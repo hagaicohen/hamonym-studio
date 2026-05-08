@@ -1,0 +1,82 @@
+/* src/app/core/layout/app-layout/app-layout.component.css */
+
+:host {
+  display: block;
+}
+
+/* APP */
+
+.app-shell {
+  min-height: 100vh;
+
+  background: #f8fafc;
+}
+
+/* BODY */
+
+.app-body {
+  display: flex;
+
+  padding-top: 72px;
+
+  min-height: calc(100vh - 72px);
+}
+
+/* CONTENT */
+
+.app-content {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 24px;
+
+  background: #f8fafc;
+}
+
+/* MOBILE OVERLAY */
+
+.mobile-overlay {
+  display: none;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+
+  .app-body {
+    display: block;
+  }
+
+  .app-content {
+    padding: 16px;
+  }
+
+  .mobile-overlay {
+    display: block;
+
+    position: fixed;
+
+    top: 72px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+
+    background: rgba(15, 23, 42, 0.4);
+
+    opacity: 0;
+    visibility: hidden;
+
+    transition:
+      opacity 0.2s ease,
+      visibility 0.2s ease;
+
+    z-index: 150;
+  }
+
+  .mobile-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+}

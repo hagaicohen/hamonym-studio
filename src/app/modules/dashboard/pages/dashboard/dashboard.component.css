@@ -1,0 +1,179 @@
+.page-header {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 16px;
+
+  margin-bottom: 32px;
+}
+
+.page-title {
+
+  font-size: 32px;
+
+  font-weight: 800;
+
+  color: #0f172a;
+
+  margin: 0;
+
+  line-height: 1.1;
+}
+
+.page-subtitle {
+
+  color: #64748b;
+
+  font-size: 15px;
+
+  margin-top: 6px;
+
+  line-height: 1.5;
+}
+
+/* STATS */
+
+.stats {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 24px;
+}
+
+.card {
+
+  background: white;
+
+  border-radius: 24px;
+
+  padding: 24px;
+
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.05);
+
+  min-width: 0;
+}
+
+.label {
+
+  color: #64748b;
+
+  font-size: 14px;
+
+  margin-bottom: 12px;
+}
+
+.value {
+
+  font-size: 38px;
+
+  font-weight: 800;
+
+  color: #0f172a;
+
+  margin-bottom: 12px;
+
+  line-height: 1.1;
+
+  overflow-wrap: break-word;
+}
+
+.change {
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+.positive {
+
+  color: #16a34a;
+}
+
+.negative {
+
+  color: #dc2626;
+}
+
+/* LAPTOP */
+
+@media (max-width: 1200px) {
+
+  .stats {
+
+    gap: 20px;
+  }
+
+  .card {
+
+    padding: 20px;
+  }
+
+  .value {
+
+    font-size: 34px;
+  }
+
+}
+
+/* TABLET */
+
+@media (max-width: 992px) {
+
+  .stats {
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-title {
+
+    font-size: 30px;
+  }
+
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+
+  .page-header {
+
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+
+    font-size: 28px;
+  }
+
+  .page-subtitle {
+
+    font-size: 14px;
+  }
+
+  .stats {
+
+    grid-template-columns: 1fr;
+
+    gap: 16px;
+  }
+
+  .card {
+
+    border-radius: 20px;
+
+    padding: 18px;
+  }
+
+  .value {
+
+    font-size: 30px;
+  }
+
+}

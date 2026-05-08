@@ -1,0 +1,65 @@
+<!-- src/app/core/layout/sidebar/sidebar.component.html -->
+
+<aside
+  class="sidebar"
+  [class.mobile-open]="mobileOpen">
+
+  <nav class="sidebar-nav">
+
+    <a
+      *ngFor="let item of menuItems"
+      class="sidebar-item"
+      [routerLink]="item.route"
+      routerLinkActive="active"
+      (click)="onNavigate()">
+
+      <!-- ICON -->
+
+      <svg
+        *ngIf="item.route === '/dashboard'"
+        class="sidebar-svg-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor">
+
+        <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+        <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+        <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+        <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+
+      </svg>
+
+      <svg
+        *ngIf="item.route === '/campaigns'"
+        class="sidebar-svg-icon"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor">
+
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 11l18-5v12l-18-5v-2z" />
+
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M11 19v2" />
+
+      </svg>
+
+      <!-- LABEL -->
+
+      <span>
+        {{ item.label }}
+      </span>
+
+    </a>
+
+  </nav>
+
+</aside>

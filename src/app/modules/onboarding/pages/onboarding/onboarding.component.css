@@ -1,0 +1,233 @@
+* {
+
+  box-sizing: border-box;
+}
+
+.onboarding-page {
+
+  min-height: calc(100vh - 72px);
+
+  padding: 40px 24px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef2ff 100%
+    );
+
+  display: flex;
+
+  justify-content: center;
+}
+
+.onboarding-container {
+
+  width: 100%;
+
+  max-width: 1100px;
+}
+
+.onboarding-header {
+
+  text-align: center;
+
+  margin-bottom: 40px;
+}
+
+.onboarding-header h1 {
+
+  margin: 0 0 12px;
+
+  font-size: 42px;
+
+  font-weight: 800;
+
+  color: #0f172a;
+}
+
+.onboarding-header p {
+
+  margin: 0;
+
+  font-size: 17px;
+
+  color: #64748b;
+}
+
+.types-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 20px;
+}
+
+.type-card {
+
+  background: white;
+
+  border-radius: 24px;
+
+  padding: 28px;
+
+  border: 2px solid transparent;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+  text-align: center;
+
+  box-shadow:
+    0 10px 30px rgba(15,23,42,0.06);
+}
+
+.type-card:hover {
+
+  transform: translateY(-4px);
+
+  border-color: #c7d2fe;
+}
+
+.type-card.active {
+
+  border-color: #4f46e5;
+
+  box-shadow:
+    0 10px 30px rgba(79,70,229,0.16);
+}
+
+.type-card .icon {
+
+  font-size: 42px;
+
+  margin-bottom: 18px;
+}
+
+.type-card h3 {
+
+  margin: 0 0 10px;
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  color: #0f172a;
+}
+
+.type-card p {
+
+  margin: 0;
+
+  color: #64748b;
+
+  line-height: 1.6;
+
+  font-size: 14px;
+}
+
+.continue-btn {
+
+  margin: 36px auto 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 220px;
+
+  height: 56px;
+
+  border: none;
+
+  border-radius: 16px;
+
+  background: #4f46e5;
+
+  color: #ffffff;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+  text-align: center;
+}
+
+.continue-btn:hover {
+
+  background: #4338ca;
+}
+
+.continue-btn:disabled {
+
+  opacity: 0.5;
+
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+
+  .types-grid {
+
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+
+  .onboarding-page {
+
+    padding: 24px 16px;
+  }
+
+  .onboarding-header {
+
+    margin-bottom: 28px;
+  }
+
+  .onboarding-header h1 {
+
+    font-size: 30px;
+
+    line-height: 1.2;
+  }
+
+  .onboarding-header p {
+
+    font-size: 15px;
+  }
+
+  .types-grid {
+
+    grid-template-columns: 1fr;
+
+    gap: 16px;
+  }
+
+  .type-card {
+
+    padding: 22px;
+  }
+
+  .type-card .icon {
+
+    font-size: 36px;
+  }
+
+  .continue-btn {
+
+    width: 100%;
+
+    margin-top: 28px;
+  }
+}
