@@ -1,0 +1,357 @@
+<div class="step-card">
+
+  <!-- HEADER -->
+
+  <div class="step-header">
+
+    <h1>
+      פרופיל העמותה
+    </h1>
+
+    <div class="step-number">
+      שלב 2 מתוך 6
+    </div>
+
+  </div>
+
+  <!-- PROGRESS -->
+
+  <div class="progress-bar-wrapper">
+
+    <div class="progress-bar">
+
+      <div
+        class="progress-fill"
+        style="width: 33.33%">
+      </div>
+
+    </div>
+
+    <div class="progress-steps">
+
+      <div class="progress-step done">
+        1
+      </div>
+
+      <div class="progress-step active">
+        2
+      </div>
+
+      <div class="progress-step">
+        3
+      </div>
+
+      <div class="progress-step">
+        4
+      </div>
+
+      <div class="progress-step">
+        5
+      </div>
+
+      <div class="progress-step">
+        6
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- BODY -->
+
+  <div class="step-body">
+
+    <!-- HERO -->
+
+    <div class="profile-hero">
+
+      <div class="hero-icon">
+
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2">
+
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="4"></circle>
+
+        </svg>
+
+      </div>
+
+      <h2>
+        מטרות העמותה
+      </h2>
+
+      <p>
+        הגדירו את הכרטיס שלכם בפלטפורמה
+      </p>
+
+    </div>
+
+    <!-- CAMPAIGN TYPES -->
+
+    <div class="base-section">
+
+      <div class="base-section-title">
+        סוגי דפים
+      </div>
+
+      <div class="campaign-type-list">
+
+        <!-- ONE TIME -->
+
+        <button
+          type="button"
+          class="campaign-type-row"
+          [class.active]="selectedCampaignTypes.includes('one-time')"
+          (click)="toggleCampaignType('one-time')">
+
+          <div class="campaign-type-content">
+
+            <div class="campaign-type-name">
+              תרומות חד־פעמיות
+            </div>
+
+            <div class="campaign-type-description">
+              דף קמפיין לתרומות חד־פעמיות
+            </div>
+
+          </div>
+
+          <div
+            class="campaign-checkbox"
+            [class.checked]="selectedCampaignTypes.includes('one-time')">
+
+            @if (selectedCampaignTypes.includes('one-time')) {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3">
+
+                <path d="M20 6 9 17l-5-5"></path>
+
+              </svg>
+
+            }
+
+          </div>
+
+        </button>
+
+        <!-- RECURRING -->
+
+        <button
+          type="button"
+          class="campaign-type-row"
+          [class.active]="selectedCampaignTypes.includes('recurring')"
+          (click)="toggleCampaignType('recurring')">
+
+          <div class="campaign-type-content">
+
+            <div class="campaign-type-name">
+              תרומות קבועות
+            </div>
+
+            <div class="campaign-type-description">
+              דף עמותה לתורמים קבועים
+            </div>
+
+          </div>
+
+          <div
+            class="campaign-checkbox"
+            [class.checked]="selectedCampaignTypes.includes('recurring')">
+
+            @if (selectedCampaignTypes.includes('recurring')) {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3">
+
+                <path d="M20 6 9 17l-5-5"></path>
+
+              </svg>
+
+            }
+
+          </div>
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- PROFILE -->
+
+    <div class="base-section">
+
+      <div class="base-section-title">
+        כרטיס העמותה
+      </div>
+
+      <!-- NAME -->
+
+      <div class="field-block">
+
+        <label>
+          שם להצגה *
+        </label>
+
+        <input
+          type="text"
+          class="base-input"
+          placeholder="השם שיוצג לתורמים">
+
+      </div>
+
+      <!-- DESCRIPTION -->
+
+      <div class="field-block">
+
+        <label>
+          תיאור קצר *
+        </label>
+
+        <div class="editor-wrapper">
+
+          <div class="editor-toolbar">
+
+            <button type="button">T</button>
+            <button type="button">🔗</button>
+            <button type="button">•</button>
+            <button type="button">≡</button>
+            <button type="button"><b>B</b></button>
+            <button type="button"><i>I</i></button>
+            <button type="button"><u>U</u></button>
+
+          </div>
+
+          <textarea
+            [(ngModel)]="organizationDescription"
+            class="base-editor"
+            placeholder="תיאור קצר של העמותה והפעילות שלה...">
+          </textarea>
+
+        </div>
+
+      </div>
+
+      <!-- LOGO -->
+
+      <div class="field-block">
+
+        <div class="logo-row">
+
+          <div class="logo-upload-side">
+
+            <label>
+              לוגו
+            </label>
+
+            <button
+              type="button"
+              class="upload-logo-btn"
+              (click)="logoInput.click()">
+
+              העלה לוגו
+
+            </button>
+
+            <div class="upload-help">
+
+              מומלץ 400x400 פיקסלים, PNG/JPG
+            </div>
+
+          </div>
+
+          <input
+            #logoInput
+            type="file"
+            hidden
+            accept=".png,.jpg,.jpeg,.svg"
+            (change)="onLogoSelected($event)">
+
+          <div class="logo-dropzone">
+
+            @if (!logoPreview) {
+
+              <div class="logo-placeholder">
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="34"
+                  height="34"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2">
+
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <circle cx="9" cy="9" r="2"></circle>
+                  <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path>
+
+                </svg>
+
+              </div>
+
+            } @else {
+
+              <img
+                [src]="logoPreview"
+                class="uploaded-logo"
+                alt="Logo">
+
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ACTIONS -->
+
+    <div class="wizard-actions">
+
+      <button
+        type="button"
+        class="secondary-btn"
+        (click)="back.emit()">
+
+        חזור
+
+      </button>
+
+      <button
+        type="button"
+        class="continue-btn"
+        [disabled]="!canContinue"
+        (click)="continue.emit()">
+
+        המשך לשלב הבא
+
+        </button>
+
+    </div>
+
+  </div>
+
+</div>

@@ -35,8 +35,25 @@ export class OnboardingComponent {
       this.selectedType
     );
 
-    this.router.navigate([
-      '/dashboard'
-    ]);
+    if (
+        this.selectedType === 'organization' ||
+        this.selectedType === 'fundraiser'
+      ) {
+
+        localStorage.setItem(
+          'selectedRole',
+          this.selectedType
+        );
+
+        this.router.navigate([
+          '/campaigns'
+        ]);
+
+        return;
+      }
+
+      this.router.navigate([
+        '/dashboard'
+      ]);
   }
 }

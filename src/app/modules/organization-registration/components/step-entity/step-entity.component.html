@@ -1,0 +1,674 @@
+<div class="step-card">
+
+  <div class="step-header">
+
+    <h1 class="step-title">
+      הצטרפות כעמותה
+    </h1>
+
+    <div class="step-number">
+      שלב 1 מתוך 6
+    </div>
+
+  </div>
+
+  <!-- PROGRESS -->
+
+  <div class="progress-bar-wrapper">
+
+    <div class="progress-bar">
+
+      <div class="progress-fill"></div>
+
+    </div>
+
+    <div class="progress-steps">
+
+      <div class="progress-step active">
+        1
+      </div>
+
+      <div class="progress-step">
+        2
+      </div>
+
+      <div class="progress-step">
+        3
+      </div>
+
+      <div class="progress-step">
+        4
+      </div>
+
+      <div class="progress-step">
+        5
+      </div>
+
+      <div class="progress-step">
+        6
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="step-body">
+
+    <!-- ICON -->
+
+    <div class="entity-icon">
+
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="34"
+        height="34"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round">
+
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+        <path d="M10 6h4"></path>
+        <path d="M10 10h4"></path>
+        <path d="M10 14h4"></path>
+        <path d="M10 18h4"></path>
+
+      </svg>
+
+    </div>
+
+    <h2>
+      בואו נכיר
+    </h2>
+
+    <p>
+      פרטי העמותה ובדיקת תקינות
+    </p>
+
+    <!-- ENTITY -->
+
+    <div class="form-section">
+
+      <div class="section-title">
+        סוג הישות
+      </div>
+
+      <label class="field-label">
+        סוג הישות *
+      </label>
+
+      <select
+        [(ngModel)]="entityType"
+        [class.placeholder]="!entityType">
+
+        @if (!entityType) {
+
+          <option value="" disabled selected>
+            בחר סוג ישות
+          </option>
+
+        }
+
+        <option value="association">
+          עמותה
+        </option>
+
+        <option value="public-benefit-company">
+          חל"צ
+        </option>
+
+        <option value="new-political-party">
+          מפלגה פוליטית חדשה
+        </option>
+
+        <option value="registered-political-party">
+          מפלגה פוליטית רשומה
+        </option>
+
+        <option value="exempt-dealer">
+          עוסק פטור
+        </option>
+
+        <option value="licensed-dealer">
+          עוסק מורשה
+        </option>
+
+      </select>
+
+    </div>
+
+    @if (entityType === 'association') {
+
+      <!-- ORGANIZATION DETAILS -->
+
+      <div class="form-section">
+
+        <div class="section-header">
+
+          <svg
+            class="section-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+
+            <path d="M3 21h18"></path>
+            <path d="M5 21V7l8-4v18"></path>
+            <path d="M19 21V11l-6-4"></path>
+            <path d="M9 9h1"></path>
+            <path d="M9 13h1"></path>
+            <path d="M9 17h1"></path>
+
+          </svg>
+
+          <div class="section-title">
+            פרטי העמותה
+          </div>
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            שם העמותה *
+          </label>
+
+          <input
+            type="text"
+            [(ngModel)]="organizationName"
+            placeholder="העמותה למען הקהילה">
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            מספר עמותה *
+          </label>
+
+          <input
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [value]="organizationNumber"
+            (input)="onOrganizationNumberInput($event)"
+            maxlength="9"
+            placeholder="580123456">
+
+        </div>
+
+      </div>
+
+      <!-- CATEGORIES -->
+
+      <div class="form-section">
+
+        <div class="section-header">
+
+          <svg
+            class="section-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+
+            <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path>
+
+            <circle
+              cx="7.5"
+              cy="7.5"
+              r=".5"
+              fill="currentColor">
+            </circle>
+
+          </svg>
+
+          <div class="section-title">
+            קטגוריות
+          </div>
+
+        </div>
+
+        <label class="field-label">
+          קטגוריה ראשית *
+        </label>
+
+        <select
+          [(ngModel)]="primaryCategory"
+          [class.placeholder]="!primaryCategory">
+
+          @if (!primaryCategory) {
+
+            <option value="" disabled selected>
+              בחר קטגוריה ראשית
+            </option>
+
+          }
+
+          @for (category of categories; track category) {
+
+            <option [value]="category">
+              {{ category }}
+            </option>
+
+          }
+
+        </select>
+
+        <div class="chips-title">
+          קטגוריות נוספות (אופציונלי)
+        </div>
+
+        <div class="chips">
+
+          @for (category of categories; track category) {
+
+            @if (category !== primaryCategory) {
+
+              <button
+                type="button"
+                class="chip"
+                [class.active]="selectedCategories.includes(category)"
+                (click)="toggleCategory(category)">
+
+                {{ category }}
+
+              </button>
+
+            }
+
+          }
+
+        </div>
+
+      </div>
+
+      <!-- CONTACT -->
+
+      <div class="form-section">
+
+        <div class="section-title">
+          איש קשר
+        </div>
+
+        <div class="field">
+
+          <label>
+            שם מלא *
+          </label>
+
+          <input
+            type="text"
+            [(ngModel)]="fullName"
+            placeholder="ישראל ישראלי">
+
+        </div>
+
+        <div class="contact-grid">
+
+          <!-- EMAIL -->
+
+          <div class="field">
+
+            <label>
+              אימייל *
+            </label>
+
+            <input
+              type="email"
+              [(ngModel)]="email"
+              placeholder="contact@charity.org.il"
+              [class.invalid]="email && !isEmailValid">
+
+            @if (email && !isEmailValid) {
+
+              <div class="field-error">
+                כתובת אימייל לא תקינה
+              </div>
+
+            }
+
+          </div>
+
+          <!-- PHONE -->
+
+          <div class="field">
+
+            <label>
+              טלפון *
+            </label>
+
+            <input
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              [value]="phone"
+              (input)="onPhoneInput($event)"
+              (keypress)="$event.key < '0' || $event.key > '9' ? $event.preventDefault() : null"
+              maxlength="11"
+              placeholder="050-1234567"
+              [class.invalid]="phone && !isPhoneValid">
+
+            @if (phone && !isPhoneValid) {
+
+              <div class="field-error">
+                מספר טלפון לא תקין
+              </div>
+
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- DOCUMENTS -->
+
+      <div class="form-section">
+
+        <div class="section-header">
+
+          <svg
+            class="documents-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+            <path d="M10 9H8"></path>
+            <path d="M16 13H8"></path>
+            <path d="M16 17H8"></path>
+
+          </svg>
+
+          <div class="section-title">
+            מסמכים נדרשים
+          </div>
+
+        </div>
+
+        <!-- CERTIFICATE -->
+
+        <div class="document-upload">
+
+          <label class="document-label">
+            תעודת רישום העמותה *
+          </label>
+
+          <p class="document-description">
+            יש להעלות תעודת רישום מקורית של העמותה
+            (PDF, JPG, PNG - עד 10MB)
+          </p>
+
+          <input
+            #certificateInput
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            hidden
+            (change)="onCertificateSelected($event)">
+
+          @if (!certificateFileName) {
+
+            <button
+              type="button"
+              class="upload-btn"
+              (click)="certificateInput.click()">
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" x2="12" y1="3" y2="15"></line>
+
+              </svg>
+
+              העלה תעודת רישום
+
+            </button>
+
+          } @else {
+
+            <div class="uploaded-file-row">
+
+          <button
+            type="button"
+            class="upload-success-btn">
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m9 12 2 2 4-4"></path>
+
+            </svg>
+
+            הועלה בהצלחה
+
+          </button>
+
+          <a
+            [href]="certificateFileUrl"
+            target="_blank"
+            class="view-file-link">
+
+            הצג קובץ
+
+          </a>
+
+          <button
+            type="button"
+            class="remove-file-btn"
+            (click)="removeCertificate()">
+
+            הסר
+
+          </button>
+
+        </div>
+
+          }
+
+        </div>
+
+        <!-- SECTION 46 -->
+
+        <div class="document-upload">
+
+          <label class="document-label">
+            אישור זיכוי מס במקור לפי סעיף 46 *
+          </label>
+
+          <p class="document-description">
+            יש להעלות אישור תקף לזיכוי מס במקור
+            (PDF, JPG, PNG - עד 10MB)
+          </p>
+
+          <input
+            #section46Input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            hidden
+            (change)="onSection46Selected($event)">
+
+          @if (!section46FileName) {
+
+            <button
+              type="button"
+              class="upload-btn"
+              (click)="section46Input.click()">
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" x2="12" y1="3" y2="15"></line>
+
+              </svg>
+
+              העלה אישור סעיף 46
+
+            </button>
+
+          } @else {
+
+            <div class="uploaded-file-row">
+
+          <button
+            type="button"
+            class="upload-success-btn">
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m9 12 2 2 4-4"></path>
+
+            </svg>
+
+            הועלה בהצלחה
+
+          </button>
+
+          <a
+            [href]="section46FileUrl"
+            target="_blank"
+            class="view-file-link">
+
+            הצג קובץ
+
+          </a>
+
+          <button
+            type="button"
+            class="remove-file-btn"
+            (click)="removeSection46()">
+
+            הסר
+
+          </button>
+
+        </div>
+
+          }
+
+        </div>
+
+        <!-- INFO -->
+
+        <div class="documents-info">
+
+          <div class="documents-info-row">
+
+            <svg
+              class="documents-info-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+              <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+              <path d="M10 9H8"></path>
+              <path d="M16 13H8"></path>
+              <path d="M16 17H8"></path>
+
+            </svg>
+
+            <div>
+
+              <div class="documents-info-title">
+                למידע:
+              </div>
+
+              <div class="documents-info-text">
+                המסמכים יועברו לבדיקה ואישור על ידי צוות האתר
+                לפני אישור היישות להצגה בפלטפורמה.
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="wizard-actions">
+
+        <button
+          class="continue-btn"
+          [disabled]="!canContinue"
+          (click)="continue.emit()">
+
+          המשך לשלב הבא
+
+        </button>
+
+      </div>
+
+    }
+
+  </div>
+
+</div>

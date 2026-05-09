@@ -1,0 +1,560 @@
+/* =========================================================
+   HERO
+========================================================= */
+
+.profile-hero {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  text-align: center;
+
+  margin-bottom: 34px;
+}
+
+.hero-icon {
+
+  width: 72px;
+
+  height: 72px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f3e8ff 0%,
+      #ede9fe 100%
+    );
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  color: #9333ea;
+
+  margin-bottom: 22px;
+}
+
+.profile-hero h2 {
+
+  margin: 0 0 10px;
+
+  font-size: 34px;
+
+  font-weight: 800;
+
+  color: #0f172a;
+}
+
+.profile-hero p {
+
+  margin: 0;
+
+  font-size: 16px;
+
+  color: #64748b;
+
+  line-height: 1.7;
+}
+
+/* =========================================================
+   BASE SECTION
+========================================================= */
+
+.base-section {
+
+  width: 100%;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 24px;
+
+  padding: 28px;
+
+  margin-bottom: 24px;
+
+  box-sizing: border-box;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.base-section-title {
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color: #0f172a;
+
+  margin-bottom: 22px;
+
+  text-align: right;
+}
+
+/* =========================================================
+   CAMPAIGN TYPES
+========================================================= */
+
+.campaign-type-list {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.campaign-type-row {
+
+  width: 100%;
+
+  border: none;
+
+  background: #f8fafc;
+
+  border-radius: 14px;
+
+  padding: 16px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 14px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.campaign-type-row:hover {
+
+  background: #f1f5f9;
+
+  transform: translateY(-1px);
+}
+
+.campaign-type-row.active {
+
+  background: #eef2ff;
+}
+
+.campaign-type-content {
+
+  flex: 1;
+
+  text-align: right;
+}
+
+.campaign-type-name {
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  color: #1e293b;
+
+  margin-bottom: 4px;
+}
+
+.campaign-type-description {
+
+  font-size: 13px;
+
+  color: #64748b;
+
+  line-height: 1.5;
+}
+
+.campaign-checkbox {
+
+  width: 18px;
+
+  height: 18px;
+
+  border-radius: 5px;
+
+  border: 1px solid #cbd5e1;
+
+  background: white;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: white;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.campaign-checkbox.checked {
+
+  background: #3b82f6;
+
+  border-color: #3b82f6;
+}
+
+/* =========================================================
+   FIELDS
+========================================================= */
+
+.field-block {
+
+  margin-bottom: 26px;
+
+  text-align: right;
+}
+
+.field-block:last-child {
+
+  margin-bottom: 0;
+}
+
+.field-block label {
+
+  display: block;
+
+  margin-bottom: 10px;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: #0f172a;
+}
+
+.base-input {
+
+  width: 100%;
+
+  height: 54px;
+
+  border: 1px solid #dbe2ea;
+
+  border-radius: 14px;
+
+  padding: 0 18px;
+
+  box-sizing: border-box;
+
+  font-size: 15px;
+
+  outline: none;
+
+  direction: rtl;
+
+  text-align: right;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.base-input:focus {
+
+  border-color: #14b8a6;
+
+  box-shadow:
+    0 0 0 4px rgba(20, 184, 166, 0.08);
+}
+
+/* =========================================================
+   EDITOR
+========================================================= */
+
+.editor-wrapper {
+
+  border: 1px solid #dbe2ea;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  background: white;
+}
+
+.editor-toolbar {
+
+  height: 54px;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 0 12px;
+
+  background: #f8fafc;
+}
+
+.editor-toolbar button {
+
+  width: 34px;
+
+  height: 34px;
+
+  border: none;
+
+  background: transparent;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  color: #475569;
+
+  font-size: 14px;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.editor-toolbar button:hover {
+
+  background: #e2e8f0;
+
+  color: #0f172a;
+}
+
+.base-editor {
+
+  width: 100%;
+
+  min-height: 170px;
+
+  border: none;
+
+  outline: none;
+
+  resize: vertical;
+
+  padding: 18px;
+
+  box-sizing: border-box;
+
+  font-size: 15px;
+
+  line-height: 1.9;
+
+  font-family: inherit;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.base-editor::placeholder {
+
+  color: #94a3b8;
+}
+
+/* =========================================================
+   LOGO
+========================================================= */
+
+.logo-row {
+
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: space-between;
+
+  gap: 24px;
+}
+
+.logo-upload-side {
+
+  flex: 1;
+}
+
+.upload-logo-btn {
+
+  height: 46px;
+
+  padding: 0 18px;
+
+  border-radius: 12px;
+
+  border: 1px solid #dbe2ea;
+
+  background: white;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.upload-logo-btn:hover {
+
+  background: #f8fafc;
+
+  border-color: #cbd5e1;
+}
+
+.upload-help {
+
+  margin-top: 12px;
+
+  font-size: 12px;
+
+  color: #94a3b8;
+}
+
+.logo-dropzone {
+
+  width: 120px;
+
+  height: 120px;
+
+  border-radius: 18px;
+
+  border: 2px dashed #cbd5e1;
+
+  background: #f8fafc;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  overflow: hidden;
+
+  flex-shrink: 0;
+}
+
+.logo-placeholder {
+
+  color: #94a3b8;
+}
+
+.uploaded-logo {
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .profile-hero {
+
+    margin-bottom: 26px;
+  }
+
+  .hero-icon {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 20px;
+
+    margin-bottom: 18px;
+  }
+
+  .profile-hero h2 {
+
+    font-size: 28px;
+  }
+
+  .profile-hero p {
+
+    font-size: 14px;
+  }
+
+  .base-section {
+
+    padding: 20px;
+
+    border-radius: 20px;
+  }
+
+  .campaign-type-row {
+
+    padding: 16px;
+  }
+
+  .campaign-type-name {
+
+    font-size: 15px;
+  }
+
+  .campaign-type-description {
+
+    font-size: 13px;
+  }
+
+  .base-input {
+
+    height: 50px;
+
+    font-size: 14px;
+  }
+
+  .editor-toolbar {
+
+    overflow-x: auto;
+
+    justify-content: flex-start;
+  }
+
+  .base-editor {
+
+    min-height: 150px;
+
+    padding: 14px;
+
+    font-size: 14px;
+  }
+
+  .logo-row {
+
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .logo-dropzone {
+
+    width: 100%;
+
+    height: 140px;
+  }
+}

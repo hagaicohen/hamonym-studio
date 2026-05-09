@@ -1,0 +1,20 @@
+<div class="wizard-page">
+
+  @if (currentStep === 1) {
+
+    <app-step-entity
+      (continue)="nextStep()">
+    </app-step-entity>
+
+  }
+
+  @if (currentStep === 2) {
+
+    <app-step-profile
+      (back)="previousStep()"
+      (continue)="nextStep()">
+    </app-step-profile>
+
+  }
+
+</div>

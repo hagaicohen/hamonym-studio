@@ -63,7 +63,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/campaigns/pages/campaigns-page/campaigns-page.component')
             .then(m => m.CampaignsPageComponent)
-      }
+      },
+
+      {
+        path: 'organization-registration',
+        loadComponent: () =>
+          import('./modules/organization-registration/pages/organization-registration/organization-registration.component')
+            .then(m => m.OrganizationRegistrationComponent)
+      },
+
+      
 
     ]
   },

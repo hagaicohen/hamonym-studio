@@ -101,6 +101,25 @@ export class LoginComponent {
           JSON.stringify(res.user)
         );
 
+        const user = res.user;
+
+        if (!user.role) {
+
+          this.router.navigate(['/onboarding']);
+
+          return;
+        }
+
+        if (
+          user.role === 'organization' ||
+          user.role === 'fundraiser'
+        ) {
+
+          this.router.navigate(['/campaigns']);
+
+          return;
+        }
+
         this.router.navigate(['/dashboard']);
 
       },
