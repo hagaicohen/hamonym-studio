@@ -202,13 +202,31 @@ export class StepEntityComponent {
   get canContinue(): boolean {
 
     return !!(
+
+      /* ENTITY */
+
       this.entityType &&
+
+      /* ORGANIZATION */
+
       this.organizationName.trim() &&
       this.organizationNumber.trim() &&
+
+      /* CATEGORY */
+
       this.primaryCategory &&
+
+      /* CONTACT */
+
       this.fullName.trim() &&
       this.isPhoneValid &&
-      this.isEmailValid
+      this.isEmailValid &&
+
+      /* DOCUMENTS */
+
+      this.certificateFileName &&
+      this.section46FileName
+
     );
 
   }

@@ -5,14 +5,22 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+
+import {
+  FormsModule
+} from '@angular/forms';
+
+import {
+  RichTextEditorComponent
+} from '../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 
 @Component({
   selector: 'app-step-profile',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    RichTextEditorComponent
   ],
   templateUrl: './step-profile.component.html',
   styleUrls: ['./step-profile.component.css']
@@ -27,19 +35,26 @@ export class StepProfileComponent {
   continue =
     new EventEmitter<void>();
 
-  get canContinue(): boolean {
-    return !!(
-      this.selectedCampaignTypes.length &&
-      this.organizationDescription.trim().length > 10 &&
-      this.logoPreview
-    );
-  }
+  /* DISPLAY NAME */
+
+  displayName = '';
+
+  /* DESCRIPTION */
 
   organizationDescription = '';
 
-  selectedCampaignTypes: string[] = [];
+  /* CAMPAIGN TYPES */
+
+  selectedCampaignTypes: string[] = [
+    'one-time',
+    'recurring'
+  ];
+
+  /* LOGO */
 
   logoPreview = '';
+
+  /* OPTIONAL */
 
   campaignTypes = [
     'גיוס תרומות',
@@ -51,6 +66,26 @@ export class StepProfileComponent {
     'קמפיין פוליטי',
     'תוכן ויצירה'
   ];
+
+  /* VALIDATION */
+
+  get canContinue(): boolean {
+
+    return !!(
+
+      this.selectedCampaignTypes.length &&
+
+      this.displayName.trim().length > 1 &&
+
+      this.organizationDescription.trim().length > 10 &&
+
+      this.logoPreview
+
+    );
+
+  }
+
+  /* TOGGLE TYPE */
 
   toggleCampaignType(type: string): void {
 
@@ -65,11 +100,14 @@ export class StepProfileComponent {
         );
 
       return;
+
     }
 
     this.selectedCampaignTypes.push(type);
 
   }
+
+  /* LOGO */
 
   onLogoSelected(event: Event): void {
 

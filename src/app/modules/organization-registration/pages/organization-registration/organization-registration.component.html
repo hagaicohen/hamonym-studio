@@ -17,4 +17,40 @@
 
   }
 
+  @if (currentStep === 3) {
+
+    <app-step-goals
+      (back)="previousStep()"
+      (continue)="nextStep()">
+    </app-step-goals>
+
+  }
+
+    @if (currentStep === 4) {
+
+      <app-step-payment
+        (back)="previousStep()"
+        (continue)="nextStep()">
+      </app-step-payment>
+
+    }
+
+    @if (currentStep === 5) {
+
+      <app-step-billing-method
+        (back)="previousStep()"
+        (continue)="nextStep()">
+      </app-step-billing-method>
+
+    }
+
+    @if (currentStep === 6) {
+
+      <app-step-review
+        (back)="previousStep()"
+        (continue)="nextStep()">
+      </app-step-review>
+
+    }
+
 </div>
