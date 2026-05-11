@@ -111,11 +111,12 @@
             ₪
           </span>
 
-          <input
-            type="number"
+         <input
+            type="text"
             class="base-input money-input"
             placeholder="50,000"
-            [(ngModel)]="monthlyGoal">
+            [ngModel]="monthlyGoal"
+            (ngModelChange)="onMoneyInput('monthly', $event)">
 
         </div>
 
@@ -140,10 +141,11 @@
           </span>
 
           <input
-            type="number"
+            type="text"
             class="base-input money-input"
             placeholder="600,000"
-            [(ngModel)]="yearlyGoal">
+            [ngModel]="yearlyGoal"
+            (ngModelChange)="onMoneyInput('yearly', $event)">
 
         </div>
 

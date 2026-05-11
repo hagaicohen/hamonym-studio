@@ -1,6 +1,20 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  EventEmitter,
+  Output
+} from '@angular/core';
+
+import {
+  CommonModule
+} from '@angular/common';
+
+import {
+  FormsModule
+} from '@angular/forms';
+
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
 
 type PaymentMethod =
   | 'credit-card'
@@ -18,9 +32,12 @@ type PaymentMethod =
 })
 export class StepBillingMethodComponent {
 
-  paymentMethod: PaymentMethod = 'credit-card';
+  @Output()
+  back =
+    new EventEmitter<void>();
 
-  // CREDIT CARD
+  paymentMethod: PaymentMethod =
+    'credit-card';
 
   cardHolderName = '';
 
@@ -30,13 +47,9 @@ export class StepBillingMethodComponent {
 
   cvv = '';
 
-  // MASAV
-
   masavUploaded = false;
 
   masavFileName = '';
-
-  // GENERAL
 
   continueLater = false;
 
@@ -44,9 +57,71 @@ export class StepBillingMethodComponent {
 
   saveCompleted = false;
 
-  protected readonly history = history;
+  constructor(
+    private readonly stateService:
+    OrganizationRegistrationStateService
+  ) {
 
-  // GETTERS
+    const state =
+      this.stateService.state();
+
+    this.paymentMethod =
+      state.paymentMethod as PaymentMethod;
+
+    this.cardHolderName =
+      state.cardHolderName;
+
+    this.cardNumber =
+      state.cardNumber;
+
+    this.expiry =
+      state.expiry;
+
+    this.cvv =
+      state.cvv;
+
+    this.masavUploaded =
+      state.masavUploaded;
+
+    this.masavFileName =
+      state.masavFileName;
+
+    this.continueLater =
+      state.continueLater;
+
+  }
+
+  private syncState(): void {
+
+    this.stateService.updateState({
+
+      paymentMethod:
+        this.paymentMethod,
+
+      cardHolderName:
+        this.cardHolderName,
+
+      cardNumber:
+        this.cardNumber,
+
+      expiry:
+        this.expiry,
+
+      cvv:
+        this.cvv,
+
+      masavUploaded:
+        this.masavUploaded,
+
+      masavFileName:
+        this.masavFileName,
+
+      continueLater:
+        this.continueLater
+
+    });
+
+  }
 
   get isCreditCard(): boolean {
 
@@ -115,19 +190,19 @@ export class StepBillingMethodComponent {
 
   }
 
-  // ACTIONS
-
   selectPaymentMethod(
     method: PaymentMethod
   ): void {
 
     this.paymentMethod = method;
 
+    this.syncState();
+
     this.resetState();
 
   }
 
- savePaymentMethod(): void {
+  savePaymentMethod(): void {
 
     if (!this.canContinue) {
 
@@ -141,8 +216,6 @@ export class StepBillingMethodComponent {
 
       this.isSaving = false;
 
-      // USER CHOSE TO COMPLETE LATER
-
       if (this.continueLater) {
 
         this.saveCompleted = false;
@@ -152,6 +225,8 @@ export class StepBillingMethodComponent {
       }
 
       this.saveCompleted = true;
+
+      this.syncState();
 
     }, 1200);
 
@@ -184,6 +259,8 @@ export class StepBillingMethodComponent {
     this.masavFileName =
       file.name;
 
+    this.syncState();
+
     this.resetState();
 
   }
@@ -193,6 +270,8 @@ export class StepBillingMethodComponent {
     this.masavUploaded = false;
 
     this.masavFileName = '';
+
+    this.syncState();
 
   }
 
@@ -210,6 +289,8 @@ export class StepBillingMethodComponent {
         ? groups.join(' ')
         : '';
 
+    this.syncState();
+
   }
 
   formatExpiry(): void {
@@ -224,11 +305,15 @@ export class StepBillingMethodComponent {
         '/' +
         rawValue.substring(2, 4);
 
+      this.syncState();
+
       return;
 
     }
 
     this.expiry = rawValue;
+
+    this.syncState();
 
   }
 

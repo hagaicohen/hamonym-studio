@@ -5,7 +5,12 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
+
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
 
 @Component({
   selector: 'app-step-entity',
@@ -15,37 +20,13 @@ import { FormsModule } from '@angular/forms';
     FormsModule
   ],
   templateUrl: './step-entity.component.html',
-  styleUrls: []
+  styleUrls: ['./step-entity.component.css']
 })
 export class StepEntityComponent {
 
   @Output()
   continue =
     new EventEmitter<void>();
-
-  entityType = '';
-
-  organizationName = '';
-
-  organizationNumber = '';
-
-  primaryCategory = '';
-
-  fullName = '';
-
-  phone = '';
-
-  email = '';
-
-  certificateFileName = '';
-
-  certificateFileUrl = '';
-
-  section46FileName = '';
-
-  section46FileUrl = '';
-
-  selectedCategories: string[] = [];
 
   categories = [
     'פוליטיקה וממשל',
@@ -77,6 +58,205 @@ export class StepEntityComponent {
     'אחר'
   ];
 
+  constructor(
+    private readonly stateService:
+    OrganizationRegistrationStateService
+  ) {}
+
+  // =========================
+  // STATE HELPERS
+  // =========================
+
+  private updateState(
+    partial: any
+  ): void {
+
+    this.stateService.updateState(partial);
+
+  }
+
+  private get state() {
+
+    return this.stateService.state();
+
+  }
+
+  // =========================
+  // STEP 1 FIELDS
+  // =========================
+
+  get entityType(): string {
+
+    return this.state.entityType;
+
+  }
+
+  set entityType(value: string) {
+
+    this.updateState({
+      entityType: value
+    });
+
+  }
+
+  get organizationName(): string {
+
+    return this.state.organizationName;
+
+  }
+
+  set organizationName(value: string) {
+
+    this.updateState({
+      organizationName: value
+    });
+
+  }
+
+  get organizationNumber(): string {
+
+    return this.state.organizationNumber;
+
+  }
+
+  set organizationNumber(value: string) {
+
+    this.updateState({
+      organizationNumber: value
+    });
+
+  }
+
+  get primaryCategory(): string {
+
+    return this.state.primaryCategory;
+
+  }
+
+  set primaryCategory(value: string) {
+
+    this.updateState({
+      primaryCategory: value
+    });
+
+  }
+
+  get fullName(): string {
+
+    return this.state.fullName;
+
+  }
+
+  set fullName(value: string) {
+
+    this.updateState({
+      fullName: value
+    });
+
+  }
+
+  get phone(): string {
+
+    return this.state.phone;
+
+  }
+
+  set phone(value: string) {
+
+    this.updateState({
+      phone: value
+    });
+
+  }
+
+  get email(): string {
+
+    return this.state.email;
+
+  }
+
+  set email(value: string) {
+
+    this.updateState({
+      email: value
+    });
+
+  }
+
+  get certificateFileName(): string {
+
+    return this.state.certificateFileName;
+
+  }
+
+  set certificateFileName(value: string) {
+
+    this.updateState({
+      certificateFileName: value
+    });
+
+  }
+
+  get certificateFileUrl(): string {
+
+    return this.state.certificateFileUrl;
+
+  }
+
+  set certificateFileUrl(value: string) {
+
+    this.updateState({
+      certificateFileUrl: value
+    });
+
+  }
+
+  get section46FileName(): string {
+
+    return this.state.section46FileName;
+
+  }
+
+  set section46FileName(value: string) {
+
+    this.updateState({
+      section46FileName: value
+    });
+
+  }
+
+  get section46FileUrl(): string {
+
+    return this.state.section46FileUrl;
+
+  }
+
+  set section46FileUrl(value: string) {
+
+    this.updateState({
+      section46FileUrl: value
+    });
+
+  }
+
+  get selectedCategories(): string[] {
+
+    return this.state.selectedCategories;
+
+  }
+
+  set selectedCategories(value: string[]) {
+
+    this.updateState({
+      selectedCategories: value
+    });
+
+  }
+
+  // =========================
+  // CATEGORY
+  // =========================
+
   toggleCategory(category: string): void {
 
     const exists =
@@ -90,11 +270,19 @@ export class StepEntityComponent {
         );
 
       return;
+
     }
 
-    this.selectedCategories.push(category);
+    this.selectedCategories = [
+      ...this.selectedCategories,
+      category
+    ];
 
   }
+
+  // =========================
+  // PHONE
+  // =========================
 
   onPhoneInput(event: Event): void {
 
@@ -104,7 +292,8 @@ export class StepEntityComponent {
     let value =
       input.value.replace(/\D/g, '');
 
-    value = value.substring(0, 10);
+    value =
+      value.substring(0, 10);
 
     if (value.length > 3) {
 
@@ -121,7 +310,13 @@ export class StepEntityComponent {
 
   }
 
-  onOrganizationNumberInput(event: Event): void {
+  // =========================
+  // ORGANIZATION NUMBER
+  // =========================
+
+  onOrganizationNumberInput(
+    event: Event
+  ): void {
 
     const input =
       event.target as HTMLInputElement;
@@ -129,15 +324,23 @@ export class StepEntityComponent {
     let value =
       input.value.replace(/\D/g, '');
 
-    value = value.substring(0, 9);
+    value =
+      value.substring(0, 9);
 
     input.value = value;
 
-    this.organizationNumber = value;
+    this.organizationNumber =
+      value;
 
   }
 
-  onCertificateSelected(event: Event): void {
+  // =========================
+  // CERTIFICATE
+  // =========================
+
+  onCertificateSelected(
+    event: Event
+  ): void {
 
     const input =
       event.target as HTMLInputElement;
@@ -147,7 +350,8 @@ export class StepEntityComponent {
 
     if (!file) return;
 
-    this.certificateFileName = file.name;
+    this.certificateFileName =
+      file.name;
 
     this.certificateFileUrl =
       URL.createObjectURL(file);
@@ -162,7 +366,13 @@ export class StepEntityComponent {
 
   }
 
-  onSection46Selected(event: Event): void {
+  // =========================
+  // SECTION 46
+  // =========================
+
+  onSection46Selected(
+    event: Event
+  ): void {
 
     const input =
       event.target as HTMLInputElement;
@@ -172,7 +382,8 @@ export class StepEntityComponent {
 
     if (!file) return;
 
-    this.section46FileName = file.name;
+    this.section46FileName =
+      file.name;
 
     this.section46FileUrl =
       URL.createObjectURL(file);
@@ -187,15 +398,23 @@ export class StepEntityComponent {
 
   }
 
+  // =========================
+  // VALIDATION
+  // =========================
+
   get isPhoneValid(): boolean {
 
-    return /^05\d-\d{7}$/.test(this.phone);
+    return /^05\d-\d{7}$/.test(
+      this.phone
+    );
 
   }
 
   get isEmailValid(): boolean {
 
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      this.email
+    );
 
   }
 
@@ -203,27 +422,13 @@ export class StepEntityComponent {
 
     return !!(
 
-      /* ENTITY */
-
       this.entityType &&
-
-      /* ORGANIZATION */
-
       this.organizationName.trim() &&
       this.organizationNumber.trim() &&
-
-      /* CATEGORY */
-
       this.primaryCategory &&
-
-      /* CONTACT */
-
       this.fullName.trim() &&
       this.isPhoneValid &&
       this.isEmailValid &&
-
-      /* DOCUMENTS */
-
       this.certificateFileName &&
       this.section46FileName
 

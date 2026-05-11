@@ -11,16 +11,18 @@ import {
 import {
   FormsModule
 } from '@angular/forms';
-import { CampaignsRoutingModule } from "../../../campaigns/campaigns-routing.module";
+
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
 
 @Component({
   selector: 'app-step-payment',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    CampaignsRoutingModule
-],
+    FormsModule
+  ],
   templateUrl: './step-payment.component.html',
   styleUrls: ['./step-payment.component.css']
 })
@@ -48,17 +50,87 @@ export class StepPaymentComponent {
 
   connectionSuccess = false;
 
-  get canContinue(): boolean {
+  connectionError = '';
 
-  /* USER CHOSE TO SKIP */
+  constructor(
+    private readonly stateService:
+    OrganizationRegistrationStateService
+  ) {
+
+    this.loadState();
+
+  }
+
+  // =========================
+  // LOAD STATE
+  // =========================
+
+  loadState(): void {
+
+    const state =
+      this.stateService.state();
+
+    this.provider =
+      state.provider;
+
+    this.terminalNumber =
+      state.terminalNumber;
+
+    this.apiUsername =
+      state.apiUsername;
+
+    this.apiPassword =
+      state.apiPassword;
+
+    this.useExistingTerminal =
+      state.useExistingTerminal;
+
+    this.connectionSuccess =
+      state.connectionSuccess;
+
+  }
+
+  // =========================
+  // SAVE STATE
+  // =========================
+
+  saveState(): void {
+
+    this.stateService.updateState({
+
+      provider:
+        this.provider,
+
+      terminalNumber:
+        this.terminalNumber,
+
+      apiUsername:
+        this.apiUsername,
+
+      apiPassword:
+        this.apiPassword,
+
+      useExistingTerminal:
+        this.useExistingTerminal,
+
+      connectionSuccess:
+        this.connectionSuccess
+
+    });
+
+  }
+
+  // =========================
+  // VALIDATION
+  // =========================
+
+  get canContinue(): boolean {
 
     if (this.useExistingTerminal) {
 
       return true;
 
     }
-
-    /* REQUIRE PAYMENT DETAILS */
 
     return !!(
 
@@ -71,19 +143,57 @@ export class StepPaymentComponent {
 
   }
 
+  // =========================
+  // CONNECTION TEST
+  // =========================
+
   testConnection(): void {
 
     this.isCheckingConnection = true;
 
     this.connectionSuccess = false;
 
+    this.connectionError = '';
+
     setTimeout(() => {
 
       this.isCheckingConnection = false;
 
-      this.connectionSuccess = true;
+      // TODO:
+      // כאן תהיה בעתיד בדיקת API אמיתית מול קארדקום
+
+      this.connectionSuccess = false;
+
+      this.connectionError =
+        'החיבור למסוף נכשל';
+
+      this.saveState();
 
     }, 1200);
+
+  }
+
+  // =========================
+  // CONTINUE
+  // =========================
+
+  onContinue(): void {
+
+    this.saveState();
+
+    this.continue.emit();
+
+  }
+
+  // =========================
+  // BACK
+  // =========================
+
+  onBack(): void {
+
+    this.saveState();
+
+    this.back.emit();
 
   }
 

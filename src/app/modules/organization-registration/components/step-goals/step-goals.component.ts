@@ -12,6 +12,10 @@ import {
   FormsModule
 } from '@angular/forms';
 
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
+
 @Component({
   selector: 'app-step-goals',
   standalone: true,
@@ -32,16 +36,109 @@ export class StepGoalsComponent {
   continue =
     new EventEmitter<void>();
 
-  monthlyGoal = '';
+  constructor(
+    private readonly stateService:
+    OrganizationRegistrationStateService
+  ) {}
 
-  yearlyGoal = '';
+  // =========================
+  // HELPERS
+  // =========================
+
+  private updateState(
+    partial: any
+  ): void {
+
+    this.stateService.updateState(
+      partial
+    );
+
+  }
+
+  private get state() {
+
+    return this.stateService.state();
+
+  }
+
+  // =========================
+  // MONTHLY GOAL
+  // =========================
+
+  get monthlyGoal(): string {
+
+    return this.state.monthlyGoal;
+
+  }
+
+  set monthlyGoal(value: string) {
+
+    this.updateState({
+      monthlyGoal: value
+    });
+
+  }
+
+  // =========================
+  // YEARLY GOAL
+  // =========================
+
+  get yearlyGoal(): string {
+
+    return this.state.yearlyGoal;
+
+  }
+
+  set yearlyGoal(value: string) {
+
+    this.updateState({
+      yearlyGoal: value
+    });
+
+  }
+
+  // =========================
+  // VALIDATION
+  // =========================
 
   get canContinue(): boolean {
 
     return !!(
+
       this.monthlyGoal &&
       this.yearlyGoal
+
     );
+
+  }
+
+  onMoneyInput(
+    type: 'monthly' | 'yearly',
+    value: string
+  ): void {
+
+    const numericValue =
+      value.replace(/\D/g, '');
+
+    const formattedValue =
+      Number(numericValue || 0)
+        .toLocaleString('en-US');
+
+    if (type === 'monthly') {
+
+      this.monthlyGoal =
+        numericValue
+          ? formattedValue
+          : '';
+
+      return;
+
+    }
+
+    this.yearlyGoal =
+      numericValue
+        ? formattedValue
+        : '';
 
   }
 

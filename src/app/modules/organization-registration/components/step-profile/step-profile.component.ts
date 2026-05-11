@@ -14,6 +14,10 @@ import {
   RichTextEditorComponent
 } from '../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
+
 @Component({
   selector: 'app-step-profile',
   standalone: true,
@@ -35,27 +39,6 @@ export class StepProfileComponent {
   continue =
     new EventEmitter<void>();
 
-  /* DISPLAY NAME */
-
-  displayName = '';
-
-  /* DESCRIPTION */
-
-  organizationDescription = '';
-
-  /* CAMPAIGN TYPES */
-
-  selectedCampaignTypes: string[] = [
-    'one-time',
-    'recurring'
-  ];
-
-  /* LOGO */
-
-  logoPreview = '';
-
-  /* OPTIONAL */
-
   campaignTypes = [
     'גיוס תרומות',
     'מימון המונים',
@@ -67,7 +50,110 @@ export class StepProfileComponent {
     'תוכן ויצירה'
   ];
 
-  /* VALIDATION */
+  constructor(
+    private readonly stateService:
+    OrganizationRegistrationStateService
+  ) {}
+
+  // =========================
+  // HELPERS
+  // =========================
+
+  private updateState(
+    partial: any
+  ): void {
+
+    this.stateService.updateState(
+      partial
+    );
+
+  }
+
+  private get state() {
+
+    return this.stateService.state();
+
+  }
+
+  // =========================
+  // DISPLAY NAME
+  // =========================
+
+  get displayName(): string {
+
+    return this.state.displayName;
+
+  }
+
+  set displayName(value: string) {
+
+    this.updateState({
+      displayName: value
+    });
+
+  }
+
+  // =========================
+  // DESCRIPTION
+  // =========================
+
+  get organizationDescription(): string {
+
+    return this.state.organizationDescription;
+
+  }
+
+  set organizationDescription(
+    value: string
+  ) {
+
+    this.updateState({
+      organizationDescription: value
+    });
+
+  }
+
+  // =========================
+  // CAMPAIGN TYPES
+  // =========================
+
+  get selectedCampaignTypes(): string[] {
+
+    return this.state.selectedCampaignTypes;
+
+  }
+
+  set selectedCampaignTypes(
+    value: string[]
+  ) {
+
+    this.updateState({
+      selectedCampaignTypes: value
+    });
+
+  }
+
+  // =========================
+  // LOGO
+  // =========================
+
+  get logoPreview(): string {
+
+    return this.state.logoPreview;
+
+  }
+
+  set logoPreview(value: string) {
+
+    this.updateState({
+      logoPreview: value
+    });
+
+  }
+
+  // =========================
+  // VALIDATION
+  // =========================
 
   get canContinue(): boolean {
 
@@ -85,12 +171,18 @@ export class StepProfileComponent {
 
   }
 
-  /* TOGGLE TYPE */
+  // =========================
+  // CAMPAIGN TYPE
+  // =========================
 
-  toggleCampaignType(type: string): void {
+  toggleCampaignType(
+    type: string
+  ): void {
 
     const exists =
-      this.selectedCampaignTypes.includes(type);
+      this.selectedCampaignTypes.includes(
+        type
+      );
 
     if (exists) {
 
@@ -103,13 +195,20 @@ export class StepProfileComponent {
 
     }
 
-    this.selectedCampaignTypes.push(type);
+    this.selectedCampaignTypes = [
+      ...this.selectedCampaignTypes,
+      type
+    ];
 
   }
 
-  /* LOGO */
+  // =========================
+  // LOGO
+  // =========================
 
-  onLogoSelected(event: Event): void {
+  onLogoSelected(
+    event: Event
+  ): void {
 
     const input =
       event.target as HTMLInputElement;
