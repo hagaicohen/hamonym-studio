@@ -1,3 +1,5 @@
+// step-payment.component.ts
+
 import {
   Component,
   EventEmitter,
@@ -52,6 +54,8 @@ export class StepPaymentComponent {
 
   connectionError = '';
 
+  connectionAttempted = false;
+
   constructor(
     private readonly stateService:
     OrganizationRegistrationStateService
@@ -88,6 +92,9 @@ export class StepPaymentComponent {
     this.connectionSuccess =
       state.connectionSuccess;
 
+    this.connectionAttempted =
+      state.connectionAttempted || false;
+
   }
 
   // =========================
@@ -114,7 +121,10 @@ export class StepPaymentComponent {
         this.useExistingTerminal,
 
       connectionSuccess:
-        this.connectionSuccess
+        this.connectionSuccess,
+
+      connectionAttempted:
+        this.connectionAttempted
 
     });
 
@@ -154,6 +164,8 @@ export class StepPaymentComponent {
     this.connectionSuccess = false;
 
     this.connectionError = '';
+
+    this.connectionAttempted = true;
 
     setTimeout(() => {
 
@@ -198,3 +210,4 @@ export class StepPaymentComponent {
   }
 
 }
+

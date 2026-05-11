@@ -1,3 +1,5 @@
+// step-billing-method.component.ts
+
 import {
   Component,
   EventEmitter,
@@ -224,6 +226,8 @@ export class StepBillingMethodComponent {
 
         this.saveCompleted = false;
 
+        this.syncState();
+
         this.continue.emit();
 
         return;
@@ -354,3 +358,4 @@ export class StepBillingMethodComponent {
   }
 
 }
+

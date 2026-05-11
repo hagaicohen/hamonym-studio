@@ -129,6 +129,19 @@
   background: #ffffff;
 }
 
+.card-number-input {
+
+  direction: ltr;
+
+  text-align: left;
+
+  unicode-bidi: plaintext;
+
+  text-align: right
+}
+
+
+
 .payment-header {
 
   margin-bottom: 18px;

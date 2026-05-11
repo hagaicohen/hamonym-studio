@@ -65,6 +65,8 @@ export interface OrganizationRegistrationState {
 
   connectionSuccess: boolean;
 
+  connectionAttempted: boolean;
+
   // STEP 5
 
   paymentMethod: BillingPaymentMethod;
@@ -146,6 +148,8 @@ const initialState:
     useExistingTerminal: false,
 
     connectionSuccess: false,
+
+    connectionAttempted: false,
 
     // STEP 5
 

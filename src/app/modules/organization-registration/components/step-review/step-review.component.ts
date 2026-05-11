@@ -1,4 +1,3 @@
-
 // step-review.component.ts
 
 import {
@@ -17,7 +16,9 @@ import {
   OrganizationRegistrationStateService
 } from '../../services/organization-registration-state.service';
 
-import { CAMPAIGN_TYPES } from '../../constants/campaign-types';
+import {
+  CAMPAIGN_TYPES
+} from '../../constants/campaign-types';
 
 @Component({
   selector: 'app-step-review',
@@ -38,11 +39,8 @@ export class StepReviewComponent {
   submit =
     new EventEmitter<void>();
 
-  campaignTypes = CAMPAIGN_TYPES; 
-  
-  getCampaignTypeLabel( id: string ): string { 
-    return this.campaignTypes .find(x => x.id === id) ?.title || id; 
-  }
+  campaignTypes =
+    CAMPAIGN_TYPES;
 
   private readonly stateService =
     inject(
@@ -53,6 +51,56 @@ export class StepReviewComponent {
     computed(() =>
       this.stateService.state()
     );
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
+
+  getCampaignTypeLabel(
+    id: string
+  ): string {
+
+    return this.campaignTypes
+      .find(x => x.id === id)
+      ?.title || id;
+
+  }
+
+  get maskedCardNumber(): string {
+
+    const raw =
+      this.state()
+        .cardNumber
+        ?.replace(/\s/g, '');
+
+    if (!raw) {
+
+      return '-';
+
+    }
+
+    return '**** **** **** ' +
+      raw.slice(-4);
+
+  }
+
+  get paymentMethodLabel(): string {
+
+    if (
+      this.state().paymentMethod === 'masav'
+    ) {
+
+      return 'הוראת קבע / מס"ב';
+
+    }
+
+    return 'כרטיס אשראי';
+
+  }
+
+  // =========================================================
+  // ORGANIZATION
+  // =========================================================
 
   get organizationName(): string {
 
@@ -90,6 +138,10 @@ export class StepReviewComponent {
 
   }
 
+  // =========================================================
+  // PROFILE
+  // =========================================================
+
   get displayName(): string {
 
     return this.state().displayName;
@@ -108,6 +160,10 @@ export class StepReviewComponent {
 
   }
 
+  // =========================================================
+  // GOALS
+  // =========================================================
+
   get monthlyGoal(): string {
 
     return this.state().monthlyGoal;
@@ -120,17 +176,89 @@ export class StepReviewComponent {
 
   }
 
+  // =========================================================
+  // PAYMENT TERMINAL
+  // =========================================================
+
   get provider(): string {
 
     return this.state().provider;
 
   }
 
+  get terminalNumber(): string {
+
+    return this.state().terminalNumber;
+
+  }
+
+  get apiUsername(): string {
+
+    return this.state().apiUsername;
+
+  }
+
+  get connectionSuccess(): boolean {
+
+    return this.state().connectionSuccess;
+
+  }
+
+  get connectionAttempted(): boolean {
+
+    return this.state().connectionAttempted;
+
+  }
+
+  get useExistingTerminal(): boolean {
+
+    return this.state().useExistingTerminal;
+
+  }
+
+  // =========================================================
+  // BILLING
+  // =========================================================
+
   get paymentMethod(): string {
 
     return this.state().paymentMethod;
 
   }
+
+  get cardHolderName(): string {
+
+    return this.state().cardHolderName;
+
+  }
+
+  get expiry(): string {
+
+    return this.state().expiry;
+
+  }
+
+  get masavUploaded(): boolean {
+
+    return this.state().masavUploaded;
+
+  }
+
+  get masavFileName(): string {
+
+    return this.state().masavFileName;
+
+  }
+
+  get continueLater(): boolean {
+
+    return this.state().continueLater;
+
+  }
+
+  // =========================================================
+  // DOCUMENTS
+  // =========================================================
 
   get registrationCertificateUploaded(): boolean {
 
@@ -144,33 +272,9 @@ export class StepReviewComponent {
 
   }
 
-  get paymentMethodLabel(): string {
-
-    if (
-      this.paymentMethod === 'credit-card'
-    ) {
-
-      return 'כרטיס אשראי';
-
-    }
-
-    if (
-      this.paymentMethod === 'masav'
-    ) {
-
-      return 'הוראת קבע';
-
-    }
-
-    return '-';
-
-  }
-
-  get connectionSuccess(): boolean {
-
-    return this.state().connectionSuccess;
-
-  }
+  // =========================================================
+  // SUBMIT
+  // =========================================================
 
   submitApplication(): void {
 

@@ -144,13 +144,16 @@
             מספר כרטיס
           </label>
 
-          <input
-            type="text"
-            [(ngModel)]="cardNumber"
-            (input)="formatCardNumber()"
-            (keydown)="onlyNumbers($event)"
-            maxlength="19"
-            placeholder="0000 0000 0000 0000">
+
+        <input
+          type="text"
+          class="form-input card-number-input"
+          [(ngModel)]="cardNumber"
+          (input)="formatCardNumber()"
+          (keydown)="onlyNumbers($event)"
+          maxlength="19"
+          placeholder="0000 0000 0000 0000">
+
 
         </div>
 
@@ -275,8 +278,6 @@
     <div class="continue-later-wrapper">
 
       <label class="checkbox-row">
-
-        
 
         <span>
           אשלים בהמשך
