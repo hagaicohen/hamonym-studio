@@ -99,7 +99,7 @@
 
   height: 40px;
 
-  border: 1px solid #e2e8f0;
+  border: 0px;
 
   border-radius: 12px;
 
@@ -124,11 +124,10 @@
 
 .topbar-icon-btn:hover {
 
-  background: #f8fafc;
+  background: #F5F5F5;
 
-  border-color: #cbd5e1;
+  border-color: #F5F5F5;
 
-  color: #0f172a;
 
   transform: translateY(-1px);
 }
@@ -141,7 +140,7 @@
 
   height: 40px;
 
-  border: 1px solid #e2e8f0;
+  border: 0px solid #e2e8f0;
 
   border-radius: 12px;
 
@@ -167,11 +166,10 @@
 
 .logout-btn:hover {
 
-  background: #f0fdfa;
+  background: #F5F5F5;
 
-  border-color: #99f6e4;
-
-  color: #0f766e;
+  border-color: #F5F5F5;
+ 
 
   transform: translateY(-1px);
 

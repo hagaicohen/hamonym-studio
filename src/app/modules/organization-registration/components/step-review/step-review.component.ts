@@ -1,7 +1,12 @@
+
+// step-review.component.ts
+
 import {
   Component,
   EventEmitter,
-  Output
+  Output,
+  computed,
+  inject
 } from '@angular/core';
 
 import {
@@ -9,15 +14,16 @@ import {
 } from '@angular/common';
 
 import {
-  FormsModule
-} from '@angular/forms';
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
+
+import { CAMPAIGN_TYPES } from '../../constants/campaign-types';
 
 @Component({
   selector: 'app-step-review',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule
+    CommonModule
   ],
   templateUrl: './step-review.component.html',
   styleUrls: ['./step-review.component.css']
@@ -29,48 +35,148 @@ export class StepReviewComponent {
     new EventEmitter<void>();
 
   @Output()
-  continue =
+  submit =
     new EventEmitter<void>();
 
-  acceptTerms = false;
+  campaignTypes = CAMPAIGN_TYPES; 
+  
+  getCampaignTypeLabel( id: string ): string { 
+    return this.campaignTypes .find(x => x.id === id) ?.title || id; 
+  }
 
-  acceptPrivacy = false;
-
-  organizationName =
-    'עמותת אור לחיים';
-
-  campaignTypes = [
-    'תרומות חד־פעמיות',
-    'תרומות קבועות'
-  ];
-
-  paymentProvider =
-    'קארדקום';
-
-  paymentConnected =
-    true;
-
-  get canContinue(): boolean {
-
-    return (
-
-      this.acceptTerms &&
-      this.acceptPrivacy
-
+  private readonly stateService =
+    inject(
+      OrganizationRegistrationStateService
     );
+
+  protected readonly state =
+    computed(() =>
+      this.stateService.state()
+    );
+
+  get organizationName(): string {
+
+    return this.state().organizationName;
 
   }
 
-  onContinue(): void {
+  get organizationNumber(): string {
 
-    if (!this.canContinue) {
+    return this.state().organizationNumber;
 
-      return;
+  }
+
+  get fullName(): string {
+
+    return this.state().fullName;
+
+  }
+
+  get email(): string {
+
+    return this.state().email;
+
+  }
+
+  get phone(): string {
+
+    return this.state().phone;
+
+  }
+
+  get selectedCategories(): string[] {
+
+    return this.state().selectedCategories || [];
+
+  }
+
+  get displayName(): string {
+
+    return this.state().displayName;
+
+  }
+
+  get organizationDescription(): string {
+
+    return this.state().organizationDescription;
+
+  }
+
+  get selectedCampaignTypes(): string[] {
+
+    return this.state().selectedCampaignTypes;
+
+  }
+
+  get monthlyGoal(): string {
+
+    return this.state().monthlyGoal;
+
+  }
+
+  get yearlyGoal(): string {
+
+    return this.state().yearlyGoal;
+
+  }
+
+  get provider(): string {
+
+    return this.state().provider;
+
+  }
+
+  get paymentMethod(): string {
+
+    return this.state().paymentMethod;
+
+  }
+
+  get registrationCertificateUploaded(): boolean {
+
+    return true;
+
+  }
+
+  get section46Uploaded(): boolean {
+
+    return true;
+
+  }
+
+  get paymentMethodLabel(): string {
+
+    if (
+      this.paymentMethod === 'credit-card'
+    ) {
+
+      return 'כרטיס אשראי';
 
     }
 
-    this.continue.emit();
+    if (
+      this.paymentMethod === 'masav'
+    ) {
+
+      return 'הוראת קבע';
+
+    }
+
+    return '-';
+
+  }
+
+  get connectionSuccess(): boolean {
+
+    return this.state().connectionSuccess;
+
+  }
+
+  submitApplication(): void {
+
+    this.submit.emit();
 
   }
 
 }
+

@@ -1,10 +1,14 @@
+// step-profile.component.ts
+
 import {
   Component,
   EventEmitter,
   Output
 } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
+import {
+  CommonModule
+} from '@angular/common';
 
 import {
   FormsModule
@@ -17,6 +21,10 @@ import {
 import {
   OrganizationRegistrationStateService
 } from '../../services/organization-registration-state.service';
+
+import {
+  CAMPAIGN_TYPES
+} from '../../constants/campaign-types';
 
 @Component({
   selector: 'app-step-profile',
@@ -39,16 +47,8 @@ export class StepProfileComponent {
   continue =
     new EventEmitter<void>();
 
-  campaignTypes = [
-    'גיוס תרומות',
-    'מימון המונים',
-    'קמפיין חירום',
-    'הנצחה',
-    'מלגות',
-    'פרויקט קהילתי',
-    'קמפיין פוליטי',
-    'תוכן ויצירה'
-  ];
+  campaignTypes =
+    CAMPAIGN_TYPES;
 
   constructor(
     private readonly stateService:

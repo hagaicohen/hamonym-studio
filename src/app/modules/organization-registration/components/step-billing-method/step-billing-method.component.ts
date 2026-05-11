@@ -36,6 +36,10 @@ export class StepBillingMethodComponent {
   back =
     new EventEmitter<void>();
 
+  @Output()
+  continue =
+    new EventEmitter<void>();
+
   paymentMethod: PaymentMethod =
     'credit-card';
 
@@ -140,7 +144,7 @@ export class StepBillingMethodComponent {
     return !!(
 
       this.cardHolderName.trim().length > 2 &&
-      this.cardNumber.trim().length >= 16 &&
+      this.cardNumber.replace(/\s/g, '').length >= 16 &&
       this.expiry.trim().length >= 4 &&
       this.cvv.trim().length >= 3
 
@@ -220,6 +224,8 @@ export class StepBillingMethodComponent {
 
         this.saveCompleted = false;
 
+        this.continue.emit();
+
         return;
 
       }
@@ -227,6 +233,8 @@ export class StepBillingMethodComponent {
       this.saveCompleted = true;
 
       this.syncState();
+
+      this.continue.emit();
 
     }, 1200);
 
