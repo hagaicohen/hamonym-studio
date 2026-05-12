@@ -2,15 +2,9 @@
 /* step-review.component.css */
 
 .review-step {
-
-  width: 100%;
-
-  max-width: 920px;
-
-  margin: 0 auto;
-
-  padding: 32px;
-
+  max-width: 760px;  
+  margin: 24px auto; 
+  padding: 0 16px; 
   box-sizing: border-box;
 }
 
