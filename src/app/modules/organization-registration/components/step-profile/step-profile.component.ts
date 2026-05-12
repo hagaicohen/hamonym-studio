@@ -1,5 +1,3 @@
-// step-profile.component.ts
-
 import {
   Component,
   EventEmitter,
@@ -25,6 +23,12 @@ import {
 import {
   CAMPAIGN_TYPES
 } from '../../constants/campaign-types';
+
+import {
+  ENTITY_CONFIGS,
+  EntityConfig,
+  EntityType
+} from '../../config/entity-config';
 
 @Component({
   selector: 'app-step-profile',
@@ -55,10 +59,6 @@ export class StepProfileComponent {
     OrganizationRegistrationStateService
   ) {}
 
-  // =========================
-  // HELPERS
-  // =========================
-
   private updateState(
     partial: any
   ): void {
@@ -75,9 +75,15 @@ export class StepProfileComponent {
 
   }
 
-  // =========================
-  // DISPLAY NAME
-  // =========================
+  get entityConfig(): EntityConfig {
+
+    return (
+      ENTITY_CONFIGS[
+        this.state.entityType as EntityType
+      ] || ENTITY_CONFIGS.association
+    );
+
+  }
 
   get displayName(): string {
 
@@ -92,10 +98,6 @@ export class StepProfileComponent {
     });
 
   }
-
-  // =========================
-  // DESCRIPTION
-  // =========================
 
   get organizationDescription(): string {
 
@@ -113,10 +115,6 @@ export class StepProfileComponent {
 
   }
 
-  // =========================
-  // CAMPAIGN TYPES
-  // =========================
-
   get selectedCampaignTypes(): string[] {
 
     return this.state.selectedCampaignTypes;
@@ -133,10 +131,6 @@ export class StepProfileComponent {
 
   }
 
-  // =========================
-  // LOGO
-  // =========================
-
   get logoPreview(): string {
 
     return this.state.logoPreview;
@@ -150,10 +144,6 @@ export class StepProfileComponent {
     });
 
   }
-
-  // =========================
-  // VALIDATION
-  // =========================
 
   get canContinue(): boolean {
 
@@ -170,10 +160,6 @@ export class StepProfileComponent {
     );
 
   }
-
-  // =========================
-  // CAMPAIGN TYPE
-  // =========================
 
   toggleCampaignType(
     type: string
@@ -201,10 +187,6 @@ export class StepProfileComponent {
     ];
 
   }
-
-  // =========================
-  // LOGO
-  // =========================
 
   onLogoSelected(
     event: Event

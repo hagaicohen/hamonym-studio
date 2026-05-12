@@ -5,7 +5,7 @@
   <div class="step-header">
 
     <h1 class="step-title">
-      הצטרפות כעמותה
+      {{ entityConfig.labels.onboardingTitle }}
     </h1>
 
     <div class="step-number">
@@ -90,7 +90,7 @@
     </h2>
 
     <p>
-      פרטי העמותה ובדיקת תקינות
+      פרטי הישות ובדיקת תקינות
     </p>
 
     <!-- ENTITY -->
@@ -104,7 +104,7 @@
       <label class="field-label">
         סוג הישות *
       </label>
-
+      
       <select
         [(ngModel)]="entityType"
         [class.placeholder]="!entityType">
@@ -121,31 +121,33 @@
           עמותה
         </option>
 
-        <option value="public-benefit-company">
-          חל"צ
+        <option value="chalatz">
+          חל״צ
         </option>
 
-        <option value="new-political-party">
+        <option value="political_party_new">
           מפלגה פוליטית חדשה
         </option>
 
-        <option value="registered-political-party">
+        <option value="political_party_registered">
           מפלגה פוליטית רשומה
         </option>
 
-        <option value="exempt-dealer">
+        <option value="sole_exempt">
           עוסק פטור
+          (יוצרי תוכן בלבד)
         </option>
 
-        <option value="licensed-dealer">
+        <option value="sole_registered">
           עוסק מורשה
+          (יוצרי תוכן בלבד)
         </option>
 
       </select>
 
     </div>
 
-    @if (entityType === 'association') {
+    @if (entityType) {
 
       <!-- ORGANIZATION DETAILS -->
 
@@ -175,7 +177,7 @@
           </svg>
 
           <div class="section-title">
-            פרטי העמותה
+            פרטי {{ entityConfig.labels.entity }}
           </div>
 
         </div>
@@ -185,22 +187,23 @@
         <div class="field">
 
           <label>
-            שם העמותה *
+            {{ entityConfig.labels.entityName }} *
           </label>
 
           <input
             type="text"
             [(ngModel)]="organizationName"
-            placeholder="העמותה למען הקהילה">
+            placeholder="הקלד שם">
 
         </div>
 
         <!-- NUMBER -->
 
+       @if (entityConfig.labels.registrationNumber) {
         <div class="field">
 
           <label>
-            מספר עמותה *
+            {{ entityConfig.labels.registrationNumber }} *
           </label>
 
           <input
@@ -210,9 +213,11 @@
             [value]="organizationNumber"
             (input)="onOrganizationNumberInput($event)"
             maxlength="9"
-            placeholder="580123456">
+            placeholder="הקלד מספר רישום">
 
         </div>
+
+      }
 
       </div>
 
@@ -343,7 +348,7 @@
             <input
               type="email"
               [(ngModel)]="email"
-              placeholder="contact@charity.org.il"
+              placeholder="contact@example.com"
               [class.invalid]="email && !isEmailValid">
 
             @if (email && !isEmailValid) {
@@ -425,11 +430,11 @@
         <div class="document-upload">
 
           <label class="document-label">
-            תעודת רישום העמותה *
+            {{ entityConfig.labels.registrationDocument }} *
           </label>
 
           <p class="document-description">
-            יש להעלות תעודת רישום מקורית של העמותה
+            יש להעלות {{ entityConfig.labels.registrationDocument }}
             (PDF, JPG, PNG - עד 10MB)
           </p>
 
@@ -447,7 +452,7 @@
               class="upload-btn"
               (click)="certificateInput.click()">
 
-              העלה תעודת רישום
+              העלה {{ entityConfig.labels.registrationDocument }}
 
             </button>
 
@@ -487,72 +492,76 @@
 
         </div>
 
-        <!-- SECTION 46 -->
+        @if (entityConfig.showSection46) {
 
-        <div class="document-upload">
+          <!-- SECTION 46 -->
 
-          <label class="document-label">
-            אישור זיכוי מס לפי סעיף 46 *
-          </label>
+          <div class="document-upload">
 
-          <p class="document-description">
-            יש להעלות אישור תקף
-            (PDF, JPG, PNG - עד 10MB)
-          </p>
+            <label class="document-label">
+              אישור זיכוי מס לפי סעיף 46 *
+            </label>
 
-          <input
-            #section46Input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            hidden
-            (change)="onSection46Selected($event)">
+            <p class="document-description">
+              יש להעלות אישור תקף
+              (PDF, JPG, PNG - עד 10MB)
+            </p>
 
-          @if (!section46FileName) {
+            <input
+              #section46Input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              hidden
+              (change)="onSection46Selected($event)">
 
-            <button
-              type="button"
-              class="upload-btn"
-              (click)="section46Input.click()">
-
-              העלה אישור סעיף 46
-
-            </button>
-
-          } @else {
-
-            <div class="uploaded-file-row">
+            @if (!section46FileName) {
 
               <button
                 type="button"
-                class="upload-success-btn">
+                class="upload-btn"
+                (click)="section46Input.click()">
 
-                הועלה בהצלחה
-
-              </button>
-
-              <a
-                [href]="section46FileUrl"
-                target="_blank"
-                class="view-file-link">
-
-                הצג קובץ
-
-              </a>
-
-              <button
-                type="button"
-                class="remove-file-btn"
-                (click)="removeSection46()">
-
-                הסר
+                העלה אישור סעיף 46
 
               </button>
 
-            </div>
+            } @else {
 
-          }
+              <div class="uploaded-file-row">
 
-        </div>
+                <button
+                  type="button"
+                  class="upload-success-btn">
+
+                  הועלה בהצלחה
+
+                </button>
+
+                <a
+                  [href]="section46FileUrl"
+                  target="_blank"
+                  class="view-file-link">
+
+                  הצג קובץ
+
+                </a>
+
+                <button
+                  type="button"
+                  class="remove-file-btn"
+                  (click)="removeSection46()">
+
+                  הסר
+
+                </button>
+
+              </div>
+
+            }
+
+          </div>
+
+        }
 
         <!-- INFO -->
 
@@ -569,7 +578,7 @@
               <div class="documents-info-text">
                 המסמכים יועברו לבדיקה ואישור
                 על ידי צוות המערכת לפני
-                אישור העמותה בפלטפורמה.
+                אישור הישות בפלטפורמה.
               </div>
 
             </div>

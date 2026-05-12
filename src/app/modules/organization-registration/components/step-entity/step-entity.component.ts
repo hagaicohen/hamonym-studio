@@ -12,6 +12,12 @@ import {
   OrganizationRegistrationStateService
 } from '../../services/organization-registration-state.service';
 
+import {
+  ENTITY_CONFIGS,
+  EntityConfig,
+  EntityType
+} from '../../config/entity-config';
+
 @Component({
   selector: 'app-step-entity',
   standalone: true,
@@ -27,6 +33,8 @@ export class StepEntityComponent {
   @Output()
   continue =
     new EventEmitter<void>();
+
+  entityConfigs = ENTITY_CONFIGS;
 
   categories = [
     'פוליטיקה וממשל',
@@ -63,10 +71,6 @@ export class StepEntityComponent {
     OrganizationRegistrationStateService
   ) {}
 
-  // =========================
-  // STATE HELPERS
-  // =========================
-
   private updateState(
     partial: any
   ): void {
@@ -81,9 +85,15 @@ export class StepEntityComponent {
 
   }
 
-  // =========================
-  // STEP 1 FIELDS
-  // =========================
+  get entityConfig(): EntityConfig {
+
+    return (
+      ENTITY_CONFIGS[
+        this.entityType as EntityType
+      ] || ENTITY_CONFIGS.association
+    );
+
+  }
 
   get entityType(): string {
 
@@ -253,10 +263,6 @@ export class StepEntityComponent {
 
   }
 
-  // =========================
-  // CATEGORY
-  // =========================
-
   toggleCategory(category: string): void {
 
     const exists =
@@ -279,10 +285,6 @@ export class StepEntityComponent {
     ];
 
   }
-
-  // =========================
-  // PHONE
-  // =========================
 
   onPhoneInput(event: Event): void {
 
@@ -310,10 +312,6 @@ export class StepEntityComponent {
 
   }
 
-  // =========================
-  // ORGANIZATION NUMBER
-  // =========================
-
   onOrganizationNumberInput(
     event: Event
   ): void {
@@ -333,10 +331,6 @@ export class StepEntityComponent {
       value;
 
   }
-
-  // =========================
-  // CERTIFICATE
-  // =========================
 
   onCertificateSelected(
     event: Event
@@ -366,10 +360,6 @@ export class StepEntityComponent {
 
   }
 
-  // =========================
-  // SECTION 46
-  // =========================
-
   onSection46Selected(
     event: Event
   ): void {
@@ -398,10 +388,6 @@ export class StepEntityComponent {
 
   }
 
-  // =========================
-  // VALIDATION
-  // =========================
-
   get isPhoneValid(): boolean {
 
     return /^05\d-\d{7}$/.test(
@@ -420,6 +406,10 @@ export class StepEntityComponent {
 
   get canContinue(): boolean {
 
+    const section46Valid =
+      !this.entityConfig.showSection46 ||
+      !!this.section46FileName;
+
     return !!(
 
       this.entityType &&
@@ -430,7 +420,7 @@ export class StepEntityComponent {
       this.isPhoneValid &&
       this.isEmailValid &&
       this.certificateFileName &&
-      this.section46FileName
+      section46Valid
 
     );
 

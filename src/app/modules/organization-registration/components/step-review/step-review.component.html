@@ -40,7 +40,6 @@
   <!-- ===================================================== -->
   <!-- ORGANIZATION -->
   <!-- ===================================================== -->
-
   <div class="summary-card">
 
     <div class="summary-card-header">
@@ -67,7 +66,7 @@
       <div>
 
         <div class="summary-card-title">
-          פרטי העמותה
+          פרטי {{ entityConfig.labels.entity }}
         </div>
 
         <div class="summary-badge">
@@ -87,7 +86,7 @@
         </div>
 
         <div class="summary-value">
-          עמותה
+          {{ entityConfig.labels.entity }}
         </div>
 
       </div>
@@ -95,7 +94,7 @@
       <div class="summary-item">
 
         <div class="summary-label">
-          שם העמותה
+          {{ entityConfig.labels.entityName }}
         </div>
 
         <div class="summary-value">
@@ -104,17 +103,21 @@
 
       </div>
 
-      <div class="summary-item">
+      @if (entityConfig.labels.registrationNumber) {
 
-        <div class="summary-label">
-          מספר עמותה
+        <div class="summary-item">
+
+          <div class="summary-label">
+            {{ entityConfig.labels.registrationNumber }}
+          </div>
+
+          <div class="summary-value">
+            {{ organizationNumber }}
+          </div>
+
         </div>
 
-        <div class="summary-value">
-          {{ organizationNumber }}
-        </div>
-
-      </div>
+      }
 
       <div class="summary-item">
 
@@ -205,37 +208,41 @@
             </svg>
 
             <span>
-              תעודת רישום
+              {{ entityConfig.labels.registrationDocument }}
             </span>
 
           </div>
 
-          <div
-            class="document-status success"
-            *ngIf="section46Uploaded">
+          @if (entityConfig.showSection46) {
 
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2">
+            <div
+              class="document-status success"
+              *ngIf="section46Uploaded">
 
-              <circle
-                cx="12"
-                cy="12"
-                r="10">
-              </circle>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2">
 
-              <path d="m9 12 2 2 4-4"></path>
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10">
+                </circle>
 
-            </svg>
+                <path d="m9 12 2 2 4-4"></path>
 
-            <span>
-              אישור סעיף 46
-            </span>
+              </svg>
 
-          </div>
+              <span>
+                אישור סעיף 46
+              </span>
+
+            </div>
+
+          }
 
         </div>
 
@@ -248,7 +255,6 @@
   <!-- ===================================================== -->
   <!-- PROFILE -->
   <!-- ===================================================== -->
-
   <div class="summary-card">
 
     <div class="summary-card-header">
@@ -287,7 +293,7 @@
       <div>
 
         <div class="summary-card-title">
-          פרופיל העמותה
+          פרופיל {{ entityConfig.labels.entity }}
         </div>
 
       </div>
@@ -336,7 +342,7 @@
       <div class="summary-item full-width">
 
         <div class="summary-label">
-          תיאור העמותה
+          תיאור {{ entityConfig.labels.entity }}
         </div>
 
         <div class="summary-description">

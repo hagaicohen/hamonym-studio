@@ -1,5 +1,4 @@
 export type EntityType =
-
   | 'association'
   | 'chalatz'
   | 'political_party_new'
@@ -80,7 +79,7 @@ export const ENTITY_CONFIGS:
 
       entityName: 'שם המפלגה',
 
-      registrationNumber: 'מספר בקשה',
+      registrationNumber: '',
 
       registrationDocument: 'מסמכי הקמה',
 
@@ -100,7 +99,7 @@ export const ENTITY_CONFIGS:
 
       entityName: 'שם המפלגה',
 
-      registrationNumber: 'מספר מפלגה',
+      registrationNumber: '',
 
       registrationDocument: 'תעודת רישום מפלגה',
 
@@ -116,7 +115,7 @@ export const ENTITY_CONFIGS:
 
     labels: {
 
-      entity: 'עוסק פטור (יוצרי תוכן בלבד)',
+      entity: 'עוסק פטור',
 
       entityName: 'שם העסק',
 
@@ -136,7 +135,7 @@ export const ENTITY_CONFIGS:
 
     labels: {
 
-      entity: 'עוסק מורשה (יוצרי תוכן בלבד)',
+      entity: 'עוסק מורשה',
 
       entityName: 'שם העסק',
 

@@ -20,6 +20,12 @@ import {
   CAMPAIGN_TYPES
 } from '../../constants/campaign-types';
 
+import {
+  ENTITY_CONFIGS,
+  EntityConfig,
+  EntityType
+} from '../../config/entity-config';
+
 @Component({
   selector: 'app-step-review',
   standalone: true,
@@ -51,6 +57,15 @@ export class StepReviewComponent {
     computed(() =>
       this.stateService.state()
     );
+
+  get entityConfig(): EntityConfig {
+    return (
+      ENTITY_CONFIGS[
+        this.state().entityType as EntityType
+      ] || ENTITY_CONFIGS.association
+    );
+
+  }
 
   // =========================================================
   // HELPERS
