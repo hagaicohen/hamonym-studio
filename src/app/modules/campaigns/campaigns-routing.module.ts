@@ -7,20 +7,20 @@ import { CampaignBuilderComponent } from './pages/campaign-builder/campaign-buil
 const routes: Routes = [
   {
     path: '',
-    component: CampaignListComponent
+    component: CampaignListComponent,
   },
   {
     path: 'builder/new',
-    component: CampaignBuilderComponent
+    component: CampaignBuilderComponent,
   },
   {
     path: 'builder/:id',
-    component: CampaignBuilderComponent
-  }
+    component: CampaignBuilderComponent,
+  },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
 export class CampaignsRoutingModule {}

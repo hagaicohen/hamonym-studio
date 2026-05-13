@@ -1,67 +1,42 @@
 <div class="step-card">
-
   <!-- HEADER -->
 
   <div class="step-header">
-
     <h1 class="step-title">
       {{ entityConfig.labels.onboardingTitle }}
     </h1>
 
-    <div class="step-number">
-      שלב 1 מתוך 6
-    </div>
-
+    <div class="step-number">שלב 1 מתוך 6</div>
   </div>
 
   <!-- PROGRESS -->
 
   <div class="progress-bar-wrapper">
-
     <div class="progress-bar">
-
       <div class="progress-fill"></div>
-
     </div>
 
     <div class="progress-steps">
+      <div class="progress-step active">1</div>
 
-      <div class="progress-step active">
-        1
-      </div>
+      <div class="progress-step">2</div>
 
-      <div class="progress-step">
-        2
-      </div>
+      <div class="progress-step">3</div>
 
-      <div class="progress-step">
-        3
-      </div>
+      <div class="progress-step">4</div>
 
-      <div class="progress-step">
-        4
-      </div>
+      <div class="progress-step">5</div>
 
-      <div class="progress-step">
-        5
-      </div>
-
-      <div class="progress-step">
-        6
-      </div>
-
+      <div class="progress-step">6</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="step-body">
-
     <!-- ICON -->
 
     <div class="entity-icon">
-
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="34"
@@ -71,8 +46,8 @@
         stroke="currentColor"
         stroke-width="2"
         stroke-linecap="round"
-        stroke-linejoin="round">
-
+        stroke-linejoin="round"
+      >
         <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
         <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
         <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
@@ -80,81 +55,42 @@
         <path d="M10 10h4"></path>
         <path d="M10 14h4"></path>
         <path d="M10 18h4"></path>
-
       </svg>
-
     </div>
 
-    <h2>
-      בואו נכיר
-    </h2>
+    <h2>בואו נכיר</h2>
 
-    <p>
-      פרטי הישות ובדיקת תקינות
-    </p>
+    <p>פרטי הישות ובדיקת תקינות</p>
 
     <!-- ENTITY -->
 
     <div class="form-section">
+      <div class="section-title">סוג הישות</div>
 
-      <div class="section-title">
-        סוג הישות
-      </div>
+      <label class="field-label"> סוג הישות * </label>
 
-      <label class="field-label">
-        סוג הישות *
-      </label>
-      
-      <select
-        [(ngModel)]="entityType"
-        [class.placeholder]="!entityType">
+      <select [(ngModel)]="entityType" [class.placeholder]="!entityType">
+        <option value="" disabled>בחר סוג ישות</option>
 
-        <option
-          value=""
-          disabled>
+        <option value="association">עמותה</option>
 
-          בחר סוג ישות
+        <option value="chalatz">חל״צ</option>
 
-        </option>
+        <option value="political_party_new">מפלגה פוליטית חדשה</option>
 
-        <option value="association">
-          עמותה
-        </option>
+        <option value="political_party_registered">מפלגה פוליטית רשומה</option>
 
-        <option value="chalatz">
-          חל״צ
-        </option>
+        <option value="sole_exempt">עוסק פטור (יוצרי תוכן בלבד)</option>
 
-        <option value="political_party_new">
-          מפלגה פוליטית חדשה
-        </option>
-
-        <option value="political_party_registered">
-          מפלגה פוליטית רשומה
-        </option>
-
-        <option value="sole_exempt">
-          עוסק פטור
-          (יוצרי תוכן בלבד)
-        </option>
-
-        <option value="sole_registered">
-          עוסק מורשה
-          (יוצרי תוכן בלבד)
-        </option>
-
+        <option value="sole_registered">עוסק מורשה (יוצרי תוכן בלבד)</option>
       </select>
-
     </div>
 
     @if (entityType) {
-
       <!-- ORGANIZATION DETAILS -->
 
       <div class="form-section">
-
         <div class="section-header">
-
           <svg
             class="section-icon"
             xmlns="http://www.w3.org/2000/svg"
@@ -165,68 +101,54 @@
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
-            stroke-linejoin="round">
-
+            stroke-linejoin="round"
+          >
             <path d="M3 21h18"></path>
             <path d="M5 21V7l8-4v18"></path>
             <path d="M19 21V11l-6-4"></path>
             <path d="M9 9h1"></path>
             <path d="M9 13h1"></path>
             <path d="M9 17h1"></path>
-
           </svg>
 
-          <div class="section-title">
-            פרטי {{ entityConfig.labels.entity }}
-          </div>
-
+          <div class="section-title">פרטי {{ entityConfig.labels.entity }}</div>
         </div>
 
         <!-- NAME -->
 
         <div class="field">
-
-          <label>
-            {{ entityConfig.labels.entityName }} *
-          </label>
+          <label> {{ entityConfig.labels.entityName }} * </label>
 
           <input
             type="text"
             [(ngModel)]="organizationName"
-            placeholder="הקלד שם">
-
+            placeholder="הקלד שם"
+          />
         </div>
 
         <!-- NUMBER -->
 
-       @if (entityConfig.labels.registrationNumber) {
-        <div class="field">
+        @if (entityConfig.labels.registrationNumber) {
+          <div class="field">
+            <label> {{ entityConfig.labels.registrationNumber }} * </label>
 
-          <label>
-            {{ entityConfig.labels.registrationNumber }} *
-          </label>
-
-          <input
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            [value]="organizationNumber"
-            (input)="onOrganizationNumberInput($event)"
-            maxlength="9"
-            placeholder="הקלד מספר רישום">
-
-        </div>
-
-      }
-
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [value]="organizationNumber"
+              (input)="onOrganizationNumberInput($event)"
+              maxlength="9"
+              placeholder="הקלד מספר רישום"
+            />
+          </div>
+        }
       </div>
 
       <!-- CATEGORIES -->
 
       <div class="form-section">
-
         <div class="section-header">
-
           <svg
             class="section-icon"
             xmlns="http://www.w3.org/2000/svg"
@@ -237,137 +159,92 @@
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
-            stroke-linejoin="round">
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+            ></path>
 
-            <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path>
-
-            <circle
-              cx="7.5"
-              cy="7.5"
-              r=".5"
-              fill="currentColor">
-            </circle>
-
+            <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle>
           </svg>
 
-          <div class="section-title">
-            קטגוריות
-          </div>
-
+          <div class="section-title">קטגוריות</div>
         </div>
 
-        <label class="field-label">
-          קטגוריה ראשית *
-        </label>
+        <label class="field-label"> קטגוריה ראשית * </label>
 
         <select
           [(ngModel)]="primaryCategory"
-          [class.placeholder]="!primaryCategory">
-
-          <option
-            value=""
-            disabled>
-
-            בחר קטגוריה ראשית
-
-          </option>
+          [class.placeholder]="!primaryCategory"
+        >
+          <option value="" disabled>בחר קטגוריה ראשית</option>
 
           @for (category of categories; track category) {
-
             <option [value]="category">
               {{ category }}
             </option>
-
           }
-
         </select>
 
         <!-- CHIPS -->
 
-        <div class="chips-title">
-          קטגוריות נוספות (אופציונלי)
-        </div>
+        <div class="chips-title">קטגוריות נוספות (אופציונלי)</div>
 
         <div class="chips">
-
           @for (category of categories; track category) {
-
             @if (category !== primaryCategory) {
-
               <button
                 type="button"
                 class="chip"
                 [class.active]="selectedCategories.includes(category)"
-                (click)="toggleCategory(category)">
-
+                (click)="toggleCategory(category)"
+              >
                 {{ category }}
-
               </button>
-
             }
-
           }
-
         </div>
-
       </div>
 
       <!-- CONTACT -->
 
       <div class="form-section">
-
-        <div class="section-title">
-          איש קשר
-        </div>
+        <div class="section-title">איש קשר</div>
 
         <!-- FULL NAME -->
 
         <div class="field">
-
-          <label>
-            שם מלא *
-          </label>
+          <label> שם מלא * </label>
 
           <input
             type="text"
             [(ngModel)]="fullName"
-            placeholder="ישראל ישראלי">
-
+            placeholder="ישראל ישראלי"
+          />
         </div>
 
         <div class="contact-grid">
-
           <!-- EMAIL -->
 
           <div class="field">
-
-            <label>
-              אימייל *
-            </label>
+            <label> אימייל * </label>
 
             <input
               type="email"
               [(ngModel)]="email"
               placeholder="contact@example.com"
-              [class.invalid]="email && !isEmailValid">
+              [class.invalid]="email && !isEmailValid"
+            />
 
             @if (email && !isEmailValid) {
-
-              <div class="field-error">
-                כתובת אימייל לא תקינה
-              </div>
-
+              <div class="field-error">כתובת אימייל לא תקינה</div>
             }
-
           </div>
 
           <!-- PHONE -->
 
           <div class="field">
-
-            <label>
-              טלפון *
-            </label>
+            <label> טלפון * </label>
 
             <input
               type="tel"
@@ -377,28 +254,20 @@
               (input)="onPhoneInput($event)"
               maxlength="11"
               placeholder="050-1234567"
-              [class.invalid]="phone && !isPhoneValid">
+              [class.invalid]="phone && !isPhoneValid"
+            />
 
             @if (phone && !isPhoneValid) {
-
-              <div class="field-error">
-                מספר טלפון לא תקין
-              </div>
-
+              <div class="field-error">מספר טלפון לא תקין</div>
             }
-
           </div>
-
         </div>
-
       </div>
 
       <!-- DOCUMENTS -->
 
       <div class="form-section">
-
         <div class="section-header">
-
           <svg
             class="documents-icon"
             xmlns="http://www.w3.org/2000/svg"
@@ -409,26 +278,23 @@
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
-            stroke-linejoin="round">
-
-            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+            stroke-linejoin="round"
+          >
+            <path
+              d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+            ></path>
             <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
             <path d="M10 9H8"></path>
             <path d="M16 13H8"></path>
             <path d="M16 17H8"></path>
-
           </svg>
 
-          <div class="section-title">
-            מסמכים נדרשים
-          </div>
-
+          <div class="section-title">מסמכים נדרשים</div>
         </div>
 
         <!-- CERTIFICATE -->
 
         <div class="document-upload">
-
           <label class="document-label">
             {{ entityConfig.labels.registrationDocument }} *
           </label>
@@ -443,68 +309,50 @@
             type="file"
             accept=".pdf,.jpg,.jpeg,.png"
             hidden
-            (change)="onCertificateSelected($event)">
+            (change)="onCertificateSelected($event)"
+          />
 
           @if (!certificateFileName) {
-
             <button
               type="button"
               class="upload-btn"
-              (click)="certificateInput.click()">
-
+              (click)="certificateInput.click()"
+            >
               העלה {{ entityConfig.labels.registrationDocument }}
-
             </button>
-
           } @else {
-
             <div class="uploaded-file-row">
-
-              <button
-                type="button"
-                class="upload-success-btn">
-
+              <button type="button" class="upload-success-btn">
                 הועלה בהצלחה
-
               </button>
 
               <a
                 [href]="certificateFileUrl"
                 target="_blank"
-                class="view-file-link">
-
+                class="view-file-link"
+              >
                 הצג קובץ
-
               </a>
 
               <button
                 type="button"
                 class="remove-file-btn"
-                (click)="removeCertificate()">
-
+                (click)="removeCertificate()"
+              >
                 הסר
-
               </button>
-
             </div>
-
           }
-
         </div>
 
         @if (entityConfig.showSection46) {
-
           <!-- SECTION 46 -->
 
           <div class="document-upload">
-
-            <label class="document-label">
-              אישור זיכוי מס לפי סעיף 46 *
-            </label>
+            <label class="document-label"> אישור זיכוי מס לפי סעיף 46 * </label>
 
             <p class="document-description">
-              יש להעלות אישור תקף
-              (PDF, JPG, PNG - עד 10MB)
+              יש להעלות אישור תקף (PDF, JPG, PNG - עד 10MB)
             </p>
 
             <input
@@ -512,101 +360,71 @@
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               hidden
-              (change)="onSection46Selected($event)">
+              (change)="onSection46Selected($event)"
+            />
 
             @if (!section46FileName) {
-
               <button
                 type="button"
                 class="upload-btn"
-                (click)="section46Input.click()">
-
+                (click)="section46Input.click()"
+              >
                 העלה אישור סעיף 46
-
               </button>
-
             } @else {
-
               <div class="uploaded-file-row">
-
-                <button
-                  type="button"
-                  class="upload-success-btn">
-
+                <button type="button" class="upload-success-btn">
                   הועלה בהצלחה
-
                 </button>
 
                 <a
                   [href]="section46FileUrl"
                   target="_blank"
-                  class="view-file-link">
-
+                  class="view-file-link"
+                >
                   הצג קובץ
-
                 </a>
 
                 <button
                   type="button"
                   class="remove-file-btn"
-                  (click)="removeSection46()">
-
+                  (click)="removeSection46()"
+                >
                   הסר
-
                 </button>
-
               </div>
-
             }
-
           </div>
-
         }
 
         <!-- INFO -->
 
         <div class="documents-info">
-
           <div class="documents-info-row">
-
             <div>
-
-              <div class="documents-info-title">
-                למידע:
-              </div>
+              <div class="documents-info-title">למידע:</div>
 
               <div class="documents-info-text">
-                המסמכים יועברו לבדיקה ואישור
-                על ידי צוות המערכת לפני
-                אישור הישות בפלטפורמה.
+                המסמכים יועברו לבדיקה ואישור על ידי צוות המערכת לפני אישור הישות
+                בפלטפורמה.
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
 
       <!-- ACTIONS -->
 
       <div class="wizard-actions">
-
         <button
           type="button"
           class="continue-btn"
           [disabled]="!canContinue"
-          (click)="continue.emit()">
-
+          (click)="continue.emit()"
+        >
           המשך לשלב הבא
-
         </button>
-
       </div>
-
     }
-
   </div>
-
 </div>

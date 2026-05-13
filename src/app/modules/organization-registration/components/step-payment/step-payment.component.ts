@@ -1,42 +1,26 @@
 // step-payment.component.ts
 
-import {
-  Component,
-  EventEmitter,
-  Output
-} from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  OrganizationRegistrationStateService
-} from '../../services/organization-registration-state.service';
+import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 
 @Component({
   selector: 'app-step-payment',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './step-payment.component.html',
-  styleUrls: ['./step-payment.component.css']
+  styleUrls: ['./step-payment.component.css'],
 })
 export class StepPaymentComponent {
+  @Output()
+  back = new EventEmitter<void>();
 
   @Output()
-  back =
-    new EventEmitter<void>();
-
-  @Output()
-  continue =
-    new EventEmitter<void>();
+  continue = new EventEmitter<void>();
 
   provider = 'cardcom';
 
@@ -57,12 +41,9 @@ export class StepPaymentComponent {
   connectionAttempted = false;
 
   constructor(
-    private readonly stateService:
-    OrganizationRegistrationStateService
+    private readonly stateService: OrganizationRegistrationStateService,
   ) {
-
     this.loadState();
-
   }
 
   // =========================
@@ -70,31 +51,21 @@ export class StepPaymentComponent {
   // =========================
 
   loadState(): void {
+    const state = this.stateService.state();
 
-    const state =
-      this.stateService.state();
+    this.provider = state.provider;
 
-    this.provider =
-      state.provider;
+    this.terminalNumber = state.terminalNumber;
 
-    this.terminalNumber =
-      state.terminalNumber;
+    this.apiUsername = state.apiUsername;
 
-    this.apiUsername =
-      state.apiUsername;
+    this.apiPassword = state.apiPassword;
 
-    this.apiPassword =
-      state.apiPassword;
+    this.useExistingTerminal = state.useExistingTerminal;
 
-    this.useExistingTerminal =
-      state.useExistingTerminal;
+    this.connectionSuccess = state.connectionSuccess;
 
-    this.connectionSuccess =
-      state.connectionSuccess;
-
-    this.connectionAttempted =
-      state.connectionAttempted || false;
-
+    this.connectionAttempted = state.connectionAttempted || false;
   }
 
   // =========================
@@ -102,32 +73,21 @@ export class StepPaymentComponent {
   // =========================
 
   saveState(): void {
-
     this.stateService.updateState({
+      provider: this.provider,
 
-      provider:
-        this.provider,
+      terminalNumber: this.terminalNumber,
 
-      terminalNumber:
-        this.terminalNumber,
+      apiUsername: this.apiUsername,
 
-      apiUsername:
-        this.apiUsername,
+      apiPassword: this.apiPassword,
 
-      apiPassword:
-        this.apiPassword,
+      useExistingTerminal: this.useExistingTerminal,
 
-      useExistingTerminal:
-        this.useExistingTerminal,
+      connectionSuccess: this.connectionSuccess,
 
-      connectionSuccess:
-        this.connectionSuccess,
-
-      connectionAttempted:
-        this.connectionAttempted
-
+      connectionAttempted: this.connectionAttempted,
     });
-
   }
 
   // =========================
@@ -135,22 +95,16 @@ export class StepPaymentComponent {
   // =========================
 
   get canContinue(): boolean {
-
     if (this.useExistingTerminal) {
-
       return true;
-
     }
 
     return !!(
-
       this.provider &&
       this.terminalNumber.trim() &&
       this.apiUsername.trim() &&
       this.apiPassword.trim()
-
     );
-
   }
 
   // =========================
@@ -158,7 +112,6 @@ export class StepPaymentComponent {
   // =========================
 
   testConnection(): void {
-
     this.isCheckingConnection = true;
 
     this.connectionSuccess = false;
@@ -168,7 +121,6 @@ export class StepPaymentComponent {
     this.connectionAttempted = true;
 
     setTimeout(() => {
-
       this.isCheckingConnection = false;
 
       // TODO:
@@ -176,13 +128,10 @@ export class StepPaymentComponent {
 
       this.connectionSuccess = false;
 
-      this.connectionError =
-        'החיבור למסוף נכשל';
+      this.connectionError = 'החיבור למסוף נכשל';
 
       this.saveState();
-
     }, 1200);
-
   }
 
   // =========================
@@ -190,11 +139,9 @@ export class StepPaymentComponent {
   // =========================
 
   onContinue(): void {
-
     this.saveState();
 
     this.continue.emit();
-
   }
 
   // =========================
@@ -202,12 +149,8 @@ export class StepPaymentComponent {
   // =========================
 
   onBack(): void {
-
     this.saveState();
 
     this.back.emit();
-
   }
-
 }
-

@@ -43,7 +43,6 @@
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .app-body {
     display: block;
   }
@@ -78,5 +77,4 @@
     opacity: 1;
     visibility: visible;
   }
-
 }

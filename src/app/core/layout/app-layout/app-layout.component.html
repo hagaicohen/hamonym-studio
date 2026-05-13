@@ -1,40 +1,33 @@
 <!-- src/app/core/layout/app-layout/app-layout.component.html -->
 
 <div class="app-shell">
-
   <!-- TOPBAR -->
 
-  <app-topbar
-    (menuClick)="toggleSidebar()">
-  </app-topbar>
+  <app-topbar (menuClick)="toggleSidebar()"> </app-topbar>
 
   <!-- MOBILE OVERLAY -->
 
   <div
     class="mobile-overlay"
     [class.open]="mobileSidebarOpen"
-    (click)="closeSidebar()">
-  </div>
+    (click)="closeSidebar()"
+  ></div>
 
   <!-- BODY -->
 
   <div class="app-body">
-
     <!-- SIDEBAR -->
 
     <app-sidebar
       [mobileOpen]="mobileSidebarOpen"
-      (closeMobile)="closeSidebar()">
+      (closeMobile)="closeSidebar()"
+    >
     </app-sidebar>
 
     <!-- CONTENT -->
 
     <main class="app-content">
-
       <router-outlet></router-outlet>
-
     </main>
-
   </div>
-
 </div>

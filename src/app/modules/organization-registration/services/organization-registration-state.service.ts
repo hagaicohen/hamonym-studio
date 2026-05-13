@@ -1,14 +1,8 @@
-import {
-  Injectable,
-  signal
-} from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
-export type BillingPaymentMethod =
-  | 'credit-card'
-  | 'masav';
+export type BillingPaymentMethod = 'credit-card' | 'masav';
 
 export interface OrganizationRegistrationState {
-
   // STEP 1
 
   entityType: string;
@@ -84,122 +78,101 @@ export interface OrganizationRegistrationState {
   masavFileName: string;
 
   continueLater: boolean;
-
 }
 
-const initialState:
-  OrganizationRegistrationState = {
+const initialState: OrganizationRegistrationState = {
+  // STEP 1
 
-    // STEP 1
+  entityType: '',
 
-    entityType: '',
+  organizationName: '',
 
-    organizationName: '',
+  organizationNumber: '',
 
-    organizationNumber: '',
+  primaryCategory: '',
 
-    primaryCategory: '',
+  fullName: '',
 
-    fullName: '',
+  phone: '',
 
-    phone: '',
+  email: '',
 
-    email: '',
+  certificateFileName: '',
 
-    certificateFileName: '',
+  certificateFileUrl: '',
 
-    certificateFileUrl: '',
+  section46FileName: '',
 
-    section46FileName: '',
+  section46FileUrl: '',
 
-    section46FileUrl: '',
+  selectedCategories: [],
 
-    selectedCategories: [],
+  // STEP 2
 
-    // STEP 2
+  displayName: '',
 
-    displayName: '',
+  organizationDescription: '',
 
-    organizationDescription: '',
+  selectedCampaignTypes: ['one-time', 'recurring'],
 
-    selectedCampaignTypes: [
-      'one-time',
-      'recurring'
-    ],
+  logoPreview: '',
 
-    logoPreview: '',
+  // STEP 3
 
-    // STEP 3
+  monthlyGoal: '',
 
-    monthlyGoal: '',
+  yearlyGoal: '',
 
-    yearlyGoal: '',
+  // STEP 4
 
-    // STEP 4
+  provider: 'cardcom',
 
-    provider: 'cardcom',
+  terminalNumber: '',
 
-    terminalNumber: '',
+  apiUsername: '',
 
-    apiUsername: '',
+  apiPassword: '',
 
-    apiPassword: '',
+  useExistingTerminal: false,
 
-    useExistingTerminal: false,
+  connectionSuccess: false,
 
-    connectionSuccess: false,
+  connectionAttempted: false,
 
-    connectionAttempted: false,
+  // STEP 5
 
-    // STEP 5
+  paymentMethod: 'credit-card',
 
-    paymentMethod: 'credit-card',
+  cardHolderName: '',
 
-    cardHolderName: '',
+  cardNumber: '',
 
-    cardNumber: '',
+  expiry: '',
 
-    expiry: '',
+  cvv: '',
 
-    cvv: '',
+  masavUploaded: false,
 
-    masavUploaded: false,
+  masavFileName: '',
 
-    masavFileName: '',
-
-    continueLater: false
-
-  };
+  continueLater: false,
+};
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class OrganizationRegistrationStateService {
+  readonly state = signal<OrganizationRegistrationState>(initialState);
 
-  readonly state =
-    signal<OrganizationRegistrationState>(
-      initialState
-    );
-
-  updateState(
-    partial:
-    Partial<OrganizationRegistrationState>
-  ): void {
-
-    this.state.update(current => ({
-
+  updateState(partial: Partial<OrganizationRegistrationState>): void {
+    this.state.update((current) => ({
       ...current,
 
-      ...partial
-
+      ...partial,
     }));
-
   }
 
   resetState(): void {
-
     this.state.set(initialState);
-
   }
-
 }

@@ -1,40 +1,24 @@
 <div class="onboarding-page">
-
   <div class="onboarding-container">
-
     <div class="onboarding-header">
+      <h1>איך תרצה להשתמש במערכת?</h1>
 
-      <h1>
-        איך תרצה להשתמש במערכת?
-      </h1>
-
-      <p>
-        נבנה עבורך חוויה מותאמת אישית
-      </p>
-
+      <p>נבנה עבורך חוויה מותאמת אישית</p>
     </div>
 
     <div class="types-grid">
-
       <!-- ORGANIZATION -->
 
       <div
         class="type-card"
         [class.active]="selectedType === 'organization'"
-        (click)="selectType('organization')">
+        (click)="selectType('organization')"
+      >
+        <div class="icon">🏛️</div>
 
-        <div class="icon">
-          🏛️
-        </div>
+        <h3>עמותה / גוף מגייס</h3>
 
-        <h3>
-          עמותה / גוף מגייס
-        </h3>
-
-        <p>
-          ניהול קמפיינים וגיוס תרומות
-        </p>
-
+        <p>ניהול קמפיינים וגיוס תרומות</p>
       </div>
 
       <!-- CAMPAIGNER -->
@@ -42,20 +26,13 @@
       <div
         class="type-card"
         [class.active]="selectedType === 'campaigner'"
-        (click)="selectType('campaigner')">
+        (click)="selectType('campaigner')"
+      >
+        <div class="icon">🚀</div>
 
-        <div class="icon">
-          🚀
-        </div>
+        <h3>קמפיינר</h3>
 
-        <h3>
-          קמפיינר
-        </h3>
-
-        <p>
-          ניהול וגיוס עבור קמפיינים
-        </p>
-
+        <p>ניהול וגיוס עבור קמפיינים</p>
       </div>
 
       <!-- BUSINESS -->
@@ -63,20 +40,13 @@
       <div
         class="type-card"
         [class.active]="selectedType === 'business'"
-        (click)="selectType('business')">
+        (click)="selectType('business')"
+      >
+        <div class="icon">💼</div>
 
-        <div class="icon">
-          💼
-        </div>
+        <h3>עסק שותף</h3>
 
-        <h3>
-          עסק שותף
-        </h3>
-
-        <p>
-          שיתופי פעולה וחשיפה עסקית
-        </p>
-
+        <p>שיתופי פעולה וחשיפה עסקית</p>
       </div>
 
       <!-- DONOR -->
@@ -84,32 +54,22 @@
       <div
         class="type-card"
         [class.active]="selectedType === 'donor'"
-        (click)="selectType('donor')">
+        (click)="selectType('donor')"
+      >
+        <div class="icon">❤️</div>
 
-        <div class="icon">
-          ❤️
-        </div>
+        <h3>רק תורם</h3>
 
-        <h3>
-          רק תורם
-        </h3>
-
-        <p>
-          מעקב אחר תרומות וקמפיינים
-        </p>
-
+        <p>מעקב אחר תרומות וקמפיינים</p>
       </div>
-
     </div>
 
     <button
-        class="continue-btn"
-        [disabled]="!selectedType"
-        (click)="continue()">
-
-          המשך
+      class="continue-btn"
+      [disabled]="!selectedType"
+      (click)="continue()"
+    >
+      המשך
     </button>
-
   </div>
-
 </div>

@@ -6,32 +6,20 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [],
   templateUrl: './no-organization-state.component.html',
-  styleUrls: ['./no-organization-state.component.css']
+  styleUrls: ['./no-organization-state.component.css'],
 })
 export class NoOrganizationStateComponent {
-
   userEmail = '';
 
-  constructor(
-    private router: Router
-  ) {
-
+  constructor(private router: Router) {
     const user = localStorage.getItem('user');
 
     if (user) {
-
-      this.userEmail =
-        JSON.parse(user).email || '';
+      this.userEmail = JSON.parse(user).email || '';
     }
-
   }
 
   startRegistration(): void {
-
-    this.router.navigate([
-      '/organization-registration'
-    ]);
-
+    this.router.navigate(['/organization-registration']);
   }
-
 }

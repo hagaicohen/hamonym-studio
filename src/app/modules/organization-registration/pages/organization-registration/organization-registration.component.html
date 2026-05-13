@@ -1,56 +1,29 @@
 <div class="wizard-page">
-
   @if (currentStep === 1) {
-
-    <app-step-entity
-      (continue)="nextStep()">
-    </app-step-entity>
-
+    <app-step-entity (continue)="nextStep()"> </app-step-entity>
   }
 
   @if (currentStep === 2) {
-
-    <app-step-profile
-      (back)="previousStep()"
-      (continue)="nextStep()">
+    <app-step-profile (back)="previousStep()" (continue)="nextStep()">
     </app-step-profile>
-
   }
 
   @if (currentStep === 3) {
-
-    <app-step-goals
-      (back)="previousStep()"
-      (continue)="nextStep()">
+    <app-step-goals (back)="previousStep()" (continue)="nextStep()">
     </app-step-goals>
-
   }
 
-    @if (currentStep === 4) {
+  @if (currentStep === 4) {
+    <app-step-payment (back)="previousStep()" (continue)="nextStep()">
+    </app-step-payment>
+  }
 
-      <app-step-payment
-        (back)="previousStep()"
-        (continue)="nextStep()">
-      </app-step-payment>
+  @if (currentStep === 5) {
+    <app-step-billing-method (back)="previousStep()" (continue)="nextStep()">
+    </app-step-billing-method>
+  }
 
-    }
-
-    @if (currentStep === 5) {
-
-      <app-step-billing-method
-        (back)="previousStep()"
-        (continue)="nextStep()">
-      </app-step-billing-method>
-
-    }
-
-    @if (currentStep === 6) {
-
-      <app-step-review
-        (back)="previousStep()"
-        >
-      </app-step-review>
-
-    }
-
+  @if (currentStep === 6) {
+    <app-step-review (back)="previousStep()"> </app-step-review>
+  }
 </div>

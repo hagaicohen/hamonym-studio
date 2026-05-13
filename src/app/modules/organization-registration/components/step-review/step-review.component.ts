@@ -5,112 +5,72 @@ import {
   EventEmitter,
   Output,
   computed,
-  inject
+  inject,
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  OrganizationRegistrationStateService
-} from '../../services/organization-registration-state.service';
+import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 
-import {
-  CAMPAIGN_TYPES
-} from '../../constants/campaign-types';
+import { CAMPAIGN_TYPES } from '../../constants/campaign-types';
 
 import {
   ENTITY_CONFIGS,
   EntityConfig,
-  EntityType
+  EntityType,
 } from '../../config/entity-config';
 
 @Component({
   selector: 'app-step-review',
   standalone: true,
-  imports: [
-    CommonModule
-  ],
+  imports: [CommonModule],
   templateUrl: './step-review.component.html',
-  styleUrls: ['./step-review.component.css']
+  styleUrls: ['./step-review.component.css'],
 })
 export class StepReviewComponent {
+  @Output()
+  back = new EventEmitter<void>();
 
   @Output()
-  back =
-    new EventEmitter<void>();
+  submit = new EventEmitter<void>();
 
-  @Output()
-  submit =
-    new EventEmitter<void>();
+  campaignTypes = CAMPAIGN_TYPES;
 
-  campaignTypes =
-    CAMPAIGN_TYPES;
+  private readonly stateService = inject(OrganizationRegistrationStateService);
 
-  private readonly stateService =
-    inject(
-      OrganizationRegistrationStateService
-    );
-
-  protected readonly state =
-    computed(() =>
-      this.stateService.state()
-    );
+  protected readonly state = computed(() => this.stateService.state());
 
   get entityConfig(): EntityConfig {
     return (
-      ENTITY_CONFIGS[
-        this.state().entityType as EntityType
-      ] || ENTITY_CONFIGS.association
+      ENTITY_CONFIGS[this.state().entityType as EntityType] ||
+      ENTITY_CONFIGS.association
     );
-
   }
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  getCampaignTypeLabel(
-    id: string
-  ): string {
-
-    return this.campaignTypes
-      .find(x => x.id === id)
-      ?.title || id;
-
+  getCampaignTypeLabel(id: string): string {
+    return this.campaignTypes.find((x) => x.id === id)?.title || id;
   }
 
   get maskedCardNumber(): string {
-
-    const raw =
-      this.state()
-        .cardNumber
-        ?.replace(/\s/g, '');
+    const raw = this.state().cardNumber?.replace(/\s/g, '');
 
     if (!raw) {
-
       return '-';
-
     }
 
-    return '**** **** **** ' +
-      raw.slice(-4);
-
+    return '**** **** **** ' + raw.slice(-4);
   }
 
   get paymentMethodLabel(): string {
-
-    if (
-      this.state().paymentMethod === 'masav'
-    ) {
-
+    if (this.state().paymentMethod === 'masav') {
       return 'הוראת קבע / מס"ב';
-
     }
 
     return 'כרטיס אשראי';
-
   }
 
   // =========================================================
@@ -118,39 +78,27 @@ export class StepReviewComponent {
   // =========================================================
 
   get organizationName(): string {
-
     return this.state().organizationName;
-
   }
 
   get organizationNumber(): string {
-
     return this.state().organizationNumber;
-
   }
 
   get fullName(): string {
-
     return this.state().fullName;
-
   }
 
   get email(): string {
-
     return this.state().email;
-
   }
 
   get phone(): string {
-
     return this.state().phone;
-
   }
 
   get selectedCategories(): string[] {
-
     return this.state().selectedCategories || [];
-
   }
 
   // =========================================================
@@ -158,21 +106,15 @@ export class StepReviewComponent {
   // =========================================================
 
   get displayName(): string {
-
     return this.state().displayName;
-
   }
 
   get organizationDescription(): string {
-
     return this.state().organizationDescription;
-
   }
 
   get selectedCampaignTypes(): string[] {
-
     return this.state().selectedCampaignTypes;
-
   }
 
   // =========================================================
@@ -180,15 +122,11 @@ export class StepReviewComponent {
   // =========================================================
 
   get monthlyGoal(): string {
-
     return this.state().monthlyGoal;
-
   }
 
   get yearlyGoal(): string {
-
     return this.state().yearlyGoal;
-
   }
 
   // =========================================================
@@ -196,39 +134,27 @@ export class StepReviewComponent {
   // =========================================================
 
   get provider(): string {
-
     return this.state().provider;
-
   }
 
   get terminalNumber(): string {
-
     return this.state().terminalNumber;
-
   }
 
   get apiUsername(): string {
-
     return this.state().apiUsername;
-
   }
 
   get connectionSuccess(): boolean {
-
     return this.state().connectionSuccess;
-
   }
 
   get connectionAttempted(): boolean {
-
     return this.state().connectionAttempted;
-
   }
 
   get useExistingTerminal(): boolean {
-
     return this.state().useExistingTerminal;
-
   }
 
   // =========================================================
@@ -236,39 +162,27 @@ export class StepReviewComponent {
   // =========================================================
 
   get paymentMethod(): string {
-
     return this.state().paymentMethod;
-
   }
 
   get cardHolderName(): string {
-
     return this.state().cardHolderName;
-
   }
 
   get expiry(): string {
-
     return this.state().expiry;
-
   }
 
   get masavUploaded(): boolean {
-
     return this.state().masavUploaded;
-
   }
 
   get masavFileName(): string {
-
     return this.state().masavFileName;
-
   }
 
   get continueLater(): boolean {
-
     return this.state().continueLater;
-
   }
 
   // =========================================================
@@ -276,15 +190,11 @@ export class StepReviewComponent {
   // =========================================================
 
   get registrationCertificateUploaded(): boolean {
-
     return true;
-
   }
 
   get section46Uploaded(): boolean {
-
     return true;
-
   }
 
   // =========================================================
@@ -292,10 +202,6 @@ export class StepReviewComponent {
   // =========================================================
 
   submitApplication(): void {
-
     this.submit.emit();
-
   }
-
 }
-

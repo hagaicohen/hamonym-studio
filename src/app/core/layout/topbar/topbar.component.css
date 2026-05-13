@@ -1,7 +1,6 @@
 /* src/app/core/layout/topbar/topbar.component.css */
 
 .topbar {
-
   position: fixed;
 
   top: 0;
@@ -27,7 +26,6 @@
 
 .topbar-right,
 .topbar-left {
-
   display: flex;
   align-items: center;
 
@@ -37,13 +35,11 @@
 /* BRAND */
 
 .brand {
-
   display: flex;
   align-items: center;
 }
 
 .brand-logo {
-
   height: 34px;
 
   width: auto;
@@ -56,7 +52,6 @@
 /* USER */
 
 .topbar-user {
-
   display: flex;
 
   flex-direction: column;
@@ -70,7 +65,6 @@
 }
 
 .topbar-user-name {
-
   font-size: 15px;
 
   font-weight: 700;
@@ -81,7 +75,6 @@
 }
 
 .topbar-user-role {
-
   font-size: 12px;
 
   color: #64748b;
@@ -94,7 +87,6 @@
 /* DEFAULT ICON BUTTON */
 
 .topbar-icon-btn {
-
   width: 40px;
 
   height: 40px;
@@ -123,11 +115,9 @@
 }
 
 .topbar-icon-btn:hover {
+  background: #f5f5f5;
 
-  background: #F5F5F5;
-
-  border-color: #F5F5F5;
-
+  border-color: #f5f5f5;
 
   transform: translateY(-1px);
 }
@@ -135,7 +125,6 @@
 /* LOGOUT BUTTON */
 
 .logout-btn {
-
   width: 40px;
 
   height: 40px;
@@ -165,16 +154,13 @@
 }
 
 .logout-btn:hover {
+  background: #f5f5f5;
 
-  background: #F5F5F5;
-
-  border-color: #F5F5F5;
- 
+  border-color: #f5f5f5;
 
   transform: translateY(-1px);
 
-  box-shadow:
-    0 8px 20px rgba(20, 184, 166, 0.12);
+  box-shadow: 0 8px 20px rgba(20, 184, 166, 0.12);
 }
 
 /* ICONS */
@@ -183,7 +169,6 @@
 .logout-icon,
 .bell-icon,
 .menu-icon {
-
   width: 18px;
 
   height: 18px;
@@ -194,48 +179,39 @@
 /* MOBILE MENU */
 
 .mobile-menu-btn {
-
   display: none;
 }
 
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .topbar {
-
     padding: 0 16px;
   }
 
   .brand-logo {
-
     height: 30px;
   }
 
   .topbar-user {
-
     display: none;
   }
 
   .mobile-menu-btn {
-
     display: flex;
   }
 
   .topbar-right,
   .topbar-left {
-
     gap: 10px;
   }
 
   .topbar-icon-btn,
   .logout-btn {
-
     width: 38px;
 
     height: 38px;
 
     border-radius: 10px;
   }
-
 }

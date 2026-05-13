@@ -1,274 +1,203 @@
 <div class="editor-shell">
-
   <!-- TOOLBAR -->
 
   <div class="editor-toolbar">
-
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bold')"
-        (click)="toggleBold()">
-
+        (click)="toggleBold()"
+      >
         <strong>B</strong>
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('italic')"
-        (click)="toggleItalic()">
-
+        (click)="toggleItalic()"
+      >
         <em>I</em>
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('underline')"
-        (click)="toggleUnderline()">
-
+        (click)="toggleUnderline()"
+      >
         <u>U</u>
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('strike')"
-        (click)="toggleStrike()">
-
+        (click)="toggleStrike()"
+      >
         S
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('highlight')"
-        (click)="toggleHighlight()">
-
+        (click)="toggleHighlight()"
+      >
         🖍
-
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn text-btn"
         [class.active]="isActive('heading', { level: 1 })"
-        (click)="setHeading(1)">
-
+        (click)="setHeading(1)"
+      >
         H1
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn text-btn"
         [class.active]="isActive('heading', { level: 2 })"
-        (click)="setHeading(2)">
-
+        (click)="setHeading(2)"
+      >
         H2
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn text-btn"
         [class.active]="isActive('heading', { level: 3 })"
-        (click)="setHeading(3)">
-
+        (click)="setHeading(3)"
+      >
         H3
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn text-btn"
         [class.active]="isActive('paragraph')"
-        (click)="setParagraph()">
-
+        (click)="setParagraph()"
+      >
         P
-
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bulletList')"
-        (click)="toggleBulletList()">
-
+        (click)="toggleBulletList()"
+      >
         •
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('orderedList')"
-        (click)="toggleOrderedList()">
-
+        (click)="toggleOrderedList()"
+      >
         1.
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('taskList')"
-        (click)="toggleTaskList()">
-
+        (click)="toggleTaskList()"
+      >
         ☑
-
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('right')">
-
+      <button type="button" class="toolbar-btn" (click)="setTextAlign('right')">
         ⇥
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
-        (click)="setTextAlign('center')">
-
+        (click)="setTextAlign('center')"
+      >
         ≡
-
       </button>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('left')">
-
+      <button type="button" class="toolbar-btn" (click)="setTextAlign('left')">
         ⇤
-
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('blockquote')"
-        (click)="toggleBlockquote()">
-
+        (click)="toggleBlockquote()"
+      >
         ❝
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('codeBlock')"
-        (click)="toggleCodeBlock()">
-
+        (click)="toggleCodeBlock()"
+      >
         &lt;/&gt;
-
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
-        (click)="insertHorizontalRule()">
-
+        (click)="insertHorizontalRule()"
+      >
         ―
-
       </button>
-
     </div>
 
     <div class="toolbar-group">
+      <button type="button" class="toolbar-btn" (click)="addImage()">🖼</button>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="addImage()">
-
-        🖼
-
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="addYoutubeVideo()">
-
+      <button type="button" class="toolbar-btn" (click)="addYoutubeVideo()">
         ▶
-
       </button>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="addLink()">
-
-        🔗
-
-      </button>
-
+      <button type="button" class="toolbar-btn" (click)="addLink()">🔗</button>
     </div>
 
     <div class="toolbar-group">
-
       <input
         type="color"
         class="color-picker"
-        (input)="setTextColor($any($event.target).value)">
-
+        (input)="setTextColor($any($event.target).value)"
+      />
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn danger"
-        (click)="clearFormatting()">
-
+        (click)="clearFormatting()"
+      >
         ✕
-
       </button>
-
     </div>
-
   </div>
 
   <button
     type="button"
     class="floating-add-btn"
-    (click)="insertHorizontalRule()">
-
+    (click)="insertHorizontalRule()"
+  >
     +
-
   </button>
 
-  <div
-    #editor
-    class="editor-content"
-    [style.minHeight.px]="minHeight">
-
-  </div>
-
+  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
 </div>

@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './loading-overlay.component.html',
-  styleUrls: ['./loading-overlay.component.css']
+  styleUrls: ['./loading-overlay.component.css'],
 })
-export class LoadingOverlayComponent {
-
-}
+export class LoadingOverlayComponent {}

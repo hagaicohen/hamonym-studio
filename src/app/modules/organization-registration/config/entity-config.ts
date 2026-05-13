@@ -7,11 +7,9 @@ export type EntityType =
   | 'sole_registered';
 
 export interface EntityConfig {
-
   type: EntityType;
 
   labels: {
-
     entity: string;
 
     entityName: string;
@@ -26,15 +24,11 @@ export interface EntityConfig {
   showSection46: boolean;
 }
 
-export const ENTITY_CONFIGS:
-  Record<EntityType, EntityConfig> = {
-
+export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
   association: {
-
     type: 'association',
 
     labels: {
-
       entity: 'עמותה',
 
       entityName: 'שם העמותה',
@@ -43,18 +37,16 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'תעודת התאגדות',
 
-      onboardingTitle: 'הצטרפות כעמותה'
+      onboardingTitle: 'הצטרפות כעמותה',
     },
 
-    showSection46: true
+    showSection46: true,
   },
 
   chalatz: {
-
     type: 'chalatz',
 
     labels: {
-
       entity: 'חל״צ',
 
       entityName: 'שם החל״צ',
@@ -63,18 +55,16 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'תעודת התאגדות',
 
-      onboardingTitle: 'הצטרפות כחל״צ'
+      onboardingTitle: 'הצטרפות כחל״צ',
     },
 
-    showSection46: false
+    showSection46: false,
   },
 
   political_party_new: {
-
     type: 'political_party_new',
 
     labels: {
-
       entity: 'מפלגה פוליטית חדשה',
 
       entityName: 'שם המפלגה',
@@ -83,18 +73,16 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'מסמכי הקמה',
 
-      onboardingTitle: 'הקמת מפלגה פוליטית'
+      onboardingTitle: 'הקמת מפלגה פוליטית',
     },
 
-    showSection46: false
+    showSection46: false,
   },
 
   political_party_registered: {
-
     type: 'political_party_registered',
 
     labels: {
-
       entity: 'מפלגה פוליטית רשומה',
 
       entityName: 'שם המפלגה',
@@ -103,18 +91,16 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'תעודת רישום מפלגה',
 
-      onboardingTitle: 'הצטרפות כמפלגה פוליטית'
+      onboardingTitle: 'הצטרפות כמפלגה פוליטית',
     },
 
-    showSection46: false
+    showSection46: false,
   },
 
   sole_exempt: {
-
     type: 'sole_exempt',
 
     labels: {
-
       entity: 'עוסק פטור',
 
       entityName: 'שם העסק',
@@ -123,18 +109,16 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'תעודת עוסק',
 
-      onboardingTitle: 'הצטרפות כעוסק פטור'
+      onboardingTitle: 'הצטרפות כעוסק פטור',
     },
 
-    showSection46: false
+    showSection46: false,
   },
 
   sole_registered: {
-
     type: 'sole_registered',
 
     labels: {
-
       entity: 'עוסק מורשה',
 
       entityName: 'שם העסק',
@@ -143,9 +127,9 @@ export const ENTITY_CONFIGS:
 
       registrationDocument: 'תעודת עוסק',
 
-      onboardingTitle: 'הצטרפות כעוסק מורשה'
+      onboardingTitle: 'הצטרפות כעוסק מורשה',
     },
 
-    showSection46: false
-  }
+    showSection46: false,
+  },
 };

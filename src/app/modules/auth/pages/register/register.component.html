@@ -1,163 +1,106 @@
 <div class="register-page">
-
   <div class="register-card">
-
     <div class="register-header">
+      <h1>יצירת חשבון</h1>
 
-      <h1>
-        יצירת חשבון
-      </h1>
-
-      <p>
-        מתחילים לבנות את הקמפיין הבא שלך
-      </p>
-
+      <p>מתחילים לבנות את הקמפיין הבא שלך</p>
     </div>
 
-    <form
-      class="register-form"
-      [formGroup]="form"
-      (ngSubmit)="submit()">
-
+    <form class="register-form" [formGroup]="form" (ngSubmit)="submit()">
       <!-- FULL NAME -->
 
       <div class="form-group">
-
-        <label>
-          שם מלא
-        </label>
+        <label> שם מלא </label>
 
         <input
           type="text"
           formControlName="fullName"
           placeholder="השם שלך"
-          autocomplete="name" />
+          autocomplete="name"
+        />
 
         <span
           class="error"
-          *ngIf="
-            form.get('fullName')?.invalid &&
-            form.get('fullName')?.touched
-          ">
-
+          *ngIf="form.get('fullName')?.invalid && form.get('fullName')?.touched"
+        >
           חובה להזין שם מלא
-
         </span>
-
       </div>
 
       <!-- EMAIL -->
 
       <div class="form-group">
-
-        <label>
-          אימייל
-        </label>
+        <label> אימייל </label>
 
         <input
           type="email"
           formControlName="email"
           placeholder="name@example.com"
-          autocomplete="email" />
+          autocomplete="email"
+        />
 
         <span
           class="error"
-          *ngIf="
-            form.get('email')?.invalid &&
-            form.get('email')?.touched
-          ">
-
+          *ngIf="form.get('email')?.invalid && form.get('email')?.touched"
+        >
           אימייל לא תקין
-
         </span>
-
       </div>
 
       <!-- PASSWORD -->
 
       <div class="form-group">
-
-        <label>
-          סיסמה
-        </label>
+        <label> סיסמה </label>
 
         <div class="password-wrapper">
-
           <input
             [type]="showPassword ? 'text' : 'password'"
             formControlName="password"
             placeholder="********"
-            autocomplete="new-password" />
+            autocomplete="new-password"
+          />
 
           <button
             type="button"
             class="toggle-password"
-            (click)="togglePassword()">
+            (click)="togglePassword()"
+          >
+            <span *ngIf="!showPassword"> 👁 </span>
 
-            <span *ngIf="!showPassword">
-              👁
-            </span>
-
-            <span
-              *ngIf="showPassword"
-              class="eye-off">
-
-              👁
-
-            </span>
-
+            <span *ngIf="showPassword" class="eye-off"> 👁 </span>
           </button>
-
         </div>
 
         <span
           class="error"
-          *ngIf="
-            form.get('password')?.invalid &&
-            form.get('password')?.touched
-          ">
-
+          *ngIf="form.get('password')?.invalid && form.get('password')?.touched"
+        >
           מינימום 6 תווים
-
         </span>
-
       </div>
 
       <!-- CONFIRM PASSWORD -->
 
       <div class="form-group">
-
-        <label>
-          אימות סיסמה
-        </label>
+        <label> אימות סיסמה </label>
 
         <div class="password-wrapper">
-
           <input
             [type]="showConfirmPassword ? 'text' : 'password'"
             formControlName="confirmPassword"
             placeholder="********"
-            autocomplete="new-password" />
+            autocomplete="new-password"
+          />
 
           <button
             type="button"
             class="toggle-password"
-            (click)="toggleConfirmPassword()">
+            (click)="toggleConfirmPassword()"
+          >
+            <span *ngIf="!showConfirmPassword"> 👁 </span>
 
-            <span *ngIf="!showConfirmPassword">
-              👁
-            </span>
-
-            <span
-              *ngIf="showConfirmPassword"
-              class="eye-off">
-
-              👁
-
-            </span>
-
+            <span *ngIf="showConfirmPassword" class="eye-off"> 👁 </span>
           </button>
-
         </div>
 
         <span
@@ -165,54 +108,31 @@
           *ngIf="
             form.get('confirmPassword')?.invalid &&
             form.get('confirmPassword')?.touched
-          ">
-
+          "
+        >
           חובה לאמת סיסמה
-
         </span>
-
       </div>
 
       <!-- SERVER ERROR -->
 
-      <div
-        class="server-error"
-        *ngIf="errorMessage">
-
+      <div class="server-error" *ngIf="errorMessage">
         {{ errorMessage }}
-
       </div>
 
       <!-- SUBMIT -->
 
-      <button
-        type="submit"
-        [disabled]="loading">
-
-        הרשמה
-
-      </button>
-
+      <button type="submit" [disabled]="loading">הרשמה</button>
     </form>
 
     <!-- FOOTER -->
 
     <div class="register-footer">
+      <span> כבר יש לך חשבון? </span>
 
-      <span>
-        כבר יש לך חשבון?
-      </span>
-
-      <a routerLink="/login">
-        להתחברות
-      </a>
-
+      <a routerLink="/login"> להתחברות </a>
     </div>
-
   </div>
 
-  <app-loading-overlay
-    *ngIf="loading">
-  </app-loading-overlay>
-
+  <app-loading-overlay *ngIf="loading"> </app-loading-overlay>
 </div>

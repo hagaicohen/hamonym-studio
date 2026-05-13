@@ -16,7 +16,6 @@
 }
 
 .empty-box {
-
   width: 100%;
 
   background: white;
@@ -39,7 +38,6 @@
 }
 
 .empty-box h2 {
-
   margin: 0;
 
   font-size: 18px;
@@ -49,7 +47,6 @@
 }
 
 .user-email {
-
   margin-top: 16px;
 
   font-size: 14px;
@@ -58,7 +55,6 @@
 }
 
 .register-btn {
-
   margin-top: 20px;
 
   height: 42px;
@@ -83,7 +79,6 @@
 }
 
 @media (max-width: 768px) {
-
   .page-header h1 {
     font-size: 32px;
   }
@@ -95,5 +90,4 @@
   .empty-box {
     padding: 32px 20px;
   }
-
 }

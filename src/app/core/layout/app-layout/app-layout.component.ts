@@ -12,17 +12,11 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterOutlet,
-    TopbarComponent,
-    SidebarComponent
-  ],
+  imports: [CommonModule, RouterOutlet, TopbarComponent, SidebarComponent],
   templateUrl: './app-layout.component.html',
-  styleUrls: ['./app-layout.component.css']
+  styleUrls: ['./app-layout.component.css'],
 })
 export class AppLayoutComponent {
-
   mobileSidebarOpen = false;
 
   toggleSidebar(): void {
@@ -32,5 +26,4 @@ export class AppLayoutComponent {
   closeSidebar(): void {
     this.mobileSidebarOpen = false;
   }
-
 }

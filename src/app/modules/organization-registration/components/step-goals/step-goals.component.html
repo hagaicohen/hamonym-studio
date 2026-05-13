@@ -1,72 +1,41 @@
 <div class="step-card">
-
   <!-- HEADER -->
 
   <div class="step-header">
+    <h1>הצטרפות כעמותה</h1>
 
-    <h1>
-      הצטרפות כעמותה
-    </h1>
-
-    <div class="step-number">
-      שלב 3 מתוך 6
-    </div>
-
+    <div class="step-number">שלב 3 מתוך 6</div>
   </div>
 
   <!-- PROGRESS -->
 
   <div class="progress-bar-wrapper">
-
     <div class="progress-bar">
-
-      <div
-        class="progress-fill"
-        style="width: 50%">
-      </div>
-
+      <div class="progress-fill" style="width: 50%"></div>
     </div>
 
     <div class="progress-steps">
+      <div class="progress-step done">1</div>
 
-      <div class="progress-step done">
-        1
-      </div>
+      <div class="progress-step done">2</div>
 
-      <div class="progress-step done">
-        2
-      </div>
+      <div class="progress-step active">3</div>
 
-      <div class="progress-step active">
-        3
-      </div>
+      <div class="progress-step">4</div>
 
-      <div class="progress-step">
-        4
-      </div>
+      <div class="progress-step">5</div>
 
-      <div class="progress-step">
-        5
-      </div>
-
-      <div class="progress-step">
-        6
-      </div>
-
+      <div class="progress-step">6</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="step-body">
-
     <!-- HERO -->
 
     <div class="profile-hero">
-
       <div class="hero-icon">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -74,95 +43,70 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
-
+          stroke-linejoin="round"
+        >
           <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
           <polyline points="16 7 22 7 22 13"></polyline>
-
         </svg>
-
       </div>
 
-      <h2>
-        יעדי גיוס
-      </h2>
+      <h2>יעדי גיוס</h2>
 
-      <p>
-        מה היעדים שלכם בפלטפורמה?
-      </p>
-
+      <p>מה היעדים שלכם בפלטפורמה?</p>
     </div>
 
     <!-- GOALS -->
 
     <div class="goals-section">
-
       <!-- MONTHLY -->
 
       <div class="field-block">
-
-        <label>
-          יעד גיוס חודשי (₪)
-        </label>
+        <label> יעד גיוס חודשי (₪) </label>
 
         <div class="money-input-wrapper">
+          <span class="money-symbol"> ₪ </span>
 
-          <span class="money-symbol">
-            ₪
-          </span>
-
-         <input
+          <input
             type="text"
             class="base-input money-input"
             placeholder="50,000"
             [ngModel]="monthlyGoal"
-            (ngModelChange)="onMoneyInput('monthly', $event)">
-
+            (ngModelChange)="onMoneyInput('monthly', $event)"
+          />
         </div>
 
         <div class="field-help">
           כמה תרומות אתם מקווים לגייס בחודש דרך הפלטפורמה?
         </div>
-
       </div>
 
       <!-- YEARLY -->
 
       <div class="field-block">
-
-        <label>
-          יעד גיוס שנתי (₪)
-        </label>
+        <label> יעד גיוס שנתי (₪) </label>
 
         <div class="money-input-wrapper">
-
-          <span class="money-symbol">
-            ₪
-          </span>
+          <span class="money-symbol"> ₪ </span>
 
           <input
             type="text"
             class="base-input money-input"
             placeholder="600,000"
             [ngModel]="yearlyGoal"
-            (ngModelChange)="onMoneyInput('yearly', $event)">
-
+            (ngModelChange)="onMoneyInput('yearly', $event)"
+          />
         </div>
 
         <div class="field-help">
           כמה תרומות אתם מקווים לגייס בשנה דרך הפלטפורמה?
         </div>
-
       </div>
-
     </div>
 
     <!-- INFO -->
 
     <div class="info-box">
-
       <div class="info-icon">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"
@@ -170,57 +114,39 @@
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
-
+          stroke-width="2"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M12 16v-4"></path>
           <path d="M12 8h.01"></path>
-
         </svg>
-
       </div>
 
       <div class="info-content">
-
-        <div class="info-title">
-          למה זה חשוב?
-        </div>
+        <div class="info-title">למה זה חשוב?</div>
 
         <div class="info-text">
-          הנתונים האלו עוזרים לנו להציע לכם המלצות מותאמות,
-          לזהות הזדמנויות צמיחה ולפתח כלים חכמים שיעזרו לכם
-          להשיג את היעדים.
+          הנתונים האלו עוזרים לנו להציע לכם המלצות מותאמות, לזהות הזדמנויות
+          צמיחה ולפתח כלים חכמים שיעזרו לכם להשיג את היעדים.
         </div>
-
       </div>
-
     </div>
 
     <!-- ACTIONS -->
 
     <div class="wizard-actions">
-
-      <button
-        type="button"
-        class="secondary-btn"
-        (click)="back.emit()">
-
+      <button type="button" class="secondary-btn" (click)="back.emit()">
         חזור
-
       </button>
 
       <button
         type="button"
         class="continue-btn"
         [disabled]="!canContinue"
-        (click)="continue.emit()">
-
+        (click)="continue.emit()"
+      >
         המשך לשלב הבא
-
       </button>
-
     </div>
-
   </div>
-
 </div>

@@ -1,7 +1,7 @@
 export const environment = {
-  production: false,
+  production: true,
 
-  apiUrl: 'http://localhost:3000',
+  apiUrl: 'https://your-api-domain.com',
 
   googleClientId:
     '615094696252-ia7q90nc7skpos9qqiln0gp9u6tirguu.apps.googleusercontent.com',

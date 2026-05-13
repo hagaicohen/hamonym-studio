@@ -1,72 +1,41 @@
 <div class="step-card">
-
   <!-- HEADER -->
 
   <div class="step-header">
+    <h1>הצטרפות כעמותה</h1>
 
-    <h1>
-      הצטרפות כעמותה
-    </h1>
-
-    <div class="step-number">
-      שלב 4 מתוך 6
-    </div>
-
+    <div class="step-number">שלב 4 מתוך 6</div>
   </div>
 
   <!-- PROGRESS -->
 
   <div class="progress-bar-wrapper">
-
     <div class="progress-bar">
-
-      <div
-        class="progress-fill"
-        style="width: 66.66%">
-      </div>
-
+      <div class="progress-fill" style="width: 66.66%"></div>
     </div>
 
     <div class="progress-steps">
+      <div class="progress-step done">1</div>
 
-      <div class="progress-step done">
-        1
-      </div>
+      <div class="progress-step done">2</div>
 
-      <div class="progress-step done">
-        2
-      </div>
+      <div class="progress-step done">3</div>
 
-      <div class="progress-step done">
-        3
-      </div>
+      <div class="progress-step active">4</div>
 
-      <div class="progress-step active">
-        4
-      </div>
+      <div class="progress-step">5</div>
 
-      <div class="progress-step">
-        5
-      </div>
-
-      <div class="progress-step">
-        6
-      </div>
-
+      <div class="progress-step">6</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="step-body">
-
     <!-- HERO -->
 
     <div class="profile-hero">
-
       <div class="hero-icon payment-hero-icon">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -74,91 +43,54 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
-
+          stroke-linejoin="round"
+        >
           <rect width="20" height="14" x="2" y="5" rx="2"></rect>
           <line x1="2" x2="22" y1="10" y2="10"></line>
-
         </svg>
-
       </div>
 
-      <h2>
-        חיבור מסוף אשראי
-      </h2>
+      <h2>חיבור מסוף אשראי</h2>
 
-      <p>
-        התחברות למסוף הסליקה שלכם
-      </p>
-
+      <p>התחברות למסוף הסליקה שלכם</p>
     </div>
 
     <!-- SKIP -->
 
     <div class="payment-section">
-
-      <div class="payment-section-title">
-        ספק סליקה
-      </div>
+      <div class="payment-section-title">ספק סליקה</div>
 
       <div class="existing-terminal-box">
-
         <label class="checkbox-row">
+          <input type="checkbox" [(ngModel)]="useExistingTerminal" />
 
-          <input
-            type="checkbox"
-            [(ngModel)]="useExistingTerminal">
-
-          <span>
-            אוסיף מסוף מאוחר יותר
-          </span>
-
+          <span> אוסיף מסוף מאוחר יותר </span>
         </label>
-
       </div>
-
     </div>
 
     <!-- FORM -->
 
     <ng-container *ngIf="!useExistingTerminal">
-
       <!-- PROVIDER -->
 
       <div class="payment-section">
-
         <div class="field-block">
+          <label> בחר ספק </label>
 
-          <label>
-            בחר ספק
-          </label>
+          <select [(ngModel)]="provider" class="base-input">
+            <option value="cardcom">קארדקום</option>
 
-          <select
-            [(ngModel)]="provider"
-            class="base-input">
-
-            <option value="cardcom">
-              קארדקום
-            </option>
-
-            <option value="tranzila">
-              טרנזילה
-            </option>
-
+            <option value="tranzila">טרנזילה</option>
           </select>
-
         </div>
-
       </div>
 
       <!-- INFO -->
 
       <div class="info-box payment-info-box">
-
         <div class="payment-info-inner">
-
           <div class="payment-info-icon">
-
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -168,97 +100,76 @@
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
-
+              stroke-linejoin="round"
+            >
               <path d="M15 3h6v6"></path>
               <path d="M10 14 21 3"></path>
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-
+              <path
+                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+              ></path>
             </svg>
-
           </div>
 
           <div class="payment-info-content">
-
-            <p class="payment-info-title">
-              לפתיחת מסוף קארדקום בתנאים מועדפים
-            </p>
+            <p class="payment-info-title">לפתיחת מסוף קארדקום בתנאים מועדפים</p>
 
             <a
               href="https://billing.planwize.com/cardcom-gateway/"
               target="_blank"
               rel="noopener noreferrer"
-              class="provider-link">
-
+              class="provider-link"
+            >
               לחצו כאן
-
             </a>
-
           </div>
-
         </div>
-
       </div>
 
       <!-- API DETAILS -->
 
       <div class="payment-section">
-
         <div class="payment-section-title">
-
           פרטי מסוף
-          {{ provider === 'cardcom'
-            ? 'קארדקום'
-            : 'טרנזילה' }}
-
+          {{ provider === "cardcom" ? "קארדקום" : "טרנזילה" }}
         </div>
 
         <!-- TERMINAL -->
 
         <div class="field-block">
-
-          <label>
-            מספר מסוף *
-          </label>
+          <label> מספר מסוף * </label>
 
           <input
             type="text"
             class="base-input"
             [(ngModel)]="terminalNumber"
-            placeholder="1234567">
-
+            placeholder="1234567"
+          />
         </div>
 
         <!-- USERNAME -->
 
         <div class="field-block">
-
-          <label>
-            משתמש API *
-          </label>
+          <label> משתמש API * </label>
 
           <input
             type="text"
             class="base-input"
             [(ngModel)]="apiUsername"
-            placeholder="username">
-
+            placeholder="username"
+          />
         </div>
 
         <!-- PASSWORD -->
 
         <div class="field-block">
-
-          <label>
-            סיסמת API *
-          </label>
+          <label> סיסמת API * </label>
 
           <input
             type="password"
             class="base-input"
             [(ngModel)]="apiPassword"
-            placeholder="••••••••">
-
+            placeholder="••••••••"
+          />
         </div>
 
         <!-- TEST -->
@@ -267,85 +178,50 @@
           type="button"
           class="test-connection-btn"
           [disabled]="isCheckingConnection"
-          (click)="testConnection()">
-
+          (click)="testConnection()"
+        >
           @if (!isCheckingConnection) {
-
             בדוק חיבור
-
           } @else {
-
             בודק חיבור...
-
           }
-
         </button>
 
         @if (connectionSuccess) {
-
           <div class="connection-success">
+            <span class="status-icon success-icon"> ✓ </span>
 
-            <span class="status-icon success-icon">
-              ✓
-            </span>
-
-            <span>
-              החיבור הצליח
-            </span>
-
+            <span> החיבור הצליח </span>
           </div>
-
         }
 
-        @if (
-          !connectionSuccess &&
-          connectionError &&
-          !isCheckingConnection
-        ) {
-
+        @if (!connectionSuccess && connectionError && !isCheckingConnection) {
           <div class="connection-error">
-
-            <span class="status-icon error-icon">
-              ✕
-            </span>
+            <span class="status-icon error-icon"> ✕ </span>
 
             <span>
               {{ connectionError }}
             </span>
-
           </div>
-
         }
-
       </div>
-
     </ng-container>
 
     <!-- ACTIONS -->
 
     <div class="wizard-actions">
-
-      <button
-        type="button"
-        class="secondary-btn"
-        (click)="onBack()">
-
+      <button type="button" class="secondary-btn" (click)="onBack()">
         חזור
-
       </button>
 
       <button
         type="button"
         class="continue-btn"
         [disabled]="!canContinue"
-        (click)="onContinue()">
-
+        (click)="onContinue()"
+      >
         המשך לשלב הבא
-
       </button>
-
     </div>
-
   </div>
-
 </div>

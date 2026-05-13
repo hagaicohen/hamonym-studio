@@ -1,10 +1,8 @@
 * {
-
   box-sizing: border-box;
 }
 
 .register-page {
-
   min-height: calc(100vh - 72px);
 
   display: flex;
@@ -15,16 +13,10 @@
 
   padding: 24px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #f8fafc 0%,
-      #eef2ff 100%
-    );
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 }
 
 .register-card {
-
   width: 100%;
 
   max-width: 460px;
@@ -35,21 +27,18 @@
 
   padding: 40px;
 
-  box-shadow:
-    0 10px 40px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
 
   direction: rtl;
 }
 
 .register-header {
-
   text-align: center;
 
   margin-bottom: 32px;
 }
 
 .register-header h1 {
-
   margin: 0 0 12px;
 
   font-size: 32px;
@@ -60,7 +49,6 @@
 }
 
 .register-header p {
-
   margin: 0;
 
   color: #64748b;
@@ -69,7 +57,6 @@
 }
 
 .register-form {
-
   display: flex;
 
   flex-direction: column;
@@ -78,7 +65,6 @@
 }
 
 .form-group {
-
   display: flex;
 
   flex-direction: column;
@@ -87,7 +73,6 @@
 }
 
 .form-group label {
-
   font-size: 14px;
 
   font-weight: 600;
@@ -96,12 +81,10 @@
 }
 
 .password-wrapper {
-
   position: relative;
 }
 
 .form-group input {
-
   height: 52px;
 
   border-radius: 14px;
@@ -122,23 +105,18 @@
 }
 
 .form-group input:focus {
-
   border-color: #6366f1;
 
-  box-shadow:
-    0 0 0 4px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 
 .form-group input.ng-invalid.ng-touched {
-
   border-color: #ef4444;
 
-  box-shadow:
-    0 0 0 4px rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
 }
 
 .toggle-password {
-
   position: absolute;
 
   left: 12px;
@@ -173,7 +151,6 @@
 }
 
 .eye-off {
-
   position: relative;
 
   display: inline-flex;
@@ -184,8 +161,7 @@
 }
 
 .eye-off::after {
-
-  content: '';
+  content: "";
 
   position: absolute;
 
@@ -199,14 +175,12 @@
 }
 
 .error {
-
   font-size: 13px;
 
   color: #ef4444;
 }
 
 .server-error {
-
   background: #fef2f2;
 
   border: 1px solid #fecaca;
@@ -223,7 +197,6 @@
 }
 
 button[type="submit"] {
-
   height: 54px;
 
   border: none;
@@ -246,19 +219,16 @@ button[type="submit"] {
 }
 
 button[type="submit"]:hover {
-
   background: #4338ca;
 }
 
 button[type="submit"]:disabled {
-
   opacity: 0.7;
 
   cursor: not-allowed;
 }
 
 .register-footer {
-
   margin-top: 28px;
 
   display: flex;
@@ -277,7 +247,6 @@ button[type="submit"]:disabled {
 }
 
 .register-footer a {
-
   color: #4f46e5;
 
   text-decoration: none;
@@ -286,9 +255,7 @@ button[type="submit"]:disabled {
 }
 
 @media (max-width: 640px) {
-
   .register-page {
-
     padding: 12px;
 
     align-items: flex-start;
@@ -297,7 +264,6 @@ button[type="submit"]:disabled {
   }
 
   .register-card {
-
     padding: 24px 16px;
 
     border-radius: 20px;
@@ -306,29 +272,24 @@ button[type="submit"]:disabled {
   }
 
   .register-header {
-
     margin-bottom: 24px;
   }
 
   .register-header h1 {
-
     font-size: 26px;
   }
 
   .register-form {
-
     gap: 16px;
   }
 
   .form-group input {
-
     height: 48px;
 
     font-size: 16px;
   }
 
   button[type="submit"] {
-
     height: 50px;
 
     font-size: 15px;

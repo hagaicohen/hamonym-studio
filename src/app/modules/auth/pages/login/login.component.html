@@ -1,68 +1,49 @@
 <div class="login-page">
-
   <div class="login-card">
-
     <!-- LOGO -->
 
-    <img
-      src="/logo.png"
-      alt="Hamonym"
-      class="logo">
+    <img src="/logo.png" alt="Hamonym" class="logo" />
 
     <!-- TITLE -->
 
-    <h1 class="title">
-      התחברות למערכת
-    </h1>
+    <h1 class="title">התחברות למערכת</h1>
 
-    <p class="subtitle">
-      ניהול קמפיינים, תרומות ותורמים במקום אחד
-    </p>
+    <p class="subtitle">ניהול קמפיינים, תרומות ותורמים במקום אחד</p>
 
     <!-- FORM -->
 
-    <form
-      class="login-form"
-      [formGroup]="loginForm"
-      (ngSubmit)="submit()">
-
+    <form class="login-form" [formGroup]="loginForm" (ngSubmit)="submit()">
       <!-- EMAIL -->
 
       <div class="field">
-
-        <label>
-          כתובת אימייל
-        </label>
+        <label> כתובת אימייל </label>
 
         <input
           type="email"
           placeholder="you@example.com"
           formControlName="email"
-          autocomplete="email">
-
+          autocomplete="email"
+        />
       </div>
 
       <!-- PASSWORD -->
 
       <div class="field">
-
-        <label>
-          סיסמה
-        </label>
+        <label> סיסמה </label>
 
         <div class="password-wrapper">
-
           <input
             [type]="showPassword ? 'text' : 'password'"
             placeholder="••••••••"
             formControlName="password"
-            autocomplete="current-password">
+            autocomplete="current-password"
+          />
 
           <button
             type="button"
             class="toggle-password"
-            (click)="togglePassword()">
-
+            (click)="togglePassword()"
+          >
             <svg
               *ngIf="!showPassword"
               xmlns="http://www.w3.org/2000/svg"
@@ -72,11 +53,10 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              class="eye-icon">
-
+              class="eye-icon"
+            >
               <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path>
               <circle cx="12" cy="12" r="3"></circle>
-
             </svg>
 
             <svg
@@ -88,80 +68,54 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              class="eye-icon">
-
+              class="eye-icon"
+            >
               <path d="M3 3l18 18"></path>
               <path d="M10.58 10.58a2 2 0 1 0 2.83 2.83"></path>
-              <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.68 3.36"></path>
-              <path d="M6.61 6.61A17.33 17.33 0 0 0 2 12s3.5 7 10 7a10.94 10.94 0 0 0 4.12-.91"></path>
-
+              <path
+                d="M9.88 5.09A10.94 10.94 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.68 3.36"
+              ></path>
+              <path
+                d="M6.61 6.61A17.33 17.33 0 0 0 2 12s3.5 7 10 7a10.94 10.94 0 0 0 4.12-.91"
+              ></path>
             </svg>
-
           </button>
-
         </div>
-
       </div>
 
       <!-- SUBMIT -->
 
-      <button
-        type="submit"
-        class="submit-btn"
-        [disabled]="loading">
-
+      <button type="submit" class="submit-btn" [disabled]="loading">
         התחברות
-
       </button>
 
       <!-- ERROR MESSAGE -->
 
-      <div
-        *ngIf="errorMessage"
-        class="error-message">
-
+      <div *ngIf="errorMessage" class="error-message">
         {{ errorMessage }}
-
       </div>
-
     </form>
 
     <!-- DIVIDER -->
 
     <div class="divider">
-
       <span>או</span>
-
     </div>
 
     <!-- GOOGLE -->
 
-    <button
-      type="button"
-      class="google-btn">
-
-      המשך עם Google
-
-    </button>
+    <div id="google-button" style="width: 100%"></div>
 
     <!-- REGISTER -->
 
     <div class="register-link">
-
       עדיין אין לך חשבון?
 
-      <a routerLink="/register">
-        הרשמה
-      </a>
-
+      <a routerLink="/register"> הרשמה </a>
     </div>
-
   </div>
 
   <!-- LOADING OVERLAY -->
 
- <app-loading-overlay
-  *ngIf="loading">
-  </app-loading-overlay>
-
+  <app-loading-overlay *ngIf="loading"> </app-loading-overlay>
 </div>

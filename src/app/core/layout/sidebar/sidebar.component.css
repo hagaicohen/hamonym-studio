@@ -1,7 +1,6 @@
 /* src/app/core/layout/sidebar/sidebar.component.css */
 
 .sidebar {
-
   width: 280px;
 
   background: white;
@@ -29,7 +28,6 @@
 /* NAV */
 
 .sidebar-nav {
-
   display: flex;
 
   flex-direction: column;
@@ -40,7 +38,6 @@
 /* ITEM */
 
 .sidebar-item {
-
   height: 48px;
 
   display: flex;
@@ -67,7 +64,6 @@
 }
 
 .sidebar-item.active {
-
   background: #eff6ff;
 
   color: #2563eb;
@@ -76,7 +72,6 @@
 /* ICON */
 
 .sidebar-svg-icon {
-
   width: 18px;
 
   height: 18px;
@@ -87,9 +82,7 @@
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .sidebar {
-
     position: fixed;
 
     top: 72px;
@@ -108,8 +101,6 @@
   }
 
   .sidebar.mobile-open {
-
     transform: translateX(0);
   }
-
 }

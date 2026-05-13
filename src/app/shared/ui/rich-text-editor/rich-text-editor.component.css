@@ -1,5 +1,4 @@
 :host {
-
   display: block;
 
   width: 100%;
@@ -10,12 +9,11 @@
 ========================================================= */
 
 .editor-shell {
-
   width: 100%;
 
-  background: rgba(255,255,255,0.92);
+  background: rgba(255, 255, 255, 0.92);
 
-  border: 1px solid rgba(226,232,240,0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
 
   border-radius: 28px;
 
@@ -23,8 +21,7 @@
 
   backdrop-filter: blur(18px);
 
-  box-shadow:
-    0 10px 40px rgba(15,23,42,0.06);
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
 
   transition:
     border-color 0.2s ease,
@@ -32,12 +29,11 @@
 }
 
 .editor-shell:focus-within {
-
   border-color: #6366f1;
 
   box-shadow:
-    0 0 0 5px rgba(99,102,241,0.12),
-    0 18px 48px rgba(99,102,241,0.12);
+    0 0 0 5px rgba(99, 102, 241, 0.12),
+    0 18px 48px rgba(99, 102, 241, 0.12);
 }
 
 /* =========================================================
@@ -45,7 +41,6 @@
 ========================================================= */
 
 .editor-toolbar {
-
   position: sticky;
 
   top: 0;
@@ -62,12 +57,11 @@
 
   padding: 18px;
 
-  background:
-    linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.98),
-      rgba(248,250,252,0.96)
-    );
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.98),
+    rgba(248, 250, 252, 0.96)
+  );
 
   border-bottom: 1px solid #e2e8f0;
 
@@ -75,7 +69,6 @@
 }
 
 .toolbar-group {
-
   display: flex;
 
   align-items: center;
@@ -88,12 +81,10 @@
 }
 
 .toolbar-group:last-child {
-
   border-inline-end: none;
 }
 
 .toolbar-btn {
-
   width: 42px;
 
   height: 42px;
@@ -123,7 +114,6 @@
 }
 
 .toolbar-btn:hover {
-
   background: #eef2ff;
 
   color: #4f46e5;
@@ -132,14 +122,12 @@
 }
 
 .toolbar-btn.active {
-
   background: #4f46e5;
 
   color: white;
 }
 
 .toolbar-btn svg {
-
   width: 18px;
 
   height: 18px;
@@ -156,7 +144,6 @@
 }
 
 .text-btn {
-
   width: auto;
 
   min-width: 46px;
@@ -169,7 +156,6 @@
 }
 
 .toolbar-btn.danger:hover {
-
   background: #fee2e2;
 
   color: #dc2626;
@@ -180,7 +166,6 @@
 ========================================================= */
 
 .color-picker {
-
   width: 42px;
 
   height: 42px;
@@ -199,12 +184,10 @@
 }
 
 .color-picker::-webkit-color-swatch-wrapper {
-
   padding: 0;
 }
 
 .color-picker::-webkit-color-swatch {
-
   border: none;
 
   border-radius: 14px;
@@ -215,17 +198,9 @@
 ========================================================= */
 
 .editor-content {
+  padding: 42px 48px;
 
-  padding:
-    42px
-    48px;
-
-  background:
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #fcfcfd 100%
-    );
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcfd 100%);
 
   direction: rtl;
 
@@ -237,7 +212,6 @@
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror {
-
   outline: none !important;
 
   min-height: 360px;
@@ -260,11 +234,10 @@
 ========================================================= */
 
 :host
-::ng-deep
-.editor-content
-.ProseMirror
-p.is-editor-empty:first-child::before {
-
+  ::ng-deep
+  .editor-content
+  .ProseMirror
+  p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
 
   color: #94a3b8;
@@ -281,7 +254,6 @@ p.is-editor-empty:first-child::before {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror * {
-
   box-sizing: border-box;
 }
 
@@ -290,7 +262,6 @@ p.is-editor-empty:first-child::before {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror p {
-
   margin-top: 8px !important;
 
   margin-bottom: 8px !important;
@@ -307,43 +278,37 @@ p.is-editor-empty:first-child::before {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror h1 {
-
   font-size: 42px !important;
 
   line-height: 1.15 !important;
 
   font-weight: 800 !important;
 
-  margin:
-    28px 0 14px !important;
+  margin: 28px 0 14px !important;
 
   color: inherit !important;
 }
 
 :host ::ng-deep .editor-content .ProseMirror h2 {
-
   font-size: 34px !important;
 
   line-height: 1.2 !important;
 
   font-weight: 800 !important;
 
-  margin:
-    24px 0 12px !important;
+  margin: 24px 0 12px !important;
 
   color: inherit !important;
 }
 
 :host ::ng-deep .editor-content .ProseMirror h3 {
-
   font-size: 26px !important;
 
   line-height: 1.3 !important;
 
   font-weight: 700 !important;
 
-  margin:
-    20px 0 10px !important;
+  margin: 20px 0 10px !important;
 
   color: inherit !important;
 }
@@ -354,17 +319,13 @@ p.is-editor-empty:first-child::before {
 
 :host ::ng-deep .editor-content .ProseMirror ul,
 :host ::ng-deep .editor-content .ProseMirror ol {
-
   padding-right: 24px !important;
 
-  margin:
-    12px 0 !important;
+  margin: 12px 0 !important;
 }
 
 :host ::ng-deep .editor-content .ProseMirror li {
-
-  margin:
-    4px 0 !important;
+  margin: 4px 0 !important;
 
   line-height: 1.65 !important;
 }
@@ -373,39 +334,29 @@ p.is-editor-empty:first-child::before {
    TASK LISTS
 ========================================================= */
 
-:host
-::ng-deep
-.editor-content
-.ProseMirror
-ul[data-type="taskList"] {
-
+:host ::ng-deep .editor-content .ProseMirror ul[data-type="taskList"] {
   list-style: none !important;
 
   padding: 0 !important;
 }
 
-:host
-::ng-deep
-.editor-content
-.ProseMirror
-ul[data-type="taskList"] li {
-
+:host ::ng-deep .editor-content .ProseMirror ul[data-type="taskList"] li {
   display: flex;
 
   align-items: flex-start;
 
   gap: 12px;
 
-  margin:
-    10px 0 !important;
+  margin: 10px 0 !important;
 }
 
 :host
-::ng-deep
-.editor-content
-.ProseMirror
-ul[data-type="taskList"] li > label {
-
+  ::ng-deep
+  .editor-content
+  .ProseMirror
+  ul[data-type="taskList"]
+  li
+  > label {
   margin-top: 2px;
 }
 
@@ -414,12 +365,9 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror blockquote {
+  margin: 20px 0 !important;
 
-  margin:
-    20px 0 !important;
-
-  padding:
-    16px 20px !important;
+  padding: 16px 20px !important;
 
   border-right: 4px solid #6366f1 !important;
 
@@ -439,7 +387,6 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror pre {
-
   background: #0f172a !important;
 
   color: #f8fafc !important;
@@ -450,15 +397,11 @@ ul[data-type="taskList"] li > label {
 
   overflow-x: auto !important;
 
-  margin:
-    18px 0 !important;
+  margin: 18px 0 !important;
 }
 
 :host ::ng-deep .editor-content .ProseMirror code {
-
-  font-family:
-    Consolas,
-    monospace !important;
+  font-family: Consolas, monospace !important;
 }
 
 /* =========================================================
@@ -466,7 +409,6 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror a {
-
   color: #4f46e5 !important;
 
   text-decoration: underline !important;
@@ -479,15 +421,13 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror hr {
-
   border: none !important;
 
   height: 1px !important;
 
   background: #e2e8f0 !important;
 
-  margin:
-    24px 0 !important;
+  margin: 24px 0 !important;
 }
 
 /* =========================================================
@@ -495,18 +435,15 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror img {
-
   max-width: 100%;
 
   display: block;
 
-  margin:
-    24px auto;
+  margin: 24px auto;
 
   border-radius: 22px;
 
-  box-shadow:
-    0 10px 30px rgba(15,23,42,0.14);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
 }
 
 /* =========================================================
@@ -514,7 +451,6 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror iframe {
-
   width: 100%;
 
   min-height: 420px;
@@ -523,8 +459,7 @@ ul[data-type="taskList"] li > label {
 
   border-radius: 22px;
 
-  margin:
-    24px 0;
+  margin: 24px 0;
 
   overflow: hidden;
 }
@@ -534,15 +469,13 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror mark {
-
   background: #fef08a;
 
   color: inherit;
 
   border-radius: 6px;
 
-  padding:
-    2px 4px;
+  padding: 2px 4px;
 }
 
 /* =========================================================
@@ -550,12 +483,10 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 .editor-content::-webkit-scrollbar {
-
   width: 10px;
 }
 
 .editor-content::-webkit-scrollbar-thumb {
-
   background: #d4d4d8;
 
   border-radius: 999px;
@@ -566,84 +497,59 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 @media (prefers-color-scheme: dark) {
-
   .editor-shell {
-
-    background: rgba(17,24,39,0.92);
+    background: rgba(17, 24, 39, 0.92);
 
     border-color: #374151;
   }
 
   .editor-toolbar {
-
-    background:
-      linear-gradient(
-        to bottom,
-        rgba(17,24,39,0.98),
-        rgba(31,41,55,0.98)
-      );
+    background: linear-gradient(
+      to bottom,
+      rgba(17, 24, 39, 0.98),
+      rgba(31, 41, 55, 0.98)
+    );
 
     border-bottom-color: #374151;
   }
 
   .toolbar-group {
-
     border-inline-end-color: #374151;
   }
 
   .toolbar-btn {
-
     color: #e5e7eb;
   }
 
   .toolbar-btn:hover {
-
     background: #312e81;
   }
 
   .editor-content {
-
-    background:
-      linear-gradient(
-        180deg,
-        #111827 0%,
-        #0f172a 100%
-      );
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
 
     color: #f3f4f6;
   }
 
-  :host
-  ::ng-deep
-  .editor-content
-  .ProseMirror
-  blockquote {
-
-    background: rgba(255,255,255,0.04) !important;
+  :host ::ng-deep .editor-content .ProseMirror blockquote {
+    background: rgba(255, 255, 255, 0.04) !important;
 
     color: #e5e7eb !important;
   }
 
   :host
-  ::ng-deep
-  .editor-content
-  .ProseMirror
-  p.is-editor-empty:first-child::before {
-
+    ::ng-deep
+    .editor-content
+    .ProseMirror
+    p.is-editor-empty:first-child::before {
     color: #6b7280;
   }
 
-  :host
-  ::ng-deep
-  .editor-content
-  .ProseMirror
-  mark {
-
+  :host ::ng-deep .editor-content .ProseMirror mark {
     background: #854d0e;
 
     color: #fff7ed;
   }
-
 }
 
 /* =========================================================
@@ -651,9 +557,7 @@ ul[data-type="taskList"] li > label {
 ========================================================= */
 
 @media (max-width: 768px) {
-
   .editor-toolbar {
-
     gap: 10px;
 
     padding: 14px;
@@ -664,7 +568,6 @@ ul[data-type="taskList"] li > label {
   }
 
   .toolbar-group {
-
     border-inline-end: none;
 
     padding-inline-end: 0;
@@ -673,7 +576,6 @@ ul[data-type="taskList"] li > label {
   }
 
   .toolbar-btn {
-
     width: 40px;
 
     height: 40px;
@@ -682,37 +584,28 @@ ul[data-type="taskList"] li > label {
   }
 
   .editor-content {
-
-    padding:
-      24px
-      18px;
+    padding: 24px 18px;
   }
 
   :host ::ng-deep .editor-content .ProseMirror {
-
     font-size: 16px !important;
 
     line-height: 1.7 !important;
   }
 
   :host ::ng-deep .editor-content .ProseMirror h1 {
-
     font-size: 32px !important;
   }
 
   :host ::ng-deep .editor-content .ProseMirror h2 {
-
     font-size: 28px !important;
   }
 
   :host ::ng-deep .editor-content .ProseMirror h3 {
-
     font-size: 22px !important;
   }
 
   :host ::ng-deep .editor-content .ProseMirror iframe {
-
     min-height: 240px;
   }
-
 }

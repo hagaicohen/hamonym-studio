@@ -1,5 +1,4 @@
 .step-card {
-
   max-width: 760px;
 
   margin: 24px auto;
@@ -16,7 +15,6 @@
 }
 
 .step-header {
-
   display: flex;
 
   flex-direction: column;
@@ -33,14 +31,12 @@
 }
 
 .step-number {
-
   font-size: 12px;
 
   color: #64748b;
 }
 
 .step-header h1 {
-
   margin: 0;
 
   font-size: 28px;
@@ -53,14 +49,12 @@
 }
 
 .progress-bar-wrapper {
-
   width: 100%;
 
   margin-bottom: 34px;
 }
 
 .progress-bar {
-
   width: 100%;
 
   height: 8px;
@@ -73,7 +67,6 @@
 }
 
 .progress-fill {
-
   width: 16.66%;
 
   height: 100%;
@@ -82,7 +75,6 @@
 }
 
 .progress-steps {
-
   display: flex;
 
   justify-content: space-between;
@@ -91,7 +83,6 @@
 }
 
 .progress-step {
-
   font-size: 14px;
 
   color: #94a3b8;
@@ -100,14 +91,12 @@
 }
 
 .progress-step.active {
-
   color: #14b8a6;
 
   font-weight: 700;
 }
 
 .step-body {
-
   display: flex;
 
   flex-direction: column;
@@ -118,7 +107,6 @@
 }
 
 .entity-icon {
-
   width: 72px;
 
   height: 72px;
@@ -139,7 +127,6 @@
 }
 
 .step-body h2 {
-
   margin: 0;
 
   font-size: 34px;
@@ -150,7 +137,6 @@
 }
 
 .step-body p {
-
   margin-top: 10px;
 
   margin-bottom: 28px;
@@ -163,7 +149,6 @@
 /* FORM SECTION */
 
 .form-section {
-
   width: 100%;
 
   margin-top: 18px;
@@ -184,25 +169,20 @@
 }
 
 @keyframes fadeUp {
-
   from {
-
     opacity: 0;
 
     transform: translateY(8px);
   }
 
   to {
-
     opacity: 1;
 
     transform: translateY(0);
   }
-
 }
 
 .section-header {
-
   display: flex;
 
   align-items: center;
@@ -215,7 +195,6 @@
 }
 
 .section-title {
-
   font-size: 18px;
 
   font-weight: 700;
@@ -224,7 +203,6 @@
 }
 
 .section-icon {
-
   width: 18px;
 
   height: 18px;
@@ -235,18 +213,15 @@
 }
 
 .field {
-
   margin-bottom: 18px;
 }
 
 .field:last-child {
-
   margin-bottom: 0;
 }
 
 .field-label,
 .field label {
-
   display: block;
 
   margin-bottom: 8px;
@@ -262,7 +237,6 @@
 
 input,
 select {
-
   width: 100%;
 
   height: 48px;
@@ -297,19 +271,16 @@ select {
 }
 
 input::placeholder {
-
   color: #94a3b8;
 }
 
 select.placeholder {
-
   color: #94a3b8;
 
   font-weight: 400;
 }
 
 select option {
-
   color: #0f172a;
 
   background: white;
@@ -317,13 +288,11 @@ select option {
 
 input:hover,
 select:hover {
-
   border-color: #cbd5e1;
 }
 
 input:focus,
 select:focus {
-
   border-color: #14b8a6;
 
   box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
@@ -332,14 +301,12 @@ select:focus {
 /* VALIDATION */
 
 .invalid {
-
   border-color: #ef4444 !important;
 
   background: #fef2f2;
 }
 
 .field-error {
-
   margin-top: 6px;
 
   font-size: 12px;
@@ -354,7 +321,6 @@ select:focus {
 /* CHIPS */
 
 .chips-title {
-
   margin-top: 18px;
 
   margin-bottom: 14px;
@@ -367,7 +333,6 @@ select:focus {
 }
 
 .chips {
-
   display: flex;
 
   flex-wrap: wrap;
@@ -376,7 +341,6 @@ select:focus {
 }
 
 .chip {
-
   height: 34px;
 
   padding: 0 14px;
@@ -401,7 +365,6 @@ select:focus {
 }
 
 .chip:hover {
-
   border-color: #14b8a6;
 
   color: #14b8a6;
@@ -410,7 +373,6 @@ select:focus {
 }
 
 .chip.active {
-
   background: #14b8a6;
 
   border-color: #14b8a6;
@@ -421,7 +383,6 @@ select:focus {
 /* GRID */
 
 .contact-grid {
-
   display: grid;
 
   grid-template-columns: 1fr 1fr;
@@ -432,22 +393,18 @@ select:focus {
 /* DOCUMENTS */
 
 .documents-icon {
-
   color: #2563eb;
 }
 
 .document-upload {
-
   margin-bottom: 26px;
 }
 
 .document-upload:last-child {
-
   margin-bottom: 0;
 }
 
 .document-label {
-
   display: block;
 
   margin-bottom: 8px;
@@ -460,7 +417,6 @@ select:focus {
 }
 
 .document-description {
-
   margin-top: 0;
 
   margin-bottom: 14px;
@@ -473,14 +429,12 @@ select:focus {
 }
 
 .document-upload input[type="file"] {
-
   display: none;
 }
 
 /* UPLOAD BUTTON */
 
 .upload-btn {
-
   width: 100%;
 
   min-height: 44px;
@@ -517,21 +471,18 @@ select:focus {
 }
 
 .upload-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
 
   transform: translateY(-1px);
 
-  box-shadow:
-    0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 /* UPLOADED STATE */
 
 .uploaded-file-row {
-
   display: flex;
 
   flex-wrap: wrap;
@@ -542,7 +493,6 @@ select:focus {
 }
 
 .upload-success-btn {
-
   min-height: 44px;
 
   padding: 0 16px;
@@ -567,12 +517,10 @@ select:focus {
 }
 
 .upload-success-btn svg {
-
   color: #16a34a;
 }
 
 .view-file-link {
-
   font-size: 14px;
 
   font-weight: 500;
@@ -585,14 +533,12 @@ select:focus {
 }
 
 .view-file-link:hover {
-
   opacity: 0.7;
 
   text-decoration: underline;
 }
 
 .remove-file-btn {
-
   border: none;
 
   background: transparent;
@@ -609,14 +555,12 @@ select:focus {
 }
 
 .remove-file-btn:hover {
-
   opacity: 0.7;
 }
 
 /* INFO BOX */
 
 .documents-info {
-
   margin-top: 8px;
 
   padding: 16px;
@@ -629,7 +573,6 @@ select:focus {
 }
 
 .documents-info-row {
-
   display: flex;
 
   align-items: flex-start;
@@ -638,7 +581,6 @@ select:focus {
 }
 
 .documents-info-icon {
-
   color: #2563eb;
 
   flex-shrink: 0;
@@ -647,7 +589,6 @@ select:focus {
 }
 
 .documents-info-title {
-
   font-size: 14px;
 
   font-weight: 700;
@@ -658,7 +599,6 @@ select:focus {
 }
 
 .documents-info-text {
-
   font-size: 14px;
 
   line-height: 1.6;
@@ -670,9 +610,7 @@ select:focus {
    WIZARD ACTIONS
 ========================================================= */
 
-
 .wizard-actions {
-
   width: 100%;
 
   display: flex;
@@ -687,7 +625,6 @@ select:focus {
 }
 
 .continue-btn {
-
   margin-inline-start: auto;
 
   width: 220px;
@@ -716,19 +653,16 @@ select:focus {
     transform 0.15s ease,
     box-shadow 0.2s ease;
 
-  box-shadow:
-    0 10px 24px rgba(20, 184, 166, 0.18);
+  box-shadow: 0 10px 24px rgba(20, 184, 166, 0.18);
 }
 
 .continue-btn:hover {
-
   background: #0f9f90;
 
   transform: translateY(-1px);
 }
 
 .continue-btn:disabled {
-
   opacity: 0.5;
 
   cursor: not-allowed;
@@ -739,7 +673,6 @@ select:focus {
 }
 
 .secondary-btn {
-
   width: 140px;
 
   height: 52px;
@@ -765,7 +698,6 @@ select:focus {
 }
 
 .secondary-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
@@ -776,9 +708,7 @@ select:focus {
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .step-card {
-
     margin: 16px;
 
     padding: 18px;
@@ -787,67 +717,56 @@ select:focus {
   }
 
   .step-header {
-
     gap: 6px;
 
     margin-bottom: 16px;
   }
 
   .step-header h1 {
-
     font-size: 24px;
   }
 
   .step-number {
-
     font-size: 11px;
   }
 
   .step-body h2 {
-
     font-size: 28px;
 
     line-height: 1.2;
   }
 
   .step-body p {
-
     font-size: 14px;
 
     line-height: 1.5;
   }
 
   .form-section {
-
     padding: 18px;
 
     border-radius: 18px;
   }
 
   .contact-grid {
-
     grid-template-columns: 1fr;
   }
 
   .chips {
-
     gap: 8px;
   }
 
   .chip {
-
     font-size: 12px;
 
     padding: 0 12px;
   }
 
   .document-description {
-
     font-size: 13px;
   }
 
   .upload-btn {
-
     min-height: 42px;
 
     font-size: 13px;
@@ -856,52 +775,43 @@ select:focus {
   }
 
   .uploaded-file-row {
-
     flex-direction: column;
 
     align-items: stretch;
   }
 
   .upload-success-btn {
-
     justify-content: center;
   }
 
   .view-file-link {
-
     text-align: center;
   }
 
   .remove-file-btn {
-
     text-align: center;
   }
 
   .documents-info {
-
     padding: 14px;
   }
 
   .documents-info-text {
-
     font-size: 13px;
 
     line-height: 1.5;
   }
 
   .wizard-actions {
-
     flex-direction: column-reverse;
   }
 
   .continue-btn,
   .secondary-btn {
-
     width: 100%;
 
     height: 50px;
 
     font-size: 14px;
   }
-
 }

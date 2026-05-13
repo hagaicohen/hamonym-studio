@@ -1,72 +1,41 @@
 <div class="step-card">
-
   <!-- HEADER -->
 
   <div class="step-header">
+    <h1>פרופיל {{ entityConfig.labels.entity }}</h1>
 
-    <h1>
-      פרופיל {{ entityConfig.labels.entity }}
-    </h1>
-
-    <div class="step-number">
-      שלב 2 מתוך 6
-    </div>
-
+    <div class="step-number">שלב 2 מתוך 6</div>
   </div>
 
   <!-- PROGRESS -->
 
   <div class="progress-bar-wrapper">
-
     <div class="progress-bar">
-
-      <div
-        class="progress-fill"
-        style="width: 33.33%">
-      </div>
-
+      <div class="progress-fill" style="width: 33.33%"></div>
     </div>
 
     <div class="progress-steps">
+      <div class="progress-step done">1</div>
 
-      <div class="progress-step done">
-        1
-      </div>
+      <div class="progress-step active">2</div>
 
-      <div class="progress-step active">
-        2
-      </div>
+      <div class="progress-step">3</div>
 
-      <div class="progress-step">
-        3
-      </div>
+      <div class="progress-step">4</div>
 
-      <div class="progress-step">
-        4
-      </div>
+      <div class="progress-step">5</div>
 
-      <div class="progress-step">
-        5
-      </div>
-
-      <div class="progress-step">
-        6
-      </div>
-
+      <div class="progress-step">6</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="step-body">
-
     <!-- HERO -->
 
     <div class="profile-hero">
-
       <div class="hero-icon">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="28"
@@ -74,42 +43,29 @@
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
-
+          stroke-width="2"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <circle cx="12" cy="12" r="4"></circle>
-
         </svg>
-
       </div>
 
-      <h2>
-        מטרות {{ entityConfig.labels.entity }}
-      </h2>
+      <h2>מטרות {{ entityConfig.labels.entity }}</h2>
 
-      <p>
-        הגדירו את הכרטיס שלכם בפלטפורמה
-      </p>
-
+      <p>הגדירו את הכרטיס שלכם בפלטפורמה</p>
     </div>
 
     <!-- CAMPAIGN TYPES -->
 
     <div class="campaign-type-list">
-
-      @for (
-        type of campaignTypes;
-        track type.id
-      ) {
-
+      @for (type of campaignTypes; track type.id) {
         <button
           type="button"
           class="campaign-type-row"
           [class.active]="selectedCampaignTypes.includes(type.id)"
-          (click)="toggleCampaignType(type.id)">
-
+          (click)="toggleCampaignType(type.id)"
+        >
           <div class="campaign-type-content">
-
             <div class="campaign-type-name">
               {{ type.title }}
             </div>
@@ -117,17 +73,13 @@
             <div class="campaign-type-description">
               {{ type.description }}
             </div>
-
           </div>
 
           <div
             class="campaign-checkbox"
-            [class.checked]="selectedCampaignTypes.includes(type.id)">
-
-            @if (
-              selectedCampaignTypes.includes(type.id)
-            ) {
-
+            [class.checked]="selectedCampaignTypes.includes(type.id)"
+          >
+            @if (selectedCampaignTypes.includes(type.id)) {
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -135,26 +87,19 @@
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="3">
-
+                stroke-width="3"
+              >
                 <path d="M20 6 9 17l-5-5"></path>
-
               </svg>
-
             }
-
           </div>
-
         </button>
-
       }
-
     </div>
 
     <!-- PROFILE -->
 
     <div class="base-section">
-
       <div class="base-section-title">
         כרטיס {{ entityConfig.labels.entity }}
       </div>
@@ -162,65 +107,49 @@
       <!-- NAME -->
 
       <div class="field-block">
-
-        <label>
-          שם להצגה *
-        </label>
+        <label> שם להצגה * </label>
 
         <input
           type="text"
           class="base-input"
           [(ngModel)]="displayName"
-          placeholder="השם שיוצג בפלטפורמה">
-
+          placeholder="השם שיוצג בפלטפורמה"
+        />
       </div>
 
       <!-- DESCRIPTION -->
 
       <div class="field-block">
-
-        <label>
-          תיאור קצר *
-        </label>
+        <label> תיאור קצר * </label>
 
         <app-rich-text-editor
           [(ngModel)]="organizationDescription"
-          placeholder="ספרו על הפעילות שלכם...">
+          placeholder="ספרו על הפעילות שלכם..."
+        >
         </app-rich-text-editor>
-
       </div>
 
       <!-- LOGO -->
 
       <div class="field-block">
-
-        <label>
-          לוגו
-        </label>
+        <label> לוגו </label>
 
         <input
           #logoInput
           type="file"
           hidden
           accept=".png,.jpg,.jpeg,.svg"
-          (change)="onLogoSelected($event)">
+          (change)="onLogoSelected($event)"
+        />
 
         <div class="modern-logo-upload">
-
           <!-- PREVIEW -->
 
           <div class="modern-logo-preview">
-
             @if (logoPreview) {
-
-              <img
-                [src]="logoPreview"
-                alt="Logo">
-
+              <img [src]="logoPreview" alt="Logo" />
             } @else {
-
               <div class="modern-logo-placeholder">
-
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="28"
@@ -228,41 +157,26 @@
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2">
+                  stroke-width="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
 
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2">
-                  </rect>
-
-                  <circle
-                    cx="9"
-                    cy="9"
-                    r="2">
-                  </circle>
+                  <circle cx="9" cy="9" r="2"></circle>
 
                   <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path>
-
                 </svg>
-
               </div>
-
             }
-
           </div>
 
           <!-- CONTENT -->
 
           <div class="modern-logo-content">
-
             <button
               type="button"
               class="modern-upload-btn"
-              (click)="logoInput.click()">
-
+              (click)="logoInput.click()"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -270,57 +184,37 @@
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
+                stroke-width="2"
+              >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
-
               </svg>
 
               העלה לוגו
-
             </button>
 
-            <div class="modern-upload-help">
-
-              מומלץ 400x400 פיקסלים, PNG/JPG
-
-            </div>
-
+            <div class="modern-upload-help">מומלץ 400x400 פיקסלים, PNG/JPG</div>
           </div>
-
         </div>
-
       </div>
-
     </div>
 
     <!-- ACTIONS -->
 
     <div class="wizard-actions">
-
-      <button
-        type="button"
-        class="secondary-btn"
-        (click)="back.emit()">
-
+      <button type="button" class="secondary-btn" (click)="back.emit()">
         חזור
-
       </button>
 
       <button
         type="button"
         class="continue-btn"
         [disabled]="!canContinue"
-        (click)="continue.emit()">
-
+        (click)="continue.emit()"
+      >
         המשך לשלב הבא
-
       </button>
-
     </div>
-
   </div>
-
 </div>

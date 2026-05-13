@@ -1,5 +1,4 @@
 .login-page {
-
   min-height: calc(100vh - 72px);
 
   display: flex;
@@ -10,12 +9,7 @@
 
   padding: 24px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #f8fafc 0%,
-      #eef2ff 100%
-    );
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 
   position: relative;
 }
@@ -23,7 +17,6 @@
 /* CARD */
 
 .login-card {
-
   width: 100%;
 
   max-width: 420px;
@@ -34,8 +27,7 @@
 
   padding: 40px;
 
-  box-shadow:
-    0 10px 40px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
 
   border: 1px solid #e5e7eb;
 
@@ -53,7 +45,6 @@
 /* LOGO */
 
 .logo {
-
   width: 140px;
 
   object-fit: contain;
@@ -64,7 +55,6 @@
 /* TITLE */
 
 .title {
-
   margin: 0;
 
   font-size: 28px;
@@ -77,7 +67,6 @@
 }
 
 .subtitle {
-
   margin-top: 10px;
 
   margin-bottom: 32px;
@@ -94,7 +83,6 @@
 /* FORM */
 
 .login-form {
-
   width: 100%;
 
   display: flex;
@@ -107,7 +95,6 @@
 /* FIELD */
 
 .field {
-
   display: flex;
 
   flex-direction: column;
@@ -118,7 +105,6 @@
 }
 
 .field label {
-
   font-size: 14px;
 
   font-weight: 600;
@@ -127,7 +113,6 @@
 }
 
 .field input {
-
   width: 100%;
 
   height: 50px;
@@ -151,35 +136,30 @@
 }
 
 .field input:focus {
-
   outline: none;
 
   border-color: #2563eb;
 
   background: white;
 
-  box-shadow:
-    0 0 0 4px rgba(37,99,235,0.08);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
 /* PASSWORD */
 
 .password-wrapper {
-
   position: relative;
 
   width: 100%;
 }
 
 .password-wrapper input {
-
   padding-right: 16px;
 
   padding-left: 52px;
 }
 
 .toggle-password {
-
   position: absolute;
 
   left: 14px;
@@ -208,7 +188,6 @@
 }
 
 .eye-icon {
-
   width: 20px;
 
   height: 20px;
@@ -219,14 +198,12 @@
 }
 
 .toggle-password:hover .eye-icon {
-
   color: #0f172a;
 }
 
 /* SUBMIT */
 
 .submit-btn {
-
   margin-top: 8px;
 
   width: 100%;
@@ -260,12 +237,10 @@
 }
 
 .submit-btn:hover {
-
   background: #1d4ed8;
 }
 
 .submit-btn:disabled {
-
   opacity: 0.85;
 
   cursor: not-allowed;
@@ -274,7 +249,6 @@
 /* DIVIDER */
 
 .divider {
-
   width: 100%;
 
   display: flex;
@@ -292,8 +266,7 @@
 
 .divider::before,
 .divider::after {
-
-  content: '';
+  content: "";
 
   flex: 1;
 
@@ -305,7 +278,6 @@
 /* GOOGLE */
 
 .google-btn {
-
   width: 100%;
 
   height: 52px;
@@ -329,7 +301,6 @@
 }
 
 .google-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
@@ -338,7 +309,6 @@
 /* REGISTER */
 
 .register-link {
-
   margin-top: 28px;
 
   font-size: 14px;
@@ -349,7 +319,6 @@
 }
 
 .register-link a {
-
   color: #2563eb;
 
   text-decoration: none;
@@ -360,12 +329,11 @@
 /* LOADING OVERLAY */
 
 .loading-overlay {
-
   position: fixed;
 
   inset: 0;
 
-  background: rgba(255,255,255,0.72);
+  background: rgba(255, 255, 255, 0.72);
 
   backdrop-filter: blur(5px);
 
@@ -381,54 +349,43 @@
 /* SPINNER */
 
 .loading-spinner {
-
   width: 58px;
 
   height: 58px;
 
   border-radius: 50%;
 
-  border: 4px solid rgba(37,99,235,0.15);
+  border: 4px solid rgba(37, 99, 235, 0.15);
 
   border-top-color: #2563eb;
 
   animation: spin 0.75s linear infinite;
 
-  box-shadow:
-    0 0 30px rgba(37,99,235,0.18);
+  box-shadow: 0 0 30px rgba(37, 99, 235, 0.18);
 }
 
 @keyframes spin {
-
   to {
-
     transform: rotate(360deg);
   }
-
 }
 
 /* TABLET */
 
 @media (max-width: 992px) {
-
   .login-page {
-
     padding: 20px;
   }
 
   .login-card {
-
     max-width: 440px;
   }
-
 }
 
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .login-page {
-
     min-height: calc(100vh - 64px);
 
     padding: 14px;
@@ -439,7 +396,6 @@
   }
 
   .login-card {
-
     max-width: 100%;
 
     padding: 28px 22px;
@@ -448,19 +404,16 @@
   }
 
   .logo {
-
     width: 120px;
 
     margin-bottom: 20px;
   }
 
   .title {
-
     font-size: 24px;
   }
 
   .subtitle {
-
     font-size: 14px;
 
     margin-bottom: 28px;
@@ -470,30 +423,25 @@
   .password-wrapper input,
   .submit-btn,
   .google-btn {
-
     height: 48px;
 
     font-size: 14px;
   }
 
   .register-link {
-
     margin-top: 24px;
 
     font-size: 13px;
   }
 
   .loading-spinner {
-
     width: 52px;
 
     height: 52px;
   }
-
 }
 
 .error-message {
-
   width: 100%;
 
   box-sizing: border-box;
@@ -517,36 +465,46 @@
   text-align: center;
 }
 
+.google-button-wrapper {
+  width: 100%;
+}
+
+.google-button-wrapper > div {
+  width: 100%;
+}
+
+.google-button-wrapper iframe {
+  width: 100% !important;
+
+  min-width: 100% !important;
+
+  border-radius: 16px !important;
+}
+
 /* SMALL MOBILE */
 
 @media (max-width: 480px) {
-
   .login-page {
-
     padding: 10px;
 
     padding-top: 20px;
   }
 
   .login-card {
-
     padding: 24px 18px;
 
     border-radius: 18px;
   }
 
   .title {
-
     font-size: 22px;
   }
 
-   .error-message {
-
+  .error-message {
     font-size: 13px;
 
     padding: 12px 14px;
 
     border-radius: 12px;
   }
-
 }

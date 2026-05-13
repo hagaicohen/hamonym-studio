@@ -5,7 +5,6 @@
 /* STEP BODY */
 
 .step-body {
-
   width: 100%;
 
   box-sizing: border-box;
@@ -14,7 +13,6 @@
 /* HERO */
 
 .hero-icon {
-
   width: 72px;
 
   height: 72px;
@@ -37,7 +35,6 @@
 }
 
 .hero-icon svg {
-
   width: 34px;
 
   height: 34px;
@@ -46,7 +43,6 @@
 /* GOALS SECTION */
 
 .goals-section {
-
   width: 100%;
 
   box-sizing: border-box;
@@ -65,14 +61,12 @@
 /* FIELD BLOCK */
 
 .field-block {
-
   width: 100%;
 
   box-sizing: border-box;
 }
 
 .field-block + .field-block {
-
   margin-top: 30px;
 
   padding-top: 30px;
@@ -81,7 +75,6 @@
 }
 
 .field-block label {
-
   display: block;
 
   margin-bottom: 14px;
@@ -98,7 +91,6 @@
 /* MONEY INPUT */
 
 .money-input-wrapper {
-
   position: relative;
 
   width: 100%;
@@ -109,7 +101,6 @@
 }
 
 .money-input {
-
   width: 100%;
 
   min-width: 0;
@@ -120,7 +111,6 @@
 }
 
 .money-symbol {
-
   position: absolute;
 
   right: 18px;
@@ -137,7 +127,6 @@
 /* HELP */
 
 .field-help {
-
   margin-top: 10px;
 
   font-size: 14px;
@@ -152,7 +141,6 @@
 /* INFO BOX */
 
 .info-box {
-
   width: 100%;
 
   box-sizing: border-box;
@@ -175,14 +163,12 @@
 }
 
 .info-icon {
-
   color: #2563eb;
 
   flex-shrink: 0;
 }
 
 .info-title {
-
   font-size: 16px;
 
   font-weight: 700;
@@ -195,7 +181,6 @@
 }
 
 .info-text {
-
   font-size: 14px;
 
   line-height: 1.8;
@@ -208,9 +193,7 @@
 ======================================== */
 
 @media (max-width: 768px) {
-
   .goals-section {
-
     margin-top: 22px;
 
     padding: 18px;
@@ -219,7 +202,6 @@
   }
 
   .hero-icon {
-
     width: 64px;
 
     height: 64px;
@@ -230,47 +212,40 @@
   }
 
   .hero-icon svg {
-
     width: 28px;
 
     height: 28px;
   }
 
   .field-block + .field-block {
-
     margin-top: 24px;
 
     padding-top: 24px;
   }
 
   .field-block label {
-
     margin-bottom: 12px;
 
     font-size: 16px;
   }
 
   .money-input {
-
     padding-right: 46px !important;
   }
 
   .money-symbol {
-
     right: 16px;
 
     font-size: 16px;
   }
 
   .field-help {
-
     font-size: 13px;
 
     line-height: 1.5;
   }
 
   .info-box {
-
     gap: 12px;
 
     padding: 18px;
@@ -279,41 +254,32 @@
   }
 
   .info-title {
-
     font-size: 15px;
   }
 
   .info-text {
-
     font-size: 13px;
 
     line-height: 1.7;
   }
-
 }
 
 /* SMALL MOBILE */
 
 @media (max-width: 480px) {
-
   .goals-section {
-
     padding: 16px;
   }
 
   .field-block label {
-
     font-size: 15px;
   }
 
   .money-symbol {
-
     font-size: 15px;
   }
 
   .info-box {
-
     padding: 16px;
   }
-
 }

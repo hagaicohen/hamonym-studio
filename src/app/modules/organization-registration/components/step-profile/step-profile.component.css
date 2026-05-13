@@ -3,7 +3,6 @@
 ========================================================= */
 
 .profile-hero {
-
   display: flex;
 
   flex-direction: column;
@@ -16,19 +15,13 @@
 }
 
 .hero-icon {
-
   width: 72px;
 
   height: 72px;
 
   border-radius: 22px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #f3e8ff 0%,
-      #ede9fe 100%
-    );
+  background: linear-gradient(180deg, #f3e8ff 0%, #ede9fe 100%);
 
   display: flex;
 
@@ -42,7 +35,6 @@
 }
 
 .profile-hero h2 {
-
   margin: 0 0 10px;
 
   font-size: 34px;
@@ -53,7 +45,6 @@
 }
 
 .profile-hero p {
-
   margin: 0;
 
   font-size: 16px;
@@ -68,7 +59,6 @@
 ========================================================= */
 
 .base-section {
-
   width: 100%;
 
   background: #ffffff;
@@ -83,12 +73,10 @@
 
   box-sizing: border-box;
 
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .base-section-title {
-
   font-size: 18px;
 
   font-weight: 700;
@@ -105,7 +93,6 @@
 ========================================================= */
 
 .campaign-type-list {
-
   display: flex;
 
   flex-direction: column;
@@ -118,7 +105,6 @@
 }
 
 .campaign-type-row {
-
   width: 100%;
 
   border: none;
@@ -145,26 +131,22 @@
 }
 
 .campaign-type-row:hover {
-
   background: #f1f5f9;
 
   transform: translateY(-1px);
 }
 
 .campaign-type-row.active {
-
   background: #eef2ff;
 }
 
 .campaign-type-content {
-
   flex: 1;
 
   text-align: right;
 }
 
 .campaign-type-name {
-
   font-size: 15px;
 
   font-weight: 600;
@@ -175,7 +157,6 @@
 }
 
 .campaign-type-description {
-
   font-size: 13px;
 
   color: #64748b;
@@ -184,7 +165,6 @@
 }
 
 .campaign-checkbox {
-
   width: 18px;
 
   height: 18px;
@@ -211,7 +191,6 @@
 }
 
 .campaign-checkbox.checked {
-
   background: #3b82f6;
 
   border-color: #3b82f6;
@@ -222,19 +201,16 @@
 ========================================================= */
 
 .field-block {
-
   margin-bottom: 26px;
 
   text-align: right;
 }
 
 .field-block:last-child {
-
   margin-bottom: 0;
 }
 
 .field-block label {
-
   display: block;
 
   margin-bottom: 10px;
@@ -247,7 +223,6 @@
 }
 
 .base-input {
-
   width: 100%;
 
   height: 54px;
@@ -274,11 +249,9 @@
 }
 
 .base-input:focus {
-
   border-color: #14b8a6;
 
-  box-shadow:
-    0 0 0 4px rgba(20, 184, 166, 0.08);
+  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
 }
 
 /* =========================================================
@@ -286,7 +259,6 @@
 ========================================================= */
 
 .editor-wrapper {
-
   border: 1px solid #dbe2ea;
 
   border-radius: 18px;
@@ -297,7 +269,6 @@
 }
 
 .editor-toolbar {
-
   height: 54px;
 
   border-bottom: 1px solid #e2e8f0;
@@ -314,7 +285,6 @@
 }
 
 .editor-toolbar button {
-
   width: 34px;
 
   height: 34px;
@@ -337,14 +307,12 @@
 }
 
 .editor-toolbar button:hover {
-
   background: #e2e8f0;
 
   color: #0f172a;
 }
 
 .base-editor {
-
   width: 100%;
 
   min-height: 170px;
@@ -371,7 +339,6 @@
 }
 
 .base-editor::placeholder {
-
   color: #94a3b8;
 }
 
@@ -380,7 +347,6 @@
 ========================================================= */
 
 .modern-logo-upload {
-
   display: flex;
 
   align-items: center;
@@ -389,7 +355,6 @@
 }
 
 .modern-logo-preview {
-
   width: 84px;
 
   height: 84px;
@@ -406,7 +371,6 @@
 }
 
 .modern-logo-preview img {
-
   width: 100%;
 
   height: 100%;
@@ -415,7 +379,6 @@
 }
 
 .modern-logo-placeholder {
-
   width: 100%;
 
   height: 100%;
@@ -430,7 +393,6 @@
 }
 
 .modern-logo-content {
-
   display: flex;
 
   flex-direction: column;
@@ -439,7 +401,6 @@
 }
 
 .modern-upload-btn {
-
   height: 40px;
 
   padding: 0 16px;
@@ -470,14 +431,12 @@
 }
 
 .modern-upload-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
 }
 
 .modern-upload-help {
-
   margin-top: 8px;
 
   font-size: 12px;
@@ -486,19 +445,15 @@
 }
 
 @media (max-width: 768px) {
-
   .modern-logo-upload {
-
     align-items: flex-start;
   }
 
   .modern-logo-preview {
-
     width: 72px;
 
     height: 72px;
   }
-
 }
 
 /* =========================================================
@@ -506,14 +461,11 @@
 ========================================================= */
 
 @media (max-width: 768px) {
-
   .profile-hero {
-
     margin-bottom: 26px;
   }
 
   .hero-icon {
-
     width: 64px;
 
     height: 64px;
@@ -524,53 +476,44 @@
   }
 
   .profile-hero h2 {
-
     font-size: 28px;
   }
 
   .profile-hero p {
-
     font-size: 14px;
   }
 
   .base-section {
-
     padding: 20px;
 
     border-radius: 20px;
   }
 
   .campaign-type-row {
-
     padding: 16px;
   }
 
   .campaign-type-name {
-
     font-size: 15px;
   }
 
   .campaign-type-description {
-
     font-size: 13px;
   }
 
   .base-input {
-
     height: 50px;
 
     font-size: 14px;
   }
 
   .editor-toolbar {
-
     overflow-x: auto;
 
     justify-content: flex-start;
   }
 
   .base-editor {
-
     min-height: 150px;
 
     padding: 14px;
@@ -579,14 +522,12 @@
   }
 
   .logo-row {
-
     flex-direction: column;
 
     align-items: stretch;
   }
 
   .logo-dropzone {
-
     width: 100%;
 
     height: 140px;

@@ -1,98 +1,78 @@
 <header class="topbar">
-
   <!-- RIGHT -->
 
   <div class="topbar-right">
-
     <!-- MOBILE MENU -->
 
-    <button
-      class="topbar-icon-btn mobile-menu-btn"
-      (click)="menuClick.emit()">
-
+    <button class="topbar-icon-btn mobile-menu-btn" (click)="menuClick.emit()">
       <svg
         class="menu-icon"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
         stroke-width="2"
-        stroke="currentColor">
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3.75 6.75h16.5"
+        />
 
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
-          d="M3.75 6.75h16.5" />
+          d="M3.75 12h16.5"
+        />
 
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
-          d="M3.75 12h16.5" />
-
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M3.75 17.25h16.5" />
-
+          d="M3.75 17.25h16.5"
+        />
       </svg>
-
     </button>
 
     <!-- LOGO -->
 
     <div class="brand">
-
-      <img
-        src="./logo.png"
-        alt="Hamonym Logo"
-        class="brand-logo">
-
+      <img src="./logo.png" alt="Hamonym Logo" class="brand-logo" />
     </div>
-
   </div>
 
   <!-- LEFT -->
 
   <div class="topbar-left">
-
     <!-- NOTIFICATIONS -->
 
     <button class="topbar-icon-btn">
-
       <svg
         class="bell-icon"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
         stroke-width="2"
-        stroke="currentColor">
-
+        stroke="currentColor"
+      >
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
-          d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.7a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
-
+          d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.7a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0"
+        />
       </svg>
-
     </button>
 
     <!-- USER -->
 
     <div class="topbar-user">
+      <div class="topbar-user-name">Hagai Cohen</div>
 
-      <div class="topbar-user-name">
-        Hagai Cohen
-      </div>
-
-      <div class="topbar-user-role">
-        תורם
-      </div>
-
+      <div class="topbar-user-role">תורם</div>
     </div>
 
     <!-- LOGOUT -->
 
-    <button class="logout-btn">
-
+    <button class="logout-btn" (click)="logout()">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -100,18 +80,14 @@
         stroke="currentColor"
         stroke-width="2"
         stroke-linecap="round"
-        stroke-linejoin="round">
-
+        stroke-linejoin="round"
+      >
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
 
         <polyline points="16 17 21 12 16 7"></polyline>
 
         <line x1="21" x2="9" y1="12" y2="12"></line>
-
       </svg>
-
     </button>
-
   </div>
-
 </header>

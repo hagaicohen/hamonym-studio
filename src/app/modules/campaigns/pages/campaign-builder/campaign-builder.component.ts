@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './campaign-builder.component.html',
-  styleUrl: './campaign-builder.component.css'
+  styleUrl: './campaign-builder.component.css',
 })
-export class CampaignBuilderComponent {
-
-}
+export class CampaignBuilderComponent {}

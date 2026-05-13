@@ -1,13 +1,10 @@
 <!-- step-review.component.html -->
 
 <div class="review-step">
-
   <!-- HERO -->
 
   <div class="review-hero">
-
     <div class="review-hero-icon">
-
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -15,84 +12,63 @@
         stroke="currentColor"
         stroke-width="2"
         stroke-linecap="round"
-        stroke-linejoin="round">
-
-        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+        stroke-linejoin="round"
+      >
+        <path
+          d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+        ></path>
 
         <path d="M20 3v4"></path>
 
         <path d="M22 5h-4"></path>
-
       </svg>
-
     </div>
 
-    <h2>
-      סיכום והגשה
-    </h2>
+    <h2>סיכום והגשה</h2>
 
-    <p>
-      סקירה אחרונה לפני שליחה לאישור
-    </p>
-
+    <p>סקירה אחרונה לפני שליחה לאישור</p>
   </div>
 
   <!-- ===================================================== -->
   <!-- ORGANIZATION -->
   <!-- ===================================================== -->
   <div class="summary-card">
-
     <div class="summary-card-header">
-
       <div class="summary-card-icon teal">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
-
+          stroke-width="2"
+        >
           <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
 
           <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
 
           <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
-
         </svg>
-
       </div>
 
       <div>
-
         <div class="summary-card-title">
           פרטי {{ entityConfig.labels.entity }}
         </div>
 
-        <div class="summary-badge">
-          מאומת
-        </div>
-
+        <div class="summary-badge">מאומת</div>
       </div>
-
     </div>
 
     <div class="summary-grid">
-
       <div class="summary-item">
-
-        <div class="summary-label">
-          סוג ישות
-        </div>
+        <div class="summary-label">סוג ישות</div>
 
         <div class="summary-value">
           {{ entityConfig.labels.entity }}
         </div>
-
       </div>
 
       <div class="summary-item">
-
         <div class="summary-label">
           {{ entityConfig.labels.entityName }}
         </div>
@@ -100,13 +76,10 @@
         <div class="summary-value">
           {{ organizationName }}
         </div>
-
       </div>
 
       @if (entityConfig.labels.registrationNumber) {
-
         <div class="summary-item">
-
           <div class="summary-label">
             {{ entityConfig.labels.registrationNumber }}
           </div>
@@ -114,274 +87,165 @@
           <div class="summary-value">
             {{ organizationNumber }}
           </div>
-
         </div>
-
       }
 
       <div class="summary-item">
-
-        <div class="summary-label">
-          איש קשר
-        </div>
+        <div class="summary-label">איש קשר</div>
 
         <div class="summary-value">
           {{ fullName }}
         </div>
-
       </div>
 
       <div class="summary-item">
-
-        <div class="summary-label">
-          אימייל
-        </div>
+        <div class="summary-label">אימייל</div>
 
         <div class="summary-value">
           {{ email }}
         </div>
-
       </div>
 
       <div class="summary-item">
-
-        <div class="summary-label">
-          טלפון
-        </div>
+        <div class="summary-label">טלפון</div>
 
         <div class="summary-value">
           {{ phone }}
         </div>
-
       </div>
 
       <div class="summary-item full-width">
-
-        <div class="summary-label">
-          קטגוריות שנבחרו
-        </div>
+        <div class="summary-label">קטגוריות שנבחרו</div>
 
         <div class="summary-tags">
-
-          @for (
-            category of selectedCategories;
-            track category
-          ) {
-
+          @for (category of selectedCategories; track category) {
             <div class="summary-tag">
               {{ category }}
             </div>
-
           }
-
         </div>
-
       </div>
 
       <div class="summary-item full-width">
-
-        <div class="summary-label">
-          מסמכים
-        </div>
+        <div class="summary-label">מסמכים</div>
 
         <div class="documents-status-list">
-
           <div
             class="document-status success"
-            *ngIf="registrationCertificateUploaded">
-
+            *ngIf="registrationCertificateUploaded"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2">
-
-              <circle
-                cx="12"
-                cy="12"
-                r="10">
-              </circle>
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
 
               <path d="m9 12 2 2 4-4"></path>
-
             </svg>
 
             <span>
               {{ entityConfig.labels.registrationDocument }}
             </span>
-
           </div>
 
           @if (entityConfig.showSection46) {
-
-            <div
-              class="document-status success"
-              *ngIf="section46Uploaded">
-
+            <div class="document-status success" *ngIf="section46Uploaded">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="m9 12 2 2 4-4"></path>
-
               </svg>
 
-              <span>
-                אישור סעיף 46
-              </span>
-
+              <span> אישור סעיף 46 </span>
             </div>
-
           }
-
         </div>
-
       </div>
-
     </div>
-
   </div>
 
   <!-- ===================================================== -->
   <!-- PROFILE -->
   <!-- ===================================================== -->
   <div class="summary-card">
-
     <div class="summary-card-header">
-
       <div class="summary-card-icon blue">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
 
-          <circle
-            cx="12"
-            cy="12"
-            r="10">
-          </circle>
+          <circle cx="12" cy="12" r="6"></circle>
 
-          <circle
-            cx="12"
-            cy="12"
-            r="6">
-          </circle>
-
-          <circle
-            cx="12"
-            cy="12"
-            r="2">
-          </circle>
-
+          <circle cx="12" cy="12" r="2"></circle>
         </svg>
-
       </div>
 
       <div>
-
         <div class="summary-card-title">
           פרופיל {{ entityConfig.labels.entity }}
         </div>
-
       </div>
-
     </div>
 
     <div class="summary-grid">
-
       <div class="summary-item">
-
-        <div class="summary-label">
-          שם להצגה
-        </div>
+        <div class="summary-label">שם להצגה</div>
 
         <div class="summary-value">
           {{ displayName }}
         </div>
-
       </div>
 
       <div class="summary-item full-width">
-
-        <div class="summary-label">
-          סוגי דפים
-        </div>
+        <div class="summary-label">סוגי דפים</div>
 
         <div class="summary-tags">
-
-          @for (
-            type of selectedCampaignTypes;
-            track type
-          ) {
-
+          @for (type of selectedCampaignTypes; track type) {
             <div class="summary-tag">
-
               {{ getCampaignTypeLabel(type) }}
-
             </div>
-
           }
-
         </div>
-
       </div>
 
       <div class="summary-item full-width">
-
-        <div class="summary-label">
-          תיאור {{ entityConfig.labels.entity }}
-        </div>
+        <div class="summary-label">תיאור {{ entityConfig.labels.entity }}</div>
 
         <div class="summary-description">
-
           {{ organizationDescription }}
-
         </div>
-
       </div>
 
       <div class="summary-item full-width">
-
-        <div class="summary-label">
-          לוגו
-        </div>
+        <div class="summary-label">לוגו</div>
 
         <div class="logo-preview-wrapper">
-
           @if (state().logoPreview) {
-
             <img
               [src]="state().logoPreview"
               alt="Organization Logo"
-              class="organization-logo-preview">
-
+              class="organization-logo-preview"
+            />
           } @else {
-
-            <div class="logo-placeholder">
-              לא הועלה לוגו
-            </div>
-
+            <div class="logo-placeholder">לא הועלה לוגו</div>
           }
-
         </div>
-
       </div>
-
     </div>
-
   </div>
 
   <!-- ===================================================== -->
@@ -389,11 +253,8 @@
   <!-- ===================================================== -->
 
   <div class="summary-card">
-
     <div class="summary-card-header">
-
       <div class="summary-card-icon emerald">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -401,58 +262,32 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
-
+          stroke-linejoin="round"
+        >
           <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
 
           <polyline points="16 7 22 7 22 13"></polyline>
-
         </svg>
-
       </div>
 
       <div>
-
-        <div class="summary-card-title">
-          יעדי גיוס
-        </div>
-
+        <div class="summary-card-title">יעדי גיוס</div>
       </div>
-
     </div>
 
     <div class="summary-grid">
-
       <div class="summary-item">
+        <div class="summary-label">יעד גיוס חודשי</div>
 
-        <div class="summary-label">
-          יעד גיוס חודשי
-        </div>
-
-        <div class="summary-value">
-
-          ₪{{ monthlyGoal }}
-
-        </div>
-
+        <div class="summary-value">₪{{ monthlyGoal }}</div>
       </div>
 
       <div class="summary-item">
+        <div class="summary-label">יעד גיוס שנתי</div>
 
-        <div class="summary-label">
-          יעד גיוס שנתי
-        </div>
-
-        <div class="summary-value">
-
-          ₪{{ yearlyGoal }}
-
-        </div>
-
+        <div class="summary-value">₪{{ yearlyGoal }}</div>
       </div>
-
     </div>
-
   </div>
 
   <!-- ===================================================== -->
@@ -460,11 +295,8 @@
   <!-- ===================================================== -->
 
   <div class="summary-card">
-
     <div class="summary-card-header">
-
       <div class="summary-card-icon orange">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -472,256 +304,147 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
+          stroke-linejoin="round"
+        >
+          <rect width="20" height="14" x="2" y="5" rx="2"></rect>
 
-          <rect
-            width="20"
-            height="14"
-            x="2"
-            y="5"
-            rx="2">
-          </rect>
-
-          <line
-            x1="2"
-            x2="22"
-            y1="10"
-            y2="10">
-          </line>
-
+          <line x1="2" x2="22" y1="10" y2="10"></line>
         </svg>
-
       </div>
 
       <div>
-
-        <div class="summary-card-title">
-          חיבור מסוף אשראי
-        </div>
-
+        <div class="summary-card-title">חיבור מסוף אשראי</div>
       </div>
-
     </div>
 
     @if (useExistingTerminal) {
-
       <div class="connection-later-box">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
-
-          <circle
-            cx="12"
-            cy="12"
-            r="10">
-          </circle>
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
 
           <path d="M12 8v4"></path>
 
           <path d="M12 16h.01"></path>
-
         </svg>
 
         <div>
-
-          <div class="connection-later-title">
-            החיבור יושלם בהמשך
-          </div>
+          <div class="connection-later-title">החיבור יושלם בהמשך</div>
 
           <div class="connection-later-description">
             בחרתם להגדיר את מסוף האשראי בשלב מאוחר יותר
           </div>
-
         </div>
-
       </div>
-
     } @else {
-
       <div class="summary-grid">
-
         <div class="summary-item">
-
-          <div class="summary-label">
-            ספק סליקה
-          </div>
+          <div class="summary-label">ספק סליקה</div>
 
           <div class="summary-value">
-
             {{ provider }}
-
           </div>
-
         </div>
 
         <div class="summary-item">
-
-          <div class="summary-label">
-            מספר מסוף
-          </div>
+          <div class="summary-label">מספר מסוף</div>
 
           <div class="summary-value">
-
-            {{ terminalNumber || '-' }}
-
+            {{ terminalNumber || "-" }}
           </div>
-
         </div>
 
         <div class="summary-item">
-
-          <div class="summary-label">
-            משתמש API
-          </div>
+          <div class="summary-label">משתמש API</div>
 
           <div class="summary-value">
-
-            {{ apiUsername || '-' }}
-
+            {{ apiUsername || "-" }}
           </div>
-
         </div>
 
         <div class="summary-item">
+          <div class="summary-label">סיסמת API</div>
 
-          <div class="summary-label">
-            סיסמת API
-          </div>
-
-          <div class="summary-value">
-
-            ••••••••
-
-          </div>
-
+          <div class="summary-value">••••••••</div>
         </div>
 
         <div class="summary-item full-width">
+          <div class="summary-label">סטטוס חיבור</div>
 
-          <div class="summary-label">
-            סטטוס חיבור
-          </div>
-
-          @if (
-            connectionAttempted &&
-            connectionSuccess
-          ) {
-
+          @if (connectionAttempted && connectionSuccess) {
             <div class="document-status success">
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="m9 12 2 2 4-4"></path>
-
               </svg>
 
-              <span>
-                החיבור לקארדקום הצליח
-              </span>
-
+              <span> החיבור לקארדקום הצליח </span>
             </div>
-
           }
 
-          @if (
-            connectionAttempted &&
-            !connectionSuccess
-          ) {
-
+          @if (connectionAttempted && !connectionSuccess) {
             <div class="document-status error">
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="m15 9-6 6"></path>
 
                 <path d="m9 9 6 6"></path>
-
               </svg>
 
-              <span>
-                החיבור לקארדקום נכשל
-              </span>
-
+              <span> החיבור לקארדקום נכשל </span>
             </div>
-
           }
 
           @if (!connectionAttempted) {
-
             <div class="document-status warning">
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="M12 8v4"></path>
 
                 <path d="M12 16h.01"></path>
-
               </svg>
 
-              <span>
-                יש להשלים בדיקת חיבור למסוף
-              </span>
-
+              <span> יש להשלים בדיקת חיבור למסוף </span>
             </div>
-
           }
-
         </div>
-
       </div>
-
     }
-
   </div>
 
-
-<!-- ===================================================== -->
-<!-- BILLING METHOD -->
-<!-- ===================================================== -->
+  <!-- ===================================================== -->
+  <!-- BILLING METHOD -->
+  <!-- ===================================================== -->
 
   <div class="summary-card">
-
     <div class="summary-card-header">
-
       <div class="summary-card-icon purple">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -729,286 +452,159 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
+          stroke-linejoin="round"
+        >
+          <rect width="20" height="14" x="2" y="5" rx="2"></rect>
 
-          <rect
-            width="20"
-            height="14"
-            x="2"
-            y="5"
-            rx="2">
-          </rect>
-
-          <line
-            x1="2"
-            x2="22"
-            y1="10"
-            y2="10">
-          </line>
-
+          <line x1="2" x2="22" y1="10" y2="10"></line>
         </svg>
-
       </div>
 
       <div>
-
-        <div class="summary-card-title">
-          אמצעי גבייה לעמלות
-        </div>
-
+        <div class="summary-card-title">אמצעי גבייה לעמלות</div>
       </div>
-
     </div>
 
     @if (continueLater) {
-
       <div class="billing-later-box">
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2">
-
-          <circle
-            cx="12"
-            cy="12"
-            r="10">
-          </circle>
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
 
           <path d="M12 8v4"></path>
 
           <path d="M12 16h.01"></path>
-
         </svg>
 
-        <span>
-          השלמת אמצעי הגבייה תתבצע בהמשך
-        </span>
-
+        <span> השלמת אמצעי הגבייה תתבצע בהמשך </span>
       </div>
-
     }
 
-
-
     <div class="summary-grid">
-
       <div class="summary-item">
-
-        <div class="summary-label">
-          סוג אמצעי גבייה
-        </div>
+        <div class="summary-label">סוג אמצעי גבייה</div>
 
         <div class="summary-value">
-
           {{ paymentMethodLabel }}
-
         </div>
-
       </div>
 
-      @if (paymentMethod === 'credit-card') {
-
+      @if (paymentMethod === "credit-card") {
         <div class="summary-item">
-
-          <div class="summary-label">
-            שם בעל הכרטיס
-          </div>
+          <div class="summary-label">שם בעל הכרטיס</div>
 
           <div class="summary-value">
-
-            {{ cardHolderName || '-' }}
-
+            {{ cardHolderName || "-" }}
           </div>
-
         </div>
 
         <div class="summary-item">
+          <div class="summary-label">מספר כרטיס</div>
 
-          <div class="summary-label">
-            מספר כרטיס
+          <div class="summary-value card-number-value">
+            {{ maskedCardNumber }}
           </div>
-
-        <div class="summary-value card-number-value">
-
-          {{ maskedCardNumber }}
-
-        </div>
-
-
         </div>
 
         <div class="summary-item">
-
-          <div class="summary-label">
-            תוקף
-          </div>
+          <div class="summary-label">תוקף</div>
 
           <div class="summary-value">
-
-            {{ expiry || '-' }}
-
+            {{ expiry || "-" }}
           </div>
-
         </div>
-
       }
 
-      @if (paymentMethod === 'masav') {
-
+      @if (paymentMethod === "masav") {
         <div class="summary-item full-width">
-
-          <div class="summary-label">
-            טופס מס"ב
-          </div>
+          <div class="summary-label">טופס מס"ב</div>
 
           @if (masavUploaded) {
-
             <div class="document-status success">
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="m9 12 2 2 4-4"></path>
-
               </svg>
 
               <span>
-
                 {{ masavFileName }}
-
               </span>
-
             </div>
-
           } @else {
-
             <div class="document-status warning">
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2">
-
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10">
-                </circle>
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
                 <path d="M12 8v4"></path>
 
                 <path d="M12 16h.01"></path>
-
               </svg>
 
-              <span>
-                טרם הועלה טופס מס"ב חתום
-              </span>
-
+              <span> טרם הועלה טופס מס"ב חתום </span>
             </div>
-
           }
-
         </div>
-
       }
-
     </div>
-
   </div>
-
 
   <!-- INFO BOX -->
 
   <div class="info-box">
-
     <div class="info-box-icon">
-
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="2">
+        stroke-width="2"
+      >
+        <circle cx="12" cy="12" r="10"></circle>
 
-        <circle
-          cx="12"
-          cy="12"
-          r="10">
-        </circle>
-
-        <polyline
-          points="12 6 12 12 16 14">
-        </polyline>
-
+        <polyline points="12 6 12 12 16 14"></polyline>
       </svg>
-
     </div>
 
     <div>
-
-      <div class="info-box-title">
-        מה הלאה?
-      </div>
+      <div class="info-box-title">מה הלאה?</div>
 
       <ul class="info-list">
+        <li>הבקשה תיבדק על ידי צוות המונים</li>
 
-        <li>
-          הבקשה תיבדק על ידי צוות המונים
-        </li>
+        <li>תקבלו מייל תוך 24-48 שעות</li>
 
-        <li>
-          תקבלו מייל תוך 24-48 שעות
-        </li>
-
-        <li>
-          לאחר אישור תוכלו להתחיל לגייס
-        </li>
-
+        <li>לאחר אישור תוכלו להתחיל לגייס</li>
       </ul>
-
     </div>
-
   </div>
 
   <!-- ACTIONS -->
 
   <div class="wizard-actions">
-
-    <button
-      type="button"
-      class="secondary-btn"
-      (click)="back.emit()">
-
+    <button type="button" class="secondary-btn" (click)="back.emit()">
       חזרה
-
     </button>
 
-    <button
-      type="button"
-      class="continue-btn"
-      (click)="submitApplication()">
-
+    <button type="button" class="continue-btn" (click)="submitApplication()">
       שלח לאישור
-
     </button>
-
   </div>
-
 </div>
-

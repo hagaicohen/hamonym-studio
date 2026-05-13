@@ -5,7 +5,7 @@ import {
   forwardRef,
   Input,
   OnDestroy,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
 import {
   ControlValueAccessor,
   FormsModule,
-  NG_VALUE_ACCESSOR
+  NG_VALUE_ACCESSOR,
 } from '@angular/forms';
 
 import { Editor } from '@tiptap/core';
@@ -49,26 +49,22 @@ import tippy from 'tippy.js';
 @Component({
   selector: 'app-rich-text-editor',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './rich-text-editor.component.html',
   styleUrls: ['./rich-text-editor.component.css'],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => RichTextEditorComponent),
-      multi: true
-    }
-  ]
+      multi: true,
+    },
+  ],
 })
 export class RichTextEditorComponent
-implements AfterViewInit, OnDestroy, ControlValueAccessor {
-
+  implements AfterViewInit, OnDestroy, ControlValueAccessor
+{
   @Input()
-  placeholder =
-    'כתוב כאן את תוכן הקמפיין שלך...';
+  placeholder = 'כתוב כאן את תוכן הקמפיין שלך...';
 
   @Input()
   minHeight = 360;
@@ -87,27 +83,20 @@ implements AfterViewInit, OnDestroy, ControlValueAccessor {
   private onTouched = () => {};
 
   ngAfterViewInit(): void {
-
     this.editor = new Editor({
-
       element: this.editorElement.nativeElement,
 
       extensions: [
-
         StarterKit.configure({
-
           heading: {
-            levels: [1, 2, 3]
-          }
-
+            levels: [1, 2, 3],
+          },
         }),
 
         Underline,
 
         Highlight.configure({
-
-          multicolor: true
-
+          multicolor: true,
         }),
 
         TextStyle,
@@ -117,54 +106,38 @@ implements AfterViewInit, OnDestroy, ControlValueAccessor {
         HorizontalRule,
 
         Image.configure({
-
           inline: false,
 
-          allowBase64: true
-
+          allowBase64: true,
         }),
 
         Youtube.configure({
-
           controls: true,
 
-          nocookie: true
-
+          nocookie: true,
         }),
 
         TaskList,
 
         TaskItem.configure({
-
-          nested: true
-
+          nested: true,
         }),
 
         Link.configure({
-
           openOnClick: false,
 
           autolink: true,
 
-          linkOnPaste: true
-
+          linkOnPaste: true,
         }),
 
         TextAlign.configure({
-
-          types: [
-            'heading',
-            'paragraph'
-          ]
-
+          types: ['heading', 'paragraph'],
         }),
 
         Placeholder.configure({
-
-          placeholder: this.placeholder
-
-        })
-
+          placeholder: this.placeholder,
+        }),
       ],
 
       content: this.value,
@@ -172,388 +145,198 @@ implements AfterViewInit, OnDestroy, ControlValueAccessor {
       editable: !this.disabled,
 
       editorProps: {
-
         attributes: {
-
           class: 'hamonym-editor-content',
 
-          dir: 'rtl'
-
-        }
-
+          dir: 'rtl',
+        },
       },
 
       onUpdate: ({ editor }) => {
-
-        const html =
-          editor.getHTML();
+        const html = editor.getHTML();
 
         this.value = html;
 
         this.onChange(html);
-
       },
 
       onBlur: () => {
-
         this.onTouched();
-
-      }
-
+      },
     });
 
     setTimeout(() => {
-
-      const buttons =
-        document.querySelectorAll(
-          '[data-tooltip]'
-        );
+      const buttons = document.querySelectorAll('[data-tooltip]');
 
       buttons.forEach((button: any) => {
-
         tippy(button, {
-
-          content:
-            button.dataset.tooltip,
+          content: button.dataset.tooltip,
 
           placement: 'top',
 
           animation: 'shift-away',
 
-          theme: 'hamonym'
-
+          theme: 'hamonym',
         });
-
       });
-
     });
-
   }
 
   writeValue(value: string): void {
-
     this.value = value || '';
 
     if (this.editor) {
-
-      this.editor.commands.setContent(
-        this.value
-      );
-
+      this.editor.commands.setContent(this.value);
     }
-
   }
 
   registerOnChange(fn: any): void {
-
     this.onChange = fn;
-
   }
 
   registerOnTouched(fn: any): void {
-
     this.onTouched = fn;
-
   }
 
   setDisabledState(isDisabled: boolean): void {
-
     this.disabled = isDisabled;
 
     if (this.editor) {
-
-      this.editor.setEditable(
-        !isDisabled
-      );
-
+      this.editor.setEditable(!isDisabled);
     }
-
   }
 
   getSelectedText(): boolean {
-
     if (!this.editor) {
-
       return false;
-
     }
 
     return !this.editor.state.selection.empty;
-
   }
 
   toggleBold(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleBold()
-      .run();
-
+    this.editor.chain().focus().toggleBold().run();
   }
 
   toggleItalic(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleItalic()
-      .run();
-
+    this.editor.chain().focus().toggleItalic().run();
   }
 
   toggleUnderline(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleUnderline()
-      .run();
-
+    this.editor.chain().focus().toggleUnderline().run();
   }
 
   toggleStrike(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleStrike()
-      .run();
-
+    this.editor.chain().focus().toggleStrike().run();
   }
 
   toggleHighlight(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleHighlight()
-      .run();
-
+    this.editor.chain().focus().toggleHighlight().run();
   }
 
   toggleBulletList(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleBulletList()
-      .run();
-
+    this.editor.chain().focus().toggleBulletList().run();
   }
 
   toggleOrderedList(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleOrderedList()
-      .run();
-
+    this.editor.chain().focus().toggleOrderedList().run();
   }
 
   toggleTaskList(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleTaskList()
-      .run();
-
+    this.editor.chain().focus().toggleTaskList().run();
   }
 
   toggleBlockquote(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleBlockquote()
-      .run();
-
+    this.editor.chain().focus().toggleBlockquote().run();
   }
 
   toggleCodeBlock(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleCodeBlock()
-      .run();
-
+    this.editor.chain().focus().toggleCodeBlock().run();
   }
 
   insertHorizontalRule(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .setHorizontalRule()
-      .run();
-
+    this.editor.chain().focus().setHorizontalRule().run();
   }
 
   setParagraph(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .setParagraph()
-      .run();
-
+    this.editor.chain().focus().setParagraph().run();
   }
 
-  setHeading(
-    level: 1 | 2 | 3
-  ): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .toggleHeading({ level })
-      .run();
-
+  setHeading(level: 1 | 2 | 3): void {
+    this.editor.chain().focus().toggleHeading({ level }).run();
   }
 
-  setTextAlign(
-    alignment:
-      | 'right'
-      | 'center'
-      | 'left'
-  ): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .setTextAlign(alignment)
-      .run();
-
+  setTextAlign(alignment: 'right' | 'center' | 'left'): void {
+    this.editor.chain().focus().setTextAlign(alignment).run();
   }
 
   setTextColor(color: string): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .setColor(color)
-      .run();
-
+    this.editor.chain().focus().setColor(color).run();
   }
 
   addLink(): void {
+    const previousUrl = this.editor.getAttributes('link')['href'];
 
-    const previousUrl =
-      this.editor
-        .getAttributes('link')['href'];
-
-    const url =
-      window.prompt(
-        'הכנס קישור',
-        previousUrl
-      );
+    const url = window.prompt('הכנס קישור', previousUrl);
 
     if (url === null) {
-
       return;
-
     }
 
     if (url === '') {
-
-      this.editor
-        .chain()
-        .focus()
-        .unsetLink()
-        .run();
+      this.editor.chain().focus().unsetLink().run();
 
       return;
-
     }
 
-    this.editor
-      .chain()
-      .focus()
-      .setLink({ href: url })
-      .run();
-
+    this.editor.chain().focus().setLink({ href: url }).run();
   }
 
   addImage(): void {
-
-    const url =
-      prompt('Image URL');
+    const url = prompt('Image URL');
 
     if (!url) {
-
       return;
-
     }
 
     this.editor
       .chain()
       .focus()
       .setImage({
-
-        src: url
-
+        src: url,
       })
       .run();
-
   }
 
   addYoutubeVideo(): void {
-
-    const url =
-      prompt('Youtube URL');
+    const url = prompt('Youtube URL');
 
     if (!url) {
-
       return;
-
     }
 
     this.editor
       .chain()
       .focus()
       .setYoutubeVideo({
-
         src: url,
 
         width: 640,
 
-        height: 360
-
+        height: 360,
       })
       .run();
-
   }
 
   clearFormatting(): void {
-
-    this.editor
-      .chain()
-      .focus()
-      .unsetAllMarks()
-      .clearNodes()
-      .run();
-
+    this.editor.chain().focus().unsetAllMarks().clearNodes().run();
   }
 
-  isActive(
-    name: string,
-    options?: any
-  ): boolean {
-
-    return this.editor?.isActive(
-      name,
-      options
-    ) || false;
-
+  isActive(name: string, options?: any): boolean {
+    return this.editor?.isActive(name, options) || false;
   }
 
   ngOnDestroy(): void {
-
     this.editor?.destroy();
-
   }
-
 }

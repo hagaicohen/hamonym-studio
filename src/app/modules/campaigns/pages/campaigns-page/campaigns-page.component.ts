@@ -5,12 +5,8 @@ import { NoOrganizationStateComponent } from '../../../../shared/components/no-o
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
-  imports: [
-    NoOrganizationStateComponent
-  ],
+  imports: [NoOrganizationStateComponent],
   templateUrl: './campaigns-page.component.html',
-  styleUrl: './campaigns-page.component.css'
+  styleUrl: './campaigns-page.component.css',
 })
-export class CampaignsPageComponent {
-
-}
+export class CampaignsPageComponent {}
