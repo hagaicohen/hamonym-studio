@@ -76,8 +76,9 @@ export class EntityBasicInfoCardComponent {
       'secondary_categories',
       updated
     );
-  }
+  } 
 
+  
   getCategoryLabel(
     categoryId: string
   ): string {
