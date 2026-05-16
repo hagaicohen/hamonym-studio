@@ -1,3 +1,5 @@
+// src/server.js
+
 require('dotenv').config();
 
 const express =
@@ -6,25 +8,35 @@ const express =
 const cors =
   require('cors');
 
+const app =
+  express();
+
+/*
+|--------------------------------------------------------------------------
+| ROUTES
+|--------------------------------------------------------------------------
+*/
 const authRoutes =
   require('./routes/auth.routes');
 
 const entitiesRoutes =
   require('./modules/entities/entities.routes');
 
-const app = express();
+/*
+|--------------------------------------------------------------------------
+| MIDDLEWARE
+|--------------------------------------------------------------------------
+*/
 
 app.use(cors());
 
 app.use(express.json());
 
-app.get('/', (req, res) => {
-
-  res.json({
-    message: 'Hamonym API Running'
-  });
-
-});
+/*
+|--------------------------------------------------------------------------
+| API ROUTES
+|--------------------------------------------------------------------------
+*/
 
 app.use(
   '/auth',
@@ -36,13 +48,50 @@ app.use(
   entitiesRoutes
 );
 
+/*
+|--------------------------------------------------------------------------
+| HEALTH CHECK
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+
+  '/',
+
+  (req, res) => {
+
+    res.json({
+
+      success: true,
+
+      message:
+        'Hamonym backend running'
+
+    });
+
+  }
+
+);
+
+/*
+|--------------------------------------------------------------------------
+| START SERVER
+|--------------------------------------------------------------------------
+*/
+
 const PORT =
   process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+app.listen(
 
-  console.log(
-    `Server running on port ${PORT}`
-  );
+  PORT,
 
-});
+  () => {
+
+    console.log(
+      `Server running on port ${PORT}`
+    );
+
+  }
+
+);

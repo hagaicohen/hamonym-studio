@@ -1,33 +1,102 @@
-const express =
-  require('express');
+// src/modules/entities/entities.routes.js
 
-const router =
-  express.Router();
+const express = require('express');
+
+const multer = require('multer');
+
+const router = express.Router();
+
+const controller =
+  require('./entities.controller');
 
 const requireAuth =
   require('../../middleware/require-auth');
 
-router.get(
+const upload = multer({
+
+  storage:
+    multer.memoryStorage()
+
+});
+
+router.post(
 
   '/',
 
   requireAuth,
 
-  (req, res) => {
-
-    res.json({
-
-      message:
-        'Authorized',
-
-      user:
-        req.user
-
-    });
-
-  }
+  controller.createEntity
 
 );
 
-module.exports =
-  router;
+router.get(
+
+  '/my',
+
+  requireAuth,
+
+  controller.getMyEntities
+
+);
+
+router.patch(
+
+   '/:id/association-document',
+
+  (req, res, next) => {
+
+    console.log('UPLOAD HIT');
+
+    next();
+
+  },
+
+  requireAuth,
+
+  upload.single('file'),
+
+  controller.uploadAssociationDocument
+
+);
+
+router.patch(
+
+  '/:id/tax-document',
+
+  requireAuth,
+
+  upload.single('file'),
+
+  controller.uploadTaxDocument
+
+);
+
+router.get(
+
+  '/:id/association-document',
+
+  controller.getAssociationDocument
+
+);
+
+router.get(
+
+  '/:id/tax-document',
+
+  controller.getTaxDocument
+
+);
+
+router.patch(
+
+  '/:id/logo',
+
+  requireAuth,
+
+  upload.single('file'),
+
+  controller.uploadLogo
+
+);
+
+module.exports = router;
