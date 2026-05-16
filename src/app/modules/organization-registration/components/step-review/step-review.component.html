@@ -1,4 +1,19 @@
 <!-- step-review.component.html -->
+<app-loading-overlay *ngIf="loading"> </app-loading-overlay>
+
+@if (success) {
+  <div class="success-overlay">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+
+      <h2>העמותה נוצרה בהצלחה</h2>
+
+      <p>ברוכים הבאים להמונים</p>
+
+      <span> מעבירים אותך למסך הקמפיינים... </span>
+    </div>
+  </div>
+}
 
 <div class="review-step">
   <!-- HERO -->
@@ -604,7 +619,7 @@
     </button>
 
     <button type="button" class="continue-btn" (click)="submitApplication()">
-      שלח לאישור
+      סיום
     </button>
   </div>
 </div>

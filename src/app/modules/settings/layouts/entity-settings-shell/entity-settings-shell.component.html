@@ -1,0 +1,239 @@
+<div class="entity-settings-shell">
+
+  <!-- SIDEBAR -->
+
+  <aside class="sidebar">
+
+    <!-- ENTITY HEADER -->
+
+    <div class="entity-header">
+
+      <div class="entity-avatar">
+        {{ entity.name.charAt(0) }}
+      </div>
+
+      <div class="entity-info">
+
+        <div class="entity-name">
+          {{ entity.name }}
+        </div>
+
+        <div class="entity-meta">
+
+          <span>
+            {{ entity.type }}
+          </span>
+
+          <span class="dot">
+            •
+          </span>
+
+          <span class="status">
+            {{ entity.status }}
+          </span>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- MENU -->
+
+    <nav class="sidebar-menu">
+
+      @for (item of menuItems; track item.route) {
+
+        <a
+          class="menu-item"
+          [routerLink]="item.route"
+          routerLinkActive="active">
+
+          <span class="menu-icon">
+
+            <!-- PROFILE -->
+
+            @if (item.icon === 'profile') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <path d="M3 21h18"></path>
+
+                <path d="M5 21V7l8-4v18"></path>
+
+                <path d="M19 21V11l-6-4"></path>
+
+              </svg>
+
+            }
+
+            <!-- DOCUMENTS -->
+
+            @if (item.icon === 'documents') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+
+                <path d="M14 2v6h6"></path>
+
+              </svg>
+
+            }
+
+            <!-- USERS -->
+
+            @if (item.icon === 'users') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+
+                <circle cx="8.5" cy="7" r="4"></circle>
+
+                <path d="M20 8v6"></path>
+
+                <path d="M23 11h-6"></path>
+
+              </svg>
+
+            }
+
+            <!-- BILLING -->
+
+            @if (item.icon === 'billing') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <rect
+                  width="20"
+                  height="14"
+                  x="2"
+                  y="5"
+                  rx="2">
+                </rect>
+
+                <line
+                  x1="2"
+                  x2="22"
+                  y1="10"
+                  y2="10">
+                </line>
+
+              </svg>
+
+            }
+
+            <!-- BRANDING -->
+
+            @if (item.icon === 'branding') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <circle cx="13.5" cy="6.5" r=".5"></circle>
+
+                <circle cx="17.5" cy="10.5" r=".5"></circle>
+
+                <circle cx="8.5" cy="7.5" r=".5"></circle>
+
+                <circle cx="6.5" cy="12.5" r=".5"></circle>
+
+                <path d="M12 22a1 1 0 0 0 1-1v-1a2 2 0 0 1 2-2h1a1 1 0 0 0 1-1 7 7 0 1 0-7 7z"></path>
+
+              </svg>
+
+            }
+
+            <!-- CAMPAIGNS -->
+
+            @if (item.icon === 'campaigns') {
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <circle cx="12" cy="12" r="10"></circle>
+
+                <circle cx="12" cy="12" r="6"></circle>
+
+                <circle cx="12" cy="12" r="2"></circle>
+
+              </svg>
+
+            }
+
+          </span>
+
+          <span class="menu-label">
+            {{ item.label }}
+          </span>
+
+        </a>
+
+      }
+
+    </nav>
+
+  </aside>
+
+  <!-- CONTENT -->
+
+  <main class="content-area">
+
+    <router-outlet />
+
+  </main>
+
+</div>

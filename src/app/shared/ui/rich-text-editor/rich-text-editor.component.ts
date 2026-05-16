@@ -1,8 +1,12 @@
+// rich-text-editor.component.ts
+
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   forwardRef,
+  inject,
   Input,
   OnDestroy,
   ViewChild,
@@ -72,7 +76,7 @@ export class RichTextEditorComponent
   @ViewChild('editor')
   editorElement!: ElementRef<HTMLDivElement>;
 
-  editor!: Editor;
+  editor: Editor | null = null;
 
   disabled = false;
 
@@ -82,220 +86,335 @@ export class RichTextEditorComponent
 
   private onTouched = () => {};
 
+  private cdr =
+    inject(ChangeDetectorRef);
+
   ngAfterViewInit(): void {
-    this.editor = new Editor({
-      element: this.editorElement.nativeElement,
-
-      extensions: [
-        StarterKit.configure({
-          heading: {
-            levels: [1, 2, 3],
-          },
-        }),
-
-        Underline,
-
-        Highlight.configure({
-          multicolor: true,
-        }),
-
-        TextStyle,
-
-        Color,
-
-        HorizontalRule,
-
-        Image.configure({
-          inline: false,
-
-          allowBase64: true,
-        }),
-
-        Youtube.configure({
-          controls: true,
-
-          nocookie: true,
-        }),
-
-        TaskList,
-
-        TaskItem.configure({
-          nested: true,
-        }),
-
-        Link.configure({
-          openOnClick: false,
-
-          autolink: true,
-
-          linkOnPaste: true,
-        }),
-
-        TextAlign.configure({
-          types: ['heading', 'paragraph'],
-        }),
-
-        Placeholder.configure({
-          placeholder: this.placeholder,
-        }),
-      ],
-
-      content: this.value,
-
-      editable: !this.disabled,
-
-      editorProps: {
-        attributes: {
-          class: 'hamonym-editor-content',
-
-          dir: 'rtl',
-        },
-      },
-
-      onUpdate: ({ editor }) => {
-        const html = editor.getHTML();
-
-        this.value = html;
-
-        this.onChange(html);
-      },
-
-      onBlur: () => {
-        this.onTouched();
-      },
-    });
 
     setTimeout(() => {
-      const buttons = document.querySelectorAll('[data-tooltip]');
 
-      buttons.forEach((button: any) => {
-        tippy(button, {
-          content: button.dataset.tooltip,
+      this.editor = new Editor({
 
-          placement: 'top',
+        element:
+          this.editorElement.nativeElement,
 
-          animation: 'shift-away',
+        extensions: [
 
-          theme: 'hamonym',
-        });
+          StarterKit.configure({
+
+            heading: {
+              levels: [1, 2, 3],
+            },
+
+          }),
+
+          Underline,
+
+          Highlight.configure({
+
+            multicolor: true,
+
+          }),
+
+          TextStyle,
+
+          Color,
+
+          HorizontalRule,
+
+          Image.configure({
+
+            inline: false,
+
+            allowBase64: true,
+
+          }),
+
+          Youtube.configure({
+
+            controls: true,
+
+            nocookie: true,
+
+          }),
+
+          TaskList,
+
+          TaskItem.configure({
+
+            nested: true,
+
+          }),
+
+          Link.configure({
+
+            openOnClick: false,
+
+            autolink: true,
+
+            linkOnPaste: true,
+
+          }),
+
+          TextAlign.configure({
+
+            types: [
+              'heading',
+              'paragraph'
+            ],
+
+          }),
+
+          Placeholder.configure({
+
+            placeholder:
+              this.placeholder,
+
+          }),
+
+        ],
+
+        content:
+          this.value,
+
+        editable:
+          !this.disabled,
+
+        editorProps: {
+
+          attributes: {
+
+            class:
+              'hamonym-editor-content',
+
+            dir: 'rtl',
+
+          },
+
+        },
+
+        onUpdate: ({ editor }) => {
+
+          const html =
+            editor.getHTML();
+
+          this.value =
+            html;
+
+          this.onChange(
+            html
+          );
+
+        },
+
+        onBlur: () => {
+
+          this.onTouched();
+
+        },
+
       });
+
+      this.cdr.detectChanges();
+
+      const buttons =
+        document.querySelectorAll(
+          '[data-tooltip]'
+        );
+
+      buttons.forEach(
+        (button: any) => {
+
+          tippy(button, {
+
+            content:
+              button.dataset.tooltip,
+
+            placement:
+              'top',
+
+            animation:
+              'shift-away',
+
+            theme:
+              'hamonym',
+
+          });
+
+        }
+      );
+
     });
+
   }
 
   writeValue(value: string): void {
-    this.value = value || '';
+
+    this.value =
+      value || '';
 
     if (this.editor) {
-      this.editor.commands.setContent(this.value);
+
+      this.editor.commands.setContent(
+        this.value
+      );
+
     }
+
   }
 
   registerOnChange(fn: any): void {
+
     this.onChange = fn;
+
   }
 
   registerOnTouched(fn: any): void {
+
     this.onTouched = fn;
+
   }
 
   setDisabledState(isDisabled: boolean): void {
+
     this.disabled = isDisabled;
 
     if (this.editor) {
-      this.editor.setEditable(!isDisabled);
-    }
-  }
 
-  getSelectedText(): boolean {
-    if (!this.editor) {
-      return false;
+      this.editor.setEditable(
+        !isDisabled
+      );
+
     }
 
-    return !this.editor.state.selection.empty;
   }
 
   toggleBold(): void {
-    this.editor.chain().focus().toggleBold().run();
+    this.editor?.chain().focus().toggleBold().run();
   }
 
   toggleItalic(): void {
-    this.editor.chain().focus().toggleItalic().run();
+    this.editor?.chain().focus().toggleItalic().run();
   }
 
   toggleUnderline(): void {
-    this.editor.chain().focus().toggleUnderline().run();
+    this.editor?.chain().focus().toggleUnderline().run();
   }
 
   toggleStrike(): void {
-    this.editor.chain().focus().toggleStrike().run();
+    this.editor?.chain().focus().toggleStrike().run();
   }
 
   toggleHighlight(): void {
-    this.editor.chain().focus().toggleHighlight().run();
+    this.editor?.chain().focus().toggleHighlight().run();
   }
 
   toggleBulletList(): void {
-    this.editor.chain().focus().toggleBulletList().run();
+    this.editor?.chain().focus().toggleBulletList().run();
   }
 
   toggleOrderedList(): void {
-    this.editor.chain().focus().toggleOrderedList().run();
+    this.editor?.chain().focus().toggleOrderedList().run();
   }
 
   toggleTaskList(): void {
-    this.editor.chain().focus().toggleTaskList().run();
+    this.editor?.chain().focus().toggleTaskList().run();
   }
 
   toggleBlockquote(): void {
-    this.editor.chain().focus().toggleBlockquote().run();
+    this.editor?.chain().focus().toggleBlockquote().run();
   }
 
   toggleCodeBlock(): void {
-    this.editor.chain().focus().toggleCodeBlock().run();
+    this.editor?.chain().focus().toggleCodeBlock().run();
   }
 
   insertHorizontalRule(): void {
-    this.editor.chain().focus().setHorizontalRule().run();
+    this.editor?.chain().focus().setHorizontalRule().run();
   }
 
   setParagraph(): void {
-    this.editor.chain().focus().setParagraph().run();
+    this.editor?.chain().focus().setParagraph().run();
   }
 
   setHeading(level: 1 | 2 | 3): void {
-    this.editor.chain().focus().toggleHeading({ level }).run();
+
+    this.editor
+      ?.chain()
+      .focus()
+      .toggleHeading({
+        level
+      })
+      .run();
+
   }
 
-  setTextAlign(alignment: 'right' | 'center' | 'left'): void {
-    this.editor.chain().focus().setTextAlign(alignment).run();
+  setTextAlign(
+    alignment:
+      'right' |
+      'center' |
+      'left'
+  ): void {
+
+    this.editor
+      ?.chain()
+      .focus()
+      .setTextAlign(alignment)
+      .run();
+
   }
 
   setTextColor(color: string): void {
-    this.editor.chain().focus().setColor(color).run();
+    this.editor?.chain().focus().setColor(color).run();
   }
 
   addLink(): void {
-    const previousUrl = this.editor.getAttributes('link')['href'];
 
-    const url = window.prompt('הכנס קישור', previousUrl);
+    if (!this.editor) {
+      return;
+    }
+
+    const previousUrl =
+      this.editor.getAttributes('link')['href'];
+
+    const url =
+      window.prompt(
+        'הכנס קישור',
+        previousUrl
+      );
 
     if (url === null) {
       return;
     }
 
     if (url === '') {
-      this.editor.chain().focus().unsetLink().run();
+
+      this.editor
+        .chain()
+        .focus()
+        .unsetLink()
+        .run();
 
       return;
+
     }
 
-    this.editor.chain().focus().setLink({ href: url }).run();
+    this.editor
+      .chain()
+      .focus()
+      .setLink({
+        href: url
+      })
+      .run();
+
   }
 
   addImage(): void {
-    const url = prompt('Image URL');
 
-    if (!url) {
+    const url =
+      prompt('Image URL');
+
+    if (!url || !this.editor) {
       return;
     }
 
@@ -306,12 +425,15 @@ export class RichTextEditorComponent
         src: url,
       })
       .run();
+
   }
 
   addYoutubeVideo(): void {
-    const url = prompt('Youtube URL');
 
-    if (!url) {
+    const url =
+      prompt('Youtube URL');
+
+    if (!url || !this.editor) {
       return;
     }
 
@@ -319,24 +441,49 @@ export class RichTextEditorComponent
       .chain()
       .focus()
       .setYoutubeVideo({
+
         src: url,
 
         width: 640,
 
         height: 360,
+
       })
       .run();
+
   }
 
   clearFormatting(): void {
-    this.editor.chain().focus().unsetAllMarks().clearNodes().run();
+
+    this.editor
+      ?.chain()
+      .focus()
+      .unsetAllMarks()
+      .clearNodes()
+      .run();
+
   }
 
-  isActive(name: string, options?: any): boolean {
-    return this.editor?.isActive(name, options) || false;
+  isActive(
+    name: string,
+    options?: any
+  ): boolean {
+
+    if (!this.editor) {
+      return false;
+    }
+
+    return this.editor.isActive(
+      name,
+      options
+    );
+
   }
 
   ngOnDestroy(): void {
+
     this.editor?.destroy();
+
   }
+
 }

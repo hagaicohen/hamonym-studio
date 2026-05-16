@@ -139,7 +139,9 @@
               [value]="organizationNumber"
               (input)="onOrganizationNumberInput($event)"
               maxlength="9"
-              placeholder="הקלד מספר רישום"
+              placeholder="הקלד מספר רישום{{
+                entityConfig.type === 'association' ? ' (580123456)' : ''
+              }}"
             />
           </div>
         }
@@ -180,8 +182,8 @@
           <option value="" disabled>בחר קטגוריה ראשית</option>
 
           @for (category of categories; track category) {
-            <option [value]="category">
-              {{ category }}
+            <option [value]="category.id">
+              {{ category.label }}
             </option>
           }
         </select>
@@ -190,20 +192,28 @@
 
         <div class="chips-title">קטגוריות נוספות (אופציונלי)</div>
 
-        <div class="chips">
-          @for (category of categories; track category) {
-            @if (category !== primaryCategory) {
-              <button
-                type="button"
-                class="chip"
-                [class.active]="selectedCategories.includes(category)"
-                (click)="toggleCategory(category)"
-              >
-                {{ category }}
-              </button>
-            }
-          }
-        </div>
+       <div class="chips">
+
+  @for (category of categories; track category.id) {
+
+    @if (category.id !== primaryCategory) {
+
+      <button
+        type="button"
+        class="chip"
+        [class.active]="selectedCategories.includes(category.id)"
+        (click)="toggleCategory(category.id)"
+      >
+
+        {{ category.label }}
+
+      </button>
+
+    }
+
+  }
+
+</div>
       </div>
 
       <!-- CONTACT -->

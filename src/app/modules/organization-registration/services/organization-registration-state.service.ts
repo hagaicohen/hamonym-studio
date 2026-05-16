@@ -29,6 +29,10 @@ export interface OrganizationRegistrationState {
 
   selectedCategories: string[];
 
+  certificateFile: File | null;
+
+  section46File: File | null;
+
   // STEP 2
 
   displayName: string;
@@ -38,6 +42,8 @@ export interface OrganizationRegistrationState {
   selectedCampaignTypes: string[];
 
   logoPreview: string;
+
+  logoFile: File | null;
 
   // STEP 3
 
@@ -107,6 +113,11 @@ const initialState: OrganizationRegistrationState = {
 
   selectedCategories: [],
 
+  certificateFile: null,
+
+  section46File: null,
+
+  
   // STEP 2
 
   displayName: '',
@@ -116,6 +127,8 @@ const initialState: OrganizationRegistrationState = {
   selectedCampaignTypes: ['one-time', 'recurring'],
 
   logoPreview: '',
+
+  logoFile: null,
 
   // STEP 3
 

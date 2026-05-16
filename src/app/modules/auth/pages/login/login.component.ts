@@ -6,6 +6,12 @@ import { environment } from '../../../../../environments/environment.js';
 
 import { CommonModule } from '@angular/common';
 
+import { inject } from '@angular/core';
+
+import { EntitiesService } from '../../../../core/services/entities.service';
+
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
+
 import {
   FormBuilder,
   FormGroup,
@@ -59,6 +65,10 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  private entitiesService = inject(EntitiesService);
+
+  private currentEntityService = inject(CurrentEntityService);
+
   ngOnInit(): void {
     google.accounts.id.initialize({
       client_id: environment.googleClientId,
@@ -101,13 +111,29 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          if (res.hasEntities) {
-            this.router.navigate(['/dashboard']);
+          this.entitiesService.getMyEntities().subscribe({
+            next: (entitiesRes) => {
+              const entities = entitiesRes.entities || [];
 
-            return;
-          }
+              if (entities.length > 0) {
+                const entity = entities[0];
 
-          this.router.navigate(['/campaigns']);
+                localStorage.setItem('currentEntity', JSON.stringify(entity));
+
+                this.currentEntityService.currentEntity.set(entity);
+
+                this.currentEntityService.currentRole.set(entity.role);
+              }
+
+              if (res.hasEntities) {
+                this.router.navigate(['/dashboard']);
+
+                return;
+              }
+
+              this.router.navigate(['/campaigns']);
+            },
+          });
         },
 
         error: (err) => {
@@ -147,21 +173,31 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('user', JSON.stringify(res.user));
 
-          const user = res.user;
+          localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          if (!user.role) {
-            this.router.navigate(['/onboarding']);
+          this.entitiesService.getMyEntities().subscribe({
+            next: (entitiesRes) => {
+              const entities = entitiesRes.entities || [];
 
-            return;
-          }
+              if (entities.length > 0) {
+                const entity = entities[0];
 
-          if (user.role === 'organization' || user.role === 'fundraiser') {
-            this.router.navigate(['/campaigns']);
+                localStorage.setItem('currentEntity', JSON.stringify(entity));
 
-            return;
-          }
+                this.currentEntityService.currentEntity.set(entity);
 
-          this.router.navigate(['/dashboard']);
+                this.currentEntityService.currentRole.set(entity.role);
+              }
+
+              if (res.hasEntities) {
+                this.router.navigate(['/dashboard']);
+
+                return;
+              }
+
+              this.router.navigate(['/campaigns']);
+            },
+          });
         },
 
         error: (err) => {

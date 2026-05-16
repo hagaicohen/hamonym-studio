@@ -622,3 +622,135 @@
     padding: 18px;
   }
 }
+
+/* =========================================================
+   SUCCESS OVERLAY
+========================================================= */
+
+.success-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(255, 255, 255, 0.72);
+
+  backdrop-filter: blur(6px);
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  z-index: 99999;
+}
+
+.success-card {
+  width: 100%;
+
+  max-width: 420px;
+
+  background: white;
+
+  border-radius: 28px;
+
+  padding: 42px 32px;
+
+  text-align: center;
+
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+
+  border: 1px solid #e2e8f0;
+}
+
+.success-icon {
+  width: 82px;
+
+  height: 82px;
+
+  margin: 0 auto 22px;
+
+  border-radius: 50%;
+
+  background: #dcfce7;
+
+  color: #15803d;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 42px;
+
+  font-weight: 700;
+}
+
+.success-card h2 {
+  margin: 0 0 12px;
+
+  font-size: 28px;
+
+  font-weight: 700;
+
+  color: #0f172a;
+}
+
+.success-card p {
+  margin: 0 0 10px;
+
+  font-size: 16px;
+
+  color: #334155;
+}
+
+.success-card span {
+  font-size: 14px;
+
+  color: #64748b;
+}
+
+/* =========================================================
+   SUCCESS MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  .success-overlay {
+    padding: 20px;
+
+    box-sizing: border-box;
+  }
+
+  .success-card {
+    max-width: 100%;
+
+    padding: 34px 22px;
+
+    border-radius: 24px;
+  }
+
+  .success-icon {
+    width: 72px;
+
+    height: 72px;
+
+    font-size: 36px;
+
+    margin-bottom: 18px;
+  }
+
+  .success-card h2 {
+    font-size: 24px;
+  }
+
+  .success-card p {
+    font-size: 15px;
+  }
+
+  .success-card span {
+    font-size: 13px;
+
+    line-height: 1.6;
+  }
+}

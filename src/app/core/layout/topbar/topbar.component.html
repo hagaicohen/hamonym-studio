@@ -64,10 +64,14 @@
 
     <!-- USER -->
 
+    <!-- USER -->
+
     <div class="topbar-user">
       <div class="topbar-user-name">Hagai Cohen</div>
 
-      <div class="topbar-user-role">תורם</div>
+      <div class="topbar-user-role">
+        {{ currentEntityService.roleLabel() }}
+      </div>
     </div>
 
     <!-- LOGOUT -->

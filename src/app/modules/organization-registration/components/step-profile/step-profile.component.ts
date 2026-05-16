@@ -114,6 +114,16 @@ export class StepProfileComponent {
     this.selectedCampaignTypes = [...this.selectedCampaignTypes, type];
   }
 
+  get logoFile(): File | null {
+    return this.stateService.state().logoFile;
+  }
+
+  set logoFile(value: File | null) {
+    this.updateState({
+      logoFile: value,
+    });
+  }
+
   onLogoSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
 
@@ -121,6 +131,8 @@ export class StepProfileComponent {
 
     if (!file) return;
 
+    this.logoFile = file;
+    
     this.logoPreview = URL.createObjectURL(file);
   }
 

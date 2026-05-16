@@ -36,6 +36,11 @@ export class SidebarComponent {
       icon: 'campaign',
       route: '/campaigns',
     },
+    {
+      label: 'הגדרות',
+      icon: 'settings',
+      route: '/settings',
+    },
   ];
 
   onNavigate(): void {

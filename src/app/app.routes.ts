@@ -3,6 +3,7 @@
 import { Routes } from '@angular/router';
 
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
+import { EntitySettingsShellComponent } from './modules/settings/layouts/entity-settings-shell/entity-settings-shell.component';
 
 export const routes: Routes = [
   /* PUBLIC ROUTES */
@@ -72,6 +73,39 @@ export const routes: Routes = [
           import(
             './modules/organization-registration/pages/organization-registration/organization-registration.component'
           ).then((m) => m.OrganizationRegistrationComponent),
+      },
+
+      /* SETTINGS */
+
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import(
+            './modules/settings/pages/settings-page/settings-page.component'
+          ).then((m) => m.SettingsPageComponent),
+      },
+
+      /* ENTITY SETTINGS */
+
+      {
+        path: 'settings/entities/:id',
+        component: EntitySettingsShellComponent,
+
+        children: [
+          {
+            path: '',
+            redirectTo: 'profile',
+            pathMatch: 'full',
+          },
+
+          {
+            path: 'profile',
+            loadComponent: () =>
+              import(
+                './modules/settings/pages/entity-settings/entity-settings.component'
+              ).then((m) => m.EntitySettingsComponent),
+          },
+        ],
       },
     ],
   },

@@ -1,8 +1,14 @@
-<div class="editor-shell">
-  <!-- TOOLBAR -->
+<!-- rich-text-editor.component.html -->
 
-  <div class="editor-toolbar">
+<div class="editor-shell">
+
+  <div
+    class="editor-toolbar"
+    *ngIf="editor"
+  >
+
     <div class="toolbar-group">
+
       <button
         type="button"
         class="toolbar-btn"
@@ -47,9 +53,11 @@
       >
         🖍
       </button>
+
     </div>
 
     <div class="toolbar-group">
+
       <button
         type="button"
         class="toolbar-btn text-btn"
@@ -85,9 +93,11 @@
       >
         P
       </button>
+
     </div>
 
     <div class="toolbar-group">
+
       <button
         type="button"
         class="toolbar-btn"
@@ -114,81 +124,9 @@
       >
         ☑
       </button>
+
     </div>
 
-    <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" (click)="setTextAlign('right')">
-        ⇥
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('center')"
-      >
-        ≡
-      </button>
-
-      <button type="button" class="toolbar-btn" (click)="setTextAlign('left')">
-        ⇤
-      </button>
-    </div>
-
-    <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('blockquote')"
-        (click)="toggleBlockquote()"
-      >
-        ❝
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('codeBlock')"
-        (click)="toggleCodeBlock()"
-      >
-        &lt;/&gt;
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="insertHorizontalRule()"
-      >
-        ―
-      </button>
-    </div>
-
-    <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" (click)="addImage()">🖼</button>
-
-      <button type="button" class="toolbar-btn" (click)="addYoutubeVideo()">
-        ▶
-      </button>
-
-      <button type="button" class="toolbar-btn" (click)="addLink()">🔗</button>
-    </div>
-
-    <div class="toolbar-group">
-      <input
-        type="color"
-        class="color-picker"
-        (input)="setTextColor($any($event.target).value)"
-      />
-    </div>
-
-    <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn danger"
-        (click)="clearFormatting()"
-      >
-        ✕
-      </button>
-    </div>
   </div>
 
   <button
@@ -199,5 +137,10 @@
     +
   </button>
 
-  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
+  <div
+    #editor
+    class="editor-content"
+    [style.minHeight.px]="minHeight"
+  ></div>
+
 </div>

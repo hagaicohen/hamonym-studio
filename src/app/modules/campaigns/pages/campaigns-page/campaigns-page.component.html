@@ -1,1 +1,9 @@
-<app-no-organization-state />
+@if (!hasEntity) {
+  <app-no-organization-state />
+} @else {
+  <div class="page-header">
+    <h1>קמפיינים</h1>
+
+    <p>ניהול הקמפיינים של העמותה</p>
+  </div>
+}

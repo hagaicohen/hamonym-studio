@@ -1,0 +1,99 @@
+<div class="settings-page">
+
+  <div class="settings-page-header">
+
+    <div>
+
+      <div class="page-title">
+
+        ניהול
+        {{ draftEntity?.entity_type === 'association'
+          ? 'עמותה'
+          : 'יישות' }}
+
+      </div>
+
+      <div class="page-description">
+
+        {{ draftEntity?.display_name }}
+
+      </div>
+
+      <div class="entity-meta-row">
+
+        <div class="entity-meta">
+
+          מספר רישום:
+          {{ draftEntity?.registration_number }}
+
+        </div>
+
+        <div class="entity-meta">
+
+          {{ draftEntity?.email }}
+
+        </div>
+
+        <div class="entity-meta status">
+
+          {{
+            draftEntity?.status === 'pending_review'
+              ? 'ממתינה לאישור'
+
+              : draftEntity?.status === 'active'
+              ? 'פעילה'
+
+              : 'טיוטה'
+          }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="header-actions">
+
+      @if (!editMode) {
+
+        <button
+          class="edit-btn"
+          (click)="editMode = true">
+
+          עריכה
+
+        </button>
+
+      }
+
+      @if (editMode) {
+
+        <button
+          class="cancel-btn"
+          (click)="cancelEdit()">
+
+          ביטול
+
+        </button>
+
+        <button
+          class="save-btn"
+          (click)="saveAll()">
+
+          שמירת שינויים
+
+        </button>
+
+      }
+
+    </div>
+
+  </div>
+
+  <app-entity-basic-info-section
+    [entity]="draftEntity"
+    [editMode]="editMode"
+    (entityChange)="onEntityChange($event)">
+  </app-entity-basic-info-section>
+
+</div>

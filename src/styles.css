@@ -28,3 +28,17 @@ select {
 
   background-size: 16px;
 }
+
+/* HIDE SCROLLBARS */
+
+* {
+
+  scrollbar-width: none;
+
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+
+  display: none;
+}

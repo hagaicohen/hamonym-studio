@@ -11,6 +11,7 @@ import {
   EntityConfig,
   EntityType,
 } from '../../config/entity-config';
+import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
 @Component({
   selector: 'app-step-entity',
@@ -25,35 +26,7 @@ export class StepEntityComponent {
 
   entityConfigs = ENTITY_CONFIGS;
 
-  categories = [
-    'פוליטיקה וממשל',
-    'ביטחון חוץ',
-    'חינוך',
-    'תרבות',
-    'אמנות',
-    'ספורט',
-    'בריאות',
-    'בריאות הנפש',
-    'הצלה וזיכרון',
-    'סביבה',
-    'עיתונאות עצמאית',
-    'ספרות וספרים',
-    'יהדות',
-    'דת',
-    'בעלי חיים',
-    'צבא וכוחות ביטחון',
-    'יוצרים עצמאיים',
-    'יוצרי תוכן',
-    'מדיניות ציבורית',
-    'איכות חיים',
-    'אורח חיים',
-    'טבע',
-    'היסטוריה',
-    'משפט וצדק',
-    'סיוע לנזקקים',
-    'מערכת פוליטית',
-    'אחר',
-  ];
+  categories = ENTITY_CATEGORIES; 
 
   constructor(
     private readonly stateService: OrganizationRegistrationStateService,
@@ -75,7 +48,7 @@ export class StepEntityComponent {
   }
 
   get entityType(): string {
-    return this.state.entityType;
+    return this.stateService.state().entityType;
   }
 
   set entityType(value: string) {
@@ -85,7 +58,7 @@ export class StepEntityComponent {
   }
 
   get organizationName(): string {
-    return this.state.organizationName;
+    return this.stateService.state().organizationName;
   }
 
   set organizationName(value: string) {
@@ -95,7 +68,7 @@ export class StepEntityComponent {
   }
 
   get organizationNumber(): string {
-    return this.state.organizationNumber;
+    return this.stateService.state().organizationNumber;
   }
 
   set organizationNumber(value: string) {
@@ -105,7 +78,7 @@ export class StepEntityComponent {
   }
 
   get primaryCategory(): string {
-    return this.state.primaryCategory;
+    return this.stateService.state().primaryCategory;
   }
 
   set primaryCategory(value: string) {
@@ -115,7 +88,7 @@ export class StepEntityComponent {
   }
 
   get fullName(): string {
-    return this.state.fullName;
+    return this.stateService.state().fullName;
   }
 
   set fullName(value: string) {
@@ -125,7 +98,7 @@ export class StepEntityComponent {
   }
 
   get phone(): string {
-    return this.state.phone;
+    return this.stateService.state().phone;
   }
 
   set phone(value: string) {
@@ -135,7 +108,7 @@ export class StepEntityComponent {
   }
 
   get email(): string {
-    return this.state.email;
+    return this.stateService.state().email;
   }
 
   set email(value: string) {
@@ -145,7 +118,7 @@ export class StepEntityComponent {
   }
 
   get certificateFileName(): string {
-    return this.state.certificateFileName;
+    return this.stateService.state().certificateFileName;
   }
 
   set certificateFileName(value: string) {
@@ -155,7 +128,7 @@ export class StepEntityComponent {
   }
 
   get certificateFileUrl(): string {
-    return this.state.certificateFileUrl;
+    return this.stateService.state().certificateFileUrl;
   }
 
   set certificateFileUrl(value: string) {
@@ -165,7 +138,7 @@ export class StepEntityComponent {
   }
 
   get section46FileName(): string {
-    return this.state.section46FileName;
+    return this.stateService.state().section46FileName;
   }
 
   set section46FileName(value: string) {
@@ -175,7 +148,7 @@ export class StepEntityComponent {
   }
 
   get section46FileUrl(): string {
-    return this.state.section46FileUrl;
+    return this.stateService.state().section46FileUrl;
   }
 
   set section46FileUrl(value: string) {
@@ -185,7 +158,7 @@ export class StepEntityComponent {
   }
 
   get selectedCategories(): string[] {
-    return this.state.selectedCategories;
+    return this.stateService.state().selectedCategories;
   }
 
   set selectedCategories(value: string[]) {
@@ -194,18 +167,45 @@ export class StepEntityComponent {
     });
   }
 
-  toggleCategory(category: string): void {
-    const exists = this.selectedCategories.includes(category);
+  get certificateFile(): File | null {
+    return this.stateService.state().certificateFile;
+  }
+
+  set certificateFile(value: File | null) {
+    this.updateState({
+      certificateFile: value,
+    });
+  }
+
+  get section46File(): File | null {
+  return this.stateService.state().section46File;
+  }
+
+  set section46File(value: File | null) {
+    this.updateState({
+      section46File: value,
+    });
+  }
+
+  toggleCategory(categoryId: string): void {
+
+    const exists =
+      this.selectedCategories.includes(categoryId);
 
     if (exists) {
-      this.selectedCategories = this.selectedCategories.filter(
-        (c) => c !== category,
-      );
+
+      this.selectedCategories =
+        this.selectedCategories.filter(
+          (c) => c !== categoryId,
+        );
 
       return;
     }
 
-    this.selectedCategories = [...this.selectedCategories, category];
+    this.selectedCategories = [
+      ...this.selectedCategories,
+      categoryId
+    ];
   }
 
   onPhoneInput(event: Event): void {
@@ -243,6 +243,8 @@ export class StepEntityComponent {
 
     if (!file) return;
 
+    this.certificateFile = file;
+
     this.certificateFileName = file.name;
 
     this.certificateFileUrl = URL.createObjectURL(file);
@@ -260,6 +262,8 @@ export class StepEntityComponent {
     const file = input.files?.[0];
 
     if (!file) return;
+
+    this.section46File = file;
 
     this.section46FileName = file.name;
 
