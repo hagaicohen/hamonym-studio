@@ -74,6 +74,12 @@ export class EntitiesService {
         campaign_types:
           data.campaign_types,
 
+        monthly_goal:
+          data.monthly_goal,
+
+        yearly_goal:
+          data.yearly_goal,
+
         contact_full_name:
           data.contact_full_name,
 

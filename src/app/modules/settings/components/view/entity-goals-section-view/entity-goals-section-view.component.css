@@ -1,0 +1,130 @@
+.settings-card {
+
+  background: white;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 24px;
+
+  padding: 28px;
+}
+
+.card-top {
+
+  padding-bottom: 24px;
+
+  margin-bottom: 28px;
+
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.header-content {
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.card-title {
+
+  font-size: 22px;
+
+  font-weight: 800;
+
+  color: #111827;
+}
+
+.card-description {
+
+  margin-top: 8px;
+
+  font-size: 14px;
+
+  color: #6b7280;
+}
+
+.goals-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 18px;
+}
+
+.goal-card {
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 20px;
+
+  padding: 24px;
+
+  background: #fafafa;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.goal-label {
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: #6b7280;
+
+  margin-bottom: 14px;
+}
+
+.goal-value {
+
+  font-size: 30px;
+
+  font-weight: 800;
+
+  color: #111827;
+}
+
+.info-box {
+
+  margin-top: 24px;
+
+  padding: 20px;
+
+  border-radius: 18px;
+
+  background: #eff6ff;
+
+  border: 1px solid #bfdbfe;
+
+  color: #1e40af;
+
+  font-size: 14px;
+
+  line-height: 1.8;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+
+  .settings-card {
+
+    padding: 18px;
+  }
+
+  .goals-grid {
+
+    grid-template-columns: 1fr;
+  }
+
+  .goal-value {
+
+    font-size: 26px;
+  }
+
+}

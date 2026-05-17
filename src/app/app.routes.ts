@@ -81,31 +81,18 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import(
-            './modules/settings/components/entity-settings/entity-settings.component'
-          ).then((m) => m.EntitySettingsComponent),
+            './modules/settings/pages/settings-page/settings-page.component'
+          ).then((m) => m.SettingsPageComponent),
       },
 
       /* ENTITY SETTINGS */
 
       {
         path: 'settings/entities/:id',
-        component: EntitySettingsShellComponent,
-
-        children: [
-          {
-            path: '',
-            redirectTo: 'profile',
-            pathMatch: 'full',
-          },
-
-          {
-            path: 'profile',
-            loadComponent: () =>
-              import(
-                './modules/settings/components/entity-settings/entity-settings.component'
-              ).then((m) => m.EntitySettingsComponent),
-          },
-        ],
+        loadComponent: () =>
+          import(
+            './modules/settings/components/entity-settings/entity-settings.component'
+          ).then((m) => m.EntitySettingsComponent),
       },
     ],
   },

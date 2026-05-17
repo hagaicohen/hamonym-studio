@@ -1,42 +1,101 @@
 <div class="settings-page">
 
-  <!-- PAGE HEADER -->
+  <!-- HERO -->
 
-  <div class="settings-page-header">
+  <div class="settings-hero">
 
-    <div>
+    <div class="hero-top-row">
 
-      <div class="page-title">
+      <div>
 
-        ניהול
-        {{ draftEntity?.entity_type === 'association'
-          ? 'עמותה'
-          : 'יישות' }}
+        <div class="page-title">
+
+          ניהול
+          {{ draftEntity?.entity_type === 'association'
+            ? 'עמותה'
+            : 'יישות' }}
+
+        </div>
+
+        <div class="page-description">
+
+          {{ draftEntity?.display_name }}
+
+        </div>
 
       </div>
 
-      <div class="page-description">
+      <div class="header-actions">
 
-        {{ draftEntity?.display_name }}
+        @if (!editMode) {
+
+          <button
+            class="edit-btn"
+            (click)="startEdit()">
+
+            עריכה
+
+          </button>
+
+        }
+
+        @if (editMode) {
+
+          <button
+            class="cancel-btn"
+            (click)="cancelEdit()">
+
+            ביטול
+
+          </button>
+
+          <button
+            class="save-btn"
+            (click)="saveAll()"
+            [disabled]="!draftEntity?.campaign_types?.length">
+
+            שמירת שינויים
+
+          </button>
+
+        }
 
       </div>
 
-      <div class="entity-meta-row">
+    </div>
 
-        <div class="entity-meta">
+    <!-- META -->
 
-          מספר רישום:
+    <div class="hero-meta-row">
+
+      <div class="meta-item">
+
+        <span class="meta-label">
+          מספר רישום
+        </span>
+
+        <span class="meta-value">
+
           {{ draftEntity?.registration_number }}
 
-        </div>
+        </span>
 
-        <div class="entity-meta">
+      </div>
 
-          {{ draftEntity?.email }}
+      <div class="meta-separator">
+        •
+      </div>
 
-        </div>
+      <div class="meta-item">
 
-        <div class="entity-meta status">
+        <span class="meta-label">
+          סטטוס
+        </span>
+
+        <span
+          class="status-text"
+          [class.pending]="draftEntity?.status === 'pending_review'"
+          [class.active]="draftEntity?.status === 'active'">
 
           {{
             draftEntity?.status === 'pending_review'
@@ -48,72 +107,85 @@
               : 'טיוטה'
           }}
 
-        </div>
+        </span>
 
       </div>
 
     </div>
 
-    <div class="header-actions">
+  </div>
 
-      @if (!editMode) {
+  <!-- INTERNAL NAVIGATION -->
 
-        <button
-          class="edit-btn"
-          (click)="startEdit()">
+  <div class="entity-sections-nav">
 
-          עריכה
+    <button
+      type="button"
+      (click)="basicInfoSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })">
 
-        </button>
+      פרופיל
 
-      }
+    </button>
 
-      @if (editMode) {
+    <button
+      type="button"
+      (click)="goalsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })">
 
-        <button
-          class="cancel-btn"
-          (click)="cancelEdit()">
+      יעדים
 
-          ביטול
+    </button>
 
-        </button>
+    <button type="button">
 
-        <button
-          class="save-btn"
-          (click)="saveAll()"
-          [disabled]="!draftEntity?.campaign_types?.length">
+      מסמכים
 
-          שמירת שינויים
+    </button>
 
-        </button>
+    <button type="button">
 
-      }
+      משתמשים
 
-    </div>
+    </button>
+
+    <button type="button">
+
+      סליקה
+
+    </button>
 
   </div>
 
   <!-- BASIC INFO -->
 
-  @if (!editMode) {
+  <div #basicInfoSection>
 
-    <app-entity-basic-info-section-view
+    @if (!editMode) {
 
-      [entity]="draftEntity">
+      <app-entity-basic-info-section-view
 
-    </app-entity-basic-info-section-view>
+        [entity]="draftEntity">
 
-  } @else {
+      </app-entity-basic-info-section-view>
 
-    <app-entity-basic-info-section-edit
+    } @else {
 
-      [entity]="draftEntity"
+      <app-entity-basic-info-section-edit
 
-      (entityChange)="onEntityChange($event)">
+        [entity]="draftEntity"
 
-    </app-entity-basic-info-section-edit>
+        (entityChange)="onEntityChange($event)">
 
-  }
+      </app-entity-basic-info-section-edit>
+
+    }
+
+  </div>
 
   <br>
 
@@ -150,5 +222,33 @@
     </app-entity-profile-section-edit>
 
   }
+
+  <br>
+
+  <!-- GOALS -->
+
+  <div #goalsSection>
+
+    @if (!editMode) {
+
+      <app-entity-goals-section-view
+
+        [entity]="draftEntity">
+
+      </app-entity-goals-section-view>
+
+    } @else {
+
+      <app-entity-goals-section-edit
+
+        [entity]="draftEntity"
+
+        (entityChange)="onEntityChange($event)">
+
+      </app-entity-goals-section-edit>
+
+    }
+
+  </div>
 
 </div>

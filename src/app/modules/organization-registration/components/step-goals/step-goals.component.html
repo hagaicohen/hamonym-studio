@@ -66,12 +66,12 @@
         <div class="money-input-wrapper">
           <span class="money-symbol"> ₪ </span>
 
-          <input
+         <input
             type="text"
             class="base-input money-input"
             placeholder="50,000"
-            [ngModel]="monthlyGoal"
-            (ngModelChange)="onMoneyInput('monthly', $event)"
+            [ngModel]="monthlyGoal | number"
+            (ngModelChange)="monthlyGoal = cleanNumber($event)"
           />
         </div>
 
@@ -92,8 +92,8 @@
             type="text"
             class="base-input money-input"
             placeholder="600,000"
-            [ngModel]="yearlyGoal"
-            (ngModelChange)="onMoneyInput('yearly', $event)"
+            [ngModel]="yearlyGoal | number"
+            (ngModelChange)="yearlyGoal = cleanNumber($event)"
           />
         </div>
 

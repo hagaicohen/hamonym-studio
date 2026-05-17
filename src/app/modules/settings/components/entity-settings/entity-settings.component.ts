@@ -40,6 +40,14 @@ import {
   EntityProfileSectionEditComponent
 } from '../edit/entity-profile-section-edit/entity-profile-section-edit.component';
 
+import {
+  EntityGoalsSectionViewComponent
+} from '../view/entity-goals-section-view/entity-goals-section-view.component';
+
+import {
+  EntityGoalsSectionEditComponent
+} from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
+
 @Component({
   selector: 'app-entity-settings',
   standalone: true,
@@ -50,7 +58,10 @@ import {
     EntityBasicInfoSectionEditComponent,
 
     EntityProfileSectionViewComponent,
-    EntityProfileSectionEditComponent
+    EntityProfileSectionEditComponent,
+
+    EntityGoalsSectionViewComponent,
+    EntityGoalsSectionEditComponent
   ],
   templateUrl:
     './entity-settings.component.html',

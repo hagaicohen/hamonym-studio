@@ -64,8 +64,7 @@ export class StepReviewComponent {
   private readonly stateService =
     inject(OrganizationRegistrationStateService);
 
-  protected readonly state =
-    computed(() => this.stateService.state());
+  protected readonly state = this.stateService.state;
 
   get entityConfig(): EntityConfig {
 
@@ -319,6 +318,21 @@ submitApplication(): void {
 
   this.loading = true;
 
+  console.log(
+  'REVIEW STATE',
+  this.state()
+);
+
+  console.log({
+
+    monthlyGoal:
+      this.state().monthlyGoal,
+
+    yearlyGoal:
+      this.state().yearlyGoal
+
+  });
+
   const payload = {
 
     entity_type:
@@ -363,6 +377,12 @@ submitApplication(): void {
     campaign_types:
       this.state().selectedCampaignTypes,
 
+    monthly_goal:
+      this.state().monthlyGoal,
+
+    yearly_goal:
+      this.state().yearlyGoal,
+
     contact_full_name:
       this.fullName,
 
@@ -385,6 +405,15 @@ submitApplication(): void {
       this.section46FileName,
 
   };
+
+  /*console.log(
+  'FINAL PAYLOAD',
+  JSON.stringify(
+    payload,
+    null,
+    2
+  )
+);*/
 
   this.entitiesService
     .createEntity(payload)
