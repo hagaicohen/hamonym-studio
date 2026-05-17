@@ -15,18 +15,33 @@ import {
 import {
   CurrentEntityService
 } from '../../../../core/services/current-entity.service';
+import { CAMPAIGN_TYPES } from '../../../organization-registration/constants/campaign-types';
+
+import {
+  EntityProfileSectionComponent
+} from '../../../../shared/entity/entity-profile-section/entity-profile-section.component';
+
+import {
+  ENTITY_CONFIGS
+} from '../../../organization-registration/config/entity-config';
+
+import {
+  environment
+} from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-entity-settings',
   standalone: true,
   imports: [
     CommonModule,
-    EntityBasicInfoSectionComponent
+    EntityBasicInfoSectionComponent,
+    EntityProfileSectionComponent
   ],
   templateUrl: './entity-settings.component.html',
   styleUrls: ['./entity-settings.component.css']
 })
 export class EntitySettingsComponent
+
   implements OnInit {
 
   private currentEntityService =
@@ -37,6 +52,12 @@ export class EntitySettingsComponent
   entity: any = null;
 
   draftEntity: any = null;
+
+  campaignTypes = CAMPAIGN_TYPES;
+
+  ENTITY_CONFIGS = ENTITY_CONFIGS;
+
+  apiUrl = environment.apiUrl;
 
   ngOnInit(): void {
 
@@ -86,4 +107,21 @@ export class EntitySettingsComponent
 
     this.editMode = false;
   }
+
+  onLogoSelected(
+  file: File
+        ) {
+
+          console.log(
+            'LOGO SELECTED',
+            file
+          );
+
+    }
+
+    get entityTypeLabel(): string {
+        return this.ENTITY_CONFIGS[
+          this.draftEntity?.entity_type as keyof typeof ENTITY_CONFIGS
+        ]?.labels?.entity || 'יישות';
+      }
 }

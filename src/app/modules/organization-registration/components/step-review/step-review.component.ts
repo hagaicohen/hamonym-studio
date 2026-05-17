@@ -311,7 +311,7 @@ get section46FileUrl(): string {
 
   success = false;
 
- submitApplication(): void {
+submitApplication(): void {
 
   if (this.loading) {
     return;
@@ -345,8 +345,11 @@ get section46FileUrl(): string {
     description:
       this.organizationDescription,
 
+    // IMPORTANT:
+    // do not save blob url
+
     logo_url:
-      this.state().logoPreview,
+      null,
 
     is_profile_complete:
       this.isProfileComplete,
@@ -356,6 +359,9 @@ get section46FileUrl(): string {
 
     secondary_categories:
       this.state().selectedCategories,
+
+    campaign_types:
+      this.state().selectedCampaignTypes,
 
     contact_full_name:
       this.fullName,
@@ -387,135 +393,134 @@ get section46FileUrl(): string {
       next: (res) => {
 
         const entityId =
-        res.entity.id;
+          res.entity.id;
 
-      const uploads = [];
+        const uploads = [];
 
-      if (this.state().certificateFile) {
+        if (this.state().certificateFile) {
 
-        uploads.push(
+          uploads.push(
 
-          this.entitiesService
-            .uploadAssociationDocument(
+            this.entitiesService
+              .uploadAssociationDocument(
 
-              entityId,
+                entityId,
 
-              this.state().certificateFile!
+                this.state().certificateFile!
 
-            )
+              )
 
-        );
+          );
 
-      }
+        }
 
-      if (this.state().section46File) {
+        if (this.state().section46File) {
 
-        uploads.push(
+          uploads.push(
 
-          this.entitiesService
-            .uploadTaxDocument(
+            this.entitiesService
+              .uploadTaxDocument(
 
-              entityId,
+                entityId,
 
-              this.state().section46File!
+                this.state().section46File!
 
-            )
+              )
 
-        );
+          );
 
-      }
+        }
 
-      if (this.state().logoFile) {
+        if (this.state().logoFile) {
 
-        uploads.push(
+          uploads.push(
 
-          this.entitiesService
-            .uploadLogo(
+            this.entitiesService
+              .uploadLogo(
 
-              entityId,
+                entityId,
 
-              this.state().logoFile!
+                this.state().logoFile!
 
-            )
+              )
 
-        );
+          );
 
-      }
+        }
 
-      if (!uploads.length) {
+        if (!uploads.length) {
 
-        this.finishRegistration(
-          res.entity
-        );
+          this.finishRegistration(
+            res.entity
+          );
 
-        return;
-      }
+          return;
+        }
 
-      console.log(uploads);
+        forkJoin(uploads)
+          .subscribe({
 
-      forkJoin(uploads)
-        .subscribe({
+            next: (results: any[]) => {
 
-          next: (results: any[]) => {
+              console.log(
+                'UPLOAD RESULTS',
+                results
+              );
 
-            console.log(
-              'UPLOAD RESULTS',
-              results
-            );
+              const updatedEntity = {
 
-            const updatedEntity = {
+                ...res.entity,
 
-              ...res.entity,
+                logo_url:
 
-              logo_url:
+                  results.find(
+                    r => r?.result?.logo_url
+                  )?.result?.logo_url
 
-                results.find(
-                  r => r?.logo_url
-                )?.logo_url
+                  || res.entity.logo_url,
 
-                || res.entity.logo_url,
+                association_certificate_url:
 
-              association_certificate_url:
+                  results.find(
+                    r => r?.result?.association_certificate_url
+                  )?.result?.association_certificate_url
 
-                results.find(
-                  r => r?.association_certificate_url
-                )?.association_certificate_url
+                  || res.entity.association_certificate_url,
 
-                || res.entity.association_certificate_url,
+                tax_document_url:
 
-              tax_document_url:
+                  results.find(
+                    r => r?.result?.tax_document_url
+                  )?.result?.tax_document_url
 
-                results.find(
-                  r => r?.tax_document_url
-                )?.tax_document_url
+                  || res.entity.tax_document_url
 
-                || res.entity.tax_document_url
+              };
 
-            };
+              console.log(
+                'UPDATED ENTITY',
+                updatedEntity
+              );
 
-            console.log(
-              'UPDATED ENTITY',
-              updatedEntity
-            );
+              this.finishRegistration(
+                updatedEntity
+              );
 
-            this.finishRegistration(
-              updatedEntity
-            );
+            },
 
-          },
+            error: (err) => {
 
-          error: (err) => {
+              console.error(
+                'UPLOAD ERROR',
+                err
+              );
 
-            console.error(
-              'UPLOAD ERROR',
-              err
-            );
+              this.loading = false;
 
-            this.loading = false;
+            }
 
-          }
+          });
 
-        });
       },
 
       error: (err) => {
@@ -526,11 +531,12 @@ get section46FileUrl(): string {
         );
 
         this.loading = false;
+
       },
+
     });
- }
 
-
+}
 
  private finishRegistration(
   entity: any

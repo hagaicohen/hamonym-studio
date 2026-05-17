@@ -95,5 +95,18 @@
     [editMode]="editMode"
     (entityChange)="onEntityChange($event)">
   </app-entity-basic-info-section>
+  <br>
+  <app-entity-profile-section
+
+    [entity]="draftEntity"
+
+    [entityTypeLabel]="entityTypeLabel"
+
+    [campaignTypes]="campaignTypes"
+    
+    [apiUrl]="apiUrl"
+    >
+
+  </app-entity-profile-section>
 
 </div>

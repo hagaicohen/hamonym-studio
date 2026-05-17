@@ -71,6 +71,9 @@ export class EntitiesService {
         secondary_categories:
           data.secondary_categories,
 
+        campaign_types:
+          data.campaign_types,
+
         contact_full_name:
           data.contact_full_name,
 
@@ -199,9 +202,9 @@ export class EntitiesService {
   }
 
   uploadLogo(
-  entityId: string,
-  file: File
-    ): Observable<any> {
+    entityId: string,
+    file: File
+      ): Observable<any> {
 
       const formData =
         new FormData();
