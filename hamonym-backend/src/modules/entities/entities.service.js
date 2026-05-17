@@ -18,48 +18,49 @@ exports.createEntity =
         await client.query(
 
           `
-          INSERT INTO entities (
+            INSERT INTO entities (
 
-                  entity_type,
-                  legal_name,
-                  display_name,
-                  registration_number,
+                    entity_type,
+                    legal_name,
+                    display_name,
+                    registration_number,
 
-                  email,
-                  phone,
-                  website,
+                    email,
+                    phone,
+                    website,
 
-                  description,
-                  logo_url,
+                    description,
+                    logo_url,
 
-                  onboarding_completed,
-                  onboarding_step,
+                    onboarding_completed,
+                    onboarding_step,
 
-                  status,
+                    status,
 
-                  created_by_user_id,
+                    created_by_user_id,
 
-                  is_profile_complete,
+                    is_profile_complete,
 
-                  primary_category,
-                  secondary_categories,
+                    primary_category,
+                    secondary_categories,
 
-                  contact_full_name,
-                  contact_phone,
-                  contact_email,
+                    campaign_types,
 
-                  association_certificate_url,
-                  association_certificate_name,
+                    contact_full_name,
+                    contact_phone,
+                    contact_email,
 
-                  tax_document_url,
-                  tax_document_name
+                    association_certificate_url,
+                    association_certificate_name,
 
-                )
+                    tax_document_url,
+                    tax_document_name
+                  )
           VALUES (
 
             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-            $11,$12,$13,$14,$15,$16,$17,$18,
-            $19,$20,$21,$22,$23
+            $11,$12,$13,$14,$15,$16,$17::text[],$18,
+            $19,$20,$21,$22,$23,$24
 
           )
           RETURNING *
@@ -100,6 +101,8 @@ exports.createEntity =
             data.primary_category,
 
             data.secondary_categories || [],
+
+            data.campaign_types || [],
 
             data.contact_full_name,
 
@@ -163,7 +166,7 @@ exports.createEntity =
 
     }
 
-  };
+};
 
 exports.getMyEntities =
   async (userId) => {
@@ -344,6 +347,9 @@ exports.uploadLogo =
     file
   }) => {
 
+    const logoUrl =
+      `/api/entities/${entityId}/logo`;
+
     const result =
       await db.query(
 
@@ -364,11 +370,40 @@ exports.uploadLogo =
 
         [
 
-          file.originalname,
+          logoUrl,
 
           file.mimetype,
 
           file.buffer,
+
+          entityId
+
+        ]
+
+      );
+
+    return result.rows[0];
+
+};
+
+exports.getLogo =
+  async (entityId) => {
+
+    const result =
+      await db.query(
+
+        `
+        SELECT
+
+          logo_mime,
+          logo_data
+
+        FROM entities
+
+        WHERE id = $1
+        `,
+
+        [
 
           entityId
 

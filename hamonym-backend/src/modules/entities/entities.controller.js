@@ -6,6 +6,12 @@ exports.createEntity =
 
     try {
 
+      console.log(
+        'BODY CAMPAIGN TYPES',
+        req.body.campaign_types
+      );
+
+      console.log(req.body);
       const entity =
         await service.createEntity({
 
@@ -317,12 +323,68 @@ exports.uploadLogo =
 
       console.error(err);
 
-      return res.status(500).json({
+      return res.status(500).json({ 
 
         success: false,
 
         message:
           'Failed uploading logo'
+
+      });
+
+    }
+
+};
+
+exports.getLogo =
+  async (req, res) => {
+
+    try {
+
+      const logo =
+        await service.getLogo(
+
+          req.params.id
+
+        );
+
+      if (!logo) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            'Logo not found'
+
+        });
+
+      }
+
+      res.setHeader(
+
+        'Content-Type',
+
+        logo.logo_mime
+
+      );
+
+      return res.send(
+
+        logo.logo_data
+
+      );
+
+    } catch (err) {
+
+      console.error(err);
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          'Failed loading logo'
 
       });
 

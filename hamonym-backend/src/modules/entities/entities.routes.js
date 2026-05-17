@@ -99,4 +99,12 @@ router.patch(
 
 );
 
+router.get(
+
+  '/:id/logo',
+
+  controller.getLogo
+
+);
+
 module.exports = router;
