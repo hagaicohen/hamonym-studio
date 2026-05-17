@@ -46,6 +46,9 @@ exports.createEntity =
 
                     campaign_types,
 
+                    monthly_goal,
+                    yearly_goal,
+
                     contact_full_name,
                     contact_phone,
                     contact_email,
@@ -56,13 +59,15 @@ exports.createEntity =
                     tax_document_url,
                     tax_document_name
                   )
+
           VALUES (
 
             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-            $11,$12,$13,$14,$15,$16,$17::text[],$18,
-            $19,$20,$21,$22,$23,$24
+            $11,$12,$13,$14,$15,$16,$17::text[],
+            $18,$19,$20,$21,$22,$23,$24,$25,$26
 
           )
+
           RETURNING *
           `,
 
@@ -104,6 +109,10 @@ exports.createEntity =
 
             data.campaign_types || [],
 
+            data.monthly_goal,
+
+            data.yearly_goal,
+
             data.contact_full_name,
 
             data.contact_phone,
@@ -135,6 +144,7 @@ exports.createEntity =
           role
 
         )
+
         VALUES ($1, $2, $3)
         `,
 
@@ -205,6 +215,7 @@ exports.uploadAssociationDocument =
   }) => {
 
     console.log(file);
+
     console.log(file.buffer.length);
 
     const result =

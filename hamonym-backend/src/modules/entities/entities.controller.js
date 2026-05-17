@@ -6,23 +6,6 @@ exports.createEntity =
 
     try {
 
-      console.log(
-        'BODY CAMPAIGN TYPES',
-        req.body.campaign_types
-      );
-
-      console.log(req.body);
-      const entity =
-        await service.createEntity({
-
-          userId:
-            req.user.id,
-
-          data:
-            req.body
-
-        });
-
       return res.status(201).json({
 
         success: true,
