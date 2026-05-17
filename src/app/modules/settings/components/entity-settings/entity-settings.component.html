@@ -1,5 +1,7 @@
 <div class="settings-page">
 
+  <!-- PAGE HEADER -->
+
   <div class="settings-page-header">
 
     <div>
@@ -58,7 +60,7 @@
 
         <button
           class="edit-btn"
-          (click)="editMode = true">
+          (click)="startEdit()">
 
           עריכה
 
@@ -78,7 +80,8 @@
 
         <button
           class="save-btn"
-          (click)="saveAll()">
+          (click)="saveAll()"
+          [disabled]="!draftEntity?.campaign_types?.length">
 
           שמירת שינויים
 
@@ -90,23 +93,62 @@
 
   </div>
 
-  <app-entity-basic-info-section
-    [entity]="draftEntity"
-    [editMode]="editMode"
-    (entityChange)="onEntityChange($event)">
-  </app-entity-basic-info-section>
+  <!-- BASIC INFO -->
+
+  @if (!editMode) {
+
+    <app-entity-basic-info-section-view
+
+      [entity]="draftEntity">
+
+    </app-entity-basic-info-section-view>
+
+  } @else {
+
+    <app-entity-basic-info-section-edit
+
+      [entity]="draftEntity"
+
+      (entityChange)="onEntityChange($event)">
+
+    </app-entity-basic-info-section-edit>
+
+  }
+
   <br>
-  <app-entity-profile-section
 
-    [entity]="draftEntity"
+  <!-- PROFILE -->
 
-    [entityTypeLabel]="entityTypeLabel"
+  @if (!editMode) {
 
-    [campaignTypes]="campaignTypes"
-    
-    [apiUrl]="apiUrl"
-    >
+    <app-entity-profile-section-view
 
-  </app-entity-profile-section>
+      [entity]="draftEntity"
+
+      [entityTypeLabel]="entityTypeLabel"
+
+      [campaignTypes]="campaignTypes"
+
+      [apiUrl]="apiUrl">
+
+    </app-entity-profile-section-view>
+
+  } @else {
+
+    <app-entity-profile-section-edit
+
+      [entity]="draftEntity"
+
+      [entityTypeLabel]="entityTypeLabel"
+
+      [campaignTypes]="campaignTypes"
+
+      [apiUrl]="apiUrl"
+
+      (entityChange)="onEntityChange($event)">
+
+    </app-entity-profile-section-edit>
+
+  }
 
 </div>

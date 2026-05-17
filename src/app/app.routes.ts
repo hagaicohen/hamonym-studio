@@ -81,8 +81,8 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import(
-            './modules/settings/pages/settings-page/settings-page.component'
-          ).then((m) => m.SettingsPageComponent),
+            './modules/settings/components/entity-settings/entity-settings.component'
+          ).then((m) => m.EntitySettingsComponent),
       },
 
       /* ENTITY SETTINGS */
@@ -102,7 +102,7 @@ export const routes: Routes = [
             path: 'profile',
             loadComponent: () =>
               import(
-                './modules/settings/pages/entity-settings/entity-settings.component'
+                './modules/settings/components/entity-settings/entity-settings.component'
               ).then((m) => m.EntitySettingsComponent),
           },
         ],

@@ -10,19 +10,19 @@ import {
 } from '@angular/common';
 
 @Component({
-  selector: 'app-entity-profile-section',
+  selector: 'app-entity-profile-section-view',
   standalone: true,
   imports: [
     CommonModule
   ],
   templateUrl:
-    './entity-profile-section.component.html',
+    './entity-profile-section-view.component.html',
 
   styleUrls: [
-    './entity-profile-section.component.css'
+    './entity-profile-section-view.component.css'
   ]
 })
-export class EntityProfileSectionComponent {
+export class EntityProfileSectionViewComponent {
 
   @Input()
   entity: any;
@@ -42,18 +42,24 @@ export class EntityProfileSectionComponent {
 
   getLogoUrl(): string {
 
-    if (!this.entity?.logo_url) {
-      return '';
-    }
+  const logo =
+    this.entity?.logo_url;
 
-    if (
-      this.entity.logo_url.startsWith('http')
-    ) {
-      return this.entity.logo_url;
-    }
-
-    return `${this.apiUrl}${this.entity.logo_url}`;
-
+  if (!logo) {
+    return '';
   }
+
+  if (
+    typeof logo === 'string' &&
+    (
+      logo.startsWith('http') ||
+      logo.startsWith('data:image')
+    )
+  ) {
+    return logo;
+  }
+
+  return `${this.apiUrl}${logo}`;
+}
 
 }

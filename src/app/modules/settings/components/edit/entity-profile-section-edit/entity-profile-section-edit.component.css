@@ -1,0 +1,428 @@
+/* entity-profile-section-edit.component.css */
+
+.settings-card {
+
+  width: 100%;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 24px;
+
+  padding: 28px;
+
+  box-sizing: border-box;
+}
+
+/* HEADER */
+
+.card-top {
+
+  padding-bottom: 24px;
+
+  margin-bottom: 28px;
+
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.header-content {
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.card-title {
+
+  font-size: 22px;
+
+  font-weight: 800;
+
+  color: #111827;
+
+  line-height: 1.2;
+}
+
+.card-description {
+
+  margin-top: 8px;
+
+  font-size: 14px;
+
+  color: #6b7280;
+
+  line-height: 1.6;
+}
+
+/* LAYOUT */
+
+.profile-grid {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 32px;
+}
+
+.top-row {
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    220px;
+
+  gap: 32px;
+
+  align-items: start;
+
+  padding-bottom: 32px;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+/* DETAILS */
+
+.details-side {
+
+  min-width: 0;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.info-section {
+
+  padding-bottom: 24px;
+
+  margin-bottom: 24px;
+
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.info-section.no-border {
+
+  margin-bottom: 0;
+
+  padding-bottom: 0;
+
+  border-bottom: none;
+}
+
+.section-label {
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  color: #6b7280;
+
+  margin-bottom: 14px;
+}
+
+/* TAGS */
+
+.tags {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 10px;
+}
+
+.tag {
+
+  min-height: 38px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 0 14px;
+
+  border-radius: 999px;
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  transition: 0.2s;
+
+  box-sizing: border-box;
+}
+
+.tag.selectable {
+
+  cursor: pointer;
+
+  background: #f9fafb;
+
+  border: 1px solid #e5e7eb;
+
+  color: #374151;
+}
+
+.tag.selectable.selected {
+
+  background: #2563eb;
+
+  border-color: #2563eb;
+
+  color: white;
+}
+
+/* LOGO */
+
+.logo-side {
+
+  width: 220px;
+
+  min-width: 220px;
+
+  flex-shrink: 0;
+
+  padding-right: 32px;
+
+  border-right: 1px solid #eef2f7;
+
+  box-sizing: border-box;
+}
+
+.logo-card {
+
+  width: 100%;
+
+  box-sizing: border-box;
+
+  border: 1px solid #eef2f7;
+
+  border-radius: 20px;
+
+  padding: 18px;
+
+  background: #fafafa;
+}
+
+.logo-label {
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  color: #6b7280;
+
+  margin-bottom: 16px;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.logo-preview {
+
+  width: 100%;
+
+  aspect-ratio: 1 / 1;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  border: 1px solid #e5e7eb;
+
+  background: #ffffff;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.logo-preview img {
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.logo-placeholder {
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: #9ca3af;
+}
+
+/* INPUTS */
+
+.profile-input {
+
+  width: 100%;
+
+  height: 50px;
+
+  padding: 0 14px;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 14px;
+
+  background: white;
+
+  font-size: 15px;
+
+  color: #111827;
+
+  box-sizing: border-box;
+
+  outline: none;
+
+  transition: 0.2s ease;
+}
+
+.profile-input:focus {
+
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(37, 99, 235, 0.08);
+}
+
+/* DESCRIPTION */
+
+.description-section {
+
+  width: 100%;
+
+  direction: rtl;
+
+  text-align: right;
+}
+
+.full-editor {
+
+  display: block;
+
+  width: 100%;
+}
+
+/* BUTTONS */
+
+.upload-btn {
+
+  margin-top: 16px;
+
+  width: 100%;
+
+  height: 42px;
+
+  border-radius: 12px;
+
+  border: 1px solid #d1d5db;
+
+  background: white;
+
+  box-sizing: border-box;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  cursor: pointer;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  transition: 0.2s;
+}
+
+.upload-btn:hover {
+
+  background: #f9fafb;
+}
+
+/* VALIDATION */
+
+.field-error {
+
+  margin-top: 12px;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  color: #dc2626;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+
+  .settings-card {
+
+    padding: 18px;
+
+    border-radius: 20px;
+  }
+
+  .profile-grid {
+
+    gap: 24px;
+  }
+
+  .top-row {
+
+    grid-template-columns: 1fr;
+
+    gap: 28px;
+
+    padding-bottom: 24px;
+  }
+
+  .logo-side {
+
+    width: 100%;
+
+    min-width: 0;
+
+    padding-right: 0;
+
+    border-right: none;
+  }
+
+  .logo-card {
+
+    max-width: 280px;
+
+    margin: 0 auto;
+  }
+
+  .tags {
+
+    flex-direction: column;
+  }
+
+  .tag.selectable {
+
+    width: 100%;
+
+    min-height: 46px;
+
+    justify-content: center;
+  }
+
+}

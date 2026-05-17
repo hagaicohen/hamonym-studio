@@ -16,7 +16,7 @@ import {
 
 import {
   ENTITY_CATEGORIES
-} from '../../config/entity-categories';
+} from '../../../../../shared/config/entity-categories';
 
 import {
   DomSanitizer,
@@ -25,19 +25,19 @@ import {
 
 import {
   EntitiesService
-} from '../../../core/services/entities.service';
+} from '../../../../../core/services/entities.service';
 
 @Component({
-  selector: 'app-entity-basic-info-section',
+  selector: 'app-entity-basic-info-section-view',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule
   ],
-  templateUrl: './entity-basic-info-section.component.html',
-  styleUrls: ['./entity-basic-info-section.component.css']
+  templateUrl: './entity-basic-info-section-view.component.html',
+  styleUrl: './entity-basic-info-section-view.component.css'
 })
-export class EntityBasicInfoSectionComponent {
+export class EntityBasicInfoSectionViewComponent {
 
   private entitiesService =
     inject(EntitiesService);

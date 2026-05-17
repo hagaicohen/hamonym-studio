@@ -15,19 +15,19 @@ import {
 
 import {
   ENTITY_CATEGORIES
-} from  '../../../../shared/config/entity-categories';
+} from '../../../../../shared/config/entity-categories';
 
 @Component({
-  selector: 'app-entity-basic-info-card',
+  selector: 'app-entity-basic-info-section-edit',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule
   ],
-  templateUrl: './entity-basic-info-card.component.html',
-  styleUrls: ['./entity-basic-info-card.component.css']
+  templateUrl: './entity-basic-info-section-edit.component.html',
+  styleUrl: './entity-basic-info-section-edit.component.css'
 })
-export class EntityBasicInfoCardComponent {
+export class EntityBasicInfoSectionEditComponent {
 
   @Input()
   entity: any;

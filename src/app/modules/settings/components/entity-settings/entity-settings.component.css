@@ -92,6 +92,15 @@
 
 }
 
+.save-btn:disabled {
+
+  opacity: 0.5;
+
+  cursor: not-allowed;
+
+  pointer-events: none;
+}
+
 @media (max-width: 768px) {
 
   .settings-page {

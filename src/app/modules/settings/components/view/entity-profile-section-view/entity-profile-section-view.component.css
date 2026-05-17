@@ -64,38 +64,6 @@
 
 }
 
-.edit-btn {
-
-  height: 42px;
-
-  padding: 0 18px;
-
-  border: 1px solid #d1d5db;
-
-  border-radius: 12px;
-
-  background: #ffffff;
-
-  color: #111827;
-
-  font-size: 14px;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition: 0.2s;
-
-  flex-shrink: 0;
-
-}
-
-.edit-btn:hover {
-
-  background: #f9fafb;
-
-}
-
 .profile-layout {
 
   display: flex;

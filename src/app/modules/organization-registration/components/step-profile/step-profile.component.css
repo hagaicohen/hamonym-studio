@@ -533,3 +533,33 @@
     height: 140px;
   }
 }
+
+/* =========================================================
+   FIELD ERROR
+========================================================= */
+
+.field-error {
+
+  margin-top: -10px;
+
+  margin-bottom: 24px;
+
+  text-align: right;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  color: #dc2626;
+}
+
+@media (max-width: 768px) {
+
+  .field-error {
+
+    font-size: 12px;
+
+    margin-top: -6px;
+  }
+
+}
