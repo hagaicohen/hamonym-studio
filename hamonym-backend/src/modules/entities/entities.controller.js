@@ -6,6 +6,17 @@ exports.createEntity =
 
     try {
 
+      const entity =
+        await service.createEntity({
+
+          userId:
+            req.user.id,
+
+          data:
+            req.body
+
+        });
+
       return res.status(201).json({
 
         success: true,

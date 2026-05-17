@@ -14,64 +14,98 @@ exports.createEntity =
 
       await client.query('BEGIN');
 
+      /*console.log(
+                  'CREATE ENTITY DATA',
+                  data
+                );*/
+
       const entityResult =
         await client.query(
 
           `
             INSERT INTO entities (
 
-                    entity_type,
-                    legal_name,
-                    display_name,
-                    registration_number,
+              entity_type,
+              legal_name,
+              display_name,
+              registration_number,
 
-                    email,
-                    phone,
-                    website,
+              email,
+              phone,
+              website,
 
-                    description,
-                    logo_url,
+              description,
+              logo_url,
 
-                    onboarding_completed,
-                    onboarding_step,
+              onboarding_completed,
+              onboarding_step,
 
-                    status,
+              status,
 
-                    created_by_user_id,
+              created_by_user_id,
 
-                    is_profile_complete,
+              is_profile_complete,
 
-                    primary_category,
-                    secondary_categories,
+              primary_category,
+              secondary_categories,
 
-                    campaign_types,
+              campaign_types,
 
-                    monthly_goal,
-                    yearly_goal,
+              monthly_goal,
+              yearly_goal,
 
-                    contact_full_name,
-                    contact_phone,
-                    contact_email,
+              billing_provider,
+              billing_skip_setup,
 
-                    association_certificate_url,
-                    association_certificate_name,
+              cardcom_terminal_number,
+              cardcom_api_username,
+              cardcom_api_password_encrypted,
 
-                    tax_document_url,
-                    tax_document_name
-                  )
+              cardcom_connection_status,
+              cardcom_last_verified_at,
+              cardcom_last_error,
 
-          VALUES (
+              contact_full_name,
+              contact_phone,
+              contact_email,
 
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-            $11,$12,$13,$14,$15,$16,$17::text[],
-            $18,$19,$20,$21,$22,$23,$24,$25,$26
+              association_certificate_url,
+              association_certificate_name,
 
-          )
+              tax_document_url,
+              tax_document_name
 
-          RETURNING *
+            )
+
+            VALUES (
+
+              $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+              $11,$12,$13,$14,$15,$16,$17::text[],
+
+              $18,$19,
+
+              $20,$21,
+
+              $22,$23,$24,
+
+              $25,$26,$27,
+
+              $28,$29,$30,
+
+              $31,$32,
+
+              $33,$34
+
+            )
+
+            RETURNING *
           `,
 
           [
+
+            // =========================
+            // BASIC
+            // =========================
 
             data.entity_type,
 
@@ -109,15 +143,51 @@ exports.createEntity =
 
             data.campaign_types || [],
 
+            // =========================
+            // GOALS
+            // =========================
+
             data.monthly_goal,
 
             data.yearly_goal,
+
+            // =========================
+            // BILLING
+            // =========================
+
+            data.billing_provider,
+
+            data.billing_skip_setup || false,
+
+            // =========================
+            // CARDCOM
+            // =========================
+
+            data.cardcom_terminal_number,
+
+            data.cardcom_api_username,
+
+            data.cardcom_api_password_encrypted,
+
+            data.cardcom_connection_status || 'not_tested',
+
+            null,
+
+            null,
+
+            // =========================
+            // CONTACT
+            // =========================
 
             data.contact_full_name,
 
             data.contact_phone,
 
             data.contact_email,
+
+            // =========================
+            // DOCUMENTS
+            // =========================
 
             data.association_certificate_url,
 
@@ -130,6 +200,11 @@ exports.createEntity =
           ]
 
         );
+
+        /*console.log(
+          'CREATED ENTITY',
+          entityResult.rows[0]
+        );*/
 
       const entity =
         entityResult.rows[0];
@@ -376,7 +451,9 @@ exports.uploadLogo =
 
         WHERE id = $4
 
-        RETURNING id
+        RETURNING
+        id,
+        logo_url
         `,
 
         [
