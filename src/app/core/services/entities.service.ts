@@ -26,93 +26,131 @@ export class EntitiesService {
     inject(HttpClient);
 
   createEntity(
-    data: any
-  ): Observable<any> {
+  data: any
+    ): Observable<any> {
 
-    return this.http.post(
+      return this.http.post(
 
-      `${environment.apiUrl}/api/entities`,
+        `${environment.apiUrl}/api/entities`,
 
-      {
+        {
 
-        entity_type:
-          data.entity_type,
+          // =========================
+          // BASIC
+          // =========================
 
-        legal_name:
-          data.legal_name,
+          entity_type:
+            data.entity_type,
 
-        display_name:
-          data.display_name,
+          legal_name:
+            data.legal_name,
 
-        registration_number:
-          data.registration_number,
+          display_name:
+            data.display_name,
 
-        email:
-          data.email,
+          registration_number:
+            data.registration_number,
 
-        phone:
-          data.phone,
+          email:
+            data.email,
 
-        website:
-          data.website,
+          phone:
+            data.phone,
 
-        description:
-          data.description,
+          website:
+            data.website,
 
-        logo_url:
-          data.logo_url,
+          description:
+            data.description,
 
-        is_profile_complete:
-          data.is_profile_complete,
+          logo_url:
+            data.logo_url,
 
-        primary_category:
-          data.primary_category,
+          is_profile_complete:
+            data.is_profile_complete,
 
-        secondary_categories:
-          data.secondary_categories,
+          primary_category:
+            data.primary_category,
 
-        campaign_types:
-          data.campaign_types,
+          secondary_categories:
+            data.secondary_categories,
 
-        monthly_goal:
-          data.monthly_goal,
+          campaign_types:
+            data.campaign_types,
 
-        yearly_goal:
-          data.yearly_goal,
+          // =========================
+          // GOALS
+          // =========================
 
-        contact_full_name:
-          data.contact_full_name,
+          monthly_goal:
+            data.monthly_goal,
 
-        contact_phone:
-          data.contact_phone,
+          yearly_goal:
+            data.yearly_goal,
 
-        contact_email:
-          data.contact_email,
+          // =========================
+          // BILLING / CARDCOM
+          // =========================
 
-        association_certificate_url:
-          data.association_certificate_url,
+          billing_provider:
+            data.billing_provider,
 
-        association_certificate_name:
-          data.association_certificate_name,
+          billing_skip_setup:
+            data.billing_skip_setup,
 
-        tax_document_url:
-          data.tax_document_url,
+          cardcom_terminal_number:
+            data.cardcom_terminal_number,
 
-        tax_document_name:
-          data.tax_document_name
+          cardcom_api_username:
+            data.cardcom_api_username,
 
-      },
+          cardcom_api_password_encrypted:
+            data.cardcom_api_password_encrypted,
 
-      {
-        headers: {
-          Authorization:
-            `Bearer ${localStorage.getItem('token')}`,
+          cardcom_connection_status:
+            data.cardcom_connection_status,
+
+          // =========================
+          // CONTACT
+          // =========================
+
+          contact_full_name:
+            data.contact_full_name,
+
+          contact_phone:
+            data.contact_phone,
+
+          contact_email:
+            data.contact_email,
+
+          // =========================
+          // DOCUMENTS
+          // =========================
+
+          association_certificate_url:
+            data.association_certificate_url,
+
+          association_certificate_name:
+            data.association_certificate_name,
+
+          tax_document_url:
+            data.tax_document_url,
+
+          tax_document_name:
+            data.tax_document_name
+
         },
-      },
 
-    );
+        {
+          headers: {
+            Authorization:
+              `Bearer ${localStorage.getItem('token')}`,
+          },
+        },
 
-  }
+      );
+
+    }
 
   getMyEntities(): Observable<any> {
 

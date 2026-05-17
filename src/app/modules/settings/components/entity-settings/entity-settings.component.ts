@@ -47,22 +47,23 @@ import {
 import {
   EntityGoalsSectionEditComponent
 } from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
+import { EntityBillingSettingsEditComponent } from "../edit/entity-billing-settings-edit/entity-billing-settings-edit.component";
+import { EntityBillingSettingsViewComponent } from "../view/entity-billing-settings-view/entity-billing-settings-view.component";
 
 @Component({
   selector: 'app-entity-settings',
   standalone: true,
   imports: [
     CommonModule,
-
     EntityBasicInfoSectionViewComponent,
     EntityBasicInfoSectionEditComponent,
-
     EntityProfileSectionViewComponent,
     EntityProfileSectionEditComponent,
-
     EntityGoalsSectionViewComponent,
-    EntityGoalsSectionEditComponent
-  ],
+    EntityGoalsSectionEditComponent,
+    EntityBillingSettingsEditComponent,
+    EntityBillingSettingsViewComponent
+],
   templateUrl:
     './entity-settings.component.html',
 
@@ -159,5 +160,35 @@ export class EntitySettingsComponent
       entityType
     ]?.labels?.entity || 'יישות';
   }
+
+  isCheckingBillingConnection = false;
+
+// =========================
+// BILLING CONNECTION TEST
+// =========================
+
+testBillingConnection(): void {
+
+  this.isCheckingBillingConnection = true;
+
+  setTimeout(() => {
+
+    this.isCheckingBillingConnection = false;
+
+    this.draftEntity = {
+
+      ...this.draftEntity,
+
+      cardcom_connection_status: 'success',
+
+      cardcom_last_verified_at:
+        new Date(),
+
+      cardcom_last_error:
+        null
+    };
+
+  }, 1200);
+}
 
 }

@@ -1,0 +1,137 @@
+<div class="settings-card">
+
+  <!-- HEADER -->
+
+  <div class="card-top">
+
+    <div>
+
+      <div class="card-title">
+        עריכת מסוף אשראי
+      </div>
+
+      <div class="card-description">
+        חיבור והגדרות ספק הסליקה
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- PROVIDER -->
+
+  <div class="field-block">
+
+    <label>
+      ספק סליקה
+    </label>
+
+    <select
+      [(ngModel)]="model.billing_provider"
+      class="base-input">
+
+      <option value="cardcom">
+        קארדקום
+      </option>
+
+    </select>
+
+  </div>
+
+  <ng-container
+    *ngIf="!model.billing_skip_setup">
+
+    <!-- TERMINAL -->
+
+    <div class="field-block">
+
+      <label>
+        מספר מסוף
+      </label>
+
+      <input
+        type="text"
+        class="base-input"
+        [(ngModel)]="model.cardcom_terminal_number"
+        placeholder="1234567" />
+
+    </div>
+
+    <!-- USERNAME -->
+
+    <div class="field-block">
+
+      <label>
+        משתמש API
+      </label>
+
+      <input
+        type="text"
+        class="base-input"
+        [(ngModel)]="model.cardcom_api_username"
+        placeholder="username" />
+
+    </div>
+
+    <!-- PASSWORD -->
+
+    <div class="field-block">
+
+      <label>
+        סיסמת API
+      </label>
+
+      <input
+        type="password"
+        class="base-input"
+        [(ngModel)]="model.cardcom_api_password"
+        placeholder="••••••••" />
+
+    </div>
+
+    <!-- STATUS -->
+
+    <div
+      class="connection-status"
+      [ngClass]="statusClass">
+
+      {{ statusLabel }}
+
+    </div>
+
+    <!-- ERROR -->
+
+    <div
+      class="connection-error"
+      *ngIf="
+        model.cardcom_connection_status === 'failed'
+        && model.cardcom_last_error
+      ">
+
+      {{ model.cardcom_last_error }}
+
+    </div>
+
+    <!-- TEST -->
+
+    <button
+      type="button"
+      class="test-connection-btn"
+      [disabled]="isCheckingConnection"
+      (click)="testConnection.emit(model)">
+
+      @if (!isCheckingConnection) {
+
+        בדוק חיבור
+
+      } @else {
+
+        בודק חיבור...
+
+      }
+
+    </button>
+
+  </ng-container>
+
+</div>

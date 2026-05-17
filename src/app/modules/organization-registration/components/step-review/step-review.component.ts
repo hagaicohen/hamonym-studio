@@ -310,7 +310,7 @@ get section46FileUrl(): string {
 
   success = false;
 
-submitApplication(): void {
+  submitApplication(): void {
 
   if (this.loading) {
     return;
@@ -319,9 +319,9 @@ submitApplication(): void {
   this.loading = true;
 
   console.log(
-  'REVIEW STATE',
-  this.state()
-);
+    'REVIEW STATE',
+    this.state()
+  );
 
   console.log({
 
@@ -334,6 +334,10 @@ submitApplication(): void {
   });
 
   const payload = {
+
+    // =========================
+    // BASIC
+    // =========================
 
     entity_type:
       this.state().entityType,
@@ -377,11 +381,50 @@ submitApplication(): void {
     campaign_types:
       this.state().selectedCampaignTypes,
 
+    // =========================
+    // GOALS
+    // =========================
+
     monthly_goal:
       this.state().monthlyGoal,
 
     yearly_goal:
       this.state().yearlyGoal,
+
+    // =========================
+    // BILLING / CARDCOM
+    // =========================
+
+    billing_provider:
+      this.state().provider,
+
+    billing_skip_setup:
+      this.state().useExistingTerminal,
+
+    cardcom_terminal_number:
+      this.state().terminalNumber,
+
+    cardcom_api_username:
+      this.state().apiUsername,
+
+    cardcom_api_password_encrypted:
+      this.state().apiPassword,
+
+    cardcom_connection_status:
+
+      this.state().useExistingTerminal
+
+        ? 'skipped'
+
+        : this.state().connectionSuccess
+
+          ? 'success'
+
+          : 'not_tested',
+
+    // =========================
+    // CONTACT
+    // =========================
 
     contact_full_name:
       this.fullName,
@@ -391,6 +434,10 @@ submitApplication(): void {
 
     contact_email:
       this.email,
+
+    // =========================
+    // DOCUMENTS
+    // =========================
 
     association_certificate_url:
       this.certificateFileUrl,
@@ -402,18 +449,14 @@ submitApplication(): void {
       this.section46FileUrl,
 
     tax_document_name:
-      this.section46FileName,
+      this.section46FileName
 
   };
 
-  /*console.log(
-  'FINAL PAYLOAD',
-  JSON.stringify(
-    payload,
-    null,
-    2
-  )
-);*/
+  console.log(
+    'FINAL PAYLOAD',
+    payload
+  );
 
   this.entitiesService
     .createEntity(payload)
@@ -561,7 +604,7 @@ submitApplication(): void {
 
         this.loading = false;
 
-      },
+      }
 
     });
 

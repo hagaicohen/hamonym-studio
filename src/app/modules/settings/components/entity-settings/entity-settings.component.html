@@ -141,21 +141,14 @@
 
     </button>
 
-    <button type="button">
+    <button
+      type="button"
+      (click)="billingSettingsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })">
 
-      מסמכים
-
-    </button>
-
-    <button type="button">
-
-      משתמשים
-
-    </button>
-
-    <button type="button">
-
-      סליקה
+      מסוף אשראי
 
     </button>
 
@@ -246,6 +239,44 @@
         (entityChange)="onEntityChange($event)">
 
       </app-entity-goals-section-edit>
+
+    }
+
+  </div>
+
+  <br>
+
+  <!-- BILLING -->
+
+  <div #billingSettingsSection>
+
+    @if (!editMode) {
+
+      <app-entity-billing-settings-view
+
+        [entity]="draftEntity"
+
+        (edit)="startEdit()"
+
+        (testConnection)="testBillingConnection()">
+
+      </app-entity-billing-settings-view>
+
+    } @else {
+
+      <app-entity-billing-settings-edit
+
+        [model]="draftEntity"
+
+        [isCheckingConnection]="isCheckingBillingConnection"
+
+        (save)="onEntityChange($event)"
+
+        (cancel)="cancelEdit()"
+
+        (testConnection)="testBillingConnection()">
+
+      </app-entity-billing-settings-edit>
 
     }
 
