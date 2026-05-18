@@ -523,4 +523,201 @@ exports.getLogo =
 
     return result.rows[0];
 
+};
+
+exports.updateEntity =
+  async ({
+    entityId,
+    userId,
+    data
+  }) => {
+
+    // =====================================================
+    // OWNERSHIP CHECK
+    // =====================================================
+
+    const ownershipResult =
+      await db.query(
+
+        `
+        SELECT 1
+
+        FROM user_entities
+
+        WHERE user_id = $1
+        AND entity_id = $2
+
+        LIMIT 1
+        `,
+
+        [
+          userId,
+          entityId
+        ]
+
+      );
+
+    if (
+      !ownershipResult.rows.length
+    ) {
+
+      throw new Error(
+        'Unauthorized'
+      );
+
+    }
+
+    // =====================================================
+    // BILLING CLEANUP
+    // =====================================================
+
+    if (
+      data.billing_method ===
+      'credit-card'
+    ) {
+
+      data.billing_masav_file_name =
+        null;
+
+    }
+
+    if (
+      data.billing_method ===
+      'masav'
+    ) {
+
+      data.billing_holder_name =
+        null;
+
+      data.billing_card_last4 =
+        null;
+
+      data.billing_card_expiry =
+        null;
+
+    }
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    const result =
+      await db.query(
+
+        `
+        UPDATE entities
+
+        SET
+
+          display_name = $1,
+          legal_name = $2,
+          registration_number = $3,
+
+          email = $4,
+          phone = $5,
+
+          website = $6,
+          description = $7,
+
+          city = $8,
+          address = $9,
+
+          primary_category = $10,
+          secondary_categories = $11::text[],
+          campaign_types = $12::text[],
+
+          monthly_goal = $13,
+          yearly_goal = $14,
+
+          billing_provider = $15,
+          billing_skip_setup = $16,
+
+          billing_method = $17,
+          billing_holder_name = $18,
+          billing_card_last4 = $19,
+          billing_card_expiry = $20,
+          billing_masav_file_name = $21,
+          billing_status = $22,
+
+          cardcom_terminal_number = $23,
+          cardcom_api_username = $24,
+          cardcom_api_password_encrypted = $25,
+
+          cardcom_clearing_company = $26,
+          cardcom_invoice_name = $27,
+          cardcom_invoice_email = $28,
+          cardcom_is_production = $29,
+
+          cardcom_connection_status = $30,
+          cardcom_last_verified_at = $31,
+          cardcom_last_error = $32,
+
+          contact_full_name = $33,
+          contact_phone = $34,
+          contact_email = $35,
+
+          updated_at = NOW()
+
+        WHERE id = $36
+
+        RETURNING *
+        `,
+
+        [
+
+          data.display_name,
+          data.legal_name,
+          data.registration_number,
+
+          data.email,
+          data.phone,
+
+          data.website,
+          data.description,
+
+          data.city,
+          data.address,
+
+          data.primary_category,
+          data.secondary_categories || [],
+          data.campaign_types || [],
+
+          data.monthly_goal,
+          data.yearly_goal,
+
+          data.billing_provider,
+          data.billing_skip_setup || false,
+
+          data.billing_method,
+          data.billing_holder_name,
+          data.billing_card_last4,
+          data.billing_card_expiry,
+          data.billing_masav_file_name,
+          data.billing_status,
+
+          data.cardcom_terminal_number,
+          data.cardcom_api_username,
+          data.cardcom_api_password_encrypted,
+
+          data.cardcom_clearing_company,
+          data.cardcom_invoice_name,
+          data.cardcom_invoice_email,
+          data.cardcom_is_production || false,
+
+          data.cardcom_connection_status,
+          data.cardcom_last_verified_at,
+          data.cardcom_last_error,
+
+          data.contact_full_name,
+          data.contact_phone,
+          data.contact_email,
+
+          entityId
+
+        ]
+
+      );
+
+    return result.rows[0];
+
   };

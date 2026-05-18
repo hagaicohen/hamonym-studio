@@ -107,4 +107,14 @@ router.get(
 
 );
 
+router.patch(
+
+  '/:id',
+
+  requireAuth,
+
+  controller.updateEntity
+
+);
+
 module.exports = router;
