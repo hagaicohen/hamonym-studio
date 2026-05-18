@@ -91,7 +91,7 @@
 
         <div class="info-value masked">
 
-          •••• {{ entity?.billing_last4 }}
+         {{ entity?.billing_card_last4 }} •••• 
 
         </div>
 
@@ -119,7 +119,7 @@
 
         <div class="info-value">
 
-          {{ entity?.billing_expiry || '—' }}
+          {{  entity?.billing_card_expiry || '—' }}
 
         </div>
 

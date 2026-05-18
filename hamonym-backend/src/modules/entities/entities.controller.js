@@ -1,387 +1,520 @@
-const service =
-  require('./entities.service');
+const db =
+  require('../../db/db');
 
 exports.createEntity =
-  async (req, res) => {
+  async ({
+    userId,
+    data
+  }) => {
+
+    const client =
+      await db.connect();
 
     try {
 
-      const entity =
-        await service.createEntity({
+      await client.query('BEGIN');
 
-          userId:
-            req.user.id,
+      const entityResult =
+        await client.query(
 
-          data:
-            req.body
+          `
+            INSERT INTO entities (
 
-        });
+              entity_type,
+              legal_name,
+              display_name,
+              registration_number,
 
-      return res.status(201).json({
+              email,
+              phone,
+              website,
 
-        success: true,
+              description,
+              logo_url,
 
-        entity
+              onboarding_completed,
+              onboarding_step,
 
-      });
+              status,
 
-    } catch (err) {
+              created_by_user_id,
 
-      console.error(err);
+              is_profile_complete,
 
-      return res.status(500).json({
+              primary_category,
+              secondary_categories,
 
-        success: false,
+              campaign_types,
 
-        message:
-          'Failed creating entity'
+              monthly_goal,
+              yearly_goal,
 
-      });
+              billing_provider,
+              billing_skip_setup,
 
-    }
+              billing_method,
+              billing_holder_name,
+              billing_card_last4,
+              billing_card_expiry,
+              billing_masav_file_name,
+              billing_status,
 
-  };
+              cardcom_terminal_number,
+              cardcom_api_username,
+              cardcom_api_password_encrypted,
 
-exports.getMyEntities =
-  async (req, res) => {
+              cardcom_connection_status,
+              cardcom_last_verified_at,
+              cardcom_last_error,
 
-    try {
+              contact_full_name,
+              contact_phone,
+              contact_email,
 
-      const entities =
-        await service.getMyEntities(
+              association_certificate_url,
+              association_certificate_name,
 
-          req.user.id
+              tax_document_url,
+              tax_document_name
+
+            )
+
+            VALUES (
+
+              $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+
+              $11,$12,$13,$14,$15,$16,$17::text[],
+
+              $18,$19,
+
+              $20,$21,
+
+              $22,$23,$24,$25,$26,$27,
+
+              $28,$29,$30,
+
+              $31,$32,$33,
+
+              $34,$35,$36,
+
+              $37,$38,
+
+              $39,$40
+
+            )
+
+            RETURNING *
+          `,
+
+          [
+
+            // =========================
+            // BASIC
+            // =========================
+
+            data.entity_type,
+
+            data.legal_name,
+
+            data.display_name,
+
+            data.registration_number,
+
+            data.email,
+
+            data.phone,
+
+            data.website,
+
+            data.description,
+
+            data.logo_url,
+
+            true,
+
+            6,
+
+            data.is_profile_complete
+              ? 'pending_review'
+              : 'draft',
+
+            userId,
+
+            data.is_profile_complete || false,
+
+            data.primary_category,
+
+            data.secondary_categories || [],
+
+            data.campaign_types || [],
+
+            // =========================
+            // GOALS
+            // =========================
+
+            data.monthly_goal,
+
+            data.yearly_goal,
+
+            // =========================
+            // BILLING
+            // =========================
+
+            data.billing_provider,
+
+            data.billing_skip_setup || false,
+
+            // =========================
+            // BILLING METHOD
+            // =========================
+
+            data.billing_method,
+
+            data.billing_holder_name,
+
+            data.billing_card_last4,
+
+            data.billing_card_expiry,
+
+            data.billing_masav_file_name,
+
+            data.billing_status || 'pending',
+
+            // =========================
+            // CARDCOM
+            // =========================
+
+            data.cardcom_terminal_number,
+
+            data.cardcom_api_username,
+
+            data.cardcom_api_password_encrypted,
+
+            data.cardcom_connection_status || 'not_tested',
+
+            null,
+
+            null,
+
+            // =========================
+            // CONTACT
+            // =========================
+
+            data.contact_full_name,
+
+            data.contact_phone,
+
+            data.contact_email,
+
+            // =========================
+            // DOCUMENTS
+            // =========================
+
+            data.association_certificate_url,
+
+            data.association_certificate_name,
+
+            data.tax_document_url,
+
+            data.tax_document_name
+
+          ]
 
         );
 
-      return res.json({
+      const entity =
+        entityResult.rows[0];
 
-        success: true,
+      await client.query(
 
-        entities
+        `
+        INSERT INTO user_entities (
 
-      });
+          user_id,
+          entity_id,
+          role
+
+        )
+
+        VALUES ($1, $2, $3)
+        `,
+
+        [
+
+          userId,
+
+          entity.id,
+
+          'owner'
+
+        ]
+
+      );
+
+      await client.query('COMMIT');
+
+      return entity;
 
     } catch (err) {
 
-      console.error(err);
+      await client.query('ROLLBACK');
 
-      return res.status(500).json({
+      throw err;
 
-        success: false,
+    } finally {
 
-        message:
-          'Failed loading entities'
-
-      });
+      client.release();
 
     }
+
+};
+
+exports.getMyEntities =
+  async (userId) => {
+
+    const result =
+      await db.query(
+
+        `
+        SELECT
+
+          e.*,
+          ue.role
+
+        FROM entities e
+
+        INNER JOIN user_entities ue
+          ON ue.entity_id = e.id
+
+        WHERE ue.user_id = $1
+
+        ORDER BY e.created_at DESC
+        `,
+
+        [userId]
+
+      );
+
+    return result.rows;
 
   };
 
 exports.uploadAssociationDocument =
-  async (req, res) => {
+  async ({
+    entityId,
+    file
+  }) => {
 
-    try {
+    console.log(file);
 
-      const result =
-        await service.uploadAssociationDocument({
+    console.log(file.buffer.length);
 
-          entityId:
-            req.params.id,
+    const result =
+      await db.query(
 
-          file:
-            req.file
+        `
+        UPDATE entities
+        SET
 
-        });
+          association_certificate_name = $1,
 
-      return res.json({
+          association_certificate_mime = $2,
 
-        success: true,
+          association_certificate_data = $3
 
-        result
+        WHERE id = $4
 
-      });
+        RETURNING id
+        `,
 
-    } catch (err) {
+        [
 
-      console.error(err);
+          file.originalname,
 
-      return res.status(500).json({
+          file.mimetype,
 
-        success: false,
+          file.buffer,
 
-        message:
-          'Failed uploading association document'
+          entityId
 
-      });
+        ]
 
-    }
+      );
+
+    return result.rows[0];
 
   };
 
 exports.uploadTaxDocument =
-  async (req, res) => {
+  async ({
+    entityId,
+    file
+  }) => {
 
-    try {
+    const result =
+      await db.query(
 
-      const result =
-        await service.uploadTaxDocument({
+        `
+        UPDATE entities
+        SET
 
-          entityId:
-            req.params.id,
+          tax_document_name = $1,
 
-          file:
-            req.file
+          tax_document_mime = $2,
 
-        });
+          tax_document_data = $3
 
-      return res.json({
+        WHERE id = $4
 
-        success: true,
+        RETURNING id
+        `,
 
-        result
+        [
 
-      });
+          file.originalname,
 
-    } catch (err) {
+          file.mimetype,
 
-      console.error(err);
+          file.buffer,
 
-      return res.status(500).json({
+          entityId
 
-        success: false,
+        ]
 
-        message:
-          'Failed uploading tax document'
+      );
 
-      });
-
-    }
+    return result.rows[0];
 
   };
 
 exports.getAssociationDocument =
-  async (req, res) => {
+  async (entityId) => {
 
-    try {
+    const result =
+      await db.query(
 
-      const document =
-        await service.getAssociationDocument(
+        `
+        SELECT
 
-          req.params.id
+          association_certificate_name,
 
-        );
+          association_certificate_mime,
 
-      if (!document) {
+          association_certificate_data
 
-        return res.status(404).json({
+        FROM entities
 
-          success: false,
+        WHERE id = $1
+        `,
 
-          message:
-            'Document not found'
-
-        });
-
-      }
-
-      res.setHeader(
-
-        'Content-Type',
-
-        document.association_certificate_mime
+        [entityId]
 
       );
 
-      res.setHeader(
-
-        'Content-Disposition',
-
-        `inline; filename="${document.association_certificate_name}"`
-
-      );
-
-      return res.send(
-
-        document.association_certificate_data
-
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      return res.status(500).json({
-
-        success: false,
-
-        message:
-          'Failed loading document'
-
-      });
-
-    }
+    return result.rows[0];
 
   };
 
 exports.getTaxDocument =
-  async (req, res) => {
+  async (entityId) => {
 
-    try {
+    const result =
+      await db.query(
 
-      const document =
-        await service.getTaxDocument(
+        `
+        SELECT
 
-          req.params.id
+          tax_document_name,
 
-        );
+          tax_document_mime,
 
-      if (!document) {
+          tax_document_data
 
-        return res.status(404).json({
+        FROM entities
 
-          success: false,
+        WHERE id = $1
+        `,
 
-          message:
-            'Document not found'
-
-        });
-
-      }
-
-      res.setHeader(
-
-        'Content-Type',
-
-        document.tax_document_mime
+        [entityId]
 
       );
 
-      res.setHeader(
+    return result.rows[0];
 
-        'Content-Disposition',
-
-        `inline; filename="${document.tax_document_name}"`
-
-      );
-
-      return res.send(
-
-        document.tax_document_data
-
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      return res.status(500).json({
-
-        success: false,
-
-        message:
-          'Failed loading document'
-
-      });
-
-    }
-
-};
+  };
 
 exports.uploadLogo =
-  async (req, res) => {
+  async ({
+    entityId,
+    file
+  }) => {
 
-    try {
+    const logoUrl =
+      `/api/entities/${entityId}/logo`;
 
-      const result =
-        await service.uploadLogo({
+    const result =
+      await db.query(
 
-          entityId:
-            req.params.id,
+        `
+        UPDATE entities
+        SET
 
-          file:
-            req.file
+          logo_url = $1,
 
-        });
+          logo_mime = $2,
 
-      return res.json({
+          logo_data = $3
 
-        success: true,
+        WHERE id = $4
 
-        result
+        RETURNING
+        id,
+        logo_url
+        `,
 
-      });
+        [
 
-    } catch (err) {
+          logoUrl,
 
-      console.error(err);
+          file.mimetype,
 
-      return res.status(500).json({ 
+          file.buffer,
 
-        success: false,
+          entityId
 
-        message:
-          'Failed uploading logo'
+        ]
 
-      });
+      );
 
-    }
+    return result.rows[0];
 
 };
 
 exports.getLogo =
-  async (req, res) => {
+  async (entityId) => {
 
-    try {
+    const result =
+      await db.query(
 
-      const logo =
-        await service.getLogo(
+        `
+        SELECT
 
-          req.params.id
+          logo_mime,
+          logo_data
 
-        );
+        FROM entities
 
-      if (!logo) {
+        WHERE id = $1
+        `,
 
-        return res.status(404).json({
+        [
 
-          success: false,
+          entityId
 
-          message:
-            'Logo not found'
-
-        });
-
-      }
-
-      res.setHeader(
-
-        'Content-Type',
-
-        logo.logo_mime
+        ]
 
       );
 
-      return res.send(
-
-        logo.logo_data
-
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      return res.status(500).json({
-
-        success: false,
-
-        message:
-          'Failed loading logo'
-
-      });
-
-    }
+    return result.rows[0];
 
   };

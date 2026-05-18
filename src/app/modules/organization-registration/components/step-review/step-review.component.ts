@@ -392,7 +392,7 @@ get section46FileUrl(): string {
       this.state().yearlyGoal,
 
     // =========================
-    // BILLING / CARDCOM
+    // CARDCOM
     // =========================
 
     billing_provider:
@@ -421,6 +421,38 @@ get section46FileUrl(): string {
           ? 'success'
 
           : 'not_tested',
+
+    // BILLING
+    billing_method:
+      this.state().paymentMethod,
+
+    billing_holder_name:
+      this.state().cardHolderName,
+
+    billing_card_last4:
+
+      this.state().cardNumber
+
+        ? this.state()
+            .cardNumber
+            .replace(/\s/g, '')
+            .slice(-4)
+
+        : null,
+
+    billing_card_expiry:
+      this.state().expiry,
+
+    billing_masav_file_name:
+      this.state().masavFileName,
+
+    billing_status:
+
+      this.state().continueLater
+
+        ? 'pending'
+
+        : 'active',
 
     // =========================
     // CONTACT

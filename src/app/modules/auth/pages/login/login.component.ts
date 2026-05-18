@@ -118,7 +118,26 @@ export class LoginComponent implements OnInit {
               if (entities.length > 0) {
                 const entity = entities[0];
 
-                localStorage.setItem('currentEntity', JSON.stringify(entity));
+                //localStorage.setItem('currentEntity', JSON.stringify(entity));
+                localStorage.setItem(
+                        'currentEntity',
+
+                        JSON.stringify({
+
+                          id: entity.id,
+
+                          display_name:
+                            entity.display_name,
+
+                          entity_type:
+                            entity.entity_type,
+
+                          status:
+                            entity.status
+
+                        })
+
+                      );
 
                 this.currentEntityService.currentEntity.set(entity);
 
@@ -182,7 +201,26 @@ export class LoginComponent implements OnInit {
               if (entities.length > 0) {
                 const entity = entities[0];
 
-                localStorage.setItem('currentEntity', JSON.stringify(entity));
+                               localStorage.setItem(
+                        'currentEntity',
+
+                        JSON.stringify({
+
+                          id: entity.id,
+
+                          display_name:
+                            entity.display_name,
+
+                          entity_type:
+                            entity.entity_type,
+
+                          status:
+                            entity.status
+
+                        })
+
+                      );
+
 
                 this.currentEntityService.currentEntity.set(entity);
 

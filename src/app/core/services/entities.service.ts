@@ -89,7 +89,7 @@ export class EntitiesService {
             data.yearly_goal,
 
           // =========================
-          // BILLING / CARDCOM
+          // CARDCOM
           // =========================
 
           billing_provider:
@@ -109,6 +109,25 @@ export class EntitiesService {
 
           cardcom_connection_status:
             data.cardcom_connection_status,
+
+          //BILLING
+          billing_method:
+            data.billing_method,
+
+          billing_holder_name:
+            data.billing_holder_name,
+
+          billing_card_last4:
+            data.billing_card_last4,
+
+          billing_card_expiry:
+            data.billing_card_expiry,
+
+          billing_masav_file_name:
+            data.billing_masav_file_name,
+
+          billing_status:
+            data.billing_status,
 
           // =========================
           // CONTACT
