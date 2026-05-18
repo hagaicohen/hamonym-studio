@@ -1,11 +1,15 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
+import {
+  LucideAngularModule,
+  WalletCards,
+} from 'lucide-angular';
+
 
 @Component({
   selector: 'app-entity-payment-section-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule,LucideAngularModule],
   templateUrl: './entity-payment-section-view.component.html',
   styleUrl: './entity-payment-section-view.component.css',
 })
@@ -18,6 +22,8 @@ export class EntityPaymentSectionViewComponent {
 
   @Output()
   testConnection = new EventEmitter<void>();
+
+  readonly WalletCards = WalletCards;
 
   get statusLabel(): string {
     switch (this.entity?.cardcom_connection_status) {

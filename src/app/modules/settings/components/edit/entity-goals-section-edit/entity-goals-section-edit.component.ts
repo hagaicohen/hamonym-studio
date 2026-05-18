@@ -4,10 +4,15 @@ import { CommonModule } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 
+import {
+  LucideAngularModule,
+  TrendingUp
+} from 'lucide-angular';
+
 @Component({
   selector: 'app-entity-goals-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './entity-goals-section-edit.component.html',
 
   styleUrls: ['./entity-goals-section-edit.component.css'],
@@ -19,6 +24,8 @@ export class EntityGoalsSectionEditComponent {
 
   @Output()
   entityChange = new EventEmitter<any>();
+
+  readonly TrendingUp = TrendingUp;
 
   // =====================================================
   // DISPLAY VALUES

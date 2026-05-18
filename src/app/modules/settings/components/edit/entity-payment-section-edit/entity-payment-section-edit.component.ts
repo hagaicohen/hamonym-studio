@@ -1,13 +1,16 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
-
 import { FormsModule } from '@angular/forms';
+import {
+  LucideAngularModule,
+  WalletCards,
+} from 'lucide-angular';
+
 
 @Component({
   selector: 'app-entity-payment-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,LucideAngularModule],
   templateUrl: './entity-payment-section-edit.component.html',
   styleUrl: './entity-payment-section-edit.component.css',
 })
@@ -26,6 +29,8 @@ export class EntityPaymentSectionEditComponent {
 
   @Output()
   testConnection = new EventEmitter<any>();
+
+  readonly WalletCards = WalletCards;
 
   get canSave(): boolean {
     if (this.model?.billing_skip_setup) {

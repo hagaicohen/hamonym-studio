@@ -1,21 +1,26 @@
 import { Component, Input } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
-
 import { FormsModule } from '@angular/forms';
+
+import {
+  LucideAngularModule,
+  CreditCard
+} from 'lucide-angular';
 
 type BillingMethod = 'credit-card' | 'masav';
 
 @Component({
   selector: 'app-entity-billing-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,LucideAngularModule],
   templateUrl: './entity-billing-section-edit.component.html',
   styleUrls: ['./entity-billing-section-edit.component.css'],
 })
 export class EntityBillingSectionEditComponent {
   @Input()
   entity: any;
+
+  readonly CreditCard = CreditCard;
 
   get billingMethod(): BillingMethod {
     return this.entity?.billing_method || 'credit-card';

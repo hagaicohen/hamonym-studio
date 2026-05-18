@@ -6,10 +6,15 @@ import { FormsModule } from '@angular/forms';
 
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 
+import {
+  LucideAngularModule,
+  ImageIcon
+} from 'lucide-angular';
+
 @Component({
   selector: 'app-entity-profile-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, RichTextEditorComponent],
+  imports: [CommonModule, FormsModule, RichTextEditorComponent,LucideAngularModule],
   templateUrl: './entity-profile-section-edit.component.html',
 
   styleUrls: ['./entity-profile-section-edit.component.css'],
@@ -29,6 +34,8 @@ export class EntityProfileSectionEditComponent {
 
   @Output()
   entityChange = new EventEmitter<any>();
+
+  readonly ImageIcon = ImageIcon;
 
   updateField(field: string, value: any): void {
     this.entityChange.emit({

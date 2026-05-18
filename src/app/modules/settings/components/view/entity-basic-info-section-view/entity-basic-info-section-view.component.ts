@@ -10,10 +10,15 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { EntitiesService } from '../../../../../core/services/entities.service';
 
+import {
+  LucideAngularModule,
+  Building2
+} from 'lucide-angular';
+
 @Component({
   selector: 'app-entity-basic-info-section-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './entity-basic-info-section-view.component.html',
   styleUrl: './entity-basic-info-section-view.component.css',
 })
@@ -21,6 +26,8 @@ export class EntityBasicInfoSectionViewComponent {
   private entitiesService = inject(EntitiesService);
 
   private sanitizer = inject(DomSanitizer);
+
+  readonly Building2 = Building2;
 
   @Input()
   entity: any;

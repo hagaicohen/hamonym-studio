@@ -100,7 +100,7 @@
     <button
       type="button"
       (click)="
-        basicInfoSection.scrollIntoView({
+        profileSection.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         })
@@ -165,26 +165,26 @@
   <br />
 
   <!-- PROFILE -->
-
-  @if (!editMode) {
-    <app-entity-profile-section-view
-      [entity]="draftEntity"
-      [entityTypeLabel]="entityTypeLabel"
-      [campaignTypes]="campaignTypes"
-      [apiUrl]="apiUrl"
-    >
-    </app-entity-profile-section-view>
-  } @else {
-    <app-entity-profile-section-edit
-      [entity]="draftEntity"
-      [entityTypeLabel]="entityTypeLabel"
-      [campaignTypes]="campaignTypes"
-      [apiUrl]="apiUrl"
-      (entityChange)="onEntityChange($event)"
-    >
-    </app-entity-profile-section-edit>
-  }
-
+  <div #profileSection>
+    @if (!editMode) {
+      <app-entity-profile-section-view
+        [entity]="draftEntity"
+        [entityTypeLabel]="entityTypeLabel"
+        [campaignTypes]="campaignTypes"
+        [apiUrl]="apiUrl"
+      >
+      </app-entity-profile-section-view>
+    } @else {
+      <app-entity-profile-section-edit
+        [entity]="draftEntity"
+        [entityTypeLabel]="entityTypeLabel"
+        [campaignTypes]="campaignTypes"
+        [apiUrl]="apiUrl"
+        (entityChange)="onEntityChange($event)"
+      >
+      </app-entity-profile-section-edit>
+    }
+  </div>
   <br />
 
   <!-- GOALS -->

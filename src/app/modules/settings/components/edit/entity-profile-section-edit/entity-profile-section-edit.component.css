@@ -1,4 +1,9 @@
 /* entity-profile-section-edit.component.css */
+.section-title-row{
+   display: flex;
+   align-items: center;
+   gap: 10px;
+}
 
 .settings-card {
   width: 100%;

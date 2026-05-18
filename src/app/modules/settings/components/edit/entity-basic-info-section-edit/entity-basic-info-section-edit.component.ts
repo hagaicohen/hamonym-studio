@@ -6,10 +6,16 @@ import { FormsModule } from '@angular/forms';
 
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
+
+import {
+  LucideAngularModule,
+  Building2
+} from 'lucide-angular';
+
 @Component({
   selector: 'app-entity-basic-info-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,LucideAngularModule],
   templateUrl: './entity-basic-info-section-edit.component.html',
   styleUrl: './entity-basic-info-section-edit.component.css',
 })
@@ -24,6 +30,8 @@ export class EntityBasicInfoSectionEditComponent {
   entityChange = new EventEmitter<any>();
 
   categories = ENTITY_CATEGORIES;
+
+  readonly Building2 = Building2;
 
   updateField(field: string, value: any) {
     this.entityChange.emit({
