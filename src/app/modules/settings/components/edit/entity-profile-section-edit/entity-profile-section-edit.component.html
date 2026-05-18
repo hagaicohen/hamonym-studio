@@ -1,169 +1,103 @@
 <!-- entity-profile-section-edit.component.html -->
 
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-top">
-
     <div class="header-content">
-
-      <div class="card-title">
-
-        פרופיל {{ entityTypeLabel }}
-
-      </div>
+      <div class="card-title">פרופיל {{ entityTypeLabel }}</div>
 
       <div class="card-description">
-
         איך ה{{ entityTypeLabel }}
         תוצג בפלטפורמה
-
       </div>
-
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="profile-grid">
+    <!-- TOP ROW -->
 
-  <!-- TOP ROW -->
+    <div class="top-row">
+      <!-- RIGHT -->
 
-  <div class="top-row">
+      <div class="details-side">
+        <!-- DISPLAY NAME -->
 
-    <!-- RIGHT -->
-
-    <div class="details-side">
-
-      <!-- DISPLAY NAME -->
-
-      <div class="info-section">
-
-        <div class="section-label">
-          שם להצגה
-        </div>
-
-        <input
-          type="text"
-          class="profile-input"
-          [ngModel]="entity?.display_name"
-          (ngModelChange)="
-            updateField(
-              'display_name',
-              $event
-            )
-          ">
-
-      </div>
-
-      <!-- CAMPAIGN TYPES -->
-
-      <div class="info-section no-border">
-
-        <div class="section-label">
-          סוגי קמפיינים
-        </div>
-
-        <div class="tags">
-
-          @for (
-            type of campaignTypes;
-            track type.id
-          ) {
-
-            <button
-              type="button"
-              class="tag selectable"
-              [class.selected]="
-                entity?.campaign_types?.includes(type.id)
-              "
-              (click)="toggleCampaignType(type.id)">
-
-              {{ type.title }}
-
-            </button>
-
-          }
-
-        </div>
-        @if (!hasCampaignTypes) {
-
-        <div class="field-error">
-
-          חובה לבחור לפחות סוג קמפיין אחד
-
-        </div>
-
-      }
-
-      </div>
-
-    </div>
-
-    <!-- LEFT -->
-
-    <div class="logo-side">
-
-      <div class="logo-card">
-
-        <div class="logo-label">
-          לוגו
-        </div>
-
-        <div class="logo-preview">
-
-          @if (entity?.logo_url) {
-
-            <img
-              [src]="getLogoUrl()"
-              alt="Logo">
-
-          } @else {
-
-            <div class="logo-placeholder">
-              LOGO
-            </div>
-
-          }
-
-        </div>
-
-        <label class="upload-btn">
-
-          העלאת לוגו
+        <div class="info-section">
+          <div class="section-label">שם להצגה</div>
 
           <input
-            hidden
-            type="file"
-            accept="image/*"
-            (change)="onLogoSelected($event)">
+            type="text"
+            class="profile-input"
+            [ngModel]="entity?.display_name"
+            (ngModelChange)="updateField('display_name', $event)"
+          />
+        </div>
 
-        </label>
+        <!-- CAMPAIGN TYPES -->
 
+        <div class="info-section no-border">
+          <div class="section-label">סוגי קמפיינים</div>
+
+          <div class="tags">
+            @for (type of campaignTypes; track type.id) {
+              <button
+                type="button"
+                class="tag selectable"
+                [class.selected]="entity?.campaign_types?.includes(type.id)"
+                (click)="toggleCampaignType(type.id)"
+              >
+                {{ type.title }}
+              </button>
+            }
+          </div>
+          @if (!hasCampaignTypes) {
+            <div class="field-error">חובה לבחור לפחות סוג קמפיין אחד</div>
+          }
+        </div>
       </div>
 
+      <!-- LEFT -->
+
+      <div class="logo-side">
+        <div class="logo-card">
+          <div class="logo-label">לוגו</div>
+
+          <div class="logo-preview">
+            @if (entity?.logo_url) {
+              <img [src]="getLogoUrl()" alt="Logo" />
+            } @else {
+              <div class="logo-placeholder">LOGO</div>
+            }
+          </div>
+
+          <label class="upload-btn">
+            העלאת לוגו
+
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              (change)="onLogoSelected($event)"
+            />
+          </label>
+        </div>
+      </div>
     </div>
 
-  </div>
+    <!-- BOTTOM ROW -->
 
-  <!-- BOTTOM ROW -->
+    <div class="description-section">
+      <div class="section-label">תיאור קצר</div>
 
-  <div class="description-section">
-
-    <div class="section-label">
-      תיאור קצר
+      <app-rich-text-editor
+        class="full-editor"
+        [(ngModel)]="entity.description"
+        placeholder="ספרו על הפעילות שלכם..."
+      >
+      </app-rich-text-editor>
     </div>
-
-    <app-rich-text-editor
-      class="full-editor"
-      [(ngModel)]="entity.description"
-      placeholder="ספרו על הפעילות שלכם...">
-    </app-rich-text-editor>
-
   </div>
-
-</div>
-
 </div>

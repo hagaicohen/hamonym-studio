@@ -1,49 +1,26 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-  inject
-} from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  ENTITY_CATEGORIES
-} from '../../../../../shared/config/entity-categories';
+import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
-import {
-  DomSanitizer,
-  SafeResourceUrl
-} from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-import {
-  EntitiesService
-} from '../../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
 
 @Component({
   selector: 'app-entity-basic-info-section-view',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './entity-basic-info-section-view.component.html',
-  styleUrl: './entity-basic-info-section-view.component.css'
+  styleUrl: './entity-basic-info-section-view.component.css',
 })
 export class EntityBasicInfoSectionViewComponent {
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
-
-  private sanitizer =
-    inject(DomSanitizer);
+  private sanitizer = inject(DomSanitizer);
 
   @Input()
   entity: any;
@@ -52,211 +29,120 @@ export class EntityBasicInfoSectionViewComponent {
   editMode = false;
 
   @Output()
-  entityChange =
-    new EventEmitter<any>();
+  entityChange = new EventEmitter<any>();
 
-  categories =
-    ENTITY_CATEGORIES;
+  categories = ENTITY_CATEGORIES;
 
-  associationDocumentUrl?:
-    SafeResourceUrl;
+  associationDocumentUrl?: SafeResourceUrl;
 
-  taxDocumentUrl?:
-    SafeResourceUrl;
+  taxDocumentUrl?: SafeResourceUrl;
 
-  uploadingAssociation =
-    false;
+  uploadingAssociation = false;
 
-  uploadingTax =
-    false;
+  uploadingTax = false;
 
   ngOnChanges() {
-
     if (!this.entity?.id) {
       return;
     }
 
-    this.associationDocumentUrl =
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
+    this.associationDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getAssociationDocumentUrl(this.entity.id),
+    );
 
-          this.entitiesService
-            .getAssociationDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
-    this.taxDocumentUrl =
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
-
-          this.entitiesService
-            .getTaxDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
-  }
-
-  updateField(
-    field: string,
-    value: any
-  ) {
-
-    this.entityChange.emit({
-      [field]: value
-    });
-  }
-
-  toggleSecondaryCategory(
-    categoryId: string
-  ) {
-
-    const current =
-      this.entity?.secondary_categories || [];
-
-    const exists =
-      current.includes(categoryId);
-
-    const updated =
-      exists
-        ? current.filter(
-            (c: string) => c !== categoryId
-          )
-        : [
-            ...current,
-            categoryId
-          ];
-
-    this.updateField(
-      'secondary_categories',
-      updated
+    this.taxDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getTaxDocumentUrl(this.entity.id),
     );
   }
 
-  onFileSelected(
-    event: Event,
-    field: string
-  ) {
+  updateField(field: string, value: any) {
+    this.entityChange.emit({
+      [field]: value,
+    });
+  }
 
-    const input =
-      event.target as HTMLInputElement;
+  toggleSecondaryCategory(categoryId: string) {
+    const current = this.entity?.secondary_categories || [];
 
-    const file =
-      input.files?.[0];
+    const exists = current.includes(categoryId);
+
+    const updated = exists
+      ? current.filter((c: string) => c !== categoryId)
+      : [...current, categoryId];
+
+    this.updateField('secondary_categories', updated);
+  }
+
+  onFileSelected(event: Event, field: string) {
+    const input = event.target as HTMLInputElement;
+
+    const file = input.files?.[0];
 
     if (!file) {
       return;
     }
 
-    if (
-      field ===
-      'association_certificate_url'
-    ) {
-
-      this.uploadingAssociation =
-        true;
+    if (field === 'association_certificate_url') {
+      this.uploadingAssociation = true;
 
       this.entitiesService
         .uploadAssociationDocument(
-
           this.entity.id,
 
-          file
-
+          file,
         )
         .subscribe({
-
           next: () => {
-
-            this.uploadingAssociation =
-              false;
+            this.uploadingAssociation = false;
 
             this.entity = {
-
               ...this.entity,
 
-              association_certificate_name:
-                file.name
-
+              association_certificate_name: file.name,
             };
-
           },
 
           error: () => {
-
-            this.uploadingAssociation =
-              false;
-
-          }
-
+            this.uploadingAssociation = false;
+          },
         });
 
       return;
-
     }
 
-    if (
-      field ===
-      'tax_document_url'
-    ) {
-
-      this.uploadingTax =
-        true;
+    if (field === 'tax_document_url') {
+      this.uploadingTax = true;
 
       this.entitiesService
         .uploadTaxDocument(
-
           this.entity.id,
 
-          file
-
+          file,
         )
         .subscribe({
-
           next: () => {
-
-            this.uploadingTax =
-              false;
+            this.uploadingTax = false;
 
             this.entity = {
-
               ...this.entity,
 
-              tax_document_name:
-                file.name
-
+              tax_document_name: file.name,
             };
-
           },
 
           error: () => {
-
-            this.uploadingTax =
-              false;
-
-          }
-
+            this.uploadingTax = false;
+          },
         });
-
     }
-
   }
 
-  getFileName(
-    fileName: string
-  ): string {
-
+  getFileName(fileName: string): string {
     return fileName || '';
-
   }
 
   get entityTypeLabel(): string {
-
     switch (this.entity?.entity_type) {
-
       case 'association':
         return 'עמותה';
 
@@ -271,12 +157,7 @@ export class EntityBasicInfoSectionViewComponent {
     }
   }
 
-  getCategoryLabel(
-    categoryId: string
-  ): string {
-
-    return this.categories.find(
-      c => c.id === categoryId
-    )?.label || '-';
+  getCategoryLabel(categoryId: string): string {
+    return this.categories.find((c) => c.id === categoryId)?.label || '-';
   }
 }

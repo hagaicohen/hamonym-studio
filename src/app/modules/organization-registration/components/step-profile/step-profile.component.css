@@ -539,7 +539,6 @@
 ========================================================= */
 
 .field-error {
-
   margin-top: -10px;
 
   margin-bottom: 24px;
@@ -554,12 +553,9 @@
 }
 
 @media (max-width: 768px) {
-
   .field-error {
-
     font-size: 12px;
 
     margin-top: -6px;
   }
-
 }

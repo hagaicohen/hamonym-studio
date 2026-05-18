@@ -1,5 +1,4 @@
 .settings-card {
-
   background: white;
 
   border: 1px solid #e5e7eb;
@@ -10,7 +9,6 @@
 }
 
 .card-top {
-
   padding-bottom: 24px;
 
   margin-bottom: 28px;
@@ -19,14 +17,12 @@
 }
 
 .header-content {
-
   direction: rtl;
 
   text-align: right;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 800;
@@ -35,7 +31,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -44,7 +39,6 @@
 }
 
 .goals-grid {
-
   display: grid;
 
   grid-template-columns: repeat(2, 1fr);
@@ -53,7 +47,6 @@
 }
 
 .goal-card {
-
   border: 1px solid #e5e7eb;
 
   border-radius: 20px;
@@ -68,7 +61,6 @@
 }
 
 .goal-label {
-
   font-size: 14px;
 
   font-weight: 700;
@@ -79,7 +71,6 @@
 }
 
 .goal-value {
-
   font-size: 30px;
 
   font-weight: 800;
@@ -88,7 +79,6 @@
 }
 
 .info-box {
-
   margin-top: 24px;
 
   padding: 20px;
@@ -111,20 +101,15 @@
 }
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 18px;
   }
 
   .goals-grid {
-
     grid-template-columns: 1fr;
   }
 
   .goal-value {
-
     font-size: 26px;
   }
-
 }

@@ -132,7 +132,7 @@ export class StepProfileComponent {
     if (!file) return;
 
     this.logoFile = file;
-    
+
     this.logoPreview = URL.createObjectURL(file);
   }
 

@@ -1,5 +1,4 @@
 .settings-card {
-
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
@@ -16,7 +15,6 @@
 /* HEADER */
 
 .card-top {
-
   display: flex;
 
   align-items: flex-start;
@@ -29,7 +27,6 @@
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 700;
@@ -42,7 +39,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -57,7 +53,6 @@
 /* INFO ROWS */
 
 .info-row {
-
   display: flex;
 
   align-items: center;
@@ -72,12 +67,10 @@
 }
 
 .info-row:last-of-type {
-
   border-bottom: none;
 }
 
 .info-label {
-
   min-width: 140px;
 
   font-size: 14px;
@@ -90,7 +83,6 @@
 }
 
 .info-value {
-
   flex: 1;
 
   font-size: 15px;
@@ -105,14 +97,12 @@
 }
 
 .masked {
-
   letter-spacing: 2px;
 }
 
 /* STATUS */
 
 .connection-status {
-
   padding: 8px 14px;
 
   border-radius: 999px;
@@ -125,28 +115,24 @@
 }
 
 .connection-status.success {
-
   background: #dcfce7;
 
   color: #166534;
 }
 
 .connection-status.failed {
-
   background: #fee2e2;
 
   color: #991b1b;
 }
 
 .connection-status.not-tested {
-
   background: #f1f5f9;
 
   color: #475569;
 }
 
 .connection-status.skipped {
-
   background: #fef3c7;
 
   color: #92400e;
@@ -155,7 +141,6 @@
 /* ERROR */
 
 .connection-error {
-
   margin-top: 18px;
 
   padding: 14px 16px;
@@ -180,7 +165,6 @@
 /* ACTIONS */
 
 .actions-row {
-
   display: flex;
 
   justify-content: flex-end;
@@ -193,7 +177,6 @@
 /* BUTTONS */
 
 .secondary-btn {
-
   height: 46px;
 
   padding: 0 22px;
@@ -219,30 +202,25 @@
 }
 
 .secondary-btn:hover {
-
   background: #f8fafc;
 
   border-color: #94a3b8;
 }
 
 .secondary-btn:active {
-
   transform: scale(0.98);
 }
 
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 20px;
 
     border-radius: 20px;
   }
 
   .info-row {
-
     flex-direction: column;
 
     align-items: flex-start;
@@ -251,24 +229,20 @@
   }
 
   .info-label {
-
     min-width: unset;
   }
 
   .info-value {
-
     width: 100%;
 
     text-align: right;
   }
 
   .actions-row {
-
     flex-direction: column;
   }
 
   .secondary-btn {
-
     width: 100%;
   }
-}   
+}

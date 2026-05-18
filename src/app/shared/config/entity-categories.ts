@@ -1,12 +1,10 @@
 export interface EntityCategory {
-
   id: string;
 
   label: string;
 }
 
 export const ENTITY_CATEGORIES: EntityCategory[] = [
-
   {
     id: 'politics-government',
     label: 'פוליטיקה וממשל',

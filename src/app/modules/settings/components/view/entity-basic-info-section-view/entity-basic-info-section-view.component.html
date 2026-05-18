@@ -1,152 +1,96 @@
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-header">
-
     <div>
+      <div class="card-title">פרטי {{ entityTypeLabel }}</div>
 
-      <div class="card-title">
-        פרטי {{ entityTypeLabel }}
-      </div>
-
-      <div class="card-description">
-        פרטים בסיסיים של היישות
-      </div>
-
+      <div class="card-description">פרטים בסיסיים של היישות</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="card-grid">
-
     <!-- ENTITY TYPE -->
 
     <div class="field">
-
-      <label>
-        סוג יישות
-      </label>
+      <label> סוג יישות </label>
 
       <select disabled>
-
         <option>
           {{ entityTypeLabel }}
         </option>
-
       </select>
-
     </div>
 
     <!-- DISPLAY NAME -->
 
     <div class="field">
-
-      <label>
-        שם היישות
-      </label>
+      <label> שם היישות </label>
 
       <input
         *ngIf="editMode"
         type="text"
         [ngModel]="entity?.display_name"
-        (ngModelChange)="updateField('display_name', $event)">
+        (ngModelChange)="updateField('display_name', $event)"
+      />
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
-        {{ entity?.display_name || '-' }}
-
+      <div *ngIf="!editMode" class="readonly-value">
+        {{ entity?.display_name || "-" }}
       </div>
-
     </div>
 
     <!-- REGISTRATION NUMBER -->
 
     <div class="field">
-
-      <label>
-        מספר יישות
-      </label>
+      <label> מספר יישות </label>
 
       <input
         *ngIf="editMode"
         type="text"
         [ngModel]="entity?.registration_number"
-        (ngModelChange)="updateField('registration_number', $event)">
+        (ngModelChange)="updateField('registration_number', $event)"
+      />
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
-        {{ entity?.registration_number || '-' }}
-
+      <div *ngIf="!editMode" class="readonly-value">
+        {{ entity?.registration_number || "-" }}
       </div>
-
     </div>
 
     <!-- PRIMARY CATEGORY -->
 
     <div class="field">
-
-      <label>
-        קטגוריה ראשית
-      </label>
+      <label> קטגוריה ראשית </label>
 
       <select
         *ngIf="editMode"
         [ngModel]="entity?.primary_category"
-        (ngModelChange)="updateField('primary_category', $event)">
-
-        <option
-          value=""
-          disabled>
-
-          בחר קטגוריה
-
-        </option>
+        (ngModelChange)="updateField('primary_category', $event)"
+      >
+        <option value="" disabled>בחר קטגוריה</option>
 
         @for (category of categories; track category.id) {
-
           <option [value]="category.id">
-
             {{ category.label }}
-
           </option>
-
         }
-
       </select>
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
+      <div *ngIf="!editMode" class="readonly-value">
         {{ getCategoryLabel(entity?.primary_category) }}
-
       </div>
-
     </div>
-
   </div>
 
   <!-- SECONDARY CATEGORIES -->
 
   <div class="field categories-field">
-
-    <label>
-      קטגוריות משניות
-    </label>
+    <label> קטגוריות משניות </label>
 
     <div class="tags">
-
       @for (category of categories; track category.id) {
-
         @if (category.id !== entity?.primary_category) {
-
           <button
             *ngIf="editMode"
             type="button"
@@ -154,276 +98,173 @@
             [class.selected]="
               entity?.secondary_categories?.includes(category.id)
             "
-            (click)="toggleSecondaryCategory(category.id)">
-
+            (click)="toggleSecondaryCategory(category.id)"
+          >
             {{ category.label }}
-
           </button>
-
         }
-
       }
 
       @if (!editMode) {
-
         @for (
           categoryId of entity?.secondary_categories || [];
           track categoryId
         ) {
-
           <div class="tag selected">
-
             {{ getCategoryLabel(categoryId) }}
-
           </div>
-
         }
-
       }
-
     </div>
-
   </div>
 
   <!-- CONTACT -->
 
-  <div class="section-divider">
-    איש קשר
-  </div>
+  <div class="section-divider">איש קשר</div>
 
   <div class="card-grid">
-
     <!-- CONTACT NAME -->
 
     <div class="field">
-
-      <label>
-        שם מלא
-      </label>
+      <label> שם מלא </label>
 
       <input
         *ngIf="editMode"
         type="text"
         [ngModel]="entity?.contact_full_name"
-        (ngModelChange)="updateField('contact_full_name', $event)">
+        (ngModelChange)="updateField('contact_full_name', $event)"
+      />
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
-        {{ entity?.contact_full_name || '-' }}
-
+      <div *ngIf="!editMode" class="readonly-value">
+        {{ entity?.contact_full_name || "-" }}
       </div>
-
     </div>
 
     <!-- CONTACT PHONE -->
 
     <div class="field">
-
-      <label>
-        טלפון
-      </label>
+      <label> טלפון </label>
 
       <input
         *ngIf="editMode"
         type="text"
         [ngModel]="entity?.contact_phone"
-        (ngModelChange)="updateField('contact_phone', $event)">
+        (ngModelChange)="updateField('contact_phone', $event)"
+      />
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
-        {{ entity?.contact_phone || '-' }}
-
+      <div *ngIf="!editMode" class="readonly-value">
+        {{ entity?.contact_phone || "-" }}
       </div>
-
     </div>
 
     <!-- CONTACT EMAIL -->
 
     <div class="field">
-
-      <label>
-        אימייל
-      </label>
+      <label> אימייל </label>
 
       <input
         *ngIf="editMode"
         type="email"
         [ngModel]="entity?.contact_email"
-        (ngModelChange)="updateField('contact_email', $event)">
+        (ngModelChange)="updateField('contact_email', $event)"
+      />
 
-      <div
-        *ngIf="!editMode"
-        class="readonly-value">
-
-        {{ entity?.contact_email || '-' }}
-
+      <div *ngIf="!editMode" class="readonly-value">
+        {{ entity?.contact_email || "-" }}
       </div>
-
     </div>
-
   </div>
 
-    <!-- DOCUMENTS -->
+  <!-- DOCUMENTS -->
 
-<!-- DOCUMENTS -->
+  <!-- DOCUMENTS -->
 
-<div class="section-divider">
-  מסמכים נדרשים
-</div>
+  <div class="section-divider">מסמכים נדרשים</div>
 
-<div class="documents-list">
+  <div class="documents-list">
+    <!-- ASSOCIATION CERTIFICATE -->
 
-  <!-- ASSOCIATION CERTIFICATE -->
+    <div class="document-card">
+      <div class="document-info">
+        <div class="document-title">תעודת התאגדות</div>
 
-  <div class="document-card">
+        <div
+          class="document-status"
+          [class.uploaded]="entity?.association_certificate_name"
+        >
+          {{ entity?.association_certificate_name ? "✓ הועלה" : "לא הועלה" }}
+        </div>
 
-    <div class="document-info">
-
-      <div class="document-title">
-        תעודת התאגדות
+        <div
+          *ngIf="entity?.association_certificate_name"
+          class="document-file-name"
+        >
+          {{ entity?.association_certificate_name }}
+        </div>
       </div>
 
-      <div
-        class="document-status"
-        [class.uploaded]="entity?.association_certificate_name">
+      <div class="document-actions">
+        <a
+          *ngIf="entity?.association_certificate_name"
+          class="document-link"
+          [href]="associationDocumentUrl"
+          target="_blank"
+        >
+          צפייה
+        </a>
 
-        {{
-          entity?.association_certificate_name
-            ? '✓ הועלה'
-            : 'לא הועלה'
-        }}
+        <label *ngIf="editMode" class="upload-btn">
+          {{ entity?.association_certificate_name ? "החלף קובץ" : "העלה קובץ" }}
 
+          <input
+            hidden
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            (change)="onFileSelected($event, 'association_certificate_url')"
+          />
+        </label>
       </div>
-
-      <div
-        *ngIf="entity?.association_certificate_name"
-        class="document-file-name">
-
-        {{
-          entity?.association_certificate_name
-        }}
-
-      </div>
-
     </div>
 
-    <div class="document-actions">
+    <!-- TAX DOCUMENT -->
 
-      <a
-        *ngIf="entity?.association_certificate_name"
-        class="document-link"
-        [href]="associationDocumentUrl"
-        target="_blank">
+    <div *ngIf="entity?.entity_type === 'association'" class="document-card">
+      <div class="document-info">
+        <div class="document-title">אישור סעיף 46</div>
 
-        צפייה
+        <div
+          class="document-status"
+          [class.uploaded]="entity?.tax_document_name"
+        >
+          {{ entity?.tax_document_name ? "✓ הועלה" : "לא הועלה" }}
+        </div>
 
-      </a>
+        <div *ngIf="entity?.tax_document_name" class="document-file-name">
+          {{ entity?.tax_document_name }}
+        </div>
+      </div>
 
-      <label
-        *ngIf="editMode"
-        class="upload-btn">
+      <div class="document-actions">
+        <a
+          *ngIf="entity?.tax_document_name"
+          class="document-link"
+          [href]="taxDocumentUrl"
+          target="_blank"
+        >
+          צפייה
+        </a>
 
-        {{
-          entity?.association_certificate_name
-            ? 'החלף קובץ'
-            : 'העלה קובץ'
-        }}
+        <label *ngIf="editMode" class="upload-btn">
+          {{ entity?.tax_document_name ? "החלף קובץ" : "העלה קובץ" }}
 
-        <input
-          hidden
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          (change)="
-            onFileSelected(
-              $event,
-              'association_certificate_url'
-            )
-          ">
-      </label>
-
+          <input
+            hidden
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            (change)="onFileSelected($event, 'tax_document_url')"
+          />
+        </label>
+      </div>
     </div>
-
   </div>
-
-  <!-- TAX DOCUMENT -->
-
-  <div
-    *ngIf="entity?.entity_type === 'association'"
-    class="document-card">
-
-    <div class="document-info">
-
-      <div class="document-title">
-        אישור סעיף 46
-      </div>
-
-      <div
-        class="document-status"
-        [class.uploaded]="entity?.tax_document_name">
-
-        {{
-          entity?.tax_document_name
-            ? '✓ הועלה'
-            : 'לא הועלה'
-        }}
-
-      </div>
-
-      <div
-        *ngIf="entity?.tax_document_name"
-        class="document-file-name">
-
-        {{
-          entity?.tax_document_name
-        }}
-
-      </div>
-
-    </div>
-
-    <div class="document-actions">
-
-      <a
-        *ngIf="entity?.tax_document_name"
-        class="document-link"
-        [href]="taxDocumentUrl"
-        target="_blank">
-
-        צפייה
-
-      </a>
-
-      <label
-        *ngIf="editMode"
-        class="upload-btn">
-
-        {{
-          entity?.tax_document_name
-            ? 'החלף קובץ'
-            : 'העלה קובץ'
-        }}
-
-        <input
-          hidden
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          (change)="
-            onFileSelected(
-              $event,
-              'tax_document_url'
-            )
-          ">
-      </label>
-
-    </div>
-
-  </div>
-
-</div>
-
-
 </div>

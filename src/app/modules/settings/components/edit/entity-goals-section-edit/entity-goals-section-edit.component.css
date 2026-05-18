@@ -1,5 +1,4 @@
 .settings-card {
-
   background: white;
 
   border: 1px solid #e5e7eb;
@@ -10,7 +9,6 @@
 }
 
 .card-top {
-
   padding-bottom: 24px;
 
   margin-bottom: 28px;
@@ -19,14 +17,12 @@
 }
 
 .header-content {
-
   direction: rtl;
 
   text-align: right;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 800;
@@ -35,7 +31,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -44,7 +39,6 @@
 }
 
 .goals-grid {
-
   display: grid;
 
   grid-template-columns: repeat(2, 1fr);
@@ -53,14 +47,12 @@
 }
 
 .goal-field {
-
   direction: rtl;
 
   text-align: right;
 }
 
 .field-label {
-
   margin-bottom: 12px;
 
   font-size: 14px;
@@ -71,12 +63,10 @@
 }
 
 .money-input-wrapper {
-
   position: relative;
 }
 
 .money-symbol {
-
   position: absolute;
 
   right: 16px;
@@ -91,7 +81,6 @@
 }
 
 .money-input {
-
   width: 100%;
 
   height: 54px;
@@ -116,16 +105,12 @@
 }
 
 .money-input:focus {
-
   border-color: #2563eb;
 
-  box-shadow:
-    0 0 0 4px
-    rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
 .field-error {
-
   margin-top: 16px;
 
   font-size: 13px;
@@ -140,7 +125,6 @@
 }
 
 .info-box {
-
   margin-top: 24px;
 
   padding: 20px;
@@ -163,15 +147,11 @@
 }
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 18px;
   }
 
   .goals-grid {
-
     grid-template-columns: 1fr;
   }
-
 }

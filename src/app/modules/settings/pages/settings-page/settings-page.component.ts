@@ -1,100 +1,59 @@
-import {
-  Component,
-  OnInit,
-  inject
-} from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  RouterModule
-} from '@angular/router';
+import { RouterModule } from '@angular/router';
 
-import {
-  EntitiesService
-} from '../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../core/services/entities.service';
 
-import {
-  CurrentEntityService
-} from '../../../../core/services/current-entity.service';
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule
-  ],
+  imports: [CommonModule, RouterModule],
   templateUrl: './settings-page.component.html',
   styleUrls: ['./settings-page.component.css'],
 })
-export class SettingsPageComponent
-  implements OnInit {
+export class SettingsPageComponent implements OnInit {
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
-
-  private currentEntityService =
-    inject(CurrentEntityService);
+  private currentEntityService = inject(CurrentEntityService);
 
   entities: any[] = [];
 
   loading = true;
 
   ngOnInit(): void {
-
-    const currentEntity =
-
-      this.currentEntityService
-        .currentEntity();
+    const currentEntity = this.currentEntityService.currentEntity();
 
     if (currentEntity) {
-
-      this.entities = [
-        currentEntity
-      ];
+      this.entities = [currentEntity];
 
       this.loading = false;
     }
 
-    this.entitiesService
-      .getMyEntities()
-      .subscribe({
+    this.entitiesService.getMyEntities().subscribe({
+      next: (res) => {
+        this.entities = res.entities || [];
 
-        next: (res) => {
+        this.loading = false;
+      },
 
-          this.entities =
-            res.entities || [];
+      error: (err) => {
+        console.error(err);
 
-          this.loading = false;
-        },
-
-        error: (err) => {
-
-          console.error(err);
-
-          this.loading = false;
-        }
-      });
+        this.loading = false;
+      },
+    });
   }
 
-  selectEntity(
-    entity: any
-  ) {
-
-    this.currentEntityService
-      .currentEntity
-      .set(entity);
+  selectEntity(entity: any) {
+    this.currentEntityService.currentEntity.set(entity);
   }
 
-  getStatusLabel(
-    status: string
-  ): string {
-
+  getStatusLabel(status: string): string {
     switch (status) {
-
       case 'active':
         return 'פעילה';
 
@@ -109,26 +68,22 @@ export class SettingsPageComponent
     }
   }
 
-  getEntityTypeLabel(
-  type: string
-): string {
+  getEntityTypeLabel(type: string): string {
+    switch (type) {
+      case 'association':
+        return 'עמותה';
 
-  switch (type) {
+      case 'chalatz':
+        return 'חל״צ';
 
-    case 'association':
-      return 'עמותה';
+      case 'political_party_registered':
+        return 'מפלגה';
 
-    case 'chalatz':
-      return 'חל״צ';
+      case 'sole_registered':
+        return 'עוסק מורשה';
 
-    case 'political_party_registered':
-      return 'מפלגה';
-
-    case 'sole_registered':
-      return 'עוסק מורשה';
-
-    default:
-      return 'יישות';
+      default:
+        return 'יישות';
+    }
   }
-}
 }

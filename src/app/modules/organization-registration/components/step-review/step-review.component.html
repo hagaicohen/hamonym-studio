@@ -294,21 +294,13 @@
       <div class="summary-item">
         <div class="summary-label">יעד גיוס חודשי</div>
 
-        <div class="summary-value">
-
-          ₪{{ (monthlyGoal || 0) | number }}
-
-        </div>
+        <div class="summary-value">₪{{ monthlyGoal || 0 | number }}</div>
       </div>
 
       <div class="summary-item">
         <div class="summary-label">יעד גיוס שנתי</div>
 
-        <div class="summary-value">
-
-           ₪{{ (yearlyGoal || 0) | number }}
-
-        </div>
+        <div class="summary-value">₪{{ yearlyGoal || 0 | number }}</div>
       </div>
     </div>
   </div>

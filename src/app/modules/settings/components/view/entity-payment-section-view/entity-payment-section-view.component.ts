@@ -1,62 +1,42 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output
-} from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-entity-payment-section-view',
   standalone: true,
-  imports: [
-    CommonModule
-  ],
+  imports: [CommonModule],
   templateUrl: './entity-payment-section-view.component.html',
-  styleUrl: './entity-payment-section-view.component.css'
+  styleUrl: './entity-payment-section-view.component.css',
 })
 export class EntityPaymentSectionViewComponent {
-
   @Input()
   entity: any;
 
   @Output()
-  edit =
-    new EventEmitter<void>();
+  edit = new EventEmitter<void>();
 
   @Output()
-  testConnection =
-    new EventEmitter<void>();
+  testConnection = new EventEmitter<void>();
 
- get statusLabel(): string {
+  get statusLabel(): string {
+    switch (this.entity?.cardcom_connection_status) {
+      case 'success':
+        return 'פעיל';
 
-  switch (
-    this.entity?.cardcom_connection_status
-  ) {
+      case 'failed':
+        return 'שגיאת חיבור';
 
-    case 'success':
-      return 'פעיל';
+      case 'skipped':
+        return 'לא הוגדר';
 
-    case 'failed':
-      return 'שגיאת חיבור';
-
-    case 'skipped':
-      return 'לא הוגדר';
-
-    default:
-      return 'לא הוגדר';
+      default:
+        return 'לא הוגדר';
+    }
   }
-}
 
   get statusClass(): string {
-
-    switch (
-      this.entity?.cardcom_connection_status
-    ) {
-
+    switch (this.entity?.cardcom_connection_status) {
       case 'success':
         return 'success';
 

@@ -1,34 +1,19 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output
-} from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  ENTITY_CATEGORIES
-} from '../../../../../shared/config/entity-categories';
+import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
 @Component({
   selector: 'app-entity-basic-info-section-edit',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './entity-basic-info-section-edit.component.html',
-  styleUrl: './entity-basic-info-section-edit.component.css'
+  styleUrl: './entity-basic-info-section-edit.component.css',
 })
 export class EntityBasicInfoSectionEditComponent {
-
   @Input()
   entity: any;
 
@@ -36,62 +21,34 @@ export class EntityBasicInfoSectionEditComponent {
   editMode = false;
 
   @Output()
-  entityChange =
-    new EventEmitter<any>();
+  entityChange = new EventEmitter<any>();
 
-  categories =
-    ENTITY_CATEGORIES;
+  categories = ENTITY_CATEGORIES;
 
-  updateField(
-    field: string,
-    value: any
-  ) {
-
+  updateField(field: string, value: any) {
     this.entityChange.emit({
-      [field]: value
+      [field]: value,
     });
   }
 
-  toggleSecondaryCategory(
-    categoryId: string
-  ) {
+  toggleSecondaryCategory(categoryId: string) {
+    const current = this.entity?.secondary_categories || [];
 
-    const current =
-      this.entity?.secondary_categories || [];
+    const exists = current.includes(categoryId);
 
-    const exists =
-      current.includes(categoryId);
+    const updated = exists
+      ? current.filter((c: string) => c !== categoryId)
+      : [...current, categoryId];
 
-    const updated =
-      exists
-        ? current.filter(
-            (c: string) => c !== categoryId
-          )
-        : [
-            ...current,
-            categoryId
-          ];
+    this.updateField('secondary_categories', updated);
+  }
 
-    this.updateField(
-      'secondary_categories',
-      updated
-    );
-  } 
-
-  
-  getCategoryLabel(
-    categoryId: string
-  ): string {
-
-    return this.categories.find(
-      c => c.id === categoryId
-    )?.label || '-';
+  getCategoryLabel(categoryId: string): string {
+    return this.categories.find((c) => c.id === categoryId)?.label || '-';
   }
 
   get entityTypeLabel(): string {
-
     switch (this.entity?.entity_type) {
-
       case 'association':
         return 'עמותה';
 

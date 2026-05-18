@@ -1,172 +1,91 @@
 <div class="settings-card">
-
   <div class="card-top">
-
     <div>
+      <div class="card-title">אמצעי חיוב</div>
 
-      <div class="card-title">
-        אמצעי חיוב
-      </div>
-
-      <div class="card-description">
-        אמצעי החיוב המשמש לתשלום עמלות המערכת
-      </div>
-
+      <div class="card-description">אמצעי החיוב המשמש לתשלום עמלות המערכת</div>
     </div>
-
   </div>
 
-    <div class="info-strip">
-
-    החיוב מתבצע בהתאם
-    לפעילות הישות במערכת
-
-    </div>
+  <div class="info-strip">החיוב מתבצע בהתאם לפעילות הישות במערכת</div>
 
   <!-- EMPTY STATE -->
 
   @if (!entity?.billing_method) {
-
     <div class="empty-state">
+      <div class="empty-icon">💳</div>
 
-      <div class="empty-icon">
-
-        💳
-
-      </div>
-
-      <div class="empty-title">
-
-        טרם הוגדר אמצעי חיוב
-
-      </div>
+      <div class="empty-title">טרם הוגדר אמצעי חיוב</div>
 
       <div class="empty-description">
-
-        ניתן להגדיר כרטיס אשראי
-        או הוראת קבע בנקאית (מס״ב)
-
+        ניתן להגדיר כרטיס אשראי או הוראת קבע בנקאית (מס״ב)
       </div>
-
-      
     </div>
-
   } @else {
-
     <!-- METHOD -->
 
     <div class="info-row">
-
-      <div class="info-label">
-        שיטת חיוב
-      </div>
+      <div class="info-label">שיטת חיוב</div>
 
       <div class="info-value">
-
         @if (isCreditCard) {
-
           כרטיס אשראי
-
         }
 
         @if (isMasav) {
-
           הוראת קבע (מס״ב)
-
         }
-
       </div>
-
     </div>
 
     <!-- CREDIT CARD -->
 
     @if (isCreditCard) {
-
       <div class="info-row">
-
-        <div class="info-label">
-          כרטיס
-        </div>
+        <div class="info-label">כרטיס</div>
 
         <div class="info-value masked">
-
-         {{ entity?.billing_card_last4 }} •••• 
-
+          {{ entity?.billing_card_last4 }} ••••
         </div>
-
       </div>
 
       <div class="info-row">
-
-        <div class="info-label">
-          בעל הכרטיס
-        </div>
+        <div class="info-label">בעל הכרטיס</div>
 
         <div class="info-value">
-
-          {{ entity?.billing_holder_name || '—' }}
-
+          {{ entity?.billing_holder_name || "—" }}
         </div>
-
       </div>
 
       <div class="info-row">
-
-        <div class="info-label">
-          תוקף
-        </div>
+        <div class="info-label">תוקף</div>
 
         <div class="info-value">
-
-          {{  entity?.billing_card_expiry || '—' }}
-
+          {{ entity?.billing_card_expiry || "—" }}
         </div>
-
       </div>
-
     }
 
     <!-- MASAV -->
 
     @if (isMasav) {
-
       <div class="info-row">
-
-        <div class="info-label">
-          טופס מס״ב
-        </div>
+        <div class="info-label">טופס מס״ב</div>
 
         <div class="info-value">
-
-          {{
-            entity?.masav_file_name || '—'
-          }}
-
+          {{ entity?.masav_file_name || "—" }}
         </div>
-
       </div>
-
     }
 
     <!-- STATUS -->
 
     <div class="info-row">
+      <div class="info-label">סטטוס</div>
 
-      <div class="info-label">
-        סטטוס
-      </div>
-
-      <div
-        class="billing-status"
-        [ngClass]="statusClass">
-
+      <div class="billing-status" [ngClass]="statusClass">
         {{ statusLabel }}
-
       </div>
-
     </div>
-
   }
-
 </div>

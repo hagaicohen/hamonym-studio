@@ -1,5 +1,4 @@
 .settings-card {
-
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
@@ -16,12 +15,10 @@
 /* HEADER */
 
 .card-top {
-
   margin-bottom: 28px;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 700;
@@ -34,7 +31,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -49,17 +45,14 @@
 /* FIELD */
 
 .field-block {
-
   width: 100%;
 }
 
 .field-block + .field-block {
-
   margin-top: 20px;
 }
 
 .field-block label {
-
   display: block;
 
   margin-bottom: 10px;
@@ -76,7 +69,6 @@
 /* INPUTS */
 
 .base-input {
-
   width: 100%;
 
   height: 50px;
@@ -104,7 +96,6 @@
 }
 
 .base-input:focus {
-
   outline: none;
 
   border-color: #2563eb;
@@ -113,14 +104,12 @@
 }
 
 .base-input::placeholder {
-
   color: #94a3b8;
 }
 
 /* SELECT */
 
 select.base-input {
-
   appearance: none;
 
   cursor: pointer;
@@ -129,7 +118,6 @@ select.base-input {
 /* SKIP BOX */
 
 .existing-terminal-box {
-
   margin-top: 24px;
 
   margin-bottom: 24px;
@@ -144,7 +132,6 @@ select.base-input {
 }
 
 .checkbox-row {
-
   display: flex;
 
   align-items: center;
@@ -163,7 +150,6 @@ select.base-input {
 }
 
 .checkbox-row input {
-
   width: 16px;
 
   height: 16px;
@@ -176,7 +162,6 @@ select.base-input {
 /* STATUS */
 
 .connection-status {
-
   display: inline-flex;
 
   align-items: center;
@@ -195,28 +180,24 @@ select.base-input {
 }
 
 .connection-status.success {
-
   background: #dcfce7;
 
   color: #166534;
 }
 
 .connection-status.failed {
-
   background: #fee2e2;
 
   color: #991b1b;
 }
 
 .connection-status.not-tested {
-
   background: #f1f5f9;
 
   color: #475569;
 }
 
 .connection-status.skipped {
-
   background: #fef3c7;
 
   color: #92400e;
@@ -225,7 +206,6 @@ select.base-input {
 /* ERROR */
 
 .connection-error {
-
   margin-top: 18px;
 
   padding: 14px 16px;
@@ -250,7 +230,6 @@ select.base-input {
 /* TEST BUTTON */
 
 .test-connection-btn {
-
   width: 100%;
 
   height: 48px;
@@ -278,19 +257,16 @@ select.base-input {
 }
 
 .test-connection-btn:hover {
-
   background: #f8fafc;
 
   border-color: #94a3b8;
 }
 
 .test-connection-btn:active {
-
   transform: scale(0.98);
 }
 
 .test-connection-btn:disabled {
-
   opacity: 0.7;
 
   cursor: not-allowed;
@@ -299,7 +275,6 @@ select.base-input {
 /* ACTIONS */
 
 .actions-row {
-
   display: flex;
 
   justify-content: flex-end;
@@ -312,7 +287,6 @@ select.base-input {
 /* BUTTONS */
 
 .primary-btn {
-
   height: 48px;
 
   padding: 0 24px;
@@ -337,24 +311,20 @@ select.base-input {
 }
 
 .primary-btn:hover {
-
   opacity: 0.92;
 }
 
 .primary-btn:active {
-
   transform: scale(0.98);
 }
 
 .primary-btn:disabled {
-
   opacity: 0.5;
 
   cursor: not-allowed;
 }
 
 .ghost-btn {
-
   height: 48px;
 
   padding: 0 22px;
@@ -380,30 +350,25 @@ select.base-input {
 }
 
 .ghost-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
 }
 
 .ghost-btn:active {
-
   transform: scale(0.98);
 }
 
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 20px;
 
     border-radius: 20px;
   }
 
   .actions-row {
-
     flex-direction: column-reverse;
 
     align-items: stretch;
@@ -411,7 +376,6 @@ select.base-input {
 
   .primary-btn,
   .ghost-btn {
-
     width: 100%;
   }
 }

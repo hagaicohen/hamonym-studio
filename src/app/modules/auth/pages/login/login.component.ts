@@ -120,24 +120,18 @@ export class LoginComponent implements OnInit {
 
                 //localStorage.setItem('currentEntity', JSON.stringify(entity));
                 localStorage.setItem(
-                        'currentEntity',
+                  'currentEntity',
 
-                        JSON.stringify({
+                  JSON.stringify({
+                    id: entity.id,
 
-                          id: entity.id,
+                    display_name: entity.display_name,
 
-                          display_name:
-                            entity.display_name,
+                    entity_type: entity.entity_type,
 
-                          entity_type:
-                            entity.entity_type,
-
-                          status:
-                            entity.status
-
-                        })
-
-                      );
+                    status: entity.status,
+                  }),
+                );
 
                 this.currentEntityService.currentEntity.set(entity);
 
@@ -201,26 +195,19 @@ export class LoginComponent implements OnInit {
               if (entities.length > 0) {
                 const entity = entities[0];
 
-                               localStorage.setItem(
-                        'currentEntity',
+                localStorage.setItem(
+                  'currentEntity',
 
-                        JSON.stringify({
+                  JSON.stringify({
+                    id: entity.id,
 
-                          id: entity.id,
+                    display_name: entity.display_name,
 
-                          display_name:
-                            entity.display_name,
+                    entity_type: entity.entity_type,
 
-                          entity_type:
-                            entity.entity_type,
-
-                          status:
-                            entity.status
-
-                        })
-
-                      );
-
+                    status: entity.status,
+                  }),
+                );
 
                 this.currentEntityService.currentEntity.set(entity);
 

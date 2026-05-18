@@ -496,11 +496,7 @@
 
   border-radius: 16px;
 
-  background: linear-gradient(
-    135deg,
-    #2563eb,
-    #1d4ed8
-  );
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
 
   color: #ffffff;
 
@@ -521,8 +517,7 @@
     opacity 0.18s ease,
     box-shadow 0.18s ease;
 
-  box-shadow:
-    0 10px 24px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
 }
 
 .manage-btn:hover {
@@ -641,7 +636,6 @@
 }
 
 @media (max-width: 768px) {
-
   .settings-page {
     padding: 18px;
   }
@@ -709,5 +703,4 @@
   .add-entity-card {
     min-height: 240px;
   }
-
 }

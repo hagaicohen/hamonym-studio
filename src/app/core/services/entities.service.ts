@@ -1,296 +1,206 @@
 // src/app/core/services/entities.service.ts
 
-import {
-  Injectable,
-  inject
-} from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
-import {
-  HttpClient
-} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
-import {
-  Observable
-} from 'rxjs';
+import { Observable } from 'rxjs';
 
-import {
-  environment
-} from '../../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class EntitiesService {
+  private http = inject(HttpClient);
 
-  private http =
-    inject(HttpClient);
+  createEntity(data: any): Observable<any> {
+    return this.http.post(
+      `${environment.apiUrl}/api/entities`,
 
-  createEntity(
-  data: any
-    ): Observable<any> {
+      {
+        // =========================
+        // BASIC
+        // =========================
 
-      return this.http.post(
+        entity_type: data.entity_type,
 
-        `${environment.apiUrl}/api/entities`,
+        legal_name: data.legal_name,
 
-        {
+        display_name: data.display_name,
 
-          // =========================
-          // BASIC
-          // =========================
+        registration_number: data.registration_number,
 
-          entity_type:
-            data.entity_type,
+        email: data.email,
 
-          legal_name:
-            data.legal_name,
+        phone: data.phone,
 
-          display_name:
-            data.display_name,
+        website: data.website,
 
-          registration_number:
-            data.registration_number,
+        description: data.description,
 
-          email:
-            data.email,
+        logo_url: data.logo_url,
 
-          phone:
-            data.phone,
+        is_profile_complete: data.is_profile_complete,
 
-          website:
-            data.website,
+        primary_category: data.primary_category,
 
-          description:
-            data.description,
+        secondary_categories: data.secondary_categories,
 
-          logo_url:
-            data.logo_url,
+        campaign_types: data.campaign_types,
 
-          is_profile_complete:
-            data.is_profile_complete,
+        // =========================
+        // GOALS
+        // =========================
 
-          primary_category:
-            data.primary_category,
+        monthly_goal: data.monthly_goal,
 
-          secondary_categories:
-            data.secondary_categories,
+        yearly_goal: data.yearly_goal,
 
-          campaign_types:
-            data.campaign_types,
+        // =========================
+        // CARDCOM
+        // =========================
 
-          // =========================
-          // GOALS
-          // =========================
+        billing_provider: data.billing_provider,
 
-          monthly_goal:
-            data.monthly_goal,
+        billing_skip_setup: data.billing_skip_setup,
 
-          yearly_goal:
-            data.yearly_goal,
+        cardcom_terminal_number: data.cardcom_terminal_number,
 
-          // =========================
-          // CARDCOM
-          // =========================
+        cardcom_api_username: data.cardcom_api_username,
 
-          billing_provider:
-            data.billing_provider,
+        cardcom_api_password_encrypted: data.cardcom_api_password_encrypted,
 
-          billing_skip_setup:
-            data.billing_skip_setup,
+        cardcom_connection_status: data.cardcom_connection_status,
 
-          cardcom_terminal_number:
-            data.cardcom_terminal_number,
+        //BILLING
+        billing_method: data.billing_method,
 
-          cardcom_api_username:
-            data.cardcom_api_username,
+        billing_holder_name: data.billing_holder_name,
 
-          cardcom_api_password_encrypted:
-            data.cardcom_api_password_encrypted,
+        billing_card_last4: data.billing_card_last4,
 
-          cardcom_connection_status:
-            data.cardcom_connection_status,
+        billing_card_expiry: data.billing_card_expiry,
 
-          //BILLING
-          billing_method:
-            data.billing_method,
+        billing_masav_file_name: data.billing_masav_file_name,
 
-          billing_holder_name:
-            data.billing_holder_name,
+        billing_status: data.billing_status,
 
-          billing_card_last4:
-            data.billing_card_last4,
+        // =========================
+        // CONTACT
+        // =========================
 
-          billing_card_expiry:
-            data.billing_card_expiry,
+        contact_full_name: data.contact_full_name,
 
-          billing_masav_file_name:
-            data.billing_masav_file_name,
+        contact_phone: data.contact_phone,
 
-          billing_status:
-            data.billing_status,
+        contact_email: data.contact_email,
 
-          // =========================
-          // CONTACT
-          // =========================
+        // =========================
+        // DOCUMENTS
+        // =========================
 
-          contact_full_name:
-            data.contact_full_name,
+        association_certificate_url: data.association_certificate_url,
 
-          contact_phone:
-            data.contact_phone,
+        association_certificate_name: data.association_certificate_name,
 
-          contact_email:
-            data.contact_email,
+        tax_document_url: data.tax_document_url,
 
-          // =========================
-          // DOCUMENTS
-          // =========================
+        tax_document_name: data.tax_document_name,
+      },
 
-          association_certificate_url:
-            data.association_certificate_url,
-
-          association_certificate_name:
-            data.association_certificate_name,
-
-          tax_document_url:
-            data.tax_document_url,
-
-          tax_document_name:
-            data.tax_document_name
-
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
+      },
+    );
+  }
 
-        {
-          headers: {
-            Authorization:
-              `Bearer ${localStorage.getItem('token')}`,
-          },
+  //update entitiy goes here...
+  updateEntity(entityId: string, data: any): Observable<any> {
+    return this.http.patch(
+      `${environment.apiUrl}/api/entities/${entityId}`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-
-      );
-
-    }
+      },
+    );
+  }
 
   getMyEntities(): Observable<any> {
-
     return this.http.get(
-
       `${environment.apiUrl}/api/entities/my`,
 
       {
         headers: {
-          Authorization:
-            `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       },
-
     );
-
   }
 
-  uploadAssociationDocument(
-    entityId: string,
-    file: File
-  ): Observable<any> {
+  uploadAssociationDocument(entityId: string, file: File): Observable<any> {
+    const formData = new FormData();
 
-    const formData =
-      new FormData();
-
-    formData.append(
-      'file',
-      file
-    );
+    formData.append('file', file);
 
     return this.http.patch(
-
       `${environment.apiUrl}/api/entities/${entityId}/association-document`,
 
       formData,
 
       {
         headers: {
-          Authorization:
-            `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       },
-
     );
-
   }
 
-  uploadTaxDocument(
-    entityId: string,
-    file: File
-  ): Observable<any> {
+  uploadTaxDocument(entityId: string, file: File): Observable<any> {
+    const formData = new FormData();
 
-    const formData =
-      new FormData();
-
-    formData.append(
-      'file',
-      file
-    );
+    formData.append('file', file);
 
     return this.http.patch(
-
       `${environment.apiUrl}/api/entities/${entityId}/tax-document`,
 
       formData,
 
       {
         headers: {
-          Authorization:
-            `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       },
-
     );
-
   }
 
-  getAssociationDocumentUrl(
-    entityId: string
-  ): string {
-
+  getAssociationDocumentUrl(entityId: string): string {
     return `${environment.apiUrl}/api/entities/${entityId}/association-document`;
-
   }
 
-  getTaxDocumentUrl(
-    entityId: string
-  ): string {
-
+  getTaxDocumentUrl(entityId: string): string {
     return `${environment.apiUrl}/api/entities/${entityId}/tax-document`;
-
   }
 
-  uploadLogo(
-    entityId: string,
-    file: File
-      ): Observable<any> {
+  uploadLogo(entityId: string, file: File): Observable<any> {
+    const formData = new FormData();
 
-      const formData =
-        new FormData();
+    formData.append('file', file);
 
-      formData.append(
-        'file',
-        file
-      );
+    return this.http.patch(
+      `${environment.apiUrl}/api/entities/${entityId}/logo`,
 
-      return this.http.patch(
+      formData,
 
-        `${environment.apiUrl}/api/entities/${entityId}/logo`,
-
-        formData,
-
-        {
-          headers: {
-            Authorization:
-              `Bearer ${localStorage.getItem('token')}`,
-          },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-
-      );
-
+      },
+    );
   }
 }

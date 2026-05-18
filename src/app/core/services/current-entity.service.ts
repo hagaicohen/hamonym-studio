@@ -1,124 +1,90 @@
-import {
-  Injectable,
-  signal,
-  computed
-} from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CurrentEntityService {
+  currentEntity = signal<any>(null);
 
-  currentEntity =
-    signal<any>(null);
-
-  currentRole =
-    signal<string | null>(null);
+  currentRole = signal<string | null>(null);
 
   constructor() {
+    const savedEntity = localStorage.getItem('currentEntity');
 
-    const savedEntity =
-      localStorage.getItem(
-        'currentEntity'
-      );
-
-    const savedRole =
-      localStorage.getItem(
-        'currentRole'
-      );
+    const savedRole = localStorage.getItem('currentRole');
 
     if (savedEntity) {
-
-      this.currentEntity.set(
-        JSON.parse(savedEntity)
-      );
-
+      this.currentEntity.set(JSON.parse(savedEntity));
     }
 
     if (savedRole) {
-
-      this.currentRole.set(
-        savedRole
-      );
-
+      this.currentRole.set(savedRole);
     }
-
   }
 
-  setEntity(
-    entity: any
-  ): void {
+  setEntity(entity: any): void {
 
-    this.currentEntity.set(
-      entity
-    );
+  const safeEntity = {
+
+    ...entity,
+
+    logo_data: undefined,
+
+    logo_url: undefined,
+
+    association_certificate_data: undefined,
+
+    tax_document_data: undefined
+
+  };
+
+  this.currentEntity.set(
+
+    safeEntity
+
+  );
+
+  localStorage.setItem(
+
+    'currentEntity',
+
+    JSON.stringify(safeEntity),
+
+  );
+
+}
+
+  setRole(role: string): void {
+    this.currentRole.set(role);
 
     localStorage.setItem(
-
-      'currentEntity',
-
-      JSON.stringify(entity)
-
-    );
-
-  }
-
-  setRole(
-    role: string
-  ): void {
-
-    this.currentRole.set(
-      role
-    );
-
-    localStorage.setItem(
-
       'currentRole',
 
-      role
-
+      role,
     );
-
   }
 
   clear(): void {
+    this.currentEntity.set(null);
 
-    this.currentEntity.set(
-      null
-    );
+    this.currentRole.set(null);
 
-    this.currentRole.set(
-      null
-    );
+    localStorage.removeItem('currentEntity');
 
-    localStorage.removeItem(
-      'currentEntity'
-    );
-
-    localStorage.removeItem(
-      'currentRole'
-    );
-
+    localStorage.removeItem('currentRole');
   }
 
   roleLabel = computed(() => {
+    const role = this.currentRole();
 
-    const role =
-      this.currentRole();
-
-    const entity =
-      this.currentEntity();
+    const entity = this.currentEntity();
 
     if (!role || !entity) {
       return 'תורם';
     }
 
     if (role === 'owner') {
-
-      switch (
-        entity.entity_type
-      ) {
-
+      switch (entity.entity_type) {
         case 'association':
           return 'מנהל עמותה';
 
@@ -131,24 +97,19 @@ export class CurrentEntityService {
         default:
           return 'מנהל מערכת';
       }
-
     }
 
     return 'משתמש';
-
   });
 
   statusLabel = computed(() => {
-
-    const entity =
-      this.currentEntity();
+    const entity = this.currentEntity();
 
     if (!entity) {
       return null;
     }
 
     switch (entity.status) {
-
       case 'draft':
         return 'השלמת פרטים';
 
@@ -163,9 +124,6 @@ export class CurrentEntityService {
 
       default:
         return entity.status;
-
     }
-
   });
-
 }
