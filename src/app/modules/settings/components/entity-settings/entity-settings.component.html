@@ -143,12 +143,23 @@
 
     <button
       type="button"
-      (click)="billingSettingsSection.scrollIntoView({
+      (click)="paymentSection.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       })">
 
-      מסוף אשראי
+      סליקת תרומות
+
+    </button>
+
+    <button
+      type="button"
+      (click)="billingSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })">
+
+      אמצעי חיוב
 
     </button>
 
@@ -246,13 +257,13 @@
 
   <br>
 
-  <!-- BILLING -->
+  <!-- PAYMENT -->
 
-  <div #billingSettingsSection>
+  <div #paymentSection>
 
     @if (!editMode) {
 
-      <app-entity-billing-settings-view
+      <app-entity-payment-section-view
 
         [entity]="draftEntity"
 
@@ -260,11 +271,11 @@
 
         (testConnection)="testBillingConnection()">
 
-      </app-entity-billing-settings-view>
+      </app-entity-payment-section-view>
 
     } @else {
 
-      <app-entity-billing-settings-edit
+      <app-entity-payment-section-edit
 
         [model]="draftEntity"
 
@@ -276,7 +287,33 @@
 
         (testConnection)="testBillingConnection()">
 
-      </app-entity-billing-settings-edit>
+      </app-entity-payment-section-edit>
+
+    }
+
+  </div>
+
+  <br>
+
+  <!-- BILLING -->
+
+  <div #billingSection>
+
+    @if (!editMode) {
+
+      <app-entity-billing-section-view
+
+        [entity]="draftEntity">
+
+      </app-entity-billing-section-view>
+
+    } @else {
+
+      <app-entity-billing-section-edit
+
+        [entity]="draftEntity">
+
+      </app-entity-billing-section-edit>
 
     }
 

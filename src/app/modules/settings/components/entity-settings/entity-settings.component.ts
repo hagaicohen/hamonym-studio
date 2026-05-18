@@ -47,8 +47,12 @@ import {
 import {
   EntityGoalsSectionEditComponent
 } from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
-import { EntityBillingSettingsEditComponent } from "../edit/entity-billing-settings-edit/entity-billing-settings-edit.component";
-import { EntityBillingSettingsViewComponent } from "../view/entity-billing-settings-view/entity-billing-settings-view.component";
+import { EntityPaymentSectionViewComponent } from "../view/entity-payment-section-view/entity-payment-section-view.component";
+import { EntityPaymentSectionEditComponent } from "../edit/entity-payment-section-edit/entity-payment-section-edit.component";
+import { EntityBillingSectionViewComponent } from "../view/entity-billing-section-view/entity-billing-section-view.component";
+import { EntityBillingSectionEditComponent } from "../edit/entity-billing-section-edit/entity-billing-section-edit.component";
+
+
 
 @Component({
   selector: 'app-entity-settings',
@@ -61,8 +65,10 @@ import { EntityBillingSettingsViewComponent } from "../view/entity-billing-setti
     EntityProfileSectionEditComponent,
     EntityGoalsSectionViewComponent,
     EntityGoalsSectionEditComponent,
-    EntityBillingSettingsEditComponent,
-    EntityBillingSettingsViewComponent
+    EntityPaymentSectionViewComponent,
+    EntityPaymentSectionEditComponent,
+    EntityBillingSectionViewComponent,
+    EntityBillingSectionEditComponent
 ],
   templateUrl:
     './entity-settings.component.html',

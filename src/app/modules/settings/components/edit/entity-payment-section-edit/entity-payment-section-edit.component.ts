@@ -14,19 +14,16 @@ import {
 } from '@angular/forms';
 
 @Component({
-  selector: 'app-entity-billing-settings-edit',
+  selector: 'app-entity-payment-section-edit',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule
   ],
-  templateUrl:
-    './entity-billing-settings-edit.component.html',
-  styleUrls: [
-    './entity-billing-settings-edit.component.css'
-  ]
+  templateUrl: './entity-payment-section-edit.component.html',
+  styleUrl: './entity-payment-section-edit.component.css'
 })
-export class EntityBillingSettingsEditComponent {
+export class EntityPaymentSectionEditComponent {
 
   @Input()
   model: any;
@@ -79,8 +76,8 @@ export class EntityBillingSettingsEditComponent {
       case 'failed':
         return 'חיבור נכשל';
 
-      case 'skipped':
-        return 'ימולא בהמשך';
+      /*case 'skipped':
+        return 'ימולא בהמשך';*/
 
       default:
         return 'טרם נבדק';

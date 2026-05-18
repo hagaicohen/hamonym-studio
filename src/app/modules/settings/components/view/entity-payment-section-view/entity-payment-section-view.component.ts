@@ -10,18 +10,15 @@ import {
 } from '@angular/common';
 
 @Component({
-  selector: 'app-entity-billing-settings-view',
+  selector: 'app-entity-payment-section-view',
   standalone: true,
   imports: [
     CommonModule
   ],
-  templateUrl:
-    './entity-billing-settings-view.component.html',
-  styleUrls: [
-    './entity-billing-settings-view.component.css'
-  ]
+  templateUrl: './entity-payment-section-view.component.html',
+  styleUrl: './entity-payment-section-view.component.css'
 })
-export class EntityBillingSettingsViewComponent {
+export class EntityPaymentSectionViewComponent {
 
   @Input()
   entity: any;
@@ -34,25 +31,25 @@ export class EntityBillingSettingsViewComponent {
   testConnection =
     new EventEmitter<void>();
 
-  get statusLabel(): string {
+ get statusLabel(): string {
 
-    switch (
-      this.entity?.cardcom_connection_status
-    ) {
+  switch (
+    this.entity?.cardcom_connection_status
+  ) {
 
-      case 'success':
-        return 'חיבור תקין';
+    case 'success':
+      return 'פעיל';
 
-      case 'failed':
-        return 'חיבור נכשל';
+    case 'failed':
+      return 'שגיאת חיבור';
 
-      case 'skipped':
-        return 'ימולא בהמשך';
+    case 'skipped':
+      return 'לא הוגדר';
 
-      default:
-        return 'טרם נבדק';
-    }
+    default:
+      return 'לא הוגדר';
   }
+}
 
   get statusClass(): string {
 
