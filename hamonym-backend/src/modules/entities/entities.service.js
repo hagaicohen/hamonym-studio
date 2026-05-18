@@ -19,7 +19,7 @@ exports.createEntity =
                   data
                 );*/
 
-      const entityResult =
+     const entityResult =
         await client.query(
 
           `
@@ -57,6 +57,13 @@ exports.createEntity =
               billing_provider,
               billing_skip_setup,
 
+              billing_method,
+              billing_holder_name,
+              billing_card_last4,
+              billing_card_expiry,
+              billing_masav_file_name,
+              billing_status,
+
               cardcom_terminal_number,
               cardcom_api_username,
               cardcom_api_password_encrypted,
@@ -80,21 +87,24 @@ exports.createEntity =
             VALUES (
 
               $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+
               $11,$12,$13,$14,$15,$16,$17::text[],
 
               $18,$19,
 
               $20,$21,
 
-              $22,$23,$24,
-
-              $25,$26,$27,
+              $22,$23,$24,$25,$26,$27,
 
               $28,$29,$30,
 
-              $31,$32,
+              $31,$32,$33,
 
-              $33,$34
+              $34,$35,$36,
+
+              $37,$38,
+
+              $39,$40
 
             )
 
@@ -152,15 +162,27 @@ exports.createEntity =
             data.yearly_goal,
 
             // =========================
-            // BILLING
+            // BILLING / SYSTEM CHARGES
             // =========================
 
             data.billing_provider,
 
             data.billing_skip_setup || false,
 
+            data.billing_method,
+
+            data.billing_holder_name,
+
+            data.billing_card_last4,
+
+            data.billing_card_expiry,
+
+            data.billing_masav_file_name,
+
+            data.billing_status || 'pending',
+
             // =========================
-            // CARDCOM
+            // CARDCOM / PAYMENT
             // =========================
 
             data.cardcom_terminal_number,
