@@ -1,7 +1,13 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output
+} from '@angular/core';
 
-import { CommonModule } from '@angular/common';
-
+import {
+  CommonModule
+} from '@angular/common';
 
 import {
   LucideAngularModule,
@@ -10,13 +16,23 @@ import {
 
 @Component({
   selector: 'app-entity-profile-section-view',
-  standalone: true,
-  imports: [CommonModule,LucideAngularModule],
-  templateUrl: './entity-profile-section-view.component.html',
 
-  styleUrls: ['./entity-profile-section-view.component.css'],
+  standalone: true,
+
+  imports: [
+    CommonModule,
+    LucideAngularModule
+  ],
+
+  templateUrl:
+    './entity-profile-section-view.component.html',
+
+  styleUrls: [
+    './entity-profile-section-view.component.css'
+  ],
 })
 export class EntityProfileSectionViewComponent {
+
   @Input()
   entity: any;
 
@@ -26,28 +42,21 @@ export class EntityProfileSectionViewComponent {
   @Input()
   campaignTypes: any[] = [];
 
-  @Input()
-  apiUrl = '';
-
   @Output()
-  edit = new EventEmitter<void>();
+  edit =
+    new EventEmitter<void>();
 
-  readonly ImageIcon = ImageIcon;
+  readonly ImageIcon =
+    ImageIcon;
+
+  logoLoaded = false;
 
   getLogoUrl(): string {
-    const logo = this.entity?.logo_url;
 
-    if (!logo) {
-      return '';
-    }
+    return (
+      this.entity?.logo_url || ''
+    );
 
-    if (
-      typeof logo === 'string' &&
-      (logo.startsWith('http') || logo.startsWith('data:image'))
-    ) {
-      return logo;
-    }
-
-    return `${this.apiUrl}${logo}`;
   }
+
 }

@@ -212,7 +212,7 @@ export class LoginComponent implements OnInit {
                 }
 
                 this.router.navigate([
-                  '/organizations'
+                  '/organization-registration'
                 ]);
               },
             });
@@ -333,7 +333,7 @@ export class LoginComponent implements OnInit {
                 }
 
                 this.router.navigate([
-                  '/organizations'
+                  '/organization-registration'
                 ]);
               },
             });

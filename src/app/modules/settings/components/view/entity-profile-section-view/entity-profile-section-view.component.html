@@ -73,18 +73,40 @@
 
     <!-- LOGO -->
 
-    <div class="logo-side">
-      <div class="logo-card">
-        <div class="logo-label">לוגו</div>
+   <div class="logo-side">
 
-        <div class="logo-preview">
-          @if (entity?.logo_url) {
-            <img [src]="getLogoUrl()" alt="Logo" />
-          } @else {
-            <div class="logo-placeholder">LOGO</div>
-          }
-        </div>
-      </div>
+  <div class="logo-card">
+
+    <div class="logo-label">
+      לוגו
     </div>
+
+    <div class="logo-preview">
+
+      @if (getLogoUrl()) {
+
+        <img
+          [src]="getLogoUrl()"
+          alt="Logo"
+          class="logo-image"
+          [class.loaded]="logoLoaded"
+          (load)="logoLoaded = true"
+        />
+
+      } @else {
+
+        <img
+          src="/logo-placeholder.svg"
+          class="logo-placeholder-image"
+          alt="Placeholder"
+        />
+
+      }
+
+    </div>
+
+  </div>
+
+</div>
   </div>
 </div>

@@ -76,7 +76,7 @@
 
           <div class="logo-preview">
             @if (entity?.logo_url) {
-              <img [src]="getLogoUrl()" alt="Logo" />
+             <img [src]="entity?.logo_url" alt="Logo" />
             } @else {
               <div class="logo-placeholder">LOGO</div>
             }

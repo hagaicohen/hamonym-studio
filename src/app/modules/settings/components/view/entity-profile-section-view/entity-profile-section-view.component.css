@@ -316,3 +316,43 @@
     padding-right: 14px;
   }
 }
+
+.logo-preview {
+
+  position: relative;
+}
+
+.logo-placeholder-image {
+
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.logo-image {
+
+  position: relative;
+
+  z-index: 2;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  opacity: 0;
+
+  transition: opacity 0.2s ease;
+}
+
+.logo-image.loaded {
+
+  opacity: 1;
+}
