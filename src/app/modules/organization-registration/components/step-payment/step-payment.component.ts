@@ -1,12 +1,11 @@
 // step-payment.component.ts
 
-import { Component, EventEmitter, Output } from '@angular/core';
-
+import { Component, EventEmitter, inject, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
 import { FormsModule } from '@angular/forms';
-
 import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-step-payment',
@@ -21,6 +20,8 @@ export class StepPaymentComponent {
 
   @Output()
   continue = new EventEmitter<void>();
+
+  http = inject(HttpClient);
 
   provider = 'cardcom';
 
@@ -110,30 +111,84 @@ export class StepPaymentComponent {
   // =========================
   // CONNECTION TEST
   // =========================
+testConnection(): void {
 
-  testConnection(): void {
-    this.isCheckingConnection = true;
+  const start =
+    Date.now();
 
-    this.connectionSuccess = false;
+  this.isCheckingConnection = true;
 
-    this.connectionError = '';
+  this.connectionSuccess = false;
 
-    this.connectionAttempted = true;
+  this.connectionError = '';
 
-    setTimeout(() => {
-      this.isCheckingConnection = false;
+  this.connectionAttempted = true;
 
-      // TODO:
-      // כאן תהיה בעתיד בדיקת API אמיתית מול קארדקום
+  this.http.post<any>(
+    `${environment.apiUrl}/api/payment/cardcom/test-connection`,
+    {
+      terminalNumber:
+        this.terminalNumber,
 
-      this.connectionSuccess = false;
+      apiName:
+        this.apiUsername,
 
-      this.connectionError = 'החיבור למסוף נכשל';
+      apiPassword:
+        this.apiPassword,
 
-      this.saveState();
-    }, 1200);
-  }
+      environment:
+        'sandbox'
+    }
+  ).subscribe({
 
+    next: (res) => {
+
+      const elapsed =
+        Date.now() - start;
+
+      const remaining =
+        Math.max(0, 2000 - elapsed);
+
+      setTimeout(() => {
+
+        this.isCheckingConnection = false;
+
+        this.connectionSuccess =
+          res.success;
+
+        this.connectionError =
+          res.success
+            ? ''
+            : res.message;
+
+        this.saveState();
+
+      }, remaining);
+    },
+
+    error: () => {
+
+      const elapsed =
+        Date.now() - start;
+
+      const remaining =
+        Math.max(0, 1200 - elapsed);
+
+      setTimeout(() => {
+
+        this.isCheckingConnection = false;
+
+        this.connectionSuccess = false;
+
+        this.connectionError =
+          'שגיאת שרת';
+
+        this.saveState();
+
+      }, remaining);
+    }
+  });
+}
   // =========================
   // CONTINUE
   // =========================

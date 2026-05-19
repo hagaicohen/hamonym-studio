@@ -1,20 +1,28 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 import {
   LucideAngularModule,
   WalletCards,
 } from 'lucide-angular';
 
-
 @Component({
   selector: 'app-entity-payment-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule,LucideAngularModule],
-  templateUrl: './entity-payment-section-edit.component.html',
-  styleUrl: './entity-payment-section-edit.component.css',
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideAngularModule
+  ],
+  templateUrl:
+    './entity-payment-section-edit.component.html',
+
+  styleUrl:
+    './entity-payment-section-edit.component.css',
 })
 export class EntityPaymentSectionEditComponent {
+
   @Input()
   model: any;
 
@@ -30,31 +38,44 @@ export class EntityPaymentSectionEditComponent {
   @Output()
   testConnection = new EventEmitter<any>();
 
-  readonly WalletCards = WalletCards;
+  readonly WalletCards =
+    WalletCards;
 
   get canSave(): boolean {
+
     if (this.model?.billing_skip_setup) {
       return true;
     }
 
     return !!(
+
       this.model?.billing_provider &&
-      this.model?.cardcom_terminal_number?.trim() &&
-      this.model?.cardcom_api_username?.trim() &&
-      this.model?.cardcom_api_password?.trim()
+
+      this.model
+        ?.cardcom_terminal_number
+        ?.trim() &&
+
+      this.model
+        ?.cardcom_api_username
+        ?.trim() &&
+
+      this.model
+        ?.cardcom_api_password
+        ?.trim()
     );
   }
 
   get statusLabel(): string {
-    switch (this.model?.cardcom_connection_status) {
+
+    switch (
+      this.model?.cardcom_connection_status
+    ) {
+
       case 'success':
         return 'חיבור תקין';
 
       case 'failed':
         return 'חיבור נכשל';
-
-      /*case 'skipped':
-        return 'ימולא בהמשך';*/
 
       default:
         return 'טרם נבדק';
@@ -62,7 +83,11 @@ export class EntityPaymentSectionEditComponent {
   }
 
   get statusClass(): string {
-    switch (this.model?.cardcom_connection_status) {
+
+    switch (
+      this.model?.cardcom_connection_status
+    ) {
+
       case 'success':
         return 'success';
 

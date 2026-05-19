@@ -1,9 +1,61 @@
 @if (!hasEntity) {
+
   <app-no-organization-state />
+
 } @else {
+
   <div class="page-header">
+
     <h1>קמפיינים</h1>
 
-    <p>ניהול הקמפיינים של העמותה</p>
+    <p>
+      כל הקמפיינים הפעילים במקום אחד
+    </p>
+
   </div>
+
+  @if (!campaigns.length) {
+
+    <div class="campaigns-empty-state">
+
+      <div class="empty-icon">
+
+        <lucide-angular
+          [img]="Target"
+          class="campaign-icon">
+        </lucide-angular>
+
+      </div>
+
+      <h2 class="empty-title">
+
+        הקמפיין הראשון שלכם מתחיל כאן
+
+      </h2>
+
+      <p class="empty-description">
+
+        צרו את הקמפיין הראשון של
+
+        <strong>
+          {{ currentEntity?.display_name }}
+        </strong>
+
+        והתחילו לגייס אונליין.
+
+      </p>
+
+      <button
+        type="button"
+        class="create-campaign-btn"
+      >
+
+        + צור קמפיין ראשון
+
+      </button>
+
+    </div>
+
+  }
+
 }

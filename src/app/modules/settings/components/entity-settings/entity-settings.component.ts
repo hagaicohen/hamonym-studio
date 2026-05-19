@@ -1,36 +1,23 @@
 import { Component, OnInit, inject } from '@angular/core';
-
 import { finalize } from 'rxjs';
-
 import { CommonModule } from '@angular/common';
-
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
-
 import { CAMPAIGN_TYPES } from '../../../organization-registration/constants/campaign-types';
-
 import { ENTITY_CONFIGS } from '../../../organization-registration/config/entity-config';
-
 import { environment } from '../../../../../environments/environment';
-
 import { EntityBasicInfoSectionViewComponent } from '../view/entity-basic-info-section-view/entity-basic-info-section-view.component';
-
 import { EntityBasicInfoSectionEditComponent } from '../edit/entity-basic-info-section-edit/entity-basic-info-section-edit.component';
-
 import { EntityProfileSectionViewComponent } from '../view/entity-profile-section-view/entity-profile-section-view.component';
-
 import { EntityProfileSectionEditComponent } from '../edit/entity-profile-section-edit/entity-profile-section-edit.component';
-
 import { EntityGoalsSectionViewComponent } from '../view/entity-goals-section-view/entity-goals-section-view.component';
-
 import { EntityGoalsSectionEditComponent } from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
 import { EntityPaymentSectionViewComponent } from '../view/entity-payment-section-view/entity-payment-section-view.component';
 import { EntityPaymentSectionEditComponent } from '../edit/entity-payment-section-edit/entity-payment-section-edit.component';
 import { EntityBillingSectionViewComponent } from '../view/entity-billing-section-view/entity-billing-section-view.component';
 import { EntityBillingSectionEditComponent } from '../edit/entity-billing-section-edit/entity-billing-section-edit.component';
-
 import { EntitiesService } from '../../../../core/services/entities.service';
-
 import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-entity-settings',
@@ -54,26 +41,22 @@ import { LoadingOverlayComponent } from '../../../../shared/components/loading-o
   styleUrls: ['./entity-settings.component.css'],
 })
 export class EntitySettingsComponent implements OnInit {
-  private currentEntityService = inject(CurrentEntityService);
 
+  constructor(private router: Router) {
+  }
+
+  private currentEntityService = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);
+  
 
   editMode = false;
-
   isSaving = false;
-
   saveSuccess = false;
-
   saveError = false;
-
   entity: any = null;
-
   draftEntity: any = null;
-
   campaignTypes = CAMPAIGN_TYPES;
-
   ENTITY_CONFIGS = ENTITY_CONFIGS;
-
   apiUrl = environment.apiUrl;
 
   ngOnInit(): void {
@@ -102,128 +85,137 @@ export class EntitySettingsComponent implements OnInit {
     this.editMode = false;
   }
 
-saveAll(): void {
+  saveAll(): void {
 
-  if (
-    !this.draftEntity?.id ||
-    this.isSaving
-  ) {
-    return;
-  }
+    if (
+      !this.draftEntity?.id ||
+      this.isSaving
+    ) {
+      return;
+    }
 
-  this.isSaving = true;
+    this.isSaving = true;
 
-  const optimisticEntity = structuredClone(
-
-    this.draftEntity
-
-  );
-
-  // optimistic UI
-
-  this.entity = optimisticEntity;
-
-  this.currentEntityService.setEntity(
-
-    optimisticEntity
-
-  );
-
-  if (this.draftEntity?.billing_card_number) {
-
-    this.draftEntity.billing_card_last4 =
+    const optimisticEntity = structuredClone(
 
       this.draftEntity
-        .billing_card_number
-        .replace(/\s/g, '')
-        .slice(-4);
+
+    );
+
+    // optimistic UI
+
+    this.entity = optimisticEntity;
+
+    this.currentEntityService.setEntity(
+
+      optimisticEntity
+
+    );
+
+    if (this.draftEntity?.billing_card_number) {
+
+      this.draftEntity.billing_card_last4 =
+
+        this.draftEntity
+          .billing_card_number
+          .replace(/\s/g, '')
+          .slice(-4);
+
+    }
+
+    // =====================================================
+    // CLEAN PAYLOAD
+    // =====================================================
+
+    const payload = {
+
+      ...this.draftEntity,
+
+      logo_data: undefined,
+
+      association_certificate_data: undefined,
+
+      tax_document_data: undefined
+
+    };
+
+    this.entitiesService
+      .updateEntity(
+
+        this.draftEntity.id,
+
+        payload,
+
+      )
+      .pipe(
+
+        finalize(() => {
+
+          this.isSaving = false;
+
+        }),
+
+      )
+      .subscribe({
+
+        next: (updatedEntity) => {
+
+          this.entity = structuredClone(
+
+            updatedEntity
+
+          );
+
+          this.draftEntity = structuredClone(
+
+            updatedEntity
+
+          );
+
+          this.currentEntityService.setEntity(
+
+            updatedEntity
+
+          );
+
+          this.editMode = false;
+
+          this.saveSuccess = true;
+
+          setTimeout(() => {
+
+            this.router.navigate([
+              '/campaigns'
+            ]);
+
+          }, 1200);
+
+          setTimeout(() => {
+
+            this.saveSuccess = false;
+
+          }, 1600);
+
+        },
+
+        error: (err) => {
+
+          console.error(err);
+
+          this.saveError = true;
+
+          setTimeout(() => {
+
+            this.saveError = false;
+
+          }, 2200);
+
+        },
+
+      });
 
   }
 
-  // =====================================================
-  // CLEAN PAYLOAD
-  // =====================================================
-
-  const payload = {
-
-    ...this.draftEntity,
-
-    logo_data: undefined,
-
-    association_certificate_data: undefined,
-
-    tax_document_data: undefined
-
-  };
-
-  this.entitiesService
-    .updateEntity(
-
-      this.draftEntity.id,
-
-      payload,
-
-    )
-    .pipe(
-
-      finalize(() => {
-
-        this.isSaving = false;
-
-      }),
-
-    )
-    .subscribe({
-
-      next: (updatedEntity) => {
-
-        this.entity = structuredClone(
-
-          updatedEntity
-
-        );
-
-        this.draftEntity = structuredClone(
-
-          updatedEntity
-
-        );
-
-        this.currentEntityService.setEntity(
-
-          updatedEntity
-
-        );
-
-        this.editMode = false;
-
-        this.saveSuccess = true;
-
-        setTimeout(() => {
-
-          this.saveSuccess = false;
-
-        }, 1600);
-
-      },
-
-      error: (err) => {
-
-        console.error(err);
-
-        this.saveError = true;
-
-        setTimeout(() => {
-
-          this.saveError = false;
-
-        }, 2200);
-
-      },
-
-    });
-
-}
   get entityTypeLabel(): string {
     const entityType = this.draftEntity
       ?.entity_type as keyof typeof ENTITY_CONFIGS;
@@ -237,21 +229,121 @@ saveAll(): void {
   // BILLING CONNECTION TEST
   // =========================
 
-  testBillingConnection(): void {
-    this.isCheckingBillingConnection = true;
+testBillingConnection(): void {
 
-    setTimeout(() => {
-      this.isCheckingBillingConnection = false;
+  const start =
+    Date.now();
 
-      this.draftEntity = {
-        ...this.draftEntity,
+  this.isCheckingBillingConnection = true;
 
-        cardcom_connection_status: 'success',
+  this.draftEntity = {
 
-        cardcom_last_verified_at: new Date(),
+    ...this.draftEntity,
 
-        cardcom_last_error: null,
-      };
-    }, 1200);
-  }
+    cardcom_last_error: null
+  };
+
+  this.entitiesService.http.post<any>(
+
+    `${environment.apiUrl}/api/payment/cardcom/test-connection`,
+
+    {
+      entityId:
+        this.draftEntity.id,
+
+      terminalNumber:
+        this.draftEntity
+          .cardcom_terminal_number,
+
+      apiName:
+        this.draftEntity
+          .cardcom_api_username,
+
+      apiPassword:
+        this.draftEntity
+          .cardcom_api_password,
+
+      environment:
+        'sandbox'
+    }
+
+  ).subscribe({
+
+    next: (res) => {
+
+      const elapsed =
+        Date.now() - start;
+
+      const remaining =
+        Math.max(0, 2000 - elapsed);
+
+      setTimeout(() => {
+
+        this.isCheckingBillingConnection = false;
+
+        this.draftEntity = {
+
+          ...this.draftEntity,
+
+          cardcom_connection_status:
+
+            res.success
+              ? 'success'
+              : 'failed',
+
+          cardcom_last_verified_at:
+            new Date(),
+
+          cardcom_last_error:
+
+            res.success
+              ? null
+              : (
+
+                  res.message ||
+
+                  res.error?.Description ||
+
+                  'בדיקת החיבור נכשלה'
+                )
+        };
+
+      }, remaining);
+    },
+
+    error: (err) => {
+
+      const elapsed =
+        Date.now() - start;
+
+      const remaining =
+        Math.max(0, 2000 - elapsed);
+
+      setTimeout(() => {
+
+        this.isCheckingBillingConnection = false;
+
+        this.draftEntity = {
+
+          ...this.draftEntity,
+
+          cardcom_connection_status:
+            'failed',
+
+          cardcom_last_verified_at:
+            new Date(),
+
+          cardcom_last_error:
+
+            err?.error?.message ||
+
+            err?.error?.error?.Description ||
+
+            'שגיאת שרת'
+        };
+
+      }, remaining);
+    }
+  });
+ }
 }

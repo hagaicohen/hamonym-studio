@@ -43,6 +43,7 @@ declare const google: any;
   styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit {
+
   loginForm: FormGroup;
 
   showPassword = false;
@@ -58,45 +59,77 @@ export class LoginComponent implements OnInit {
 
     private router: Router,
   ) {
-    this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
 
-      password: ['', [Validators.required, Validators.minLength(6)]],
+    this.loginForm = this.fb.group({
+
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.email
+        ]
+      ],
+
+      password: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(6)
+        ]
+      ],
     });
   }
 
-  private entitiesService = inject(EntitiesService);
+  private entitiesService =
+    inject(EntitiesService);
 
-  private currentEntityService = inject(CurrentEntityService);
+  private currentEntityService =
+    inject(CurrentEntityService);
 
   ngOnInit(): void {
+
     google.accounts.id.initialize({
-      client_id: environment.googleClientId,
+
+      client_id:
+        environment.googleClientId,
 
       callback: (response: any) => {
-        this.handleGoogleLogin(response.credential);
+
+        this.handleGoogleLogin(
+          response.credential
+        );
       },
     });
 
     google.accounts.id.renderButton(
-      document.getElementById('google-button'),
+
+      document.getElementById(
+        'google-button'
+      ),
 
       {
         theme: 'outline',
+
         size: 'large',
+
         shape: 'pill',
+
         text: 'signin_with',
       },
     );
   }
 
-  handleGoogleLogin(credential: string): void {
+  handleGoogleLogin(
+    credential: string
+  ): void {
+
     this.loading = true;
 
     this.errorMessage = '';
 
     this.http
       .post<any>(
+
         `${environment.apiUrl}/auth/google`,
 
         {
@@ -104,55 +137,93 @@ export class LoginComponent implements OnInit {
         },
       )
       .subscribe({
+
         next: (res) => {
-          localStorage.setItem('token', res.token);
 
-          localStorage.setItem('user', JSON.stringify(res.user));
+          localStorage.setItem(
+            'token',
+            res.token
+          );
 
-          localStorage.setItem('hasEntities', String(res.hasEntities));
+          localStorage.setItem(
+            'user',
+            JSON.stringify(res.user)
+          );
 
-          this.entitiesService.getMyEntities().subscribe({
-            next: (entitiesRes) => {
-              const entities = entitiesRes.entities || [];
+          localStorage.setItem(
+            'hasEntities',
+            String(res.hasEntities)
+          );
 
-              if (entities.length > 0) {
-                const entity = entities[0];
+          this.entitiesService
+            .getMyEntities()
+            .subscribe({
 
-                //localStorage.setItem('currentEntity', JSON.stringify(entity));
-                localStorage.setItem(
-                  'currentEntity',
+              next: (entitiesRes) => {
 
-                  JSON.stringify({
-                    id: entity.id,
+                const entities =
+                  entitiesRes.entities || [];
 
-                    display_name: entity.display_name,
+                if (entities.length > 0) {
 
-                    entity_type: entity.entity_type,
+                  const entity =
+                    entities[0];
 
-                    status: entity.status,
-                  }),
-                );
+                  localStorage.setItem(
 
-                this.currentEntityService.currentEntity.set(entity);
+                    'currentEntity',
 
-                this.currentEntityService.currentRole.set(entity.role);
-              }
+                    JSON.stringify({
 
-              if (res.hasEntities) {
-                this.router.navigate(['/dashboard']);
+                      id:
+                        entity.id,
 
-                return;
-              }
+                      display_name:
+                        entity.display_name,
 
-              this.router.navigate(['/campaigns']);
-            },
-          });
+                      entity_type:
+                        entity.entity_type,
+
+                      status:
+                        entity.status,
+                    }),
+                  );
+
+                  this.currentEntityService
+                    .currentEntity
+                    .set(entity);
+
+                  this.currentEntityService
+                    .currentRole
+                    .set(entity.role);
+                }
+
+                // =========================
+                // NAVIGATION FLOW
+                // =========================
+
+                if (res.hasEntities) {
+
+                  this.router.navigate([
+                    '/campaigns'
+                  ]);
+
+                  return;
+                }
+
+                this.router.navigate([
+                  '/organizations'
+                ]);
+              },
+            });
         },
 
         error: (err) => {
+
           console.error(err);
 
-          this.errorMessage = 'אירעה שגיאה בהתחברות עם Google';
+          this.errorMessage =
+            'אירעה שגיאה בהתחברות עם Google';
 
           this.loading = false;
         },
@@ -160,12 +231,17 @@ export class LoginComponent implements OnInit {
   }
 
   togglePassword(): void {
-    this.showPassword = !this.showPassword;
+
+    this.showPassword =
+      !this.showPassword;
   }
 
   submit(): void {
+
     if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
+
+      this.loginForm
+        .markAllAsTouched();
 
       return;
     }
@@ -176,73 +252,120 @@ export class LoginComponent implements OnInit {
 
     this.http
       .post<any>(
+
         `${environment.apiUrl}/auth/login`,
 
         this.loginForm.value,
       )
       .subscribe({
+
         next: (res) => {
-          localStorage.setItem('token', res.token);
 
-          localStorage.setItem('user', JSON.stringify(res.user));
+          localStorage.setItem(
+            'token',
+            res.token
+          );
 
-          localStorage.setItem('hasEntities', String(res.hasEntities));
+          localStorage.setItem(
+            'user',
+            JSON.stringify(res.user)
+          );
 
-          this.entitiesService.getMyEntities().subscribe({
-            next: (entitiesRes) => {
-              const entities = entitiesRes.entities || [];
+          localStorage.setItem(
+            'hasEntities',
+            String(res.hasEntities)
+          );
 
-              if (entities.length > 0) {
-                const entity = entities[0];
+          this.entitiesService
+            .getMyEntities()
+            .subscribe({
 
-                localStorage.setItem(
-                  'currentEntity',
+              next: (entitiesRes) => {
 
-                  JSON.stringify({
-                    id: entity.id,
+                const entities =
+                  entitiesRes.entities || [];
 
-                    display_name: entity.display_name,
+                if (entities.length > 0) {
 
-                    entity_type: entity.entity_type,
+                  const entity =
+                    entities[0];
 
-                    status: entity.status,
-                  }),
-                );
+                  localStorage.setItem(
 
-                this.currentEntityService.currentEntity.set(entity);
+                    'currentEntity',
 
-                this.currentEntityService.currentRole.set(entity.role);
-              }
+                    JSON.stringify({
 
-              if (res.hasEntities) {
-                this.router.navigate(['/dashboard']);
+                      id:
+                        entity.id,
 
-                return;
-              }
+                      display_name:
+                        entity.display_name,
 
-              this.router.navigate(['/campaigns']);
-            },
-          });
+                      entity_type:
+                        entity.entity_type,
+
+                      status:
+                        entity.status,
+                    }),
+                  );
+
+                  this.currentEntityService
+                    .currentEntity
+                    .set(entity);
+
+                  this.currentEntityService
+                    .currentRole
+                    .set(entity.role);
+                }
+
+                // =========================
+                // NAVIGATION FLOW
+                // =========================
+
+                if (res.hasEntities) {
+
+                  this.router.navigate([
+                    '/campaigns'
+                  ]);
+
+                  return;
+                }
+
+                this.router.navigate([
+                  '/organizations'
+                ]);
+              },
+            });
         },
 
         error: (err) => {
+
           console.error(err);
 
-          const backendError = err?.error?.error;
+          const backendError =
+            err?.error?.error;
 
           switch (backendError) {
+
             case 'Invalid credentials':
-              this.errorMessage = 'אימייל או סיסמה שגויים';
+
+              this.errorMessage =
+                'אימייל או סיסמה שגויים';
 
               break;
 
             case 'Email already exists':
-              this.errorMessage = 'האימייל כבר קיים במערכת';
+
+              this.errorMessage =
+                'האימייל כבר קיים במערכת';
 
               break;
 
             default:
-              this.errorMessage = 'אירעה שגיאה בהתחברות';
+
+              this.errorMessage =
+                'אירעה שגיאה בהתחברות';
           }
 
           this.loading = false;
