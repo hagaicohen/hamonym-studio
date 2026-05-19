@@ -308,7 +308,7 @@ exports.uploadLogo =
 // GET LOGO
 // =========================================================
 
-exports.getLogo =
+/*exports.getLogo =
   async (req, res) => {
 
     try {
@@ -353,7 +353,7 @@ exports.getLogo =
 
     }
 
-  };
+  };*/
 
 // =========================================================
 // UPDATE ENTITY

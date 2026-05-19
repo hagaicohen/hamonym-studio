@@ -1,6 +1,9 @@
 const db =
   require('../../db/db');
 
+const supabase =
+  require('../../lib/supabase');
+
 exports.createEntity =
   async ({
     userId,
@@ -449,7 +452,7 @@ exports.getTaxDocument =
 
   };
 
-exports.uploadLogo =
+/*exports.uploadLogo =
   async ({
     entityId,
     file
@@ -494,9 +497,88 @@ exports.uploadLogo =
 
     return result.rows[0];
 
+};*/
+
+exports.uploadLogo =
+  async ({
+    entityId,
+    file
+  }) => {
+
+    const extension =
+      file.originalname
+        .split('.')
+        .pop();
+
+    const filePath =
+      `entities/${entityId}/logo-${Date.now()}.${extension}`;
+
+    const {
+      error
+    } = await supabase
+      .storage
+      .from('media')
+      .upload(
+
+        filePath,
+
+        file.buffer,
+
+        {
+
+          contentType:
+            file.mimetype,
+
+          upsert: true
+
+        }
+
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    const {
+      data
+    } = supabase
+      .storage
+      .from('media')
+      .getPublicUrl(
+        filePath
+      );
+
+    const result =
+      await db.query(
+
+        `
+        UPDATE entities
+
+        SET
+          logo_url = $1
+
+        WHERE id = $2
+
+        RETURNING
+          id,
+          logo_url
+        `,
+
+        [
+
+          data.publicUrl,
+
+          entityId
+
+        ]
+
+      );
+
+    return result.rows[0];
+
 };
 
-exports.getLogo =
+/*exports.getLogo =
   async (entityId) => {
 
     const result =
@@ -523,7 +605,7 @@ exports.getLogo =
 
     return result.rows[0];
 
-};
+};*/
 
 exports.updateEntity =
   async ({

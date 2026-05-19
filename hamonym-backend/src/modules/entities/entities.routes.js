@@ -99,13 +99,13 @@ router.patch(
 
 );
 
-router.get(
+/*router.get(
 
   '/:id/logo',
 
   controller.getLogo
 
-);
+);*/
 
 router.patch(
 

@@ -22,6 +22,9 @@ const authRoutes =
 const entitiesRoutes =
   require('./modules/entities/entities.routes');
 
+const paymentRoutes =
+  require('./modules/payment/payment.routes');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -71,6 +74,16 @@ app.get(
 
   }
 
+);
+
+/*
+|--------------------------------------------------------------------------
+| PAYMENT - CARDCOM
+|--------------------------------------------------------------------------
+*/
+app.use(
+  '/api/payment',
+  paymentRoutes
 );
 
 /*
