@@ -1,7 +1,11 @@
 /* entity-profile-section-edit.component.css */
+.section-title-row{
+   display: flex;
+   align-items: center;
+   gap: 10px;
+}
 
 .settings-card {
-
   width: 100%;
 
   background: #ffffff;
@@ -18,7 +22,6 @@
 /* HEADER */
 
 .card-top {
-
   padding-bottom: 24px;
 
   margin-bottom: 28px;
@@ -27,14 +30,12 @@
 }
 
 .header-content {
-
   direction: rtl;
 
   text-align: right;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 800;
@@ -45,7 +46,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -58,7 +58,6 @@
 /* LAYOUT */
 
 .profile-grid {
-
   display: flex;
 
   flex-direction: column;
@@ -67,7 +66,6 @@
 }
 
 .top-row {
-
   display: grid;
 
   grid-template-columns:
@@ -86,7 +84,6 @@
 /* DETAILS */
 
 .details-side {
-
   min-width: 0;
 
   direction: rtl;
@@ -95,7 +92,6 @@
 }
 
 .info-section {
-
   padding-bottom: 24px;
 
   margin-bottom: 24px;
@@ -104,7 +100,6 @@
 }
 
 .info-section.no-border {
-
   margin-bottom: 0;
 
   padding-bottom: 0;
@@ -113,7 +108,6 @@
 }
 
 .section-label {
-
   font-size: 13px;
 
   font-weight: 700;
@@ -126,7 +120,6 @@
 /* TAGS */
 
 .tags {
-
   display: flex;
 
   flex-wrap: wrap;
@@ -135,7 +128,6 @@
 }
 
 .tag {
-
   min-height: 38px;
 
   display: inline-flex;
@@ -158,7 +150,6 @@
 }
 
 .tag.selectable {
-
   cursor: pointer;
 
   background: #f9fafb;
@@ -169,7 +160,6 @@
 }
 
 .tag.selectable.selected {
-
   background: #2563eb;
 
   border-color: #2563eb;
@@ -180,7 +170,6 @@
 /* LOGO */
 
 .logo-side {
-
   width: 220px;
 
   min-width: 220px;
@@ -195,7 +184,6 @@
 }
 
 .logo-card {
-
   width: 100%;
 
   box-sizing: border-box;
@@ -210,7 +198,6 @@
 }
 
 .logo-label {
-
   font-size: 13px;
 
   font-weight: 700;
@@ -225,7 +212,6 @@
 }
 
 .logo-preview {
-
   width: 100%;
 
   aspect-ratio: 1 / 1;
@@ -246,7 +232,6 @@
 }
 
 .logo-preview img {
-
   width: 100%;
 
   height: 100%;
@@ -255,7 +240,6 @@
 }
 
 .logo-placeholder {
-
   font-size: 14px;
 
   font-weight: 700;
@@ -266,7 +250,6 @@
 /* INPUTS */
 
 .profile-input {
-
   width: 100%;
 
   height: 50px;
@@ -291,18 +274,14 @@
 }
 
 .profile-input:focus {
-
   border-color: #2563eb;
 
-  box-shadow:
-    0 0 0 4px
-    rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
 /* DESCRIPTION */
 
 .description-section {
-
   width: 100%;
 
   direction: rtl;
@@ -311,7 +290,6 @@
 }
 
 .full-editor {
-
   display: block;
 
   width: 100%;
@@ -320,7 +298,6 @@
 /* BUTTONS */
 
 .upload-btn {
-
   margin-top: 16px;
 
   width: 100%;
@@ -351,14 +328,12 @@
 }
 
 .upload-btn:hover {
-
   background: #f9fafb;
 }
 
 /* VALIDATION */
 
 .field-error {
-
   margin-top: 12px;
 
   font-size: 13px;
@@ -371,21 +346,17 @@
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 18px;
 
     border-radius: 20px;
   }
 
   .profile-grid {
-
     gap: 24px;
   }
 
   .top-row {
-
     grid-template-columns: 1fr;
 
     gap: 28px;
@@ -394,7 +365,6 @@
   }
 
   .logo-side {
-
     width: 100%;
 
     min-width: 0;
@@ -405,24 +375,20 @@
   }
 
   .logo-card {
-
     max-width: 280px;
 
     margin: 0 auto;
   }
 
   .tags {
-
     flex-direction: column;
   }
 
   .tag.selectable {
-
     width: 100%;
 
     min-height: 46px;
 
     justify-content: center;
   }
-
 }

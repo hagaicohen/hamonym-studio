@@ -1,322 +1,240 @@
-<div class="settings-page">
+<app-loading-overlay *ngIf="isSaving"> </app-loading-overlay>
 
+@if (saveSuccess) {
+  <div class="success-overlay">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+
+      <h2>השינויים נשמרו</h2>
+
+      <p>פרטי הישות עודכנו בהצלחה</p>
+    </div>
+  </div>
+}
+
+@if (saveError) {
+  <div class="success-overlay">
+    <div class="success-card">
+      <div class="success-icon" style="background: #fee2e2; color: #b91c1c">
+        ✕
+      </div>
+
+      <h2>השמירה נכשלה</h2>
+
+      <p>אירעה שגיאה בשמירת הנתונים</p>
+    </div>
+  </div>
+}
+
+<div class="settings-page">
   <!-- HERO -->
 
   <div class="settings-hero">
-
     <div class="hero-top-row">
-
       <div>
-
         <div class="page-title">
-
           ניהול
-          {{ draftEntity?.entity_type === 'association'
-            ? 'עמותה'
-            : 'יישות' }}
-
+          {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
         </div>
 
         <div class="page-description">
-
           {{ draftEntity?.display_name }}
-
         </div>
-
       </div>
 
       <div class="header-actions">
-
         @if (!editMode) {
-
-          <button
-            class="edit-btn"
-            (click)="startEdit()">
-
-            עריכה
-
-          </button>
-
+          <button class="edit-btn" (click)="startEdit()">עריכה</button>
         }
 
         @if (editMode) {
-
-          <button
-            class="cancel-btn"
-            (click)="cancelEdit()">
-
-            ביטול
-
-          </button>
+          <button class="cancel-btn" (click)="cancelEdit()">ביטול</button>
 
           <button
             class="save-btn"
             (click)="saveAll()"
-            [disabled]="!draftEntity?.campaign_types?.length">
-
+            [disabled]="!draftEntity?.campaign_types?.length"
+          >
             שמירת שינויים
-
           </button>
-
         }
-
       </div>
-
     </div>
 
     <!-- META -->
 
     <div class="hero-meta-row">
-
       <div class="meta-item">
-
-        <span class="meta-label">
-          מספר רישום
-        </span>
+        <span class="meta-label"> מספר רישום </span>
 
         <span class="meta-value">
-
           {{ draftEntity?.registration_number }}
-
         </span>
-
       </div>
 
-      <div class="meta-separator">
-        •
-      </div>
+      <div class="meta-separator">•</div>
 
       <div class="meta-item">
-
-        <span class="meta-label">
-          סטטוס
-        </span>
+        <span class="meta-label"> סטטוס </span>
 
         <span
           class="status-text"
           [class.pending]="draftEntity?.status === 'pending_review'"
-          [class.active]="draftEntity?.status === 'active'">
-
+          [class.active]="draftEntity?.status === 'active'"
+        >
           {{
-            draftEntity?.status === 'pending_review'
-              ? 'ממתינה לאישור'
-
-              : draftEntity?.status === 'active'
-              ? 'פעילה'
-
-              : 'טיוטה'
+            draftEntity?.status === "pending_review"
+              ? "ממתינה לאישור"
+              : draftEntity?.status === "active"
+                ? "פעילה"
+                : "טיוטה"
           }}
-
         </span>
-
       </div>
-
     </div>
-
   </div>
 
   <!-- INTERNAL NAVIGATION -->
 
   <div class="entity-sections-nav">
-
     <button
       type="button"
-      (click)="basicInfoSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      })">
-
+      (click)="
+        profileSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      "
+    >
       פרופיל
-
     </button>
 
     <button
       type="button"
-      (click)="goalsSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      })">
-
+      (click)="
+        goalsSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      "
+    >
       יעדים
-
     </button>
 
     <button
       type="button"
-      (click)="paymentSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      })">
-
+      (click)="
+        paymentSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      "
+    >
       סליקת תרומות
-
     </button>
 
     <button
       type="button"
-      (click)="billingSection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      })">
-
+      (click)="
+        billingSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      "
+    >
       אמצעי חיוב
-
     </button>
-
   </div>
 
   <!-- BASIC INFO -->
 
   <div #basicInfoSection>
-
     @if (!editMode) {
-
-      <app-entity-basic-info-section-view
-
-        [entity]="draftEntity">
-
+      <app-entity-basic-info-section-view [entity]="draftEntity">
       </app-entity-basic-info-section-view>
-
     } @else {
-
       <app-entity-basic-info-section-edit
-
         [entity]="draftEntity"
-
-        (entityChange)="onEntityChange($event)">
-
+        (entityChange)="onEntityChange($event)"
+        [editMode]="true"
+      >
       </app-entity-basic-info-section-edit>
-
     }
-
   </div>
 
-  <br>
+  <br />
 
   <!-- PROFILE -->
-
-  @if (!editMode) {
-
-    <app-entity-profile-section-view
-
-      [entity]="draftEntity"
-
-      [entityTypeLabel]="entityTypeLabel"
-
-      [campaignTypes]="campaignTypes"
-
-      [apiUrl]="apiUrl">
-
-    </app-entity-profile-section-view>
-
-  } @else {
-
-    <app-entity-profile-section-edit
-
-      [entity]="draftEntity"
-
-      [entityTypeLabel]="entityTypeLabel"
-
-      [campaignTypes]="campaignTypes"
-
-      [apiUrl]="apiUrl"
-
-      (entityChange)="onEntityChange($event)">
-
-    </app-entity-profile-section-edit>
-
-  }
-
-  <br>
+  <div #profileSection>
+    @if (!editMode) {
+      <app-entity-profile-section-view
+        [entity]="draftEntity"
+        [entityTypeLabel]="entityTypeLabel"
+        [campaignTypes]="campaignTypes"
+      >
+      </app-entity-profile-section-view>
+    } @else {
+      <app-entity-profile-section-edit
+        [entity]="draftEntity"
+        [entityTypeLabel]="entityTypeLabel"
+        [campaignTypes]="campaignTypes"
+        (entityChange)="onEntityChange($event)"
+      >
+      </app-entity-profile-section-edit>
+    }
+  </div>
+  <br />
 
   <!-- GOALS -->
 
   <div #goalsSection>
-
     @if (!editMode) {
-
-      <app-entity-goals-section-view
-
-        [entity]="draftEntity">
-
+      <app-entity-goals-section-view [entity]="draftEntity">
       </app-entity-goals-section-view>
-
     } @else {
-
       <app-entity-goals-section-edit
-
         [entity]="draftEntity"
-
-        (entityChange)="onEntityChange($event)">
-
+        (entityChange)="onEntityChange($event)"
+      >
       </app-entity-goals-section-edit>
-
     }
-
   </div>
 
-  <br>
+  <br />
 
   <!-- PAYMENT -->
 
   <div #paymentSection>
-
     @if (!editMode) {
-
       <app-entity-payment-section-view
-
         [entity]="draftEntity"
-
         (edit)="startEdit()"
-
-        (testConnection)="testBillingConnection()">
-
+        (testConnection)="testBillingConnection()"
+      >
       </app-entity-payment-section-view>
-
     } @else {
-
       <app-entity-payment-section-edit
-
         [model]="draftEntity"
-
         [isCheckingConnection]="isCheckingBillingConnection"
-
         (save)="onEntityChange($event)"
-
         (cancel)="cancelEdit()"
-
-        (testConnection)="testBillingConnection()">
-
+        (testConnection)="testBillingConnection()"
+      >
       </app-entity-payment-section-edit>
-
     }
-
   </div>
 
-  <br>
+  <br />
 
   <!-- BILLING -->
 
   <div #billingSection>
-
     @if (!editMode) {
-
-      <app-entity-billing-section-view
-
-        [entity]="draftEntity">
-
+      <app-entity-billing-section-view [entity]="draftEntity">
       </app-entity-billing-section-view>
-
     } @else {
-
-      <app-entity-billing-section-edit
-
-        [entity]="draftEntity">
-
+      <app-entity-billing-section-edit [entity]="draftEntity">
       </app-entity-billing-section-edit>
-
     }
-
   </div>
-
 </div>

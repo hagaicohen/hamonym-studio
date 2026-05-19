@@ -117,7 +117,6 @@ const initialState: OrganizationRegistrationState = {
 
   section46File: null,
 
-  
   // STEP 2
 
   displayName: '',

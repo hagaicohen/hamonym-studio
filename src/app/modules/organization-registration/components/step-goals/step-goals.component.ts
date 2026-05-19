@@ -1,44 +1,27 @@
-import {
-  Component,
-  EventEmitter,
-  Output,
-} from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  OrganizationRegistrationStateService
-} from '../../services/organization-registration-state.service';
+import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 
 @Component({
   selector: 'app-step-goals',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './step-goals.component.html',
   styleUrls: ['./step-goals.component.css'],
 })
 export class StepGoalsComponent {
+  @Output()
+  back = new EventEmitter<void>();
 
   @Output()
-  back =
-    new EventEmitter<void>();
-
-  @Output()
-  continue =
-    new EventEmitter<void>();
+  continue = new EventEmitter<void>();
 
   constructor(
-    private readonly stateService:
-      OrganizationRegistrationStateService,
+    private readonly stateService: OrganizationRegistrationStateService,
   ) {}
 
   // =========================
@@ -51,13 +34,8 @@ export class StepGoalsComponent {
   // HELPERS
   // =========================
 
-  private updateState(
-    partial: any
-  ): void {
-
-    this.stateService.updateState(
-      partial
-    );
+  private updateState(partial: any): void {
+    this.stateService.updateState(partial);
   }
 
   // =========================
@@ -65,18 +43,12 @@ export class StepGoalsComponent {
   // =========================
 
   get monthlyGoal(): string {
-
     return this.state().monthlyGoal;
   }
 
-  set monthlyGoal(
-    value: string
-  ) {
-
+  set monthlyGoal(value: string) {
     this.updateState({
-
       monthlyGoal: value,
-
     });
   }
 
@@ -85,18 +57,12 @@ export class StepGoalsComponent {
   // =========================
 
   get yearlyGoal(): string {
-
     return this.state().yearlyGoal;
   }
 
-  set yearlyGoal(
-    value: string
-  ) {
-
+  set yearlyGoal(value: string) {
     this.updateState({
-
       yearlyGoal: value,
-
     });
   }
 
@@ -105,13 +71,7 @@ export class StepGoalsComponent {
   // =========================
 
   get canContinue(): boolean {
-
-    return !!(
-
-      this.monthlyGoal &&
-      this.yearlyGoal
-
-    );
+    return !!(this.monthlyGoal && this.yearlyGoal);
   }
 
   cleanNumber(value: string): string {

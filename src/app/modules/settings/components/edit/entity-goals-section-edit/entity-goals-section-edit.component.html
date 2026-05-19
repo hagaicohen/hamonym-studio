@@ -1,105 +1,68 @@
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-top">
-
     <div class="header-content">
+      <div class="section-title-row">
+        <lucide-icon
+          [img]="TrendingUp"
+          class="section-icon">
+        </lucide-icon>
 
-      <div class="card-title">
-        יעדי גיוס
+        <div class="card-title">
+          יעדי גיוס
+        </div>
       </div>
 
-      <div class="card-description">
-
-        הגדירו את יעדי הגיוס שלכם בפלטפורמה
-
-      </div>
-
+      <div class="card-description">הגדירו את יעדי הגיוס שלכם בפלטפורמה</div>
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="goals-grid">
-
     <!-- MONTHLY -->
 
     <div class="goal-field">
-
-      <div class="field-label">
-        יעד גיוס חודשי
-      </div>
+      <div class="field-label">יעד גיוס חודשי</div>
 
       <div class="money-input-wrapper">
-
-        <span class="money-symbol">
-          ₪
-        </span>
+        <span class="money-symbol"> ₪ </span>
 
         <input
           type="text"
           class="money-input"
           placeholder="50,000"
-          [ngModel]="entity?.monthly_goal"
-          (ngModelChange)="
-            onMoneyInput(
-              'monthly_goal',
-              $event
-            )
-          ">
-
+          [ngModel]="monthlyGoalDisplay"
+          (ngModelChange)="onMoneyInput('monthly_goal', $event)"
+        />
       </div>
-
     </div>
 
     <!-- YEARLY -->
 
     <div class="goal-field">
-
-      <div class="field-label">
-        יעד גיוס שנתי
-      </div>
+      <div class="field-label">יעד גיוס שנתי</div>
 
       <div class="money-input-wrapper">
-
-        <span class="money-symbol">
-          ₪
-        </span>
+        <span class="money-symbol"> ₪ </span>
 
         <input
           type="text"
           class="money-input"
           placeholder="600,000"
-          [ngModel]="entity?.yearly_goal"
-          (ngModelChange)="
-            onMoneyInput(
-              'yearly_goal',
-              $event
-            )
-          ">
-
+          [ngModel]="yearlyGoalDisplay"
+          (ngModelChange)="onMoneyInput('yearly_goal', $event)"
+        />
       </div>
-
     </div>
-
   </div>
 
   @if (!hasGoals) {
-
-    <div class="field-error">
-
-      חובה להזין יעד חודשי ושנתי
-
-    </div>
-
+    <div class="field-error">חובה להזין יעד חודשי ושנתי</div>
   }
 
   <div class="info-box">
-
     הנתונים האלו משמשים להתאמת המלצות וכלי צמיחה בפלטפורמה.
-
   </div>
-
 </div>

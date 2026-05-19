@@ -1,90 +1,70 @@
 <div class="settings-card">
-
   <div class="card-top">
-
     <div>
+      <div class="section-title-row">
 
-      <div class="card-title">
-        אמצעי חיוב
+        <lucide-icon
+          [img]="CreditCard"
+          class="section-icon">
+        </lucide-icon>
+
+        <div class="card-title">
+
+          אמצעי חיוב
+
+        </div>
+
       </div>
 
-      <div class="card-description">
-        הגדרת אמצעי החיוב של הישות
-      </div>
-
+      <div class="card-description">הגדרת אמצעי החיוב של הישות</div>
     </div>
-
   </div>
 
-  <div class="info-strip">
-
-    החיוב מתבצע בהתאם לפעילות הישות במערכת
-
-  </div>
+  <div class="info-strip">החיוב מתבצע בהתאם לפעילות הישות במערכת</div>
 
   <!-- METHOD SELECTOR -->
 
   <div class="method-selector">
-
     <button
       type="button"
       class="method-button"
       [class.active]="isCreditCard"
-      (click)="selectBillingMethod('credit-card')">
+      (click)="selectBillingMethod('credit-card')"
+    >
+      <div class="method-title">כרטיס אשראי</div>
 
-      <div class="method-title">
-        כרטיס אשראי
-      </div>
-
-      <div class="method-description">
-        חיוב חודשי
-      </div>
-
+      <div class="method-description">חיוב חודשי</div>
     </button>
 
     <button
       type="button"
       class="method-button"
       [class.active]="isMasav"
-      (click)="selectBillingMethod('masav')">
+      (click)="selectBillingMethod('masav')"
+    >
+      <div class="method-title">הוראת קבע (מס״ב)</div>
 
-      <div class="method-title">
-        הוראת קבע (מס״ב)
-      </div>
-
-      <div class="method-description">
-        חיוב בנקאי
-      </div>
-
+      <div class="method-description">חיוב בנקאי</div>
     </button>
-
   </div>
 
   <!-- CREDIT CARD -->
 
   @if (isCreditCard) {
-
     <div class="billing-section">
-
       <div class="field-block">
-
-        <label>
-          שם בעל הכרטיס
-        </label>
+        <label> שם בעל הכרטיס </label>
 
         <input
           type="text"
           class="base-input"
           [(ngModel)]="entity.billing_holder_name"
-          placeholder="ישראל ישראלי" />
-
+          placeholder="ישראל ישראלי"
+        />
       </div>
 
       <div class="field-block">
-
-        <label>
-          מספר כרטיס
-        </label>
+        <label> מספר כרטיס </label>
 
         <input
           type="text"
@@ -92,122 +72,83 @@
           [(ngModel)]="entity.billing_card_number"
           (input)="formatCardNumber()"
           (keypress)="onlyNumbers($event)"
-          placeholder="0000 0000 0000 0000" />
-
+          placeholder="0000 0000 0000 0000"
+        />
       </div>
 
       <div class="two-columns">
-
         <div class="field-block">
-
-          <label>
-            תוקף
-          </label>
+          <label> תוקף </label>
 
           <input
             type="text"
             class="base-input"
-            [(ngModel)]="entity.billing_expiry"
+            [(ngModel)]="entity.billing_card_expiry"
             (input)="formatExpiry()"
             (keypress)="onlyNumbers($event)"
-            placeholder="MM/YY" />
-
+            placeholder="MM/YY"
+          />
         </div>
 
         <div class="field-block">
-
-          <label>
-            CVV
-          </label>
+          <label> CVV </label>
 
           <input
             type="password"
             class="base-input"
             [(ngModel)]="entity.billing_cvv"
             (keypress)="onlyNumbers($event)"
-            placeholder="123" />
-
+            placeholder="123"
+          />
         </div>
-
       </div>
-
     </div>
-
   }
 
   <!-- MASAV -->
 
   @if (isMasav) {
-
     <div class="billing-section">
-
       <div class="masav-box">
-
-        <div class="masav-title">
-
-          הוראת קבע בנקאית
-
-        </div>
+        <div class="masav-title">הוראת קבע בנקאית</div>
 
         <div class="masav-description">
-
-          יש להוריד את הטופס,
-          לחתום עליו ולהעלות אותו חזרה למערכת
-
+          יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת
         </div>
-
       </div>
 
-      <a
-        href="/files/masav-form.pdf"
-        download
-        class="download-btn">
-
+      <a href="/files/masav-form.pdf" download class="download-btn">
         הורדת טופס מס״ב
-
       </a>
 
-      @if (entity?.masav_file_name) {
-
+      @if (entity?.billing_masav_file_name) {
         <div class="upload-box">
-
           <div class="upload-success">
-
-            ✓ {{ entity?.masav_file_name }}
-
+            ✓ {{ entity?.billing_masav_file_name }}
           </div>
 
           <button
             type="button"
             class="remove-file-button"
-            (click)="removeMasavFile()">
-
+            (click)="removeMasavFile()"
+          >
             הסר קובץ
-
           </button>
-
         </div>
-
       }
 
-      @if (!entity?.masav_file_name) {
-
+      @if (!entity?.billing_masav_file_name) {
         <label class="upload-btn">
-
           העלאת טופס חתום
 
           <input
             type="file"
             hidden
             accept=".pdf,.jpg,.jpeg,.png"
-            (change)="onMasavFileSelected($event)" />
-
+            (change)="onMasavFileSelected($event)"
+          />
         </label>
-
       }
-
     </div>
-
   }
-
 </div>

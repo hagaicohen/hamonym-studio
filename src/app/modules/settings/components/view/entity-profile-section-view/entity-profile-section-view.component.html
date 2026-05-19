@@ -1,149 +1,112 @@
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-top">
-
     <div class="header-content">
+      <div class="section-title-row">
 
-      <div class="card-title">
+            <lucide-icon
+              [img]="ImageIcon"
+              class="section-icon">
+            </lucide-icon>
 
-        פרופיל {{ entityTypeLabel }}
+            <div class="card-title">
+
+              פרופיל {{ entityTypeLabel }}
+
+            </div>
 
       </div>
 
       <div class="card-description">
-
         איך ה{{ entityTypeLabel }}
         תוצג בפלטפורמה
-
       </div>
-
     </div>
-
   </div>
 
   <!-- BODY -->
 
   <div class="profile-layout">
-
     <!-- DETAILS -->
 
     <div class="details-side">
-
       <!-- DISPLAY NAME -->
 
       <div class="info-section">
-
-        <div class="section-label">
-
-          שם להצגה
-
-        </div>
+        <div class="section-label">שם להצגה</div>
 
         <div class="profile-name">
-
-          {{ entity?.display_name || '-' }}
-
+          {{ entity?.display_name || "-" }}
         </div>
-
       </div>
 
       <!-- CAMPAIGN TYPES -->
 
       <div class="info-section">
-
-        <div class="section-label">
-
-          סוגי קמפיינים
-
-        </div>
+        <div class="section-label">סוגי קמפיינים</div>
 
         <div class="tags">
-
-          @for (
-            type of campaignTypes;
-            track type.id
-          ) {
-
-            @if (
-              entity?.campaign_types?.includes(type.id)
-            ) {
-
+          @for (type of campaignTypes; track type.id) {
+            @if (entity?.campaign_types?.includes(type.id)) {
               <div class="tag">
-
-                <span class="tag-check">
-                  ✓
-                </span>
+                <span class="tag-check"> ✓ </span>
 
                 {{ type.title }}
-
               </div>
-
             }
-
           }
-
         </div>
-
       </div>
 
       <!-- DESCRIPTION -->
 
       <div class="info-section no-border">
-
-        <div class="section-label">
-
-          תיאור קצר
-
-        </div>
+        <div class="section-label">תיאור קצר</div>
 
         <div
           class="profile-description html-content"
-          [innerHTML]="entity?.description || '-'">
-
-        </div>
-
+          [innerHTML]="entity?.description || '-'"
+        ></div>
       </div>
-
     </div>
 
     <!-- LOGO -->
 
-    <div class="logo-side">
+   <div class="logo-side">
 
-      <div class="logo-card">
+  <div class="logo-card">
 
-        <div class="logo-label">
+    <div class="logo-label">
+      לוגו
+    </div>
 
-          לוגו
+    <div class="logo-preview">
 
-        </div>
+      @if (getLogoUrl()) {
 
-        <div class="logo-preview">
+        <img
+          [src]="getLogoUrl()"
+          alt="Logo"
+          class="logo-image"
+          [class.loaded]="logoLoaded"
+          (load)="logoLoaded = true"
+        />
 
-          @if (entity?.logo_url) {
+      } @else {
 
-            <img
-              [src]="getLogoUrl()"
-              alt="Logo">
+        <img
+          src="/logo-placeholder.svg"
+          class="logo-placeholder-image"
+          alt="Placeholder"
+        />
 
-          } @else {
-
-            <div class="logo-placeholder">
-
-              LOGO
-
-            </div>
-
-          }
-
-        </div>
-
-      </div>
+      }
 
     </div>
 
   </div>
 
+</div>
+  </div>
 </div>

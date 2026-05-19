@@ -1,31 +1,21 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output
-} from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+
+import { CommonModule } from '@angular/common';
+
+import { FormsModule } from '@angular/forms';
 
 import {
-  CommonModule
-} from '@angular/common';
-
-import {
-  FormsModule
-} from '@angular/forms';
+  LucideAngularModule,
+  TrendingUp
+} from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-goals-section-edit',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
-  templateUrl:
-    './entity-goals-section-edit.component.html',
+  imports: [CommonModule, FormsModule, LucideAngularModule],
+  templateUrl: './entity-goals-section-edit.component.html',
 
-  styleUrls: [
-    './entity-goals-section-edit.component.css'
-  ]
+  styleUrls: ['./entity-goals-section-edit.component.css'],
 })
 export class EntityGoalsSectionEditComponent {
 
@@ -33,8 +23,35 @@ export class EntityGoalsSectionEditComponent {
   entity: any;
 
   @Output()
-  entityChange =
-    new EventEmitter<any>();
+  entityChange = new EventEmitter<any>();
+
+  readonly TrendingUp = TrendingUp;
+
+  // =====================================================
+  // DISPLAY VALUES
+  // =====================================================
+
+  monthlyGoalDisplay = '';
+
+  yearlyGoalDisplay = '';
+
+  ngOnChanges(): void {
+
+    this.monthlyGoalDisplay =
+      this.formatMoney(
+        this.entity?.monthly_goal
+      );
+
+    this.yearlyGoalDisplay =
+      this.formatMoney(
+        this.entity?.yearly_goal
+      );
+
+  }
+
+  // =====================================================
+  // UPDATE FIELD
+  // =====================================================
 
   updateField(
     field: string,
@@ -42,42 +59,109 @@ export class EntityGoalsSectionEditComponent {
   ): void {
 
     this.entityChange.emit({
-      [field]: value
+
+      [field]: value,
+
     });
+
   }
+
+  // =====================================================
+  // MONEY INPUT
+  // =====================================================
 
   onMoneyInput(
     field:
       'monthly_goal' |
       'yearly_goal',
 
-    value: string
+    value: string,
+
   ): void {
 
-    const numericValue =
+    const cleanedValue =
+
       value.replace(/\D/g, '');
 
+    const numericValue =
+
+      Number(cleanedValue);
+
     const formattedValue =
-      Number(
-        numericValue || 0
-      ).toLocaleString('en-US');
+
+      cleanedValue
+        ? numericValue.toLocaleString('en-US')
+        : '';
+
+    // DISPLAY VALUE
+
+    if (
+      field === 'monthly_goal'
+    ) {
+
+      this.monthlyGoalDisplay =
+        formattedValue;
+
+    }
+
+    if (
+      field === 'yearly_goal'
+    ) {
+
+      this.yearlyGoalDisplay =
+        formattedValue;
+
+    }
+
+    // REAL VALUE
 
     this.updateField(
+
       field,
-      numericValue
-        ? formattedValue
-        : ''
+
+      cleanedValue
+        ? numericValue
+        : null
+
     );
+
   }
+
+  // =====================================================
+  // FORMAT
+  // =====================================================
+
+  formatMoney(value: any): string {
+
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+
+      return '';
+
+    }
+
+    return Number(value)
+      .toLocaleString('en-US');
+
+  }
+
+  // =====================================================
+  // VALIDATION
+  // =====================================================
 
   get hasGoals(): boolean {
 
     return !!(
 
       this.entity?.monthly_goal &&
+
       this.entity?.yearly_goal
 
     );
+
   }
 
 }

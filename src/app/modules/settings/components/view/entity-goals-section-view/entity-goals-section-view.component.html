@@ -1,65 +1,44 @@
 <div class="settings-card">
-
   <div class="card-top">
-
     <div class="header-content">
+      <div class="section-title-row">
+        <lucide-icon
+          [img]="TrendingUp"
+          class="section-icon">
+        </lucide-icon>
 
-      <div class="card-title">
-        יעדי גיוס
+        <div class="card-title">
+          יעדי גיוס
+        </div>
       </div>
 
-      <div class="card-description">
-        היעדים שהוגדרו עבור הפעילות בפלטפורמה
-      </div>
-
+      <div class="card-description">היעדים שהוגדרו עבור הפעילות בפלטפורמה</div>
     </div>
-
   </div>
 
   <div class="goals-grid">
-
     <!-- MONTHLY -->
 
     <div class="goal-card">
-
-      <div class="goal-label">
-        יעד גיוס חודשי
-      </div>
+      <div class="goal-label">יעד גיוס חודשי</div>
 
       <div class="goal-value">
-
         <div class="summary-value">
-
-           ₪ {{ (entity?.monthly_goal || 0) | number }}
-
+          ₪ {{ entity?.monthly_goal || 0 | number }}
         </div>
-
       </div>
-
     </div>
 
     <!-- YEARLY -->
 
     <div class="goal-card">
+      <div class="goal-label">יעד גיוס שנתי</div>
 
-      <div class="goal-label">
-        יעד גיוס שנתי
-      </div>
-
-      <div class="goal-value">
-
-        ₪ {{ (entity?.yearly_goal || 0) | number }}
-
-      </div>
-
+      <div class="goal-value">₪ {{ entity?.yearly_goal || 0 | number }}</div>
     </div>
-
   </div>
 
   <div class="info-box">
-
     הנתונים האלו משמשים להתאמת המלצות וכלי צמיחה בפלטפורמה.
-
   </div>
-
 </div>

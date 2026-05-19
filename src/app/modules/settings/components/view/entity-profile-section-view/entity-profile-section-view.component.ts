@@ -9,18 +9,27 @@ import {
   CommonModule
 } from '@angular/common';
 
+import {
+  LucideAngularModule,
+  ImageIcon,
+} from 'lucide-angular';
+
 @Component({
   selector: 'app-entity-profile-section-view',
+
   standalone: true,
+
   imports: [
-    CommonModule
+    CommonModule,
+    LucideAngularModule
   ],
+
   templateUrl:
     './entity-profile-section-view.component.html',
 
   styleUrls: [
     './entity-profile-section-view.component.css'
-  ]
+  ],
 })
 export class EntityProfileSectionViewComponent {
 
@@ -33,33 +42,21 @@ export class EntityProfileSectionViewComponent {
   @Input()
   campaignTypes: any[] = [];
 
-  @Input()
-  apiUrl = '';
-
   @Output()
   edit =
     new EventEmitter<void>();
 
+  readonly ImageIcon =
+    ImageIcon;
+
+  logoLoaded = false;
+
   getLogoUrl(): string {
 
-  const logo =
-    this.entity?.logo_url;
+    return (
+      this.entity?.logo_url || ''
+    );
 
-  if (!logo) {
-    return '';
   }
-
-  if (
-    typeof logo === 'string' &&
-    (
-      logo.startsWith('http') ||
-      logo.startsWith('data:image')
-    )
-  ) {
-    return logo;
-  }
-
-  return `${this.apiUrl}${logo}`;
-}
 
 }

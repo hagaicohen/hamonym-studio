@@ -1,161 +1,101 @@
-import {
-  Component,
-  Input
-} from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import {
-  CommonModule
-} from '@angular/common';
+  LucideAngularModule,
+  CreditCard
+} from 'lucide-angular';
 
-import {
-  FormsModule
-} from '@angular/forms';
-
-type BillingMethod =
-  'credit-card'
-  | 'masav';
+type BillingMethod = 'credit-card' | 'masav';
 
 @Component({
   selector: 'app-entity-billing-section-edit',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule,LucideAngularModule],
   templateUrl: './entity-billing-section-edit.component.html',
-  styleUrls: ['./entity-billing-section-edit.component.css']
+  styleUrls: ['./entity-billing-section-edit.component.css'],
 })
 export class EntityBillingSectionEditComponent {
-
   @Input()
   entity: any;
 
-  get billingMethod(): BillingMethod {
+  readonly CreditCard = CreditCard;
 
-    return (
-      this.entity?.billing_method ||
-      'credit-card'
-    );
+  get billingMethod(): BillingMethod {
+    return this.entity?.billing_method || 'credit-card';
   }
 
   get isCreditCard(): boolean {
-
-    return (
-      this.billingMethod ===
-      'credit-card'
-    );
+    return this.billingMethod === 'credit-card';
   }
 
   get isMasav(): boolean {
-
-    return (
-      this.billingMethod ===
-      'masav'
-    );
+    return this.billingMethod === 'masav';
   }
 
-  selectBillingMethod(
-    method: BillingMethod
-  ): void {
-
-    this.entity.billing_method =
-      method;
+  selectBillingMethod(method: BillingMethod): void {
+    this.entity.billing_method = method;
   }
 
   formatCardNumber(): void {
+    const rawValue = this.entity.billing_card_number
+      ?.replace(/\s/g, '')
+      ?.replace(/[^0-9]/gi, '');
 
-    const rawValue =
+    const groups = rawValue?.match(/.{1,4}/g);
 
-      this.entity.billing_card_number
-        ?.replace(/\s/g, '')
-        ?.replace(/[^0-9]/gi, '');
-
-    const groups =
-      rawValue?.match(/.{1,4}/g);
-
-    this.entity.billing_card_number =
-
-      groups
-        ? groups.join(' ')
-        : '';
+    this.entity.billing_card_number = groups ? groups.join(' ') : '';
   }
 
   formatExpiry(): void {
+    const rawValue = this.entity.billing_card_expiry?.replace(/\D/g, '');
 
-    const rawValue =
-
-      this.entity.billing_expiry
-        ?.replace(/\D/g, '');
-
-    if (
-      rawValue?.length >= 3
-    ) {
-
-      this.entity.billing_expiry =
-
-        rawValue.substring(0, 2) +
-
-        '/' +
-
-        rawValue.substring(2, 4);
+    if (rawValue?.length >= 3) {
+      this.entity.billing_card_expiry =
+        rawValue.substring(0, 2) + '/' + rawValue.substring(2, 4);
 
       return;
     }
 
-    this.entity.billing_expiry =
-      rawValue;
+    this.entity.billing_card_expiry = rawValue;
   }
 
-  onMasavFileSelected(
-    event: Event
-  ): void {
-
-    const input =
-      event.target as HTMLInputElement;
+  onMasavFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
     if (!input.files?.length) {
       return;
     }
 
-    const file =
-      input.files[0];
+    const file = input.files[0];
 
-    this.entity.masav_file_name =
-      file.name;
+    this.entity.billing_masav_file_name = file.name;
   }
 
   removeMasavFile(): void {
-
-    this.entity.masav_file_name =
-      null;
+    this.entity.billing_masav_file_name = null;
   }
 
-  onlyNumbers(
-  event: KeyboardEvent
-): void {
+  onlyNumbers(event: KeyboardEvent): void {
+    const allowedKeys = [
+      'Backspace',
 
-  const allowedKeys = [
+      'ArrowLeft',
 
-    'Backspace',
+      'ArrowRight',
 
-    'ArrowLeft',
+      'Tab',
 
-    'ArrowRight',
+      'Delete',
+    ];
 
-    'Tab',
+    if (allowedKeys.includes(event.key)) {
+      return;
+    }
 
-    'Delete'
-  ];
-
-  if (
-    allowedKeys.includes(event.key)
-  ) {
-    return;
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
   }
-
-  if (!/^\d$/.test(event.key)) {
-
-    event.preventDefault();
-  }
-} 
 }

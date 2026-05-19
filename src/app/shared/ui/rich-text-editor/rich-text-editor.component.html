@@ -1,14 +1,8 @@
 <!-- rich-text-editor.component.html -->
 
 <div class="editor-shell">
-
-  <div
-    class="editor-toolbar"
-    *ngIf="editor"
-  >
-
+  <div class="editor-toolbar" *ngIf="editor">
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn"
@@ -53,11 +47,9 @@
       >
         🖍
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn text-btn"
@@ -93,11 +85,9 @@
       >
         P
       </button>
-
     </div>
 
     <div class="toolbar-group">
-
       <button
         type="button"
         class="toolbar-btn"
@@ -124,9 +114,7 @@
       >
         ☑
       </button>
-
     </div>
-
   </div>
 
   <button
@@ -137,10 +125,5 @@
     +
   </button>
 
-  <div
-    #editor
-    class="editor-content"
-    [style.minHeight.px]="minHeight"
-  ></div>
-
+  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
 </div>

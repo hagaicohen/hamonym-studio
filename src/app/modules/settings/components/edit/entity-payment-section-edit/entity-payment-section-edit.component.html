@@ -1,105 +1,82 @@
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-top">
-
     <div>
+      <div class="section-title-row">
+        <lucide-icon
+          [img]="WalletCards"
+          class="section-icon">
+        </lucide-icon>
 
-      <div class="card-title">
-        עריכת מסוף אשראי
+        <div class="card-title">
+           מסוף אשראי
+        </div>
+
       </div>
 
-      <div class="card-description">
-        חיבור והגדרות ספק הסליקה
-      </div>
-
+      <div class="card-description">חיבור והגדרות ספק הסליקה</div>
     </div>
-
   </div>
 
   <!-- PROVIDER -->
 
   <div class="field-block">
+    <label> ספק סליקה </label>
 
-    <label>
-      ספק סליקה
-    </label>
-
-    <select
-      [(ngModel)]="model.billing_provider"
-      class="base-input">
-
-      <option value="cardcom">
-        קארדקום
-      </option>
-
+    <select [(ngModel)]="model.billing_provider" class="base-input">
+      <option value="cardcom">קארדקום</option>
     </select>
-
   </div>
 
   <ng-container>
-
     <!-- TERMINAL -->
 
     <div class="field-block">
-
-      <label>
-        מספר מסוף
-      </label>
+      <label> מספר מסוף </label>
 
       <input
         type="text"
         class="base-input"
         [(ngModel)]="model.cardcom_terminal_number"
-        placeholder="1234567" />
-
+        placeholder="1234567"
+      />
     </div>
 
     <!-- USERNAME -->
 
     <div class="field-block">
-
-      <label>
-        משתמש API
-      </label>
+      <label> משתמש API </label>
 
       <input
         type="text"
         class="base-input"
         [(ngModel)]="model.cardcom_api_username"
-        placeholder="username" />
-
+        placeholder="username"
+      />
     </div>
 
     <!-- PASSWORD -->
 
     <div class="field-block">
-
-      <label>
-        סיסמת API
-      </label>
+      <label> סיסמת API </label>
 
       <input
         type="password"
         class="base-input"
         [(ngModel)]="model.cardcom_api_password"
-        placeholder="••••••••" />
-
+        placeholder="••••••••"
+      />
     </div>
 
     <!-- STATUS -->
 
-    <div
-      class="connection-status"
-      [ngClass]="statusClass">
-
+    <div class="connection-status" [ngClass]="statusClass">
       {{ statusLabel }}
-
     </div>
 
     <!-- ERROR -->
-<!--
+    <!--
     <div
       class="connection-error"
       *ngIf="
@@ -113,24 +90,28 @@
 -->
     <!-- TEST -->
 
-    <button
+   <button
       type="button"
       class="test-connection-btn"
-      [disabled]="isCheckingConnection"
-      (click)="testConnection.emit(model)">
+      [disabled]="
+        isCheckingConnection
+      "
+      (click)="testConnection.emit(model)"
+    >
 
-      @if (!isCheckingConnection) {
+      <span
+        *ngIf="isCheckingConnection"
+        class="btn-spinner">
+      </span>
 
-        בדוק חיבור
-
-      } @else {
-
-        בודק חיבור...
-
-      }
+      <span>
+        {{
+          isCheckingConnection
+            ? 'בודק חיבור...'
+            : 'בדוק חיבור'
+        }}
+      </span>
 
     </button>
-
   </ng-container>
-
 </div>

@@ -1,134 +1,88 @@
 <div class="settings-card">
-
   <!-- HEADER -->
 
   <div class="card-top">
-
     <div>
+      <div class="section-title-row">
 
-      <div class="card-title">
-        מסוף אשראי
+        <lucide-icon
+          [img]="WalletCards"
+          class="section-icon">
+        </lucide-icon>
+
+        <div class="card-title">
+
+          מסוף אשראי
+
+        </div>
+
       </div>
-
       <div class="card-description">
         הגדרות סליקה וחיבור ספק האשראי של הישות
       </div>
-
     </div>
-
   </div>
 
   <!-- PROVIDER -->
 
   <div class="info-row">
+    <div class="info-label">ספק סליקה</div>
 
-    <div class="info-label">
-      ספק סליקה
-    </div>
-
-    <div class="info-value">
-      קארדקום
-    </div>
-
+    <div class="info-value">קארדקום</div>
   </div>
 
   <!-- TERMINAL -->
 
   <div class="info-row">
-
-    <div class="info-label">
-      מספר מסוף
-    </div>
+    <div class="info-label">מספר מסוף</div>
 
     <div class="info-value">
-
-      {{
-        entity?.cardcom_terminal_number || '—'
-      }}
-
+      {{ entity?.cardcom_terminal_number || "—" }}
     </div>
-
   </div>
 
   <!-- API USER -->
 
   <div class="info-row">
-
-    <div class="info-label">
-      משתמש API
-    </div>
+    <div class="info-label">משתמש API</div>
 
     <div class="info-value">
-
-      {{
-        entity?.cardcom_api_username || '—'
-      }}
-
+      {{ entity?.cardcom_api_username || "—" }}
     </div>
-
   </div>
 
   <!-- PASSWORD -->
 
   <div class="info-row">
-
-    <div class="info-label">
-      סיסמת API
-    </div>
+    <div class="info-label">סיסמת API</div>
 
     <div class="info-value masked">
-
       @if (entity?.cardcom_api_password_encrypted) {
-
         ••••••••••
-
       } @else {
-
         —
-
       }
-
     </div>
-
   </div>
 
   <!-- CONNECTION STATUS -->
 
   <div class="info-row">
+    <div class="info-label">סטטוס חיבור</div>
 
-    <div class="info-label">
-      סטטוס חיבור
-    </div>
-
-    <div
-      class="connection-status"
-      [ngClass]="statusClass">
-
+    <div class="connection-status" [ngClass]="statusClass">
       {{ statusLabel }}
-
     </div>
-
   </div>
 
   <!-- LAST VERIFIED -->
 
-  <div
-    class="info-row"
-    *ngIf="entity?.cardcom_last_verified_at">
-
-    <div class="info-label">
-      בדיקה אחרונה
-    </div>
+  <div class="info-row" *ngIf="entity?.cardcom_last_verified_at">
+    <div class="info-label">בדיקה אחרונה</div>
 
     <div class="info-value">
-
-      {{
-        entity.cardcom_last_verified_at
-          | date:'dd/MM/yyyy HH:mm'
-      }}
-
+      {{ entity.cardcom_last_verified_at | date: "dd/MM/yyyy HH:mm" }}
     </div>
-
   </div>
 
   <!-- ERROR -->
@@ -136,12 +90,10 @@
   <div
     class="connection-error"
     *ngIf="
-      entity?.cardcom_connection_status === 'failed'
-      && entity?.cardcom_last_error
-    ">
-
+      entity?.cardcom_connection_status === 'failed' &&
+      entity?.cardcom_last_error
+    "
+  >
     {{ entity.cardcom_last_error }}
-
   </div>
-
 </div>

@@ -28,9 +28,7 @@ import { LoadingOverlayComponent } from '../../../../shared/components/loading-o
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
-import {
-  forkJoin
-} from 'rxjs';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-step-review',
@@ -40,81 +38,55 @@ import {
   styleUrls: ['./step-review.component.css'],
 })
 export class StepReviewComponent {
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
+  private router = inject(Router);
 
-  private router =
-    inject(Router);
-
-  private currentEntityService =
-    inject(CurrentEntityService);
+  private currentEntityService = inject(CurrentEntityService);
 
   @Output()
-  back =
-    new EventEmitter<void>();
+  back = new EventEmitter<void>();
 
   @Output()
-  submit =
-    new EventEmitter<void>();
+  submit = new EventEmitter<void>();
 
-  campaignTypes =
-    CAMPAIGN_TYPES;
+  campaignTypes = CAMPAIGN_TYPES;
 
-  private readonly stateService =
-    inject(OrganizationRegistrationStateService);
+  private readonly stateService = inject(OrganizationRegistrationStateService);
 
   protected readonly state = this.stateService.state;
 
   get entityConfig(): EntityConfig {
-
     return (
-      ENTITY_CONFIGS[
-        this.state().entityType as EntityType
-      ] ||
+      ENTITY_CONFIGS[this.state().entityType as EntityType] ||
       ENTITY_CONFIGS.association
     );
   }
 
   get certificateFileUrl(): string {
+    return this.state().certificateFileUrl;
+  }
 
-  return this.state()
-    .certificateFileUrl;
-}
-
-get certificateFileName(): string {
-
-  return this.state()
-    .certificateFileName;
-}
-get section46FileUrl(): string {
-
-  return this.state()
-    .section46FileUrl;
-}
+  get certificateFileName(): string {
+    return this.state().certificateFileName;
+  }
+  get section46FileUrl(): string {
+    return this.state().section46FileUrl;
+  }
 
   get section46FileName(): string {
-
-  return this.state()
-    .section46FileName;
-}
+    return this.state().section46FileName;
+  }
   // =========================================================
   // HELPERS
   // =========================================================
 
-  getCampaignTypeLabel(
-    id: string
-  ): string {
-
-    return this.campaignTypes.find(
-      (x) => x.id === id
-    )?.title || id;
+  getCampaignTypeLabel(id: string): string {
+    return this.campaignTypes.find((x) => x.id === id)?.title || id;
   }
 
   get maskedCardNumber(): string {
-
-    const raw =
-      this.state().cardNumber?.replace(/\s/g, '');
+    const raw = this.state().cardNumber?.replace(/\s/g, '');
 
     if (!raw) {
       return '-';
@@ -124,11 +96,7 @@ get section46FileUrl(): string {
   }
 
   get paymentMethodLabel(): string {
-
-    if (
-      this.state().paymentMethod === 'masav'
-    ) {
-
+    if (this.state().paymentMethod === 'masav') {
       return 'הוראת קבע / מס"ב';
     }
 
@@ -252,39 +220,27 @@ get section46FileUrl(): string {
   // =========================================================
 
   get registrationCertificateUploaded(): boolean {
-
-    return !!this.state()
-      .certificateFileUrl;
+    return !!this.state().certificateFileUrl;
   }
 
   get section46Uploaded(): boolean {
-
-    return !!this.state()
-      .section46FileUrl;
+    return !!this.state().section46FileUrl;
   }
 
   get associationCertificateUrl(): string {
-
-    return this.state()
-      .certificateFileUrl;
+    return this.state().certificateFileUrl;
   }
 
   get associationCertificateName(): string {
-
-    return this.state()
-      .certificateFileName;
+    return this.state().certificateFileName;
   }
 
   get taxDocumentUrl(): string {
-
-    return this.state()
-      .section46FileUrl;
+    return this.state().section46FileUrl;
   }
 
   get taxDocumentName(): string {
-
-    return this.state()
-      .section46FileName;
+    return this.state().section46FileName;
   }
 
   // =========================================================
@@ -292,9 +248,7 @@ get section46FileUrl(): string {
   // =========================================================
 
   get isProfileComplete(): boolean {
-
     return !!(
-
       this.state().entityType &&
       this.organizationName &&
       this.organizationNumber &&
@@ -302,7 +256,6 @@ get section46FileUrl(): string {
       this.email &&
       this.phone &&
       this.organizationDescription
-
     );
   }
 
@@ -311,366 +264,221 @@ get section46FileUrl(): string {
   success = false;
 
   submitApplication(): void {
+    if (this.loading) {
+      return;
+    }
 
-  if (this.loading) {
-    return;
-  }
+    this.loading = true;
 
-  this.loading = true;
+    console.log('REVIEW STATE', this.state());
 
-  console.log(
-    'REVIEW STATE',
-    this.state()
-  );
+    console.log({
+      monthlyGoal: this.state().monthlyGoal,
 
-  console.log({
+      yearlyGoal: this.state().yearlyGoal,
+    });
 
-    monthlyGoal:
-      this.state().monthlyGoal,
+    const payload = {
+      // =========================
+      // BASIC
+      // =========================
 
-    yearlyGoal:
-      this.state().yearlyGoal
+      entity_type: this.state().entityType,
 
-  });
+      legal_name: this.organizationName,
 
-  const payload = {
+      display_name: this.displayName,
 
-    // =========================
-    // BASIC
-    // =========================
+      registration_number: this.organizationNumber,
 
-    entity_type:
-      this.state().entityType,
+      email: this.email,
 
-    legal_name:
-      this.organizationName,
+      phone: this.phone,
 
-    display_name:
-      this.displayName,
+      website: null,
 
-    registration_number:
-      this.organizationNumber,
+      description: this.organizationDescription,
 
-    email:
-      this.email,
+      // IMPORTANT:
+      // do not save blob url
 
-    phone:
-      this.phone,
+      logo_url: null,
 
-    website:
-      null,
+      is_profile_complete: this.isProfileComplete,
 
-    description:
-      this.organizationDescription,
+      primary_category: this.state().primaryCategory,
 
-    // IMPORTANT:
-    // do not save blob url
+      secondary_categories: this.state().selectedCategories,
 
-    logo_url:
-      null,
+      campaign_types: this.state().selectedCampaignTypes,
 
-    is_profile_complete:
-      this.isProfileComplete,
+      // =========================
+      // GOALS
+      // =========================
 
-    primary_category:
-      this.state().primaryCategory,
+      monthly_goal: this.state().monthlyGoal,
 
-    secondary_categories:
-      this.state().selectedCategories,
+      yearly_goal: this.state().yearlyGoal,
 
-    campaign_types:
-      this.state().selectedCampaignTypes,
+      // =========================
+      // CARDCOM
+      // =========================
 
-    // =========================
-    // GOALS
-    // =========================
+      billing_provider: this.state().provider,
 
-    monthly_goal:
-      this.state().monthlyGoal,
+      billing_skip_setup: this.state().useExistingTerminal,
 
-    yearly_goal:
-      this.state().yearlyGoal,
+      cardcom_terminal_number: this.state().terminalNumber,
 
-    // =========================
-    // CARDCOM
-    // =========================
+      cardcom_api_username: this.state().apiUsername,
 
-    billing_provider:
-      this.state().provider,
+      cardcom_api_password_encrypted: this.state().apiPassword,
 
-    billing_skip_setup:
-      this.state().useExistingTerminal,
-
-    cardcom_terminal_number:
-      this.state().terminalNumber,
-
-    cardcom_api_username:
-      this.state().apiUsername,
-
-    cardcom_api_password_encrypted:
-      this.state().apiPassword,
-
-    cardcom_connection_status:
-
-      this.state().useExistingTerminal
-
+      cardcom_connection_status: this.state().useExistingTerminal
         ? 'skipped'
-
         : this.state().connectionSuccess
-
           ? 'success'
-
           : 'not_tested',
 
-    // BILLING
-    billing_method:
-      this.state().paymentMethod,
+      // BILLING
+      billing_method: this.state().paymentMethod,
 
-    billing_holder_name:
-      this.state().cardHolderName,
+      billing_holder_name: this.state().cardHolderName,
 
-    billing_card_last4:
-
-      this.state().cardNumber
-
-        ? this.state()
-            .cardNumber
-            .replace(/\s/g, '')
-            .slice(-4)
-
+      billing_card_last4: this.state().cardNumber
+        ? this.state().cardNumber.replace(/\s/g, '').slice(-4)
         : null,
 
-    billing_card_expiry:
-      this.state().expiry,
+      billing_card_expiry: this.state().expiry,
 
-    billing_masav_file_name:
-      this.state().masavFileName,
+      billing_masav_file_name: this.state().masavFileName,
 
-    billing_status:
+      billing_status: this.state().continueLater ? 'pending' : 'active',
 
-      this.state().continueLater
+      // =========================
+      // CONTACT
+      // =========================
 
-        ? 'pending'
+      contact_full_name: this.fullName,
 
-        : 'active',
+      contact_phone: this.phone,
 
-    // =========================
-    // CONTACT
-    // =========================
+      contact_email: this.email,
 
-    contact_full_name:
-      this.fullName,
+      // =========================
+      // DOCUMENTS
+      // =========================
 
-    contact_phone:
-      this.phone,
+      association_certificate_url: this.certificateFileUrl,
 
-    contact_email:
-      this.email,
+      association_certificate_name: this.certificateFileName,
 
-    // =========================
-    // DOCUMENTS
-    // =========================
+      tax_document_url: this.section46FileUrl,
 
-    association_certificate_url:
-      this.certificateFileUrl,
+      tax_document_name: this.section46FileName,
+    };
 
-    association_certificate_name:
-      this.certificateFileName,
+    console.log('FINAL PAYLOAD', payload);
 
-    tax_document_url:
-      this.section46FileUrl,
-
-    tax_document_name:
-      this.section46FileName
-
-  };
-
-  console.log(
-    'FINAL PAYLOAD',
-    payload
-  );
-
-  this.entitiesService
-    .createEntity(payload)
-    .subscribe({
-
+    this.entitiesService.createEntity(payload).subscribe({
       next: (res) => {
-
-        const entityId =
-          res.entity.id;
+        const entityId = res.entity.id;
 
         const uploads = [];
 
         if (this.state().certificateFile) {
-
           uploads.push(
+            this.entitiesService.uploadAssociationDocument(
+              entityId,
 
-            this.entitiesService
-              .uploadAssociationDocument(
-
-                entityId,
-
-                this.state().certificateFile!
-
-              )
-
+              this.state().certificateFile!,
+            ),
           );
-
         }
 
         if (this.state().section46File) {
-
           uploads.push(
+            this.entitiesService.uploadTaxDocument(
+              entityId,
 
-            this.entitiesService
-              .uploadTaxDocument(
-
-                entityId,
-
-                this.state().section46File!
-
-              )
-
+              this.state().section46File!,
+            ),
           );
-
         }
 
         if (this.state().logoFile) {
-
           uploads.push(
+            this.entitiesService.uploadLogo(
+              entityId,
 
-            this.entitiesService
-              .uploadLogo(
-
-                entityId,
-
-                this.state().logoFile!
-
-              )
-
+              this.state().logoFile!,
+            ),
           );
-
         }
 
         if (!uploads.length) {
-
-          this.finishRegistration(
-            res.entity
-          );
+          this.finishRegistration(res.entity);
 
           return;
         }
 
-        forkJoin(uploads)
-          .subscribe({
+        forkJoin(uploads).subscribe({
+          next: (results: any[]) => {
+            console.log('UPLOAD RESULTS', results);
 
-            next: (results: any[]) => {
+            const updatedEntity = {
+              ...res.entity,
 
-              console.log(
-                'UPLOAD RESULTS',
-                results
-              );
+              logo_url:
+                results.find((r) => r?.result?.logo_url)?.result?.logo_url ||
+                res.entity.logo_url,
 
-              const updatedEntity = {
+              association_certificate_url:
+                results.find((r) => r?.result?.association_certificate_url)
+                  ?.result?.association_certificate_url ||
+                res.entity.association_certificate_url,
 
-                ...res.entity,
+              tax_document_url:
+                results.find((r) => r?.result?.tax_document_url)?.result
+                  ?.tax_document_url || res.entity.tax_document_url,
+            };
 
-                logo_url:
+            console.log('UPDATED ENTITY', updatedEntity);
 
-                  results.find(
-                    r => r?.result?.logo_url
-                  )?.result?.logo_url
+            this.finishRegistration(updatedEntity);
+          },
 
-                  || res.entity.logo_url,
+          error: (err) => {
+            console.error('UPLOAD ERROR', err);
 
-                association_certificate_url:
-
-                  results.find(
-                    r => r?.result?.association_certificate_url
-                  )?.result?.association_certificate_url
-
-                  || res.entity.association_certificate_url,
-
-                tax_document_url:
-
-                  results.find(
-                    r => r?.result?.tax_document_url
-                  )?.result?.tax_document_url
-
-                  || res.entity.tax_document_url
-
-              };
-
-              console.log(
-                'UPDATED ENTITY',
-                updatedEntity
-              );
-
-              this.finishRegistration(
-                updatedEntity
-              );
-
-            },
-
-            error: (err) => {
-
-              console.error(
-                'UPLOAD ERROR',
-                err
-              );
-
-              this.loading = false;
-
-            }
-
-          });
-
+            this.loading = false;
+          },
+        });
       },
 
       error: (err) => {
-
-        console.error(
-          'CREATE ENTITY ERROR',
-          err
-        );
+        console.error('CREATE ENTITY ERROR', err);
 
         this.loading = false;
-
-      }
-
+      },
     });
+  }
 
-}
+  private finishRegistration(entity: any): void {
+    localStorage.setItem('currentEntity', JSON.stringify(entity));
 
- private finishRegistration(
-  entity: any
-    ): void {
+    this.currentEntityService.currentEntity.set(entity);
 
-      localStorage.setItem(
-        'currentEntity',
-        JSON.stringify(entity)
-      );
+    this.currentEntityService.currentRole.set('owner');
 
-      this.currentEntityService
-        .currentEntity
-        .set(entity);
+    this.loading = false;
 
-      this.currentEntityService
-        .currentRole
-        .set('owner');
+    this.success = true;
 
-      this.loading = false;
+    console.log('FINISH');
 
-      this.success = true;
-
-      console.log('FINISH');
-
-      setTimeout(() => {
-
-        this.router.navigate([
-          '/campaigns'
-        ]);
-
-      }, 1800);
-    }
+    setTimeout(() => {
+      this.router.navigate(['/campaigns']);
+    }, 1800);
+  }
 }

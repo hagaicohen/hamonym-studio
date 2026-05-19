@@ -192,28 +192,20 @@
 
         <div class="chips-title">קטגוריות נוספות (אופציונלי)</div>
 
-       <div class="chips">
-
-  @for (category of categories; track category.id) {
-
-    @if (category.id !== primaryCategory) {
-
-      <button
-        type="button"
-        class="chip"
-        [class.active]="selectedCategories.includes(category.id)"
-        (click)="toggleCategory(category.id)"
-      >
-
-        {{ category.label }}
-
-      </button>
-
-    }
-
-  }
-
-</div>
+        <div class="chips">
+          @for (category of categories; track category.id) {
+            @if (category.id !== primaryCategory) {
+              <button
+                type="button"
+                class="chip"
+                [class.active]="selectedCategories.includes(category.id)"
+                (click)="toggleCategory(category.id)"
+              >
+                {{ category.label }}
+              </button>
+            }
+          }
+        </div>
       </div>
 
       <!-- CONTACT -->

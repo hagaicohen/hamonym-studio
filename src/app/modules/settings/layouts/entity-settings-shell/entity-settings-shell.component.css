@@ -1,5 +1,4 @@
 :host {
-
   display: block;
 
   width: 100%;
@@ -10,7 +9,6 @@
 }
 html,
 body {
-
   width: 100%;
 
   margin: 0;
@@ -23,7 +21,6 @@ body {
 ========================= */
 
 .entity-settings-shell {
-
   display: flex;
 
   width: 100%;
@@ -42,7 +39,6 @@ body {
 ========================= */
 
 .sidebar {
-
   width: 320px;
 
   min-width: 320px;
@@ -69,7 +65,6 @@ body {
 ========================= */
 
 .entity-header {
-
   display: flex;
 
   align-items: center;
@@ -80,7 +75,6 @@ body {
 }
 
 .entity-avatar {
-
   width: 58px;
 
   height: 58px;
@@ -105,7 +99,6 @@ body {
 }
 
 .entity-info {
-
   display: flex;
 
   flex-direction: column;
@@ -116,7 +109,6 @@ body {
 }
 
 .entity-name {
-
   font-size: 18px;
 
   font-weight: 700;
@@ -131,7 +123,6 @@ body {
 }
 
 .entity-meta {
-
   display: flex;
 
   align-items: center;
@@ -144,12 +135,10 @@ body {
 }
 
 .dot {
-
   opacity: 0.5;
 }
 
 .status {
-
   color: #059669;
 
   font-weight: 600;
@@ -160,7 +149,6 @@ body {
 ========================= */
 
 .sidebar-menu {
-
   display: flex;
 
   flex-direction: column;
@@ -171,7 +159,6 @@ body {
 }
 
 .menu-item {
-
   height: 52px;
 
   border-radius: 14px;
@@ -194,12 +181,10 @@ body {
 }
 
 .menu-item:hover {
-
   background: #f3f4f6;
 }
 
 .menu-item.active {
-
   background: #eff6ff;
 
   color: #2563eb;
@@ -208,7 +193,6 @@ body {
 }
 
 .menu-icon {
-
   width: 22px;
 
   display: flex;
@@ -221,7 +205,6 @@ body {
 }
 
 .menu-label {
-
   font-size: 15px;
 
   white-space: nowrap;
@@ -236,7 +219,6 @@ body {
 ========================= */
 
 .content-area {
-
   flex: 1 1 0;
 
   min-width: 0;
@@ -259,14 +241,11 @@ body {
 ========================= */
 
 @media (max-width: 900px) {
-
   .entity-settings-shell {
-
     flex-direction: column;
   }
 
   .sidebar {
-
     width: 100%;
 
     min-width: 0;
@@ -279,7 +258,6 @@ body {
   }
 
   .sidebar-menu {
-
     display: flex;
 
     flex-wrap: wrap;
@@ -288,14 +266,12 @@ body {
   }
 
   .menu-item {
-
     flex: 1 1 calc(50% - 8px);
 
     min-width: 0;
   }
 
   .content-area {
-
     width: 100%;
 
     max-width: 100%;
@@ -304,5 +280,4 @@ body {
 
     padding: 12px;
   }
-
 }

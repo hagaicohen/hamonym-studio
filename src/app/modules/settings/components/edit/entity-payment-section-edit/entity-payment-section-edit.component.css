@@ -1,5 +1,10 @@
-.settings-card {
+.section-title-row{
+   display: flex;
+   align-items: center;
+   gap: 10px;
+}
 
+.settings-card {
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
@@ -16,12 +21,10 @@
 /* HEADER */
 
 .card-top {
-
   margin-bottom: 28px;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 700;
@@ -34,7 +37,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -49,17 +51,14 @@
 /* FIELD */
 
 .field-block {
-
   width: 100%;
 }
 
 .field-block + .field-block {
-
   margin-top: 20px;
 }
 
 .field-block label {
-
   display: block;
 
   margin-bottom: 10px;
@@ -76,7 +75,6 @@
 /* INPUTS */
 
 .base-input {
-
   width: 100%;
 
   height: 50px;
@@ -104,7 +102,6 @@
 }
 
 .base-input:focus {
-
   outline: none;
 
   border-color: #2563eb;
@@ -113,14 +110,12 @@
 }
 
 .base-input::placeholder {
-
   color: #94a3b8;
 }
 
 /* SELECT */
 
 select.base-input {
-
   appearance: none;
 
   cursor: pointer;
@@ -129,7 +124,6 @@ select.base-input {
 /* SKIP BOX */
 
 .existing-terminal-box {
-
   margin-top: 24px;
 
   margin-bottom: 24px;
@@ -144,7 +138,6 @@ select.base-input {
 }
 
 .checkbox-row {
-
   display: flex;
 
   align-items: center;
@@ -163,7 +156,6 @@ select.base-input {
 }
 
 .checkbox-row input {
-
   width: 16px;
 
   height: 16px;
@@ -176,7 +168,6 @@ select.base-input {
 /* STATUS */
 
 .connection-status {
-
   display: inline-flex;
 
   align-items: center;
@@ -195,28 +186,24 @@ select.base-input {
 }
 
 .connection-status.success {
-
   background: #dcfce7;
 
   color: #166534;
 }
 
 .connection-status.failed {
-
   background: #fee2e2;
 
   color: #991b1b;
 }
 
 .connection-status.not-tested {
-
   background: #f1f5f9;
 
   color: #475569;
 }
 
 .connection-status.skipped {
-
   background: #fef3c7;
 
   color: #92400e;
@@ -225,7 +212,6 @@ select.base-input {
 /* ERROR */
 
 .connection-error {
-
   margin-top: 18px;
 
   padding: 14px 16px;
@@ -250,7 +236,6 @@ select.base-input {
 /* TEST BUTTON */
 
 .test-connection-btn {
-
   width: 100%;
 
   height: 48px;
@@ -278,19 +263,16 @@ select.base-input {
 }
 
 .test-connection-btn:hover {
-
   background: #f8fafc;
 
   border-color: #94a3b8;
 }
 
 .test-connection-btn:active {
-
   transform: scale(0.98);
 }
 
 .test-connection-btn:disabled {
-
   opacity: 0.7;
 
   cursor: not-allowed;
@@ -299,7 +281,6 @@ select.base-input {
 /* ACTIONS */
 
 .actions-row {
-
   display: flex;
 
   justify-content: flex-end;
@@ -312,7 +293,6 @@ select.base-input {
 /* BUTTONS */
 
 .primary-btn {
-
   height: 48px;
 
   padding: 0 24px;
@@ -337,24 +317,20 @@ select.base-input {
 }
 
 .primary-btn:hover {
-
   opacity: 0.92;
 }
 
 .primary-btn:active {
-
   transform: scale(0.98);
 }
 
 .primary-btn:disabled {
-
   opacity: 0.5;
 
   cursor: not-allowed;
 }
 
 .ghost-btn {
-
   height: 48px;
 
   padding: 0 22px;
@@ -380,30 +356,25 @@ select.base-input {
 }
 
 .ghost-btn:hover {
-
   background: #f8fafc;
 
   border-color: #cbd5e1;
 }
 
 .ghost-btn:active {
-
   transform: scale(0.98);
 }
 
 /* MOBILE */
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 20px;
 
     border-radius: 20px;
   }
 
   .actions-row {
-
     flex-direction: column-reverse;
 
     align-items: stretch;
@@ -411,7 +382,154 @@ select.base-input {
 
   .primary-btn,
   .ghost-btn {
-
     width: 100%;
   }
+}
+
+
+/* SPINNER FOR TEST CARDCOM */
+.test-connection-btn {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  min-height: 44px;
+
+  padding: 0 18px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.15s ease;
+}
+
+.test-connection-btn:hover:not(:disabled) {
+
+  background: #1d4ed8;
+}
+
+.test-connection-btn:active:not(:disabled) {
+
+  transform: translateY(1px);
+}
+
+.test-connection-btn:disabled {
+
+  opacity: 0.7;
+
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+
+  width: 16px;
+
+  height: 16px;
+
+  display: inline-block;
+
+  border-radius: 50%;
+
+  border: 2px solid rgba(255,255,255,0.35);
+
+  border-top-color: #ffffff;
+
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.connection-success {
+
+  margin-top: 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color: #15803d;
+
+  font-size: 14px;
+
+  font-weight: 500;
+}
+
+.connection-error {
+
+  margin-top: 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color: #dc2626;
+
+  font-size: 14px;
+
+  font-weight: 500;
+}
+
+.status-icon {
+
+  width: 20px;
+
+  height: 20px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 50%;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.success-icon {
+
+  background: rgba(34,197,94,0.12);
+
+  color: #15803d;
+}
+
+.error-icon {
+
+  background: rgba(239,68,68,0.12);
+
+  color: #dc2626;
 }

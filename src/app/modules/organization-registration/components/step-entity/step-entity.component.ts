@@ -26,7 +26,7 @@ export class StepEntityComponent {
 
   entityConfigs = ENTITY_CONFIGS;
 
-  categories = ENTITY_CATEGORIES; 
+  categories = ENTITY_CATEGORIES;
 
   constructor(
     private readonly stateService: OrganizationRegistrationStateService,
@@ -178,7 +178,7 @@ export class StepEntityComponent {
   }
 
   get section46File(): File | null {
-  return this.stateService.state().section46File;
+    return this.stateService.state().section46File;
   }
 
   set section46File(value: File | null) {
@@ -188,24 +188,17 @@ export class StepEntityComponent {
   }
 
   toggleCategory(categoryId: string): void {
-
-    const exists =
-      this.selectedCategories.includes(categoryId);
+    const exists = this.selectedCategories.includes(categoryId);
 
     if (exists) {
-
-      this.selectedCategories =
-        this.selectedCategories.filter(
-          (c) => c !== categoryId,
-        );
+      this.selectedCategories = this.selectedCategories.filter(
+        (c) => c !== categoryId,
+      );
 
       return;
     }
 
-    this.selectedCategories = [
-      ...this.selectedCategories,
-      categoryId
-    ];
+    this.selectedCategories = [...this.selectedCategories, categoryId];
   }
 
   onPhoneInput(event: Event): void {
