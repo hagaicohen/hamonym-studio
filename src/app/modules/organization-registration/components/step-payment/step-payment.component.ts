@@ -125,7 +125,7 @@ testConnection(): void {
   this.connectionAttempted = true;
 
   this.http.post<any>(
-    `${environment.apiUrl}/api/payment/cardcom/test-connection`,
+    `${environment.apiUrl}/api/billing/cardcom/test-connection`,
     {
       terminalNumber:
         this.terminalNumber,

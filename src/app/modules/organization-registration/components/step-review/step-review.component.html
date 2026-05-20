@@ -453,13 +453,16 @@
     }
   </div>
 
-  <!-- ===================================================== -->
-  <!-- BILLING METHOD -->
-  <!-- ===================================================== -->
+<!-- ===================================================== -->
+<!-- BILLING METHOD -->
+<!-- ===================================================== -->
 
   <div class="summary-card">
+
     <div class="summary-card-header">
+
       <div class="summary-card-icon purple">
+
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -467,118 +470,239 @@
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+          stroke-linejoin="round">
 
-          <line x1="2" x2="22" y1="10" y2="10"></line>
+          <rect
+            width="20"
+            height="14"
+            x="2"
+            y="5"
+            rx="2">
+          </rect>
+
+          <line
+            x1="2"
+            x2="22"
+            y1="10"
+            y2="10">
+          </line>
+
         </svg>
+
       </div>
 
       <div>
-        <div class="summary-card-title">אמצעי גבייה לעמלות</div>
+
+        <div class="summary-card-title">
+
+          אמצעי גבייה לעמלות
+
+        </div>
+
       </div>
+
     </div>
 
     @if (continueLater) {
+
       <div class="billing-later-box">
+
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
-        >
-          <circle cx="12" cy="12" r="10"></circle>
+          stroke-width="2">
+
+          <circle
+            cx="12"
+            cy="12"
+            r="10">
+          </circle>
 
           <path d="M12 8v4"></path>
 
           <path d="M12 16h.01"></path>
+
         </svg>
 
-        <span> השלמת אמצעי הגבייה תתבצע בהמשך </span>
-      </div>
-    }
+        <span>
 
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-label">סוג אמצעי גבייה</div>
+          השלמת אמצעי הגבייה תתבצע בהמשך
 
-        <div class="summary-value">
-          {{ paymentMethodLabel }}
-        </div>
+        </span>
+
       </div>
 
-      @if (paymentMethod === "credit-card") {
+    } @else {
+
+      <div class="summary-grid">
+
         <div class="summary-item">
-          <div class="summary-label">שם בעל הכרטיס</div>
+
+          <div class="summary-label">
+
+            סוג אמצעי גבייה
+
+          </div>
 
           <div class="summary-value">
-            {{ cardHolderName || "-" }}
+
+            {{ paymentMethodLabel }}
+
           </div>
+
         </div>
 
-        <div class="summary-item">
-          <div class="summary-label">מספר כרטיס</div>
+        @if (paymentMethod === 'credit-card') {
 
-          <div class="summary-value card-number-value">
-            {{ maskedCardNumber }}
+          <div class="summary-item">
+
+            <div class="summary-label">
+
+              ספק
+
+            </div>
+
+            <div class="summary-value">
+
+              CardCom
+
+            </div>
+
           </div>
-        </div>
 
-        <div class="summary-item">
-          <div class="summary-label">תוקף</div>
+          <div class="summary-item">
 
-          <div class="summary-value">
-            {{ expiry || "-" }}
-          </div>
-        </div>
-      }
+            <div class="summary-label">
 
-      @if (paymentMethod === "masav") {
-        <div class="summary-item full-width">
-          <div class="summary-label">טופס מס"ב</div>
+              סטטוס כרטיס
 
-          @if (masavUploaded) {
+            </div>
+
             <div class="document-status success">
+
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="10"></circle>
+                stroke-width="2">
+
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10">
+                </circle>
 
                 <path d="m9 12 2 2 4-4"></path>
+
               </svg>
 
               <span>
-                {{ masavFileName }}
+
+                כרטיס נשמר בהצלחה
+
               </span>
+
             </div>
-          } @else {
-            <div class="document-status warning">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="10"></circle>
 
-                <path d="M12 8v4"></path>
+          </div>
 
-                <path d="M12 16h.01"></path>
-              </svg>
+          <div class="summary-item">
 
-              <span> טרם הועלה טופס מס"ב חתום </span>
+            <div class="summary-label">
+
+              4 ספרות אחרונות
+
             </div>
-          }
-        </div>
-      }
-    </div>
+
+            
+          </div>
+
+
+        }
+
+        @if (paymentMethod === 'masav') {
+
+          <div class="summary-item full-width">
+
+            <div class="summary-label">
+
+              טופס מס"ב
+
+            </div>
+
+            @if (masavUploaded) {
+
+              <div class="document-status success">
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2">
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10">
+                  </circle>
+
+                  <path d="m9 12 2 2 4-4"></path>
+
+                </svg>
+
+                <span>
+
+                  {{ masavFileName }}
+
+                </span>
+
+              </div>
+
+            } @else {
+
+              <div class="document-status warning">
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2">
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10">
+                  </circle>
+
+                  <path d="M12 8v4"></path>
+
+                  <path d="M12 16h.01"></path>
+
+                </svg>
+
+                <span>
+
+                  טרם הועלה טופס מס"ב חתום
+
+                </span>
+
+              </div>
+
+            }
+
+          </div>
+
+        }
+
+      </div>
+
+    }
+
   </div>
 
   <!-- INFO BOX -->

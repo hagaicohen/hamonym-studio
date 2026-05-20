@@ -1,0 +1,82 @@
+<div class="billing-form">
+
+  <!-- MASTER -->
+
+  <iframe
+    id="CardComMasterFrame"
+    name="CardComMasterFrame"
+    src="https://secure.cardcom.solutions/api/openfields/master"
+    class="master-frame">
+  </iframe>
+
+  <!-- CARD -->
+
+  <div class="field">
+
+    <label>
+      מספר כרטיס
+    </label>
+
+    <iframe
+      id="CardComCardNumber"
+      name="CardComCardNumber"
+      src="https://secure.cardcom.solutions/api/openfields/cardNumber"
+      class="cardcom-field-frame">
+    </iframe>
+
+  </div>
+
+  <!-- EXP -->
+
+  <div class="field-row">
+
+    <div class="field">
+
+      <label>
+        חודש
+      </label>
+
+      <input
+        class="exp-input"
+        id="expirationMonth"
+        type="text"
+        value="05"
+        maxlength="2">
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        שנה
+      </label>
+
+      <input
+        class="exp-input"
+        id="expirationYear"
+        type="text"
+        value="29"
+        maxlength="2">
+
+    </div>
+
+  </div>
+
+  <!-- CVV -->
+
+  <div class="field">
+
+    <label>
+      CVV
+    </label>
+
+    <iframe
+      id="CardComCvv"
+      name="CardComCvv"
+      src="https://secure.cardcom.solutions/api/openfields/CVV"
+      class="cardcom-field-frame">
+    </iframe>
+
+  </div>
+
+</div>

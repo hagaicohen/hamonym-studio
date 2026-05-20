@@ -84,6 +84,10 @@ export interface OrganizationRegistrationState {
   masavFileName: string;
 
   continueLater: boolean;
+
+  cardcomLowProfileId?: string;
+
+  cardcomInternalDealNumber?: number;
 }
 
 const initialState: OrganizationRegistrationState = {
@@ -168,6 +172,11 @@ const initialState: OrganizationRegistrationState = {
   masavFileName: '',
 
   continueLater: false,
+
+  cardcomLowProfileId: '',
+
+  cardcomInternalDealNumber: 0
+
 };
 
 @Injectable({

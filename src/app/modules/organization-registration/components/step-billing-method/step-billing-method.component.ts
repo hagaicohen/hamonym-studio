@@ -1,38 +1,75 @@
-// step-billing-method.component.ts
+import {
+  Component,
+  EventEmitter,
+  Output,
+  ViewChild,
+  inject
+} from '@angular/core';
 
-import { Component, EventEmitter, Output } from '@angular/core';
+import {
+  CommonModule
+} from '@angular/common';
 
-import { CommonModule } from '@angular/common';
+import {
+  FormsModule
+} from '@angular/forms';
 
-import { FormsModule } from '@angular/forms';
+import {
+  OrganizationRegistrationStateService
+} from '../../services/organization-registration-state.service';
 
-import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
+import {
+  OpenfieldsFormComponent
+} from '../../../billing/components/openfields-form/openfields-form.component';
 
-type PaymentMethod = 'credit-card' | 'masav';
+type PaymentMethod =
+  'credit-card' |
+  'masav';
 
 @Component({
-  selector: 'app-step-billing-method',
+  selector:
+    'app-step-billing-method',
+
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './step-billing-method.component.html',
-  styleUrls: ['./step-billing-method.component.css'],
+
+  imports: [
+
+    CommonModule,
+
+    FormsModule,
+
+    OpenfieldsFormComponent
+
+  ],
+
+  templateUrl:
+    './step-billing-method.component.html',
+
+  styleUrls: [
+    './step-billing-method.component.css'
+  ],
 })
 export class StepBillingMethodComponent {
-  @Output()
-  back = new EventEmitter<void>();
 
   @Output()
-  continue = new EventEmitter<void>();
+  back =
+    new EventEmitter<void>();
 
-  paymentMethod: PaymentMethod = 'credit-card';
+  @Output()
+  continue =
+    new EventEmitter<void>();
 
-  cardHolderName = '';
+  @ViewChild(OpenfieldsFormComponent)
+  openfieldsForm?: OpenfieldsFormComponent;
 
-  cardNumber = '';
+  readonly stateService =
+    inject(
+      OrganizationRegistrationStateService
+    );
 
-  expiry = '';
-
-  cvv = '';
+  paymentMethod:
+    PaymentMethod =
+      'credit-card';
 
   masavUploaded = false;
 
@@ -44,200 +81,187 @@ export class StepBillingMethodComponent {
 
   saveCompleted = false;
 
-  constructor(
-    private readonly stateService: OrganizationRegistrationStateService,
-  ) {
-    const state = this.stateService.state();
+  constructor() {
 
-    this.paymentMethod = state.paymentMethod as PaymentMethod;
+    const state =
+      this.stateService.state();
 
-    this.cardHolderName = state.cardHolderName;
+    this.paymentMethod =
+      state.paymentMethod as PaymentMethod;
 
-    this.cardNumber = state.cardNumber;
+    this.masavUploaded =
+      state.masavUploaded;
 
-    this.expiry = state.expiry;
+    this.masavFileName =
+      state.masavFileName;
 
-    this.cvv = state.cvv;
+    this.continueLater =
+      state.continueLater;
 
-    this.masavUploaded = state.masavUploaded;
-
-    this.masavFileName = state.masavFileName;
-
-    this.continueLater = state.continueLater;
   }
 
   private syncState(): void {
+
     this.stateService.updateState({
-      paymentMethod: this.paymentMethod,
 
-      cardHolderName: this.cardHolderName,
+      paymentMethod:
+        this.paymentMethod,
 
-      cardNumber: this.cardNumber,
+      masavUploaded:
+        this.masavUploaded,
 
-      expiry: this.expiry,
+      masavFileName:
+        this.masavFileName,
 
-      cvv: this.cvv,
+      continueLater:
+        this.continueLater,
 
-      masavUploaded: this.masavUploaded,
-
-      masavFileName: this.masavFileName,
-
-      continueLater: this.continueLater,
     });
+
   }
 
   get isCreditCard(): boolean {
-    return this.paymentMethod === 'credit-card';
+
+    return this.paymentMethod ===
+      'credit-card';
+
   }
 
   get isMasav(): boolean {
-    return this.paymentMethod === 'masav';
-  }
 
-  get isCreditCardValid(): boolean {
-    return !!(
-      this.cardHolderName.trim().length > 2 &&
-      this.cardNumber.replace(/\s/g, '').length >= 16 &&
-      this.expiry.trim().length >= 4 &&
-      this.cvv.trim().length >= 3
-    );
+    return this.paymentMethod ===
+      'masav';
+
   }
 
   get canContinue(): boolean {
+
     if (this.continueLater) {
       return true;
     }
 
     if (this.isCreditCard) {
-      return this.isCreditCardValid;
+
+      return true;
+
     }
 
     if (this.isMasav) {
+
       return this.masavUploaded;
+
     }
 
     return false;
+
   }
 
   get submitButtonText(): string {
+
     if (this.isSaving) {
+
       return 'ממשיך...';
+
     }
 
-    if (this.continueLater) {
-      return 'המשך';
-    }
+    return 'המשך';
 
-    return 'שמור והמשך';
   }
 
-  selectPaymentMethod(method: PaymentMethod): void {
-    this.paymentMethod = method;
+  selectPaymentMethod(
+    method: PaymentMethod
+  ): void {
+
+    this.paymentMethod =
+      method;
 
     this.syncState();
 
     this.resetState();
+
   }
 
-  savePaymentMethod(): void {
+  async savePaymentMethod(): Promise<void> {
+
+    if (
+      this.isSaving
+    ) {
+      return;
+    }
+
     if (!this.canContinue) {
       return;
     }
 
     this.isSaving = true;
 
-    setTimeout(() => {
-      this.isSaving = false;
+    if (
+      this.isCreditCard &&
+      !this.continueLater
+    ) {
 
-      if (this.continueLater) {
-        this.saveCompleted = false;
+      const success =
 
-        this.syncState();
+        await this.openfieldsForm
+          ?.tokenize();
 
-        this.continue.emit();
+      if (!success) {
+
+        this.isSaving = false;
 
         return;
       }
+    }
 
+      this.isSaving = false;
       this.saveCompleted = true;
+      this.syncState();
+      this.continue.emit();
+    }
+
+    resetState(): void {
+
+      this.saveCompleted =
+        false;
+
+    }
+
+    onMasavFileSelected(
+      event: Event
+    ): void {
+
+      const input =
+        event.target as HTMLInputElement;
+
+      if (!input.files?.length) {
+        return;
+      }
+
+      const file =
+        input.files[0];
+
+      this.masavUploaded =
+        true;
+
+      this.masavFileName =
+        file.name;
 
       this.syncState();
 
-      this.continue.emit();
-    }, 1200);
-  }
+      this.resetState();
 
-  resetState(): void {
-    this.saveCompleted = false;
-  }
-
-  onMasavFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    if (!input.files?.length) {
-      return;
-    }
-
-    const file = input.files[0];
-
-    this.masavUploaded = true;
-
-    this.masavFileName = file.name;
-
-    this.syncState();
-
-    this.resetState();
   }
 
   removeMasavFile(): void {
-    this.masavUploaded = false;
 
-    this.masavFileName = '';
+    this.masavUploaded =
+      false;
 
-    this.syncState();
-  }
-
-  formatCardNumber(): void {
-    const rawValue = this.cardNumber.replace(/\s/g, '').replace(/[^0-9]/gi, '');
-
-    const groups = rawValue.match(/.{1,4}/g);
-
-    this.cardNumber = groups ? groups.join(' ') : '';
+    this.masavFileName =
+      '';
 
     this.syncState();
+
   }
 
-  formatExpiry(): void {
-    const rawValue = this.expiry.replace(/\D/g, '');
-
-    if (rawValue.length >= 3) {
-      this.expiry = rawValue.substring(0, 2) + '/' + rawValue.substring(2, 4);
-
-      this.syncState();
-
-      return;
-    }
-
-    this.expiry = rawValue;
-
-    this.syncState();
-  }
-
-  onlyNumbers(event: KeyboardEvent): void {
-    const allowedKeys = [
-      'Backspace',
-      'ArrowLeft',
-      'ArrowRight',
-      'Tab',
-      'Delete',
-    ];
-
-    if (allowedKeys.includes(event.key)) {
-      return;
-    }
-
-    if (!/^\d$/.test(event.key)) {
-      event.preventDefault();
-    }
-  }
 }
