@@ -10,7 +10,6 @@ exports.getByEntityId =
 
         id,
         provider,
-        card_brand,
         last4,
         exp_month,
         exp_year,
@@ -18,7 +17,7 @@ exports.getByEntityId =
         status,
         created_at
 
-      FROM entity_payment_methods
+      FROM entity_billing
 
       WHERE entity_id = $1
 
@@ -42,40 +41,37 @@ exports.create =
 
     const query = `
 
-      INSERT INTO entity_payment_methods (
+      INSERT INTO entity_billing (
 
-        entity_id,
-        provider,
-        token,
-        card_brand,
-        last4,
-        exp_month,
-        exp_year,
-        card_holder_name,
-        is_default,
-        status
+      entity_id,
+      provider,
+      token,
+      last4,
+      exp_month,
+      exp_year,
+      card_holder_name,
+      is_default,
+      status
 
-      )
+    )
 
-      VALUES (
+    VALUES (
 
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        true,
-        'active'
+      $1,
+      $2,
+      $3,
+      $4,
+      $5,
+      $6,
+      $7,
+      true,
+      'active'
 
-      )
+    )
 
       RETURNING
         id,
         provider,
-        card_brand,
         last4,
         exp_month,
         exp_year,
@@ -92,8 +88,6 @@ exports.create =
       data.provider || 'cardcom',
 
       data.token,
-
-      data.card_brand,
 
       data.last4,
 
@@ -117,7 +111,7 @@ exports.remove =
 
     const query = `
 
-      UPDATE entity_payment_methods
+      UPDATE entity_billing
 
       SET
         status = 'deleted',

@@ -14,12 +14,7 @@ exports.createEntity =
 
       await client.query('BEGIN');
 
-      /*console.log(
-                  'CREATE ENTITY DATA',
-                  data
-                );*/
-
-     const entityResult =
+      const entityResult =
         await client.query(
 
           `
@@ -54,16 +49,6 @@ exports.createEntity =
               monthly_goal,
               yearly_goal,
 
-              billing_provider,
-              billing_skip_setup,
-
-              billing_method,
-              billing_holder_name,
-              billing_card_last4,
-              billing_card_expiry,
-              billing_masav_file_name,
-              billing_status,
-
               cardcom_terminal_number,
               cardcom_api_username,
               cardcom_api_password_encrypted,
@@ -86,25 +71,27 @@ exports.createEntity =
 
             VALUES (
 
-              $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-
-              $11,$12,$13,$14,$15,$16,$17::text[],
+              $1,$2,$3,$4,
+              $5,$6,$7,
+              $8,$9,
+              $10,$11,
+              $12,
+              $13,
+              $14,
+              $15,$16,
+              $17::text[],
 
               $18,$19,
 
-              $20,$21,
+              $20,$21,$22,
 
-              $22,$23,$24,$25,$26,$27,
+              $23,$24,$25,
 
-              $28,$29,$30,
+              $26,$27,$28,
 
-              $31,$32,$33,
+              $29,$30,
 
-              $34,$35,$36,
-
-              $37,$38,
-
-              $39,$40
+              $31,$32
 
             )
 
@@ -162,27 +149,7 @@ exports.createEntity =
             data.yearly_goal,
 
             // =========================
-            // BILLING / SYSTEM CHARGES
-            // =========================
-
-            data.billing_provider,
-
-            data.billing_skip_setup || false,
-
-            data.billing_method,
-
-            data.billing_holder_name,
-
-            data.billing_card_last4,
-
-            data.billing_card_expiry,
-
-            data.billing_masav_file_name,
-
-            data.billing_status || 'pending',
-
-            // =========================
-            // CARDCOM / PAYMENT
+            // CARDCOM
             // =========================
 
             data.cardcom_terminal_number,
@@ -222,11 +189,6 @@ exports.createEntity =
           ]
 
         );
-
-        /*console.log(
-          'CREATED ENTITY',
-          entityResult.rows[0]
-        );*/
 
       const entity =
         entityResult.rows[0];
@@ -310,10 +272,6 @@ exports.uploadAssociationDocument =
     entityId,
     file
   }) => {
-
-    console.log(file);
-
-    console.log(file.buffer.length);
 
     const result =
       await db.query(
@@ -568,36 +526,6 @@ exports.updateEntity =
     }
 
     // =====================================================
-    // BILLING CLEANUP
-    // =====================================================
-
-    if (
-      data.billing_method ===
-      'credit-card'
-    ) {
-
-      data.billing_masav_file_name =
-        null;
-
-    }
-
-    if (
-      data.billing_method ===
-      'masav'
-    ) {
-
-      data.billing_holder_name =
-        null;
-
-      data.billing_card_last4 =
-        null;
-
-      data.billing_card_expiry =
-        null;
-
-    }
-
-    // =====================================================
     // UPDATE
     // =====================================================
 
@@ -629,36 +557,26 @@ exports.updateEntity =
           monthly_goal = $13,
           yearly_goal = $14,
 
-          billing_provider = $15,
-          billing_skip_setup = $16,
+          cardcom_terminal_number = $15,
+          cardcom_api_username = $16,
+          cardcom_api_password_encrypted = $17,
 
-          billing_method = $17,
-          billing_holder_name = $18,
-          billing_card_last4 = $19,
-          billing_card_expiry = $20,
-          billing_masav_file_name = $21,
-          billing_status = $22,
+          cardcom_clearing_company = $18,
+          cardcom_invoice_name = $19,
+          cardcom_invoice_email = $20,
+          cardcom_is_production = $21,
 
-          cardcom_terminal_number = $23,
-          cardcom_api_username = $24,
-          cardcom_api_password_encrypted = $25,
+          cardcom_connection_status = $22,
+          cardcom_last_verified_at = $23,
+          cardcom_last_error = $24,
 
-          cardcom_clearing_company = $26,
-          cardcom_invoice_name = $27,
-          cardcom_invoice_email = $28,
-          cardcom_is_production = $29,
-
-          cardcom_connection_status = $30,
-          cardcom_last_verified_at = $31,
-          cardcom_last_error = $32,
-
-          contact_full_name = $33,
-          contact_phone = $34,
-          contact_email = $35,
+          contact_full_name = $25,
+          contact_phone = $26,
+          contact_email = $27,
 
           updated_at = NOW()
 
-        WHERE id = $36
+        WHERE id = $28
 
         RETURNING *
         `,
@@ -685,16 +603,6 @@ exports.updateEntity =
           data.monthly_goal,
           data.yearly_goal,
 
-          data.billing_provider,
-          data.billing_skip_setup || false,
-
-          data.billing_method,
-          data.billing_holder_name,
-          data.billing_card_last4,
-          data.billing_card_expiry,
-          data.billing_masav_file_name,
-          data.billing_status,
-
           data.cardcom_terminal_number,
           data.cardcom_api_username,
           data.cardcom_api_password_encrypted,
@@ -719,5 +627,25 @@ exports.updateEntity =
       );
 
     return result.rows[0];
+  };
+
+  exports.getEntityById =
+  async (entityId) => {
+
+    const result =
+      await db.query(
+
+        `
+        SELECT *
+        FROM entities
+        WHERE id = $1
+        LIMIT 1
+        `,
+
+        [entityId]
+
+      );
+
+    return result.rows[0] || null;
 
   };

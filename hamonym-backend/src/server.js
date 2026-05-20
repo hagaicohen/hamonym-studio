@@ -16,11 +16,15 @@ const app =
 | ROUTES
 |--------------------------------------------------------------------------
 */
+
 const authRoutes =
   require('./routes/auth.routes');
 
 const entitiesRoutes =
   require('./modules/entities/entities.routes');
+
+const billingRoutes =
+  require('./modules/billing/billing.routes');
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +52,11 @@ app.use(
   entitiesRoutes
 );
 
+app.use(
+  '/api/billing',
+  billingRoutes
+);
+
 /*
 |--------------------------------------------------------------------------
 | HEALTH CHECK
@@ -72,19 +81,6 @@ app.get(
   }
 
 );
-
-/*
-|--------------------------------------------------------------------------
-| PAYMENY MTHOD
-|--------------------------------------------------------------------------
-*/
-const paymentMethodsRoutes =
-  require('./modules/payment-methods/payment-methods.routes');
-
- app.use(
-  '/api/payment-methods',
-  paymentMethodsRoutes
-); 
 
 /*
 |--------------------------------------------------------------------------

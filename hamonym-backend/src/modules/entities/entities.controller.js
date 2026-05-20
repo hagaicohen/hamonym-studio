@@ -29,14 +29,39 @@ exports.createEntity =
 
     } catch (err) {
 
-      console.error(err);
+        console.error(err);
 
-      res.status(500).json({
-        error:
-          'Failed to create entity'
-      });
+        // ========================================
+        // DUPLICATE REGISTRATION NUMBER
+        // ========================================
 
-    }
+        if (
+          err.code === '23505'
+        ) {
+
+          return res
+            .status(409)
+            .json({
+
+              success: false,
+
+              message:
+                'מספר רישום כבר קיים במערכת'
+
+            });
+
+        }
+
+        res.status(500).json({
+
+          success: false,
+
+          error:
+            'Failed to create entity'
+
+        });
+
+      }
 
   };
 
