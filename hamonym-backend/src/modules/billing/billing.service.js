@@ -196,3 +196,36 @@ exports.handleCardcomCallback =
     };
 
   };
+
+  exports.getLowProfileResult =
+  async (lowProfileId) => {
+
+    const response =
+      await axios.post(
+
+        'https://secure.cardcom.solutions/api/v11/LowProfile/GetLpResult',
+
+        {
+
+          TerminalNumber:
+            process.env
+              .HAMONYM_CARDCOM_TERMINAL,
+
+          ApiName:
+            process.env
+              .HAMONYM_CARDCOM_API_NAME,
+
+          ApiPassword:
+            process.env
+              .HAMONYM_CARDCOM_API_PASSWORD,
+
+          LowProfileId:
+            lowProfileId
+
+        }
+
+      );
+
+    return response.data;
+
+  };
