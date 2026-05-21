@@ -58,7 +58,7 @@ router.post(
 );
 
 /* =========================================
-   CARDCOM ROUTES
+   BILLING  ROUTES
 ========================================= */
 
 router.use(
@@ -70,3 +70,18 @@ router.use(
 
 module.exports =
   router;
+
+
+router.post(
+
+  '/create-low-profile',
+
+  controller.createLowProfile
+);
+
+router.get(
+
+  '/low-profile-result/:lowProfileId',
+
+  controller.getLowProfileResult
+);
