@@ -16,14 +16,15 @@ const app =
 | ROUTES
 |--------------------------------------------------------------------------
 */
+
 const authRoutes =
   require('./routes/auth.routes');
 
 const entitiesRoutes =
   require('./modules/entities/entities.routes');
 
-const paymentRoutes =
-  require('./modules/payment/payment.routes');
+const billingRoutes =
+  require('./modules/billing/billing.routes');
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,11 @@ app.use(
 app.use(
   '/api/entities',
   entitiesRoutes
+);
+
+app.use(
+  '/api/billing',
+  billingRoutes
 );
 
 /*
