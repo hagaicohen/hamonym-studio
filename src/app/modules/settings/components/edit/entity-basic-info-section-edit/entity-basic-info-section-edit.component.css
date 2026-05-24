@@ -1,3 +1,5 @@
+/* entity-basic-info-section-edit.component.css */
+
 .card-top {
 
   display: flex;
@@ -18,6 +20,8 @@
   align-items: center;
 
   gap: 10px;
+
+  margin-inline-start: auto;
 }
 
 .cancel-btn {
@@ -89,13 +93,17 @@
 
 }
 
-.section-title-row{
-   display: flex;
-   align-items: center;
-   gap: 10px;
+.section-title-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
 }
 
 .settings-card {
+
   background: #ffffff;
 
   border: 1px solid #e5e7eb;
@@ -108,10 +116,12 @@
 }
 
 .card-header {
+
   margin-bottom: 32px;
 }
 
 .card-title {
+
   font-size: 22px;
 
   font-weight: 700;
@@ -120,6 +130,7 @@
 }
 
 .card-description {
+
   margin-top: 6px;
 
   font-size: 14px;
@@ -128,6 +139,7 @@
 }
 
 .card-body {
+
   display: flex;
 
   flex-direction: column;
@@ -136,6 +148,7 @@
 }
 
 .card-grid {
+
   display: grid;
 
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -144,6 +157,7 @@
 }
 
 .field {
+
   display: flex;
 
   flex-direction: column;
@@ -154,6 +168,7 @@
 }
 
 label {
+
   font-size: 14px;
 
   font-weight: 600;
@@ -163,6 +178,7 @@ label {
 
 input,
 select {
+
   width: 100%;
 
   height: 48px;
@@ -186,12 +202,14 @@ select {
 
 input:focus,
 select:focus {
+
   border-color: #2563eb;
 
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
 .readonly-value {
+
   min-height: 24px;
 
   font-size: 15px;
@@ -204,6 +222,7 @@ select:focus {
 }
 
 .section-divider {
+
   margin-top: 8px;
 
   padding-top: 24px;
@@ -218,10 +237,12 @@ select:focus {
 }
 
 .categories-field {
+
   margin-top: 4px;
 }
 
 .tags {
+
   display: flex;
 
   flex-wrap: wrap;
@@ -230,6 +251,7 @@ select:focus {
 }
 
 .tag {
+
   min-height: 36px;
 
   display: flex;
@@ -260,6 +282,7 @@ select:focus {
 }
 
 .tag.selected {
+
   background: #2563eb !important;
 
   color: white !important;
@@ -268,10 +291,12 @@ select:focus {
 }
 
 .tag:hover {
+
   opacity: 0.92;
 }
 
 .documents-list {
+
   display: flex;
 
   flex-direction: column;
@@ -280,6 +305,7 @@ select:focus {
 }
 
 .document-card {
+
   display: flex;
 
   align-items: center;
@@ -298,6 +324,7 @@ select:focus {
 }
 
 .document-info {
+
   display: flex;
 
   flex-direction: column;
@@ -308,6 +335,7 @@ select:focus {
 }
 
 .document-title {
+
   font-size: 15px;
 
   font-weight: 600;
@@ -316,6 +344,7 @@ select:focus {
 }
 
 .document-status {
+
   font-size: 14px;
 
   font-weight: 600;
@@ -324,10 +353,12 @@ select:focus {
 }
 
 .document-status.uploaded {
+
   color: #059669;
 }
 
 .document-actions {
+
   display: flex;
 
   align-items: center;
@@ -340,7 +371,16 @@ select:focus {
 }
 
 .document-btn {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
   height: 36px;
+
+  min-width: 92px;
 
   padding: 0 14px;
 
@@ -359,52 +399,74 @@ select:focus {
   cursor: pointer;
 
   transition: 0.2s ease;
+
+  text-decoration: none;
+
+  box-sizing: border-box;
+
+  white-space: nowrap;
+
+  line-height: normal;
+
+  font-family: inherit;
 }
 
 .document-btn:hover {
+
   background: #f9fafb;
 }
 
 .document-btn.danger {
+
   color: #dc2626;
 }
 
 .document-btn.danger:hover {
+
   background: #fef2f2;
 }
 
 @media (max-width: 768px) {
+
   .settings-card {
+
     padding: 20px;
 
     border-radius: 18px;
   }
 
   .card-grid {
+
     grid-template-columns: 1fr;
 
     gap: 18px;
   }
 
   .document-card {
+
     flex-direction: column;
 
     align-items: stretch;
   }
 
   .document-actions {
+
     justify-content: stretch;
   }
 
   .document-btn {
+
     width: 100%;
   }
 
   .tags {
+
     gap: 8px;
   }
 
   .tag {
+
     font-size: 13px;
   }
+
 }
