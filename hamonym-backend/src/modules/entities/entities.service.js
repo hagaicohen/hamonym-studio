@@ -247,19 +247,36 @@ exports.getMyEntities =
       await db.query(
 
         `
-        SELECT
+       SELECT
 
-          e.*,
-          ue.role
+  e.*,
+  ue.role,
 
-        FROM entities e
+  CASE
+    WHEN eb.id IS NOT NULL
+    THEN 'credit-card'
+    ELSE NULL
+  END AS billing_method,
 
-        INNER JOIN user_entities ue
-          ON ue.entity_id = e.id
+  eb.provider AS billing_provider,
 
-        WHERE ue.user_id = $1
+  eb.last4 AS billing_last4,
 
-        ORDER BY e.created_at DESC
+  eb.exp_month,
+  eb.exp_year
+
+FROM entities e
+
+INNER JOIN user_entities ue
+  ON ue.entity_id = e.id
+
+LEFT JOIN entity_billing eb
+  ON eb.entity_id = e.id
+  AND eb.status = 'active'
+
+WHERE ue.user_id = $1
+
+ORDER BY e.created_at DESC
         `,
 
         [userId]
@@ -711,16 +728,43 @@ exports.updateEntity =
     return result.rows[0];
   };
 
-  exports.getEntityById =
+exports.getEntityById =
   async (entityId) => {
 
     const result =
       await db.query(
 
         `
-        SELECT *
-        FROM entities
-        WHERE id = $1
+        SELECT
+
+          e.*,
+
+          CASE
+            WHEN eb.id IS NOT NULL
+            THEN 'credit-card'
+            ELSE NULL
+          END AS billing_method,
+
+          eb.provider AS billing_provider,
+
+          eb.last4 AS billing_last4,
+
+          eb.card_holder_name,
+
+          eb.exp_month,
+
+          eb.exp_year
+
+        FROM entities e
+
+        LEFT JOIN entity_billing eb
+          ON eb.entity_id = e.id
+          AND eb.status = 'active'
+
+        WHERE e.id = $1
+
+        ORDER BY eb.created_at DESC
+
         LIMIT 1
         `,
 

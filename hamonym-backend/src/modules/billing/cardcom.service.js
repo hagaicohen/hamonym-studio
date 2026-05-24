@@ -4,7 +4,7 @@ const axios =
   require('axios');
 
 exports.createOpenFieldsLowProfile =
-  async () => {
+  async (entityId) => {
 
     const payload = {
 
@@ -18,7 +18,7 @@ exports.createOpenFieldsLowProfile =
         process.env.HAMONYM_CARDCOM_API_PASSWORD,
 
       Operation:
-        'ChargeAndCreateToken',
+        'CreateToken',
 
       Amount: 1,
 
@@ -31,14 +31,21 @@ exports.createOpenFieldsLowProfile =
         'he',
 
       SuccessRedirectUrl:
-        process.env.CARDCOM_SUCCESS_URL,
+
+        `${process.env.FRONTEND_URL}/settings/entities/${entityId}?LowProfileId=[lowprofileid]&InternalDealNumber=[internaldealnumber]`,
 
       FailedRedirectUrl:
-        process.env.CARDCOM_FAILED_URL,
+
+        `${process.env.FRONTEND_URL}/settings/entities/${entityId}`,
 
       ReturnValue:
-        'hamonym-openfields'
+        entityId
     };
+
+    console.log(
+      'SUCCESS URL',
+      payload.SuccessRedirectUrl
+    );
 
     console.log(
       'OPENFIELDS PAYLOAD',
@@ -68,17 +75,30 @@ exports.createOpenFieldsLowProfile =
         )
       );
 
+      console.log(
+        'LOW PROFILE URL',
+        `https://secure.cardcom.solutions/External/LowProfile.aspx?LowProfileId=${response.data.LowProfileId}`
+      );
+
       return {
 
-        terminalNumber:
-          process.env.HAMONYM_CARDCOM_TERMINAL,
+            terminalNumber:
+              process.env.HAMONYM_CARDCOM_TERMINAL,
 
-        apiName:
-          process.env.HAMONYM_CARDCOM_API_NAME,
+            apiName:
+              process.env.HAMONYM_CARDCOM_API_NAME,
 
-        lowProfileId:
-          response.data.LowProfileId
-      };
+            lowProfileId:
+              response.data.LowProfileId,
+
+            lowProfileUrl:
+
+              response.data.Url ||
+
+              response.data.LowProfileUrl ||
+
+              `https://secure.cardcom.solutions/External/LowProfile.aspx?LowProfileId=${response.data.LowProfileId}`
+          };
 
     } catch (error) {
 

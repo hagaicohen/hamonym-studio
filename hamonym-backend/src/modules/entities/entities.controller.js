@@ -383,6 +383,43 @@ exports.uploadLogo =
 // =========================================================
 // UPDATE ENTITY
 // =========================================================
+exports.getEntityById =
+  async (req, res) => {
+
+    try {
+
+      const entity =
+
+        await service
+          .getEntityById(
+            req.params.id
+          );
+
+      if (!entity) {
+
+        return res
+          .status(404)
+          .json({
+            error:
+              'Entity not found'
+          });
+
+      }
+
+      res.json(entity);
+
+    } catch (err) {
+
+      console.error(err);
+
+      res.status(500).json({
+        error:
+          'Failed to get entity'
+      });
+
+    }
+
+  };
 
 exports.updateEntity =
   async (req, res) => {

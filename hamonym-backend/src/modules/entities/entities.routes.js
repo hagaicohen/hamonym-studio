@@ -107,6 +107,16 @@ router.patch(
 
 );*/
 
+router.get(
+
+  '/:id',
+
+  requireAuth,
+
+  controller.getEntityById
+
+);  
+
 router.patch(
 
   '/:id',

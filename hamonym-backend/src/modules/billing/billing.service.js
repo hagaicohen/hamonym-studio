@@ -3,6 +3,9 @@
 const repository =
   require('./billing.repository');
 
+const axios =
+  require('axios');
+
 /* =========================================
    GET ENTITY BILLING
 ========================================= */
@@ -18,14 +21,6 @@ exports.getEntityBilling =
 /* =========================================
    CREATE BILLING
 ========================================= */
-
-/* =========================================
-   CREATE BILLING
-========================================= */
-
-const axios =
-  require('axios');
-
 exports.createBilling =
   async (data) => {
 
@@ -77,6 +72,18 @@ exports.createBilling =
     const result =
       response.data;
 
+    console.log(
+
+      'FULL RESULT',
+
+      JSON.stringify(
+        result,
+        null,
+        2
+      )
+
+    );
+
     /* =========================
        VALIDATION
     ========================= */
@@ -86,9 +93,11 @@ exports.createBilling =
     ) {
 
       throw new Error(
+
         result?.Description ||
 
         'CardCom error'
+
       );
 
     }
@@ -102,10 +111,19 @@ exports.createBilling =
       result?.TokenInfo
         ?.Token ||
 
+      result?.Token ||
+
+      result?.CardToken ||
+
       result?.TranzactionInfo
         ?.Token ||
 
       null;
+
+    console.log(
+      'EXTRACTED TOKEN',
+      token
+    );
 
     const last4 =
 
@@ -116,17 +134,21 @@ exports.createBilling =
 
     const expMonth =
 
-      result?.TokenInfo
-        ?.CardMonth ||
+  result?.TokenInfo
+    ?.CardMonth ||
 
-      null;
+  data.expMonth ||
 
-    const expYear =
+  null;
 
-      result?.TokenInfo
-        ?.CardYear ||
+const expYear =
 
-      null;
+  result?.TokenInfo
+    ?.CardYear ||
+
+  data.expYear ||
+
+  null;
 
     const cardHolderName =
 
@@ -134,6 +156,18 @@ exports.createBilling =
         ?.CardOwnerName ||
 
       null;
+
+    /* =========================
+       REPLACE EXISTING TOKEN
+    ========================= */
+
+    await repository
+      .deactivateEntityBilling(
+
+        data.entityId
+        
+
+      );
 
     /* =========================
        SAVE BILLING
@@ -197,7 +231,11 @@ exports.handleCardcomCallback =
 
   };
 
-  exports.getLowProfileResult =
+/* =========================================
+   GET LOW PROFILE RESULT
+========================================= */
+
+exports.getLowProfileResult =
   async (lowProfileId) => {
 
     const response =

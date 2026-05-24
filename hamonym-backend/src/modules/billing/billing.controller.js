@@ -96,7 +96,11 @@ exports.createLowProfile =
       const result =
 
         await cardcomService
-          .createOpenFieldsLowProfile();
+          .createOpenFieldsLowProfile(
+
+            req.body.entityId
+
+          );
 
       res.json(result);
 

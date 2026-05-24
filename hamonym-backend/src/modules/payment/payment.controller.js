@@ -21,4 +21,4 @@ exports.testCardcomConnection =
         message: 'CardCom connection failed'
       });
     }
-  };
+  }; 
