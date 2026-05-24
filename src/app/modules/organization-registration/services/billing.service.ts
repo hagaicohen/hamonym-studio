@@ -38,4 +38,30 @@ export class BillingService {
     `${environment.apiUrl}/api/billing/public-config`
   );
 }
+
+createLowProfile(
+  payload: any
+) {
+
+  return this.http.post(
+
+    `${environment.apiUrl}/api/billing/create-low-profile`,
+
+    payload
+
+  );
+
+}
+
+getLowProfileResult(
+  lowProfileId: string
+) {
+
+  return this.http.get(
+
+    `${environment.apiUrl}/api/billing/low-profile-result/${lowProfileId}`
+
+  );
+
+}
 }

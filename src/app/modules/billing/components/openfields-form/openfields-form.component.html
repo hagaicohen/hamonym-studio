@@ -17,12 +17,40 @@
       מספר כרטיס
     </label>
 
-    <iframe
-      id="CardComCardNumber"
-      name="CardComCardNumber"
-      src="https://secure.cardcom.solutions/api/openfields/cardNumber"
-      class="cardcom-field-frame">
-    </iframe>
+    <div class="card-frame-shell">
+
+      <!-- FAKE FIELD -->
+
+     @if (!cardIframeReady) {
+
+      <div class="card-skeleton">
+
+       <img
+            class="card-skeleton-icon"
+            src="./credit-card.png"
+            alt="">
+
+        <div class="card-skeleton-number">
+
+          0000 0000 0000 0000
+
+        </div>
+
+      </div>
+
+    }
+
+      <!-- REAL IFRAME -->
+
+      <iframe
+        id="CardComCardNumber"
+        name="CardComCardNumber"
+        src="https://secure.cardcom.solutions/api/openfields/cardNumber"
+        class="cardcom-field-frame"
+        [class.cardcom-visible]="cardIframeReady">
+      </iframe>
+
+    </div>
 
   </div>
 
@@ -62,21 +90,44 @@
 
   </div>
 
-  <!-- CVV -->
+ <!-- CVV -->
 
-  <div class="field">
+<div class="field">
 
-    <label>
-      CVV
-    </label>
+  <label>
+    CVV
+  </label>
+
+  <div class="card-frame-shell">
+
+    <!-- SKELETON -->
+
+    @if (!cvvIframeReady) {
+
+      <div class="card-skeleton cvv-skeleton">
+
+        <div class="cvv-skeleton-number">
+
+          123
+
+        </div>
+
+      </div>
+
+    }
+
+    <!-- REAL -->
 
     <iframe
       id="CardComCvv"
       name="CardComCvv"
       src="https://secure.cardcom.solutions/api/openfields/CVV"
-      class="cardcom-field-frame">
+      class="cardcom-field-frame"
+      [class.cardcom-visible]="cvvIframeReady">
     </iframe>
 
   </div>
+
+</div>
 
 </div>

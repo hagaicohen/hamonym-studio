@@ -7,6 +7,8 @@
   gap: 22px;
 
   width: 100%;
+
+  overflow-x: hidden;
 }
 
 * {
@@ -38,6 +40,10 @@
 ========================================= */
 
 .field {
+
+  position: relative;
+
+  overflow: hidden;
 
   display: flex;
 
@@ -73,14 +79,97 @@
 }
 
 /* =========================================
+   CARD SHELL
+========================================= */
+
+.card-frame-shell {
+
+  position: relative;
+
+  width: 100%;
+
+  height: 54px;
+}
+
+/* =========================================
+   SKELETON
+========================================= */
+
+.card-skeleton {
+
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  flex-direction: row-reverse;
+
+  width: 100%;
+
+  height: 54px;
+
+  border: 1px solid #dbe2ea;
+
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  padding: 0 16px;
+
+  margin: 0;
+
+  box-sizing: border-box;
+
+  z-index: 5;
+}
+
+.card-skeleton-number {
+
+  font-size: 17px;
+
+  font-family: Arial, sans-serif;
+
+  font-weight: 500;
+
+  color: gray;
+
+  direction: rtl;
+
+  text-align: right;
+
+  line-height: 54px;
+
+  user-select: none;
+}
+
+.card-skeleton-icon {
+
+  width: 30px;
+
+  height: 20px;
+
+  object-fit: contain;
+
+  flex-shrink: 0;
+
+  opacity: 0.9;
+
+  position: relative;
+
+  left: -12px;
+
+  top: -8px;
+}
+/* =========================================
    IFRAMES
 ========================================= */
 
 iframe {
-
-  display: block;
-
-  width: 100%;
 
   border: none !important;
 
@@ -89,19 +178,23 @@ iframe {
   box-shadow: none !important;
 
   background: transparent !important;
-
-  vertical-align: top;
 }
 
 .cardcom-field-frame {
 
+  position: relative;
+
+  z-index: 1;
+
   width: 100%;
 
-  height: 58px;
+  height: 54px !important;
+
+  max-height: 54px !important;
 
   display: block;
 
-  overflow: hidden;
+  overflow: hidden !important;
 
   background: transparent;
 
@@ -110,6 +203,15 @@ iframe {
   min-width: 0;
 
   line-height: 0;
+
+  vertical-align: top;
+
+  opacity: 0;
+}
+
+.cardcom-field-frame.cardcom-visible {
+
+  opacity: 1;
 }
 
 /* =========================================
@@ -160,6 +262,10 @@ iframe {
 ========================================= */
 
 button {
+
+  position: relative;
+
+  z-index: 5;
 
   width: 100%;
 
@@ -214,7 +320,8 @@ button:disabled {
   }
 
   .cardcom-field-frame,
-  .exp-input {
+  .exp-input,
+  .card-frame-shell {
 
     height: 56px;
   }
@@ -223,7 +330,6 @@ button:disabled {
 
     height: 52px;
   }
-
 }
 
 /* =========================================
@@ -236,62 +342,30 @@ body {
   overflow-x: hidden;
 }
 
-.billing-form {
-
-  overflow-x: hidden;
-}
-
 /* =========================================
-   MOBILE IFRAME SCROLL FIX
+   CVV SKELETON
 ========================================= */
 
-.cardcom-field-frame {
+.cvv-skeleton {
 
-  height: 57px !important;
-
-  overflow: hidden !important;
+  justify-content: flex-end;
 }
 
-@media (max-width: 768px) {
+.cvv-skeleton-number {
 
-  .cardcom-field-frame {
+  font-size: 17px;
 
-    height: 55px !important;
-  }
+  font-family: Arial, sans-serif;
 
-  iframe {
+  font-weight: 500;
 
-    overflow: hidden !important;
-  }
-}
+  color: gray;
 
-/* =========================================
-   FIX IFRAME OVERLAY
-========================================= */
+  direction: ltr;
 
-.cardcom-field-frame {
+  text-align: right;
 
-  position: relative;
+  line-height: 54px;
 
-  z-index: 1;
-
-  height: 54px !important;
-
-  max-height: 54px !important;
-
-  overflow: hidden !important;
-}
-
-.field {
-
-  position: relative;
-
-  overflow: hidden;
-}
-
-button {
-
-  position: relative;
-
-  z-index: 5;
+  user-select: none;
 }

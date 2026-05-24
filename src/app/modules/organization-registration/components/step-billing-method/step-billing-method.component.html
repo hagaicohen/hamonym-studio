@@ -146,22 +146,24 @@
 
         </div>
 
+        <!-- OPENFIELDS -->
+
         <app-openfields-form>
         </app-openfields-form>
 
-       @if (
-            stateService
-              .state()
-              .cardcomInternalDealNumber
-          ) {
+        @if (
+          stateService
+            .state()
+            .cardcomInternalDealNumber
+        ) {
 
-            <div class="token-success">
+          <div class="token-success">
 
-              ✓ אמצעי החיוב נשמר בהצלחה
+            ✓ אמצעי החיוב נשמר בהצלחה
 
-            </div>
+          </div>
 
-          }
+        }
 
       </div>
 

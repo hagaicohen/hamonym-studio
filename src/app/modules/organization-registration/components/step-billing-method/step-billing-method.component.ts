@@ -141,15 +141,11 @@ export class StepBillingMethodComponent {
     }
 
     if (this.isCreditCard) {
-
       return true;
-
     }
 
     if (this.isMasav) {
-
       return this.masavUploaded;
-
     }
 
     return false;
@@ -159,9 +155,7 @@ export class StepBillingMethodComponent {
   get submitButtonText(): string {
 
     if (this.isSaving) {
-
       return 'ממשיך...';
-
     }
 
     return 'המשך';
@@ -183,9 +177,7 @@ export class StepBillingMethodComponent {
 
   async savePaymentMethod(): Promise<void> {
 
-    if (
-      this.isSaving
-    ) {
+    if (this.isSaving) {
       return;
     }
 
@@ -213,42 +205,46 @@ export class StepBillingMethodComponent {
       }
     }
 
-      this.isSaving = false;
-      this.saveCompleted = true;
-      this.syncState();
-      this.continue.emit();
+    this.isSaving = false;
+
+    this.saveCompleted = true;
+
+    this.syncState();
+
+    this.continue.emit();
+
+  }
+
+  resetState(): void {
+
+    this.saveCompleted =
+      false;
+
+  }
+
+  onMasavFileSelected(
+    event: Event
+  ): void {
+
+    const input =
+      event.target as HTMLInputElement;
+
+    if (!input.files?.length) {
+      return;
     }
 
-    resetState(): void {
+    const file =
+      input.files[0];
 
-      this.saveCompleted =
-        false;
+    this.masavUploaded =
+      true;
 
-    }
+    this.masavFileName =
+      file.name;
 
-    onMasavFileSelected(
-      event: Event
-    ): void {
+    this.syncState();
 
-      const input =
-        event.target as HTMLInputElement;
-
-      if (!input.files?.length) {
-        return;
-      }
-
-      const file =
-        input.files[0];
-
-      this.masavUploaded =
-        true;
-
-      this.masavFileName =
-        file.name;
-
-      this.syncState();
-
-      this.resetState();
+    this.resetState();
 
   }
 

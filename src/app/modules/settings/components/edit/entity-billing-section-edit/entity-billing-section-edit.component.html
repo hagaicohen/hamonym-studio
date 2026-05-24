@@ -1,6 +1,11 @@
+<!-- entity-billing-section-edit.component.html -->
+
 <div class="settings-card">
+
   <div class="card-top">
+
     <div>
+
       <div class="section-title-row">
 
         <lucide-icon
@@ -16,139 +21,359 @@
 
       </div>
 
-      <div class="card-description">הגדרת אמצעי החיוב של הישות</div>
+      <div class="card-description">
+
+        הגדרת אמצעי החיוב של הישות
+
+      </div>
+
     </div>
+
   </div>
 
-  <div class="info-strip">החיוב מתבצע בהתאם לפעילות הישות במערכת</div>
+  <div class="info-strip">
+
+    החיוב מתבצע בהתאם לפעילות הישות במערכת
+
+  </div>
 
   <!-- METHOD SELECTOR -->
 
   <div class="method-selector">
+
     <button
       type="button"
       class="method-button"
       [class.active]="isCreditCard"
-      (click)="selectBillingMethod('credit-card')"
-    >
-      <div class="method-title">כרטיס אשראי</div>
+      (click)="selectBillingMethod('credit-card')">
 
-      <div class="method-description">חיוב חודשי</div>
+      <div class="method-title">
+
+        כרטיס אשראי
+
+      </div>
+
     </button>
 
     <button
       type="button"
       class="method-button"
       [class.active]="isMasav"
-      (click)="selectBillingMethod('masav')"
-    >
-      <div class="method-title">הוראת קבע (מס״ב)</div>
+      (click)="selectBillingMethod('masav')">
 
-      <div class="method-description">חיוב בנקאי</div>
+      <div class="method-title">
+
+        הוראת קבע (מס״ב)
+
+      </div>
+
+      <div class="method-description">
+
+        חיוב בנקאי
+
+      </div>
+
     </button>
+
   </div>
 
   <!-- CREDIT CARD -->
 
   @if (isCreditCard) {
+
     <div class="billing-section">
-      <div class="field-block">
-        <label> שם בעל הכרטיס </label>
 
-        <input
-          type="text"
-          class="base-input"
-          [(ngModel)]="entity.billing_holder_name"
-          placeholder="ישראל ישראלי"
-        />
-      </div>
+      <!-- EMPTY STATE -->
 
-      <div class="field-block">
-        <label> מספר כרטיס </label>
+      @if (
+        mode === 'empty'
+      ) {
 
-        <input
-          type="text"
-          class="base-input"
-          [(ngModel)]="entity.billing_card_number"
-          (input)="formatCardNumber()"
-          (keypress)="onlyNumbers($event)"
-          placeholder="0000 0000 0000 0000"
-        />
-      </div>
+        <div class="openfields-placeholder">
 
-      <div class="two-columns">
-        <div class="field-block">
-          <label> תוקף </label>
+          <div class="placeholder-title">
 
-          <input
-            type="text"
-            class="base-input"
-            [(ngModel)]="entity.billing_card_expiry"
-            (input)="formatExpiry()"
-            (keypress)="onlyNumbers($event)"
-            placeholder="MM/YY"
-          />
+            חיבור כרטיס אשראי
+
+          </div>
+
+          <button
+            type="button"
+            class="replace-card-button"
+            (click)="mode = 'replacing'">
+
+            חיבור כרטיס
+
+          </button>
+
         </div>
 
-        <div class="field-block">
-          <label> CVV </label>
+      }
 
-          <input
-            type="password"
-            class="base-input"
-            [(ngModel)]="entity.billing_cvv"
-            (keypress)="onlyNumbers($event)"
-            placeholder="123"
-          />
+      <!-- CONNECTED CARD -->
+
+      @if (
+        mode === 'connected'
+      ) {
+
+        <div class="connected-card-box">
+
+          <div class="connected-card-layout">
+
+            <!-- DETAILS -->
+
+            <div class="connected-card-content">
+
+              <div class="connected-card-header">
+
+                <div class="connected-title">
+
+                  ✓ כרטיס מחובר
+
+                </div>
+
+                <div class="connected-description">
+
+                  קיים אמצעי חיוב פעיל במערכת
+
+                </div>
+
+              </div>
+
+              <div class="connected-card-details">
+
+                <div class="connected-card-row">
+
+                  <div class="connected-card-label">
+
+                    מספר כרטיס
+
+                  </div>
+
+                  <div class="connected-card-value card-number-value">
+
+                    <span class="card-group">
+
+                      ••••
+
+                    </span>
+
+                    <span class="card-group">
+
+                      ••••
+
+                    </span>
+
+                    <span class="card-group">
+
+                      ••••
+
+                    </span>
+
+                    <span class="card-last4">
+
+                      {{ entity.billing_last4 }}
+
+                    </span>
+
+                  </div>
+
+                </div>
+
+                @if (
+                  entity?.exp_month &&
+                  entity?.exp_year
+                ) {
+
+                  <div class="connected-card-row">
+
+                    <div class="connected-card-label">
+
+                      תוקף
+
+                    </div>
+
+                    <div class="connected-card-value expiry-value">
+
+                      {{
+                        entity.exp_month
+                      }}/{{ entity.exp_year }}
+
+                    </div>
+
+                  </div>
+
+                }
+
+              </div>
+
+              <button
+                type="button"
+                class="replace-card-button"
+                (click)="mode = 'replacing'">
+
+                החלפת כרטיס
+
+              </button>
+
+            </div>
+
+            <!-- VISUAL CARD -->
+
+            <div class="visual-card">
+
+              <div class="visual-card-brand">
+
+                VISA
+
+              </div>
+
+              <div class="visual-card-chip"></div>
+
+              <div class="visual-card-number">
+
+                <span>••••</span>
+
+                <span>••••</span>
+
+                <span>••••</span>
+
+                <span>
+
+                  {{ entity.billing_last4 }}
+
+                </span>
+
+              </div>
+
+              @if (
+                entity?.exp_month &&
+                entity?.exp_year
+              ) {
+
+                <div class="visual-card-expiry">
+
+                  {{
+                    entity.exp_month
+                  }}/{{ entity.exp_year }}
+
+                </div>
+
+              }
+
+            </div>
+
+          </div>
+
         </div>
-      </div>
+
+      }
+
+      <!-- REPLACE CARD -->
+
+      @if (
+        mode === 'replacing'
+      ) {
+
+        <div class="openfields-placeholder">
+
+          <div class="placeholder-title">
+
+            החלפת כרטיס אשראי
+
+          </div>
+
+          <div class="hosted-info">
+
+            פרטי האשראי נשמרים בצורה
+            מאובטחת באמצעות CardCom.
+
+          </div>
+
+          <app-openfields-form>
+          </app-openfields-form>
+
+        </div>
+
+      }
+
     </div>
+
   }
 
   <!-- MASAV -->
 
   @if (isMasav) {
+
     <div class="billing-section">
+
       <div class="masav-box">
-        <div class="masav-title">הוראת קבע בנקאית</div>
+
+        <div class="masav-title">
+
+          הוראת קבע בנקאית
+
+        </div>
 
         <div class="masav-description">
-          יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת
+
+          יש להוריד את הטופס,
+          לחתום עליו ולהעלות אותו חזרה למערכת
+
         </div>
+
       </div>
 
-      <a href="/files/masav-form.pdf" download class="download-btn">
+      <a
+        href="/files/masav-form.pdf"
+        download
+        class="download-btn">
+
         הורדת טופס מס״ב
+
       </a>
 
       @if (entity?.billing_masav_file_name) {
+
         <div class="upload-box">
+
           <div class="upload-success">
+
             ✓ {{ entity?.billing_masav_file_name }}
+
           </div>
 
           <button
             type="button"
             class="remove-file-button"
-            (click)="removeMasavFile()"
-          >
+            (click)="removeMasavFile()">
+
             הסר קובץ
+
           </button>
+
         </div>
+
       }
 
       @if (!entity?.billing_masav_file_name) {
+
         <label class="upload-btn">
+
           העלאת טופס חתום
 
           <input
             type="file"
             hidden
             accept=".pdf,.jpg,.jpeg,.png"
-            (change)="onMasavFileSelected($event)"
-          />
+            (change)="onMasavFileSelected($event)" />
+
         </label>
+
       }
+
     </div>
+
   }
+
 </div>

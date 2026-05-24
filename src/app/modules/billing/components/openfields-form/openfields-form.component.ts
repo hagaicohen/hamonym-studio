@@ -1,3 +1,5 @@
+// openfields-form.component.ts
+
 import {
   Component,
   OnInit,
@@ -12,6 +14,10 @@ import {
 import {
   BillingApiService
 } from '../../services/billing-api.service';
+
+import {
+  BillingService
+} from '../../../organization-registration/services/billing.service';
 
 import {
   OrganizationRegistrationStateService
@@ -40,6 +46,9 @@ export class OpenfieldsFormComponent
   private billingApi =
     inject(BillingApiService);
 
+  private billingService =
+    inject(BillingService);
+
   private stateService =
     inject(
       OrganizationRegistrationStateService
@@ -52,6 +61,16 @@ export class OpenfieldsFormComponent
   apiName = '';
 
   isReady = false;
+
+  cvvIframeReady = false;
+
+  /*
+    CARD NUMBER REAL IFRAME
+    READY STATE
+  */
+
+  cardIframeReady =
+    false;
 
   private transactionStarted =
     false;
@@ -67,6 +86,11 @@ export class OpenfieldsFormComponent
         .initOpenFields()
         .toPromise();
 
+    console.log(
+      'OPENFIELDS CONFIG',
+      config
+    );
+
     this.lowProfileId =
       config.lowProfileId;
 
@@ -75,6 +99,11 @@ export class OpenfieldsFormComponent
 
     this.apiName =
       config.apiName;
+
+    console.log(
+      'LOW PROFILE CREATED',
+      this.lowProfileId
+    );
 
     window.addEventListener(
 
@@ -93,6 +122,11 @@ export class OpenfieldsFormComponent
       if (
         !masterFrame?.contentWindow
       ) {
+
+        console.error(
+          'MASTER FRAME NOT READY'
+        );
+
         return;
       }
 
@@ -228,6 +262,11 @@ export class OpenfieldsFormComponent
           this.lowProfileId
       };
 
+      console.log(
+        'INIT OPENFIELDS',
+        iframeMessage
+      );
+
       masterFrame.contentWindow
         .postMessage(
 
@@ -238,10 +277,40 @@ export class OpenfieldsFormComponent
 
       this.isReady = true;
 
+      /*
+        SHOW REAL CARD FIELD
+        ONLY AFTER BOOTSTRAP
+      */
+
+      setTimeout(() => {
+
+        this.cardIframeReady =
+          true;
+
+        this.cvvIframeReady =
+          true;
+
+      }, 350);
+
+      console.log(
+        'OPENFIELDS READY'
+      );
+
     }, 500);
   }
 
   async tokenize(): Promise<boolean> {
+
+    if (
+      !this.lowProfileId
+    ) {
+
+      console.error(
+        'LOW PROFILE NOT READY'
+      );
+
+      return false;
+    }
 
     if (
       this.transactionStarted
@@ -280,6 +349,10 @@ export class OpenfieldsFormComponent
       if (
         !masterFrame?.contentWindow
       ) {
+
+        console.error(
+          'MASTER FRAME MISSING'
+        );
 
         resolve(false);
 
@@ -326,10 +399,6 @@ export class OpenfieldsFormComponent
           msg
         );
 
-        /* =========================
-           SUCCESS
-        ========================= */
-
         if (
           msg?.action ===
           'HandleSubmit'
@@ -349,6 +418,11 @@ export class OpenfieldsFormComponent
             msg.data;
 
           console.log(
+            'CURRENT PATHNAME',
+            window.location.pathname
+          );
+
+          console.log(
             'HANDLE SUBMIT FULL',
             JSON.stringify(
               result,
@@ -357,19 +431,78 @@ export class OpenfieldsFormComponent
             )
           );
 
+          const internalDealNumber =
+
+            result?.InternalDealNumber ||
+
+            result?.TranzactionId ||
+
+            null;
+
+          if (
+            window.location.pathname.includes(
+              '/settings/entities/'
+            )
+          ) {
+
+            const entityId =
+
+              window.location.pathname
+                .split('/')
+                .pop();
+
+            this.billingService
+              .createEntityBilling({
+
+                entityId,
+
+                provider:
+                  'cardcom',
+
+                lowProfileId:
+                  this.lowProfileId,
+
+                internalDealNumber,
+
+                expMonth:
+                  expirationMonth,
+
+                expYear:
+                  expirationYear
+
+              })
+
+              .subscribe({
+
+                next: () => {
+
+                  resolve(true);
+
+                },
+
+                error: (err: any) => {
+
+                  console.error(err);
+
+                  resolve(false);
+
+                }
+
+              });
+
+            return;
+
+          }
+
           this.stateService.updateState({
 
-              cardcomLowProfileId:
+            cardcomLowProfileId:
 
-                this.lowProfileId,
+              this.lowProfileId,
 
-              cardcomInternalDealNumber:
+            cardcomInternalDealNumber:
 
-                result?.InternalDealNumber ||
-
-                result?.TranzactionId ||
-
-                null
+              internalDealNumber
 
           });
 
@@ -379,10 +512,6 @@ export class OpenfieldsFormComponent
 
           return;
         }
-
-        /* =========================
-           ERROR
-        ========================= */
 
         if (
           msg?.action ===
@@ -419,6 +548,9 @@ export class OpenfieldsFormComponent
 
         action:
           'doTransaction',
+
+        lowProfileCode:
+          this.lowProfileId,
 
         cardOwnerId:
           '000000000',
@@ -471,10 +603,12 @@ export class OpenfieldsFormComponent
     const data =
       event.data;
 
+    /*
     console.log(
       'CARDCOM EVENT',
       data
     );
+    */
   }
 
   ngOnDestroy(): void {

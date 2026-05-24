@@ -127,6 +127,25 @@ export class EntitiesService {
     );
   }
 
+  getEntityById(
+  entityId: string
+  ): Observable<any> {
+
+    return this.http.get(
+
+      `${environment.apiUrl}/api/entities/${entityId}`,
+
+      {
+        headers: {
+          Authorization:
+            `Bearer ${localStorage.getItem('token')}`,
+        },
+      }
+
+    );
+
+  }
+
   getMyEntities(): Observable<any> {
     return this.http.get(
       `${environment.apiUrl}/api/entities/my`,

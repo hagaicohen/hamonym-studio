@@ -1,101 +1,341 @@
-import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+// entity-billing-section-edit.component.ts
+
+import {
+  Component,
+  Input,
+  inject,
+  OnInit,
+  ViewChild
+} from '@angular/core';
+
+import {
+  CommonModule
+} from '@angular/common';
+
+import {
+  FormsModule
+} from '@angular/forms';
+
+import {
+  ActivatedRoute
+} from '@angular/router';
 
 import {
   LucideAngularModule,
   CreditCard
 } from 'lucide-angular';
 
-type BillingMethod = 'credit-card' | 'masav';
+import {
+  BillingService
+} from '../../../../organization-registration/services/billing.service';
+
+import {
+  EntitiesService
+} from '../../../../../core/services/entities.service';
+
+import {
+  CurrentEntityService
+} from '../../../../../core/services/current-entity.service';
+
+import {
+  OpenfieldsFormComponent
+} from '../../../../billing/components/openfields-form/openfields-form.component';
+
+type BillingMethod =
+  'credit-card' |
+  'masav';
 
 @Component({
-  selector: 'app-entity-billing-section-edit',
+  selector:
+    'app-entity-billing-section-edit',
+
   standalone: true,
-  imports: [CommonModule, FormsModule,LucideAngularModule],
-  templateUrl: './entity-billing-section-edit.component.html',
-  styleUrls: ['./entity-billing-section-edit.component.css'],
+
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideAngularModule,
+    OpenfieldsFormComponent
+  ],
+
+  templateUrl:
+    './entity-billing-section-edit.component.html',
+
+  styleUrls: [
+    './entity-billing-section-edit.component.css'
+  ],
 })
-export class EntityBillingSectionEditComponent {
+export class EntityBillingSectionEditComponent
+  implements OnInit {
+
+  private billingService =
+    inject(BillingService);
+
+  private entitiesService =
+    inject(EntitiesService);
+
+  private currentEntityService =
+    inject(CurrentEntityService);
+
+  private route =
+    inject(ActivatedRoute);
+
+  @ViewChild(OpenfieldsFormComponent)
+  openfieldsForm?: OpenfieldsFormComponent;
+
+  /* =====================================
+     ENTITY INPUT
+  ===================================== */
+
+  private _entity: any;
+
   @Input()
-  entity: any;
+  set entity(value: any) {
 
-  readonly CreditCard = CreditCard;
+    this._entity = value;
 
-  get billingMethod(): BillingMethod {
-    return this.entity?.billing_method || 'credit-card';
+    this.syncModeFromEntity();
+
   }
 
-  get isCreditCard(): boolean {
-    return this.billingMethod === 'credit-card';
+  get entity(): any {
+
+    return this._entity;
+
   }
 
-  get isMasav(): boolean {
-    return this.billingMethod === 'masav';
-  }
+  readonly CreditCard =
+    CreditCard;
 
-  selectBillingMethod(method: BillingMethod): void {
-    this.entity.billing_method = method;
-  }
+  mode:
+    'connected' |
+    'replacing' |
+    'empty' = 'empty';
 
-  formatCardNumber(): void {
-    const rawValue = this.entity.billing_card_number
-      ?.replace(/\s/g, '')
-      ?.replace(/[^0-9]/gi, '');
+  ngOnInit(): void {
 
-    const groups = rawValue?.match(/.{1,4}/g);
+    console.log(
+      'QUERY PARAMS',
+      window.location.href
+    );
 
-    this.entity.billing_card_number = groups ? groups.join(' ') : '';
-  }
+    /* =========================
+       FULL HYDRATION
+    ========================= */
 
-  formatExpiry(): void {
-    const rawValue = this.entity.billing_card_expiry?.replace(/\D/g, '');
+    this.entitiesService
+      .getEntityById(this.entity.id)
 
-    if (rawValue?.length >= 3) {
-      this.entity.billing_card_expiry =
-        rawValue.substring(0, 2) + '/' + rawValue.substring(2, 4);
+      .subscribe({
 
+        next: (res: any) => {
+
+          console.log(
+            'FULL ENTITY',
+            res
+          );
+
+          const refreshedEntity =
+
+            res.entity || res;
+
+          this.entity =
+            refreshedEntity;
+
+        },
+
+        error: (err: any) => {
+
+          console.error(err);
+
+        }
+
+      });
+
+    /* =========================
+       CARDCOM RETURN
+    ========================= */
+
+    const lowProfileId =
+
+      this.route.snapshot
+        .queryParamMap
+        .get('LowProfileId');
+
+    const internalDealNumber =
+
+      this.route.snapshot
+        .queryParamMap
+        .get('InternalDealNumber');
+
+    if (
+      !lowProfileId ||
+      !internalDealNumber
+    ) {
       return;
     }
 
-    this.entity.billing_card_expiry = rawValue;
+    this.billingService
+      .createEntityBilling({
+
+        entityId:
+          this.entity.id,
+
+        provider:
+          'cardcom',
+
+        lowProfileId,
+
+        internalDealNumber
+
+      })
+
+      .subscribe({
+
+        next: () => {
+
+          this.entitiesService
+            .getEntityById(this.entity.id)
+
+            .subscribe({
+
+              next: (entityRes: any) => {
+
+                console.log(
+                  'REFRESHED ENTITY',
+                  entityRes
+                );
+
+                const refreshedEntity =
+
+                  entityRes.entity ||
+                  entityRes;
+
+                this.entity =
+                  refreshedEntity;
+
+                this.currentEntityService
+                  .setEntity(
+                    refreshedEntity
+                  );
+
+              },
+
+              error: (err: any) => {
+
+                console.error(err);
+
+              }
+
+            });
+
+        },
+
+        error: (err: any) => {
+
+          console.error(err);
+
+        }
+
+      });
+
   }
 
-  onMasavFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
+  /* =====================================
+     MODE SYNC
+  ===================================== */
+
+  private syncModeFromEntity(): void {
+
+    /*
+      IMPORTANT:
+      Don't override replace flow
+    */
+
+    if (
+      this.mode ===
+      'replacing'
+    ) {
+      return;
+    }
+
+    if (
+      this.entity?.billing_last4
+    ) {
+
+      this.mode =
+        'connected';
+
+    } else {
+
+      this.mode =
+        'empty';
+
+    }
+
+  }
+
+  get billingMethod(): BillingMethod {
+
+    return this.entity?.billing_method ||
+      'credit-card';
+
+  }
+
+  get isCreditCard(): boolean {
+
+    return this.billingMethod ===
+      'credit-card';
+
+  }
+
+  get isMasav(): boolean {
+
+    return this.billingMethod ===
+      'masav';
+
+  }
+
+  selectBillingMethod(
+    method: BillingMethod
+  ): void {
+
+    this.entity.billing_method =
+      method;
+
+  }
+
+  onMasavFileSelected(
+    event: Event
+  ): void {
+
+    const input =
+      event.target as HTMLInputElement;
 
     if (!input.files?.length) {
       return;
     }
 
-    const file = input.files[0];
+    const file =
+      input.files[0];
 
-    this.entity.billing_masav_file_name = file.name;
+    this.entity.billing_masav_file_name =
+      file.name;
+
   }
 
   removeMasavFile(): void {
-    this.entity.billing_masav_file_name = null;
+
+    this.entity.billing_masav_file_name =
+      null;
+
   }
 
-  onlyNumbers(event: KeyboardEvent): void {
-    const allowedKeys = [
-      'Backspace',
+  startReplaceCard(): void {
 
-      'ArrowLeft',
+    this.mode =
+      'replacing';
 
-      'ArrowRight',
-
-      'Tab',
-
-      'Delete',
-    ];
-
-    if (allowedKeys.includes(event.key)) {
-      return;
-    }
-
-    if (!/^\d$/.test(event.key)) {
-      event.preventDefault();
-    }
   }
+
 }
