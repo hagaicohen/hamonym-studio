@@ -422,8 +422,10 @@ exports.getEntityById =
   };
 
 exports.updateEntity =
+
   async (req, res) => {
 
+    
     try {
 
       const entity =

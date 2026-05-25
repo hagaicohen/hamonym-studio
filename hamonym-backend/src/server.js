@@ -11,8 +11,8 @@ const cors =
 const app =
   express();
 
-/*const paymentRoutes =
-  require('./routes/payment.routes');*/
+const paymentRoutes =
+  require('./routes/payment.routes');
 /*
 |--------------------------------------------------------------------------
 | ROUTES
@@ -89,11 +89,11 @@ app.get(
 | PAYMENT - CARDCOM
 |--------------------------------------------------------------------------
 */
-/*
+
 app.use(
   '/api/payment',
   paymentRoutes
-);*/
+);
 
 /*
 |--------------------------------------------------------------------------
