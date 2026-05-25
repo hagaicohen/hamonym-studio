@@ -1,4 +1,5 @@
 /* entity-profile-section-edit.component.css */
+@import '../../../styles/settings-section-actions.css'; 
 .section-title-row{
    display: flex;
    align-items: center;
@@ -20,14 +21,6 @@
 }
 
 /* HEADER */
-
-.card-top {
-  padding-bottom: 24px;
-
-  margin-bottom: 28px;
-
-  border-bottom: 1px solid #f3f4f6;
-}
 
 .header-content {
   direction: rtl;

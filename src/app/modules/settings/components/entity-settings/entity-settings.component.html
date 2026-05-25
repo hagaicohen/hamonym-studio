@@ -1,30 +1,4 @@
-<app-loading-overlay *ngIf="isSaving"> </app-loading-overlay>
-
-@if (saveSuccess) {
-  <div class="success-overlay">
-    <div class="success-card">
-      <div class="success-icon">✓</div>
-
-      <h2>השינויים נשמרו</h2>
-
-      <p>פרטי הישות עודכנו בהצלחה</p>
-    </div>
-  </div>
-}
-
-@if (saveError) {
-  <div class="success-overlay">
-    <div class="success-card">
-      <div class="success-icon" style="background: #fee2e2; color: #b91c1c">
-        ✕
-      </div>
-
-      <h2>השמירה נכשלה</h2>
-
-      <p>אירעה שגיאה בשמירת הנתונים</p>
-    </div>
-  </div>
-}
+<!--<app-loading-overlay *ngIf="isSaving"> </app-loading-overlay>-->
 
 <div class="settings-page">
   <!-- HERO -->
@@ -41,13 +15,13 @@
           {{ draftEntity?.display_name }}
         </div>
       </div>
-
+<!--
       <div class="header-actions">
         @if (!editMode) {
           <button class="edit-btn" (click)="startEdit()">עריכה</button>
         }
 
-        @if (editMode) {
+        @if (editMode && !editingSection) {
           <button class="cancel-btn" (click)="cancelEdit()">ביטול</button>
 
           <button
@@ -58,7 +32,7 @@
             שמירת שינויים
           </button>
         }
-      </div>
+      </div>-->
     </div>
 
     <!-- META -->
@@ -149,92 +123,144 @@
   <!-- BASIC INFO -->
 
   <div #basicInfoSection>
-    @if (!editMode) {
-      <app-entity-basic-info-section-view [entity]="draftEntity">
+    @if (!editMode || editingSection !== 'basic-info') {
+      <app-entity-basic-info-section-view
+        [entity]="draftEntity"
+        (edit)="startEdit('basic-info')">
       </app-entity-basic-info-section-view>
     } @else {
       <app-entity-basic-info-section-edit
-        [entity]="draftEntity"
-        (entityChange)="onEntityChange($event)"
-        [editMode]="true"
-      >
-      </app-entity-basic-info-section-edit>
+      [entity]="draftEntity"
+      (entityChange)="onEntityChange($event)"
+      [editMode]="true"
+      [saveState]="saveState"
+      [saveError]="saveError"
+      [showInlineError]="showInlineError"
+      (save)="saveAll()"
+      (cancel)="cancelEdit()">
+    </app-entity-basic-info-section-edit>
     }
   </div>
 
   <br />
 
   <!-- PROFILE -->
+
   <div #profileSection>
-    @if (!editMode) {
-      <app-entity-profile-section-view
-        [entity]="draftEntity"
-        [entityTypeLabel]="entityTypeLabel"
-        [campaignTypes]="campaignTypes"
-      >
-      </app-entity-profile-section-view>
-    } @else {
-      <app-entity-profile-section-edit
-        [entity]="draftEntity"
-        [entityTypeLabel]="entityTypeLabel"
-        [campaignTypes]="campaignTypes"
-        (entityChange)="onEntityChange($event)"
-      >
-      </app-entity-profile-section-edit>
-    }
-  </div>
-  <br />
 
-  <!-- GOALS -->
+  @if (
+    !editMode ||
+    editingSection !== 'profile'
+  ) {
 
-  <div #goalsSection>
-    @if (!editMode) {
-      <app-entity-goals-section-view [entity]="draftEntity">
-      </app-entity-goals-section-view>
-    } @else {
-      <app-entity-goals-section-edit
-        [entity]="draftEntity"
-        (entityChange)="onEntityChange($event)"
-      >
-      </app-entity-goals-section-edit>
-    }
-  </div>
+    <app-entity-profile-section-view
+      [entity]="draftEntity"
+      [entityTypeLabel]="entityTypeLabel"
+      [campaignTypes]="campaignTypes"
+      (edit)="startEdit('profile')">
+    </app-entity-profile-section-view>
+
+  } @else {
+
+    <app-entity-profile-section-edit
+      [entity]="draftEntity"
+      [entityTypeLabel]="entityTypeLabel"
+      [campaignTypes]="campaignTypes"
+      [saveState]="saveState"
+      (entityChange)="onEntityChange($event)"
+      (save)="saveAll()"
+      (cancel)="cancelEdit()">
+    </app-entity-profile-section-edit>
+
+  }
+
+</div>
 
   <br />
 
-  <!-- PAYMENT -->
+ <div #goalsSection>
 
-  <div #paymentSection>
-    @if (!editMode) {
-      <app-entity-payment-section-view
-        [entity]="draftEntity"
-        (edit)="startEdit()"
-        (testConnection)="testBillingConnection()"
-      >
-      </app-entity-payment-section-view>
-    } @else {
-      <app-entity-payment-section-edit
-        [model]="draftEntity"
-        [isCheckingConnection]="isCheckingBillingConnection"
-        (save)="onEntityChange($event)"
-        (cancel)="cancelEdit()"
-        (testConnection)="testBillingConnection()"
-      >
-      </app-entity-payment-section-edit>
-    }
-  </div>
+  @if (
+    !editMode ||
+    editingSection !== 'goals'
+  ) {
+
+    <app-entity-goals-section-view
+      [entity]="draftEntity"
+      (edit)="startEdit('goals')">
+    </app-entity-goals-section-view>
+
+  } @else {
+
+    <app-entity-goals-section-edit
+      [entity]="draftEntity"
+      [saveState]="saveState"
+      (entityChange)="onEntityChange($event)"
+      (save)="saveAll()"
+      (cancel)="cancelEdit()">
+    </app-entity-goals-section-edit>
+
+  }
+
+</div>
+
+  <br />
+<div #paymentSection>
+
+  @if (
+    !editMode ||
+    editingSection !== 'payment'
+  ) {
+
+    <app-entity-payment-section-view
+      [entity]="draftEntity"
+      (edit)="startEdit('payment')"
+      (testConnection)="testBillingConnection()">
+    </app-entity-payment-section-view>
+
+  } @else {
+
+    <app-entity-payment-section-edit
+      [model]="draftEntity"
+      [saveState]="saveState"
+      [isCheckingConnection]="isCheckingBillingConnection"
+      (save)="saveAll()"
+      (cancel)="cancelEdit()"
+      (testConnection)="testBillingConnection()"
+      (modelChange)="onEntityChange($event)">
+    </app-entity-payment-section-edit>
+
+  }
+
+</div>
 
   <br />
 
   <!-- BILLING -->
 
-  <div #billingSection>
-    @if (!editMode) {
-      <app-entity-billing-section-view [entity]="draftEntity">
-      </app-entity-billing-section-view>
-    } @else {
-      <app-entity-billing-section-edit [entity]="draftEntity">
-      </app-entity-billing-section-edit>
-    }
-  </div>
+ <div #billingSection>
+
+  @if (
+    !editMode ||
+    editingSection !== 'billing'
+  ) {
+
+    <app-entity-billing-section-view
+      [entity]="draftEntity"
+      (edit)="startEdit('billing')">
+    </app-entity-billing-section-view>
+
+  } @else {
+
+    <app-entity-billing-section-edit
+      [entity]="draftEntity"
+      [saveState]="saveState"
+      (entityChange)="onEntityChange($event)"
+      (save)="saveAll()"
+      (cancel)="cancelEdit()">
+    </app-entity-billing-section-edit>
+
+  }
+
+</div>
 </div>

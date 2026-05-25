@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input,EventEmitter,Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   LucideAngularModule,
@@ -16,6 +16,8 @@ import {
 export class EntityGoalsSectionViewComponent {
   @Input()
   entity: any;
+
+  @Output() edit = new EventEmitter<void>();
 
   readonly TrendingUp = TrendingUp;
 }

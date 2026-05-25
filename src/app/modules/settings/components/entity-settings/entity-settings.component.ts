@@ -80,8 +80,10 @@ import {
 } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
 import {
-  Router
-} from '@angular/router';
+
+  SectionSaveState
+
+} from '../../models/section-save-state.model';
 
 @Component({
   selector: 'app-entity-settings',
@@ -120,7 +122,6 @@ export class EntitySettingsComponent
   implements OnInit {
 
   constructor(
-    private router: Router
   ) {
   }
 
@@ -136,11 +137,21 @@ export class EntitySettingsComponent
 
   editMode = false;
 
-  isSaving = false;
+  editingSection:
+    string | null = null;
 
-  saveSuccess = false;
 
   saveError = '';
+  showInlineError = false;
+
+  saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
 
   entity: any = null;
 
@@ -181,7 +192,9 @@ export class EntitySettingsComponent
 
   }
 
-  startEdit(): void {
+  startEdit(
+    section?: string
+  ): void {
 
     this.saveError = '';
 
@@ -192,6 +205,9 @@ export class EntitySettingsComponent
 
     this.editMode =
       true;
+
+    this.editingSection =
+      section || null;
 
   }
 
@@ -207,273 +223,246 @@ export class EntitySettingsComponent
     this.editMode =
       false;
 
+    this.editingSection =
+      null;
+
   }
 
-  async saveAll(): Promise<void> {
+async saveAll(): Promise<void> {
 
-    console.log(
-      'SAVE ALL STARTED'
+  console.log(
+    'SAVE ALL STARTED'
+  );
+
+  this.saveError = '';
+
+  this.showInlineError =
+    false;
+
+  this.saveState.saveCompleted =
+    false;
+
+  if (
+    !this.draftEntity?.id ||
+    this.saveState.isSaving
+  ) {
+    return;
+  }
+
+  this.saveState.isSaving =
+    true;
+
+  const billingComponent =
+
+    document.querySelector(
+      'app-entity-billing-section-edit'
     );
 
-    this.saveError = '';
+  const isReplacingCard =
 
-    if (
-      !this.draftEntity?.id ||
-      this.isSaving
-    ) {
-      return;
-    }
-
-    this.isSaving =
-      true;
-
-    /* =========================
-       TOKENIZE NEW CARD
-    ========================= */
-
-    const billingComponent =
-
-      document.querySelector(
-        'app-entity-billing-section-edit'
+    billingComponent
+      ?.querySelector(
+        'app-openfields-form'
       );
 
-    const isReplacingCard =
+  if (
+    isReplacingCard &&
+    this.billingSection
+      ?.openfieldsForm
+  ) {
 
-      billingComponent
-        ?.querySelector(
-          'app-openfields-form'
-        );
+    const tokenized =
 
-    console.log(
-      'BILLING SECTION INSTANCE',
-      this.billingSection
-    );
+      await this.billingSection
+        .openfieldsForm
+        .tokenize();
 
-    console.log(
-      'OPENFIELDS INSTANCE',
-      this.billingSection
-        ?.openfieldsForm
-    );
+    if (!tokenized) {
 
-    if (
-      isReplacingCard &&
-      this.billingSection
-        ?.openfieldsForm
-    ) {
+      this.saveError =
 
-      const tokenized =
+        'שמירת כרטיס האשראי נכשלה';
 
-        await this.billingSection
-          .openfieldsForm
-          .tokenize();
+      this.showInlineError =
+        true;
 
-      console.log(
-        'TOKENIZE FROM SAVE',
-        tokenized
-      );
+      this.saveState.isSaving =
+        false;
 
-      if (!tokenized) {
+      setTimeout(() => {
 
-        this.saveError =
-
-          'שמירת כרטיס האשראי נכשלה';
-
-        this.isSaving =
+        this.showInlineError =
           false;
 
-        setTimeout(() => {
+      }, 2500);
 
-          this.saveError = '';
-
-        }, 3000);
-
-        return;
-
-      }
+      return;
 
     }
-
-    const optimisticEntity =
-      structuredClone(
-
-        this.draftEntity
-
-      );
-
-    // optimistic UI
-
-    this.entity =
-      optimisticEntity;
-
-    this.currentEntityService
-      .setEntity(
-
-        optimisticEntity
-
-      );
-
-    if (
-      this.draftEntity
-        ?.billing_card_number
-    ) {
-
-      this.draftEntity
-        .billing_card_last4 =
-
-        this.draftEntity
-          .billing_card_number
-          .replace(/\s/g, '')
-          .slice(-4);
-
-    }
-
-    // =====================================================
-    // CLEAN PAYLOAD
-    // =====================================================
-
-    const payload = {
-
-      ...this.draftEntity,
-
-      logo_data:
-        undefined,
-
-      association_certificate_data:
-        undefined,
-
-      tax_document_data:
-        undefined
-
-    };
-
-    this.entitiesService
-      .updateEntity(
-
-        this.draftEntity.id,
-
-        payload,
-
-      )
-
-      .pipe(
-
-        finalize(() => {
-
-          this.isSaving =
-            false;
-
-        }),
-
-      )
-
-      .subscribe({
-
-        next: (updatedEntity) => {
-
-          this.entity =
-            structuredClone(
-
-              updatedEntity
-
-            );
-
-          this.draftEntity =
-            structuredClone(
-
-              updatedEntity
-
-            );
-
-          this.currentEntityService
-            .setEntity(
-              updatedEntity
-            );
-
-          /* =========================
-             REFRESH ENTITY WITH BILLING
-          ========================= */
-
-          this.entitiesService
-            .getEntityById(
-              updatedEntity.id
-            )
-
-            .subscribe({
-
-              next: (fullEntity: any) => {
-
-                const entity =
-
-                  fullEntity.entity ||
-                  fullEntity;
-
-                this.entity =
-                  structuredClone(entity);
-
-                this.draftEntity =
-                  structuredClone(entity);
-
-                this.currentEntityService
-                  .setEntity(entity);
-
-                /*
-                  IMPORTANT:
-                  close edit mode
-                  only after fresh billing data
-                */
-
-                this.editMode =
-                  false;
-
-              },
-
-              error: (err: any) => {
-
-                console.error(err);
-
-              }
-
-            });
-
-          this.saveSuccess =
-            true;
-
-          setTimeout(() => {
-
-            this.router.navigate([
-              '/campaigns'
-            ]);
-
-          }, 1200);
-
-          setTimeout(() => {
-
-            this.saveSuccess =
-              false;
-
-          }, 1600);
-
-        },
-
-        error: (err) => {
-
-          console.error(err);
-
-          this.saveError =
-
-            'אירעה שגיאה בשמירת הנתונים';
-
-          setTimeout(() => {
-
-            this.saveError = '';
-
-          }, 3000);
-
-        },
-
-      });
 
   }
+
+  const optimisticEntity =
+    structuredClone(
+
+      this.draftEntity
+
+    );
+
+  this.entity =
+    optimisticEntity;
+
+  this.currentEntityService
+    .setEntity(
+
+      optimisticEntity
+
+    );
+
+  if (
+    this.draftEntity
+      ?.billing_card_number
+  ) {
+
+    this.draftEntity
+      .billing_card_last4 =
+
+      this.draftEntity
+        .billing_card_number
+        .replace(/\s/g, '')
+        .slice(-4);
+
+  }
+
+  const payload = {
+
+    ...this.draftEntity,
+
+    logo_data:
+      undefined,
+
+    association_certificate_data:
+      undefined,
+
+    tax_document_data:
+      undefined
+
+  };
+
+  this.entitiesService
+  .updateEntity(
+
+    this.draftEntity.id,
+
+    payload,
+
+  )
+
+  .subscribe({
+
+    next: (updatedEntity) => {
+
+      this.saveState.isSaving =
+        false;
+
+      this.saveState.saveFailed =
+        false;
+
+      this.saveState.saveCompleted =
+        true;
+
+      this.entity =
+        structuredClone(
+
+          updatedEntity
+
+        );
+
+      this.draftEntity =
+        structuredClone(
+
+          updatedEntity
+
+        );
+
+      this.currentEntityService
+        .setEntity(
+          updatedEntity
+        );
+
+      setTimeout(() => {
+
+        this.saveState.saveCompleted =
+          false;
+
+        this.editMode =
+          false;
+
+        this.editingSection =
+          null;
+
+      }, 1500);
+
+      this.entitiesService
+        .getEntityById(
+          updatedEntity.id
+        )
+
+        .subscribe({
+
+          next: (fullEntity: any) => {
+
+            const entity =
+
+              fullEntity.entity ||
+              fullEntity;
+
+            this.entity =
+              structuredClone(entity);
+
+            this.draftEntity =
+              structuredClone(entity);
+
+            this.currentEntityService
+              .setEntity(entity);
+
+          },
+
+          error: (err) => {
+
+            console.error(err);
+
+          }
+
+        });
+
+    },
+
+    error: (err) => {
+
+      console.error(err);
+
+      this.saveState.isSaving =
+        false;
+
+      this.saveState.saveCompleted =
+        false;
+
+      this.saveState.saveFailed =
+        true;
+
+      setTimeout(() => {
+
+        this.saveState.saveFailed =
+          false;
+
+      }, 2000);
+
+    },
+
+  });
+
+}
 
   get entityTypeLabel(): string {
 
@@ -491,10 +480,6 @@ export class EntitySettingsComponent
 
   isCheckingBillingConnection =
     false;
-
-  // =========================
-  // BILLING CONNECTION TEST
-  // =========================
 
   testBillingConnection(): void {
 

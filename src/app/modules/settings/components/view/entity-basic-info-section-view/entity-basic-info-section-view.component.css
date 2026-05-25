@@ -1,3 +1,6 @@
+/* entity-basic-info-section-view.component.css */
+@import '../../../styles/settings-section-actions.css';
+
 .section-title-row {
 
   display: flex;
@@ -28,17 +31,9 @@
   box-sizing: border-box;
 }
 
-.card-top {
+.card-actions {
 
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: flex-start;
-
-  gap: 20px;
-
-  margin-bottom: 32px;
+  margin-inline-start: auto;
 }
 
 .card-title {
@@ -59,33 +54,7 @@
   color: #6b7280;
 }
 
-.edit-btn {
 
-  height: 42px;
-
-  padding: 0 18px;
-
-  border: 1px solid #d1d5db;
-
-  border-radius: 12px;
-
-  background: white;
-
-  color: #111827;
-
-  font-size: 14px;
-
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition: 0.2s ease;
-}
-
-.edit-btn:hover {
-
-  background: #f9fafb;
-}
 
 .card-grid {
 
@@ -285,6 +254,13 @@
   font-size: 14px;
 
   font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.document-link:hover {
+
+  background: #f9fafb;
 }
 
 @media (max-width: 768px) {
@@ -299,6 +275,16 @@
     flex-direction: column;
 
     align-items: stretch;
+  }
+
+  .card-actions {
+
+    width: 100%;
+  }
+
+  .edit-btn {
+
+    width: 100%;
   }
 
   .card-grid {
@@ -322,4 +308,5 @@
 
     width: 100%;
   }
+
 }

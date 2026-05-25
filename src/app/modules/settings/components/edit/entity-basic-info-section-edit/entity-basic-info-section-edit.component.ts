@@ -35,6 +35,12 @@ import {
   Building2
 } from 'lucide-angular';
 
+import {
+
+  SectionSaveState
+
+} from '../../../models/section-save-state.model';
+
 @Component({
   selector: 'app-entity-basic-info-section-edit',
 
@@ -67,9 +73,6 @@ export class EntityBasicInfoSectionEditComponent
   @Input()
   editMode = false;
 
-  @Input()
-  isSaving = false;
-
   @Output()
   entityChange =
     new EventEmitter<any>();
@@ -81,6 +84,21 @@ export class EntityBasicInfoSectionEditComponent
   @Output()
   cancel =
     new EventEmitter<void>();
+
+    @Input()
+  saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
+  @Input()
+  saveError = '';
+
+  @Input()
+  showInlineError = false;
 
   categories =
     ENTITY_CATEGORIES;
@@ -187,6 +205,18 @@ export class EntityBasicInfoSectionEditComponent
       file.name
     );
 
+    this.entity = {
+
+      ...this.entity,
+
+      association_certificate_file:
+        file,
+
+      association_certificate_name:
+        file.name
+
+    };
+
   }
 
   onTaxDocumentSelected(
@@ -213,6 +243,18 @@ export class EntityBasicInfoSectionEditComponent
       file.name
     );
 
+    this.entity = {
+
+      ...this.entity,
+
+      tax_document_file:
+        file,
+
+      tax_document_name:
+        file.name
+
+    };
+
   }
 
   removeAssociationCertificate(): void {
@@ -227,6 +269,18 @@ export class EntityBasicInfoSectionEditComponent
       null
     );
 
+    this.entity = {
+
+      ...this.entity,
+
+      association_certificate_file:
+        null,
+
+      association_certificate_name:
+        null
+
+    };
+
   }
 
   removeTaxDocument(): void {
@@ -240,6 +294,18 @@ export class EntityBasicInfoSectionEditComponent
       'tax_document_name',
       null
     );
+
+    this.entity = {
+
+      ...this.entity,
+
+      tax_document_file:
+        null,
+
+      tax_document_name:
+        null
+
+    };
 
   }
 

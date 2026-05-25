@@ -6,6 +6,7 @@ import {
   LucideAngularModule,
   WalletCards,
 } from 'lucide-angular';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
 @Component({
   selector: 'app-entity-payment-section-edit',
@@ -37,6 +38,19 @@ export class EntityPaymentSectionEditComponent {
 
   @Output()
   testConnection = new EventEmitter<any>();
+
+  @Input()
+saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
+
+
+  
 
   readonly WalletCards =
     WalletCards;

@@ -1,19 +1,35 @@
 <div class="settings-card">
   <div class="card-top">
-    <div class="header-content">
-      <div class="section-title-row">
-        <lucide-icon
-          [img]="TrendingUp"
-          class="section-icon">
-        </lucide-icon>
+    <div>
+      <div class="header-content">
+        <div class="section-title-row">
+          <lucide-icon
+            [img]="TrendingUp"
+            class="section-icon">
+          </lucide-icon>
 
-        <div class="card-title">
-          יעדי גיוס
+          <div class="card-title">
+            יעדי גיוס
+          </div>
         </div>
-      </div>
 
-      <div class="card-description">היעדים שהוגדרו עבור הפעילות בפלטפורמה</div>
+        <div class="card-description">היעדים שהוגדרו עבור הפעילות בפלטפורמה</div>
+      </div>
     </div>
+
+    <div class="card-actions">
+
+      <button
+        type="button"
+        class="edit-btn"
+        (click)="edit.emit()">
+
+        עריכה
+
+      </button>
+
+    </div>
+
   </div>
 
   <div class="goals-grid">

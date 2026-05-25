@@ -42,9 +42,7 @@ export class EntityProfileSectionViewComponent {
   @Input()
   campaignTypes: any[] = [];
 
-  @Output()
-  edit =
-    new EventEmitter<void>();
+  @Output() edit = new EventEmitter<void>();
 
   readonly ImageIcon =
     ImageIcon;

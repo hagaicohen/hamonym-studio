@@ -31,6 +31,66 @@
 
     </div>
 
+    <div class="card-actions">
+
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="cancel.emit()">
+
+        ביטול
+
+      </button>
+
+      <button
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        class="save-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="save.emit()">
+
+       @if (
+        !saveState.isSaving &&
+        !saveState.saveCompleted &&
+        !saveState.saveFailed
+      ) {
+
+        שמירה
+
+      }
+
+      @if (saveState.isSaving) {
+
+        <div class="btn-spinner"></div>
+
+      }
+
+      @if (!saveState.isSaving && saveState.saveCompleted) {
+
+        <div class="save-success">
+
+          ✓ נשמר
+
+        </div>
+
+      }
+
+      @if (!saveState.isSaving && saveState.saveFailed) {
+
+        <div class="save-failed">
+
+          ✕ נכשל
+
+        </div>
+
+      }
+
+      </button>
+
+    </div>
+
   </div>
 
   <!-- BODY -->
@@ -344,55 +404,55 @@
 
         <div class="document-actions">
 
-  <a
-    *ngIf="
-      entity
-        ?.association_certificate_name
-    "
-    class="document-btn"
-    [href]="associationDocumentUrl"
-    target="_blank">
+          <a
+            *ngIf="
+              entity
+                ?.association_certificate_name
+            "
+            class="document-btn"
+            [href]="associationDocumentUrl"
+            target="_blank">
 
-    צפייה
+            צפייה
 
-  </a>
+          </a>
 
- <label
-  class="document-btn">
+          <label
+            class="document-btn">
 
-  {{
-    entity?.association_certificate_name
-      ? 'החלף קובץ'
-      : 'העלה תעודת התאגדות'
-  }}
+            {{
+              entity?.association_certificate_name
+                ? 'החלף קובץ'
+                : 'העלה תעודת התאגדות'
+            }}
 
-    <input
-      hidden
-      type="file"
-      accept=".pdf,.jpg,.jpeg,.png"
-      (change)="
-        onAssociationCertificateSelected(
-          $event
-        )
-      ">
+            <input
+              hidden
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              (change)="
+                onAssociationCertificateSelected(
+                  $event
+                )
+              ">
 
-  </label>
+          </label>
 
-  <button
-  *ngIf="
-    entity?.association_certificate_name
-  "
-    type="button"
-    class="document-btn danger"
-    (click)="
-      removeAssociationCertificate()
-    ">
+          <button
+            *ngIf="
+              entity?.association_certificate_name
+            "
+            type="button"
+            class="document-btn danger"
+            (click)="
+              removeAssociationCertificate()
+            ">
 
-    הסרה
+            הסרה
 
-  </button>
+          </button>
 
-</div>
+        </div>
 
       </div>
 
@@ -443,54 +503,54 @@
 
         <div class="document-actions">
 
-  <a
-    *ngIf="
-      entity?.tax_document_name
-    "
-    class="document-btn"
-    [href]="taxDocumentUrl"
-    target="_blank">
+          <a
+            *ngIf="
+              entity?.tax_document_name
+            "
+            class="document-btn"
+            [href]="taxDocumentUrl"
+            target="_blank">
 
-    צפייה
+            צפייה
 
-  </a>
+          </a>
 
-  <label
-  class="document-btn">
+          <label
+            class="document-btn">
 
-  {{
-    entity?.tax_document_name
-      ? 'החלף קובץ'
-      : 'העלה אישור סעיף 46'
-  }}
+            {{
+              entity?.tax_document_name
+                ? 'החלף קובץ'
+                : 'העלה אישור סעיף 46'
+            }}
 
-    <input
-      hidden
-      type="file"
-      accept=".pdf,.jpg,.jpeg,.png"
-      (change)="
-        onTaxDocumentSelected(
-          $event
-        )
-      ">
+            <input
+              hidden
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              (change)="
+                onTaxDocumentSelected(
+                  $event
+                )
+              ">
 
-  </label>
+          </label>
 
-  <button
-  *ngIf="
-    entity?.tax_document_name
-  "
-    type="button"
-    class="document-btn danger"
-    (click)="
-      removeTaxDocument()
-    ">
+          <button
+            *ngIf="
+              entity?.tax_document_name
+            "
+            type="button"
+            class="document-btn danger"
+            (click)="
+              removeTaxDocument()
+            ">
 
-    הסרה
+            הסרה
 
-  </button>
+          </button>
 
-</div>
+        </div>
 
       </div>
 

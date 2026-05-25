@@ -51,7 +51,8 @@ import {
   styleUrl:
     './entity-basic-info-section-view.component.css',
 })
-export class EntityBasicInfoSectionViewComponent   implements OnChanges {
+export class EntityBasicInfoSectionViewComponent
+  implements OnChanges {
 
   private entitiesService =
     inject(EntitiesService);

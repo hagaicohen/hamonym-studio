@@ -2,27 +2,42 @@
   <!-- HEADER -->
 
   <div class="card-top">
-    <div class="header-content">
-      <div class="section-title-row">
+    <div>
+      <div class="header-content">
+        <div class="section-title-row">
 
-            <lucide-icon
-              [img]="ImageIcon"
-              class="section-icon">
-            </lucide-icon>
+              <lucide-icon
+                [img]="ImageIcon"
+                class="section-icon">
+              </lucide-icon>
 
-            <div class="card-title">
+              <div class="card-title">
 
-              פרופיל {{ entityTypeLabel }}
+                פרופיל {{ entityTypeLabel }}
 
-            </div>
+              </div>
 
-      </div>
+        </div>
 
-      <div class="card-description">
-        איך ה{{ entityTypeLabel }}
-        תוצג בפלטפורמה
+        <div class="card-description">
+          איך ה{{ entityTypeLabel }}
+          תוצג בפלטפורמה
+        </div>
       </div>
     </div>
+     <div class="card-actions">
+
+      <button
+        type="button"
+        class="edit-btn"
+        (click)="edit.emit()">
+
+        עריכה
+
+      </button>
+
+    </div>
+
   </div>
 
   <!-- BODY -->

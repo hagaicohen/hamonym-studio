@@ -7,6 +7,10 @@ import { FormsModule } from '@angular/forms';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 
 import {
+  SectionSaveState
+} from '../../../models/section-save-state.model';
+
+import {
   LucideAngularModule,
   ImageIcon
 } from 'lucide-angular';
@@ -34,6 +38,24 @@ export class EntityProfileSectionEditComponent {
 
   @Output()
   entityChange = new EventEmitter<any>();
+
+  @Input()
+saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
+
+@Output()
+save =
+  new EventEmitter<void>();
+
+@Output()
+cancel =
+  new EventEmitter<void>();
 
   readonly ImageIcon = ImageIcon;
 

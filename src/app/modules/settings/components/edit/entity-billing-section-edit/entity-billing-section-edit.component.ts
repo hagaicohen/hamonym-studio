@@ -5,7 +5,9 @@ import {
   Input,
   inject,
   OnInit,
-  ViewChild
+  ViewChild,
+  EventEmitter,
+  Output
 } from '@angular/core';
 
 import {
@@ -40,6 +42,7 @@ import {
 import {
   OpenfieldsFormComponent
 } from '../../../../billing/components/openfields-form/openfields-form.component';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
 type BillingMethod =
   'credit-card' |
@@ -98,6 +101,24 @@ export class EntityBillingSectionEditComponent
 
   }
 
+  @Input()
+saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
+
+@Output()
+save =
+  new EventEmitter<void>();
+
+@Output()
+cancel =
+  new EventEmitter<void>();
+  
   get entity(): any {
 
     return this._entity;

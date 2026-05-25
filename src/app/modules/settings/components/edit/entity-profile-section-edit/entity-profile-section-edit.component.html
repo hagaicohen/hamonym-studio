@@ -4,6 +4,7 @@
   <!-- HEADER -->
 
   <div class="card-top">
+    <div>
     <div class="header-content">
       <div class="section-title-row">
         <lucide-icon
@@ -21,6 +22,72 @@
         תוצג בפלטפורמה
       </div>
     </div>
+    </div>
+    <div class="card-actions">
+
+  <button
+    class="cancel-btn"
+    type="button"
+    [disabled]="saveState.isSaving"
+    (click)="cancel.emit()">
+
+    ביטול
+
+  </button>
+
+  <button
+    class="save-btn"
+    type="button"
+    [class.success]="saveState.saveCompleted"
+    [class.error]="saveState.saveFailed"
+    [disabled]="saveState.isSaving"
+    (click)="save.emit()">
+
+    @if (
+      !saveState.isSaving &&
+      !saveState.saveCompleted &&
+      !saveState.saveFailed
+    ) {
+
+      שמירה
+
+    }
+
+    @if (saveState.isSaving) {
+
+      <div class="btn-spinner"></div>
+
+    }
+
+    @if (
+      !saveState.isSaving &&
+      saveState.saveCompleted
+    ) {
+
+      <div class="save-success">
+
+        ✓ נשמר
+
+      </div>
+
+    }
+
+    @if (
+      !saveState.isSaving &&
+      saveState.saveFailed
+    ) {
+
+      <div class="save-failed">
+
+        ✕ נכשל
+
+      </div>
+
+    }
+
+  </button>
+
+</div>
   </div>
 
   <!-- BODY -->

@@ -1,13 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
-
 import { FormsModule } from '@angular/forms';
-
 import {
   LucideAngularModule,
   TrendingUp
 } from 'lucide-angular';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
 @Component({
   selector: 'app-entity-goals-section-edit',
@@ -24,6 +22,24 @@ export class EntityGoalsSectionEditComponent {
 
   @Output()
   entityChange = new EventEmitter<any>();
+
+  @Input()
+saveState: SectionSaveState = {
+
+  isSaving: false,
+
+  saveCompleted: false,
+
+  saveFailed: false
+};
+
+@Output()
+save =
+  new EventEmitter<void>();
+
+@Output()
+cancel =
+  new EventEmitter<void>();
 
   readonly TrendingUp = TrendingUp;
 
