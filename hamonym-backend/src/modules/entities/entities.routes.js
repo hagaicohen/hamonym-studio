@@ -127,4 +127,9 @@ router.patch(
 
 );
 
+router.delete(
+  '/:id/tax-document',
+  controller.removeTaxDocument
+);
+
 module.exports = router;

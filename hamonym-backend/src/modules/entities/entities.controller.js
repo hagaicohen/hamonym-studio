@@ -456,3 +456,36 @@ exports.updateEntity =
     }
 
   };
+
+// =========================================================
+// REMOVE TAX DOCUMENT
+// =========================================================
+
+exports.removeTaxDocument =
+  async (req, res) => {
+
+    try {
+
+      await service
+        .removeTaxDocument(
+
+          req.params.id
+
+        );
+
+      res.json({
+        success: true
+      });
+
+    } catch (err) {
+
+      console.error(err);
+
+      res.status(500).json({
+        error:
+          'Failed to remove tax document'
+      });
+
+    }
+
+  };

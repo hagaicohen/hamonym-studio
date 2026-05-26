@@ -826,3 +826,37 @@ exports.getEntityById =
     return result.rows[0] || null;
 
   };
+
+  exports.removeTaxDocument =
+  async (entityId) => {
+
+    const result =
+      await db.query(
+
+        `
+        UPDATE entities
+
+        SET
+
+          tax_document_name = NULL,
+
+          tax_document_mime = NULL,
+
+          tax_document_data = NULL
+
+        WHERE id = $1
+
+        RETURNING id
+        `,
+
+        [
+
+          entityId
+
+        ]
+
+      );
+
+    return result.rows[0];
+
+  };
