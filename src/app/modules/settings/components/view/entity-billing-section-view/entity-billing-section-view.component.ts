@@ -44,21 +44,49 @@ export class EntityBillingSectionViewComponent {
   readonly CreditCard =
     CreditCard;
 
-  get hasBillingMethod(): boolean {
-
-    return !!this.entity?.billing_method;
-
-  }
-
   get isCreditCard(): boolean {
 
-    return this.entity?.billing_method === 'credit-card';
+    return (
+      this.entity?.billing_method ===
+      'credit-card'
+    );
 
   }
 
   get isMasav(): boolean {
 
-    return this.entity?.billing_method === 'masav';
+    return (
+      this.entity?.billing_method ===
+      'masav'
+    );
+
+  }
+
+ get hasBillingMethod(): boolean {
+
+    /*
+    |--------------------------------------------------------------------------
+    | MASAV
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      this.entity?.billing_method === 'masav'
+    ) {
+
+      return !!this.entity
+        ?.billing_masav_file_name;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREDIT CARD
+    |--------------------------------------------------------------------------
+    */
+
+    return !!this.entity
+      ?.billing_last4;
 
   }
 

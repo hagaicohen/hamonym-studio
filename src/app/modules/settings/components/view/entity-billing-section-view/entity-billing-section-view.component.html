@@ -1,4 +1,4 @@
-  <div class="settings-card">
+<div class="settings-card">
 
   <div class="card-top">
 
@@ -27,7 +27,7 @@
 
     </div>
 
-     <div class="card-actions">
+    <div class="card-actions">
 
       <button
         type="button"
@@ -105,7 +105,10 @@
 
     <!-- CREDIT CARD -->
 
-    @if (isCreditCard) {
+    @if (
+      isCreditCard &&
+      entity?.billing_last4
+    ) {
 
       <div class="info-row">
 
@@ -123,25 +126,21 @@
 
       </div>
 
-      @if (entity?.billing_last4) {
+      <div class="info-row">
 
-        <div class="info-row">
+        <div class="info-label">
 
-          <div class="info-label">
-
-            4 ספרות אחרונות
-
-          </div>
-
-          <div class="info-value masked">
-
-             {{ entity.billing_last4 }} ••••
-
-          </div>
+          4 ספרות אחרונות
 
         </div>
 
-      }
+        <div class="info-value masked">
+
+          {{ entity.billing_last4 }} ••••
+
+        </div>
+
+      </div>
 
       @if (
         entity?.exp_month &&
@@ -194,7 +193,10 @@
 
     <!-- MASAV -->
 
-    @if (isMasav) {
+    @if (
+      isMasav &&
+      entity?.billing_masav_file_name
+    ) {
 
       <div class="info-row">
 
@@ -206,7 +208,25 @@
 
         <div class="info-value">
 
-          {{ entity?.masav_file_name || 'הועלה טופס חתום' }}
+          {{
+            entity?.billing_masav_file_name
+          }}
+
+        </div>
+
+      </div>
+
+      <div class="info-row">
+
+        <div class="info-label">
+
+          סטטוס
+
+        </div>
+
+        <div class="billing-status success">
+
+          טופס מס״ב הוגדר
 
         </div>
 

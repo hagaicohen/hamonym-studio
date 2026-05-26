@@ -42,7 +42,10 @@ import {
 import {
   OpenfieldsFormComponent
 } from '../../../../billing/components/openfields-form/openfields-form.component';
-import { SectionSaveState } from '../../../models/section-save-state.model';
+
+import {
+  SectionSaveState
+} from '../../../models/section-save-state.model';
 
 type BillingMethod =
   'credit-card' |
@@ -86,11 +89,17 @@ export class EntityBillingSectionEditComponent
   @ViewChild(OpenfieldsFormComponent)
   openfieldsForm?: OpenfieldsFormComponent;
 
-  /* =====================================
-     ENTITY INPUT
-  ===================================== */
-
   private _entity: any;
+
+  /*
+  |--------------------------------------------------------------------------
+  | IMPORTANT
+  | prevent UI hydration override
+  |--------------------------------------------------------------------------
+  */
+
+  private manuallySelectedMasav = false;
+  private manuallySelectedCreditCard = false;
 
   @Input()
   set entity(value: any) {
@@ -101,29 +110,33 @@ export class EntityBillingSectionEditComponent
 
   }
 
-  @Input()
-saveState: SectionSaveState = {
-
-  isSaving: false,
-
-  saveCompleted: false,
-
-  saveFailed: false
-};
-
-@Output()
-save =
-  new EventEmitter<void>();
-
-@Output()
-cancel =
-  new EventEmitter<void>();
-  
   get entity(): any {
 
     return this._entity;
 
   }
+
+  @Input()
+  saveState: SectionSaveState = {
+
+    isSaving: false,
+
+    saveCompleted: false,
+
+    saveFailed: false
+  };
+
+  @Output()
+  save =
+    new EventEmitter<void>();
+
+  @Output()
+  cancel =
+    new EventEmitter<void>();
+
+  @Output()
+  entityChange =
+    new EventEmitter<any>();
 
   readonly CreditCard =
     CreditCard;
@@ -135,26 +148,12 @@ cancel =
 
   ngOnInit(): void {
 
-    console.log(
-      'QUERY PARAMS',
-      window.location.href
-    );
-
-    /* =========================
-       FULL HYDRATION
-    ========================= */
-
     this.entitiesService
       .getEntityById(this.entity.id)
 
       .subscribe({
 
         next: (res: any) => {
-
-          console.log(
-            'FULL ENTITY',
-            res
-          );
 
           const refreshedEntity =
 
@@ -172,10 +171,6 @@ cancel =
         }
 
       });
-
-    /* =========================
-       CARDCOM RETURN
-    ========================= */
 
     const lowProfileId =
 
@@ -222,11 +217,6 @@ cancel =
 
               next: (entityRes: any) => {
 
-                console.log(
-                  'REFRESHED ENTITY',
-                  entityRes
-                );
-
                 const refreshedEntity =
 
                   entityRes.entity ||
@@ -262,23 +252,18 @@ cancel =
 
   }
 
-  /* =====================================
-     MODE SYNC
-  ===================================== */
+private syncModeFromEntity(): void {
 
-  private syncModeFromEntity(): void {
+  /*
+  |--------------------------------------------------------------------------
+  | LOCAL CREDIT CARD SELECTION
+  | MUST WIN OVER HYDRATION
+  |--------------------------------------------------------------------------
+  */
 
-    /*
-      IMPORTANT:
-      Don't override replace flow
-    */
-
-    if (
-      this.mode ===
-      'replacing'
-    ) {
-      return;
-    }
+  if (
+    this.manuallySelectedCreditCard
+  ) {
 
     if (
       this.entity?.billing_last4
@@ -294,9 +279,94 @@ cancel =
 
     }
 
+    return;
+
   }
 
-  get billingMethod(): BillingMethod {
+  /*
+  |--------------------------------------------------------------------------
+  | LOCAL MASAV SELECTION
+  | MUST WIN OVER HYDRATION
+  |--------------------------------------------------------------------------
+  */
+
+  if (
+    this.manuallySelectedMasav
+  ) {
+
+    this.mode =
+      'empty';
+
+    return;
+
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | MASAV FROM SERVER
+  |--------------------------------------------------------------------------
+  */
+
+  if (
+    this.entity?.billing_method === 'masav'
+  ) {
+
+    this.mode =
+      'empty';
+
+    return;
+
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | NEVER OVERRIDE REPLACE FLOW
+  |--------------------------------------------------------------------------
+  */
+
+  if (
+    this.mode === 'replacing'
+  ) {
+    return;
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | CREDIT CARD
+  |--------------------------------------------------------------------------
+  */
+
+  if (
+    this.entity?.billing_last4
+  ) {
+
+    this.mode =
+      'connected';
+
+  } else {
+
+    this.mode =
+      'empty';
+
+  }
+
+}
+
+ get billingMethod(): BillingMethod {
+
+    /*
+      IMPORTANT:
+      local MASAV selection
+      must override hydration
+    */
+
+    if (
+      this.manuallySelectedMasav
+    ) {
+
+      return 'masav';
+
+    }
 
     return this.entity?.billing_method ||
       'credit-card';
@@ -317,15 +387,86 @@ cancel =
 
   }
 
-  selectBillingMethod(
-    method: BillingMethod
-  ): void {
+  get canSaveMasav(): boolean {
 
-    this.entity.billing_method =
-      method;
+    return !!this.entity
+      ?.billing_masav_file_name;
 
   }
 
+  selectBillingMethod(
+  method: BillingMethod
+): void {
+
+  /*
+  |--------------------------------------------------------------------------
+  | MASAV
+  |--------------------------------------------------------------------------
+  */
+
+  if (method === 'masav') {
+
+    this.manuallySelectedMasav =
+      true;
+
+    this.manuallySelectedCreditCard =
+      false;
+
+    this.mode =
+      'empty';
+
+    /*
+      IMPORTANT:
+      DO NOT CLEAR CREDIT CARD YET.
+      ONLY AFTER REAL SAVE.
+    */
+
+    this.entity = {
+
+      ...this.entity,
+
+      billing_method:
+        'masav'
+
+    };
+
+  } else {
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREDIT CARD
+    |--------------------------------------------------------------------------
+    */
+
+    this.manuallySelectedMasav =
+      false;
+
+    this.manuallySelectedCreditCard =
+      true;
+
+    this.entity = {
+
+      ...this.entity,
+
+      billing_method:
+        'credit-card',
+
+      /*
+        CLEAR MASAV
+      */
+
+      billing_masav_file_name:
+        null
+
+    };
+
+  }
+
+  this.entityChange.emit(
+    this.entity
+  );
+
+}
   onMasavFileSelected(
     event: Event
   ): void {
@@ -340,15 +481,36 @@ cancel =
     const file =
       input.files[0];
 
-    this.entity.billing_masav_file_name =
-      file.name;
+    this.entity = {
+
+      ...this.entity,
+
+      billing_method:
+        'masav',
+
+      billing_masav_file_name:
+        file.name
+    };
+
+    this.entityChange.emit(
+      this.entity
+    );
 
   }
 
   removeMasavFile(): void {
 
-    this.entity.billing_masav_file_name =
-      null;
+    this.entity = {
+
+      ...this.entity,
+
+      billing_masav_file_name:
+        null
+    };
+
+    this.entityChange.emit(
+      this.entity
+    );
 
   }
 

@@ -309,6 +309,28 @@ async saveAll(): Promise<void> {
 
     );
 
+  /*
+    IMPORTANT:
+    preserve billing method UI state
+  */
+
+  if (
+    this.editingSection === 'billing'
+  ) {
+
+    optimisticEntity.billing_method =
+
+      this.draftEntity
+        .billing_method;
+
+    optimisticEntity
+      .billing_masav_file_name =
+
+      this.draftEntity
+        .billing_masav_file_name;
+
+  }
+
   this.entity =
     optimisticEntity;
 
@@ -334,20 +356,44 @@ async saveAll(): Promise<void> {
 
   }
 
-  const payload = {
+const payload = {
 
-    ...this.draftEntity,
+  ...this.draftEntity,
 
-    logo_data:
-      undefined,
+  /*
+    IMPORTANT:
+    switching to MASAV
+    must clear old credit card data
+  */
 
-    association_certificate_data:
-      undefined,
+  ...(this.draftEntity?.billing_method === 'masav'
+    ? {
 
-    tax_document_data:
-      undefined
+        billing_last4:
+          null,
 
-  };
+        exp_month:
+          null,
+
+        exp_year:
+          null,
+
+        billing_provider:
+          null
+
+      }
+    : {}),
+
+  logo_data:
+    undefined,
+
+  association_certificate_data:
+    undefined,
+
+  tax_document_data:
+    undefined
+
+};
 
   this.entitiesService
   .updateEntity(
@@ -371,23 +417,39 @@ async saveAll(): Promise<void> {
       this.saveState.saveCompleted =
         true;
 
+      /*
+        IMPORTANT:
+        preserve billing UI state
+        after backend response
+      */
+
+      const mergedEntity = {
+
+        ...updatedEntity,
+
+        billing_method:
+          this.draftEntity
+            ?.billing_method,
+
+        billing_masav_file_name:
+          this.draftEntity
+            ?.billing_masav_file_name
+
+      };
+
       this.entity =
         structuredClone(
-
-          updatedEntity
-
+          mergedEntity
         );
 
       this.draftEntity =
         structuredClone(
-
-          updatedEntity
-
+          mergedEntity
         );
 
       this.currentEntityService
         .setEntity(
-          updatedEntity
+          mergedEntity
         );
 
       setTimeout(() => {
@@ -450,6 +512,31 @@ async saveAll(): Promise<void> {
 
       this.saveState.saveFailed =
         true;
+
+
+      /*
+          IMPORTANT:
+          keep billing edit mode open
+          after failed save
+        */
+
+        if (
+          this.editingSection === 'billing'
+        ) {
+
+          this.draftEntity = {
+
+            ...this.draftEntity,
+
+            billing_method:
+
+              this.draftEntity
+                ?.billing_method ||
+
+              'credit-card'
+          };
+
+        }  
 
       setTimeout(() => {
 

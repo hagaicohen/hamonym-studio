@@ -31,69 +31,75 @@
 
     <div class="card-actions">
 
-  <button
-    class="cancel-btn"
-    type="button"
-    [disabled]="saveState.isSaving"
-    (click)="cancel.emit()">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="cancel.emit()">
 
-    ביטול
+        ביטול
 
-  </button>
+      </button>
 
-  <button
-    class="save-btn"
-    type="button"
-    [class.success]="saveState.saveCompleted"
-    [class.error]="saveState.saveFailed"
-    [disabled]="saveState.isSaving"
-    (click)="save.emit()">
+      <button
+        class="save-btn"
+        type="button"
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        [disabled]="
+          saveState.isSaving ||
+          (
+            isMasav &&
+            !canSaveMasav
+          )
+        "
+        (click)="save.emit()">
 
-    @if (
-      !saveState.isSaving &&
-      !saveState.saveCompleted &&
-      !saveState.saveFailed
-    ) {
+        @if (
+          !saveState.isSaving &&
+          !saveState.saveCompleted &&
+          !saveState.saveFailed
+        ) {
 
-      שמירה
+          שמירה
 
-    }
+        }
 
-    @if (saveState.isSaving) {
+        @if (saveState.isSaving) {
 
-      <div class="btn-spinner"></div>
+          <div class="btn-spinner"></div>
 
-    }
+        }
 
-    @if (
-      !saveState.isSaving &&
-      saveState.saveCompleted
-    ) {
+        @if (
+          !saveState.isSaving &&
+          saveState.saveCompleted
+        ) {
 
-      <div class="save-success">
+          <div class="save-success">
 
-        ✓ נשמר
+            ✓ נשמר
 
-      </div>
+          </div>
 
-    }
+        }
 
-    @if (
-      !saveState.isSaving &&
-      saveState.saveFailed
-    ) {
+        @if (
+          !saveState.isSaving &&
+          saveState.saveFailed
+        ) {
 
-      <div class="save-failed">
+          <div class="save-failed">
 
-        ✕ נכשל
+            ✕ נכשל
 
-      </div>
+          </div>
 
-    }
+        }
 
-  </button>
+      </button>
 
-</div>
+    </div>
 
   </div>
 

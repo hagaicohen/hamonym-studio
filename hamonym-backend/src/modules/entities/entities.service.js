@@ -249,34 +249,42 @@ exports.getMyEntities =
         `
        SELECT
 
-  e.*,
-  ue.role,
+            e.*,
+            ue.role,
 
-  CASE
-    WHEN eb.id IS NOT NULL
-    THEN 'credit-card'
-    ELSE NULL
-  END AS billing_method,
+            CASE
 
-  eb.provider AS billing_provider,
+              WHEN e.billing_method = 'masav'
+              THEN 'masav'
 
-  eb.last4 AS billing_last4,
+              WHEN eb.id IS NOT NULL
+              THEN 'credit-card'
 
-  eb.exp_month,
-  eb.exp_year
+              ELSE NULL
 
-FROM entities e
+            END AS billing_method,
 
-INNER JOIN user_entities ue
-  ON ue.entity_id = e.id
+            eb.provider AS billing_provider,
 
-LEFT JOIN entity_billing eb
-  ON eb.entity_id = e.id
-  AND eb.status = 'active'
+            eb.last4 AS billing_last4,
 
-WHERE ue.user_id = $1
+            eb.exp_month,
+            eb.exp_year,
 
-ORDER BY e.created_at DESC
+            e.billing_masav_file_name
+
+          FROM entities e
+
+          INNER JOIN user_entities ue
+            ON ue.entity_id = e.id
+
+          LEFT JOIN entity_billing eb
+            ON eb.entity_id = e.id
+            AND eb.status = 'active'
+
+          WHERE ue.user_id = $1
+
+          ORDER BY e.created_at DESC
         `,
 
         [userId]
@@ -624,6 +632,33 @@ exports.updateEntity =
 
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | SWITCH TO MASAV
+    | DISABLE ACTIVE CREDIT CARDS
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      data.billing_method === 'masav'
+    ) {
+
+      await db.query(
+
+        `
+        UPDATE entity_billing
+
+        SET status = 'inactive'
+
+        WHERE entity_id = $1
+        `,
+
+        [entityId]
+
+      );
+
+    }
+
     // =====================================================
     // UPDATE
     // =====================================================
@@ -673,9 +708,12 @@ exports.updateEntity =
           contact_phone = $26,
           contact_email = $27,
 
+          billing_method = $28,
+          billing_masav_file_name = $29,
+
           updated_at = NOW()
 
-        WHERE id = $28
+        WHERE id = $30
 
         RETURNING *
         `,
@@ -719,6 +757,10 @@ exports.updateEntity =
           data.contact_phone,
           data.contact_email,
 
+          data.billing_method,
+
+          data.billing_masav_file_name,
+
           entityId
 
         ]
@@ -726,6 +768,7 @@ exports.updateEntity =
       );
 
     return result.rows[0];
+
   };
 
 exports.getEntityById =
@@ -740,9 +783,15 @@ exports.getEntityById =
           e.*,
 
           CASE
+
+            WHEN e.billing_method = 'masav'
+            THEN 'masav'
+
             WHEN eb.id IS NOT NULL
             THEN 'credit-card'
+
             ELSE NULL
+
           END AS billing_method,
 
           eb.provider AS billing_provider,
@@ -753,7 +802,9 @@ exports.getEntityById =
 
           eb.exp_month,
 
-          eb.exp_year
+          eb.exp_year,
+
+          e.billing_masav_file_name
 
         FROM entities e
 
