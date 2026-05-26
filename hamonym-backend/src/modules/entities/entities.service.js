@@ -247,44 +247,44 @@ exports.getMyEntities =
       await db.query(
 
         `
-       SELECT
+        SELECT
 
-            e.*,
-            ue.role,
+          e.*,
+          ue.role,
 
-            CASE
+          CASE
 
-              WHEN e.billing_method = 'masav'
-              THEN 'masav'
+            WHEN e.billing_method = 'masav'
+            THEN 'masav'
 
-              WHEN eb.id IS NOT NULL
-              THEN 'credit-card'
+            WHEN eb.id IS NOT NULL
+            THEN 'credit-card'
 
-              ELSE NULL
+            ELSE NULL
 
-            END AS billing_method,
+          END AS billing_method,
 
-            eb.provider AS billing_provider,
+          eb.provider AS billing_provider,
 
-            eb.last4 AS billing_last4,
+          eb.last4 AS billing_last4,
 
-            eb.exp_month,
-            eb.exp_year,
+          eb.exp_month,
+          eb.exp_year,
 
-            e.billing_masav_file_name
+          e.billing_masav_file_name
 
-          FROM entities e
+        FROM entities e
 
-          INNER JOIN user_entities ue
-            ON ue.entity_id = e.id
+        INNER JOIN user_entities ue
+          ON ue.entity_id = e.id
 
-          LEFT JOIN entity_billing eb
-            ON eb.entity_id = e.id
-            AND eb.status = 'active'
+        LEFT JOIN entity_billing eb
+          ON eb.entity_id = e.id
+          AND eb.status = 'active'
 
-          WHERE ue.user_id = $1
+        WHERE ue.user_id = $1
 
-          ORDER BY e.created_at DESC
+        ORDER BY e.created_at DESC
         `,
 
         [userId]
