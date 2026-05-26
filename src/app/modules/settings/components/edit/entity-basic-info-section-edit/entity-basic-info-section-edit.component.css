@@ -350,3 +350,39 @@ select:focus {
   }
 
 }
+
+.document-description {
+
+  margin-top: 4px;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+
+  color: #6b7280;
+}
+
+.optional-badge {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin-inline-start: 8px;
+
+  padding: 2px 8px;
+
+  border-radius: 999px;
+
+  background: #f3f4f6;
+
+  color: #6b7280;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  vertical-align: middle;
+}

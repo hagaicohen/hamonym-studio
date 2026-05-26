@@ -278,9 +278,6 @@ export class StepEntityComponent {
   }
 
   get canContinue(): boolean {
-    const section46Valid =
-      !this.entityConfig.showSection46 || !!this.section46FileName;
-
     return !!(
       this.entityType &&
       this.organizationName.trim() &&
@@ -289,8 +286,7 @@ export class StepEntityComponent {
       this.fullName.trim() &&
       this.isPhoneValid &&
       this.isEmailValid &&
-      this.certificateFileName &&
-      section46Valid
+      this.certificateFileName
     );
   }
 }

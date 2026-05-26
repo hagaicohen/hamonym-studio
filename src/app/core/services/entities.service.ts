@@ -219,4 +219,16 @@ export class EntitiesService {
       },
     );
   }
+
+  removeTaxDocument(
+  entityId: string
+  ) {
+
+    return this.http.delete(
+
+      `${environment.apiUrl}/api/entities/${entityId}/tax-document`
+
+    );
+
+  }
 }

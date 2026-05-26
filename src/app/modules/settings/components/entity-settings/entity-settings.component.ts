@@ -8,7 +8,8 @@ import {
 } from '@angular/core';
 
 import {
-  finalize
+  finalize,
+  firstValueFrom
 } from 'rxjs';
 
 import {
@@ -302,6 +303,46 @@ async saveAll(): Promise<void> {
 
   }
 
+  /*
+    IMPORTANT:
+    explicit tax document delete flow
+  */
+
+  const hadTaxDocument =
+
+    !!this.entity
+      ?.tax_document_name;
+
+  const removedTaxDocument =
+
+    hadTaxDocument &&
+
+    !this.draftEntity
+      ?.tax_document_name;
+
+  if (removedTaxDocument) {
+
+    try {
+
+      await firstValueFrom(
+
+        this.entitiesService
+          .removeTaxDocument(
+
+            this.draftEntity.id
+
+          )
+
+      );
+
+    } catch (err) {
+
+      console.error(err);
+
+    }
+
+  }
+
   const optimisticEntity =
     structuredClone(
 
@@ -356,165 +397,164 @@ async saveAll(): Promise<void> {
 
   }
 
-const payload = {
+  const payload = {
 
-  ...this.draftEntity,
+    ...this.draftEntity,
 
-  /*
-    IMPORTANT:
-    switching to MASAV
-    must clear old credit card data
-  */
+    /*
+      IMPORTANT:
+      switching to MASAV
+      must clear old credit card data
+    */
 
-  ...(this.draftEntity?.billing_method === 'masav'
-    ? {
+    ...(this.draftEntity?.billing_method === 'masav'
+      ? {
 
-        billing_last4:
-          null,
+          billing_last4:
+            null,
 
-        exp_month:
-          null,
+          exp_month:
+            null,
 
-        exp_year:
-          null,
+          exp_year:
+            null,
 
-        billing_provider:
-          null
+          billing_provider:
+            null
 
-      }
-    : {}),
+        }
+      : {}),
 
-  logo_data:
-    undefined,
+    logo_data:
+      undefined,
 
-  association_certificate_data:
-    undefined,
+    association_certificate_data:
+      undefined,
 
-  tax_document_data:
-    undefined
+    tax_document_data:
+      undefined
 
-};
+  };
 
   this.entitiesService
-  .updateEntity(
+    .updateEntity(
 
-    this.draftEntity.id,
+      this.draftEntity.id,
 
-    payload,
+      payload,
 
-  )
+    )
 
-  .subscribe({
+    .subscribe({
 
-    next: (updatedEntity) => {
+      next: (updatedEntity) => {
 
-      this.saveState.isSaving =
-        false;
+        this.saveState.isSaving =
+          false;
 
-      this.saveState.saveFailed =
-        false;
+        this.saveState.saveFailed =
+          false;
 
-      this.saveState.saveCompleted =
-        true;
+        this.saveState.saveCompleted =
+          true;
 
-      /*
-        IMPORTANT:
-        preserve billing UI state
-        after backend response
-      */
+        /*
+          IMPORTANT:
+          preserve billing UI state
+          after backend response
+        */
 
-      const mergedEntity = {
+        const mergedEntity = {
 
-        ...updatedEntity,
+          ...updatedEntity,
 
-        billing_method:
-          this.draftEntity
-            ?.billing_method,
+          billing_method:
+            this.draftEntity
+              ?.billing_method,
 
-        billing_masav_file_name:
-          this.draftEntity
-            ?.billing_masav_file_name
+          billing_masav_file_name:
+            this.draftEntity
+              ?.billing_masav_file_name
 
-      };
+        };
 
-      this.entity =
-        structuredClone(
-          mergedEntity
-        );
+        this.entity =
+          structuredClone(
+            mergedEntity
+          );
 
-      this.draftEntity =
-        structuredClone(
-          mergedEntity
-        );
+        this.draftEntity =
+          structuredClone(
+            mergedEntity
+          );
 
-      this.currentEntityService
-        .setEntity(
-          mergedEntity
-        );
+        this.currentEntityService
+          .setEntity(
+            mergedEntity
+          );
 
-      setTimeout(() => {
+        setTimeout(() => {
+
+          this.saveState.saveCompleted =
+            false;
+
+          this.editMode =
+            false;
+
+          this.editingSection =
+            null;
+
+        }, 1500);
+
+        this.entitiesService
+          .getEntityById(
+            updatedEntity.id
+          )
+
+          .subscribe({
+
+            next: (fullEntity: any) => {
+
+              const entity =
+
+                fullEntity.entity ||
+                fullEntity;
+
+              this.entity =
+                structuredClone(entity);
+
+              this.draftEntity =
+                structuredClone(entity);
+
+              this.currentEntityService
+                .setEntity(entity);
+
+            },
+
+            error: (err) => {
+
+              console.error(err);
+
+            }
+
+          });
+
+      },
+
+      error: (err) => {
+
+        console.error(err);
+
+        this.saveState.isSaving =
+          false;
 
         this.saveState.saveCompleted =
           false;
 
-        this.editMode =
-          false;
+        this.saveState.saveFailed =
+          true;
 
-        this.editingSection =
-          null;
-
-      }, 1500);
-
-      this.entitiesService
-        .getEntityById(
-          updatedEntity.id
-        )
-
-        .subscribe({
-
-          next: (fullEntity: any) => {
-
-            const entity =
-
-              fullEntity.entity ||
-              fullEntity;
-
-            this.entity =
-              structuredClone(entity);
-
-            this.draftEntity =
-              structuredClone(entity);
-
-            this.currentEntityService
-              .setEntity(entity);
-
-          },
-
-          error: (err) => {
-
-            console.error(err);
-
-          }
-
-        });
-
-    },
-
-    error: (err) => {
-
-      console.error(err);
-
-      this.saveState.isSaving =
-        false;
-
-      this.saveState.saveCompleted =
-        false;
-
-      this.saveState.saveFailed =
-        true;
-
-
-      /*
+        /*
           IMPORTANT:
           keep billing edit mode open
           after failed save
@@ -536,18 +576,18 @@ const payload = {
               'credit-card'
           };
 
-        }  
+        }
 
-      setTimeout(() => {
+        setTimeout(() => {
 
-        this.saveState.saveFailed =
-          false;
+          this.saveState.saveFailed =
+            false;
 
-      }, 2000);
+        }, 2000);
 
-    },
+      },
 
-  });
+    });
 
 }
 

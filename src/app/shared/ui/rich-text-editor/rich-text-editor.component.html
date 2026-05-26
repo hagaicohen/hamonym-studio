@@ -1,14 +1,45 @@
 <!-- rich-text-editor.component.html -->
 
 <div class="editor-shell">
-  <div class="editor-toolbar" *ngIf="editor">
+  <div
+    class="editor-toolbar"
+    *ngIf="editor">
+
+    <!-- TEXT STYLE -->
+
+    <div class="toolbar-group">
+      <select
+        class="toolbar-select"
+        [value]="getCurrentBlockType()"
+        (change)="onBlockTypeChange($event)">
+
+        <option value="paragraph">
+          Normal
+        </option>
+
+        <option value="h1">
+          Heading 1
+        </option>
+
+        <option value="h2">
+          Heading 2
+        </option>
+
+        <option value="h3">
+          Heading 3
+        </option>
+      </select>
+    </div>
+
+    <!-- INLINE -->
+
     <div class="toolbar-group">
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bold')"
-        (click)="toggleBold()"
-      >
+        (click)="toggleBold()">
+
         <strong>B</strong>
       </button>
 
@@ -16,8 +47,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('italic')"
-        (click)="toggleItalic()"
-      >
+        (click)="toggleItalic()">
+
         <em>I</em>
       </button>
 
@@ -25,8 +56,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('underline')"
-        (click)="toggleUnderline()"
-      >
+        (click)="toggleUnderline()">
+
         <u>U</u>
       </button>
 
@@ -34,66 +65,21 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('strike')"
-        (click)="toggleStrike()"
-      >
-        S
-      </button>
+        (click)="toggleStrike()">
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('highlight')"
-        (click)="toggleHighlight()"
-      >
-        🖍
+        <s>S</s>
       </button>
     </div>
 
-    <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn text-btn"
-        [class.active]="isActive('heading', { level: 1 })"
-        (click)="setHeading(1)"
-      >
-        H1
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn text-btn"
-        [class.active]="isActive('heading', { level: 2 })"
-        (click)="setHeading(2)"
-      >
-        H2
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn text-btn"
-        [class.active]="isActive('heading', { level: 3 })"
-        (click)="setHeading(3)"
-      >
-        H3
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn text-btn"
-        [class.active]="isActive('paragraph')"
-        (click)="setParagraph()"
-      >
-        P
-      </button>
-    </div>
+    <!-- LISTS -->
 
     <div class="toolbar-group">
       <button
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bulletList')"
-        (click)="toggleBulletList()"
-      >
+        (click)="toggleBulletList()">
+
         •
       </button>
 
@@ -101,29 +87,86 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('orderedList')"
-        (click)="toggleOrderedList()"
-      >
+        (click)="toggleOrderedList()">
+
         1.
+      </button>
+    </div>
+
+    <!-- ALIGN -->
+
+    <div class="toolbar-group">
+      <button
+        type="button"
+        class="toolbar-btn"
+        (click)="setTextAlign('right')">
+
+        ≡
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
-        [class.active]="isActive('taskList')"
-        (click)="toggleTaskList()"
-      >
-        ☑
+        (click)="setTextAlign('center')">
+
+        ☰
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn"
+        (click)="setTextAlign('left')">
+
+        ☷
+      </button>
+    </div>
+
+    <!-- LINK -->
+
+    <div class="toolbar-group">
+      <button
+        type="button"
+        class="toolbar-btn"
+        [class.active]="isActive('link')"
+        (click)="addLink()">
+
+        🔗
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn danger"
+        (click)="removeLink()">
+
+        ✕
+      </button>
+    </div>
+
+    <!-- EXTRA -->
+
+    <div class="toolbar-group">
+      <button
+        type="button"
+        class="toolbar-btn"
+        [class.active]="isActive('blockquote')"
+        (click)="toggleBlockquote()">
+
+        ❝
+      </button>
+
+      <button
+        type="button"
+        class="toolbar-btn"
+        (click)="clearFormatting()">
+
+        Tx
       </button>
     </div>
   </div>
 
-  <button
-    type="button"
-    class="floating-add-btn"
-    (click)="insertHorizontalRule()"
-  >
-    +
-  </button>
-
-  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
+  <div
+    #editor
+    class="editor-content"
+    [style.minHeight.px]="minHeight">
+  </div>
 </div>
