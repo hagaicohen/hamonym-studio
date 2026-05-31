@@ -1,0 +1,46 @@
+.preview-donation-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 12px;
+
+}
+
+.donation-chip {
+
+  height: 52px;
+
+  border: none;
+
+  border-radius: 18px;
+
+  background: #f3f4f6;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    all .2s ease;
+
+}
+
+.donation-chip.active {
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--campaign-primary, #8b5cf6),
+      var(--campaign-secondary, #c084fc)
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 8px 20px rgba(139,92,246,0.25);
+
+}

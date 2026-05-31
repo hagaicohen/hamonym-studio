@@ -1,0 +1,60 @@
+.campaign-preview-page {
+
+  display: flex;
+
+  flex-direction: column;
+
+  height: calc(100vh - 32px);
+  
+
+}
+
+.campaign-preview-meta {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 4px;
+
+  padding: 0 0 12px;
+
+}
+
+.campaign-preview-label {
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  color: #111827;
+
+}
+
+.campaign-preview-status {
+
+  font-size: 11px;
+
+  color: #6b7280;
+
+}
+
+.campaign-preview-body {
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  border-radius: 28px;
+
+  background: #ffffff;
+
+  border:
+    1px solid rgba(0,0,0,0.05);
+
+  box-shadow:
+    0 4px 20px rgba(0,0,0,0.04);
+
+}

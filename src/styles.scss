@@ -1,3 +1,15 @@
+@use './app/modules/campaigns/styles/variables';
+
+@use './app/modules/campaigns/styles/cards';
+@use './app/modules/campaigns/styles/buttons';
+@use './app/modules/campaigns/styles/forms';
+@use './app/modules/campaigns/styles/pages';
+@use './app/modules/campaigns/styles/live-preview';
+@use './app/modules/campaigns/styles/builder-shell';
+@use './app/modules/campaigns/styles/preview-hero-section';
+@use './app/modules/campaigns/styles/preview-progress-section';
+@use './app/modules/campaigns/styles/preview-story-section';
+@use './app/modules/campaigns/styles/preview-donation-section';
 @import "./styles/onboarding.css";
 
 /* You can add global styles to this file, and also import other style files */
@@ -39,4 +51,10 @@ select {
 
 *::-webkit-scrollbar {
   display: none;
+}
+
+h1 {
+
+  margin: 0;
+
 }

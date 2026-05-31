@@ -1,0 +1,102 @@
+:host {
+
+  display: block;
+
+}
+
+.footer {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 32px;
+
+  margin-top: 32px;
+
+  border-top: 1px solid #e5e7eb;
+
+  background: #ffffff;
+
+}
+
+.primary-button {
+
+  min-width: 180px;
+
+  height: 56px;
+
+  border: none;
+
+  border-radius: 16px;
+
+  background: linear-gradient(
+    135deg,
+    #8b5cf6,
+    #7c3aed
+  );
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+}
+
+.secondary-button {
+
+  min-width: 140px;
+
+  height: 56px;
+
+  border-radius: 16px;
+
+  border: 1px solid #d1d5db;
+
+  background: white;
+
+  color: #111827;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+
+  .editor-content {
+
+    overflow-y: visible;
+
+    flex: unset;
+  }
+
+  .footer {
+
+    flex-direction: column-reverse;
+
+    gap: 16px;
+
+    padding: 24px;
+
+  }
+
+  .primary-button {
+
+    width: 100%;
+
+  }
+
+  .secondary-button {
+
+    width: 100%;
+
+  }
+}

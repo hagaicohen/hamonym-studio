@@ -1,0 +1,53 @@
+<div class="campaign-editor">
+
+  <div class="editor-content">
+
+    <app-campaign-stepper
+      [currentStep]="currentStep">
+    </app-campaign-stepper>
+
+    @if (currentStep === 1) {
+
+      <app-campaign-type-step />
+
+    }
+
+    @if (currentStep === 2) {
+
+      <app-campaign-details-step />
+
+    }
+
+    @if (currentStep === 3) {
+
+      <app-campaign-media-step />
+
+    }
+
+    @if (currentStep === 4) {
+
+      <app-campaign-fundraising-step />
+
+    }
+
+    @if (currentStep === 5) {
+
+      <app-campaign-publish-step />
+
+    }
+
+  </div>
+
+  <app-campaign-editor-footer
+
+  [currentStep]="currentStep"
+
+  [canContinue]="canContinue()"
+
+  (next)="nextStep()"
+
+  (previous)="previousStep()">
+
+</app-campaign-editor-footer>
+
+</div>

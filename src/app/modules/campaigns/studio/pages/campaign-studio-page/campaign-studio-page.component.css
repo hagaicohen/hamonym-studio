@@ -1,0 +1,73 @@
+.studio-page {
+
+  height: 100vh;
+
+  display: flex;
+
+  flex-direction: column;
+
+  background: #ffffff;
+
+}
+
+.studio-workspace {
+
+  flex: 1;
+
+  display: grid;
+
+  grid-template-columns: 55% 45%;
+
+  gap: 12px;
+
+  padding: 12px;
+
+  background: #f5f7fb;
+
+  
+
+}
+
+.preview-card {
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  min-width: 0;
+
+}
+
+.editor-card {
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  min-width: 0;
+
+}
+
+@media (max-width: 991px) {
+
+  .studio-workspace {
+
+    display: block;
+
+  }
+
+  .preview-card {
+
+    display: none;
+
+  }
+
+}

@@ -1,54 +1,62 @@
-import { Component, OnInit } from '@angular/core';
-
-import { CommonModule } from '@angular/common';
+import {
+  Component
+} from '@angular/core';
 
 import {
-  LucideAngularModule,
-  Target
-} from 'lucide-angular';
+  Router
+} from '@angular/router';
 
-import { NoOrganizationStateComponent } from '../../../../shared/components/no-organization-state/no-organization-state.component';
+
+import { AppLoaderService }
+from '../../../../core/services/app-loader.service';
 
 @Component({
-  selector: 'app-campaigns-page',
-  standalone: true,
-  imports: [
-    CommonModule,
-    NoOrganizationStateComponent,
-    LucideAngularModule
-  ],
+
+  selector:
+    'app-campaigns-page',
+
+  standalone:
+    true,
+
+  imports: [],
+
   templateUrl:
     './campaigns-page.component.html',
 
-  styleUrl:
-    './campaigns-page.component.css',
+  styleUrls: [
+    './campaigns-page.component.css'
+  ]
 })
-export class CampaignsPageComponent
-  implements OnInit {
+export class CampaignsPageComponent {
 
-  hasEntity = false;
+  viewMode:
+    'grid' | 'list'
+    = 'grid';
 
-  campaigns: any[] = [];
+  constructor(
 
-  currentEntity: any = null;
+    private router:
+      Router,
 
-  readonly Target =
-    Target;
+    private loader:
+      AppLoaderService
 
-  ngOnInit(): void {
+  ) {}
 
-    const currentEntity =
-      localStorage.getItem(
-        'currentEntity'
-      );
+  createCampaign(): void {
 
-    this.hasEntity =
-      !!currentEntity;
+    this.loader.show(
+      'טוען את אשף יצירת הקמפיין...'
+    );
 
-    if (currentEntity) {
+    setTimeout(() => {
 
-      this.currentEntity =
-        JSON.parse(currentEntity);
-    }
+      this.router.navigate([
+        '/campaigns/create'
+      ]);
+
+      this.loader.hide();
+
+    }, 900);
   }
 }

@@ -1,0 +1,63 @@
+.primary-button {
+
+  height: 44px;
+
+  padding-inline: 18px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  background:
+    var(--campaign-primary);
+
+  color: white;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    all 0.2s ease;
+}
+
+.primary-button:hover {
+
+  opacity: 0.92;
+}
+
+.secondary-button {
+
+  height: 44px;
+
+  padding-inline: 18px;
+
+  border-radius: 12px;
+
+  border:
+    1px solid
+    var(--campaign-border);
+
+  background:
+    white;
+
+  color:
+    var(--campaign-text);
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    all 0.2s ease;
+}
+
+.secondary-button:hover {
+
+  background:
+    #f8fafc;
+}
