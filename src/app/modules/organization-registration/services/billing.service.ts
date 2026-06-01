@@ -1,67 +1,38 @@
-import {
-  Injectable,
-  inject
-} from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
-import {
-  HttpClient
-} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
-import {
-  environment
-} from '../../../../environments/environment';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BillingService {
+  private http = inject(HttpClient);
 
-  private http =
-    inject(HttpClient);
-
-  createEntityBilling(
-    payload: any
-  ) {
-
+  createEntityBilling(payload: any) {
     return this.http.post(
-
       `${environment.apiUrl}/api/billing`,
 
-      payload
+      payload,
     );
   }
 
   getPublicConfig() {
+    return this.http.get(`${environment.apiUrl}/api/billing/public-config`);
+  }
 
-  return this.http.get(
+  createLowProfile(payload: any) {
+    return this.http.post(
+      `${environment.apiUrl}/api/billing/create-low-profile`,
 
-    `${environment.apiUrl}/api/billing/public-config`
-  );
-}
+      payload,
+    );
+  }
 
-createLowProfile(
-  payload: any
-) {
-
-  return this.http.post(
-
-    `${environment.apiUrl}/api/billing/create-low-profile`,
-
-    payload
-
-  );
-
-}
-
-getLowProfileResult(
-  lowProfileId: string
-) {
-
-  return this.http.get(
-
-    `${environment.apiUrl}/api/billing/low-profile-result/${lowProfileId}`
-
-  );
-
-}
+  getLowProfileResult(lowProfileId: string) {
+    return this.http.get(
+      `${environment.apiUrl}/api/billing/low-profile-result/${lowProfileId}`,
+    );
+  }
 }

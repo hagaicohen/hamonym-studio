@@ -127,23 +127,16 @@ export class EntitiesService {
     );
   }
 
-  getEntityById(
-  entityId: string
-  ): Observable<any> {
-
+  getEntityById(entityId: string): Observable<any> {
     return this.http.get(
-
       `${environment.apiUrl}/api/entities/${entityId}`,
 
       {
         headers: {
-          Authorization:
-            `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-      }
-
+      },
     );
-
   }
 
   getMyEntities(): Observable<any> {
@@ -220,15 +213,9 @@ export class EntitiesService {
     );
   }
 
-  removeTaxDocument(
-  entityId: string
-  ) {
-
+  removeTaxDocument(entityId: string) {
     return this.http.delete(
-
-      `${environment.apiUrl}/api/entities/${entityId}/tax-document`
-
+      `${environment.apiUrl}/api/entities/${entityId}/tax-document`,
     );
-
   }
 }

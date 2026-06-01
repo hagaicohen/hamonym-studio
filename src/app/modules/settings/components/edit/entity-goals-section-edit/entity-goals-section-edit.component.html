@@ -5,84 +5,53 @@
     <div>
       <div class="header-content">
         <div class="section-title-row">
-          <lucide-icon
-            [img]="TrendingUp"
-            class="section-icon">
-          </lucide-icon>
+          <lucide-icon [img]="TrendingUp" class="section-icon"> </lucide-icon>
 
-          <div class="card-title">
-            יעדי גיוס
-          </div>
+          <div class="card-title">יעדי גיוס</div>
         </div>
 
         <div class="card-description">הגדירו את יעדי הגיוס שלכם בפלטפורמה</div>
       </div>
     </div>
     <div class="card-actions">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="cancel.emit()"
+      >
+        ביטול
+      </button>
 
-  <button
-    class="cancel-btn"
-    type="button"
-    [disabled]="saveState.isSaving"
-    (click)="cancel.emit()">
+      <button
+        class="save-btn"
+        type="button"
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        [disabled]="saveState.isSaving"
+        (click)="save.emit()"
+      >
+        @if (
+          !saveState.isSaving &&
+          !saveState.saveCompleted &&
+          !saveState.saveFailed
+        ) {
+          שמירה
+        }
 
-    ביטול
+        @if (saveState.isSaving) {
+          <div class="btn-spinner"></div>
+        }
 
-  </button>
+        @if (!saveState.isSaving && saveState.saveCompleted) {
+          <div class="save-success">✓ נשמר</div>
+        }
 
-  <button
-    class="save-btn"
-    type="button"
-    [class.success]="saveState.saveCompleted"
-    [class.error]="saveState.saveFailed"
-    [disabled]="saveState.isSaving"
-    (click)="save.emit()">
-
-    @if (
-      !saveState.isSaving &&
-      !saveState.saveCompleted &&
-      !saveState.saveFailed
-    ) {
-
-      שמירה
-
-    }
-
-    @if (saveState.isSaving) {
-
-      <div class="btn-spinner"></div>
-
-    }
-
-    @if (
-      !saveState.isSaving &&
-      saveState.saveCompleted
-    ) {
-
-      <div class="save-success">
-
-        ✓ נשמר
-
-      </div>
-
-    }
-
-    @if (
-      !saveState.isSaving &&
-      saveState.saveFailed
-    ) {
-
-      <div class="save-failed">
-
-        ✕ נכשל
-
-      </div>
-
-    }
-
-  </button>
-
-</div>
+        @if (!saveState.isSaving && saveState.saveFailed) {
+          <div class="save-failed">✕ נכשל</div>
+        }
+      </button>
+    </div>
   </div>
 
   <!-- BODY -->

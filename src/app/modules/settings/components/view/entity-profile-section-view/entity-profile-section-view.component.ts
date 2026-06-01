@@ -1,38 +1,21 @@
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output
-} from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  LucideAngularModule,
-  ImageIcon,
-} from 'lucide-angular';
+import { LucideAngularModule, ImageIcon } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-profile-section-view',
 
   standalone: true,
 
-  imports: [
-    CommonModule,
-    LucideAngularModule
-  ],
+  imports: [CommonModule, LucideAngularModule],
 
-  templateUrl:
-    './entity-profile-section-view.component.html',
+  templateUrl: './entity-profile-section-view.component.html',
 
-  styleUrls: [
-    './entity-profile-section-view.component.css'
-  ],
+  styleUrls: ['./entity-profile-section-view.component.css'],
 })
 export class EntityProfileSectionViewComponent {
-
   @Input()
   entity: any;
 
@@ -44,17 +27,11 @@ export class EntityProfileSectionViewComponent {
 
   @Output() edit = new EventEmitter<void>();
 
-  readonly ImageIcon =
-    ImageIcon;
+  readonly ImageIcon = ImageIcon;
 
   logoLoaded = false;
 
   getLogoUrl(): string {
-
-    return (
-      this.entity?.logo_url || ''
-    );
-
+    return this.entity?.logo_url || '';
   }
-
 }

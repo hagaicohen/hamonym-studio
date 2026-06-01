@@ -1,33 +1,22 @@
 <!-- rich-text-editor.component.html -->
 
 <div class="editor-shell">
-  <div
-    class="editor-toolbar"
-    *ngIf="editor">
-
+  <div class="editor-toolbar" *ngIf="editor">
     <!-- TEXT STYLE -->
 
     <div class="toolbar-group">
       <select
         class="toolbar-select"
         [value]="getCurrentBlockType()"
-        (change)="onBlockTypeChange($event)">
+        (change)="onBlockTypeChange($event)"
+      >
+        <option value="paragraph">Normal</option>
 
-        <option value="paragraph">
-          Normal
-        </option>
+        <option value="h1">Heading 1</option>
 
-        <option value="h1">
-          Heading 1
-        </option>
+        <option value="h2">Heading 2</option>
 
-        <option value="h2">
-          Heading 2
-        </option>
-
-        <option value="h3">
-          Heading 3
-        </option>
+        <option value="h3">Heading 3</option>
       </select>
     </div>
 
@@ -38,8 +27,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bold')"
-        (click)="toggleBold()">
-
+        (click)="toggleBold()"
+      >
         <strong>B</strong>
       </button>
 
@@ -47,8 +36,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('italic')"
-        (click)="toggleItalic()">
-
+        (click)="toggleItalic()"
+      >
         <em>I</em>
       </button>
 
@@ -56,8 +45,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('underline')"
-        (click)="toggleUnderline()">
-
+        (click)="toggleUnderline()"
+      >
         <u>U</u>
       </button>
 
@@ -65,8 +54,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('strike')"
-        (click)="toggleStrike()">
-
+        (click)="toggleStrike()"
+      >
         <s>S</s>
       </button>
     </div>
@@ -78,8 +67,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('bulletList')"
-        (click)="toggleBulletList()">
-
+        (click)="toggleBulletList()"
+      >
         •
       </button>
 
@@ -87,8 +76,8 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('orderedList')"
-        (click)="toggleOrderedList()">
-
+        (click)="toggleOrderedList()"
+      >
         1.
       </button>
     </div>
@@ -96,27 +85,19 @@
     <!-- ALIGN -->
 
     <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('right')">
-
+      <button type="button" class="toolbar-btn" (click)="setTextAlign('right')">
         ≡
       </button>
 
       <button
         type="button"
         class="toolbar-btn"
-        (click)="setTextAlign('center')">
-
+        (click)="setTextAlign('center')"
+      >
         ☰
       </button>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('left')">
-
+      <button type="button" class="toolbar-btn" (click)="setTextAlign('left')">
         ☷
       </button>
     </div>
@@ -128,16 +109,12 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('link')"
-        (click)="addLink()">
-
+        (click)="addLink()"
+      >
         🔗
       </button>
 
-      <button
-        type="button"
-        class="toolbar-btn danger"
-        (click)="removeLink()">
-
+      <button type="button" class="toolbar-btn danger" (click)="removeLink()">
         ✕
       </button>
     </div>
@@ -149,24 +126,16 @@
         type="button"
         class="toolbar-btn"
         [class.active]="isActive('blockquote')"
-        (click)="toggleBlockquote()">
-
+        (click)="toggleBlockquote()"
+      >
         ❝
       </button>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="clearFormatting()">
-
+      <button type="button" class="toolbar-btn" (click)="clearFormatting()">
         Tx
       </button>
     </div>
   </div>
 
-  <div
-    #editor
-    class="editor-content"
-    [style.minHeight.px]="minHeight">
-  </div>
+  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
 </div>

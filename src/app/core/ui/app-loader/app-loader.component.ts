@@ -1,30 +1,16 @@
-import {
-  Component,
-  inject
-} from '@angular/core';
+import { Component, inject } from '@angular/core';
 
-import { AppLoaderService }
-from '../../services/app-loader.service';
+import { AppLoaderService } from '../../services/app-loader.service';
 
 @Component({
+  selector: 'app-loader',
 
-  selector:
-    'app-loader',
+  standalone: true,
 
-  standalone:
-    true,
+  templateUrl: './app-loader.component.html',
 
-  templateUrl:
-    './app-loader.component.html',
-
-  styleUrls: [
-    './app-loader.component.css'
-  ]
+  styleUrls: ['./app-loader.component.css'],
 })
 export class AppLoaderComponent {
-
-  loader =
-    inject(
-      AppLoaderService
-    );
+  loader = inject(AppLoaderService);
 }

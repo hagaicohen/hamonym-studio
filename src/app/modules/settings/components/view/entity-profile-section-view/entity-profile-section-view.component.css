@@ -1,6 +1,5 @@
-@import '../../../styles/settings-section-actions.css';
+@import "../../../styles/settings-section-actions.css";
 .section-title-row {
-
   display: flex;
 
   align-items: center;
@@ -9,7 +8,6 @@
 }
 
 .settings-card {
-
   width: 100%;
 
   background: #ffffff;
@@ -23,9 +21,7 @@
   box-sizing: border-box;
 }
 
-
 .header-content {
-
   direction: rtl;
 
   text-align: right;
@@ -34,12 +30,10 @@
 }
 
 .section-edit-btn {
-
   flex-shrink: 0;
 }
 
 .card-title {
-
   font-size: 22px;
 
   font-weight: 800;
@@ -50,7 +44,6 @@
 }
 
 .card-description {
-
   margin-top: 8px;
 
   font-size: 14px;
@@ -61,7 +54,6 @@
 }
 
 .section-edit-btn {
-
   height: 42px;
 
   padding: 0 16px;
@@ -92,19 +84,16 @@
 }
 
 .section-edit-btn:hover {
-
   background: #f9fafb;
 }
 
 .edit-icon {
-
   width: 16px;
 
   height: 16px;
 }
 
 .profile-layout {
-
   display: flex;
 
   flex-direction: row;
@@ -115,7 +104,6 @@
 }
 
 .details-side {
-
   flex: 1;
 
   max-width: 760px;
@@ -126,7 +114,6 @@
 }
 
 .info-section {
-
   padding-bottom: 24px;
 
   margin-bottom: 24px;
@@ -135,7 +122,6 @@
 }
 
 .info-section.no-border {
-
   margin-bottom: 0;
 
   padding-bottom: 0;
@@ -144,7 +130,6 @@
 }
 
 .section-label {
-
   font-size: 13px;
 
   font-weight: 700;
@@ -155,7 +140,6 @@
 }
 
 .profile-name {
-
   font-size: 22px;
 
   font-weight: 800;
@@ -166,7 +150,6 @@
 }
 
 .profile-description {
-
   font-size: 15px;
 
   line-height: 1.9;
@@ -175,7 +158,6 @@
 }
 
 .tags {
-
   display: flex;
 
   flex-wrap: wrap;
@@ -184,7 +166,6 @@
 }
 
 .tag {
-
   height: 38px;
 
   display: inline-flex;
@@ -209,7 +190,6 @@
 }
 
 .tag-check {
-
   width: 18px;
 
   height: 18px;
@@ -232,14 +212,12 @@
 }
 
 .logo-side {
-
   width: 180px;
 
   flex-shrink: 0;
 }
 
 .logo-card {
-
   border: 1px solid #eef2f7;
 
   border-radius: 20px;
@@ -250,7 +228,6 @@
 }
 
 .logo-label {
-
   font-size: 13px;
 
   font-weight: 700;
@@ -265,7 +242,6 @@
 }
 
 .logo-preview {
-
   position: relative;
 
   width: 100%;
@@ -288,7 +264,6 @@
 }
 
 .logo-placeholder-image {
-
   position: absolute;
 
   inset: 0;
@@ -301,7 +276,6 @@
 }
 
 .logo-image {
-
   position: relative;
 
   z-index: 2;
@@ -318,87 +292,72 @@
 }
 
 .logo-image.loaded {
-
   opacity: 1;
 }
 
 .html-content p {
-
   margin: 0 0 12px;
 }
 
 .html-content ul,
 .html-content ol {
-
   margin: 12px 0;
 
   padding-right: 22px;
 }
 
 .html-content li {
-
   margin-bottom: 8px;
 }
 
 .html-content strong {
-
   font-weight: 700;
 }
 
 .html-content a {
-
   color: #2563eb;
 
   text-decoration: none;
 }
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 18px;
 
     border-radius: 20px;
   }
 
-   .section-edit-btn {
-
+  .section-edit-btn {
     width: 100%;
 
     justify-content: center;
   }
 
   .profile-layout {
-
     flex-direction: column-reverse;
 
     gap: 24px;
   }
 
   .logo-side {
-
     width: 100%;
   }
 
   .logo-preview {
-
     max-width: 220px;
 
     margin: 0 auto;
   }
 
   .tags {
-
     gap: 8px;
   }
 
   .tag {
-
     width: 100%;
 
     justify-content: flex-start;
 
     padding-right: 14px;
   }
-
 }

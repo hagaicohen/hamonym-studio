@@ -1,5 +1,4 @@
 .studio-shell {
-
   display: grid;
 
   grid-template-columns: 55% 45%;
@@ -7,23 +6,18 @@
   height: 100vh;
 
   overflow: hidden;
-
 }
 
 .preview-panel {
-
   border-left: 1px solid #e5e7eb;
 
   overflow-y: auto;
 
   background: #f8fafc;
-
 }
 
 .editor-panel {
-
   overflow-y: auto;
 
   background: #ffffff;
-
 }

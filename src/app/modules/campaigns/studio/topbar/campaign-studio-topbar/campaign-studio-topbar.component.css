@@ -1,5 +1,4 @@
 .studio-topbar {
-
   height: 56px;
 
   background: #ffffff;
@@ -16,21 +15,17 @@
   align-items: center;
 
   padding: 0 16px;
-
 }
 
 .title-group {
-
   display: flex;
 
   align-items: center;
 
   gap: 8px;
-
 }
 
 .exit-button {
-
   width: 36px;
 
   height: 36px;
@@ -52,27 +47,21 @@
   color: #6b7280;
 
   margin-top: -10px;
-
 }
 
 .exit-button:hover {
-
   background: #f3f4f6;
-
 }
 
 .campaign-title {
-
   font-size: 15px;
 
   font-weight: 600;
 
   color: #111827;
-
 }
 
 .device-switcher {
-
   display: flex;
 
   align-items: center;
@@ -86,11 +75,9 @@
   border-radius: 12px;
 
   justify-self: center;
-
 }
 
 .device-button {
-
   width: 36px;
 
   height: 36px;
@@ -110,19 +97,15 @@
   justify-content: center;
 
   color: #6b7280;
-
 }
 
 .device-button.active {
-
   background: #ede9fe;
 
   color: #7c3aed;
-
 }
 
 .save-button {
-
   height: 34px;
 
   min-width: 82px;
@@ -143,48 +126,37 @@
 
   color: #374151;
 
-  transition: all .2s ease;
-
+  transition: all 0.2s ease;
 }
 
 .save-button:hover {
-
   background: #f9fafb;
-
 }
 
 .save-button.saved {
-
   background: #f0fdf4;
 
   border-color: #86efac;
 
   color: #15803d;
-
 }
 
 .device-button lucide-icon,
 .exit-button lucide-icon {
-
   width: 16px;
 
   height: 16px;
-
 }
 
 @media (max-width: 991px) {
-
   .device-switcher {
-
     display: none;
-
   }
 
   .save-button {
-
     width: 140px;
 
-    left:20px;
+    left: 20px;
 
     position: fixed;
 
@@ -193,6 +165,5 @@
     font-size: 14px;
 
     border-radius: 8px;
-
   }
 }

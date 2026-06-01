@@ -1,134 +1,83 @@
 <div class="campaign-type-step">
-
   <div class="campaign-type-header">
-
-    <h2 class="campaign-type-title">
-      בחר סוג קמפיין
-    </h2>
+    <h2 class="campaign-type-title">בחר סוג קמפיין</h2>
 
     <p class="campaign-type-description">
       סוג הקמפיין קובע את אפשרויות הגיוס והתוכן הזמינות עבורך
     </p>
-
   </div>
 
   <div class="types-grid">
-
     <button
       class="type-card"
       [class.selected]="state.draft.type === 'nonprofit'"
-      (click)="selectType('nonprofit')">
-
-      <div class="type-icon">
-        🏛️
-      </div>
+      (click)="selectType('nonprofit')"
+    >
+      <div class="type-icon">🏛️</div>
 
       <div class="type-content">
-
-        <h3 class="type-title">
-          עמותה
-        </h3>
+        <h3 class="type-title">עמותה</h3>
 
         <p class="type-description">
           קמפיין לגיוס תרומות עבור עמותה או ארגון חברתי
         </p>
-
       </div>
-
     </button>
 
     <button
       class="type-card"
       [class.selected]="state.draft.type === 'business'"
-      (click)="selectType('business')">
-
-      <div class="type-icon">
-        🏪
-      </div>
+      (click)="selectType('business')"
+    >
+      <div class="type-icon">🏪</div>
 
       <div class="type-content">
+        <h3 class="type-title">עסק</h3>
 
-        <h3 class="type-title">
-          עסק
-        </h3>
-
-        <p class="type-description">
-          קמפיין למימון או צמיחה של עסק
-        </p>
-
+        <p class="type-description">קמפיין למימון או צמיחה של עסק</p>
       </div>
-
     </button>
 
     <button
       class="type-card"
       [class.selected]="state.draft.type === 'private'"
-      (click)="selectType('private')">
-
-      <div class="type-icon">
-        👤
-      </div>
+      (click)="selectType('private')"
+    >
+      <div class="type-icon">👤</div>
 
       <div class="type-content">
+        <h3 class="type-title">אדם פרטי</h3>
 
-        <h3 class="type-title">
-          אדם פרטי
-        </h3>
-
-        <p class="type-description">
-          קמפיין אישי למטרה פרטית
-        </p>
-
+        <p class="type-description">קמפיין אישי למטרה פרטית</p>
       </div>
-
     </button>
 
     <button
       class="type-card"
       [class.selected]="state.draft.type === 'social'"
-      (click)="selectType('social')">
-
-      <div class="type-icon">
-        🤝
-      </div>
+      (click)="selectType('social')"
+    >
+      <div class="type-icon">🤝</div>
 
       <div class="type-content">
+        <h3 class="type-title">עסק חברתי</h3>
 
-        <h3 class="type-title">
-          עסק חברתי
-        </h3>
-
-        <p class="type-description">
-          מיזם חברתי עם פעילות עסקית
-        </p>
-
+        <p class="type-description">מיזם חברתי עם פעילות עסקית</p>
       </div>
-
     </button>
 
     <button
       class="type-card type-card-wide"
       [class.selected]="state.draft.type === 'political'"
-      (click)="selectType('political')">
-
-      <div class="type-icon">
-        🗳️
-      </div>
+      (click)="selectType('political')"
+    >
+      <div class="type-icon">🗳️</div>
 
       <div class="type-content">
+        <h3 class="type-title">מפלגה</h3>
 
-        <h3 class="type-title">
-          מפלגה
-        </h3>
-
-        <p class="type-description">
-          גיוס עבור פעילות פוליטית
-        </p>
-
+        <p class="type-description">גיוס עבור פעילות פוליטית</p>
       </div>
-
     </button>
-
   </div>
-
 </div>

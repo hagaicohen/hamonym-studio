@@ -8,9 +8,8 @@ describe('CampaignPublishStepComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CampaignPublishStepComponent]
-    })
-    .compileComponents();
+      imports: [CampaignPublishStepComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(CampaignPublishStepComponent);
     component = fixture.componentInstance;

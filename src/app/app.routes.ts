@@ -2,11 +2,9 @@
 
 import { Routes } from '@angular/router';
 
-import { AppLayoutComponent }
-from './core/layout/app-layout/app-layout.component';
+import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 
 export const routes: Routes = [
-
   /* ========================================
      PUBLIC ROUTES
   ======================================== */
@@ -15,7 +13,6 @@ export const routes: Routes = [
     path: '',
 
     children: [
-
       {
         path: '',
 
@@ -28,11 +25,8 @@ export const routes: Routes = [
         path: 'login',
 
         loadComponent: () =>
-
-          import(
-            './modules/auth/pages/login/login.component'
-          ).then(
-            (m) => m.LoginComponent
+          import('./modules/auth/pages/login/login.component').then(
+            (m) => m.LoginComponent,
           ),
       },
 
@@ -40,11 +34,8 @@ export const routes: Routes = [
         path: 'register',
 
         loadComponent: () =>
-
-          import(
-            './modules/auth/pages/register/register.component'
-          ).then(
-            (m) => m.RegisterComponent
+          import('./modules/auth/pages/register/register.component').then(
+            (m) => m.RegisterComponent,
           ),
       },
     ],
@@ -59,12 +50,9 @@ export const routes: Routes = [
     path: 'campaigns/create',
 
     loadComponent: () =>
-
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
-      ).then(
-        (m) => m.CampaignStudioPageComponent
-      ),
+      ).then((m) => m.CampaignStudioPageComponent),
   },
 
   /* ========================================
@@ -74,23 +62,18 @@ export const routes: Routes = [
   {
     path: '',
 
-    component:
-      AppLayoutComponent,
+    component: AppLayoutComponent,
 
     children: [
-
       /* ONBOARDING */
 
       {
         path: 'onboarding',
 
         loadComponent: () =>
-
           import(
             './modules/onboarding/pages/onboarding/onboarding.component'
-          ).then(
-            (m) => m.OnboardingComponent
-          ),
+          ).then((m) => m.OnboardingComponent),
       },
 
       /* DASHBOARD */
@@ -99,12 +82,9 @@ export const routes: Routes = [
         path: 'dashboard',
 
         loadComponent: () =>
-
           import(
             './modules/dashboard/pages/dashboard/dashboard.component'
-          ).then(
-            (m) => m.DashboardComponent
-          ),
+          ).then((m) => m.DashboardComponent),
       },
 
       /* ========================================
@@ -115,17 +95,13 @@ export const routes: Routes = [
         path: 'campaigns',
 
         children: [
-
           {
             path: '',
 
             loadComponent: () =>
-
               import(
                 './modules/campaigns/pages/campaigns-page/campaigns-page.component'
-              ).then(
-                (m) => m.CampaignsPageComponent
-              ),
+              ).then((m) => m.CampaignsPageComponent),
           },
         ],
       },
@@ -136,12 +112,9 @@ export const routes: Routes = [
         path: 'organization-registration',
 
         loadComponent: () =>
-
           import(
             './modules/organization-registration/pages/organization-registration/organization-registration.component'
-          ).then(
-            (m) => m.OrganizationRegistrationComponent
-          ),
+          ).then((m) => m.OrganizationRegistrationComponent),
       },
 
       /* ========================================
@@ -152,12 +125,9 @@ export const routes: Routes = [
         path: 'settings',
 
         loadComponent: () =>
-
           import(
             './modules/settings/pages/settings-page/settings-page.component'
-          ).then(
-            (m) => m.SettingsPageComponent
-          ),
+          ).then((m) => m.SettingsPageComponent),
       },
 
       /* ENTITY SETTINGS */
@@ -166,12 +136,9 @@ export const routes: Routes = [
         path: 'settings/entities/:id',
 
         loadComponent: () =>
-
           import(
             './modules/settings/components/entity-settings/entity-settings.component'
-          ).then(
-            (m) => m.EntitySettingsComponent
-          ),
+          ).then((m) => m.EntitySettingsComponent),
       },
     ],
   },

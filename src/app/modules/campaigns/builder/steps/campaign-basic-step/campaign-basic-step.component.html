@@ -1,0 +1,173 @@
+<div class="campaign-basic-step">
+  <div class="step-header-layout">
+    <div class="step-header-content">
+      <h1 class="step-title">פרטי הקמפיין</h1>
+
+      <p class="step-description">
+        הגדר את הכותרת, התקציר והתוכן שיופיעו בפני התורמים.
+      </p>
+    </div>
+
+    <div class="campaign-logo-wrapper">
+      <img src="/logo-hamonym.svg" alt="לוגו" class="campaign-logo-image" />
+    </div>
+  </div>
+
+  <div class="campaign-logo-info">
+    אם לארגון אין לוגו, יופיע לוגו המונים בעמוד הקמפיין.
+  </div>
+
+  <div class="basic-step-section">
+    <label class="field-label">
+      כותרת הקמפיין
+      <span class="required">*</span>
+    </label>
+
+    <div class="field-meta">
+      <div class="field-description">
+        מסר קצר וברור שמציג את מטרת הקמפיין.
+      </div>
+
+      <div class="char-counter">
+        {{ campaignTitle.length }}/80
+      </div>
+    </div>
+
+    <input
+      type="text"
+      class="campaign-title"
+      [class.invalid]="isTitleInvalid()"
+      [(ngModel)]="campaignTitle"
+      (blur)="titleTouched = true"
+      placeholder="כותרת הקמפיין"
+    />
+
+    @if (isTitleInvalid()) {
+      <div class="field-error">
+        יש להזין כותרת לקמפיין
+      </div>
+    }
+  </div>
+
+  <div class="basic-step-section">
+    <label class="field-label">
+      כתובת הקמפיין
+      <span class="required">*</span>
+    </label>
+
+    <div class="field-description">
+      השם שיופיע לאחר /hamonym.com/campaigns (באותיות אנגליות, מספרים ומקפים
+      בלבד)
+    </div>
+
+    <div class="url-row">
+      <input
+        type="text"
+        class="url-input"
+        [class.invalid]="isSlugInvalid()"
+        [(ngModel)]="campaignSlug"
+        (blur)="slugTouched = true"
+        (keydown)="allowSlugChars($event)"
+        (ngModelChange)="onSlugChange($event)"
+        placeholder="merkaz-noar-kiryat-gat"
+      />
+    </div>
+
+    @if (slugAvailable === true) {
+      <div class="slug-success">
+        ✓ הכתובת זמינה
+      </div>
+    }
+
+    @if (slugAvailable === false) {
+      <div class="slug-error">
+        ✕ הכתובת כבר נמצאת בשימוש
+      </div>
+    }
+
+    @if (isCheckingSlug) {
+      <div class="slug-checking">
+        <span class="spinner"></span>
+
+        <span>
+          בודק זמינות...
+        </span>
+      </div>
+    }
+
+    @if (isSlugInvalid()) {
+      <div class="field-error">
+        יש לבחור כתובת קמפיין תקינה
+      </div>
+    }
+  </div>
+
+  <div class="basic-step-section">
+    <label class="field-label">
+      תיאור קצר
+      <span class="required">*</span>
+    </label>
+
+    <div class="field-meta">
+      <div class="field-description">
+        עד שני משפטים המציגים את מטרת הקמפיין
+      </div>
+
+      <div class="char-counter">
+        {{ shortDescription.length }}/160
+      </div>
+    </div>
+
+    <textarea
+      rows="2"
+      class="form-textarea short-description"
+      [class.invalid]="isShortDescriptionInvalid()"
+      [(ngModel)]="shortDescription"
+      (blur)="shortDescriptionTouched = true"
+      placeholder="משפט קצר שמתאר את הקמפיין, עד שני משפטים"
+    >
+    </textarea>
+
+    @if (isShortDescriptionInvalid()) {
+      <div class="field-error">
+        יש להזין תיאור קצר
+      </div>
+    }
+  </div>
+
+  <div class="basic-step-section">
+    <label class="field-label">
+      תיאור מלא
+      <span class="required">*</span>
+    </label>
+
+    <div class="field-description">
+      זהו הטקסט המרכזי של הקמפיין. מומלץ לפחות 300 מילים.
+    </div>
+
+    <div
+      class="campaign-story"
+       [class.invalid]="isFullDescriptionInvalid()"
+      (focusout)="fullDescriptionTouched = true"
+    >
+      <app-rich-text-editor
+        [(ngModel)]="fullDescription"
+        placeholder="ספרו את הסיפור שמאחורי הקמפיין..."
+      >
+      </app-rich-text-editor>
+    </div>
+
+    @if (isFullDescriptionInvalid()) {
+      <div class="field-error">
+        יש להזין תיאור מלא לקמפיין
+      </div>
+    }
+
+    <div class="campaign-tip">
+      <strong>טיפ:</strong>
+
+      כותרת ותיאור טובים מגדילים את סיכויי ההצלחה של הקמפיין.
+      השתדל להיות ברור, רגשי ואותנטי.
+    </div>
+  </div>
+</div>

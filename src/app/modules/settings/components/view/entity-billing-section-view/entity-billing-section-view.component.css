@@ -1,8 +1,8 @@
-@import '../../../styles/settings-section-actions.css';
-.section-title-row{
-   display: flex;
-   align-items: center;
-   gap: 10px;
+@import "../../../styles/settings-section-actions.css";
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .settings-card {

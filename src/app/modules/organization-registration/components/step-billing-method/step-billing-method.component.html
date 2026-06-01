@@ -1,13 +1,10 @@
 <!-- step-billing-method.component.html -->
 
 <div class="step-card">
-
   <!-- ICON -->
 
   <div class="icon-wrapper">
-
     <div class="wallet-icon">
-
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -17,95 +14,58 @@
         stroke-linecap="round"
         stroke-linejoin="round"
       >
-
         <path
-          d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1">
-        </path>
+          d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+        ></path>
 
-        <path
-          d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4">
-        </path>
-
+        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
       </svg>
-
     </div>
-
   </div>
 
   <!-- TITLE -->
 
-  <h1 class="page-title">
-    אמצעי גבייה לעמלות
-  </h1>
+  <h1 class="page-title">אמצעי גבייה לעמלות</h1>
 
   <p class="page-subtitle">
-
-    חיבור אמצעי גבייה לצורך גביית
-    עמלות שימוש בפלטפורמה
-
+    חיבור אמצעי גבייה לצורך גביית עמלות שימוש בפלטפורמה
   </p>
 
   <!-- INFO -->
 
   <div class="info-box">
-
-    <div class="info-title">
-      מידע חשוב
-    </div>
+    <div class="info-title">מידע חשוב</div>
 
     <ul>
+      <li>עמלת מערכת: 3% + מע״מ מכל תרומה</li>
 
-      <li>
-        עמלת מערכת: 3% + מע״מ מכל תרומה
-      </li>
+      <li>החיוב מתבצע אחת לחודש בלבד</li>
 
-      <li>
-        החיוב מתבצע אחת לחודש בלבד
-      </li>
+      <li>לא מתבצע חיוב ללא פעילות בפועל</li>
 
-      <li>
-        לא מתבצע חיוב ללא פעילות בפועל
-      </li>
-
-      <li>
-        חשבונית וקבלה יישלחו למייל הארגון
-      </li>
-
+      <li>חשבונית וקבלה יישלחו למייל הארגון</li>
     </ul>
-
   </div>
 
   <!-- PAYMENT CARD -->
 
   <div class="payment-card">
-
     <div class="payment-header">
-
-      <h2>
-        שיטת גבייה
-      </h2>
-
+      <h2>שיטת גבייה</h2>
     </div>
 
     <!-- METHODS -->
 
     <div class="method-selector">
-
       <button
         type="button"
         class="method-button"
         [class.active]="isCreditCard"
         (click)="selectPaymentMethod('credit-card')"
       >
+        <div class="method-title">כרטיס אשראי</div>
 
-        <div class="method-title">
-          כרטיס אשראי
-        </div>
-
-        <div class="method-description">
-          חיוב חודשי באמצעות כרטיס אשראי
-        </div>
-
+        <div class="method-description">חיוב חודשי באמצעות כרטיס אשראי</div>
       </button>
 
       <button
@@ -114,128 +74,64 @@
         [class.active]="isMasav"
         (click)="selectPaymentMethod('masav')"
       >
+        <div class="method-title">הוראת קבע (מס״ב)</div>
 
-        <div class="method-title">
-          הוראת קבע (מס״ב)
-        </div>
-
-        <div class="method-description">
-          חיוב באמצעות הרשאה בנקאית
-        </div>
-
+        <div class="method-description">חיוב באמצעות הרשאה בנקאית</div>
       </button>
-
     </div>
 
     <!-- CREDIT CARD -->
 
     @if (isCreditCard) {
-
       <div class="payment-section">
-
-        <div class="section-title">
-
-          פרטי כרטיס אשראי
-
-        </div>
+        <div class="section-title">פרטי כרטיס אשראי</div>
 
         <div class="hosted-info">
-
-          פרטי האשראי נשמרים בצורה
-          מאובטחת באמצעות CardCom.
-
+          פרטי האשראי נשמרים בצורה מאובטחת באמצעות CardCom.
         </div>
 
         <!-- OPENFIELDS -->
 
-        <app-openfields-form>
-        </app-openfields-form>
+        <app-openfields-form> </app-openfields-form>
 
-        @if (
-          stateService
-            .state()
-            .cardcomInternalDealNumber
-        ) {
-
-          <div class="token-success">
-
-            ✓ אמצעי החיוב נשמר בהצלחה
-
-          </div>
-
+        @if (stateService.state().cardcomInternalDealNumber) {
+          <div class="token-success">✓ אמצעי החיוב נשמר בהצלחה</div>
         }
-
       </div>
-
     }
 
     <!-- MASAV -->
 
     @if (isMasav) {
-
       <div class="payment-section">
-
         <div class="masav-alert">
+          <div class="masav-title">הוראת קבע - מס״ב</div>
 
-          <div class="masav-title">
+          <p>יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת.</p>
 
-            הוראת קבע - מס״ב
+          <div class="plan-id">קוד מוסד פלנויד: 25788</div>
 
-          </div>
-
-          <p>
-
-            יש להוריד את הטופס,
-            לחתום עליו ולהעלות אותו חזרה למערכת.
-
-          </p>
-
-          <div class="plan-id">
-
-            קוד מוסד פלנויד: 25788
-
-          </div>
-
-          <a
-            href="/files/masav-form.pdf"
-            download
-            class="download-button"
-          >
-
+          <a href="/files/masav-form.pdf" download class="download-button">
             הורד טופס הוראת קבע
-
           </a>
-
         </div>
 
         @if (masavUploaded) {
-
           <div class="upload-box">
-
-            <div class="upload-success">
-
-              ✓ {{ masavFileName }}
-
-            </div>
+            <div class="upload-success">✓ {{ masavFileName }}</div>
 
             <button
               type="button"
               class="remove-file-button"
               (click)="removeMasavFile()"
             >
-
               הסר קובץ
-
             </button>
-
           </div>
-
         }
 
         @if (!masavUploaded) {
-
           <label class="upload-button">
-
             העלה טופס חתום
 
             <input
@@ -244,46 +140,25 @@
               accept=".pdf,.jpg,.jpeg,.png"
               (change)="onMasavFileSelected($event)"
             />
-
           </label>
-
         }
-
       </div>
-
     }
 
     <!-- FOOTER -->
 
     <div class="payment-footer">
-
       <div class="continue-later-wrapper">
-
         <label class="checkbox-row">
+          <span> אשלים בהמשך </span>
 
-          <span>
-            אשלים בהמשך
-          </span>
-
-          <input
-            type="checkbox"
-            [(ngModel)]="continueLater"
-          />
-
+          <input type="checkbox" [(ngModel)]="continueLater" />
         </label>
-
       </div>
 
       <div class="wizard-actions">
-
-        <button
-          type="button"
-          class="secondary-btn"
-          (click)="back.emit()"
-        >
-
+        <button type="button" class="secondary-btn" (click)="back.emit()">
           חזור
-
         </button>
 
         <button
@@ -292,25 +167,13 @@
           [disabled]="!canContinue || isSaving"
           (click)="savePaymentMethod()"
         >
-
           {{ submitButtonText }}
-
         </button>
-
       </div>
-
     </div>
 
     @if (saveCompleted) {
-
-      <div class="success-message">
-
-        אמצעי הגבייה נשמר בהצלחה
-
-      </div>
-
+      <div class="success-message">אמצעי הגבייה נשמר בהצלחה</div>
     }
-
   </div>
-
 </div>

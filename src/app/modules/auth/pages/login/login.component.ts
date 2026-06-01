@@ -43,7 +43,6 @@ declare const google: any;
   styleUrl: './login.component.scss',
 })
 export class LoginComponent implements OnInit {
-
   loginForm: FormGroup;
 
   showPassword = false;
@@ -59,53 +58,28 @@ export class LoginComponent implements OnInit {
 
     private router: Router,
   ) {
-
     this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
 
-      email: [
-        '',
-        [
-          Validators.required,
-          Validators.email
-        ]
-      ],
-
-      password: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(6)
-        ]
-      ],
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
-  private entitiesService =
-    inject(EntitiesService);
+  private entitiesService = inject(EntitiesService);
 
-  private currentEntityService =
-    inject(CurrentEntityService);
+  private currentEntityService = inject(CurrentEntityService);
 
   ngOnInit(): void {
-
     google.accounts.id.initialize({
-
-      client_id:
-        environment.googleClientId,
+      client_id: environment.googleClientId,
 
       callback: (response: any) => {
-
-        this.handleGoogleLogin(
-          response.credential
-        );
+        this.handleGoogleLogin(response.credential);
       },
     });
 
     google.accounts.id.renderButton(
-
-      document.getElementById(
-        'google-button'
-      ),
+      document.getElementById('google-button'),
 
       {
         theme: 'outline',
@@ -119,17 +93,13 @@ export class LoginComponent implements OnInit {
     );
   }
 
-  handleGoogleLogin(
-    credential: string
-  ): void {
-
+  handleGoogleLogin(credential: string): void {
     this.loading = true;
 
     this.errorMessage = '';
 
     this.http
       .post<any>(
-
         `${environment.apiUrl}/auth/google`,
 
         {
@@ -137,93 +107,58 @@ export class LoginComponent implements OnInit {
         },
       )
       .subscribe({
-
         next: (res) => {
+          localStorage.setItem('token', res.token);
 
-          localStorage.setItem(
-            'token',
-            res.token
-          );
+          localStorage.setItem('user', JSON.stringify(res.user));
 
-          localStorage.setItem(
-            'user',
-            JSON.stringify(res.user)
-          );
+          localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          localStorage.setItem(
-            'hasEntities',
-            String(res.hasEntities)
-          );
+          this.entitiesService.getMyEntities().subscribe({
+            next: (entitiesRes) => {
+              const entities = entitiesRes.entities || [];
 
-          this.entitiesService
-            .getMyEntities()
-            .subscribe({
+              if (entities.length > 0) {
+                const entity = entities[0];
 
-              next: (entitiesRes) => {
+                localStorage.setItem(
+                  'currentEntity',
 
-                const entities =
-                  entitiesRes.entities || [];
+                  JSON.stringify({
+                    id: entity.id,
 
-                if (entities.length > 0) {
+                    display_name: entity.display_name,
 
-                  const entity =
-                    entities[0];
+                    entity_type: entity.entity_type,
 
-                  localStorage.setItem(
+                    status: entity.status,
+                  }),
+                );
 
-                    'currentEntity',
+                this.currentEntityService.currentEntity.set(entity);
 
-                    JSON.stringify({
+                this.currentEntityService.currentRole.set(entity.role);
+              }
 
-                      id:
-                        entity.id,
+              // =========================
+              // NAVIGATION FLOW
+              // =========================
 
-                      display_name:
-                        entity.display_name,
+              if (res.hasEntities) {
+                this.router.navigate(['/campaigns']);
 
-                      entity_type:
-                        entity.entity_type,
+                return;
+              }
 
-                      status:
-                        entity.status,
-                    }),
-                  );
-
-                  this.currentEntityService
-                    .currentEntity
-                    .set(entity);
-
-                  this.currentEntityService
-                    .currentRole
-                    .set(entity.role);
-                }
-
-                // =========================
-                // NAVIGATION FLOW
-                // =========================
-
-                if (res.hasEntities) {
-
-                  this.router.navigate([
-                    '/campaigns'
-                  ]);
-
-                  return;
-                }
-
-                this.router.navigate([
-                  '/organization-registration'
-                ]);
-              },
-            });
+              this.router.navigate(['/organization-registration']);
+            },
+          });
         },
 
         error: (err) => {
-
           console.error(err);
 
-          this.errorMessage =
-            'אירעה שגיאה בהתחברות עם Google';
+          this.errorMessage = 'אירעה שגיאה בהתחברות עם Google';
 
           this.loading = false;
         },
@@ -231,17 +166,12 @@ export class LoginComponent implements OnInit {
   }
 
   togglePassword(): void {
-
-    this.showPassword =
-      !this.showPassword;
+    this.showPassword = !this.showPassword;
   }
 
   submit(): void {
-
     if (this.loginForm.invalid) {
-
-      this.loginForm
-        .markAllAsTouched();
+      this.loginForm.markAllAsTouched();
 
       return;
     }
@@ -252,120 +182,77 @@ export class LoginComponent implements OnInit {
 
     this.http
       .post<any>(
-
         `${environment.apiUrl}/auth/login`,
 
         this.loginForm.value,
       )
       .subscribe({
-
         next: (res) => {
+          localStorage.setItem('token', res.token);
 
-          localStorage.setItem(
-            'token',
-            res.token
-          );
+          localStorage.setItem('user', JSON.stringify(res.user));
 
-          localStorage.setItem(
-            'user',
-            JSON.stringify(res.user)
-          );
+          localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          localStorage.setItem(
-            'hasEntities',
-            String(res.hasEntities)
-          );
+          this.entitiesService.getMyEntities().subscribe({
+            next: (entitiesRes) => {
+              const entities = entitiesRes.entities || [];
 
-          this.entitiesService
-            .getMyEntities()
-            .subscribe({
+              if (entities.length > 0) {
+                const entity = entities[0];
 
-              next: (entitiesRes) => {
+                localStorage.setItem(
+                  'currentEntity',
 
-                const entities =
-                  entitiesRes.entities || [];
+                  JSON.stringify({
+                    id: entity.id,
 
-                if (entities.length > 0) {
+                    display_name: entity.display_name,
 
-                  const entity =
-                    entities[0];
+                    entity_type: entity.entity_type,
 
-                  localStorage.setItem(
+                    status: entity.status,
+                  }),
+                );
 
-                    'currentEntity',
+                this.currentEntityService.currentEntity.set(entity);
 
-                    JSON.stringify({
+                this.currentEntityService.currentRole.set(entity.role);
+              }
 
-                      id:
-                        entity.id,
+              // =========================
+              // NAVIGATION FLOW
+              // =========================
 
-                      display_name:
-                        entity.display_name,
+              if (res.hasEntities) {
+                this.router.navigate(['/campaigns']);
 
-                      entity_type:
-                        entity.entity_type,
+                return;
+              }
 
-                      status:
-                        entity.status,
-                    }),
-                  );
-
-                  this.currentEntityService
-                    .currentEntity
-                    .set(entity);
-
-                  this.currentEntityService
-                    .currentRole
-                    .set(entity.role);
-                }
-
-                // =========================
-                // NAVIGATION FLOW
-                // =========================
-
-                if (res.hasEntities) {
-
-                  this.router.navigate([
-                    '/campaigns'
-                  ]);
-
-                  return;
-                }
-
-                this.router.navigate([
-                  '/organization-registration'
-                ]);
-              },
-            });
+              this.router.navigate(['/organization-registration']);
+            },
+          });
         },
 
         error: (err) => {
-
           console.error(err);
 
-          const backendError =
-            err?.error?.error;
+          const backendError = err?.error?.error;
 
           switch (backendError) {
-
             case 'Invalid credentials':
-
-              this.errorMessage =
-                'אימייל או סיסמה שגויים';
+              this.errorMessage = 'אימייל או סיסמה שגויים';
 
               break;
 
             case 'Email already exists':
-
-              this.errorMessage =
-                'האימייל כבר קיים במערכת';
+              this.errorMessage = 'האימייל כבר קיים במערכת';
 
               break;
 
             default:
-
-              this.errorMessage =
-                'אירעה שגיאה בהתחברות';
+              this.errorMessage = 'אירעה שגיאה בהתחברות';
           }
 
           this.loading = false;

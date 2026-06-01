@@ -1,5 +1,4 @@
 .wizard-layout {
-
   width: 100%;
 
   max-width: 900px;
@@ -12,19 +11,16 @@
 }
 
 .wizard-main {
-
   min-width: 0;
 }
 
 .wizard-preview {
-
   position: sticky;
 
   top: 24px;
 }
 
 .wizard-content {
-
   margin-top: 24px;
 }
 
@@ -33,7 +29,6 @@
 ======================================== */
 
 .wizard-stepper {
-
   position: relative;
 
   display: flex;
@@ -48,19 +43,14 @@
 
   border-radius: 24px;
 
-  background:
-    white;
+  background: white;
 
-  border:
-    1px solid
-    var(--campaign-border);
+  border: 1px solid var(--campaign-border);
 
-  box-shadow:
-    0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .step {
-
   position: relative;
 
   z-index: 2;
@@ -73,30 +63,25 @@
 
   gap: 10px;
 
-  color:
-    #94a3b8;
+  color: #94a3b8;
 }
 
 .step-label {
-
   font-size: 12px;
 
   white-space: nowrap;
 }
 
 .step-number {
-
   width: 40px;
 
   height: 40px;
 
   border-radius: 999px;
 
-  background:
-    #ccfbf1;
+  background: #ccfbf1;
 
-  color:
-    #0f766e;
+  color: #0f766e;
 
   display: flex;
 
@@ -110,22 +95,16 @@
 }
 
 .step.active {
-
-  color:
-    var(--campaign-text);
+  color: var(--campaign-text);
 }
 
 .step.active .step-number {
+  background: var(--campaign-primary);
 
-  background:
-    var(--campaign-primary);
-
-  color:
-    white;
+  color: white;
 }
 
 .stepper-progress {
-
   position: absolute;
 
   bottom: 0;
@@ -138,23 +117,19 @@
 
   border-radius: 999px;
 
-  background:
-    #dbeafe;
+  background: #dbeafe;
 
   overflow: hidden;
 }
 
 .stepper-progress-fill {
-
   height: 100%;
 
-  background:
-    #3b82f6;
+  background: #3b82f6;
 
   border-radius: inherit;
 
-  transition:
-    width 0.3s ease;
+  transition: width 0.3s ease;
 }
 
 /* ========================================
@@ -162,7 +137,6 @@
 ======================================== */
 
 .wizard-footer {
-
   display: flex;
 
   justify-content: space-between;
@@ -175,17 +149,13 @@
 ======================================== */
 
 .preview-card {
-
   height: 600px;
 
   border-radius: 24px;
 
-  background:
-    white;
+  background: white;
 
-  border:
-    1px solid
-    var(--campaign-border);
+  border: 1px solid var(--campaign-border);
 
   display: flex;
 
@@ -199,17 +169,13 @@
 ======================================== */
 
 .wizard-card {
-
-  background:
-    white;
+  background: white;
 
   border-radius: 24px;
 
   padding: 32px;
 
-  border:
-    1px solid
-    var(--campaign-border);
+  border: 1px solid var(--campaign-border);
 
   min-height: 500px;
 }
@@ -219,11 +185,8 @@
 ======================================== */
 
 @media (max-width: 1200px) {
-
   .wizard-layout {
-
-    grid-template-columns:
-      1fr;
+    grid-template-columns: 1fr;
 
     padding: 16px;
 
@@ -231,7 +194,6 @@
   }
 
   .wizard-preview {
-
     position: relative;
 
     top: unset;
@@ -240,39 +202,33 @@
   }
 
   .wizard-stepper {
-
     overflow-x: auto;
 
     padding-bottom: 4px;
   }
 
   .step-label {
-
     white-space: nowrap;
 
     font-size: 13px;
   }
 
   .wizard-card {
-
     padding: 20px;
 
     border-radius: 20px;
   }
 
   .preview-card {
-
     height: 320px;
   }
 
   .wizard-footer {
-
     position: sticky;
 
     bottom: 0;
 
-    background:
-      var(--campaign-background);
+    background: var(--campaign-background);
 
     padding-top: 16px;
   }

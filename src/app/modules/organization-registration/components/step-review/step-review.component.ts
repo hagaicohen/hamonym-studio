@@ -30,9 +30,7 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 
 import { forkJoin } from 'rxjs';
 
-import {
-  BillingService
-} from '../../services/billing.service';
+import { BillingService } from '../../services/billing.service';
 
 @Component({
   selector: 'app-step-review',
@@ -251,213 +249,142 @@ export class StepReviewComponent {
 
   success = false;
 
-submitApplication(): void {
+  submitApplication(): void {
+    if (this.loading) {
+      return;
+    }
 
-  if (this.loading) {
-    return;
-  }
+    this.loading = true;
 
-  this.loading = true;
+    console.log('REVIEW STATE', this.state());
 
-  console.log(
-    'REVIEW STATE',
-    this.state()
-  );
+    console.log({
+      monthlyGoal: this.state().monthlyGoal,
 
-  console.log({
+      yearlyGoal: this.state().yearlyGoal,
+    });
 
-    monthlyGoal:
-      this.state().monthlyGoal,
+    const payload = {
+      // =========================
+      // BASIC
+      // =========================
 
-    yearlyGoal:
-      this.state().yearlyGoal,
+      entity_type: this.state().entityType,
 
-  });
+      legal_name: this.organizationName,
 
-  const payload = {
+      display_name: this.displayName,
 
-    // =========================
-    // BASIC
-    // =========================
+      registration_number: this.organizationNumber,
 
-    entity_type:
-      this.state().entityType,
+      email: this.email,
 
-    legal_name:
-      this.organizationName,
+      phone: this.phone,
 
-    display_name:
-      this.displayName,
+      website: null,
 
-    registration_number:
-      this.organizationNumber,
+      description: this.organizationDescription,
 
-    email:
-      this.email,
+      // IMPORTANT:
+      // do not save blob url
 
-    phone:
-      this.phone,
+      logo_url: null,
 
-    website:
-      null,
+      is_profile_complete: this.isProfileComplete,
 
-    description:
-      this.organizationDescription,
+      primary_category: this.state().primaryCategory,
 
-    // IMPORTANT:
-    // do not save blob url
+      secondary_categories: this.state().selectedCategories,
 
-    logo_url:
-      null,
+      campaign_types: this.state().selectedCampaignTypes,
 
-    is_profile_complete:
-      this.isProfileComplete,
+      // =========================
+      // GOALS
+      // =========================
 
-    primary_category:
-      this.state().primaryCategory,
+      monthly_goal: this.state().monthlyGoal,
 
-    secondary_categories:
-      this.state().selectedCategories,
+      yearly_goal: this.state().yearlyGoal,
 
-    campaign_types:
-      this.state().selectedCampaignTypes,
+      // =========================
+      // ORGANIZATION CARDCOM
+      // =========================
 
-    // =========================
-    // GOALS
-    // =========================
+      billing_provider: this.state().provider,
 
-    monthly_goal:
-      this.state().monthlyGoal,
+      billing_skip_setup: this.state().useExistingTerminal,
 
-    yearly_goal:
-      this.state().yearlyGoal,
+      cardcom_terminal_number: this.state().terminalNumber,
 
-    // =========================
-    // ORGANIZATION CARDCOM
-    // =========================
+      cardcom_api_username: this.state().apiUsername,
 
-    billing_provider:
-      this.state().provider,
+      cardcom_api_password_encrypted: this.state().apiPassword,
 
-    billing_skip_setup:
-      this.state().useExistingTerminal,
-
-    cardcom_terminal_number:
-      this.state().terminalNumber,
-
-    cardcom_api_username:
-      this.state().apiUsername,
-
-    cardcom_api_password_encrypted:
-      this.state().apiPassword,
-
-    cardcom_connection_status:
-      this.state().useExistingTerminal
-
+      cardcom_connection_status: this.state().useExistingTerminal
         ? 'skipped'
-
         : this.state().connectionSuccess
-
           ? 'success'
-
           : 'not_tested',
 
-    // =========================
-    // CONTACT
-    // =========================
+      // =========================
+      // CONTACT
+      // =========================
 
-    contact_full_name:
-      this.fullName,
+      contact_full_name: this.fullName,
 
-    contact_phone:
-      this.phone,
+      contact_phone: this.phone,
 
-    contact_email:
-      this.email,
+      contact_email: this.email,
 
-    // =========================
-    // DOCUMENTS
-    // =========================
+      // =========================
+      // DOCUMENTS
+      // =========================
 
-    association_certificate_url:
-      this.certificateFileUrl,
+      association_certificate_url: this.certificateFileUrl,
 
-    association_certificate_name:
-      this.certificateFileName,
+      association_certificate_name: this.certificateFileName,
 
-    tax_document_url:
-      this.section46FileUrl,
+      tax_document_url: this.section46FileUrl,
 
-    tax_document_name:
-      this.section46FileName,
+      tax_document_name: this.section46FileName,
+    };
 
-  };
+    console.log('FINAL PAYLOAD', payload);
 
-  console.log(
-    'FINAL PAYLOAD',
-    payload
-  );
-
-  this.entitiesService
-    .createEntity(payload)
-    .subscribe({
-
+    this.entitiesService.createEntity(payload).subscribe({
       next: (res) => {
-
-        const entityId =
-          res.entity.id;
+        const entityId = res.entity.id;
 
         const uploads = [];
 
         if (this.state().certificateFile) {
-
           uploads.push(
+            this.entitiesService.uploadAssociationDocument(
+              entityId,
 
-            this.entitiesService
-              .uploadAssociationDocument(
-
-                entityId,
-
-                this.state().certificateFile!
-
-              )
-
+              this.state().certificateFile!,
+            ),
           );
-
         }
 
         if (this.state().section46File) {
-
           uploads.push(
+            this.entitiesService.uploadTaxDocument(
+              entityId,
 
-            this.entitiesService
-              .uploadTaxDocument(
-
-                entityId,
-
-                this.state().section46File!
-
-              )
-
+              this.state().section46File!,
+            ),
           );
-
         }
 
         if (this.state().logoFile) {
-
           uploads.push(
+            this.entitiesService.uploadLogo(
+              entityId,
 
-            this.entitiesService
-              .uploadLogo(
-
-                entityId,
-
-                this.state().logoFile!
-
-              )
-
+              this.state().logoFile!,
+            ),
           );
-
         }
 
         // =========================
@@ -465,133 +392,66 @@ submitApplication(): void {
         // =========================
 
         if (this.state().cardcomInternalDealNumber) {
-            uploads.push(
+          uploads.push(
+            this.billingService.createEntityBilling({
+              entityId,
 
-              this.billingService
-                .createEntityBilling({
+              provider: 'cardcom',
 
-                  entityId,
+              lowProfileId: this.state().cardcomLowProfileId,
 
-                  provider:
-                    'cardcom',
-
-                  lowProfileId:
-                    this.state()
-                      .cardcomLowProfileId,
-
-                  internalDealNumber:
-                    this.state()
-                      .cardcomInternalDealNumber,
-
-                })
-
-            );
-
-          }
-
-        if (!uploads.length) {
-
-          this.finishRegistration(
-            res.entity
+              internalDealNumber: this.state().cardcomInternalDealNumber,
+            }),
           );
-
-          return;
-
         }
 
-        forkJoin(uploads)
-          .subscribe({
+        if (!uploads.length) {
+          this.finishRegistration(res.entity);
 
-            next:
-              (results: any[]) => {
+          return;
+        }
 
-                console.log(
-                  'UPLOAD RESULTS',
-                  results
-                );
+        forkJoin(uploads).subscribe({
+          next: (results: any[]) => {
+            console.log('UPLOAD RESULTS', results);
 
-                const updatedEntity = {
+            const updatedEntity = {
+              ...res.entity,
 
-                  ...res.entity,
+              logo_url:
+                results.find((r) => r?.result?.logo_url)?.result?.logo_url ||
+                res.entity.logo_url,
 
-                  logo_url:
+              association_certificate_url:
+                results.find((r) => r?.result?.association_certificate_url)
+                  ?.result?.association_certificate_url ||
+                res.entity.association_certificate_url,
 
-                    results.find(
-                      (r) =>
-                        r?.result?.logo_url
-                    )?.result?.logo_url ||
+              tax_document_url:
+                results.find((r) => r?.result?.tax_document_url)?.result
+                  ?.tax_document_url || res.entity.tax_document_url,
+            };
 
-                    res.entity.logo_url,
+            console.log('UPDATED ENTITY', updatedEntity);
 
-                  association_certificate_url:
+            this.finishRegistration(updatedEntity);
+          },
 
-                    results.find(
-                      (r) =>
-                        r?.result
-                          ?.association_certificate_url
-                    )?.result
-                      ?.association_certificate_url ||
+          error: (err) => {
+            console.error('UPLOAD ERROR', err);
 
-                    res.entity
-                      .association_certificate_url,
-
-                  tax_document_url:
-
-                    results.find(
-                      (r) =>
-                        r?.result
-                          ?.tax_document_url
-                    )?.result
-                      ?.tax_document_url ||
-
-                    res.entity
-                      .tax_document_url,
-
-                };
-
-                console.log(
-                  'UPDATED ENTITY',
-                  updatedEntity
-                );
-
-                this.finishRegistration(
-                  updatedEntity
-                );
-
-              },
-
-            error:
-              (err) => {
-
-                console.error(
-                  'UPLOAD ERROR',
-                  err
-                );
-
-                this.loading =
-                  false;
-
-              },
-
-          });
-
+            this.loading = false;
+          },
+        });
       },
 
       error: (err) => {
+        console.error('CREATE ENTITY ERROR', err);
 
-        console.error(
-          'CREATE ENTITY ERROR',
-          err
-        );
-
-        this.loading =
-          false;
-
+        this.loading = false;
       },
-
     });
-
-}
+  }
 
   private finishRegistration(entity: any): void {
     localStorage.setItem('currentEntity', JSON.stringify(entity));

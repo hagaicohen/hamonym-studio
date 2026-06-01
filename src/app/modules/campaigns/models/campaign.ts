@@ -1,2 +1,1 @@
-export interface Campaign {
-}
+export interface Campaign {}

@@ -1,36 +1,20 @@
-import {
-  Injectable,
-  signal
-} from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AppLoaderService {
+  isVisible = signal(false);
 
-  isVisible =
-    signal(false);
+  text = signal('');
 
-  text =
-    signal('');
+  show(text = 'טוען...'): void {
+    this.text.set(text);
 
-  show(
-    text = 'טוען...'
-  ): void {
-
-    this.text.set(
-      text
-    );
-
-    this.isVisible.set(
-      true
-    );
+    this.isVisible.set(true);
   }
 
   hide(): void {
-
-    this.isVisible.set(
-      false
-    );
+    this.isVisible.set(false);
   }
 }

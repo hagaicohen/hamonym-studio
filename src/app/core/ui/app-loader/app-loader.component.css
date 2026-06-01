@@ -1,5 +1,4 @@
 .app-loader-overlay {
-
   position: fixed;
 
   inset: 0;
@@ -12,15 +11,12 @@
 
   justify-content: center;
 
-  background:
-    rgba(255,255,255,0.82);
+  background: rgba(255, 255, 255, 0.82);
 
-  backdrop-filter:
-    blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .app-loader-content {
-
   display: flex;
 
   flex-direction: column;
@@ -31,48 +27,39 @@
 }
 
 .app-loader-dot {
-
   width: 18px;
 
   height: 18px;
 
   border-radius: 999px;
 
-  background:
-    var(--campaign-primary);
+  background: var(--campaign-primary);
 
-  animation:
-    loaderPulse 1.2s infinite;
+  animation: loaderPulse 1.2s infinite;
 }
 
 .app-loader-text {
-
   font-size: 14px;
 
   font-weight: 600;
 
-  color:
-    #334155;
+  color: #334155;
 }
 
 @keyframes loaderPulse {
-
   0% {
-
     transform: scale(1);
 
     opacity: 1;
   }
 
   50% {
-
     transform: scale(1.8);
 
     opacity: 0.4;
   }
 
   100% {
-
     transform: scale(1);
 
     opacity: 1;

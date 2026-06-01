@@ -175,8 +175,7 @@ const initialState: OrganizationRegistrationState = {
 
   cardcomLowProfileId: '',
 
-  cardcomInternalDealNumber: 0
-
+  cardcomInternalDealNumber: 0,
 };
 
 @Injectable({

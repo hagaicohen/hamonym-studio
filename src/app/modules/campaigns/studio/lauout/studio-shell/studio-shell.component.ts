@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './studio-shell.component.html',
-  styleUrl: './studio-shell.component.css'
+  styleUrl: './studio-shell.component.css',
 })
-export class StudioShellComponent {
-
-}
+export class StudioShellComponent {}

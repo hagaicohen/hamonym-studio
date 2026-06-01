@@ -1,15 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  LucideAngularModule,
-  WalletCards,
-} from 'lucide-angular';
-
+import { LucideAngularModule, WalletCards } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-payment-section-view',
   standalone: true,
-  imports: [CommonModule,LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './entity-payment-section-view.component.html',
   styleUrl: './entity-payment-section-view.component.css',
 })

@@ -1,9 +1,9 @@
-@import '../../../styles/settings-section-actions.css';
+@import "../../../styles/settings-section-actions.css";
 
-.section-title-row{
-   display: flex;
-   align-items: center;
-   gap: 10px;
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .settings-card {
@@ -15,7 +15,6 @@
 
   padding: 28px;
 }
-
 
 .header-content {
   direction: rtl;

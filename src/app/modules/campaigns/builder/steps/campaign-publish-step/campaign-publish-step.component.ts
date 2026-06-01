@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './campaign-publish-step.component.html',
-  styleUrl: './campaign-publish-step.component.css'
+  styleUrl: './campaign-publish-step.component.css',
 })
-export class CampaignPublishStepComponent {
-
-}
+export class CampaignPublishStepComponent {}

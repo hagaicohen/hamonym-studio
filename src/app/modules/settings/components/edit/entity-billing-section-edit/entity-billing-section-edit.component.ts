@@ -7,53 +7,31 @@ import {
   OnInit,
   ViewChild,
   EventEmitter,
-  Output
+  Output,
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  ActivatedRoute
-} from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
-import {
-  LucideAngularModule,
-  CreditCard
-} from 'lucide-angular';
+import { LucideAngularModule, CreditCard } from 'lucide-angular';
 
-import {
-  BillingService
-} from '../../../../organization-registration/services/billing.service';
+import { BillingService } from '../../../../organization-registration/services/billing.service';
 
-import {
-  EntitiesService
-} from '../../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
 
-import {
-  CurrentEntityService
-} from '../../../../../core/services/current-entity.service';
+import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 
-import {
-  OpenfieldsFormComponent
-} from '../../../../billing/components/openfields-form/openfields-form.component';
+import { OpenfieldsFormComponent } from '../../../../billing/components/openfields-form/openfields-form.component';
 
-import {
-  SectionSaveState
-} from '../../../models/section-save-state.model';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
-type BillingMethod =
-  'credit-card' |
-  'masav';
+type BillingMethod = 'credit-card' | 'masav';
 
 @Component({
-  selector:
-    'app-entity-billing-section-edit',
+  selector: 'app-entity-billing-section-edit',
 
   standalone: true,
 
@@ -61,30 +39,21 @@ type BillingMethod =
     CommonModule,
     FormsModule,
     LucideAngularModule,
-    OpenfieldsFormComponent
+    OpenfieldsFormComponent,
   ],
 
-  templateUrl:
-    './entity-billing-section-edit.component.html',
+  templateUrl: './entity-billing-section-edit.component.html',
 
-  styleUrls: [
-    './entity-billing-section-edit.component.css'
-  ],
+  styleUrls: ['./entity-billing-section-edit.component.css'],
 })
-export class EntityBillingSectionEditComponent
-  implements OnInit {
+export class EntityBillingSectionEditComponent implements OnInit {
+  private billingService = inject(BillingService);
 
-  private billingService =
-    inject(BillingService);
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
+  private currentEntityService = inject(CurrentEntityService);
 
-  private currentEntityService =
-    inject(CurrentEntityService);
-
-  private route =
-    inject(ActivatedRoute);
+  private route = inject(ActivatedRoute);
 
   @ViewChild(OpenfieldsFormComponent)
   openfieldsForm?: OpenfieldsFormComponent;
@@ -103,422 +72,273 @@ export class EntityBillingSectionEditComponent
 
   @Input()
   set entity(value: any) {
-
     this._entity = value;
 
     this.syncModeFromEntity();
-
   }
 
   get entity(): any {
-
     return this._entity;
-
   }
 
   @Input()
   saveState: SectionSaveState = {
-
     isSaving: false,
 
     saveCompleted: false,
 
-    saveFailed: false
+    saveFailed: false,
   };
 
   @Output()
-  save =
-    new EventEmitter<void>();
+  save = new EventEmitter<void>();
 
   @Output()
-  cancel =
-    new EventEmitter<void>();
+  cancel = new EventEmitter<void>();
 
   @Output()
-  entityChange =
-    new EventEmitter<any>();
+  entityChange = new EventEmitter<any>();
 
-  readonly CreditCard =
-    CreditCard;
+  readonly CreditCard = CreditCard;
 
-  mode:
-    'connected' |
-    'replacing' |
-    'empty' = 'empty';
+  mode: 'connected' | 'replacing' | 'empty' = 'empty';
 
   ngOnInit(): void {
-
     this.entitiesService
       .getEntityById(this.entity.id)
 
       .subscribe({
-
         next: (res: any) => {
+          const refreshedEntity = res.entity || res;
 
-          const refreshedEntity =
-
-            res.entity || res;
-
-          this.entity =
-            refreshedEntity;
-
+          this.entity = refreshedEntity;
         },
 
         error: (err: any) => {
-
           console.error(err);
-
-        }
-
+        },
       });
 
-    const lowProfileId =
-
-      this.route.snapshot
-        .queryParamMap
-        .get('LowProfileId');
+    const lowProfileId = this.route.snapshot.queryParamMap.get('LowProfileId');
 
     const internalDealNumber =
+      this.route.snapshot.queryParamMap.get('InternalDealNumber');
 
-      this.route.snapshot
-        .queryParamMap
-        .get('InternalDealNumber');
-
-    if (
-      !lowProfileId ||
-      !internalDealNumber
-    ) {
+    if (!lowProfileId || !internalDealNumber) {
       return;
     }
 
     this.billingService
       .createEntityBilling({
+        entityId: this.entity.id,
 
-        entityId:
-          this.entity.id,
-
-        provider:
-          'cardcom',
+        provider: 'cardcom',
 
         lowProfileId,
 
-        internalDealNumber
-
+        internalDealNumber,
       })
 
       .subscribe({
-
         next: () => {
-
           this.entitiesService
             .getEntityById(this.entity.id)
 
             .subscribe({
-
               next: (entityRes: any) => {
+                const refreshedEntity = entityRes.entity || entityRes;
 
-                const refreshedEntity =
+                this.entity = refreshedEntity;
 
-                  entityRes.entity ||
-                  entityRes;
-
-                this.entity =
-                  refreshedEntity;
-
-                this.currentEntityService
-                  .setEntity(
-                    refreshedEntity
-                  );
-
+                this.currentEntityService.setEntity(refreshedEntity);
               },
 
               error: (err: any) => {
-
                 console.error(err);
-
-              }
-
+              },
             });
-
         },
 
         error: (err: any) => {
-
           console.error(err);
-
-        }
-
+        },
       });
-
   }
 
-private syncModeFromEntity(): void {
-
-  /*
+  private syncModeFromEntity(): void {
+    /*
   |--------------------------------------------------------------------------
   | LOCAL CREDIT CARD SELECTION
   | MUST WIN OVER HYDRATION
   |--------------------------------------------------------------------------
   */
 
-  if (
-    this.manuallySelectedCreditCard
-  ) {
+    if (this.manuallySelectedCreditCard) {
+      if (this.entity?.billing_last4) {
+        this.mode = 'connected';
+      } else {
+        this.mode = 'empty';
+      }
 
-    if (
-      this.entity?.billing_last4
-    ) {
-
-      this.mode =
-        'connected';
-
-    } else {
-
-      this.mode =
-        'empty';
-
+      return;
     }
 
-    return;
-
-  }
-
-  /*
+    /*
   |--------------------------------------------------------------------------
   | LOCAL MASAV SELECTION
   | MUST WIN OVER HYDRATION
   |--------------------------------------------------------------------------
   */
 
-  if (
-    this.manuallySelectedMasav
-  ) {
+    if (this.manuallySelectedMasav) {
+      this.mode = 'empty';
 
-    this.mode =
-      'empty';
+      return;
+    }
 
-    return;
-
-  }
-
-  /*
+    /*
   |--------------------------------------------------------------------------
   | MASAV FROM SERVER
   |--------------------------------------------------------------------------
   */
 
-  if (
-    this.entity?.billing_method === 'masav'
-  ) {
+    if (this.entity?.billing_method === 'masav') {
+      this.mode = 'empty';
 
-    this.mode =
-      'empty';
+      return;
+    }
 
-    return;
-
-  }
-
-  /*
+    /*
   |--------------------------------------------------------------------------
   | NEVER OVERRIDE REPLACE FLOW
   |--------------------------------------------------------------------------
   */
 
-  if (
-    this.mode === 'replacing'
-  ) {
-    return;
-  }
+    if (this.mode === 'replacing') {
+      return;
+    }
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | CREDIT CARD
   |--------------------------------------------------------------------------
   */
 
-  if (
-    this.entity?.billing_last4
-  ) {
-
-    this.mode =
-      'connected';
-
-  } else {
-
-    this.mode =
-      'empty';
-
+    if (this.entity?.billing_last4) {
+      this.mode = 'connected';
+    } else {
+      this.mode = 'empty';
+    }
   }
 
-}
-
- get billingMethod(): BillingMethod {
-
+  get billingMethod(): BillingMethod {
     /*
       IMPORTANT:
       local MASAV selection
       must override hydration
     */
 
-    if (
-      this.manuallySelectedMasav
-    ) {
-
+    if (this.manuallySelectedMasav) {
       return 'masav';
-
     }
 
-    return this.entity?.billing_method ||
-      'credit-card';
-
+    return this.entity?.billing_method || 'credit-card';
   }
 
   get isCreditCard(): boolean {
-
-    return this.billingMethod ===
-      'credit-card';
-
+    return this.billingMethod === 'credit-card';
   }
 
   get isMasav(): boolean {
-
-    return this.billingMethod ===
-      'masav';
-
+    return this.billingMethod === 'masav';
   }
 
   get canSaveMasav(): boolean {
-
-    return !!this.entity
-      ?.billing_masav_file_name;
-
+    return !!this.entity?.billing_masav_file_name;
   }
 
-  selectBillingMethod(
-  method: BillingMethod
-): void {
-
-  /*
+  selectBillingMethod(method: BillingMethod): void {
+    /*
   |--------------------------------------------------------------------------
   | MASAV
   |--------------------------------------------------------------------------
   */
 
-  if (method === 'masav') {
+    if (method === 'masav') {
+      this.manuallySelectedMasav = true;
 
-    this.manuallySelectedMasav =
-      true;
+      this.manuallySelectedCreditCard = false;
 
-    this.manuallySelectedCreditCard =
-      false;
+      this.mode = 'empty';
 
-    this.mode =
-      'empty';
-
-    /*
+      /*
       IMPORTANT:
       DO NOT CLEAR CREDIT CARD YET.
       ONLY AFTER REAL SAVE.
     */
 
-    this.entity = {
+      this.entity = {
+        ...this.entity,
 
-      ...this.entity,
-
-      billing_method:
-        'masav'
-
-    };
-
-  } else {
-
-    /*
+        billing_method: 'masav',
+      };
+    } else {
+      /*
     |--------------------------------------------------------------------------
     | CREDIT CARD
     |--------------------------------------------------------------------------
     */
 
-    this.manuallySelectedMasav =
-      false;
+      this.manuallySelectedMasav = false;
 
-    this.manuallySelectedCreditCard =
-      true;
+      this.manuallySelectedCreditCard = true;
 
-    this.entity = {
+      this.entity = {
+        ...this.entity,
 
-      ...this.entity,
+        billing_method: 'credit-card',
 
-      billing_method:
-        'credit-card',
-
-      /*
+        /*
         CLEAR MASAV
       */
 
-      billing_masav_file_name:
-        null
+        billing_masav_file_name: null,
+      };
+    }
 
-    };
-
+    this.entityChange.emit(this.entity);
   }
-
-  this.entityChange.emit(
-    this.entity
-  );
-
-}
-  onMasavFileSelected(
-    event: Event
-  ): void {
-
-    const input =
-      event.target as HTMLInputElement;
+  onMasavFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
     if (!input.files?.length) {
       return;
     }
 
-    const file =
-      input.files[0];
+    const file = input.files[0];
 
     this.entity = {
-
       ...this.entity,
 
-      billing_method:
-        'masav',
+      billing_method: 'masav',
 
-      billing_masav_file_name:
-        file.name
+      billing_masav_file_name: file.name,
     };
 
-    this.entityChange.emit(
-      this.entity
-    );
-
+    this.entityChange.emit(this.entity);
   }
 
   removeMasavFile(): void {
-
     this.entity = {
-
       ...this.entity,
 
-      billing_masav_file_name:
-        null
+      billing_masav_file_name: null,
     };
 
-    this.entityChange.emit(
-      this.entity
-    );
-
+    this.entityChange.emit(this.entity);
   }
 
   startReplaceCard(): void {
-
-    this.mode =
-      'replacing';
-
+    this.mode = 'replacing';
   }
-
 }

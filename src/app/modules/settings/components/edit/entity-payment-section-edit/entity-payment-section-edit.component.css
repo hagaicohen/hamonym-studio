@@ -1,8 +1,8 @@
-@import '../../../styles/settings-section-actions.css';
-.section-title-row{
-   display: flex;
-   align-items: center;
-   gap: 10px;
+@import "../../../styles/settings-section-actions.css";
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .settings-card {
@@ -387,10 +387,8 @@ select.base-input {
   }
 }
 
-
 /* SPINNER FOR TEST CARDCOM */
 .test-connection-btn {
-
   display: inline-flex;
 
   align-items: center;
@@ -424,24 +422,20 @@ select.base-input {
 }
 
 .test-connection-btn:hover:not(:disabled) {
-
   background: #1d4ed8;
 }
 
 .test-connection-btn:active:not(:disabled) {
-
   transform: translateY(1px);
 }
 
 .test-connection-btn:disabled {
-
   opacity: 0.7;
 
   cursor: not-allowed;
 }
 
 .btn-spinner {
-
   width: 16px;
 
   height: 16px;
@@ -450,7 +444,7 @@ select.base-input {
 
   border-radius: 50%;
 
-  border: 2px solid rgba(255,255,255,0.35);
+  border: 2px solid rgba(255, 255, 255, 0.35);
 
   border-top-color: #ffffff;
 
@@ -458,7 +452,6 @@ select.base-input {
 }
 
 @keyframes spin {
-
   from {
     transform: rotate(0deg);
   }
@@ -469,7 +462,6 @@ select.base-input {
 }
 
 .connection-success {
-
   margin-top: 12px;
 
   display: flex;
@@ -486,7 +478,6 @@ select.base-input {
 }
 
 .connection-error {
-
   margin-top: 12px;
 
   display: flex;
@@ -503,7 +494,6 @@ select.base-input {
 }
 
 .status-icon {
-
   width: 20px;
 
   height: 20px;
@@ -522,15 +512,13 @@ select.base-input {
 }
 
 .success-icon {
-
-  background: rgba(34,197,94,0.12);
+  background: rgba(34, 197, 94, 0.12);
 
   color: #15803d;
 }
 
 .error-icon {
-
-  background: rgba(239,68,68,0.12);
+  background: rgba(239, 68, 68, 0.12);
 
   color: #dc2626;
 }

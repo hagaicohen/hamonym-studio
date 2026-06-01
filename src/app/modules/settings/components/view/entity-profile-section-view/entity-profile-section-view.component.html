@@ -5,18 +5,9 @@
     <div>
       <div class="header-content">
         <div class="section-title-row">
+          <lucide-icon [img]="ImageIcon" class="section-icon"> </lucide-icon>
 
-              <lucide-icon
-                [img]="ImageIcon"
-                class="section-icon">
-              </lucide-icon>
-
-              <div class="card-title">
-
-                פרופיל {{ entityTypeLabel }}
-
-              </div>
-
+          <div class="card-title">פרופיל {{ entityTypeLabel }}</div>
         </div>
 
         <div class="card-description">
@@ -25,19 +16,11 @@
         </div>
       </div>
     </div>
-     <div class="card-actions">
-
-      <button
-        type="button"
-        class="edit-btn"
-        (click)="edit.emit()">
-
+    <div class="card-actions">
+      <button type="button" class="edit-btn" (click)="edit.emit()">
         עריכה
-
       </button>
-
     </div>
-
   </div>
 
   <!-- BODY -->
@@ -88,40 +71,28 @@
 
     <!-- LOGO -->
 
-   <div class="logo-side">
+    <div class="logo-side">
+      <div class="logo-card">
+        <div class="logo-label">לוגו</div>
 
-  <div class="logo-card">
-
-    <div class="logo-label">
-      לוגו
+        <div class="logo-preview">
+          @if (getLogoUrl()) {
+            <img
+              [src]="getLogoUrl()"
+              alt="Logo"
+              class="logo-image"
+              [class.loaded]="logoLoaded"
+              (load)="logoLoaded = true"
+            />
+          } @else {
+            <img
+              src="/logo-placeholder.svg"
+              class="logo-placeholder-image"
+              alt="Placeholder"
+            />
+          }
+        </div>
+      </div>
     </div>
-
-    <div class="logo-preview">
-
-      @if (getLogoUrl()) {
-
-        <img
-          [src]="getLogoUrl()"
-          alt="Logo"
-          class="logo-image"
-          [class.loaded]="logoLoaded"
-          (load)="logoLoaded = true"
-        />
-
-      } @else {
-
-        <img
-          src="/logo-placeholder.svg"
-          class="logo-placeholder-image"
-          alt="Placeholder"
-        />
-
-      }
-
-    </div>
-
-  </div>
-
-</div>
   </div>
 </div>

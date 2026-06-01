@@ -1,5 +1,4 @@
 export interface SectionSaveState {
-
   isSaving: boolean;
 
   saveCompleted: boolean;

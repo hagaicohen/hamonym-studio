@@ -23,36 +23,26 @@ export class CurrentEntityService {
   }
 
   setEntity(entity: any): void {
+    const safeEntity = {
+      ...entity,
 
-  const safeEntity = {
+      logo_data: undefined,
 
-    ...entity,
+      logo_url: undefined,
 
-    logo_data: undefined,
+      association_certificate_data: undefined,
 
-    logo_url: undefined,
+      tax_document_data: undefined,
+    };
 
-    association_certificate_data: undefined,
+    this.currentEntity.set(safeEntity);
 
-    tax_document_data: undefined
+    localStorage.setItem(
+      'currentEntity',
 
-  };
-
-  this.currentEntity.set(
-
-    safeEntity
-
-  );
-
-  localStorage.setItem(
-
-    'currentEntity',
-
-    JSON.stringify(safeEntity),
-
-  );
-
-}
+      JSON.stringify(safeEntity),
+    );
+  }
 
   setRole(role: string): void {
     this.currentRole.set(role);

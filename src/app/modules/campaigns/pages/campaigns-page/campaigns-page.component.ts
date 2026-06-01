@@ -1,62 +1,36 @@
-import {
-  Component
-} from '@angular/core';
+import { Component } from '@angular/core';
 
-import {
-  Router
-} from '@angular/router';
+import { Router } from '@angular/router';
 
-
-import { AppLoaderService }
-from '../../../../core/services/app-loader.service';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 @Component({
+  selector: 'app-campaigns-page',
 
-  selector:
-    'app-campaigns-page',
-
-  standalone:
-    true,
+  standalone: true,
 
   imports: [],
 
-  templateUrl:
-    './campaigns-page.component.html',
+  templateUrl: './campaigns-page.component.html',
 
-  styleUrls: [
-    './campaigns-page.component.css'
-  ]
+  styleUrls: ['./campaigns-page.component.css'],
 })
 export class CampaignsPageComponent {
-
-  viewMode:
-    'grid' | 'list'
-    = 'grid';
+  viewMode: 'grid' | 'list' = 'grid';
 
   constructor(
+    private router: Router,
 
-    private router:
-      Router,
-
-    private loader:
-      AppLoaderService
-
+    private loader: AppLoaderService,
   ) {}
 
   createCampaign(): void {
-
-    this.loader.show(
-      'טוען את אשף יצירת הקמפיין...'
-    );
+    this.loader.show('טוען את אשף יצירת הקמפיין...');
 
     setTimeout(() => {
-
-      this.router.navigate([
-        '/campaigns/create'
-      ]);
+      this.router.navigate(['/campaigns/create']);
 
       this.loader.hide();
-
     }, 900);
   }
 }

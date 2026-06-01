@@ -1,5 +1,4 @@
 .form-field {
-
   display: flex;
 
   flex-direction: column;
@@ -8,17 +7,14 @@
 }
 
 .field-label {
-
   font-size: 14px;
 
   font-weight: 600;
 
-  color:
-    var(--campaign-text);
+  color: var(--campaign-text);
 }
 
 .text-input {
-
   width: 100%;
 
   height: 52px;
@@ -27,32 +23,24 @@
 
   border-radius: 14px;
 
-  border:
-    1px solid
-    var(--campaign-border);
+  border: 1px solid var(--campaign-border);
 
-  background:
-    white;
+  background: white;
 
   font-size: 15px;
 
-  transition:
-    all 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .text-input:focus {
-
   outline: none;
 
-  border-color:
-    var(--campaign-primary);
+  border-color: var(--campaign-primary);
 
-  box-shadow:
-    0 0 0 4px rgba(15,157,138,0.08);
+  box-shadow: 0 0 0 4px rgba(15, 157, 138, 0.08);
 }
 
 .text-area {
-
   width: 100%;
 
   min-height: 140px;
@@ -61,25 +49,19 @@
 
   border-radius: 14px;
 
-  border:
-    1px solid
-    var(--campaign-border);
+  border: 1px solid var(--campaign-border);
 
   resize: vertical;
 
   font-size: 15px;
 
-  transition:
-    all 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .text-area:focus {
-
   outline: none;
 
-  border-color:
-    var(--campaign-primary);
+  border-color: var(--campaign-primary);
 
-  box-shadow:
-    0 0 0 4px rgba(15,157,138,0.08);
+  box-shadow: 0 0 0 4px rgba(15, 157, 138, 0.08);
 }

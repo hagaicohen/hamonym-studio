@@ -3,73 +3,43 @@ import {
   EventEmitter,
   Output,
   ViewChild,
-  inject
+  inject,
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  OrganizationRegistrationStateService
-} from '../../services/organization-registration-state.service';
+import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 
-import {
-  OpenfieldsFormComponent
-} from '../../../billing/components/openfields-form/openfields-form.component';
+import { OpenfieldsFormComponent } from '../../../billing/components/openfields-form/openfields-form.component';
 
-type PaymentMethod =
-  'credit-card' |
-  'masav';
+type PaymentMethod = 'credit-card' | 'masav';
 
 @Component({
-  selector:
-    'app-step-billing-method',
+  selector: 'app-step-billing-method',
 
   standalone: true,
 
-  imports: [
+  imports: [CommonModule, FormsModule, OpenfieldsFormComponent],
 
-    CommonModule,
+  templateUrl: './step-billing-method.component.html',
 
-    FormsModule,
-
-    OpenfieldsFormComponent
-
-  ],
-
-  templateUrl:
-    './step-billing-method.component.html',
-
-  styleUrls: [
-    './step-billing-method.component.css'
-  ],
+  styleUrls: ['./step-billing-method.component.css'],
 })
 export class StepBillingMethodComponent {
+  @Output()
+  back = new EventEmitter<void>();
 
   @Output()
-  back =
-    new EventEmitter<void>();
-
-  @Output()
-  continue =
-    new EventEmitter<void>();
+  continue = new EventEmitter<void>();
 
   @ViewChild(OpenfieldsFormComponent)
   openfieldsForm?: OpenfieldsFormComponent;
 
-  readonly stateService =
-    inject(
-      OrganizationRegistrationStateService
-    );
+  readonly stateService = inject(OrganizationRegistrationStateService);
 
-  paymentMethod:
-    PaymentMethod =
-      'credit-card';
+  paymentMethod: PaymentMethod = 'credit-card';
 
   masavUploaded = false;
 
@@ -82,60 +52,38 @@ export class StepBillingMethodComponent {
   saveCompleted = false;
 
   constructor() {
+    const state = this.stateService.state();
 
-    const state =
-      this.stateService.state();
+    this.paymentMethod = state.paymentMethod as PaymentMethod;
 
-    this.paymentMethod =
-      state.paymentMethod as PaymentMethod;
+    this.masavUploaded = state.masavUploaded;
 
-    this.masavUploaded =
-      state.masavUploaded;
+    this.masavFileName = state.masavFileName;
 
-    this.masavFileName =
-      state.masavFileName;
-
-    this.continueLater =
-      state.continueLater;
-
+    this.continueLater = state.continueLater;
   }
 
   private syncState(): void {
-
     this.stateService.updateState({
+      paymentMethod: this.paymentMethod,
 
-      paymentMethod:
-        this.paymentMethod,
+      masavUploaded: this.masavUploaded,
 
-      masavUploaded:
-        this.masavUploaded,
+      masavFileName: this.masavFileName,
 
-      masavFileName:
-        this.masavFileName,
-
-      continueLater:
-        this.continueLater,
-
+      continueLater: this.continueLater,
     });
-
   }
 
   get isCreditCard(): boolean {
-
-    return this.paymentMethod ===
-      'credit-card';
-
+    return this.paymentMethod === 'credit-card';
   }
 
   get isMasav(): boolean {
-
-    return this.paymentMethod ===
-      'masav';
-
+    return this.paymentMethod === 'masav';
   }
 
   get canContinue(): boolean {
-
     if (this.continueLater) {
       return true;
     }
@@ -149,34 +97,25 @@ export class StepBillingMethodComponent {
     }
 
     return false;
-
   }
 
   get submitButtonText(): string {
-
     if (this.isSaving) {
       return 'ממשיך...';
     }
 
     return 'המשך';
-
   }
 
-  selectPaymentMethod(
-    method: PaymentMethod
-  ): void {
-
-    this.paymentMethod =
-      method;
+  selectPaymentMethod(method: PaymentMethod): void {
+    this.paymentMethod = method;
 
     this.syncState();
 
     this.resetState();
-
   }
 
   async savePaymentMethod(): Promise<void> {
-
     if (this.isSaving) {
       return;
     }
@@ -187,18 +126,10 @@ export class StepBillingMethodComponent {
 
     this.isSaving = true;
 
-    if (
-      this.isCreditCard &&
-      !this.continueLater
-    ) {
-
-      const success =
-
-        await this.openfieldsForm
-          ?.tokenize();
+    if (this.isCreditCard && !this.continueLater) {
+      const success = await this.openfieldsForm?.tokenize();
 
       if (!success) {
-
         this.isSaving = false;
 
         return;
@@ -212,52 +143,35 @@ export class StepBillingMethodComponent {
     this.syncState();
 
     this.continue.emit();
-
   }
 
   resetState(): void {
-
-    this.saveCompleted =
-      false;
-
+    this.saveCompleted = false;
   }
 
-  onMasavFileSelected(
-    event: Event
-  ): void {
-
-    const input =
-      event.target as HTMLInputElement;
+  onMasavFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
     if (!input.files?.length) {
       return;
     }
 
-    const file =
-      input.files[0];
+    const file = input.files[0];
 
-    this.masavUploaded =
-      true;
+    this.masavUploaded = true;
 
-    this.masavFileName =
-      file.name;
+    this.masavFileName = file.name;
 
     this.syncState();
 
     this.resetState();
-
   }
 
   removeMasavFile(): void {
+    this.masavUploaded = false;
 
-    this.masavUploaded =
-      false;
-
-    this.masavFileName =
-      '';
+    this.masavFileName = '';
 
     this.syncState();
-
   }
-
 }

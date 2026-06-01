@@ -1,78 +1,23 @@
 <div class="stepper">
-
   <div class="stepper-header">
-
-    שלב {{ currentStep }} מתוך 5
-
+    שלב {{ currentStep }} מתוך {{ steps.length }}
   </div>
 
-  <div class="stepper-progress">
+  <div class="stepper-items">
+    @for (step of steps; track $index) {
+      <div class="stepper-item">
+        <div class="step-dot" [class.active]="currentStep >= $index + 1">
+          {{ $index + 1 }}
+        </div>
 
-    <div class="step-dot"
-         [class.active]="currentStep >= 1">
-      1
-    </div>
+        <div class="stepper-label">
+          {{ step }}
+        </div>
+      </div>
 
-    <div class="step-line"
-         [class.active]="currentStep > 1">
-    </div>
-
-    <div class="step-dot"
-         [class.active]="currentStep >= 2">
-      2
-    </div>
-
-    <div class="step-line"
-         [class.active]="currentStep > 2">
-    </div>
-
-    <div class="step-dot"
-         [class.active]="currentStep >= 3">
-      3
-    </div>
-
-    <div class="step-line"
-         [class.active]="currentStep > 3">
-    </div>
-
-    <div class="step-dot"
-         [class.active]="currentStep >= 4">
-      4
-    </div>
-
-    <div class="step-line"
-         [class.active]="currentStep > 4">
-    </div>
-
-    <div class="step-dot"
-         [class.active]="currentStep >= 5">
-      5
-    </div>
-
+      @if ($index < steps.length - 1) {
+        <div class="step-line" [class.active]="currentStep > $index + 1"></div>
+      }
+    }
   </div>
-
-  <div class="stepper-labels">
-
-    <div class="stepper-label">
-      סוג
-    </div>
-
-    <div class="stepper-label">
-      פרטים
-    </div>
-
-    <div class="stepper-label">
-      מדיה
-    </div>
-
-    <div class="stepper-label">
-      גיוס
-    </div>
-
-    <div class="stepper-label">
-      פרסום
-    </div>
-
-  </div>
-
 </div>

@@ -4,34 +4,18 @@
   <div class="card-top">
     <div>
       <div class="section-title-row">
+        <lucide-icon [img]="WalletCards" class="section-icon"> </lucide-icon>
 
-        <lucide-icon
-          [img]="WalletCards"
-          class="section-icon">
-        </lucide-icon>
-
-        <div class="card-title">
-
-          מסוף אשראי
-
-        </div>
-
+        <div class="card-title">מסוף אשראי</div>
       </div>
       <div class="card-description">
         הגדרות סליקה וחיבור ספק האשראי של הישות
       </div>
     </div>
-         <div class="card-actions">
-
-      <button
-        type="button"
-        class="edit-btn"
-        (click)="edit.emit()">
-
+    <div class="card-actions">
+      <button type="button" class="edit-btn" (click)="edit.emit()">
         עריכה
-
       </button>
-
     </div>
   </div>
 

@@ -175,29 +175,17 @@
         <!-- TEST -->
 
         <button
-            type="button"
-            class="test-connection-btn"
-            [disabled]="
-              isCheckingConnection ||
-              !canContinue
-            "
-            (click)="testConnection()"
-          >
+          type="button"
+          class="test-connection-btn"
+          [disabled]="isCheckingConnection || !canContinue"
+          (click)="testConnection()"
+        >
+          <span *ngIf="isCheckingConnection" class="btn-spinner"> </span>
 
-            <span
-              *ngIf="isCheckingConnection"
-              class="btn-spinner">
-            </span>
-
-            <span>
-              {{
-                isCheckingConnection
-                  ? 'בודק חיבור...'
-                  : 'בדוק חיבור'
-              }}
-            </span>
-
-          </button>
+          <span>
+            {{ isCheckingConnection ? "בודק חיבור..." : "בדוק חיבור" }}
+          </span>
+        </button>
 
         @if (connectionSuccess) {
           <div class="connection-success">

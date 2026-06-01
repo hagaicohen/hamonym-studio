@@ -6,19 +6,19 @@ import { FormsModule } from '@angular/forms';
 
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 
-import {
-  SectionSaveState
-} from '../../../models/section-save-state.model';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
-import {
-  LucideAngularModule,
-  ImageIcon
-} from 'lucide-angular';
+import { LucideAngularModule, ImageIcon } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-profile-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, RichTextEditorComponent,LucideAngularModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RichTextEditorComponent,
+    LucideAngularModule,
+  ],
   templateUrl: './entity-profile-section-edit.component.html',
 
   styleUrls: ['./entity-profile-section-edit.component.css'],
@@ -40,22 +40,19 @@ export class EntityProfileSectionEditComponent {
   entityChange = new EventEmitter<any>();
 
   @Input()
-saveState: SectionSaveState = {
+  saveState: SectionSaveState = {
+    isSaving: false,
 
-  isSaving: false,
+    saveCompleted: false,
 
-  saveCompleted: false,
+    saveFailed: false,
+  };
 
-  saveFailed: false
-};
+  @Output()
+  save = new EventEmitter<void>();
 
-@Output()
-save =
-  new EventEmitter<void>();
-
-@Output()
-cancel =
-  new EventEmitter<void>();
+  @Output()
+  cancel = new EventEmitter<void>();
 
   readonly ImageIcon = ImageIcon;
 

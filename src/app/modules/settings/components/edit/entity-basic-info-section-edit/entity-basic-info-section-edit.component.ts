@@ -6,66 +6,38 @@ import {
   Input,
   Output,
   inject,
-  OnChanges
+  OnChanges,
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  ENTITY_CATEGORIES
-} from '../../../../../shared/config/entity-categories';
+import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
-import {
-  DomSanitizer,
-  SafeResourceUrl
-} from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-import {
-  EntitiesService
-} from '../../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
 
-import {
-  LucideAngularModule,
-  Building2
-} from 'lucide-angular';
+import { LucideAngularModule, Building2 } from 'lucide-angular';
 
-import {
-
-  SectionSaveState
-
-} from '../../../models/section-save-state.model';
+import { SectionSaveState } from '../../../models/section-save-state.model';
 
 @Component({
   selector: 'app-entity-basic-info-section-edit',
 
   standalone: true,
 
-  imports: [
-    CommonModule,
-    FormsModule,
-    LucideAngularModule
-  ],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
 
-  templateUrl:
-    './entity-basic-info-section-edit.component.html',
+  templateUrl: './entity-basic-info-section-edit.component.html',
 
-  styleUrl:
-    './entity-basic-info-section-edit.component.css',
+  styleUrl: './entity-basic-info-section-edit.component.css',
 })
-export class EntityBasicInfoSectionEditComponent
-  implements OnChanges {
+export class EntityBasicInfoSectionEditComponent implements OnChanges {
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
-
-  private sanitizer =
-    inject(DomSanitizer);
+  private sanitizer = inject(DomSanitizer);
 
   @Input()
   entity: any;
@@ -74,256 +46,146 @@ export class EntityBasicInfoSectionEditComponent
   editMode = false;
 
   @Output()
-  entityChange =
-    new EventEmitter<any>();
+  entityChange = new EventEmitter<any>();
 
   @Output()
-  save =
-    new EventEmitter<void>();
+  save = new EventEmitter<void>();
 
   @Output()
-  cancel =
-    new EventEmitter<void>();
+  cancel = new EventEmitter<void>();
 
-    @Input()
+  @Input()
   saveState: SectionSaveState = {
+    isSaving: false,
 
-  isSaving: false,
+    saveCompleted: false,
 
-  saveCompleted: false,
-
-  saveFailed: false
-};
+    saveFailed: false,
+  };
   @Input()
   saveError = '';
 
   @Input()
   showInlineError = false;
 
-  categories =
-    ENTITY_CATEGORIES;
+  categories = ENTITY_CATEGORIES;
 
-  readonly Building2 =
-    Building2;
+  readonly Building2 = Building2;
 
-  associationDocumentUrl?:
-    SafeResourceUrl;
+  associationDocumentUrl?: SafeResourceUrl;
 
-  taxDocumentUrl?:
-    SafeResourceUrl;
+  taxDocumentUrl?: SafeResourceUrl;
 
   ngOnChanges(): void {
-
     if (!this.entity?.id) {
       return;
     }
 
-    this.associationDocumentUrl =
+    this.associationDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getAssociationDocumentUrl(this.entity.id),
+    );
 
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
-
-          this.entitiesService
-            .getAssociationDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
-    this.taxDocumentUrl =
-
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
-
-          this.entitiesService
-            .getTaxDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
+    this.taxDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getTaxDocumentUrl(this.entity.id),
+    );
   }
 
-  updateField(
-    field: string,
-    value: any
-  ) {
-
+  updateField(field: string, value: any) {
     this.entityChange.emit({
       [field]: value,
     });
-
   }
 
-  toggleSecondaryCategory(
-    categoryId: string
-  ) {
+  toggleSecondaryCategory(categoryId: string) {
+    const current = this.entity?.secondary_categories || [];
 
-    const current =
-      this.entity?.secondary_categories || [];
-
-    const exists =
-      current.includes(categoryId);
+    const exists = current.includes(categoryId);
 
     const updated = exists
-      ? current.filter(
-          (c: string) => c !== categoryId
-        )
-      : [
-          ...current,
-          categoryId
-        ];
+      ? current.filter((c: string) => c !== categoryId)
+      : [...current, categoryId];
 
-    this.updateField(
-      'secondary_categories',
-      updated
-    );
-
+    this.updateField('secondary_categories', updated);
   }
 
-  onAssociationCertificateSelected(
-    event: Event
-  ): void {
+  onAssociationCertificateSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
-    const input =
-      event.target as HTMLInputElement;
-
-    const file =
-      input.files?.[0];
+    const file = input.files?.[0];
 
     if (!file) {
       return;
     }
 
-    this.updateField(
-      'association_certificate_file',
-      file
-    );
+    this.updateField('association_certificate_file', file);
 
-    this.updateField(
-      'association_certificate_name',
-      file.name
-    );
+    this.updateField('association_certificate_name', file.name);
 
     this.entity = {
-
       ...this.entity,
 
-      association_certificate_file:
-        file,
+      association_certificate_file: file,
 
-      association_certificate_name:
-        file.name
-
+      association_certificate_name: file.name,
     };
-
   }
 
-  onTaxDocumentSelected(
-    event: Event
-  ): void {
+  onTaxDocumentSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
 
-    const input =
-      event.target as HTMLInputElement;
-
-    const file =
-      input.files?.[0];
+    const file = input.files?.[0];
 
     if (!file) {
       return;
     }
 
-    this.updateField(
-      'tax_document_file',
-      file
-    );
+    this.updateField('tax_document_file', file);
 
-    this.updateField(
-      'tax_document_name',
-      file.name
-    );
+    this.updateField('tax_document_name', file.name);
 
     this.entity = {
-
       ...this.entity,
 
-      tax_document_file:
-        file,
+      tax_document_file: file,
 
-      tax_document_name:
-        file.name
-
+      tax_document_name: file.name,
     };
-
   }
 
   removeAssociationCertificate(): void {
+    this.updateField('association_certificate_file', null);
 
-    this.updateField(
-      'association_certificate_file',
-      null
-    );
-
-    this.updateField(
-      'association_certificate_name',
-      null
-    );
+    this.updateField('association_certificate_name', null);
 
     this.entity = {
-
       ...this.entity,
 
-      association_certificate_file:
-        null,
+      association_certificate_file: null,
 
-      association_certificate_name:
-        null
-
+      association_certificate_name: null,
     };
-
   }
 
   removeTaxDocument(): void {
+    this.updateField('tax_document_file', null);
 
-    this.updateField(
-      'tax_document_file',
-      null
-    );
-
-    this.updateField(
-      'tax_document_name',
-      null
-    );
+    this.updateField('tax_document_name', null);
 
     this.entity = {
-
       ...this.entity,
 
-      tax_document_file:
-        null,
+      tax_document_file: null,
 
-      tax_document_name:
-        null
-
+      tax_document_name: null,
     };
-
   }
 
-  getCategoryLabel(
-    categoryId: string
-  ): string {
-
-    return this.categories
-      .find(
-        (c) => c.id === categoryId
-      )?.label || '-';
-
+  getCategoryLabel(categoryId: string): string {
+    return this.categories.find((c) => c.id === categoryId)?.label || '-';
   }
 
   get entityTypeLabel(): string {
-
     switch (this.entity?.entity_type) {
-
       case 'association':
         return 'עמותה';
 
@@ -335,9 +197,6 @@ export class EntityBasicInfoSectionEditComponent
 
       default:
         return 'יישות';
-
     }
-
   }
-
 }

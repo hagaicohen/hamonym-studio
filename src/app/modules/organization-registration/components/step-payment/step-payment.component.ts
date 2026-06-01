@@ -111,84 +111,61 @@ export class StepPaymentComponent {
   // =========================
   // CONNECTION TEST
   // =========================
-testConnection(): void {
+  testConnection(): void {
+    const start = Date.now();
 
-  const start =
-    Date.now();
+    this.isCheckingConnection = true;
 
-  this.isCheckingConnection = true;
+    this.connectionSuccess = false;
 
-  this.connectionSuccess = false;
+    this.connectionError = '';
 
-  this.connectionError = '';
+    this.connectionAttempted = true;
 
-  this.connectionAttempted = true;
+    this.http
+      .post<any>(`${environment.apiUrl}/api/billing/cardcom/test-connection`, {
+        terminalNumber: this.terminalNumber,
 
-  this.http.post<any>(
-    `${environment.apiUrl}/api/billing/cardcom/test-connection`,
-    {
-      terminalNumber:
-        this.terminalNumber,
+        apiName: this.apiUsername,
 
-      apiName:
-        this.apiUsername,
+        apiPassword: this.apiPassword,
 
-      apiPassword:
-        this.apiPassword,
+        environment: 'sandbox',
+      })
+      .subscribe({
+        next: (res) => {
+          const elapsed = Date.now() - start;
 
-      environment:
-        'sandbox'
-    }
-  ).subscribe({
+          const remaining = Math.max(0, 2000 - elapsed);
 
-    next: (res) => {
+          setTimeout(() => {
+            this.isCheckingConnection = false;
 
-      const elapsed =
-        Date.now() - start;
+            this.connectionSuccess = res.success;
 
-      const remaining =
-        Math.max(0, 2000 - elapsed);
+            this.connectionError = res.success ? '' : res.message;
 
-      setTimeout(() => {
+            this.saveState();
+          }, remaining);
+        },
 
-        this.isCheckingConnection = false;
+        error: () => {
+          const elapsed = Date.now() - start;
 
-        this.connectionSuccess =
-          res.success;
+          const remaining = Math.max(0, 1200 - elapsed);
 
-        this.connectionError =
-          res.success
-            ? ''
-            : res.message;
+          setTimeout(() => {
+            this.isCheckingConnection = false;
 
-        this.saveState();
+            this.connectionSuccess = false;
 
-      }, remaining);
-    },
+            this.connectionError = 'שגיאת שרת';
 
-    error: () => {
-
-      const elapsed =
-        Date.now() - start;
-
-      const remaining =
-        Math.max(0, 1200 - elapsed);
-
-      setTimeout(() => {
-
-        this.isCheckingConnection = false;
-
-        this.connectionSuccess = false;
-
-        this.connectionError =
-          'שגיאת שרת';
-
-        this.saveState();
-
-      }, remaining);
-    }
-  });
-}
+            this.saveState();
+          }, remaining);
+        },
+      });
+  }
   // =========================
   // CONTINUE
   // =========================

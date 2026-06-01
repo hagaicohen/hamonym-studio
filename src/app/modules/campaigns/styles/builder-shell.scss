@@ -1,6 +1,4 @@
-
 .builder-shell {
-
   display: grid;
 
   grid-template-columns: minmax(0, 68%) minmax(320px, 32%);
@@ -14,50 +12,39 @@
   padding: 16px;
 
   box-sizing: border-box;
-
 }
 
 .builder-content {
-
   min-width: 0;
-
 }
 
 .builder-sidebar {
-
   position: sticky;
 
   top: 16px;
 
   align-self: start;
-
 }
 
 .live-preview {
-
   width: 100%;
 
   max-width: 100%;
 
   box-sizing: border-box;
-
 }
 
 .builder-form-placeholder {
-
   background: #ffffff;
 
   border-radius: 32px;
 
   min-height: 800px;
 
-  border:
-    1px solid rgba(0,0,0,0.04);
-
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .builder-step-card {
-
   background: #ffffff;
 
   border-radius: 32px;
@@ -66,10 +53,7 @@
 
   padding: 32px;
 
-  border:
-    1px solid rgba(0,0,0,0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
 
-  box-shadow:
-    0 10px 40px rgba(0,0,0,0.04);
-
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
 }

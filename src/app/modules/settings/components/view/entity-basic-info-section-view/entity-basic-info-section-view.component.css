@@ -1,8 +1,7 @@
 /* entity-basic-info-section-view.component.css */
-@import '../../../styles/settings-section-actions.css';
+@import "../../../styles/settings-section-actions.css";
 
 .section-title-row {
-
   display: flex;
 
   align-items: center;
@@ -11,7 +10,6 @@
 }
 
 .settings-card {
-
   width: 100%;
 
   max-width: 100%;
@@ -32,12 +30,10 @@
 }
 
 .card-actions {
-
   margin-inline-start: auto;
 }
 
 .card-title {
-
   font-size: 20px;
 
   font-weight: 700;
@@ -46,7 +42,6 @@
 }
 
 .card-description {
-
   margin-top: 6px;
 
   font-size: 14px;
@@ -54,20 +49,15 @@
   color: #6b7280;
 }
 
-
-
 .card-grid {
-
   display: grid;
 
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
   gap: 20px;
 }
 
 .field {
-
   display: flex;
 
   flex-direction: column;
@@ -76,7 +66,6 @@
 }
 
 .field label {
-
   font-size: 14px;
 
   font-weight: 600;
@@ -85,7 +74,6 @@
 }
 
 .readonly-value {
-
   min-height: 24px;
 
   font-size: 15px;
@@ -96,12 +84,10 @@
 }
 
 .categories-field {
-
   margin-top: 24px;
 }
 
 .tags {
-
   display: flex;
 
   flex-wrap: wrap;
@@ -110,7 +96,6 @@
 }
 
 .tag {
-
   height: 34px;
 
   display: flex;
@@ -131,7 +116,6 @@
 }
 
 .section-divider {
-
   margin-top: 28px;
 
   padding-top: 24px;
@@ -146,7 +130,6 @@
 }
 
 .documents-list {
-
   margin-top: 24px;
 
   display: flex;
@@ -157,7 +140,6 @@
 }
 
 .document-card {
-
   display: flex;
 
   justify-content: space-between;
@@ -176,7 +158,6 @@
 }
 
 .document-info {
-
   display: flex;
 
   flex-direction: column;
@@ -187,7 +168,6 @@
 }
 
 .document-title {
-
   font-size: 15px;
 
   font-weight: 700;
@@ -196,7 +176,6 @@
 }
 
 .document-file-name {
-
   font-size: 13px;
 
   color: #6b7280;
@@ -205,7 +184,6 @@
 }
 
 .document-status {
-
   font-size: 14px;
 
   font-weight: 600;
@@ -214,12 +192,10 @@
 }
 
 .document-status.uploaded {
-
   color: #059669;
 }
 
 .document-actions {
-
   display: flex;
 
   align-items: center;
@@ -230,7 +206,6 @@
 }
 
 .document-link {
-
   height: 40px;
 
   display: inline-flex;
@@ -259,54 +234,43 @@
 }
 
 .document-link:hover {
-
   background: #f9fafb;
 }
 
 @media (max-width: 768px) {
-
   .settings-card {
-
     padding: 18px;
   }
 
   .card-top {
-
     flex-direction: column;
 
     align-items: stretch;
   }
 
   .card-actions {
-
     width: 100%;
   }
 
   .edit-btn {
-
     width: 100%;
   }
 
   .card-grid {
-
     grid-template-columns: 1fr;
   }
 
   .document-card {
-
     flex-direction: column;
 
     align-items: stretch;
   }
 
   .document-actions {
-
     width: 100%;
   }
 
   .document-link {
-
     width: 100%;
   }
-
 }

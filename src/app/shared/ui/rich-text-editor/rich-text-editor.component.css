@@ -27,8 +27,7 @@
 .editor-shell:focus-within {
   border-color: #6366f1;
 
-  box-shadow:
-    0 0 0 3px rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
 }
 
 /* =========================================================
@@ -60,9 +59,7 @@
 
   padding-inline-end: 10px;
 
-  border-inline-end:
-    1px solid
-    rgba(229, 231, 235, 0.7);
+  border-inline-end: 1px solid rgba(229, 231, 235, 0.7);
 }
 
 .toolbar-group:last-child {
@@ -190,9 +187,7 @@
   .editor-content
   .ProseMirror
   p.is-editor-empty:first-child::before {
-
-  content:
-    attr(data-placeholder);
+  content: attr(data-placeholder);
 
   color: #94a3b8;
 
@@ -251,7 +246,6 @@
 
 :host ::ng-deep .editor-content .ProseMirror ul,
 :host ::ng-deep .editor-content .ProseMirror ol {
-
   padding-right: 24px !important;
 
   margin: 14px 0 !important;
@@ -266,13 +260,11 @@
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror blockquote {
-
   margin: 20px 0 !important;
 
   padding: 14px 18px !important;
 
-  border-right:
-    3px solid #6366f1 !important;
+  border-right: 3px solid #6366f1 !important;
 
   background: #f8fafc !important;
 
@@ -284,7 +276,6 @@
 ========================================================= */
 
 :host ::ng-deep .editor-content .ProseMirror a {
-
   color: #4f46e5 !important;
 
   text-decoration: underline !important;

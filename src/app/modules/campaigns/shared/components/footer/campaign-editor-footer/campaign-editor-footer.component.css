@@ -1,11 +1,8 @@
 :host {
-
   display: block;
-
 }
 
 .footer {
-
   display: flex;
 
   align-items: center;
@@ -19,11 +16,9 @@
   border-top: 1px solid #e5e7eb;
 
   background: #ffffff;
-
 }
 
 .primary-button {
-
   min-width: 180px;
 
   height: 56px;
@@ -32,11 +27,7 @@
 
   border-radius: 16px;
 
-  background: linear-gradient(
-    135deg,
-    #8b5cf6,
-    #7c3aed
-  );
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 
   color: white;
 
@@ -45,11 +36,9 @@
   font-weight: 700;
 
   cursor: pointer;
-
 }
 
 .secondary-button {
-
   min-width: 140px;
 
   height: 56px;
@@ -70,33 +59,25 @@
 }
 
 @media (max-width: 768px) {
-
   .editor-content {
-
     overflow-y: visible;
 
     flex: unset;
   }
 
   .footer {
-
     flex-direction: column-reverse;
 
     gap: 16px;
 
     padding: 24px;
-
   }
 
   .primary-button {
-
     width: 100%;
-
   }
 
   .secondary-button {
-
     width: 100%;
-
   }
 }

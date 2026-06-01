@@ -5,8 +5,6 @@ import { Component } from '@angular/core';
   standalone: true,
   imports: [],
   templateUrl: './campaign-media-step.component.html',
-  styleUrl: './campaign-media-step.component.css'
+  styleUrl: './campaign-media-step.component.css',
 })
-export class CampaignMediaStepComponent {
-
-}
+export class CampaignMediaStepComponent {}

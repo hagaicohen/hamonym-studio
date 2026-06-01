@@ -1,23 +1,19 @@
 <div class="footer">
-
   <button
     type="button"
     class="secondary-button"
     (click)="previous.emit()"
-    [disabled]="currentStep === 1">
-
+    [disabled]="currentStep === 1"
+  >
     הקודם
-
   </button>
 
   <button
     type="button"
     class="primary-button"
     (click)="next.emit()"
-    [disabled]="!canContinue">
-
-    {{ currentStep === 5 ? 'פרסם' : 'המשך' }}
-
+    [disabled]="!canContinue"
+  >
+    {{ currentStep === 5 ? "פרסם" : "המשך" }}
   </button>
-
 </div>

@@ -1,61 +1,30 @@
 <div class="campaigns-page">
-
   <div class="campaigns-header">
-
     <div>
+      <h1 class="campaigns-title">קמפיינים</h1>
 
-      <h1 class="campaigns-title">
-
-        קמפיינים
-
-      </h1>
-
-      <p class="campaigns-description">
-
-        נהל את קמפיינים הגיוס שלך
-
-      </p>
-
+      <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
 
-    <button
-
-      class="primary-button"
-
-      (click)="createCampaign()"
-
-    >
-
+    <button class="primary-button" (click)="createCampaign()">
       קמפיין חדש
-
     </button>
-
   </div>
 
   <div class="campaigns-alert">
-
-    <strong>
-
-      שים לב:
-
-    </strong>
+    <strong> שים לב: </strong>
 
     כל קמפיין דורש מסוף סליקה ייעודי.
-
   </div>
 
   <div class="campaigns-toolbar">
-
     <div class="view-switch">
-
       <button
         class="view-icon"
         [class.active]="viewMode === 'grid'"
         (click)="viewMode = 'grid'"
       >
-
         ◼
-
       </button>
 
       <button
@@ -63,139 +32,62 @@
         [class.active]="viewMode === 'list'"
         (click)="viewMode = 'list'"
       >
-
         ≣
-
       </button>
-
     </div>
-
   </div>
 
-  @if (viewMode === 'grid') {
-
-    <div class="campaigns-grid">
-
-     
-
-    </div>
-
+  @if (viewMode === "grid") {
+    <div class="campaigns-grid"></div>
   }
 
-  @if (viewMode === 'list') {
-
+  @if (viewMode === "list") {
     <div class="campaigns-list">
-
       <div class="campaign-list-item">
-
         <div class="campaign-list-top">
+          <div class="campaign-list-identity">
+            <h3 class="campaign-list-title">בניית בית כנסת ביישוב נחושה</h3>
 
-  <div class="campaign-list-identity">
+            <div class="campaign-list-status">פעיל</div>
+          </div>
 
-    <h3 class="campaign-list-title">
-
-      בניית בית כנסת ביישוב נחושה
-
-    </h3>
-
-    <div class="campaign-list-status">
-
-      פעיל
-
-    </div>
-
-  </div>
-
-  <div class="campaign-list-menu">
-
-    ⋮
-
-  </div>
-
-</div>
+          <div class="campaign-list-menu">⋮</div>
+        </div>
 
         <div class="campaign-list-middle">
-
           <div class="campaign-list-progress-info">
+            <div class="campaign-list-amount">₪420,000 מתוך ₪1,000,000</div>
 
-            <div class="campaign-list-amount">
-
-              ₪420,000 מתוך ₪1,000,000
-
-            </div>
-
-            <div class="campaign-list-percent">
-
-              42%
-
-            </div>
-
+            <div class="campaign-list-percent">42%</div>
           </div>
 
           <div class="campaign-list-progress-bar">
-
-            <div
-              class="campaign-list-progress-fill"
-              style="width: 42%;">
-
-            </div>
-
+            <div class="campaign-list-progress-fill" style="width: 42%"></div>
           </div>
-
         </div>
 
         <div class="campaign-list-bottom">
-
           <div class="campaign-list-meta">
-
             <div class="campaign-meta-item">
-
               📅
 
-              <span>
-
-                97 ימים נותרו
-
-              </span>
-
+              <span> 97 ימים נותרו </span>
             </div>
 
             <div class="campaign-meta-item">
-
               ❤️
 
-              <span>
-
-                84 תורמים
-
-              </span>
-
+              <span> 84 תורמים </span>
             </div>
-
           </div>
 
           <div class="campaign-list-actions">
+            <button class="secondary-button">📊 דוחות</button>
 
-            <button class="secondary-button">
-
-              📊 דוחות
-
-            </button>
-
-            <button class="secondary-button">
-
-              ✏️ ערוך
-
-            </button>
-
+            <button class="secondary-button">✏️ ערוך</button>
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   }
-
 </div>

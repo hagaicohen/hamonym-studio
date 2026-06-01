@@ -1,10 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import {
-  LucideAngularModule,
-  TrendingUp
-} from 'lucide-angular';
+import { LucideAngularModule, TrendingUp } from 'lucide-angular';
 import { SectionSaveState } from '../../../models/section-save-state.model';
 
 @Component({
@@ -16,7 +13,6 @@ import { SectionSaveState } from '../../../models/section-save-state.model';
   styleUrls: ['./entity-goals-section-edit.component.css'],
 })
 export class EntityGoalsSectionEditComponent {
-
   @Input()
   entity: any;
 
@@ -24,22 +20,19 @@ export class EntityGoalsSectionEditComponent {
   entityChange = new EventEmitter<any>();
 
   @Input()
-saveState: SectionSaveState = {
+  saveState: SectionSaveState = {
+    isSaving: false,
 
-  isSaving: false,
+    saveCompleted: false,
 
-  saveCompleted: false,
+    saveFailed: false,
+  };
 
-  saveFailed: false
-};
+  @Output()
+  save = new EventEmitter<void>();
 
-@Output()
-save =
-  new EventEmitter<void>();
-
-@Output()
-cancel =
-  new EventEmitter<void>();
+  @Output()
+  cancel = new EventEmitter<void>();
 
   readonly TrendingUp = TrendingUp;
 
@@ -52,34 +45,19 @@ cancel =
   yearlyGoalDisplay = '';
 
   ngOnChanges(): void {
+    this.monthlyGoalDisplay = this.formatMoney(this.entity?.monthly_goal);
 
-    this.monthlyGoalDisplay =
-      this.formatMoney(
-        this.entity?.monthly_goal
-      );
-
-    this.yearlyGoalDisplay =
-      this.formatMoney(
-        this.entity?.yearly_goal
-      );
-
+    this.yearlyGoalDisplay = this.formatMoney(this.entity?.yearly_goal);
   }
 
   // =====================================================
   // UPDATE FIELD
   // =====================================================
 
-  updateField(
-    field: string,
-    value: any
-  ): void {
-
+  updateField(field: string, value: any): void {
     this.entityChange.emit({
-
       [field]: value,
-
     });
-
   }
 
   // =====================================================
@@ -87,60 +65,35 @@ cancel =
   // =====================================================
 
   onMoneyInput(
-    field:
-      'monthly_goal' |
-      'yearly_goal',
+    field: 'monthly_goal' | 'yearly_goal',
 
     value: string,
-
   ): void {
+    const cleanedValue = value.replace(/\D/g, '');
 
-    const cleanedValue =
+    const numericValue = Number(cleanedValue);
 
-      value.replace(/\D/g, '');
-
-    const numericValue =
-
-      Number(cleanedValue);
-
-    const formattedValue =
-
-      cleanedValue
-        ? numericValue.toLocaleString('en-US')
-        : '';
+    const formattedValue = cleanedValue
+      ? numericValue.toLocaleString('en-US')
+      : '';
 
     // DISPLAY VALUE
 
-    if (
-      field === 'monthly_goal'
-    ) {
-
-      this.monthlyGoalDisplay =
-        formattedValue;
-
+    if (field === 'monthly_goal') {
+      this.monthlyGoalDisplay = formattedValue;
     }
 
-    if (
-      field === 'yearly_goal'
-    ) {
-
-      this.yearlyGoalDisplay =
-        formattedValue;
-
+    if (field === 'yearly_goal') {
+      this.yearlyGoalDisplay = formattedValue;
     }
 
     // REAL VALUE
 
     this.updateField(
-
       field,
 
-      cleanedValue
-        ? numericValue
-        : null
-
+      cleanedValue ? numericValue : null,
     );
-
   }
 
   // =====================================================
@@ -148,20 +101,11 @@ cancel =
   // =====================================================
 
   formatMoney(value: any): string {
-
-    if (
-      value === null ||
-      value === undefined ||
-      value === ''
-    ) {
-
+    if (value === null || value === undefined || value === '') {
       return '';
-
     }
 
-    return Number(value)
-      .toLocaleString('en-US');
-
+    return Number(value).toLocaleString('en-US');
   }
 
   // =====================================================
@@ -169,15 +113,6 @@ cancel =
   // =====================================================
 
   get hasGoals(): boolean {
-
-    return !!(
-
-      this.entity?.monthly_goal &&
-
-      this.entity?.yearly_goal
-
-    );
-
+    return !!(this.entity?.monthly_goal && this.entity?.yearly_goal);
   }
-
 }

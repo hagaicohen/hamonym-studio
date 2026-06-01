@@ -1,5 +1,4 @@
 .campaign-editor {
-
   height: 100%;
 
   display: flex;
@@ -9,11 +8,9 @@
   background: #ffffff;
 
   border-left: 1px solid rgba(0, 0, 0, 0.06);
-
 }
 
 .editor-steps {
-
   height: 120px;
 
   display: flex;
@@ -27,11 +24,9 @@
   border-bottom: 1px solid #e5e7eb;
 
   padding: 0 24px;
-
 }
 
 .step {
-
   display: flex;
 
   flex-direction: column;
@@ -39,11 +34,9 @@
   align-items: center;
 
   gap: 8px;
-
 }
 
 .step-number {
-
   width: 40px;
 
   height: 40px;
@@ -59,37 +52,29 @@
   justify-content: center;
 
   font-weight: 700;
-
 }
 
 .step.active .step-number {
-
   background: #7c3aed;
 
   color: white;
-
 }
 
 .step-label {
-
   font-size: 12px;
 
   color: #6b7280;
-
 }
 
 .editor-content {
-
   flex: 1;
 
   padding: 32px;
 
   overflow-y: auto;
-
 }
 
 .editor-actions {
-
   height: 88px;
 
   border-top: 1px solid #e5e7eb;
@@ -101,11 +86,9 @@
   justify-content: space-between;
 
   padding: 0 32px;
-
 }
 
 .primary-button {
-
   height: 48px;
 
   padding: 0 24px;
@@ -119,11 +102,9 @@
   color: white;
 
   cursor: pointer;
-
 }
 
 .secondary-button {
-
   height: 48px;
 
   padding: 0 24px;
@@ -133,5 +114,4 @@
   border-radius: 12px;
 
   background: white;
-
 }

@@ -1,7 +1,6 @@
 import { CampaignType } from './campaign-type.enum';
 
 export interface Campaign {
-
   id?: string;
 
   type?: CampaignType;
@@ -19,5 +18,4 @@ export interface Campaign {
   startDate?: string;
 
   endDate?: string;
-
 }

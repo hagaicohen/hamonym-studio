@@ -1,5 +1,4 @@
 export enum CampaignType {
-
   NONPROFIT = 'NONPROFIT',
 
   BUSINESS = 'BUSINESS',
@@ -8,6 +7,5 @@ export enum CampaignType {
 
   PRIVATE = 'PRIVATE',
 
-  POLITICAL = 'POLITICAL'
-
+  POLITICAL = 'POLITICAL',
 }

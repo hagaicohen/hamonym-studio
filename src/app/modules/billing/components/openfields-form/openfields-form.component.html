@@ -1,44 +1,29 @@
 <div class="billing-form">
-
   <!-- MASTER -->
 
   <iframe
     id="CardComMasterFrame"
     name="CardComMasterFrame"
     src="https://secure.cardcom.solutions/api/openfields/master"
-    class="master-frame">
+    class="master-frame"
+  >
   </iframe>
 
   <!-- CARD -->
 
   <div class="field">
-
-    <label>
-      מספר כרטיס
-    </label>
+    <label> מספר כרטיס </label>
 
     <div class="card-frame-shell">
-
       <!-- FAKE FIELD -->
 
-     @if (!cardIframeReady) {
+      @if (!cardIframeReady) {
+        <div class="card-skeleton">
+          <img class="card-skeleton-icon" src="./credit-card.png" alt="" />
 
-      <div class="card-skeleton">
-
-       <img
-            class="card-skeleton-icon"
-            src="./credit-card.png"
-            alt="">
-
-        <div class="card-skeleton-number">
-
-          0000 0000 0000 0000
-
+          <div class="card-skeleton-number">0000 0000 0000 0000</div>
         </div>
-
-      </div>
-
-    }
+      }
 
       <!-- REAL IFRAME -->
 
@@ -47,87 +32,64 @@
         name="CardComCardNumber"
         src="https://secure.cardcom.solutions/api/openfields/cardNumber"
         class="cardcom-field-frame"
-        [class.cardcom-visible]="cardIframeReady">
+        [class.cardcom-visible]="cardIframeReady"
+      >
       </iframe>
-
     </div>
-
   </div>
 
   <!-- EXP -->
 
   <div class="field-row">
-
     <div class="field">
-
-      <label>
-        חודש
-      </label>
+      <label> חודש </label>
 
       <input
         class="exp-input"
         id="expirationMonth"
         type="text"
         value="05"
-        maxlength="2">
-
+        maxlength="2"
+      />
     </div>
 
     <div class="field">
-
-      <label>
-        שנה
-      </label>
+      <label> שנה </label>
 
       <input
         class="exp-input"
         id="expirationYear"
         type="text"
         value="29"
-        maxlength="2">
-
+        maxlength="2"
+      />
     </div>
-
   </div>
 
- <!-- CVV -->
+  <!-- CVV -->
 
-<div class="field">
+  <div class="field">
+    <label> CVV </label>
 
-  <label>
-    CVV
-  </label>
+    <div class="card-frame-shell">
+      <!-- SKELETON -->
 
-  <div class="card-frame-shell">
-
-    <!-- SKELETON -->
-
-    @if (!cvvIframeReady) {
-
-      <div class="card-skeleton cvv-skeleton">
-
-        <div class="cvv-skeleton-number">
-
-          123
-
+      @if (!cvvIframeReady) {
+        <div class="card-skeleton cvv-skeleton">
+          <div class="cvv-skeleton-number">123</div>
         </div>
+      }
 
-      </div>
+      <!-- REAL -->
 
-    }
-
-    <!-- REAL -->
-
-    <iframe
-      id="CardComCvv"
-      name="CardComCvv"
-      src="https://secure.cardcom.solutions/api/openfields/CVV"
-      class="cardcom-field-frame"
-      [class.cardcom-visible]="cvvIframeReady">
-    </iframe>
-
+      <iframe
+        id="CardComCvv"
+        name="CardComCvv"
+        src="https://secure.cardcom.solutions/api/openfields/CVV"
+        class="cardcom-field-frame"
+        [class.cardcom-visible]="cvvIframeReady"
+      >
+      </iframe>
+    </div>
   </div>
-
-</div>
-
 </div>

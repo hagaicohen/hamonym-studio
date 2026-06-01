@@ -1,75 +1,46 @@
 <header class="studio-topbar">
-
   <div class="title-group">
-
-    <button
-      class="exit-button"
-      (click)="closeStudio()">
-
-      <lucide-icon
-        [img]="X">
-      </lucide-icon>
-
+    <button class="exit-button" (click)="closeStudio()">
+      <lucide-icon [img]="X"> </lucide-icon>
     </button>
 
-    <div class="campaign-title">
-
-      יצירת קמפיין חדש
-
-    </div>
-
+    <div class="campaign-title">יצירת קמפיין חדש</div>
   </div>
 
   <div class="device-switcher">
-
     <button
       class="device-button"
       [class.active]="!isMobilePreview"
-      (click)="setDesktop()">
-
-      <lucide-icon
-        [img]="Monitor">
-      </lucide-icon>
-
+      (click)="setDesktop()"
+    >
+      <lucide-icon [img]="Monitor"> </lucide-icon>
     </button>
 
     <button
       class="device-button"
       [class.active]="isMobilePreview"
-      (click)="setMobile()">
-
-      <lucide-icon
-        [img]="Smartphone">
-      </lucide-icon>
-
+      (click)="setMobile()"
+    >
+      <lucide-icon [img]="Smartphone"> </lucide-icon>
     </button>
-
   </div>
 
   <button
     class="save-button"
     [class.saved]="saveState === 'saved'"
     [disabled]="saveState === 'saving'"
-    (click)="saveDraft()">
-
-    @if (saveState === 'idle') {
-
-      שמור
-
+    (click)="saveDraft()"
+  >
+    @if (saveState === "idle") {
+      שמור טיוטה
     }
 
-    @if (saveState === 'saving') {
-
+    @if (saveState === "saving") {
       שומר...
-
     }
 
-    @if (saveState === 'saved') {
-
-      ✓ נשמר
-
+    @if (saveState === "saved") {
+      ✓ טיוטה נשמרה
     }
-
   </button>
-
 </header>

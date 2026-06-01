@@ -1,36 +1,22 @@
-import {
-  Injectable,
-  inject
-} from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
-import {
-  HttpClient
-} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
-import {
-  Observable
-} from 'rxjs';
+import { Observable } from 'rxjs';
 
-import {
-  environment
-} from '../../../../environments/environment';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BillingApiService {
+  private http = inject(HttpClient);
 
-  private http =
-    inject(HttpClient);
-
-  initOpenFields():
-    Observable<any> {
-
+  initOpenFields(): Observable<any> {
     return this.http.post(
-
       `${environment.apiUrl}/api/billing/init-openfields`,
 
-      {}
+      {},
     );
   }
 }

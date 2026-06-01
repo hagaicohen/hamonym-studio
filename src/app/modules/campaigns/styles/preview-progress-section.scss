@@ -1,15 +1,12 @@
 .preview-progress-amount {
-
   font-size: 32px;
 
   font-weight: 700;
 
   margin-bottom: 16px;
-
 }
 
 .preview-progress-bar {
-
   width: 100%;
 
   height: 14px;
@@ -21,30 +18,24 @@
   background: #e5e7eb;
 
   margin-bottom: 12px;
-
 }
 
 .preview-progress-fill {
-
   width: 63%;
 
   height: 100%;
 
   border-radius: inherit;
 
-  background:
-    linear-gradient(
-      90deg,
-      var(--campaign-primary, #8b5cf6),
-      var(--campaign-secondary, #c084fc)
-    );
-
+  background: linear-gradient(
+    90deg,
+    var(--campaign-primary, #8b5cf6),
+    var(--campaign-secondary, #c084fc)
+  );
 }
 
 .preview-progress-meta {
-
   font-size: 14px;
 
   color: #6b7280;
-
 }

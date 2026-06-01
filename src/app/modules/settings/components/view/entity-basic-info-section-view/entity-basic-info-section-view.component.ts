@@ -4,117 +4,67 @@ import {
   Input,
   Output,
   inject,
-  OnChanges
+  OnChanges,
 } from '@angular/core';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  FormsModule
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
-import {
-  ENTITY_CATEGORIES
-} from '../../../../../shared/config/entity-categories';
+import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
-import {
-  DomSanitizer,
-  SafeResourceUrl
-} from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-import {
-  EntitiesService
-} from '../../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
 
-import {
-  LucideAngularModule,
-  Building2
-} from 'lucide-angular';
+import { LucideAngularModule, Building2 } from 'lucide-angular';
 
 @Component({
-  selector:
-    'app-entity-basic-info-section-view',
+  selector: 'app-entity-basic-info-section-view',
 
   standalone: true,
 
-  imports: [
-    CommonModule,
-    FormsModule,
-    LucideAngularModule
-  ],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
 
-  templateUrl:
-    './entity-basic-info-section-view.component.html',
+  templateUrl: './entity-basic-info-section-view.component.html',
 
-  styleUrl:
-    './entity-basic-info-section-view.component.css',
+  styleUrl: './entity-basic-info-section-view.component.css',
 })
-export class EntityBasicInfoSectionViewComponent
-  implements OnChanges {
+export class EntityBasicInfoSectionViewComponent implements OnChanges {
+  private entitiesService = inject(EntitiesService);
 
-  private entitiesService =
-    inject(EntitiesService);
+  private sanitizer = inject(DomSanitizer);
 
-  private sanitizer =
-    inject(DomSanitizer);
-
-  readonly Building2 =
-    Building2;
+  readonly Building2 = Building2;
 
   @Input()
   entity: any;
 
   @Output()
-  edit =
-    new EventEmitter<void>();
+  edit = new EventEmitter<void>();
 
-  categories =
-    ENTITY_CATEGORIES;
+  categories = ENTITY_CATEGORIES;
 
-  associationDocumentUrl?:
-    SafeResourceUrl;
+  associationDocumentUrl?: SafeResourceUrl;
 
-  taxDocumentUrl?:
-    SafeResourceUrl;
+  taxDocumentUrl?: SafeResourceUrl;
 
   ngOnChanges(): void {
-
     if (!this.entity?.id) {
       return;
     }
 
-    this.associationDocumentUrl =
+    this.associationDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getAssociationDocumentUrl(this.entity.id),
+    );
 
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
-
-          this.entitiesService
-            .getAssociationDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
-    this.taxDocumentUrl =
-
-      this.sanitizer
-        .bypassSecurityTrustResourceUrl(
-
-          this.entitiesService
-            .getTaxDocumentUrl(
-              this.entity.id
-            )
-
-        );
-
+    this.taxDocumentUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.entitiesService.getTaxDocumentUrl(this.entity.id),
+    );
   }
 
   get entityTypeLabel(): string {
-
     switch (this.entity?.entity_type) {
-
       case 'association':
         return 'עמותה';
 
@@ -126,20 +76,10 @@ export class EntityBasicInfoSectionViewComponent
 
       default:
         return 'יישות';
-
     }
-
   }
 
-  getCategoryLabel(
-    categoryId: string
-  ): string {
-
-    return this.categories
-      .find(
-        (c) => c.id === categoryId
-      )?.label || '-';
-
+  getCategoryLabel(categoryId: string): string {
+    return this.categories.find((c) => c.id === categoryId)?.label || '-';
   }
-
 }

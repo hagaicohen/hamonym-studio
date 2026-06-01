@@ -1,90 +1,44 @@
 // entity-settings.component.ts
 
-import {
-  Component,
-  OnInit,
-  inject,
-  ViewChild
-} from '@angular/core';
+import { Component, OnInit, inject, ViewChild } from '@angular/core';
 
-import {
-  finalize,
-  firstValueFrom
-} from 'rxjs';
+import { finalize, firstValueFrom } from 'rxjs';
 
-import {
-  CommonModule
-} from '@angular/common';
+import { CommonModule } from '@angular/common';
 
-import {
-  CurrentEntityService
-} from '../../../../core/services/current-entity.service';
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
-import {
-  CAMPAIGN_TYPES
-} from '../../../organization-registration/constants/campaign-types';
+import { CAMPAIGN_TYPES } from '../../../organization-registration/constants/campaign-types';
 
-import {
-  ENTITY_CONFIGS
-} from '../../../organization-registration/config/entity-config';
+import { ENTITY_CONFIGS } from '../../../organization-registration/config/entity-config';
 
-import {
-  environment
-} from '../../../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 
-import {
-  EntityBasicInfoSectionViewComponent
-} from '../view/entity-basic-info-section-view/entity-basic-info-section-view.component';
+import { EntityBasicInfoSectionViewComponent } from '../view/entity-basic-info-section-view/entity-basic-info-section-view.component';
 
-import {
-  EntityBasicInfoSectionEditComponent
-} from '../edit/entity-basic-info-section-edit/entity-basic-info-section-edit.component';
+import { EntityBasicInfoSectionEditComponent } from '../edit/entity-basic-info-section-edit/entity-basic-info-section-edit.component';
 
-import {
-  EntityProfileSectionViewComponent
-} from '../view/entity-profile-section-view/entity-profile-section-view.component';
+import { EntityProfileSectionViewComponent } from '../view/entity-profile-section-view/entity-profile-section-view.component';
 
-import {
-  EntityProfileSectionEditComponent
-} from '../edit/entity-profile-section-edit/entity-profile-section-edit.component';
+import { EntityProfileSectionEditComponent } from '../edit/entity-profile-section-edit/entity-profile-section-edit.component';
 
-import {
-  EntityGoalsSectionViewComponent
-} from '../view/entity-goals-section-view/entity-goals-section-view.component';
+import { EntityGoalsSectionViewComponent } from '../view/entity-goals-section-view/entity-goals-section-view.component';
 
-import {
-  EntityGoalsSectionEditComponent
-} from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
+import { EntityGoalsSectionEditComponent } from '../edit/entity-goals-section-edit/entity-goals-section-edit.component';
 
-import {
-  EntityPaymentSectionViewComponent
-} from '../view/entity-payment-section-view/entity-payment-section-view.component';
+import { EntityPaymentSectionViewComponent } from '../view/entity-payment-section-view/entity-payment-section-view.component';
 
-import {
-  EntityPaymentSectionEditComponent
-} from '../edit/entity-payment-section-edit/entity-payment-section-edit.component';
+import { EntityPaymentSectionEditComponent } from '../edit/entity-payment-section-edit/entity-payment-section-edit.component';
 
-import {
-  EntityBillingSectionViewComponent
-} from '../view/entity-billing-section-view/entity-billing-section-view.component';
+import { EntityBillingSectionViewComponent } from '../view/entity-billing-section-view/entity-billing-section-view.component';
 
-import {
-  EntityBillingSectionEditComponent
-} from '../edit/entity-billing-section-edit/entity-billing-section-edit.component';
+import { EntityBillingSectionEditComponent } from '../edit/entity-billing-section-edit/entity-billing-section-edit.component';
 
-import {
-  EntitiesService
-} from '../../../../core/services/entities.service';
+import { EntitiesService } from '../../../../core/services/entities.service';
 
-import {
-  LoadingOverlayComponent
-} from '../../../../shared/components/loading-overlay/loading-overlay.component';
+import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
-import {
-
-  SectionSaveState
-
-} from '../../models/section-save-state.model';
+import { SectionSaveState } from '../../models/section-save-state.model';
 
 @Component({
   selector: 'app-entity-settings',
@@ -109,630 +63,369 @@ import {
     EntityBillingSectionViewComponent,
     EntityBillingSectionEditComponent,
 
-    LoadingOverlayComponent
+    LoadingOverlayComponent,
   ],
 
-  templateUrl:
-    './entity-settings.component.html',
+  templateUrl: './entity-settings.component.html',
 
-  styleUrls: [
-    './entity-settings.component.css'
-  ],
+  styleUrls: ['./entity-settings.component.css'],
 })
-export class EntitySettingsComponent
-  implements OnInit {
+export class EntitySettingsComponent implements OnInit {
+  constructor() {}
 
-  constructor(
-  ) {
-  }
+  private currentEntityService = inject(CurrentEntityService);
 
-  private currentEntityService =
-    inject(CurrentEntityService);
-
-  private entitiesService =
-    inject(EntitiesService);
+  private entitiesService = inject(EntitiesService);
 
   @ViewChild(EntityBillingSectionEditComponent)
-  billingSection?:
-    EntityBillingSectionEditComponent;
+  billingSection?: EntityBillingSectionEditComponent;
 
   editMode = false;
 
-  editingSection:
-    string | null = null;
-
+  editingSection: string | null = null;
 
   saveError = '';
   showInlineError = false;
 
   saveState: SectionSaveState = {
+    isSaving: false,
 
-  isSaving: false,
+    saveCompleted: false,
 
-  saveCompleted: false,
-
-  saveFailed: false
-};
+    saveFailed: false,
+  };
 
   entity: any = null;
 
   draftEntity: any = null;
 
-  campaignTypes =
-    CAMPAIGN_TYPES;
+  campaignTypes = CAMPAIGN_TYPES;
 
-  ENTITY_CONFIGS =
-    ENTITY_CONFIGS;
+  ENTITY_CONFIGS = ENTITY_CONFIGS;
 
-  apiUrl =
-    environment.apiUrl;
+  apiUrl = environment.apiUrl;
 
   ngOnInit(): void {
+    this.entity = this.currentEntityService.currentEntity();
 
-    this.entity =
-      this.currentEntityService
-        .currentEntity();
-
-    this.draftEntity =
-      structuredClone(
-        this.entity
-      );
-
+    this.draftEntity = structuredClone(this.entity);
   }
 
-  onEntityChange(
-    partial: any
-  ): void {
-
+  onEntityChange(partial: any): void {
     this.draftEntity = {
-
       ...this.draftEntity,
 
       ...partial,
     };
-
   }
 
-  startEdit(
-    section?: string
-  ): void {
-
+  startEdit(section?: string): void {
     this.saveError = '';
 
-    this.draftEntity =
-      structuredClone(
-        this.entity
-      );
+    this.draftEntity = structuredClone(this.entity);
 
-    this.editMode =
-      true;
+    this.editMode = true;
 
-    this.editingSection =
-      section || null;
-
+    this.editingSection = section || null;
   }
 
   cancelEdit(): void {
+    this.saveError = '';
+
+    this.draftEntity = structuredClone(this.entity);
+
+    this.editMode = false;
+
+    this.editingSection = null;
+  }
+
+  async saveAll(): Promise<void> {
+    console.log('SAVE ALL STARTED');
 
     this.saveError = '';
 
-    this.draftEntity =
-      structuredClone(
-        this.entity
-      );
+    this.showInlineError = false;
 
-    this.editMode =
-      false;
+    this.saveState.saveCompleted = false;
 
-    this.editingSection =
-      null;
-
-  }
-
-async saveAll(): Promise<void> {
-
-  console.log(
-    'SAVE ALL STARTED'
-  );
-
-  this.saveError = '';
-
-  this.showInlineError =
-    false;
-
-  this.saveState.saveCompleted =
-    false;
-
-  if (
-    !this.draftEntity?.id ||
-    this.saveState.isSaving
-  ) {
-    return;
-  }
-
-  this.saveState.isSaving =
-    true;
-
-  const billingComponent =
-
-    document.querySelector(
-      'app-entity-billing-section-edit'
-    );
-
-  const isReplacingCard =
-
-    billingComponent
-      ?.querySelector(
-        'app-openfields-form'
-      );
-
-  if (
-    isReplacingCard &&
-    this.billingSection
-      ?.openfieldsForm
-  ) {
-
-    const tokenized =
-
-      await this.billingSection
-        .openfieldsForm
-        .tokenize();
-
-    if (!tokenized) {
-
-      this.saveError =
-
-        'שמירת כרטיס האשראי נכשלה';
-
-      this.showInlineError =
-        true;
-
-      this.saveState.isSaving =
-        false;
-
-      setTimeout(() => {
-
-        this.showInlineError =
-          false;
-
-      }, 2500);
-
+    if (!this.draftEntity?.id || this.saveState.isSaving) {
       return;
-
     }
 
-  }
+    this.saveState.isSaving = true;
 
-  /*
+    const billingComponent = document.querySelector(
+      'app-entity-billing-section-edit',
+    );
+
+    const isReplacingCard = billingComponent?.querySelector(
+      'app-openfields-form',
+    );
+
+    if (isReplacingCard && this.billingSection?.openfieldsForm) {
+      const tokenized = await this.billingSection.openfieldsForm.tokenize();
+
+      if (!tokenized) {
+        this.saveError = 'שמירת כרטיס האשראי נכשלה';
+
+        this.showInlineError = true;
+
+        this.saveState.isSaving = false;
+
+        setTimeout(() => {
+          this.showInlineError = false;
+        }, 2500);
+
+        return;
+      }
+    }
+
+    /*
     IMPORTANT:
     explicit tax document delete flow
   */
 
-  const hadTaxDocument =
+    const hadTaxDocument = !!this.entity?.tax_document_name;
 
-    !!this.entity
-      ?.tax_document_name;
+    const removedTaxDocument =
+      hadTaxDocument && !this.draftEntity?.tax_document_name;
 
-  const removedTaxDocument =
-
-    hadTaxDocument &&
-
-    !this.draftEntity
-      ?.tax_document_name;
-
-  if (removedTaxDocument) {
-
-    try {
-
-      await firstValueFrom(
-
-        this.entitiesService
-          .removeTaxDocument(
-
-            this.draftEntity.id
-
-          )
-
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
+    if (removedTaxDocument) {
+      try {
+        await firstValueFrom(
+          this.entitiesService.removeTaxDocument(this.draftEntity.id),
+        );
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-  }
+    const optimisticEntity = structuredClone(this.draftEntity);
 
-  const optimisticEntity =
-    structuredClone(
-
-      this.draftEntity
-
-    );
-
-  /*
+    /*
     IMPORTANT:
     preserve billing method UI state
   */
 
-  if (
-    this.editingSection === 'billing'
-  ) {
+    if (this.editingSection === 'billing') {
+      optimisticEntity.billing_method = this.draftEntity.billing_method;
 
-    optimisticEntity.billing_method =
+      optimisticEntity.billing_masav_file_name =
+        this.draftEntity.billing_masav_file_name;
+    }
 
-      this.draftEntity
-        .billing_method;
+    this.entity = optimisticEntity;
 
-    optimisticEntity
-      .billing_masav_file_name =
+    this.currentEntityService.setEntity(optimisticEntity);
 
-      this.draftEntity
-        .billing_masav_file_name;
-
-  }
-
-  this.entity =
-    optimisticEntity;
-
-  this.currentEntityService
-    .setEntity(
-
-      optimisticEntity
-
-    );
-
-  if (
-    this.draftEntity
-      ?.billing_card_number
-  ) {
-
-    this.draftEntity
-      .billing_card_last4 =
-
-      this.draftEntity
-        .billing_card_number
+    if (this.draftEntity?.billing_card_number) {
+      this.draftEntity.billing_card_last4 = this.draftEntity.billing_card_number
         .replace(/\s/g, '')
         .slice(-4);
+    }
 
-  }
+    const payload = {
+      ...this.draftEntity,
 
-  const payload = {
-
-    ...this.draftEntity,
-
-    /*
+      /*
       IMPORTANT:
       switching to MASAV
       must clear old credit card data
     */
 
-    ...(this.draftEntity?.billing_method === 'masav'
-      ? {
+      ...(this.draftEntity?.billing_method === 'masav'
+        ? {
+            billing_last4: null,
 
-          billing_last4:
-            null,
+            exp_month: null,
 
-          exp_month:
-            null,
+            exp_year: null,
 
-          exp_year:
-            null,
+            billing_provider: null,
+          }
+        : {}),
 
-          billing_provider:
-            null
+      logo_data: undefined,
 
-        }
-      : {}),
+      association_certificate_data: undefined,
 
-    logo_data:
-      undefined,
+      tax_document_data: undefined,
+    };
 
-    association_certificate_data:
-      undefined,
+    this.entitiesService
+      .updateEntity(
+        this.draftEntity.id,
 
-    tax_document_data:
-      undefined
+        payload,
+      )
 
-  };
+      .subscribe({
+        next: (updatedEntity) => {
+          this.saveState.isSaving = false;
 
-  this.entitiesService
-    .updateEntity(
+          this.saveState.saveFailed = false;
 
-      this.draftEntity.id,
+          this.saveState.saveCompleted = true;
 
-      payload,
-
-    )
-
-    .subscribe({
-
-      next: (updatedEntity) => {
-
-        this.saveState.isSaving =
-          false;
-
-        this.saveState.saveFailed =
-          false;
-
-        this.saveState.saveCompleted =
-          true;
-
-        /*
+          /*
           IMPORTANT:
           preserve billing UI state
           after backend response
         */
 
-        const mergedEntity = {
+          const mergedEntity = {
+            ...updatedEntity,
 
-          ...updatedEntity,
+            billing_method: this.draftEntity?.billing_method,
 
-          billing_method:
-            this.draftEntity
-              ?.billing_method,
+            billing_masav_file_name: this.draftEntity?.billing_masav_file_name,
+          };
 
-          billing_masav_file_name:
-            this.draftEntity
-              ?.billing_masav_file_name
+          this.entity = structuredClone(mergedEntity);
 
-        };
+          this.draftEntity = structuredClone(mergedEntity);
 
-        this.entity =
-          structuredClone(
-            mergedEntity
-          );
+          this.currentEntityService.setEntity(mergedEntity);
 
-        this.draftEntity =
-          structuredClone(
-            mergedEntity
-          );
+          setTimeout(() => {
+            this.saveState.saveCompleted = false;
 
-        this.currentEntityService
-          .setEntity(
-            mergedEntity
-          );
+            this.editMode = false;
 
-        setTimeout(() => {
+            this.editingSection = null;
+          }, 1500);
 
-          this.saveState.saveCompleted =
-            false;
+          this.entitiesService
+            .getEntityById(updatedEntity.id)
 
-          this.editMode =
-            false;
+            .subscribe({
+              next: (fullEntity: any) => {
+                const entity = fullEntity.entity || fullEntity;
 
-          this.editingSection =
-            null;
+                this.entity = structuredClone(entity);
 
-        }, 1500);
+                this.draftEntity = structuredClone(entity);
 
-        this.entitiesService
-          .getEntityById(
-            updatedEntity.id
-          )
+                this.currentEntityService.setEntity(entity);
+              },
 
-          .subscribe({
+              error: (err) => {
+                console.error(err);
+              },
+            });
+        },
 
-            next: (fullEntity: any) => {
+        error: (err) => {
+          console.error(err);
 
-              const entity =
+          this.saveState.isSaving = false;
 
-                fullEntity.entity ||
-                fullEntity;
+          this.saveState.saveCompleted = false;
 
-              this.entity =
-                structuredClone(entity);
+          this.saveState.saveFailed = true;
 
-              this.draftEntity =
-                structuredClone(entity);
-
-              this.currentEntityService
-                .setEntity(entity);
-
-            },
-
-            error: (err) => {
-
-              console.error(err);
-
-            }
-
-          });
-
-      },
-
-      error: (err) => {
-
-        console.error(err);
-
-        this.saveState.isSaving =
-          false;
-
-        this.saveState.saveCompleted =
-          false;
-
-        this.saveState.saveFailed =
-          true;
-
-        /*
+          /*
           IMPORTANT:
           keep billing edit mode open
           after failed save
         */
 
-        if (
-          this.editingSection === 'billing'
-        ) {
+          if (this.editingSection === 'billing') {
+            this.draftEntity = {
+              ...this.draftEntity,
 
-          this.draftEntity = {
+              billing_method: this.draftEntity?.billing_method || 'credit-card',
+            };
+          }
 
-            ...this.draftEntity,
-
-            billing_method:
-
-              this.draftEntity
-                ?.billing_method ||
-
-              'credit-card'
-          };
-
-        }
-
-        setTimeout(() => {
-
-          this.saveState.saveFailed =
-            false;
-
-        }, 2000);
-
-      },
-
-    });
-
-}
-
-  get entityTypeLabel(): string {
-
-    const entityType =
-      this.draftEntity
-        ?.entity_type as keyof typeof ENTITY_CONFIGS;
-
-    return this
-      .ENTITY_CONFIGS
-      [entityType]
-      ?.labels
-      ?.entity || 'יישות';
-
+          setTimeout(() => {
+            this.saveState.saveFailed = false;
+          }, 2000);
+        },
+      });
   }
 
-  isCheckingBillingConnection =
-    false;
+  get entityTypeLabel(): string {
+    const entityType = this.draftEntity
+      ?.entity_type as keyof typeof ENTITY_CONFIGS;
+
+    return this.ENTITY_CONFIGS[entityType]?.labels?.entity || 'יישות';
+  }
+
+  isCheckingBillingConnection = false;
 
   testBillingConnection(): void {
+    const start = Date.now();
 
-    const start =
-      Date.now();
-
-    this.isCheckingBillingConnection =
-      true;
+    this.isCheckingBillingConnection = true;
 
     this.draftEntity = {
-
       ...this.draftEntity,
 
-      cardcom_last_error:
-        null
+      cardcom_last_error: null,
     };
 
-    this.entitiesService.http.post<any>(
+    this.entitiesService.http
+      .post<any>(
+        `${environment.apiUrl}/api/payment/cardcom/test-connection`,
 
-      `${environment.apiUrl}/api/payment/cardcom/test-connection`,
+        {
+          entityId: this.draftEntity.id,
 
-      {
-        entityId:
-          this.draftEntity.id,
+          terminalNumber: this.draftEntity.cardcom_terminal_number,
 
-        terminalNumber:
-          this.draftEntity
-            .cardcom_terminal_number,
+          apiName: this.draftEntity.cardcom_api_username,
 
-        apiName:
-          this.draftEntity
-            .cardcom_api_username,
+          apiPassword: this.draftEntity.cardcom_api_password,
 
-        apiPassword:
-          this.draftEntity
-            .cardcom_api_password,
+          environment: 'sandbox',
+        },
+      )
+      .subscribe({
+        next: (res) => {
+          const elapsed = Date.now() - start;
 
-        environment:
-          'sandbox'
-      }
+          const remaining = Math.max(0, 2000 - elapsed);
 
-    ).subscribe({
+          setTimeout(() => {
+            this.isCheckingBillingConnection = false;
 
-      next: (res) => {
+            this.draftEntity = {
+              ...this.draftEntity,
 
-        const elapsed =
-          Date.now() - start;
+              cardcom_connection_status: res.success ? 'success' : 'failed',
 
-        const remaining =
-          Math.max(
-            0,
-            2000 - elapsed
-          );
+              cardcom_last_verified_at: new Date(),
 
-        setTimeout(() => {
-
-          this.isCheckingBillingConnection =
-            false;
-
-          this.draftEntity = {
-
-            ...this.draftEntity,
-
-            cardcom_connection_status:
-
-              res.success
-                ? 'success'
-                : 'failed',
-
-            cardcom_last_verified_at:
-              new Date(),
-
-            cardcom_last_error:
-
-              res.success
+              cardcom_last_error: res.success
                 ? null
-                : (
+                : res.message || res.error?.Description || 'בדיקת החיבור נכשלה',
+            };
+          }, remaining);
+        },
 
-                    res.message ||
+        error: (err) => {
+          const elapsed = Date.now() - start;
 
-                    res.error?.Description ||
+          const remaining = Math.max(0, 2000 - elapsed);
 
-                    'בדיקת החיבור נכשלה'
-                  )
-          };
+          setTimeout(() => {
+            this.isCheckingBillingConnection = false;
 
-        }, remaining);
-      },
+            this.draftEntity = {
+              ...this.draftEntity,
 
-      error: (err) => {
+              cardcom_connection_status: 'failed',
 
-        const elapsed =
-          Date.now() - start;
+              cardcom_last_verified_at: new Date(),
 
-        const remaining =
-          Math.max(
-            0,
-            2000 - elapsed
-          );
-
-        setTimeout(() => {
-
-          this.isCheckingBillingConnection =
-            false;
-
-          this.draftEntity = {
-
-            ...this.draftEntity,
-
-            cardcom_connection_status:
-              'failed',
-
-            cardcom_last_verified_at:
-              new Date(),
-
-            cardcom_last_error:
-
-              err?.error?.message ||
-
-              err?.error?.error?.Description ||
-
-              'שגיאת שרת'
-          };
-
-        }, remaining);
-      }
-    });
+              cardcom_last_error:
+                err?.error?.message ||
+                err?.error?.error?.Description ||
+                'שגיאת שרת',
+            };
+          }, remaining);
+        },
+      });
   }
 }
