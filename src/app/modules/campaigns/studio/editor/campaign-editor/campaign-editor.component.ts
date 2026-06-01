@@ -1,15 +1,8 @@
 import { Component } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
-
 import { CampaignStepperComponent } from '../../../shared/components/campaign-stepper/campaign-stepper.component';
-
 import { CampaignEditorFooterComponent } from '../../../shared/components/footer/campaign-editor-footer/campaign-editor-footer.component';
-
 import { CampaignTypeStepComponent } from '../../../builder/steps/campaign-type-step/campaign-type-step.component';
-
-import { CampaignMediaStepComponent } from '../../../builder/steps/campaign-media-step/campaign-media-step.component';
-
 import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-publish-step/campaign-publish-step.component';
 
 import { ViewChild } from '@angular/core';
@@ -18,6 +11,7 @@ import { CampaignContentStepComponent } from '../../../builder/steps/campaign-co
 import { CampaignGoalsStepComponent } from '../../../builder/steps/campaign-goals-step/campaign-goals-step.component';
 import { CampaignBasicStepComponent } from '../../../builder/steps/campaign-basic-step/campaign-basic-step.component';
 import { CampaignDonationsStepComponent } from '../../../builder/steps/campaign-donations-step/campaign-donations-step.component';
+import { CampaignDefenitionsStepComponent } from "../../../builder/steps/campaign-defenitions-step/campaign-defenitions-step.component";
 
 @Component({
   selector: 'app-campaign-editor',
@@ -27,13 +21,13 @@ import { CampaignDonationsStepComponent } from '../../../builder/steps/campaign-
     CampaignStepperComponent,
     CampaignEditorFooterComponent,
     CampaignTypeStepComponent,
-    CampaignMediaStepComponent,
     CampaignPublishStepComponent,
     CampaignBasicStepComponent,
     CampaignGoalsStepComponent,
     CampaignContentStepComponent,
     CampaignDonationsStepComponent,
-  ],
+    CampaignDefenitionsStepComponent
+],
   templateUrl: './campaign-editor.component.html',
   styleUrls: ['./campaign-editor.component.css'],
 })

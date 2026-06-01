@@ -3,200 +3,60 @@
 }
 
 .campaign-type-step {
-  max-width: 900px;
+
+  max-width: 1000px;
 
   margin: 0 auto;
+
 }
 
 .campaign-type-header {
-  text-align: center;
 
-  margin-bottom: 24px;
+  margin-bottom: 32px;
+
 }
 
 .campaign-type-title {
+
   margin: 0;
 
-  font-size: 30px;
+  font-size: 40px;
 
-  font-weight: 700;
+  font-weight: 800;
 
-  color: #111827;
+  color: #0f172a;
+
 }
 
 .campaign-type-description {
+
   margin-top: 8px;
-
-  font-size: 14px;
-
-  color: #6b7280;
-}
-
-.types-grid {
-  display: grid;
-
-  grid-template-columns: repeat(2, 1fr);
-
-  gap: 16px;
-}
-
-.type-card {
-  min-height: 120px;
-
-  border: 1px solid #e5e7eb;
-
-  border-radius: 18px;
-
-  background: white;
-
-  padding: 18px;
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 16px;
-
-  text-align: right;
-
-  cursor: pointer;
-
-  transition: all 0.2s ease;
-}
-
-.type-card:hover {
-  border-color: #a78bfa;
-
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-}
-
-.type-card.selected {
-  border-color: #7c3aed;
-
-  background: #faf5ff;
-
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
-}
-
-.type-icon {
-  width: 48px;
-
-  height: 48px;
-
-  border-radius: 50%;
-
-  background: #f5f3ff;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  font-size: 24px;
-
-  flex-shrink: 0;
-}
-
-.type-content {
-  flex: 1;
-}
-
-.type-title {
-  margin: 0 0 6px;
 
   font-size: 18px;
 
-  font-weight: 700;
+  color: #64748b;
 
-  color: #111827;
 }
 
-.type-description {
-  margin: 0;
+.types-list {
 
-  font-size: 13px;
+  display: flex;
 
-  line-height: 1.5;
-
-  color: #6b7280;
-}
-
-.type-card-wide {
-  grid-column: span 2;
-}
-
-@media (max-width: 768px) {
-  .campaign-type-title {
-    font-size: 24px;
-  }
-
-  .types-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .type-card-wide {
-    grid-column: auto;
-  }
-}
-:host {
-  display: block;
-}
-
-.campaign-type-step {
-  max-width: 950px;
-
-  margin: 0 auto;
-
-  background: #ffffff;
-
-  border: 1px solid #e5e7eb;
-
-  border-radius: 20px;
-
-  padding: 32px;
-}
-
-.campaign-type-header {
-  margin-bottom: 32px;
-
-  text-align: right;
-}
-
-.campaign-type-title {
-  margin: 0;
-
-  font-size: 30px;
-
-  font-weight: 700;
-
-  color: #111827;
-}
-
-.campaign-type-description {
-  margin-top: 10px;
-
-  font-size: 15px;
-
-  color: #6b7280;
-}
-
-.types-grid {
-  display: grid;
-
-  grid-template-columns: repeat(2, 1fr);
+  flex-direction: column;
 
   gap: 16px;
+
 }
 
 .type-card {
-  position: relative;
 
-  min-height: 130px;
+  width: 100%;
 
-  border: 1px solid #e5e7eb;
+  min-height: 140px;
 
-  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+
+  border-radius: 20px;
 
   background: #ffffff;
 
@@ -204,181 +64,210 @@
 
   display: flex;
 
+  flex-direction: row-reverse;
+
   align-items: center;
 
-  gap: 16px;
+  gap: 24px;
 
   cursor: pointer;
 
   text-align: right;
 
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease;
+    border-color .2s ease,
+    background .2s ease,
+    box-shadow .2s ease;
+
 }
 
 .type-card:hover {
-  transform: translateY(-2px);
 
-  border-color: #c4b5fd;
+  border-color: #d8b4fe;
 
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
 }
 
 .type-card.selected {
+
   border-color: #7c3aed;
 
-  background: #faf5ff;
+  background: #fcfbff;
 
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  box-shadow:
+    0 0 0 2px
+    rgba(
+      124,
+      58,
+      237,
+      0.08
+    );
+
 }
 
-.selected-badge {
-  position: absolute;
+.radio-area {
 
-  top: 12px;
+  width: 36px;
 
-  left: 12px;
+  flex-shrink: 0;
+
+  display: flex;
+
+  justify-content: center;
+
+}
+
+.radio-icon {
 
   width: 28px;
 
   height: 28px;
 
-  border-radius: 50%;
+  color: #cbd5e1;
 
-  background: #7c3aed;
-
-  color: white;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  font-size: 14px;
-
-  font-weight: 700;
 }
 
-.type-icon {
-  width: 56px;
+.selected-icon {
 
-  height: 56px;
+  width: 28px;
 
-  border-radius: 14px;
+  height: 28px;
 
-  display: flex;
+  color: #7c3aed;
 
-  align-items: center;
-
-  justify-content: center;
-
-  font-size: 28px;
-
-  flex-shrink: 0;
-}
-
-.all-or-nothing .type-icon {
-  background: linear-gradient(135deg, #f97316, #ef4444);
-}
-
-.flexible .type-icon {
-  background: linear-gradient(135deg, #06b6d4, #14b8a6);
-}
-
-.recurring .type-icon {
-  background: linear-gradient(135deg, #a855f7, #ec4899);
-}
-
-.matching .type-icon {
-  background: linear-gradient(135deg, #22c55e, #10b981);
 }
 
 .type-content {
+
   flex: 1;
+
 }
 
 .type-title {
-  margin: 0 0 8px;
 
-  font-size: 20px;
+  margin: 0;
+
+  font-size: 22px;
 
   font-weight: 700;
 
   color: #111827;
+
 }
 
 .type-description {
-  margin: 0;
 
-  font-size: 14px;
+  margin-top: 10px;
+
+  margin-bottom: 8px;
+
+  font-size: 15px;
 
   line-height: 1.6;
 
-  color: #6b7280;
+  color: #475569;
+
 }
 
-.selected-type-panel {
-  margin-top: 24px;
-
-  padding: 18px 20px;
-
-  border-radius: 12px;
-
-  background: #f8fafc;
-
-  border: 1px solid #e2e8f0;
-}
-
-.selected-type-label {
-  color: #64748b;
+.type-recommendation {
 
   font-size: 14px;
+
+  font-weight: 600;
+
+  color: #94a3b8;
+
 }
 
-.selected-type-value {
+.icon-box {
+
+  width: 72px;
+
+  height: 72px;
+
+  min-width: 72px;
+
+  min-height: 72px;
+
+  border-radius: 18px;
+
+  border: 1px solid #ede9fe;
+
+  background: #f8f7fc;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-shrink: 0;
+
+}
+
+.type-icon {
+
+  
+
+  color: #7c3aed;
+
+}
+
+.selected-panel {
+
+  margin-top: 24px;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 16px;
+
+  background: #fafafa;
+
+  padding: 20px;
+
+}
+
+.selected-label {
+
+  color: #64748b;
+
+}
+
+.selected-value {
+
   margin-right: 8px;
 
   font-weight: 700;
 
-  color: #111827;
-}
+  color: #7c3aed;
 
-.campaign-note {
-  margin-top: 20px;
-
-  padding: 16px 20px;
-
-  border-radius: 12px;
-
-  background: #fffbeb;
-
-  border: 1px solid #fde68a;
-
-  color: #92400e;
-
-  line-height: 1.7;
-
-  font-size: 14px;
 }
 
 @media (max-width: 768px) {
-  .campaign-type-step {
-    padding: 20px;
-  }
 
   .campaign-type-title {
-    font-size: 24px;
+
+    font-size: 28px;
+
   }
 
-  .types-grid {
-    grid-template-columns: 1fr;
+  .campaign-type-description {
+
+    font-size: 15px;
+
   }
 
   .type-card {
-    min-height: 110px;
+
+    padding: 18px;
+
   }
+
+  .icon-box {
+
+    width: 56px;
+
+    height: 56px;
+
+  }
+
 }

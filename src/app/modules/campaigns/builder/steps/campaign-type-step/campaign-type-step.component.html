@@ -1,165 +1,93 @@
 <div class="campaign-type-step">
+
   <div class="campaign-type-header">
-    <h2 class="campaign-type-title">
+
+    <h1 class="campaign-type-title">
       בחר סוג קמפיין
-    </h2>
+    </h1>
 
     <p class="campaign-type-description">
       כל סוג מתאים למטרה אחרת
     </p>
-  </div>
-
-  <div class="types-grid">
-
-    <button
-      type="button"
-      class="type-card all-or-nothing"
-      [class.selected]="selectedType === 'all-or-nothing'"
-      (click)="selectType('all-or-nothing')">
-
-      @if (selectedType === 'all-or-nothing') {
-
-        <div class="selected-badge">
-          ✓
-        </div>
-
-      }
-
-      <div class="type-icon">
-        🎯
-      </div>
-
-      <div class="type-content">
-
-        <h3 class="type-title">
-          הכל או כלום
-        </h3>
-
-        <p class="type-description">
-          תקבלו את הכסף רק אם תגיעו ליעד המלא
-        </p>
-
-      </div>
-
-    </button>
-
-    <button
-      type="button"
-      class="type-card flexible"
-      [class.selected]="selectedType === 'flexible'"
-      (click)="selectType('flexible')">
-
-      @if (selectedType === 'flexible') {
-
-        <div class="selected-badge">
-          ✓
-        </div>
-
-      }
-
-      <div class="type-icon">
-        📈
-      </div>
-
-      <div class="type-content">
-
-        <h3 class="type-title">
-          גיוס גמיש
-        </h3>
-
-        <p class="type-description">
-          כל סכום שיגויס יועבר לעמותה גם אם היעד לא הושג
-        </p>
-
-      </div>
-
-    </button>
-
-    <button
-      type="button"
-      class="type-card recurring"
-      [class.selected]="selectedType === 'recurring'"
-      (click)="selectType('recurring')">
-
-      @if (selectedType === 'recurring') {
-
-        <div class="selected-badge">
-          ✓
-        </div>
-
-      }
-
-      <div class="type-icon">
-        🔄
-      </div>
-
-      <div class="type-content">
-
-        <h3 class="type-title">
-          הוראות קבע
-        </h3>
-
-        <p class="type-description">
-          תרומות חודשיות קבועות ללא הגבלת זמן
-        </p>
-
-      </div>
-
-    </button>
-
-    <button
-      type="button"
-      class="type-card matching"
-      [class.selected]="selectedType === 'matching'"
-      (click)="selectType('matching')">
-
-      @if (selectedType === 'matching') {
-
-        <div class="selected-badge">
-          ✓
-        </div>
-
-      }
-
-      <div class="type-icon">
-        ⚡
-      </div>
-
-      <div class="type-content">
-
-        <h3 class="type-title">
-          מאצ'ינג
-        </h3>
-
-        <p class="type-description">
-          כל תרומה מוכפלת לפי היחס שתקבעו
-        </p>
-
-      </div>
-
-    </button>
 
   </div>
 
-  <div class="selected-type-panel">
+  <div class="types-list">
 
-    <span class="selected-type-label">
+    @for (
+      type of campaignTypes;
+      track type.id
+    ) {
+
+      <button
+        type="button"
+        class="type-card"
+        [class.selected]="selectedType === type.id"
+        (click)="selectType(type.id)">
+
+        <div class="radio-area">
+
+          @if (
+            selectedType === type.id
+          ) {
+
+            <lucide-angular
+              [img]="CheckCircle2"
+              class="selected-icon">
+            </lucide-angular>
+
+          } @else {
+
+            <lucide-angular
+              [img]="Circle"
+              class="radio-icon">
+            </lucide-angular>
+
+          }
+
+        </div>
+
+        <div class="type-content">
+
+          <h3 class="type-title">
+            {{ type.title }}
+          </h3>
+
+          <p class="type-description">
+            {{ type.description }}
+          </p>
+
+          <div class="type-recommendation">
+            {{ type.recommendation }}
+          </div>
+
+        </div>
+
+        <div class="icon-box">
+
+          <lucide-angular
+            [img]="type.icon"
+            class="type-icon">
+          </lucide-angular>
+
+        </div>
+
+      </button>
+
+    }
+
+  </div>
+
+  <div class="selected-panel">
+
+    <span class="selected-label">
       סוג קמפיין נבחר:
     </span>
 
-    <span class="selected-type-value">
+    <span class="selected-value">
       {{ getSelectedTypeLabel() }}
     </span>
 
   </div>
 
-  <div class="campaign-note">
-
-    <strong>
-      חשוב לדעת:
-    </strong>
-
-    ניתן לשנות את סוג הקמפיין עד לפרסום הראשון.
-
-  </div>
 </div>
