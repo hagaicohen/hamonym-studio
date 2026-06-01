@@ -13,7 +13,7 @@ export class CampaignEditorFooterComponent {
   currentStep = 1;
 
   @Input()
-  canContinue = false;
+  canContinue = true;
 
   @Output()
   previous = new EventEmitter<void>();

@@ -1,0 +1,241 @@
+:host {
+  display: block;
+}
+
+.campaign-goals-step {
+  max-width: 950px;
+
+  margin: 0 auto;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 20px;
+
+  padding: 32px;
+}
+
+.step-header {
+  margin-bottom: 32px;
+}
+
+.step-title {
+  margin: 0;
+
+  font-size: 30px;
+
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.step-description {
+  margin-top: 10px;
+
+  font-size: 15px;
+
+  color: #6b7280;
+}
+
+.step-section {
+  margin-bottom: 32px;
+}
+
+.field-label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  color: #111827;
+}
+
+.required {
+  color: #dc2626;
+}
+
+.field-description {
+  margin-bottom: 10px;
+
+  font-size: 12px;
+
+  color: #6b7280;
+}
+
+.amount-input-wrapper {
+  position: relative;
+}
+
+.currency-symbol {
+  position: absolute;
+
+  left: 16px;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: #6b7280;
+}
+
+.amount-input,
+.date-input {
+  width: 100%;
+
+  height: 52px;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 8px;
+
+  font-size: 16px;
+
+  background: #ffffff;
+}
+
+.amount-input:focus,
+.date-input:focus {
+  outline: none;
+
+  border-color: #7c3aed;
+
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+}
+
+.invalid {
+  border-color: #ef4444 !important;
+
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+.field-error {
+  margin-top: 8px;
+
+  color: #dc2626;
+
+  font-size: 13px;
+}
+
+.insight-card {
+  margin-bottom: 32px;
+
+  padding: 24px;
+
+  border-radius: 16px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+
+  text-align: center;
+}
+
+.insight-amount {
+  font-size: 36px;
+
+  font-weight: 800;
+
+  color: #111827;
+}
+
+.insight-title {
+  margin-top: 6px;
+
+  color: #6b7280;
+}
+
+.insight-row {
+  margin-top: 12px;
+
+  color: #374151;
+}
+
+.section-title {
+  margin-bottom: 16px;
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.dates-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 16px;
+}
+
+.campaign-duration {
+  margin-top: 16px;
+
+  color: #374151;
+
+  font-weight: 600;
+}
+
+.campaign-tip {
+  padding: 18px 20px;
+
+  border-radius: 12px;
+
+  background: #eff6ff;
+
+  border: 1px solid #bfdbfe;
+
+  color: #1e3a8a;
+
+  line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+  .campaign-goals-step {
+    padding: 20px;
+  }
+
+  .step-title {
+    font-size: 24px;
+  }
+
+  .dates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.amount-input {
+  text-align: right;
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  padding-right: 18px;
+
+  padding-left: 52px;
+}
+
+.date-input {
+  cursor: pointer;
+
+  padding: 0 16px;
+}
+
+.date-input:hover {
+  border-color: #c4b5fd;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.currency-symbol {
+  font-size: 18px;
+
+  font-weight: 700;
+}

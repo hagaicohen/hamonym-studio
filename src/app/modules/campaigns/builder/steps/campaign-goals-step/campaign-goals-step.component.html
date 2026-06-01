@@ -1,1 +1,154 @@
-<p>campaign-goals-step works!</p>
+<div class="campaign-goals-step">
+
+  <div class="step-header">
+
+    <h1 class="step-title">
+      יעד הגיוס
+    </h1>
+
+    <p class="step-description">
+      הגדירו את יעד הקמפיין ואת משך הזמן לגיוס.
+    </p>
+
+  </div>
+
+  <div class="step-section">
+
+    <label class="field-label">
+
+      יעד גיוס
+
+      <span class="required">*</span>
+
+    </label>
+
+    <div class="field-description">
+      כמה תרצו לגייס בקמפיין?
+    </div>
+
+    <div class="amount-input-wrapper">
+
+      <span class="currency-symbol">
+        ₪
+      </span>
+
+      <input
+        type="text"
+        class="amount-input"
+        [class.invalid]="isTargetInvalid()"
+        [ngModel]="targetAmount"
+        (keydown)="allowMoneyChars($event)"
+        (blur)="targetTouched = true"
+        (ngModelChange)="onTargetChange($event)"
+        placeholder="100,000">
+
+    </div>
+
+    @if (isTargetInvalid()) {
+
+      <div class="field-error">
+        יש להזין יעד גיוס
+      </div>
+
+    }
+
+  </div>
+
+  @if (getNumericTarget() > 0) {
+
+    <div class="insight-card">
+
+      <div class="insight-amount">
+        ₪{{ targetAmount }}
+      </div>
+
+      <div class="insight-title">
+        יעד הגיוס
+      </div>
+
+      <div class="insight-row">
+        ≈ {{ getDonors200() }}
+        תורמים של 200 ₪
+      </div>
+
+      <div class="insight-row">
+        ≈ {{ getDonors100() }}
+        תורמים של 100 ₪
+      </div>
+
+    </div>
+
+  }
+
+  <div class="step-section">
+
+    <div class="section-title">
+      משך הקמפיין
+    </div>
+
+    <div class="dates-grid">
+
+      <div>
+
+        <label class="field-label">
+          תאריך התחלה
+        </label>
+
+        <input
+          type="date"
+          class="date-input"
+          [(ngModel)]="startDate"
+          (blur)="startDateTouched = true">
+
+      </div>
+
+      <div>
+
+        <label class="field-label">
+          תאריך סיום
+        </label>
+
+        <input
+          type="date"
+          class="date-input"
+          [(ngModel)]="endDate"
+          (blur)="endDateTouched = true">
+
+      </div>
+
+    </div>
+
+    @if (getCampaignDays() > 0) {
+
+      <div class="campaign-duration">
+
+        משך הקמפיין:
+        {{ getCampaignDays() }}
+        ימים
+
+      </div>
+
+    }
+
+    @if (isDateRangeInvalid()) {
+
+      <div class="field-error">
+        תאריך הסיום חייב להיות אחרי תאריך ההתחלה
+      </div>
+
+    }
+
+  </div>
+
+  <div class="campaign-tip">
+
+    <strong>
+      טיפ:
+    </strong>
+
+    קמפיינים עם יעד ריאלי ומשך זמן מוגדר
+    נוטים לגייס יותר תרומות.
+
+  </div>
+
+</div>

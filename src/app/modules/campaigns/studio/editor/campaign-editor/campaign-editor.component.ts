@@ -62,6 +62,7 @@ export class CampaignEditorComponent {
   }
 
   canContinue(): boolean {
+    return true;
     switch (this.currentStep) {
       case 1:
         return this.basicStep?.isValid() ?? false;
