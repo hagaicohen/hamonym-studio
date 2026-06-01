@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 
-import {
-  CampaignStudioStateService,
-  CampaignType,
-} from '../../../services/campaign-studio-state.service';
+export type CampaignType =
+  | 'all-or-nothing'
+  | 'flexible'
+  | 'recurring'
+  | 'matching';
 
 @Component({
   selector: 'app-campaign-type-step',
@@ -12,9 +13,28 @@ import {
   styleUrls: ['./campaign-type-step.component.css'],
 })
 export class CampaignTypeStepComponent {
-  constructor(public state: CampaignStudioStateService) {}
+  selectedType: CampaignType | null = null;
 
   selectType(type: CampaignType): void {
-    this.state.setType(type);
+    this.selectedType = type;
+  }
+
+  getSelectedTypeLabel(): string {
+    switch (this.selectedType) {
+      case 'all-or-nothing':
+        return 'הכל או כלום';
+
+      case 'flexible':
+        return 'גיוס גמיש';
+
+      case 'recurring':
+        return 'הוראות קבע';
+
+      case 'matching':
+        return "מאצ'ינג";
+
+      default:
+        return 'טרם נבחר';
+    }
   }
 }

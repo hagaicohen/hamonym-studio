@@ -1,83 +1,165 @@
 <div class="campaign-type-step">
   <div class="campaign-type-header">
-    <h2 class="campaign-type-title">בחר סוג קמפיין</h2>
+    <h2 class="campaign-type-title">
+      בחר סוג קמפיין
+    </h2>
 
     <p class="campaign-type-description">
-      סוג הקמפיין קובע את אפשרויות הגיוס והתוכן הזמינות עבורך
+      כל סוג מתאים למטרה אחרת
     </p>
   </div>
 
   <div class="types-grid">
+
     <button
-      class="type-card"
-      [class.selected]="state.draft.type === 'nonprofit'"
-      (click)="selectType('nonprofit')"
-    >
-      <div class="type-icon">🏛️</div>
+      type="button"
+      class="type-card all-or-nothing"
+      [class.selected]="selectedType === 'all-or-nothing'"
+      (click)="selectType('all-or-nothing')">
+
+      @if (selectedType === 'all-or-nothing') {
+
+        <div class="selected-badge">
+          ✓
+        </div>
+
+      }
+
+      <div class="type-icon">
+        🎯
+      </div>
 
       <div class="type-content">
-        <h3 class="type-title">עמותה</h3>
+
+        <h3 class="type-title">
+          הכל או כלום
+        </h3>
 
         <p class="type-description">
-          קמפיין לגיוס תרומות עבור עמותה או ארגון חברתי
+          תקבלו את הכסף רק אם תגיעו ליעד המלא
         </p>
+
       </div>
+
     </button>
 
     <button
-      class="type-card"
-      [class.selected]="state.draft.type === 'business'"
-      (click)="selectType('business')"
-    >
-      <div class="type-icon">🏪</div>
+      type="button"
+      class="type-card flexible"
+      [class.selected]="selectedType === 'flexible'"
+      (click)="selectType('flexible')">
+
+      @if (selectedType === 'flexible') {
+
+        <div class="selected-badge">
+          ✓
+        </div>
+
+      }
+
+      <div class="type-icon">
+        📈
+      </div>
 
       <div class="type-content">
-        <h3 class="type-title">עסק</h3>
 
-        <p class="type-description">קמפיין למימון או צמיחה של עסק</p>
+        <h3 class="type-title">
+          גיוס גמיש
+        </h3>
+
+        <p class="type-description">
+          כל סכום שיגויס יועבר לעמותה גם אם היעד לא הושג
+        </p>
+
       </div>
+
     </button>
 
     <button
-      class="type-card"
-      [class.selected]="state.draft.type === 'private'"
-      (click)="selectType('private')"
-    >
-      <div class="type-icon">👤</div>
+      type="button"
+      class="type-card recurring"
+      [class.selected]="selectedType === 'recurring'"
+      (click)="selectType('recurring')">
+
+      @if (selectedType === 'recurring') {
+
+        <div class="selected-badge">
+          ✓
+        </div>
+
+      }
+
+      <div class="type-icon">
+        🔄
+      </div>
 
       <div class="type-content">
-        <h3 class="type-title">אדם פרטי</h3>
 
-        <p class="type-description">קמפיין אישי למטרה פרטית</p>
+        <h3 class="type-title">
+          הוראות קבע
+        </h3>
+
+        <p class="type-description">
+          תרומות חודשיות קבועות ללא הגבלת זמן
+        </p>
+
       </div>
+
     </button>
 
     <button
-      class="type-card"
-      [class.selected]="state.draft.type === 'social'"
-      (click)="selectType('social')"
-    >
-      <div class="type-icon">🤝</div>
+      type="button"
+      class="type-card matching"
+      [class.selected]="selectedType === 'matching'"
+      (click)="selectType('matching')">
+
+      @if (selectedType === 'matching') {
+
+        <div class="selected-badge">
+          ✓
+        </div>
+
+      }
+
+      <div class="type-icon">
+        ⚡
+      </div>
 
       <div class="type-content">
-        <h3 class="type-title">עסק חברתי</h3>
 
-        <p class="type-description">מיזם חברתי עם פעילות עסקית</p>
+        <h3 class="type-title">
+          מאצ'ינג
+        </h3>
+
+        <p class="type-description">
+          כל תרומה מוכפלת לפי היחס שתקבעו
+        </p>
+
       </div>
+
     </button>
 
-    <button
-      class="type-card type-card-wide"
-      [class.selected]="state.draft.type === 'political'"
-      (click)="selectType('political')"
-    >
-      <div class="type-icon">🗳️</div>
+  </div>
 
-      <div class="type-content">
-        <h3 class="type-title">מפלגה</h3>
+  <div class="selected-type-panel">
 
-        <p class="type-description">גיוס עבור פעילות פוליטית</p>
-      </div>
-    </button>
+    <span class="selected-type-label">
+      סוג קמפיין נבחר:
+    </span>
+
+    <span class="selected-type-value">
+      {{ getSelectedTypeLabel() }}
+    </span>
+
+  </div>
+
+  <div class="campaign-note">
+
+    <strong>
+      חשוב לדעת:
+    </strong>
+
+    ניתן לשנות את סוג הקמפיין עד לפרסום הראשון.
+
   </div>
 </div>
