@@ -30,7 +30,8 @@
 
       <input
         type="checkbox"
-        [(ngModel)]="rewardsEnabled">
+        [(ngModel)]="draft.rewardsEnabled"
+        (ngModelChange)="sync()">
 
       <span class="slider"></span>
 
@@ -38,7 +39,7 @@
 
   </div>
 
-  <ng-container *ngIf="rewardsEnabled">
+  <ng-container *ngIf="draft.rewardsEnabled">
 
     <div
       class="reward-form-card"
@@ -211,71 +212,68 @@
     </div>
 
     <div
-    class="reward-card"
-    *ngFor="let reward of rewards">
+      class="reward-card"
+      *ngFor="let reward of draft.rewards">
 
-    <div class="reward-content">
+      <div class="reward-content">
 
         <div class="reward-details">
 
-        <div class="reward-title">
+          <div class="reward-title">
             {{ reward.title }}
-        </div>
+          </div>
 
-        <div
+          <div
             class="reward-description"
             *ngIf="reward.description">
 
             {{ reward.description }}
 
-        </div>
+          </div>
 
-        <div class="reward-meta">
+          <div class="reward-meta">
 
             <span>
-            ₪{{ reward.minimumAmount | number }}
+              ₪{{ reward.minimumAmount | number }}
             </span>
 
             <span *ngIf="reward.stock">
-            כמות: {{ reward.stock }}
+              כמות: {{ reward.stock }}
             </span>
 
             <span *ngIf="!reward.stock">
-            ללא הגבלה
+              ללא הגבלה
             </span>
 
-        </div>
+          </div>
 
-        <button
+          <button
             class="delete-button"
             (click)="deleteReward(reward.id)">
 
             🗑 מחק תשורה
 
-        </button>
+          </button>
 
         </div>
 
         <img
-        *ngIf="reward.imageUrl"
-        [src]="reward.imageUrl"
-        class="reward-image"
-        alt="reward">
+          *ngIf="reward.imageUrl"
+          [src]="reward.imageUrl"
+          class="reward-image"
+          alt="reward">
 
-    </div>
+      </div>
 
     </div>
 
     <div
       class="add-reward-card"
-      *ngIf="!showCreateRewardForm && rewards.length < 20"
+      *ngIf="!showCreateRewardForm && draft.rewards.length < 20"
       (click)="addReward()">
 
-      <button
-        class="add-button">
-
+      <button class="add-button">
         + הוסף תשורה
-
       </button>
 
     </div>

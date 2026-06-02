@@ -140,6 +140,50 @@
 
 }
 
+.upload-area.has-image {
+  padding: 0;
+  overflow: hidden;
+  border-style: solid;
+  border-color: #c4b5fd;
+}
+
+.cover-preview {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity .2s ease;
+  border-radius: 16px;
+}
+
+.upload-area.has-image {
+  position: relative;
+}
+
+.upload-area.has-image:hover .cover-overlay {
+  opacity: 1;
+}
+
+.upload-icon-small {
+  width: 32px;
+  height: 32px;
+}
+
 .video-input-wrapper {
 
   position: relative;

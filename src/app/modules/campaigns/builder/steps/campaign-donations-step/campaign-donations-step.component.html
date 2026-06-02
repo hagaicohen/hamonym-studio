@@ -50,7 +50,8 @@
 
           <input
             type="checkbox"
-            [(ngModel)]="enableSuggestedAmounts">
+            [(ngModel)]="draft.enableSuggestedAmounts"
+            (ngModelChange)="sync()">
 
           <span class="slider"></span>
 
@@ -60,7 +61,7 @@
 
     </div>
 
-    @if (enableSuggestedAmounts) {
+    @if (draft.enableSuggestedAmounts) {
 
       <div class="section-card">
 
@@ -75,7 +76,7 @@
         <div class="amounts-container">
 
           @for (
-            amount of suggestedAmounts;
+            amount of draft.suggestedAmounts;
             track amount
           ) {
 
@@ -141,7 +142,8 @@
 
           <input
             type="checkbox"
-            [(ngModel)]="allowCustomAmount">
+            [(ngModel)]="draft.allowCustomAmount"
+            (ngModelChange)="sync()">
 
           <span class="slider"></span>
 
@@ -171,7 +173,8 @@
 
           <input
             type="checkbox"
-            [(ngModel)]="allowMonthlyDonation">
+            [(ngModel)]="draft.allowMonthlyDonation"
+            (ngModelChange)="sync()">
 
           <span class="slider"></span>
 
@@ -181,7 +184,7 @@
 
     </div>
 
-    @if (allowMonthlyDonation) {
+    @if (draft.allowMonthlyDonation) {
 
       <div class="section-card">
 
@@ -196,7 +199,7 @@
         <div class="amounts-container">
 
           @for (
-            amount of monthlyAmounts;
+            amount of draft.monthlyAmounts;
             track amount
           ) {
 

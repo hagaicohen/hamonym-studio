@@ -36,7 +36,7 @@
         type="text"
         class="amount-input"
         [class.invalid]="isTargetInvalid()"
-        [ngModel]="targetAmount"
+        [ngModel]="targetAmountDisplay"
         (keydown)="allowMoneyChars($event)"
         (blur)="targetTouched = true"
         (ngModelChange)="onTargetChange($event)"
@@ -54,12 +54,12 @@
 
   </div>
 
-  @if (getNumericTarget() > 0) {
+  @if (draft.targetAmount > 0) {
 
     <div class="insight-card">
 
       <div class="insight-amount">
-        ₪{{ targetAmount }}
+        ₪{{ targetAmountDisplay }}
       </div>
 
       <div class="insight-title">
@@ -97,7 +97,8 @@
         <input
           type="date"
           class="date-input"
-          [(ngModel)]="startDate"
+          [(ngModel)]="draft.startDate"
+          (ngModelChange)="sync()"
           (blur)="startDateTouched = true">
 
       </div>
@@ -111,7 +112,8 @@
         <input
           type="date"
           class="date-input"
-          [(ngModel)]="endDate"
+          [(ngModel)]="draft.endDate"
+          (ngModelChange)="sync()"
           (blur)="endDateTouched = true">
 
       </div>

@@ -18,8 +18,7 @@
       תמונה ראשית
     </label>
 
-    <label
-      class="upload-area">
+    <label class="upload-area" [class.has-image]="draft.coverImageUrl">
 
       <input
         type="file"
@@ -27,43 +26,31 @@
         class="hidden-file-input"
         (change)="onFileSelected($event)">
 
-      <lucide-angular
-        [img]="Image"
-        class="upload-icon">
-      </lucide-angular>
+      @if (draft.coverImageUrl) {
 
-      @if (!selectedFileName) {
+        <img
+          [src]="draft.coverImageUrl"
+          class="cover-preview"
+          alt="תמונת קמפיין">
 
-        <div
-          class="upload-title">
+        <div class="cover-overlay">
+          <lucide-angular [img]="Upload" class="upload-icon-small"></lucide-angular>
+          <span>החלף תמונה</span>
+        </div>
 
+      } @else {
+
+        <lucide-angular
+          [img]="Image"
+          class="upload-icon">
+        </lucide-angular>
+
+        <div class="upload-title">
           לחץ להעלאת תמונה
-
         </div>
 
-        <div
-          class="upload-subtitle">
-
+        <div class="upload-subtitle">
           JPG, PNG עד 5MB
-
-        </div>
-
-      }
-
-      @if (selectedFileName) {
-
-        <div
-          class="upload-title">
-
-          {{ selectedFileName }}
-
-        </div>
-
-        <div
-          class="upload-success">
-
-          התמונה הועלתה
-
         </div>
 
       }
@@ -78,12 +65,12 @@
       סרטון (YouTube/Vimeo)
     </label>
 
-    <div
-      class="video-input-wrapper">
+    <div class="video-input-wrapper">
 
       <input
         type="text"
-        [(ngModel)]="videoUrl"
+        [(ngModel)]="draft.videoUrl"
+        (ngModelChange)="sync()"
         class="video-input"
         placeholder="https://www.youtube.com/watch?v=...">
 
@@ -94,12 +81,9 @@
 
     </div>
 
-    <div
-      class="field-help">
-
+    <div class="field-help">
       ניתן להשתמש רק בקישורים
       מ־YouTube או Vimeo
-
     </div>
 
   </div>

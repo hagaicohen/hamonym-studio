@@ -58,3 +58,9 @@ h1 {
   margin: 0;
 
 }
+
+*:focus,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

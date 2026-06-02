@@ -1,62 +1,40 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-import {
-  LucideAngularModule,
-  Image,
-  Video,
-  Upload,
-} from 'lucide-angular';
+import { LucideAngularModule, Image, Video, Upload } from 'lucide-angular';
+import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-content-step',
-
   standalone: true,
-
-  imports: [
-    FormsModule,
-    LucideAngularModule,
-  ],
-
-  templateUrl:
-    './campaign-content-step.component.html',
-
-  styleUrls: [
-    './campaign-content-step.component.css',
-  ],
+  imports: [FormsModule, LucideAngularModule],
+  templateUrl: './campaign-content-step.component.html',
+  styleUrls: ['./campaign-content-step.component.css'],
 })
 export class CampaignContentStepComponent {
 
-  readonly Image =
-    Image;
+  protected campaignState = inject(CampaignStudioStateService);
 
-  readonly Video =
-    Video;
+  get draft() { return this.campaignState.draft; }
 
-  readonly Upload =
-    Upload;
-
-  videoUrl = '';
+  readonly Image = Image;
+  readonly Video = Video;
+  readonly Upload = Upload;
 
   selectedFileName = '';
 
-  onFileSelected(
-    event: Event
-  ): void {
+  sync(): void { this.campaignState.sync(); }
 
-    const input =
-      event.target as HTMLInputElement;
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
 
-    if (
-      !input.files ||
-      !input.files.length
-    ) {
-      return;
-    }
+    const file = input.files[0];
+    this.selectedFileName = file.name;
 
-    this.selectedFileName =
-      input.files[0].name;
-
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.campaignState.patch({ coverImageUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
   }
-
 }

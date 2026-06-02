@@ -12,8 +12,11 @@
     type="button"
     class="primary-button"
     (click)="next.emit()"
-    [disabled]="!canContinue"
-  >
-    {{ currentStep === 8 ? "פרסם" : "המשך" }}
+    [disabled]="!canContinue">
+
+    {{ currentStep === 8
+        ? 'פרסם קמפיין'
+        : 'המשך' }}
+
   </button>
 </div>

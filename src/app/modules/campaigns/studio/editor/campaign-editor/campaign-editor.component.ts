@@ -46,7 +46,7 @@ export class CampaignEditorComponent {
       return;
     }
 
-    if (this.currentStep < 7) {
+    if (this.currentStep < 8) {
       this.currentStep++;
     }
   }

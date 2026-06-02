@@ -1,214 +1,77 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-interface Reward {
-
-  id: string;
-
-  title: string;
-
-  description: string;
-
-  minimumAmount: number;
-
-  stock: number | null;
-
-  imageUrl: string | null;
-
-}
+import {
+  CampaignStudioStateService,
+  CampaignReward,
+} from '../../../../campaigns/services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-rewards-step',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
-  templateUrl:
-    './campaign-rewards-step.component.html',
-  styleUrl:
-    './campaign-rewards-step.component.css'
+  imports: [CommonModule, FormsModule],
+  templateUrl: './campaign-rewards-step.component.html',
+  styleUrl: './campaign-rewards-step.component.css',
 })
 export class CampaignRewardsStepComponent {
 
-  rewardsEnabled =
-    true;
+  protected campaignState = inject(CampaignStudioStateService);
 
-  showCreateRewardForm =
-    false;
+  get draft() { return this.campaignState.draft; }
 
-  minimumAmountInput =
-    '100';
+  showCreateRewardForm = false;
+  minimumAmountInput = '100';
 
-  rewards: Reward[] = [];
+  newReward: CampaignReward = this.emptyReward();
 
-  newReward: Reward = {
-
-    id: '',
-
-    title: '',
-
-    description: '',
-
-    minimumAmount: 100,
-
-    stock: null,
-
-    imageUrl: null
-
-  };
+  sync(): void { this.campaignState.sync(); }
 
   addReward(): void {
-
-    if (
-      this.rewards.length >= 20
-    ) {
-
-      return;
-
-    }
-
-    this.showCreateRewardForm =
-      true;
-
+    if (this.draft.rewards.length >= 20) return;
+    this.showCreateRewardForm = true;
   }
 
   saveReward(): void {
-
-    if (
-      !this.newReward.title.trim()
-    ) {
-
-      return;
-
-    }
-
-    this.rewards.unshift({
-
-      ...this.newReward,
-
-      id:
-        Date.now().toString()
-
-    });
-
+    if (!this.newReward.title.trim()) return;
+    const updated = [{ ...this.newReward, id: Date.now().toString() }, ...this.draft.rewards];
+    this.campaignState.patch({ rewards: updated });
     this.resetReward();
-
   }
 
   cancelReward(): void {
-
     this.resetReward();
-
   }
 
-  deleteReward(
-    rewardId: string
-  ): void {
-
-    this.rewards =
-      this.rewards.filter(
-        reward =>
-          reward.id !== rewardId
-      );
-
+  deleteReward(rewardId: string): void {
+    this.campaignState.patch({ rewards: this.draft.rewards.filter(r => r.id !== rewardId) });
   }
 
-  onMinimumAmountInput(
-    event: Event
-  ): void {
-
-    const input =
-      event.target as HTMLInputElement;
-
-    const digits =
-      input.value.replace(
-        /[^0-9]/g,
-        ''
-      );
-
-    const amount =
-      Number(
-        digits || 0
-      );
-
-    this.newReward.minimumAmount =
-      amount;
-
-    this.minimumAmountInput =
-      amount
-        ? amount.toLocaleString(
-            'en-US'
-          )
-        : '';
-
+  onMinimumAmountInput(event: Event): void {
+    const digits = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
+    const amount = Number(digits || 0);
+    this.newReward.minimumAmount = amount;
+    this.minimumAmountInput = amount ? amount.toLocaleString('en-US') : '';
   }
 
-  onImageSelected(
-    event: Event
-  ): void {
-
-    const input =
-      event.target as HTMLInputElement;
-
-    const file =
-      input.files?.[0];
-
-    if (!file) {
-
-      return;
-
-    }
-
-    const reader =
-      new FileReader();
-
-    reader.onload =
-      () => {
-
-        this.newReward.imageUrl =
-          reader.result as string;
-
-      };
-
-    reader.readAsDataURL(
-      file
-    );
-
+  onImageSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { this.newReward.imageUrl = reader.result as string; };
+    reader.readAsDataURL(file);
   }
 
   removeImage(): void {
+    this.newReward.imageUrl = null;
+  }
 
-    this.newReward.imageUrl =
-      null;
-
+  private emptyReward(): CampaignReward {
+    return { id: '', title: '', description: '', minimumAmount: 100, stock: null, imageUrl: null };
   }
 
   private resetReward(): void {
-
-    this.showCreateRewardForm =
-      false;
-
-    this.minimumAmountInput =
-      '100';
-
-    this.newReward = {
-
-      id: '',
-
-      title: '',
-
-      description: '',
-
-      minimumAmount: 100,
-
-      stock: null,
-
-      imageUrl: null
-
-    };
-
+    this.showCreateRewardForm = false;
+    this.minimumAmountInput = '100';
+    this.newReward = this.emptyReward();
   }
-
 }

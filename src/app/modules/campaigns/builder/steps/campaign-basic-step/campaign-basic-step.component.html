@@ -29,7 +29,7 @@
       </div>
 
       <div class="char-counter">
-        {{ campaignTitle.length }}/80
+        {{ draft.title.length }}/80
       </div>
     </div>
 
@@ -37,7 +37,8 @@
       type="text"
       class="campaign-title"
       [class.invalid]="isTitleInvalid()"
-      [(ngModel)]="campaignTitle"
+      [(ngModel)]="draft.title"
+      (ngModelChange)="sync()"
       (blur)="titleTouched = true"
       placeholder="כותרת הקמפיין"
     />
@@ -65,7 +66,7 @@
         type="text"
         class="url-input"
         [class.invalid]="isSlugInvalid()"
-        [(ngModel)]="campaignSlug"
+        [ngModel]="draft.slug"
         (blur)="slugTouched = true"
         (keydown)="allowSlugChars($event)"
         (ngModelChange)="onSlugChange($event)"
@@ -88,10 +89,7 @@
     @if (isCheckingSlug) {
       <div class="slug-checking">
         <span class="spinner"></span>
-
-        <span>
-          בודק זמינות...
-        </span>
+        <span>בודק זמינות...</span>
       </div>
     }
 
@@ -114,7 +112,7 @@
       </div>
 
       <div class="char-counter">
-        {{ shortDescription.length }}/160
+        {{ draft.shortDescription.length }}/160
       </div>
     </div>
 
@@ -122,7 +120,8 @@
       rows="2"
       class="form-textarea short-description"
       [class.invalid]="isShortDescriptionInvalid()"
-      [(ngModel)]="shortDescription"
+      [(ngModel)]="draft.shortDescription"
+      (ngModelChange)="sync()"
       (blur)="shortDescriptionTouched = true"
       placeholder="משפט קצר שמתאר את הקמפיין, עד שני משפטים"
     >
@@ -147,11 +146,12 @@
 
     <div
       class="campaign-story"
-       [class.invalid]="isFullDescriptionInvalid()"
+      [class.invalid]="isFullDescriptionInvalid()"
       (focusout)="fullDescriptionTouched = true"
     >
       <app-rich-text-editor
-        [(ngModel)]="fullDescription"
+        [(ngModel)]="draft.fullDescription"
+        (ngModelChange)="sync()"
         placeholder="ספרו את הסיפור שמאחורי הקמפיין..."
       >
       </app-rich-text-editor>

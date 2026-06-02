@@ -22,14 +22,12 @@
       <button
         type="button"
         class="type-card"
-        [class.selected]="selectedType === type.id"
+        [class.selected]="draft.fundingType === type.id"
         (click)="selectType(type.id)">
 
         <div class="radio-area">
 
-          @if (
-            selectedType === type.id
-          ) {
+          @if (draft.fundingType === type.id) {
 
             <lucide-angular
               [img]="CheckCircle2"

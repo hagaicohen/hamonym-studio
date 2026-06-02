@@ -1,10 +1,85 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  LucideAngularModule,
+  FileText,
+  Heart,
+  Settings,
+  Gift,
+  Info,
+  CreditCard,
+  Check,
+  CircleAlert,
+} from 'lucide-angular';
+import {
+  CampaignStudioStateService,
+} from '../../../../campaigns/services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-publish-step',
   standalone: true,
-  imports: [],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './campaign-publish-step.component.html',
   styleUrl: './campaign-publish-step.component.css',
 })
-export class CampaignPublishStepComponent {}
+export class CampaignPublishStepComponent {
+
+  protected campaignState = inject(CampaignStudioStateService);
+
+  get draft() { return this.campaignState.draft; }
+
+  readonly FileText = FileText;
+  readonly Heart = Heart;
+  readonly Settings = Settings;
+  readonly Gift = Gift;
+  readonly Info = Info;
+  readonly CreditCard = CreditCard;
+  readonly Check = Check;
+  readonly CircleAlert = CircleAlert;
+
+  private readonly fundingTypeLabels: Record<string, string> = {
+    'flexible':       'קמפיין גמיש',
+    'all-or-nothing': 'הכל או כלום',
+    'recurring':      'הוראות קבע',
+    'matching':       "מאצ'ינג",
+  };
+
+  get fundingTypeLabel(): string {
+    return this.fundingTypeLabels[this.draft.fundingType] ?? '';
+  }
+
+  get campaignDays(): number {
+    if (!this.draft.startDate || !this.draft.endDate) return 0;
+    const diff = new Date(this.draft.endDate).getTime() - new Date(this.draft.startDate).getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  formatDate(iso: string): string {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  get hasStory(): boolean {
+    return !!this.draft.fullDescription
+      ?.replace(/<[^>]*>/g, '')
+      ?.replace(/&nbsp;/g, '')
+      ?.trim();
+  }
+
+  get missingFields(): string[] {
+    const d = this.draft;
+    const missing: string[] = [];
+    if (!d.title?.trim())          missing.push('כותרת הקמפיין');
+    if (!d.slug?.trim())           missing.push('כתובת הקמפיין');
+    if (!d.shortDescription?.trim()) missing.push('תיאור קצר');
+    if (!this.hasStory)            missing.push('סיפור מלא');
+    if (!d.targetAmount)           missing.push('יעד גיוס');
+    if (!d.coverImageUrl)          missing.push('תמונת קאבר');
+    return missing;
+  }
+
+  get isReady(): boolean {
+    return this.missingFields.length === 0;
+  }
+}
