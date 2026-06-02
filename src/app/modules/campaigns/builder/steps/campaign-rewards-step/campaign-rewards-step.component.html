@@ -1,0 +1,285 @@
+<div class="campaign-rewards-step">
+
+  <div class="step-header">
+
+    <h1 class="step-title">
+      תשורות
+    </h1>
+
+    <p class="step-description">
+      הוסף תמריצים לתורמים (אופציונלי)
+    </p>
+
+  </div>
+
+  <div class="rewards-toggle-card">
+
+    <div>
+
+      <div class="rewards-toggle-title">
+        הפעל תשורות
+      </div>
+
+      <div class="rewards-toggle-description">
+        תורמים יוכלו לבחור תשורה בהתאם לסכום התרומה
+      </div>
+
+    </div>
+
+    <label class="switch">
+
+      <input
+        type="checkbox"
+        [(ngModel)]="rewardsEnabled">
+
+      <span class="slider"></span>
+
+    </label>
+
+  </div>
+
+  <ng-container *ngIf="rewardsEnabled">
+
+    <div
+      class="reward-form-card"
+      *ngIf="showCreateRewardForm">
+
+      <div class="form-row">
+
+        <div class="field">
+
+          <label>
+            כותרת התשורה *
+          </label>
+
+          <input
+            type="text"
+            [(ngModel)]="newReward.title"
+            placeholder="למשל: ספר חתום">
+
+        </div>
+
+        <div class="field amount-field">
+
+          <label>
+            תרומה מינימלית
+          </label>
+
+          <div class="currency-input">
+
+            <span class="currency-symbol">
+              ₪
+            </span>
+
+            <input
+              type="text"
+              [value]="minimumAmountInput"
+              (input)="onMinimumAmountInput($event)"
+              placeholder="100">
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="field">
+
+        <label>
+          תיאור
+        </label>
+
+        <textarea
+          [(ngModel)]="newReward.description"
+          placeholder="ספר על התשורה">
+        </textarea>
+
+      </div>
+
+      <div class="form-row">
+
+        <div class="field">
+
+          <label>
+            תמונת תשורה
+          </label>
+
+          <div class="image-upload-box">
+
+            <input
+              #rewardImageInput
+              type="file"
+              accept="image/*"
+              hidden
+              (change)="onImageSelected($event)">
+
+            <ng-container *ngIf="!newReward.imageUrl">
+
+              <div class="upload-placeholder-icon">
+                🖼️
+              </div>
+
+              <div class="upload-title">
+                העלה תמונה לתשורה
+              </div>
+
+              <div class="upload-description">
+                JPG / PNG / WEBP
+              </div>
+
+              <button
+                type="button"
+                class="upload-button"
+                (click)="rewardImageInput.click()">
+
+                בחר תמונה
+
+              </button>
+
+            </ng-container>
+
+            <ng-container *ngIf="newReward.imageUrl">
+
+              <img
+                [src]="newReward.imageUrl"
+                class="upload-preview"
+                alt="preview">
+
+              <div class="upload-actions">
+
+                <button
+                  type="button"
+                  class="change-image-button"
+                  (click)="rewardImageInput.click()">
+
+                  החלף
+
+                </button>
+
+                <button
+                  type="button"
+                  class="remove-image-button"
+                  (click)="removeImage()">
+
+                  הסר
+
+                </button>
+
+              </div>
+
+            </ng-container>
+
+          </div>
+
+        </div>
+
+        <div class="field">
+
+          <label>
+            כמות (אופציונלי)
+          </label>
+
+          <input
+            type="number"
+            [(ngModel)]="newReward.stock"
+            placeholder="ללא הגבלה">
+
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+
+        <button
+          class="primary-button"
+          (click)="saveReward()">
+
+          הוסף
+
+        </button>
+
+        <button
+          class="secondary-button"
+          (click)="cancelReward()">
+
+          ביטול
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <div
+    class="reward-card"
+    *ngFor="let reward of rewards">
+
+    <div class="reward-content">
+
+        <div class="reward-details">
+
+        <div class="reward-title">
+            {{ reward.title }}
+        </div>
+
+        <div
+            class="reward-description"
+            *ngIf="reward.description">
+
+            {{ reward.description }}
+
+        </div>
+
+        <div class="reward-meta">
+
+            <span>
+            ₪{{ reward.minimumAmount | number }}
+            </span>
+
+            <span *ngIf="reward.stock">
+            כמות: {{ reward.stock }}
+            </span>
+
+            <span *ngIf="!reward.stock">
+            ללא הגבלה
+            </span>
+
+        </div>
+
+        <button
+            class="delete-button"
+            (click)="deleteReward(reward.id)">
+
+            🗑 מחק תשורה
+
+        </button>
+
+        </div>
+
+        <img
+        *ngIf="reward.imageUrl"
+        [src]="reward.imageUrl"
+        class="reward-image"
+        alt="reward">
+
+    </div>
+
+    </div>
+
+    <div
+      class="add-reward-card"
+      *ngIf="!showCreateRewardForm && rewards.length < 20"
+      (click)="addReward()">
+
+      <button
+        class="add-button">
+
+        + הוסף תשורה
+
+      </button>
+
+    </div>
+
+  </ng-container>
+
+</div>
