@@ -1,3 +1,13 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep app-campaign-studio-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 .studio-page {
   height: 100vh;
 
