@@ -12,6 +12,7 @@ import { CampaignGoalsStepComponent } from '../../../builder/steps/campaign-goal
 import { CampaignBasicStepComponent } from '../../../builder/steps/campaign-basic-step/campaign-basic-step.component';
 import { CampaignDonationsStepComponent } from '../../../builder/steps/campaign-donations-step/campaign-donations-step.component';
 import { CampaignDefenitionsStepComponent } from "../../../builder/steps/campaign-defenitions-step/campaign-defenitions-step.component";
+import { CampaignGiftStepComponent } from '../../../builder/steps/campaign-gift-step/campaign-gift-step.component';
 
 @Component({
   selector: 'app-campaign-editor',
@@ -26,7 +27,8 @@ import { CampaignDefenitionsStepComponent } from "../../../builder/steps/campaig
     CampaignGoalsStepComponent,
     CampaignContentStepComponent,
     CampaignDonationsStepComponent,
-    CampaignDefenitionsStepComponent
+    CampaignDefenitionsStepComponent,
+    CampaignGiftStepComponent
 ],
   templateUrl: './campaign-editor.component.html',
   styleUrls: ['./campaign-editor.component.css'],

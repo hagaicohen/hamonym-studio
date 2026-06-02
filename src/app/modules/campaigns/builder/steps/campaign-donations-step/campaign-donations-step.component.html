@@ -1,1 +1,260 @@
-<p>campaign-donations-step works!</p>
+<div class="campaign-donations-step">
+
+  <div class="step-header">
+
+    <h1 class="step-title">
+      עמוד התרומה
+    </h1>
+
+    <p class="step-description">
+      הגדירו כיצד התורמים יתרמו לקמפיין שלכם
+    </p>
+
+  </div>
+
+  <div class="skip-banner">
+
+    <div>
+
+      <div class="skip-banner-title">
+        אפשר לדלג ולהגדיר מאוחר יותר
+      </div>
+
+      <div class="skip-banner-description">
+        ניתן לחזור לעמוד זה בכל שלב
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="settings-column">
+
+    <div class="section-card">
+
+      <div class="toggle-row">
+
+        <div class="toggle-content">
+
+          <div class="toggle-title">
+            סכומי תרומה מומלצים
+          </div>
+
+          <div class="toggle-description">
+            הצג סכומים מוכנים לבחירה בעמוד התרומה
+          </div>
+
+        </div>
+
+        <label class="switch">
+
+          <input
+            type="checkbox"
+            [(ngModel)]="enableSuggestedAmounts">
+
+          <span class="slider"></span>
+
+        </label>
+
+      </div>
+
+    </div>
+
+    @if (enableSuggestedAmounts) {
+
+      <div class="section-card">
+
+        <div class="section-title">
+          סכומים מומלצים
+        </div>
+
+        <div class="section-description">
+          עד 8 סכומים. יוצגו לפי סדר עולה.
+        </div>
+
+        <div class="amounts-container">
+
+          @for (
+            amount of suggestedAmounts;
+            track amount
+          ) {
+
+            <div class="amount-chip">
+
+              ₪ {{ amount }}
+
+              <span
+                class="amount-chip-remove"
+                (click)="removeSuggestedAmount(amount)">
+
+                ✕
+
+              </span>
+
+            </div>
+
+          }
+
+        </div>
+
+        <div class="add-amount-row">
+
+          <input
+            type="text"
+            class="amount-input"
+            placeholder="סכום חדש"
+            [value]="newSuggestedAmount"
+            (input)="onSuggestedAmountInput($event)">
+
+          <button
+            type="button"
+            class="add-amount-button"
+            (click)="addSuggestedAmount()">
+
+            הוסף
+
+          </button>
+
+        </div>
+
+      </div>
+
+    }
+
+    <div class="section-card">
+
+      <div class="toggle-row">
+
+        <div class="toggle-content">
+
+          <div class="toggle-title">
+            אפשר לתורם להזין סכום אחר
+          </div>
+
+          <div class="toggle-description">
+            בנוסף לסכומים המוצעים
+          </div>
+
+        </div>
+
+        <label class="switch">
+
+          <input
+            type="checkbox"
+            [(ngModel)]="allowCustomAmount">
+
+          <span class="slider"></span>
+
+        </label>
+
+      </div>
+
+    </div>
+
+    <div class="section-card">
+
+      <div class="toggle-row">
+
+        <div class="toggle-content">
+
+          <div class="toggle-title">
+            אפשר תרומה חודשית
+          </div>
+
+          <div class="toggle-description">
+            תורמים יוכלו לבחור תרומה חודשית קבועה
+          </div>
+
+        </div>
+
+        <label class="switch">
+
+          <input
+            type="checkbox"
+            [(ngModel)]="allowMonthlyDonation">
+
+          <span class="slider"></span>
+
+        </label>
+
+      </div>
+
+    </div>
+
+    @if (allowMonthlyDonation) {
+
+      <div class="section-card">
+
+        <div class="section-title">
+          סכומים לתרומה חודשית
+        </div>
+
+        <div class="section-description">
+          עד 8 סכומים. יוצגו לפי סדר עולה.
+        </div>
+
+        <div class="amounts-container">
+
+          @for (
+            amount of monthlyAmounts;
+            track amount
+          ) {
+
+            <div class="amount-chip">
+
+              ₪ {{ amount }}
+
+              <span
+                class="amount-chip-remove"
+                (click)="removeMonthlyAmount(amount)">
+
+                ✕
+
+              </span>
+
+            </div>
+
+          }
+
+        </div>
+
+        <div class="add-amount-row">
+
+          <input
+            type="text"
+            class="amount-input"
+            placeholder="סכום חודשי חדש"
+            [value]="newMonthlyAmount"
+            (input)="onMonthlyAmountInput($event)">
+
+          <button
+            type="button"
+            class="add-amount-button"
+            (click)="addMonthlyAmount()">
+
+            הוסף
+
+          </button>
+
+        </div>
+
+      </div>
+
+    }
+
+    <div class="tip-card">
+
+      <div class="tip-title">
+        טיפ
+      </div>
+
+      <div class="tip-text">
+        רוב התורמים בוחרים באחד מהסכומים המוצעים.
+        מומלץ להציג בין 4 ל־8 אפשרויות.
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

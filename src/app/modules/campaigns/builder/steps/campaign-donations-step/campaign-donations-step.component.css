@@ -1,0 +1,469 @@
+:host {
+  display: block;
+}
+
+.campaign-donations-step {
+
+  max-width: 1000px;
+
+  margin: 0 auto;
+
+}
+
+.step-header {
+
+  margin-bottom: 32px;
+
+}
+
+.step-title {
+
+  margin: 0;
+
+  font-size: 40px;
+
+  font-weight: 800;
+
+  color: #0f172a;
+
+}
+
+.step-description {
+
+  margin-top: 10px;
+
+  font-size: 18px;
+
+  color: #64748b;
+
+}
+
+.skip-banner {
+
+  display: flex;
+
+  align-items: center;
+
+  padding: 18px 22px;
+
+  border-radius: 16px;
+
+  background: #fef3c7;
+
+  border: 1px solid #fde68a;
+
+  margin-bottom: 24px;
+
+}
+
+.skip-banner-title {
+
+  font-weight: 700;
+
+  color: #92400e;
+
+}
+
+.skip-banner-description {
+
+  margin-top: 4px;
+
+  font-size: 14px;
+
+  color: #a16207;
+
+}
+
+.settings-column {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 20px;
+
+}
+
+.section-card {
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 20px;
+
+  background: #ffffff;
+
+  padding: 24px;
+
+}
+
+.section-title {
+
+  font-size: 24px;
+
+  font-weight: 700;
+
+  color: #111827;
+
+  margin-bottom: 8px;
+
+}
+
+.section-description {
+
+  color: #64748b;
+
+  margin-bottom: 18px;
+
+}
+
+.amounts-container {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 12px;
+
+}
+
+.amount-chip {
+
+  direction: ltr;  
+
+  height: 54px;
+
+  min-width: 120px;
+
+  padding: 0 18px;
+
+  border-radius: 12px;
+
+  border: 1px solid #d1d5db;
+
+  background: white;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  position: relative;
+
+  font-weight: 700;
+
+}
+
+.amount-chip-remove {
+
+  position: absolute;
+
+  left: 10px;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  cursor: pointer;
+
+  color: #94a3b8;
+
+  transition: color .2s;
+
+}
+
+.amount-chip-remove:hover {
+
+  color: #ef4444;
+
+}
+
+.add-amount-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-top: 18px;
+
+}
+
+.amount-input {
+
+  width: 220px;
+
+  height: 54px;
+
+  border-radius: 12px;
+
+  border: 1px solid #d1d5db;
+
+  padding: 0 16px;
+
+  font-size: 16px;
+
+  text-align: right;
+
+  transition:
+    border-color .2s,
+    box-shadow .2s;
+
+}
+
+.amount-input:focus {
+
+  outline: none;
+
+  border-color: #7c3aed;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      124,
+      58,
+      237,
+      0.08
+    );
+
+}
+
+.add-amount-button {
+
+  width: 110px;
+
+  height: 54px;
+
+  border-radius: 12px;
+
+  border: 1px solid #c4b5fd;
+
+  background: white;
+
+  color: #7c3aed;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background .2s,
+    border-color .2s;
+
+}
+
+.add-amount-button:hover {
+
+  background: #faf5ff;
+
+}
+
+.limit-note {
+
+  margin-top: 14px;
+
+  font-size: 14px;
+
+  color: #64748b;
+
+}
+
+.toggle-row {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+}
+
+.toggle-content {
+
+  flex: 1;
+
+}
+
+.toggle-title {
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  color: #111827;
+
+}
+
+.toggle-description {
+
+  margin-top: 4px;
+
+  color: #64748b;
+
+}
+
+.toggle-row input[type='checkbox'] {
+
+  width: 22px;
+
+  height: 22px;
+
+  accent-color: #7c3aed;
+
+  cursor: pointer;
+
+}
+
+.tip-card {
+
+  border: 1px solid #e9d5ff;
+
+  background: #faf5ff;
+
+  border-radius: 18px;
+
+  padding: 20px;
+
+}
+
+.tip-title {
+
+  color: #7c3aed;
+
+  font-weight: 700;
+
+  margin-bottom: 10px;
+
+}
+
+.tip-text {
+
+  color: #6b7280;
+
+  line-height: 1.8;
+
+}
+
+@media (max-width: 768px) {
+
+  .step-title {
+
+    font-size: 30px;
+
+  }
+
+  .step-description {
+
+    font-size: 16px;
+
+  }
+
+  .add-amount-row {
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+  }
+
+  .amount-input {
+
+    width: 100%;
+
+  }
+
+  .add-amount-button {
+
+    width: 100%;
+
+  }
+
+  .amount-chip {
+
+    width: 100%;
+
+  }
+
+}
+
+/* להוסיף בסוף הקובץ */
+
+.switch {
+
+  position: relative;
+
+  width: 48px;
+
+  height: 28px;
+
+  flex-shrink: 0;
+
+}
+
+.switch input {
+
+  opacity: 0;
+
+  width: 0;
+
+  height: 0;
+
+}
+
+.slider {
+
+  position: absolute;
+
+  inset: 0;
+
+  cursor: pointer;
+
+  background: #d1d5db;
+
+  border-radius: 999px;
+
+  transition: .2s;
+
+}
+
+.slider::before {
+
+  content: '';
+
+  position: absolute;
+
+  width: 22px;
+
+  height: 22px;
+
+  right: 3px;
+
+  top: 3px;
+
+  border-radius: 50%;
+
+  background: white;
+
+  transition: .2s;
+
+  box-shadow:
+    0 1px 3px
+    rgba(0,0,0,.15);
+
+}
+
+.switch input:checked + .slider {
+
+  background: #7c3aed;
+
+}
+
+.switch input:checked + .slider::before {
+
+  transform:
+    translateX(-20px);
+
+}

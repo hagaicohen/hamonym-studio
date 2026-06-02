@@ -1,1 +1,121 @@
-<p>campaign-content-step works!</p>
+<div class="campaign-content-step">
+
+  <div class="step-header">
+
+    <h1 class="step-title">
+      תוכן הקמפיין
+    </h1>
+
+    <p class="step-description">
+      הוסף תמונה וסרטון כדי לספר את הסיפור
+    </p>
+
+  </div>
+
+  <div class="field-section">
+
+    <label class="field-label">
+      תמונה ראשית
+    </label>
+
+    <label
+      class="upload-area">
+
+      <input
+        type="file"
+        accept="image/*"
+        class="hidden-file-input"
+        (change)="onFileSelected($event)">
+
+      <lucide-angular
+        [img]="Image"
+        class="upload-icon">
+      </lucide-angular>
+
+      @if (!selectedFileName) {
+
+        <div
+          class="upload-title">
+
+          לחץ להעלאת תמונה
+
+        </div>
+
+        <div
+          class="upload-subtitle">
+
+          JPG, PNG עד 5MB
+
+        </div>
+
+      }
+
+      @if (selectedFileName) {
+
+        <div
+          class="upload-title">
+
+          {{ selectedFileName }}
+
+        </div>
+
+        <div
+          class="upload-success">
+
+          התמונה הועלתה
+
+        </div>
+
+      }
+
+    </label>
+
+  </div>
+
+  <div class="field-section">
+
+    <label class="field-label">
+      סרטון (YouTube/Vimeo)
+    </label>
+
+    <div
+      class="video-input-wrapper">
+
+      <input
+        type="text"
+        [(ngModel)]="videoUrl"
+        class="video-input"
+        placeholder="https://www.youtube.com/watch?v=...">
+
+      <lucide-angular
+        [img]="Video"
+        class="video-icon">
+      </lucide-angular>
+
+    </div>
+
+    <div
+      class="field-help">
+
+      ניתן להשתמש רק בקישורים
+      מ־YouTube או Vimeo
+
+    </div>
+
+  </div>
+
+  <div class="tip-box">
+
+    <strong>
+      טיפ:
+    </strong>
+
+    קמפיינים עם סרטון מקבלים
+    בממוצע פי 2 יותר תרומות.
+
+    סרטון קצר של 1–2 דקות
+    הוא האידיאלי.
+
+  </div>
+
+</div>

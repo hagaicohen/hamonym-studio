@@ -14,9 +14,11 @@ export class CampaignStepperComponent {
 
     'יעד הגיוס',
 
-    'סיפור הקמפיין',
+    'תוכן',
 
     'תרומות',
+
+    'תשורות',
 
     'הגדרות',
 
