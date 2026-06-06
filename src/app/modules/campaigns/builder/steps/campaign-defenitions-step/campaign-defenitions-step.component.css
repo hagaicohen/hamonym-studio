@@ -17,29 +17,40 @@
 ======================================================= */
 
 .step-header {
-
   margin-bottom: 24px;
-
+  text-align: center;
 }
 
 .step-title {
-
   margin: 0;
-
   font-size: 30px;
-
-  font-weight: 800;
-
+  font-weight: 700;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
 
+.step-title-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  background: #ede9fe;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-title-icon {
+  margin-top: 7px;
+  color: #7c3aed;
 }
 
 .step-description {
-
   margin-top: 8px;
-
   font-size: 15px;
-
   color: #64748b;
 
 }

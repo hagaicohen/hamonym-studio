@@ -1,0 +1,575 @@
+<div class="step-container" *ngIf="draft$ | async as draft">
+
+  <div class="step-header">
+    <span class="step-icon-wrapper"><span class="step-icon-text">🧱</span></span>
+    <div>
+      <h2 class="step-title">בניית דף הקמפיין</h2>
+      <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
+    </div>
+  </div>
+
+  <!-- BLOCKS LIST -->
+  <div class="blocks-list">
+    <div class="block-item" [class.block-item--hidden]="!block.visible"
+      *ngFor="let block of sortedBlocks(draft.blocks); trackBy: trackById">
+
+      <!-- Block Header -->
+      <div class="block-header" (click)="toggleEdit(block.id)">
+        <span class="block-icon">{{ blockIcons[block.type] }}</span>
+        <div class="block-header-info">
+          <span class="block-label">{{ blockLabels[block.type] }}</span>
+          <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
+        </div>
+        <div class="block-actions" (click)="$event.stopPropagation()">
+          <button class="action-btn" (click)="moveUp(block.id)"   [disabled]="isFirst(block, draft.blocks)" title="למעלה">↑</button>
+          <button class="action-btn" (click)="moveDown(block.id)" [disabled]="isLast(block, draft.blocks)"  title="למטה">↓</button>
+          <button class="action-btn" [class.action-btn--muted]="!block.visible"
+            (click)="toggleVisibility(block.id)">{{ block.visible ? '👁' : '🙈' }}</button>
+          <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)">✕</button>
+        </div>
+        <span class="block-chevron" [class.open]="editingBlockId === block.id">›</span>
+      </div>
+
+      <!-- Block Editor -->
+      <div class="block-editor" *ngIf="editingBlockId === block.id">
+
+        <!-- LABEL -->
+        <div class="editor-field">
+          <label class="editor-label">שם הבלוק (לשימוש בתוכן מפוצל)</label>
+          <input class="editor-input" type="text"
+            [value]="block.label"
+            (input)="updateLabel(block.id, $any($event.target).value)"
+            placeholder="למשל: סיפור, תמונה ראשית...">
+        </div>
+
+        <div class="editor-divider"></div>
+
+        <!-- ── RICH TEXT ── -->
+        <div class="editor-field" *ngIf="block.type === 'rich-text'">
+          <app-rich-text-editor
+            [ngModel]="asRichText(block.data).content"
+            (ngModelChange)="updateRichText(block.id, $event)"
+            placeholder="כתבו כאן...">
+          </app-rich-text-editor>
+          <div class="spacing-row" style="margin-top:10px">
+            <span class="spacing-label">מרווח שורות</span>
+            <input type="range" class="split-slider" min="1" max="3" step="0.1"
+              [value]="asRichText(block.data).lineHeight || 1.6"
+              (input)="updateRichTextLineHeight(block.id, +$any($event.target).value)">
+            <span class="spacing-val">{{ (asRichText(block.data).lineHeight || 1.6) | number:'1.1-1' }}</span>
+          </div>
+        </div>
+
+        <!-- ── IMAGE ── -->
+        <div class="editor-field" *ngIf="block.type === 'image'">
+          <input #imgInput type="file" accept="image/*" hidden (change)="onImageFileSelected(block.id, $event)">
+
+          <div class="image-preview-box"
+            [class.image-preview-box--empty]="!asImage(block.data).url"
+            (click)="!asImage(block.data).url && imgInput.click()">
+            <img *ngIf="asImage(block.data).url" [src]="asImage(block.data).url" class="image-preview-img" alt="">
+            <div class="image-preview-empty" *ngIf="!asImage(block.data).url">
+              <span>🖼️</span><span>לחצו להעלאת תמונה</span>
+            </div>
+          </div>
+
+          <div class="image-actions" *ngIf="asImage(block.data).url">
+            <button class="editor-btn" type="button" (click)="imgInput.click()">החלף תמונה</button>
+            <button class="editor-btn editor-btn--danger" type="button" (click)="updateImageField(block.id, 'url', '')">הסר</button>
+          </div>
+
+          <div class="editor-row">
+            <label class="editor-label">כיתוב (רשות)</label>
+            <input class="editor-input" type="text"
+              [value]="asImage(block.data).caption || ''"
+              (input)="updateImageField(block.id, 'caption', $any($event.target).value)"
+              placeholder="תיאור התמונה...">
+          </div>
+        </div>
+
+        <!-- ── VIDEO ── -->
+        <div class="editor-field" *ngIf="block.type === 'video'">
+          <label class="editor-label">קישור וידאו</label>
+          <input class="editor-input" type="url"
+            [value]="asVideo(block.data).url"
+            (change)="updateVideoUrl(block.id, $any($event.target).value)"
+            placeholder="YouTube / Vimeo...">
+        </div>
+
+        <!-- ── GALLERY ── -->
+        <div class="editor-field" *ngIf="block.type === 'gallery'">
+          <input #galleryInput type="file" accept="image/*" multiple hidden
+            (change)="onGalleryFileSelected(block.id, $event)">
+
+          <div class="gallery-grid" *ngIf="asGallery(block.data).items.length > 0">
+            <div class="gallery-item" *ngFor="let item of asGallery(block.data).items; let i = index">
+              <img [src]="item.url" class="gallery-thumb" alt="">
+              <div class="gallery-item-actions">
+                <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, -1)" [disabled]="i === 0">←</button>
+                <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, 1)"  [disabled]="i === asGallery(block.data).items.length - 1">→</button>
+                <button class="gallery-btn gallery-btn--danger" (click)="removeGalleryItem(block.id, i)">✕</button>
+              </div>
+              <input class="gallery-caption" type="text"
+                [value]="item.caption || ''"
+                (input)="updateGalleryCaption(block.id, i, $any($event.target).value)"
+                placeholder="כיתוב...">
+            </div>
+          </div>
+
+          <button class="upload-area-btn" type="button" (click)="galleryInput.click()">
+            + הוסף תמונות לגלריה
+          </button>
+        </div>
+
+        <!-- ── SPLIT ── -->
+        <div class="editor-field split-editor" *ngIf="block.type === 'split'">
+
+          <div class="split-percent-row">
+            <label class="editor-label">חלוקה: {{ asSplit(block.data).leftPercent }}% / {{ 100 - asSplit(block.data).leftPercent }}%</label>
+            <input type="range" class="split-slider" min="20" max="80" step="5"
+              [value]="asSplit(block.data).leftPercent"
+              (input)="updateSplitField(block.id, 'leftPercent', +$any($event.target).value)">
+            <div class="split-presets">
+              <button class="split-preset-btn" *ngFor="let p of [30,40,50,60,70]"
+                [class.active]="asSplit(block.data).leftPercent === p"
+                (click)="updateSplitField(block.id, 'leftPercent', p)">{{ p }}/{{ 100-p }}</button>
+            </div>
+          </div>
+
+          <div class="split-sides">
+            <div class="split-side">
+              <label class="editor-label">צד ימין</label>
+              <select class="editor-select"
+                [value]="asSplit(block.data).leftBlockId || ''"
+                (change)="updateSplitField(block.id, 'leftBlockId', $any($event.target).value || null)">
+                <option value="">— בחרו בלוק —</option>
+                <option *ngFor="let b of labelableBlocks(draft.blocks, block.id)"
+                  [value]="b.id">{{ b.label }} ({{ blockLabels[b.type] }})</option>
+              </select>
+            </div>
+            <div class="split-side">
+              <label class="editor-label">צד שמאל</label>
+              <select class="editor-select"
+                [value]="asSplit(block.data).rightBlockId || ''"
+                (change)="updateSplitField(block.id, 'rightBlockId', $any($event.target).value || null)">
+                <option value="">— בחרו בלוק —</option>
+                <option *ngFor="let b of labelableBlocks(draft.blocks, block.id)"
+                  [value]="b.id">{{ b.label }} ({{ blockLabels[b.type] }})</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="split-hint">
+            <span>💡</span> תנו שם לבלוקים אחרים כדי שיופיעו כאן לבחירה.
+          </div>
+        </div>
+
+        <!-- ── CTA ── -->
+        <div class="editor-field cta-editor" *ngIf="block.type === 'cta'">
+          <div class="editor-row">
+            <label class="editor-label">כותרת</label>
+            <input class="editor-input" type="text"
+              [value]="asCta(block.data).title"
+              (input)="updateCtaField(block.id, 'title', $any($event.target).value)"
+              placeholder="כותרת הקריאה לפעולה">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">תיאור</label>
+            <input class="editor-input" type="text"
+              [value]="asCta(block.data).text"
+              (input)="updateCtaField(block.id, 'text', $any($event.target).value)"
+              placeholder="תיאור קצר">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">צבע רקע</label>
+            <div class="color-row">
+              <input type="color" class="color-picker"
+                [value]="asCta(block.data).backgroundColor"
+                (input)="updateCtaField(block.id, 'backgroundColor', $any($event.target).value)">
+              <span class="color-value">{{ asCta(block.data).backgroundColor }}</span>
+            </div>
+          </div>
+          <app-text-style-editor
+            [textStyle]="asCta(block.data).textStyle"
+            (textStyleChange)="updateCtaTextStyle(block.id, $event)"
+            [ctaConfig]="asCta(block.data).ctaConfig"
+            (ctaConfigChange)="updateCtaConfig(block.id, $event)"
+            [showPosition]="false"
+            [showCta]="true">
+          </app-text-style-editor>
+        </div>
+
+        <!-- ── CONTAINER ── -->
+        <div class="container-editor" *ngIf="block.type === 'container'">
+
+          <!-- Child blocks -->
+          <div class="editor-row">
+            <label class="editor-label">בלוקים בתוך הקונטיינר</label>
+            <div class="container-children">
+              <div class="container-child-row"
+                *ngFor="let b of sortedBlocks(draft.blocks)"
+                [class.container-child-row--self]="b.id === block.id"
+                [class.container-child-row--checked]="asContainer(block.data).childBlockIds.includes(b.id)"
+                (click)="b.id !== block.id && toggleContainerChild(block.id, b.id, draft.blocks)">
+                <span class="container-child-icon">{{ blockIcons[b.type] }}</span>
+                <span class="container-child-name">{{ b.label || blockLabels[b.type] }}</span>
+                <span class="container-child-check"
+                  [class.checked]="asContainer(block.data).childBlockIds.includes(b.id)">
+                  {{ asContainer(block.data).childBlockIds.includes(b.id) ? '✓' : '' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Direction -->
+          <div class="editor-row">
+            <label class="editor-label">כיוון</label>
+            <div class="tse-chips">
+              <button class="tse-chip"
+                [class.active]="(asContainer(block.data).direction || 'column') === 'column'"
+                (click)="updateContainerField(block.id, 'direction', 'column')">עמודות ↓</button>
+              <button class="tse-chip"
+                [class.active]="asContainer(block.data).direction === 'row'"
+                (click)="updateContainerField(block.id, 'direction', 'row')">שורה ←→</button>
+            </div>
+          </div>
+
+          <!-- Colors row -->
+          <div class="container-colors-row">
+            <div class="editor-row">
+              <label class="editor-label">רקע</label>
+              <app-color-picker
+                [value]="asContainer(block.data).backgroundColor"
+                (valueChange)="updateContainerField(block.id, 'backgroundColor', $event)"
+                [showNone]="true">
+              </app-color-picker>
+            </div>
+            <div class="editor-row">
+              <label class="editor-label">מסגרת</label>
+              <app-color-picker
+                [value]="asContainer(block.data).borderColor"
+                (valueChange)="updateContainerField(block.id, 'borderColor', $event)"
+                [showNone]="true">
+              </app-color-picker>
+            </div>
+          </div>
+
+          <!-- Background image -->
+          <div class="editor-row">
+            <label class="editor-label">תמונת רקע (רשות)</label>
+            <input #containerBgInput type="file" accept="image/*,image/gif" hidden
+              (change)="onContainerBgImageSelected(block.id, $event)">
+            <div class="bg-image-preview"
+              *ngIf="asContainer(block.data).backgroundImageUrl"
+              [style.backgroundImage]="'url(' + asContainer(block.data).backgroundImageUrl + ')'">
+              <button class="bg-image-remove" (click)="updateContainerField(block.id, 'backgroundImageUrl', '')">✕</button>
+            </div>
+            <button class="upload-area-btn" type="button" (click)="containerBgInput.click()">
+              {{ asContainer(block.data).backgroundImageUrl ? 'החלף תמונת רקע' : '+ תמונת רקע / GIF' }}
+            </button>
+          </div>
+
+          <!-- Sliders -->
+          <div class="container-sliders">
+            <div class="slider-row">
+              <span class="slider-label">ריפוד ({{ asContainer(block.data).padding }}px)</span>
+              <input type="range" class="split-slider" min="0" max="60" step="4"
+                [value]="asContainer(block.data).padding"
+                (input)="updateContainerField(block.id, 'padding', +$any($event.target).value)">
+            </div>
+            <div class="slider-row">
+              <span class="slider-label">מרווח בין בלוקים ({{ asContainer(block.data).gap }}px)</span>
+              <input type="range" class="split-slider" min="0" max="60" step="4"
+                [value]="asContainer(block.data).gap"
+                (input)="updateContainerField(block.id, 'gap', +$any($event.target).value)">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── STATS ── -->
+        <div class="editor-field stats-editor" *ngIf="block.type === 'stats'">
+
+          <!-- Mini horizontal preview -->
+          <div class="stats-mini-preview">
+            <span class="stats-mini-item"
+              *ngFor="let item of sortedStatItems(asStats(block.data))"
+              [class.stats-mini-item--hidden]="!item.visible">
+              {{ statIcons[item.key] }} {{ statLabels[item.key] }}
+            </span>
+          </div>
+
+          <!-- Style / Size / Colors -->
+          <div class="stats-config-grid">
+
+            <div class="editor-row">
+              <label class="editor-label">סגנון</label>
+              <div class="stats-style-toggle">
+                <button class="stats-style-btn"
+                  [class.active]="asStats(block.data).style === 'cards'"
+                  (click)="updateStatsField(block.id, 'style', 'cards')">
+                  <span class="stats-style-icon">▦</span> כרטיסים
+                </button>
+                <button class="stats-style-btn"
+                  [class.active]="asStats(block.data).style === 'inline'"
+                  (click)="updateStatsField(block.id, 'style', 'inline')">
+                  <span class="stats-style-icon">≡</span> אינליין
+                </button>
+              </div>
+            </div>
+
+            <div class="editor-row">
+              <label class="editor-label">גודל</label>
+              <div class="tse-chips">
+                <button class="tse-chip" [class.active]="asStats(block.data).size === 'sm'"
+                  (click)="updateStatsField(block.id, 'size', 'sm')">S</button>
+                <button class="tse-chip" [class.active]="asStats(block.data).size === 'md'"
+                  (click)="updateStatsField(block.id, 'size', 'md')">M</button>
+                <button class="tse-chip" [class.active]="asStats(block.data).size === 'lg'"
+                  (click)="updateStatsField(block.id, 'size', 'lg')">L</button>
+              </div>
+            </div>
+
+            <div class="editor-row">
+              <label class="editor-label">צבע אייקונים</label>
+              <app-color-picker
+                [value]="asStats(block.data).iconColor"
+                (valueChange)="updateStatsField(block.id, 'iconColor', $event)">
+              </app-color-picker>
+            </div>
+
+            <div class="editor-row">
+              <label class="editor-label">רקע</label>
+              <app-color-picker
+                [value]="asStats(block.data).backgroundColor"
+                (valueChange)="updateStatsField(block.id, 'backgroundColor', $event)"
+                [showNone]="true">
+              </app-color-picker>
+            </div>
+
+            <div class="editor-row">
+              <label class="editor-label">מסגרת</label>
+              <app-color-picker
+                [value]="asStats(block.data).borderColor"
+                (valueChange)="updateStatsField(block.id, 'borderColor', $event)"
+                [showNone]="true">
+              </app-color-picker>
+            </div>
+
+            <div class="editor-row">
+              <label class="editor-label">עיגול פינות ({{ asStats(block.data).borderRadius }}px)</label>
+              <input type="range" class="split-slider" min="0" max="24" step="2"
+                [value]="asStats(block.data).borderRadius"
+                (input)="updateStatsField(block.id, 'borderRadius', +$any($event.target).value)">
+            </div>
+
+          </div>
+
+          <div class="editor-divider"></div>
+          <label class="editor-label">סדר וחשיפה — הפס מוצג <strong>מימין לשמאל</strong></label>
+
+          <div class="stats-items-list">
+            <div class="stats-item-row" *ngFor="let item of sortedStatItems(asStats(block.data))">
+              <div class="stats-item-left">
+                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, -1)" title="הזז ימינה">←</button>
+                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, 1)"  title="הזז שמאלה">→</button>
+              </div>
+              <label class="stats-item-label">
+                <span class="stats-item-icon">{{ statIcons[item.key] }}</span>
+                <span class="stats-item-name">{{ statLabels[item.key] }}</span>
+              </label>
+              <input type="checkbox" class="stats-checkbox"
+                [checked]="item.visible"
+                (change)="toggleStatItem(block.id, item.key, $any($event.target).checked)">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── DONATION WIDGET ── -->
+        <div class="editor-field donation-editor" *ngIf="block.type === 'donation-widget'">
+
+          <div class="editor-row">
+            <label class="editor-label">כותרת</label>
+            <input class="editor-input" type="text"
+              [value]="asDonationWidget(block.data).title"
+              (input)="updateDonationWidgetField(block.id, 'title', $any($event.target).value)"
+              placeholder="תמכו עכשיו">
+          </div>
+
+          <div class="editor-row">
+            <label class="editor-label">תת-כותרת</label>
+            <input class="editor-input" type="text"
+              [value]="asDonationWidget(block.data).subtitle"
+              (input)="updateDonationWidgetField(block.id, 'subtitle', $any($event.target).value)"
+              placeholder="כל תרומה מקרבת אותנו ליעד">
+          </div>
+
+          <div class="editor-divider"></div>
+
+          <!-- CTA button -->
+          <div class="donation-cta-grid">
+            <div class="editor-row">
+              <label class="editor-label">טקסט כפתור</label>
+              <input class="editor-input" type="text"
+                [value]="asDonationWidget(block.data).ctaLabel"
+                (input)="updateDonationWidgetField(block.id, 'ctaLabel', $any($event.target).value)"
+                placeholder="תמכו עכשיו">
+            </div>
+            <div class="editor-row">
+              <label class="editor-label">צבע כפתור</label>
+              <app-color-picker
+                [value]="asDonationWidget(block.data).ctaColor"
+                (valueChange)="updateDonationWidgetField(block.id, 'ctaColor', $event)">
+              </app-color-picker>
+            </div>
+          </div>
+
+          <div class="editor-row">
+            <label class="editor-label">אייקון על הכפתור</label>
+            <div class="icon-row">
+              <button *ngFor="let ic of ['','❤️','🙏','⭐','🎁','✨','→']"
+                class="tse-icon-btn"
+                [class.active]="asDonationWidget(block.data).ctaIcon === ic"
+                (click)="updateDonationWidgetField(block.id, 'ctaIcon', ic)">
+                {{ ic === '' ? '—' : ic }}
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-divider"></div>
+
+          <!-- Payment logos -->
+          <div class="editor-row">
+            <label class="editor-label">אמצעי תשלום</label>
+            <div class="payment-logos-row">
+              <button *ngFor="let logo of ['visa','mastercard','amex','apple-pay','google-pay','bit']"
+                class="payment-logo-btn"
+                [class.active]="asDonationWidget(block.data).paymentLogos.includes(logo)"
+                (click)="togglePaymentLogo(block.id, logo)">
+                {{ logo }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          
+
+          <div class="system-note">
+            <span>💡</span> סכומי התרומה נלקחים מהגדרות בשלב "סוג קמפיין".
+          </div>
+        </div>
+
+        <!-- ── SPACING ── -->
+        <div class="editor-field spacing-editor">
+          <label class="editor-label">מרווחים חיצוניים</label>
+          <div class="spacing-row">
+            <span class="spacing-label">למעלה</span>
+            <input type="range" class="split-slider" min="0" max="80" step="4"
+              [value]="block.spacingTop"
+              (input)="updateSpacing(block.id, 'spacingTop', +$any($event.target).value)">
+            <span class="spacing-val">{{ block.spacingTop }}px</span>
+          </div>
+          <div class="spacing-row">
+            <span class="spacing-label">למטה</span>
+            <input type="range" class="split-slider" min="0" max="80" step="4"
+              [value]="block.spacingBottom"
+              (input)="updateSpacing(block.id, 'spacingBottom', +$any($event.target).value)">
+            <span class="spacing-val">{{ block.spacingBottom }}px</span>
+          </div>
+        </div>
+
+        <!-- SYSTEM -->
+        <div class="system-note" *ngIf="['rewards','sponsors','ambassadors','donors','updates'].includes(block.type)">
+          <span>🔧</span> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
+        </div>
+
+        <!-- ── SPACER / DIVIDER ── -->
+        <div class="editor-field" *ngIf="block.type === 'divider'">
+          <div class="spacing-row">
+            <span class="spacing-label">גובה מרווח ({{ asDivider(block.data).height || 24 }}px)</span>
+            <input type="range" class="split-slider" min="4" max="120" step="4"
+              [value]="asDivider(block.data).height || 24"
+              (input)="updateDividerField(block.id, 'height', +$any($event.target).value)">
+          </div>
+          <div class="donation-toggle-item" style="margin-top:10px"
+            (click)="updateDividerField(block.id, 'showLine', !asDivider(block.data).showLine)">
+            <span class="donation-toggle-text">— הצג קו מפריד</span>
+            <span class="toggle-pill" [class.on]="asDivider(block.data).showLine">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+          <div class="editor-row" *ngIf="asDivider(block.data).showLine" style="margin-top:8px">
+            <span class="spacing-label">צבע קו</span>
+            <app-color-picker
+              [value]="asDivider(block.data).lineColor || '#e2e8f0'"
+              (valueChange)="updateDividerField(block.id, 'lineColor', $event)">
+            </app-color-picker>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMPAIGN BACKGROUND -->
+  <div class="campaign-bg-section">
+    <div class="campaign-bg-header">
+      <span class="campaign-bg-title">🖼️ רקע הקמפיין</span>
+    </div>
+
+    <!-- Type selector -->
+    <div class="bg-type-toggle">
+      <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'none'"
+        (click)="updateLayoutBg('backgroundType', 'none', draft)">ללא</button>
+      <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'color'"
+        (click)="updateLayoutBg('backgroundType', 'color', draft)">צבע</button>
+      <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'image'"
+        (click)="updateLayoutBg('backgroundType', 'image', draft)">תמונה / GIF</button>
+    </div>
+
+    <!-- Color picker -->
+    <div class="editor-row" *ngIf="draft.layout.backgroundType === 'color'">
+      <label class="editor-label">צבע רקע</label>
+      <div class="color-row">
+        <input type="color" class="color-picker"
+          [value]="draft.layout.backgroundColor"
+          (input)="updateLayoutBg('backgroundColor', $any($event.target).value, draft)">
+        <span class="color-value">{{ draft.layout.backgroundColor }}</span>
+      </div>
+    </div>
+
+    <!-- Image upload -->
+    <ng-container *ngIf="draft.layout.backgroundType === 'image'">
+      <input #campaignBgInput type="file" accept="image/*,image/gif" hidden
+        (change)="onCampaignBgImageSelected($event, draft)">
+      <div class="bg-image-preview"
+        *ngIf="draft.layout.backgroundImageUrl"
+        [style.backgroundImage]="'url(' + draft.layout.backgroundImageUrl + ')'">
+        <button class="bg-image-remove" (click)="updateLayoutBg('backgroundImageUrl', '', draft)">✕</button>
+      </div>
+      <button class="upload-area-btn" type="button" (click)="campaignBgInput.click()">
+        {{ draft.layout.backgroundImageUrl ? 'החלף תמונת רקע' : '+ הוסף תמונת רקע / GIF' }}
+      </button>
+    </ng-container>
+  </div>
+
+  <!-- ADD BLOCK -->
+  <div class="add-block-area">
+    <button class="btn-add-block" (click)="showBlockPicker = !showBlockPicker" type="button">
+      {{ showBlockPicker ? '✕ סגור' : '+ הוסף בלוק' }}
+    </button>
+
+    <div class="block-picker" *ngIf="showBlockPicker">
+      <button class="picker-item"
+        *ngFor="let type of addableBlocks"
+        [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
+        [disabled]="isAlreadyAdded(type, draft.blocks)"
+        (click)="addBlock(type, draft.blocks)">
+        <span class="picker-icon">{{ blockIcons[type] }}</span>
+        <span class="picker-label">{{ blockLabels[type] }}</span>
+        <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+      </button>
+    </div>
+  </div>
+
+</div>

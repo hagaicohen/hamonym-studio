@@ -1,12 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule, Target } from 'lucide-angular';
 import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-goals-step',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, LucideAngularModule],
   templateUrl: './campaign-goals-step.component.html',
   styleUrl: './campaign-goals-step.component.css',
 })
@@ -15,6 +16,8 @@ export class CampaignGoalsStepComponent implements OnInit {
   protected campaignState = inject(CampaignStudioStateService);
 
   get draft() { return this.campaignState.draft; }
+
+  readonly Target = Target;
 
   targetAmountDisplay = '';
 

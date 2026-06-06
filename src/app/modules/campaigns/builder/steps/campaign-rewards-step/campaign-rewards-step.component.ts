@@ -1,77 +1,114 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, Gift, Settings2, ChevronDown, ChevronUp, Eye } from 'lucide-angular';
 import {
   CampaignStudioStateService,
   CampaignReward,
 } from '../../../../campaigns/services/campaign-studio-state.service';
+import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 
 @Component({
   selector: 'app-campaign-rewards-step',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent],
   templateUrl: './campaign-rewards-step.component.html',
   styleUrl: './campaign-rewards-step.component.css',
 })
 export class CampaignRewardsStepComponent {
+  protected state = inject(CampaignStudioStateService);
 
-  protected campaignState = inject(CampaignStudioStateService);
+  readonly Gift        = Gift;
+  readonly Settings2   = Settings2;
+  readonly ChevronDown = ChevronDown;
+  readonly ChevronUp   = ChevronUp;
+  readonly Eye         = Eye;
 
-  get draft() { return this.campaignState.draft; }
+  get draft() { return this.state.draft; }
 
-  showCreateRewardForm = false;
-  minimumAmountInput = '100';
+  showAdvanced = false;
 
-  newReward: CampaignReward = this.emptyReward();
+  // ── Form state ──
+  editingRewardId: string | null = null;
+  minimumAmountInput = '250';
+  stockInput = '';
+  reward: CampaignReward = this.empty();
 
-  sync(): void { this.campaignState.sync(); }
+  get isEditing(): boolean { return this.editingRewardId !== null; }
 
-  addReward(): void {
-    if (this.draft.rewards.length >= 20) return;
-    this.showCreateRewardForm = true;
+  sync(): void { this.state.sync(); }
+
+  // ── Form actions ──
+  save(): void {
+    if (!this.reward.title.trim()) return;
+    if (this.isEditing) {
+      const rewards = this.draft.rewards.map(r =>
+        r.id === this.editingRewardId ? { ...this.reward, id: this.editingRewardId! } : r
+      );
+      this.state.patch({ rewards });
+    } else {
+      const rewards = [...this.draft.rewards, { ...this.reward, id: Date.now().toString() }];
+      this.state.patch({ rewards });
+    }
+    this.reset();
   }
 
-  saveReward(): void {
-    if (!this.newReward.title.trim()) return;
-    const updated = [{ ...this.newReward, id: Date.now().toString() }, ...this.draft.rewards];
-    this.campaignState.patch({ rewards: updated });
-    this.resetReward();
+  clearForm(): void { this.reset(); }
+
+  editReward(r: CampaignReward): void {
+    this.editingRewardId = r.id;
+    this.reward = { ...r };
+    this.minimumAmountInput = r.minimumAmount ? r.minimumAmount.toLocaleString('he-IL') : '';
+    this.stockInput = r.stock !== null ? String(r.stock) : '';
+    setTimeout(() => document.querySelector('.reward-form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
-  cancelReward(): void {
-    this.resetReward();
+  deleteReward(id: string): void {
+    if (id === this.editingRewardId) this.reset();
+    this.state.patch({ rewards: this.draft.rewards.filter(r => r.id !== id) });
   }
 
-  deleteReward(rewardId: string): void {
-    this.campaignState.patch({ rewards: this.draft.rewards.filter(r => r.id !== rewardId) });
+  // ── Amount input ──
+  onAmountInput(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
+    const n = Number(raw || 0);
+    this.reward.minimumAmount = n;
+    this.minimumAmountInput = n ? n.toLocaleString('he-IL') : '';
   }
 
-  onMinimumAmountInput(event: Event): void {
-    const digits = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
-    const amount = Number(digits || 0);
-    this.newReward.minimumAmount = amount;
-    this.minimumAmountInput = amount ? amount.toLocaleString('en-US') : '';
+  onStockInput(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
+    this.stockInput = raw;
+    this.reward.stock = raw ? Number(raw) : null;
   }
 
+  // ── Image upload ──
   onImageSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { this.newReward.imageUrl = reader.result as string; };
+    reader.onload = () => { this.reward.imageUrl = reader.result as string; };
     reader.readAsDataURL(file);
+    (event.target as HTMLInputElement).value = '';
   }
 
-  removeImage(): void {
-    this.newReward.imageUrl = null;
+  removeImage(): void { this.reward.imageUrl = null; }
+
+  // ── Theme ──
+  patchTheme(partial: Partial<typeof this.draft.layout.theme>): void {
+    this.state.patch({
+      layout: { ...this.draft.layout, theme: { ...this.draft.layout.theme, ...partial } },
+    });
   }
 
-  private emptyReward(): CampaignReward {
-    return { id: '', title: '', description: '', minimumAmount: 100, stock: null, imageUrl: null };
+  private empty(): CampaignReward {
+    return { id: '', title: '', description: '', minimumAmount: 250, stock: null, imageUrl: null, featured: false };
   }
 
-  private resetReward(): void {
-    this.showCreateRewardForm = false;
-    this.minimumAmountInput = '100';
-    this.newReward = this.emptyReward();
+  private reset(): void {
+    this.editingRewardId = null;
+    this.minimumAmountInput = '250';
+    this.stockInput = '';
+    this.reward = this.empty();
   }
 }

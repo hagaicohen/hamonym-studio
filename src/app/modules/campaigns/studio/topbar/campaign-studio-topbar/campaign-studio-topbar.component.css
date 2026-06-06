@@ -145,12 +145,58 @@
   color: #15803d;
 }
 
-.device-button lucide-icon,
-.exit-button lucide-icon {
-  width: 16px;
+.device-divider {
+  width: 1px; height: 20px;
+  background: #e5e7eb;
+  margin: 0 2px;
+}
 
+.fullscreen-btn { color: #6b7280; }
+.fullscreen-btn:hover { background: #ede9fe; color: #7c3aed; }
+
+.back-button {
+  display: flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+  background: white; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #374151;
+  transition: all 0.15s;
+}
+.back-button:hover { background: #f9fafb; border-color: #c4b5fd; color: #7c3aed; }
+.back-button lucide-icon { width: 15px; height: 15px; }
+
+.studio-topbar--fullscreen {
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+}
+.studio-topbar--fullscreen .back-button {
+  background: #1e293b; border-color: #334155; color: #e2e8f0;
+}
+.studio-topbar--fullscreen .back-button:hover {
+  background: #334155; border-color: #7c3aed; color: #c4b5fd;
+}
+.studio-topbar--fullscreen .device-switcher {
+  background: #1e293b;
+}
+.studio-topbar--fullscreen .device-button { color: #94a3b8; }
+.studio-topbar--fullscreen .device-button.active { background: #7c3aed; color: #fff; }
+.studio-topbar--fullscreen .device-divider { background: #334155; }
+.studio-topbar--fullscreen .save-button {
+  background: #1e293b; border-color: #334155; color: #e2e8f0;
+}
+.studio-topbar--fullscreen .save-button:hover { background: #334155; }
+.studio-topbar--fullscreen .save-button.saved {
+  background: #14532d; border-color: #16a34a; color: #bbf7d0;
+}
+
+
+.exit-button lucide-icon,
+.back-button lucide-icon {
+  width: 16px;
   height: 16px;
 }
+
+
 
 @media (max-width: 991px) {
   .device-switcher {

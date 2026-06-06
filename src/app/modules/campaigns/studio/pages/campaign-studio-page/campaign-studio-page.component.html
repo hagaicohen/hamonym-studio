@@ -1,13 +1,22 @@
-<div class="studio-page">
+<ng-container *ngIf="ui.state$ | async as s">
+<div class="studio-page"
+  [class.studio-page--mobile]="s.device === 'mobile'"
+  [class.studio-page--fullscreen]="s.fullscreen">
+
   <app-campaign-studio-topbar />
 
   <div class="studio-workspace">
-    <div class="editor-card">
+
+    <div class="editor-card" [class.editor-card--hidden]="s.fullscreen">
       <app-campaign-editor />
     </div>
 
     <div class="preview-card">
-      <app-campaign-preview />
+      <div class="preview-inner" [class.preview-inner--mobile]="s.device === 'mobile'">
+        <app-campaign-preview />
+      </div>
     </div>
+
   </div>
 </div>
+</ng-container>

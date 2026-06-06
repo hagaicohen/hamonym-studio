@@ -1,1 +1,372 @@
-<div class="campaign-preview">Campaign Preview</div>
+<ng-container *ngIf="{ draft: draft$ | async, mobile: (isMobile$ | async) === 'mobile' } as vm">
+<ng-container *ngIf="vm.draft as draft">
+
+<div class="campaign-page"
+  [class.campaign-page--mobile]="vm.mobile"
+  [style]="'background:' + pageBackground(draft)"
+  [style.--hm-primary]="draft.layout.theme.primaryColor"
+  [style.--hm-secondary]="draft.layout.theme.secondaryColor"
+  [style.--hm-accent]="draft.layout.theme.accentColor"
+  [style.--hm-logo-bg]="draft.layout.theme.logoBg"
+  [style.--hm-top-strip-bg]="draft.layout.theme.topStripBg"
+  [style.--hm-rewards-bg]="draft.layout.theme.rewardsBg"
+  [style.--hm-reward-border]="draft.layout.theme.rewardCardBorder"
+  [style.--hm-reward-border-active]="draft.layout.theme.rewardCardBorderActive"
+  [style.--line]="draft.layout.theme.lineColor">
+
+  <!-- ── EMPTY STATE ── -->
+  <div class="empty-state" *ngIf="isEmpty(draft)">
+    <div class="empty-icon">👁️</div>
+    <div class="empty-title">תצוגה מקדימה חיה</div>
+    <div class="empty-desc">הזינו כותרת ותמונה<br>הדף יופיע כאן בזמן אמת</div>
+  </div>
+
+  <ng-container *ngIf="!isEmpty(draft)">
+
+    <!-- ══ HAMONYM SITE HEADER ══ -->
+    <div class="site-header">
+      <img src="logo-hamonym.svg" class="site-logo-img" alt="המונים">
+      <button class="site-login-btn"
+        [style.color]="primaryColor(draft)"
+        [style.borderColor]="primaryColor(draft)">
+        כניסה / אזור אישי
+      </button>
+    </div>
+
+    <!-- ══ CAMPAIGN NAV ══ -->
+    <nav class="campaign-nav" [class.campaign-nav--mobile]="vm.mobile">
+
+      <!-- Desktop: links + donate -->
+      <ng-container *ngIf="!vm.mobile">
+        <div class="nav-links">
+          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story')">על המיזם</a>
+          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards')">תשורות</a>
+          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates')">עדכונים</a>
+          <a class="nav-link" [style.color]="primaryColor(draft)">צור קשר</a>
+        </div>
+        <button class="nav-donate-btn" [style.background]="primaryColor(draft)">
+          לתמיכה מאובטחת
+        </button>
+      </ng-container>
+
+      <!-- Mobile: donate + hamburger -->
+      <ng-container *ngIf="vm.mobile">
+        <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)">
+          לתמיכה מאובטחת
+        </button>
+        <button class="nav-hamburger" (click)="navOpen = !navOpen"
+          [class.nav-hamburger--open]="navOpen">
+          <span></span><span></span><span></span>
+        </button>
+      </ng-container>
+
+    </nav>
+
+    <!-- Mobile nav drawer -->
+    <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
+      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">על המיזם</a>
+      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
+      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
+      <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
+    </div>
+
+    <!-- ══ HERO ══ -->
+    <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile">
+
+      <!-- Background image layer (separate div to avoid Angular [style] parsing issues) -->
+      <div class="hm-hero-bg-layer" [style.backgroundImage]="heroBg(draft)"></div>
+
+      <div class="hm-hero-container" [class.hm-hero-container--mobile]="vm.mobile">
+
+        <!-- Title, subtitle, play button -->
+        <div class="hm-hero-copy">
+          <h1 class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+            {{ draft.title }}
+          </h1>
+          <p class="hm-hero-subtitle" *ngIf="draft.shortDescription" [style.color]="draft.heroTextStyle.color">
+            {{ draft.shortDescription }}
+          </p>
+          <button class="hm-play-trigger" *ngIf="draft.heroType === 'video' && draft.videoUrl" type="button">
+            <span class="hm-play-icon"></span>
+          </button>
+        </div>
+
+        <!-- Org logo circle -->
+        <div class="hm-hero-org-logo">
+          <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
+          <span *ngIf="!entityLogoUrl" class="hero-logo-emoji">🏢</span>
+        </div>
+
+      </div>
+
+      <!-- Meta chips — always visible at the absolute bottom center -->
+      <div class="hm-hero-meta">
+        <span class="hm-meta-badge">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          {{ draft.endDate ? 'פעיל עד ' + formatDate(draft.endDate) : 'תאריך סיום' }}
+        </span>
+        <span class="hm-meta-badge">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          {{ draft.category || 'קטגוריה' }}
+        </span>
+        <span class="hm-meta-badge">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          {{ draft.managerName ? 'מנהל: ' + draft.managerName : 'מנהל' }}
+        </span>
+      </div>
+
+    </section>
+
+    <!-- ══ CONTENT BLOCKS ══ -->
+    <div class="page-blocks">
+      <ng-container *ngFor="let block of contentBlocks(draft)">
+        <div class="block-wrap"
+          [id]="blockSectionId(block)"
+          [style.marginTop.px]="block.spacingTop"
+          [style.marginBottom.px]="block.spacingBottom">
+          <!-- Section heading from block label -->
+          <div class="section-heading" *ngIf="block.label && block.type !== 'divider'"
+            [style.color]="primaryColor(draft)">
+            {{ block.label }}
+          </div>
+          <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+        </div>
+      </ng-container>
+    </div>
+
+  </ng-container>
+</div>
+
+</ng-container>
+</ng-container>
+
+<!-- ══ BLOCK TEMPLATE ══ -->
+<ng-template #blockTpl let-block="block" let-draft="draft">
+
+  <!-- RICH TEXT -->
+  <div class="block-rich-text" *ngIf="block.type === 'rich-text'"
+    [style.lineHeight]="asRichText(block.data).lineHeight || 1.6"
+    [innerHTML]="safeHtml(asRichText(block.data).content)">
+  </div>
+
+  <!-- IMAGE -->
+  <div class="block-image" *ngIf="block.type === 'image' && asImage(block.data).url">
+    <img [src]="asImage(block.data).url" alt="{{ asImage(block.data).caption || '' }}">
+    <p class="block-caption" *ngIf="asImage(block.data).caption">{{ asImage(block.data).caption }}</p>
+  </div>
+
+  <!-- VIDEO -->
+  <div class="block-video" *ngIf="block.type === 'video'">
+    <iframe *ngIf="getYoutubeEmbedUrl(asVideo(block.data).url) as embedUrl"
+      [src]="embedUrl" frameborder="0" allowfullscreen class="block-video-iframe"></iframe>
+  </div>
+
+  <!-- GALLERY -->
+  <div class="gallery-strip" *ngIf="block.type === 'gallery'">
+    <div class="gallery-item" *ngFor="let item of asGallery(block.data).items">
+      <img [src]="item.url" [alt]="item.caption || ''">
+    </div>
+  </div>
+
+  <!-- SPLIT -->
+  <div class="block-split" *ngIf="block.type === 'split'"
+    [style.gridTemplateColumns]="asSplit(block.data).leftPercent + '% ' + (100 - asSplit(block.data).leftPercent) + '%'">
+    <div class="split-side">
+      <ng-container *ngIf="blockById(asSplit(block.data).leftBlockId ?? '', draft) as lb">
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: lb, draft}"></ng-container>
+      </ng-container>
+    </div>
+    <div class="split-side">
+      <ng-container *ngIf="blockById(asSplit(block.data).rightBlockId ?? '', draft) as rb">
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: rb, draft}"></ng-container>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- CONTAINER -->
+  <div class="block-container" *ngIf="block.type === 'container'"
+    [class.block-container--row]="asContainer(block.data).direction === 'row'"
+    [style.background]="asContainer(block.data).backgroundColor || 'transparent'"
+    [style.border]="asContainer(block.data).borderColor ? '1.5px solid ' + asContainer(block.data).borderColor : 'none'"
+    [style.padding.px]="asContainer(block.data).padding"
+    [style.gap.px]="asContainer(block.data).gap"
+    [style.backgroundImage]="asContainer(block.data).backgroundImageUrl ? 'url(' + asContainer(block.data).backgroundImageUrl + ')' : ''">
+    <div class="container-child" *ngFor="let child of childBlocks(block, draft)">
+      <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft}"></ng-container>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="block-cta" *ngIf="block.type === 'cta'"
+    [style.background]="asCta(block.data).backgroundColor"
+    [style.textAlign]="asCta(block.data).textStyle.align">
+    <h2 class="cta-title" [style.color]="asCta(block.data).textStyle.color">{{ asCta(block.data).title }}</h2>
+    <p class="cta-text" [style.color]="asCta(block.data).textStyle.color" *ngIf="asCta(block.data).text">{{ asCta(block.data).text }}</p>
+    <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"
+      [style.justifyContent]="ctaAlignStyle(asCta(block.data).ctaConfig.align)">
+      <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color">
+        <span *ngIf="asCta(block.data).ctaConfig.icon">{{ asCta(block.data).ctaConfig.icon }}</span>
+        {{ asCta(block.data).ctaConfig.label }}
+      </button>
+    </div>
+  </div>
+
+  <!-- SPACER / DIVIDER -->
+  <div *ngIf="block.type === 'divider'"
+    [style.height.px]="asDivider(block.data).height || 24"
+    [style.borderTop]="asDivider(block.data).showLine ? '1px solid ' + (asDivider(block.data).lineColor || '#e2e8f0') : 'none'"
+    [style.margin]="asDivider(block.data).showLine ? '0 20px' : '0'">
+  </div>
+
+  <!-- DONATION WIDGET -->
+  <div class="hm-donate" *ngIf="block.type === 'donation-widget'">
+    <h2>בחרו סכום לתמיכה</h2>
+    <div class="hm-amounts">
+      <button *ngFor="let a of draft.suggestedAmounts | slice:0:5; let i = index"
+        class="hm-amount-preset" type="button"
+        [class.is-selected]="i === middleAmountIndex(draft.suggestedAmounts)">
+        ₪{{ $any(a).toLocaleString('he-IL') }}
+      </button>
+    </div>
+    <div class="hm-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
+      <span class="hm-currency-symbol">₪</span>
+      <input class="hm-custom-amount" type="number" min="1" placeholder="סכום אחר" readonly>
+    </div>
+    <button class="hm-donate-btn" type="button">
+      <span class="hm-lock-icon">🔒</span>
+      <span class="hm-btn-text">לתמיכה מאובטחת</span>
+    </button>
+    <div class="hm-payments">
+      <span class="hm-payment-badge visa">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+        <span>אשראי</span>
+      </span>
+      <span class="hm-payment-badge applepay">
+        <svg viewBox="0 0 24 24"><path d="M16.6 3.2c-.9.1-1.9.7-2.5 1.5-.5.7-.9 1.6-.8 2.5 1 0 2-.6 2.6-1.4.6-.8.9-1.7.7-2.6z"/><path d="M19 16.4c-.4.9-.7 1.3-1.3 2.1-.8 1.2-1.9 2.6-3.3 2.6-1.2 0-1.5-.8-3.1-.8s-2 .8-3.1.8c-1.4.1-2.5-1.5-3.3-2.7-1.8-2.6-2-5.6-.9-7.2.8-1.2 2-1.8 3.2-1.8 1.2 0 2 .8 3.1.8 1 0 1.6-.8 3.1-.8 1.1 0 2.3.6 3.1 1.7-2.7 1.5-2.3 5.3.5 6.3z"/></svg>
+        <span>Apple Pay</span>
+      </span>
+      <span class="hm-payment-badge bit"><strong>bit</strong></span>
+    </div>
+  </div>
+
+  <!-- STATS BLOCK -->
+  <div class="hm-stats" *ngIf="block.type === 'stats'">
+    <div class="hm-stats-top">
+      <div class="hm-ring-wrapper">
+        <svg class="hm-ring-svg" viewBox="0 0 36 36">
+          <circle class="hm-ring-bg"   cx="18" cy="18" r="15" stroke-width="5"/>
+          <circle class="hm-ring-fill" cx="18" cy="18" r="15" stroke-width="5"
+            stroke-dasharray="0 94.25" stroke-linecap="round"/>
+        </svg>
+        <div class="hm-ring-text"><strong>0%</strong><span>מהיעד</span></div>
+      </div>
+      <div class="hm-raised-info">
+        <span class="hm-raised-title">גויס עד כה</span>
+        <span class="hm-raised-amount">₪0</span>
+        <span class="hm-raised-goal">מתוך {{ formatAmount(draft.targetAmount) }}</span>
+      </div>
+    </div>
+    <div class="hm-stat-grid">
+      <div class="hm-stat-box">
+        <span class="hm-stat-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </span>
+        <strong>{{ formatAmount(draft.targetAmount) }}</strong>
+        <span>נותר ליעד</span>
+      </div>
+      <div class="hm-stat-box">
+        <span class="hm-stat-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </span>
+        <strong>{{ daysRemaining(draft) }}</strong>
+        <span>ימים נותרו</span>
+      </div>
+      <div class="hm-stat-box">
+        <span class="hm-stat-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <strong>0</strong><span>שגרירים</span>
+      </div>
+      <div class="hm-stat-box">
+        <span class="hm-stat-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </span>
+        <strong>0</strong><span>תורמים</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REWARDS ══ -->
+  <section class="hm-rewards" *ngIf="block.type === 'rewards'" id="section-rewards">
+    <h2>בחרו את התשורה המתאימה לכם</h2>
+
+    <ng-container *ngIf="draft.rewards && draft.rewards.length > 0; else rewardsEmpty">
+      <div class="hm-slider-outer">
+        <button class="hm-slider-arrow hm-slider-arrow--prev" (click)="scrollSlider(slider, 'prev')">‹</button>
+        <div class="hm-reward-slider" #slider>
+          <div class="hm-slider-track">
+            <article *ngFor="let reward of draft.rewards"
+              class="hm-reward-card"
+              [class.is-featured]="reward.featured === true">
+              <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+              <div class="hm-reward-card-top">
+                <div class="hm-reward-icon-wrap">
+                  <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title" class="hm-reward-img-small">
+                  <span *ngIf="!reward.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+                </div>
+                <div class="hm-reward-price">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
+              </div>
+              <div class="hm-reward-body">
+                <h3>{{ reward.title }}</h3>
+                <p [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description || ' ' }}</p>
+                <button class="hm-reward-more-btn"
+                  *ngIf="reward.description && reward.description.length > 120"
+                  (click)="toggleExpand(reward.id)">
+                  {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
+                </button>
+                <button class="hm-reward-select-btn" type="button">בחירה בתשורה</button>
+              </div>
+            </article>
+          </div>
+        </div>
+        <button class="hm-slider-arrow hm-slider-arrow--next" (click)="scrollSlider(slider, 'next')">›</button>
+      </div>
+    </ng-container>
+
+    <ng-template #rewardsEmpty>
+      <div class="hm-rewards-empty">
+        <span class="hm-rewards-empty-icon">🎁</span>
+        <p>התשורות יוצגו כאן לאחר הגדרתן בשלב התשורות</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- SYSTEM BLOCKS (other) -->
+  <div class="block-system" *ngIf="['sponsors','ambassadors','donors','updates'].includes(block.type)">
+    <div class="system-block-placeholder">
+      {{ block.type === 'donors' ? 'רשימת התורמים תוצג כאן' :
+         block.type === 'updates' ? 'עדכוני הקמפיין יוצגו כאן' :
+         'יוצג לאחר הגדרה' }}
+    </div>
+  </div>
+
+</ng-template>

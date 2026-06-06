@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, Heart } from 'lucide-angular';
 import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-donations-step',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-donations-step.component.html',
   styleUrls: ['./campaign-donations-step.component.css'],
 })
@@ -15,6 +16,8 @@ export class CampaignDonationsStepComponent {
   protected campaignState = inject(CampaignStudioStateService);
 
   get draft() { return this.campaignState.draft; }
+
+  readonly Heart = Heart;
 
   newSuggestedAmount = '';
   newMonthlyAmount = '';

@@ -1,0 +1,105 @@
+<div class="tse">
+
+  <!-- TOGGLE ROW -->
+  <div class="tse-toggle-row" (click)="expanded = !expanded">
+    <div class="tse-toggle-left">
+      <span class="tse-advanced-label">עיצוב מתקדם</span>
+      <span class="tse-summary" *ngIf="!expanded">{{ summary }}</span>
+    </div>
+    <label class="tse-switch" (click)="$event.stopPropagation()">
+      <input type="checkbox" [checked]="expanded" (change)="expanded = !expanded">
+      <span class="tse-switch-slider"></span>
+    </label>
+  </div>
+
+  <!-- EXPANDED CONTENT -->
+  <div class="tse-body" *ngIf="expanded">
+
+    <!-- POSITION -->
+    <div class="tse-row" *ngIf="showPosition">
+      <span class="tse-label">מיקום טקסט</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of positionOptions" class="tse-chip"
+          [class.active]="textStyle.position === opt.value"
+          (click)="patchStyle({ position: opt.value })">{{ opt.label }}</button>
+      </div>
+    </div>
+
+    <!-- ALIGN -->
+    <div class="tse-row">
+      <span class="tse-label">יישור טקסט</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of alignOptions" class="tse-chip"
+          [class.active]="textStyle.align === opt.value"
+          (click)="patchStyle({ align: opt.value })">{{ opt.label }}</button>
+      </div>
+    </div>
+
+    <!-- FONT SIZE -->
+    <div class="tse-row">
+      <span class="tse-label">גודל פונט</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
+          [class.active]="textStyle.fontSize === opt.value"
+          (click)="patchStyle({ fontSize: opt.value })">{{ opt.label }}</button>
+      </div>
+    </div>
+
+    <!-- TEXT COLOR -->
+    <div class="tse-row">
+      <span class="tse-label">צבע טקסט</span>
+      <app-color-picker [value]="textStyle.color" (valueChange)="patchStyle({ color: $event })"></app-color-picker>
+    </div>
+
+    <!-- CTA -->
+    <ng-container *ngIf="showCta && ctaConfig">
+      <div class="tse-divider"></div>
+
+      <div class="tse-row tse-row--toggle">
+        <span class="tse-label">כפתור CTA</span>
+        <label class="tse-switch">
+          <input type="checkbox" [checked]="ctaConfig.visible"
+            (change)="patchCta({ visible: $any($event.target).checked })">
+          <span class="tse-switch-slider"></span>
+        </label>
+      </div>
+
+      <ng-container *ngIf="ctaConfig.visible">
+
+        <div class="tse-row">
+          <span class="tse-label">טקסט</span>
+          <input class="tse-input" type="text" [value]="ctaConfig.label"
+            (input)="patchCta({ label: $any($event.target).value })"
+            placeholder="תרמו עכשיו">
+        </div>
+
+        <div class="tse-row">
+          <span class="tse-label">אייקון</span>
+          <div class="tse-icons">
+            <button *ngFor="let ic of presetIcons" class="tse-icon-btn"
+              [class.active]="ctaConfig.icon === ic"
+              (click)="patchCta({ icon: ic })">
+              {{ ic === '' ? '—' : ic }}
+            </button>
+          </div>
+        </div>
+
+        <div class="tse-row">
+          <span class="tse-label">יישור כפתור</span>
+          <div class="tse-chips">
+            <button *ngFor="let opt of alignOptions" class="tse-chip"
+              [class.active]="ctaConfig.align === opt.value"
+              (click)="patchCta({ align: opt.value })">{{ opt.label }}</button>
+          </div>
+        </div>
+
+        <div class="tse-row">
+          <span class="tse-label">צבע כפתור</span>
+          <app-color-picker [value]="ctaConfig.color" (valueChange)="patchCta({ color: $event })"></app-color-picker>
+        </div>
+
+      </ng-container>
+    </ng-container>
+
+  </div>
+</div>

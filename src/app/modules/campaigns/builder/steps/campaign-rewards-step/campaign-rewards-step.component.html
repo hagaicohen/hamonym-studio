@@ -1,281 +1,244 @@
-<div class="campaign-rewards-step">
+<div class="rewards-step">
 
-  <div class="step-header">
-
-    <h1 class="step-title">
-      תשורות
-    </h1>
-
-    <p class="step-description">
-      הוסף תמריצים לתורמים (אופציונלי)
-    </p>
-
+  <!-- ── HEADER ── -->
+  <div class="rs-header">
+    <div class="rs-header-text">
+      <h2 class="rs-title">{{ isEditing ? 'עריכת תשורה' : 'הגדרת תשורה חדשה' }}</h2>
+      <p class="rs-subtitle">צור תשורה שתופיע לתורמים בקמפיין שלך</p>
+    </div>
+    <div class="rs-header-icon">
+      <lucide-angular [img]="Gift" [size]="22" class="rs-gift-icon"></lucide-angular>
+    </div>
   </div>
 
-  <div class="rewards-toggle-card">
-
-    <div>
-
-      <div class="rewards-toggle-title">
-        הפעל תשורות
-      </div>
-
-      <div class="rewards-toggle-description">
-        תורמים יוכלו לבחור תשורה בהתאם לסכום התרומה
-      </div>
-
-    </div>
-
-    <label class="switch">
-
-      <input
-        type="checkbox"
-        [(ngModel)]="draft.rewardsEnabled"
-        (ngModelChange)="sync()">
-
-      <span class="slider"></span>
-
+  <!-- ── ENABLE TOGGLE ── -->
+  <div class="rs-enable-row">
+    <div class="rs-enable-text">הפעל תשורות לקמפיין</div>
+    <label class="rs-switch">
+      <input type="checkbox" [(ngModel)]="draft.rewardsEnabled" (ngModelChange)="sync()">
+      <span class="rs-slider"></span>
     </label>
-
   </div>
 
   <ng-container *ngIf="draft.rewardsEnabled">
 
-    <div
-      class="reward-form-card"
-      *ngIf="showCreateRewardForm">
+    <!-- ── BUILDER: Form + Preview ── -->
+    <div class="rs-builder">
 
-      <div class="form-row">
+      <!-- FORM (right, 60%) -->
+      <div class="reward-form-panel">
 
-        <div class="field">
-
-          <label>
-            כותרת התשורה *
-          </label>
-
-          <input
-            type="text"
-            [(ngModel)]="newReward.title"
-            placeholder="למשל: ספר חתום">
-
+        <!-- כותרת -->
+        <div class="rf-field">
+          <div class="rf-label-row">
+            <label class="rf-label">כותרת התשורה <span class="rf-req">*</span></label>
+            <span class="rf-icon">🎁</span>
+          </div>
+          <input class="rf-input" type="text" [(ngModel)]="reward.title"
+            placeholder="ספר חתום על ידי המחבר">
         </div>
 
-        <div class="field amount-field">
-
-          <label>
-            תרומה מינימלית
-          </label>
-
-          <div class="currency-input">
-
-            <span class="currency-symbol">
-              ₪
-            </span>
-
-            <input
-              type="text"
+        <!-- סכום מינימלי -->
+        <div class="rf-field">
+          <div class="rf-label-row">
+            <label class="rf-label">סכום מינימלי (₪) <span class="rf-req">*</span></label>
+            <span class="rf-icon">💳</span>
+          </div>
+          <div class="rf-currency-wrap">
+            <span class="rf-currency-symbol">₪</span>
+            <input class="rf-input rf-input--currency" type="text"
               [value]="minimumAmountInput"
-              (input)="onMinimumAmountInput($event)"
-              placeholder="100">
-
+              (input)="onAmountInput($event)"
+              placeholder="250">
           </div>
-
         </div>
 
-      </div>
+        <!-- תיאור -->
+        <div class="rf-field">
+          <div class="rf-label-row">
+            <label class="rf-label">תיאור התשורה <span class="rf-req">*</span></label>
+            <span class="rf-icon">≡</span>
+          </div>
+          <textarea class="rf-input rf-textarea" [(ngModel)]="reward.description"
+            placeholder="ספר עם הקדשה אישית ותעודת הוקרה לתורם. משלוח חינם עד הבית.">
+          </textarea>
+        </div>
 
-      <div class="field">
+        <!-- כמות -->
+        <div class="rf-field">
+          <div class="rf-label-row">
+            <label class="rf-label">כמות (אופציונלי)</label>
+            <span class="rf-icon">👥</span>
+          </div>
+          <div class="rf-select-wrap">
+            <select class="rf-input rf-select"
+              [value]="reward.stock === null ? 'unlimited' : 'limited'"
+              (change)="reward.stock = $any($event.target).value === 'unlimited' ? null : (reward.stock || 10)">
+              <option value="unlimited">ללא הגבלה</option>
+              <option value="limited">הגבלת כמות</option>
+            </select>
+          </div>
+          <input *ngIf="reward.stock !== null"
+            class="rf-input rf-input--stock" type="text"
+            [value]="stockInput"
+            (input)="onStockInput($event)"
+            placeholder="כמות יחידות">
+        </div>
 
-        <label>
-          תיאור
-        </label>
+        <!-- תמונה -->
+        <div class="rf-field">
+          <div class="rf-label-row">
+            <label class="rf-label">תמונת התשורה</label>
+          </div>
 
-        <textarea
-          [(ngModel)]="newReward.description"
-          placeholder="ספר על התשורה">
-        </textarea>
+          <input id="reward-img-input" type="file" accept="image/*"
+            style="display:none" (change)="onImageSelected($event)">
 
-      </div>
+          <div class="rf-upload-area" *ngIf="!reward.imageUrl">
+            <div class="rf-upload-icon">☁️</div>
+            <p class="rf-upload-title">גרור תמונה לכאן או
+              <label for="reward-img-input" class="rf-upload-link">לחץ להעלאה</label>
+            </p>
+            <p class="rf-upload-hint">מומלץ להעלות תמונה ברזולוציה של 1200×800 פיקסלים (יחס 3:2)</p>
+            <label for="reward-img-input" class="rf-library-btn">
+              🖼 בחר מהספריה
+            </label>
+          </div>
 
-      <div class="form-row">
+          <div class="rf-img-preview" *ngIf="reward.imageUrl">
+            <img [src]="reward.imageUrl" alt="תמונת תשורה" class="rf-img-thumb">
+            <div class="rf-img-actions">
+              <label for="reward-img-input" class="rf-img-btn">החלף</label>
+              <button type="button" class="rf-img-btn rf-img-btn--remove" (click)="removeImage()">הסר</button>
+            </div>
+          </div>
+        </div>
 
-        <div class="field">
-
-          <label>
-            תמונת תשורה
+        <!-- מומלץ toggle -->
+        <div class="rf-featured-row">
+          <div class="rf-featured-text">
+            <span class="rf-featured-star">⭐</span>
+            <div>
+              <div class="rf-featured-title">תשורה מומלצת</div>
+              <div class="rf-featured-desc">תשורות מומלצות יופיעו עם כוכב בולט למבקרים</div>
+            </div>
+          </div>
+          <label class="rs-switch">
+            <input type="checkbox" [(ngModel)]="reward.featured">
+            <span class="rs-slider rs-slider--purple"></span>
           </label>
-
-          <div class="image-upload-box">
-
-            <input
-              #rewardImageInput
-              type="file"
-              accept="image/*"
-              hidden
-              (change)="onImageSelected($event)">
-
-            <ng-container *ngIf="!newReward.imageUrl">
-
-              <div class="upload-placeholder-icon">
-                🖼️
-              </div>
-
-              <div class="upload-title">
-                העלה תמונה לתשורה
-              </div>
-
-              <div class="upload-description">
-                JPG / PNG / WEBP
-              </div>
-
-              <button
-                type="button"
-                class="upload-button"
-                (click)="rewardImageInput.click()">
-
-                בחר תמונה
-
-              </button>
-
-            </ng-container>
-
-            <ng-container *ngIf="newReward.imageUrl">
-
-              <img
-                [src]="newReward.imageUrl"
-                class="upload-preview"
-                alt="preview">
-
-              <div class="upload-actions">
-
-                <button
-                  type="button"
-                  class="change-image-button"
-                  (click)="rewardImageInput.click()">
-
-                  החלף
-
-                </button>
-
-                <button
-                  type="button"
-                  class="remove-image-button"
-                  (click)="removeImage()">
-
-                  הסר
-
-                </button>
-
-              </div>
-
-            </ng-container>
-
-          </div>
-
         </div>
 
-        <div class="field">
-
-          <label>
-            כמות (אופציונלי)
-          </label>
-
-          <input
-            type="number"
-            [(ngModel)]="newReward.stock"
-            placeholder="ללא הגבלה">
-
-        </div>
-
-      </div>
-
-      <div class="form-actions">
-
-        <button
-          class="primary-button"
-          (click)="saveReward()">
-
-          הוסף
-
-        </button>
-
-        <button
-          class="secondary-button"
-          (click)="cancelReward()">
-
-          ביטול
-
-        </button>
-
-      </div>
-
-    </div>
-
-    <div
-      class="reward-card"
-      *ngFor="let reward of draft.rewards">
-
-      <div class="reward-content">
-
-        <div class="reward-details">
-
-          <div class="reward-title">
-            {{ reward.title }}
-          </div>
-
-          <div
-            class="reward-description"
-            *ngIf="reward.description">
-
-            {{ reward.description }}
-
-          </div>
-
-          <div class="reward-meta">
-
-            <span>
-              ₪{{ reward.minimumAmount | number }}
-            </span>
-
-            <span *ngIf="reward.stock">
-              כמות: {{ reward.stock }}
-            </span>
-
-            <span *ngIf="!reward.stock">
-              ללא הגבלה
-            </span>
-
-          </div>
-
-          <button
-            class="delete-button"
-            (click)="deleteReward(reward.id)">
-
-            🗑 מחק תשורה
-
+        <!-- Actions -->
+        <div class="rf-actions">
+          <button class="rf-btn-clear" type="button" (click)="clearForm()">
+            🗑 נקה טופס
           </button>
-
+          <button class="rf-btn-save" type="button" (click)="save()"
+            [disabled]="!reward.title.trim()">
+            💾 {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}
+          </button>
         </div>
 
-        <img
-          *ngIf="reward.imageUrl"
-          [src]="reward.imageUrl"
-          class="reward-image"
-          alt="reward">
+      </div>
 
+      <!-- PREVIEW (left, 40%) -->
+      <div class="reward-preview-panel">
+        <div class="rp-header">
+          <lucide-angular [img]="Eye" [size]="16" class="rp-eye"></lucide-angular>
+          <span>תצוגה מקדימה</span>
+        </div>
+
+        <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
+          <!-- Featured badge -->
+          <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+          <!-- Card top: icon + price -->
+          <div class="rp-card-top">
+            <div class="rp-icon-wrap">
+              <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" class="rp-img" alt="">
+              <span *ngIf="!reward.imageUrl" class="rp-img-icon">🎁</span>
+            </div>
+            <div class="rp-price" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
+              ₪{{ reward.minimumAmount ? reward.minimumAmount.toLocaleString('he-IL') : '0' }}
+            </div>
+          </div>
+          <!-- Body -->
+          <div class="rp-body">
+            <div class="rp-title">{{ reward.title || 'כותרת התשורה' }}</div>
+            <p class="rp-desc">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
+            <button class="rp-cta" type="button"
+              [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
+              [style.color]="draft.layout.theme.rewardCardBorder ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)'">
+              בחירה בתשורה
+            </button>
+          </div>
+        </div>
       </div>
 
     </div>
 
-    <div
-      class="add-reward-card"
-      *ngIf="!showCreateRewardForm && draft.rewards.length < 20"
-      (click)="addReward()">
+    <!-- ── REWARDS LIST ── -->
+    <div class="rs-list-section" *ngIf="draft.rewards.length > 0">
+      <div class="rs-list-header">
+        <div class="rs-list-title">
+          <lucide-angular [img]="Gift" [size]="18" class="rs-list-icon"></lucide-angular>
+          התשורות בקמפיין ({{ draft.rewards.length }})
+        </div>
+        <button class="rs-add-btn" type="button" (click)="clearForm()">+ הוסף תשורה חדשה</button>
+      </div>
 
-      <button class="add-button">
-        + הוסף תשורה
-      </button>
+      <div class="rs-grid">
+        <div class="rs-card" *ngFor="let r of draft.rewards">
+          <!-- Image thumb -->
+          <div class="rs-card-img" *ngIf="r.imageUrl">
+            <img [src]="r.imageUrl" alt="">
+            <div class="rs-card-badge" *ngIf="r.featured === true">★</div>
+          </div>
+          <div class="rs-card-img rs-card-img--empty" *ngIf="!r.imageUrl">
+            <span>🎁</span>
+            <div class="rs-card-badge" *ngIf="r.featured === true">★</div>
+          </div>
+          <!-- Content -->
+          <div class="rs-card-body">
+            <div class="rs-card-price">₪{{ r.minimumAmount.toLocaleString('he-IL') }}</div>
+            <div class="rs-card-title">{{ r.title }}</div>
+            <p class="rs-card-desc">{{ r.description }}</p>
+            <div class="rs-card-actions">
+              <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteReward(r.id)">
+                🗑 מחיקה
+              </button>
+              <button class="rs-card-btn rs-card-btn--edit" type="button" (click)="editReward(r)">
+                ✏ עריכה
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- ── ADVANCED (colors) ── -->
+    <button class="rewards-advanced-toggle" type="button" (click)="showAdvanced = !showAdvanced">
+      <lucide-angular [img]="Settings2" [size]="15" class="adv-icon"></lucide-angular>
+      <span>עיצוב מתקדם</span>
+      <lucide-angular [img]="showAdvanced ? ChevronUp : ChevronDown" [size]="15" class="adv-chevron"></lucide-angular>
+    </button>
+
+    <div class="rewards-advanced-panel" *ngIf="showAdvanced">
+      <div class="adv-row">
+        <label class="adv-label">רקע סקשן</label>
+        <app-color-picker [value]="draft.layout.theme.rewardsBg"
+          (valueChange)="patchTheme({ rewardsBg: $event })"></app-color-picker>
+      </div>
+      <div class="adv-row">
+        <label class="adv-label">בורדר כרטיס</label>
+        <app-color-picker [value]="draft.layout.theme.rewardCardBorder"
+          (valueChange)="patchTheme({ rewardCardBorder: $event })"></app-color-picker>
+      </div>
+      <div class="adv-row">
+        <label class="adv-label">נבחר / Hover</label>
+        <app-color-picker [value]="draft.layout.theme.rewardCardBorderActive"
+          (valueChange)="patchTheme({ rewardCardBorderActive: $event })"></app-color-picker>
+      </div>
     </div>
 
   </ng-container>

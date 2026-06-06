@@ -14,17 +14,44 @@
 
   margin-bottom: 32px;
 
+  text-align: center;
+
 }
 
 .campaign-type-title {
 
   margin: 0;
 
-  font-size: 40px;
+  font-size: 30px;
 
   font-weight: 800;
 
   color: #0f172a;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 12px;
+
+}
+
+.step-title-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  background: #ede9fe;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-title-icon {
+  margin-top: 7px;
+  color: #7c3aed;
 
 }
 

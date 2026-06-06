@@ -8,70 +8,93 @@
 
   margin: 0 auto;
 
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 24px;
+
 }
 
 .step-header {
-
-  margin-bottom: 32px;
-
+  margin-bottom: 24px;
+  text-align: center;
 }
 
 .step-title {
-
   margin: 0;
-
-  font-size: 40px;
-
-  font-weight: 800;
-
+  font-size: 30px;
+  font-weight: 700;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
 
+.step-title-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  background: #ede9fe;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-title-icon {
+  margin-top: 7px;
+  color: #7c3aed;
 }
 
 .step-description {
-
   margin-top: 10px;
-
-  font-size: 18px;
-
+  font-size: 16px;
   color: #64748b;
-
 }
 
-.skip-banner {
-
+.donation-section {
   display: flex;
-
-  align-items: center;
-
-  padding: 18px 22px;
-
-  border-radius: 16px;
-
-  background: #fef3c7;
-
-  border: 1px solid #fde68a;
-
-  margin-bottom: 24px;
-
+  flex-direction: column;
+  gap: 10px;
 }
 
-.skip-banner-title {
-
+.donation-section-label {
+  font-size: 16px;
   font-weight: 700;
-
-  color: #92400e;
-
+  color: #1e293b;
+  padding-right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.skip-banner-description {
+.donation-section-label::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: #7c3aed;
+  border-radius: 2px;
+}
 
-  margin-top: 4px;
+.card-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 18px 0;
+}
 
-  font-size: 14px;
+.amounts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
-  color: #a16207;
-
+.amounts-note {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 14px;
 }
 
 .settings-column {

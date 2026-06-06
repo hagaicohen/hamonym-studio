@@ -7,7 +7,8 @@ import {
   Target,
   TrendingUp,
   RefreshCw,
-  Zap
+  Zap,
+  LayoutGrid,
 } from 'lucide-angular';
 
 import {
@@ -36,6 +37,7 @@ export class CampaignTypeStepComponent {
 
   get draft() { return this.campaignState.draft; }
 
+  readonly LayoutGrid = LayoutGrid;
   readonly Circle = Circle;
   readonly CheckCircle2 = CheckCircle2;
   readonly Target = Target;

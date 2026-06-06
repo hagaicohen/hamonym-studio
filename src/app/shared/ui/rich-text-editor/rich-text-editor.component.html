@@ -1,141 +1,98 @@
-<!-- rich-text-editor.component.html -->
-
 <div class="editor-shell">
+
   <div class="editor-toolbar" *ngIf="editor">
-    <!-- TEXT STYLE -->
 
+    <!-- BLOCK TYPE -->
     <div class="toolbar-group">
-      <select
-        class="toolbar-select"
-        [value]="getCurrentBlockType()"
-        (change)="onBlockTypeChange($event)"
-      >
-        <option value="paragraph">Normal</option>
-
-        <option value="h1">Heading 1</option>
-
-        <option value="h2">Heading 2</option>
-
-        <option value="h3">Heading 3</option>
+      <select class="toolbar-select" [value]="getCurrentBlockType()" (change)="onBlockTypeChange($event)">
+        <option value="paragraph">טקסט</option>
+        <option value="h1">כותרת 1</option>
+        <option value="h2">כותרת 2</option>
+        <option value="h3">כותרת 3</option>
       </select>
     </div>
 
-    <!-- INLINE -->
+    <div class="toolbar-sep"></div>
 
+    <!-- INLINE FORMATTING -->
     <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('bold')"
-        (click)="toggleBold()"
-      >
-        <strong>B</strong>
-      </button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('bold')"      (click)="toggleBold()"      title="מודגש"><strong>B</strong></button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('italic')"    (click)="toggleItalic()"    title="נטוי"><em>I</em></button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" title="קו תחתון"><u>U</u></button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('strike')"    (click)="toggleStrike()"    title="קו חוצה"><s>S</s></button>
+    </div>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('italic')"
-        (click)="toggleItalic()"
-      >
-        <em>I</em>
-      </button>
+    <div class="toolbar-sep"></div>
 
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('underline')"
-        (click)="toggleUnderline()"
-      >
-        <u>U</u>
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('strike')"
-        (click)="toggleStrike()"
-      >
-        <s>S</s>
+    <!-- FONT SIZE (selection-only) -->
+    <div class="toolbar-group">
+      <button *ngFor="let opt of fontSizeOptions"
+        type="button" class="toolbar-btn fs-btn"
+        [class.active]="getActiveFontSize() === opt.value"
+        [title]="opt.value"
+        (click)="getActiveFontSize() === opt.value ? setFontSize('') : setFontSize(opt.value)">
+        {{ opt.label }}
       </button>
     </div>
+
+    <div class="toolbar-sep"></div>
+
+    <!-- TEXT COLOR -->
+    <div class="toolbar-group color-group">
+      <button type="button" class="toolbar-btn color-btn" (click)="showColorPicker = !showColorPicker" title="צבע טקסט">
+        <span class="color-preview-letter" [style.color]="getActiveColor()">A</span>
+        <span class="color-underline" [style.background]="getActiveColor()"></span>
+      </button>
+
+      <div class="color-dropdown" *ngIf="showColorPicker">
+        <div class="color-swatches">
+          <button
+            *ngFor="let c of presetColors"
+            class="color-swatch"
+            [style.background]="c"
+            [class.color-swatch--bordered]="c === '#ffffff'"
+            [title]="c"
+            (click)="setColor(c)">
+          </button>
+        </div>
+        <div class="color-custom-row">
+          <label class="color-custom-label">
+            <input type="color" [value]="getActiveColor()" (input)="setColor($any($event.target).value)">
+            צבע מותאם
+          </label>
+          <button type="button" class="color-reset-btn" (click)="unsetColor()">איפוס</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-sep"></div>
 
     <!-- LISTS -->
-
     <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('bulletList')"
-        (click)="toggleBulletList()"
-      >
-        •
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('orderedList')"
-        (click)="toggleOrderedList()"
-      >
-        1.
-      </button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('bulletList')"  (click)="toggleBulletList()"  title="רשימה">•≡</button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" title="רשימה ממוספרת">1.</button>
     </div>
+
+    <div class="toolbar-sep"></div>
 
     <!-- ALIGN -->
-
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" (click)="setTextAlign('right')">
-        ≡
-      </button>
-
-      <button
-        type="button"
-        class="toolbar-btn"
-        (click)="setTextAlign('center')"
-      >
-        ☰
-      </button>
-
-      <button type="button" class="toolbar-btn" (click)="setTextAlign('left')">
-        ☷
-      </button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'right' })"  (click)="setTextAlign('right')"  title="ימין">≡→</button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'center' })" (click)="setTextAlign('center')" title="מרכז">≡</button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'left' })"   (click)="setTextAlign('left')"   title="שמאל">←≡</button>
     </div>
 
-    <!-- LINK -->
+    <div class="toolbar-sep"></div>
 
+    <!-- LINK + EXTRA -->
     <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('link')"
-        (click)="addLink()"
-      >
-        🔗
-      </button>
-
-      <button type="button" class="toolbar-btn danger" (click)="removeLink()">
-        ✕
-      </button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('link')"       (click)="addLink()"          title="קישור">🔗</button>
+      <button type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" title="ציטוט">❝</button>
+      <button type="button" class="toolbar-btn"                                          (click)="clearFormatting()"  title="נקה עיצוב">Tx</button>
     </div>
 
-    <!-- EXTRA -->
-
-    <div class="toolbar-group">
-      <button
-        type="button"
-        class="toolbar-btn"
-        [class.active]="isActive('blockquote')"
-        (click)="toggleBlockquote()"
-      >
-        ❝
-      </button>
-
-      <button type="button" class="toolbar-btn" (click)="clearFormatting()">
-        Tx
-      </button>
-    </div>
   </div>
 
-  <div #editor class="editor-content" [style.minHeight.px]="minHeight"></div>
+  <div #editorEl class="editor-content" [style.minHeight.px]="minHeight"></div>
+
 </div>

@@ -1,7 +1,12 @@
 <div class="campaign-publish-step">
 
   <div class="step-header">
-    <h1 class="step-title">סיכום ופרסום</h1>
+    <h1 class="step-title">
+      <span class="step-title-icon-wrapper">
+        <lucide-angular [img]="Rocket" class="step-title-icon"></lucide-angular>
+      </span>
+      סיכום ופרסום
+    </h1>
     <p class="step-description">בדקו את פרטי הקמפיין לפני הפרסום</p>
   </div>
 
@@ -84,16 +89,16 @@
       </div>
 
       <div class="field-row">
-        <span class="field-name">סיפור מלא</span>
-        <span class="status-chip" [class.filled]="hasStory" [class.missing]="!hasStory">
-          {{ hasStory ? 'הוגדר ✓' : 'חסר' }}
+        <span class="field-name">בלוקי תוכן</span>
+        <span class="status-chip" [class.filled]="hasStoryBlock" [class.optional-empty]="!hasStoryBlock">
+          {{ hasStoryBlock ? 'הוגדרו ✓' : 'לא הוגדרו' }}
         </span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">תמונת קאבר</span>
-        <span class="status-chip" [class.filled]="draft.coverImageUrl" [class.missing]="!draft.coverImageUrl">
-          {{ draft.coverImageUrl ? 'הועלתה ✓' : 'חסר' }}
+        <span class="field-name">Hero</span>
+        <span class="status-chip" [class.filled]="hasHero" [class.missing]="!hasHero">
+          {{ hasHero ? 'הוגדר ✓' : 'חסר' }}
         </span>
       </div>
 
@@ -148,46 +153,23 @@
 
     </div>
 
-    <!-- הגדרות ומעקב -->
+    <!-- חסויות ובלוקים -->
     <div class="section-card">
       <div class="card-header">
         <lucide-angular [img]="Settings" class="card-icon"></lucide-angular>
-        <span class="card-title">הגדרות ומעקב</span>
+        <span class="card-title">דף הקמפיין</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">קמפיינים אישיים</span>
-        <span class="status-chip" [class.enabled]="draft.personalCampaignsEnabled" [class.disabled]="!draft.personalCampaignsEnabled">
-          {{ draft.personalCampaignsEnabled ? 'מופעל ✓' : 'מושבת' }}
+        <span class="field-name">חסויות</span>
+        <span class="status-chip" [class.filled]="draft.sponsors.length > 0" [class.optional-empty]="draft.sponsors.length === 0">
+          {{ draft.sponsors.length > 0 ? (draft.sponsors.length + ' הוגדרו ✓') : 'לא הוגדרו' }}
         </span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">Google Analytics</span>
-        <span class="status-chip" [class.filled]="draft.googleAnalyticsId" [class.optional-empty]="!draft.googleAnalyticsId">
-          {{ draft.googleAnalyticsId ? 'מחובר ✓' : 'לא הוגדר' }}
-        </span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-name">Facebook Pixel</span>
-        <span class="status-chip" [class.filled]="draft.facebookPixelId" [class.optional-empty]="!draft.facebookPixelId">
-          {{ draft.facebookPixelId ? 'מחובר ✓' : 'לא הוגדר' }}
-        </span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-name">Google Ads</span>
-        <span class="status-chip" [class.filled]="draft.googleAdsId" [class.optional-empty]="!draft.googleAdsId">
-          {{ draft.googleAdsId ? 'מחובר ✓' : 'לא הוגדר' }}
-        </span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-name">Hotjar</span>
-        <span class="status-chip" [class.filled]="draft.hotjarSiteId" [class.optional-empty]="!draft.hotjarSiteId">
-          {{ draft.hotjarSiteId ? 'מחובר ✓' : 'לא הוגדר' }}
-        </span>
+        <span class="field-name">בלוקים בדף</span>
+        <span class="status-chip filled">{{ draft.blocks.length }} בלוקים ✓</span>
       </div>
 
     </div>

@@ -1,47 +1,43 @@
+<ng-container *ngIf="ui.state$ | async as s">
+<header class="studio-topbar" [class.studio-topbar--fullscreen]="s.fullscreen">
 
-<header class="studio-topbar">
+  <!-- LEFT: exit / back -->
   <div class="title-group">
-    <button class="exit-button" (click)="closeStudio()">
-      <lucide-icon [img]="X"> </lucide-icon>
-    </button>
-
-    <div class="campaign-title">יצירת קמפיין חדש</div>
+    <ng-container *ngIf="!s.fullscreen">
+      <button class="exit-button" (click)="closeStudio()">
+        <lucide-icon [img]="X"></lucide-icon>
+      </button>
+      <div class="campaign-title">יצירת קמפיין חדש</div>
+    </ng-container>
+    <ng-container *ngIf="s.fullscreen">
+      <button class="back-button" (click)="exitFullscreen()">
+        <lucide-icon [img]="ArrowRight"></lucide-icon>
+        חזרה לעריכה
+      </button>
+    </ng-container>
   </div>
 
+  <!-- CENTER: device + fullscreen switcher -->
   <div class="device-switcher">
-    <button
-      class="device-button"
-      [class.active]="!isMobilePreview"
-      (click)="setDesktop()"
-    >
-      <lucide-icon [img]="Monitor"> </lucide-icon>
+    <button class="device-button" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+      <lucide-icon [img]="Monitor"></lucide-icon>
     </button>
-
-    <button
-      class="device-button"
-      [class.active]="isMobilePreview"
-      (click)="setMobile()"
-    >
-      <lucide-icon [img]="Smartphone"> </lucide-icon>
+    <button class="device-button" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+      <lucide-icon [img]="Smartphone"></lucide-icon>
+    </button>
+    <div class="device-divider"></div>
+    <button class="device-button" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+      <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2"></lucide-icon>
     </button>
   </div>
 
-  <button
-    class="save-button"
-    [class.saved]="saveState === 'saved'"
-    [disabled]="saveState === 'saving'"
-    (click)="saveDraft()"
-  >
-    @if (saveState === "idle") {
-      שמור טיוטה
-    }
-
-    @if (saveState === "saving") {
-      שומר...
-    }
-
-    @if (saveState === "saved") {
-      ✓ טיוטה נשמרה
-    }
+  <!-- RIGHT: save -->
+  <button class="save-button" [class.saved]="saveState === 'saved'"
+    [disabled]="saveState === 'saving'" (click)="saveDraft()">
+    @if (saveState === 'idle')   { שמור טיוטה }
+    @if (saveState === 'saving') { שומר... }
+    @if (saveState === 'saved')  { ✓ נשמר }
   </button>
+
 </header>
+</ng-container>

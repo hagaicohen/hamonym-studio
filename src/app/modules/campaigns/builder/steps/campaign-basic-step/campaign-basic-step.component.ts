@@ -1,85 +1,173 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
+import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
+import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
-import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
+import {
+  CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData,
+} from '../../../../campaigns/services/campaign-studio-state.service';
+import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
+import { environment } from '../../../../../../environments/environment';
+import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
+import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 
 @Component({
   selector: 'app-campaign-basic-step',
   standalone: true,
-  imports: [FormsModule, RichTextEditorComponent],
+  imports: [
+    CommonModule, FormsModule, LucideAngularModule,
+    TextStyleEditorComponent, ColorPickerComponent, RichTextEditorComponent,
+  ],
   templateUrl: './campaign-basic-step.component.html',
   styleUrl: './campaign-basic-step.component.css',
 })
-export class CampaignBasicStepComponent {
+export class CampaignBasicStepComponent implements OnInit {
+  protected state = inject(CampaignStudioStateService);
+  private entityService = inject(CurrentEntityService);
+  private entitiesService = inject(EntitiesService);
+  private doc = inject(DOCUMENT);
 
-  protected campaignState = inject(CampaignStudioStateService);
+  readonly ImageIcon   = Image;
+  readonly VideoIcon   = Video;
+  readonly Settings2   = Settings2;
+  readonly ChevronDown = ChevronDown;
+  readonly ChevronUp   = ChevronUp;
 
-  get draft() { return this.campaignState.draft; }
+  // Categories sorted alphabetically (Hebrew locale)
+  readonly categories = [...ENTITY_CATEGORIES].sort((a, b) =>
+    a.label.localeCompare(b.label, 'he')
+  );
+
+  @ViewChild('heroImageInput') heroImageInputRef?: ElementRef<HTMLInputElement>;
+
+  entityLogoUrl: string | null = null;
+  entityName = '';
+
+  showAdvanced = false;
 
   slugTimeout: any;
   isCheckingSlug = false;
   slugAvailable: boolean | null = null;
-
+  slugFocused = false;
   titleTouched = false;
-  slugTouched = false;
-  shortDescriptionTouched = false;
-  fullDescriptionTouched = false;
 
-  sync(): void { this.campaignState.sync(); }
+  ngOnInit(): void {
+    const entity = this.entityService.currentEntity();
+    if (!entity?.id) return;
+    this.entityName = entity.display_name || entity.legal_name || entity.name || '';
+    this.entitiesService.getEntityById(entity.id).subscribe({
+      next: (res: any) => {
+        const raw = res?.logo_url ?? null;
+        if (raw) {
+          this.entityLogoUrl = (raw.startsWith('http') || raw.startsWith('data:image'))
+            ? raw : `${environment.apiUrl}${raw}`;
+        }
+        if (!this.entityName)
+          this.entityName = res?.display_name || res?.legal_name || res?.name || '';
+        // Pre-populate manager name: prefer contact_full_name from entities table
+        if (!this.state.draft.managerName) {
+          const name = res?.contact_full_name || res?.admin_name || res?.contact_name || this.entityName;
+          if (name) this.state.patch({ managerName: name });
+        }
+      },
+    });
+  }
+
+
+  get draft(): CampaignDraft { return this.state.draft; }
+
+  get urlPrefix(): string {
+    return `${this.doc.location.origin}/campaigns/`;
+  }
+
+  // ── Story (first rich-text block) ──
+  get storyContent(): string {
+    const block = this.state.draft.blocks.find(b => b.type === 'rich-text');
+    return (block?.data as RichTextBlockData)?.content || '';
+  }
+
+  setStoryContent(content: string): void {
+    let found = false;
+    const blocks = this.state.draft.blocks.map(b => {
+      if (!found && b.type === 'rich-text') {
+        found = true;
+        return { ...b, data: { ...(b.data as RichTextBlockData), content } };
+      }
+      return b;
+    });
+    this.state.patch({ blocks });
+  }
+
+  // ── Hero ──
+  sync(): void { this.state.sync(); }
+
+  setHeroType(type: HeroType): void {
+    if (type === 'image') {
+      this.state.patch({ heroType: 'image', videoUrl: '' });
+      if (!this.state.draft.coverImageUrl) {
+        setTimeout(() => this.heroImageInputRef?.nativeElement.click(), 0);
+      }
+    } else {
+      this.state.patch({ heroType: 'video', coverImageUrl: null });
+    }
+  }
+
+  onImageFileChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => this.state.patch({ coverImageUrl: reader.result as string });
+    reader.readAsDataURL(file);
+  }
+
+  getYoutubeThumbnail(url: string): string | null {
+    if (!url) return null;
+    const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+    }
+    return null;
+  }
+
+  get hasHero(): boolean {
+    return this.draft.heroType === 'image' ? !!this.draft.coverImageUrl : !!this.draft.videoUrl;
+  }
+
+  // ── Advanced ──
+  onTextStyleChange(style: TextStyle): void { this.state.patch({ heroTextStyle: style }); }
+  onCtaConfigChange(cta: CtaConfig): void   { this.state.patch({ heroCtaConfig: cta }); }
+
+  patchLogo(partial: Partial<Pick<CampaignDraft,
+    'logoPlacement' | 'logoStripAlign' | 'logoStripBg' | 'showEntityName'>>): void {
+    this.state.patch(partial);
+  }
+
+  // ── Slug ──
+  onSlugBlur(): void { this.slugFocused = false; }
 
   allowSlugChars(event: KeyboardEvent): void {
-    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
-    if (allowedKeys.includes(event.key)) return;
-    if (!/^[a-z0-9-]$/.test(event.key)) event.preventDefault();
+    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+    if (allowed.includes(event.key)) return;
+    if (!/^[a-zA-Z0-9-]$/.test(event.key)) event.preventDefault();
   }
 
   onSlugChange(value: string): void {
-    this.campaignState.patch({ slug: value });
+    const normalized = value.toLowerCase();
+    this.state.patch({ slug: normalized });
     clearTimeout(this.slugTimeout);
-
-    if (!value || value.trim().length < 3) {
-      this.slugAvailable = null;
-      this.isCheckingSlug = false;
-      return;
+    if (!normalized || normalized.trim().length < 3) {
+      this.slugAvailable = null; this.isCheckingSlug = false; return;
     }
-
-    this.isCheckingSlug = true;
-    this.slugAvailable = null;
-
+    this.isCheckingSlug = true; this.slugAvailable = null;
     this.slugTimeout = setTimeout(() => {
-      this.slugAvailable = value.toLowerCase().trim() !== 'abc';
+      this.slugAvailable = normalized.trim() !== 'abc';
       this.isCheckingSlug = false;
     }, 800);
   }
 
-  isTitleInvalid(): boolean {
-    return this.titleTouched && !this.draft.title.trim();
-  }
-
-  isSlugInvalid(): boolean {
-    return this.slugTouched && (!this.draft.slug.trim() || this.slugAvailable === false);
-  }
-
-  isShortDescriptionInvalid(): boolean {
-    return this.shortDescriptionTouched && !this.draft.shortDescription.trim();
-  }
-
-  isFullDescriptionInvalid(): boolean {
-    const content = this.draft.fullDescription
-      ?.replace(/<[^>]*>/g, '')
-      ?.replace(/&nbsp;/g, '')
-      ?.trim();
-    return this.fullDescriptionTouched && !content;
-  }
-
-  isValid(): boolean {
-    return (
-      !!this.draft.title?.trim() &&
-      !!this.draft.slug?.trim() &&
-      !!this.draft.shortDescription?.trim() &&
-      !!this.draft.fullDescription?.trim() &&
-      this.slugAvailable === true &&
-      !this.isCheckingSlug
-    );
-  }
+  isTitleInvalid(): boolean { return this.titleTouched && !this.draft.title.trim(); }
 }

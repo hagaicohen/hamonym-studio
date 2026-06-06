@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, Settings } from 'lucide-angular';
 import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
 
 type ActiveTab = 'terminal' | 'tracking' | 'advanced';
@@ -10,7 +11,7 @@ type ConnectionState = 'idle' | 'loading' | 'success' | 'failed';
 @Component({
   selector: 'app-campaign-defenitions-step',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-defenitions-step.component.html',
   styleUrl: './campaign-defenitions-step.component.css',
 })
@@ -19,6 +20,8 @@ export class CampaignDefenitionsStepComponent {
   protected campaignState = inject(CampaignStudioStateService);
 
   get draft() { return this.campaignState.draft; }
+
+  readonly Settings = Settings;
 
   /*
   |--------------------------------------------------------------------------

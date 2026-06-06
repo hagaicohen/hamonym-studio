@@ -9,20 +9,12 @@ import { Component, Input } from '@angular/core';
 export class CampaignStepperComponent {
   steps = [
     'פרטי בסיס',
-
     'סוג קמפיין',
-
-    'יעד הגיוס',
-
-    'תוכן',
-
-    'תרומות',
-
+    'יעד גיוס',
     'תשורות',
-
-    'הגדרות',
-
-    'סיכום',
+    'חסויות',
+    'בניית דף',
+    'פרסום',
   ];
 
   @Input()

@@ -22,20 +22,36 @@
 
 .step-title {
   margin: 0;
-
   font-size: 30px;
-
   font-weight: 700;
-
   color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+.step-title-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  background: #ede9fe;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-title-icon {
+  margin-top: 7px;
+  color: #7c3aed;
 }
 
 .step-description {
   margin-top: 10px;
-
   font-size: 15px;
-
   color: #6b7280;
+  text-align: center;
 }
 
 .step-section {

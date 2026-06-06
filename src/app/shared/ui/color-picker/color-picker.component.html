@@ -1,0 +1,65 @@
+<div class="cp-wrap">
+
+  <!-- TRIGGER -->
+  <button type="button" class="cp-trigger" (click)="toggle()">
+    <span class="cp-swatch"
+      [class.cp-swatch--none]="isTransparent(value)"
+      [style.background]="isTransparent(value) ? '' : value">
+    </span>
+    <span class="cp-trigger-label" *ngIf="label">{{ label }}</span>
+    <span class="cp-trigger-value">{{ isTransparent(value) ? 'ללא' : value }}</span>
+    <span class="cp-chevron">›</span>
+  </button>
+
+  <!-- DROPDOWN -->
+  <div class="cp-dropdown" *ngIf="open">
+
+    <!-- PALETTE -->
+    <div class="cp-palette">
+      <button *ngIf="showNone" class="cp-swatch cp-swatch--none cp-swatch--btn"
+        [class.cp-swatch--active]="isTransparent(value)"
+        (click)="select('')" title="ללא / שקוף">
+      </button>
+      <div class="cp-palette-row" *ngFor="let row of palette">
+        <button *ngFor="let c of row"
+          class="cp-swatch cp-swatch--btn"
+          [class.cp-swatch--active]="value === c"
+          [class.cp-swatch--light]="c === '#ffffff' || c === '#f8fafc' || c === '#f1f5f9'"
+          [style.background]="c"
+          [title]="c"
+          (click)="select(c)">
+        </button>
+      </div>
+    </div>
+
+    <div class="cp-divider"></div>
+
+    <!-- CSS NAMES -->
+    <div class="cp-names-section">
+      <div class="cp-names-label">שמות CSS</div>
+      <div class="cp-names-grid">
+        <button *ngFor="let name of cssNames"
+          class="cp-name-btn"
+          [class.active]="value === name"
+          (click)="select(name)">
+          <span class="cp-name-swatch" [style.background]="name"></span>
+          {{ name }}
+        </button>
+      </div>
+    </div>
+
+    <div class="cp-divider"></div>
+
+    <!-- CUSTOM INPUT -->
+    <div class="cp-custom">
+      <input type="color" class="cp-native" [value]="isTransparent(value) ? '#ffffff' : value"
+        (input)="onNativeColorInput($event)">
+      <input class="cp-text-input" type="text"
+        [(ngModel)]="inputValue"
+        (keydown.enter)="applyInput()"
+        placeholder="#hex / rgb() / שם CSS">
+      <button class="cp-apply-btn" type="button" (click)="applyInput()">✓</button>
+    </div>
+
+  </div>
+</div>

@@ -1,173 +1,170 @@
-<div class="campaign-basic-step">
-  <div class="step-header-layout">
-    <div class="step-header-content">
-      <h1 class="step-title">פרטי הקמפיין</h1>
+<div class="basic-step">
 
-      <p class="step-description">
-        הגדר את הכותרת, התקציר והתוכן שיופיעו בפני התורמים.
-      </p>
-    </div>
-
-    <div class="campaign-logo-wrapper">
-      <img src="/logo-hamonym.svg" alt="לוגו" class="campaign-logo-image" />
+  <!-- ── STEP HEADER ── -->
+  <div class="step-header">
+    <span class="step-icon-wrapper">
+      <lucide-angular [img]="ImageIcon" [size]="20" class="step-icon"></lucide-angular>
+    </span>
+    <div>
+      <h2 class="step-title">פרטי הקמפיין</h2>
+      <p class="step-desc">תמונה, כותרת וסיפור המיזם</p>
     </div>
   </div>
 
-  <div class="campaign-logo-info">
-    אם לארגון אין לוגו, יופיע לוגו המונים בעמוד הקמפיין.
+  <!-- ── HERO MEDIA ── -->
+  <div class="field-section">
+    <div class="media-type-row">
+      <label class="field-label">תמונה / וידאו <span class="required">*</span></label>
+      <div class="media-toggle">
+        <button class="media-toggle-btn" [class.active]="draft.heroType === 'image'" (click)="setHeroType('image')">
+          <lucide-angular [img]="ImageIcon" [size]="15" class="toggle-icon"></lucide-angular>
+          <span>תמונה</span>
+        </button>
+        <button class="media-toggle-btn" [class.active]="draft.heroType === 'video'" (click)="setHeroType('video')">
+          <lucide-angular [img]="VideoIcon" [size]="15" class="toggle-icon"></lucide-angular>
+          <span>וידאו</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Image upload -->
+    <ng-container *ngIf="draft.heroType === 'image'">
+      <input #heroImageInput type="file" accept="image/*" (change)="onImageFileChange($event)" hidden>
+      <div class="upload-area" [class.upload-area--has-image]="draft.coverImageUrl"
+        (click)="heroImageInput.click()">
+        <img *ngIf="draft.coverImageUrl" [src]="draft.coverImageUrl" class="upload-preview-img" alt="">
+        <div *ngIf="!draft.coverImageUrl" class="upload-empty">
+          <lucide-angular [img]="ImageIcon" class="upload-empty-icon"></lucide-angular>
+          <span>לחצו להעלאת תמונת כיסוי</span>
+          <small>JPG / PNG עד 10MB</small>
+        </div>
+        <div *ngIf="draft.coverImageUrl" class="upload-replace-overlay">
+          <span>החלף תמונה</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Video URL -->
+    <ng-container *ngIf="draft.heroType === 'video'">
+      <input class="field-input" type="url"
+        [(ngModel)]="draft.videoUrl" (ngModelChange)="sync()"
+        placeholder="https://www.youtube.com/watch?v=...">
+      <div class="video-thumb-preview" *ngIf="getYoutubeThumbnail(draft.videoUrl) as thumb">
+        <img [src]="thumb" class="video-thumb-img" alt="">
+        <span class="video-play-badge">▶</span>
+      </div>
+    </ng-container>
   </div>
 
-  <div class="basic-step-section">
-    <label class="field-label">
-      כותרת הקמפיין
-      <span class="required">*</span>
-    </label>
-
+  <!-- ── TITLE ── -->
+  <div class="field-section">
     <div class="field-meta">
-      <div class="field-description">
-        מסר קצר וברור שמציג את מטרת הקמפיין.
-      </div>
-
-      <div class="char-counter">
-        {{ draft.title.length }}/80
-      </div>
+      <label class="field-label">שם הקמפיין <span class="required">*</span></label>
+      <span class="char-counter">{{ draft.title.length }}/80</span>
     </div>
-
-    <input
-      type="text"
-      class="campaign-title"
-      [class.invalid]="isTitleInvalid()"
-      [(ngModel)]="draft.title"
-      (ngModelChange)="sync()"
-      (blur)="titleTouched = true"
-      placeholder="כותרת הקמפיין"
-    />
-
-    @if (isTitleInvalid()) {
-      <div class="field-error">
-        יש להזין כותרת לקמפיין
-      </div>
-    }
+    <input class="field-input field-input--lg" type="text"
+      [(ngModel)]="draft.title" (ngModelChange)="sync()" (blur)="titleTouched = true"
+      maxlength="80" placeholder="שם הקמפיין שיופיע כותרת ה-Hero">
+    <div class="field-error" *ngIf="isTitleInvalid()">יש להזין שם לקמפיין</div>
   </div>
 
-  <div class="basic-step-section">
-    <label class="field-label">
-      כתובת הקמפיין
-      <span class="required">*</span>
-    </label>
-
-    <div class="field-description">
-      השם שיופיע לאחר /hamonym.com/campaigns (באותיות אנגליות, מספרים ומקפים
-      בלבד)
+  <!-- ── SUBTITLE ── -->
+  <div class="field-section">
+    <div class="field-meta">
+      <label class="field-label">תת-כותרת <span class="required">*</span></label>
+      <span class="char-counter">{{ draft.shortDescription.length }}/160</span>
     </div>
+    <input class="field-input" type="text"
+      [(ngModel)]="draft.shortDescription" (ngModelChange)="sync()"
+      maxlength="160" placeholder="משפט קצר שמתאר את המיזם">
+  </div>
 
-    <div class="url-row">
-      <input
-        type="text"
-        class="url-input"
-        [class.invalid]="isSlugInvalid()"
+  <!-- ── STORY ── -->
+  <div class="field-section">
+    <label class="field-label">סיפור הקמפיין <span class="required">*</span></label>
+    <p class="field-hint">יופיע כבלוק "על המיזם" בדף הקמפיין</p>
+    <app-rich-text-editor
+      [ngModel]="storyContent"
+      (ngModelChange)="setStoryContent($event)"
+      placeholder="ספרו את הסיפור שלכם...">
+    </app-rich-text-editor>
+  </div>
+
+  <!-- ── CATEGORY ── -->
+  <div class="field-section">
+    <label class="field-label">קטגוריה <span class="required">*</span></label>
+    <p class="field-hint">בחרו מהרשימה או הזינו עד שלוש מילים. תופיע על ה-Hero.</p>
+    <input class="field-input" type="text" list="category-list"
+      [(ngModel)]="draft.category" (ngModelChange)="sync()"
+      maxlength="40" placeholder="הזינו קטגוריה או בחרו מהרשימה...">
+    <datalist id="category-list">
+      <option *ngFor="let cat of categories" [value]="cat.label">{{ cat.label }}</option>
+    </datalist>
+  </div>
+
+  <!-- ── MANAGER NAME ── -->
+  <div class="field-section">
+    <label class="field-label">מנהל הקמפיין</label>
+    <p class="field-hint">השם שיופיע על ה-Hero. ברירת מחדל: שם מנהל העמותה.</p>
+    <input class="field-input" type="text"
+      [(ngModel)]="draft.managerName" (ngModelChange)="sync()"
+      maxlength="60" placeholder="שם מנהל הקמפיין">
+  </div>
+
+  <!-- ── SLUG (required, not advanced) ── -->
+  <div class="field-section">
+    <label class="field-label">כתובת הקמפיין <span class="required">*</span></label>
+    <p class="field-hint">אותיות לטיניות, מספרים ומקפים בלבד</p>
+    <div class="url-field-wrapper" [class.focused]="slugFocused" [class.invalid]="slugAvailable === false">
+      <span class="url-prefix">{{ urlPrefix }}</span>
+      <input type="text" class="url-input"
         [ngModel]="draft.slug"
-        (blur)="slugTouched = true"
+        (focus)="slugFocused = true"
+        (blur)="onSlugBlur()"
         (keydown)="allowSlugChars($event)"
         (ngModelChange)="onSlugChange($event)"
-        placeholder="merkaz-noar-kiryat-gat"
-      />
+        placeholder="campaign-name">
     </div>
-
-    @if (slugAvailable === true) {
-      <div class="slug-success">
-        ✓ הכתובת זמינה
-      </div>
-    }
-
-    @if (slugAvailable === false) {
-      <div class="slug-error">
-        ✕ הכתובת כבר נמצאת בשימוש
-      </div>
-    }
-
-    @if (isCheckingSlug) {
-      <div class="slug-checking">
-        <span class="spinner"></span>
-        <span>בודק זמינות...</span>
-      </div>
-    }
-
-    @if (isSlugInvalid()) {
-      <div class="field-error">
-        יש לבחור כתובת קמפיין תקינה
-      </div>
-    }
+    <div class="slug-success"  *ngIf="slugAvailable === true">✓ הכתובת זמינה</div>
+    <div class="slug-error"    *ngIf="slugAvailable === false">✕ הכתובת כבר בשימוש</div>
+    <div class="slug-checking" *ngIf="isCheckingSlug">בודק זמינות...</div>
   </div>
 
-  <div class="basic-step-section">
-    <label class="field-label">
-      תיאור קצר
-      <span class="required">*</span>
-    </label>
+  <!-- ── ADVANCED TOGGLE ── -->
+  <button class="advanced-toggle-btn" type="button" (click)="showAdvanced = !showAdvanced">
+    <lucide-angular [img]="Settings2" [size]="15" class="advanced-btn-icon"></lucide-angular>
+    <span>הגדרות מתקדמות</span>
+    <lucide-angular [img]="showAdvanced ? ChevronUp : ChevronDown" [size]="15" class="advanced-btn-chevron"></lucide-angular>
+  </button>
 
-    <div class="field-meta">
-      <div class="field-description">
-        עד שני משפטים המציגים את מטרת הקמפיין
-      </div>
+  <div class="advanced-section" *ngIf="showAdvanced">
 
-      <div class="char-counter">
-        {{ draft.shortDescription.length }}/160
-      </div>
+    <!-- TEXT STYLE -->
+    <div class="field-section">
+      <label class="field-label">עיצוב טקסט ה-Hero</label>
+      <app-text-style-editor
+        [textStyle]="draft.heroTextStyle"
+        (textStyleChange)="onTextStyleChange($event)"
+        [ctaConfig]="draft.heroCtaConfig"
+        (ctaConfigChange)="onCtaConfigChange($event)"
+        [showPosition]="true"
+        [showCta]="true">
+      </app-text-style-editor>
     </div>
 
-    <textarea
-      rows="2"
-      class="form-textarea short-description"
-      [class.invalid]="isShortDescriptionInvalid()"
-      [(ngModel)]="draft.shortDescription"
-      (ngModelChange)="sync()"
-      (blur)="shortDescriptionTouched = true"
-      placeholder="משפט קצר שמתאר את הקמפיין, עד שני משפטים"
-    >
-    </textarea>
-
-    @if (isShortDescriptionInvalid()) {
-      <div class="field-error">
-        יש להזין תיאור קצר
+    <!-- LOGO OPTIONS -->
+    <div class="field-section">
+      <label class="field-label">לוגו</label>
+      <div class="logo-preview-row">
+        <div class="logo-circle-preview">
+          <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
+          <span *ngIf="!entityLogoUrl">🏢</span>
+        </div>
+        <span class="logo-entity-name" *ngIf="entityName">{{ entityName }}</span>
       </div>
-    }
+      <p class="field-hint">הלוגו מוצג על ה-Hero — ניתן לשנות מיקום בדף הבונה.</p>
+    </div>
+
   </div>
 
-  <div class="basic-step-section">
-    <label class="field-label">
-      תיאור מלא
-      <span class="required">*</span>
-    </label>
-
-    <div class="field-description">
-      זהו הטקסט המרכזי של הקמפיין. מומלץ לפחות 300 מילים.
-    </div>
-
-    <div
-      class="campaign-story"
-      [class.invalid]="isFullDescriptionInvalid()"
-      (focusout)="fullDescriptionTouched = true"
-    >
-      <app-rich-text-editor
-        [(ngModel)]="draft.fullDescription"
-        (ngModelChange)="sync()"
-        placeholder="ספרו את הסיפור שמאחורי הקמפיין..."
-      >
-      </app-rich-text-editor>
-    </div>
-
-    @if (isFullDescriptionInvalid()) {
-      <div class="field-error">
-        יש להזין תיאור מלא לקמפיין
-      </div>
-    }
-
-    <div class="campaign-tip">
-      <strong>טיפ:</strong>
-
-      כותרת ותיאור טובים מגדילים את סיכויי ההצלחה של הקמפיין.
-      השתדל להיות ברור, רגשי ואותנטי.
-    </div>
-  </div>
 </div>

@@ -10,6 +10,7 @@ import {
   CreditCard,
   Check,
   CircleAlert,
+  Rocket,
 } from 'lucide-angular';
 import {
   CampaignStudioStateService,
@@ -36,6 +37,7 @@ export class CampaignPublishStepComponent {
   readonly CreditCard = CreditCard;
   readonly Check = Check;
   readonly CircleAlert = CircleAlert;
+  readonly Rocket = Rocket;
 
   private readonly fundingTypeLabels: Record<string, string> = {
     'flexible':       'קמפיין גמיש',
@@ -60,22 +62,26 @@ export class CampaignPublishStepComponent {
     return `${d}/${m}/${y}`;
   }
 
-  get hasStory(): boolean {
-    return !!this.draft.fullDescription
-      ?.replace(/<[^>]*>/g, '')
-      ?.replace(/&nbsp;/g, '')
-      ?.trim();
+  get hasHero(): boolean {
+    return this.draft.heroType === 'image'
+      ? !!this.draft.coverImageUrl
+      : !!this.draft.videoUrl;
+  }
+
+  get hasStoryBlock(): boolean {
+    return this.draft.blocks.some(b =>
+      b.type === 'rich-text' && !!(b.data as { content?: string }).content?.replace(/<[^>]*>/g, '').trim()
+    );
   }
 
   get missingFields(): string[] {
     const d = this.draft;
     const missing: string[] = [];
-    if (!d.title?.trim())          missing.push('כותרת הקמפיין');
-    if (!d.slug?.trim())           missing.push('כתובת הקמפיין');
-    if (!d.shortDescription?.trim()) missing.push('תיאור קצר');
-    if (!this.hasStory)            missing.push('סיפור מלא');
-    if (!d.targetAmount)           missing.push('יעד גיוס');
-    if (!d.coverImageUrl)          missing.push('תמונת קאבר');
+    if (!d.title?.trim())            missing.push('כותרת הקמפיין');
+    if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
+    if (!d.shortDescription?.trim()) missing.push('כותרת משנה');
+    if (!this.hasHero)               missing.push('תמונה / וידאו ראשי');
+    if (!d.targetAmount)             missing.push('יעד גיוס');
     return missing;
   }
 
