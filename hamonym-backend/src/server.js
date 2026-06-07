@@ -25,8 +25,14 @@ const authRoutes =
 const entitiesRoutes =
   require('./modules/entities/entities.routes');
 
+const campaignsRoutes =
+  require('./modules/campaigns/campaigns.routes');
+
 const billingRoutes =
   require('./modules/billing/billing.routes');
+
+const mediaRoutes =
+  require('./modules/media/media.routes');
 
 /*
 |--------------------------------------------------------------------------
@@ -55,8 +61,18 @@ app.use(
 );
 
 app.use(
+  '/api/campaigns',
+  campaignsRoutes
+);
+
+app.use(
   '/api/billing',
   billingRoutes
+);
+
+app.use(
+  '/api/media',
+  mediaRoutes
 );
 
 /*
