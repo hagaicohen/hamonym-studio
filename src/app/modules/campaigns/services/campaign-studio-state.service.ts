@@ -462,6 +462,10 @@ export class CampaignStudioStateService {
     this.draftSubject.next(createInitialDraft());
   }
 
+  loadDraft(data: CampaignDraft): void {
+    this.draftSubject.next(data);
+  }
+
   // Block operations
   addBlock(type: BlockType): void {
     const blocks = [...this.draft.blocks];

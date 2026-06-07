@@ -8,15 +8,13 @@
     הקודם
   </button>
 
-  <button
-    type="button"
-    class="primary-button"
-    (click)="next.emit()"
-    [disabled]="!canContinue">
-
-    {{ currentStep === 8
-        ? 'פרסם קמפיין'
-        : 'המשך' }}
-
-  </button>
+  @if (currentStep < 8) {
+    <button
+      type="button"
+      class="primary-button"
+      (click)="next.emit()"
+      [disabled]="!canContinue">
+      המשך
+    </button>
+  }
 </div>

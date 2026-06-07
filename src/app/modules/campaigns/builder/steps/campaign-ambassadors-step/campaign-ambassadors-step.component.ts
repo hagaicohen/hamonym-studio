@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Star, Eye } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignAmbassador } from '../../../services/campaign-studio-state.service';
+import { UploadService } from '../../../../../core/services/upload.service';
 
 @Component({
   selector: 'app-campaign-ambassadors-step',
@@ -12,7 +13,8 @@ import { CampaignStudioStateService, CampaignAmbassador } from '../../../service
   styleUrl: './campaign-ambassadors-step.component.css',
 })
 export class CampaignAmbassadorsStepComponent {
-  private state = inject(CampaignStudioStateService);
+  private state         = inject(CampaignStudioStateService);
+  private uploadService = inject(UploadService);
 
   readonly StarIcon = Star;
   readonly EyeIcon  = Eye;
@@ -57,11 +59,15 @@ export class CampaignAmbassadorsStepComponent {
     if (this.editingId === id) this.clearForm();
   }
 
+  isUploadingImage = false;
+
   onImageSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { this.form.imageUrl = reader.result as string; };
-    reader.readAsDataURL(file);
+    this.isUploadingImage = true;
+    this.uploadService.upload(file, 'campaigns/ambassadors').subscribe({
+      next: url => { this.form.imageUrl = url; this.isUploadingImage = false; },
+      error: ()  => { this.isUploadingImage = false; },
+    });
   }
 }

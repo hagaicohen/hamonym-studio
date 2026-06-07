@@ -55,6 +55,15 @@ export const routes: Routes = [
       ).then((m) => m.CampaignStudioPageComponent),
   },
 
+  {
+    path: 'campaigns/:id/edit',
+
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
+      ).then((m) => m.CampaignStudioPageComponent),
+  },
+
   /* ========================================
      APP SHELL
   ======================================== */

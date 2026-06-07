@@ -1,0 +1,358 @@
+.campaigns-page {
+  padding: 32px;
+  
+  margin: 0 auto;
+  direction: rtl;
+}
+
+/* ------------------------------------------------------------------ */
+/* HEADER                                                               */
+/* ------------------------------------------------------------------ */
+
+.campaigns-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.header-text { text-align: right; flex: 1; }
+
+.campaigns-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.campaigns-description {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* ALERT                                                                */
+/* ------------------------------------------------------------------ */
+
+.campaigns-alert {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #1e40af;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ */
+/* TOOLBAR                                                              */
+/* ------------------------------------------------------------------ */
+
+.campaigns-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.view-switch {
+  display: flex;
+  gap: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.view-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 16px;
+  color: #94a3b8;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.view-icon.active {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+/* ------------------------------------------------------------------ */
+/* BUTTONS                                                              */
+/* ------------------------------------------------------------------ */
+
+.btn-new {
+  background: #0d9488;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-new:hover { background: #0f766e; }
+
+.btn-action {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.btn-action:hover { background: #f1f5f9; }
+
+.btn-edit {
+  background: #fff;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* STATUS BADGES                                                        */
+/* ------------------------------------------------------------------ */
+
+.card-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge-draft     { background: rgba(255,255,255,0.85); color: #475569; }
+.badge-published { background: #dcfce7; color: #15803d; }
+.badge-paused    { background: #fef9c3; color: #a16207; }
+.badge-ended     { background: #fee2e2; color: #b91c1c; }
+
+/* ------------------------------------------------------------------ */
+/* EMPTY STATE                                                          */
+/* ------------------------------------------------------------------ */
+
+.campaigns-empty {
+  text-align: center;
+  padding: 80px 24px;
+  color: #94a3b8;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.campaigns-empty .empty-icon { font-size: 48px; }
+
+/* ------------------------------------------------------------------ */
+/* GRID VIEW                                                            */
+/* ------------------------------------------------------------------ */
+
+.campaigns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.campaign-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.campaign-card:hover {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+  transform: translateY(-3px);
+}
+
+.card-cover {
+  height: 200px;
+  background: #e2e8f0 center / cover no-repeat;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 12px;
+}
+
+.card-cover .card-status-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+.card-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.card-funding-type {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+}
+
+/* ------------------------------------------------------------------ */
+/* PROGRESS                                                             */
+/* ------------------------------------------------------------------ */
+
+.card-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.card-progress-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.progress-raised {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.progress-target {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.list-pct {
+  font-size: 12px;
+  color: #64748b;
+  margin-right: auto;
+}
+
+.progress-bar {
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0d9488, #06b6d4);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.progress-pct {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ------------------------------------------------------------------ */
+/* META                                                                 */
+/* ------------------------------------------------------------------ */
+
+.card-meta {
+  display: flex;
+  gap: 16px;
+}
+
+.meta-item {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------------------------ */
+/* LIST VIEW                                                            */
+/* ------------------------------------------------------------------ */
+
+.campaigns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  transition: box-shadow 0.2s;
+}
+
+.list-item:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.list-cover {
+  width: 160px;
+  flex-shrink: 0;
+  background: #e2e8f0 center / cover no-repeat;
+}
+
+.list-body {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.list-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.list-progress { display: flex; flex-direction: column; gap: 5px; }
+
+.list-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  justify-content: center;
+  border-right: 1px solid #f1f5f9;
+}

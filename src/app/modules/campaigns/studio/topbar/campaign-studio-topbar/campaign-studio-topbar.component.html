@@ -7,7 +7,7 @@
       <button class="exit-button" (click)="closeStudio()">
         <lucide-icon [img]="X"></lucide-icon>
       </button>
-      <div class="campaign-title">יצירת קמפיין חדש</div>
+      <div class="campaign-title">{{ title }}</div>
     </ng-container>
     <ng-container *ngIf="s.fullscreen">
       <button class="back-button" (click)="exitFullscreen()">
@@ -32,11 +32,15 @@
   </div>
 
   <!-- RIGHT: save -->
-  <button class="save-button" [class.saved]="saveState === 'saved'"
-    [disabled]="saveState === 'saving'" (click)="saveDraft()">
+  <button class="save-button"
+    [class.saved]="saveState === 'saved'"
+    [class.error]="saveState === 'error'"
+    [disabled]="saveState === 'saving'"
+    (click)="saveDraft()">
     @if (saveState === 'idle')   { שמור טיוטה }
     @if (saveState === 'saving') { שומר... }
     @if (saveState === 'saved')  { ✓ נשמר }
+    @if (saveState === 'error')  { ✗ שגיאה }
   </button>
 
 </header>

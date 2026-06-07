@@ -1,20 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { switchMap } from 'rxjs';
 import {
   LucideAngularModule,
-  FileText,
-  Heart,
-  Settings,
-  Gift,
-  Info,
-  CreditCard,
-  Check,
-  CircleAlert,
-  Rocket,
+  FileText, Heart, Settings, Gift, Info, CreditCard, Check, CircleAlert, Rocket, Loader,
 } from 'lucide-angular';
-import {
-  CampaignStudioStateService,
-} from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignApiService }         from '../../../../campaigns/services/campaign-api.service';
+import { CurrentEntityService }       from '../../../../../core/services/current-entity.service';
 
 @Component({
   selector: 'app-campaign-publish-step',
@@ -26,18 +20,25 @@ import {
 export class CampaignPublishStepComponent {
 
   protected campaignState = inject(CampaignStudioStateService);
+  private campaignApi     = inject(CampaignApiService);
+  private currentEntity   = inject(CurrentEntityService);
+  private router          = inject(Router);
+
+  isPublishing = false;
+  errorMessage: string | null = null;
 
   get draft() { return this.campaignState.draft; }
 
-  readonly FileText = FileText;
-  readonly Heart = Heart;
-  readonly Settings = Settings;
-  readonly Gift = Gift;
-  readonly Info = Info;
-  readonly CreditCard = CreditCard;
-  readonly Check = Check;
+  readonly FileText    = FileText;
+  readonly Heart       = Heart;
+  readonly Settings    = Settings;
+  readonly Gift        = Gift;
+  readonly Info        = Info;
+  readonly CreditCard  = CreditCard;
+  readonly Check       = Check;
   readonly CircleAlert = CircleAlert;
-  readonly Rocket = Rocket;
+  readonly Rocket      = Rocket;
+  readonly Loader      = Loader;
 
   private readonly fundingTypeLabels: Record<string, string> = {
     'flexible':       'קמפיין גמיש',
@@ -87,5 +88,49 @@ export class CampaignPublishStepComponent {
 
   get isReady(): boolean {
     return this.missingFields.length === 0;
+  }
+
+  publishCampaign(): void {
+    if (this.isPublishing) return;
+    this.errorMessage = null;
+
+    if (!this.isReady) {
+      this.errorMessage = 'יש להשלים את כל השדות הנדרשים לפני פרסום';
+      return;
+    }
+
+    const entityId = this.currentEntity.currentEntity()?.id;
+    if (!entityId) {
+      this.errorMessage = 'לא נמצאה עמותה מחוברת. נסה להתחבר מחדש.';
+      return;
+    }
+
+    this.isPublishing = true;
+
+    const draft = this.draft;
+
+    const save$ = draft.id
+      ? this.campaignApi.update(draft.id, draft)
+      : this.campaignApi.create(entityId, draft);
+
+    save$.pipe(
+      switchMap(res => {
+        const id = (draft.id ?? res?.id) as string;
+        if (!draft.id && id) {
+          this.campaignState.patch({ id });
+        }
+        return this.campaignApi.publish(id);
+      })
+    ).subscribe({
+      next: () => {
+        this.campaignState.patch({ status: 'published' });
+        this.isPublishing = false;
+        this.router.navigate(['/campaigns']);
+      },
+      error: (err) => {
+        this.isPublishing = false;
+        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'אירעה שגיאה. נסה שוב.';
+      },
+    });
   }
 }

@@ -1,93 +1,131 @@
 <div class="campaigns-page">
-  <div class="campaigns-header">
-    <div>
-      <h1 class="campaigns-title">קמפיינים</h1>
 
+  <!-- HEADER -->
+  <div class="campaigns-header">
+    <div class="header-text">
+      <h1 class="campaigns-title">קמפיינים</h1>
       <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
-
-    <button class="primary-button" (click)="createCampaign()">
-      קמפיין חדש
-    </button>
+    <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
   </div>
 
+  <!-- ALERT -->
   <div class="campaigns-alert">
-    <strong> שים לב: </strong>
-
-    כל קמפיין דורש מסוף סליקה ייעודי.
+    <strong>שים לב:</strong> כל קמפיין דורש מסוף סליקה ייעודי.
+    אם אתה רוצה לפתוח קמפיין נוסף (למשל גיוס קבוע + קמפיין חד-פעמי), תצטרך להגדיר מסוף נוסף בספק הסליקה שלך.
   </div>
 
+  <!-- TOOLBAR -->
   <div class="campaigns-toolbar">
     <div class="view-switch">
-      <button
-        class="view-icon"
-        [class.active]="viewMode === 'grid'"
-        (click)="viewMode = 'grid'"
-      >
-        ◼
-      </button>
-
-      <button
-        class="view-icon"
-        [class.active]="viewMode === 'list'"
-        (click)="viewMode = 'list'"
-      >
-        ≣
-      </button>
+      <button class="view-icon" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">⊞</button>
+      <button class="view-icon" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">☰</button>
     </div>
   </div>
 
-  @if (viewMode === "grid") {
-    <div class="campaigns-grid"></div>
-  }
-
-  @if (viewMode === "list") {
-    <div class="campaigns-list">
-      <div class="campaign-list-item">
-        <div class="campaign-list-top">
-          <div class="campaign-list-identity">
-            <h3 class="campaign-list-title">בניית בית כנסת ביישוב נחושה</h3>
-
-            <div class="campaign-list-status">פעיל</div>
-          </div>
-
-          <div class="campaign-list-menu">⋮</div>
-        </div>
-
-        <div class="campaign-list-middle">
-          <div class="campaign-list-progress-info">
-            <div class="campaign-list-amount">₪420,000 מתוך ₪1,000,000</div>
-
-            <div class="campaign-list-percent">42%</div>
-          </div>
-
-          <div class="campaign-list-progress-bar">
-            <div class="campaign-list-progress-fill" style="width: 42%"></div>
-          </div>
-        </div>
-
-        <div class="campaign-list-bottom">
-          <div class="campaign-list-meta">
-            <div class="campaign-meta-item">
-              📅
-
-              <span> 97 ימים נותרו </span>
-            </div>
-
-            <div class="campaign-meta-item">
-              ❤️
-
-              <span> 84 תורמים </span>
-            </div>
-          </div>
-
-          <div class="campaign-list-actions">
-            <button class="secondary-button">📊 דוחות</button>
-
-            <button class="secondary-button">✏️ ערוך</button>
-          </div>
-        </div>
-      </div>
+  <!-- STATES -->
+  @if (isLoading) {
+    <div class="campaigns-empty">טוען קמפיינים...</div>
+  } @else if (campaigns.length === 0) {
+    <div class="campaigns-empty">
+      <div class="empty-icon">📋</div>
+      <p>אין קמפיינים עדיין</p>
+      <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
+  } @else {
+
+    <!-- GRID -->
+    @if (viewMode === 'grid') {
+      <div class="campaigns-grid">
+        @for (c of campaigns; track c.id) {
+          <div class="campaign-card">
+
+            <!-- Cover -->
+            <div class="card-cover"
+              [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'">
+              <span class="card-status-badge" [class]="'badge-' + c.status">
+                {{ statusLabel(c.status) }}
+              </span>
+            </div>
+
+            <!-- Body -->
+            <div class="card-body">
+              <h3 class="card-title">{{ c.title || 'ללא כותרת' }}</h3>
+
+              <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
+
+              <!-- Progress -->
+              <div class="card-progress">
+                <div class="card-progress-row">
+                  <span class="progress-raised">₪{{ (c.raisedAmount ?? 0) | number }}</span>
+                  <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                </div>
+                <div class="progress-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</div>
+              </div>
+
+              <!-- Meta -->
+              <div class="card-meta">
+                <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
+                <span class="meta-item">↗ {{ c.donorsCount ?? 0 }} תורמים</span>
+              </div>
+
+              <!-- Actions -->
+              <div class="card-actions">
+                <button class="btn-action">📊 דוחות</button>
+                <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+              </div>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+
+    <!-- LIST -->
+    @if (viewMode === 'list') {
+      <div class="campaigns-list">
+        @for (c of campaigns; track c.id) {
+          <div class="list-item">
+
+            <div class="list-cover"
+              [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'">
+            </div>
+
+            <div class="list-body">
+              <div class="list-top">
+                <h3 class="list-title">{{ c.title || 'ללא כותרת' }}</h3>
+                <span class="card-status-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
+              </div>
+              <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
+              <div class="list-progress">
+                <div class="card-progress-row">
+                  <span class="progress-raised">₪{{ (c.raisedAmount ?? 0) | number }}</span>
+                  <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
+                  <span class="list-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                </div>
+              </div>
+              <div class="card-meta">
+                <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
+                <span class="meta-item">↗ {{ c.donorsCount ?? 0 }} תורמים</span>
+              </div>
+            </div>
+
+            <div class="list-actions">
+              <button class="btn-action">📊 דוחות</button>
+              <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+
   }
+
 </div>

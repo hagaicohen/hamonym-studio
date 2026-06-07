@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Megaphone, Eye } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignUpdate } from '../../../services/campaign-studio-state.service';
+import { UploadService } from '../../../../../core/services/upload.service';
 
 @Component({
   selector: 'app-campaign-updates-step',
@@ -12,7 +13,8 @@ import { CampaignStudioStateService, CampaignUpdate } from '../../../services/ca
   styleUrl: './campaign-updates-step.component.css',
 })
 export class CampaignUpdatesStepComponent {
-  private state = inject(CampaignStudioStateService);
+  private state         = inject(CampaignStudioStateService);
+  private uploadService = inject(UploadService);
 
   readonly MegaphoneIcon = Megaphone;
   readonly EyeIcon       = Eye;
@@ -58,16 +60,21 @@ export class CampaignUpdatesStepComponent {
     if (this.editingId === id) this.clearForm();
   }
 
+  isUploadingMedia = false;
+
   onMediaSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const isVideo = file.type.startsWith('video/');
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.form.mediaUrl  = reader.result as string;
-      this.form.mediaType = isVideo ? 'video' : 'image';
-    };
-    reader.readAsDataURL(file);
+    this.isUploadingMedia = true;
+    this.uploadService.upload(file, 'campaigns/updates').subscribe({
+      next: url => {
+        this.form.mediaUrl  = url;
+        this.form.mediaType = isVideo ? 'video' : 'image';
+        this.isUploadingMedia = false;
+      },
+      error: () => { this.isUploadingMedia = false; },
+    });
   }
 
   formatDate(iso: string): string {

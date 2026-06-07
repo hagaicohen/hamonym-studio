@@ -25,6 +25,7 @@ import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-edit
 import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
+import { UploadService } from '../../../../../core/services/upload.service';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -78,7 +79,8 @@ const ADDABLE_BLOCKS: BlockType[] = [
   styleUrl: './campaign-page-builder-step.component.css',
 })
 export class CampaignPageBuilderStepComponent {
-  private state = inject(CampaignStudioStateService);
+  private state         = inject(CampaignStudioStateService);
+  private uploadService = inject(UploadService);
 
   readonly LayersIcon = Layers;
   draft$ = this.state.draft$;
@@ -158,9 +160,9 @@ export class CampaignPageBuilderStepComponent {
   onImageFileSelected(id: string, event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => this.updateImageField(id, 'url', reader.result as string);
-    reader.readAsDataURL(file);
+    this.uploadService.upload(file, 'campaigns/blocks').subscribe({
+      next: url => this.updateImageField(id, 'url', url),
+    });
   }
 
   updateVideoUrl(id: string, url: string): void {
@@ -179,9 +181,9 @@ export class CampaignPageBuilderStepComponent {
     const files = (event.target as HTMLInputElement).files;
     if (!files) return;
     Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => this.addGalleryItem(id, reader.result as string);
-      reader.readAsDataURL(file);
+      this.uploadService.upload(file, 'campaigns/gallery').subscribe({
+        next: url => this.addGalleryItem(id, url),
+      });
     });
   }
 
@@ -258,9 +260,9 @@ export class CampaignPageBuilderStepComponent {
   onCampaignBgImageSelected(event: Event, draft: any): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => this.updateCampaignBgImage(reader.result as string, draft);
-    reader.readAsDataURL(file);
+    this.uploadService.upload(file, 'campaigns/backgrounds').subscribe({
+      next: url => this.updateCampaignBgImage(url, draft),
+    });
   }
 
   updateCampaignBgImage(url: string, draft: any): void {
@@ -270,9 +272,9 @@ export class CampaignPageBuilderStepComponent {
   onContainerBgImageSelected(id: string, event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => this.updateContainerField(id, 'backgroundImageUrl', reader.result as string);
-    reader.readAsDataURL(file);
+    this.uploadService.upload(file, 'campaigns/backgrounds').subscribe({
+      next: url => this.updateContainerField(id, 'backgroundImageUrl', url),
+    });
   }
 
   // Per-block spacing

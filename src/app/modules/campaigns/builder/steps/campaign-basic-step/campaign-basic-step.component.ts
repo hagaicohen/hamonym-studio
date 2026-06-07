@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, ElementRef, OnInit } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
@@ -10,6 +10,7 @@ import {
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
+import { UploadService } from '../../../../../core/services/upload.service';
 import { environment } from '../../../../../../environments/environment';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
@@ -25,8 +26,9 @@ import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categorie
   styleUrl: './campaign-basic-step.component.css',
 })
 export class CampaignBasicStepComponent implements OnInit {
-  protected state = inject(CampaignStudioStateService);
+  protected state       = inject(CampaignStudioStateService);
   private entityService = inject(CurrentEntityService);
+  private uploadService = inject(UploadService);
   private entitiesService = inject(EntitiesService);
   private doc = inject(DOCUMENT);
 
@@ -42,11 +44,55 @@ export class CampaignBasicStepComponent implements OnInit {
   );
 
   @ViewChild('heroImageInput') heroImageInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('categoryInput') categoryInputRef?: ElementRef<HTMLInputElement>;
 
   entityLogoUrl: string | null = null;
   entityName = '';
 
   showAdvanced = false;
+
+  // ── Category picker ──
+  categorySearch = '';
+  categoryDropdownOpen = false;
+
+  get filteredCategories(): { id: string; label: string }[] {
+    const q = this.categorySearch.trim().toLowerCase();
+    if (!q) return this.categories;
+    return this.categories.filter(c => c.label.toLowerCase().includes(q));
+  }
+
+  get categoryWordCount(): number {
+    return this.categorySearch.trim() ? this.categorySearch.trim().split(/\s+/).length : 0;
+  }
+
+  openCategoryDropdown(): void {
+    this.categorySearch = this.draft.category || '';
+    this.categoryDropdownOpen = true;
+  }
+
+  onCategoryInput(value: string): void {
+    const limited = value.length > 20 ? value.slice(0, 20) : value;
+    this.categorySearch = limited;
+    if (this.categoryInputRef && limited !== value) {
+      this.categoryInputRef.nativeElement.value = limited;
+    }
+    this.state.patch({ category: limited.trim() });
+    this.sync();
+  }
+
+  selectCategory(label: string): void {
+    this.categorySearch = label;
+    this.state.patch({ category: label });
+    this.sync();
+    this.categoryDropdownOpen = false;
+  }
+
+  onCategoryBlur(): void {
+    setTimeout(() => { this.categoryDropdownOpen = false; }, 150);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeCategoryOnEscape(): void { this.categoryDropdownOpen = false; }
 
   slugTimeout: any;
   isCheckingSlug = false;
@@ -115,12 +161,16 @@ export class CampaignBasicStepComponent implements OnInit {
     }
   }
 
+  isUploadingCover = false;
+
   onImageFileChange(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => this.state.patch({ coverImageUrl: reader.result as string });
-    reader.readAsDataURL(file);
+    this.isUploadingCover = true;
+    this.uploadService.upload(file, 'campaigns/covers').subscribe({
+      next: url => { this.state.patch({ coverImageUrl: url }); this.isUploadingCover = false; },
+      error: ()  => { this.isUploadingCover = false; },
+    });
   }
 
   getYoutubeThumbnail(url: string): string | null {

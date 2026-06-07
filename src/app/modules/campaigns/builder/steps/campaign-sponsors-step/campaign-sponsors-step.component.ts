@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Handshake, Eye, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignSponsor } from '../../../services/campaign-studio-state.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
+import { UploadService } from '../../../../../core/services/upload.service';
 
 @Component({
   selector: 'app-campaign-sponsors-step',
@@ -13,7 +14,8 @@ import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/colo
   styleUrl: './campaign-sponsors-step.component.css',
 })
 export class CampaignSponsorsStepComponent {
-  private state = inject(CampaignStudioStateService);
+  private state         = inject(CampaignStudioStateService);
+  private uploadService = inject(UploadService);
 
   readonly HandshakeIcon = Handshake;
   readonly Eye = Eye;
@@ -64,11 +66,15 @@ export class CampaignSponsorsStepComponent {
     if (this.editingId === id) this.clearForm();
   }
 
+  isUploadingLogo = false;
+
   onLogoSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { this.form.logoUrl = reader.result as string; };
-    reader.readAsDataURL(file);
+    this.isUploadingLogo = true;
+    this.uploadService.upload(file, 'campaigns/sponsors').subscribe({
+      next: url => { this.form.logoUrl = url; this.isUploadingLogo = false; },
+      error: ()  => { this.isUploadingLogo = false; },
+    });
   }
 }

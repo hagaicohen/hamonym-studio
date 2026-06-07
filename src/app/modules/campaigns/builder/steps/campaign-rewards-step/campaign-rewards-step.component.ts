@@ -7,6 +7,7 @@ import {
   CampaignReward,
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
+import { UploadService } from '../../../../../core/services/upload.service';
 
 @Component({
   selector: 'app-campaign-rewards-step',
@@ -16,7 +17,8 @@ import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/colo
   styleUrl: './campaign-rewards-step.component.css',
 })
 export class CampaignRewardsStepComponent {
-  protected state = inject(CampaignStudioStateService);
+  protected state       = inject(CampaignStudioStateService);
+  private uploadService = inject(UploadService);
 
   readonly Gift        = Gift;
   readonly Settings2   = Settings2;
@@ -83,13 +85,17 @@ export class CampaignRewardsStepComponent {
   }
 
   // ── Image upload ──
+  isUploadingImage = false;
+
   onImageSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { this.reward.imageUrl = reader.result as string; };
-    reader.readAsDataURL(file);
     (event.target as HTMLInputElement).value = '';
+    this.isUploadingImage = true;
+    this.uploadService.upload(file, 'campaigns/rewards').subscribe({
+      next: url => { this.reward.imageUrl = url; this.isUploadingImage = false; },
+      error: ()  => { this.isUploadingImage = false; },
+    });
   }
 
   removeImage(): void { this.reward.imageUrl = null; }

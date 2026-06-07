@@ -367,6 +367,7 @@
 
   .reward-preview-panel{
     visibility: hidden;
+    height: 0;
   }
 
   .rs-builder{

@@ -92,12 +92,35 @@
 
   <!-- ── CATEGORY ── -->
   <div class="field-section">
-    <label class="field-label">קטגוריה <span class="required">*</span></label>
-    <p class="field-hint">בחרו קטגוריה מהרשימה. תופיע על ה-Hero.</p>
-    <select class="field-input field-select" [(ngModel)]="draft.category" (ngModelChange)="sync()">
-      <option value="">בחרו קטגוריה...</option>
-      <option *ngFor="let cat of categories" [value]="cat.label">{{ cat.label }}</option>
-    </select>
+    <div class="field-meta">
+      <label class="field-label">קטגוריה <span class="required">*</span></label>
+      <span class="char-counter" *ngIf="categorySearch">{{ categorySearch.length }}/20</span>
+    </div>
+    <div class="category-picker">
+      <input
+        #categoryInput
+        type="text"
+        class="field-input category-input"
+        [value]="categorySearch"
+        maxlength="20"
+        (input)="onCategoryInput($any($event.target).value)"
+        (focus)="openCategoryDropdown()"
+        (blur)="onCategoryBlur()"
+        placeholder="חפשו או הקלידו קטגוריה...">
+      <div class="category-dropdown" *ngIf="categoryDropdownOpen">
+        <button
+          *ngFor="let cat of filteredCategories"
+          type="button"
+          class="category-option"
+          [class.selected]="draft.category === cat.label"
+          (mousedown)="selectCategory(cat.label)">
+          {{ cat.label }}
+        </button>
+        <div *ngIf="filteredCategories.length === 0" class="category-empty">
+          לא נמצאו קטגוריות — הטקסט שהזנתם ישמש כקטגוריה
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── MANAGER NAME ── -->

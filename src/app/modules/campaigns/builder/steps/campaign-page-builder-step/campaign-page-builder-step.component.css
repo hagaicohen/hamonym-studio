@@ -663,7 +663,7 @@
   font-weight: 700;
 }
 
-@media  {
+@media (max-width: 768px) {
   .footer-colors-row {
     display: flex;
     flex-direction: column;
@@ -671,7 +671,7 @@
   }
 
   .step-container{
-    padding 10px;
+    padding: 10px;
   }
 
 }

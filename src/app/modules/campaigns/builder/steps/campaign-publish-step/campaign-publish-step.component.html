@@ -269,34 +269,43 @@
     <div class="cta-text-block">
 
       @if (isReady) {
-
         <div class="cta-title">🎉 הקמפיין מוכן לפרסום!</div>
-
         <div class="cta-description">
           כל השלבים הושלמו בהצלחה. לאחר הפרסום הקמפיין יהיה זמין לציבור ויתחיל לקבל תרומות.
         </div>
-
       } @else {
-
         <div class="cta-title">יש להשלים פרטים לפני הפרסום</div>
-
         <ul class="missing-list">
           <li class="missing-item" *ngFor="let field of missingFields">
             <lucide-angular [img]="CircleAlert" class="missing-icon"></lucide-angular>
             {{ field }}
           </li>
         </ul>
-
       }
 
     </div>
 
-    <button
-      class="publish-button"
-      [disabled]="!isReady"
-      type="button">
-      <lucide-angular [img]="Check" class="check-icon"></lucide-angular>
-    </button>
+    <div class="cta-actions">
+
+      @if (errorMessage) {
+        <div class="publish-error">{{ errorMessage }}</div>
+      }
+
+      <button
+        class="publish-button"
+        [disabled]="isPublishing"
+        (click)="publishCampaign()"
+        type="button">
+        @if (isPublishing) {
+          <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
+          <span>מפרסם...</span>
+        } @else {
+          <lucide-angular [img]="Rocket" class="publish-icon"></lucide-angular>
+          <span>פרסם קמפיין</span>
+        }
+      </button>
+
+    </div>
 
   </div>
 
