@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, Layers } from 'lucide-angular';
 import {
   CampaignStudioStateService,
   CampaignBlock,
@@ -16,7 +17,9 @@ import {
   DonationWidgetBlockData,
   CtaBlockData,
   DividerBlockData,
+  UpdatesBlockData,
   CampaignDraft,
+  CampaignTheme,
 } from '../../../services/campaign-studio-state.service';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
@@ -70,13 +73,14 @@ const ADDABLE_BLOCKS: BlockType[] = [
 @Component({
   selector: 'app-campaign-page-builder-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, RichTextEditorComponent, TextStyleEditorComponent, ColorPickerComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent, ColorPickerComponent],
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
 export class CampaignPageBuilderStepComponent {
   private state = inject(CampaignStudioStateService);
 
+  readonly LayersIcon = Layers;
   draft$ = this.state.draft$;
 
   showBlockPicker = false;
@@ -337,8 +341,14 @@ export class CampaignPageBuilderStepComponent {
   }
 
   // Background
-  updateLayoutBg(field: keyof CampaignDraft['layout'], value: string, draft: CampaignDraft): void {
+  updateLayoutBg(field: keyof CampaignDraft['layout'], value: string | boolean, draft: CampaignDraft): void {
     this.state.patch({ layout: { ...draft.layout, [field]: value } });
+  }
+
+  // Theme
+  patchTheme(partial: Partial<CampaignTheme>): void {
+    const draft = this.state.draft;
+    this.state.patch({ layout: { ...draft.layout, theme: { ...draft.layout.theme, ...partial } } });
   }
 
   asRichText(data: unknown): RichTextBlockData       { return data as RichTextBlockData; }
@@ -356,5 +366,13 @@ export class CampaignPageBuilderStepComponent {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as DividerBlockData);
+  }
+
+  asUpdatesBlock(data: unknown): UpdatesBlockData { return data as UpdatesBlockData; }
+
+  updateUpdatesViewMode(blockId: string, mode: 'slider' | 'list'): void {
+    const block = this.state.draft.blocks.find(b => b.id === blockId);
+    if (!block) return;
+    this.state.updateBlockData(blockId, { viewMode: mode } as UpdatesBlockData);
   }
 }

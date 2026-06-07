@@ -20,6 +20,10 @@ import {
   DonationWidgetBlockData,
   CtaBlockData,
   DividerBlockData,
+  DonorsBlockData,
+  SponsorsBlockData,
+  AmbassadorsBlockData,
+  UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
 
 const FUNDING_LABELS: Record<string, string> = {
@@ -46,6 +50,7 @@ export class CampaignPreviewComponent {
   entityLogoUrl: string | null = null;
   entityName = '';
   navOpen = false;
+  readonly currentYear = new Date().getFullYear();
   private expandedRewards = new Set<string>();
 
   isExpanded(id: string): boolean { return this.expandedRewards.has(id); }
@@ -164,8 +169,14 @@ export class CampaignPreviewComponent {
 
   formatDate(iso: string): string {
     if (!iso) return '';
-    const [, m, d] = iso.split('-');
-    return `${d}.${m}`;          // dd.mm only — full year omitted
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y.slice(2)}`;
+  }
+
+  formatDateShort(iso: string): string {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y.slice(2)}`;
   }
 
   formatDateFull(iso: string): string {
@@ -223,11 +234,16 @@ export class CampaignPreviewComponent {
     return draft.layout?.theme?.secondaryColor || '#6fc9eb';
   }
 
-  blockSectionId(block: CampaignBlock): string {
+  blockSectionId(block: CampaignBlock, draft?: CampaignDraft): string {
     if (block.type === 'rich-text') return 'section-story';
     if (block.type === 'rewards')   return 'section-rewards';
     if (block.type === 'updates')   return 'section-updates';
     if (block.type === 'donors')    return 'section-donors';
+    if (block.type === 'container' && draft) {
+      const ids = (block.data as ContainerBlockData).childBlockIds;
+      if (ids.some(id => draft.blocks.find(b => b.id === id)?.type === 'donation-widget'))
+        return 'section-donate';
+    }
     return '';
   }
 
@@ -256,6 +272,19 @@ export class CampaignPreviewComponent {
   asDonationWidget(data: unknown)   { return data as DonationWidgetBlockData; }
   asCta(data: unknown)              { return data as CtaBlockData; }
   asDivider(data: unknown)          { return data as DividerBlockData; }
+  asDonors(data: unknown)           { return data as DonorsBlockData; }
+  asSponsorsBlock(data: unknown)    { return data as SponsorsBlockData; }
+  asAmbassadorsBlock(data: unknown) { return data as AmbassadorsBlockData; }
+  asUpdates(data: unknown)          { return data as UpdatesBlockData; }
+
+  // ── Donors mock (live data not available in preview) ──
+  readonly mockDonors = [
+    { name: 'תמר לוי',     amount: 360  },
+    { name: 'דניאל מזרחי', amount: 500  },
+    { name: 'משפחת חוזן',  amount: 1093 },
+    { name: 'יואב כהן',    amount: 180  },
+    { name: 'יעל לוי',     amount: 360  },
+  ];
 
   visibleStats(block: CampaignBlock): StatsBlockData['items'] {
     return (block.data as StatsBlockData).items

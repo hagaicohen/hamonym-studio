@@ -3,7 +3,12 @@
     "allow": [
       "Bash(git checkout *)",
       "Bash(npx tsc *)",
-      "Bash(npx ng *)"
+      "Bash(npx ng *)",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-ambassadors-step\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"done\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-ambassadors-step\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-updates-step\")"
     ]
   }
 }

@@ -93,13 +93,11 @@
   <!-- ── CATEGORY ── -->
   <div class="field-section">
     <label class="field-label">קטגוריה <span class="required">*</span></label>
-    <p class="field-hint">בחרו מהרשימה או הזינו עד שלוש מילים. תופיע על ה-Hero.</p>
-    <input class="field-input" type="text" list="category-list"
-      [(ngModel)]="draft.category" (ngModelChange)="sync()"
-      maxlength="40" placeholder="הזינו קטגוריה או בחרו מהרשימה...">
-    <datalist id="category-list">
+    <p class="field-hint">בחרו קטגוריה מהרשימה. תופיע על ה-Hero.</p>
+    <select class="field-input field-select" [(ngModel)]="draft.category" (ngModelChange)="sync()">
+      <option value="">בחרו קטגוריה...</option>
       <option *ngFor="let cat of categories" [value]="cat.label">{{ cat.label }}</option>
-    </datalist>
+    </select>
   </div>
 
   <!-- ── MANAGER NAME ── -->
@@ -131,15 +129,16 @@
   </div>
 
   <!-- ── ADVANCED TOGGLE ── -->
-  <button class="advanced-toggle-btn" type="button" (click)="showAdvanced = !showAdvanced">
+ <!-- <button class="advanced-toggle-btn" type="button" (click)="showAdvanced = !showAdvanced">
     <lucide-angular [img]="Settings2" [size]="15" class="advanced-btn-icon"></lucide-angular>
     <span>הגדרות מתקדמות</span>
     <lucide-angular [img]="showAdvanced ? ChevronUp : ChevronDown" [size]="15" class="advanced-btn-chevron"></lucide-angular>
-  </button>
+  </button> 
 
   <div class="advanced-section" *ngIf="showAdvanced">
-
+  -->
     <!-- TEXT STYLE -->
+     <!--
     <div class="field-section">
       <label class="field-label">עיצוב טקסט ה-Hero</label>
       <app-text-style-editor
@@ -150,9 +149,10 @@
         [showPosition]="true"
         [showCta]="true">
       </app-text-style-editor>
-    </div>
+    </div> -->
 
     <!-- LOGO OPTIONS -->
+     <!--
     <div class="field-section">
       <label class="field-label">לוגו</label>
       <div class="logo-preview-row">
@@ -163,8 +163,8 @@
         <span class="logo-entity-name" *ngIf="entityName">{{ entityName }}</span>
       </div>
       <p class="field-hint">הלוגו מוצג על ה-Hero — ניתן לשנות מיקום בדף הבונה.</p>
-    </div>
+    </div> 
 
   </div>
-
+-->
 </div>

@@ -1,0 +1,129 @@
+<div class="upd-step" *ngIf="draft$ | async as draft">
+
+  <div class="upd-header">
+    <div class="upd-header-text">
+      <h2 class="upd-title">{{ isEditing ? 'עריכת עדכון' : 'הוספת עדכון חדש' }}</h2>
+      <p class="upd-subtitle">עדכנו את התומכים על התקדמות הקמפיין</p>
+    </div>
+    <div class="upd-header-icon">
+      <lucide-angular [img]="MegaphoneIcon" [size]="22" class="upd-icon"></lucide-angular>
+    </div>
+  </div>
+
+  <div class="upd-builder">
+
+    <!-- FORM -->
+    <div class="upd-form-panel">
+
+      <!-- Media -->
+      <div class="uf-field">
+        <label class="uf-label">תמונה / וידאו</label>
+        <input id="upd-media-input" type="file" accept="image/*,video/*" style="display:none" (change)="onMediaSelected($event)">
+        <div class="uf-media-area" *ngIf="!form.mediaUrl">
+          <label for="upd-media-input" class="uf-upload-label">
+            <span class="uf-upload-icon">🖼</span>
+            <span>לחץ להעלאת תמונה / וידאו</span>
+            <span class="uf-upload-hint">מומלץ יחס 16:9</span>
+          </label>
+        </div>
+        <div class="uf-media-preview" *ngIf="form.mediaUrl">
+          <img *ngIf="form.mediaType === 'image'" [src]="form.mediaUrl" alt="">
+          <video *ngIf="form.mediaType === 'video'" [src]="form.mediaUrl" controls style="width:100%;border-radius:10px"></video>
+          <div class="uf-media-actions">
+            <label for="upd-media-input" class="uf-img-btn">החלף</label>
+            <button type="button" class="uf-img-btn uf-img-btn--remove" (click)="form.mediaUrl=''; form.mediaType='none'">הסר</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div class="uf-field">
+        <label class="uf-label">כותרת העדכון <span class="uf-req">*</span></label>
+        <input class="uf-input" type="text" [(ngModel)]="form.title" placeholder="למשל: הגענו ל-50%!">
+      </div>
+
+      <!-- Date -->
+      <div class="uf-field">
+        <label class="uf-label">תאריך</label>
+        <input class="uf-input" type="date" [(ngModel)]="form.date">
+      </div>
+
+      <!-- Description -->
+      <div class="uf-field">
+        <label class="uf-label">תיאור קצר</label>
+        <textarea class="uf-textarea" rows="3" [(ngModel)]="form.description"
+          placeholder="ספרו לתומכים על ההתקדמות..."></textarea>
+      </div>
+
+      <!-- Link (optional) -->
+      <div class="uf-field">
+        <label class="uf-label">קישור לפרטים נוספים (רשות)</label>
+        <input class="uf-input" type="url" [(ngModel)]="form.linkUrl" placeholder="https://...">
+        <input class="uf-input" type="text" [(ngModel)]="form.linkLabel" placeholder='טקסט הקישור — למשל "קרא עוד"'>
+      </div>
+
+      <div class="uf-actions">
+        <button class="uf-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
+        <button class="uf-btn-save"  type="button" (click)="save()" [disabled]="!form.title.trim()">
+          💾 {{ isEditing ? 'עדכן' : 'שמור עדכון' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="upd-preview-panel">
+      <div class="up-header">
+        <lucide-angular [img]="EyeIcon" [size]="16" class="up-eye"></lucide-angular>
+        <span>תצוגה מקדימה</span>
+      </div>
+      <div class="up-card">
+        <div class="up-card-media">
+          <img *ngIf="form.mediaUrl && form.mediaType === 'image'" [src]="form.mediaUrl" alt="">
+          <div *ngIf="!form.mediaUrl" class="up-card-media-placeholder"></div>
+        </div>
+        <div class="up-card-body">
+          <span class="up-date-badge">{{ formatDate(form.date) }}</span>
+          <div class="up-card-title">{{ form.title || 'כותרת העדכון' }}</div>
+          <p class="up-card-desc">{{ form.description || 'תיאור העדכון יופיע כאן' }}</p>
+          <a *ngIf="form.linkUrl" class="up-card-link">{{ form.linkLabel || 'קרא עוד' }} →</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LIST -->
+  <div class="upd-list-section" *ngIf="draft.updates.length > 0">
+    <div class="upd-list-header">
+      <div class="upd-list-title">
+        <lucide-angular [img]="MegaphoneIcon" [size]="18" class="upd-list-icon"></lucide-angular>
+        עדכוני הקמפיין ({{ draft.updates.length }})
+      </div>
+      <button class="upd-add-btn" type="button" (click)="clearForm()">+ הוסף עדכון</button>
+    </div>
+    <div class="upd-grid">
+      <div class="upd-card" *ngFor="let u of draft.updates" [class.upd-card--editing]="editingId === u.id">
+        <div class="upd-card-media">
+          <img *ngIf="u.mediaUrl && u.mediaType === 'image'" [src]="u.mediaUrl" alt="">
+          <div *ngIf="!u.mediaUrl" class="upd-card-media-empty">📢</div>
+        </div>
+        <div class="upd-card-body">
+          <span class="upd-date-badge">{{ formatDate(u.date) }}</span>
+          <div class="upd-card-title">{{ u.title }}</div>
+          <p class="upd-card-desc">{{ u.description }}</p>
+          <div class="upd-card-actions">
+            <button class="upd-card-btn upd-card-btn--delete" (click)="delete(u.id)">🗑 מחיקה</button>
+            <button class="upd-card-btn upd-card-btn--edit"   (click)="edit(u)">✏ עריכה</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="upd-empty" *ngIf="draft.updates.length === 0">
+    <div class="upd-empty-icon">📢</div>
+    <div class="upd-empty-text">טרם נוספו עדכונים</div>
+    <div class="upd-empty-hint">ניתן להוסיף עדכונים גם לאחר פרסום הקמפיין</div>
+  </div>
+
+</div>

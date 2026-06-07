@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Handshake } from 'lucide-angular';
-import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
+import { LucideAngularModule, Handshake, Eye, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
+import { CampaignStudioStateService, CampaignSponsor } from '../../../services/campaign-studio-state.service';
+import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 
 @Component({
   selector: 'app-campaign-sponsors-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent],
   templateUrl: './campaign-sponsors-step.component.html',
   styleUrl: './campaign-sponsors-step.component.css',
 })
@@ -15,47 +16,59 @@ export class CampaignSponsorsStepComponent {
   private state = inject(CampaignStudioStateService);
 
   readonly HandshakeIcon = Handshake;
+  readonly Eye = Eye;
+  readonly Settings2 = Settings2;
+  readonly ChevronDown = ChevronDown;
+  readonly ChevronUp = ChevronUp;
 
   draft$ = this.state.draft$;
 
-  addSponsor(): void {
-    const sponsors = [...this.state.draft.sponsors, {
-      id: Math.random().toString(36).slice(2, 10),
-      name: '',
-      logoUrl: null,
-      link: null,
-    }];
-    this.state.patch({ sponsors });
+  editingId: string | null = null;
+  form: { name: string; logoUrl: string; link: string } = { name: '', logoUrl: '', link: '' };
+
+  get isEditing(): boolean { return this.editingId !== null; }
+
+  clearForm(): void {
+    this.editingId = null;
+    this.form = { name: '', logoUrl: '', link: '' };
   }
 
-  removeSponsor(id: string): void {
+  editSponsor(s: CampaignSponsor): void {
+    this.editingId = s.id;
+    this.form = { name: s.name, logoUrl: s.logoUrl ?? '', link: s.link ?? '' };
+  }
+
+  save(): void {
+    if (!this.form.name.trim()) return;
+    if (this.isEditing) {
+      const sponsors = this.state.draft.sponsors.map(s =>
+        s.id === this.editingId
+          ? { ...s, name: this.form.name, logoUrl: this.form.logoUrl || null, link: this.form.link || null }
+          : s
+      );
+      this.state.patch({ sponsors });
+    } else {
+      const sponsor: CampaignSponsor = {
+        id: Math.random().toString(36).slice(2, 10),
+        name: this.form.name,
+        logoUrl: this.form.logoUrl || null,
+        link: this.form.link || null,
+      };
+      this.state.patch({ sponsors: [...this.state.draft.sponsors, sponsor] });
+    }
+    this.clearForm();
+  }
+
+  deleteSponsor(id: string): void {
     this.state.patch({ sponsors: this.state.draft.sponsors.filter(s => s.id !== id) });
+    if (this.editingId === id) this.clearForm();
   }
 
-  updateName(id: string, value: string): void {
-    const sponsors = this.state.draft.sponsors.map(s =>
-      s.id === id ? { ...s, name: value } : s
-    );
-    this.state.patch({ sponsors });
-  }
-
-  onLogoSelected(id: string, event: Event): void {
+  onLogoSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const sponsors = this.state.draft.sponsors.map(s =>
-        s.id === id ? { ...s, logoUrl: reader.result as string } : s
-      );
-      this.state.patch({ sponsors });
-    };
+    reader.onload = () => { this.form.logoUrl = reader.result as string; };
     reader.readAsDataURL(file);
-  }
-
-  removeLogo(id: string): void {
-    const sponsors = this.state.draft.sponsors.map(s =>
-      s.id === id ? { ...s, logoUrl: null } : s
-    );
-    this.state.patch({ sponsors });
   }
 }

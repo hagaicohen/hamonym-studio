@@ -1,7 +1,9 @@
 <div class="step-container" *ngIf="draft$ | async as draft">
 
   <div class="step-header">
-    <span class="step-icon-wrapper"><span class="step-icon-text">🧱</span></span>
+    <span class="step-icon-wrapper">
+      <lucide-angular [img]="LayersIcon" [size]="20" class="step-icon"></lucide-angular>
+    </span>
     <div>
       <h2 class="step-title">בניית דף הקמפיין</h2>
       <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
@@ -478,9 +480,35 @@
           </div>
         </div>
 
-        <!-- SYSTEM -->
-        <div class="system-note" *ngIf="['rewards','sponsors','ambassadors','donors','updates'].includes(block.type)">
+        <!-- SYSTEM: rewards/donors — auto -->
+        <div class="system-note" *ngIf="['rewards','donors'].includes(block.type)">
           <span>🔧</span> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
+        </div>
+
+        <!-- SPONSORS — managed in step 4 -->
+        <div class="system-note" *ngIf="block.type === 'sponsors'">
+          <span>🤝</span> החסויות מנוהלות בצעד 4 — חסויות
+        </div>
+
+        <!-- AMBASSADORS — managed in step 5 -->
+        <div class="system-note" *ngIf="block.type === 'ambassadors'">
+          <span>⭐</span> השגרירים מנוהלים בצעד 5 — שגרירים
+        </div>
+
+        <!-- UPDATES — view mode only, content in step 6 -->
+        <div class="editor-field" *ngIf="block.type === 'updates'">
+          <div class="system-note" style="margin-bottom:10px">
+            <span>📢</span> תוכן העדכונים מנוהל בצעד 6 — עדכונים
+          </div>
+          <label class="editor-label">תצוגה בדף</label>
+          <div class="tse-chips">
+            <button class="tse-chip"
+              [class.active]="(asUpdatesBlock(block.data).viewMode || 'slider') === 'slider'"
+              (click)="updateUpdatesViewMode(block.id, 'slider')">סליידר</button>
+            <button class="tse-chip"
+              [class.active]="asUpdatesBlock(block.data).viewMode === 'list'"
+              (click)="updateUpdatesViewMode(block.id, 'list')">רשימה</button>
+          </div>
         </div>
 
         <!-- ── SPACER / DIVIDER ── -->
@@ -509,6 +537,36 @@
 
       </div>
     </div>
+  </div>
+
+  <!-- CAMPAIGN THEME COLORS -->
+  <div class="campaign-theme-section">
+    <div class="campaign-bg-header">
+      <span class="campaign-bg-title">🎨 צבעי תמה</span>
+    </div>
+    <div class="theme-colors-grid">
+      <div class="theme-color-row">
+        <span class="theme-color-label">ראשי</span>
+        <app-color-picker [value]="draft.layout.theme.primaryColor"
+          (valueChange)="patchTheme({ primaryColor: $event })"></app-color-picker>
+      </div>
+      <div class="theme-color-row">
+        <span class="theme-color-label">משני / כותרות</span>
+        <app-color-picker [value]="draft.layout.theme.secondaryColor"
+          (valueChange)="patchTheme({ secondaryColor: $event })"></app-color-picker>
+      </div>
+      <div class="theme-color-row">
+        <span class="theme-color-label">הדגשה / קישורים</span>
+        <app-color-picker [value]="draft.layout.theme.accentColor"
+          (valueChange)="patchTheme({ accentColor: $event })"></app-color-picker>
+      </div>
+      <div class="theme-color-row">
+        <span class="theme-color-label">צבע טקסט</span>
+        <app-color-picker [value]="draft.layout.theme.bodyTextColor"
+          (valueChange)="patchTheme({ bodyTextColor: $event })"></app-color-picker>
+      </div>
+    </div>
+    <p class="theme-hint">שינוי צבע משני יעדכן את כל הכותרות בדף. שינוי הדגשה יעדכן קישורים וכפתורי CTA.</p>
   </div>
 
   <!-- CAMPAIGN BACKGROUND -->
@@ -550,6 +608,102 @@
       <button class="upload-area-btn" type="button" (click)="campaignBgInput.click()">
         {{ draft.layout.backgroundImageUrl ? 'החלף תמונת רקע' : '+ הוסף תמונת רקע / GIF' }}
       </button>
+    </ng-container>
+  </div>
+
+  <!-- BOTTOM BANNER (פרטי קמפיין) -->
+  <div class="campaign-bg-section">
+    <div class="campaign-bg-header">
+      <span class="section-icon-box">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="13" width="18" height="8" rx="1"/>
+          <line x1="6" y1="17" x2="6" y2="17"/><line x1="10" y1="17" x2="10" y2="17"/>
+          <line x1="14" y1="17" x2="14" y2="17"/><line x1="18" y1="17" x2="18" y2="17"/>
+          <line x1="3" y1="10" x2="21" y2="10" stroke-dasharray="3 2"/>
+        </svg>
+      </span>
+      <span class="campaign-bg-title">פרטי קמפיין</span>
+      <div class="footer-toggle-inline"
+        (click)="updateLayoutBg('showBottomBanner', !(draft.layout.showBottomBanner !== false), draft)">
+        <span class="toggle-pill" [class.on]="draft.layout.showBottomBanner !== false">
+          <span class="toggle-pill-dot"></span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="campaign-bg-section">
+    <div class="campaign-bg-header">
+      <span class="section-icon-box">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="3" y1="16" x2="21" y2="16"/>
+          <line x1="7" y1="20" x2="7" y2="16"/>
+        </svg>
+      </span>
+      <span class="campaign-bg-title">פוטר</span>
+      <div class="footer-toggle-inline"
+        (click)="updateLayoutBg('showFooter', !(draft.layout.showFooter !== false), draft)">
+        <span class="toggle-pill" [class.on]="draft.layout.showFooter !== false">
+          <span class="toggle-pill-dot"></span>
+        </span>
+      </div>
+    </div>
+
+    <ng-container *ngIf="draft.layout.showFooter !== false">
+
+      <!-- Colors -->
+      <div class="footer-colors-row">
+        <div class="editor-row">
+          <label class="editor-label">צבע רקע</label>
+          <app-color-picker
+            [value]="draft.layout.footerBg || '#030712'"
+            (valueChange)="updateLayoutBg('footerBg', $event, draft)">
+          </app-color-picker>
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">צבע טקסט</label>
+          <app-color-picker
+            [value]="draft.layout.footerTextColor || '#ffffff'"
+            (valueChange)="updateLayoutBg('footerTextColor', $event, draft)">
+          </app-color-picker>
+        </div>
+      </div>
+
+      <!-- Contact toggle -->
+      <div class="footer-toggle-row"
+        (click)="updateLayoutBg('showFooterContact', !(draft.layout.showFooterContact !== false), draft)">
+        <span class="editor-label">עמודת "צור קשר"</span>
+        <span class="toggle-pill" [class.on]="draft.layout.showFooterContact !== false">
+          <span class="toggle-pill-dot"></span>
+        </span>
+      </div>
+
+      <ng-container *ngIf="draft.layout.showFooterContact !== false">
+        <div class="editor-row">
+          <label class="editor-label">דוא"ל</label>
+          <input class="editor-input" type="text"
+            [value]="draft.layout.footerEmail"
+            (input)="updateLayoutBg('footerEmail', $any($event.target).value, draft)"
+            placeholder="info@hamonym.org">
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">טלפון</label>
+          <input class="editor-input" type="text"
+            [value]="draft.layout.footerPhone"
+            (input)="updateLayoutBg('footerPhone', $any($event.target).value, draft)"
+            placeholder="072-3970028">
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">שעות פעילות</label>
+          <input class="editor-input" type="text"
+            [value]="draft.layout.footerHours"
+            (input)="updateLayoutBg('footerHours', $any($event.target).value, draft)"
+            placeholder="א'-ה' 09:00-17:00">
+        </div>
+      </ng-container>
+
     </ng-container>
   </div>
 

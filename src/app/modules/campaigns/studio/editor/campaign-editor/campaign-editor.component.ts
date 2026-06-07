@@ -4,14 +4,15 @@ import { CampaignStepperComponent } from '../../../shared/components/campaign-st
 import { CampaignEditorFooterComponent } from '../../../shared/components/footer/campaign-editor-footer/campaign-editor-footer.component';
 import { CampaignBasicStepComponent } from '../../../builder/steps/campaign-basic-step/campaign-basic-step.component';
 import { CampaignTypeStepComponent } from '../../../builder/steps/campaign-type-step/campaign-type-step.component';
-import { CampaignGoalsStepComponent } from '../../../builder/steps/campaign-goals-step/campaign-goals-step.component';
 import { CampaignRewardsStepComponent } from '../../../builder/steps/campaign-rewards-step/campaign-rewards-step.component';
 import { CampaignSponsorsStepComponent } from '../../../builder/steps/campaign-sponsors-step/campaign-sponsors-step.component';
+import { CampaignAmbassadorsStepComponent } from '../../../builder/steps/campaign-ambassadors-step/campaign-ambassadors-step.component';
+import { CampaignUpdatesStepComponent } from '../../../builder/steps/campaign-updates-step/campaign-updates-step.component';
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-publish-step/campaign-publish-step.component';
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 @Component({
   selector: 'app-campaign-editor',
@@ -22,9 +23,10 @@ const TOTAL_STEPS = 7;
     CampaignEditorFooterComponent,
     CampaignBasicStepComponent,
     CampaignTypeStepComponent,
-    CampaignGoalsStepComponent,
     CampaignRewardsStepComponent,
     CampaignSponsorsStepComponent,
+    CampaignAmbassadorsStepComponent,
+    CampaignUpdatesStepComponent,
     CampaignPageBuilderStepComponent,
     CampaignPublishStepComponent,
   ],
@@ -48,7 +50,5 @@ export class CampaignEditorComponent {
     if (this.currentStep > 1) this.currentStep--;
   }
 
-  canContinue(): boolean {
-    return true;
-  }
+  canContinue(): boolean { return true; }
 }

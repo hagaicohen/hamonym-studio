@@ -7,12 +7,18 @@
   [style.--hm-primary]="draft.layout.theme.primaryColor"
   [style.--hm-secondary]="draft.layout.theme.secondaryColor"
   [style.--hm-accent]="draft.layout.theme.accentColor"
+  [style.--hm-body]="draft.layout.theme.bodyTextColor"
   [style.--hm-logo-bg]="draft.layout.theme.logoBg"
   [style.--hm-top-strip-bg]="draft.layout.theme.topStripBg"
   [style.--hm-rewards-bg]="draft.layout.theme.rewardsBg"
   [style.--hm-reward-border]="draft.layout.theme.rewardCardBorder"
   [style.--hm-reward-border-active]="draft.layout.theme.rewardCardBorderActive"
-  [style.--line]="draft.layout.theme.lineColor">
+  [style.--line]="draft.layout.theme.lineColor"
+  [style.--hm-section-odd]="draft.layout.sectionBgOdd || '#ffffff'"
+  [style.--hm-section-even]="draft.layout.sectionBgEven || '#f8fafc'"
+  [style.--hm-section-divider]="draft.layout.sectionDividerColor || '#e2e8f0'"
+  [style.--hm-footer-bg]="draft.layout.footerBg || '#030712'"
+  [style.--hm-footer-text]="draft.layout.footerTextColor || 'rgba(255,255,255,0.85)'">
 
   <!-- ── EMPTY STATE ── -->
   <div class="empty-state" *ngIf="isEmpty(draft)">
@@ -107,7 +113,7 @@
             <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          {{ draft.endDate ? 'פעיל עד ' + formatDate(draft.endDate) : 'תאריך סיום' }}
+          {{ draft.endDate ? (vm.mobile ? formatDateShort(draft.endDate) : 'פעיל עד ' + formatDate(draft.endDate)) : 'תאריך סיום' }}
         </span>
         <span class="hm-meta-badge">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
@@ -121,7 +127,7 @@
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
-          {{ draft.managerName ? 'מנהל: ' + draft.managerName : 'מנהל' }}
+          {{ draft.managerName ? (vm.mobile ? draft.managerName : 'מנהל: ' + draft.managerName) : 'מנהל' }}
         </span>
       </div>
 
@@ -131,7 +137,7 @@
     <div class="page-blocks">
       <ng-container *ngFor="let block of contentBlocks(draft)">
         <div class="block-wrap"
-          [id]="blockSectionId(block)"
+          [id]="blockSectionId(block, draft)"
           [style.marginTop.px]="block.spacingTop"
           [style.marginBottom.px]="block.spacingBottom">
           <!-- Section heading from block label -->
@@ -143,6 +149,82 @@
         </div>
       </ng-container>
     </div>
+
+    <!-- ══ BOTTOM CAMPAIGN BANNER ══ -->
+    <div class="hm-bottom-banner" *ngIf="draft.layout.showBottomBanner !== false">
+      <div class="hm-bottom-stat">
+        <strong [style.color]="primaryColor(draft)">{{ daysRemaining(draft) }}</strong>
+        <span>ימים נותרו</span>
+      </div>
+      <div class="hm-bottom-divider"></div>
+      <div class="hm-bottom-stat">
+        <strong [style.color]="primaryColor(draft)">0%</strong>
+        <span>מהיעד</span>
+      </div>
+      <div class="hm-bottom-divider"></div>
+      <div class="hm-bottom-stat">
+        <strong [style.color]="primaryColor(draft)">₪0</strong>
+        <span>סך גיוס</span>
+      </div>
+      <div class="hm-bottom-divider"></div>
+      <div class="hm-bottom-stat">
+        <strong [style.color]="primaryColor(draft)">0</strong>
+        <span>תומכים</span>
+      </div>
+    </div>
+
+    <!-- ══ FOOTER ══ -->
+    <footer class="hm-footer" *ngIf="draft.layout.showFooter !== false">
+
+      <!-- Brand -->
+      <div class="hm-footer-brand">
+        <div class="hm-footer-logo">
+          <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
+          <span *ngIf="!entityLogoUrl" class="hm-footer-logo-name">{{ entityName || 'לוגו עמותה' }}</span>
+        </div>
+        <p>{{ draft.shortDescription || 'תיאור קצר של הקמפיין יופיע כאן.' }}</p>
+        <div class="hm-footer-social">
+          <a href="#" aria-label="LinkedIn">LN</a>
+          <a href="#" aria-label="Instagram">IG</a>
+          <a href="#" aria-label="Facebook">FB</a>
+        </div>
+      </div>
+
+      <!-- Quick nav -->
+      <div class="hm-footer-links">
+        <h3>ניווט מהיר</h3>
+        <a (click)="scrollTo('section-donate')">תרומה</a>
+        <a (click)="scrollTo('section-story')">על המיזם</a>
+        <a (click)="scrollTo('section-rewards')">תשורות</a>
+        <a (click)="scrollTo('section-updates')">עדכונים</a>
+      </div>
+
+      <!-- Newsletter -->
+      <div class="hm-footer-newsletter">
+        <h3>הרשמה לעדכונים</h3>
+        <p>הירשמו לקבלת עדכונים מהשטח על התקדמות המיזם.</p>
+        <div class="hm-newsletter-form">
+          <input type="email" placeholder="המייל שלכם">
+          <button type="button" [style.background]="primaryColor(draft)">שלחו</button>
+        </div>
+      </div>
+
+      <!-- Contact — user-toggleable -->
+      <div class="hm-footer-contact" *ngIf="draft.layout.showFooterContact !== false">
+        <h3>צור קשר</h3>
+        <p>
+          <strong>דוא"ל:</strong> {{ draft.layout.footerEmail || 'info@hamonym.org' }}<br>
+          <strong>שעות פעילות:</strong> {{ draft.layout.footerHours || "א'-ה' 09:00-17:00" }}<br>
+          <strong>טלפון:</strong> {{ draft.layout.footerPhone || '072-3970028' }}
+        </p>
+      </div>
+
+      <!-- Bottom strip -->
+      <div class="hm-footer-bottom">
+        <p>© {{ currentYear }} {{ entityName || 'המונים' }} — כל הזכויות שמורות. תרומות מוכרות לצרכי מס לפי סעיף 46.</p>
+      </div>
+
+    </footer>
 
   </ng-container>
 </div>
@@ -360,13 +442,163 @@
     </ng-template>
   </section>
 
-  <!-- SYSTEM BLOCKS (other) -->
-  <div class="block-system" *ngIf="['sponsors','ambassadors','donors','updates'].includes(block.type)">
-    <div class="system-block-placeholder">
-      {{ block.type === 'donors' ? 'רשימת התורמים תוצג כאן' :
-         block.type === 'updates' ? 'עדכוני הקמפיין יוצגו כאן' :
-         'יוצג לאחר הגדרה' }}
-    </div>
-  </div>
+  <!-- SPONSORS -->
+  <section class="hm-section hm-sponsors" *ngIf="block.type === 'sponsors'" id="section-sponsors">
+    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">חסויות</h2>
+    <ng-container *ngIf="draft.sponsors?.length > 0; else sponsorsEmpty">
+      <div class="hm-sponsors-grid">
+        <div class="hm-sponsor-card" *ngFor="let sp of draft.sponsors">
+          <img *ngIf="sp.logoUrl" [src]="sp.logoUrl" [alt]="sp.name">
+          <span *ngIf="!sp.logoUrl" class="hm-sponsor-name-text">{{ sp.name || 'חוסה' }}</span>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template #sponsorsEmpty>
+      <div class="hm-section-placeholder">
+        <span>🤝</span><p>נותני חסות יוצגו כאן לאחר הגדרתם בבונה הדף</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- AMBASSADORS — slider -->
+  <section class="hm-section hm-ambassadors" *ngIf="block.type === 'ambassadors'" id="section-ambassadors">
+    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">שגרירים</h2>
+    <ng-container *ngIf="draft.ambassadors?.length > 0; else ambassadorsEmpty">
+      <div class="hm-amb-outer">
+        <button class="hm-amb-arrow" (click)="scrollSlider(ambSlider, 'prev')">‹</button>
+        <div class="hm-amb-slider" #ambSlider>
+          <div class="hm-amb-track">
+            <div class="hm-amb-card" *ngFor="let a of draft.ambassadors">
+              <div class="hm-amb-avatar" [style.color]="primaryColor(draft)">
+                <img *ngIf="a.imageUrl" [src]="a.imageUrl" alt="">
+                <svg *ngIf="!a.imageUrl" viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                </svg>
+              </div>
+              <div class="hm-amb-name" [style.color]="primaryColor(draft)">{{ a.name }}</div>
+              <div class="hm-amb-role">שגריר/ה</div>
+            </div>
+          </div>
+        </div>
+        <button class="hm-amb-arrow" (click)="scrollSlider(ambSlider, 'next')">›</button>
+      </div>
+    </ng-container>
+    <ng-template #ambassadorsEmpty>
+      <div class="hm-section-placeholder">
+        <span>⭐</span><p>שגרירי הקמפיין יוצגו כאן לאחר הגדרתם בבונה הדף</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- DONORS — grid or list -->
+  <section class="hm-section hm-donors" *ngIf="block.type === 'donors'" id="section-donors">
+    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">תורמים אחרונים</h2>
+
+    <!-- GRID -->
+    <ng-container *ngIf="(asDonors(block.data).viewMode || 'grid') === 'grid'">
+      <div class="hm-donors-outer">
+        <button class="hm-amb-arrow" (click)="scrollSlider(donorSlider, 'prev')">‹</button>
+        <div class="hm-donors-slider" #donorSlider>
+          <div class="hm-donors-track">
+            <div class="hm-donor-card" *ngFor="let d of mockDonors">
+              <div class="hm-donor-amount" [style.color]="draft.layout.theme.accentColor">
+                ₪{{ d.amount.toLocaleString('he-IL') }}
+              </div>
+              <div class="hm-donor-info">
+                <span class="hm-donor-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+                <span class="hm-donor-role">תורמ/ה בקמפיין</span>
+              </div>
+              <div class="hm-donor-avatar" [style.borderColor]="draft.layout.theme.accentColor">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" [style.color]="draft.layout.theme.accentColor">
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="hm-amb-arrow" (click)="scrollSlider(donorSlider, 'next')">›</button>
+      </div>
+    </ng-container>
+
+    <!-- LIST -->
+    <ng-container *ngIf="(asDonors(block.data).viewMode || 'grid') === 'list'">
+      <div class="hm-donors-list">
+        <div class="hm-donor-list-row" *ngFor="let d of mockDonors">
+          <div class="hm-donor-avatar hm-donor-avatar--sm" [style.borderColor]="draft.layout.theme.accentColor">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" [style.color]="draft.layout.theme.accentColor">
+              <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+            </svg>
+          </div>
+          <div class="hm-donor-info">
+            <span class="hm-donor-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+            <span class="hm-donor-role">תורמ/ה בקמפיין</span>
+          </div>
+          <div class="hm-donor-amount" [style.color]="draft.layout.theme.accentColor">
+            ₪{{ d.amount.toLocaleString('he-IL') }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- UPDATES — slider or list -->
+  <section class="hm-section hm-updates" *ngIf="block.type === 'updates'" id="section-updates">
+    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">עדכונים</h2>
+
+    <ng-container *ngIf="draft.updates?.length > 0; else updatesEmpty">
+
+      <!-- SLIDER -->
+      <ng-container *ngIf="(asUpdates(block.data).viewMode || 'slider') === 'slider'">
+        <div class="hm-updates-outer">
+          <button class="hm-amb-arrow" (click)="scrollSlider(updatesSlider, 'prev')">‹</button>
+          <div class="hm-updates-slider" #updatesSlider>
+            <div class="hm-updates-track">
+              <article class="hm-update-card" *ngFor="let u of draft.updates">
+                <div class="hm-update-media">
+                  <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
+                  <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
+                </div>
+                <div class="hm-update-content">
+                  <span class="hm-update-date-badge">{{ formatDate(u.date) }}</span>
+                  <h3 class="hm-update-title" [style.color]="primaryColor(draft)">{{ u.title }}</h3>
+                  <p class="hm-update-desc">{{ u.description }}</p>
+                  <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+                    {{ u.linkLabel || 'קרא עוד' }} →
+                  </a>
+                </div>
+              </article>
+            </div>
+          </div>
+          <button class="hm-amb-arrow" (click)="scrollSlider(updatesSlider, 'next')">›</button>
+        </div>
+      </ng-container>
+
+      <!-- LIST -->
+      <ng-container *ngIf="asUpdates(block.data).viewMode === 'list'">
+        <div class="hm-updates-list-view">
+          <article class="hm-update-list-item" *ngFor="let u of draft.updates">
+            <div class="hm-update-media hm-update-media--sm">
+              <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
+              <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
+            </div>
+            <div class="hm-update-content">
+              <span class="hm-update-date-badge">{{ formatDate(u.date) }}</span>
+              <h3 class="hm-update-title" [style.color]="primaryColor(draft)">{{ u.title }}</h3>
+              <p class="hm-update-desc">{{ u.description }}</p>
+              <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+                {{ u.linkLabel || 'קרא עוד' }} →
+              </a>
+            </div>
+          </article>
+        </div>
+      </ng-container>
+
+    </ng-container>
+    <ng-template #updatesEmpty>
+      <div class="hm-section-placeholder">
+        <span>📢</span><p>עדכוני הקמפיין יוצגו כאן לאחר הוספתם בבונה הדף</p>
+      </div>
+    </ng-template>
+  </section>
 
 </ng-template>

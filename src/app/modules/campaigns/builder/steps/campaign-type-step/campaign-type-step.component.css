@@ -1,299 +1,92 @@
-:host {
-  display: block;
+:host { display: block; }
+
+.type-goals-step {
+  max-width: 860px; margin: 0 auto;
+  padding: 28px 28px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+  font-family: 'Heebo', sans-serif; direction: rtl;
 }
 
-.campaign-type-step {
-
-  max-width: 1000px;
-
-  margin: 0 auto;
-
+/* Section header */
+.tg-section-header { display: flex; align-items: center; gap: 12px; }
+.tg-icon-box {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: #ede9fe; border: 1.5px solid #c4b5fd;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
+.tg-section-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
+.tg-section-desc  { font-size: 12px; color: #64748b; margin: 0; }
 
-.campaign-type-header {
-
-  margin-bottom: 32px;
-
-  text-align: center;
-
+/* Type cards — compact 2×2 grid */
+.types-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
-
-.campaign-type-title {
-
-  margin: 0;
-
-  font-size: 30px;
-
-  font-weight: 800;
-
-  color: #0f172a;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  gap: 12px;
-
-}
-
-.step-title-icon-wrapper {
-  width: 44px;
-  height: 44px;
-  background: #ede9fe;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.step-title-icon {
-  margin-top: 7px;
-  color: #7c3aed;
-
-}
-
-.campaign-type-description {
-
-  margin-top: 8px;
-
-  font-size: 18px;
-
-  color: #64748b;
-
-}
-
-.types-list {
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 16px;
-
-}
-
 .type-card {
-
-  width: 100%;
-
-  min-height: 140px;
-
-  border: 1px solid #e2e8f0;
-
-  border-radius: 20px;
-
-  background: #ffffff;
-
-  padding: 24px;
-
-  display: flex;
-
-  flex-direction: row-reverse;
-
-  align-items: center;
-
-  gap: 24px;
-
-  cursor: pointer;
-
-  text-align: right;
-
-  transition:
-    border-color .2s ease,
-    background .2s ease,
-    box-shadow .2s ease;
-
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px 16px; border-radius: 14px;
+  border: 2px solid #e2e8f0; background: #fff;
+  cursor: pointer; font-family: inherit; text-align: right;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.type-card:hover   { border-color: #a78bfa; }
+.type-card.selected{ border-color: #7c3aed; background: #faf5ff; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
 
-.type-card:hover {
-
-  border-color: #d8b4fe;
-
+.tc-top  { display: flex; align-items: center; justify-content: space-between; }
+.tc-icon-wrap {
+  width: 32px; height: 32px; border-radius: 8px; background: #ede9fe;
+  display: flex; align-items: center; justify-content: center;
 }
+.tc-icon   { color: #7c3aed; }
+.tc-check  { color: #7c3aed; }
+.tc-circle { color: #cbd5e1; }
+.tc-title  { font-size: 14px; font-weight: 800; color: #0f172a; }
+.tc-desc   { font-size: 12px; color: #64748b; line-height: 1.4; }
 
-.type-card.selected {
+/* Divider */
+.tg-divider { height: 1px; background: #e2e8f0; margin: 4px 0; }
 
-  border-color: #7c3aed;
-
-  background: #fcfbff;
-
-  box-shadow:
-    0 0 0 2px
-    rgba(
-      124,
-      58,
-      237,
-      0.08
-    );
-
+/* Goals fields */
+.tg-field  { display: flex; flex-direction: column; gap: 6px; }
+.tg-label  { font-size: 13px; font-weight: 700; color: #374151; }
+.tg-req    { color: #ef4444; }
+.tg-amount-wrap { display: flex; align-items: center; gap: 0; position: relative; }
+.tg-currency {
+  position: absolute; right: 14px;
+  font-size: 16px; font-weight: 800; color: #64748b; pointer-events: none;
 }
-
-.radio-area {
-
-  width: 36px;
-
-  flex-shrink: 0;
-
-  display: flex;
-
-  justify-content: center;
-
+.tg-amount-input {
+  width: 100%; padding: 12px 40px 12px 14px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: 16px; font-weight: 700; direction: rtl;
+  font-family: inherit; color: #0f172a; outline: none;
+  transition: border-color 0.15s;
 }
+.tg-amount-input:focus { border-color: #7c3aed; }
+.tg-amount-input.invalid { border-color: #ef4444; }
 
-.radio-icon {
-
-  width: 28px;
-
-  height: 28px;
-
-  color: #cbd5e1;
-
+.tg-insight {
+  background: #faf5ff; border: 1.5px solid #ddd6fe; border-radius: 14px;
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 6px;
 }
+.tg-insight-amount { font-size: 28px; font-weight: 900; color: #7c3aed; }
+.tg-insight-label  { font-size: 12px; font-weight: 700; color: #64748b; }
+.tg-insight-rows   { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
 
-.selected-icon {
-
-  width: 28px;
-
-  height: 28px;
-
-  color: #7c3aed;
-
+.tg-dates-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
 }
-
-.type-content {
-
-  flex: 1;
-
+.tg-date-input {
+  padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: 14px; font-family: inherit; color: #0f172a; outline: none;
+  transition: border-color 0.15s;
 }
+.tg-date-input:focus { border-color: #7c3aed; }
 
-.type-title {
-
-  margin: 0;
-
-  font-size: 22px;
-
-  font-weight: 700;
-
-  color: #111827;
-
+.tg-duration { font-size: 13px; color: #475569; }
+.tg-duration strong { color: #7c3aed; }
+.tg-error { font-size: 12px; color: #ef4444; font-weight: 700; }
+.tg-tip {
+  font-size: 13px; color: #64748b; background: #f8fafc;
+  border-radius: 10px; padding: 12px 16px; line-height: 1.5;
 }
-
-.type-description {
-
-  margin-top: 10px;
-
-  margin-bottom: 8px;
-
-  font-size: 15px;
-
-  line-height: 1.6;
-
-  color: #475569;
-
-}
-
-.type-recommendation {
-
-  font-size: 14px;
-
-  font-weight: 600;
-
-  color: #94a3b8;
-
-}
-
-.icon-box {
-
-  width: 72px;
-
-  height: 72px;
-
-  min-width: 72px;
-
-  min-height: 72px;
-
-  border-radius: 18px;
-
-  border: 1px solid #ede9fe;
-
-  background: #f8f7fc;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  flex-shrink: 0;
-
-}
-
-.type-icon {
-
-  
-  color: #7c3aed;
-
-}
-
-.selected-panel {
-
-  margin-top: 24px;
-
-  border: 1px solid #e5e7eb;
-
-  border-radius: 16px;
-
-  background: #fafafa;
-
-  padding: 20px;
-
-}
-
-.selected-label {
-
-  color: #64748b;
-
-}
-
-.selected-value {
-
-  margin-right: 8px;
-
-  font-weight: 700;
-
-  color: #7c3aed;
-
-}
-
-@media (max-width: 768px) {
-
-  .campaign-type-title {
-
-    font-size: 28px;
-
-  }
-
-  .campaign-type-description {
-
-    font-size: 15px;
-
-  }
-
-  .type-card {
-
-    padding: 18px;
-
-  }
-
-  .icon-box {
-
-    width: 56px;
-
-    height: 56px;
-
-  }
-
-}
+.tg-tip strong { color: #374151; }

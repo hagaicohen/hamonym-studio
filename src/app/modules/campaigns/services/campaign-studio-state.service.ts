@@ -72,6 +72,17 @@ export interface DividerBlockData {
   lineColor: string;  // line color, default '#e2e8f0'
 }
 
+export interface DonorsBlockData {
+  viewMode: 'grid' | 'list';
+}
+
+// Block-level view configs — content lives at draft root level
+export interface SponsorsBlockData    { /* view config only */ }
+export interface AmbassadorsBlockData { /* view config only */ }
+export interface UpdatesBlockData {
+  viewMode: 'slider' | 'list';
+}
+
 export interface ImageBlockData {
   url: string;
   caption?: string;
@@ -121,6 +132,10 @@ export type BlockData =
   | DonationWidgetBlockData
   | CtaBlockData
   | DividerBlockData
+  | DonorsBlockData
+  | SponsorsBlockData
+  | AmbassadorsBlockData
+  | UpdatesBlockData
   | Record<string, never>;
 
 export interface CampaignBlock {
@@ -151,20 +166,34 @@ export interface CampaignSponsor {
   link: string | null;
 }
 
+export interface CampaignAmbassador {
+  id:       string;
+  name:     string;
+  imageUrl: string;
+}
+
+export interface CampaignUpdate {
+  id:          string;
+  title:       string;
+  date:        string;  // ISO yyyy-mm-dd
+  description: string;
+  mediaType:   'image' | 'video' | 'none';
+  mediaUrl:    string;
+  linkUrl:     string;
+  linkLabel:   string;
+}
+
 export interface CampaignTheme {
-  // Matches CSS custom properties on .campaign-page
-  primaryColor:   string;  // --hm-primary   (כותרות, כפתור תרומה ראשי)
-  secondaryColor: string;  // --hm-secondary (כפתורים משניים, כותרות סקשן)
-  accentColor:    string;  // --hm-accent    (אייקונים, hover, הדגשות)
-  logoBg:         string;  // --hm-logo-bg   (רקע עיגול הלוגו בהירו)
-  topStripBg:     string;  // --hm-top-strip-bg (header עליון)
-  rewardsBg:           string;  // --hm-rewards-bg
-  rewardCardBorder:    string;  // --hm-reward-border        (כרטיס רגיל)
-  rewardCardBorderActive: string; // --hm-reward-border-active (נבחר / hover)
-  lineColor:      string;  // --line
-  // Kept for compatibility
-  buttonColor:    string;
-  backgroundColor: string;
+  primaryColor:          string;  // --hm-primary
+  secondaryColor:        string;  // --hm-secondary
+  accentColor:           string;  // --hm-accent
+  bodyTextColor:         string;  // --hm-body
+  logoBg:                string;  // --hm-logo-bg
+  topStripBg:            string;  // --hm-top-strip-bg
+  rewardsBg:             string;  // --hm-rewards-bg
+  rewardCardBorder:      string;  // --hm-reward-border
+  rewardCardBorderActive:string;  // --hm-reward-border-active
+  lineColor:             string;  // --line
 }
 
 export interface CampaignLayout {
@@ -172,9 +201,32 @@ export interface CampaignLayout {
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
   backgroundImageUrl: string;
+  sectionBgOdd:        string;
+  sectionBgEven:       string;
+  sectionDividerColor: string;
+  // Bottom banner (פרטי קמפיין)
+  showBottomBanner:    boolean;
+  // Footer
+  showFooter:          boolean;
+  showFooterContact:   boolean;
+  footerBg:            string;   // default #030712
+  footerTextColor:     string;   // default rgba(255,255,255,0.85)
+  footerEmail:         string;
+  footerPhone:         string;
+  footerHours:         string;
 }
 
+export type CampaignStatus = 'draft' | 'published' | 'paused' | 'ended';
+
 export interface CampaignDraft {
+  // Server-managed (populated after save/load — undefined for new campaigns)
+  id?:          string;
+  entityId?:    string;
+  status:       CampaignStatus;
+  createdAt?:   string;  // ISO timestamp
+  updatedAt?:   string;  // ISO timestamp
+  publishedAt?: string;  // ISO timestamp
+
   // Step 1 — Basic Info
   title: string;
   slug: string;
@@ -215,7 +267,13 @@ export interface CampaignDraft {
   // Step 3 — Sponsors
   sponsors: CampaignSponsor[];
 
-  // Step 4 — Page Builder
+  // Step 4 — Ambassadors
+  ambassadors: CampaignAmbassador[];
+
+  // Step 5 — Updates
+  updates: CampaignUpdate[];
+
+  // Step 6 — Page Builder
   blocks: CampaignBlock[];
 
   // Layout & Theme
@@ -235,6 +293,7 @@ function createInitialDraft(): CampaignDraft {
   })();
 
   return {
+    status:       'draft',
     title: '',
     slug: '',
     shortDescription: '',
@@ -262,7 +321,9 @@ function createInitialDraft(): CampaignDraft {
     monthlyAmounts: [18, 36, 54, 100],
     rewardsEnabled: true,
     rewards: [],
-    sponsors: [],
+    sponsors:     [],
+    ambassadors:  [],
+    updates:      [],
     blocks: (() => {
       const statsId    = generateId();
       const donationId = generateId();
@@ -326,24 +387,52 @@ function createInitialDraft(): CampaignDraft {
           label: '',
           data: {},
         },
+        {
+          id: generateId(),
+          type: 'ambassadors' as BlockType,
+          order: 4, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          data: defaultBlockData('ambassadors'),
+        },
+        {
+          id: generateId(),
+          type: 'donors' as BlockType,
+          order: 5, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          data: defaultBlockData('donors'),
+        },
+        {
+          id: generateId(),
+          type: 'updates' as BlockType,
+          order: 6, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          data: defaultBlockData('updates'),
+        },
       ];
     })(),
     layout: {
-      backgroundType:     'none',
-      backgroundColor:    '#f8fafc',
-      backgroundImageUrl: '',
+      backgroundType:      'none',
+      backgroundColor:     '#f8fafc',
+      backgroundImageUrl:  '',
+      sectionBgOdd:        '#ffffff',
+      sectionBgEven:       '#f8fafc',
+      sectionDividerColor: '#e2e8f0',
+      showBottomBanner:    true,
+      showFooter:          true,
+      showFooterContact:   true,
+      footerBg:            '#030712',
+      footerTextColor:     'rgba(255,255,255,0.85)',
+      footerEmail:         '',
+      footerPhone:         '',
+      footerHours:         '',
       theme: {
         primaryColor:   '#333333',
         secondaryColor: '#6fc9eb',
         accentColor:    '#cc350f',
+        bodyTextColor:  '#334155',
         logoBg:         '#ffffff',
         topStripBg:     '#061b3a',
         rewardsBg:              '#014737',
         rewardCardBorder:       'rgba(255,255,255,.12)',
         rewardCardBorderActive: '#7DD3FC',
         lineColor:      '#e2e8f0',
-        buttonColor:    '#6fc9eb',
-        backgroundColor: '#ffffff',
       },
     },
   };
@@ -462,6 +551,10 @@ function defaultBlockData(type: BlockType): BlockData {
       paymentLogos:      ['visa', 'mastercard', 'apple-pay', 'google-pay', 'bit'],
     } as DonationWidgetBlockData;
     case 'divider':     return { height: 24, showLine: false, lineColor: '#e2e8f0' } as DividerBlockData;
+    case 'donors':      return { viewMode: 'grid' } as DonorsBlockData;
+    case 'sponsors':    return {} as SponsorsBlockData;
+    case 'ambassadors': return {} as AmbassadorsBlockData;
+    case 'updates':     return { viewMode: 'slider' } as UpdatesBlockData;
     case 'cta':         return {
       title: '', text: '', backgroundColor: '#14532d',
       textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },

@@ -1,56 +1,117 @@
-<div class="step-container" *ngIf="draft$ | async as draft">
+<div class="sponsors-step" *ngIf="draft$ | async as draft">
 
-  <div class="step-header">
-    <span class="step-icon-wrapper">
-      <lucide-angular [img]="HandshakeIcon" class="step-icon" />
-    </span>
-    <div>
-      <h2 class="step-title">חסויות</h2>
-      <p class="step-desc">לוגואים של ארגונים ושותפים שיוצגו בדף הקמפיין</p>
+  <!-- HEADER -->
+  <div class="ss-header">
+    <div class="ss-header-text">
+      <h2 class="ss-title">{{ isEditing ? 'עריכת חסות' : 'הוספת חסות חדשה' }}</h2>
+      <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
+    </div>
+    <div class="ss-header-icon">
+      <lucide-angular [img]="HandshakeIcon" [size]="22" class="ss-icon"></lucide-angular>
     </div>
   </div>
 
-  <!-- SPONSORS LIST -->
-  <div class="sponsors-list" *ngIf="draft.sponsors.length > 0">
-    <div class="sponsor-row" *ngFor="let sponsor of draft.sponsors">
+  <!-- BUILDER: Form + Preview -->
+  <div class="ss-builder">
 
-      <!-- LOGO -->
-      <input type="file" accept="image/*" hidden #logoInput (change)="onLogoSelected(sponsor.id, $event)">
+    <!-- FORM -->
+    <div class="sponsor-form-panel">
 
-      <div class="logo-slot" (click)="logoInput.click()">
-        <img *ngIf="sponsor.logoUrl" [src]="sponsor.logoUrl" class="logo-img" alt="לוגו">
-        <div class="logo-placeholder" *ngIf="!sponsor.logoUrl">
-          <span>🏢</span>
-          <span class="logo-hint">לוגו</span>
+      <!-- Logo -->
+      <div class="sf-field">
+        <label class="sf-label">לוגו</label>
+        <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
+        <div class="sf-logo-area" *ngIf="!form.logoUrl">
+          <label for="sp-logo-input" class="sf-upload-label">
+            <span class="sf-upload-icon">☁️</span>
+            <span>לחץ להעלאת לוגו</span>
+            <span class="sf-upload-hint">PNG / SVG מומלץ, רקע שקוף</span>
+          </label>
         </div>
-        <div class="logo-overlay-hover" *ngIf="sponsor.logoUrl">החלף</div>
-        <button class="logo-x" *ngIf="sponsor.logoUrl" (click)="$event.stopPropagation(); removeLogo(sponsor.id)">✕</button>
+        <div class="sf-logo-preview" *ngIf="form.logoUrl">
+          <img [src]="form.logoUrl" alt="לוגו">
+          <div class="sf-logo-actions">
+            <label for="sp-logo-input" class="sf-img-btn">החלף</label>
+            <button type="button" class="sf-img-btn sf-img-btn--remove" (click)="form.logoUrl = ''">הסר</button>
+          </div>
+        </div>
       </div>
 
-      <!-- NAME -->
-      <div class="sponsor-info">
-        <label class="sponsor-label">שם נותן/ת החסות</label>
-        <input
-          class="sponsor-name-input"
-          type="text"
-          [(ngModel)]="sponsor.name"
-          (blur)="updateName(sponsor.id, sponsor.name)"
-          placeholder="למשל: קרן רוטשילד">
+      <!-- Name -->
+      <div class="sf-field">
+        <label class="sf-label">שם נותן/ת החסות <span class="sf-req">*</span></label>
+        <input class="sf-input" type="text" [(ngModel)]="form.name" placeholder="למשל: קרן רוטשילד">
       </div>
 
-      <!-- DELETE -->
-      <button class="btn-delete" (click)="removeSponsor(sponsor.id)" title="מחק">✕</button>
+      <!-- Link -->
+      <div class="sf-field">
+        <label class="sf-label">קישור לאתר (רשות)</label>
+        <input class="sf-input" type="url" [(ngModel)]="form.link" placeholder="https://...">
+      </div>
 
+      <!-- Actions -->
+      <div class="sf-actions">
+        <button class="sf-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
+        <button class="sf-btn-save" type="button" (click)="save()" [disabled]="!form.name.trim()">
+          💾 {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="sponsor-preview-panel">
+      <div class="sp-header">
+        <lucide-angular [img]="Eye" [size]="16" class="sp-eye"></lucide-angular>
+        <span>תצוגה מקדימה</span>
+      </div>
+      <div class="sp-card">
+        <div class="sp-logo-wrap">
+          <img *ngIf="form.logoUrl" [src]="form.logoUrl" alt="">
+          <span *ngIf="!form.logoUrl" class="sp-logo-placeholder">🏢</span>
+        </div>
+        <div class="sp-name">{{ form.name || 'שם החסות' }}</div>
+        <div class="sp-link" *ngIf="form.link">{{ form.link }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SPONSORS GRID -->
+  <div class="ss-list-section" *ngIf="draft.sponsors.length > 0">
+    <div class="ss-list-header">
+      <div class="ss-list-title">
+        <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-list-icon"></lucide-angular>
+        החסויות בקמפיין ({{ draft.sponsors.length }})
+      </div>
+      <button class="ss-add-btn" type="button" (click)="clearForm()">+ הוסף חסות חדשה</button>
+    </div>
+
+    <div class="ss-grid">
+      <div class="ss-card" *ngFor="let s of draft.sponsors" [class.ss-card--editing]="editingId === s.id">
+        <div class="ss-card-logo" *ngIf="s.logoUrl">
+          <img [src]="s.logoUrl" alt="">
+        </div>
+        <div class="ss-card-logo ss-card-logo--empty" *ngIf="!s.logoUrl">
+          <span>🏢</span>
+        </div>
+        <div class="ss-card-body">
+          <div class="ss-card-name">{{ s.name }}</div>
+          <div class="ss-card-link" *ngIf="s.link">{{ s.link }}</div>
+          <div class="ss-card-actions">
+            <button class="ss-card-btn ss-card-btn--delete" type="button" (click)="deleteSponsor(s.id)">🗑 מחיקה</button>
+            <button class="ss-card-btn ss-card-btn--edit"   type="button" (click)="editSponsor(s)">✏ עריכה</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- EMPTY STATE -->
-  <div class="empty-state" *ngIf="draft.sponsors.length === 0">
-    <div class="empty-icon">🤝</div>
-    <div class="empty-text">טרם נוספו חסויות</div>
-    <div class="empty-hint">חסויות הן רשות — ניתן לדלג</div>
+  <div class="ss-empty" *ngIf="draft.sponsors.length === 0">
+    <div class="ss-empty-icon">🤝</div>
+    <div class="ss-empty-text">טרם נוספו חסויות</div>
+    <div class="ss-empty-hint">חסויות הן רשות — ניתן לדלג</div>
   </div>
-
-  <button class="btn-add" (click)="addSponsor()">+ הוסף חסות</button>
 
 </div>

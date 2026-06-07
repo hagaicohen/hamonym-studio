@@ -1,0 +1,102 @@
+<div class="amb-step" *ngIf="draft$ | async as draft">
+
+  <div class="amb-header">
+    <div class="amb-header-text">
+      <h2 class="amb-title">{{ isEditing ? 'עריכת שגריר/ה' : 'הוספת שגריר/ה חדש/ה' }}</h2>
+      <p class="amb-subtitle">שגרירים הם אנשים שמפיצים את הקמפיין בשמכם</p>
+    </div>
+    <div class="amb-header-icon">
+      <lucide-angular [img]="StarIcon" [size]="22" class="amb-icon"></lucide-angular>
+    </div>
+  </div>
+
+  <div class="amb-builder">
+
+    <!-- FORM -->
+    <div class="amb-form-panel">
+
+      <div class="af-field">
+        <label class="af-label">תמונה</label>
+        <input id="amb-img-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
+        <div class="af-photo-area" *ngIf="!form.imageUrl">
+          <label for="amb-img-input" class="af-upload-label">
+            <span class="af-upload-icon">📷</span>
+            <span>לחץ להעלאת תמונה</span>
+            <span class="af-upload-hint">תמונת פרופיל — מומלץ ריבועית</span>
+          </label>
+        </div>
+        <div class="af-photo-preview" *ngIf="form.imageUrl">
+          <img [src]="form.imageUrl" alt="">
+          <div class="af-photo-actions">
+            <label for="amb-img-input" class="af-img-btn">החלף</label>
+            <button type="button" class="af-img-btn af-img-btn--remove" (click)="form.imageUrl = ''">הסר</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="af-field">
+        <label class="af-label">שם מלא <span class="af-req">*</span></label>
+        <input class="af-input" type="text" [(ngModel)]="form.name" placeholder="למשל: ישראל ישראלי">
+      </div>
+
+      <div class="af-actions">
+        <button class="af-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
+        <button class="af-btn-save"  type="button" (click)="save()" [disabled]="!form.name.trim()">
+          💾 {{ isEditing ? 'עדכן שגריר/ה' : 'שמור שגריר/ה' }}
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="amb-preview-panel">
+      <div class="ap-header">
+        <lucide-angular [img]="EyeIcon" [size]="16" class="ap-eye"></lucide-angular>
+        <span>תצוגה מקדימה</span>
+      </div>
+      <div class="ap-card">
+        <div class="ap-avatar">
+          <img *ngIf="form.imageUrl" [src]="form.imageUrl" alt="">
+          <span *ngIf="!form.imageUrl" class="ap-avatar-placeholder">👤</span>
+        </div>
+        <div class="ap-name">{{ form.name || 'שם השגריר/ה' }}</div>
+        <div class="ap-role">שגריר/ה</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LIST -->
+  <div class="amb-list-section" *ngIf="draft.ambassadors.length > 0">
+    <div class="amb-list-header">
+      <div class="amb-list-title">
+        <lucide-angular [img]="StarIcon" [size]="18" class="amb-list-icon"></lucide-angular>
+        שגרירי הקמפיין ({{ draft.ambassadors.length }})
+      </div>
+      <button class="amb-add-btn" type="button" (click)="clearForm()">+ הוסף שגריר/ה</button>
+    </div>
+    <div class="amb-grid">
+      <div class="amb-card" *ngFor="let a of draft.ambassadors" [class.amb-card--editing]="editingId === a.id">
+        <div class="amb-card-avatar">
+          <img *ngIf="a.imageUrl" [src]="a.imageUrl" alt="">
+          <span *ngIf="!a.imageUrl">👤</span>
+        </div>
+        <div class="amb-card-body">
+          <div class="amb-card-name">{{ a.name }}</div>
+          <div class="amb-card-role">שגריר/ה</div>
+          <div class="amb-card-actions">
+            <button class="amb-card-btn amb-card-btn--delete" (click)="delete(a.id)">🗑 מחיקה</button>
+            <button class="amb-card-btn amb-card-btn--edit"   (click)="edit(a)">✏ עריכה</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="amb-empty" *ngIf="draft.ambassadors.length === 0">
+    <div class="amb-empty-icon">⭐</div>
+    <div class="amb-empty-text">טרם נוספו שגרירים</div>
+    <div class="amb-empty-hint">שגרירים הם רשות — ניתן לדלג</div>
+  </div>
+
+</div>

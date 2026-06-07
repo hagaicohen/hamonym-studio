@@ -1,86 +1,73 @@
-import { Component, inject } from '@angular/core';
-
+import { Component, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
-  LucideAngularModule,
-  Circle,
-  CheckCircle2,
-  Target,
-  TrendingUp,
-  RefreshCw,
-  Zap,
-  LayoutGrid,
+  LucideAngularModule, Circle, CircleCheck,
+  Target, TrendingUp, RefreshCw, Zap, LayoutGrid,
 } from 'lucide-angular';
-
-import {
-  CampaignStudioStateService,
-  CampaignFundingType,
-} from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignStudioStateService, CampaignFundingType } from '../../../../campaigns/services/campaign-studio-state.service';
 
 interface CampaignTypeOption {
   id: CampaignFundingType;
   title: string;
   description: string;
-  recommendation: string;
   icon: any;
 }
 
 @Component({
   selector: 'app-campaign-type-step',
   standalone: true,
-  imports: [LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-type-step.component.html',
   styleUrls: ['./campaign-type-step.component.css'],
 })
-export class CampaignTypeStepComponent {
+export class CampaignTypeStepComponent implements OnInit {
+  protected state = inject(CampaignStudioStateService);
+  get draft() { return this.state.draft; }
 
-  protected campaignState = inject(CampaignStudioStateService);
-
-  get draft() { return this.campaignState.draft; }
-
-  readonly LayoutGrid = LayoutGrid;
-  readonly Circle = Circle;
-  readonly CheckCircle2 = CheckCircle2;
-  readonly Target = Target;
-  readonly TrendingUp = TrendingUp;
-  readonly RefreshCw = RefreshCw;
-  readonly Zap = Zap;
+  readonly LayoutGrid    = LayoutGrid;
+  readonly Circle        = Circle;
+  readonly CircleCheck   = CircleCheck;
 
   readonly campaignTypes: CampaignTypeOption[] = [
-    {
-      id: 'all-or-nothing',
-      title: 'הכל או כלום',
-      description: 'הכסף יועבר רק אם יעד הגיוס הושג במלואו',
-      recommendation: 'מומלץ לפרויקטים עם יעד ברור',
-      icon: Target,
-    },
-    {
-      id: 'flexible',
-      title: 'גיוס גמיש',
-      description: 'כל סכום שיגויס יועבר לעמותה',
-      recommendation: 'מומלץ לרוב העמותות',
-      icon: TrendingUp,
-    },
-    {
-      id: 'recurring',
-      title: 'הוראות קבע',
-      description: 'תרומות חודשיות קבועות ללא הגבלת זמן',
-      recommendation: 'בניית הכנסה קבועה לאורך זמן',
-      icon: RefreshCw,
-    },
-    {
-      id: 'matching',
-      title: "מאצ'ינג",
-      description: 'כל תרומה מוכפלת לפי יחס שתקבעו',
-      recommendation: 'מתאים לקמפיינים אינטנסיביים וקצרים',
-      icon: Zap,
-    },
+    { id: 'all-or-nothing', title: 'הכל או כלום',   description: 'הכסף יועבר רק אם היעד הושג במלואו',      icon: Target     },
+    { id: 'flexible',       title: 'גיוס גמיש',      description: 'כל סכום שיגויס יועבר לעמותה',           icon: TrendingUp  },
+    { id: 'recurring',      title: 'הוראות קבע',     description: 'תרומות חודשיות קבועות ללא הגבלת זמן',    icon: RefreshCw  },
+    { id: 'matching',       title: "מאצ'ינג",         description: 'כל תרומה מוכפלת לפי יחס שתקבעו',         icon: Zap        },
   ];
 
-  selectType(type: CampaignFundingType): void {
-    this.campaignState.patch({ fundingType: type });
+  selectType(type: CampaignFundingType): void { this.state.patch({ fundingType: type }); }
+
+  // ── Goals fields ──
+  targetAmountDisplay = '';
+  targetTouched = false;
+
+  ngOnInit(): void {
+    if (this.draft.targetAmount > 0)
+      this.targetAmountDisplay = this.draft.targetAmount.toLocaleString('en-US');
   }
 
-  getSelectedTypeLabel(): string {
-    return this.campaignTypes.find(item => item.id === this.draft.fundingType)?.title ?? '';
+  sync(): void { this.state.sync(); }
+
+  allowMoneyChars(event: KeyboardEvent): void {
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+    if (!allowed.includes(event.key) && !/^\d$/.test(event.key)) event.preventDefault();
   }
+
+  onTargetChange(value: string): void {
+    const num = Number(value.replace(/\D/g, '') || 0);
+    this.targetAmountDisplay = num ? num.toLocaleString('en-US') : '';
+    this.state.patch({ targetAmount: num });
+  }
+
+  isTargetInvalid():   boolean { return this.targetTouched && !this.draft.targetAmount; }
+  isDateRangeInvalid():boolean {
+    if (!this.draft.startDate || !this.draft.endDate) return false;
+    return new Date(this.draft.endDate) < new Date(this.draft.startDate);
+  }
+  getCampaignDays(): number {
+    if (!this.draft.startDate || !this.draft.endDate) return 0;
+    return Math.ceil((new Date(this.draft.endDate).getTime() - new Date(this.draft.startDate).getTime()) / 86400000);
+  }
+  getDonors(amount: number): string { return Math.ceil(this.draft.targetAmount / amount).toLocaleString('en-US'); }
 }

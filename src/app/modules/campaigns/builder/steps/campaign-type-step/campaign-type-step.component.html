@@ -1,94 +1,104 @@
-<div class="campaign-type-step">
+<div class="type-goals-step">
 
-  <div class="campaign-type-header">
-
-    <h1 class="campaign-type-title">
-      <span class="step-title-icon-wrapper">
-        <lucide-angular [img]="LayoutGrid" class="step-title-icon"></lucide-angular>
-      </span>
-      בחר סוג קמפיין
-    </h1>
-
-    <p class="campaign-type-description">
-      כל סוג מתאים למטרה אחרת
-    </p>
-
+  <!-- ── SECTION: סוג קמפיין ── -->
+  <div class="tg-section-header">
+    <div class="tg-icon-box">
+      <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
+    </div>
+    <div>
+      <h2 class="tg-section-title">סוג קמפיין</h2>
+      <p class="tg-section-desc">כל סוג מתאים למטרה אחרת</p>
+    </div>
   </div>
 
-  <div class="types-list">
-
-    @for (
-      type of campaignTypes;
-      track type.id
-    ) {
-
-      <button
-        type="button"
-        class="type-card"
+  <div class="types-grid">
+    @for (type of campaignTypes; track type.id) {
+      <button type="button" class="type-card"
         [class.selected]="draft.fundingType === type.id"
         (click)="selectType(type.id)">
-
-        <div class="radio-area">
-
-          @if (draft.fundingType === type.id) {
-
-            <lucide-angular
-              [img]="CheckCircle2"
-              class="selected-icon">
-            </lucide-angular>
-
-          } @else {
-
-            <lucide-angular
-              [img]="Circle"
-              class="radio-icon">
-            </lucide-angular>
-
-          }
-
-        </div>
-
-        <div class="type-content">
-
-          <h3 class="type-title">
-            {{ type.title }}
-          </h3>
-
-          <p class="type-description">
-            {{ type.description }}
-          </p>
-
-          <div class="type-recommendation">
-            {{ type.recommendation }}
+        <div class="tc-top">
+          <div class="tc-icon-wrap">
+            <lucide-angular [img]="type.icon" [size]="18" class="tc-icon"></lucide-angular>
           </div>
-
+          <div class="tc-radio">
+            @if (draft.fundingType === type.id) {
+              <lucide-angular [img]="CircleCheck" [size]="18" class="tc-check"></lucide-angular>
+            } @else {
+              <lucide-angular [img]="Circle"      [size]="18" class="tc-circle"></lucide-angular>
+            }
+          </div>
         </div>
-
-        <div class="icon-box">
-
-          <lucide-angular
-            [img]="type.icon"
-            class="type-icon">
-          </lucide-angular>
-
-        </div>
-
+        <div class="tc-title">{{ type.title }}</div>
+        <div class="tc-desc">{{ type.description }}</div>
       </button>
-
     }
-
   </div>
 
-  <div class="selected-panel">
+  <!-- ── DIVIDER ── -->
+  <div class="tg-divider"></div>
 
-    <span class="selected-label">
-      סוג קמפיין נבחר:
-    </span>
+  <!-- ── SECTION: יעד וזמן ── -->
+  <div class="tg-section-header">
+    <div class="tg-icon-box">
+      <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
+    </div>
+    <div>
+      <h2 class="tg-section-title">יעד הגיוס ומשך הקמפיין</h2>
+      <p class="tg-section-desc">הגדירו כמה תרצו לגייס ובאיזה טווח זמן</p>
+    </div>
+  </div>
 
-    <span class="selected-value">
-      {{ getSelectedTypeLabel() }}
-    </span>
+  <!-- Target amount -->
+  <div class="tg-field">
+    <label class="tg-label">יעד גיוס <span class="tg-req">*</span></label>
+    <div class="tg-amount-wrap">
+      <span class="tg-currency">₪</span>
+      <input class="tg-amount-input" type="text"
+        [class.invalid]="isTargetInvalid()"
+        [ngModel]="targetAmountDisplay"
+        (keydown)="allowMoneyChars($event)"
+        (blur)="targetTouched = true"
+        (ngModelChange)="onTargetChange($event)"
+        placeholder="100,000">
+    </div>
+    @if (isTargetInvalid()) {
+      <div class="tg-error">יש להזין יעד גיוס</div>
+    }
+  </div>
 
+  <!-- Insight card -->
+  @if (draft.targetAmount > 0) {
+    <div class="tg-insight">
+      <div class="tg-insight-amount">₪{{ targetAmountDisplay }}</div>
+      <div class="tg-insight-label">יעד הגיוס</div>
+      <div class="tg-insight-rows">
+        <span>≈ {{ getDonors(200) }} תורמים של ₪200</span>
+        <span>≈ {{ getDonors(100) }} תורמים של ₪100</span>
+      </div>
+    </div>
+  }
+
+  <!-- Dates -->
+  <div class="tg-dates-row">
+    <div class="tg-field">
+      <label class="tg-label">תאריך התחלה</label>
+      <input class="tg-date-input" type="date" [(ngModel)]="draft.startDate" (ngModelChange)="sync()">
+    </div>
+    <div class="tg-field">
+      <label class="tg-label">תאריך סיום</label>
+      <input class="tg-date-input" type="date" [(ngModel)]="draft.endDate"   (ngModelChange)="sync()">
+    </div>
+  </div>
+
+  @if (getCampaignDays() > 0) {
+    <div class="tg-duration">משך הקמפיין: <strong>{{ getCampaignDays() }} ימים</strong></div>
+  }
+  @if (isDateRangeInvalid()) {
+    <div class="tg-error">תאריך הסיום חייב להיות אחרי תאריך ההתחלה</div>
+  }
+
+  <div class="tg-tip">
+    <strong>טיפ:</strong> קמפיינים עם יעד ריאלי ומשך זמן מוגדר נוטים לגייס יותר תרומות.
   </div>
 
 </div>
