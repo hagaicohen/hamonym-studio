@@ -8,7 +8,8 @@
       "Bash(Out-Null)",
       "Bash(Write-Host \"done\")",
       "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-ambassadors-step\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-updates-step\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\\\\src\\\\app\\\\modules\\\\campaigns\\\\builder\\\\steps\\\\campaign-updates-step\")",
+      "PowerShell(Get-ChildItem \"c:\\\\DEV\\\\HamonymStudio\\\\hamonym-app\" -Depth 1 | Where-Object { $_.PSIsContainer } | Select-Object Name)"
     ]
   }
 }

@@ -5,11 +5,11 @@
   font-family: 'Heebo', sans-serif;
   direction: rtl;
 }
-.ss-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.ss-title   { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
-.ss-subtitle{ font-size: 13px; color: #64748b; margin: 0; }
+.ss-title-row { display: flex; align-items: center; gap: 8px; }
+.ss-title   { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.ss-subtitle{ font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .ss-header-icon {
-  width: 48px; height: 48px; border-radius: 14px;
+  width: 32px; height: 32px; border-radius: 9px;
   background: #ede9fe; border: 1.5px solid #c4b5fd;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -118,3 +118,16 @@
 .ss-empty-icon { font-size: 40px; opacity: 0.3; }
 .ss-empty-text { font-size: 15px; font-weight: 700; color: #64748b; }
 .ss-empty-hint { font-size: 13px; color: #94a3b8; }
+
+@media (max-width: 768px) {
+  .sponsor-preview-panel {
+    visibility: hidden; 
+
+  }
+  .sponsors-step{
+    padding: 10px;
+  }
+  .ss-builder{
+    grid-template-columns: none;
+  }
+}

@@ -8,14 +8,14 @@
 }
 
 /* Section header */
-.tg-section-header { display: flex; align-items: center; gap: 12px; }
+.tg-title-row { display: flex; align-items: center; gap: 8px; }
 .tg-icon-box {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 32px; height: 32px; border-radius: 9px;
   background: #ede9fe; border: 1.5px solid #c4b5fd;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.tg-section-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
-.tg-section-desc  { font-size: 12px; color: #64748b; margin: 0; }
+.tg-section-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.tg-section-desc  { font-size: 13px; color: #64748b; margin: 4px 0 0; }
 
 /* Type cards — compact 2×2 grid */
 .types-grid {
@@ -90,3 +90,11 @@
   border-radius: 10px; padding: 12px 16px; line-height: 1.5;
 }
 .tg-tip strong { color: #374151; }
+
+@media (max-width: 768px) {
+  .type-goals-step { padding: 10px; }
+
+  .tg-dates-row {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+}

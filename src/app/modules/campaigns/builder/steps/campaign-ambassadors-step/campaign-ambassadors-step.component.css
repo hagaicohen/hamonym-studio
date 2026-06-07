@@ -3,11 +3,11 @@
   padding: 28px 28px 40px; max-width: 1100px; margin: 0 auto;
   font-family: 'Heebo', sans-serif; direction: rtl;
 }
-.amb-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.amb-title   { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
-.amb-subtitle{ font-size: 13px; color: #64748b; margin: 0; }
+.amb-title-row { display: flex; align-items: center; gap: 8px; }
+.amb-title   { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.amb-subtitle{ font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .amb-header-icon {
-  width: 48px; height: 48px; border-radius: 14px;
+  width: 32px; height: 32px; border-radius: 9px;
   background: #fef9c3; border: 1.5px solid #fde047;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -115,3 +115,13 @@
 .amb-empty-icon { font-size: 40px; opacity: 0.3; }
 .amb-empty-text { font-size: 15px; font-weight: 700; color: #64748b; }
 .amb-empty-hint { font-size: 13px; color: #94a3b8; }
+
+@media (max-width: 768px) {
+  .amb-step{
+    padding: 10px;
+       
+  }
+  .amb-preview-panel { VISIBILITY: HIDDEN; }
+  .amb-builder {  grid-template-columns: none; }
+
+}

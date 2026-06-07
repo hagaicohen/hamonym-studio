@@ -97,7 +97,8 @@
 }
 
 @media (max-width: 768px) {
-  .stepper-label {
-    display: none;
-  }
+  .stepper-label { display: none; }
+  .stepper-item { width: 28px; flex-shrink: 1; }
+  .step-dot { width: 22px; height: 22px; font-size: 10px; }
+  .step-line { margin-top: 11px; }
 }

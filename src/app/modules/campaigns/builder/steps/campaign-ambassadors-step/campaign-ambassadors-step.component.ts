@@ -31,7 +31,7 @@ export class CampaignAmbassadorsStepComponent {
 
   edit(a: CampaignAmbassador): void {
     this.editingId = a.id;
-    this.form = { name: a.name, imageUrl: a.imageUrl };
+    this.form = { name: a.name, imageUrl: a.imageUrl ?? '' };
   }
 
   save(): void {

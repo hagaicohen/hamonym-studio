@@ -169,7 +169,7 @@ export interface CampaignSponsor {
 export interface CampaignAmbassador {
   id:       string;
   name:     string;
-  imageUrl: string;
+  imageUrl: string | null;
 }
 
 export interface CampaignUpdate {

@@ -2,13 +2,13 @@
 
   <!-- ── HEADER ── -->
   <div class="rs-header">
-    <div class="rs-header-text">
-      <h2 class="rs-title">{{ isEditing ? 'עריכת תשורה' : 'הגדרת תשורה חדשה' }}</h2>
-      <p class="rs-subtitle">צור תשורה שתופיע לתורמים בקמפיין שלך</p>
+    <div class="rs-title-row">
+      <div class="rs-header-icon">
+        <lucide-angular [img]="Gift" [size]="18" class="rs-gift-icon"></lucide-angular>
+      </div>
+      <h2 class="rs-title">תשורות</h2>
     </div>
-    <div class="rs-header-icon">
-      <lucide-angular [img]="Gift" [size]="22" class="rs-gift-icon"></lucide-angular>
-    </div>
+    <p class="rs-subtitle">צור תשורה שתופיע לתורמים בקמפיין שלך</p>
   </div>
 
   <!-- ── ENABLE TOGGLE ── -->

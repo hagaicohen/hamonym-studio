@@ -1,13 +1,13 @@
 <div class="upd-step" *ngIf="draft$ | async as draft">
 
   <div class="upd-header">
-    <div class="upd-header-text">
-      <h2 class="upd-title">{{ isEditing ? 'עריכת עדכון' : 'הוספת עדכון חדש' }}</h2>
-      <p class="upd-subtitle">עדכנו את התומכים על התקדמות הקמפיין</p>
+    <div class="upd-title-row">
+      <div class="upd-header-icon">
+        <lucide-angular [img]="MegaphoneIcon" [size]="18" class="upd-icon"></lucide-angular>
+      </div>
+      <h2 class="upd-title">עדכונים</h2>
     </div>
-    <div class="upd-header-icon">
-      <lucide-angular [img]="MegaphoneIcon" [size]="22" class="upd-icon"></lucide-angular>
-    </div>
+    <p class="upd-subtitle">עדכנו את התומכים על התקדמות הקמפיין</p>
   </div>
 
   <div class="upd-builder">

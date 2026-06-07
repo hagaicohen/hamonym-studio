@@ -115,3 +115,13 @@
 
   background: white;
 }
+
+@media (max-width: 768px) {
+  .editor-content {
+    padding: 10px;
+  }
+
+  .editor-actions {
+    padding: 0 16px;
+  }
+}

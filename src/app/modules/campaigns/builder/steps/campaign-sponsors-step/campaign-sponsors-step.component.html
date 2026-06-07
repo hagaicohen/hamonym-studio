@@ -2,13 +2,13 @@
 
   <!-- HEADER -->
   <div class="ss-header">
-    <div class="ss-header-text">
-      <h2 class="ss-title">{{ isEditing ? 'עריכת חסות' : 'הוספת חסות חדשה' }}</h2>
-      <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
+    <div class="ss-title-row">
+      <div class="ss-header-icon">
+        <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-icon"></lucide-angular>
+      </div>
+      <h2 class="ss-title">חסויות</h2>
     </div>
-    <div class="ss-header-icon">
-      <lucide-angular [img]="HandshakeIcon" [size]="22" class="ss-icon"></lucide-angular>
-    </div>
+    <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
   </div>
 
   <!-- BUILDER: Form + Preview -->

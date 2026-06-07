@@ -8,14 +8,11 @@
 }
 
 /* ─── HEADER ─── */
-.rs-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px;
-}
-.rs-title { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
-.rs-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+.rs-title-row { display: flex; align-items: center; gap: 8px; }
+.rs-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.rs-subtitle { font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .rs-header-icon {
-  width: 48px; height: 48px; border-radius: 14px;
+  width: 32px; height: 32px; border-radius: 9px;
   background: #ede9fe; border: 1.5px solid #c4b5fd;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -364,3 +361,19 @@
 }
 .adv-row { display: flex; align-items: center; gap: 12px; }
 .adv-label { font-size: 13px; font-weight: 600; color: #374151; min-width: 100px; flex-shrink: 0; }
+
+@media (max-width: 768px) {
+  .rewards-step { padding: 10px; }
+
+  .reward-preview-panel{
+    visibility: hidden;
+  }
+
+  .rs-builder{
+    grid-template-columns:none
+  }
+
+  .reward-form-panel{
+    padding: 10px;
+  }
+}

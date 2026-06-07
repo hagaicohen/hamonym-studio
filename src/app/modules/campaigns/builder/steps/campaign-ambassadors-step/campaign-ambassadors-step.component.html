@@ -1,13 +1,13 @@
 <div class="amb-step" *ngIf="draft$ | async as draft">
 
   <div class="amb-header">
-    <div class="amb-header-text">
-      <h2 class="amb-title">{{ isEditing ? 'עריכת שגריר/ה' : 'הוספת שגריר/ה חדש/ה' }}</h2>
-      <p class="amb-subtitle">שגרירים הם אנשים שמפיצים את הקמפיין בשמכם</p>
+    <div class="amb-title-row">
+      <div class="amb-header-icon">
+        <lucide-angular [img]="StarIcon" [size]="18" class="amb-icon"></lucide-angular>
+      </div>
+      <h2 class="amb-title">שגרירים</h2>
     </div>
-    <div class="amb-header-icon">
-      <lucide-angular [img]="StarIcon" [size]="22" class="amb-icon"></lucide-angular>
-    </div>
+    <p class="amb-subtitle">אנשים שמפיצים את הקמפיין בשמכם</p>
   </div>
 
   <div class="amb-builder">
