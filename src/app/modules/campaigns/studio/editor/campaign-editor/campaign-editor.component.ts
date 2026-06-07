@@ -41,6 +41,10 @@ export class CampaignEditorComponent {
 
   currentStep = 1;
 
+  get isEditMode(): boolean {
+    return this.state.isEditMode;
+  }
+
   nextStep(): void {
     if (!this.canContinue()) return;
     if (this.currentStep < TOTAL_STEPS) this.currentStep++;
@@ -48,6 +52,12 @@ export class CampaignEditorComponent {
 
   previousStep(): void {
     if (this.currentStep > 1) this.currentStep--;
+  }
+
+  goToStep(step: number): void {
+    if (step >= 1 && step <= TOTAL_STEPS) {
+      this.currentStep = step;
+    }
   }
 
   canContinue(): boolean { return true; }

@@ -31,17 +31,24 @@
     </button>
   </div>
 
-  <!-- RIGHT: save -->
-  <button class="save-button"
-    [class.saved]="saveState === 'saved'"
-    [class.error]="saveState === 'error'"
-    [disabled]="saveState === 'saving'"
-    (click)="saveDraft()">
-    @if (saveState === 'idle')   { שמור טיוטה }
-    @if (saveState === 'saving') { שומר... }
-    @if (saveState === 'saved')  { ✓ נשמר }
-    @if (saveState === 'error')  { ✗ שגיאה }
-  </button>
+  <!-- RIGHT: view + save -->
+  <div class="topbar-actions">
+    @if (campaignSlug) {
+      <button class="view-campaign-button" (click)="viewCampaign()" title="צפה בדף הקמפיין">
+        צפה בקמפיין
+      </button>
+    }
+    <button class="save-button"
+      [class.saved]="saveState === 'saved'"
+      [class.error]="saveState === 'error'"
+      [disabled]="saveState === 'saving'"
+      (click)="saveDraft()">
+      @if (saveState === 'idle')   { שמור טיוטה }
+      @if (saveState === 'saving') { שומר... }
+      @if (saveState === 'saved')  { ✓ נשמר }
+      @if (saveState === 'error')  { ✗ שגיאה }
+    </button>
+  </div>
 
 </header>
 </ng-container>

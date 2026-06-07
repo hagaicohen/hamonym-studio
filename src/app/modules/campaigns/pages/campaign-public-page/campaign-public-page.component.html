@@ -1,0 +1,13 @@
+@if (isLoading) {
+  <div class="public-loading">
+    <div class="public-spinner"></div>
+  </div>
+} @else if (notFound) {
+  <div class="public-not-found">
+    <p>הקמפיין לא נמצא</p>
+  </div>
+} @else {
+  <div class="public-preview-wrap">
+    <app-campaign-preview />
+  </div>
+}

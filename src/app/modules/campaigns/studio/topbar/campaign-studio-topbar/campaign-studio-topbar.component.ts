@@ -39,10 +39,17 @@ export class CampaignStudioTopbarComponent {
     return this.campaignState.draft.title?.trim() || 'קמפיין חדש';
   }
 
+  get campaignSlug(): string { return this.campaignState.draft.slug?.trim() || ''; }
+
   closeStudio(): void { history.back(); }
   setDevice(mode: DeviceMode): void { this.ui.setDevice(mode); }
   toggleFullscreen(): void { this.ui.setFullscreen(!this.ui.isFullscreen); }
   exitFullscreen(): void { this.ui.setFullscreen(false); }
+
+  viewCampaign(): void {
+    const slug = this.campaignSlug;
+    if (slug) this.router.navigate(['/campaigns', slug, 'view']);
+  }
 
   saveDraft(): void {
     if (this.saveState !== 'idle') return;

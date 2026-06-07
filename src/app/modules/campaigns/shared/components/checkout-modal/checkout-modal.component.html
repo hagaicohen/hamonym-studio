@@ -1,0 +1,152 @@
+<div class="checkout-overlay" (click)="onOverlayClick($event)">
+  <div class="checkout-modal" role="dialog" aria-modal="true">
+
+    <!-- CLOSE -->
+    <button class="checkout-close" type="button" (click)="close()" aria-label="סגור">✕</button>
+
+    <!-- LEFT PANEL — summary -->
+    <div class="checkout-summary">
+      <div class="summary-campaign-header">
+        <div class="summary-logo" *ngIf="entityLogoUrl">
+          <img [src]="entityLogoUrl" [alt]="entityName">
+        </div>
+        <div class="summary-org" *ngIf="entityName">{{ entityName }}</div>
+      </div>
+
+      <div class="summary-cover" *ngIf="draft.coverImageUrl"
+        [style.backgroundImage]="'url(' + draft.coverImageUrl + ')'">
+      </div>
+
+      <h2 class="summary-campaign-title">{{ draft.title }}</h2>
+
+      <!-- Mobile-only summary row -->
+      <div class="summary-amount-mobile">
+        <span class="summary-total-label">סה"כ לתשלום</span>
+        <span class="summary-chip summary-chip--amount">{{ formattedAmount }}</span>
+        <div class="summary-mobile-rewards" *ngIf="cartRewards.length > 0">
+          <span class="summary-mobile-reward-tag" *ngFor="let r of cartRewards">✓ {{ r.title }}</span>
+        </div>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-row">
+        <span class="summary-label">סכום התרומה</span>
+        <span class="summary-value summary-amount">{{ formattedAmount }}</span>
+      </div>
+
+      <ng-container *ngIf="cartRewards.length > 0">
+        <div class="summary-divider"></div>
+        <div class="summary-rewards-title">תשורות נבחרות ({{ cartRewards.length }})</div>
+        <div class="summary-rewards-list">
+          <div class="summary-reward-item" *ngFor="let r of cartRewards">
+            <span class="summary-reward-check">✓</span>
+            <div class="summary-reward-info">
+              <span class="summary-reward-name">{{ r.title }}</span>
+              <span class="summary-reward-min">מינימום ₪{{ r.minimumAmount.toLocaleString('he-IL') }}</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <div class="summary-row" *ngIf="cartRewards.length === 0">
+        <span class="summary-label">תשורות</span>
+        <span class="summary-value summary-none">ללא תשורה</span>
+      </div>
+
+      <div class="summary-secure-note">
+        <span class="secure-icon">🔒</span>
+        תשלום מאובטח ומוצפן
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL — form -->
+    <div class="checkout-form-panel">
+      <div class="form-header">
+        <h3 class="form-title">פרטי תורם</h3>
+        <p class="form-subtitle">הזינו את פרטיכם להמשך ביצוע התרומה</p>
+      </div>
+
+      <form class="checkout-form" (ngSubmit)="onSubmit()" novalidate>
+
+        <div class="field-group">
+          <label class="field-label">שם מלא <span class="required">*</span></label>
+          <input class="field-input"
+            type="text"
+            [(ngModel)]="name"
+            name="name"
+            placeholder="ישראל ישראלי"
+            autocomplete="name"
+            [class.field-error]="submitted && name.trim().length < 2">
+          <span class="error-msg" *ngIf="submitted && name.trim().length < 2">נא להזין שם מלא</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">כתובת אימייל <span class="required">*</span></label>
+          <input class="field-input"
+            type="email"
+            [(ngModel)]="email"
+            name="email"
+            placeholder="israel@gmail.com"
+            autocomplete="email"
+            dir="ltr"
+            [class.field-error]="submitted && !isValidEmail">
+          <span class="error-msg" *ngIf="submitted && !isValidEmail">נא להזין כתובת אימייל תקינה</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">מספר טלפון <span class="required">*</span></label>
+          <input class="field-input"
+            type="tel"
+            [(ngModel)]="phone"
+            name="phone"
+            placeholder="050-0000000"
+            autocomplete="tel"
+            dir="ltr"
+            [class.field-error]="submitted && phone.trim().length < 9">
+          <span class="error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">תעודת זהות <span class="required">*</span></label>
+          <input class="field-input"
+            type="text"
+            [(ngModel)]="idNumber"
+            name="idNumber"
+            placeholder="000000000"
+            inputmode="numeric"
+            maxlength="9"
+            dir="ltr"
+            [class.field-error]="submitted && !isValidId">
+          <span class="error-msg" *ngIf="submitted && !isValidId">נא להזין מספר תעודת זהות תקין (9 ספרות)</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">כתובת <span class="required">*</span></label>
+          <input class="field-input"
+            type="text"
+            [(ngModel)]="address"
+            name="address"
+            placeholder="רחוב, מספר, עיר"
+            autocomplete="street-address"
+            [class.field-error]="submitted && address.trim().length <= 2">
+          <span class="error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
+        </div>
+
+        <button class="pay-btn" type="submit">
+          <span class="pay-lock">🔒</span>
+          מעבר לתשלום מאובטח — {{ formattedAmount }}
+        </button>
+
+      </form>
+
+      <div class="payment-logos">
+        <span class="pay-logo">ויזה</span>
+        <span class="pay-logo">מסטרקארד</span>
+        <span class="pay-logo">Apple Pay</span>
+        <span class="pay-logo pay-logo--bit">bit</span>
+      </div>
+    </div>
+
+  </div>
+</div>

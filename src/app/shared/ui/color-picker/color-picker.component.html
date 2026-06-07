@@ -12,53 +12,69 @@
   </button>
 
   <!-- DROPDOWN -->
-  <div class="cp-dropdown" *ngIf="open">
+  <div class="cp-dropdown" *ngIf="open"
+    [style.top.px]="dropdownTop"
+    [style.right.px]="dropdownRight"
+    [style.max-height.px]="dropdownMaxHeight">
 
-    <!-- PALETTE -->
-    <div class="cp-palette">
-      <button *ngIf="showNone" class="cp-swatch cp-swatch--none cp-swatch--btn"
-        [class.cp-swatch--active]="isTransparent(value)"
-        (click)="select('')" title="ללא / שקוף">
-      </button>
-      <div class="cp-palette-row" *ngFor="let row of palette">
-        <button *ngFor="let c of row"
-          class="cp-swatch cp-swatch--btn"
-          [class.cp-swatch--active]="value === c"
-          [class.cp-swatch--light]="c === '#ffffff' || c === '#f8fafc' || c === '#f1f5f9'"
-          [style.background]="c"
-          [title]="c"
-          (click)="select(c)">
-        </button>
-      </div>
+    <!-- HEX INPUT (accepts #FFFFFF or FFFFFF) -->
+    <div class="cp-hex-row">
+      <span class="cp-hex-preview" [style.background]="livePreview || '#fff'"></span>
+      <input class="cp-hex-input" type="text"
+        [(ngModel)]="hexInput"
+        (ngModelChange)="onHexInput()"
+        (keydown.enter)="applyHex()"
+        (click)="$event.stopPropagation()"
+        placeholder="#FFFFFF"
+        dir="ltr">
+      <button class="cp-hex-apply" type="button" (click)="applyHex()">✓</button>
     </div>
 
-    <div class="cp-divider"></div>
-
-    <!-- CSS NAMES -->
-    <div class="cp-names-section">
-      <div class="cp-names-label">שמות CSS</div>
-      <div class="cp-names-grid">
-        <button *ngFor="let name of cssNames"
-          class="cp-name-btn"
-          [class.active]="value === name"
-          (click)="select(name)">
-          <span class="cp-name-swatch" [style.background]="name"></span>
-          {{ name }}
-        </button>
-      </div>
-    </div>
-
-    <div class="cp-divider"></div>
-
-    <!-- CUSTOM INPUT -->
-    <div class="cp-custom">
-      <input type="color" class="cp-native" [value]="isTransparent(value) ? '#ffffff' : value"
+    <!-- NATIVE PICKER -->
+    <label class="cp-free-picker">
+      <input type="color" class="cp-native-hidden"
+        [value]="isTransparent(value) ? '#ffffff' : value"
         (input)="onNativeColorInput($event)">
-      <input class="cp-text-input" type="text"
-        [(ngModel)]="inputValue"
-        (keydown.enter)="applyInput()"
-        placeholder="#hex / rgb() / שם CSS">
-      <button class="cp-apply-btn" type="button" (click)="applyInput()">✓</button>
+      <span class="cp-free-label">בחר צבע חופשי</span>
+      <span class="cp-free-arrow">›</span>
+    </label>
+
+    <div class="cp-divider"></div>
+
+    <!-- COMPACT PALETTE -->
+    <div class="cp-grid">
+      <button *ngIf="showNone"
+        class="cp-sq cp-sq--none"
+        [class.cp-sq--active]="isTransparent(value)"
+        (click)="select('')" title="ללא">
+      </button>
+      <button *ngFor="let c of compactPalette"
+        class="cp-sq"
+        [style.background]="c"
+        [class.cp-sq--active]="value === c"
+        [class.cp-sq--light]="isLight(c)"
+        (click)="select(c)"
+        [title]="c">
+      </button>
+    </div>
+
+    <div class="cp-divider"></div>
+
+    <!-- CSS NAMES SEARCH -->
+    <input class="cp-search" type="text"
+      [(ngModel)]="nameSearch"
+      placeholder="חפש שם CSS (red, blue...)"
+      (click)="$event.stopPropagation()">
+
+    <div class="cp-names-grid" *ngIf="filteredNames.length > 0">
+      <button *ngFor="let name of filteredNames"
+        class="cp-sq"
+        [style.background]="name"
+        [class.cp-sq--active]="value === name"
+        (click)="select(name)"
+        [title]="name">
+        <span class="cp-sq-tip">{{ name }}</span>
+      </button>
     </div>
 
   </div>

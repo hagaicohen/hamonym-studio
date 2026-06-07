@@ -8,6 +8,7 @@ import { CampaignStudioTopbarComponent } from '../../topbar/campaign-studio-topb
 import { StudioUiService }            from '../../services/studio-ui.service';
 import { CampaignApiService }         from '../../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
+import { AppLoaderService }           from '../../../../../core/services/app-loader.service';
 
 @Component({
   selector: 'app-campaign-studio-page',
@@ -26,16 +27,19 @@ export class CampaignStudioPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private campaignApi = inject(CampaignApiService);
   private stateService = inject(CampaignStudioStateService);
+  private loader = inject(AppLoaderService);
   ui = inject(StudioUiService);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.campaignApi.getById(id).subscribe(data => {
-        this.stateService.loadDraft(data);
+      this.campaignApi.getById(id).subscribe({
+        next: (data) => { this.stateService.loadDraft(data); this.loader.hide(); },
+        error: ()     => { this.loader.hide(); },
       });
     } else {
       this.stateService.reset();
+      this.loader.hide();
     }
   }
 

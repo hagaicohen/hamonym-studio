@@ -443,11 +443,17 @@ function createInitialDraft(): CampaignDraft {
 })
 export class CampaignStudioStateService {
   private draftSubject = new BehaviorSubject<CampaignDraft>(createInitialDraft());
+  private editModeSubject = new BehaviorSubject<boolean>(false);
 
   draft$ = this.draftSubject.asObservable();
+  isEditMode$ = this.editModeSubject.asObservable();
 
   get draft(): CampaignDraft {
     return this.draftSubject.value;
+  }
+
+  get isEditMode(): boolean {
+    return this.editModeSubject.value;
   }
 
   patch(partial: Partial<CampaignDraft>): void {
@@ -459,10 +465,12 @@ export class CampaignStudioStateService {
   }
 
   reset(): void {
+    this.editModeSubject.next(false);
     this.draftSubject.next(createInitialDraft());
   }
 
   loadDraft(data: CampaignDraft): void {
+    this.editModeSubject.next(true);
     this.draftSubject.next(data);
   }
 

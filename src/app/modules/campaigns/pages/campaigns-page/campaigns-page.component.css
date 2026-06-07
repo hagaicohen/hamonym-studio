@@ -122,6 +122,16 @@
   font-weight: 600;
 }
 
+.btn-view {
+  color: #16a34a;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.btn-view:hover {
+  background: #dcfce7;
+}
+
 /* ------------------------------------------------------------------ */
 /* STATUS BADGES                                                        */
 /* ------------------------------------------------------------------ */

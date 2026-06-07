@@ -122,6 +122,21 @@ export class CampaignApiService {
     }).pipe(map(r => this.fromSnake(r)));
   }
 
+  getBySlug(slug: string): Observable<CampaignDraft> {
+    return this.http.get<any>(`${this.apiUrl}/slug/${slug}`, {
+      headers: this.headers(),
+    }).pipe(map(r => this.fromSnake(r)));
+  }
+
+  checkSlugAvailable(slug: string, excludeId?: string): Observable<boolean> {
+    const params: Record<string, string> = { slug };
+    if (excludeId) params['excludeId'] = excludeId;
+    return this.http.get<{ available: boolean }>(`${this.apiUrl}/check-slug`, {
+      headers: this.headers(),
+      params,
+    }).pipe(map(r => r.available));
+  }
+
   // No dedicated publish endpoint — update status via PATCH
   publish(campaignId: string): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${campaignId}`,

@@ -25,6 +25,7 @@ import {
   AmbassadorsBlockData,
   UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
+import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
 
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
@@ -36,7 +37,7 @@ const FUNDING_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CheckoutModalComponent],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
@@ -50,8 +51,16 @@ export class CampaignPreviewComponent {
   entityLogoUrl: string | null = null;
   entityName = '';
   navOpen = false;
+  showStickyBar = true;
   readonly currentYear = new Date().getFullYear();
   private expandedRewards = new Set<string>();
+
+  // ── Checkout state ──
+  checkoutOpen = false;
+  selectedAmount: number | null = null;
+  cartRewardIds = new Set<string>();   // rewards in cart
+  customAmount: number | null = null;
+  amountDisplay = '';  // formatted display value for custom amount input
 
   isExpanded(id: string): boolean { return this.expandedRewards.has(id); }
   toggleExpand(id: string): void {
@@ -167,21 +176,27 @@ export class CampaignPreviewComponent {
     return String(Math.max(0, Math.ceil(diff / 86400000)));
   }
 
+  private parseDate(iso: string): [string, string, string] {
+    const date = iso.slice(0, 10); // take only yyyy-mm-dd part
+    const [y, m, d] = date.split('-');
+    return [y, m, d];
+  }
+
   formatDate(iso: string): string {
     if (!iso) return '';
-    const [y, m, d] = iso.split('-');
+    const [y, m, d] = this.parseDate(iso);
     return `${d}.${m}.${y.slice(2)}`;
   }
 
   formatDateShort(iso: string): string {
     if (!iso) return '';
-    const [y, m, d] = iso.split('-');
+    const [y, m, d] = this.parseDate(iso);
     return `${d}.${m}.${y.slice(2)}`;
   }
 
   formatDateFull(iso: string): string {
     if (!iso) return '';
-    const [y, m, d] = iso.split('-');
+    const [y, m, d] = this.parseDate(iso);
     return `${d}.${m}.${y}`;
   }
 
@@ -218,6 +233,94 @@ export class CampaignPreviewComponent {
   middleAmountIndex(amounts: number[]): number {
     const shown = Math.min(amounts.length, 5);
     return Math.floor((shown - 1) / 2);
+  }
+
+  // ── Checkout ──
+  selectAmount(amount: number): void {
+    this.selectedAmount = amount;
+    this.customAmount   = null;
+    this.amountDisplay  = '';
+  }
+
+  onCustomAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const raw   = input.value.replace(/[^\d]/g, '');
+    const num   = raw ? parseInt(raw, 10) : null;
+    this.customAmount  = num && num > 0 ? num : null;
+    this.amountDisplay = num ? num.toLocaleString('he-IL') : '';
+    // keep cursor position stable after re-render
+    const formatted = this.amountDisplay;
+    requestAnimationFrame(() => { input.value = formatted; });
+    if (this.customAmount) this.selectedAmount = null;
+  }
+
+  getEffectiveAmount(draft: CampaignDraft): number {
+    if (this.customAmount) return this.customAmount;
+    if (this.selectedAmount !== null) return this.selectedAmount;
+    const amounts = draft.suggestedAmounts.slice(0, 5);
+    return amounts[this.middleAmountIndex(amounts)] ?? 0;
+  }
+
+  isAmountSelected(amount: number): boolean {
+    return this.selectedAmount === amount && this.customAmount === null;
+  }
+
+  isRewardInCart(id: string): boolean { return this.cartRewardIds.has(id); }
+
+  selectReward(id: string): void {
+    if (!this.cartRewardIds.has(id)) {
+      this.cartRewardIds.add(id);
+      this.cartRewardIds = new Set(this.cartRewardIds);
+    }
+  }
+
+  removeReward(id: string): void {
+    this.cartRewardIds.delete(id);
+    this.cartRewardIds = new Set(this.cartRewardIds);
+  }
+
+  toggleReward(id: string): void {
+    if (this.cartRewardIds.has(id)) {
+      this.cartRewardIds.delete(id);
+    } else {
+      this.cartRewardIds.add(id);
+    }
+    this.cartRewardIds = new Set(this.cartRewardIds);
+  }
+
+  get cartCount(): number { return this.cartRewardIds.size; }
+
+  get explicitAmount(): number {
+    if (this.customAmount) return this.customAmount;
+    if (this.selectedAmount !== null) return this.selectedAmount;
+    return 0;
+  }
+
+  cartRewardsTotal(draft: CampaignDraft): number {
+    return draft.rewards
+      .filter(r => this.cartRewardIds.has(r.id))
+      .reduce((sum, r) => sum + (r.minimumAmount || 0), 0);
+  }
+
+  totalAmount(draft: CampaignDraft): number {
+    return this.explicitAmount + this.cartRewardsTotal(draft);
+  }
+
+  scrollToDonation(): void {
+    const el = document.querySelector('.hm-donate');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  openCheckout(draft: CampaignDraft): void {
+    this.checkoutOpen = true;
+  }
+
+  closeCheckout(): void {
+    this.checkoutOpen = false;
+  }
+
+  cartRewardList(draft: CampaignDraft) {
+    return draft.rewards.filter(r => this.cartRewardIds.has(r.id));
   }
 
   middleIndex(len: number): number {

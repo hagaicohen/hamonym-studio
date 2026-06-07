@@ -75,6 +75,7 @@
               <!-- Actions -->
               <div class="card-actions">
                 <button class="btn-action">📊 דוחות</button>
+                <button class="btn-action btn-view" *ngIf="c.slug" (click)="viewCampaign(c.slug)">צפה</button>
                 <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
               </div>
             </div>
@@ -118,6 +119,7 @@
 
             <div class="list-actions">
               <button class="btn-action">📊 דוחות</button>
+              <button class="btn-action btn-view" *ngIf="c.slug" (click)="viewCampaign(c.slug)">צפה</button>
               <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
             </div>
 

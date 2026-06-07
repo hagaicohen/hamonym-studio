@@ -226,8 +226,34 @@
 
     </footer>
 
+  <!-- ══ STICKY BOTTOM BAR ══ -->
+  <div class="hm-sticky-bar" *ngIf="showStickyBar">
+    <button class="hm-sticky-close" (click)="showStickyBar = false" aria-label="סגור">✕</button>
+    <div class="hm-sticky-inner">
+      <div class="hm-sticky-stats">
+        <span class="hm-sticky-amount">{{ statValue('raised', draft) }}</span>
+        <span class="hm-sticky-pct">{{ statValue('percent', draft) }} גויס</span>
+      </div>
+      <div class="hm-sticky-progress-wrap">
+        <div class="hm-sticky-progress-fill" style="width: 0%"></div>
+      </div>
+      <button class="hm-sticky-cta" (click)="openCheckout(draft)">לתמיכה מאובטחת</button>
+    </div>
+  </div>
+
   </ng-container>
 </div>
+
+<!-- ══ CHECKOUT MODAL ══ -->
+<app-checkout-modal
+  *ngIf="checkoutOpen"
+  [draft]="draft"
+  [amount]="explicitAmount + cartRewardsTotal(draft)"
+  [cartRewards]="cartRewardList(draft)"
+  [entityLogoUrl]="entityLogoUrl"
+  [entityName]="entityName"
+  (closed)="closeCheckout()">
+</app-checkout-modal>
 
 </ng-container>
 </ng-container>
@@ -316,17 +342,43 @@
     <div class="hm-amounts">
       <button *ngFor="let a of draft.suggestedAmounts | slice:0:5; let i = index"
         class="hm-amount-preset" type="button"
-        [class.is-selected]="i === middleAmountIndex(draft.suggestedAmounts)">
+        [class.is-selected]="selectedAmount === a && customAmount === null || (selectedAmount === null && customAmount === null && i === middleAmountIndex(draft.suggestedAmounts))"
+        (click)="selectAmount($any(a))">
         ₪{{ $any(a).toLocaleString('he-IL') }}
       </button>
     </div>
     <div class="hm-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
       <span class="hm-currency-symbol">₪</span>
-      <input class="hm-custom-amount" type="number" min="1" placeholder="סכום אחר" readonly>
+      <input class="hm-custom-amount"
+        type="text"
+        inputmode="numeric"
+        placeholder="סכום אחר"
+        [value]="amountDisplay"
+        (input)="onCustomAmountInput($event)">
     </div>
-    <button class="hm-donate-btn" type="button">
+    <!-- Total breakdown -->
+    <div class="hm-total-section" *ngIf="cartCount > 0">
+      <div class="hm-total-line" *ngIf="explicitAmount > 0">
+        <span class="hm-total-label">תרומה</span>
+        <span class="hm-total-val">₪{{ explicitAmount.toLocaleString('he-IL') }}</span>
+      </div>
+      <ng-container *ngFor="let r of cartRewardList(draft)">
+        <div class="hm-total-line">
+          <span class="hm-total-label">{{ r.title }}</span>
+          <span class="hm-total-val">₪{{ r.minimumAmount.toLocaleString('he-IL') }}</span>
+        </div>
+      </ng-container>
+      <div class="hm-total-divider"></div>
+      <div class="hm-total-sum">
+        <span>סה"כ לתשלום</span>
+        <span class="hm-total-sum-val">₪{{ totalAmount(draft).toLocaleString('he-IL') }}</span>
+      </div>
+    </div>
+
+    <button class="hm-donate-btn" type="button" (click)="openCheckout(draft)">
       <span class="hm-lock-icon">🔒</span>
       <span class="hm-btn-text">לתמיכה מאובטחת</span>
+      <span class="hm-cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
     </button>
     <div class="hm-payments">
       <span class="hm-payment-badge visa">
@@ -408,7 +460,9 @@
           <div class="hm-slider-track">
             <article *ngFor="let reward of draft.rewards"
               class="hm-reward-card"
-              [class.is-featured]="reward.featured === true">
+              [class.is-featured]="reward.featured === true"
+              [class.is-selected]="isRewardInCart(reward.id)"
+              (click)="selectReward(reward.id)">
               <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
               <div class="hm-reward-card-top">
                 <div class="hm-reward-icon-wrap">
@@ -419,13 +473,24 @@
               </div>
               <div class="hm-reward-body">
                 <h3>{{ reward.title }}</h3>
-                <p [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description || ' ' }}</p>
+                <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
                 <button class="hm-reward-more-btn"
                   *ngIf="reward.description && reward.description.length > 120"
-                  (click)="toggleExpand(reward.id)">
+                  (click)="toggleExpand(reward.id); $event.stopPropagation()">
                   {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
                 </button>
-                <button class="hm-reward-select-btn" type="button">בחירה בתשורה</button>
+                <div class="hm-reward-select-hint">לחץ לבחירה</div>
+              </div>
+
+              <!-- Selected overlay -->
+              <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
+                <div class="hm-reward-overlay-check">✓</div>
+                <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
+                <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
+                <div class="hm-reward-overlay-btns">
+                  <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
+                  <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+                </div>
               </div>
             </article>
           </div>

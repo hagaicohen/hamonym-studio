@@ -64,6 +64,15 @@ export const routes: Routes = [
       ).then((m) => m.CampaignStudioPageComponent),
   },
 
+  {
+    path: 'campaigns/:slug/view',
+
+    loadComponent: () =>
+      import(
+        './modules/campaigns/pages/campaign-public-page/campaign-public-page.component'
+      ).then((m) => m.CampaignPublicPageComponent),
+  },
+
   /* ========================================
      APP SHELL
   ======================================== */

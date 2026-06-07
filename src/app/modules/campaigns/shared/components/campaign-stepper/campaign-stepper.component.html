@@ -1,16 +1,20 @@
-<div class="stepper">
+<div class="stepper" [class.edit-mode]="editMode">
   <div class="stepper-header">
-    שלב {{ currentStep }} מתוך {{ steps.length }}
+    @if (editMode) {
+      עריכת קמפיין — שלב {{ currentStep }} מתוך {{ steps.length }}
+    } @else {
+      שלב {{ currentStep }} מתוך {{ steps.length }}
+    }
   </div>
 
   <div class="stepper-items">
     @for (step of steps; track $index) {
-      <div class="stepper-item">
-        <div class="step-dot" [class.active]="currentStep >= $index + 1">
+      <div class="stepper-item" [class.clickable]="editMode" (click)="selectStep($index)">
+        <div class="step-dot" [class.active]="currentStep >= $index + 1" [class.current]="currentStep === $index + 1">
           {{ $index + 1 }}
         </div>
 
-        <div class="stepper-label">
+        <div class="stepper-label" [class.active-label]="currentStep === $index + 1">
           {{ step }}
         </div>
       </div>

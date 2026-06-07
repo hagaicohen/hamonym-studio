@@ -43,7 +43,13 @@ export class CampaignsPageComponent implements OnInit {
   }
 
   editCampaign(id: string): void {
+    this.loader.show('טוען קמפיין...');
     this.router.navigate(['/campaigns', id, 'edit']);
+  }
+
+  viewCampaign(slug: string): void {
+    this.loader.show('טוען קמפיין...');
+    this.router.navigate(['/campaigns', slug, 'view']);
   }
 
   statusLabel(status: string): string {

@@ -1,6 +1,10 @@
 <div class="campaign-editor">
   <div class="editor-content">
-    <app-campaign-stepper [currentStep]="currentStep" />
+    <app-campaign-stepper
+      [currentStep]="currentStep"
+      [editMode]="isEditMode"
+      (stepSelected)="goToStep($event)"
+    />
 
     @if (currentStep === 1) { <app-campaign-basic-step /> }
     @if (currentStep === 2) { <app-campaign-type-step /> }

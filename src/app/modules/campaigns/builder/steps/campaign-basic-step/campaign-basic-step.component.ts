@@ -8,6 +8,7 @@ import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-edit
 import {
   CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData,
 } from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignApiService } from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { UploadService } from '../../../../../core/services/upload.service';
@@ -30,6 +31,7 @@ export class CampaignBasicStepComponent implements OnInit {
   private entityService = inject(CurrentEntityService);
   private uploadService = inject(UploadService);
   private entitiesService = inject(EntitiesService);
+  private campaignApi   = inject(CampaignApiService);
   private doc = inject(DOCUMENT);
 
   readonly ImageIcon   = Image;
@@ -214,8 +216,11 @@ export class CampaignBasicStepComponent implements OnInit {
     }
     this.isCheckingSlug = true; this.slugAvailable = null;
     this.slugTimeout = setTimeout(() => {
-      this.slugAvailable = normalized.trim() !== 'abc';
-      this.isCheckingSlug = false;
+      const excludeId = this.state.draft.id;
+      this.campaignApi.checkSlugAvailable(normalized.trim(), excludeId).subscribe({
+        next: (available) => { this.slugAvailable = available; this.isCheckingSlug = false; },
+        error: ()          => { this.slugAvailable = null;      this.isCheckingSlug = false; },
+      });
     }, 800);
   }
 

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-campaign-stepper',
@@ -18,6 +18,14 @@ export class CampaignStepperComponent {
     'פרסום',
   ];
 
-  @Input()
-  currentStep = 1;
+  @Input() currentStep = 1;
+  @Input() editMode = false;
+
+  @Output() stepSelected = new EventEmitter<number>();
+
+  selectStep(index: number): void {
+    if (this.editMode) {
+      this.stepSelected.emit(index + 1);
+    }
+  }
 }
