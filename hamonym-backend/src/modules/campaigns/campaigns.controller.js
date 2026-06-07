@@ -220,6 +220,78 @@ exports.updateCampaign =
 
   };
 
+exports.getCampaignBySlug =
+  async (req, res) => {
+
+    try {
+
+      const campaign =
+        await service.getCampaignBySlug({
+
+          userId:
+            req.user.id,
+
+          slug:
+            req.params.slug
+
+        });
+
+      if (!campaign) {
+        return res
+          .status(404)
+          .json({ error: 'הקמפיין לא נמצא' });
+      }
+
+      res.json(campaign);
+
+    } catch (err) {
+
+      console.error(err);
+
+      res
+        .status(500)
+        .json({ error: 'אירעה שגיאה בלתי צפויה' });
+
+    }
+
+  };
+
+exports.checkSlugAvailable =
+  async (req, res) => {
+
+    try {
+
+      const {
+        slug,
+        excludeId
+      } = req.query;
+
+      if (!slug || slug.trim().length < 3) {
+        return res
+          .status(400)
+          .json({ error: 'slug קצר מדי' });
+      }
+
+      const available =
+        await service.checkSlugAvailable({
+          slug: slug.trim().toLowerCase(),
+          excludeId: excludeId || null
+        });
+
+      res.json({ available });
+
+    } catch (err) {
+
+      console.error(err);
+
+      res
+        .status(500)
+        .json({ error: 'אירעה שגיאה בלתי צפויה' });
+
+    }
+
+  };
+
 exports.deleteCampaign =
   async (req, res) => {
 

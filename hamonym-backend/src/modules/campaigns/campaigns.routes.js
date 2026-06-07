@@ -23,6 +23,18 @@ router.get(
 );
 
 router.get(
+  '/check-slug',
+  requireAuth,
+  controller.checkSlugAvailable
+);
+
+router.get(
+  '/slug/:slug',
+  requireAuth,
+  controller.getCampaignBySlug
+);
+
+router.get(
   '/:id',
   requireAuth,
   controller.getCampaignById

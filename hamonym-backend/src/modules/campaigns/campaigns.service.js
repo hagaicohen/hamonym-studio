@@ -51,6 +51,17 @@ function sanitizeUpdateData(
 
 }
 
+const JSON_COLUMNS = new Set([
+  'hero_text_style',
+  'hero_cta_config',
+  'rewards',
+  'sponsors',
+  'ambassadors',
+  'updates',
+  'blocks',
+  'layout',
+]);
+
 function buildUpdateQuery(
   data
 ) {
@@ -85,8 +96,12 @@ function buildUpdateQuery(
         `${key} = $${index + 1}`
       );
 
+      const val = data[key];
+
       values.push(
-        data[key]
+        JSON_COLUMNS.has(key) && val !== null && typeof val === 'object'
+          ? JSON.stringify(val)
+          : val
       );
 
     }
@@ -550,6 +565,77 @@ exports.updateCampaign =
       throw err;
 
     }
+
+  };
+
+/*
+|--------------------------------------------------------------------------
+| GET CAMPAIGN BY SLUG (public preview for manager)
+|--------------------------------------------------------------------------
+*/
+
+exports.getCampaignBySlug =
+  async ({
+    userId,
+    slug
+  }) => {
+
+    const result =
+      await db.query(
+
+        `
+        SELECT c.*
+
+        FROM campaigns c
+
+        INNER JOIN user_entities ue
+          ON ue.entity_id = c.entity_id
+
+        WHERE c.slug = $1
+        AND ue.user_id = $2
+
+        LIMIT 1
+        `,
+
+        [
+          slug,
+          userId
+        ]
+
+      );
+
+    return result.rows[0] || null;
+
+  };
+
+/*
+|--------------------------------------------------------------------------
+| CHECK SLUG AVAILABILITY
+|--------------------------------------------------------------------------
+*/
+
+exports.checkSlugAvailable =
+  async ({
+    slug,
+    excludeId
+  }) => {
+
+    const params = [slug];
+
+    let query =
+      `SELECT 1 FROM campaigns WHERE slug = $1`;
+
+    if (excludeId) {
+      query += ` AND id != $2`;
+      params.push(excludeId);
+    }
+
+    query += ` LIMIT 1`;
+
+    const result =
+      await db.query(query, params);
+
+    return result.rows.length === 0;
 
   };
 
