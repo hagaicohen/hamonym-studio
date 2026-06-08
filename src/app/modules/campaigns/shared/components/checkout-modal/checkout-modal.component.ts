@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CampaignDraft, CampaignReward } from '../../../services/campaign-studio-state.service';
+import { DonationService } from '../../../services/donation.service';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -19,12 +20,16 @@ export class CheckoutModalComponent implements OnInit {
 
   @Output() closed = new EventEmitter<void>();
 
+  private donationService = inject(DonationService);
+
   name      = '';
   email     = '';
   phone     = '';
   address   = '';
   idNumber  = '';
   submitted = false;
+  loading   = false;
+  errorMsg  = '';
 
   get formattedAmount(): string {
     return '₪' + this.amount.toLocaleString('he-IL');
@@ -64,8 +69,41 @@ export class CheckoutModalComponent implements OnInit {
 
   onSubmit(): void {
     this.submitted = true;
-    if (!this.isValid) return;
-    // TODO: integrate with Cardcom payment gateway
-    console.log('Checkout:', { name: this.name, email: this.email, phone: this.phone, address: this.address, idNumber: this.idNumber, amount: this.amount });
+    if (!this.isValid || this.loading) return;
+
+    if (!this.draft?.id) {
+      this.errorMsg = 'לא ניתן לעבד תשלום — הקמפיין אינו פעיל';
+      return;
+    }
+
+    this.loading  = true;
+    this.errorMsg = '';
+
+    const rewards = this.cartRewards.map(r => ({
+      title:         r.title,
+      minimumAmount: r.minimumAmount ?? 0,
+    }));
+
+    this.donationService.create({
+      campaignId: this.draft.id,
+      donor: {
+        name:     this.name.trim(),
+        email:    this.email.trim(),
+        phone:    this.phone.trim(),
+        idNumber: this.idNumber.replace(/\D/g, ''),
+        address:  this.address.trim(),
+      },
+      amount: this.amount,
+      rewards,
+    }).subscribe({
+      next: (res) => {
+        document.body.style.overflow = '';
+        window.location.href = res.url;
+      },
+      error: (err) => {
+        this.loading  = false;
+        this.errorMsg = err?.error?.error || 'שגיאה בעיבוד הבקשה, נסו שנית';
+      },
+    });
   }
 }
