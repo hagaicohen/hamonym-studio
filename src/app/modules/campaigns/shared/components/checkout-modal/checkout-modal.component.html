@@ -133,7 +133,9 @@
           <span class="error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
         </div>
 
-        <div class="api-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+        <div class="api-error-slot">
+          <div class="api-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+        </div>
 
         <button class="pay-btn" type="submit" [disabled]="loading">
           <span *ngIf="!loading">
