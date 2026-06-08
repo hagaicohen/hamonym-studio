@@ -121,6 +121,58 @@
           <button class="upload-area-btn" type="button" (click)="galleryInput.click()">
             + הוסף תמונות לגלריה
           </button>
+
+          <!-- Gallery style options -->
+          <div class="gallery-style-section">
+            <div class="editor-label" style="margin-bottom:8px">סגנון תצוגה</div>
+
+            <div class="gallery-mode-btns">
+              <button class="gallery-mode-btn"
+                [class.active]="asGallery(block.data).style !== 'grid'"
+                (click)="updateGalleryStyle(block.id, 'style', 'slider')">
+                ◀▶ סליידר
+              </button>
+              <button class="gallery-mode-btn"
+                [class.active]="asGallery(block.data).style === 'grid'"
+                (click)="updateGalleryStyle(block.id, 'style', 'grid')">
+                ▦ רשת
+              </button>
+            </div>
+
+            <div class="editor-row" style="margin-top:10px">
+              <label class="editor-label">יחס תמונה</label>
+              <select class="editor-select"
+                [ngModel]="asGallery(block.data).aspectRatio"
+                (ngModelChange)="updateGalleryStyle(block.id, 'aspectRatio', $event)">
+                <option value="16:9">16:9 — רחב</option>
+                <option value="4:3">4:3 — סטנדרטי</option>
+                <option value="3:2">3:2</option>
+                <option value="1:1">1:1 — ריבועי</option>
+              </select>
+            </div>
+
+            <div class="gallery-checks" *ngIf="asGallery(block.data).style !== 'grid'">
+              <label class="gallery-check">
+                <input type="checkbox"
+                  [ngModel]="asGallery(block.data).showArrows"
+                  (ngModelChange)="updateGalleryStyle(block.id, 'showArrows', $event)">
+                חצים
+              </label>
+              <label class="gallery-check">
+                <input type="checkbox"
+                  [ngModel]="asGallery(block.data).showDots"
+                  (ngModelChange)="updateGalleryStyle(block.id, 'showDots', $event)">
+                נקודות
+              </label>
+              <label class="gallery-check">
+                <input type="checkbox"
+                  [ngModel]="asGallery(block.data).showCaptions"
+                  (ngModelChange)="updateGalleryStyle(block.id, 'showCaptions', $event)">
+                כיתובים
+              </label>
+            </div>
+          </div>
+
         </div>
 
         <!-- ── SPLIT ── -->

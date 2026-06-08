@@ -54,6 +54,7 @@ export class CampaignPreviewComponent {
   showStickyBar = true;
   readonly currentYear = new Date().getFullYear();
   private expandedRewards = new Set<string>();
+  private gallerySlides   = new Map<string, number>();
 
   // ── Checkout state ──
   checkoutOpen = false;
@@ -325,6 +326,21 @@ export class CampaignPreviewComponent {
 
   middleIndex(len: number): number {
     return Math.floor((len - 1) / 2);
+  }
+
+  // ── Gallery slider ──
+  gallerySlide(id: string): number { return this.gallerySlides.get(id) ?? 0; }
+  setSlide(id: string, i: number): void { this.gallerySlides.set(id, i); }
+  prevSlide(id: string, count: number): void {
+    this.gallerySlides.set(id, Math.max(0, (this.gallerySlides.get(id) ?? 0) - 1));
+  }
+  nextSlide(id: string, count: number): void {
+    this.gallerySlides.set(id, Math.min(count - 1, (this.gallerySlides.get(id) ?? 0) + 1));
+  }
+
+  galleryAspectStyle(ratio: string): string {
+    const map: Record<string, string> = { '16:9': '56.25%', '4:3': '75%', '1:1': '100%', '3:2': '66.67%' };
+    return map[ratio] ?? '56.25%';
   }
 
   scrollSlider(el: HTMLElement, dir: 'prev' | 'next'): void {

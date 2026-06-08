@@ -94,7 +94,13 @@ export interface VideoBlockData {
 }
 
 export interface GalleryBlockData {
-  items: { url: string; caption?: string }[];
+  items:       { url: string; caption?: string }[];
+  style:       'slider' | 'grid';
+  aspectRatio: '16:9' | '4:3' | '1:1' | '3:2';
+  showCaptions: boolean;
+  showDots:    boolean;
+  showArrows:  boolean;
+  autoPlay:    boolean;
 }
 
 export interface SplitBlockData {
@@ -533,7 +539,7 @@ function defaultBlockData(type: BlockType): BlockData {
     case 'rich-text':   return { content: '', lineHeight: 1.6 };
     case 'image':       return { url: '' };
     case 'video':       return { url: '' };
-    case 'gallery':     return { items: [] };
+    case 'gallery':     return { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: true, showDots: true, showArrows: true, autoPlay: false } as GalleryBlockData;
     case 'split':       return { leftBlockId: null, rightBlockId: null, leftPercent: 50 } as SplitBlockData;
     case 'container':   return { childBlockIds: [], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData;
     case 'stats':       return {

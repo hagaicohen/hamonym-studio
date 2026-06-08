@@ -210,7 +210,13 @@ export class CampaignPageBuilderStepComponent {
     if (!block) return;
     const items = [...(block.data as GalleryBlockData).items];
     items[index] = { ...items[index], caption };
-    this.state.updateBlockData(id, { items } as GalleryBlockData);
+    this.state.updateBlockData(id, { ...(block.data as GalleryBlockData), items } as GalleryBlockData);
+  }
+
+  updateGalleryStyle(id: string, field: keyof GalleryBlockData, value: unknown): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as GalleryBlockData);
   }
 
   // Split
