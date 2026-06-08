@@ -11,3 +11,9 @@
     <app-campaign-preview />
   </div>
 }
+
+<app-payment-failed-popup
+  *ngIf="showFailedPopup"
+  (retry)="onRetryPayment()"
+  (closed)="showFailedPopup = false">
+</app-payment-failed-popup>

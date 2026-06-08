@@ -427,7 +427,10 @@
   padding: 20px 8px 0;
   border-left: 1px solid var(--line, #e2e8f0);
 }
-.hm-stat-box:last-child { border-left: none; }
+.hm-stat-box:first-child { 
+  border-left: none; 
+}
+
 .hm-stat-icon {
   width: 40px; height: 40px;
   border-radius: 8px;

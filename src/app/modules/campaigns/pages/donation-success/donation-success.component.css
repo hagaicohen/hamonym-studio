@@ -1,0 +1,198 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f2417 100%);
+  direction: rtl;
+}
+
+.success-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+/* ── CARD ── */
+.success-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 48px 40px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  animation: cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── ICON ── */
+.success-icon { margin-bottom: 20px; }
+.success-circle {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  animation: popIn 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.success-circle svg { width: 100%; height: 100%; }
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── ORG LOGO ── */
+.success-org-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+  margin: 0 auto 16px;
+  display: block;
+}
+
+/* ── TEXT ── */
+.success-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+
+.success-subtitle {
+  font-size: 15px;
+  color: #475569;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+/* ── SUMMARY BOX ── */
+.success-summary {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+.success-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.success-summary-row:last-child { border-bottom: none; }
+
+.summary-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+.summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  direction: ltr;
+}
+.summary-amount {
+  font-size: 22px;
+  color: #16a34a;
+}
+.summary-ref {
+  font-family: monospace;
+  font-size: 13px;
+  color: #7c3aed;
+  letter-spacing: 1px;
+}
+
+/* ── RECEIPT NOTE ── */
+.success-receipt-note {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 28px;
+}
+
+/* ── SHARE ── */
+.success-share { margin-bottom: 24px; }
+
+.share-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.share-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.share-btn:hover  { opacity: 0.88; }
+.share-btn:active { transform: scale(0.97); }
+.share-btn--wa   { background: #25d366; color: #fff; }
+.share-btn--fb   { background: #1877f2; color: #fff; }
+.share-btn--link { background: #f1f5f9; color: #374151; }
+
+.share-icon { font-size: 15px; }
+
+/* ── BACK BUTTON ── */
+.back-btn {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.back-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+/* ── LOADING ── */
+.success-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── MOBILE ── */
+@media (max-width: 540px) {
+  .success-card { padding: 36px 20px; }
+  .success-title { font-size: 22px; }
+  .share-buttons { flex-direction: column; }
+  .share-btn { justify-content: center; }
+}

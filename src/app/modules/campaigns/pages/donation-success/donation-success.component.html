@@ -1,0 +1,70 @@
+<div class="success-page" dir="rtl">
+
+  <div class="success-card" *ngIf="!loading">
+
+    <!-- Check icon -->
+    <div class="success-icon">
+      <div class="success-circle">
+        <svg viewBox="0 0 52 52" fill="none">
+          <circle cx="26" cy="26" r="25" stroke="#22c55e" stroke-width="2"/>
+          <path d="M14 26l9 9 15-15" stroke="#22c55e" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Entity logo -->
+    <img *ngIf="donation?.entity_logo" class="success-org-logo"
+         [src]="donation!.entity_logo" [alt]="donation!.entity_name">
+
+    <h1 class="success-title">תודה רבה על תרומתך!</h1>
+    <p class="success-subtitle" *ngIf="campaignTitle">תמיכתך בקמפיין <strong>{{ campaignTitle }}</strong> התקבלה בהצלחה</p>
+
+    <!-- Summary box -->
+    <div class="success-summary">
+      <div class="success-summary-row">
+        <span class="summary-label">סכום התרומה</span>
+        <span class="summary-value summary-amount">{{ formattedAmount }}</span>
+      </div>
+      <div class="success-summary-row" *ngIf="ref">
+        <span class="summary-label">מספר אסמכתא</span>
+        <span class="summary-value summary-ref">{{ ref.slice(0, 8).toUpperCase() }}</span>
+      </div>
+      <div class="success-summary-row">
+        <span class="summary-label">תאריך</span>
+        <span class="summary-value">{{ formattedDate }}</span>
+      </div>
+    </div>
+
+    <p class="success-receipt-note">
+      קבלה תישלח לכתובת האימייל שהזנת בנפרד.
+    </p>
+
+    <!-- Share -->
+    <div class="success-share">
+      <p class="share-label">שתפו את הקמפיין</p>
+      <div class="share-buttons">
+        <button class="share-btn share-btn--wa" (click)="shareWhatsApp()">
+          <span class="share-icon">💬</span> WhatsApp
+        </button>
+        <button class="share-btn share-btn--fb" (click)="shareFacebook()">
+          <span class="share-icon">📘</span> Facebook
+        </button>
+        <button class="share-btn share-btn--link" (click)="copyLink()">
+          <span class="share-icon">🔗</span>
+          {{ linkCopied ? 'הועתק!' : 'העתק קישור' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Back -->
+    <button class="back-btn" (click)="backToCampaign()">חזרה לדף הקמפיין</button>
+
+  </div>
+
+  <!-- Loading -->
+  <div class="success-loading" *ngIf="loading">
+    <div class="loading-spinner"></div>
+  </div>
+
+</div>

@@ -1,0 +1,21 @@
+<div class="failed-overlay" (click)="closed.emit()" dir="rtl">
+  <div class="failed-popup" (click)="$event.stopPropagation()">
+
+    <div class="failed-icon">
+      <svg viewBox="0 0 52 52" fill="none">
+        <circle cx="26" cy="26" r="25" stroke="#ef4444" stroke-width="2"/>
+        <path d="M17 17l18 18M35 17L17 35" stroke="#ef4444" stroke-width="2.5"
+              stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <h2 class="failed-title">התשלום לא הושלם</h2>
+    <p class="failed-msg">הכרטיס לא חויב. ניתן לנסות שנית או לחזור לדף הקמפיין.</p>
+
+    <div class="failed-actions">
+      <button class="btn-retry" (click)="retry.emit()">נסה שנית</button>
+      <button class="btn-back"  (click)="closed.emit()">חזרה לקמפיין</button>
+    </div>
+
+  </div>
+</div>

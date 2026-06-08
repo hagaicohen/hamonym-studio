@@ -66,11 +66,16 @@ export const routes: Routes = [
 
   {
     path: 'campaigns/:slug/view',
-
     loadComponent: () =>
-      import(
-        './modules/campaigns/pages/campaign-public-page/campaign-public-page.component'
-      ).then((m) => m.CampaignPublicPageComponent),
+      import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
+        .then((m) => m.CampaignPublicPageComponent),
+  },
+
+  {
+    path: 'campaigns/:slug/success',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/donation-success/donation-success.component')
+        .then((m) => m.DonationSuccessComponent),
   },
 
   /* ========================================
