@@ -223,6 +223,8 @@ export interface CampaignDraft {
   id?:          string;
   entityId?:    string;
   status:       CampaignStatus;
+  currentAmount?:   number;
+  supportersCount?: number;
   createdAt?:   string;  // ISO timestamp
   updatedAt?:   string;  // ISO timestamp
   publishedAt?: string;  // ISO timestamp

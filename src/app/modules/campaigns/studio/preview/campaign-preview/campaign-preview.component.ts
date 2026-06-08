@@ -396,11 +396,16 @@ export class CampaignPreviewComponent {
   }
 
   statValue(key: string, draft: CampaignDraft): string {
+    const raised     = draft.currentAmount   ?? 0;
+    const supporters = draft.supportersCount ?? 0;
+    const target     = draft.targetAmount    ?? 0;
+    const pct        = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+
     switch (key) {
-      case 'target':         return draft.targetAmount ? this.formatAmount(draft.targetAmount) : '—';
-      case 'raised':         return '₪0';
-      case 'percent':        return '0%';
-      case 'supporters':     return '0';
+      case 'target':         return target    ? this.formatAmount(target) : '—';
+      case 'raised':         return this.formatAmount(raised);
+      case 'percent':        return pct + '%';
+      case 'supporters':     return supporters.toLocaleString('he-IL');
       case 'start_date':     return draft.startDate ? this.formatDate(draft.startDate) : '—';
       case 'end_date':       return draft.endDate ? this.formatDate(draft.endDate) : '—';
       case 'days_remaining': return this.daysRemaining(draft);

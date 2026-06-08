@@ -60,6 +60,8 @@ export class CampaignApiService {
       id:                      data.id,
       entityId:                data.entity_id,
       status:                  data.status,
+      currentAmount:           parseFloat(data.current_amount)  || 0,
+      supportersCount:         parseInt(data.supporters_count)  || 0,
       createdAt:               data.created_at,
       updatedAt:               data.updated_at,
       publishedAt:             data.published_at,
