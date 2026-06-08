@@ -133,17 +133,16 @@
           <span class="error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
         </div>
 
-        <div class="api-error-slot">
+        <div class="pay-btn-wrap">
           <div class="api-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+          <button class="pay-btn" type="submit" [disabled]="loading">
+            <span *ngIf="!loading">
+              <span class="pay-lock">🔒</span>
+              מעבר לתשלום מאובטח — {{ formattedAmount }}
+            </span>
+            <span *ngIf="loading" class="pay-spinner">מעבד...</span>
+          </button>
         </div>
-
-        <button class="pay-btn" type="submit" [disabled]="loading">
-          <span *ngIf="!loading">
-            <span class="pay-lock">🔒</span>
-            מעבר לתשלום מאובטח — {{ formattedAmount }}
-          </span>
-          <span *ngIf="loading" class="pay-spinner">מעבד...</span>
-        </button>
 
       </form>
 
