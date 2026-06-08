@@ -57,7 +57,7 @@
               <!-- Progress -->
               <div class="card-progress">
                 <div class="card-progress-row">
-                  <span class="progress-raised">₪{{ (c.raisedAmount ?? 0) | number }}</span>
+                  <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
                   <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
                 </div>
                 <div class="progress-bar">
@@ -69,7 +69,7 @@
               <!-- Meta -->
               <div class="card-meta">
                 <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
-                <span class="meta-item">↗ {{ c.donorsCount ?? 0 }} תורמים</span>
+                <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
               </div>
 
               <!-- Actions -->
@@ -103,7 +103,7 @@
               <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
               <div class="list-progress">
                 <div class="card-progress-row">
-                  <span class="progress-raised">₪{{ (c.raisedAmount ?? 0) | number }}</span>
+                  <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
                   <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
                   <span class="list-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</span>
                 </div>
@@ -113,7 +113,7 @@
               </div>
               <div class="card-meta">
                 <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
-                <span class="meta-item">↗ {{ c.donorsCount ?? 0 }} תורמים</span>
+                <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
               </div>
             </div>
 

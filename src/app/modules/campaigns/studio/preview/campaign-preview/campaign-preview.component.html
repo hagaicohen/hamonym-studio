@@ -235,7 +235,7 @@
         <span class="hm-sticky-pct">{{ statValue('percent', draft) }} גויס</span>
       </div>
       <div class="hm-sticky-progress-wrap">
-        <div class="hm-sticky-progress-fill" style="width: 0%"></div>
+        <div class="hm-sticky-progress-fill" [style.width.%]="raisedPct(draft)"></div>
       </div>
       <button class="hm-sticky-cta" (click)="scrollToDonation()">לתמיכה מאובטחת</button>
     </div>

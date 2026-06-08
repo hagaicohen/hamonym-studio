@@ -68,7 +68,7 @@ export class CampaignsPageComponent implements OnInit {
 
   progressPercent(campaign: any): number {
     if (!campaign.targetAmount) return 0;
-    return Math.min(100, Math.round(((campaign.raisedAmount ?? 0) / campaign.targetAmount) * 100));
+    return Math.min(100, Math.round(((campaign.currentAmount ?? 0) / campaign.targetAmount) * 100));
   }
 
   daysRemaining(endDate: string): number {
