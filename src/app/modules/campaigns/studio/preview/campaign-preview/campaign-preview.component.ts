@@ -339,8 +339,8 @@ export class CampaignPreviewComponent {
   }
 
   galleryAspectStyle(ratio: string): string {
-    const map: Record<string, string> = { '16:9': '56.25%', '4:3': '75%', '1:1': '100%', '3:2': '66.67%' };
-    return map[ratio] ?? '56.25%';
+    const map: Record<string, string> = { '16:9': '16/9', '4:3': '4/3', '1:1': '1/1', '3:2': '3/2' };
+    return map[ratio] ?? '16/9';
   }
 
   scrollSlider(el: HTMLElement, dir: 'prev' | 'next'): void {

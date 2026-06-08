@@ -641,69 +641,59 @@
 /* GALLERY BLOCK */
 .hm-gallery-block { padding: 12px 0; }
 
-/* Slider — all classes prefixed hm-gal- to avoid collision with rewards slider */
-.hm-gal-slider {
+/* ── GALLERY BLOCK — all prefixed hm-gal- to avoid collision with rewards ── */
+.hm-gallery-block { padding: 0; }
+
+/* Slider wrapper — arrows position relative to this */
+.hm-gal-slider { position: relative; direction: ltr; }
+
+/* Viewport: defines the visible window, clips overflow, enforces aspect ratio */
+.hm-gal-viewport {
   position: relative;
-  direction: ltr;
+  width: 100%;
   overflow: hidden;
   border-radius: 10px;
-  background: #f1f5f9;
+  background: #e2e8f0;
+  /* aspect-ratio set via [style.aspect-ratio] binding */
 }
-.hm-gal-viewport {
-  width: 100%;
-  padding-top: var(--aspect, 56.25%);
-  position: relative;
-  overflow: hidden;
-}
+
+/* Track: stretches to full viewport size, slides laid out horizontally */
 .hm-gal-track {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   display: flex;
-  width: 100%;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
+
+/* Each slide fills the viewport */
 .hm-gal-slide {
   flex: 0 0 100%;
-  position: relative;
-  overflow: hidden;
-}
-.hm-gal-slide img {
-  width: 100%;
+  min-width: 0;
   height: 100%;
-  object-fit: cover;
-  display: block;
+  position: relative;
 }
+
+.hm-gal-slide img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
 .hm-gal-caption {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   padding: 8px 12px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.55));
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
   color: #fff;
   font-size: 12px;
   direction: rtl;
   text-align: right;
 }
 
-/* Arrows */
-.hm-gal-arrow {
-  position: absolute;
-  top: 50%; transform: translateY(-50%);
-  width: 36px; height: 36px;
-  background: rgba(255,255,255,0.85);
-  border: none; border-radius: 50%;
-  font-size: 22px; line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, opacity 0.15s;
-  z-index: 2;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-}
-.hm-gal-arrow:disabled { opacity: 0.3; cursor: default; }
-.hm-gal-arrow:not(:disabled):hover { background: #fff; }
-.hm-gal-arrow--next { left: 10px; }
-.hm-gal-arrow--prev { right: 10px; }
-
-/* Dots */
+/* Dots — inside viewport so they sit on top of the image */
 .hm-gal-dots {
   position: absolute;
   bottom: 10px; left: 0; right: 0;
@@ -713,40 +703,52 @@
 .hm-gal-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.45);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
-.hm-gal-dot.active {
-  background: #fff;
-  transform: scale(1.25);
-}
+.hm-gal-dot.active { background: #fff; transform: scale(1.3); }
 
-/* Grid mode */
+/* Arrows — outside viewport, positioned over it via .hm-gal-slider */
+.hm-gal-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 34px; height: 34px;
+  background: rgba(255,255,255,0.88);
+  border: none; border-radius: 50%;
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transition: background 0.15s, opacity 0.15s;
+}
+.hm-gal-arrow:disabled { opacity: 0.25; cursor: default; }
+.hm-gal-arrow:not(:disabled):hover { background: #fff; }
+/* RTL: "prev" (go back) is on the right side; "next" (go forward) is on the left */
+.hm-gal-arrow--prev { right: 10px; }
+.hm-gal-arrow--next { left: 10px; }
+
+/* GRID mode */
 .hm-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  border-radius: 10px;
+  overflow: hidden;
 }
 .hm-gallery-grid-item {
   position: relative;
-  border-radius: 8px;
   overflow: hidden;
-  background: #f1f5f9;
-}
-.hm-gallery-grid-item::before {
-  content: '';
-  display: block;
-  padding-top: var(--aspect, 66.67%);
+  background: #e2e8f0;
+  /* aspect-ratio set via [style.aspect-ratio] binding */
 }
 .hm-gallery-grid-item img {
   position: absolute;
   inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-}
-.hm-gallery-grid-item .hm-gal-caption {
-  font-size: 11px;
 }
 
 /* Empty state */
