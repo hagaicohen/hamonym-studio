@@ -283,34 +283,21 @@
   <div class="hm-gallery-block" *ngIf="block.type === 'gallery'">
     <ng-container *ngIf="asGallery(block.data).items.length > 0; else galleryEmpty">
 
-      <!-- SLIDER mode — same outer pattern as rewards -->
+      <!-- CAROUSEL mode — scroll-based, same pattern as rewards slider -->
       <ng-container *ngIf="asGallery(block.data).style !== 'grid'">
         <div class="hm-gal-outer">
-          <button class="hm-gal-nav"
-            [disabled]="gallerySlide(block.id) === 0"
-            (click)="prevSlide(block.id, asGallery(block.data).items.length)">&#8249;</button>
-
-          <div class="hm-gal-viewport"
-            [style.aspect-ratio]="galleryAspectStyle(asGallery(block.data).aspectRatio)">
-            <div class="hm-gal-track"
-              [style.transform]="'translateX(-' + (gallerySlide(block.id) * 100) + '%)'">
-              <div class="hm-gal-slide" *ngFor="let item of asGallery(block.data).items">
-                <img [src]="item.url" [alt]="item.caption || ''" loading="lazy">
+          <button class="hm-gal-nav" (click)="scrollSlider(galSlider, 'prev')">&#8249;</button>
+          <div class="hm-gal-slider" #galSlider>
+            <div class="hm-gal-track">
+              <div class="hm-gal-card" *ngFor="let item of asGallery(block.data).items">
+                <img [src]="item.url" [alt]="item.caption || ''" loading="lazy"
+                  [style.aspect-ratio]="galleryAspectStyle(asGallery(block.data).aspectRatio)">
                 <div class="hm-gal-caption"
                   *ngIf="asGallery(block.data).showCaptions && item.caption">{{ item.caption }}</div>
               </div>
             </div>
-            <div class="hm-gal-dots" *ngIf="asGallery(block.data).showDots && asGallery(block.data).items.length > 1">
-              <span class="hm-gal-dot"
-                *ngFor="let item of asGallery(block.data).items; let i = index"
-                [class.active]="gallerySlide(block.id) === i"
-                (click)="setSlide(block.id, i)"></span>
-            </div>
           </div>
-
-          <button class="hm-gal-nav"
-            [disabled]="gallerySlide(block.id) === asGallery(block.data).items.length - 1"
-            (click)="nextSlide(block.id, asGallery(block.data).items.length)">&#8250;</button>
+          <button class="hm-gal-nav" (click)="scrollSlider(galSlider, 'next')">&#8250;</button>
         </div>
       </ng-container>
 
@@ -318,10 +305,9 @@
       <ng-container *ngIf="asGallery(block.data).style === 'grid'">
         <div class="hm-gal-grid-wrap">
           <div class="hm-gal-grid">
-            <div class="hm-gal-grid-item"
-              *ngFor="let item of asGallery(block.data).items"
-              [style.aspect-ratio]="galleryAspectStyle(asGallery(block.data).aspectRatio)">
-              <img [src]="item.url" [alt]="item.caption || ''" loading="lazy">
+            <div class="hm-gal-card hm-gal-card--grid" *ngFor="let item of asGallery(block.data).items">
+              <img [src]="item.url" [alt]="item.caption || ''" loading="lazy"
+                [style.aspect-ratio]="galleryAspectStyle(asGallery(block.data).aspectRatio)">
               <div class="hm-gal-caption"
                 *ngIf="asGallery(block.data).showCaptions && item.caption">{{ item.caption }}</div>
             </div>
