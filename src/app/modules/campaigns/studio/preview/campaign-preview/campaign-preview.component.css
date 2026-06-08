@@ -401,13 +401,14 @@
   transform: rotate(-90deg);
   width: 100%; height: 100%;
 }
-.hm-ring-bg   { fill: none; stroke: #e2e8f0; }
-.hm-ring-fill { fill: none; stroke: var(--hm-primary, #333); stroke-linecap: round; transition: stroke-dashoffset 1s; }
+.hm-ring-bg   { fill: none; stroke: #e8eef5; }
+.hm-ring-fill { fill: none; stroke: #0f2747; stroke-linecap: round; transition: stroke-dasharray 0.8s ease; }
 .hm-ring-text {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
+  margin-top: 5px;
 }
-.hm-ring-text strong { font-size: 22px; font-weight: 800; color: var(--hm-primary, #333); line-height: 1; }
+.hm-ring-text strong { font-size: 22px; font-weight: 800; color: #0f2747; line-height: 1; }
 .hm-ring-text span   { font-size: 10px; color: #62728d; font-weight: 700; margin-top: 2px; }
 
 .hm-raised-info { display: flex; flex-direction: column; }
