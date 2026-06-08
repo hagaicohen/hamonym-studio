@@ -50,14 +50,25 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
   // 3. Build Cardcom products list
   const products = [];
   const rewardsTotal = rewards.reduce((s, r) => s + (r.minimumAmount || 0), 0);
-  const baseAmount   = amount - rewardsTotal;
+  const baseAmount   = round2(amount - rewardsTotal);
 
-  if (baseAmount > 0) {
-    products.push({ Description: 'תרומה', UnitCost: round2(baseAmount) });
-  }
+  // Rewards first — each with its own title and minimum amount
   for (const r of rewards) {
-    products.push({ Description: r.title, UnitCost: round2(r.minimumAmount || 0) });
+    products.push({
+      Description: `תשורה: ${r.title}`,
+      UnitCost: round2(r.minimumAmount || 0),
+    });
   }
+
+  // Free / top-up amount
+  if (baseAmount > 0) {
+    const label = rewards.length > 0
+      ? `תרומה חופשית — ${campaign.title}`
+      : `תרומה — ${campaign.title}`;
+    products.push({ Description: label, UnitCost: baseAmount });
+  }
+
+  // Fallback: no rewards, no base (shouldn't happen)
   if (products.length === 0) {
     products.push({ Description: campaign.title || 'תרומה', UnitCost: round2(amount) });
   }
