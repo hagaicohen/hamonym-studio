@@ -294,9 +294,34 @@
   background: #fff;
 }
 
+.field-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.field-input-wrap .field-input {
+  width: 100%;
+  padding-left: 36px; /* room for icon on LTR side */
+}
+.field-status-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #22c55e;
+  pointer-events: none;
+}
+.field-status-icon--bad { color: #ef4444; }
+
 .field-input.field-error {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  background: #fff;
+}
+.field-input.field-valid {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+  background: #f0fdf4;
 }
 
 .error-msg {

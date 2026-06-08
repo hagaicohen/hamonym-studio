@@ -109,16 +109,23 @@
 
         <div class="field-group">
           <label class="field-label">תעודת זהות <span class="required">*</span></label>
-          <input class="field-input"
-            type="text"
-            [(ngModel)]="idNumber"
-            name="idNumber"
-            placeholder="000000000"
-            inputmode="numeric"
-            maxlength="9"
-            dir="ltr"
-            [class.field-error]="submitted && !isValidId">
-          <span class="error-msg" *ngIf="submitted && !isValidId">נא להזין מספר תעודת זהות תקין (9 ספרות)</span>
+          <div class="field-input-wrap">
+            <input class="field-input"
+              type="text"
+              [(ngModel)]="idNumber"
+              name="idNumber"
+              placeholder="000000000"
+              inputmode="numeric"
+              maxlength="9"
+              dir="ltr"
+              [class.field-error]="(submitted || idLiveState === 'invalid') && !isValidId"
+              [class.field-valid]="idLiveState === 'valid'">
+            <span class="field-status-icon" *ngIf="idLiveState === 'valid'">✓</span>
+            <span class="field-status-icon field-status-icon--bad" *ngIf="idLiveState === 'invalid'">✕</span>
+          </div>
+          <span class="error-msg" *ngIf="(submitted || idLiveState === 'invalid') && !isValidId">
+            מספר ת.ז אינו תקין
+          </span>
         </div>
 
         <div class="field-group">

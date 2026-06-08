@@ -43,9 +43,15 @@ export class CheckoutModalComponent implements OnInit {
       && this.isValidId;
   }
 
+  get idDigits(): string {
+    return this.idNumber.replace(/\D/g, '');
+  }
+
   get isValidId(): boolean {
-    const digits = this.idNumber.replace(/\D/g, '').padStart(9, '0');
-    if (digits.length !== 9) return false;
+    const raw = this.idDigits;
+    // Israeli IDs are 5–9 digits; shorter = not a real ID
+    if (raw.length < 5 || raw.length > 9) return false;
+    const digits = raw.padStart(9, '0');
     let total = 0;
     for (let i = 0; i < 9; i++) {
       let n = parseInt(digits[i]) * ((i % 2) + 1);
@@ -53,6 +59,12 @@ export class CheckoutModalComponent implements OnInit {
       total += n;
     }
     return total % 10 === 0;
+  }
+
+  get idLiveState(): 'idle' | 'valid' | 'invalid' {
+    if (this.idDigits.length === 0) return 'idle';
+    if (this.idDigits.length < 5)  return 'idle';   // still typing
+    return this.isValidId ? 'valid' : 'invalid';
   }
 
   get isValidEmail(): boolean {
