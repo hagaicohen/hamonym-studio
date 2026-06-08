@@ -34,6 +34,9 @@ const billingRoutes =
 const mediaRoutes =
   require('./modules/media/media.routes');
 
+const donationsRoutes =
+  require('./modules/donations/donations.routes');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -73,6 +76,11 @@ app.use(
 app.use(
   '/api/media',
   mediaRoutes
+);
+
+app.use(
+  '/api/donations',
+  donationsRoutes
 );
 
 /*
