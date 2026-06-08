@@ -44,8 +44,15 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   get isValidId(): boolean {
-    const digits = this.idNumber.replace(/\D/g, '');
-    return digits.length === 9;
+    const digits = this.idNumber.replace(/\D/g, '').padStart(9, '0');
+    if (digits.length !== 9) return false;
+    let total = 0;
+    for (let i = 0; i < 9; i++) {
+      let n = parseInt(digits[i]) * ((i % 2) + 1);
+      if (n > 9) n -= 9;
+      total += n;
+    }
+    return total % 10 === 0;
   }
 
   get isValidEmail(): boolean {
