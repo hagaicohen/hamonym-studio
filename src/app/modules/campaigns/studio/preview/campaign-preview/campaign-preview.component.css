@@ -641,39 +641,39 @@
 /* GALLERY BLOCK */
 .hm-gallery-block { padding: 12px 0; }
 
-/* Slider */
-.hm-slider {
+/* Slider — all classes prefixed hm-gal- to avoid collision with rewards slider */
+.hm-gal-slider {
   position: relative;
   direction: ltr;
   overflow: hidden;
   border-radius: 10px;
   background: #f1f5f9;
 }
-.hm-slider-viewport {
+.hm-gal-viewport {
   width: 100%;
   padding-top: var(--aspect, 56.25%);
   position: relative;
   overflow: hidden;
 }
-.hm-slider-track {
+.hm-gal-track {
   position: absolute;
   inset: 0;
   display: flex;
   width: 100%;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hm-slide {
+.hm-gal-slide {
   flex: 0 0 100%;
   position: relative;
   overflow: hidden;
 }
-.hm-slide img {
+.hm-gal-slide img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-.hm-slide-caption {
+.hm-gal-caption {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   padding: 8px 12px;
@@ -685,7 +685,7 @@
 }
 
 /* Arrows */
-.hm-slider-arrow {
+.hm-gal-arrow {
   position: absolute;
   top: 50%; transform: translateY(-50%);
   width: 36px; height: 36px;
@@ -698,26 +698,26 @@
   z-index: 2;
   box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
-.hm-slider-arrow:disabled { opacity: 0.3; cursor: default; }
-.hm-slider-arrow:not(:disabled):hover { background: #fff; }
-.hm-arrow-next { left: 10px; }
-.hm-arrow-prev { right: 10px; }
+.hm-gal-arrow:disabled { opacity: 0.3; cursor: default; }
+.hm-gal-arrow:not(:disabled):hover { background: #fff; }
+.hm-gal-arrow--next { left: 10px; }
+.hm-gal-arrow--prev { right: 10px; }
 
 /* Dots */
-.hm-slider-dots {
+.hm-gal-dots {
   position: absolute;
   bottom: 10px; left: 0; right: 0;
   display: flex; justify-content: center; gap: 6px;
   z-index: 2;
 }
-.hm-dot {
+.hm-gal-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
   background: rgba(255,255,255,0.5);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
-.hm-dot.active {
+.hm-gal-dot.active {
   background: #fff;
   transform: scale(1.25);
 }
@@ -745,7 +745,7 @@
   width: 100%; height: 100%;
   object-fit: cover;
 }
-.hm-gallery-grid-item .hm-slide-caption {
+.hm-gallery-grid-item .hm-gal-caption {
   font-size: 11px;
 }
 
