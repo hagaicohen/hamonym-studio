@@ -395,6 +395,20 @@ export class CampaignPreviewComponent {
       .sort((a, b) => a.order - b.order);
   }
 
+  readonly Math = Math;
+
+  raisedPct(draft: CampaignDraft): number {
+    const target = draft.targetAmount ?? 0;
+    const raised = draft.currentAmount ?? 0;
+    return target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+  }
+
+  ringDash(draft: CampaignDraft): string {
+    const circumference = 94.25; // 2π×15
+    const fill = (this.raisedPct(draft) / 100) * circumference;
+    return `${fill.toFixed(2)} ${circumference}`;
+  }
+
   statValue(key: string, draft: CampaignDraft): string {
     const raised     = draft.currentAmount   ?? 0;
     const supporters = draft.supportersCount ?? 0;

@@ -400,13 +400,15 @@
         <svg class="hm-ring-svg" viewBox="0 0 36 36">
           <circle class="hm-ring-bg"   cx="18" cy="18" r="15" stroke-width="5"/>
           <circle class="hm-ring-fill" cx="18" cy="18" r="15" stroke-width="5"
-            stroke-dasharray="0 94.25" stroke-linecap="round"/>
+            [attr.stroke-dasharray]="ringDash(draft)" stroke-linecap="round"/>
         </svg>
-        <div class="hm-ring-text"><strong>0%</strong><span>מהיעד</span></div>
+        <div class="hm-ring-text">
+          <strong>{{ raisedPct(draft) }}%</strong><span>מהיעד</span>
+        </div>
       </div>
       <div class="hm-raised-info">
         <span class="hm-raised-title">גויס עד כה</span>
-        <span class="hm-raised-amount">₪0</span>
+        <span class="hm-raised-amount">{{ formatAmount(draft.currentAmount ?? 0) }}</span>
         <span class="hm-raised-goal">מתוך {{ formatAmount(draft.targetAmount) }}</span>
       </div>
     </div>
@@ -417,7 +419,7 @@
             <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
           </svg>
         </span>
-        <strong>{{ formatAmount(draft.targetAmount) }}</strong>
+        <strong>{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
         <span>נותר ליעד</span>
       </div>
       <div class="hm-stat-box">
@@ -444,7 +446,7 @@
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </span>
-        <strong>0</strong><span>תורמים</span>
+        <strong>{{ draft.supportersCount ?? 0 }}</strong><span>תורמים</span>
       </div>
     </div>
   </div>
