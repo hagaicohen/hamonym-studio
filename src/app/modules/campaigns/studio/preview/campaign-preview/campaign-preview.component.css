@@ -700,12 +700,23 @@
   overflow: hidden;
   background: #e2e8f0;
   scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s ease;
+}
+.hm-gal-card:hover {
+  transform: scale(1.035);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 }
 .hm-gal-card img {
   width: 100%;
   display: block;
   object-fit: cover;
+  transition: transform 0.4s ease;
   /* aspect-ratio set via [style.aspect-ratio] binding */
+}
+.hm-gal-card:hover img {
+  transform: scale(1.04);
 }
 
 /* Caption overlay */
