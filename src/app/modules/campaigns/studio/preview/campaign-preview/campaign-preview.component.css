@@ -457,22 +457,25 @@
 }
 .hm-amount-preset {
   padding: 12px 4px;
-  border: 1.5px solid var(--line, #e2e8f0);
+  border: 1.5px solid #dbe3ea;
   background: #fff;
   font-weight: 800; font-size: 14px;
   border-radius: 8px; cursor: pointer;
-  color: var(--hm-secondary, #6fc9eb);
+  color: #0f2747;
   font-family: inherit;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
 }
 .hm-amount-preset:hover {
-  border-color: var(--hm-primary, #333);
-  color: var(--hm-primary, #333);
+  border-color: #59c3f0;
+  background: #f8fcff;
+  transform: translateY(-1px);
 }
 .hm-amount-preset.is-selected {
-  border-color: var(--hm-primary, #333333);
-  color: var(--hm-primary, #333333);
-  box-shadow: inset 0 -3px 0 var(--hm-primary, #333333);
+  background: #0f2747;
+  border-color: #0f2747;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15,39,71,0.2);
+  transform: translateY(-1px);
 }
 
 .hm-custom-amount-wrap {
@@ -499,15 +502,21 @@
 }
 .hm-donate-btn {
   width: 100%; padding: 16px;
-  border: none; border-radius: 8px;
-  background: var(--hm-primary, #333333);
+  border: none; border-radius: 12px;
+  background: #0f2747;
   color: #fff;
   font-weight: 800; font-size: 17px;
   cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: opacity 0.15s;
+  transition: all 0.2s ease;
+  height: 56px;
 }
-.hm-donate-btn:hover { opacity: 0.88; }
+.hm-donate-btn:hover {
+  background: #1b3b67;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15,39,71,0.25);
+}
+.hm-donate-btn:active { transform: translateY(0); }
 .hm-custom-amount { cursor: text; }
 .hm-lock-icon { font-size: 15px; }
 
