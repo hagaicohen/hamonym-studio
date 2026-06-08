@@ -130,29 +130,66 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
 ───────────────────────────────────────── */
 exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
 
-  const success = status === 'success' || String(responseCode) === '0';
+  const success   = status === 'success' || String(responseCode) === '0';
   const newStatus = success ? 'paid' : 'failed';
 
-  await db.query(
-    `UPDATE donations
-     SET status=$1, low_profile_code=$2, updated_at=NOW()
-     WHERE id=$3`,
-    [newStatus, lowprofilecode || null, donationId]
-  );
-
-  const slugRes = await db.query(
-    `SELECT c.slug FROM donations d
+  // Fetch donation + campaign in one query
+  const donRes = await db.query(
+    `SELECT d.amount, d.campaign_id, c.slug
+     FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      WHERE d.id = $1`,
     [donationId]
   );
 
-  const slug      = slugRes.rows[0]?.slug || '';
+  const row = donRes.rows[0];
+  const slug   = row?.slug  || '';
+  const amount = row?.amount || 0;
+
+  // Update donation record
+  await db.query(
+    `UPDATE donations
+     SET status=$1, provider_reference=$2, completed_at=NOW(), updated_at=NOW()
+     WHERE id=$3`,
+    [newStatus, lowprofilecode || null, donationId]
+  );
+
+  // On success: bump campaign metrics
+  if (success && row?.campaign_id) {
+    await db.query(
+      `UPDATE campaigns
+       SET current_amount   = current_amount   + $1,
+           supporters_count = supporters_count + 1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [amount, row.campaign_id]
+    );
+  }
+
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   return {
-    redirectUrl: `${frontBase}/c/${slug}?payment=${newStatus}`,
+    redirectUrl: success
+      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
+      : `${frontBase}/campaigns/${slug}/view?payment=failed`,
   };
+};
+
+/* ─────────────────────────────────────────
+   PUBLIC DONATION RESULT (for success page)
+───────────────────────────────────────── */
+exports.getDonationPublic = async (donationId) => {
+  const res = await db.query(
+    `SELECT d.id, d.amount, d.created_at, d.status,
+            c.title AS campaign_title, c.slug AS campaign_slug,
+            c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities  e ON e.id = d.entity_id
+     WHERE d.id = $1`,
+    [donationId]
+  );
+  return res.rows[0] || null;
 };
 
 function round2(n) { return Math.round(n * 100) / 100; }

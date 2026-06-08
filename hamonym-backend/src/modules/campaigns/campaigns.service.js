@@ -610,6 +610,24 @@ exports.getCampaignBySlug =
 
 /*
 |--------------------------------------------------------------------------
+| GET CAMPAIGN BY SLUG — PUBLIC (no auth required)
+|--------------------------------------------------------------------------
+*/
+
+exports.getCampaignBySlugPublic = async (slug) => {
+  const result = await db.query(
+    `SELECT c.*, e.display_name AS entity_name, e.logo_url AS entity_logo
+     FROM campaigns c
+     JOIN entities e ON e.id = c.entity_id
+     WHERE c.slug = $1 AND c.status = 'published'
+     LIMIT 1`,
+    [slug]
+  );
+  return result.rows[0] || null;
+};
+
+/*
+|--------------------------------------------------------------------------
 | CHECK SLUG AVAILABILITY
 |--------------------------------------------------------------------------
 */

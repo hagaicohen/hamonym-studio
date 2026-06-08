@@ -1,5 +1,15 @@
 const donationsService = require('./donations.service');
 
+exports.getDonationPublic = async (req, res) => {
+  try {
+    const donation = await donationsService.getDonationPublic(req.params.id);
+    if (!donation) return res.status(404).json({ error: 'Not found' });
+    res.json(donation);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.createDonation = async (req, res) => {
   try {
     const { campaignId, donor, amount, rewards } = req.body;

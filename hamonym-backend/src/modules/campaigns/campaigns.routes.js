@@ -10,6 +10,12 @@ const controller =
 const requireAuth =
   require('../../middleware/require-auth');
 
+// Public — no auth
+router.get(
+  '/public/:slug',
+  controller.getCampaignBySlugPublic
+);
+
 router.post(
   '/',
   requireAuth,

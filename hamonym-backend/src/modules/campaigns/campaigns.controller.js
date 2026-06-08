@@ -256,6 +256,17 @@ exports.getCampaignBySlug =
 
   };
 
+exports.getCampaignBySlugPublic = async (req, res) => {
+  try {
+    const campaign = await service.getCampaignBySlugPublic(req.params.slug);
+    if (!campaign) return res.status(404).json({ error: 'הקמפיין לא נמצא' });
+    res.json(campaign);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'אירעה שגיאה בלתי צפויה' });
+  }
+};
+
 exports.checkSlugAvailable =
   async (req, res) => {
 
