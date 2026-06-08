@@ -143,11 +143,11 @@
         <div class="pay-btn-wrap">
           <div class="api-error" *ngIf="errorMsg">{{ errorMsg }}</div>
           <button class="pay-btn" type="submit" [disabled]="loading">
-            <span *ngIf="!loading">
+            <span class="pay-btn-inner" [class.pay-btn-inner--hidden]="loading">
               <span class="pay-lock">🔒</span>
               מעבר לתשלום מאובטח — {{ formattedAmount }}
             </span>
-            <span *ngIf="loading" class="pay-spinner">מעבד...</span>
+            <span class="pay-spinner" *ngIf="loading"></span>
           </button>
         </div>
 

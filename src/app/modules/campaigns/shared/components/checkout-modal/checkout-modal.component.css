@@ -331,6 +331,10 @@
 
 /* ── PAY BUTTON ── */
 .pay-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 8px;
   width: 100%;
   padding: 18px 24px;
@@ -353,8 +357,25 @@
 .pay-btn:active { transform: scale(0.99); }
 
 .pay-lock { font-size: 16px; }
-.pay-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-.pay-spinner { letter-spacing: 0.5px; }
+.pay-btn:disabled { opacity: 0.85; cursor: not-allowed; }
+
+.pay-btn-inner { display: inline-flex; align-items: center; gap: 8px; }
+.pay-btn-inner--hidden { opacity: 0; }
+
+.pay-spinner {
+  display: inline-block;
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Error floats above the button — zero impact on layout */
 .pay-btn-wrap {
