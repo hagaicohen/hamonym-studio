@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
@@ -26,6 +26,7 @@ import {
   UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
+import { DonationService } from '../../../services/donation.service';
 
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
@@ -41,12 +42,13 @@ const FUNDING_LABELS: Record<string, string> = {
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
-export class CampaignPreviewComponent {
-  private state          = inject(CampaignStudioStateService);
-  private sanitizer      = inject(DomSanitizer);
-  private entityService  = inject(CurrentEntityService);
+export class CampaignPreviewComponent implements OnInit {
+  private state           = inject(CampaignStudioStateService);
+  private sanitizer       = inject(DomSanitizer);
+  private entityService   = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);
-  private ui             = inject(StudioUiService);
+  private ui              = inject(StudioUiService);
+  private donationService = inject(DonationService);
 
   entityLogoUrl: string | null = null;
   entityName = '';
@@ -87,6 +89,17 @@ export class CampaignPreviewComponent {
         },
       });
     }
+  }
+
+  ngOnInit(): void {
+    this.draft$.subscribe(draft => {
+      if (draft?.slug && draft.slug !== this.loadedSlug) {
+        this.loadedSlug = draft.slug;
+        this.donationService.getDonors(draft.slug).subscribe({
+          next: donors => { this.donors = donors; },
+        });
+      }
+    });
   }
 
   isEmpty(draft: CampaignDraft): boolean {
@@ -396,14 +409,8 @@ export class CampaignPreviewComponent {
   asAmbassadorsBlock(data: unknown) { return data as AmbassadorsBlockData; }
   asUpdates(data: unknown)          { return data as UpdatesBlockData; }
 
-  // ── Donors mock (live data not available in preview) ──
-  readonly mockDonors = [
-    { name: 'תמר לוי',     amount: 360  },
-    { name: 'דניאל מזרחי', amount: 500  },
-    { name: 'משפחת חוזן',  amount: 1093 },
-    { name: 'יואב כהן',    amount: 180  },
-    { name: 'יעל לוי',     amount: 360  },
-  ];
+  donors: { name: string; amount: number }[] = [];
+  private loadedSlug = '';
 
   visibleStats(block: CampaignBlock): StatsBlockData['items'] {
     return (block.data as StatsBlockData).items

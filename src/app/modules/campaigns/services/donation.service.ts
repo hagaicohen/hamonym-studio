@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface DonationPayload {
@@ -28,5 +28,10 @@ export class DonationService {
 
   create(payload: DonationPayload): Observable<DonationResult> {
     return this.http.post<DonationResult>(this.apiUrl, payload);
+  }
+
+  getDonors(slug: string): Observable<{ name: string; amount: number }[]> {
+    return this.http.get<{ donors: any[] }>(`${this.apiUrl}/campaign/${slug}/donors`)
+      .pipe(map(r => r.donors ?? []));
   }
 }

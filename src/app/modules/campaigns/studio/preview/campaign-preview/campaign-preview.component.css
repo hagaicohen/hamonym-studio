@@ -1313,6 +1313,12 @@
 .hm-amb-name { font-size: 13px; font-weight: 700; }
 .hm-amb-role { font-size: 11px; color: #94a3b8; font-weight: 600; }
 
+/* Donors empty state */
+.hm-donors-empty {
+  text-align: center; padding: 32px 16px; color: #94a3b8; font-size: 14px;
+}
+.hm-donors-empty span { font-size: 28px; display: block; margin-bottom: 8px; }
+
 /* ══ DONORS — grid (slider) ══ */
 .hm-donors-outer {
   display: flex; align-items: center; gap: 10px;
