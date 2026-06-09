@@ -126,6 +126,59 @@ export class CampaignPageBuilderStepComponent {
     this.showBlockPicker = false;
   }
 
+  // ── Hierarchy helpers ──────────────────────────────────────────
+
+  private childIdSet(blocks: CampaignBlock[]): Set<string> {
+    return new Set(
+      blocks.filter(b => b.type === 'container')
+        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
+    );
+  }
+
+  topLevelBlocks(blocks: CampaignBlock[]): CampaignBlock[] {
+    const childIds = this.childIdSet(blocks);
+    return blocks.filter(b => !childIds.has(b.id)).sort((a, b) => a.order - b.order);
+  }
+
+  containerChildren(block: CampaignBlock, blocks: CampaignBlock[]): CampaignBlock[] {
+    if (block.type !== 'container') return [];
+    const ids = (block.data as ContainerBlockData).childBlockIds;
+    return ids.map(id => blocks.find(b => b.id === id))
+      .filter((b): b is CampaignBlock => !!b)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  scopeBlocksFor(parentBlock: CampaignBlock | null, blocks: CampaignBlock[]): CampaignBlock[] {
+    return parentBlock ? this.containerChildren(parentBlock, blocks) : this.topLevelBlocks(blocks);
+  }
+
+  moveInScope(id: string, parentBlock: CampaignBlock | null, blocks: CampaignBlock[], dir: -1 | 1): void {
+    const scopeIds = this.scopeBlocksFor(parentBlock, blocks).map(b => b.id);
+    if (dir < 0) {
+      this.state.moveBlockUpInScope(id, scopeIds);
+    } else {
+      this.state.moveBlockDownInScope(id, scopeIds);
+    }
+  }
+
+  isFirstInScopeOf(block: CampaignBlock, parentBlock: CampaignBlock | null, blocks: CampaignBlock[]): boolean {
+    const scope = this.scopeBlocksFor(parentBlock, blocks);
+    return scope[0]?.id === block.id;
+  }
+
+  isLastInScopeOf(block: CampaignBlock, parentBlock: CampaignBlock | null, blocks: CampaignBlock[]): boolean {
+    const scope = this.scopeBlocksFor(parentBlock, blocks);
+    return scope[scope.length - 1]?.id === block.id;
+  }
+
+  showContainerPickerId: string | null = null;
+
+  addBlockInsideContainer(containerId: string, type: BlockType, blocks: CampaignBlock[]): void {
+    if (this.isAlreadyAdded(type, blocks)) return;
+    this.state.addBlockToContainer(containerId, type);
+    this.showContainerPickerId = null;
+  }
+
   onTemplateSelected(template: CampaignTemplate): void {
     this.state.applyTemplate(template.createBlocks(), template.themeOverride, template.layoutMode, template.id);
     this.showTemplatePicker = false;
@@ -140,21 +193,10 @@ export class CampaignPageBuilderStepComponent {
     this.state.removeBlock(id);
   }
 
-  moveUp(id: string): void { this.state.moveBlockUp(id); }
-  moveDown(id: string): void { this.state.moveBlockDown(id); }
   toggleVisibility(id: string): void { this.state.toggleBlockVisibility(id); }
 
   toggleEdit(id: string): void {
     this.editingBlockId = this.editingBlockId === id ? null : id;
-  }
-
-  isFirst(block: CampaignBlock, blocks: CampaignBlock[]): boolean {
-    return this.sortedBlocks(blocks)[0]?.id === block.id;
-  }
-
-  isLast(block: CampaignBlock, blocks: CampaignBlock[]): boolean {
-    const sorted = this.sortedBlocks(blocks);
-    return sorted[sorted.length - 1]?.id === block.id;
   }
 
   updateLabel(id: string, label: string): void {
@@ -381,6 +423,9 @@ export class CampaignPageBuilderStepComponent {
     const draft = this.state.draft;
     this.state.patch({ layout: { ...draft.layout, theme: { ...draft.layout.theme, ...partial } } });
   }
+
+  blockIcon(block: CampaignBlock): string  { return BLOCK_ICONS[block.type] ?? ''; }
+  blockLabel(block: CampaignBlock): string { return BLOCK_LABELS[block.type] ?? block.type; }
 
   asRichText(data: unknown): RichTextBlockData       { return data as RichTextBlockData; }
   asImage(data: unknown): ImageBlockData             { return data as ImageBlockData; }

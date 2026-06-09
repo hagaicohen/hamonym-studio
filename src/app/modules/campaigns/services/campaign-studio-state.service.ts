@@ -559,6 +559,55 @@ export class CampaignStudioStateService {
     this.patch({ blocks });
   }
 
+  // Swap block with its predecessor in a given ordered id-list (scope-aware move)
+  moveBlockUpInScope(id: string, orderedScopeIds: string[]): void {
+    const idx = orderedScopeIds.indexOf(id);
+    if (idx <= 0) return;
+    const prevId = orderedScopeIds[idx - 1];
+    const blocks = this.draft.blocks.map(b => ({ ...b }));
+    const a = blocks.find(b => b.id === id)!;
+    const prev = blocks.find(b => b.id === prevId)!;
+    [a.order, prev.order] = [prev.order, a.order];
+    this.patch({ blocks });
+  }
+
+  moveBlockDownInScope(id: string, orderedScopeIds: string[]): void {
+    const idx = orderedScopeIds.indexOf(id);
+    if (idx < 0 || idx >= orderedScopeIds.length - 1) return;
+    const nextId = orderedScopeIds[idx + 1];
+    const blocks = this.draft.blocks.map(b => ({ ...b }));
+    const a = blocks.find(b => b.id === id)!;
+    const next = blocks.find(b => b.id === nextId)!;
+    [a.order, next.order] = [next.order, a.order];
+    this.patch({ blocks });
+  }
+
+  // Add a new block and register it as a child of a container
+  addBlockToContainer(containerId: string, type: BlockType): void {
+    const blocks = [...this.draft.blocks];
+    const container = blocks.find(b => b.id === containerId);
+    if (!container) return;
+    const ctData = { ...(container.data as ContainerBlockData) };
+    const siblingOrders = ctData.childBlockIds
+      .map(cid => blocks.find(b => b.id === cid)?.order ?? 0);
+    const maxOrder = siblingOrders.length ? Math.max(...siblingOrders) : 0;
+    const newId = Math.random().toString(36).slice(2, 10);
+    const sameType = blocks.filter(b => b.type === type).length;
+    const defaultLabels: Partial<Record<BlockType, string>> = {
+      'rich-text': 'טקסט', 'image': 'תמונה', 'video': 'וידאו', 'gallery': 'גלריה',
+      'cta': 'קריאה לפעולה', 'divider': 'מרווח', 'container': 'מסגרת',
+      'stats': 'פס נתונים', 'donation-widget': 'תיבת תרומה',
+      'rewards': 'תשורות', 'sponsors': 'חסויות', 'ambassadors': 'שגרירים',
+      'donors': 'תורמים', 'updates': 'עדכונים',
+    };
+    const baseName = defaultLabels[type] ?? type;
+    const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
+    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: defaultBlockData(type) });
+    ctData.childBlockIds = [...ctData.childBlockIds, newId];
+    const updatedBlocks = blocks.map(b => b.id === containerId ? { ...b, data: ctData } : b);
+    this.patch({ blocks: updatedBlocks });
+  }
+
   toggleBlockVisibility(id: string): void {
     const blocks = this.draft.blocks.map(b =>
       b.id === id ? { ...b, visible: !b.visible } : b

@@ -43,21 +43,25 @@
     </div>
   </div>
 
-  <!-- BLOCKS LIST -->
-  <div class="blocks-list">
+  <!-- ════ BLOCK TREE TEMPLATE (recursive) ════ -->
+  <ng-template #blockItem let-block="block" let-parentBlock="parentBlock">
     <div class="block-item" [class.block-item--hidden]="!block.visible"
-      *ngFor="let block of sortedBlocks(draft.blocks); trackBy: trackById">
+         [class.block-item--nested]="parentBlock">
 
       <!-- Block Header -->
       <div class="block-header" (click)="toggleEdit(block.id)">
-        <span class="block-icon">{{ blockIcons[block.type] }}</span>
+        <span class="block-icon">{{ blockIcon(block) }}</span>
         <div class="block-header-info">
-          <span class="block-label">{{ blockLabels[block.type] }}</span>
+          <span class="block-label">{{ blockLabel(block) }}</span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
-          <button class="action-btn" (click)="moveUp(block.id)"   [disabled]="isFirst(block, draft.blocks)" title="למעלה">↑</button>
-          <button class="action-btn" (click)="moveDown(block.id)" [disabled]="isLast(block, draft.blocks)"  title="למטה">↓</button>
+          <button class="action-btn"
+            (click)="moveInScope(block.id, parentBlock, draft.blocks, -1)"
+            [disabled]="isFirstInScopeOf(block, parentBlock, draft.blocks)" title="למעלה">↑</button>
+          <button class="action-btn"
+            (click)="moveInScope(block.id, parentBlock, draft.blocks, 1)"
+            [disabled]="isLastInScopeOf(block, parentBlock, draft.blocks)" title="למטה">↓</button>
           <button class="action-btn" [class.action-btn--muted]="!block.visible"
             (click)="toggleVisibility(block.id)">{{ block.visible ? '👁' : '🙈' }}</button>
           <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)">✕</button>
@@ -608,7 +612,62 @@
         </div>
 
       </div>
+
+      <!-- ── CONTAINER CHILDREN TREE ── (always visible when block is a container) -->
+      <div class="container-children-tree" *ngIf="block.type === 'container'">
+        <div class="container-tree-header">
+          <span class="container-tree-label">
+            {{ asContainer(block.data).direction === 'row' ? '⬛⬜ שורה' : '☰ עמודה' }}
+            <span class="container-tree-count">{{ containerChildren(block, draft.blocks).length }} בלוקים</span>
+          </span>
+          <button class="container-add-btn" type="button"
+            (click)="$event.stopPropagation(); showContainerPickerId = (showContainerPickerId === block.id ? null : block.id)">
+            + הוסף לכאן
+          </button>
+        </div>
+
+        <!-- Mini block picker for this container -->
+        <div class="block-picker block-picker--grouped block-picker--mini"
+             *ngIf="showContainerPickerId === block.id"
+             (click)="$event.stopPropagation()">
+          <div class="picker-group" *ngFor="let group of blockGroups">
+            <div class="picker-group-label">{{ group.label }}</div>
+            <div class="picker-group-items">
+              <button class="picker-item"
+                *ngFor="let type of group.types"
+                [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
+                [disabled]="isAlreadyAdded(type, draft.blocks)"
+                (click)="addBlockInsideContainer(block.id, type, draft.blocks)">
+                <span class="picker-icon">{{ blockIcons[type] }}</span>
+                <span class="picker-label">{{ blockLabels[type] }}</span>
+                <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Children (recursive) -->
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyContainerTpl">
+          <ng-container *ngFor="let child of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: child, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyContainerTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף לכאן" להוספת בלוק</div>
+        </ng-template>
+      </div>
+
     </div>
+  </ng-template>
+  <!-- ════ END BLOCK TREE TEMPLATE ════ -->
+
+  <!-- BLOCKS LIST -->
+  <div class="blocks-list">
+    <ng-container *ngFor="let block of topLevelBlocks(draft.blocks); trackBy: trackById">
+      <ng-container *ngTemplateOutlet="blockItem; context: { block: block, parentBlock: null }">
+      </ng-container>
+    </ng-container>
   </div>
 
   <!-- CAMPAIGN THEME COLORS -->
