@@ -1663,6 +1663,74 @@
   .hm-update-media--sm { width: 120px; min-height: 110px; }
 }
 
+/* ══════════════════════════════════════
+   MOBILE PREVIEW — comprehensive polish
+══════════════════════════════════════ */
+
+/* Page-level: horizontal padding for all block content */
+.campaign-page--mobile .page-blocks {
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* Sections: tighter vertical padding, full centering */
+.campaign-page--mobile .hm-section {
+  padding: 28px 16px;
+}
+.campaign-page--mobile .hm-section-title {
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+/* Donors: single column, tighter cards */
+.campaign-page--mobile .hm-donors-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.campaign-page--mobile .hm-donor-card-v2 {
+  padding: 12px 14px;
+}
+.campaign-page--mobile .hm-donor-v2-name  { font-size: 13px; }
+.campaign-page--mobile .hm-donor-v2-amount { font-size: 15px; }
+.campaign-page--mobile .hm-donor-v2-avatar { width: 34px; height: 34px; font-size: 12px; }
+
+/* Ambassadors: narrower cards */
+.campaign-page--mobile .hm-amb-outer { padding: 0; }
+.campaign-page--mobile .hm-amb-card  { flex: 0 0 120px; padding: 16px 8px 12px; }
+.campaign-page--mobile .hm-amb-avatar { width: 56px; height: 56px; }
+.campaign-page--mobile .hm-amb-name  { font-size: 12px; }
+
+/* Updates */
+.campaign-page--mobile .hm-updates-outer { padding: 0; }
+.campaign-page--mobile .hm-update-list-item { border-radius: 10px; }
+.campaign-page--mobile .hm-update-list-item .hm-update-content { padding: 14px 14px 14px 0; }
+
+/* Rewards: edge-to-edge on mobile preview */
+.campaign-page--mobile .hm-rewards { padding: 28px 0 20px; }
+.campaign-page--mobile .hm-rewards h2 { padding: 0 16px; font-size: 18px; }
+
+/* Rich text: comfortable reading width */
+.campaign-page--mobile .block-rich-text {
+  padding: 0 4px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Donation widget: button full width */
+.campaign-page--mobile .hm-donate-btn { width: 100%; justify-content: center; }
+
+/* Section placeholder: centered */
+.campaign-page--mobile .hm-section-placeholder { padding: 20px 16px; }
+
+/* Bottom banner: tighter on mobile preview */
+.campaign-page--mobile .hm-bottom-banner { padding: 16px 8px; gap: 0; }
+.campaign-page--mobile .hm-bottom-stat strong { font-size: 20px; }
+
+/* Block wrap: full width, no overflow */
+.campaign-page--mobile .block-wrap {
+  overflow-x: hidden;
+}
+
 /* ══ BOTTOM CAMPAIGN BANNER ══ */
 .hm-bottom-banner {
   display: flex;
@@ -1838,9 +1906,27 @@
   .hm-amounts { grid-template-columns: repeat(3, 1fr); }
 
   /* REWARDS */
-  .hm-rewards { padding: 40px 0 32px; }
-  .hm-rewards h2 { padding: 0 16px; }
+  .hm-rewards { padding: 28px 0 20px; }
+  .hm-rewards h2 { padding: 0 16px; font-size: 18px; }
   .hm-slider-outer { max-width: 100%; padding: 0 4px; gap: 8px; }
+
+  /* SECTIONS */
+  .hm-section { padding: 28px 16px; }
+  .hm-section-title { font-size: 20px; margin-bottom: 20px; }
+
+  /* DONORS */
+  .hm-donors-grid { grid-template-columns: 1fr; gap: 8px; }
+  .hm-donor-card-v2 { padding: 12px 14px; }
+
+  /* RICH TEXT */
+  .block-rich-text { font-size: 15px; line-height: 1.7; }
+
+  /* DONATE button */
+  .hm-donate-btn { width: 100%; justify-content: center; }
+
+  /* PAGE BLOCKS */
+  .page-blocks { padding: 0 16px; box-sizing: border-box; }
+  .block-wrap { overflow-x: hidden; }
 
   /* SIDEBAR layout on small screens */
   .page-content-outer { padding: 0; }
