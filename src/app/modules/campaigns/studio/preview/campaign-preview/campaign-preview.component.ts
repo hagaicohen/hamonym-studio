@@ -26,7 +26,21 @@ import {
   UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
-import { DonationService } from '../../../services/donation.service';
+import { DonationService, Donor } from '../../../services/donation.service';
+
+const now = Date.now();
+const MOCK_DONORS: Donor[] = [
+  { name: 'ישראל ישראלי',     amount: 500,  completedAt: new Date(now - 15 * 60000) },
+  { name: 'תורמ/ה אנונימי',   amount: 1000, completedAt: new Date(now - 45 * 60000) },
+  { name: 'רחל כהן',           amount: 250,  completedAt: new Date(now - 90 * 60000) },
+  { name: 'תורמ/ה אנונימי',   amount: 750,  completedAt: new Date(now - 3 * 3600000) },
+  { name: 'אברהם לוי',         amount: 180,  completedAt: new Date(now - 5 * 3600000) },
+  { name: 'מרים ברק',          amount: 360,  completedAt: new Date(now - 8 * 3600000) },
+  { name: 'תורמ/ה אנונימי',   amount: 100,  completedAt: new Date(now - 24 * 3600000) },
+  { name: 'דוד מזרחי',         amount: 2000, completedAt: new Date(now - 48 * 3600000) },
+  { name: 'שרה גולדברג',       amount: 450,  completedAt: new Date(now - 72 * 3600000) },
+  { name: 'תורמ/ה אנונימי',   amount: 300,  completedAt: new Date(now - 96 * 3600000) },
+];
 
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
@@ -409,8 +423,39 @@ export class CampaignPreviewComponent implements OnInit {
   asAmbassadorsBlock(data: unknown) { return data as AmbassadorsBlockData; }
   asUpdates(data: unknown)          { return data as UpdatesBlockData; }
 
-  donors: { name: string; amount: number }[] = [];
+  donors: Donor[] = [];
   private loadedSlug = '';
+  private shownCount = 6;
+  readonly PAGE_SIZE = 6;
+
+  get activeDonors(): Donor[] {
+    return this.state.isEditMode ? MOCK_DONORS : this.donors;
+  }
+  get visibleDonors(): Donor[] {
+    return this.activeDonors.slice(0, this.shownCount);
+  }
+  get canShowMore(): boolean {
+    return this.shownCount < this.activeDonors.length;
+  }
+  showMoreDonors(): void {
+    this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
+  }
+
+  timeAgo(date: Date): string {
+    const diff = Date.now() - date.getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `לפני ${m} דקות`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `לפני ${h} שעות`;
+    const d = Math.floor(h / 24);
+    return `לפני ${d} ימים`;
+  }
+
+  donorInitials(name: string): string {
+    if (name.includes('אנונימי')) return '?';
+    const parts = name.trim().split(' ');
+    return parts.length >= 2 ? parts[0][0] + parts[1][0] : parts[0][0];
+  }
 
   visibleStats(block: CampaignBlock): StatsBlockData['items'] {
     return (block.data as StatsBlockData).items

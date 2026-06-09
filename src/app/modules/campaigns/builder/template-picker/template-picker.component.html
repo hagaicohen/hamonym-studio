@@ -1,0 +1,47 @@
+<div class="tp-overlay">
+  <div class="tp-panel">
+
+    <div class="tp-header">
+      <h1 class="tp-title">בחרו עיצוב לדף הקמפיין</h1>
+      <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-card"
+        *ngFor="let t of templates"
+        [class.tp-card--hovered]="hoveredId === t.id"
+        [style.--accent]="t.accent"
+        (mouseenter)="hoveredId = t.id"
+        (mouseleave)="hoveredId = null">
+
+        <!-- Visual preview -->
+        <div class="tp-preview">
+          <!-- Hero bar -->
+          <div class="tp-preview-hero"></div>
+          <!-- Content rows from template definition -->
+          <div class="tp-preview-body">
+            <div class="tp-preview-row" *ngFor="let row of t.preview">
+              <div class="tp-preview-col"
+                *ngFor="let col of row.cols"
+                [style.flex]="col.flex"
+                [style.background]="col.color"
+                [style.height.px]="col.height">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="tp-card-body">
+          <div class="tp-card-name">{{ t.name }}</div>
+          <div class="tp-card-desc">{{ t.description }}</div>
+          <button class="tp-btn" (click)="select(t)">
+            בחרו עיצוב זה
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

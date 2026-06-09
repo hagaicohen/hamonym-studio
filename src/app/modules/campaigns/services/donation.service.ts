@@ -3,6 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+export interface Donor {
+  name: string;
+  amount: number;
+  completedAt: Date;
+}
+
 export interface DonationPayload {
   campaignId: string;
   donor: {
@@ -30,8 +36,12 @@ export class DonationService {
     return this.http.post<DonationResult>(this.apiUrl, payload);
   }
 
-  getDonors(slug: string): Observable<{ name: string; amount: number }[]> {
+  getDonors(slug: string): Observable<Donor[]> {
     return this.http.get<{ donors: any[] }>(`${this.apiUrl}/campaign/${slug}/donors`)
-      .pipe(map(r => r.donors ?? []));
+      .pipe(map(r => (r.donors ?? []).map((d: any) => ({
+        name: d.name,
+        amount: d.amount,
+        completedAt: new Date(d.completed_at),
+      }))));
   }
 }

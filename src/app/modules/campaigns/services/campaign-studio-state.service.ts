@@ -478,6 +478,15 @@ export class CampaignStudioStateService {
     this.draftSubject.next(createInitialDraft());
   }
 
+  applyTemplate(blocks: CampaignBlock[], themeOverride: Record<string, any>): void {
+    const base = createInitialDraft();
+    const layout = {
+      ...base.layout,
+      theme: { ...base.layout.theme, ...themeOverride['theme'] },
+    };
+    this.draftSubject.next({ ...base, blocks, layout });
+  }
+
   loadDraft(data: CampaignDraft): void {
     this.editModeSubject.next(true);
     this.draftSubject.next(data);

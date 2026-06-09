@@ -1,0 +1,146 @@
+.tp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.tp-panel {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 36px 36px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.28);
+}
+
+.tp-header {
+  text-align: center;
+}
+
+.tp-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.tp-subtitle {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Grid */
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Card */
+.tp-card {
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.tp-card--hovered {
+  border-color: var(--accent);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  transform: translateY(-3px);
+}
+
+/* Preview area */
+.tp-preview {
+  background: #f8fafc;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tp-preview-hero {
+  height: 36px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 6px;
+}
+
+.tp-preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tp-preview-row {
+  display: flex;
+  gap: 4px;
+}
+
+.tp-preview-col {
+  border-radius: 4px;
+  min-height: 16px;
+}
+
+/* Card body */
+.tp-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.tp-card-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tp-card-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.tp-btn {
+  margin-top: 4px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid var(--accent, #22c55e);
+  background: transparent;
+  color: var(--accent, #22c55e);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tp-card--hovered .tp-btn {
+  background: var(--accent, #22c55e);
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .tp-grid { grid-template-columns: 1fr; }
+  .tp-panel { padding: 24px 16px; }
+  .tp-title { font-size: 20px; }
+}

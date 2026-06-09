@@ -140,8 +140,8 @@
           [id]="blockSectionId(block, draft)"
           [style.marginTop.px]="block.spacingTop"
           [style.marginBottom.px]="block.spacingBottom">
-          <!-- Section heading from block label -->
-          <div class="section-heading" *ngIf="block.label && block.type !== 'divider'"
+          <div class="section-heading"
+            *ngIf="block.label && ['rich-text','image','video','gallery'].includes(block.type)"
             [style.color]="primaryColor(draft)">
             {{ block.label }}
           </div>
@@ -601,61 +601,33 @@
   <section class="hm-section hm-donors" *ngIf="block.type === 'donors'" id="section-donors">
     <h2 class="hm-section-title" [style.color]="primaryColor(draft)">תורמים אחרונים</h2>
 
-    <ng-container *ngIf="donors.length > 0; else donorsEmpty">
-
-      <!-- GRID / CAROUSEL -->
-      <ng-container *ngIf="(asDonors(block.data).viewMode || 'grid') === 'grid'">
-        <div class="hm-donors-outer">
-          <button class="hm-amb-arrow" (click)="scrollSlider(donorSlider, 'prev')">‹</button>
-          <div class="hm-donors-slider" #donorSlider>
-            <div class="hm-donors-track">
-              <div class="hm-donor-card" *ngFor="let d of donors">
-                <div class="hm-donor-amount" [style.color]="draft.layout.theme.accentColor">
-                  ₪{{ d.amount.toLocaleString('he-IL') }}
-                </div>
-                <div class="hm-donor-info">
-                  <span class="hm-donor-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-                  <span class="hm-donor-role">תורמ/ה בקמפיין</span>
-                </div>
-                <div class="hm-donor-avatar" [style.borderColor]="draft.layout.theme.accentColor">
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" [style.color]="draft.layout.theme.accentColor">
-                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
+    <div class="hm-donors-grid">
+      <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+        <div class="hm-donor-v2-left">
+          <div class="hm-donor-v2-avatar"
+            [style.background]="draft.layout.theme.accentColor + '22'"
+            [style.color]="draft.layout.theme.accentColor">
+            {{ donorInitials(d.name) }}
           </div>
-          <button class="hm-amb-arrow" (click)="scrollSlider(donorSlider, 'next')">›</button>
-        </div>
-      </ng-container>
-
-      <!-- LIST -->
-      <ng-container *ngIf="(asDonors(block.data).viewMode || 'grid') === 'list'">
-        <div class="hm-donors-list">
-          <div class="hm-donor-list-row" *ngFor="let d of donors">
-            <div class="hm-donor-avatar hm-donor-avatar--sm" [style.borderColor]="draft.layout.theme.accentColor">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" [style.color]="draft.layout.theme.accentColor">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-              </svg>
-            </div>
-            <div class="hm-donor-info">
-              <span class="hm-donor-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-              <span class="hm-donor-role">תורמ/ה בקמפיין</span>
-            </div>
-            <div class="hm-donor-amount" [style.color]="draft.layout.theme.accentColor">
-              ₪{{ d.amount.toLocaleString('he-IL') }}
-            </div>
+          <div class="hm-donor-v2-info">
+            <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+            <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
           </div>
         </div>
-      </ng-container>
-
-    </ng-container>
-    <ng-template #donorsEmpty>
-      <div class="hm-donors-empty">
-        <span>💛</span>
-        <p>התורמים הראשונים יופיעו כאן</p>
+        <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
+          ₪{{ d.amount.toLocaleString('he-IL') }}
+        </div>
       </div>
-    </ng-template>
+    </div>
+
+    <div class="hm-donors-footer" *ngIf="canShowMore">
+      <button class="hm-donors-more-btn"
+        [style.borderColor]="draft.layout.theme.accentColor"
+        [style.color]="draft.layout.theme.accentColor"
+        (click)="showMoreDonors()">
+        הצג עוד תורמים
+      </button>
+    </div>
   </section>
 
   <!-- UPDATES — slider or list -->
