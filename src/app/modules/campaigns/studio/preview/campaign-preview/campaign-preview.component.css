@@ -1277,6 +1277,12 @@
 .block-wrap:nth-child(odd)  { background: var(--hm-section-odd, #ffffff); }
 .block-wrap:nth-child(even) { background: var(--hm-section-even, #f8fafc); }
 
+/* Sidebar main column — no section borders or alternating backgrounds */
+.sidebar-main .block-wrap {
+  border-bottom: none;
+  background: transparent !important;
+}
+
 /* SYSTEM BLOCKS */
 .block-system {
   padding: 16px 24px 28px;

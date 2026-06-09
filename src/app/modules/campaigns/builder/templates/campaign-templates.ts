@@ -123,11 +123,10 @@ function sidebarRightBlocks(): CampaignBlock[] {
     statsBlock(statsId, 1, 'cards', 'sm', '#7c3aed', '', ''),
     donationBlock(donationId, 2, { ctaColor: '#7c3aed' }),
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם',  spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    { id: gid(), type: 'image',       order: 4, visible: true, label: 'תמונה',     spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
-    { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',    spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'ambassadors', order: 6, visible: true, label: 'שגרירים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'donors',      order: 7, visible: true, label: 'תורמים',    spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'updates',     order: 8, visible: true, label: 'עדכונים',   spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
+    { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',    spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'ambassadors', order: 5, visible: true, label: 'שגרירים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',    spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים',   spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
   ];
 }
 
@@ -140,11 +139,10 @@ function sidebarLeftBlocks(): CampaignBlock[] {
     statsBlock(statsId, 1, 'cards', 'sm', '#f59e0b', '', ''),
     donationBlock(donationId, 2, { ctaColor: '#f59e0b' }),
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    { id: gid(), type: 'image',       order: 4, visible: true, label: 'תמונה',    spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
-    { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'ambassadors', order: 6, visible: true, label: 'שגרירים',  spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'donors',      order: 7, visible: true, label: 'תורמים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'updates',     order: 8, visible: true, label: 'עדכונים',  spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
+    { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'ambassadors', order: 5, visible: true, label: 'שגרירים',  spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
+    { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים',  spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
   ];
 }
 
