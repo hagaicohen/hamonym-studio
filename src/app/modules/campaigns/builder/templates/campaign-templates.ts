@@ -116,33 +116,73 @@ function largeHeroBlocks(): CampaignBlock[] {
 
 // ─────────────────────────────────────
 // 3. סיידבר ימין — Sidebar Right
+// Nested containers: outer row → sidebar-col (right, 36%) + content-col (left, 64%)
+// In RTL flex-row: first child appears on the RIGHT side
 // ─────────────────────────────────────
 function sidebarRightBlocks(): CampaignBlock[] {
-  const statsId = gid(), donationId = gid();
+  const outerCtId  = gid();
+  const sidebarCtId = gid();  // appears RIGHT (first child in RTL)
+  const contentCtId = gid();  // appears LEFT  (second child in RTL)
+  const statsId    = gid();
+  const donationId = gid();
+  const richTextId = gid();
   return [
-    statsBlock(statsId, 1, 'cards', 'sm', '#7c3aed', '', ''),
+    { id: outerCtId, type: 'container', order: 1, visible: true, label: 'פריסת דף',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [sidebarCtId, contentCtId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 24, gap: 32, direction: 'row', splitPercent: 36 } as ContainerBlockData },
+    { id: sidebarCtId, type: 'container', order: 1, visible: true, label: 'אזור תרומה',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column' } as ContainerBlockData },
+    { id: contentCtId, type: 'container', order: 2, visible: true, label: 'אזור תוכן',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [richTextId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column' } as ContainerBlockData },
+    statsBlock(statsId, 1, 'cards', 'sm', '#7c3aed'),
     donationBlock(donationId, 2, { ctaColor: '#7c3aed' }),
-    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם',  spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',    spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'ambassadors', order: 5, visible: true, label: 'שגרירים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',    spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים',   spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
+    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
+      spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
+    { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'ambassadors', order: 3, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'donors',      order: 4, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'updates',     order: 5, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
   ];
 }
 
 // ─────────────────────────────────────
 // 4. סיידבר שמאל — Sidebar Left
+// Nested containers: outer row → content-col (right, 64%) + sidebar-col (left, 36%)
+// In RTL flex-row: first child appears on the RIGHT side
 // ─────────────────────────────────────
 function sidebarLeftBlocks(): CampaignBlock[] {
-  const statsId = gid(), donationId = gid();
+  const outerCtId  = gid();
+  const contentCtId = gid();  // appears RIGHT (first child in RTL)
+  const sidebarCtId = gid();  // appears LEFT  (second child in RTL)
+  const statsId    = gid();
+  const donationId = gid();
+  const richTextId = gid();
   return [
-    statsBlock(statsId, 1, 'cards', 'sm', '#f59e0b', '', ''),
+    { id: outerCtId, type: 'container', order: 1, visible: true, label: 'פריסת דף',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [contentCtId, sidebarCtId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 24, gap: 32, direction: 'row', splitPercent: 64 } as ContainerBlockData },
+    { id: contentCtId, type: 'container', order: 1, visible: true, label: 'אזור תוכן',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [richTextId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column' } as ContainerBlockData },
+    { id: sidebarCtId, type: 'container', order: 2, visible: true, label: 'אזור תרומה',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column' } as ContainerBlockData },
+    statsBlock(statsId, 1, 'cards', 'sm', '#f59e0b'),
     donationBlock(donationId, 2, { ctaColor: '#f59e0b' }),
-    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'ambassadors', order: 5, visible: true, label: 'שגרירים',  spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
-    { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים',  spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'list' } },
+    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
+      spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
+    { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'ambassadors', order: 3, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'donors',      order: 4, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'updates',     order: 5, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
   ];
 }
 
@@ -293,9 +333,9 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   {
     id: 'sidebar-right',
     name: 'סיידבר ימין',
-    description: 'תיבת התרומה והנתונים קבועים בצד ימין. תוכן הסיפור גולל בצד שמאל.',
+    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
     accent: '#7c3aed',
-    layoutMode: 'sidebar-right',
+    layoutMode: 'standard',
     preview: [
       { cols: [{ flex: 1, color: '#ede9fe', height: 48 }] },
       { cols: [{ flex: 65, color: '#ddd6fe', height: 100 }, { flex: 35, color: '#c4b5fd', height: 100 }] },
@@ -314,9 +354,9 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   {
     id: 'sidebar-left',
     name: 'סיידבר שמאל',
-    description: 'תיבת התרומה והנתונים קבועים בצד שמאל. תוכן הסיפור גולל בצד ימין.',
+    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
     accent: '#f59e0b',
-    layoutMode: 'sidebar-left',
+    layoutMode: 'standard',
     preview: [
       { cols: [{ flex: 1, color: '#fef3c7', height: 48 }] },
       { cols: [{ flex: 35, color: '#fcd34d', height: 100 }, { flex: 65, color: '#fef3c7', height: 100 }] },

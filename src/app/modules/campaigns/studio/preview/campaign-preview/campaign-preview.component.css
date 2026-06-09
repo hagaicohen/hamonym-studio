@@ -853,6 +853,8 @@
   display: flex;
   flex-direction: column;
 }
+/* Nested containers inside a row container: no separator border */
+.block-container--row .container-child > .block-container { border-bottom: none; }
 /* Mobile: site header — logo right side */
 .campaign-page--mobile .site-header {
   justify-content: flex-start;
