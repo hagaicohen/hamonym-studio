@@ -861,26 +861,41 @@
   padding: 0 16px;
 }
 
-/* Mobile: stats top row — full width */
+/* Mobile: stats + donate cards — compact */
+.campaign-page--mobile .hm-stats,
+.campaign-page--mobile .hm-donate {
+  padding: 16px 12px;
+}
 .campaign-page--mobile .hm-stats-top {
- 
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    margin-bottom: 30px;
-
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .campaign-page--mobile .hm-raised-info {
   flex: 1;
   align-items: flex-start;
   text-align: left;
 }
-.campaign-page--mobile .hm-ring-wrapper {
-  width: 110px; height: 110px;
+.campaign-page--mobile .hm-ring-wrapper { width: 80px; height: 80px; }
+.campaign-page--mobile .hm-ring-svg    { width: 80px; height: 80px; }
+.campaign-page--mobile .hm-ring-text strong { font-size: 16px; }
+.campaign-page--mobile .hm-raised-amount { font-size: 22px; }
+/* 2-column stat grid on mobile */
+.campaign-page--mobile .hm-stat-grid {
+  grid-template-columns: repeat(2, 1fr);
 }
-.campaign-page--mobile .hm-ring-svg { width: 110px; height: 110px; }
+.campaign-page--mobile .hm-stat-box { padding: 10px 4px 0; }
+.campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-left: none; }
+.campaign-page--mobile .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+/* 3-column amounts on mobile */
+.campaign-page--mobile .hm-amounts { grid-template-columns: repeat(3, 1fr); }
 
-/* Mobile: always stack vertically */
+/* Mobile: always stack vertically + cap container padding */
+.campaign-page--mobile .block-container {
+  padding: 12px !important;
+  gap: 12px !important;
+}
 .campaign-page--mobile .block-container--row {
   flex-direction: column;
   max-width: 100%;
@@ -889,6 +904,27 @@
   flex: none;
   width: 100%;
 }
+
+/* ─── Inside a container-child (sidebar context) — compact stats regardless of breakpoint ─── */
+.container-child .hm-stats,
+.container-child .hm-donate {
+  padding: 20px 16px;
+}
+.container-child .hm-stats-top {
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.container-child .hm-ring-wrapper { width: 80px; height: 80px; }
+.container-child .hm-ring-svg    { width: 80px; height: 80px; }
+.container-child .hm-ring-text strong { font-size: 16px; }
+.container-child .hm-raised-amount   { font-size: 22px; }
+/* 2-column stat grid inside any container */
+.container-child .hm-stat-grid { grid-template-columns: repeat(2, 1fr); }
+.container-child .hm-stat-box { padding: 12px 6px 0; }
+.container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
+.container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+/* 3-column amounts inside container */
+.container-child .hm-amounts { grid-template-columns: repeat(3, 1fr); }
 /* Both cards fill their container-child height equally */
 .block-container--row .container-child > .hm-stats,
 .block-container--row .container-child > .hm-donate {
@@ -1781,11 +1817,25 @@
   .hm-ring-wrapper { width: 110px; height: 110px; }
   .hm-ring-svg { width: 110px; height: 110px; }
 
-  /* CONTAINER BLOCKS */
-  .block-container--row { flex-direction: column; max-width: 100%; }
-  .block-container--row .container-child { flex: none; width: 100%; }
+  /* CONTAINER BLOCKS — stack + reduce padding */
+  .block-container { padding: 12px !important; gap: 12px !important; }
+  .block-container--row { flex-direction: column !important; max-width: 100%; }
+  .block-container--row .container-child { flex: none !important; width: 100% !important; }
   .block-container--row .container-child > .hm-stats,
   .block-container--row .container-child > .hm-donate { height: auto; }
+
+  /* STATS + DONATE — compact on small screens */
+  .hm-stats, .hm-donate { padding: 16px 12px; }
+  .hm-stats-top { gap: 16px; margin-bottom: 16px; }
+  .hm-ring-wrapper { width: 80px; height: 80px; }
+  .hm-ring-svg    { width: 80px; height: 80px; }
+  .hm-ring-text strong { font-size: 16px; }
+  .hm-raised-amount { font-size: 22px; }
+  .hm-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .hm-stat-box  { padding: 10px 4px 0; }
+  .hm-stat-box:nth-child(2n+1) { border-left: none; }
+  .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+  .hm-amounts { grid-template-columns: repeat(3, 1fr); }
 
   /* REWARDS */
   .hm-rewards { padding: 40px 0 32px; }
