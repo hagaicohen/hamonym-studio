@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Layers } from 'lucide-angular';
@@ -90,7 +90,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
-export class CampaignPageBuilderStepComponent {
+export class CampaignPageBuilderStepComponent implements OnInit {
   private state         = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
 
@@ -100,6 +100,11 @@ export class CampaignPageBuilderStepComponent {
   showBlockPicker = false;
   showTemplatePicker = false;
   editingBlockId: string | null = null;
+
+  ngOnInit(): void {
+    // Auto-migrate old CSS-hack sidebar campaigns to proper nested containers
+    this.state.migrateSidebarToContainers();
+  }
 
   readonly addableBlocks = ADDABLE_BLOCKS;
   readonly blockGroups = BLOCK_GROUPS;

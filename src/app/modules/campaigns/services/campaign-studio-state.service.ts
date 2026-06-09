@@ -582,6 +582,68 @@ export class CampaignStudioStateService {
     this.patch({ blocks });
   }
 
+  // ── CSS-sidebar → nested-containers migration ──────────────────
+  // Old campaigns used layoutMode:'sidebar-right/left' with flat blocks.
+  // This wraps those flat blocks in proper container blocks and sets layoutMode:'standard'.
+  migrateSidebarToContainers(): void {
+    const draft = this.draft;
+    const mode = draft.layout?.layoutMode;
+    if (mode !== 'sidebar-right' && mode !== 'sidebar-left') return;
+    if (draft.blocks.some(b => b.type === 'container')) return; // already has containers
+
+    const SIDEBAR_TYPES = ['stats', 'donation-widget'];
+    const FULL_WIDTH_TYPES = ['rewards', 'donors', 'ambassadors', 'sponsors', 'updates'];
+    const sorted = [...draft.blocks].sort((a, b) => a.order - b.order);
+
+    const sidebarBlocks  = sorted.filter(b => SIDEBAR_TYPES.includes(b.type));
+    const fullWidthBlocks = sorted.filter(b => FULL_WIDTH_TYPES.includes(b.type));
+    const contentBlocks  = sorted.filter(b => !SIDEBAR_TYPES.includes(b.type) && !FULL_WIDTH_TYPES.includes(b.type));
+
+    const newId = () => Math.random().toString(36).slice(2, 10);
+    const outerCtId   = newId();
+    const sidebarCtId = newId();
+    const contentCtId = newId();
+
+    // RTL: first child in flex-row appears on the RIGHT side visually
+    // sidebar-right → sidebar is RIGHT (first child), content is LEFT (second child)
+    // sidebar-left  → content is RIGHT (first child), sidebar is LEFT (second child)
+    const isLeft = mode === 'sidebar-left';
+    const outerChildren = isLeft ? [contentCtId, sidebarCtId] : [sidebarCtId, contentCtId];
+
+    const outerContainer: CampaignBlock = {
+      id: outerCtId, type: 'container', order: 1, visible: true, label: 'פריסת דף',
+      spacingTop: 0, spacingBottom: 0,
+      data: {
+        childBlockIds: outerChildren, direction: 'row',
+        splitPercent: isLeft ? 64 : 36,
+        backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 24, gap: 32,
+      } as ContainerBlockData,
+    };
+    const sidebarContainer: CampaignBlock = {
+      id: sidebarCtId, type: 'container', order: isLeft ? 2 : 1, visible: true, label: 'אזור תרומה',
+      spacingTop: 0, spacingBottom: 0,
+      data: {
+        childBlockIds: sidebarBlocks.map(b => b.id), direction: 'column',
+        backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 16,
+      } as ContainerBlockData,
+    };
+    const contentContainer: CampaignBlock = {
+      id: contentCtId, type: 'container', order: isLeft ? 1 : 2, visible: true, label: 'אזור תוכן',
+      spacingTop: 0, spacingBottom: 0,
+      data: {
+        childBlockIds: contentBlocks.map(b => b.id), direction: 'column',
+        backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 24,
+      } as ContainerBlockData,
+    };
+
+    const updatedFullWidth = fullWidthBlocks.map((b, i) => ({ ...b, order: i + 2 }));
+
+    this.patch({
+      blocks: [outerContainer, sidebarContainer, contentContainer, ...sidebarBlocks, ...contentBlocks, ...updatedFullWidth],
+      layout: { ...draft.layout, layoutMode: 'standard' as any },
+    });
+  }
+
   // Add a new block and register it as a child of a container
   addBlockToContainer(containerId: string, type: BlockType): void {
     const blocks = [...this.draft.blocks];
