@@ -614,14 +614,24 @@
 }
 .page-blocks--magazine .block-wrap { width: 100%; }
 
+/* ── Centering wrapper for sidebar layouts ── */
+.page-content-outer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Sidebar layouts */
 .page-layout-sidebar {
   display: flex;
   align-items: flex-start;
-  gap: 0;
+  gap: 24px;
   min-height: 400px;
+  padding: 24px 0;
 }
-/* RTL: sidebar-right puts rail on the left physically (right visually) */
+/* RTL: sidebar-right places rail visually on the right (physically left in RTL flex) */
 .page-layout-sidebar--right { flex-direction: row; }
 .page-layout-sidebar--left  { flex-direction: row-reverse; }
 
@@ -633,21 +643,41 @@
 }
 
 .sidebar-rail {
-  width: 320px;
+  width: 380px;
+  min-width: 320px;
   flex-shrink: 0;
   position: sticky;
-  top: 0;
+  top: 16px;
   align-self: flex-start;
   background: #f8fafc;
-  border-radius: 0;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
 }
 .sidebar-rail-inner {
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
+
+/* Mobile: stack sidebar on top */
+.campaign-page--mobile .page-content-outer { padding: 0 12px; }
+.campaign-page--mobile .page-layout-sidebar {
+  flex-direction: column !important;
+  gap: 0;
+  padding: 0;
+}
+.campaign-page--mobile .sidebar-rail {
+  width: 100%;
+  min-width: unset;
+  position: static;
+  border-radius: 0;
+  box-shadow: none;
+  order: -1; /* rail on top on mobile */
+}
+.campaign-page--mobile .sidebar-rail-inner { padding: 16px; }
+.campaign-page--mobile .sidebar-main { width: 100%; }
 
 /* Section heading */
 .section-heading {
@@ -877,13 +907,16 @@
 }
 
 /* ══ REWARDS SECTION ══ */
-/* ══ REWARDS SECTION ══ */
 .hm-rewards {
   background: var(--hm-rewards-bg, #06351f);
   color: #fff;
   padding: 40px clamp(16px, 5vw, 48px);
   border-bottom: 1px solid rgba(255,255,255,0.1);
   font-family: 'Assistant', 'Heebo', sans-serif;
+  max-width: 1200px;
+  margin-inline: auto;
+  border-radius: 16px;
+  margin-block: 16px;
 }
 .hm-rewards h2 {
   color: #fff;
@@ -1220,10 +1253,12 @@
 
 /* ── MOBILE ── */
 .campaign-page--mobile .hm-rewards {
-  padding: 40px 0 32px;
+  padding: 32px 16px;
+  border-radius: 0;
+  margin-inline: 0;
 }
 .campaign-page--mobile .hm-rewards h2 {
-  padding: 0 16px;
+  padding: 0;
 }
 .campaign-page--mobile .hm-slider-outer {
   max-width: 100%;
@@ -1751,9 +1786,27 @@
   .block-container--row .container-child > .hm-donate { height: auto; }
 
   /* REWARDS */
-  .hm-rewards { padding: 40px 0 32px; }
-  .hm-rewards h2 { padding: 0 16px; }
+  .hm-rewards { padding: 32px 16px; border-radius: 0; margin-inline: 0; }
+  .hm-rewards h2 { padding: 0; }
   .hm-slider-outer { max-width: 100%; padding: 0 4px; gap: 8px; }
+
+  /* SIDEBAR layout on small screens */
+  .page-content-outer { padding: 0; }
+  .page-layout-sidebar {
+    flex-direction: column !important;
+    gap: 0;
+    padding: 0;
+  }
+  .sidebar-rail {
+    width: 100%;
+    min-width: unset;
+    position: static;
+    border-radius: 0;
+    box-shadow: none;
+    order: -1;
+  }
+  .sidebar-rail-inner { padding: 16px; }
+  .sidebar-main { width: 100%; }
   .hm-reward-slider { padding: 20px 0 16px; }
   .hm-slider-track { gap: 12px; }
   .hm-reward-card { flex: 0 0 88%; min-width: 88%; border-radius: 16px; }
