@@ -1,102 +1,213 @@
 <div class="amb-step" *ngIf="draft$ | async as draft">
 
+  <!-- HEADER -->
   <div class="amb-header">
-    <div class="amb-title-row">
+    <div class="amb-header-right">
       <div class="amb-header-icon">
-        <lucide-angular [img]="StarIcon" [size]="18" class="amb-icon"></lucide-angular>
+        <lucide-angular [img]="UsersIcon" [size]="18" class="amb-icon"></lucide-angular>
       </div>
-      <h2 class="amb-title">שגרירים</h2>
-    </div>
-    <p class="amb-subtitle">אנשים שמפיצים את הקמפיין בשמכם</p>
-  </div>
-
-  <div class="amb-builder">
-
-    <!-- FORM -->
-    <div class="amb-form-panel">
-
-      <div class="af-field">
-        <label class="af-label">תמונה</label>
-        <input id="amb-img-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
-        <div class="af-photo-area" *ngIf="!form.imageUrl">
-          <label for="amb-img-input" class="af-upload-label">
-            <span class="af-upload-icon">📷</span>
-            <span>לחץ להעלאת תמונה</span>
-            <span class="af-upload-hint">תמונת פרופיל — מומלץ ריבועית</span>
-          </label>
-        </div>
-        <div class="af-photo-preview" *ngIf="form.imageUrl">
-          <img [src]="form.imageUrl" alt="">
-          <div class="af-photo-actions">
-            <label for="amb-img-input" class="af-img-btn">החלף</label>
-            <button type="button" class="af-img-btn af-img-btn--remove" (click)="form.imageUrl = ''">הסר</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="af-field">
-        <label class="af-label">שם מלא <span class="af-req">*</span></label>
-        <input class="af-input" type="text" [(ngModel)]="form.name" placeholder="למשל: ישראל ישראלי">
-      </div>
-
-      <div class="af-actions">
-        <button class="af-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
-        <button class="af-btn-save"  type="button" (click)="save()" [disabled]="!form.name.trim()">
-          💾 {{ isEditing ? 'עדכן שגריר/ה' : 'שמור שגריר/ה' }}
-        </button>
-      </div>
-
-    </div>
-
-    <!-- PREVIEW -->
-    <div class="amb-preview-panel">
-      <div class="ap-header">
-        <lucide-angular [img]="EyeIcon" [size]="16" class="ap-eye"></lucide-angular>
-        <span>תצוגה מקדימה</span>
-      </div>
-      <div class="ap-card">
-        <div class="ap-avatar">
-          <img *ngIf="form.imageUrl" [src]="form.imageUrl" alt="">
-          <span *ngIf="!form.imageUrl" class="ap-avatar-placeholder">👤</span>
-        </div>
-        <div class="ap-name">{{ form.name || 'שם השגריר/ה' }}</div>
-        <div class="ap-role">שגריר/ה</div>
+      <div>
+        <h2 class="amb-title">שגרירים</h2>
+        <p class="amb-subtitle">שגרירים נשמרים עם הקמפיין — הם יופעלו בפרסום</p>
       </div>
     </div>
-
-  </div>
-
-  <!-- LIST -->
-  <div class="amb-list-section" *ngIf="draft.ambassadors.length > 0">
-    <div class="amb-list-header">
-      <div class="amb-list-title">
-        <lucide-angular [img]="StarIcon" [size]="18" class="amb-list-icon"></lucide-angular>
-        שגרירי הקמפיין ({{ draft.ambassadors.length }})
+    <div class="amb-stats-row" *ngIf="ambassadors.length > 0">
+      <div class="amb-stat">
+        <div class="amb-stat-val">{{ ambassadors.length }}</div>
+        <div class="amb-stat-lbl">שגרירים</div>
       </div>
-      <button class="amb-add-btn" type="button" (click)="clearForm()">+ הוסף שגריר/ה</button>
-    </div>
-    <div class="amb-grid">
-      <div class="amb-card" *ngFor="let a of draft.ambassadors" [class.amb-card--editing]="editingId === a.id">
-        <div class="amb-card-avatar">
-          <img *ngIf="a.imageUrl" [src]="a.imageUrl" alt="">
-          <span *ngIf="!a.imageUrl">👤</span>
-        </div>
-        <div class="amb-card-body">
-          <div class="amb-card-name">{{ a.name }}</div>
-          <div class="amb-card-role">שגריר/ה</div>
-          <div class="amb-card-actions">
-            <button class="amb-card-btn amb-card-btn--delete" (click)="delete(a.id)">🗑 מחיקה</button>
-            <button class="amb-card-btn amb-card-btn--edit"   (click)="edit(a)">✏ עריכה</button>
-          </div>
-        </div>
+      <div class="amb-stat">
+        <div class="amb-stat-val">{{ withGoalCount }}</div>
+        <div class="amb-stat-lbl">עם יעד</div>
       </div>
     </div>
   </div>
 
-  <div class="amb-empty" *ngIf="draft.ambassadors.length === 0">
-    <div class="amb-empty-icon">⭐</div>
+  <!-- TOOLBAR -->
+  <div class="amb-toolbar">
+    <div class="amb-search-wrap">
+      <lucide-angular [img]="SearchIcon" [size]="15" class="amb-search-icon"></lucide-angular>
+      <input class="amb-search" type="text" [(ngModel)]="searchQuery" placeholder="חיפוש לפי שם, טלפון, אימייל...">
+    </div>
+    <div class="amb-toolbar-actions">
+      <button class="amb-btn-secondary" (click)="downloadTemplate()" title="הורד תבנית CSV">
+        <lucide-angular [img]="DownloadIcon" [size]="15"></lucide-angular>
+        תבנית
+      </button>
+      <label class="amb-btn-secondary amb-import-label" title="ייבא Excel / CSV">
+        <lucide-angular [img]="UploadIcon" [size]="15"></lucide-angular>
+        ייבוא Excel
+        <input type="file" accept=".csv,.xlsx,.xls" (change)="onImportFile($event)" style="display:none">
+      </label>
+      <button class="amb-btn-primary" (click)="openAdd()">
+        <lucide-angular [img]="PlusIcon" [size]="15"></lucide-angular>
+        הוסף שגריר/ה
+      </button>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div class="amb-empty" *ngIf="ambassadors.length === 0">
+    <lucide-angular [img]="UsersIcon" [size]="40" class="amb-empty-svg"></lucide-angular>
     <div class="amb-empty-text">טרם נוספו שגרירים</div>
     <div class="amb-empty-hint">שגרירים הם רשות — ניתן לדלג</div>
+    <button class="amb-btn-primary" style="margin-top:12px" (click)="openAdd()">
+      <lucide-angular [img]="PlusIcon" [size]="15"></lucide-angular>
+      הוסף שגריר/ה ראשון
+    </button>
   </div>
 
+  <!-- TABLE -->
+  <div class="amb-table-wrap" *ngIf="ambassadors.length > 0">
+    <table class="amb-table">
+      <thead>
+        <tr>
+          <th>שם</th>
+          <th>טלפון</th>
+          <th>אימייל</th>
+          <th>יעד</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of filtered">
+          <td class="amb-td-name">
+            <div class="amb-name-cell">
+              <div class="amb-avatar-sm">{{ a.fullName.charAt(0) }}</div>
+              <div>
+                <div class="amb-name-text">{{ a.fullName }}</div>
+                <div class="amb-slug-text" dir="ltr">/{{ draft.slug }}/{{ a.slug }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="amb-td-muted">{{ a.phone || '—' }}</td>
+          <td class="amb-td-muted">{{ a.email || '—' }}</td>
+          <td>{{ formatMoney(a.goalAmount) }}</td>
+          <td class="amb-td-actions">
+            <button class="amb-action-btn" title="עריכה" (click)="openEdit(a)">
+              <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular>
+            </button>
+            <button class="amb-action-btn amb-action-btn--delete" title="מחיקה" (click)="delete(a.id)">
+              <lucide-angular [img]="TrashIcon" [size]="14"></lucide-angular>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="amb-table-footer">
+      {{ filtered.length }} מתוך {{ ambassadors.length }} שגרירים
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── ADD / EDIT DRAWER ─── -->
+<div class="amb-overlay" *ngIf="showDrawer" (click)="closeDrawer()"></div>
+<div class="amb-drawer" [class.amb-drawer--open]="showDrawer">
+  <div class="amb-drawer-header">
+    <h3 class="amb-drawer-title">{{ editingId ? 'עריכת שגריר/ה' : 'שגריר/ה חדש' }}</h3>
+    <button class="amb-drawer-close" (click)="closeDrawer()">
+      <lucide-angular [img]="XIcon" [size]="18"></lucide-angular>
+    </button>
+  </div>
+
+  <div class="amb-drawer-body">
+    <div class="adf-field">
+      <label class="adf-label">שם מלא <span class="adf-req">*</span></label>
+      <input class="adf-input" type="text" [(ngModel)]="form.fullName"
+             placeholder="ישראל ישראלי" (ngModelChange)="onFullNameInput()">
+    </div>
+
+    <div class="adf-field">
+      <label class="adf-label">כינוי בקישור <span class="adf-req">*</span></label>
+      <div class="adf-slug-wrap">
+        <input class="adf-input adf-input--slug" type="text" [(ngModel)]="form.slug"
+               placeholder="israel-israeli" dir="ltr"
+               (ngModelChange)="onSlugInput()">
+        <span class="adf-slug-status">
+          <span *ngIf="slugStatus === 'checking'" class="adf-slug-spinner"></span>
+          <span *ngIf="slugStatus === 'valid'"    class="adf-slug-ok">✓ תקין</span>
+          <span *ngIf="slugStatus === 'invalid'"  class="adf-slug-err">✗ {{ slugError }}</span>
+        </span>
+      </div>
+      <div class="adf-slug-path" *ngIf="form.slug">
+        /campaigns/{{ campaignSlug }}/<strong>{{ form.slug }}</strong>
+      </div>
+    </div>
+    <div class="adf-row">
+      <div class="adf-field">
+        <label class="adf-label">טלפון</label>
+        <input class="adf-input" type="tel" [(ngModel)]="form.phone" placeholder="050-0000000">
+      </div>
+      <div class="adf-field">
+        <label class="adf-label">אימייל</label>
+        <input class="adf-input" type="email" [(ngModel)]="form.email" placeholder="name@example.com">
+      </div>
+    </div>
+    <div class="adf-field">
+      <label class="adf-label">יעד אישי (₪)</label>
+      <div class="adf-money-wrap">
+        <span class="adf-money-symbol">₪</span>
+        <input class="adf-input adf-input--money" type="text" inputmode="numeric"
+               [value]="goalDisplay"
+               (input)="onGoalInput($event)"
+               placeholder="5,000">
+      </div>
+    </div>
+    <div class="adf-field">
+      <label class="adf-label">הודעה אישית</label>
+      <textarea class="adf-textarea" [(ngModel)]="form.personalMessage"
+                placeholder="קצת על עצמי ולמה אני מגייס..." rows="3"></textarea>
+    </div>
+  </div>
+
+  <div class="amb-drawer-footer">
+    <button class="amb-btn-ghost" (click)="closeDrawer()">ביטול</button>
+    <button class="amb-btn-primary" (click)="save()" [disabled]="!canSave">
+      {{ editingId ? 'שמור שינויים' : 'הוסף שגריר/ה' }}
+    </button>
+  </div>
+</div>
+
+<!-- ─── IMPORT MODAL ─── -->
+<div class="amb-modal-overlay" *ngIf="showImportModal" (click)="closeImport()"></div>
+<div class="amb-modal" *ngIf="showImportModal">
+  <div class="amb-modal-header">
+    <h3 class="amb-modal-title">ייבוא שגרירים</h3>
+    <button class="amb-drawer-close" (click)="closeImport()">
+      <lucide-angular [img]="XIcon" [size]="18"></lucide-angular>
+    </button>
+  </div>
+
+  <div class="amb-import-summary">
+    <span class="amb-import-valid">✓ {{ validImportCount }} שורות תקינות</span>
+    <span class="amb-import-invalid" *ngIf="invalidImportCount > 0">✗ {{ invalidImportCount }} שגיאות</span>
+  </div>
+
+  <div class="amb-import-table-wrap">
+    <table class="amb-table amb-table--import">
+      <thead>
+        <tr><th></th><th>שם</th><th>טלפון</th><th>אימייל</th><th>יעד</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of importRows" [class.amb-import-row--error]="!r.valid">
+          <td>
+            <span *ngIf="r.valid"  class="amb-row-ok">✓</span>
+            <span *ngIf="!r.valid" class="amb-row-err" [title]="r.error">✗</span>
+          </td>
+          <td>{{ r.fullName || '—' }}</td>
+          <td>{{ r.phone   || '—' }}</td>
+          <td>{{ r.email   || '—' }}</td>
+          <td>{{ r.goalAmount ? formatMoney(r.goalAmount) : '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="amb-modal-footer">
+    <button class="amb-btn-ghost" (click)="closeImport()">ביטול</button>
+    <button class="amb-btn-primary" (click)="confirmImport()" [disabled]="validImportCount === 0">
+      ייבא {{ validImportCount }} שגרירים
+    </button>
+  </div>
 </div>

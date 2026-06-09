@@ -1,5 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
@@ -27,6 +28,8 @@ import {
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor } from '../../../services/donation.service';
+import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
+import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 
 const now = Date.now();
 const MOCK_DONORS: Donor[] = [
@@ -52,7 +55,7 @@ const FUNDING_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule, CheckoutModalComponent],
+  imports: [CommonModule, FormsModule, CheckoutModalComponent],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
@@ -63,6 +66,107 @@ export class CampaignPreviewComponent implements OnInit {
   private entitiesService = inject(EntitiesService);
   private ui              = inject(StudioUiService);
   private donationService = inject(DonationService);
+
+  @Input() ambassador:      Ambassador | null = null;
+  @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
+  private ambassadorSvc = inject(AmbassadorService);
+
+  // ── Ambassador leaderboard state ──
+  ambSearch   = '';
+  ambSortBy: 'raised' | 'name' | 'pct' | 'donors' = 'raised';
+  ambShowCount = 6;
+
+  // ── Ambassador self-join modal ──
+  showJoinModal = false;
+  joinStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  joinForm     = { fullName: '', phone: '', email: '' };
+  joinShareUrl = '';
+  joinCopied   = false;
+  joinError    = '';
+
+  get ambTotalRaised(): number {
+    return this.ambEffective.reduce((s, a) => s + a.raisedTotal, 0);
+  }
+
+  hasAmbassadorsSection(draft: CampaignDraft): boolean {
+    return (draft.blocks ?? []).some(b => b.type === 'ambassadors');
+  }
+
+  openJoinModal(): void {
+    this.joinForm     = { fullName: '', phone: '', email: '' };
+    this.joinStatus   = 'idle';
+    this.joinShareUrl = '';
+    this.joinCopied   = false;
+    this.joinError    = '';
+    this.showJoinModal = true;
+  }
+
+  closeJoinModal(): void { this.showJoinModal = false; }
+
+  submitJoin(draft: CampaignDraft): void {
+    if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading') return;
+    this.joinStatus = 'loading';
+    this.ambassadorSvc.selfRegister(draft.slug!, this.joinForm).subscribe({
+      next: (res: { slug: string; shareUrl: string }) => {
+        this.joinShareUrl = res.shareUrl;
+        this.joinStatus   = 'success';
+      },
+      error: (err: { error?: { error?: string } }) => {
+        this.joinStatus = 'error';
+        this.joinError  = err?.error?.error || 'אירעה שגיאה. נסה שוב.';
+      },
+    });
+  }
+
+  copyJoinLink(): void {
+    navigator.clipboard.writeText(this.joinShareUrl).then(() => {
+      this.joinCopied = true;
+      setTimeout(() => { this.joinCopied = false; }, 2500);
+    });
+  }
+
+  get ambEffective(): AmbassadorPublicInfo[] {
+    if (this.ambassadorsList) return this.ambassadorsList;
+    return (this.state.draft?.ambassadors ?? []).map((a: CampaignAmbassador) => ({
+      id: a.id, fullName: a.fullName, slug: a.slug,
+      goalAmount: a.goalAmount, personalMessage: a.personalMessage,
+      raisedTotal: 0, donorCount: 0,
+    }));
+  }
+
+  get ambFiltered(): AmbassadorPublicInfo[] {
+    let list = this.ambEffective;
+    if (this.ambSearch.trim()) {
+      const q = this.ambSearch.toLowerCase();
+      list = list.filter(a => a.fullName.toLowerCase().includes(q));
+    }
+    const s = [...list];
+    switch (this.ambSortBy) {
+      case 'raised':  s.sort((a, b) => b.raisedTotal - a.raisedTotal); break;
+      case 'name':    s.sort((a, b) => a.fullName.localeCompare(b.fullName, 'he')); break;
+      case 'pct':     s.sort((a, b) => this.ambPct(b) - this.ambPct(a)); break;
+      case 'donors':  s.sort((a, b) => b.donorCount - a.donorCount); break;
+    }
+    return s;
+  }
+
+  get ambVisible(): AmbassadorPublicInfo[] {
+    return this.ambFiltered.slice(0, this.ambShowCount);
+  }
+
+  ambPct(a: AmbassadorPublicInfo): number {
+    if (!a.goalAmount) return 0;
+    return Math.min(100, Math.round((a.raisedTotal / a.goalAmount) * 100));
+  }
+
+  viewAmbassador(slug: string, draft: { slug: string }): void {
+    window.location.href = `/campaigns/${draft.slug}/${slug}`;
+  }
+
+  copyAmbLink(slug: string, draft: { slug: string }): void {
+    const url = `${window.location.origin}/campaigns/${draft.slug}/${slug}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+  }
 
   entityLogoUrl: string | null = null;
   entityName = '';
@@ -233,6 +337,11 @@ export class CampaignPreviewComponent implements OnInit {
   formatAmount(n: number): string {
     if (!n) return '₪0';
     return '₪' + n.toLocaleString('he-IL');
+  }
+
+  ambassadorPct(): number {
+    if (!this.ambassador?.goalAmount) return 0;
+    return Math.min(100, Math.round((this.ambassador.raisedTotal / this.ambassador.goalAmount) * 100));
   }
 
   daysRemaining(draft: CampaignDraft): string {
@@ -418,16 +527,44 @@ export class CampaignPreviewComponent implements OnInit {
   }
 
   blockSectionId(block: CampaignBlock, draft?: CampaignDraft): string {
-    if (block.type === 'rich-text') return 'section-story';
-    if (block.type === 'rewards')   return 'section-rewards';
-    if (block.type === 'updates')   return 'section-updates';
-    if (block.type === 'donors')    return 'section-donors';
+    if (block.type === 'rich-text')    return 'section-story';
+    if (block.type === 'rewards')      return 'section-rewards';
+    if (block.type === 'updates')      return 'section-updates';
+    if (block.type === 'donors')       return 'section-donors';
+    if (block.type === 'ambassadors')  return 'section-ambassadors';
+    if (block.type === 'sponsors')     return 'section-sponsors';
     if (block.type === 'container' && draft) {
       const ids = (block.data as ContainerBlockData).childBlockIds;
       if (ids.some(id => draft.blocks.find(b => b.id === id)?.type === 'donation-widget'))
         return 'section-donate';
     }
     return '';
+  }
+
+  navItems(draft: CampaignDraft): { label: string; sectionId: string; count?: number }[] {
+    const LABELS: Partial<Record<string, string>> = {
+      'rich-text':    'אודות הקמפיין',
+      'rewards':      'תשורות',
+      'updates':      'עדכונים',
+      'donors':       'תורמים',
+      'ambassadors':  'שגרירים',
+      'sponsors':     'תומכים',
+    };
+    const seen = new Set<string>();
+    const items: { label: string; sectionId: string; count?: number }[] = [];
+    for (const block of (draft.blocks ?? [])) {
+      const sectionId = this.blockSectionId(block, draft);
+      if (!sectionId || seen.has(sectionId)) continue;
+      seen.add(sectionId);
+      const label = LABELS[block.type];
+      if (!label) continue;
+      const count =
+        block.type === 'ambassadors' ? (this.ambEffective.length || undefined) :
+        block.type === 'donors'      ? (this.activeDonors.length  || undefined) :
+        undefined;
+      items.push({ label, sectionId, count });
+    }
+    return items;
   }
 
   scrollTo(sectionId: string): void {

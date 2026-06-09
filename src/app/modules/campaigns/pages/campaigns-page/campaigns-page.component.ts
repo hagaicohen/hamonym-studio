@@ -2,18 +2,22 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { LucideAngularModule, Trash2 } from 'lucide-angular';
 
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './campaigns-page.component.html',
   styleUrls: ['./campaigns-page.component.css'],
 })
 export class CampaignsPageComponent implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
   campaigns: any[] = [];
-  isLoading = true;
+  isLoading  = true;
+  deletingId: string | null = null;
+
+  readonly TrashIcon = Trash2;
 
   private router      = inject(Router);
   private campaignApi = inject(CampaignApiService);
@@ -29,6 +33,20 @@ export class CampaignsPageComponent implements OnInit {
     this.campaignApi.list().subscribe({
       next: (data) => { this.campaigns = data; this.isLoading = false; },
       error: ()    => { this.isLoading = false; },
+    });
+  }
+
+  deleteCampaign(event: Event, id: string, title: string): void {
+    event.stopPropagation();
+    const name = title || 'קמפיין זה';
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את "${name}"?\n\nפעולה זו אינה ניתנת לביטול.`)) return;
+    this.deletingId = id;
+    this.campaignApi.delete(id).subscribe({
+      next: () => {
+        this.campaigns  = this.campaigns.filter(c => c.id !== id);
+        this.deletingId = null;
+      },
+      error: () => { this.deletingId = null; },
     });
   }
 

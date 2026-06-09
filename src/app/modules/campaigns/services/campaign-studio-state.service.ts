@@ -174,9 +174,13 @@ export interface CampaignSponsor {
 }
 
 export interface CampaignAmbassador {
-  id:       string;
-  name:     string;
-  imageUrl: string | null;
+  id:              string;
+  fullName:        string;
+  phone:           string | null;
+  email:           string | null;
+  goalAmount:      number | null;
+  personalMessage: string;
+  slug:            string;
 }
 
 export interface CampaignUpdate {

@@ -322,6 +322,15 @@ export class CampaignPageBuilderStepComponent implements OnInit {
     this.state.updateBlockData(id, { ...block.data, [field]: value } as ContainerBlockData);
   }
 
+  swapContainerChildren(id: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as ContainerBlockData;
+    if (data.childBlockIds.length < 2) return;
+    const [first, second, ...rest] = data.childBlockIds;
+    this.state.updateBlockData(id, { ...data, childBlockIds: [second, first, ...rest] } as ContainerBlockData);
+  }
+
   toggleContainerChild(id: string, childId: string, blocks: CampaignBlock[]): void {
     const block = blocks.find(b => b.id === id);
     if (!block) return;

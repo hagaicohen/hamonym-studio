@@ -7,6 +7,7 @@ import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/
 import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
+import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
 
 @Component({
   selector: 'app-campaign-public-page',
@@ -16,16 +17,19 @@ import { PaymentFailedPopupComponent } from '../../shared/components/payment-fai
   styleUrls: ['./campaign-public-page.component.css'],
 })
 export class CampaignPublicPageComponent implements OnInit {
-  private route  = inject(ActivatedRoute);
-  private router = inject(Router);
-  private api    = inject(CampaignApiService);
-  private state  = inject(CampaignStudioStateService);
-  private ui     = inject(StudioUiService);
-  private loader = inject(AppLoaderService);
+  private route           = inject(ActivatedRoute);
+  private router          = inject(Router);
+  private api             = inject(CampaignApiService);
+  private state           = inject(CampaignStudioStateService);
+  private ui              = inject(StudioUiService);
+  private loader          = inject(AppLoaderService);
+  private ambassadorSvc   = inject(AmbassadorService);
 
   isLoading       = true;
   notFound        = false;
   showFailedPopup = false;
+  currentAmbassador: Ambassador | null = null;
+  ambassadorsList: AmbassadorPublicInfo[] | null = null;
 
   @HostListener('window:resize')
   onResize(): void { this.syncDevice(); }
@@ -36,14 +40,16 @@ export class CampaignPublicPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.syncDevice();
-    const slug = this.route.snapshot.paramMap.get('slug');
+    const slug          = this.route.snapshot.paramMap.get('slug');
+    const ambassadorSlug =
+      this.route.snapshot.paramMap.get('ambassadorSlug') ??
+      this.route.snapshot.queryParamMap.get('a'); // backwards compat
+
     if (!slug) { this.router.navigate(['/campaigns']); return; }
 
-    // Show failure popup if redirected back from Cardcom after failure
     if (this.route.snapshot.queryParamMap.get('payment') === 'failed') {
       this.showFailedPopup = true;
-      // Clean URL without reloading
-      this.router.navigate([], { replaceUrl: true, queryParams: {} });
+      this.router.navigate([], { replaceUrl: true, queryParams: ambassadorSlug ? { a: ambassadorSlug } : {} });
     }
 
     this.api.getBySlug(slug).subscribe({
@@ -51,6 +57,17 @@ export class CampaignPublicPageComponent implements OnInit {
         this.state.loadDraft(data);
         this.loader.hide();
         this.isLoading = false;
+
+        // Load ambassador leaderboard
+        this.ambassadorSvc.listPublic(slug).subscribe({
+          next: list => { this.ambassadorsList = list; },
+        });
+
+        if (ambassadorSlug) {
+          this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({
+            next: amb => { this.currentAmbassador = amb; },
+          });
+        }
       },
       error: () => {
         this.loader.hide();
@@ -62,8 +79,6 @@ export class CampaignPublicPageComponent implements OnInit {
 
   onRetryPayment(): void {
     this.showFailedPopup = false;
-    // The preview component handles opening the checkout modal
-    // Scroll to donation section so user can try again
     setTimeout(() => {
       const el = document.querySelector('.hm-donate');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });

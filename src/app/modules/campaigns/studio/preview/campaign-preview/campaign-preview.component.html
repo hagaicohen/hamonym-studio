@@ -45,11 +45,19 @@
       <!-- Desktop: links + donate -->
       <ng-container *ngIf="!vm.mobile">
         <div class="nav-links">
-          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story')">על המיזם</a>
-          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards')">תשורות</a>
-          <a class="nav-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates')">עדכונים</a>
-          <a class="nav-link" [style.color]="primaryColor(draft)">צור קשר</a>
+          <a class="nav-link" *ngFor="let item of navItems(draft)"
+             [style.color]="primaryColor(draft)"
+             (click)="scrollTo(item.sectionId)">
+            {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
+          </a>
         </div>
+        <button class="nav-amb-join-btn"
+                *ngIf="hasAmbassadorsSection(draft)"
+                [style.color]="primaryColor(draft)"
+                [style.borderColor]="primaryColor(draft)"
+                (click)="openJoinModal()">
+          <span>🚀 הצטרפו כשגרירים</span>
+        </button>
         <button class="nav-donate-btn" [style.background]="primaryColor(draft)">
           לתמיכה מאובטחת
         </button>
@@ -67,6 +75,27 @@
       </ng-container>
 
     </nav>
+
+    <!-- ══ AMBASSADOR BANNER ══ -->
+    <div class="hm-amb-banner" *ngIf="ambassador">
+      <div class="hm-amb-banner-avatar">{{ ambassador.fullName.charAt(0) }}</div>
+      <div class="hm-amb-banner-info">
+        <div class="hm-amb-banner-name">{{ ambassador.fullName }} מגייס/ת עבור קמפיין זה</div>
+        <div class="hm-amb-banner-msg" *ngIf="ambassador.personalMessage">{{ ambassador.personalMessage }}</div>
+      </div>
+      <div class="hm-amb-banner-progress" *ngIf="ambassador.goalAmount">
+        <div class="hm-amb-banner-nums">
+          <span class="hm-amb-banner-raised">{{ formatAmount(ambassador.raisedTotal) }}</span>
+          <span class="hm-amb-banner-sep">מתוך</span>
+          <span class="hm-amb-banner-goal">{{ formatAmount(ambassador.goalAmount) }}</span>
+        </div>
+        <div class="hm-amb-banner-bar">
+          <div class="hm-amb-banner-fill" [style.width.%]="ambassadorPct()"
+               [style.background]="primaryColor(draft)"></div>
+        </div>
+        <div class="hm-amb-banner-pct">{{ ambassadorPct() }}%</div>
+      </div>
+    </div>
 
     <!-- Mobile nav drawer -->
     <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
@@ -297,6 +326,87 @@
 
   </ng-container>
 </div>
+
+<!-- ══ AMBASSADOR JOIN MODAL ══ -->
+<ng-container *ngIf="showJoinModal">
+  <ng-container *ngIf="{ draft: draft$ | async } as vm2">
+  <div class="hm-join-overlay" (click)="closeJoinModal()"></div>
+  <div class="hm-join-modal" *ngIf="vm2.draft as draft">
+
+    <!-- Header -->
+    <div class="hm-join-header">
+      <h3 class="hm-join-title">הצטרפות כשגריר/ה</h3>
+      <button class="hm-join-close" (click)="closeJoinModal()">✕</button>
+    </div>
+
+    <!-- FORM STATE -->
+    <ng-container *ngIf="joinStatus === 'idle' || joinStatus === 'loading'">
+      <div class="hm-join-body">
+        <p class="hm-join-sub">קבלו קישור אישי לשיתוף — ללא הרשמה</p>
+
+        <div class="hm-join-field">
+          <label class="hm-join-label">שם מלא <span style="color:#ef4444">*</span></label>
+          <input class="hm-join-input" type="text" [(ngModel)]="joinForm.fullName"
+                 placeholder="ישראל ישראלי" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">טלפון</label>
+          <input class="hm-join-input" type="tel" [(ngModel)]="joinForm.phone"
+                 placeholder="050-0000000" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">אימייל</label>
+          <input class="hm-join-input" type="email" [(ngModel)]="joinForm.email"
+                 placeholder="you@example.com" [disabled]="joinStatus === 'loading'">
+        </div>
+      </div>
+      <div class="hm-join-footer">
+        <button class="hm-join-submit"
+                [style.background]="primaryColor(draft)"
+                [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading'"
+                (click)="submitJoin(draft)">
+          <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי 🚀</span>
+          <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- SUCCESS STATE -->
+    <ng-container *ngIf="joinStatus === 'success'">
+      <div class="hm-join-body hm-join-success">
+        <div class="hm-join-success-icon" [style.color]="primaryColor(draft)">✓</div>
+        <h4 class="hm-join-success-title">נרשמת כשגריר/ה!</h4>
+        <p class="hm-join-success-sub">הקישור האישי שלך מוכן לשיתוף:</p>
+        <div class="hm-join-link-box">
+          <span class="hm-join-link-text">{{ joinShareUrl }}</span>
+          <button class="hm-join-copy-btn" [style.background]="primaryColor(draft)"
+                  (click)="copyJoinLink()">
+            {{ joinCopied ? '✓ הועתק!' : 'העתק' }}
+          </button>
+        </div>
+        <p class="hm-join-upsell">
+          רוצים לעקוב אחר התרומות שגייסתם?<br>
+          <a class="hm-join-upsell-link" [style.color]="primaryColor(draft)" href="/register">
+            פתחו אזור אישי בחינם →
+          </a>
+        </p>
+      </div>
+    </ng-container>
+
+    <!-- ERROR STATE -->
+    <ng-container *ngIf="joinStatus === 'error'">
+      <div class="hm-join-body hm-join-success">
+        <div class="hm-join-success-icon" style="color:#ef4444">✗</div>
+        <h4 class="hm-join-success-title">שגיאה</h4>
+        <p class="hm-join-success-sub">{{ joinError }}</p>
+        <button class="hm-join-submit" [style.background]="primaryColor(draft)"
+                (click)="joinStatus = 'idle'">נסה שוב</button>
+      </div>
+    </ng-container>
+
+  </div>
+  </ng-container>
+</ng-container>
 
 <!-- ══ CHECKOUT MODAL ══ -->
 <app-checkout-modal
@@ -621,34 +731,132 @@
     </ng-template>
   </section>
 
-  <!-- AMBASSADORS — slider -->
+  <!-- AMBASSADORS — leaderboard -->
   <section class="hm-section hm-ambassadors" *ngIf="block.type === 'ambassadors'" id="section-ambassadors">
-    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">שגרירים</h2>
-    <ng-container *ngIf="draft.ambassadors?.length > 0; else ambassadorsEmpty">
-      <div class="hm-amb-outer">
-        <button class="hm-amb-arrow" (click)="scrollSlider(ambSlider, 'prev')">‹</button>
-        <div class="hm-amb-slider" #ambSlider>
-          <div class="hm-amb-track">
-            <div class="hm-amb-card" *ngFor="let a of draft.ambassadors">
-              <div class="hm-amb-avatar" [style.color]="primaryColor(draft)">
-                <img *ngIf="a.imageUrl" [src]="a.imageUrl" alt="">
-                <svg *ngIf="!a.imageUrl" viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
-                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                </svg>
-              </div>
-              <div class="hm-amb-name" [style.color]="primaryColor(draft)">{{ a.name }}</div>
-              <div class="hm-amb-role">שגריר/ה</div>
-            </div>
+    <div class="hm-lb-container">
+
+      <!-- ── Section header ── -->
+      <div class="hm-lb-section-header">
+        <h2 class="hm-lb-section-title" [style.color]="primaryColor(draft)">שגרירים</h2>
+        <button class="hm-amb-join-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
+          🚀 הצטרפו כשגרירים
+        </button>
+      </div>
+
+      <!-- ── Social proof ── -->
+      <div class="hm-lb-proof" *ngIf="ambEffective.length > 0">
+        💡 כבר <strong>{{ ambEffective.length | number }}</strong> שגרירים הצטרפו
+        <ng-container *ngIf="ambTotalRaised > 0"> וגייסו <strong>₪{{ ambTotalRaised | number }}</strong></ng-container>
+      </div>
+
+      <ng-container *ngIf="ambEffective.length > 0; else ambassadorsEmpty">
+
+        <!-- ── Controls row: search + sort ── -->
+        <div class="hm-lb-controls">
+          <div class="hm-lb-search-wrap">
+            <svg class="hm-lb-search-icon-svg" viewBox="0 0 20 20" width="16" height="16" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <input class="hm-lb-search" type="text" [(ngModel)]="ambSearch"
+                   (ngModelChange)="ambShowCount = 6" placeholder="חיפוש שגריר/ה...">
+          </div>
+          <div class="hm-lb-sort-row">
+            <span class="hm-lb-sort-label">מיין:</span>
+            <button class="hm-lb-sort-btn" [class.hm-lb-sort-btn--active]="ambSortBy==='raised'"
+                    [style.background]="ambSortBy==='raised' ? primaryColor(draft) : ''"
+                    (click)="ambSortBy='raised'; ambShowCount=6">גבוה</button>
+            <button class="hm-lb-sort-btn" [class.hm-lb-sort-btn--active]="ambSortBy==='name'"
+                    [style.background]="ambSortBy==='name' ? primaryColor(draft) : ''"
+                    (click)="ambSortBy='name'; ambShowCount=6">שם</button>
+            <button class="hm-lb-sort-btn" [class.hm-lb-sort-btn--active]="ambSortBy==='pct'"
+                    [style.background]="ambSortBy==='pct' ? primaryColor(draft) : ''"
+                    (click)="ambSortBy='pct'; ambShowCount=6">קרוב ליעד</button>
+            <button class="hm-lb-sort-btn" [class.hm-lb-sort-btn--active]="ambSortBy==='donors'"
+                    [style.background]="ambSortBy==='donors' ? primaryColor(draft) : ''"
+                    (click)="ambSortBy='donors'; ambShowCount=6">תורמים</button>
+            <span class="hm-lb-count-chip" [style.color]="primaryColor(draft)">
+              {{ ambFiltered.length | number }} שגרירים
+            </span>
           </div>
         </div>
-        <button class="hm-amb-arrow" (click)="scrollSlider(ambSlider, 'next')">›</button>
-      </div>
-    </ng-container>
-    <ng-template #ambassadorsEmpty>
-      <div class="hm-section-placeholder">
-        <span>⭐</span><p>שגרירי הקמפיין יוצגו כאן לאחר הגדרתם בבונה הדף</p>
-      </div>
-    </ng-template>
+
+        <!-- ── Cards grid — 2 per row ── -->
+        <div class="hm-lb-grid">
+          <div class="hm-lb-card" *ngFor="let a of ambVisible">
+
+            <!-- Card header: avatar + name + copy -->
+            <div class="hm-lb-card-header">
+              <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
+                {{ a.fullName.charAt(0) }}
+              </div>
+              <div class="hm-lb-card-info">
+                <div class="hm-lb-card-name">{{ a.fullName }}</div>
+                <div class="hm-lb-card-msg" *ngIf="a.personalMessage">{{ a.personalMessage }}</div>
+              </div>
+              <button class="hm-lb-copy-btn" (click)="copyAmbLink(a.slug, draft)" title="העתק קישור">
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none">
+                  <rect x="5" y="5" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                העתק קישור
+              </button>
+            </div>
+
+            <!-- Progress -->
+            <div class="hm-lb-progress-wrap">
+              <div class="hm-lb-progress-nums">
+                <span class="hm-lb-raised">₪{{ a.raisedTotal | number }}</span>
+                <span class="hm-lb-goal" *ngIf="a.goalAmount"> מתוך ₪{{ a.goalAmount | number }}</span>
+                <span class="hm-lb-pct-tag" [style.color]="primaryColor(draft)" *ngIf="a.goalAmount">{{ ambPct(a) }}%</span>
+              </div>
+              <div class="hm-lb-bar">
+                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+              </div>
+            </div>
+
+            <!-- Footer: donors + view -->
+            <div class="hm-lb-card-footer">
+              <div class="hm-lb-donors">
+                <span class="hm-lb-donors-num">{{ a.donorCount | number }}</span>
+                <span class="hm-lb-donors-lbl">תורמים</span>
+              </div>
+              <button class="hm-lb-view-btn"
+                      [style.background]="primaryColor(draft)"
+                      (click)="viewAmbassador(a.slug, draft)">
+                לדף השגריר ←
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- No results -->
+        <div class="hm-lb-no-results" *ngIf="ambFiltered.length === 0">
+          לא נמצאו שגרירים התואמים את החיפוש
+        </div>
+
+        <!-- Show more -->
+        <div class="hm-lb-show-more" *ngIf="ambFiltered.length > ambShowCount">
+          <button class="hm-lb-more-btn" [style.borderColor]="primaryColor(draft)" [style.color]="primaryColor(draft)"
+                  (click)="ambShowCount = ambShowCount + 6">
+            הצג עוד · נותרו {{ ambFiltered.length - ambShowCount }}
+          </button>
+        </div>
+
+      </ng-container>
+      <ng-template #ambassadorsEmpty>
+        <div class="hm-lb-empty">
+          <div class="hm-lb-empty-icon">🤝</div>
+          <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
+          <div class="hm-lb-empty-sub">עזרו לנו להפיץ ותקבלו קישור אישי לשיתוף</div>
+          <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
+            🚀 הצטרפו כשגרירים
+          </button>
+        </div>
+      </ng-template>
+
+    </div>
   </section>
 
   <!-- DONORS — grid or list -->

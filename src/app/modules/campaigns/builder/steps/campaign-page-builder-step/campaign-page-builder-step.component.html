@@ -310,6 +310,17 @@
                 [class.active]="(asContainer(block.data).splitPercent ?? 50) === p"
                 (click)="updateContainerField(block.id, 'splitPercent', p)">{{ p }}/{{ 100-p }}</button>
             </div>
+            <!-- Swap sides -->
+            <button class="swap-sides-btn"
+                    *ngIf="asContainer(block.data).childBlockIds.length >= 2"
+                    (click)="swapContainerChildren(block.id)"
+                    title="החלף ימין ↔ שמאל">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 5h10M10 3l2 2-2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11H4M6 9l-2 2 2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              החלף ימין ↔ שמאל
+            </button>
           </div>
 
           <!-- Colors row -->

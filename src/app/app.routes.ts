@@ -78,6 +78,13 @@ export const routes: Routes = [
         .then((m) => m.DonationSuccessComponent),
   },
 
+  {
+    path: 'campaigns/:slug/:ambassadorSlug',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
+        .then((m) => m.CampaignPublicPageComponent),
+  },
+
   /* ========================================
      APP SHELL
   ======================================== */

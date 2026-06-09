@@ -310,7 +310,7 @@
 .split-editor { gap: 16px; }
 .split-percent-row { display: flex; flex-direction: column; gap: 8px; }
 .split-slider { width: 100%; accent-color: #7c3aed; }
-.split-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.split-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .split-preset-btn {
   padding: 4px 10px;
   border: 1.5px solid #e2e8f0;
@@ -321,6 +321,17 @@
   transition: all 0.15s;
 }
 .split-preset-btn.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+.swap-sides-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; width: 100%;
+  border: 1.5px dashed #c4b5fd; border-radius: 8px;
+  background: #faf5ff; color: #7c3aed;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  justify-content: center;
+}
+.swap-sides-btn:hover { background: #ede9fe; border-color: #7c3aed; }
 .split-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .split-side { display: flex; flex-direction: column; gap: 5px; }
 .split-hint {
