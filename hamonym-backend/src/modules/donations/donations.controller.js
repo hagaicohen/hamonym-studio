@@ -26,6 +26,15 @@ exports.createDonation = async (req, res) => {
   }
 };
 
+exports.getCampaignDonors = async (req, res) => {
+  try {
+    const donors = await donationsService.getCampaignDonors(req.params.slug);
+    res.json({ donors });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.handleReturn = async (req, res) => {
   try {
     const { id, status, lowprofilecode, ResponseCode } = req.query;

@@ -192,4 +192,24 @@ exports.getDonationPublic = async (donationId) => {
   return res.rows[0] || null;
 };
 
+/* ─────────────────────────────────────────
+   PUBLIC DONORS LIST (for campaign page)
+───────────────────────────────────────── */
+exports.getCampaignDonors = async (slug) => {
+  const res = await db.query(
+    `SELECT d.donor_name AS name,
+            d.amount::float AS amount,
+            d.completed_at
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     WHERE c.slug = $1
+       AND d.status = 'paid'
+       AND d.is_anonymous = false
+     ORDER BY d.completed_at DESC
+     LIMIT 30`,
+    [slug]
+  );
+  return res.rows;
+};
+
 function round2(n) { return Math.round(n * 100) / 100; }
