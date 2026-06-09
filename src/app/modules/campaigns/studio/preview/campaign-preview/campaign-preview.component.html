@@ -191,6 +191,17 @@
 
         </div>
       </div>
+
+      <!-- Full-width blocks below sidebar (rewards, donors, ambassadors, sponsors, updates) -->
+      <ng-container *ngFor="let block of belowSidebarBlocks(draft)">
+        <div class="block-wrap"
+          [id]="blockSectionId(block, draft)"
+          [style.marginTop.px]="block.spacingTop"
+          [style.marginBottom.px]="block.spacingBottom">
+          <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+        </div>
+      </ng-container>
+
     </ng-container>
 
     <!-- ══ BOTTOM CAMPAIGN BANNER ══ -->

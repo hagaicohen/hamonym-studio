@@ -162,40 +162,49 @@ export class CampaignPreviewComponent implements OnInit {
     return draft.layout?.layoutMode ?? 'standard';
   }
 
-  // ── Content blocks (exclude donation-widget / stats — shown in widgets zone) ──
+  // ── Content blocks for standard/magazine layouts ──
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
-    const childIds = new Set(
-      draft.blocks
-        .filter(b => b.type === 'container')
-        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
-    );
+    const childIds = this.topLevelChildIds(draft);
     return draft.blocks
       .filter(b => b.visible && !childIds.has(b.id))
       .sort((a, b) => a.order - b.order);
   }
 
-  // For sidebar layouts: top-level stats + donation-widget blocks go to the rail
+  // Sidebar rail: top-level stats + donation-widget blocks
   sidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
-    const childIds = new Set(
-      draft.blocks
-        .filter(b => b.type === 'container')
-        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
-    );
+    const childIds = this.topLevelChildIds(draft);
     return draft.blocks
       .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
       .sort((a, b) => a.order - b.order);
   }
 
-  // For sidebar layouts: everything that is NOT stats/donation-widget goes to main column
+  // Main column: content blocks that are NOT sidebar blocks and NOT full-width blocks
   mainBlocks(draft: CampaignDraft): CampaignBlock[] {
-    const childIds = new Set(
+    const childIds = this.topLevelChildIds(draft);
+    return draft.blocks
+      .filter(b => b.visible && !childIds.has(b.id)
+        && !this.SIDEBAR_TYPES.includes(b.type)
+        && !this.FULL_WIDTH_TYPES.includes(b.type))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  // Full-width blocks rendered below the sidebar two-column area
+  belowSidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
+    const childIds = this.topLevelChildIds(draft);
+    return draft.blocks
+      .filter(b => b.visible && !childIds.has(b.id) && this.FULL_WIDTH_TYPES.includes(b.type))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  private readonly SIDEBAR_TYPES = ['stats', 'donation-widget'];
+  private readonly FULL_WIDTH_TYPES = ['rewards', 'donors', 'ambassadors', 'sponsors', 'updates'];
+
+  private topLevelChildIds(draft: CampaignDraft): Set<string> {
+    return new Set(
       draft.blocks
         .filter(b => b.type === 'container')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
-    return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && b.type !== 'stats' && b.type !== 'donation-widget')
-      .sort((a, b) => a.order - b.order);
   }
 
   blockById(id: string, draft: CampaignDraft): CampaignBlock | undefined {
