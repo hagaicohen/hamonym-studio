@@ -8,7 +8,17 @@
       <h2 class="step-title">בניית דף הקמפיין</h2>
     </div>
     <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
+    <button class="btn-change-template" type="button" (click)="showTemplatePicker = true">
+      ✦ שנה תבנית
+    </button>
   </div>
+
+  <!-- Template picker re-open -->
+  <app-template-picker
+    *ngIf="showTemplatePicker"
+    (templateSelected)="onTemplateSelected($event)"
+    (skipped)="onTemplateSkipped()">
+  </app-template-picker>
 
   <!-- ADD BLOCK — TOP -->
   <div class="add-block-area add-block-area--top">

@@ -203,7 +203,15 @@ export interface CampaignTheme {
   lineColor:             string;  // --line
 }
 
+export type LayoutMode =
+  | 'standard'
+  | 'sidebar-right'
+  | 'sidebar-left'
+  | 'magazine';
+
 export interface CampaignLayout {
+  layoutMode:         LayoutMode;
+  templateId?:        string;
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -216,8 +224,8 @@ export interface CampaignLayout {
   // Footer
   showFooter:          boolean;
   showFooterContact:   boolean;
-  footerBg:            string;   // default #030712
-  footerTextColor:     string;   // default rgba(255,255,255,0.85)
+  footerBg:            string;
+  footerTextColor:     string;
   footerEmail:         string;
   footerPhone:         string;
   footerHours:         string;
@@ -417,6 +425,7 @@ function createInitialDraft(): CampaignDraft {
       ];
     })(),
     layout: {
+      layoutMode:          'standard' as LayoutMode,
       backgroundType:      'none',
       backgroundColor:     '#f8fafc',
       backgroundImageUrl:  '',
@@ -478,11 +487,13 @@ export class CampaignStudioStateService {
     this.draftSubject.next(createInitialDraft());
   }
 
-  applyTemplate(blocks: CampaignBlock[], themeOverride: Record<string, any>): void {
+  applyTemplate(blocks: CampaignBlock[], themeOverride: Record<string, any>, layoutMode?: LayoutMode, templateId?: string): void {
     const base = createInitialDraft();
-    const layout = {
+    const layout: CampaignLayout = {
       ...base.layout,
-      theme: { ...base.layout.theme, ...themeOverride['theme'] },
+      layoutMode: layoutMode ?? 'standard',
+      templateId,
+      theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });
   }

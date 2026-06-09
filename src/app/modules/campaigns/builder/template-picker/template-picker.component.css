@@ -49,6 +49,27 @@
   gap: 20px;
 }
 
+/* Footer */
+.tp-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.tp-skip-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: color 0.15s;
+}
+.tp-skip-btn:hover { color: #64748b; }
+
 /* Card */
 .tp-card {
   border-radius: 16px;

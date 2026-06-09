@@ -11,11 +11,16 @@ import { CAMPAIGN_TEMPLATES, CampaignTemplate } from '../templates/campaign-temp
 })
 export class TemplatePickerComponent {
   @Output() templateSelected = new EventEmitter<CampaignTemplate>();
+  @Output() skipped = new EventEmitter<void>();
 
   readonly templates = CAMPAIGN_TEMPLATES;
   hoveredId: string | null = null;
 
   select(template: CampaignTemplate): void {
     this.templateSelected.emit(template);
+  }
+
+  skip(): void {
+    this.skipped.emit();
   }
 }

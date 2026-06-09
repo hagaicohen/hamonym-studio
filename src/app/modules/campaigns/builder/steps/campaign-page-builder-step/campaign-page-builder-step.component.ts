@@ -26,6 +26,8 @@ import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-ed
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
 import { UploadService } from '../../../../../core/services/upload.service';
+import { TemplatePickerComponent } from '../../template-picker/template-picker.component';
+import { CampaignTemplate } from '../../templates/campaign-templates';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -84,7 +86,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
 @Component({
   selector: 'app-campaign-page-builder-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent, ColorPickerComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent, ColorPickerComponent, TemplatePickerComponent],
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
@@ -96,6 +98,7 @@ export class CampaignPageBuilderStepComponent {
   draft$ = this.state.draft$;
 
   showBlockPicker = false;
+  showTemplatePicker = false;
   editingBlockId: string | null = null;
 
   readonly addableBlocks = ADDABLE_BLOCKS;
@@ -121,6 +124,15 @@ export class CampaignPageBuilderStepComponent {
     if (this.isAlreadyAdded(type, blocks)) return;
     this.state.addBlock(type);
     this.showBlockPicker = false;
+  }
+
+  onTemplateSelected(template: CampaignTemplate): void {
+    this.state.applyTemplate(template.createBlocks(), template.themeOverride, template.layoutMode, template.id);
+    this.showTemplatePicker = false;
+  }
+
+  onTemplateSkipped(): void {
+    this.showTemplatePicker = false;
   }
 
   removeBlock(id: string): void {

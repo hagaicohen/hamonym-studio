@@ -19,4 +19,12 @@
 
   </div>
 </div>
+
+<!-- Template picker overlay — shown when creating a new campaign -->
+<app-template-picker
+  *ngIf="showTemplatePicker"
+  (templateSelected)="onTemplateSelected($event)"
+  (skipped)="onTemplateSkipped()">
+</app-template-picker>
+
 </ng-container>

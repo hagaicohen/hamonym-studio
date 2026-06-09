@@ -117,7 +117,10 @@ export class CampaignApiService {
         ...b,
         label: b.label || DEFAULT_BLOCK_LABELS[b.type as string] || '',
       })),
-      layout:                  data.layout                  ?? {} as any,
+      layout: {
+        ...(data.layout ?? {}),
+        layoutMode: data.layout?.layoutMode ?? 'standard',
+      } as any,
     };
   }
 

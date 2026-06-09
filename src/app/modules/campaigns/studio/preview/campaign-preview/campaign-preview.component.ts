@@ -158,6 +158,10 @@ export class CampaignPreviewComponent implements OnInit {
     return found ? found.label : categoryId;
   }
 
+  layoutMode(draft: CampaignDraft): string {
+    return draft.layout?.layoutMode ?? 'standard';
+  }
+
   // ── Content blocks (exclude donation-widget / stats — shown in widgets zone) ──
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = new Set(
@@ -167,6 +171,30 @@ export class CampaignPreviewComponent implements OnInit {
     );
     return draft.blocks
       .filter(b => b.visible && !childIds.has(b.id))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  // For sidebar layouts: top-level stats + donation-widget blocks go to the rail
+  sidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
+    const childIds = new Set(
+      draft.blocks
+        .filter(b => b.type === 'container')
+        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
+    );
+    return draft.blocks
+      .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
+      .sort((a, b) => a.order - b.order);
+  }
+
+  // For sidebar layouts: everything that is NOT stats/donation-widget goes to main column
+  mainBlocks(draft: CampaignDraft): CampaignBlock[] {
+    const childIds = new Set(
+      draft.blocks
+        .filter(b => b.type === 'container')
+        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
+    );
+    return draft.blocks
+      .filter(b => b.visible && !childIds.has(b.id) && b.type !== 'stats' && b.type !== 'donation-widget')
       .sort((a, b) => a.order - b.order);
   }
 

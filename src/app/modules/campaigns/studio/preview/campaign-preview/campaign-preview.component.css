@@ -604,6 +604,51 @@
 .page-blocks { display: flex; flex-direction: column; }
 .block-wrap  { width: 100%; }
 
+/* Magazine layout — two-column masonry-like */
+.page-blocks--magazine {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 0;
+  padding: 0;
+}
+.page-blocks--magazine .block-wrap { width: 100%; }
+
+/* Sidebar layouts */
+.page-layout-sidebar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-height: 400px;
+}
+/* RTL: sidebar-right puts rail on the left physically (right visually) */
+.page-layout-sidebar--right { flex-direction: row; }
+.page-layout-sidebar--left  { flex-direction: row-reverse; }
+
+.sidebar-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-rail {
+  width: 320px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  background: #f8fafc;
+  border-radius: 0;
+  overflow: hidden;
+}
+.sidebar-rail-inner {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* Section heading */
 .section-heading {
   font-size: 22px; font-weight: 900;

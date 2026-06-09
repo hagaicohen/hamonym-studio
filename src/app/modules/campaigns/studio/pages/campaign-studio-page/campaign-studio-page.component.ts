@@ -5,10 +5,12 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { CampaignEditorComponent }       from '../../editor/campaign-editor/campaign-editor.component';
 import { CampaignPreviewComponent }      from '../../preview/campaign-preview/campaign-preview.component';
 import { CampaignStudioTopbarComponent } from '../../topbar/campaign-studio-topbar/campaign-studio-topbar.component';
+import { TemplatePickerComponent }       from '../../../builder/template-picker/template-picker.component';
 import { StudioUiService }               from '../../services/studio-ui.service';
 import { CampaignApiService }            from '../../../services/campaign-api.service';
 import { CampaignStudioStateService }    from '../../../services/campaign-studio-state.service';
 import { AppLoaderService }              from '../../../../../core/services/app-loader.service';
+import { CampaignTemplate }             from '../../../builder/templates/campaign-templates';
 
 @Component({
   selector: 'app-campaign-studio-page',
@@ -18,6 +20,7 @@ import { AppLoaderService }              from '../../../../../core/services/app-
     CampaignStudioTopbarComponent,
     CampaignEditorComponent,
     CampaignPreviewComponent,
+    TemplatePickerComponent,
   ],
   templateUrl: './campaign-studio-page.component.html',
   styleUrls: ['./campaign-studio-page.component.css'],
@@ -30,6 +33,8 @@ export class CampaignStudioPageComponent implements OnInit {
   private loader       = inject(AppLoaderService);
   ui = inject(StudioUiService);
 
+  showTemplatePicker = false;
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -40,7 +45,22 @@ export class CampaignStudioPageComponent implements OnInit {
     } else {
       this.stateService.reset();
       this.loader.hide();
+      this.showTemplatePicker = true;
     }
+  }
+
+  onTemplateSelected(template: CampaignTemplate): void {
+    this.stateService.applyTemplate(
+      template.createBlocks(),
+      template.themeOverride,
+      template.layoutMode,
+      template.id,
+    );
+    this.showTemplatePicker = false;
+  }
+
+  onTemplateSkipped(): void {
+    this.showTemplatePicker = false;
   }
 
   goBack(): void { this.router.navigate(['/campaigns']); }

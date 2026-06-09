@@ -133,22 +133,63 @@
 
     </section>
 
-    <!-- ══ CONTENT BLOCKS ══ -->
-    <div class="page-blocks">
-      <ng-container *ngFor="let block of contentBlocks(draft)">
-        <div class="block-wrap"
-          [id]="blockSectionId(block, draft)"
-          [style.marginTop.px]="block.spacingTop"
-          [style.marginBottom.px]="block.spacingBottom">
-          <div class="section-heading"
-            *ngIf="block.label && ['rich-text','image','video','gallery'].includes(block.type)"
-            [style.color]="primaryColor(draft)">
-            {{ block.label }}
+    <!-- ══ CONTENT BLOCKS — Standard / Magazine ══ -->
+    <ng-container *ngIf="layoutMode(draft) === 'standard' || layoutMode(draft) === 'magazine'">
+      <div class="page-blocks" [class.page-blocks--magazine]="layoutMode(draft) === 'magazine'">
+        <ng-container *ngFor="let block of contentBlocks(draft)">
+          <div class="block-wrap"
+            [id]="blockSectionId(block, draft)"
+            [style.marginTop.px]="block.spacingTop"
+            [style.marginBottom.px]="block.spacingBottom">
+            <div class="section-heading"
+              *ngIf="block.label && ['rich-text','image','video','gallery'].includes(block.type)"
+              [style.color]="primaryColor(draft)">
+              {{ block.label }}
+            </div>
+            <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
           </div>
-          <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <!-- ══ CONTENT BLOCKS — Sidebar Right / Left ══ -->
+    <ng-container *ngIf="layoutMode(draft) === 'sidebar-right' || layoutMode(draft) === 'sidebar-left'">
+      <div class="page-layout-sidebar"
+        [class.page-layout-sidebar--right]="layoutMode(draft) === 'sidebar-right'"
+        [class.page-layout-sidebar--left]="layoutMode(draft) === 'sidebar-left'">
+
+        <!-- Main column -->
+        <div class="sidebar-main">
+          <ng-container *ngFor="let block of mainBlocks(draft)">
+            <div class="block-wrap"
+              [id]="blockSectionId(block, draft)"
+              [style.marginTop.px]="block.spacingTop"
+              [style.marginBottom.px]="block.spacingBottom">
+              <div class="section-heading"
+                *ngIf="block.label && ['rich-text','image','video','gallery'].includes(block.type)"
+                [style.color]="primaryColor(draft)">
+                {{ block.label }}
+              </div>
+              <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+            </div>
+          </ng-container>
         </div>
-      </ng-container>
-    </div>
+
+        <!-- Sticky sidebar -->
+        <div class="sidebar-rail" id="section-donate">
+          <div class="sidebar-rail-inner">
+            <ng-container *ngFor="let block of sidebarBlocks(draft)">
+              <div class="block-wrap"
+                [style.marginTop.px]="block.spacingTop"
+                [style.marginBottom.px]="block.spacingBottom">
+                <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+
+      </div>
+    </ng-container>
 
     <!-- ══ BOTTOM CAMPAIGN BANNER ══ -->
     <div class="hm-bottom-banner" *ngIf="draft.layout.showBottomBanner !== false">
