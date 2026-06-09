@@ -4,6 +4,24 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { CampaignDraft } from './campaign-studio-state.service';
 
+const DEFAULT_BLOCK_LABELS: Record<string, string> = {
+  'rich-text':       'טקסט',
+  'image':           'תמונה',
+  'video':           'וידאו',
+  'gallery':         'גלריה',
+  'split':           'עמודות',
+  'cta':             'קריאה לפעולה',
+  'divider':         'מרווח',
+  'container':       'מסגרת',
+  'stats':           'פס נתונים',
+  'donation-widget': 'תיבת תרומה',
+  'rewards':         'תשורות',
+  'sponsors':        'חסויות',
+  'ambassadors':     'שגרירים',
+  'donors':          'תורמים',
+  'updates':         'עדכונים',
+};
+
 @Injectable({ providedIn: 'root' })
 export class CampaignApiService {
   private http = inject(HttpClient);
@@ -95,7 +113,10 @@ export class CampaignApiService {
       sponsors:                data.sponsors                ?? [],
       ambassadors:             data.ambassadors             ?? [],
       updates:                 data.updates                 ?? [],
-      blocks:                  data.blocks                  ?? [],
+      blocks:                  (data.blocks ?? []).map((b: any) => ({
+        ...b,
+        label: b.label || DEFAULT_BLOCK_LABELS[b.type as string] || '',
+      })),
       layout:                  data.layout                  ?? {} as any,
     };
   }

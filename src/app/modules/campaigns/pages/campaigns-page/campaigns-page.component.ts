@@ -1,7 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { AppLoaderService }   from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 
 @Component({
@@ -17,7 +16,6 @@ export class CampaignsPageComponent implements OnInit {
   isLoading = true;
 
   private router      = inject(Router);
-  private loader      = inject(AppLoaderService);
   private campaignApi = inject(CampaignApiService);
 
   private readonly fundingLabels: Record<string, string> = {
@@ -35,20 +33,14 @@ export class CampaignsPageComponent implements OnInit {
   }
 
   createCampaign(): void {
-    this.loader.show('טוען את אשף יצירת הקמפיין...');
-    setTimeout(() => {
-      this.router.navigate(['/campaigns/create']);
-      this.loader.hide();
-    }, 900);
+    this.router.navigate(['/campaigns/create']);
   }
 
   editCampaign(id: string): void {
-    this.loader.show('טוען קמפיין...');
     this.router.navigate(['/campaigns', id, 'edit']);
   }
 
   viewCampaign(slug: string): void {
-    this.loader.show('טוען קמפיין...');
     this.router.navigate(['/campaigns', slug, 'view']);
   }
 

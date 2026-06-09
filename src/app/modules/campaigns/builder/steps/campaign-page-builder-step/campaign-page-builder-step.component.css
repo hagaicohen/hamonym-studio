@@ -683,6 +683,61 @@
   background: #f8fafc;
 }
 
+/* Grouped picker */
+.block-picker--grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.picker-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.picker-group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+/* Top add-block area */
+.add-block-area--top {
+  margin-bottom: 16px;
+}
+
+/* Direction toggle — segmented control */
+.direction-toggle {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.direction-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.18s;
+}
+.direction-btn:hover { color: #475569; }
+.direction-btn.active {
+  background: #fff;
+  color: #7c3aed;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+
 .picker-item {
   display: flex;
   flex-direction: column;

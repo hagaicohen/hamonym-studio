@@ -32,10 +32,10 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'image':       'תמונה',
   'video':       'וידאו',
   'gallery':     'גלריה',
-  'split':       'תוכן מפוצל',
+  'split':       'עמודות',
   'cta':         'קריאה לפעולה',
-  'divider':     'מרווח',
-  'container':       'קונטיינר',
+  'divider':     'מרווח / קו',
+  'container':       'מסגרת',
   'stats':           'פס נתונים',
   'donation-widget': 'תיבת תרומה',
   'rewards':         'תשורות',
@@ -53,7 +53,7 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'split':       '⬛⬜',
   'cta':         '🟢',
   'divider':     '↕',
-  'container':       '📦',
+  'container':       '▣',
   'stats':           '📊',
   'donation-widget': '💳',
   'rewards':         '🎁',
@@ -65,8 +65,18 @@ const BLOCK_ICONS: Record<BlockType, string> = {
 
 const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates'];
 
+// Block groups for the picker UI
+export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
+  { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
+  { label: 'פריסה',   types: ['container'] },
+  { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards'] },
+  { label: 'נתונים',  types: ['stats', 'donors'] },
+  { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
+  { label: 'עיצוב',   types: ['divider'] },
+];
+
 const ADDABLE_BLOCKS: BlockType[] = [
-  'rich-text', 'image', 'video', 'gallery', 'split', 'container',
+  'rich-text', 'image', 'video', 'gallery', 'container',
   'stats', 'donation-widget', 'cta', 'divider',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
 ];
@@ -89,6 +99,7 @@ export class CampaignPageBuilderStepComponent {
   editingBlockId: string | null = null;
 
   readonly addableBlocks = ADDABLE_BLOCKS;
+  readonly blockGroups = BLOCK_GROUPS;
   readonly blockLabels = BLOCK_LABELS;
   readonly blockIcons = BLOCK_ICONS;
 

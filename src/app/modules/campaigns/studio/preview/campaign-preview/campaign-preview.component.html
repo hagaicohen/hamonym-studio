@@ -344,9 +344,14 @@
     [style.padding.px]="asContainer(block.data).padding"
     [style.gap.px]="asContainer(block.data).gap"
     [style.backgroundImage]="asContainer(block.data).backgroundImageUrl ? 'url(' + asContainer(block.data).backgroundImageUrl + ')' : ''">
-    <div class="container-child" *ngFor="let child of childBlocks(block, draft)">
-      <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft}"></ng-container>
-    </div>
+    <ng-container *ngFor="let child of childBlocks(block, draft); let i = index">
+      <div class="container-child"
+        [style.flex]="asContainer(block.data).direction === 'row' && childBlocks(block, draft).length === 2
+          ? (i === 0 ? (asContainer(block.data).splitPercent ?? 50) + ' 0 0%' : (100 - (asContainer(block.data).splitPercent ?? 50)) + ' 0 0%')
+          : '1'">
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft}"></ng-container>
+      </div>
+    </ng-container>
   </div>
 
   <!-- CTA -->

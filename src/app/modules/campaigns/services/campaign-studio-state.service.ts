@@ -111,12 +111,13 @@ export interface SplitBlockData {
 
 export interface ContainerBlockData {
   childBlockIds:       string[];
-  backgroundColor:     string;   // '' = transparent
-  borderColor:         string;   // '' = no border
-  backgroundImageUrl:  string;   // '' = none
-  padding:             number;   // px
-  gap:                 number;   // px between children
-  direction?:          'row' | 'column';  // default 'column'
+  backgroundColor:     string;
+  borderColor:         string;
+  backgroundImageUrl:  string;
+  padding:             number;
+  gap:                 number;
+  direction?:          'row' | 'column';
+  splitPercent?:       number; // 20–80, only used when direction='row'
 }
 
 export interface CtaBlockData {
@@ -344,7 +345,7 @@ function createInitialDraft(): CampaignDraft {
           visible: true,
           spacingTop: 0,
           spacingBottom: 0,
-          label: '',
+          label: 'מסגרת ראשית',
           data: {
             childBlockIds: [statsId, donationId],
             backgroundColor: '',
@@ -360,7 +361,7 @@ function createInitialDraft(): CampaignDraft {
           type: 'stats' as BlockType,
           order: 1,
           visible: true,
-          label: '',
+          label: 'פס נתונים',
           spacingTop: 0,
           spacingBottom: 0,
           data: defaultBlockData('stats'),
@@ -370,7 +371,7 @@ function createInitialDraft(): CampaignDraft {
           type: 'donation-widget' as BlockType,
           order: 2,
           visible: true,
-          label: '',
+          label: 'תיבת תרומה',
           spacingTop: 0,
           spacingBottom: 0,
           data: defaultBlockData('donation-widget'),
@@ -392,25 +393,25 @@ function createInitialDraft(): CampaignDraft {
           visible: true,
           spacingTop: 0,
           spacingBottom: 0,
-          label: '',
+          label: 'תשורות',
           data: {},
         },
         {
           id: generateId(),
           type: 'ambassadors' as BlockType,
-          order: 4, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          order: 4, visible: true, spacingTop: 0, spacingBottom: 0, label: 'שגרירים',
           data: defaultBlockData('ambassadors'),
         },
         {
           id: generateId(),
           type: 'donors' as BlockType,
-          order: 5, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          order: 5, visible: true, spacingTop: 0, spacingBottom: 0, label: 'תורמים',
           data: defaultBlockData('donors'),
         },
         {
           id: generateId(),
           type: 'updates' as BlockType,
-          order: 6, visible: true, spacingTop: 0, spacingBottom: 0, label: '',
+          order: 6, visible: true, spacingTop: 0, spacingBottom: 0, label: 'עדכונים',
           data: defaultBlockData('updates'),
         },
       ];
@@ -486,12 +487,31 @@ export class CampaignStudioStateService {
   addBlock(type: BlockType): void {
     const blocks = [...this.draft.blocks];
     const maxOrder = blocks.reduce((max, b) => Math.max(max, b.order), 0);
+    const sameType = blocks.filter(b => b.type === type).length;
+    const defaultLabels: Partial<Record<BlockType, string>> = {
+      'rich-text':       'טקסט',
+      'image':           'תמונה',
+      'video':           'וידאו',
+      'gallery':         'גלריה',
+      'cta':             'קריאה לפעולה',
+      'divider':         'מרווח',
+      'container':       'מסגרת',
+      'stats':           'פס נתונים',
+      'donation-widget': 'תיבת תרומה',
+      'rewards':         'תשורות',
+      'sponsors':        'חסויות',
+      'ambassadors':     'שגרירים',
+      'donors':          'תורמים',
+      'updates':         'עדכונים',
+    };
+    const baseName = defaultLabels[type] ?? type;
+    const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
     blocks.push({
       id: generateId(),
       type,
       order: maxOrder + 1,
       visible: true,
-      label: '',
+      label,
       spacingTop: 0,
       spacingBottom: 0,
       data: defaultBlockData(type),
