@@ -7,6 +7,59 @@
   direction: rtl;
 }
 
+/* ─── LAYOUT PICKER ─── */
+.rs-layout-picker { display: flex; flex-direction: column; gap: 10px; }
+.rs-layout-label  { font-size: 13px; font-weight: 700; color: #374151; }
+.rs-layout-btns   { display: flex; gap: 12px; }
+
+.rs-layout-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  border: 2px solid #e2e8f0; border-radius: 12px;
+  background: #fff; color: #64748b;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s; min-width: 130px;
+}
+.rs-layout-btn:hover { border-color: #c4b5fd; color: #7c3aed; }
+.rs-layout-btn--active { border-color: #7c3aed; background: #faf5ff; color: #7c3aed; }
+
+/* Layout icon micro-mockups */
+.rs-layout-icon {
+  display: flex; flex-direction: column; gap: 3px;
+  width: 72px; padding: 6px; border-radius: 6px;
+  background: #f1f5f9; border: 1px solid #e2e8f0;
+}
+.rs-layout-btn--active .rs-layout-icon { background: #ede9fe; border-color: #c4b5fd; }
+
+.rs-layout-icon--standard .rli-row { display: flex; gap: 4px; align-items: center; }
+.rs-layout-icon--standard .rli-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #94a3b8; flex-shrink: 0;
+}
+.rs-layout-btn--active .rs-layout-icon--standard .rli-thumb { background: #7c3aed; }
+.rs-layout-icon--standard .rli-lines { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.rs-layout-icon--standard .rli-lines span {
+  height: 3px; border-radius: 2px; background: #cbd5e1;
+}
+.rs-layout-icon--standard .rli-lines span:first-child { width: 80%; }
+.rs-layout-icon--standard .rli-lines span:last-child  { width: 55%; }
+.rs-layout-btn--active .rs-layout-icon--standard .rli-lines span { background: #a78bfa; }
+
+.rs-layout-icon--image { gap: 4px; }
+.rli-price {
+  height: 5px; border-radius: 3px; background: #94a3b8; width: 45%; align-self: center;
+}
+.rli-img-block {
+  height: 26px; border-radius: 4px; background: #cbd5e1;
+}
+.rs-layout-btn--active .rli-price,
+.rs-layout-btn--active .rli-img-block { background: #a78bfa; }
+.rli-text-lines { display: flex; flex-direction: column; gap: 3px; }
+.rli-text-lines span { height: 3px; border-radius: 2px; background: #cbd5e1; }
+.rli-text-lines span:first-child { width: 90%; }
+.rli-text-lines span:last-child  { width: 65%; }
+.rs-layout-btn--active .rli-text-lines span { background: #a78bfa; }
+
 /* ─── HEADER ─── */
 .rs-title-row { display: flex; align-items: center; gap: 8px; }
 .rs-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
@@ -267,6 +320,39 @@
   box-sizing: border-box;
 }
 
+/* Image layout preview card */
+.rp-card--img {
+  padding: 0;
+  overflow: visible;
+}
+.rp-price-top {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  direction: rtl;
+  border-radius: 20px 20px 0 0;
+}
+.rp-img-hero {
+  width: 100%;
+  min-height: 140px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rp-img-hero img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.rp-img-hero-placeholder { font-size: 40px; opacity: 0.4; }
+.rp-body--img { border-radius: 0 0 20px 20px; padding-top: 10px; padding-bottom: 14px; }
+.rp-title--center { text-align: center; }
+.rp-desc--justify { text-align: justify; }
+
 /* ─── REWARDS LIST ─── */
 .rs-list-section {
   display: flex; flex-direction: column; gap: 16px;
@@ -300,10 +386,10 @@
   border-radius: 16px; overflow: hidden;
 }
 .rs-card-img {
-  width: 110px; flex-shrink: 0;
+  width: 110px; min-height: 100px; flex-shrink: 0; align-self: stretch;
   position: relative; overflow: hidden; background: #f1f5f9;
 }
-.rs-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rs-card-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .rs-card-img--empty {
   display: flex; align-items: center; justify-content: center;
   font-size: 28px; opacity: 0.25;

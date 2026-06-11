@@ -158,11 +158,16 @@ export class AmbassadorService {
 
   selfRegister(
     campaignSlug: string,
-    data: { fullName: string; phone: string; email: string }
+    data: { fullName: string; phone: string; email: string; goalAmount?: number | null }
   ): Observable<{ slug: string; shareUrl: string }> {
     return this.http.post<{ slug: string; shareUrl: string }>(
       `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/self-register`,
-      { full_name: data.fullName, phone: data.phone || null, email: data.email || null }
+      {
+        full_name:   data.fullName,
+        phone:       data.phone || null,
+        email:       data.email || null,
+        goal_amount: data.goalAmount ?? null,
+      }
     );
   }
 

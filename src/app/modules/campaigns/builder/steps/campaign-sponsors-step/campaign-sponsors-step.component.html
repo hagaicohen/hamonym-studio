@@ -2,11 +2,20 @@
 
   <!-- HEADER -->
   <div class="ss-header">
-    <div class="ss-title-row">
-      <div class="ss-header-icon">
-        <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-icon"></lucide-angular>
+    <div class="ss-header-top">
+      <div class="ss-title-row">
+        <div class="ss-header-icon">
+          <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-icon"></lucide-angular>
+        </div>
+        <h2 class="ss-title">חסויות</h2>
       </div>
-      <h2 class="ss-title">חסויות</h2>
+      <div class="ss-visibility-toggle" *ngIf="sponsorsBlock">
+        <span class="ss-toggle-label">{{ sponsorsVisible ? 'מוצג בדף' : 'מוסתר' }}</span>
+        <button class="ss-toggle-btn" [class.ss-toggle-btn--on]="sponsorsVisible"
+                (click)="toggleSponsorsVisible()">
+          <span class="ss-toggle-thumb"></span>
+        </button>
+      </div>
     </div>
     <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
   </div>

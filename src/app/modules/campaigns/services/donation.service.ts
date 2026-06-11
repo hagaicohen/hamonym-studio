@@ -15,8 +15,9 @@ export interface DonationPayload {
     name:      string;
     email:     string;
     phone:     string;
-    idNumber?: string;
-    address?:  string;
+    idNumber?:   string;
+    address?:    string;
+    postalCode?: string;
   };
   amount:  number;
   rewards: Array<{ title: string; minimumAmount: number }>;

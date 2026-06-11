@@ -3,7 +3,21 @@
   padding: 28px 28px 40px; max-width: 1100px; margin: 0 auto;
   font-family: 'Heebo', sans-serif; direction: rtl;
 }
+.upd-header-top { display: flex; align-items: center; justify-content: space-between; }
 .upd-title-row { display: flex; align-items: center; gap: 8px; }
+.upd-visibility-toggle { display: flex; align-items: center; gap: 8px; }
+.upd-toggle-label { font-size: 12px; color: #64748b; font-weight: 500; white-space: nowrap; }
+.upd-toggle-btn {
+  width: 40px; height: 22px; border-radius: 11px; border: none; cursor: pointer;
+  background: #cbd5e1; position: relative; transition: background 0.2s; padding: 0; flex-shrink: 0;
+}
+.upd-toggle-btn--on { background: #16a34a; }
+.upd-toggle-thumb {
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s; display: block;
+}
+.upd-toggle-btn--on .upd-toggle-thumb { transform: translateX(-18px); }
 .upd-title  { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .upd-subtitle{ font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .upd-header-icon {

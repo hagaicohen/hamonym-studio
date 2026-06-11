@@ -22,6 +22,31 @@
 
   <ng-container *ngIf="draft.rewardsEnabled">
 
+    <!-- ── LAYOUT PICKER ── -->
+    <div class="rs-layout-picker">
+      <div class="rs-layout-label">מבנה כרטיסיה</div>
+      <div class="rs-layout-btns">
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="draft.layout.rewardsLayout !== 'image'"
+          (click)="setRewardsLayout('standard')">
+          <span class="rs-layout-icon rs-layout-icon--standard">
+            <span class="rli-row"><span class="rli-thumb"></span><span class="rli-lines"><span></span><span></span></span></span>
+          </span>
+          כרטיסיה רגילה
+        </button>
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="draft.layout.rewardsLayout === 'image'"
+          (click)="setRewardsLayout('image')">
+          <span class="rs-layout-icon rs-layout-icon--image">
+            <span class="rli-price"></span>
+            <span class="rli-img-block"></span>
+            <span class="rli-text-lines"><span></span><span></span></span>
+          </span>
+          כרטיסיה עם תמונה
+        </button>
+      </div>
+    </div>
+
     <!-- ── BUILDER: Form + Preview ── -->
     <div class="rs-builder">
 
@@ -149,30 +174,54 @@
           <span>תצוגה מקדימה</span>
         </div>
 
-        <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-          <!-- Featured badge -->
-          <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
-          <!-- Card top: icon + price -->
-          <div class="rp-card-top">
-            <div class="rp-icon-wrap">
-              <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" class="rp-img" alt="">
-              <span *ngIf="!reward.imageUrl" class="rp-img-icon">🎁</span>
+        <!-- Standard layout preview -->
+        <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
+          <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
+            <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+            <div class="rp-card-top">
+              <div class="rp-icon-wrap">
+                <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" class="rp-img" alt="">
+                <span *ngIf="!reward.imageUrl" class="rp-img-icon">🎁</span>
+              </div>
+              <div class="rp-price" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
+                ₪{{ reward.minimumAmount ? reward.minimumAmount.toLocaleString('he-IL') : '0' }}
+              </div>
             </div>
-            <div class="rp-price" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
+            <div class="rp-body">
+              <div class="rp-title">{{ reward.title || 'כותרת התשורה' }}</div>
+              <p class="rp-desc">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <button class="rp-cta" type="button"
+                [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
+                [style.color]="'rgba(255,255,255,0.9)'">
+                בחירה בתשורה
+              </button>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Image layout preview -->
+        <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
+          <div class="rp-card rp-card--img" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
+            <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+            <div class="rp-price-top" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
               ₪{{ reward.minimumAmount ? reward.minimumAmount.toLocaleString('he-IL') : '0' }}
             </div>
+            <div class="rp-img-hero">
+              <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" alt="">
+              <span *ngIf="!reward.imageUrl" class="rp-img-hero-placeholder">🖼</span>
+            </div>
+            <div class="rp-body rp-body--img">
+              <div class="rp-title rp-title--center">{{ reward.title || 'כותרת התשורה' }}</div>
+              <p class="rp-desc rp-desc--justify">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <button class="rp-cta" type="button"
+                [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
+                [style.color]="'rgba(255,255,255,0.9)'">
+                בחירה בתשורה
+              </button>
+            </div>
           </div>
-          <!-- Body -->
-          <div class="rp-body">
-            <div class="rp-title">{{ reward.title || 'כותרת התשורה' }}</div>
-            <p class="rp-desc">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
-            <button class="rp-cta" type="button"
-              [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
-              [style.color]="draft.layout.theme.rewardCardBorder ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)'">
-              בחירה בתשורה
-            </button>
-          </div>
-        </div>
+        </ng-container>
+
       </div>
 
     </div>

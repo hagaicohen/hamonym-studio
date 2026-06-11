@@ -34,4 +34,12 @@ export class AppLoaderService {
       this.isVisible.set(false);
     }
   }
+
+  forceHide(): void {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = undefined;
+    }
+    this.isVisible.set(false);
+  }
 }

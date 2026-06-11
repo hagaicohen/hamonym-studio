@@ -13,8 +13,12 @@
       type="button"
       class="primary-button"
       (click)="next.emit()"
-      [disabled]="!canContinue">
-      המשך
+      [disabled]="!canContinue || isSaving">
+      @if (isSaving) {
+        <span class="btn-spinner"></span>
+      } @else {
+        המשך
+      }
     </button>
   }
 </div>

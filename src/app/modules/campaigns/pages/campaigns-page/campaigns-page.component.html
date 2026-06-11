@@ -15,16 +15,8 @@
     אם אתה רוצה לפתוח קמפיין נוסף (למשל גיוס קבוע + קמפיין חד-פעמי), תצטרך להגדיר מסוף נוסף בספק הסליקה שלך.
   </div>
 
-  <!-- TOOLBAR -->
-  <div class="campaigns-toolbar">
-    <div class="view-switch">
-      <button class="view-icon" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">⊞</button>
-      <button class="view-icon" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">☰</button>
-    </div>
-  </div>
-
-  <!-- STATES -->
   @if (isLoading) {
+    <div class="page-loading"><div class="page-spinner"></div></div>
   } @else if (campaigns.length === 0) {
     <div class="campaigns-empty">
       <div class="empty-icon">📋</div>
@@ -33,113 +25,231 @@
     </div>
   } @else {
 
-    <!-- GRID -->
-    @if (viewMode === 'grid') {
-      <div class="campaigns-grid">
-        @for (c of campaigns; track c.id) {
-          <div class="campaign-card">
-
-            <!-- Cover -->
-            <div class="card-cover"
-              [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'"
-              [class.card-cover--deleting]="deletingId === c.id">
-              <span class="card-status-badge" [class]="'badge-' + c.status">
-                {{ statusLabel(c.status) }}
-              </span>
-              <button class="card-delete-btn"
-                      (click)="deleteCampaign($event, c.id, c.title)"
-                      title="מחק קמפיין">
-                <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div class="card-body">
-              <h3 class="card-title">{{ c.title || 'ללא כותרת' }}</h3>
-
-              <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
-
-              <!-- Progress -->
-              <div class="card-progress">
-                <div class="card-progress-row">
-                  <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
-                  <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
-                </div>
-                <div class="progress-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</div>
+    <!-- ══ DRAFTS ══ -->
+    @if (drafts.length > 0) {
+      <section class="section-block">
+        <div class="section-title-row">
+          <h2 class="section-title">טיוטות <span class="count-badge">{{ drafts.length }}</span></h2>
+          <span class="section-hint">טיוטות אינן גלויות לציבור</span>
+        </div>
+        <div class="drafts-grid">
+          @for (c of drafts; track c.id) {
+            <div class="draft-card" [class.draft-card--deleting]="deletingId === c.id">
+              <div class="draft-cover">
+                @if (c.coverImageUrl) {
+                  <img [src]="c.coverImageUrl" [alt]="c.title" class="draft-cover-img" />
+                } @else {
+                  <div class="draft-cover-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28" opacity="0.35">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                    </svg>
+                  </div>
+                }
               </div>
-
-              <!-- Meta -->
-              <div class="card-meta">
-                <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
-                <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
+              <div class="draft-body">
+                <h3 class="draft-title">{{ c.title || 'ללא כותרת' }}</h3>
+                @if (c.createdAt) {
+                  <span class="draft-date">נוצרה {{ fmtDate(c.createdAt) }}</span>
+                }
               </div>
-
-              <!-- Actions -->
-              <div class="card-actions">
-                <button class="btn-action">📊 דוחות</button>
-                <button class="btn-action btn-view" *ngIf="c.slug" (click)="viewCampaign(c.slug)">צפה</button>
-                <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+              <div class="draft-actions">
+                <button class="btn-continue" (click)="editCampaign(c.id)">המשך עריכה</button>
+                <button class="btn-delete-draft"
+                        [disabled]="deletingId === c.id"
+                        (click)="openDeleteModal($event, c.id, c.title)"
+                        title="מחק טיוטה">
+                  <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
+                </button>
               </div>
             </div>
-
-          </div>
-        }
-      </div>
+          }
+        </div>
+      </section>
     }
 
-    <!-- LIST -->
-    @if (viewMode === 'list') {
-      <div class="campaigns-list">
-        @for (c of campaigns; track c.id) {
-          <div class="list-item" [class.card-cover--deleting]="deletingId === c.id">
+    <!-- ══ CAMPAIGNS ══ -->
+    @if (activeCampaigns.length > 0) {
+      <section class="section-block">
+        <div class="section-title-row">
+          <h2 class="section-title">קמפיינים</h2>
+          <div class="view-switch">
+            <button class="view-icon" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">⊞</button>
+            <button class="view-icon" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">☰</button>
+          </div>
+        </div>
 
-            <!-- Thumbnail -->
-            <div class="list-cover"
-              [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'">
-              <button class="card-delete-btn"
-                      (click)="deleteCampaign($event, c.id, c.title)"
-                      title="מחק קמפיין">
-                <lucide-angular [img]="TrashIcon" [size]="13"></lucide-angular>
-              </button>
-            </div>
+        <!-- GRID -->
+        @if (viewMode === 'grid') {
+          <div class="campaigns-grid">
+            @for (c of activeCampaigns; track c.id) {
+              <div class="campaign-card" [class.card--hidden]="c.isHidden">
 
-            <!-- Body -->
-            <div class="list-body">
-              <div class="list-top">
-                <h3 class="list-title">{{ c.title || 'ללא כותרת' }}</h3>
-                <span class="card-status-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
-              </div>
-              <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
-              <div class="list-progress">
-                <div class="card-progress-row">
-                  <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
-                  <span class="progress-target">/ ₪{{ c.targetAmount | number }}</span>
-                  <span class="list-pct">{{ progressPercent(c) | number:'1.0-0' }}%</span>
+                <div class="card-cover"
+                  [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'"
+                  [class.card-cover--deleting]="deletingId === c.id">
+                  <span class="card-status-badge" [class]="'badge-' + c.status">
+                    {{ statusLabel(c.status) }}
+                  </span>
+                  @if (c.isHidden) {
+                    <span class="badge-hidden">מוסתר</span>
+                  }
                 </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+
+                <div class="card-body">
+                  <h3 class="card-title">{{ c.title || 'ללא כותרת' }}</h3>
+                  <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
+
+                  <div class="card-progress">
+                    <div class="card-progress-row">
+                      <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
+                      <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
+                    </div>
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                    </div>
+                    <div class="progress-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</div>
+                  </div>
+
+                  <div class="card-meta">
+                    <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
+                    <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
+                  </div>
+
+                  <div class="card-actions">
+                    <button class="btn-action">📊 דוחות</button>
+                    @if (c.slug) {
+                      <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
+                    }
+                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                    @if (c.isHidden) {
+                      <button class="btn-icon-action btn-unhide"
+                              [disabled]="hidingId === c.id"
+                              (click)="unhide($event, c)"
+                              title="הצג מחדש">
+                        <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
+                      </button>
+                    } @else {
+                      <button class="btn-icon-action btn-delete-campaign"
+                              [disabled]="hidingId === c.id"
+                              (click)="openHideModal($event, c)"
+                              title="הסר קמפיין">
+                        <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
+                      </button>
+                    }
+                  </div>
                 </div>
-              </div>
-              <div class="card-meta">
-                <span class="meta-item">📅 {{ daysRemaining(c.endDate) }}י׳</span>
-                <span class="meta-item">↗ {{ c.supportersCount ?? 0 }}</span>
-              </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="list-actions">
-              <button class="btn-action btn-view" *ngIf="c.slug" (click)="viewCampaign(c.slug)">צפה</button>
-              <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
-            </div>
-
+              </div>
+            }
           </div>
         }
-      </div>
+
+        <!-- LIST -->
+        @if (viewMode === 'list') {
+          <div class="campaigns-list">
+            @for (c of activeCampaigns; track c.id) {
+              <div class="list-item" [class.card--hidden]="c.isHidden">
+
+                <div class="list-cover"
+                  [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'">
+                </div>
+
+                <div class="list-body">
+                  <div class="list-top">
+                    <h3 class="list-title">{{ c.title || 'ללא כותרת' }}</h3>
+                    <span class="card-status-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
+                    @if (c.isHidden) {
+                      <span class="badge-hidden">מוסתר</span>
+                    }
+                  </div>
+                  <span class="card-funding-type">{{ fundingLabel(c.fundingType) }}</span>
+                  <div class="list-progress">
+                    <div class="card-progress-row">
+                      <span class="progress-raised">₪{{ (c.currentAmount ?? 0) | number }}</span>
+                      <span class="progress-target">/ ₪{{ c.targetAmount | number }}</span>
+                      <span class="list-pct">{{ progressPercent(c) | number:'1.0-0' }}%</span>
+                    </div>
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                    </div>
+                  </div>
+                  <div class="card-meta">
+                    <span class="meta-item">📅 {{ daysRemaining(c.endDate) }}י׳</span>
+                    <span class="meta-item">↗ {{ c.supportersCount ?? 0 }}</span>
+                  </div>
+                </div>
+
+                <div class="list-actions">
+                  <button class="btn-action">📊 דוחות</button>
+                  @if (c.slug) {
+                    <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
+                  }
+                  <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                  @if (c.isHidden) {
+                    <button class="btn-icon-action btn-unhide"
+                            [disabled]="hidingId === c.id"
+                            (click)="unhide($event, c)"
+                            title="הצג מחדש">
+                      <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
+                    </button>
+                  } @else {
+                    <button class="btn-icon-action btn-delete-campaign"
+                            [disabled]="hidingId === c.id"
+                            (click)="openHideModal($event, c)"
+                            title="הסר קמפיין">
+                      <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
+                    </button>
+                  }
+                </div>
+
+              </div>
+            }
+          </div>
+        }
+      </section>
     }
 
   }
 
 </div>
+
+<!-- ══ CONFIRM MODAL ══ -->
+@if (confirmModal) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-icon-wrap" [class.modal-icon-wrap--orange]="confirmModal.type === 'hide-campaign'">
+        <lucide-angular [img]="TrashIcon" [size]="24"></lucide-angular>
+      </div>
+
+      @if (confirmModal.type === 'delete-draft') {
+        <h2 class="modal-title">מחיקת טיוטה</h2>
+        <p class="modal-desc">
+          האם אתה בטוח שברצונך למחוק את<br>
+          <strong>״{{ confirmModal.title }}״</strong>?
+        </p>
+        <p class="modal-warn">פעולה זו אינה ניתנת לביטול.</p>
+        <div class="modal-actions">
+          <button class="modal-btn-cancel" (click)="closeModal()">ביטול</button>
+          <button class="modal-btn-delete" (click)="confirmAction()">
+            <lucide-angular [img]="TrashIcon" [size]="14"></lucide-angular>
+            מחק טיוטה
+          </button>
+        </div>
+      } @else {
+        <h2 class="modal-title">הסרת קמפיין</h2>
+        <p class="modal-desc">
+          הקמפיין <strong>״{{ confirmModal.title }}״</strong><br>
+          יוסתר מהציבור באופן מיידי.
+        </p>
+        <p class="modal-warn modal-warn--orange">מחיקה סופית תתבצע על ידי צוות המונים בהמשך.</p>
+        <div class="modal-actions">
+          <button class="modal-btn-cancel" (click)="closeModal()">ביטול</button>
+          <button class="modal-btn-hide" (click)="confirmAction()">
+            <lucide-angular [img]="EyeOffIcon" [size]="14"></lucide-angular>
+            הסתר קמפיין
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

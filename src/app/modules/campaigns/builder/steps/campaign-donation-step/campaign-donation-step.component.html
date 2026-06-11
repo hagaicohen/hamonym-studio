@@ -1,0 +1,148 @@
+<div class="step-container">
+
+  <div class="step-header">
+    <div class="step-icon-wrap">💳</div>
+    <div>
+      <h2 class="step-title">הגדרות תרומה</h2>
+      <p class="step-subtitle">סכומים מוצעים ופרטי התורם</p>
+    </div>
+  </div>
+
+  <!-- ── SUGGESTED AMOUNTS ── -->
+  <div class="section-card">
+    <div class="section-title">סכומי תרומה מוצעים</div>
+
+    <label class="field-toggle" [class.field-toggle--on]="draft.enableSuggestedAmounts">
+      <div class="field-toggle-info">
+        <span class="field-toggle-name">הצג סכומים מוצעים</span>
+        <span class="field-toggle-desc">כפתורי בחירה מהירה לתורם</span>
+      </div>
+      <div class="toggle-switch" (click)="patchDraft({ enableSuggestedAmounts: !draft.enableSuggestedAmounts })">
+        <div class="toggle-thumb"></div>
+      </div>
+    </label>
+
+    <div *ngIf="draft.enableSuggestedAmounts">
+      <div class="amounts-grid">
+        <div class="amount-chip" *ngFor="let a of draft.suggestedAmounts; let i = index">
+          <span class="amount-currency">₪</span>
+          <input type="number" class="amount-input" [value]="a" min="1"
+            (change)="updateAmount(i, +$any($event.target).value)">
+          <button class="amount-remove" *ngIf="draft.suggestedAmounts.length > 1"
+            (click)="removeAmount(i)">✕</button>
+        </div>
+        <button class="amount-add-btn" *ngIf="draft.suggestedAmounts.length < 6"
+          (click)="addAmount()">+ הוסף</button>
+      </div>
+    </div>
+
+    <label class="field-toggle" [class.field-toggle--on]="draft.allowCustomAmount">
+      <div class="field-toggle-info">
+        <span class="field-toggle-name">אפשר סכום חופשי</span>
+        <span class="field-toggle-desc">התורם יכול להקליד כל סכום</span>
+      </div>
+      <div class="toggle-switch" (click)="patchDraft({ allowCustomAmount: !draft.allowCustomAmount })">
+        <div class="toggle-thumb"></div>
+      </div>
+    </label>
+  </div>
+
+  <!-- ── MONTHLY DONATION ── -->
+  <div class="section-card">
+    <div class="section-title">תרומה חודשית</div>
+
+    <label class="field-toggle" [class.field-toggle--on]="draft.allowMonthlyDonation">
+      <div class="field-toggle-info">
+        <span class="field-toggle-name">אפשר תרומה חודשית</span>
+        <span class="field-toggle-desc">התורם יכול להתחייב לסכום חודשי קבוע</span>
+      </div>
+      <div class="toggle-switch" (click)="patchDraft({ allowMonthlyDonation: !draft.allowMonthlyDonation })">
+        <div class="toggle-thumb"></div>
+      </div>
+    </label>
+
+    <div *ngIf="draft.allowMonthlyDonation">
+      <p class="amounts-sub-label">סכומים חודשיים מוצעים</p>
+      <div class="amounts-grid">
+        <div class="amount-chip" *ngFor="let a of draft.monthlyAmounts; let i = index">
+          <span class="amount-currency">₪</span>
+          <input type="number" class="amount-input" [value]="a" min="1"
+            (change)="updateMonthlyAmount(i, +$any($event.target).value)">
+          <button class="amount-remove" *ngIf="draft.monthlyAmounts.length > 1"
+            (click)="removeMonthlyAmount(i)">✕</button>
+        </div>
+        <button class="amount-add-btn" *ngIf="draft.monthlyAmounts.length < 6"
+          (click)="addMonthlyAmount()">+ הוסף</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DONOR FIELDS ── -->
+  <div class="section-card">
+    <div class="section-title">שדות חובה</div>
+    <p class="section-desc">השדות הבאים תמיד יופיעו בטופס התורם ואינם ניתנים לשינוי:</p>
+    <div class="fields-list">
+      <div class="field-row field-row--required">
+        <span class="field-check">✓</span>
+        <span class="field-name">שם מלא</span>
+        <span class="field-badge">חובה</span>
+      </div>
+      <div class="field-row field-row--required">
+        <span class="field-check">✓</span>
+        <span class="field-name">כתובת אימייל</span>
+        <span class="field-badge">חובה</span>
+      </div>
+      <div class="field-row field-row--required">
+        <span class="field-check">✓</span>
+        <span class="field-name">מספר טלפון</span>
+        <span class="field-badge">חובה</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OPTIONAL FIELDS ── -->
+  <div class="section-card">
+    <div class="section-title">שדות אופציונליים</div>
+    <p class="section-desc">בחרו אילו שדות נוספים יוצגו לתורם:</p>
+    <div class="fields-list">
+
+      <label class="field-toggle" [class.field-toggle--on]="donorFields.showAddress">
+        <div class="field-toggle-info">
+          <span class="field-toggle-name">כתובת מגורים</span>
+          <span class="field-toggle-desc">רחוב, מספר בית, עיר</span>
+        </div>
+        <div class="toggle-switch" (click)="toggle('showAddress')">
+          <div class="toggle-thumb"></div>
+        </div>
+      </label>
+
+      <label class="field-toggle" [class.field-toggle--on]="donorFields.showPostalCode">
+        <div class="field-toggle-info">
+          <span class="field-toggle-name">מיקוד</span>
+          <span class="field-toggle-desc">קוד מיקוד של התורם</span>
+        </div>
+        <div class="toggle-switch" (click)="toggle('showPostalCode')">
+          <div class="toggle-thumb"></div>
+        </div>
+      </label>
+
+      <label class="field-toggle" [class.field-toggle--on]="donorFields.showIdNumber">
+        <div class="field-toggle-info">
+          <span class="field-toggle-name">תעודת זהות</span>
+          <span class="field-toggle-desc">נדרש לקבלה לצרכי מס (סעיף 46)</span>
+        </div>
+        <div class="toggle-switch" (click)="toggle('showIdNumber')">
+          <div class="toggle-thumb"></div>
+        </div>
+      </label>
+
+    </div>
+  </div>
+
+  <!-- Info note -->
+  <div class="info-note">
+    <span class="info-icon">💡</span>
+    <span>שדות מופעלים יוצגו בטופס התשלום של כל תורם. מומלץ לאפשר ת.ז אם נדרש זיהוי תורמים — לצורך קבלה, מימון פוליטי, או קבלה לצרכי מס (סעיף 46).</span>
+  </div>
+
+</div>

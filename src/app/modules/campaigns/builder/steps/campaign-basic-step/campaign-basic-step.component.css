@@ -140,6 +140,138 @@
 .advanced-btn-icon    { width: 16px; height: 16px; flex-shrink: 0; display: block; }
 .advanced-btn-chevron { width: 16px; height: 16px; flex-shrink: 0; display: block; margin-right: auto; }
 
+/* ── HERO TOGGLES ── */
+.hero-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+  padding: 13px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.12s;
+}
+
+.toggle-row:last-child { border-bottom: none; }
+.toggle-row:hover { background: #fafafa; }
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-sub {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: #e2e8f0;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-switch.toggle-on { background: #7c3aed; }
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: right 0.2s;
+}
+
+.toggle-switch.toggle-on .toggle-knob { right: calc(100% - 21px); }
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* ── LOGO OPTIONS (inside hero toggles) ── */
+.logo-options {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.logo-option-section { display: flex; flex-direction: column; gap: 6px; }
+
+.logo-option-label {
+  font-size: 11px; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.logo-option-hint { font-size: 11px; color: #94a3b8; }
+
+.logo-source-row {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.logo-source-preview {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; border: 1.5px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; flex-shrink: 0;
+  font-size: 20px;
+}
+.logo-source-preview img { width: 80%; height: 80%; object-fit: contain; }
+
+.logo-upload-btn {
+  flex: 1; padding: 7px 12px;
+  border: 1.5px solid #c4b5fd; border-radius: 8px;
+  background: #fff; color: #7c3aed;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-upload-btn:hover:not(:disabled) { background: #f5f3ff; border-color: #7c3aed; }
+.logo-upload-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.logo-remove-btn {
+  padding: 7px 10px;
+  border: 1.5px solid #fecaca; border-radius: 8px;
+  background: #fff; color: #ef4444;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-remove-btn:hover { background: #fef2f2; }
+
+.logo-position-row { display: flex; gap: 8px; }
+
+.logo-pos-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: #fff; color: #64748b;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-pos-btn:hover { border-color: #c4b5fd; color: #7c3aed; }
+.logo-pos-btn--active { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
+.logo-pos-icon { font-size: 14px; }
+
 /* ── ADVANCED SECTION ── */
 .advanced-section {
   display: flex; flex-direction: column; gap: 24px;

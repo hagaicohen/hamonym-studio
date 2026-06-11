@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Layers } from 'lucide-angular';
@@ -90,7 +91,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
-export class CampaignPageBuilderStepComponent implements OnInit {
+export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   private state         = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
 
@@ -101,9 +102,27 @@ export class CampaignPageBuilderStepComponent implements OnInit {
   showTemplatePicker = false;
   editingBlockId: string | null = null;
 
+  hoveredBlockId: string | null = null;
+  private _destroy$ = new Subject<void>();
+
+  setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'builder'); }
+
   ngOnInit(): void {
-    // Auto-migrate old CSS-hack sidebar campaigns to proper nested containers
     this.state.migrateSidebarToContainers();
+    this.state.setPageBuilderActive(true);
+    this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id, source }) => {
+      this.hoveredBlockId = id;
+      if (id && source === 'preview') {
+        setTimeout(() => document.getElementById(`editor-blk-${id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.state.setPageBuilderActive(false);
+    this._destroy$.next();
+    this._destroy$.complete();
   }
 
   readonly addableBlocks = ADDABLE_BLOCKS;
@@ -327,8 +346,16 @@ export class CampaignPageBuilderStepComponent implements OnInit {
     if (!block) return;
     const data = block.data as ContainerBlockData;
     if (data.childBlockIds.length < 2) return;
-    const [first, second, ...rest] = data.childBlockIds;
-    this.state.updateBlockData(id, { ...data, childBlockIds: [second, first, ...rest] } as ContainerBlockData);
+    const children = data.childBlockIds
+      .map(cid => this.state.draft.blocks.find(b => b.id === cid))
+      .filter((b): b is CampaignBlock => !!b)
+      .sort((a, b) => a.order - b.order);
+    if (children.length < 2) return;
+    const blocks = this.state.draft.blocks.map(b => ({ ...b }));
+    const a = blocks.find(b => b.id === children[0].id)!;
+    const bBlock = blocks.find(b => b.id === children[1].id)!;
+    [a.order, bBlock.order] = [bBlock.order, a.order];
+    this.state.patch({ blocks });
   }
 
   toggleContainerChild(id: string, childId: string, blocks: CampaignBlock[]): void {

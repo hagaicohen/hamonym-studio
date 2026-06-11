@@ -36,6 +36,21 @@ export class CampaignUpdatesStepComponent {
 
   clearForm(): void { this.editingId = null; this.form = this.emptyForm(); }
 
+  get updatesBlock() {
+    return this.state.draft.blocks?.find(b => b.type === 'updates') ?? null;
+  }
+  get updatesVisible(): boolean {
+    return this.updatesBlock?.visible !== false;
+  }
+  toggleUpdatesVisible(): void {
+    const block = this.updatesBlock;
+    if (!block) return;
+    const blocks = this.state.draft.blocks.map(b =>
+      b.id === block.id ? { ...b, visible: !b.visible } : b
+    );
+    this.state.patch({ blocks });
+  }
+
   edit(u: CampaignUpdate): void {
     this.editingId = u.id;
     this.form = { title: u.title, date: u.date, description: u.description, mediaType: u.mediaType, mediaUrl: u.mediaUrl, linkUrl: u.linkUrl, linkLabel: u.linkLabel };

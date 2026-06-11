@@ -19,6 +19,8 @@
 .amb-title   { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .amb-subtitle{ font-size: 13px; color: #64748b; margin: 2px 0 0; }
 
+.amb-header-controls { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
 .amb-stats-row { display: flex; gap: 20px; }
 .amb-stat {
   background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
@@ -26,6 +28,25 @@
 }
 .amb-stat-val { font-size: 18px; font-weight: 800; color: #0f172a; }
 .amb-stat-lbl { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+/* ─── Visibility toggle ─── */
+.amb-visibility-toggle {
+  display: flex; align-items: center; gap: 8px;
+}
+.amb-toggle-label {
+  font-size: 12px; color: #64748b; font-weight: 500; white-space: nowrap;
+}
+.amb-toggle-btn {
+  width: 40px; height: 22px; border-radius: 11px; border: none; cursor: pointer;
+  background: #cbd5e1; position: relative; transition: background 0.2s; padding: 0; flex-shrink: 0;
+}
+.amb-toggle-btn--on { background: #2563eb; }
+.amb-toggle-thumb {
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s; display: block;
+}
+.amb-toggle-btn--on .amb-toggle-thumb { transform: translateX(-18px); }
 
 /* ─── No ID ─── */
 .amb-no-id {

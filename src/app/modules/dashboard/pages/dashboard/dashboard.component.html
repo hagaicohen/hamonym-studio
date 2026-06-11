@@ -1,39 +1,345 @@
-<div class="page-header">
-  <div>
-    <h1 class="page-title">דשבורד עמותה</h1>
+@if (error) {
+  <div class="db-error">{{ error }}</div>
+}
 
-    <p class="page-subtitle">סקירה כללית של התרומות והפעילות</p>
+@if (!error && data) {
+<div class="db">
+
+  <!-- ══ TOP HEADER ══ -->
+  <div class="dash-header-card">
+
+    <!-- ימין: avatar + שם + תפקיד -->
+    <div class="dh-user">
+      <div class="dh-avatar">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="dh-user-info">
+        <span class="dh-name">{{ userName }}</span>
+        <span class="dh-role">{{ currentEntity.roleLabel() }}</span>
+      </div>
+    </div>
+
+    <!-- שמאל: פעמון + לוגו עמותה -->
+    <div class="dh-right-actions">
+      <div class="dh-bell" (click)="scrollToAlerts()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
+        </svg>
+        @if (allAlerts.length > 0) {
+          <span class="dh-badge">{{ allAlerts.length }}</span>
+        }
+      </div>
+
+      <div class="dh-divider"></div>
+
+      <div class="dh-entity">
+        <div class="dh-entity-logo">
+          @if (entityLogoUrl) {
+            <img [src]="entityLogoUrl" [alt]="entityName" />
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+            </svg>
+          }
+        </div>
+        <span class="dh-entity-name">{{ entityName }}</span>
+      </div>
+    </div>
+
   </div>
+
+  <!-- ══ KPI GRID ══ -->
+  <section class="kpi-grid">
+
+    <div class="kpi-card success">
+      <div class="kpi-header kpi-h-centered">
+        <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v1H3V7zm0 3h18v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8zm13 4a1 1 0 100 2 1 1 0 000-2z"/>
+        </svg>
+        <span class="kpi-title">גויס החודש</span>
+      </div>
+      <div class="kpi-value kpi-centered">{{ fmt(data.kpi.fundraisingThisMonth.total) }}</div>
+      <div class="kpi-trend kpi-centered"
+           [class.trend-negative]="!pctIsUp(data.kpi.fundraisingThisMonth.pctChange)">
+        <span class="trend-arrow">{{ pctIsUp(data.kpi.fundraisingThisMonth.pctChange) ? '▲' : '▼' }}</span>
+        <span class="trend-pct">{{ pctAbs(data.kpi.fundraisingThisMonth.pctChange) }}%</span>
+        <span class="trend-label"> לעומת חודש שעבר</span>
+      </div>
+    </div>
+
+    <div class="kpi-card info">
+      <div class="kpi-header kpi-h-centered">
+        <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>
+        </svg>
+        <span class="kpi-title">תרומות החודש</span>
+      </div>
+      <div class="kpi-value kpi-centered">{{ data.kpi.donationsThisMonth.count }}</div>
+      <div class="kpi-trend kpi-centered"
+           [class.trend-negative]="!pctIsUp(data.kpi.donationsThisMonth.pctChange)">
+        <span class="trend-arrow">{{ pctIsUp(data.kpi.donationsThisMonth.pctChange) ? '▲' : '▼' }}</span>
+        <span class="trend-pct">{{ pctAbs(data.kpi.donationsThisMonth.pctChange) }}%</span>
+        <span class="trend-label"> לעומת חודש שעבר</span>
+      </div>
+    </div>
+
+    <div class="kpi-card primary">
+      <div class="kpi-header kpi-h-centered">
+        <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
+        </svg>
+        <span class="kpi-title">קמפיינים פעילים</span>
+      </div>
+      <div class="kpi-value kpi-centered">{{ data.kpi.activeCampaigns.active }}</div>
+      <div class="kpi-trend kpi-centered kpi-sub">מתוך {{ data.kpi.activeCampaigns.total }} קמפיינים</div>
+    </div>
+
+    <div class="kpi-card danger">
+      <div class="kpi-header kpi-h-centered">
+        <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="9.5" y1="11" x2="14.5" y2="16" stroke-linecap="round"/>
+          <line x1="14.5" y1="11" x2="9.5" y2="16" stroke-linecap="round"/>
+        </svg>
+        <span class="kpi-title">תשלומים שנכשלו</span>
+      </div>
+      <div class="kpi-value kpi-centered" [class.text-danger]="data.kpi.failedPayments.count > 0">
+        {{ data.kpi.failedPayments.count }}
+      </div>
+      <div class="kpi-trend kpi-centered kpi-sub">
+        @if (data.kpi.failedPayments.totalLost > 0) {
+          {{ fmt(data.kpi.failedPayments.totalLost) }} לא נגבו
+        } @else {
+          אין תשלומים שנכשלו
+        }
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ ALERTS ══ -->
+  @if (allAlerts.length > 0) {
+  <section class="alerts-section" id="alerts-section">
+    <div class="alerts-card">
+      <div class="section-header">
+        <h2>התראות <span class="alerts-count-badge">{{ allAlerts.length }}</span></h2>
+      </div>
+      <div class="alerts-list">
+        @for (a of pagedAlerts; track $index) {
+          <div class="alert-row"
+               [class.alert-row-critical]="alertSeverity(a) === 'critical'"
+               [class.alert-row-warning]="alertSeverity(a) === 'warning'"
+               [class.alert-row-info]="alertSeverity(a) === 'info'">
+            <div class="alert-main">
+              <div class="alert-icon"
+                   [class.alert-icon-critical]="alertSeverity(a) === 'critical'"
+                   [class.alert-icon-warning]="alertSeverity(a) === 'warning'"
+                   [class.alert-icon-info]="alertSeverity(a) === 'info'">
+                @if (alertSeverity(a) === 'critical') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13" stroke-linecap="round"/>
+                    <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/>
+                  </svg>
+                } @else if (alertSeverity(a) === 'info') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12" stroke-linecap="round"/>
+                    <circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none"/>
+                  </svg>
+                } @else {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                }
+              </div>
+              <div class="alert-text">
+                <span class="alert-title"
+                      [class.color-critical]="alertSeverity(a) === 'critical'"
+                      [class.color-warning]="alertSeverity(a) === 'warning'"
+                      [class.color-info]="alertSeverity(a) === 'info'">{{ alertTitle(a) }}</span>
+                <span class="alert-desc">{{ alertDesc(a) }}</span>
+              </div>
+            </div>
+            @if (alertBtn(a)) {
+              <button class="alert-action-btn"
+                 [class.alert-btn-critical]="alertSeverity(a) === 'critical'"
+                 [class.alert-btn-warning]="alertSeverity(a) === 'warning'"
+                 [class.alert-btn-info]="alertSeverity(a) === 'info'"
+                 (click)="navigateAlert(a)">{{ alertBtn(a) }}</button>
+            }
+          </div>
+        }
+      </div>
+      @if (alertTotalPages > 1) {
+        <div class="alerts-pager-footer">
+          <button class="pager-arrow" (click)="alertPrev()" [disabled]="alertPage === 0" title="הקודם">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="pager-dots">
+            @for (p of alertPageIndices; track p) {
+              <button class="pager-dot" [class.pager-dot-active]="p === alertPage" (click)="alertPage = p"></button>
+            }
+          </div>
+          <button class="pager-arrow" (click)="alertNext()" [disabled]="alertPage >= alertTotalPages - 1" title="הבא">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+  }
+
+  <!-- ══ CAMPAIGNS ══ -->
+  @if (data.campaigns.length > 0) {
+  <section class="campaigns-section">
+    <div class="section-header">
+      <h2>הקמפיינים שלי</h2>
+      <a class="view-all-link" routerLink="/campaigns">לכל הקמפיינים</a>
+    </div>
+    <div class="campaigns-grid">
+      @for (c of data.campaigns; track c.id; let i = $index) {
+        <div class="campaign-card">
+          <div class="card-image-placeholder" [class]="'img-' + ((i % 4) + 1)">
+            @if (c.cover_image_url) {
+              <img [src]="c.cover_image_url" [alt]="c.title" class="cover-img">
+            }
+            <span class="card-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
+          </div>
+          <div class="card-body">
+            <h3>{{ c.title }}</h3>
+            @if (c.status === 'draft') {
+              @if (c.created_at) {
+                <p class="camp-created">נוצר ב- {{ fmtDate(c.created_at) }}</p>
+              }
+              <button class="card-action-btn" (click)="editCampaign(c.id)">המשך עריכה</button>
+            } @else {
+              @if (c.target_amount > 0) {
+                <div class="progress-stats">
+                  <strong>{{ fmt(c.current_amount) }}</strong>
+                  <span>מתוך {{ fmt(c.target_amount) }}</span>
+                </div>
+                <div class="progress-bar-container">
+                  <div class="progress-bar"
+                       [class.bg-success]="progressPct(c) >= 60"
+                       [class.bg-info]="progressPct(c) < 60"
+                       [style.width.%]="progressPct(c)"></div>
+                </div>
+                <div class="progress-percentage">{{ progressPct(c) }}%</div>
+              } @else {
+                <div class="progress-stats"><span>{{ c.supporters_count }} תורמים</span></div>
+                <div class="progress-percentage">&nbsp;</div>
+              }
+              <button class="card-action-btn" (click)="viewCampaign(c.slug)">צפייה בקמפיין</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+  }
+
+  <!-- ══ BOTTOM 3-COL GRID ══ -->
+  <section class="bottom-tables-grid">
+
+    <!-- שגרירים מובילים -->
+    <div class="table-card">
+      <div class="card-header-flex">
+        <h3>שגרירים מובילים</h3>
+        <a class="view-all-link" routerLink="/campaigns">לכל השגרירים</a>
+      </div>
+      <ul class="data-list">
+        @for (amb of displayAmbassadors; track amb.id; let i = $index) {
+          <li>
+            <div class="list-right">
+              <span class="rank">{{ i + 1 }}</span>
+              <div class="amb-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path stroke-linecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+              </div>
+              <span class="ambassador-name">{{ amb.full_name }}</span>
+            </div>
+            <strong class="amb-amount">{{ fmt(amb.raised_total) }}</strong>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <!-- תשלומים שנכשלו -->
+    <div id="failed-payments-section" class="table-card">
+      <div class="card-header-flex">
+        <h3>תשלומים שנכשלו</h3>
+        <a class="view-all-link" routerLink="/campaigns">לכל התשלומים שנכשלו</a>
+      </div>
+      <div class="sub-alert-box">
+        <div class="sub-alert-text">
+          <span class="sub-alert-count">{{ displayFailedPayments.length }} תשלומים נכשלו השבוע</span>
+          <span class="sub-alert-sub">סה"כ {{ fmt(displayFailedTotal) }} שלא נגבו</span>
+        </div>
+        <svg class="sub-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13" stroke-linecap="round"/>
+          <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr><th>סיבה</th><th>סכום</th><th>קמפיין</th><th>תאריך</th></tr>
+        </thead>
+        <tbody>
+          @for (f of displayFailedPayments; track f.id) {
+            <tr>
+              <td class="text-danger">{{ failureReason(f) }}</td>
+              <td class="td-amount">{{ fmt(f.amount) }}</td>
+              <td>{{ f.campaign_title }}</td>
+              <td class="td-muted">{{ fmtDate(f.updated_at) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- תרומות אחרונות -->
+    <div class="table-card">
+      <div class="card-header-flex">
+        <h3>תרומות אחרונות</h3>
+        <a class="view-all-link" routerLink="/campaigns">לכל התרומות</a>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr><th>סכום</th><th>קמפיין</th><th>תורם</th><th>זמן</th></tr>
+        </thead>
+        <tbody>
+          @for (d of displayDonations; track d.id) {
+            <tr>
+              <td class="td-amount">{{ fmt(d.amount) }}</td>
+              <td class="td-campaign">{{ d.campaign_title }}</td>
+              <td>{{ d.donor_name }}</td>
+              <td class="td-muted">{{ timeAgo(d.completed_at) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ══ CHART ══ -->
+  <section class="chart-section">
+    <div class="section-header">
+      <h2>גיוסים ב-30 הימים האחרונים</h2>
+      <a class="view-all-link" routerLink="/campaigns">לכל הדוחות</a>
+    </div>
+    <div class="chart-wrapper">
+      <canvas #chartCanvas height="90"></canvas>
+    </div>
+  </section>
+
 </div>
-
-<div class="stats">
-  <div class="card">
-    <div class="card-top">
-      <div class="label">סה״כ תרומות</div>
-    </div>
-
-    <div class="value">₪ 1,240,000</div>
-
-    <div class="change positive">‎+12%</div>
-  </div>
-
-  <div class="card">
-    <div class="card-top">
-      <div class="label">תורמים</div>
-    </div>
-
-    <div class="value">842</div>
-
-    <div class="change positive">‎+4%</div>
-  </div>
-
-  <div class="card">
-    <div class="card-top">
-      <div class="label">קמפיינים פעילים</div>
-    </div>
-
-    <div class="value">12</div>
-
-    <div class="change negative">‎-2%</div>
-  </div>
-</div>
+}

@@ -46,6 +46,7 @@ export class CampaignBasicStepComponent implements OnInit {
   );
 
   @ViewChild('heroImageInput') heroImageInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('campaignLogoInput') campaignLogoInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('categoryInput') categoryInputRef?: ElementRef<HTMLInputElement>;
 
   entityLogoUrl: string | null = null;
@@ -164,6 +165,22 @@ export class CampaignBasicStepComponent implements OnInit {
   }
 
   isUploadingCover = false;
+  isUploadingLogo  = false;
+
+  onCampaignLogoChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.isUploadingLogo = true;
+    this.uploadService.upload(file, 'campaigns/logos').subscribe({
+      next: url => { this.state.patch({ campaignLogoUrl: url }); this.isUploadingLogo = false; },
+      error: ()  => { this.isUploadingLogo = false; },
+    });
+  }
+
+  removeCampaignLogo(): void {
+    this.state.patch({ campaignLogoUrl: null });
+    if (this.campaignLogoInputRef) this.campaignLogoInputRef.nativeElement.value = '';
+  }
 
   onImageFileChange(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];

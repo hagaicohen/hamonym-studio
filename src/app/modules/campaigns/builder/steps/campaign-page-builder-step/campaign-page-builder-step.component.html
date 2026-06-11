@@ -46,7 +46,11 @@
   <!-- ════ BLOCK TREE TEMPLATE (recursive) ════ -->
   <ng-template #blockItem let-block="block" let-parentBlock="parentBlock">
     <div class="block-item" [class.block-item--hidden]="!block.visible"
-         [class.block-item--nested]="parentBlock">
+         [class.block-item--nested]="parentBlock"
+         [class.block-item--hovered]="hoveredBlockId === block.id"
+         [attr.id]="'editor-blk-' + block.id"
+         (mouseenter)="setHovered(block.id)"
+         (mouseleave)="setHovered(null)">
 
       <!-- Block Header -->
       <div class="block-header" (click)="toggleEdit(block.id)">
@@ -62,6 +66,10 @@
           <button class="action-btn"
             (click)="moveInScope(block.id, parentBlock, draft.blocks, 1)"
             [disabled]="isLastInScopeOf(block, parentBlock, draft.blocks)" title="למטה">↓</button>
+          <button class="action-btn action-btn--swap"
+            *ngIf="block.type === 'container' && asContainer(block.data).direction === 'row' && asContainer(block.data).childBlockIds.length >= 2"
+            (click)="swapContainerChildren(block.id)"
+            title="החלף ימין ↔ שמאל">⇄</button>
           <button class="action-btn" [class.action-btn--muted]="!block.visible"
             (click)="toggleVisibility(block.id)">{{ block.visible ? '👁' : '🙈' }}</button>
           <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)">✕</button>
@@ -540,11 +548,8 @@
             </div>
           </div>
 
-          <!-- Toggles -->
-          
-
           <div class="system-note">
-            <span>💡</span> סכומי התרומה נלקחים מהגדרות בשלב "סוג קמפיין".
+            <span>💡</span> סכומי התרומה נלקחים מהגדרות בשלב "הגדרות תרומה".
           </div>
         </div>
 

@@ -1,7 +1,10 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CampaignDraft, CampaignReward } from '../../../services/campaign-studio-state.service';
+import {
+  CampaignDraft, CampaignReward,
+  DonorFieldsConfig, DEFAULT_DONOR_FIELDS,
+} from '../../../services/campaign-studio-state.service';
 import { DonationService } from '../../../services/donation.service';
 
 @Component({
@@ -22,25 +25,32 @@ export class CheckoutModalComponent implements OnInit {
 
   private donationService = inject(DonationService);
 
-  name      = '';
-  email     = '';
-  phone     = '';
-  address   = '';
-  idNumber  = '';
-  submitted = false;
-  loading   = false;
-  errorMsg  = '';
+  name        = '';
+  email       = '';
+  phone       = '';
+  address     = '';
+  postalCode  = '';
+  idNumber    = '';
+  submitted   = false;
+  loading     = false;
+  errorMsg    = '';
+
+  get donorFields(): DonorFieldsConfig {
+    return { ...DEFAULT_DONOR_FIELDS, ...(this.draft?.donorFields ?? {}) };
+  }
 
   get formattedAmount(): string {
     return '₪' + this.amount.toLocaleString('he-IL');
   }
 
   get isValid(): boolean {
+    const df = this.donorFields;
     return this.name.trim().length > 1
       && this.isValidEmail
       && this.phone.trim().length >= 9
-      && this.address.trim().length > 2
-      && this.isValidId;
+      && (!df.showAddress    || this.address.trim().length > 2)
+      && (!df.showPostalCode || this.postalCode.trim().length >= 4)
+      && (!df.showIdNumber   || this.isValidId);
   }
 
   get idDigits(): string {
@@ -103,14 +113,16 @@ export class CheckoutModalComponent implements OnInit {
       minimumAmount: r.minimumAmount ?? 0,
     }));
 
+    const df = this.donorFields;
     this.donationService.create({
       campaignId: this.draft.id,
       donor: {
-        name:     this.name.trim(),
-        email:    this.email.trim(),
-        phone:    this.phone.trim(),
-        idNumber: this.idNumber.replace(/\D/g, ''),
-        address:  this.address.trim(),
+        name:       this.name.trim(),
+        email:      this.email.trim(),
+        phone:      this.phone.trim(),
+        idNumber:   df.showIdNumber   ? this.idNumber.replace(/\D/g, '')  : '',
+        address:    df.showAddress    ? this.address.trim()                : '',
+        postalCode: df.showPostalCode ? this.postalCode.trim()             : '',
       },
       amount: this.amount,
       rewards,

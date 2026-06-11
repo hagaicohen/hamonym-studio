@@ -17,6 +17,9 @@ export class CampaignEditorFooterComponent {
   @Input()
   canContinue = true;
 
+  @Input()
+  isSaving = false;
+
   @Output()
   previous = new EventEmitter<void>();
 

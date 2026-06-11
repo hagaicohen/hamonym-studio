@@ -30,71 +30,107 @@
   <ng-container *ngIf="!isEmpty(draft)">
 
     <!-- ══ HAMONYM SITE HEADER ══ -->
-    <div class="site-header">
-      <img src="logo-hamonym.svg" class="site-logo-img" alt="המונים">
-      <button class="site-login-btn"
-        [style.color]="primaryColor(draft)"
-        [style.borderColor]="primaryColor(draft)">
-        כניסה / אזור אישי
-      </button>
+    <div class="hm-sticky-header">
+      <div class="site-header">
+        <img src="logo-hamonym.svg" class="site-logo-img" alt="המונים">
+        <button class="site-login-btn"
+          [style.color]="primaryColor(draft)"
+          [style.borderColor]="primaryColor(draft)">
+          כניסה / אזור אישי
+        </button>
+      </div>
+
+      <!-- ══ CAMPAIGN NAV ══ -->
+      <nav class="campaign-nav" [class.campaign-nav--mobile]="vm.mobile">
+
+        <!-- Desktop: links + donate -->
+        <ng-container *ngIf="!vm.mobile">
+          <div class="nav-links">
+            <a class="nav-link" *ngFor="let item of navItems(draft)"
+              [style.color]="primaryColor(draft)"
+              (click)="scrollTo(item.sectionId)">
+              {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
+            </a>
+          </div>
+          <button class="nav-amb-join-btn"
+                  *ngIf="hasAmbassadorsSection(draft)"
+                  [style.color]="primaryColor(draft)"
+                  [style.borderColor]="primaryColor(draft)"
+                  (click)="openJoinModal()">
+            <span>🚀 הצטרפו כשגרירים</span>
+          </button>
+          <button class="nav-donate-btn" [style.background]="primaryColor(draft)">
+            לתמיכה מאובטחת
+          </button>
+        </ng-container>
+
+        <!-- Mobile: donate + hamburger -->
+        <ng-container *ngIf="vm.mobile">
+          <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)">
+            לתמיכה מאובטחת
+          </button>
+          <button class="nav-hamburger" (click)="navOpen = !navOpen"
+            [class.nav-hamburger--open]="navOpen">
+            <span></span><span></span><span></span>
+          </button>
+        </ng-container>
+
+      </nav>
     </div>
 
-    <!-- ══ CAMPAIGN NAV ══ -->
-    <nav class="campaign-nav" [class.campaign-nav--mobile]="vm.mobile">
+    <!-- ══ AMBASSADOR BANNER ══ -->
+    <div class="ambassador-strip" *ngIf="ambassador">
 
-      <!-- Desktop: links + donate -->
-      <ng-container *ngIf="!vm.mobile">
-        <div class="nav-links">
-          <a class="nav-link" *ngFor="let item of navItems(draft)"
-             [style.color]="primaryColor(draft)"
-             (click)="scrollTo(item.sectionId)">
-            {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
-          </a>
+      <!-- Info: name -->
+      <div class="ambassador-info">
+        <div class="ambassador-details">
+          <div class="ambassador-name">{{ ambassador.fullName }}</div>
+          <div class="ambassador-role">שגריר/ת הקמפיין</div>
         </div>
-        <button class="nav-amb-join-btn"
-                *ngIf="hasAmbassadorsSection(draft)"
+      </div>
+
+      <!-- Stats: donors | amount+bar | pct -->
+      <div class="ambassador-stats">
+
+        <div class="amb-stat">
+          <div class="amb-stat-value">{{ ambassador.donorCount || 0 | number }}</div>
+          <div class="amb-stat-label">תורמים</div>
+        </div>
+
+        <div class="amb-progress-section">
+          <div class="amb-amount">
+            {{ formatAmount(ambassador.raisedTotal) }}
+            <span *ngIf="ambassador.goalAmount">מתוך {{ formatAmount(ambassador.goalAmount) }}</span>
+          </div>
+          <div class="amb-progress-bar">
+            <div class="amb-progress-fill"
+                 [style.width.%]="ambassadorPct()"
+                 [style.background]="primaryColor(draft)"></div>
+          </div>
+        </div>
+
+        <div class="amb-stat">
+          <div class="amb-stat-value" [style.color]="primaryColor(draft)">{{ ambassadorPct() }}%</div>
+          <div class="amb-stat-label">מהיעד</div>
+        </div>
+
+      </div>
+
+      <!-- Actions -->
+      <div class="ambassador-actions">
+        <button class="amb-donate-btn"
+                [style.background]="primaryColor(draft)"
+                (click)="scrollTo('section-donate')">
+          ❤ תרמו דרך {{ ambassador.fullName.split(' ')[0] }}
+        </button>
+        <button class="amb-donors-btn"
                 [style.color]="primaryColor(draft)"
                 [style.borderColor]="primaryColor(draft)"
-                (click)="openJoinModal()">
-          <span>🚀 הצטרפו כשגרירים</span>
+                (click)="scrollTo('section-donors')">
+          👥 צפו ברשימת התורמים
         </button>
-        <button class="nav-donate-btn" [style.background]="primaryColor(draft)">
-          לתמיכה מאובטחת
-        </button>
-      </ng-container>
-
-      <!-- Mobile: donate + hamburger -->
-      <ng-container *ngIf="vm.mobile">
-        <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)">
-          לתמיכה מאובטחת
-        </button>
-        <button class="nav-hamburger" (click)="navOpen = !navOpen"
-          [class.nav-hamburger--open]="navOpen">
-          <span></span><span></span><span></span>
-        </button>
-      </ng-container>
-
-    </nav>
-
-    <!-- ══ AMBASSADOR BANNER ══ -->
-    <div class="hm-amb-banner" *ngIf="ambassador">
-      <div class="hm-amb-banner-avatar">{{ ambassador.fullName.charAt(0) }}</div>
-      <div class="hm-amb-banner-info">
-        <div class="hm-amb-banner-name">{{ ambassador.fullName }} מגייס/ת עבור קמפיין זה</div>
-        <div class="hm-amb-banner-msg" *ngIf="ambassador.personalMessage">{{ ambassador.personalMessage }}</div>
       </div>
-      <div class="hm-amb-banner-progress" *ngIf="ambassador.goalAmount">
-        <div class="hm-amb-banner-nums">
-          <span class="hm-amb-banner-raised">{{ formatAmount(ambassador.raisedTotal) }}</span>
-          <span class="hm-amb-banner-sep">מתוך</span>
-          <span class="hm-amb-banner-goal">{{ formatAmount(ambassador.goalAmount) }}</span>
-        </div>
-        <div class="hm-amb-banner-bar">
-          <div class="hm-amb-banner-fill" [style.width.%]="ambassadorPct()"
-               [style.background]="primaryColor(draft)"></div>
-        </div>
-        <div class="hm-amb-banner-pct">{{ ambassadorPct() }}%</div>
-      </div>
+
     </div>
 
     <!-- Mobile nav drawer -->
@@ -103,6 +139,15 @@
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
+    </div>
+
+    <!-- Logo strip — white bar ABOVE hero, logo as plain image, no circle -->
+    <div class="hm-logo-above-strip"
+         *ngIf="draft.showLogo !== false && draft.heroLogoPosition === 'above'">
+      <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
+           class="hm-logo-above-img"
+           [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+      <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
     </div>
 
     <!-- ══ HERO ══ -->
@@ -115,10 +160,10 @@
 
         <!-- Title, subtitle, play button -->
         <div class="hm-hero-copy">
-          <h1 class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+          <h1 *ngIf="draft.showHeroTitle !== false" class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
             {{ draft.title }}
           </h1>
-          <p class="hm-hero-subtitle" *ngIf="draft.shortDescription" [style.color]="draft.heroTextStyle.color">
+          <p class="hm-hero-subtitle" *ngIf="draft.showHeroSubtitle !== false && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
             {{ draft.shortDescription }}
           </p>
           <button class="hm-play-trigger" *ngIf="draft.heroType === 'video' && draft.videoUrl" type="button">
@@ -126,10 +171,12 @@
           </button>
         </div>
 
-        <!-- Org logo circle -->
-        <div class="hm-hero-org-logo">
-          <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
-          <span *ngIf="!entityLogoUrl" class="hero-logo-emoji">🏢</span>
+        <!-- Logo overlaid on hero (left or center) -->
+        <div class="hm-hero-org-logo"
+             *ngIf="draft.showLogo !== false && draft.heroLogoPosition !== 'above'"
+             [class.hm-hero-org-logo--center]="draft.heroLogoPosition === 'center'">
+          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
         </div>
 
       </div>
@@ -169,7 +216,10 @@
           <div class="block-wrap"
             [id]="blockSectionId(block, draft)"
             [style.marginTop.px]="block.spacingTop"
-            [style.marginBottom.px]="block.spacingBottom">
+            [style.marginBottom.px]="block.spacingBottom"
+            [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+            (mouseenter)="setHovered(block.id)"
+            (mouseleave)="setHovered(null)">
             <div class="section-heading"
               *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
               [style.color]="primaryColor(draft)">
@@ -194,7 +244,10 @@
               <div class="block-wrap"
                 [id]="blockSectionId(block, draft)"
                 [style.marginTop.px]="block.spacingTop"
-                [style.marginBottom.px]="block.spacingBottom">
+                [style.marginBottom.px]="block.spacingBottom"
+                [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+                (mouseenter)="setHovered(block.id)"
+                (mouseleave)="setHovered(null)">
                 <div class="section-heading"
                   *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
                   [style.color]="primaryColor(draft)">
@@ -211,7 +264,10 @@
               <ng-container *ngFor="let block of sidebarBlocks(draft)">
                 <div class="block-wrap"
                   [style.marginTop.px]="block.spacingTop"
-                  [style.marginBottom.px]="block.spacingBottom">
+                  [style.marginBottom.px]="block.spacingBottom"
+                  [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+                  (mouseenter)="setHovered(block.id)"
+                  (mouseleave)="setHovered(null)">
                   <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
                 </div>
               </ng-container>
@@ -226,7 +282,10 @@
         <div class="block-wrap"
           [id]="blockSectionId(block, draft)"
           [style.marginTop.px]="block.spacingTop"
-          [style.marginBottom.px]="block.spacingBottom">
+          [style.marginBottom.px]="block.spacingBottom"
+          [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          (mouseenter)="setHovered(block.id)"
+          (mouseleave)="setHovered(null)">
           <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
         </div>
       </ng-container>
@@ -262,8 +321,8 @@
       <!-- Brand -->
       <div class="hm-footer-brand">
         <div class="hm-footer-logo">
-          <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
-          <span *ngIf="!entityLogoUrl" class="hm-footer-logo-name">{{ entityName || 'לוגו עמותה' }}</span>
+          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hm-footer-logo-name">{{ entityName || 'לוגו עמותה' }}</span>
         </div>
         <p>{{ draft.shortDescription || 'תיאור קצר של הקמפיין יופיע כאן.' }}</p>
         <div class="hm-footer-social">
@@ -358,6 +417,17 @@
           <label class="hm-join-label">אימייל</label>
           <input class="hm-join-input" type="email" [(ngModel)]="joinForm.email"
                  placeholder="you@example.com" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">יעד גיוס אישי (₪) <span style="color:#94a3b8;font-weight:400">— חובה</span></label>
+          <div class="hm-join-money-wrap">
+            <span class="hm-join-money-sym">₪</span>
+            <input class="hm-join-input hm-join-input--money" type="text" inputmode="numeric"
+                   [value]="joinGoalDisplay"
+                   (input)="onJoinGoalInput($event)"
+                   placeholder="5,000"
+                   [disabled]="joinStatus === 'loading'">
+          </div>
         </div>
       </div>
       <div class="hm-join-footer">
@@ -512,7 +582,10 @@
       <div class="container-child"
         [style.flex]="asContainer(block.data).direction === 'row' && childBlocks(block, draft).length === 2
           ? (i === 0 ? (asContainer(block.data).splitPercent ?? 50) + ' 0 0%' : (100 - (asContainer(block.data).splitPercent ?? 50)) + ' 0 0%')
-          : '1'">
+          : '1'"
+        [class.container-child--hovered]="pageBuilderActive && hoveredBlockId === child.id"
+        (mouseenter)="$event.stopPropagation(); setHovered(child.id)"
+        (mouseleave)="setHovered(block.id)">
         <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft}"></ng-container>
       </div>
     </ng-container>
@@ -656,7 +729,7 @@
   </div>
 
   <!-- ══ REWARDS ══ -->
-  <section class="hm-rewards" *ngIf="block.type === 'rewards'" id="section-rewards">
+  <section class="hm-rewards" *ngIf="block.type === 'rewards' && draft.rewardsEnabled !== false" id="section-rewards">
     <h2>בחרו את התשורה המתאימה לכם</h2>
 
     <ng-container *ngIf="draft.rewards && draft.rewards.length > 0; else rewardsEmpty">
@@ -664,41 +737,79 @@
         <button class="hm-slider-arrow hm-slider-arrow--prev" (click)="scrollSlider(slider, 'prev')">‹</button>
         <div class="hm-reward-slider" #slider>
           <div class="hm-slider-track">
-            <article *ngFor="let reward of draft.rewards"
-              class="hm-reward-card"
-              [class.is-featured]="reward.featured === true"
-              [class.is-selected]="isRewardInCart(reward.id)"
-              (click)="selectReward(reward.id)">
-              <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
-              <div class="hm-reward-card-top">
-                <div class="hm-reward-icon-wrap">
-                  <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title" class="hm-reward-img-small">
-                  <span *ngIf="!reward.imageUrl" class="hm-reward-avatar-icon">🎁</span>
-                </div>
-                <div class="hm-reward-price">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
-              </div>
-              <div class="hm-reward-body">
-                <h3>{{ reward.title }}</h3>
-                <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
-                <button class="hm-reward-more-btn"
-                  *ngIf="reward.description && reward.description.length > 120"
-                  (click)="toggleExpand(reward.id); $event.stopPropagation()">
-                  {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
-                </button>
-                <div class="hm-reward-select-hint">לחץ לבחירה</div>
-              </div>
 
-              <!-- Selected overlay -->
-              <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
-                <div class="hm-reward-overlay-check">✓</div>
-                <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
-                <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
-                <div class="hm-reward-overlay-btns">
-                  <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
-                  <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+            <!-- ── Standard layout ── -->
+            <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
+              <article *ngFor="let reward of draft.rewards"
+                class="hm-reward-card"
+                [class.is-featured]="reward.featured === true"
+                [class.is-selected]="isRewardInCart(reward.id)"
+                (click)="selectReward(reward.id)">
+                <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-card-top">
+                  <div class="hm-reward-icon-wrap">
+                    <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title" class="hm-reward-img-small">
+                    <span *ngIf="!reward.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+                  </div>
+                  <div class="hm-reward-price">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
                 </div>
-              </div>
-            </article>
+                <div class="hm-reward-body">
+                  <h3>{{ reward.title }}</h3>
+                  <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
+                  <button class="hm-reward-more-btn"
+                    *ngIf="reward.description && reward.description.length > 120"
+                    (click)="toggleExpand(reward.id); $event.stopPropagation()">
+                    {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
+                  </button>
+                  <div class="hm-reward-select-hint">לחץ לבחירה</div>
+                </div>
+                <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
+                  <div class="hm-reward-overlay-check">✓</div>
+                  <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
+                  <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
+                  <div class="hm-reward-overlay-btns">
+                    <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
+                    <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+                  </div>
+                </div>
+              </article>
+            </ng-container>
+
+            <!-- ── Image layout: amount → image → title + description ── -->
+            <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
+              <article *ngFor="let reward of draft.rewards"
+                class="hm-reward-card hm-reward-card--img"
+                [class.is-featured]="reward.featured === true"
+                [class.is-selected]="isRewardInCart(reward.id)"
+                (click)="selectReward(reward.id)">
+                <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-price-top">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
+                <div class="hm-reward-img-hero">
+                  <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title">
+                  <span *ngIf="!reward.imageUrl" class="hm-reward-img-hero-placeholder">🎁</span>
+                </div>
+                <div class="hm-reward-body">
+                  <h3>{{ reward.title }}</h3>
+                  <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
+                  <button class="hm-reward-more-btn"
+                    *ngIf="reward.description && reward.description.length > 120"
+                    (click)="toggleExpand(reward.id); $event.stopPropagation()">
+                    {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
+                  </button>
+                  <div class="hm-reward-select-hint">לחץ לבחירה</div>
+                </div>
+                <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
+                  <div class="hm-reward-overlay-check">✓</div>
+                  <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
+                  <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
+                  <div class="hm-reward-overlay-btns">
+                    <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
+                    <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+                  </div>
+                </div>
+              </article>
+            </ng-container>
+
           </div>
         </div>
         <button class="hm-slider-arrow hm-slider-arrow--next" (click)="scrollSlider(slider, 'next')">›</button>

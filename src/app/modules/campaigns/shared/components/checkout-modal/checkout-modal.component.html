@@ -107,7 +107,8 @@
           <span class="error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
         </div>
 
-        <div class="field-group">
+        <!-- תעודת זהות — אופציונלי -->
+        <div class="field-group" *ngIf="donorFields.showIdNumber">
           <label class="field-label">תעודת זהות <span class="required">*</span></label>
           <div class="field-input-wrap">
             <input class="field-input"
@@ -128,7 +129,8 @@
           </span>
         </div>
 
-        <div class="field-group">
+        <!-- כתובת — אופציונלי -->
+        <div class="field-group" *ngIf="donorFields.showAddress">
           <label class="field-label">כתובת <span class="required">*</span></label>
           <input class="field-input"
             type="text"
@@ -138,6 +140,22 @@
             autocomplete="street-address"
             [class.field-error]="submitted && address.trim().length <= 2">
           <span class="error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
+        </div>
+
+        <!-- מיקוד — אופציונלי -->
+        <div class="field-group" *ngIf="donorFields.showPostalCode">
+          <label class="field-label">מיקוד <span class="required">*</span></label>
+          <input class="field-input"
+            type="text"
+            [(ngModel)]="postalCode"
+            name="postalCode"
+            placeholder="1234567"
+            inputmode="numeric"
+            maxlength="7"
+            dir="ltr"
+            autocomplete="postal-code"
+            [class.field-error]="submitted && postalCode.trim().length < 4">
+          <span class="error-msg" *ngIf="submitted && postalCode.trim().length < 4">נא להזין מיקוד תקין</span>
         </div>
 
         <div class="pay-btn-wrap">

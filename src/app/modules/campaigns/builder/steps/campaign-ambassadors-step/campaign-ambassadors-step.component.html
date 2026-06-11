@@ -11,14 +11,23 @@
         <p class="amb-subtitle">שגרירים נשמרים עם הקמפיין — הם יופעלו בפרסום</p>
       </div>
     </div>
-    <div class="amb-stats-row" *ngIf="ambassadors.length > 0">
-      <div class="amb-stat">
-        <div class="amb-stat-val">{{ ambassadors.length }}</div>
-        <div class="amb-stat-lbl">שגרירים</div>
+    <div class="amb-header-controls">
+      <div class="amb-stats-row" *ngIf="ambassadors.length > 0">
+        <div class="amb-stat">
+          <div class="amb-stat-val">{{ ambassadors.length }}</div>
+          <div class="amb-stat-lbl">שגרירים</div>
+        </div>
+        <div class="amb-stat">
+          <div class="amb-stat-val">{{ withGoalCount }}</div>
+          <div class="amb-stat-lbl">עם יעד</div>
+        </div>
       </div>
-      <div class="amb-stat">
-        <div class="amb-stat-val">{{ withGoalCount }}</div>
-        <div class="amb-stat-lbl">עם יעד</div>
+      <div class="amb-visibility-toggle" *ngIf="ambassadorsBlock">
+        <span class="amb-toggle-label">{{ ambassadorsVisible ? 'מוצג בדף' : 'מוסתר' }}</span>
+        <button class="amb-toggle-btn" [class.amb-toggle-btn--on]="ambassadorsVisible"
+                (click)="toggleAmbassadorsVisible()" [title]="ambassadorsVisible ? 'הסתר חלק שגרירים' : 'הצג חלק שגרירים'">
+          <span class="amb-toggle-thumb"></span>
+        </button>
       </div>
     </div>
   </div>

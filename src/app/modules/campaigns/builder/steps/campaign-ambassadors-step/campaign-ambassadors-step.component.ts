@@ -99,6 +99,23 @@ export class CampaignAmbassadorsStepComponent {
     return this.state.draft.ambassadors ?? [];
   }
 
+  get ambassadorsBlock() {
+    return this.state.draft.blocks?.find(b => b.type === 'ambassadors') ?? null;
+  }
+
+  get ambassadorsVisible(): boolean {
+    return this.ambassadorsBlock?.visible !== false;
+  }
+
+  toggleAmbassadorsVisible(): void {
+    const block = this.ambassadorsBlock;
+    if (!block) return;
+    const blocks = this.state.draft.blocks.map(b =>
+      b.id === block.id ? { ...b, visible: !b.visible } : b
+    );
+    this.state.patch({ blocks });
+  }
+
   get filtered(): CampaignAmbassador[] {
     if (!this.searchQuery.trim()) return this.ambassadors;
     const q = this.searchQuery.toLowerCase();

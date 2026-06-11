@@ -18,9 +18,9 @@
   flex: 1;
   min-height: 0;          /* let flex children shrink */
   display: grid;
-  grid-template-columns: 55% 45%;
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 12px 12px 12px 20px;
   background: #f5f7fb;
 }
 
@@ -37,16 +37,16 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   min-width: 0;
-  margin-left: 5px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* ── PREVIEW INNER ── */
 .preview-inner {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 

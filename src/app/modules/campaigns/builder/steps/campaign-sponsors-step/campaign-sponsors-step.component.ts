@@ -30,6 +30,21 @@ export class CampaignSponsorsStepComponent {
 
   get isEditing(): boolean { return this.editingId !== null; }
 
+  get sponsorsBlock() {
+    return this.state.draft.blocks?.find(b => b.type === 'sponsors') ?? null;
+  }
+  get sponsorsVisible(): boolean {
+    return this.sponsorsBlock?.visible !== false;
+  }
+  toggleSponsorsVisible(): void {
+    const block = this.sponsorsBlock;
+    if (!block) return;
+    const blocks = this.state.draft.blocks.map(b =>
+      b.id === block.id ? { ...b, visible: !b.visible } : b
+    );
+    this.state.patch({ blocks });
+  }
+
   clearForm(): void {
     this.editingId = null;
     this.form = { name: '', logoUrl: '', link: '' };

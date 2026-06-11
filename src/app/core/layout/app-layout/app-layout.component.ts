@@ -38,7 +38,11 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
-        this.loader.hide();
+        const url = event instanceof NavigationEnd ? event.url : (event as any).url ?? '';
+        // /dashboard מסתיר בעצמו אחרי שה-API חוזר — לא נסתיר כאן
+        if (!url.startsWith('/dashboard')) {
+          this.loader.hide();
+        }
       }
     });
   }

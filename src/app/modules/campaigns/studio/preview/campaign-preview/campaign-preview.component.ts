@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, Input } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, Input } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
@@ -59,8 +60,13 @@ const FUNDING_LABELS: Record<string, string> = {
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
-export class CampaignPreviewComponent implements OnInit {
+export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private state           = inject(CampaignStudioStateService);
+
+  hoveredBlockId: string | null = null;
+  pageBuilderActive = false;
+  private _destroy$ = new Subject<void>();
+  setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'preview'); }
   private sanitizer       = inject(DomSanitizer);
   private entityService   = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);
@@ -75,11 +81,14 @@ export class CampaignPreviewComponent implements OnInit {
   ambSearch   = '';
   ambSortBy: 'raised' | 'name' | 'pct' | 'donors' = 'raised';
   ambShowCount = 6;
+  private liveAmbassadors: AmbassadorPublicInfo[] | null = null;
+  private loadedAmbSlug = '';
 
   // ── Ambassador self-join modal ──
   showJoinModal = false;
   joinStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
-  joinForm     = { fullName: '', phone: '', email: '' };
+  joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null };
+  joinGoalDisplay = '';
   joinShareUrl = '';
   joinCopied   = false;
   joinError    = '';
@@ -93,12 +102,22 @@ export class CampaignPreviewComponent implements OnInit {
   }
 
   openJoinModal(): void {
-    this.joinForm     = { fullName: '', phone: '', email: '' };
-    this.joinStatus   = 'idle';
-    this.joinShareUrl = '';
-    this.joinCopied   = false;
-    this.joinError    = '';
-    this.showJoinModal = true;
+    this.joinForm        = { fullName: '', phone: '', email: '', goalAmount: null };
+    this.joinGoalDisplay = '';
+    this.joinStatus      = 'idle';
+    this.joinShareUrl    = '';
+    this.joinCopied      = false;
+    this.joinError       = '';
+    this.showJoinModal   = true;
+  }
+
+  onJoinGoalInput(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/[^\d]/g, '');
+    const num = raw ? parseInt(raw, 10) : null;
+    this.joinForm.goalAmount = num && num > 0 ? num : null;
+    const formatted = num ? num.toLocaleString('he-IL') : '';
+    (event.target as HTMLInputElement).value = formatted;
+    this.joinGoalDisplay = formatted;
   }
 
   closeJoinModal(): void { this.showJoinModal = false; }
@@ -106,7 +125,12 @@ export class CampaignPreviewComponent implements OnInit {
   submitJoin(draft: CampaignDraft): void {
     if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading') return;
     this.joinStatus = 'loading';
-    this.ambassadorSvc.selfRegister(draft.slug!, this.joinForm).subscribe({
+    this.ambassadorSvc.selfRegister(draft.slug!, {
+      fullName: this.joinForm.fullName,
+      phone: this.joinForm.phone,
+      email: this.joinForm.email,
+      goalAmount: this.joinForm.goalAmount,
+    }).subscribe({
       next: (res: { slug: string; shareUrl: string }) => {
         this.joinShareUrl = res.shareUrl;
         this.joinStatus   = 'success';
@@ -126,7 +150,8 @@ export class CampaignPreviewComponent implements OnInit {
   }
 
   get ambEffective(): AmbassadorPublicInfo[] {
-    if (this.ambassadorsList) return this.ambassadorsList;
+    if (this.ambassadorsList)  return this.ambassadorsList;
+    if (this.liveAmbassadors) return this.liveAmbassadors;
     return (this.state.draft?.ambassadors ?? []).map((a: CampaignAmbassador) => ({
       id: a.id, fullName: a.fullName, slug: a.slug,
       goalAmount: a.goalAmount, personalMessage: a.personalMessage,
@@ -217,7 +242,25 @@ export class CampaignPreviewComponent implements OnInit {
           next: donors => { this.donors = donors; },
         });
       }
+      if (draft?.slug && draft.slug !== this.loadedAmbSlug) {
+        this.loadedAmbSlug = draft.slug;
+        this.ambassadorSvc.listPublic(draft.slug).subscribe({
+          next: list => { this.liveAmbassadors = list; },
+        });
+      }
     });
+    this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
+      this.hoveredBlockId = id;
+    });
+    this.state.pageBuilderActive$.pipe(takeUntil(this._destroy$)).subscribe(active => {
+      this.pageBuilderActive = active;
+      if (!active) this.hoveredBlockId = null;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
   }
 
   isEmpty(draft: CampaignDraft): boolean {
@@ -527,8 +570,9 @@ export class CampaignPreviewComponent implements OnInit {
   }
 
   blockSectionId(block: CampaignBlock, draft?: CampaignDraft): string {
-    if (block.type === 'rich-text')    return 'section-story';
-    if (block.type === 'rewards')      return 'section-rewards';
+    if (block.type === 'rich-text')        return 'section-story';
+    if (block.type === 'donation-widget') return 'section-donate';
+    if (block.type === 'rewards')          return 'section-rewards';
     if (block.type === 'updates')      return 'section-updates';
     if (block.type === 'donors')       return 'section-donors';
     if (block.type === 'ambassadors')  return 'section-ambassadors';

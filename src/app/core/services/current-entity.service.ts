@@ -28,8 +28,6 @@ export class CurrentEntityService {
 
       logo_data: undefined,
 
-      logo_url: undefined,
-
       association_certificate_data: undefined,
 
       tax_document_data: undefined,

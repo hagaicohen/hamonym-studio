@@ -1,102 +1,111 @@
 /* src/app/core/layout/sidebar/sidebar.component.css */
 
 .sidebar {
-  width: 280px;
-
+  width: 260px;
   background: white;
-
   border-left: 1px solid #e2e8f0;
-  border-top: 1px solid #e2e8f0;
-
-  padding: 16px;
-
+  padding: 24px 16px;
   box-sizing: border-box;
-
   overflow-y: auto;
-
   position: sticky;
-
   top: 72px;
-
   height: calc(100vh - 72px);
-
   z-index: 200;
-
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 /* NAV */
-
 .sidebar-nav {
   display: flex;
-
   flex-direction: column;
-
-  gap: 8px;
+  gap: 4px;
 }
 
 /* ITEM */
-
 .sidebar-item {
-  height: 48px;
-
+  height: 46px;
   display: flex;
-
   align-items: center;
-
   gap: 12px;
-
-  padding: 0 16px;
-
-  border-radius: 12px;
-
+  padding: 0 14px;
+  border-radius: 10px;
   text-decoration: none;
-
-  color: #334155;
-
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .sidebar-item:hover {
-  background: #f8fafc;
+  background: #eef0ff;
+  color: #583cd6;
 }
 
 .sidebar-item.active {
-  background: #eff6ff;
+  background: #583cd6;
+  color: white;
+}
 
-  color: #2563eb;
+.sidebar-item.active:hover {
+  background: #4b2fc0;
+  color: white;
 }
 
 /* ICON */
-
-.sidebar-svg-icon {
-  width: 18px;
-
-  height: 18px;
-
+.sidebar-svg-icon,
+.menu-svg {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  transition: stroke 0.15s ease;
+}
+
+.sidebar-item:hover .sidebar-svg-icon,
+.sidebar-item:hover .menu-svg {
+  stroke: #583cd6;
+}
+
+.sidebar-item.active .sidebar-svg-icon,
+.sidebar-item.active .menu-svg {
+  stroke: white;
+}
+
+/* NEW CAMPAIGN BUTTON */
+.btn-new-campaign {
+  width: 100%;
+  padding: 14px;
+  background: #583cd6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(88, 60, 214, 0.25);
+  transition: background 0.15s ease, transform 0.15s ease;
+  margin-top: 16px;
+}
+
+.btn-new-campaign:hover {
+  background: #4b2fc0;
+  transform: translateY(-1px);
 }
 
 /* MOBILE */
-
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
-
     top: 72px;
-
     right: 0;
-
-    width: 280px;
-
+    width: 260px;
     height: calc(100vh - 72px);
-
     transform: translateX(100%);
-
     transition: transform 0.2s ease;
-
     z-index: 250;
   }
 

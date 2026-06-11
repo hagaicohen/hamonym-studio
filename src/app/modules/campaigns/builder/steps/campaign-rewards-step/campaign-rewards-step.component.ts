@@ -100,6 +100,11 @@ export class CampaignRewardsStepComponent {
 
   removeImage(): void { this.reward.imageUrl = null; }
 
+  setRewardsLayout(layout: 'standard' | 'image'): void {
+    this.state.patch({ layout: { ...this.draft.layout, rewardsLayout: layout } });
+    this.sync();
+  }
+
   // ── Theme ──
   patchTheme(partial: Partial<typeof this.draft.layout.theme>): void {
     this.state.patch({

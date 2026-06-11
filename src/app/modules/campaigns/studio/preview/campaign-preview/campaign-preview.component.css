@@ -1,7 +1,5 @@
 :host {
   display: block;
-  height: 100%;
-  overflow-y: auto;
 
   --hm-primary: #333333;
   --hm-secondary: #6fc9eb;
@@ -21,6 +19,7 @@
   font-family: 'Heebo', sans-serif;
   direction: rtl;
   background: #ffffff;
+  overflow-x: clip;
 }
 
 /* ── EMPTY STATE ── */
@@ -31,6 +30,14 @@
 .empty-icon  { font-size: 40px; opacity: 0.35; }
 .empty-title { font-size: 15px; font-weight: 700; color: #64748b; }
 .empty-desc  { font-size: 13px; line-height: 1.7; }
+
+/* ══ STICKY HEADER WRAPPER ══ */
+.hm-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #ffffff;
+}
 
 /* ══ SITE HEADER ══ */
 .site-header {
@@ -135,31 +142,100 @@
 .nav-hamburger--open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
 
 /* Mobile drawer — always in DOM, shown only when open */
-/* ── Ambassador Banner ── */
-.hm-amb-banner {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 12px 24px;
-  background: #eff6ff; border-bottom: 1.5px solid #bfdbfe;
-  direction: rtl; font-family: 'Heebo', sans-serif;
+/* ══ Ambassador Card ══ */
+/* ══ Ambassador Strip ══ */
+.ambassador-strip {
+  direction: rtl; display: flex; align-items: center;
+  justify-content: space-between; gap: 24px;
+  padding: 16px 20px; margin: 8px 16px;
+  background: #ffffff; border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(15,23,42,0.05);
+  font-family: 'Heebo', sans-serif;
 }
-.hm-amb-banner-avatar {
-  width: 38px; height: 38px; border-radius: 50%; background: #2563eb;
-  color: #fff; font-size: 16px; font-weight: 800; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
+.ambassador-info {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
 }
-.hm-amb-banner-info { flex: 1; min-width: 140px; }
-.hm-amb-banner-name { font-size: 13px; font-weight: 800; color: #1e3a5f; }
-.hm-amb-banner-msg  { font-size: 12px; color: #475569; margin-top: 2px; }
-.hm-amb-banner-progress { display: flex; align-items: center; gap: 8px; }
-.hm-amb-banner-nums { display: flex; align-items: center; gap: 4px; font-size: 12px; }
-.hm-amb-banner-raised { font-weight: 800; color: #1e3a5f; font-size: 14px; }
-.hm-amb-banner-sep    { color: #94a3b8; }
-.hm-amb-banner-goal   { color: #64748b; }
-.hm-amb-banner-bar  {
-  width: 80px; height: 6px; background: #bfdbfe; border-radius: 3px; overflow: hidden;
+.ambassador-name { font-size: 20px; font-weight: 800; color: #0f172a; }
+.ambassador-role { margin-top: 2px; color: #64748b; font-size: 13px; }
+
+.ambassador-stats {
+  flex: 1; display: flex; align-items: center; gap: 24px; min-width: 0;
 }
-.hm-amb-banner-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
-.hm-amb-banner-pct  { font-size: 12px; font-weight: 800; color: #1e3a5f; min-width: 30px; }
+.amb-stat { text-align: center; min-width: 70px; flex-shrink: 0; }
+.amb-stat-value { font-size: 20px; font-weight: 800; color: #0f172a; }
+.amb-stat-label { margin-top: 3px; font-size: 12px; color: #64748b; }
+
+.amb-progress-section { flex: 1; min-width: 0; }
+.amb-amount {
+  text-align: center; font-size: 15px; font-weight: 800; color: #0f172a;
+  margin-bottom: 8px;
+}
+.amb-amount span { font-weight: 500; color: #94a3b8; font-size: 13px; }
+.amb-progress-bar {
+  height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden;
+}
+.amb-progress-fill {
+  height: 100%; border-radius: 999px; transition: width 0.5s ease;
+}
+
+.ambassador-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.amb-donate-btn {
+  border: none; color: #fff; height: 42px; padding: 0 20px;
+  border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: opacity 0.15s;
+}
+.amb-donate-btn:hover { opacity: 0.85; }
+.amb-donors-btn {
+  background: #fff; height: 42px; padding: 0 18px;
+  border-radius: 12px; border: 1px solid; font-weight: 700; font-size: 13px;
+  cursor: pointer; font-family: inherit; white-space: nowrap; transition: opacity 0.15s;
+}
+.amb-donors-btn:hover { opacity: 0.75; }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .ambassador-strip {
+    flex-direction: column; align-items: stretch;
+    gap: 0; padding: 16px; margin: 8px 10px;
+  }
+
+  /* 1. Name — right-aligned + separator */
+  .ambassador-info {
+    justify-content: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 14px;
+  }
+  .ambassador-name { font-size: 20px; }
+
+  /* 2. Stats — grid: progress full-width on top, two stats below */
+  .ambassador-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  /* donors (1st DOM child) → right (col 1 in RTL) */
+  .ambassador-stats > :nth-child(1) {
+    grid-column: 1; grid-row: 2;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  /* progress (2nd DOM child) → full-width top row */
+  .ambassador-stats > :nth-child(2) {
+    grid-column: 1 / -1; grid-row: 1;
+  }
+  /* pct% (3rd DOM child) → left (col 2 in RTL) */
+  .ambassador-stats > :nth-child(3) {
+    grid-column: 2; grid-row: 2;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .amb-stat-value { font-size: 22px; }
+
+  /* 3. Buttons — full width column */
+  .ambassador-actions { flex-direction: column; gap: 10px; }
+  .amb-donate-btn, .amb-donors-btn { width: 100%; height: 48px; }
+}
 
 .nav-mobile-drawer {
   background: #fff;
@@ -377,6 +453,29 @@
 .hm-hero-org-logo img {
   width: 78%; height: 78%; object-fit: contain;
 }
+.hm-hero-org-logo--center {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+/* ── Logo above-hero strip ── */
+.hm-logo-above-strip {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 32px;
+  box-sizing: border-box;
+}
+.hm-logo-above-img {
+  max-height: 72px;
+  max-width: 260px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
 .hero-logo-emoji { font-size: 52px; }
 
 /* ══ SUPPORT ROW — floats over hero bottom ══ */
@@ -482,7 +581,7 @@
 }
 .hm-amounts {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -632,7 +731,13 @@
 
 /* ══ PAGE BLOCKS ══ */
 .page-blocks { display: flex; flex-direction: column; }
-.block-wrap  { width: 100%; }
+.block-wrap  { width: 100%; position: relative; }
+
+.block-wrap--hovered {
+  outline: 2px solid #7c3aed;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
 
 /* Magazine layout — two-column masonry-like */
 .page-blocks--magazine {
@@ -648,7 +753,7 @@
 .page-content-outer {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -661,9 +766,9 @@
   min-height: 400px;
   padding: 24px 0;
 }
-/* RTL: sidebar-right places rail visually on the right (physically left in RTL flex) */
-.page-layout-sidebar--right { flex-direction: row; }
-.page-layout-sidebar--left  { flex-direction: row-reverse; }
+/* RTL: row-reverse → rail (2nd DOM element) ends up on the RIGHT */
+.page-layout-sidebar--right { flex-direction: row-reverse; }
+.page-layout-sidebar--left  { flex-direction: row; }
 
 .sidebar-main {
   flex: 1 1 0;
@@ -673,8 +778,8 @@
 }
 
 .sidebar-rail {
-  width: 380px;
-  min-width: 320px;
+  width: min(380px, 44%);
+  min-width: 260px;
   flex-shrink: 0;
   position: sticky;
   top: 16px;
@@ -868,15 +973,22 @@
   display: flex; flex-direction: column;
   background-size: cover; background-position: center;
   border-bottom: 1px solid var(--line, #e2e8f0);
+  box-sizing: border-box;
+  width: 100%;
 }
 .block-container--row {
   flex-direction: row;
   align-items: stretch;
   max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
 }
-.container-child { width: 100%; }
+.container-child { width: 100%; position: relative; }
+
+.container-child--hovered {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .block-container--row .container-child {
   flex: 1;
   min-width: 0;
@@ -919,7 +1031,7 @@
 .campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-left: none; }
 .campaign-page--mobile .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
 /* 3-column amounts on mobile */
-.campaign-page--mobile .hm-amounts { grid-template-columns: repeat(3, 1fr); }
+.campaign-page--mobile .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 
 /* Mobile: always stack vertically + cap container padding */
 .campaign-page--mobile .block-container {
@@ -954,7 +1066,7 @@
 .container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
 .container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
 /* 3-column amounts inside container */
-.container-child .hm-amounts { grid-template-columns: repeat(3, 1fr); }
+.container-child .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 /* Both cards fill their container-child height equally */
 .block-container--row .container-child > .hm-stats,
 .block-container--row .container-child > .hm-donate {
@@ -1092,6 +1204,52 @@
   z-index: 5;
   box-shadow: 0 2px 8px rgba(217,119,6,0.5);
 }
+
+/* ── Image-layout reward card ── */
+.hm-reward-card--img {
+  flex: 0 0 320px;
+  min-width: 320px;
+  padding: 0;
+  overflow: visible;   /* keep badge visible above card */
+}
+.hm-reward-price-top {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--hm-secondary, #7DD3FC);
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--hm-reward-border, rgba(255,255,255,.15));
+  border-radius: 20px 20px 0 0;
+}
+.hm-reward-img-hero {
+  width: 100%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.hm-reward-img-hero img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.hm-reward-img-hero-placeholder { font-size: 52px; opacity: 0.5; }
+
+/* Image-layout body: centered title, justified description, compact padding */
+.hm-reward-card--img .hm-reward-body {
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+  padding-top: 10px;
+  padding-bottom: 14px;
+}
+.hm-reward-card--img .hm-reward-body h3 {
+  text-align: center;
+}
+.hm-reward-card--img .hm-reward-body p {
+  text-align: justify;
+}
+
+/* Mobile: image cards also scroll nicely */
+.campaign-page--mobile .hm-reward-card--img { flex: 0 0 82vw; min-width: 82vw; }
 
 /* Card top: icon + price */
 .hm-reward-card-top {
@@ -1437,6 +1595,15 @@
 }
 .hm-join-input:focus   { border-color: var(--hm-primary, #1a56db); }
 .hm-join-input:disabled { opacity: 0.6; }
+.hm-join-money-wrap {
+  position: relative;
+  display: flex; align-items: center;
+}
+.hm-join-money-sym {
+  position: absolute; right: 12px; color: #94a3b8; font-size: 14px; pointer-events: none;
+}
+.hm-join-input--money { padding-right: 28px; }
+
 .hm-join-footer {
   padding: 0 24px 24px;
 }
@@ -2132,7 +2299,7 @@
   .hm-stat-box  { padding: 10px 4px 0; }
   .hm-stat-box:nth-child(2n+1) { border-left: none; }
   .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
-  .hm-amounts { grid-template-columns: repeat(3, 1fr); }
+  .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 
   /* REWARDS */
   .hm-rewards { padding: 28px 0 20px; }

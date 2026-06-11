@@ -5,7 +5,21 @@
   font-family: 'Heebo', sans-serif;
   direction: rtl;
 }
+.ss-header-top { display: flex; align-items: center; justify-content: space-between; }
 .ss-title-row { display: flex; align-items: center; gap: 8px; }
+.ss-visibility-toggle { display: flex; align-items: center; gap: 8px; }
+.ss-toggle-label { font-size: 12px; color: #64748b; font-weight: 500; white-space: nowrap; }
+.ss-toggle-btn {
+  width: 40px; height: 22px; border-radius: 11px; border: none; cursor: pointer;
+  background: #cbd5e1; position: relative; transition: background 0.2s; padding: 0; flex-shrink: 0;
+}
+.ss-toggle-btn--on { background: #7c3aed; }
+.ss-toggle-thumb {
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s; display: block;
+}
+.ss-toggle-btn--on .ss-toggle-thumb { transform: translateX(-18px); }
 .ss-title   { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .ss-subtitle{ font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .ss-header-icon {
