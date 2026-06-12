@@ -160,9 +160,9 @@
 }
 
 .entity-sections-nav button.active {
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #2563eb;
+  color: #6D5DF6;
 }
 
 .entity-sections-nav button:active {
@@ -208,7 +208,7 @@
 }
 
 .save-btn {
-  background: #2563eb;
+  background: #6D5DF6;
 
   color: white;
 }

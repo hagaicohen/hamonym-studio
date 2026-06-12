@@ -81,9 +81,9 @@ body {
 
   border-radius: 18px;
 
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #2563eb;
+  color: #6D5DF6;
 
   display: flex;
 
@@ -185,9 +185,9 @@ body {
 }
 
 .menu-item.active {
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #2563eb;
+  color: #6D5DF6;
 
   font-weight: 600;
 }
