@@ -5,28 +5,30 @@
 
   <div class="settings-hero">
     <div class="hero-top-row">
-      <div>
-        <div class="page-title">
-          ניהול
-          {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+      <div class="hero-identity">
+        <div>
+          <div class="page-title">
+            ניהול
+            {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+          </div>
+
+          <div class="page-description">
+            {{ draftEntity?.display_name }}
+          </div>
         </div>
 
-        <div class="page-description">
-          {{ draftEntity?.display_name }}
-        </div>
-      </div>
-
-      <div class="hero-logo-area">
-        <div class="hero-logo-divider"></div>
-        <div class="hero-logo-box">
-          <img
-            *ngIf="draftEntity?.logo_url"
-            [src]="draftEntity.logo_url"
-            class="hero-logo-img"
-            alt="לוגו"
-          />
-          <div *ngIf="!draftEntity?.logo_url" class="hero-logo-avatar">
-            {{ draftEntity?.display_name?.charAt(0) || "?" }}
+        <div class="hero-logo-area">
+          <div class="hero-logo-divider"></div>
+          <div class="hero-logo-box">
+            <img
+              *ngIf="draftEntity?.logo_url"
+              [src]="draftEntity.logo_url"
+              class="hero-logo-img"
+              alt="לוגו"
+            />
+            <div *ngIf="!draftEntity?.logo_url" class="hero-logo-avatar">
+              {{ draftEntity?.display_name?.charAt(0) || "?" }}
+            </div>
           </div>
         </div>
       </div>

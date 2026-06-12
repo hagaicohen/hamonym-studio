@@ -16,10 +16,14 @@
   display: flex;
 
   align-items: flex-start;
+}
 
-  justify-content: space-between;
+.hero-identity {
+  display: flex;
 
-  gap: 24px;
+  align-items: center;
+
+  gap: 0;
 }
 
 .page-title {
