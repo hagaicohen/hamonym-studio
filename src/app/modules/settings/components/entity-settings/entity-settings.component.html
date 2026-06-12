@@ -15,6 +15,22 @@
           {{ draftEntity?.display_name }}
         </div>
       </div>
+
+      <div class="hero-logo-area">
+        <div class="hero-logo-divider"></div>
+        <div class="hero-logo-box">
+          <img
+            *ngIf="draftEntity?.logo_url"
+            [src]="draftEntity.logo_url"
+            class="hero-logo-img"
+            alt="לוגו"
+          />
+          <div *ngIf="!draftEntity?.logo_url" class="hero-logo-avatar">
+            {{ draftEntity?.display_name?.charAt(0) || "?" }}
+          </div>
+        </div>
+      </div>
+
       <!--
       <div class="header-actions">
         @if (!editMode) {
