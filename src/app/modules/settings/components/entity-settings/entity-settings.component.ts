@@ -8,6 +8,8 @@ import { ActivatedRoute } from '@angular/router';
 
 import { CommonModule } from '@angular/common';
 
+import { LucideAngularModule, Building2 } from 'lucide-angular';
+
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
 import { CAMPAIGN_TYPES } from '../../../organization-registration/constants/campaign-types';
@@ -49,6 +51,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 
   imports: [
     CommonModule,
+    LucideAngularModule,
 
     EntityBasicInfoSectionViewComponent,
     EntityBasicInfoSectionEditComponent,
@@ -74,6 +77,8 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 })
 export class EntitySettingsComponent implements OnInit {
   constructor() {}
+
+  readonly Building2 = Building2;
 
   private currentEntityService = inject(CurrentEntityService);
 

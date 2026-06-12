@@ -6,9 +6,12 @@
   <div class="settings-hero">
     <div class="hero-top-row">
       <div>
-        <div class="page-title">
-          ניהול
-          {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+        <div class="page-title-row">
+          <lucide-icon [img]="Building2" class="hero-title-icon"></lucide-icon>
+          <div class="page-title">
+            ניהול
+            {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+          </div>
         </div>
 
         <div class="page-description">
