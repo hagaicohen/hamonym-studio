@@ -7,7 +7,9 @@
     <div class="hero-top-row">
       <div>
         <div class="page-title-row">
-          <lucide-icon [img]="Building2" class="hero-title-icon"></lucide-icon>
+          <div class="hero-icon-frame">
+            <lucide-icon [img]="Building2" class="hero-title-icon"></lucide-icon>
+          </div>
           <div class="page-title">
             ניהול
             {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
@@ -16,18 +18,6 @@
 
         <div class="page-description">
           {{ draftEntity?.display_name }}
-        </div>
-      </div>
-
-      <div class="hero-logo-frame">
-        <img
-          *ngIf="draftEntity?.logo_url"
-          [src]="draftEntity.logo_url"
-          class="hero-logo-img"
-          alt="לוגו"
-        />
-        <div *ngIf="!draftEntity?.logo_url" class="hero-logo-avatar">
-          {{ draftEntity?.display_name?.charAt(0) || "?" }}
         </div>
       </div>
 
