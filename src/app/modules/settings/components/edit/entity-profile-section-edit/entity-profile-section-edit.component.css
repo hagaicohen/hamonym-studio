@@ -1,4 +1,4 @@
-/* entity-profile-section-edit.component.css */
+﻿/* entity-profile-section-edit.component.css */
 @import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
@@ -153,9 +153,9 @@
 }
 
 .tag.selectable.selected {
-  background: #2563eb;
+  background: #6D5DF6;
 
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
   color: white;
 }
@@ -267,7 +267,7 @@
 }
 
 .profile-input:focus {
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
@@ -385,3 +385,4 @@
     justify-content: center;
   }
 }
+

@@ -1,4 +1,4 @@
-@import "../../../styles/settings-section-actions.css";
+﻿@import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
   align-items: center;
@@ -104,7 +104,7 @@
 }
 
 .money-input:focus {
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
@@ -154,3 +154,4 @@
     grid-template-columns: 1fr;
   }
 }
+

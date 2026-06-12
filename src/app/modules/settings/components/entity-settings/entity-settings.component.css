@@ -85,17 +85,29 @@
 }
 
 .status-text {
-  font-size: 14px;
+  font-size: 13px;
 
   font-weight: 700;
+
+  padding: 4px 12px;
+
+  border-radius: 999px;
 }
 
 .status-text.pending {
-  color: #c2410c;
+  background: #fff7ed;
+
+  color: #ea580c;
+
+  border: 1px solid #fed7aa;
 }
 
 .status-text.active {
-  color: #047857;
+  background: #f0fdf4;
+
+  color: #15803d;
+
+  border: 1px solid #bbf7d0;
 }
 
 /* NAVIGATION */

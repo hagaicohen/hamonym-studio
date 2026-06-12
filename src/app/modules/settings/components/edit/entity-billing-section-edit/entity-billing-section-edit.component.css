@@ -1,4 +1,4 @@
-@import "../../../styles/settings-section-actions.css";
+﻿@import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
 
@@ -95,7 +95,7 @@
 }
 
 .method-button.active {
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
   background: #eff6ff;
 }
@@ -678,3 +678,4 @@
 
   border-top: 1px solid #dcfce7;
 }
+

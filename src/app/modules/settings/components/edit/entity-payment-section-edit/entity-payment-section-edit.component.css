@@ -1,4 +1,4 @@
-@import "../../../styles/settings-section-actions.css";
+﻿@import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
   align-items: center;
@@ -105,7 +105,7 @@
 .base-input:focus {
   outline: none;
 
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
@@ -163,7 +163,7 @@ select.base-input {
 
   margin: 0;
 
-  accent-color: #2563eb;
+  accent-color: #6D5DF6;
 }
 
 /* STATUS */
@@ -405,7 +405,7 @@ select.base-input {
 
   border-radius: 12px;
 
-  background: #2563eb;
+  background: #6D5DF6;
 
   color: #ffffff;
 
@@ -422,7 +422,7 @@ select.base-input {
 }
 
 .test-connection-btn:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #5B4AE6;
 }
 
 .test-connection-btn:active:not(:disabled) {
@@ -522,3 +522,4 @@ select.base-input {
 
   color: #dc2626;
 }
+
