@@ -262,7 +262,10 @@ router.post(
             user.full_name,
 
           role_id:
-            user.role_id
+            user.role_id,
+
+          picture:
+            user.picture ?? null
 
         },
 
@@ -326,6 +329,9 @@ router.post(
       const googleId =
         payload.sub;
 
+      const picture =
+        payload.picture ?? null;
+
       let userResult =
         await pool.query(
 
@@ -356,7 +362,8 @@ router.post(
               role_id,
               email,
               full_name,
-              google_id
+              google_id,
+              picture
 
             )
 
@@ -364,7 +371,8 @@ router.post(
               $1,
               $2,
               $3,
-              $4
+              $4,
+              $5
             )
 
             RETURNING *
@@ -374,7 +382,8 @@ router.post(
               1,
               email,
               fullName,
-              googleId
+              googleId,
+              picture
             ]
 
           );
@@ -384,17 +393,18 @@ router.post(
 
       }
 
-      /* UPDATE LAST LOGIN */
+      /* UPDATE LAST LOGIN + sync picture */
 
       await pool.query(
 
         `
         UPDATE users
-        SET last_login_at = NOW()
+        SET last_login_at = NOW(),
+            picture = COALESCE($2, picture)
         WHERE id = $1
         `,
 
-        [user.id]
+        [user.id, picture]
 
       );
 
@@ -459,7 +469,10 @@ router.post(
             user.full_name,
 
           role_id:
-            user.role_id
+            user.role_id,
+
+          picture:
+            user.picture ?? null
 
         },
 
