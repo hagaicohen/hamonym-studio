@@ -19,6 +19,18 @@
         </div>
       </div>
 
+      <div class="hero-logo-frame">
+        <img
+          *ngIf="draftEntity?.logo_url"
+          [src]="draftEntity.logo_url"
+          class="hero-logo-img"
+          alt="לוגו"
+        />
+        <div *ngIf="!draftEntity?.logo_url" class="hero-logo-avatar">
+          {{ draftEntity?.display_name?.charAt(0) || "?" }}
+        </div>
+      </div>
+
       <!--
       <div class="header-actions">
         @if (!editMode) {
