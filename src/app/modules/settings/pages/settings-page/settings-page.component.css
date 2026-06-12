@@ -89,7 +89,8 @@
 }
 
 .entity-card.current {
-  border: 2px solid #2563eb;
+  border: 2px solid #6D5DF6;
+  box-shadow: 0 8px 24px rgba(109, 93, 246, 0.12);
 }
 
 .entity-top {
@@ -231,7 +232,7 @@
 .entity-card {
   background: #ffffff;
 
-  border: 1px solid #e5e7eb;
+  border: 1px solid #ede9fe;
 
   border-radius: 28px;
 
@@ -252,13 +253,14 @@
 .entity-card:hover {
   transform: translateY(-2px);
 
-  border-color: #dbe3ef;
+  border-color: #c4b5fd;
 
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 14px 40px rgba(109, 93, 246, 0.08);
 }
 
 .entity-card.current {
-  border: 2px solid #2563eb;
+  border: 2px solid #6D5DF6;
+  box-shadow: 0 8px 24px rgba(109, 93, 246, 0.12);
 }
 
 .entity-top {
@@ -332,19 +334,19 @@
 }
 
 .entity-status.pending {
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #1d4ed8;
+  color: #6D5DF6;
 }
 
 .current-badge {
   margin-top: 18px;
 
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #1d4ed8;
+  color: #6D5DF6;
 
-  border: 1px solid #bfdbfe;
+  border: 1px solid #c4b5fd;
 
   padding: 10px 14px;
 
@@ -496,7 +498,7 @@
 
   border-radius: 16px;
 
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, #6D5DF6, #5B4AE6);
 
   color: #ffffff;
 
@@ -517,7 +519,7 @@
     opacity 0.18s ease,
     box-shadow 0.18s ease;
 
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 10px 24px rgba(109, 93, 246, 0.22);
 }
 
 .manage-btn:hover {
@@ -529,9 +531,9 @@
 .add-entity-card {
   min-height: 340px;
 
-  border: 2px dashed #d1d5db;
+  border: 2px dashed #c4b5fd;
 
-  background: #ffffff;
+  background: #faf8ff;
 
   border-radius: 28px;
 
@@ -554,9 +556,9 @@
 }
 
 .add-entity-card:hover {
-  border-color: #2563eb;
+  border-color: #6D5DF6;
 
-  background: #f8fbff;
+  background: #f3f0ff;
 
   transform: translateY(-2px);
 }
@@ -568,9 +570,9 @@
 
   border-radius: 50%;
 
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #2563eb;
+  color: #6D5DF6;
 
   display: flex;
 
