@@ -18,14 +18,6 @@
   align-items: flex-start;
 }
 
-.hero-identity {
-  display: flex;
-
-  align-items: center;
-
-  gap: 0;
-}
-
 .page-title {
   font-size: 36px;
 
@@ -42,52 +34,6 @@
   font-size: 17px;
 
   color: #6b7280;
-}
-
-/* LOGO */
-
-.hero-logo-area {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-shrink: 0;
-}
-
-.hero-logo-divider {
-  width: 1px;
-  height: 64px;
-  background: #e5e7eb;
-}
-
-.hero-logo-box {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.hero-logo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.hero-logo-avatar {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ede9fe;
-  color: #6D5DF6;
-  font-size: 26px;
-  font-weight: 700;
 }
 
 /* META */
