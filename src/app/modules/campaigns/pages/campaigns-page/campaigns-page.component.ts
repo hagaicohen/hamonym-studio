@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { LucideAngularModule, Trash2, Eye, EyeOff } from 'lucide-angular';
 
 @Component({
@@ -26,6 +27,7 @@ export class CampaignsPageComponent implements OnInit {
 
   private router      = inject(Router);
   private campaignApi = inject(CampaignApiService);
+  private loader      = inject(AppLoaderService);
 
   private readonly fundingLabels: Record<string, string> = {
     'flexible':       'גיוס גמיש',
@@ -36,8 +38,8 @@ export class CampaignsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.campaignApi.list().subscribe({
-      next: (data) => { this.campaigns = data; this.isLoading = false; },
-      error: ()    => { this.isLoading = false; },
+      next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); },
+      error: ()    => { this.isLoading = false; this.loader.hide(); },
     });
   }
 

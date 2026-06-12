@@ -135,7 +135,7 @@
 
     <!-- Mobile nav drawer -->
     <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
-      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">על המיזם</a>
+      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">אודות הקמפיין</a>
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
       <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
@@ -214,7 +214,7 @@
       <div class="page-blocks" [class.page-blocks--magazine]="layoutMode(draft) === 'magazine'">
         <ng-container *ngFor="let block of contentBlocks(draft)">
           <div class="block-wrap"
-            [id]="blockSectionId(block, draft)"
+            [id]="blockSectionId(block, draft) || null"
             [style.marginTop.px]="block.spacingTop"
             [style.marginBottom.px]="block.spacingBottom"
             [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
@@ -242,7 +242,7 @@
           <div class="sidebar-main">
             <ng-container *ngFor="let block of mainBlocks(draft)">
               <div class="block-wrap"
-                [id]="blockSectionId(block, draft)"
+                [id]="blockSectionId(block, draft) || null"
                 [style.marginTop.px]="block.spacingTop"
                 [style.marginBottom.px]="block.spacingBottom"
                 [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
@@ -336,7 +336,7 @@
       <div class="hm-footer-links">
         <h3>ניווט מהיר</h3>
         <a (click)="scrollTo('section-donate')">תרומה</a>
-        <a (click)="scrollTo('section-story')">על המיזם</a>
+        <a (click)="scrollTo('section-story')">אודות הקמפיין</a>
         <a (click)="scrollTo('section-rewards')">תשורות</a>
         <a (click)="scrollTo('section-updates')">עדכונים</a>
       </div>
@@ -580,6 +580,7 @@
     [style.backgroundImage]="asContainer(block.data).backgroundImageUrl ? 'url(' + asContainer(block.data).backgroundImageUrl + ')' : ''">
     <ng-container *ngFor="let child of childBlocks(block, draft); let i = index">
       <div class="container-child"
+        [id]="blockSectionId(child, draft) || null"
         [style.flex]="asContainer(block.data).direction === 'row' && childBlocks(block, draft).length === 2
           ? (i === 0 ? (asContainer(block.data).splitPercent ?? 50) + ' 0 0%' : (100 - (asContainer(block.data).splitPercent ?? 50)) + ' 0 0%')
           : '1'"
@@ -599,7 +600,8 @@
     <p class="cta-text" [style.color]="asCta(block.data).textStyle.color" *ngIf="asCta(block.data).text">{{ asCta(block.data).text }}</p>
     <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"
       [style.justifyContent]="ctaAlignStyle(asCta(block.data).ctaConfig.align)">
-      <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color">
+      <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color"
+        (click)="scrollToDonation()">
         <span *ngIf="asCta(block.data).ctaConfig.icon">{{ asCta(block.data).ctaConfig.icon }}</span>
         {{ asCta(block.data).ctaConfig.label }}
       </button>

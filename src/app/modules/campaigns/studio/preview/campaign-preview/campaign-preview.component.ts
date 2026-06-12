@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, OnDestroy, Input } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -76,6 +77,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
   private ambassadorSvc = inject(AmbassadorService);
+  private router        = inject(Router);
 
   // ── Ambassador leaderboard state ──
   ambSearch   = '';
@@ -134,6 +136,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       next: (res: { slug: string; shareUrl: string }) => {
         this.joinShareUrl = res.shareUrl;
         this.joinStatus   = 'success';
+        this.router.navigate(['/campaigns', draft.slug, res.slug]);
       },
       error: (err: { error?: { error?: string } }) => {
         this.joinStatus = 'error';

@@ -70,6 +70,15 @@ export class CampaignRewardsStepComponent {
     this.state.patch({ rewards: this.draft.rewards.filter(r => r.id !== id) });
   }
 
+  duplicateReward(r: CampaignReward): void {
+    const copy = { ...r, id: Date.now().toString() };
+    const idx = this.draft.rewards.findIndex(x => x.id === r.id);
+    const rewards = [...this.draft.rewards];
+    rewards.splice(idx + 1, 0, copy);
+    this.state.patch({ rewards });
+    this.editReward(copy);
+  }
+
   // ── Amount input ──
   onAmountInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');

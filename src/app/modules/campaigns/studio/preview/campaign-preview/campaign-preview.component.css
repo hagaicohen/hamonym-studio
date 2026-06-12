@@ -1082,9 +1082,11 @@
 .cta-btn {
   padding: 11px 24px; border-radius: 10px; border: none;
   color: #fff; font-size: 14px; font-weight: 700;
-  cursor: default; font-family: inherit;
+  cursor: pointer; font-family: inherit;
   display: inline-flex; align-items: center; gap: 6px;
+  transition: filter 0.15s;
 }
+.cta-btn:hover { filter: brightness(1.1); }
 
 /* ══ REWARDS SECTION ══ */
 .hm-rewards {

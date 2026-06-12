@@ -12,6 +12,8 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+
 import {
   FormBuilder,
   FormGroup,
@@ -68,6 +70,8 @@ export class LoginComponent implements OnInit {
   private entitiesService = inject(EntitiesService);
 
   private currentEntityService = inject(CurrentEntityService);
+
+  private currentContextService = inject(CurrentContextService);
 
   ngOnInit(): void {
     google.accounts.id.initialize({
@@ -140,6 +144,8 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
+              this.currentContextService.initFromLogin({ entities });
+
               // =========================
               // NAVIGATION FLOW
               // =========================
@@ -150,7 +156,7 @@ export class LoginComponent implements OnInit {
                 return;
               }
 
-              this.router.navigate(['/organization-registration']);
+              this.router.navigate(['/welcome']);
             },
           });
         },
@@ -220,6 +226,8 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
+              this.currentContextService.initFromLogin({ entities });
+
               // =========================
               // NAVIGATION FLOW
               // =========================
@@ -230,7 +238,7 @@ export class LoginComponent implements OnInit {
                 return;
               }
 
-              this.router.navigate(['/organization-registration']);
+              this.router.navigate(['/welcome']);
             },
           });
         },
