@@ -65,7 +65,13 @@ export class CampaignPublicPageComponent implements OnInit {
 
         if (ambassadorSlug) {
           this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({
-            next: amb => { this.currentAmbassador = amb; },
+            next: amb => {
+              if (amb?.status === 'inactive') {
+                this.router.navigate(['/campaigns', slug, 'view'], { replaceUrl: true });
+                return;
+              }
+              this.currentAmbassador = amb;
+            },
           });
         }
       },

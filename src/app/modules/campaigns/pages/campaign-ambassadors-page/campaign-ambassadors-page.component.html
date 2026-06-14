@@ -128,24 +128,49 @@
 
 </div>
 
-<!-- CONFIRM DELETE MODAL -->
+<!-- CONFIRM REMOVE / DEACTIVATE MODAL -->
 <div class="modal-backdrop" *ngIf="confirmDelete" (click)="cancelDelete()">
   <div class="modal-box" (click)="$event.stopPropagation()">
-    <div class="modal-icon-wrap">
-      <lucide-angular [img]="TrashIcon" [size]="26" color="#ef4444"></lucide-angular>
-    </div>
-    <h2 class="modal-title">מחיקת שגריר</h2>
-    <p class="modal-desc">
-      האם אתה בטוח שברצונך למחוק את<br>
-      <strong>{{ confirmDelete.name }}</strong>?
-    </p>
-    <p class="modal-warn">פעולה זו אינה ניתנת לביטול.</p>
-    <div class="modal-actions">
-      <button class="modal-btn-cancel" (click)="cancelDelete()">ביטול</button>
-      <button class="modal-btn-delete" (click)="confirmDeleteAction()">
-        <lucide-angular [img]="TrashIcon" [size]="13" color="white"></lucide-angular>
-        מחק שגריר
-      </button>
-    </div>
+
+    <!-- Has donations → deactivate only -->
+    <ng-container *ngIf="confirmDelete.hasDonations">
+      <div class="modal-icon-wrap modal-icon-wrap--orange">
+        <lucide-angular [img]="EyeOffIcon" [size]="26" color="#d97706"></lucide-angular>
+      </div>
+      <h2 class="modal-title">הסרת שגריר</h2>
+      <p class="modal-desc">
+        ל<strong>{{ confirmDelete.name }}</strong> יש תרומות מקושרות.<br>
+        הלינק שלו יושבת, אבל הנתונים ישמרו.
+      </p>
+      <p class="modal-warn modal-warn--orange">השגריר יעבור לסטטוס "לא פעיל" — לא יימחק.</p>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" (click)="cancelDelete()">ביטול</button>
+        <button class="modal-btn-deactivate" (click)="confirmDeleteAction()">
+          <lucide-angular [img]="EyeOffIcon" [size]="13" color="white"></lucide-angular>
+          הסר שגריר
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- No donations → can hard delete -->
+    <ng-container *ngIf="!confirmDelete.hasDonations">
+      <div class="modal-icon-wrap">
+        <lucide-angular [img]="TrashIcon" [size]="26" color="#ef4444"></lucide-angular>
+      </div>
+      <h2 class="modal-title">מחיקת שגריר</h2>
+      <p class="modal-desc">
+        האם אתה בטוח שברצונך למחוק את<br>
+        <strong>{{ confirmDelete.name }}</strong>?
+      </p>
+      <p class="modal-warn">אין תרומות מקושרות — המחיקה תהיה סופית.</p>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" (click)="cancelDelete()">ביטול</button>
+        <button class="modal-btn-delete" (click)="confirmDeleteAction()">
+          <lucide-angular [img]="TrashIcon" [size]="13" color="white"></lucide-angular>
+          מחק שגריר
+        </button>
+      </div>
+    </ng-container>
+
   </div>
 </div>

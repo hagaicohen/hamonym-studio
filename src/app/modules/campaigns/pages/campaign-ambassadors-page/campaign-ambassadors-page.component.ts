@@ -33,7 +33,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   isLoading   = true;
   togglingId: string | null = null;
   deletingId: string | null = null;
-  confirmDelete: { id: string; name: string } | null = null;
+  confirmDelete: { id: string; name: string; hasDonations: boolean } | null = null;
 
   ngOnInit(): void {
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -73,18 +73,37 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     });
   }
 
-  openDeleteConfirm(a: Ambassador): void { this.confirmDelete = { id: a.id, name: a.fullName }; }
+  openDeleteConfirm(a: Ambassador): void {
+    this.confirmDelete = { id: a.id, name: a.fullName, hasDonations: a.donorCount > 0 || a.raisedTotal > 0 };
+  }
   cancelDelete(): void { this.confirmDelete = null; }
 
   confirmDeleteAction(): void {
     if (!this.confirmDelete) return;
-    const { id } = this.confirmDelete;
+    const { id, hasDonations } = this.confirmDelete;
     this.confirmDelete = null;
     this.deletingId = id;
-    this.ambassadorSvc.delete(id).subscribe({
-      next: () => { this.ambassadors = this.ambassadors.filter(a => a.id !== id); this.deletingId = null; },
-      error: () => { this.deletingId = null; },
-    });
+
+    if (hasDonations) {
+      // Deactivate — never delete an ambassador with donation history
+      this.ambassadorSvc.setStatus(id, 'inactive').subscribe({
+        next: (updated) => {
+          const i = this.ambassadors.findIndex(x => x.id === id);
+          if (i !== -1) this.ambassadors = [
+            ...this.ambassadors.slice(0, i),
+            updated,
+            ...this.ambassadors.slice(i + 1),
+          ];
+          this.deletingId = null;
+        },
+        error: () => { this.deletingId = null; },
+      });
+    } else {
+      this.ambassadorSvc.delete(id).subscribe({
+        next: () => { this.ambassadors = this.ambassadors.filter(a => a.id !== id); this.deletingId = null; },
+        error: () => { this.deletingId = null; },
+      });
+    }
   }
 
   back(): void { this.router.navigate(['/campaigns']); }

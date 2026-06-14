@@ -334,3 +334,21 @@
 }
 
 .modal-btn-delete:hover { background: #dc2626; }
+
+.modal-btn-deactivate {
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: #d97706;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-btn-deactivate:hover { background: #b45309; }
+
+.modal-warn--orange { color: #d97706; }

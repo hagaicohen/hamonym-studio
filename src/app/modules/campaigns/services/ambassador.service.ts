@@ -19,6 +19,7 @@ export interface Ambassador {
   raisedTotal: number;
   donorCount: number;
   createdAt: string;
+  deactivatedAt: string | null;
 }
 
 export interface AmbassadorFormData {
@@ -241,6 +242,7 @@ export class AmbassadorService {
       raisedTotal:     a.raised_total    ?? 0,
       donorCount:      a.donor_count     ?? 0,
       createdAt:       a.created_at,
+      deactivatedAt:   a.deactivated_at  ?? null,
     };
   }
 
