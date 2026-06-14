@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users } from 'lucide-angular';
 
 @Component({
@@ -26,9 +27,14 @@ export class CampaignsPageComponent implements OnInit {
 
   confirmModal: { id: string; title: string; type: 'delete-draft' | 'hide-campaign' } | null = null;
 
-  private router      = inject(Router);
-  private campaignApi = inject(CampaignApiService);
-  private loader      = inject(AppLoaderService);
+  private router          = inject(Router);
+  private campaignApi     = inject(CampaignApiService);
+  private loader          = inject(AppLoaderService);
+  private currentContext  = inject(CurrentContextService);
+
+  get isAmbassador(): boolean {
+    return this.currentContext.active()?.role === 'ambassador';
+  }
 
   private readonly fundingLabels: Record<string, string> = {
     'flexible':       'גיוס גמיש',

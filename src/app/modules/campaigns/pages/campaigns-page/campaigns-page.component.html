@@ -119,22 +119,23 @@
                     @if (c.slug) {
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
-                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
-                    <button class="btn-action btn-ambassadors" (click)="viewAmbassadors(c.id)">שגרירים</button>
-                    @if (c.isHidden) {
-                      <button class="btn-icon-action btn-unhide"
-                              [disabled]="hidingId === c.id"
-                              (click)="unhide($event, c)"
-                              title="הצג מחדש">
-                        <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
-                      </button>
-                    } @else {
-                      <button class="btn-icon-action btn-delete-campaign"
-                              [disabled]="hidingId === c.id"
-                              (click)="openHideModal($event, c)"
-                              title="הסר קמפיין">
-                        <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
-                      </button>
+                    @if (!isAmbassador) {
+                      <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                      @if (c.isHidden) {
+                        <button class="btn-icon-action btn-unhide"
+                                [disabled]="hidingId === c.id"
+                                (click)="unhide($event, c)"
+                                title="הצג מחדש">
+                          <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
+                        </button>
+                      } @else {
+                        <button class="btn-icon-action btn-delete-campaign"
+                                [disabled]="hidingId === c.id"
+                                (click)="openHideModal($event, c)"
+                                title="הסר קמפיין">
+                          <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
+                        </button>
+                      }
                     }
                   </div>
                 </div>
@@ -184,22 +185,23 @@
                   @if (c.slug) {
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }
-                  <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
-                  <button class="btn-action btn-ambassadors" (click)="viewAmbassadors(c.id)">שגרירים</button>
-                  @if (c.isHidden) {
-                    <button class="btn-icon-action btn-unhide"
-                            [disabled]="hidingId === c.id"
-                            (click)="unhide($event, c)"
-                            title="הצג מחדש">
-                      <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
-                    </button>
-                  } @else {
-                    <button class="btn-icon-action btn-delete-campaign"
-                            [disabled]="hidingId === c.id"
-                            (click)="openHideModal($event, c)"
-                            title="הסר קמפיין">
-                      <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
-                    </button>
+                  @if (!isAmbassador) {
+                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                    @if (c.isHidden) {
+                      <button class="btn-icon-action btn-unhide"
+                              [disabled]="hidingId === c.id"
+                              (click)="unhide($event, c)"
+                              title="הצג מחדש">
+                        <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
+                      </button>
+                    } @else {
+                      <button class="btn-icon-action btn-delete-campaign"
+                              [disabled]="hidingId === c.id"
+                              (click)="openHideModal($event, c)"
+                              title="הסר קמפיין">
+                        <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
+                      </button>
+                    }
                   }
                 </div>
 

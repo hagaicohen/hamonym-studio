@@ -4,6 +4,7 @@ import { Routes } from '@angular/router';
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
 import { contextGuard } from './core/guards/context.guard';
+import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 
 export const routes: Routes = [
 
@@ -58,6 +59,7 @@ export const routes: Routes = [
 
   {
     path: 'campaigns/create',
+    canActivate: [campaignEditorGuard],
     loadComponent: () =>
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
@@ -66,6 +68,7 @@ export const routes: Routes = [
 
   {
     path: 'campaigns/:id/edit',
+    canActivate: [campaignEditorGuard],
     loadComponent: () =>
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
