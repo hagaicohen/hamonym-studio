@@ -6,6 +6,25 @@ import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-lay
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 
+// These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
+const AMBASSADOR_STUDIO_ROUTE = {
+  path: 'campaigns/:id/ambassador-studio',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/ambassador-studio-page/ambassador-studio-page.component').then(
+      (m) => m.AmbassadorStudioPageComponent,
+    ),
+};
+
+const CAMPAIGN_AMBASSADORS_ROUTE = {
+  path: 'campaigns/:id/ambassadors',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-ambassadors-page/campaign-ambassadors-page.component').then(
+      (m) => m.CampaignAmbassadorsPageComponent,
+    ),
+};
+
 export const routes: Routes = [
 
   /* ========================================
@@ -93,6 +112,9 @@ export const routes: Routes = [
         .then((m) => m.DonationSuccessComponent),
   },
 
+  AMBASSADOR_STUDIO_ROUTE,
+  CAMPAIGN_AMBASSADORS_ROUTE,
+
   {
     path: 'campaigns/:slug/:ambassadorSlug',
     loadComponent: () =>
@@ -145,20 +167,6 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./modules/campaigns/pages/campaigns-page/campaigns-page.component').then(
                 (m) => m.CampaignsPageComponent,
-              ),
-          },
-          {
-            path: ':id/ambassadors',
-            loadComponent: () =>
-              import('./modules/campaigns/pages/campaign-ambassadors-page/campaign-ambassadors-page.component').then(
-                (m) => m.CampaignAmbassadorsPageComponent,
-              ),
-          },
-          {
-            path: ':id/ambassador-studio',
-            loadComponent: () =>
-              import('./modules/campaigns/pages/ambassador-studio-page/ambassador-studio-page.component').then(
-                (m) => m.AmbassadorStudioPageComponent,
               ),
           },
         ],

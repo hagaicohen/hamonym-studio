@@ -80,6 +80,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
           raisedTotal:     0,
           donorCount:      0,
           createdAt:       r.created_at,
+          deactivatedAt:   r.deactivated_at ?? null,
         };
         this.ambassador.set(ambassador);
         this.draft = {
