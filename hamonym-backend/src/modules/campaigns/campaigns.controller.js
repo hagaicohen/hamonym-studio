@@ -357,6 +357,27 @@ exports.setCampaignVisibility =
 
   };
 
+exports.updateMyAmbassadorRecord = async (req, res) => {
+  try {
+    const record = await service.updateMyAmbassadorRecord(req.user.id, req.params.campaignId, req.body);
+    res.json({ ambassador: record });
+  } catch (err) {
+    const status = err.message === 'Ambassador not found' ? 404
+      : err.message === 'No fields supplied' ? 400 : 500;
+    res.status(status).json({ error: err.message });
+  }
+};
+
+exports.myAmbassadorRecord = async (req, res) => {
+  try {
+    const record = await service.myAmbassadorRecord(req.user.id, req.params.campaignId);
+    res.json({ ambassador: record });
+  } catch (err) {
+    const status = err.message === 'Ambassador not found' ? 404 : 500;
+    res.status(status).json({ error: err.message });
+  }
+};
+
 exports.myAmbassadorCampaigns = async (req, res) => {
   try {
     const campaigns = await service.myAmbassadorCampaigns(req.user.id);

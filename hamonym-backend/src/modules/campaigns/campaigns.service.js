@@ -845,6 +845,76 @@ exports.setCampaignVisibility =
 
   };
 
+exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
+  const { rows: found } = await db.query(
+    `SELECT a.id FROM campaign_ambassadors a
+     JOIN users u ON LOWER(u.email) = LOWER(a.email)
+     WHERE u.id = $1 AND a.campaign_id = $2 LIMIT 1`,
+    [userId, campaignId]
+  );
+  if (!found.length) throw new Error('Ambassador not found');
+  const ambassadorId = found[0].id;
+
+  const fields = [];
+  const vals   = [];
+  let   i      = 1;
+  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title'];
+  for (const key of allowed) {
+    if (data[key] !== undefined) {
+      fields.push(`${key} = $${i++}`);
+      vals.push(data[key] === '' ? null : data[key]);
+    }
+  }
+  if (!fields.length) throw new Error('No fields supplied');
+  vals.push(ambassadorId);
+  const { rows } = await db.query(
+    `UPDATE campaign_ambassadors SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+    vals
+  );
+  if (!rows.length) throw new Error('Ambassador not found');
+  const r = rows[0];
+  return {
+    id:               r.id,
+    campaign_id:      r.campaign_id,
+    full_name:        r.full_name,
+    phone:            r.phone        ?? null,
+    email:            r.email        ?? null,
+    goal_amount:      r.goal_amount  != null ? Number(r.goal_amount) : null,
+    personal_message: r.personal_message ?? '',
+    personal_title:   r.personal_title   ?? '',
+    status:           r.status,
+    slug:             r.slug,
+  };
+};
+
+exports.myAmbassadorRecord = async (userId, campaignId) => {
+  const { rows } = await db.query(
+    `SELECT a.id, a.campaign_id, a.full_name, a.phone, a.email,
+            a.goal_amount, a.personal_message, a.status, a.slug,
+            a.personal_title, a.created_at
+     FROM campaign_ambassadors a
+     JOIN users u ON LOWER(u.email) = LOWER(a.email)
+     WHERE u.id = $1 AND a.campaign_id = $2
+     LIMIT 1`,
+    [userId, campaignId]
+  );
+  if (!rows.length) throw new Error('Ambassador not found');
+  const r = rows[0];
+  return {
+    id:               r.id,
+    campaign_id:      r.campaign_id,
+    full_name:        r.full_name,
+    phone:            r.phone        ?? null,
+    email:            r.email        ?? null,
+    goal_amount:      r.goal_amount  != null ? Number(r.goal_amount) : null,
+    personal_message: r.personal_message ?? '',
+    personal_title:   r.personal_title   ?? '',
+    status:           r.status,
+    slug:             r.slug,
+    created_at:       r.created_at,
+  };
+};
+
 exports.myAmbassadorCampaigns = async (userId) => {
   const { rows } = await db.query(
     `SELECT DISTINCT c.id, c.title AS name

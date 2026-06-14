@@ -35,6 +35,18 @@ router.get(
 );
 
 router.get(
+  '/:campaignId/my-ambassador-record',
+  requireAuth,
+  controller.myAmbassadorRecord
+);
+
+router.patch(
+  '/:campaignId/my-ambassador-record',
+  requireAuth,
+  controller.updateMyAmbassadorRecord
+);
+
+router.get(
   '/check-slug',
   requireAuth,
   controller.checkSlugAvailable
