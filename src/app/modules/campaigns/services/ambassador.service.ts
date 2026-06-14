@@ -118,6 +118,16 @@ export class AmbassadorService {
     );
   }
 
+  setStatus(id: string, status: 'active' | 'inactive'): Observable<Ambassador> {
+    return this.http
+      .patch<{ ambassador: any }>(
+        `${this.apiBase}/ambassadors/${id}`,
+        { status },
+        { headers: this.headers() }
+      )
+      .pipe(map(r => this.fromSnake(r.ambassador)));
+  }
+
   addAdjustment(ambassadorId: string, amount: number, reason: string): Observable<void> {
     return this.http.post<void>(
       `${this.apiBase}/ambassadors/${ambassadorId}/adjustments`,
@@ -153,6 +163,18 @@ export class AmbassadorService {
       .pipe(
         map(r => (r.ambassador ? this.fromSnake(r.ambassador) : null)),
         catchError(() => of(null))
+      );
+  }
+
+  getMyCampaigns(): Observable<Array<{ id: string; name: string }>> {
+    return this.http
+      .get<{ campaigns: Array<{ id: string; name: string }> }>(
+        `${this.apiBase}/campaigns/my-ambassador-campaigns`,
+        { headers: this.headers() }
+      )
+      .pipe(
+        map(r => r.campaigns ?? []),
+        catchError(() => of([]))
       );
   }
 

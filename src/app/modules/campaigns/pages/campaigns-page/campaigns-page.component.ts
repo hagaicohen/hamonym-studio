@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-import { LucideAngularModule, Trash2, Eye, EyeOff } from 'lucide-angular';
+import { LucideAngularModule, Trash2, Eye, EyeOff, Users } from 'lucide-angular';
 
 @Component({
   selector: 'app-campaigns-page',
@@ -19,9 +19,10 @@ export class CampaignsPageComponent implements OnInit {
   deletingId: string | null = null;
   hidingId:   string | null = null;
 
-  readonly TrashIcon  = Trash2;
-  readonly EyeIcon    = Eye;
-  readonly EyeOffIcon = EyeOff;
+  readonly TrashIcon   = Trash2;
+  readonly EyeIcon     = Eye;
+  readonly EyeOffIcon  = EyeOff;
+  readonly UsersIcon   = Users;
 
   confirmModal: { id: string; title: string; type: 'delete-draft' | 'hide-campaign' } | null = null;
 
@@ -114,6 +115,10 @@ export class CampaignsPageComponent implements OnInit {
 
   viewCampaign(slug: string): void {
     this.router.navigate(['/campaigns', slug, 'view']);
+  }
+
+  viewAmbassadors(id: string): void {
+    this.router.navigate(['/campaigns', id, 'ambassadors']);
   }
 
   statusLabel(status: string): string {

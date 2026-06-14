@@ -144,6 +144,13 @@ export const routes: Routes = [
                 (m) => m.CampaignsPageComponent,
               ),
           },
+          {
+            path: ':id/ambassadors',
+            loadComponent: () =>
+              import('./modules/campaigns/pages/campaign-ambassadors-page/campaign-ambassadors-page.component').then(
+                (m) => m.CampaignAmbassadorsPageComponent,
+              ),
+          },
         ],
       },
       {

@@ -120,6 +120,7 @@
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
                     <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                    <button class="btn-action btn-ambassadors" (click)="viewAmbassadors(c.id)">שגרירים</button>
                     @if (c.isHidden) {
                       <button class="btn-icon-action btn-unhide"
                               [disabled]="hidingId === c.id"
@@ -184,6 +185,7 @@
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }
                   <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                  <button class="btn-action btn-ambassadors" (click)="viewAmbassadors(c.id)">שגרירים</button>
                   @if (c.isHidden) {
                     <button class="btn-icon-action btn-unhide"
                             [disabled]="hidingId === c.id"

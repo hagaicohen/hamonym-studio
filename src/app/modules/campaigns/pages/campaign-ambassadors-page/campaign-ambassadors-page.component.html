@@ -1,0 +1,151 @@
+<div class="amb-page">
+
+  <!-- HERO -->
+  <div class="amb-hero">
+    <button class="back-btn" (click)="back()">
+      <lucide-angular [img]="BackIcon" [size]="16" color="#6D5DF6"></lucide-angular>
+      חזרה לקמפיינים
+    </button>
+    <h1 class="amb-title">שגרירים</h1>
+    <p class="amb-subtitle" *ngIf="campaignTitle">{{ campaignTitle }}</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" *ngIf="!isLoading && ambassadors.length > 0">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.totalAmbassadors }}</div>
+      <div class="stat-label">סה"כ שגרירים</div>
+    </div>
+    <div class="stat-card stat-card--green">
+      <div class="stat-value">{{ stats.activeAmbassadors }}</div>
+      <div class="stat-label">פעילים</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ hiddenCount }}</div>
+      <div class="stat-label">מוסתרים</div>
+    </div>
+    <div class="stat-card stat-card--purple">
+      <div class="stat-value">{{ fmtMoney(stats.totalRaised) }}</div>
+      <div class="stat-label">גויס סה"כ</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.totalDonors }}</div>
+      <div class="stat-label">תורמים</div>
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="table-card">
+    <div class="table-header">
+      <h2 class="table-title">רשימת שגרירים</h2>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Empty -->
+    <div class="empty-state" *ngIf="!isLoading && ambassadors.length === 0">
+      <lucide-angular [img]="UsersIcon" [size]="48" color="#c4b5fd"></lucide-angular>
+      <p>אין שגרירים לקמפיין זה עדיין</p>
+    </div>
+
+    <!-- Table -->
+    <div class="amb-table" *ngIf="!isLoading && ambassadors.length > 0">
+      <div class="amb-table-head">
+        <span>שגריר</span>
+        <span>יעד אישי</span>
+        <span>גייס</span>
+        <span>תורמים</span>
+        <span>סטטוס</span>
+        <span></span>
+      </div>
+
+      <div
+        class="amb-row"
+        *ngFor="let a of ambassadors"
+        [class.amb-row--hidden]="a.status === 'inactive'"
+        [class.amb-row--deleting]="deletingId === a.id"
+      >
+        <!-- Identity -->
+        <div class="amb-identity">
+          <div class="amb-avatar">{{ initials(a.fullName) }}</div>
+          <div class="amb-info">
+            <div class="amb-name">{{ a.fullName }}</div>
+            <div class="amb-contact">
+              <span *ngIf="a.phone">{{ a.phone }}</span>
+              <span *ngIf="a.phone && a.email"> · </span>
+              <span *ngIf="a.email">{{ a.email }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Goal -->
+        <div class="amb-cell">{{ a.goalAmount ? fmtMoney(a.goalAmount) : '—' }}</div>
+
+        <!-- Raised -->
+        <div class="amb-cell raised-cell">{{ fmtMoney(a.raisedTotal) }}</div>
+
+        <!-- Donors -->
+        <div class="amb-cell">{{ a.donorCount }}</div>
+
+        <!-- Status -->
+        <div class="amb-cell">
+          <span class="status-badge"
+                [class.badge--active]="a.status === 'active'"
+                [class.badge--hidden]="a.status === 'inactive'">
+            {{ a.status === 'active' ? 'פעיל' : 'מוסתר' }}
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="amb-actions">
+          <button
+            class="action-btn"
+            (click)="toggleStatus(a)"
+            [disabled]="togglingId === a.id"
+            [title]="a.status === 'active' ? 'הסתר שגריר' : 'הצג שגריר'"
+          >
+            <lucide-angular
+              [img]="a.status === 'active' ? EyeOffIcon : EyeIcon"
+              [size]="15"
+              color="#6b7280"
+            ></lucide-angular>
+          </button>
+          <button
+            class="action-btn action-btn--delete"
+            [disabled]="deletingId === a.id"
+            (click)="openDeleteConfirm(a)"
+            title="מחק שגריר"
+          >
+            <lucide-angular [img]="TrashIcon" [size]="15" color="#ef4444"></lucide-angular>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-backdrop" *ngIf="confirmDelete" (click)="cancelDelete()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-icon-wrap">
+      <lucide-angular [img]="TrashIcon" [size]="26" color="#ef4444"></lucide-angular>
+    </div>
+    <h2 class="modal-title">מחיקת שגריר</h2>
+    <p class="modal-desc">
+      האם אתה בטוח שברצונך למחוק את<br>
+      <strong>{{ confirmDelete.name }}</strong>?
+    </p>
+    <p class="modal-warn">פעולה זו אינה ניתנת לביטול.</p>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" (click)="cancelDelete()">ביטול</button>
+      <button class="modal-btn-delete" (click)="confirmDeleteAction()">
+        <lucide-angular [img]="TrashIcon" [size]="13" color="white"></lucide-angular>
+        מחק שגריר
+      </button>
+    </div>
+  </div>
+</div>
