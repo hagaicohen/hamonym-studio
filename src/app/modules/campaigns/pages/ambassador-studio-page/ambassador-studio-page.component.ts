@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AmbassadorService, Ambassador } from '../../services/ambassador.service';
-import { CampaignApiService } from '../../services/campaign-api.service';
 import { environment } from '../../../../../environments/environment';
 import { LucideAngularModule, ChevronRight, ChevronLeft, Eye, User, MessageSquare } from 'lucide-angular';
 
@@ -20,7 +19,6 @@ export class AmbassadorStudioPageComponent implements OnInit {
   private router        = inject(Router);
   private http          = inject(HttpClient);
   private ambassadorSvc = inject(AmbassadorService);
-  private campaignApi   = inject(CampaignApiService);
 
   readonly ChevronRight   = ChevronRight;
   readonly ChevronLeft    = ChevronLeft;
@@ -57,27 +55,47 @@ export class AmbassadorStudioPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
+    const token = localStorage.getItem('token') ?? '';
 
-    Promise.all([
-      this.campaignApi.getById(this.campaignId).toPromise(),
-      this.ambassadorSvc.getMyRecord(this.campaignId).toPromise(),
-    ]).then(([campaign, ambassador]) => {
-      this.campaign = campaign;
-      if (ambassador) {
+    this.http.get<{ ambassador: any }>(
+      `${environment.apiUrl}/api/campaigns/${this.campaignId}/my-ambassador-record`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    ).subscribe({
+      next: (res) => {
+        const r = res.ambassador;
+        this.campaign = r.campaign ?? null;
+        const ambassador: Ambassador = {
+          id:              r.id,
+          campaignId:      r.campaign_id,
+          fullName:        r.full_name,
+          phone:           r.phone       ?? null,
+          email:           r.email       ?? null,
+          goalAmount:      r.goal_amount != null ? Number(r.goal_amount) : null,
+          personalMessage: r.personal_message ?? '',
+          personalTitle:   r.personal_title   ?? '',
+          status:          r.status,
+          slug:            r.slug,
+          raisedOnline:    0,
+          raisedManual:    0,
+          raisedTotal:     0,
+          donorCount:      0,
+          createdAt:       r.created_at,
+        };
         this.ambassador.set(ambassador);
         this.draft = {
           fullName:        ambassador.fullName,
-          phone:           ambassador.phone ?? '',
-          email:           ambassador.email ?? '',
-          personalTitle:   ambassador.personalTitle ?? '',
+          phone:           ambassador.phone           ?? '',
+          email:           ambassador.email           ?? '',
+          personalTitle:   ambassador.personalTitle   ?? '',
           personalMessage: ambassador.personalMessage ?? '',
           goalAmount:      ambassador.goalAmount,
         };
-      }
-      this.isLoading = false;
-    }).catch(() => {
-      this.errorMsg = 'שגיאה בטעינת הנתונים';
-      this.isLoading = false;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMsg = 'לא נמצאה רשומת שגריר עבור קמפיין זה';
+        this.isLoading = false;
+      },
     });
   }
 
@@ -140,8 +158,9 @@ export class AmbassadorStudioPageComponent implements OnInit {
 
   shareUrl(): string {
     const amb = this.ambassador();
-    if (!amb || !this.campaign?.slug) return '';
-    return `${window.location.origin}/campaigns/${this.campaign.slug}/${amb.slug}`;
+    const slug = this.campaign?.slug;
+    if (!amb || !slug) return '';
+    return `${window.location.origin}/campaigns/${slug}/${amb.slug}`;
   }
 
   copyLink(): void {
