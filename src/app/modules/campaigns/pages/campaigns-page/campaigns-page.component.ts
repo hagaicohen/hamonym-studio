@@ -116,7 +116,11 @@ export class CampaignsPageComponent implements OnInit {
   }
 
   editCampaign(id: string): void {
-    this.router.navigate(['/campaigns', id, 'edit']);
+    if (this.isAmbassador) {
+      this.router.navigate(['/campaigns', id, 'ambassador-studio']);
+    } else {
+      this.router.navigate(['/campaigns', id, 'edit']);
+    }
   }
 
   viewCampaign(slug: string): void {

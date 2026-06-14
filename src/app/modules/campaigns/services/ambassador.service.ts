@@ -12,6 +12,7 @@ export interface Ambassador {
   goalAmount: number | null;
   status: 'active' | 'inactive' | 'pending';
   personalMessage: string;
+  personalTitle: string;
   slug: string;
   raisedOnline: number;
   raisedManual: number;
@@ -26,6 +27,7 @@ export interface AmbassadorFormData {
   email: string;
   goalAmount: number | null;
   personalMessage: string;
+  personalTitle: string;
 }
 
 export interface ImportRow {
@@ -166,6 +168,15 @@ export class AmbassadorService {
       );
   }
 
+  getMyRecord(campaignId: string): Observable<Ambassador> {
+    return this.http
+      .get<{ ambassador: any }>(
+        `${this.apiBase}/campaigns/${campaignId}/my-ambassador-record`,
+        { headers: this.headers() }
+      )
+      .pipe(map(r => this.fromSnake(r.ambassador)));
+  }
+
   getMyCampaigns(): Observable<Array<{ id: string; name: string }>> {
     return this.http
       .get<{ campaigns: Array<{ id: string; name: string }> }>(
@@ -223,6 +234,7 @@ export class AmbassadorService {
       goalAmount:      a.goal_amount    ?? null,
       status:          a.status         ?? 'active',
       personalMessage: a.personal_message ?? '',
+      personalTitle:   a.personal_title   ?? '',
       slug:            a.slug            ?? '',
       raisedOnline:    a.raised_online   ?? 0,
       raisedManual:    a.raised_manual   ?? 0,
@@ -239,6 +251,7 @@ export class AmbassadorService {
     if (data.email            !== undefined) r['email']            = data.email || null;
     if (data.goalAmount       !== undefined) r['goal_amount']      = data.goalAmount;
     if (data.personalMessage  !== undefined) r['personal_message'] = data.personalMessage;
+    if (data.personalTitle    !== undefined) r['personal_title']   = data.personalTitle;
     return r;
   }
 }

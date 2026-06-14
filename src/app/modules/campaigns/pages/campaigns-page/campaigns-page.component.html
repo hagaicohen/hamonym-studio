@@ -119,8 +119,8 @@
                     @if (c.slug) {
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
+                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
                     @if (!isAmbassador) {
-                      <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
                       @if (c.isHidden) {
                         <button class="btn-icon-action btn-unhide"
                                 [disabled]="hidingId === c.id"
@@ -185,8 +185,8 @@
                   @if (c.slug) {
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }
+                  <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
                   @if (!isAmbassador) {
-                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
                     @if (c.isHidden) {
                       <button class="btn-icon-action btn-unhide"
                               [disabled]="hidingId === c.id"

@@ -1,0 +1,165 @@
+<div class="amb-studio">
+
+  <!-- TOPBAR -->
+  <div class="studio-topbar">
+    <button class="back-btn" (click)="back()">
+      <lucide-angular [img]="ChevronRight" [size]="16" color="#6D5DF6"></lucide-angular>
+      חזרה לקמפיינים
+    </button>
+    <div class="studio-title">
+      <span class="studio-label">עריכת דף שגריר</span>
+      <span class="studio-campaign-name" *ngIf="campaign?.title">{{ campaign.title }}</span>
+    </div>
+    <div class="studio-actions">
+      <span class="saved-badge" *ngIf="saved">✓ נשמר</span>
+      <button class="btn-save" (click)="save()" [disabled]="isSaving || currentStep === 3">
+        {{ isSaving ? 'שומר...' : 'שמור' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-state" *ngIf="!isLoading && errorMsg">
+    <p>{{ errorMsg }}</p>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="studio-body" *ngIf="!isLoading && !errorMsg">
+
+    <!-- STEPPER -->
+    <div class="stepper">
+      @for (s of steps; track s.num) {
+        <div class="step-item" [class.step-item--active]="currentStep === s.num" [class.step-item--done]="currentStep > s.num">
+          <div class="step-circle">{{ currentStep > s.num ? '✓' : s.num }}</div>
+          <span class="step-label">{{ s.label }}</span>
+        </div>
+        @if (s.num < TOTAL_STEPS) {
+          <div class="step-connector" [class.step-connector--done]="currentStep > s.num"></div>
+        }
+      }
+    </div>
+
+    <!-- ───── STEP 1: PROFILE ───── -->
+    @if (currentStep === 1) {
+      <div class="step-card">
+        <h2 class="step-title">פרופיל שגריר</h2>
+        <p class="step-desc">הפרטים שיופיעו בדף השגריר שלך</p>
+
+        <div class="field-group">
+          <label class="field-label">שם מלא <span class="required">*</span></label>
+          <input class="field-input" type="text" [(ngModel)]="draft.fullName" placeholder="ישראל ישראלי" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">טלפון</label>
+            <input class="field-input" type="tel" [(ngModel)]="draft.phone" placeholder="050-000-0000" dir="ltr" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">אימייל</label>
+            <input class="field-input" type="email" [(ngModel)]="draft.email" placeholder="me@example.com" dir="ltr" />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ───── STEP 2: PERSONAL CONTENT ───── -->
+    @if (currentStep === 2) {
+      <div class="step-card">
+        <h2 class="step-title">תוכן אישי</h2>
+        <p class="step-desc">המסר שלך לתורמים ויעד הגיוס האישי</p>
+
+        <div class="field-group">
+          <label class="field-label">כותרת אישית לדף</label>
+          <input class="field-input" type="text"
+                 [(ngModel)]="draft.personalTitle"
+                 placeholder="לדוגמה: ישראל ישראלי למען בניין ירושלים" />
+          <span class="field-hint">תוצג בראש דף השגריר שלך במקום שם הקמפיין</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">מסר אישי</label>
+          <textarea class="field-textarea" rows="5"
+                    [(ngModel)]="draft.personalMessage"
+                    placeholder="ספר לתורמים למה חשוב לך הנושא הזה...">
+          </textarea>
+        </div>
+
+        <div class="field-group field-group--narrow">
+          <label class="field-label">יעד גיוס אישי (₪)</label>
+          <input class="field-input" type="number" min="0"
+                 [(ngModel)]="draft.goalAmount"
+                 placeholder="25000" />
+          <span class="field-hint">השאר ריק אם אין לך יעד אישי</span>
+        </div>
+      </div>
+    }
+
+    <!-- ───── STEP 3: PREVIEW ───── -->
+    @if (currentStep === 3) {
+      <div class="step-card step-card--preview">
+        <h2 class="step-title">תצוגה מקדימה</h2>
+        <p class="step-desc">כך ייראה דף השגריר שלך</p>
+
+        <div class="preview-card" *ngIf="ambassador() as amb">
+          <div class="preview-header">
+            <div class="preview-avatar">{{ amb.fullName.charAt(0) }}</div>
+            <div class="preview-info">
+              <div class="preview-name">{{ draft.personalTitle || amb.fullName }}</div>
+              <div class="preview-msg" *ngIf="draft.personalMessage">{{ draft.personalMessage }}</div>
+            </div>
+          </div>
+
+          @if (draft.goalAmount) {
+            <div class="preview-goal">
+              <div class="preview-goal-label">היעד שלי</div>
+              <div class="preview-goal-amount">₪{{ draft.goalAmount | number }}</div>
+              <div class="preview-bar">
+                <div class="preview-bar-fill" [style.width.%]="goalPct(amb)"></div>
+              </div>
+              <div class="preview-goal-pct">{{ goalPct(amb) }}% הושג</div>
+            </div>
+          }
+
+          <div class="preview-campaign-info">
+            <div class="preview-campaign-label">קמפיין</div>
+            <div class="preview-campaign-name">{{ campaign?.title }}</div>
+          </div>
+        </div>
+
+        <div class="share-row" *ngIf="shareUrl()">
+          <span class="share-label">קישור אישי:</span>
+          <span class="share-url" dir="ltr">{{ shareUrl() }}</span>
+          <button class="btn-copy" (click)="copyLink()">העתק</button>
+        </div>
+      </div>
+    }
+
+    <!-- FOOTER NAV -->
+    <div class="studio-footer">
+      <button class="btn-prev" (click)="prev()" [disabled]="currentStep === 1">
+        <lucide-angular [img]="ChevronRight" [size]="15"></lucide-angular>
+        הקודם
+      </button>
+
+      @if (currentStep < TOTAL_STEPS) {
+        <button class="btn-next" (click)="next()" [disabled]="isSaving">
+          {{ currentStep === 2 ? (isSaving ? 'שומר...' : 'שמור והמשך') : 'הבא' }}
+          <lucide-angular [img]="ChevronLeft" [size]="15"></lucide-angular>
+        </button>
+      } @else {
+        <button class="btn-next btn-finish" (click)="back()">
+          סיום
+          <lucide-angular [img]="ChevronLeft" [size]="15"></lucide-angular>
+        </button>
+      }
+    </div>
+
+  </div>
+
+</div>
