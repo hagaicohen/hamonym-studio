@@ -1,7 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Users, Plus, Upload, Download, Search, Pencil, Trash2, X, CircleCheck } from 'lucide-angular';
+import { Router } from '@angular/router';
+import { LucideAngularModule, Users, Plus, Upload, Download, Search, Pencil, Trash2, X, CircleCheck, ExternalLink } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { AmbassadorService } from '../../../services/ambassador.service';
 
@@ -67,18 +68,20 @@ const EMPTY_FORM: FormModel = {
   styleUrl: './campaign-ambassadors-step.component.css',
 })
 export class CampaignAmbassadorsStepComponent {
-  private state = inject(CampaignStudioStateService);
-  readonly svc  = inject(AmbassadorService);
+  private state  = inject(CampaignStudioStateService);
+  private router = inject(Router);
+  readonly svc   = inject(AmbassadorService);
 
-  readonly UsersIcon    = Users;
-  readonly PlusIcon     = Plus;
-  readonly UploadIcon   = Upload;
-  readonly DownloadIcon = Download;
-  readonly SearchIcon   = Search;
-  readonly EditIcon     = Pencil;
-  readonly TrashIcon    = Trash2;
-  readonly XIcon        = X;
-  readonly CheckIcon    = CircleCheck;
+  readonly UsersIcon        = Users;
+  readonly PlusIcon         = Plus;
+  readonly UploadIcon       = Upload;
+  readonly DownloadIcon     = Download;
+  readonly SearchIcon       = Search;
+  readonly EditIcon         = Pencil;
+  readonly TrashIcon        = Trash2;
+  readonly XIcon            = X;
+  readonly CheckIcon        = CircleCheck;
+  readonly ExternalLinkIcon = ExternalLink;
 
   draft$ = this.state.draft$;
 
@@ -97,6 +100,14 @@ export class CampaignAmbassadorsStepComponent {
 
   get ambassadors(): CampaignAmbassador[] {
     return this.state.draft.ambassadors ?? [];
+  }
+
+  get campaignId(): string { return this.state.draft.id ?? ''; }
+
+  openManagement(): void {
+    if (this.campaignId) {
+      this.router.navigate(['/campaigns', this.campaignId, 'ambassadors']);
+    }
   }
 
   get ambassadorsBlock() {

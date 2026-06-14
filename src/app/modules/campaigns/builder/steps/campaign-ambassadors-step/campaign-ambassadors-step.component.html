@@ -12,6 +12,10 @@
       </div>
     </div>
     <div class="amb-header-controls">
+      <button class="btn-manage" *ngIf="campaignId" (click)="openManagement()">
+        <lucide-angular [img]="ExternalLinkIcon" [size]="13"></lucide-angular>
+        ניהול שגרירים
+      </button>
       <div class="amb-stats-row" *ngIf="ambassadors.length > 0">
         <div class="amb-stat">
           <div class="amb-stat-val">{{ ambassadors.length }}</div>

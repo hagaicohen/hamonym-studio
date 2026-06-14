@@ -21,6 +21,17 @@
 
 .amb-header-controls { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 
+.btn-manage {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border: 1.5px solid #c4b5fd; border-radius: 10px;
+  background: white; color: #6D5DF6;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-manage:hover { background: #ede9fe; border-color: #a78bfa; }
+
 .amb-stats-row { display: flex; gap: 20px; }
 .amb-stat {
   background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
