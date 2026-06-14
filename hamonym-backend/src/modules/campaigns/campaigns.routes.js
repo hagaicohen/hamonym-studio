@@ -29,6 +29,12 @@ router.get(
 );
 
 router.get(
+  '/my-ambassador-campaigns',
+  requireAuth,
+  controller.myAmbassadorCampaigns
+);
+
+router.get(
   '/check-slug',
   requireAuth,
   controller.checkSlugAvailable
@@ -56,6 +62,12 @@ router.delete(
   '/:id',
   requireAuth,
   controller.deleteCampaign
+);
+
+router.patch(
+  '/:id/visibility',
+  requireAuth,
+  controller.setCampaignVisibility
 );
 
 module.exports =

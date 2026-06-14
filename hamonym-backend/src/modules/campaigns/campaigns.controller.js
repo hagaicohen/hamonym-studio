@@ -310,35 +310,59 @@ exports.deleteCampaign =
 
       await service.deleteCampaign({
 
-        userId:
-          req.user.id,
-
-        campaignId:
-          req.params.id
+        userId:     req.user.id,
+        userRoleId: req.user.roleId,
+        campaignId: req.params.id,
 
       });
 
-      res.json({
-
-        success: true
-
-      });
+      res.json({ success: true });
 
     } catch (err) {
 
       console.error(err);
 
       res
-        .status(
-          getStatusCode(err)
-        )
-        .json({
-
-          error:
-            getErrorMessage(err)
-
-        });
+        .status(err.status || getStatusCode(err))
+        .json({ error: getErrorMessage(err) });
 
     }
 
   };
+
+exports.setCampaignVisibility =
+  async (req, res) => {
+
+    try {
+
+      const isHidden = req.body.is_hidden === true;
+
+      await service.setCampaignVisibility({
+        userId:     req.user.id,
+        campaignId: req.params.id,
+        isHidden,
+      });
+
+      res.json({ success: true, is_hidden: isHidden });
+
+    } catch (err) {
+
+      console.error(err);
+
+      res
+        .status(err.status || getStatusCode(err))
+        .json({ error: getErrorMessage(err) });
+
+    }
+
+  };
+
+exports.myAmbassadorCampaigns = async (req, res) => {
+  try {
+    const campaigns = await service.myAmbassadorCampaigns(req.user.id);
+    res.json({ campaigns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
