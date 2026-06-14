@@ -891,8 +891,11 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
   const { rows } = await db.query(
     `SELECT a.id, a.campaign_id, a.full_name, a.phone, a.email,
             a.goal_amount, a.personal_message, a.status, a.slug,
-            a.personal_title, a.created_at
+            a.personal_title, a.created_at,
+            c.title AS campaign_title, c.slug AS campaign_slug,
+            c.cover_image_url AS campaign_cover
      FROM campaign_ambassadors a
+     JOIN campaigns c ON c.id = a.campaign_id
      JOIN users u ON LOWER(u.email) = LOWER(a.email)
      WHERE u.id = $1 AND a.campaign_id = $2
      LIMIT 1`,
@@ -912,6 +915,11 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
     status:           r.status,
     slug:             r.slug,
     created_at:       r.created_at,
+    campaign: {
+      title: r.campaign_title ?? '',
+      slug:  r.campaign_slug  ?? '',
+      cover: r.campaign_cover ?? null,
+    },
   };
 };
 
