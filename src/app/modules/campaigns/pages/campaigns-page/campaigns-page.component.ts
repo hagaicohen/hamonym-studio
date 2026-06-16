@@ -1,10 +1,12 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/ambassador.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
-import { LucideAngularModule, Trash2, Eye, EyeOff, Users } from 'lucide-angular';
+import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link } from 'lucide-angular';
 
 @Component({
   selector: 'app-campaigns-page',
@@ -13,27 +15,73 @@ import { LucideAngularModule, Trash2, Eye, EyeOff, Users } from 'lucide-angular'
   templateUrl: './campaigns-page.component.html',
   styleUrls: ['./campaigns-page.component.css'],
 })
-export class CampaignsPageComponent implements OnInit {
+export class CampaignsPageComponent implements OnInit, OnDestroy {
   viewMode: 'grid' | 'list' = 'grid';
   campaigns: any[] = [];
   isLoading  = true;
   deletingId: string | null = null;
   hidingId:   string | null = null;
 
-  readonly TrashIcon   = Trash2;
-  readonly EyeIcon     = Eye;
-  readonly EyeOffIcon  = EyeOff;
-  readonly UsersIcon   = Users;
+  private dataSub?: Subscription;
+
+  readonly TrashIcon  = Trash2;
+  readonly EyeIcon    = Eye;
+  readonly EyeOffIcon = EyeOff;
+  readonly UsersIcon  = Users;
+  readonly EditIcon   = Pencil;
+  readonly LinkIcon   = Link;
 
   confirmModal: { id: string; title: string; type: 'delete-draft' | 'hide-campaign' } | null = null;
 
-  private router          = inject(Router);
-  private campaignApi     = inject(CampaignApiService);
-  private loader          = inject(AppLoaderService);
-  private currentContext  = inject(CurrentContextService);
+  ambassadorCampaigns: AmbassadorCampaignSummary[] = [];
+
+  private router         = inject(Router);
+  private campaignApi    = inject(CampaignApiService);
+  private ambassadorSvc  = inject(AmbassadorService);
+  private loader         = inject(AppLoaderService);
+  private currentContext = inject(CurrentContextService);
+
+  constructor() {
+    // Re-load data whenever the active context changes (e.g. topbar role switch)
+    effect(() => {
+      const isAmb = this.currentContext.active()?.role === 'ambassador';
+      untracked(() => {
+        this.dataSub?.unsubscribe();
+        this.isLoading          = true;
+        this.ambassadorCampaigns = [];
+        this.campaigns           = [];
+        this.loader.show();
+
+        if (isAmb) {
+          this.dataSub = this.ambassadorSvc.getMyCampaigns().subscribe({
+            next: (data) => { this.ambassadorCampaigns = data; this.isLoading = false; this.loader.hide(); },
+            error: ()    => { this.isLoading = false; this.loader.hide(); },
+          });
+        } else {
+          this.dataSub = this.campaignApi.list().subscribe({
+            next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); },
+            error: ()    => { this.isLoading = false; this.loader.hide(); },
+          });
+        }
+      });
+    });
+  }
+
+  get isAmbassadorMode(): boolean {
+    return this.currentContext.active()?.role === 'ambassador';
+  }
 
   get isAmbassador(): boolean {
-    return this.currentContext.active()?.role === 'ambassador';
+    return this.isAmbassadorMode;
+  }
+
+  private ambassadorCampaignIds(): Set<string> {
+    const group = this.currentContext.roles().find(g => g.role === 'ambassador');
+    return new Set(group?.contexts.map(c => c.id) ?? []);
+  }
+
+  private hasEntityManagerRole(): boolean {
+    return this.currentContext.roles().some(g => g.role === 'entity-manager');
   }
 
   private readonly fundingLabels: Record<string, string> = {
@@ -43,12 +91,9 @@ export class CampaignsPageComponent implements OnInit {
     'matching':       "מאצ'ינג",
   };
 
-  ngOnInit(): void {
-    this.campaignApi.list().subscribe({
-      next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); },
-      error: ()    => { this.isLoading = false; this.loader.hide(); },
-    });
-  }
+  ngOnInit(): void {}
+
+  ngOnDestroy(): void { this.dataSub?.unsubscribe(); }
 
   get drafts(): any[] {
     return this.campaigns.filter(c => c.status === 'draft');
@@ -115,8 +160,12 @@ export class CampaignsPageComponent implements OnInit {
     this.router.navigate(['/campaigns/create']);
   }
 
+  openAmbassadorStudio(id: string): void {
+    this.router.navigate(['/campaigns', id, 'ambassador-studio']);
+  }
+
   editCampaign(id: string): void {
-    if (this.isAmbassador) {
+    if (!this.hasEntityManagerRole() && this.ambassadorCampaignIds().has(id)) {
       this.router.navigate(['/campaigns', id, 'ambassador-studio']);
     } else {
       this.router.navigate(['/campaigns', id, 'edit']);
@@ -125,6 +174,14 @@ export class CampaignsPageComponent implements OnInit {
 
   viewCampaign(slug: string): void {
     this.router.navigate(['/campaigns', slug, 'view']);
+  }
+
+  viewMyAmbassadorPage(c: AmbassadorCampaignSummary): void {
+    if (c.ambassadorSlug) {
+      this.router.navigate(['/campaigns', c.slug, c.ambassadorSlug]);
+    } else {
+      this.router.navigate(['/campaigns', c.slug, 'view']);
+    }
   }
 
   viewAmbassadors(id: string): void {

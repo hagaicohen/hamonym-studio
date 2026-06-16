@@ -824,3 +824,157 @@
 }
 
 .modal-btn-hide:hover { background: #c2410c; }
+
+/* ------------------------------------------------------------------ */
+/* AMBASSADOR CAMPAIGN CARDS                                            */
+/* ------------------------------------------------------------------ */
+
+.amb-loading {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.amb-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #ede9fe;
+  border-top-color: #6D5DF6;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.amb-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.amb-campaign-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(15,23,42,.04);
+  transition: box-shadow 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.amb-campaign-card:hover {
+  box-shadow: 0 4px 20px rgba(109,93,246,.12);
+  transform: translateY(-2px);
+}
+
+.amb-card-cover {
+  height: 140px;
+  background-color: #f8f7ff;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.amb-card-cover--empty {
+  background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+}
+
+.amb-card-status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.badge-published { background: #dcfce7; color: #15803d; }
+.badge-draft     { background: #fef9c3; color: #854d0e; }
+.badge-paused    { background: #fee2e2; color: #b91c1c; }
+.badge-ended     { background: #f1f5f9; color: #475569; }
+
+.amb-card-inactive-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.amb-card-body {
+  padding: 16px 18px 10px;
+  flex: 1;
+}
+
+.amb-card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.amb-card-goal {
+  font-size: 12px;
+  color: #6D5DF6;
+  font-weight: 600;
+  margin: 0;
+}
+
+.amb-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 16px;
+}
+
+.amb-btn-edit {
+  flex: 1;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: #6D5DF6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.amb-btn-edit:hover { background: #5b4de0; }
+
+.amb-btn-view {
+  height: 38px;
+  padding: 0 14px;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #6D5DF6;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.amb-btn-view:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+}
+

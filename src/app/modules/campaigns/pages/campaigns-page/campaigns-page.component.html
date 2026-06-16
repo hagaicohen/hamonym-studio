@@ -1,5 +1,67 @@
 <div class="campaigns-page">
 
+  <!-- ══ AMBASSADOR VIEW ══ -->
+  @if (isAmbassadorMode) {
+
+    <div class="campaigns-header">
+      <div class="header-text">
+        <h1 class="campaigns-title">הקמפיינים שלי</h1>
+        <p class="campaigns-description">הקמפיינים שבהם אתה משמש כשגריר</p>
+      </div>
+    </div>
+
+    @if (!isLoading && ambassadorCampaigns.length === 0) {
+      <div class="campaigns-empty">
+        <div class="empty-icon">🤝</div>
+        <p>לא נמצאו קמפיינים שאתה שגריר בהם</p>
+      </div>
+    } @else {
+      <div class="amb-cards-grid">
+        @for (c of ambassadorCampaigns; track c.id) {
+          <div class="amb-campaign-card">
+
+            <!-- Cover -->
+            <div class="amb-card-cover"
+                 [style.backgroundImage]="c.cover ? 'url(' + c.cover + ')' : 'none'"
+                 [class.amb-card-cover--empty]="!c.cover">
+              @if (!c.cover) {
+                <lucide-angular [img]="UsersIcon" [size]="32" color="#c4b5fd"></lucide-angular>
+              }
+              <span class="amb-card-status-badge" [class]="'badge-' + c.status">
+                {{ c.status === 'published' ? 'פעיל' : c.status === 'draft' ? 'טיוטה' : c.status }}
+              </span>
+              @if (c.ambassadorStatus === 'inactive') {
+                <span class="amb-card-inactive-badge">לא פעיל</span>
+              }
+            </div>
+
+            <!-- Body -->
+            <div class="amb-card-body">
+              <h3 class="amb-card-title">{{ c.name }}</h3>
+              @if (c.personalGoal) {
+                <p class="amb-card-goal">יעד אישי: ₪{{ c.personalGoal | number }}</p>
+              }
+            </div>
+
+            <!-- Actions -->
+            <div class="amb-card-actions">
+              <button class="amb-btn-edit" (click)="openAmbassadorStudio(c.id)">
+                <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular>
+                ערוך הדף שלי
+              </button>
+              <button class="amb-btn-view" (click)="viewMyAmbassadorPage(c)" title="צפה בדף השגריר שלך">
+                <lucide-angular [img]="LinkIcon" [size]="14"></lucide-angular>
+                הדף שלי
+              </button>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+
+  } @else {
+
   <!-- HEADER -->
   <div class="campaigns-header">
     <div class="header-text">
@@ -213,6 +275,8 @@
     }
 
   }
+
+  } <!-- end @else (entity view) -->
 
 </div>
 

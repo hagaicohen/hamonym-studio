@@ -32,3 +32,44 @@
 .public-preview-wrap {
   width: 100%;
 }
+
+.ambassador-edit-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: #6D5DF6;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 20px;
+  font-size: 14px;
+  direction: rtl;
+}
+
+.ambassador-edit-label {
+  opacity: 0.9;
+}
+
+.ambassador-edit-btn {
+  background: #fff;
+  color: #6D5DF6;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ambassador-edit-btn:hover {
+  opacity: 0.9;
+}
+
+.public-preview-wrap.has-edit-bar {
+  padding-top: 44px;
+}

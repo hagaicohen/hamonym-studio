@@ -81,11 +81,14 @@
     <!-- ══ AMBASSADOR BANNER ══ -->
     <div class="ambassador-strip" *ngIf="ambassador">
 
-      <!-- Info: name -->
+      <!-- Info: name + personal title + message -->
       <div class="ambassador-info">
         <div class="ambassador-details">
           <div class="ambassador-name">{{ ambassador.fullName }}</div>
-          <div class="ambassador-role">שגריר/ת הקמפיין</div>
+          <div class="ambassador-role">{{ ambassador.personalTitle || 'שגריר/ת הקמפיין' }}</div>
+        </div>
+        <div class="ambassador-personal-msg" *ngIf="ambassador.personalMessage">
+          "{{ ambassador.personalMessage }}"
         </div>
       </div>
 

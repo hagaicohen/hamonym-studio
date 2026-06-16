@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AmbassadorService, Ambassador } from '../../services/ambassador.service';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { environment } from '../../../../../environments/environment';
 import { LucideAngularModule, ChevronRight, ChevronLeft, Eye, User, MessageSquare } from 'lucide-angular';
 
@@ -19,6 +20,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
   private router        = inject(Router);
   private http          = inject(HttpClient);
   private ambassadorSvc = inject(AmbassadorService);
+  private loader        = inject(AppLoaderService);
 
   readonly ChevronRight   = ChevronRight;
   readonly ChevronLeft    = ChevronLeft;
@@ -92,10 +94,12 @@ export class AmbassadorStudioPageComponent implements OnInit {
           goalAmount:      ambassador.goalAmount,
         };
         this.isLoading = false;
+        this.loader.hide();
       },
       error: () => {
         this.errorMsg = 'לא נמצאה רשומת שגריר עבור קמפיין זה';
         this.isLoading = false;
+        this.loader.hide();
       },
     });
   }
@@ -151,6 +155,13 @@ export class AmbassadorStudioPageComponent implements OnInit {
         this.errorMsg = 'שגיאה בשמירה';
       },
     });
+  }
+
+  reload(): void {
+    this.isLoading = true;
+    this.errorMsg  = '';
+    this.loader.show();
+    this.ngOnInit();
   }
 
   back(): void {

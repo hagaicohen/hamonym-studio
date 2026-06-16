@@ -8,6 +8,7 @@ import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
 import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
 
 @Component({
   selector: 'app-campaign-public-page',
@@ -24,6 +25,17 @@ export class CampaignPublicPageComponent implements OnInit {
   private ui              = inject(StudioUiService);
   private loader          = inject(AppLoaderService);
   private ambassadorSvc   = inject(AmbassadorService);
+  private ctx             = inject(CurrentContextService);
+
+  get isAmbassadorMode(): boolean {
+    return this.ctx.active()?.role === 'ambassador';
+  }
+
+  editMyAmbassadorPage(): void {
+    if (this.currentAmbassador?.campaignId) {
+      this.router.navigate(['/campaigns', this.currentAmbassador.campaignId, 'ambassador-studio']);
+    }
+  }
 
   isLoading       = true;
   notFound        = false;

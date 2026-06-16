@@ -158,6 +158,14 @@
 }
 .ambassador-name { font-size: 20px; font-weight: 800; color: #0f172a; }
 .ambassador-role { margin-top: 2px; color: #64748b; font-size: 13px; }
+.ambassador-personal-msg {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #374151;
+  font-style: italic;
+  line-height: 1.5;
+  max-width: 340px;
+}
 
 .ambassador-stats {
   flex: 1; display: flex; align-items: center; gap: 24px; min-width: 0;
