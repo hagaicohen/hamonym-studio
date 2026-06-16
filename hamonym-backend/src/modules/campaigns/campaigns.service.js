@@ -848,8 +848,10 @@ exports.setCampaignVisibility =
 exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
   const { rows: found } = await db.query(
     `SELECT a.id FROM campaign_ambassadors a
-     JOIN users u ON LOWER(u.email) = LOWER(a.email)
-     WHERE u.id = $1 AND a.campaign_id = $2 LIMIT 1`,
+     WHERE a.campaign_id = $2
+       AND a.email IS NOT NULL
+       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
+     LIMIT 1`,
     [userId, campaignId]
   );
   if (!found.length) throw new Error('Ambassador not found');
@@ -858,11 +860,12 @@ exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
   const fields = [];
   const vals   = [];
   let   i      = 1;
-  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title'];
+  const allowed    = ['full_name','phone','email','goal_amount','personal_message','personal_title'];
+  const notNullable = new Set(['full_name', 'personal_message']);
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = $${i++}`);
-      vals.push(data[key] === '' ? null : data[key]);
+      vals.push(data[key] === '' && !notNullable.has(key) ? null : data[key]);
     }
   }
   if (!fields.length) throw new Error('No fields supplied');
@@ -896,8 +899,9 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
             c.cover_image_url AS campaign_cover
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
-     JOIN users u ON LOWER(u.email) = LOWER(a.email)
-     WHERE u.id = $1 AND a.campaign_id = $2
+     WHERE a.campaign_id = $2
+       AND a.email IS NOT NULL
+       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
      LIMIT 1`,
     [userId, campaignId]
   );
@@ -925,14 +929,25 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
 
 exports.myAmbassadorCampaigns = async (userId) => {
   const { rows } = await db.query(
-    `SELECT DISTINCT c.id, c.title AS name
+    `SELECT c.id, c.title AS name, c.slug, c.cover_image_url, c.status,
+            a.slug AS ambassador_slug, a.status AS ambassador_status,
+            a.goal_amount AS personal_goal
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
-     JOIN users u ON LOWER(u.email) = LOWER(a.email)
-     WHERE u.id = $1 AND a.email IS NOT NULL
+     WHERE a.email IS NOT NULL
+       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
      ORDER BY c.title`,
     [userId]
   );
-  return rows.map(r => ({ id: r.id, name: r.name || '' }));
+  return rows.map(r => ({
+    id:               r.id,
+    name:             r.name             || '',
+    slug:             r.slug             || '',
+    cover:            r.cover_image_url  ?? null,
+    status:           r.status           || 'published',
+    ambassadorSlug:   r.ambassador_slug  || '',
+    ambassadorStatus: r.ambassador_status || 'active',
+    personalGoal:     r.personal_goal != null ? Number(r.personal_goal) : null,
+  }));
 };
 
