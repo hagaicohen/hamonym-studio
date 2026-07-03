@@ -12,13 +12,19 @@ exports.getDonationPublic = async (req, res) => {
 
 exports.createDonation = async (req, res) => {
   try {
-    const { campaignId, donor, amount, rewards } = req.body;
+    const { campaignId, donor, amount, rewards, utmParams } = req.body;
 
     if (!campaignId || !donor || !amount) {
       return res.status(400).json({ error: 'campaignId, donor and amount are required' });
     }
 
-    const result = await donationsService.createDonation({ campaignId, donor, amount, rewards });
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const userAgent = req.headers['user-agent'] || null;
+
+    const result = await donationsService.createDonation({
+      campaignId, donor, amount, rewards,
+      utmParams, ipAddress, userAgent,
+    });
     res.json(result);
   } catch (err) {
     console.error('createDonation error:', err.message);
@@ -31,6 +37,21 @@ exports.getCampaignDonors = async (req, res) => {
     const donors = await donationsService.getCampaignDonors(req.params.slug);
     res.json({ donors });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.mockComplete = async (req, res) => {
+  if (process.env.PAYMENT_PROVIDER !== 'mock') {
+    return res.status(403).json({ error: 'Mock payments are disabled' });
+  }
+  try {
+    const { id, status, failureReason, completedAt } = req.body;
+    if (!id || !status) return res.status(400).json({ error: 'id and status are required' });
+    const result = await donationsService.handleMockComplete({ donationId: id, status, failureReason, completedAt });
+    res.json({ redirectUrl: result.redirectUrl });
+  } catch (err) {
+    console.error('mockComplete error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };

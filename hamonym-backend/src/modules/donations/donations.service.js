@@ -6,7 +6,9 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ─────────────────────────────────────────
    CREATE DONATION + CARDCOM LOW PROFILE
 ───────────────────────────────────────── */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmParams, ipAddress, userAgent }) => {
+
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -21,7 +23,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
   const campaign = campaignRes.rows[0];
   if (!campaign) throw new Error('Campaign not found');
 
-  if (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password) {
+  if (!isMock && (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password)) {
     throw new Error('Cardcom credentials not configured for this entity');
   }
 
@@ -30,8 +32,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
     `INSERT INTO donations (
        campaign_id, entity_id, amount,
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
-       rewards, status
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+       postal_code, is_anonymous,
+       rewards, status, is_mock,
+       utm_params, ip_address, user_agent
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15)
      RETURNING id`,
     [
       campaignId,
@@ -40,12 +44,27 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
       donor.name,
       donor.email,
       donor.phone,
-      donor.idNumber || null,
-      donor.address  || null,
+      donor.idNumber    || null,
+      donor.address     || null,
+      donor.postalCode  || null,
+      donor.isAnonymous || false,
       JSON.stringify(rewards),
+      isMock,
+      utmParams  ? JSON.stringify(utmParams) : null,
+      ipAddress  || null,
+      userAgent  || null,
     ]
   );
   const donationId = donationRes.rows[0].id;
+
+  // 3. Mock provider — skip Cardcom, return mock payment URL
+  if (isMock) {
+    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+    return {
+      url: `${frontBase}/mock-payment?id=${donationId}&amount=${amount}&slug=${campaign.slug}&title=${encodeURIComponent(campaign.title)}`,
+      donationId,
+    };
+  }
 
   // 3. Build Cardcom products list
   const products = [];
@@ -104,12 +123,12 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [] }) => 
     });
     cardcomData = response.data;
   } catch (err) {
-    await db.query(`UPDATE donations SET status='failed' WHERE id=$1`, [donationId]);
+    await db.query(`UPDATE donations SET status='failed', updated_at=NOW() WHERE id=$1`, [donationId]);
     throw new Error(err.response?.data?.Description || 'Cardcom connection failed');
   }
 
   if (cardcomData.ResponseCode !== 0) {
-    await db.query(`UPDATE donations SET status='failed' WHERE id=$1`, [donationId]);
+    await db.query(`UPDATE donations SET status='failed', updated_at=NOW() WHERE id=$1`, [donationId]);
     throw new Error(cardcomData.Description || `Cardcom error ${cardcomData.ResponseCode}`);
   }
 
@@ -135,16 +154,17 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
 
   // Fetch donation + campaign in one query
   const donRes = await db.query(
-    `SELECT d.amount, d.campaign_id, c.slug
+    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      WHERE d.id = $1`,
     [donationId]
   );
 
-  const row = donRes.rows[0];
-  const slug   = row?.slug  || '';
-  const amount = row?.amount || 0;
+  const row      = donRes.rows[0];
+  const slug     = row?.slug      || '';
+  const amount   = row?.amount    || 0;
+  const entityId = row?.entity_id || null;
 
   // Update donation record
   await db.query(
@@ -154,7 +174,7 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
     [newStatus, lowprofilecode || null, donationId]
   );
 
-  // On success: bump campaign metrics
+  // On success: bump campaign metrics + bust dashboard cache
   if (success && row?.campaign_id) {
     await db.query(
       `UPDATE campaigns
@@ -164,6 +184,7 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
        WHERE id = $2`,
       [amount, row.campaign_id]
     );
+    if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
   }
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
@@ -210,6 +231,54 @@ exports.getCampaignDonors = async (slug) => {
     [slug]
   );
   return res.rows;
+};
+
+/* ─────────────────────────────────────────
+   HANDLE MOCK PAYMENT COMPLETION (dev only)
+───────────────────────────────────────── */
+exports.handleMockComplete = async ({ donationId, status, failureReason, completedAt }) => {
+  const success   = status === 'paid';
+  const newStatus = success ? 'paid' : 'failed';
+  const resolvedAt = completedAt ? new Date(completedAt) : new Date();
+
+  const donRes = await db.query(
+    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     WHERE d.id = $1`,
+    [donationId]
+  );
+
+  const row      = donRes.rows[0];
+  const slug     = row?.slug      || '';
+  const amount   = row?.amount    || 0;
+  const entityId = row?.entity_id || null;
+
+  await db.query(
+    `UPDATE donations
+     SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
+     WHERE id=$4`,
+    [newStatus, failureReason || null, resolvedAt, donationId]
+  );
+
+  if (success && row?.campaign_id) {
+    await db.query(
+      `UPDATE campaigns
+       SET current_amount   = current_amount   + $1,
+           supporters_count = supporters_count + 1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [amount, row.campaign_id]
+    );
+    if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+  }
+
+  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+  return {
+    redirectUrl: success
+      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
+      : `${frontBase}/campaigns/${slug}/view?payment=failed`,
+  };
 };
 
 function round2(n) { return Math.round(n * 100) / 100; }
