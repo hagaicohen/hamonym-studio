@@ -76,6 +76,15 @@
         </ng-container>
 
       </nav>
+
+      <!-- Mobile nav drawer -->
+      <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
+        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">אודות הקמפיין</a>
+        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
+        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
+        <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
+      </div>
+
     </div>
 
     <!-- ══ AMBASSADOR BANNER ══ -->
@@ -134,14 +143,6 @@
         </button>
       </div>
 
-    </div>
-
-    <!-- Mobile nav drawer -->
-    <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
-      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">אודות הקמפיין</a>
-      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
-      <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
-      <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
     </div>
 
     <!-- Logo strip — white bar ABOVE hero, logo as plain image, no circle -->

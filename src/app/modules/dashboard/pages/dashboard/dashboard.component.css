@@ -76,6 +76,12 @@
   height: 30px;
 }
 
+.dh-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .dh-user-info {
   display: flex;
   flex-direction: column;
@@ -153,16 +159,18 @@
 }
 
 .dh-entity-logo {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f8b4c0, #b57bee);
+  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  color: white;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
 
 .dh-entity-logo img {

@@ -8,7 +8,8 @@ import { CommonModule } from '@angular/common';
 
 import { inject } from '@angular/core';
 
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { EntitiesService } from '../../../../core/services/entities.service';
 
@@ -80,9 +81,23 @@ export class LoginComponent implements OnInit {
   private ambassadorService = inject(AmbassadorService);
 
   ngOnInit(): void {
+    this._initGoogle();
+  }
+
+  private _initGoogle(): void {
+    if (typeof (window as any)['google'] !== 'undefined' && (window as any)['google']?.accounts?.id) {
+      this._renderGoogleButton();
+    } else {
+      const script = document.querySelector('script[src*="accounts.google.com"]');
+      if (script) {
+        script.addEventListener('load', () => this._renderGoogleButton());
+      }
+    }
+  }
+
+  private _renderGoogleButton(): void {
     google.accounts.id.initialize({
       client_id: environment.googleClientId,
-
       callback: (response: any) => {
         this.handleGoogleLogin(response.credential);
       },
@@ -90,16 +105,7 @@ export class LoginComponent implements OnInit {
 
     google.accounts.id.renderButton(
       document.getElementById('google-button'),
-
-      {
-        theme: 'outline',
-
-        size: 'large',
-
-        shape: 'pill',
-
-        text: 'signin_with',
-      },
+      { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' },
     );
   }
 
@@ -125,7 +131,7 @@ export class LoginComponent implements OnInit {
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
           forkJoin({
-            entitiesRes: this.entitiesService.getMyEntities(),
+            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
           }).subscribe({
             next: ({ entitiesRes, ambassadorCampaigns }) => {
@@ -159,7 +165,7 @@ export class LoginComponent implements OnInit {
               // NAVIGATION FLOW
               // =========================
 
-              if (res.hasEntities) {
+              if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;
@@ -210,7 +216,7 @@ export class LoginComponent implements OnInit {
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
           forkJoin({
-            entitiesRes: this.entitiesService.getMyEntities(),
+            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
           }).subscribe({
             next: ({ entitiesRes, ambassadorCampaigns }) => {
@@ -244,7 +250,7 @@ export class LoginComponent implements OnInit {
               // NAVIGATION FLOW
               // =========================
 
-              if (res.hasEntities) {
+              if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;

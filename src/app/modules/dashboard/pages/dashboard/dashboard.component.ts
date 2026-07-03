@@ -10,6 +10,7 @@ import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
 
 Chart.register(...registerables);
 
@@ -54,6 +55,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private http            = inject(HttpClient);
   currentEntity           = inject(CurrentEntityService);
+  readonly ctx            = inject(CurrentContextService);
   private entitiesService = inject(EntitiesService);
   private router          = inject(Router);
   private loader          = inject(AppLoaderService);
@@ -63,6 +65,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   userName       = '';
   userInitials   = '';
+  userPhoto      = '';
   entityName     = '';
   entityInitials = '';
   entityLogoUrl  = '';
@@ -77,11 +80,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
       const full: string = u.full_name || u.name || '';
       this.userName = full;
+      this.userPhoto = u.picture || '';
       const parts = full.trim().split(' ').filter(Boolean);
       this.userInitials = parts.length >= 2
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : (parts[0]?.[0] ?? '?').toUpperCase();
-    } catch { this.userName = ''; this.userInitials = '?'; }
+    } catch { this.userName = ''; this.userInitials = '?'; this.userPhoto = ''; }
 
     const eName: string = this.currentEntity.currentEntity()?.display_name || '';
     this.entityName = eName;
@@ -100,7 +104,13 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
     // רענון entity — מעדכן את ה-signal כך שה-allAlerts getter יקבל נתונים עדכניים
     this.entitiesService.getEntityById(entity.id).subscribe({
-      next: (fresh) => { this.currentEntity.setEntity(fresh); },
+      next: (fresh) => {
+        this.currentEntity.setEntity(fresh);
+        const freshRaw: string = fresh.logo_url || '';
+        this.entityLogoUrl = freshRaw
+          ? (freshRaw.startsWith('http') || freshRaw.startsWith('data:') ? freshRaw : `${environment.apiUrl}${freshRaw}`)
+          : '';
+      },
       error: () => {},
     });
 
