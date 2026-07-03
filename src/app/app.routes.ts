@@ -28,6 +28,18 @@ const CAMPAIGN_AMBASSADORS_ROUTE = {
 export const routes: Routes = [
 
   /* ========================================
+     MOCK PAYMENT — ללא auth, ללא layout
+     מחליף את Cardcom בסביבת פיתוח
+  ======================================== */
+  {
+    path: 'mock-payment',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/mock-payment-page/mock-payment-page.component').then(
+        (m) => m.MockPaymentPageComponent,
+      ),
+  },
+
+  /* ========================================
      AUTH — ללא Topbar/Sidebar
      login | register | organization-registration
   ======================================== */
