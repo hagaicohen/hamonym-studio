@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -7,6 +7,13 @@ export interface Donor {
   name: string;
   amount: number;
   completedAt: Date;
+}
+
+export interface DonationToastItem {
+  name: string;
+  amount: number;
+  completedAt: Date;
+  isAnonymous: boolean;
 }
 
 export interface DonationPayload {
@@ -44,5 +51,16 @@ export class DonationService {
         amount: d.amount,
         completedAt: new Date(d.completed_at),
       }))));
+  }
+
+  getLive(slug: string, since: string): Observable<DonationToastItem[]> {
+    return this.http.get<{ donations: any[] }>(`${this.apiUrl}/campaign/${slug}/live`, {
+      params: new HttpParams().set('since', since),
+    }).pipe(map(r => (r.donations ?? []).map((d: any) => ({
+      name: d.name,
+      amount: d.amount,
+      completedAt: new Date(d.completed_at),
+      isAnonymous: d.is_anonymous,
+    }))));
   }
 }

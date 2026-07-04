@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
@@ -7,17 +7,21 @@ import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/
 import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
+import { DonationToastComponent } from '../../shared/components/donation-toast/donation-toast.component';
 import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { DonationService } from '../../services/donation.service';
 
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [CommonModule, CampaignPreviewComponent, PaymentFailedPopupComponent],
+  imports: [CommonModule, CampaignPreviewComponent, PaymentFailedPopupComponent, DonationToastComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })
-export class CampaignPublicPageComponent implements OnInit {
+export class CampaignPublicPageComponent implements OnInit, OnDestroy {
+  @ViewChild(DonationToastComponent) private toast!: DonationToastComponent;
+
   private route           = inject(ActivatedRoute);
   private router          = inject(Router);
   private api             = inject(CampaignApiService);
@@ -26,6 +30,7 @@ export class CampaignPublicPageComponent implements OnInit {
   private loader          = inject(AppLoaderService);
   private ambassadorSvc   = inject(AmbassadorService);
   private ctx             = inject(CurrentContextService);
+  private donationSvc     = inject(DonationService);
 
   get isAmbassadorMode(): boolean {
     return this.ctx.active()?.role === 'ambassador';
@@ -43,6 +48,10 @@ export class CampaignPublicPageComponent implements OnInit {
   currentAmbassador: Ambassador | null = null;
   ambassadorsList: AmbassadorPublicInfo[] | null = null;
 
+  private pollSlug    = '';
+  private pollSince   = '';
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+
   @HostListener('window:resize')
   onResize(): void { this.syncDevice(); }
 
@@ -55,7 +64,7 @@ export class CampaignPublicPageComponent implements OnInit {
     const slug          = this.route.snapshot.paramMap.get('slug');
     const ambassadorSlug =
       this.route.snapshot.paramMap.get('ambassadorSlug') ??
-      this.route.snapshot.queryParamMap.get('a'); // backwards compat
+      this.route.snapshot.queryParamMap.get('a');
 
     if (!slug) { this.router.navigate(['/campaigns']); return; }
 
@@ -70,7 +79,6 @@ export class CampaignPublicPageComponent implements OnInit {
         this.loader.hide();
         this.isLoading = false;
 
-        // Load ambassador leaderboard
         this.ambassadorSvc.listPublic(slug).subscribe({
           next: list => { this.ambassadorsList = list; },
         });
@@ -86,6 +94,8 @@ export class CampaignPublicPageComponent implements OnInit {
             },
           });
         }
+
+        this.startLivePolling(slug);
       },
       error: () => {
         this.loader.hide();
@@ -93,6 +103,29 @@ export class CampaignPublicPageComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  private startLivePolling(slug: string): void {
+    this.pollSlug  = slug;
+    this.pollSince = new Date().toISOString();
+    this.pollInterval = setInterval(() => this.pollLive(), 5000);
+  }
+
+  private pollLive(): void {
+    const since = this.pollSince;
+    this.pollSince = new Date().toISOString();
+
+    this.donationSvc.getLive(this.pollSlug, since).subscribe({
+      next: items => {
+        for (const item of items) {
+          this.toast?.add(item);
+        }
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   onRetryPayment(): void {

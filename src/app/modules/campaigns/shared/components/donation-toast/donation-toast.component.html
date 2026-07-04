@@ -1,0 +1,14 @@
+@if (current) {
+  <div class="donation-toast" [class.visible]="visible" [class.large]="isLarge(current.amount)">
+    <div class="toast-icon">{{ isLarge(current.amount) ? '🎉' : '💜' }}</div>
+    <div class="toast-body">
+      <div class="toast-name">
+        {{ current.isAnonymous ? 'תורם אנונימי' : current.name }}
+      </div>
+      <div class="toast-amount">
+        תרם {{ current.amount | number:'1.0-0' }} ₪
+      </div>
+      <div class="toast-time">{{ timeAgo(current.completedAt) }}</div>
+    </div>
+  </div>
+}
