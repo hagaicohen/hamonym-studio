@@ -24,6 +24,7 @@ export class TopbarComponent {
 
   dropdownOpen = false;
   readonly alertCount = signal<number>(0);
+  photoFailed = false;
 
   readonly currentUser = signal<{ full_name: string; email: string; picture?: string } | null>(
     this._loadUser(),
@@ -38,12 +39,15 @@ export class TopbarComponent {
 
   readonly userPhoto = computed(() => this.currentUser()?.picture ?? null);
 
+  private _alertTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(private auth: AuthService) {
     effect(() => {
       const active = this.ctx.active();
       const entityId = active?.role === 'entity-manager' ? active.context?.id : null;
+      if (this._alertTimer) clearTimeout(this._alertTimer);
       if (entityId) {
-        this._fetchAlertCount(entityId);
+        this._alertTimer = setTimeout(() => this._fetchAlertCount(entityId), 2000);
       } else {
         this.alertCount.set(0);
       }

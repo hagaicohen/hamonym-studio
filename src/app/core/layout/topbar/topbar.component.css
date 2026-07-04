@@ -249,9 +249,12 @@
   border-radius: 50%;
 }
 
-.avatar-icon {
-  width: 20px; height: 20px;
-  color: #64748b;
+.avatar-initials {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.5px;
+  user-select: none;
 }
 
 /* ─── LOGOUT ─────────────────────────────────────────── */
