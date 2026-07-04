@@ -1,6 +1,6 @@
 .donation-toast {
   position: fixed;
-  bottom: 28px;
+  top: 88px;
   right: 28px;
   z-index: 9999;
   display: flex;
@@ -70,8 +70,8 @@
 
 @media (max-width: 480px) {
   .donation-toast {
+    top: 12px;
     right: 12px;
-    bottom: 12px;
     min-width: 200px;
     max-width: calc(100vw - 24px);
   }

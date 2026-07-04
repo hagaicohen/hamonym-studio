@@ -44,7 +44,9 @@ export class MockPaymentPageComponent implements OnInit {
     this.amount        = parseFloat(p.get('amount') || '0');
     this.slug          = p.get('slug')   || '';
     this.campaignTitle = p.get('title')  || '';
-    this.completedAt   = new Date().toISOString().slice(0, 16);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    this.completedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   }
 
   get formattedAmount(): string {
