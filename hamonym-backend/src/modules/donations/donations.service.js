@@ -214,6 +214,28 @@ exports.getDonationPublic = async (donationId) => {
 };
 
 /* ─────────────────────────────────────────
+   LIVE DONATIONS (polling — new since timestamp)
+───────────────────────────────────────── */
+exports.getLiveDonations = async (slug, since) => {
+  const sinceDate = since ? new Date(since) : new Date(0);
+  const res = await db.query(
+    `SELECT d.donor_name AS name,
+            d.amount::float AS amount,
+            d.completed_at,
+            d.is_anonymous
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     WHERE c.slug = $1
+       AND d.status = 'paid'
+       AND d.completed_at > $2
+     ORDER BY d.completed_at ASC
+     LIMIT 10`,
+    [slug, sinceDate]
+  );
+  return res.rows;
+};
+
+/* ─────────────────────────────────────────
    PUBLIC DONORS LIST (for campaign page)
 ───────────────────────────────────────── */
 exports.getCampaignDonors = async (slug) => {

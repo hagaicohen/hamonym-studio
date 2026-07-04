@@ -32,6 +32,15 @@ exports.createDonation = async (req, res) => {
   }
 };
 
+exports.getLiveDonations = async (req, res) => {
+  try {
+    const donations = await donationsService.getLiveDonations(req.params.slug, req.query.since);
+    res.json({ donations });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.getCampaignDonors = async (req, res) => {
   try {
     const donors = await donationsService.getCampaignDonors(req.params.slug);
