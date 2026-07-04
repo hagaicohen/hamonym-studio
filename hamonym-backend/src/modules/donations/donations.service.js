@@ -270,8 +270,9 @@ exports.handleMockComplete = async ({ donationId, status, failureReason, complet
        WHERE id = $2`,
       [amount, row.campaign_id]
     );
-    if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
   }
+
+  if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
   return {
