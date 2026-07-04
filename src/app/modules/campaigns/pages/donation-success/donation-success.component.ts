@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 interface DonationResult {
   id:             string;
@@ -30,6 +31,7 @@ export class DonationSuccessComponent implements OnInit {
   private meta   = inject(Meta);
   private title  = inject(Title);
   private http   = inject(HttpClient);
+  private loader = inject(AppLoaderService);
 
   slug       = '';
   ref        = '';
@@ -54,11 +56,13 @@ export class DonationSuccessComponent implements OnInit {
             this.amount   = parseFloat(String(d.amount));
             this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
             this.loading  = false;
+            this.loader.hide();
           },
-          error: () => { this.loading = false; },
+          error: () => { this.loading = false; this.loader.hide(); },
         });
     } else {
       this.loading = false;
+      this.loader.hide();
     }
   }
 
@@ -97,6 +101,8 @@ export class DonationSuccessComponent implements OnInit {
   }
 
   backToCampaign(): void {
-    this.router.navigate(['/campaigns', this.slug, 'view']);
+    this.router.navigate(['/campaigns', this.slug, 'view'], {
+      queryParams: { since: new Date(Date.now() - 10 * 60_000).toISOString() },
+    });
   }
 }

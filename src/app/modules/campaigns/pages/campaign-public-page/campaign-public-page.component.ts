@@ -73,6 +73,8 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
       this.router.navigate([], { replaceUrl: true, queryParams: ambassadorSlug ? { a: ambassadorSlug } : {} });
     }
 
+    const sinceParm = this.route.snapshot.queryParamMap.get('since');
+
     this.api.getBySlug(slug).subscribe({
       next: (data) => {
         this.state.loadDraft(data);
@@ -95,7 +97,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
           });
         }
 
-        this.startLivePolling(slug);
+        this.startLivePolling(slug, sinceParm ?? undefined);
       },
       error: () => {
         this.loader.hide();
@@ -105,10 +107,10 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  private startLivePolling(slug: string): void {
+  private startLivePolling(slug: string, since?: string): void {
     this.pollSlug  = slug;
-    // Look back 90s to catch donations completed just before returning to page
-    this.pollSince = new Date(Date.now() - 90_000).toISOString();
+    // since param passed from success page; default 5-min lookback for fresh viewers
+    this.pollSince = since ?? new Date(Date.now() - 5 * 60_000).toISOString();
     this.pollInterval = setInterval(() => this.pollLive(), 5000);
   }
 
