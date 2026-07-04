@@ -107,7 +107,8 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   private startLivePolling(slug: string): void {
     this.pollSlug  = slug;
-    this.pollSince = new Date().toISOString();
+    // Look back 90s to catch donations completed just before returning to page
+    this.pollSince = new Date(Date.now() - 90_000).toISOString();
     this.pollInterval = setInterval(() => this.pollLive(), 5000);
   }
 
