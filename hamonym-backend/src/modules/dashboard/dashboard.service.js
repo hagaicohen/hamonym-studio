@@ -310,6 +310,36 @@ exports.getDashboardData = async (entityId) => {
 };
 
 exports.getAlertCount = async (entityId) => {
-  const data = await exports.getDashboardData(entityId);
-  return data.alerts.length;
+  const res = await db.query(`
+    SELECT (
+      (SELECT COUNT(*) FROM donations
+       WHERE entity_id = $1 AND status = 'failed'
+         AND updated_at >= date_trunc('month', NOW()))
+      +
+      (SELECT COUNT(*) FROM campaigns
+       WHERE entity_id = $1
+         AND (status = 'pending_review'
+           OR (status = 'published' AND end_date IS NOT NULL
+               AND end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')))
+      +
+      (SELECT COUNT(*) FROM campaigns
+       WHERE entity_id = $1 AND status = 'published'
+         AND target_amount > 0
+         AND current_amount >= target_amount * 0.9
+         AND current_amount < target_amount)
+      +
+      (SELECT COUNT(*) FROM campaigns c
+       WHERE c.entity_id = $1 AND c.status = 'published'
+         AND (c.end_date IS NULL OR c.end_date > NOW())
+         AND c.created_at < NOW() - INTERVAL '14 days'
+         AND NOT EXISTS (
+           SELECT 1 FROM donations d
+           WHERE d.campaign_id = c.id AND d.status = 'paid'
+             AND d.completed_at >= NOW() - INTERVAL '14 days'))
+      +
+      (SELECT COUNT(*) FROM campaigns
+       WHERE entity_id = $1 AND status = 'draft')
+    )::int AS count
+  `, [entityId]);
+  return res.rows[0].count;
 };
