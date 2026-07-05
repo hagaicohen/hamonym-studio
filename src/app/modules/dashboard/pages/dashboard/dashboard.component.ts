@@ -313,8 +313,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   fmtDate(iso: string): string {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${y}`;
   }
 
   statusLabel(s: string): string {

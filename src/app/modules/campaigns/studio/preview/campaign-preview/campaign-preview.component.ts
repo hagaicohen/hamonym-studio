@@ -405,19 +405,19 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   formatDate(iso: string): string {
     if (!iso) return '';
     const [y, m, d] = this.parseDate(iso);
-    return `${d}.${m}.${y.slice(2)}`;
+    return `${d}/${m}/${y}`;
   }
 
   formatDateShort(iso: string): string {
     if (!iso) return '';
     const [y, m, d] = this.parseDate(iso);
-    return `${d}.${m}.${y.slice(2)}`;
+    return `${d}/${m}/${y}`;
   }
 
   formatDateFull(iso: string): string {
     if (!iso) return '';
     const [y, m, d] = this.parseDate(iso);
-    return `${d}.${m}.${y}`;
+    return `${d}/${m}/${y}`;
   }
 
   // ── Utilities ──

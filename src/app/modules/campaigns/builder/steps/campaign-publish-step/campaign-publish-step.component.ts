@@ -60,9 +60,9 @@ export class CampaignPublishStepComponent {
 
   formatDate(iso: string): string {
     if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    if (!y || !m || !d) return '—';
+    return `${d}/${m}/${y}`;
   }
 
   get hasHero(): boolean {

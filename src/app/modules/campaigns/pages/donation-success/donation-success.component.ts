@@ -71,8 +71,12 @@ export class DonationSuccessComponent implements OnInit {
   }
 
   get formattedDate(): string {
-    const d = this.donation?.created_at ? new Date(this.donation.created_at) : new Date();
-    return d.toLocaleString('he-IL', { dateStyle: 'long', timeStyle: 'short' });
+    const iso = this.donation?.created_at ?? new Date().toISOString();
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    const t = new Date(iso);
+    const hh = String(t.getHours()).padStart(2, '0');
+    const mm = String(t.getMinutes()).padStart(2, '0');
+    return `${d}/${m}/${y} ${hh}:${mm}`;
   }
 
   get campaignTitle(): string {
