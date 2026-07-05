@@ -532,6 +532,11 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
 
   openCheckout(draft: CampaignDraft): void {
+    if (this.selectedAmount === null && !this.customAmount) {
+      const effective = this.getEffectiveAmount(draft);
+      if (effective > 0) this.selectedAmount = effective;
+    }
+    if (this.totalAmount(draft) === 0) return;
     this.checkoutOpen = true;
   }
 
