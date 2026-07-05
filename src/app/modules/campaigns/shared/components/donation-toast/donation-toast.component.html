@@ -1,14 +1,17 @@
-@if (current) {
-  <div class="donation-toast" [class.visible]="visible" [class.large]="isLarge(current.amount)">
-    <div class="toast-icon">{{ isLarge(current.amount) ? '🎉' : '💜' }}</div>
-    <div class="toast-body">
-      <div class="toast-name">
-        {{ current.isAnonymous ? 'תורם אנונימי' : current.name }}
+<div class="toast-stack">
+  @for (toast of active; track toast.id) {
+    <div class="donation-toast"
+         [class.visible]="toast.visible"
+         [class.large]="isLarge(toast.item.amount)"
+         (click)="dismiss(toast.id)">
+      <div class="toast-icon">{{ isLarge(toast.item.amount) ? '🎉' : '💜' }}</div>
+      <div class="toast-body">
+        <div class="toast-name">
+          {{ toast.item.isAnonymous ? 'תורם אנונימי' : toast.item.name }}
+        </div>
+        <div class="toast-amount">תרם {{ toast.item.amount | number:'1.0-0' }} ₪</div>
+        <div class="toast-time">{{ timeAgo(toast.item.completedAt) }}</div>
       </div>
-      <div class="toast-amount">
-        תרם {{ current.amount | number:'1.0-0' }} ₪
-      </div>
-      <div class="toast-time">{{ timeAgo(current.completedAt) }}</div>
     </div>
-  </div>
-}
+  }
+</div>

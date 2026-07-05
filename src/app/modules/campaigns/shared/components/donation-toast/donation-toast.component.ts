@@ -2,6 +2,12 @@ import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DonationToastItem } from '../../../services/donation.service';
 
+interface ActiveToast {
+  id: number;
+  item: DonationToastItem;
+  visible: boolean;
+}
+
 @Component({
   selector: 'app-donation-toast',
   standalone: true,
@@ -10,26 +16,35 @@ import { DonationToastItem } from '../../../services/donation.service';
   styleUrls: ['./donation-toast.component.css'],
 })
 export class DonationToastComponent implements OnDestroy {
-  current: DonationToastItem | null = null;
-  visible = false;
+  active: ActiveToast[] = [];
 
-  private queue: DonationToastItem[] = [];
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
-  private nextTimer: ReturnType<typeof setTimeout> | null = null;
+  private nextId  = 0;
+  private timers  = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly MAX = 3;
 
   add(item: DonationToastItem): void {
-    this.queue.push(item);
-    if (!this.current) this.showNext();
+    if (this.active.length >= this.MAX) {
+      this.dismiss(this.active[0].id);
+    }
+
+    const id = this.nextId++;
+    this.active.push({ id, item, visible: false });
+
+    setTimeout(() => {
+      const t = this.active.find(t => t.id === id);
+      if (t) t.visible = true;
+    }, 10);
+
+    this.timers.set(id, setTimeout(() => this.dismiss(id), 4500));
   }
 
-  private showNext(): void {
-    if (this.queue.length === 0) { this.current = null; return; }
-    this.current = this.queue.shift()!;
-    this.visible = true;
-    this.hideTimer = setTimeout(() => {
-      this.visible = false;
-      this.nextTimer = setTimeout(() => this.showNext(), 420);
-    }, 4500);
+  dismiss(id: number): void {
+    const t = this.active.find(t => t.id === id);
+    if (!t) return;
+    t.visible = false;
+    setTimeout(() => { this.active = this.active.filter(t => t.id !== id); }, 400);
+    const timer = this.timers.get(id);
+    if (timer) { clearTimeout(timer); this.timers.delete(id); }
   }
 
   timeAgo(date: Date): string {
@@ -42,7 +57,6 @@ export class DonationToastComponent implements OnDestroy {
   isLarge(amount: number): boolean { return amount >= 1000; }
 
   ngOnDestroy(): void {
-    if (this.hideTimer) clearTimeout(this.hideTimer);
-    if (this.nextTimer) clearTimeout(this.nextTimer);
+    this.timers.forEach(t => clearTimeout(t));
   }
 }
