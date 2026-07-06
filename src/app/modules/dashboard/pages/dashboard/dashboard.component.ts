@@ -186,7 +186,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
             position: 'right',
             beginAtZero: true,
             grid: { color: '#f1f5f9' },
-            ticks: { font: { size: 11 }, callback: v => `₪${Number(v).toLocaleString('he-IL')}` },
+            ticks: { font: { size: 11 }, callback: v => {
+              const n = Number(v);
+              if (n >= 1_000_000) return `₪${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+              if (n >= 1_000)     return `₪${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+              return `₪${n}`;
+            }},
           },
         },
       },
