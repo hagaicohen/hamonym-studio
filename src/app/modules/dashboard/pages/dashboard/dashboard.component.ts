@@ -138,7 +138,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   private buildChart(rows: DashboardData['chartData']): void {
-    if (!this.chartCanvas) return;
+    if (!this.chartCanvas?.nativeElement) {
+      setTimeout(() => this.buildChart(rows), 0);
+      return;
+    }
     if (this.chart) { this.chart.destroy(); this.chart = null; }
 
     const map = new Map(rows.map(r => [r.day, r.total]));
@@ -148,7 +151,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = `${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      labels.push(`${d.getDate()}.${d.getMonth() + 1}`);
+      labels.push(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth() + 1).padStart(2,'0')}`);
       values.push(map.get(key) ?? 0);
     }
 
@@ -175,6 +178,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 11 } } },
