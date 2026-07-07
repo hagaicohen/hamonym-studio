@@ -1,0 +1,28 @@
+:host { display: block; }
+
+.progress-bar-wrap { display: inline-block; width: 60px; vertical-align: middle; margin-left: 8px; }
+
+.campaign-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campaign-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f1f5f9;
+}
+
+.campaign-thumb--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ede9fe;
+  color: #583cd6;
+  font-weight: 700;
+  font-size: 13px;
+}

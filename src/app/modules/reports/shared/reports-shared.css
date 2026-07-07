@@ -32,32 +32,51 @@
   margin: 0;
 }
 
-/* ── PERIOD TABS ── */
-.period-tabs {
+/* ── TABS ── */
+.rep-tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 4px;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 6px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 6px rgba(15,23,42,.05);
 }
 
-.period-tabs button {
-  padding: 6px 16px;
+.rep-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 7px;
+  border-radius: 10px;
   background: transparent;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   color: #64748b;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
-.period-tabs button.active {
+.rep-tab lucide-angular {
+  display: flex;
+  color: #94a3b8;
+  transition: color 0.15s;
+}
+
+.rep-tab:hover:not(.active) { background: #f8fafc; color: #1e293b; }
+.rep-tab:hover:not(.active) lucide-angular { color: #583cd6; }
+
+.rep-tab.active {
   background: #583cd6;
   color: #fff;
+  box-shadow: 0 4px 14px rgba(88,60,214,.28);
 }
+
+.rep-tab.active lucide-angular { color: #fff; }
 
 /* ── KPI ── */
 .don-kpi-row {
@@ -90,6 +109,16 @@
 
 .kpi-value.primary { color: #583cd6; }
 .kpi-value.danger  { color: #ef4444; }
+.kpi-value.good    { color: #0EA65A; }
+
+.kpi-change {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.kpi-change.up   { color: #0EA65A; }
+.kpi-change.down { color: #ef4444; }
+.kpi-change.flat { color: #64748b; }
 
 /* ── FILTERS ── */
 .don-filters {
@@ -133,8 +162,6 @@
 }
 
 .don-select:focus { border-color: #583cd6; }
-
-.don-select--campaign { flex: 1 1 160px; }
 
 .don-export-btn {
   padding: 9px 16px;
@@ -206,7 +233,38 @@
   border-radius: 12px;
   box-shadow: 0 1px 6px rgba(15,23,42,.05);
   overflow: hidden;
+  margin-bottom: 24px;
 }
+
+.don-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.don-card-header-btn {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.don-card-header-btn:hover { background: #f1f5f9; }
+
+.don-card-body { padding: 20px; }
 
 .don-loading,
 .don-empty {
@@ -266,20 +324,14 @@
 
 .don-table td { padding: 13px 18px; border-bottom: 1px solid #f1f5f9; }
 
-.don-row {
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
+.don-row { transition: background 0.12s; }
 .don-row:last-child td { border-bottom: none; }
 .don-row:hover { background: #f8fafc; }
 
 .don-name    { font-weight: 500; color: #1e293b; }
-.don-campaign { color: #475569; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .don-amount  { font-weight: 600; color: #1e293b; }
 .don-date    { color: #64748b; white-space: nowrap; }
 
-/* LTR content (date) inside an RTL table */
 .ltr-col { direction: ltr; text-align: right; unicode-bidi: isolate; }
 
 /* ── BADGE ── */
@@ -291,167 +343,27 @@
   font-weight: 600;
 }
 
-.status-paid    { background: #e6f9f3; color: #0EA65A; }
-.status-failed  { background: #fef2f2; color: #ef4444; }
-.status-pending { background: #fffbeb; color: #f59e0b; }
+.status-paid           { background: #e6f9f3; color: #0EA65A; }
+.status-failed         { background: #fef2f2; color: #ef4444; }
+.status-pending        { background: #fffbeb; color: #f59e0b; }
+.status-published      { background: #e6f9f3; color: #0EA65A; }
+.status-pending_review { background: #fffbeb; color: #f59e0b; }
 
-.badge-test {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #e0e7ff;
-  color: #4338ca;
-  margin-right: 8px;
-}
-
-/* ── PAGINATION ── */
-.don-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 16px;
-  border-top: 1px solid #f1f5f9;
-  position: relative;
-}
-
-.pag-limit {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #64748b;
-  position: absolute;
-  right: 16px;
-  text-align: center;
-}
-
-.pag-limit select {
-  padding: 5px 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
-  color: #1e293b;
-  cursor: pointer;
-  text-align: center;
-}
-
-.pag-btn {
-  padding: 7px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 7px;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.pag-btn:hover:not(:disabled) { background: #f1f5f9; }
-.pag-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.pag-info { font-size: 13px; color: #64748b; }
-
-/* ── DRAWER ── */
-.don-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.35);
-  z-index: 1000;
-}
-
-.don-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 360px;
-  height: 100%;
-  background: #fff;
-  z-index: 1001;
-  box-shadow: 4px 0 24px rgba(0,0,0,.12);
-  display: flex;
-  flex-direction: column;
-  direction: rtl;
-  animation: slideIn 0.25s ease;
-}
-
-@keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
-}
-
-.drawer-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e8edf3;
-  flex-direction: row-reverse;
-  justify-content: space-between;
-}
-
-.drawer-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
-}
-
-.drawer-close {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s;
-}
-
-.drawer-close:hover { background: #f1f5f9; }
-
-.drawer-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
-
-.drawer-section { display: flex; flex-direction: column; gap: 10px; }
-
-.drawer-divider {
-  height: 1px;
+/* ── PROGRESS BAR ── */
+.progress-bar-wrap {
+  width: 100%;
+  height: 8px;
   background: #f1f5f9;
-  margin: 16px 0;
+  border-radius: 999px;
+  overflow: hidden;
 }
-
-.drawer-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+.progress-bar-fill {
+  height: 100%;
+  background: #583cd6;
+  border-radius: 999px;
+  transition: width 0.2s;
 }
-
-.dr-label {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-  padding-top: 2px;
-}
-
-.dr-value {
-  font-size: 14px;
-  color: #1e293b;
-  text-align: left;
-  word-break: break-word;
-}
-
-.dr-value.bold   { font-weight: 700; }
-.dr-value.danger { color: #ef4444; }
+.progress-bar-fill.over { background: #0EA65A; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
@@ -461,26 +373,14 @@
 
 @media (max-width: 600px) {
   .don-kpi-row { grid-template-columns: 1fr 1fr; }
-  .don-drawer  { width: 100%; }
-
-  /* Stack filters full-width instead of squeezing them into one row.
-     flex-basis follows the main axis, so reset it to auto here —
-     otherwise the desktop pixel values (meant as widths) become heights. */
-  .don-filters { flex-direction: column; align-items: stretch; }
-  .don-search, .don-select, .don-select--campaign, .don-export-btn {
-    flex: 0 0 auto;
-    width: 100%;
-    max-width: none;
-  }
-
-  /* Secondary columns move into the row drawer instead of the table */
-  .col-secondary { display: none; }
   .don-table th, .don-table td { padding: 10px 10px; }
   .don-name { font-size: 13px; }
 
-  .don-pagination { flex-wrap: wrap; }
-  .pag-limit { position: static; order: -1; width: 100%; justify-content: center; margin-bottom: 4px; text-align: center;}
+  .rep-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rep-tab  { padding: 9px 14px; font-size: 12.5px; }
 
-  /* Column toggling is moot once secondary columns are force-hidden */
+  .don-filters { flex-direction: column; align-items: stretch; }
+  .don-search, .don-select, .don-export-btn { flex: 0 0 auto; width: 100%; max-width: none; }
+  .col-secondary { display: none; }
   .don-col-menu-wrap { display: none; }
 }

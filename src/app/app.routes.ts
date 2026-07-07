@@ -205,6 +205,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'reports',
+        loadComponent: () =>
+          import('./modules/reports/pages/reports-page/reports-page.component').then(
+            (m) => m.ReportsPageComponent,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./modules/settings/pages/settings-page/settings-page.component').then(

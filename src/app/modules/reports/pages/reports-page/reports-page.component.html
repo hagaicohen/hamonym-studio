@@ -1,0 +1,33 @@
+<div class="don-page">
+
+  <div class="don-header">
+    <h1 class="don-title">דוחות</h1>
+  </div>
+
+  <div class="rep-tabs">
+    <button class="rep-tab" [class.active]="activeTab() === 'campaigns'" (click)="setTab('campaigns')">
+      <lucide-angular [img]="ChartColumnIcon" [size]="17"></lucide-angular>
+      <span>ביצועי קמפיינים</span>
+    </button>
+    <button class="rep-tab" [class.active]="activeTab() === 'marketing'" (click)="setTab('marketing')">
+      <lucide-angular [img]="MegaphoneIcon" [size]="17"></lucide-angular>
+      <span>שיווק ומקורות תנועה</span>
+    </button>
+    <button class="rep-tab" [class.active]="activeTab() === 'trends'" (click)="setTab('trends')">
+      <lucide-angular [img]="TrendingUpIcon" [size]="17"></lucide-angular>
+      <span>מגמות והשוואות</span>
+    </button>
+    <button class="rep-tab" [class.active]="activeTab() === 'failures'" (click)="setTab('failures')">
+      <lucide-angular [img]="TriangleAlertIcon" [size]="17"></lucide-angular>
+      <span>תקלות וסליקה</span>
+    </button>
+  </div>
+
+  @switch (activeTab()) {
+    @case ('campaigns') { <app-campaign-performance-report /> }
+    @case ('marketing') { <app-marketing-report /> }
+    @case ('trends')    { <app-trends-report /> }
+    @case ('failures')  { <app-failures-report /> }
+  }
+
+</div>

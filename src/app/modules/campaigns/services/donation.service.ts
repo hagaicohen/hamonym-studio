@@ -37,6 +37,7 @@ export interface DonationPayload {
   };
   amount:  number;
   rewards: Array<{ title: string; minimumAmount: number }>;
+  utmParams?: Record<string, string>;
 }
 
 export interface DonationResult {

@@ -1,0 +1,120 @@
+@if (error) {
+  <div class="don-error">{{ error }}</div>
+} @else if (loading) {
+  <div class="don-card"><div class="don-loading">טוען...</div></div>
+} @else {
+
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">נכשלו החודש</div>
+      <div class="kpi-value danger">{{ kpi.failedCount | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">הפסד מוערך החודש</div>
+      <div class="kpi-value danger">{{ fmtMoney(kpi.failedAmount) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">ממתינות</div>
+      <div class="kpi-value">{{ kpi.pendingCount | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">אחוז הצלחה החודש</div>
+      <div class="kpi-value good">{{ kpi.successRate !== null ? kpi.successRate + '%' : '—' }}</div>
+    </div>
+  </div>
+
+  @if (failureReasons.length > 0) {
+    <div class="don-card">
+      <div class="don-card-header">סיבות כשל נפוצות</div>
+      <div class="don-card-body">
+        <app-report-chart [labels]="chartLabels" [datasets]="chartDatasets" [horizontal]="true" [height]="chartHeight" [moneyFormat]="false" />
+      </div>
+    </div>
+  }
+
+  <div class="don-filters">
+    <input
+      class="don-search"
+      type="search"
+      placeholder="חיפוש לפי תורם או קמפיין..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+
+    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+      <option value="all">הכל</option>
+      <option value="failed">נכשל</option>
+      <option value="pending">ממתין</option>
+    </select>
+
+    <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || recent.length === 0">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+
+    <div class="don-col-menu-wrap">
+      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      @if (columnsMenuOpen) {
+        <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
+        <div class="don-col-panel">
+          @for (col of columnDefs; track col.key) {
+            <label class="don-col-item">
+              <span>{{ col.label }}</span>
+              <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="don-card">
+    <div class="don-card-header">תרומות שנכשלו / ממתינות</div>
+    @if (recent.length === 0) {
+      <div class="don-empty">אין תרומות שנכשלו או ממתינות</div>
+    } @else {
+      <div class="don-table-wrap" [class.refreshing]="refreshing">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th class="sortable" [class.active]="sortField === 'donor'" (click)="sortBy('donor')">
+                תורם<span class="sort-arrow">{{ sortField === 'donor' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('campaign')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'campaign'" (click)="sortBy('campaign')">
+                  קמפיין<span class="sort-arrow">{{ sortField === 'campaign' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              <th class="sortable" [class.active]="sortField === 'amount'" (click)="sortBy('amount')">
+                סכום<span class="sort-arrow">{{ sortField === 'amount' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('status')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'status'" (click)="sortBy('status')">
+                  סטטוס<span class="sort-arrow">{{ sortField === 'status' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('reason')) { <th class="col-secondary">סיבה</th> }
+              @if (isColVisible('date')) {
+                <th class="sortable ltr-col" [class.active]="sortField === 'date'" (click)="sortBy('date')">
+                  עודכן<span class="sort-arrow">{{ sortField === 'date' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of recent; track r.id) {
+              <tr class="don-row">
+                <td class="don-name">{{ r.donor_name }}</td>
+                @if (isColVisible('campaign')) { <td class="col-secondary">{{ r.campaign_title }}</td> }
+                <td class="don-amount">{{ fmtMoney(r.amount) }}</td>
+                @if (isColVisible('status')) { <td class="col-secondary"><span class="status-badge status-{{ r.status }}">{{ statusLabel(r.status) }}</span></td> }
+                @if (isColVisible('reason')) { <td class="col-secondary">{{ r.failure_reason ?? '—' }}</td> }
+                @if (isColVisible('date'))   { <td class="don-date ltr-col">{{ fmtDateTime(r.updated_at) }}</td> }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+}

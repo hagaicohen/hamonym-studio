@@ -266,6 +266,7 @@
   color: #64748b;
   position: absolute;
   right: 16px;
+  text-align: center;
 }
 
 .pag-limit select {
@@ -276,6 +277,7 @@
   background: #fff;
   color: #1e293b;
   cursor: pointer;
+  text-align: center;
 }
 
 .pag-btn {

@@ -1,0 +1,137 @@
+@if (error) {
+  <div class="don-error">{{ error }}</div>
+} @else if (loading) {
+  <div class="don-card"><div class="don-loading">טוען...</div></div>
+} @else {
+
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סה"כ גויס</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">קמפיינים</div>
+      <div class="kpi-value">{{ kpi.totalCampaigns | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">פעילים</div>
+      <div class="kpi-value">{{ kpi.activeCampaigns | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">התקדמות ממוצעת</div>
+      <div class="kpi-value">{{ kpi.avgProgressPct !== null ? kpi.avgProgressPct + '%' : '—' }}</div>
+    </div>
+  </div>
+
+  <div class="don-filters">
+    <input
+      class="don-search"
+      type="search"
+      placeholder="חיפוש לפי שם קמפיין..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+
+    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+      <option value="all">כל הסטטוסים</option>
+      <option value="published">פורסם</option>
+      <option value="pending_review">ממתין לאישור</option>
+    </select>
+
+    <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || campaigns.length === 0">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+
+    <div class="don-col-menu-wrap">
+      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      @if (columnsMenuOpen) {
+        <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
+        <div class="don-col-panel">
+          @for (col of columnDefs; track col.key) {
+            <label class="don-col-item">
+              <span>{{ col.label }}</span>
+              <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="don-card">
+    @if (campaigns.length === 0) {
+      <div class="don-empty">לא נמצאו קמפיינים</div>
+    } @else {
+      <div class="don-table-wrap" [class.refreshing]="refreshing">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th class="sortable" [class.active]="sortField === 'name'" (click)="sortBy('name')">
+                קמפיין<span class="sort-arrow">{{ sortField === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('target')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'target'" (click)="sortBy('target')">
+                  יעד<span class="sort-arrow">{{ sortField === 'target' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              <th class="sortable" [class.active]="sortField === 'raised'" (click)="sortBy('raised')">
+                גויס<span class="sort-arrow">{{ sortField === 'raised' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('pct')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'pct'" (click)="sortBy('pct')">
+                  %<span class="sort-arrow">{{ sortField === 'pct' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('donors')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'donors'" (click)="sortBy('donors')">
+                  תורמים<span class="sort-arrow">{{ sortField === 'donors' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('avg')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'avg'" (click)="sortBy('avg')">
+                  ממוצע<span class="sort-arrow">{{ sortField === 'avg' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('pace'))      { <th class="col-secondary">קצב יומי</th> }
+              @if (isColVisible('remaining')) { <th class="col-secondary">ימים שנותרו</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of campaigns; track c.id) {
+              <tr class="don-row">
+                <td class="don-name">
+                  <div class="campaign-name-cell">
+                    @if (c.cover_image_url) {
+                      <img class="campaign-thumb" [src]="c.cover_image_url" [alt]="c.title" />
+                    } @else {
+                      <div class="campaign-thumb campaign-thumb--placeholder">{{ c.title.charAt(0) }}</div>
+                    }
+                    <span>{{ c.title }}</span>
+                    <span class="status-badge status-{{ c.status }}">{{ c.status === 'published' ? 'פורסם' : 'ממתין' }}</span>
+                  </div>
+                </td>
+                @if (isColVisible('target')) { <td class="col-secondary">{{ fmtMoney(c.target_amount) }}</td> }
+                <td class="don-amount">{{ fmtMoney(c.current_amount) }}</td>
+                @if (isColVisible('pct')) {
+                  <td class="col-secondary">
+                    @if (c.pct !== null) {
+                      <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill" [class.over]="c.pct >= 100" [style.width.%]="c.pct > 100 ? 100 : c.pct"></div>
+                      </div>
+                      <span>{{ c.pct }}%</span>
+                    } @else { — }
+                  </td>
+                }
+                @if (isColVisible('donors'))    { <td class="col-secondary">{{ c.supporters_count | number }}</td> }
+                @if (isColVisible('avg'))       { <td class="col-secondary">{{ fmtMoney(c.avg) }}</td> }
+                @if (isColVisible('pace'))      { <td class="don-date col-secondary">{{ fmtMoney(c.daily_pace) }} / יום</td> }
+                @if (isColVisible('remaining')) { <td class="don-date col-secondary">{{ fmtDays(c.days_remaining) }}</td> }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+}

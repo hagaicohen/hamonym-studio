@@ -96,6 +96,17 @@ export class CheckoutModalComponent implements OnInit {
     }
   }
 
+  private captureUtmParams(): Record<string, string> | undefined {
+    const search = new URLSearchParams(window.location.search);
+    const keys = ['utm_source', 'utm_medium', 'utm_campaign'] as const;
+    const params: Record<string, string> = {};
+    for (const key of keys) {
+      const value = search.get(key);
+      if (value) params[key.replace('utm_', '')] = value;
+    }
+    return Object.keys(params).length > 0 ? params : undefined;
+  }
+
   onSubmit(): void {
     this.submitted = true;
     if (!this.isValid || this.loading) return;
@@ -126,6 +137,7 @@ export class CheckoutModalComponent implements OnInit {
       },
       amount: this.amount,
       rewards,
+      utmParams: this.captureUtmParams(),
     }).subscribe({
       next: (res) => {
         document.body.style.overflow = '';
