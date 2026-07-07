@@ -1,4 +1,4 @@
-const donationsService = require('./donations.service');
+﻿const donationsService = require('./donations.service');
 
 exports.getDonationPublic = async (req, res) => {
   try {
@@ -43,8 +43,8 @@ exports.getLiveDonations = async (req, res) => {
 
 exports.getCampaignDonors = async (req, res) => {
   try {
-    const donors = await donationsService.getCampaignDonors(req.params.slug);
-    res.json({ donors });
+    const result = await donationsService.getCampaignDonors(req.params.slug, req.query.period);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -61,6 +61,35 @@ exports.mockComplete = async (req, res) => {
     res.json({ redirectUrl: result.redirectUrl });
   } catch (err) {
     console.error('mockComplete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+exports.getEntityDonations = async (req, res) => {
+  try {
+    const entityId = req.params.id;
+    const page     = parseInt(req.query.page  || '0', 10);
+    const limit    = parseInt(req.query.limit || '25', 10);
+    const { status, campaignId, period, search, sortBy, sortDir } = req.query;
+    const result = await donationsService.getEntityDonations(entityId, { status, campaignId, period, search, sortBy, sortDir, page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error('[getEntityDonations] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getEntityDonors = async (req, res) => {
+  try {
+    const entityId = req.params.id;
+    const page     = parseInt(req.query.page  || '0', 10);
+    const limit    = parseInt(req.query.limit || '25', 10);
+    const { search, sortBy, sortDir } = req.query;
+    const result = await donationsService.getEntityDonors(entityId, { search, sortBy, sortDir, page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error('[getEntityDonors] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
@@ -88,3 +117,4 @@ exports.handleReturn = async (req, res) => {
     res.redirect(`${frontBase}?payment=error`);
   }
 };
+

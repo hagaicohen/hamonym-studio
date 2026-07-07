@@ -1,16 +1,16 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const db    = require('../../db/db');
 
 const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
-/* ─────────────────────────────────────────
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
-───────────────────────────────────────── */
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmParams, ipAddress, userAgent }) => {
 
   const isMock = process.env.PAYMENT_PROVIDER === 'mock';
 
-  // 1. Fetch campaign → entity
+  // 1. Fetch campaign ג†’ entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id,
             e.cardcom_terminal, e.cardcom_api_name, e.cardcom_api_password
@@ -57,7 +57,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   );
   const donationId = donationRes.rows[0].id;
 
-  // 3. Mock provider — skip Cardcom, return mock payment URL
+  // 3. Mock provider ג€” skip Cardcom, return mock payment URL
   if (isMock) {
     const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
     return {
@@ -71,10 +71,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   const rewardsTotal = rewards.reduce((s, r) => s + (r.minimumAmount || 0), 0);
   const baseAmount   = round2(amount - rewardsTotal);
 
-  // Rewards first — each with its own title and minimum amount
+  // Rewards first ג€” each with its own title and minimum amount
   for (const r of rewards) {
     products.push({
-      Description: `תשורה: ${r.title}`,
+      Description: `׳×׳©׳•׳¨׳”: ${r.title}`,
       UnitCost: round2(r.minimumAmount || 0),
     });
   }
@@ -82,14 +82,14 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   // Free / top-up amount
   if (baseAmount > 0) {
     const label = rewards.length > 0
-      ? `תרומה חופשית — ${campaign.title}`
-      : `תרומה — ${campaign.title}`;
+      ? `׳×׳¨׳•׳׳” ׳—׳•׳₪׳©׳™׳× ג€” ${campaign.title}`
+      : `׳×׳¨׳•׳׳” ג€” ${campaign.title}`;
     products.push({ Description: label, UnitCost: baseAmount });
   }
 
   // Fallback: no rewards, no base (shouldn't happen)
   if (products.length === 0) {
-    products.push({ Description: campaign.title || 'תרומה', UnitCost: round2(amount) });
+    products.push({ Description: campaign.title || '׳×׳¨׳•׳׳”', UnitCost: round2(amount) });
   }
 
   // 4. Cardcom payload
@@ -144,9 +144,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   };
 };
 
-/* ─────────────────────────────────────────
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE CARDCOM RETURN
-───────────────────────────────────────── */
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
 
   const success   = status === 'success' || String(responseCode) === '0';
@@ -196,9 +196,9 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
   };
 };
 
-/* ─────────────────────────────────────────
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    PUBLIC DONATION RESULT (for success page)
-───────────────────────────────────────── */
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.getDonationPublic = async (donationId) => {
   const res = await db.query(
     `SELECT d.id, d.amount, d.created_at, d.status,
@@ -213,9 +213,9 @@ exports.getDonationPublic = async (donationId) => {
   return res.rows[0] || null;
 };
 
-/* ─────────────────────────────────────────
-   LIVE DONATIONS (polling — new since timestamp)
-───────────────────────────────────────── */
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+   LIVE DONATIONS (polling ג€” new since timestamp)
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.getLiveDonations = async (slug, since) => {
   const sinceDate = since ? new Date(since) : new Date(0);
   const res = await db.query(
@@ -235,29 +235,58 @@ exports.getLiveDonations = async (slug, since) => {
   return res.rows;
 };
 
-/* ─────────────────────────────────────────
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    PUBLIC DONORS LIST (for campaign page)
-───────────────────────────────────────── */
-exports.getCampaignDonors = async (slug) => {
-  const res = await db.query(
-    `SELECT d.donor_name AS name,
-            d.amount::float AS amount,
-            d.completed_at
-     FROM donations d
-     JOIN campaigns c ON c.id = d.campaign_id
-     WHERE c.slug = $1
-       AND d.status = 'paid'
-       AND d.is_anonymous = false
-     ORDER BY d.completed_at DESC
-     LIMIT 30`,
-    [slug]
-  );
-  return res.rows;
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
+exports.getCampaignDonors = async (slug, period) => {
+  let periodClause = '';
+  if (period === 'today')      periodClause = `AND camp.completed_at >= date_trunc('day', NOW())`;
+  else if (period === 'week')  periodClause = `AND camp.completed_at >= NOW() - INTERVAL '7 days'`;
+
+  const [listRes, topRes] = await Promise.all([
+    db.query(
+      `WITH camp AS (
+         SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount,
+                d.completed_at, d.is_anonymous
+         FROM donations d
+         JOIN campaigns c ON c.id = d.campaign_id
+         WHERE c.slug = $1 AND d.status = 'paid'
+       ),
+       first_ids AS (
+         SELECT DISTINCT ON (COALESCE(NULLIF(donor_email, ''), NULLIF(donor_phone, ''), id::text)) id
+         FROM camp
+         ORDER BY COALESCE(NULLIF(donor_email, ''), NULLIF(donor_phone, ''), id::text), completed_at ASC
+       )
+       SELECT
+         CASE WHEN camp.is_anonymous THEN 'תורם/ת אנונימי/ת' ELSE camp.donor_name END AS name,
+         camp.amount,
+         camp.completed_at,
+         camp.is_anonymous,
+         (camp.id IN (SELECT id FROM first_ids)) AS is_first
+       FROM camp
+       WHERE TRUE ${periodClause}
+       ORDER BY camp.completed_at DESC
+       LIMIT 30`,
+      [slug]
+    ),
+    db.query(
+      `SELECT d.donor_name AS name, SUM(d.amount)::float AS total
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       WHERE c.slug = $1 AND d.status = 'paid' AND d.is_anonymous = false
+       GROUP BY d.donor_name
+       ORDER BY total DESC
+       LIMIT 10`,
+      [slug]
+    ),
+  ]);
+
+  return { donors: listRes.rows, topDonors: topRes.rows };
 };
 
-/* ─────────────────────────────────────────
+/* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE MOCK PAYMENT COMPLETION (dev only)
-───────────────────────────────────────── */
+ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.handleMockComplete = async ({ donationId, status, failureReason, completedAt }) => {
   const success   = status === 'paid';
   const newStatus = success ? 'paid' : 'failed';
@@ -304,4 +333,180 @@ exports.handleMockComplete = async ({ donationId, status, failureReason, complet
   };
 };
 
+
+/* ─────────────────────────────────────────
+   ENTITY DONATIONS PAGE (authenticated)
+───────────────────────────────────────── */
+const SORT_COLUMNS = {
+  donor:    'd.donor_name',
+  campaign: 'c.title',
+  amount:   'd.amount',
+  date:     'd.created_at',
+  status:   'd.status',
+};
+
+exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
+  const where  = ['d.entity_id = $1'];
+  const params = [entityId];
+  let idx = 2;
+
+  const sortCol = SORT_COLUMNS[sortBy] || 'd.created_at';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  if (period === 'month') {
+    where.push(`d.created_at >= date_trunc('month', NOW())`);
+  } else if (period === 'last_month') {
+    where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
+    where.push(`d.created_at <  date_trunc('month', NOW())`);
+  } else if (period === 'quarter') {
+    where.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
+  }
+
+  if (status && status !== 'all') {
+    where.push(`d.status = $${idx++}`);
+    params.push(status);
+  }
+
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
+
+  if (search) {
+    where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = where.join(' AND ');
+
+  const [listRes, kpiRes, campaignsRes] = await Promise.all([
+    db.query(
+      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              c.title AS campaign_title, c.slug AS campaign_slug
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       WHERE ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
+         COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
+         COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
+         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount
+       FROM donations d
+       WHERE ${whereStr}`,
+      params
+    ),
+    db.query(
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      [entityId]
+    ),
+  ]);
+
+  const kpi = kpiRes.rows[0];
+  return {
+    donations: listRes.rows,
+    kpi: {
+      totalRaised:  kpi.total_raised,
+      paidCount:    kpi.paid_count,
+      failedCount:  kpi.failed_count,
+      pendingCount: kpi.pending_count,
+      avgAmount:    kpi.avg_amount,
+      total:        kpi.total,
+    },
+    campaigns: campaignsRes.rows,
+    total:     kpi.total,
+    page,
+    limit,
+  };
+};
+
+/* ─────────────────────────────────────────
+   ENTITY DONORS PAGE (authenticated)
+   — donations grouped by donor identity
+───────────────────────────────────────── */
+const DONOR_SORT_COLUMNS = {
+  name:  'display_name',
+  total: 'total_donated',
+  count: 'donation_count',
+  last:  'last_donation_at',
+};
+
+exports.getEntityDonors = async (entityId, { search, sortBy, sortDir, page = 0, limit = 25 }) => {
+  const where  = ['d.entity_id = $1', `d.status = 'paid'`];
+  const params = [entityId];
+  let idx = 2;
+
+  if (search) {
+    where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = where.join(' AND ');
+  const sortCol   = DONOR_SORT_COLUMNS[sortBy] || 'total_donated';
+  const sortOrd   = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  const [listRes, kpiRes] = await Promise.all([
+    db.query(
+      `WITH base AS (
+         SELECT
+           COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name) AS donor_key,
+           d.donor_name, d.donor_email, d.donor_phone, d.amount, d.completed_at,
+           d.campaign_id, d.is_anonymous, d.is_mock
+         FROM donations d
+         WHERE ${whereStr}
+       )
+       SELECT
+         donor_key,
+         MAX(donor_email) AS email,
+         MAX(donor_phone) AS phone,
+         COALESCE(MAX(CASE WHEN NOT is_anonymous THEN donor_name END), 'תורם/ת אנונימי/ת') AS display_name,
+         BOOL_OR(is_anonymous)                AS has_anonymous,
+         BOOL_OR(is_mock)                     AS has_mock,
+         SUM(amount)::float                   AS total_donated,
+         COUNT(*)::int                        AS donation_count,
+         MIN(completed_at)                    AS first_donation_at,
+         MAX(completed_at)                    AS last_donation_at,
+         COUNT(DISTINCT campaign_id)::int     AS campaigns_count
+       FROM base
+       GROUP BY donor_key
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))::int AS donor_count,
+         COALESCE(SUM(d.amount), 0)::float AS total_raised
+       FROM donations d
+       WHERE ${whereStr}`,
+      params
+    ),
+  ]);
+
+  const kpi        = kpiRes.rows[0];
+  const donorCount = kpi.donor_count;
+
+  return {
+    donors: listRes.rows,
+    kpi: {
+      donorCount,
+      totalRaised: kpi.total_raised,
+      avgPerDonor: donorCount > 0 ? kpi.total_raised / donorCount : 0,
+    },
+    total: donorCount,
+    page,
+    limit,
+  };
+};
+
 function round2(n) { return Math.round(n * 100) / 100; }
+
