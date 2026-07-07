@@ -860,3 +860,33 @@ exports.getEntityById =
     return result.rows[0];
 
   };
+
+exports.removeAssociationDocument =
+  async (entityId) => {
+
+    const result =
+      await db.query(
+
+        `
+        UPDATE entities
+
+        SET
+
+          association_certificate_name = NULL,
+
+          association_certificate_mime = NULL,
+
+          association_certificate_data = NULL
+
+        WHERE id = $1
+
+        RETURNING id
+        `,
+
+        [ entityId ]
+
+      );
+
+    return result.rows[0];
+
+  };

@@ -132,4 +132,10 @@ router.delete(
   controller.removeTaxDocument
 );
 
+router.delete(
+  '/:id/association-document',
+  requireAuth,
+  controller.removeAssociationDocument
+);
+
 module.exports = router;

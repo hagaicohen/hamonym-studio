@@ -489,3 +489,14 @@ exports.removeTaxDocument =
     }
 
   };
+
+exports.removeAssociationDocument =
+  async (req, res) => {
+    try {
+      await service.removeAssociationDocument(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to remove association document' });
+    }
+  };
