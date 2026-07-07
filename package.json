@@ -35,10 +35,12 @@
     "@tiptap/extension-youtube": "^3.23.1",
     "@tiptap/pm": "^3.23.1",
     "@tiptap/starter-kit": "^3.23.1",
+    "chart.js": "^4.5.1",
     "lucide-angular": "^1.0.0",
     "rxjs": "~7.8.0",
     "tippy.js": "^6.3.7",
     "tslib": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.14.3"
   },
   "devDependencies": {

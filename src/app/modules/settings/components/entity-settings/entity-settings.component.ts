@@ -4,7 +4,11 @@ import { Component, OnInit, inject, ViewChild } from '@angular/core';
 
 import { finalize, firstValueFrom } from 'rxjs';
 
+import { ActivatedRoute } from '@angular/router';
+
 import { CommonModule } from '@angular/common';
+
+import { LucideAngularModule, Building2 } from 'lucide-angular';
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
@@ -47,6 +51,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 
   imports: [
     CommonModule,
+    LucideAngularModule,
 
     EntityBasicInfoSectionViewComponent,
     EntityBasicInfoSectionEditComponent,
@@ -73,9 +78,13 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 export class EntitySettingsComponent implements OnInit {
   constructor() {}
 
+  readonly Building2 = Building2;
+
   private currentEntityService = inject(CurrentEntityService);
 
   private entitiesService = inject(EntitiesService);
+
+  private route = inject(ActivatedRoute);
 
   @ViewChild(EntityBillingSectionEditComponent)
   billingSection?: EntityBillingSectionEditComponent;
@@ -109,6 +118,10 @@ export class EntitySettingsComponent implements OnInit {
     this.entity = this.currentEntityService.currentEntity();
 
     this.draftEntity = structuredClone(this.entity);
+
+    if (this.route.snapshot.queryParamMap.get('edit') === 'true') {
+      this.startEdit();
+    }
   }
 
   onEntityChange(partial: any): void {
@@ -186,18 +199,19 @@ export class EntitySettingsComponent implements OnInit {
   */
 
     const hadTaxDocument = !!this.entity?.tax_document_name;
-
-    const removedTaxDocument =
-      hadTaxDocument && !this.draftEntity?.tax_document_name;
-
+    const removedTaxDocument = hadTaxDocument && !this.draftEntity?.tax_document_name;
     if (removedTaxDocument) {
       try {
-        await firstValueFrom(
-          this.entitiesService.removeTaxDocument(this.draftEntity.id),
-        );
-      } catch (err) {
-        console.error(err);
-      }
+        await firstValueFrom(this.entitiesService.removeTaxDocument(this.draftEntity.id));
+      } catch (err) { console.error(err); }
+    }
+
+    const hadAssociationCert = !!this.entity?.association_certificate_name;
+    const removedAssociationCert = hadAssociationCert && !this.draftEntity?.association_certificate_name;
+    if (removedAssociationCert) {
+      try {
+        await firstValueFrom(this.entitiesService.removeAssociationDocument(this.draftEntity.id));
+      } catch (err) { console.error(err); }
     }
 
     const optimisticEntity = structuredClone(this.draftEntity);

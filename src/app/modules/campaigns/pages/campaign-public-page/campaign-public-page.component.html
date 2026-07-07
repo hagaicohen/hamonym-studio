@@ -1,14 +1,20 @@
-@if (isLoading) {
-  <div class="public-loading">
-    <div class="public-spinner"></div>
-  </div>
-} @else if (notFound) {
+@if (notFound) {
   <div class="public-not-found">
     <p>הקמפיין לא נמצא</p>
   </div>
-} @else {
-  <div class="public-preview-wrap">
-    <app-campaign-preview />
+} @else if (!isLoading) {
+
+  @if (isAmbassadorMode && currentAmbassador) {
+    <div class="ambassador-edit-bar">
+      <span class="ambassador-edit-label">אתה צופה בדף השגריר שלך</span>
+      <button class="ambassador-edit-btn" (click)="editMyAmbassadorPage()">
+        ✏️ ערוך הדף שלי
+      </button>
+    </div>
+  }
+
+  <div class="public-preview-wrap" [class.has-edit-bar]="isAmbassadorMode && currentAmbassador">
+    <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" />
   </div>
 }
 
@@ -17,3 +23,5 @@
   (retry)="onRetryPayment()"
   (closed)="showFailedPopup = false">
 </app-payment-failed-popup>
+
+<app-donation-toast />

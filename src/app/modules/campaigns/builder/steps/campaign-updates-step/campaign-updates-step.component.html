@@ -1,11 +1,20 @@
 <div class="upd-step" *ngIf="draft$ | async as draft">
 
   <div class="upd-header">
-    <div class="upd-title-row">
-      <div class="upd-header-icon">
-        <lucide-angular [img]="MegaphoneIcon" [size]="18" class="upd-icon"></lucide-angular>
+    <div class="upd-header-top">
+      <div class="upd-title-row">
+        <div class="upd-header-icon">
+          <lucide-angular [img]="MegaphoneIcon" [size]="18" class="upd-icon"></lucide-angular>
+        </div>
+        <h2 class="upd-title">עדכונים</h2>
       </div>
-      <h2 class="upd-title">עדכונים</h2>
+      <div class="upd-visibility-toggle" *ngIf="updatesBlock">
+        <span class="upd-toggle-label">{{ updatesVisible ? 'מוצג בדף' : 'מוסתר' }}</span>
+        <button class="upd-toggle-btn" [class.upd-toggle-btn--on]="updatesVisible"
+                (click)="toggleUpdatesVisible()">
+          <span class="upd-toggle-thumb"></span>
+        </button>
+      </div>
     </div>
     <p class="upd-subtitle">עדכנו את התומכים על התקדמות הקמפיין</p>
   </div>

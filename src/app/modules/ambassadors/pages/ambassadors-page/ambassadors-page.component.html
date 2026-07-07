@@ -1,0 +1,265 @@
+<div class="don-page">
+
+  @if (error) {
+    <div class="don-error">{{ error }}</div>
+  } @else {
+
+  <!-- ══ HEADER ══ -->
+  <div class="don-header">
+    <h1 class="don-title">שגרירים</h1>
+  </div>
+
+  <!-- ══ KPI ROW ══ -->
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סה"כ גויס</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">סה"כ שגרירים</div>
+      <div class="kpi-value">{{ kpi.totalAmbassadors | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">פעילים</div>
+      <div class="kpi-value">{{ kpi.activeAmbassadors | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">תורמים</div>
+      <div class="kpi-value">{{ kpi.totalDonors | number }}</div>
+    </div>
+  </div>
+
+  <!-- ══ FILTERS ══ -->
+  <div class="don-filters">
+    <input
+      class="don-search"
+      type="search"
+      placeholder="חיפוש לפי שם, אימייל או טלפון..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+
+    <select class="don-select don-select--campaign" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
+      <option value="">כל הקמפיינים</option>
+      @for (c of campaigns; track c.id) {
+        <option [value]="c.id">{{ c.title }}</option>
+      }
+    </select>
+
+    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+      <option value="all">כל הסטטוסים</option>
+      <option value="active">פעיל</option>
+      <option value="pending">ממתין</option>
+      <option value="inactive">לא פעיל</option>
+    </select>
+
+    <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+
+    <div class="don-col-menu-wrap">
+      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      @if (columnsMenuOpen) {
+        <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
+        <div class="don-col-panel">
+          @for (col of columnDefs; track col.key) {
+            <label class="don-col-item">
+              <span>{{ col.label }}</span>
+              <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <div class="don-card">
+    @if (loading) {
+      <div class="don-loading">טוען...</div>
+    } @else if (ambassadors.length === 0) {
+      <div class="don-empty">לא נמצאו שגרירים</div>
+    } @else {
+      <div class="don-table-wrap" [class.refreshing]="refreshing">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th class="sortable" [class.active]="sortField === 'name'" (click)="sortBy('name')">
+                שגריר<span class="sort-arrow">{{ sortField === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('campaign')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'campaign'" (click)="sortBy('campaign')">
+                  קמפיין<span class="sort-arrow">{{ sortField === 'campaign' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('email')) { <th class="ltr-col col-secondary">אימייל</th> }
+              @if (isColVisible('phone')) { <th class="ltr-col col-secondary">טלפון</th> }
+              @if (isColVisible('goal')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'goal'" (click)="sortBy('goal')">
+                  יעד אישי<span class="sort-arrow">{{ sortField === 'goal' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              <th class="sortable" [class.active]="sortField === 'raised'" (click)="sortBy('raised')">
+                גויס<span class="sort-arrow">{{ sortField === 'raised' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('donors')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'donors'" (click)="sortBy('donors')">
+                  תורמים<span class="sort-arrow">{{ sortField === 'donors' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('status')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'status'" (click)="sortBy('status')">
+                  סטטוס<span class="sort-arrow">{{ sortField === 'status' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of ambassadors; track a.id) {
+              <tr class="don-row" (click)="openDrawer(a)">
+                <td class="don-name">{{ a.full_name }}</td>
+                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ a.campaign_title }}</td> }
+                @if (isColVisible('email'))    { <td class="don-campaign ltr-col col-secondary">{{ a.email || '—' }}</td> }
+                @if (isColVisible('phone'))    { <td class="don-campaign ltr-col col-secondary">{{ a.phone || '—' }}</td> }
+                @if (isColVisible('goal'))     { <td class="don-date col-secondary">{{ a.goal_amount ? fmtMoney(a.goal_amount) : '—' }}</td> }
+                <td class="don-amount">{{ fmtMoney(a.raised_total) }}</td>
+                @if (isColVisible('donors'))   { <td class="don-date col-secondary">{{ a.donor_count | number }}</td> }
+                @if (isColVisible('status'))   { <td class="col-secondary"><span class="status-badge status-{{ a.status }}">{{ statusLabel(a.status) }}</span></td> }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="don-pagination">
+        <label class="pag-limit">
+          שורות בעמוד:
+          <select [(ngModel)]="limit" (change)="onLimitChange()">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
+        <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
+        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
+      </div>
+    }
+  </div>
+
+  }
+</div>
+
+<!-- ══ DRAWER ══ -->
+@if (selected) {
+  <div class="don-overlay" (click)="closeDrawer()"></div>
+  <div class="don-drawer">
+    <div class="drawer-header">
+      <button class="drawer-close" (click)="closeDrawer()">✕</button>
+      <h2 class="drawer-title">פרטי שגריר</h2>
+    </div>
+
+    <div class="drawer-body">
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">שם</span>
+          <span class="dr-value">{{ selected.full_name }}</span>
+        </div>
+        @if (selected.personal_title) {
+          <div class="drawer-row">
+            <span class="dr-label">תפקיד</span>
+            <span class="dr-value">{{ selected.personal_title }}</span>
+          </div>
+        }
+        @if (selected.email) {
+          <div class="drawer-row">
+            <span class="dr-label">אימייל</span>
+            <span class="dr-value">{{ selected.email }}</span>
+          </div>
+        }
+        @if (selected.phone) {
+          <div class="drawer-row">
+            <span class="dr-label">טלפון</span>
+            <span class="dr-value">{{ selected.phone }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">קמפיין</span>
+          <span class="dr-value">{{ selected.campaign_title }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">סטטוס</span>
+          <span class="dr-value">
+            <span class="status-badge status-{{ selected.status }}">{{ statusLabel(selected.status) }}</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">יעד אישי</span>
+          <span class="dr-value">{{ selected.goal_amount ? fmtMoney(selected.goal_amount) : '—' }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">גויס אונליין</span>
+          <span class="dr-value">{{ fmtMoney(selected.raised_online) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">גויס ידני</span>
+          <span class="dr-value">{{ fmtMoney(selected.raised_manual) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">סה"כ גויס</span>
+          <span class="dr-value bold">{{ fmtMoney(selected.raised_total) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">מספר תורמים</span>
+          <span class="dr-value">{{ selected.donor_count | number }}</span>
+        </div>
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="share-row">
+          <span class="dr-label">קישור אישי</span>
+          <span class="dr-value share-url" dir="ltr">{{ shareUrl(selected) }}</span>
+          <button class="btn-copy" (click)="copyLink(selected)">{{ linkCopied ? 'הועתק ✓' : 'העתק' }}</button>
+        </div>
+      </div>
+
+      @if (selected.personal_message) {
+        <div class="drawer-divider"></div>
+        <div class="drawer-section">
+          <div class="dr-label">הודעה אישית</div>
+          <p class="dr-message">{{ selected.personal_message }}</p>
+        </div>
+      }
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">נוצר</span>
+          <span class="dr-value">{{ fmtDateTime(selected.created_at) }}</span>
+        </div>
+        @if (selected.deactivated_at) {
+          <div class="drawer-row">
+            <span class="dr-label">הוסר</span>
+            <span class="dr-value">{{ fmtDateTime(selected.deactivated_at) }}</span>
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+}

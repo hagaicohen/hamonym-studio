@@ -1,0 +1,107 @@
+@if (error) {
+  <div class="don-error">{{ error }}</div>
+} @else if (loading) {
+  <div class="don-card"><div class="don-loading">טוען...</div></div>
+} @else {
+
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סה"כ גויס</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">ערוץ מוביל</div>
+      <div class="kpi-value" style="font-size: 17px;">{{ kpi.topChannel ?? '—' }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">עם מקור UTM מזוהה</div>
+      <div class="kpi-value ltr-col">{{ kpi.withUtmCount }} / {{ kpi.totalCount }}</div>
+    </div>
+  </div>
+
+  <div class="don-card">
+    <div class="don-card-header">גיוס לפי ערוץ</div>
+    <div class="don-card-body">
+      @if (channels.length === 0) {
+        <div class="don-empty">אין נתונים עדיין</div>
+      } @else {
+        <app-report-chart
+          [labels]="chartLabels"
+          [datasets]="chartDatasets"
+          [horizontal]="true"
+          [height]="chartHeight"
+        />
+      }
+    </div>
+  </div>
+
+  @if (channels.length > 0) {
+    <div class="don-card">
+      <div class="don-card-header">
+        <span>פירוט לפי ערוץ</span>
+        <button class="don-card-header-btn" (click)="exportChannelsCsv()">⬇ ייצוא CSV</button>
+      </div>
+      <div class="don-table-wrap">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th>ערוץ</th>
+              <th>תרומות</th>
+              <th>סה"כ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of channels; track c.channel; let i = $index) {
+              <tr class="don-row">
+                <td class="don-name">
+                  <span class="channel-dot" [style.background]="channelColor(i)"></span>
+                  {{ c.channel }}
+                </td>
+                <td>{{ c.count | number }}</td>
+                <td class="don-amount">{{ fmtMoney(c.total) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  @if (utmBreakdown.length > 0) {
+    <div class="don-card">
+      <div class="don-card-header">
+        <span>פירוט UTM (source / medium)</span>
+        <button class="don-card-header-btn" (click)="exportUtmCsv()">⬇ ייצוא CSV</button>
+      </div>
+      <div class="don-table-wrap">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Medium</th>
+              <th>תרומות</th>
+              <th>סה"כ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of utmBreakdown; track u.source + (u.medium ?? '')) {
+              <tr class="don-row">
+                <td class="ltr-col">{{ u.source }}</td>
+                <td class="ltr-col">{{ u.medium ?? '—' }}</td>
+                <td>{{ u.count | number }}</td>
+                <td class="don-amount">{{ fmtMoney(u.total) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <div class="don-card">
+      <div class="don-card-body don-empty">
+        עדיין אין תרומות עם UTM מזוהה (source/medium/campaign בקישור) — הלכידה הופעלה מעכשיו, הנתונים יצטברו בהמשך.
+      </div>
+    </div>
+  }
+
+}

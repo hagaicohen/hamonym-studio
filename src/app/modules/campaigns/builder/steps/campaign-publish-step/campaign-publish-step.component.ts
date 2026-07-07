@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { switchMap } from 'rxjs';
 import {
   LucideAngularModule,
-  FileText, Heart, Settings, Gift, Info, CreditCard, Check, CircleAlert, Rocket, Loader,
+  FileText, Heart, Settings, Gift, Info, CreditCard, Check, CircleAlert, Rocket, Loader, Users,
 } from 'lucide-angular';
 import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService }         from '../../../../campaigns/services/campaign-api.service';
@@ -39,6 +39,7 @@ export class CampaignPublishStepComponent {
   readonly CircleAlert = CircleAlert;
   readonly Rocket      = Rocket;
   readonly Loader      = Loader;
+  readonly Users       = Users;
 
   private readonly fundingTypeLabels: Record<string, string> = {
     'flexible':       'קמפיין גמיש',
@@ -59,7 +60,8 @@ export class CampaignPublishStepComponent {
 
   formatDate(iso: string): string {
     if (!iso) return '—';
-    const [y, m, d] = iso.split('-');
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    if (!y || !m || !d) return '—';
     return `${d}/${m}/${y}`;
   }
 

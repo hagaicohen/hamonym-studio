@@ -174,6 +174,38 @@
 
     </div>
 
+    <!-- שגרירים -->
+    <div class="section-card">
+      <div class="card-header">
+        <lucide-angular [img]="Users" class="card-icon"></lucide-angular>
+        <span class="card-title">שגרירים</span>
+      </div>
+      <ng-container *ngIf="draft.ambassadors.length === 0">
+        <div class="field-row">
+          <span class="field-name">שגרירים</span>
+          <span class="status-chip optional-empty">לא הוגדרו</span>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="draft.ambassadors.length > 0">
+        <div class="field-row">
+          <span class="field-name">מספר שגרירים</span>
+          <span class="status-chip filled">{{ draft.ambassadors.length }} שגרירים ✓</span>
+        </div>
+        <div class="amb-summary-list">
+          <div class="amb-summary-item" *ngFor="let a of draft.ambassadors | slice:0:5">
+            <div class="amb-summary-avatar">{{ a.fullName.charAt(0) }}</div>
+            <div class="amb-summary-info">
+              <span class="amb-summary-name">{{ a.fullName }}</span>
+              <span class="amb-summary-goal" *ngIf="a.goalAmount">יעד: ₪{{ a.goalAmount | number }}</span>
+            </div>
+          </div>
+          <div class="amb-summary-more" *ngIf="draft.ambassadors.length > 5">
+            ועוד {{ draft.ambassadors.length - 5 }} שגרירים...
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
     <!-- תגמולים -->
     <div class="section-card">
       <div class="card-header">

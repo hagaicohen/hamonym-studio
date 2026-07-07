@@ -4,6 +4,14 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { CampaignDraft } from './campaign-studio-state.service';
 
+// pg v8 returns DATE columns as Date objects. Convert to YYYY-MM-DD using local time.
+function toDateStr(v: Date | string | null | undefined): string {
+  if (!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const DEFAULT_BLOCK_LABELS: Record<string, string> = {
   'rich-text':       'טקסט',
   'image':           'תמונה',
@@ -48,6 +56,11 @@ export class CampaignApiService {
       logo_strip_align:         draft.logoStripAlign,
       logo_strip_bg:            draft.logoStripBg,
       show_entity_name:         draft.showEntityName,
+      show_logo:                draft.showLogo,
+      campaign_logo_url:        draft.campaignLogoUrl    || null,
+      hero_logo_position:       draft.heroLogoPosition   || 'left',
+      show_hero_title:          draft.showHeroTitle,
+      show_hero_subtitle:       draft.showHeroSubtitle,
       hero_type:                draft.heroType,
       hero_layout:              draft.heroLayout,
       hero_text_style:          draft.heroTextStyle,
@@ -78,6 +91,7 @@ export class CampaignApiService {
       id:                      data.id,
       entityId:                data.entity_id,
       status:                  data.status,
+      isHidden:                data.is_hidden ?? false,
       currentAmount:           parseFloat(data.current_amount)  || 0,
       supportersCount:         parseInt(data.supporters_count)  || 0,
       createdAt:               data.created_at,
@@ -90,12 +104,17 @@ export class CampaignApiService {
       category:                data.category                ?? '',
       managerName:             data.manager_name            ?? '',
       targetAmount:            parseFloat(data.target_amount) || 0,
-      startDate:               data.start_date              ?? '',
-      endDate:                 data.end_date                ?? '',
+      startDate:               toDateStr(data.start_date),
+      endDate:                 toDateStr(data.end_date),
       logoPlacement:           data.logo_placement          ?? 'overlay',
       logoStripAlign:          data.logo_strip_align        ?? 'center',
       logoStripBg:             data.logo_strip_bg           ?? '#ffffff',
       showEntityName:          data.show_entity_name        ?? true,
+      showLogo:                data.show_logo               ?? true,
+      campaignLogoUrl:         data.campaign_logo_url       ?? null,
+      heroLogoPosition:        data.hero_logo_position      ?? 'left',
+      showHeroTitle:           data.show_hero_title         ?? true,
+      showHeroSubtitle:        data.show_hero_subtitle      ?? true,
       heroType:                data.hero_type               ?? 'image',
       heroLayout:              data.hero_layout             ?? 'title-subtitle',
       heroTextStyle:           data.hero_text_style         ?? { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' },
@@ -108,6 +127,11 @@ export class CampaignApiService {
       allowMonthlyDonation:    data.allow_monthly_donation  ?? true,
       suggestedAmounts:        data.suggested_amounts       ?? [],
       monthlyAmounts:          data.monthly_amounts         ?? [],
+      donorFields: {
+        showAddress:    data.donor_fields?.show_address    ?? true,
+        showPostalCode: data.donor_fields?.show_postal_code ?? false,
+        showIdNumber:   data.donor_fields?.show_id_number  ?? false,
+      },
       rewardsEnabled:          data.rewards_enabled         ?? true,
       rewards:                 data.rewards                 ?? [],
       sponsors:                data.sponsors                ?? [],
@@ -168,6 +192,14 @@ export class CampaignApiService {
     return this.http.patch<any>(`${this.apiUrl}/${campaignId}`,
       { status: 'published' },
       { headers: this.headers() }
+    );
+  }
+
+  setVisibility(campaignId: string, isHidden: boolean): Observable<any> {
+    return this.http.patch<any>(
+      `${this.apiUrl}/${campaignId}/visibility`,
+      { is_hidden: isHidden },
+      { headers: this.headers() },
     );
   }
 

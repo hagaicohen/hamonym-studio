@@ -8,9 +8,16 @@ import { CommonModule } from '@angular/common';
 
 import { inject } from '@angular/core';
 
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
 import { EntitiesService } from '../../../../core/services/entities.service';
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
+
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+
+import { AmbassadorService } from '../../../campaigns/services/ambassador.service';
 
 import {
   FormBuilder,
@@ -69,10 +76,28 @@ export class LoginComponent implements OnInit {
 
   private currentEntityService = inject(CurrentEntityService);
 
+  private currentContextService = inject(CurrentContextService);
+
+  private ambassadorService = inject(AmbassadorService);
+
   ngOnInit(): void {
+    this._initGoogle();
+  }
+
+  private _initGoogle(): void {
+    if (typeof (window as any)['google'] !== 'undefined' && (window as any)['google']?.accounts?.id) {
+      this._renderGoogleButton();
+    } else {
+      const script = document.querySelector('script[src*="accounts.google.com"]');
+      if (script) {
+        script.addEventListener('load', () => this._renderGoogleButton());
+      }
+    }
+  }
+
+  private _renderGoogleButton(): void {
     google.accounts.id.initialize({
       client_id: environment.googleClientId,
-
       callback: (response: any) => {
         this.handleGoogleLogin(response.credential);
       },
@@ -80,16 +105,7 @@ export class LoginComponent implements OnInit {
 
     google.accounts.id.renderButton(
       document.getElementById('google-button'),
-
-      {
-        theme: 'outline',
-
-        size: 'large',
-
-        shape: 'pill',
-
-        text: 'signin_with',
-      },
+      { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' },
     );
   }
 
@@ -114,8 +130,11 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          this.entitiesService.getMyEntities().subscribe({
-            next: (entitiesRes) => {
+          forkJoin({
+            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
+            ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
+          }).subscribe({
+            next: ({ entitiesRes, ambassadorCampaigns }) => {
               const entities = entitiesRes.entities || [];
 
               if (entities.length > 0) {
@@ -140,17 +159,19 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+
               // =========================
               // NAVIGATION FLOW
               // =========================
 
-              if (res.hasEntities) {
+              if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;
               }
 
-              this.router.navigate(['/organization-registration']);
+              this.router.navigate(['/welcome']);
             },
           });
         },
@@ -194,8 +215,11 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
-          this.entitiesService.getMyEntities().subscribe({
-            next: (entitiesRes) => {
+          forkJoin({
+            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
+            ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
+          }).subscribe({
+            next: ({ entitiesRes, ambassadorCampaigns }) => {
               const entities = entitiesRes.entities || [];
 
               if (entities.length > 0) {
@@ -220,17 +244,19 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+
               // =========================
               // NAVIGATION FLOW
               // =========================
 
-              if (res.hasEntities) {
+              if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;
               }
 
-              this.router.navigate(['/organization-registration']);
+              this.router.navigate(['/welcome']);
             },
           });
         },

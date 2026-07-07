@@ -6,15 +6,21 @@
   <div class="settings-hero">
     <div class="hero-top-row">
       <div>
-        <div class="page-title">
-          ניהול
-          {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+        <div class="page-title-row">
+          <div class="hero-icon-frame">
+            <lucide-icon [img]="Building2" class="hero-title-icon"></lucide-icon>
+          </div>
+          <div class="page-title">
+            ניהול
+            {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
+          </div>
         </div>
 
         <div class="page-description">
           {{ draftEntity?.display_name }}
         </div>
       </div>
+
       <!--
       <div class="header-actions">
         @if (!editMode) {

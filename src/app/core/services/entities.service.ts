@@ -218,4 +218,11 @@ export class EntitiesService {
       `${environment.apiUrl}/api/entities/${entityId}/tax-document`,
     );
   }
+
+  removeAssociationDocument(entityId: string) {
+    return this.http.delete(
+      `${environment.apiUrl}/api/entities/${entityId}/association-document`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
 }

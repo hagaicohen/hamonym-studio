@@ -10,6 +10,7 @@ export class CampaignStepperComponent {
   steps = [
     'פרטי בסיס',
     'סוג ויעד',
+    'תרומה',
     'תשורות',
     'חסויות',
     'שגרירים',

@@ -1,0 +1,148 @@
+:host { display: block; min-height: 100vh; background: #f1f5f9; }
+
+.mock-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  direction: rtl;
+  font-family: 'Heebo', sans-serif;
+}
+
+.mock-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+}
+
+.mock-header {
+  background: linear-gradient(135deg, #1e293b, #334155);
+  padding: 28px 24px 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.mock-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  font-size: 12px;
+  padding: 4px 12px;
+  margin-bottom: 14px;
+  letter-spacing: 0.3px;
+}
+
+.mock-campaign {
+  font-size: 15px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.mock-amount {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.mock-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mock-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mock-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.mock-input {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.mock-input:focus { border-color: #583cd6; }
+
+.mock-radio-group {
+  display: flex;
+  gap: 10px;
+}
+
+.mock-radio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mock-radio input[type="radio"] { display: none; }
+.mock-radio--selected { border-color: #583cd6; background: #f5f3ff; }
+
+.radio-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.radio-dot--success { background: #22c55e; }
+.radio-dot--fail    { background: #ef4444; }
+
+.mock-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+
+.mock-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: #22c55e;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.mock-btn:hover:not(:disabled) { opacity: 0.9; }
+.mock-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.mock-btn--fail { background: #ef4444; }
+
+.mock-footer {
+  padding: 12px 24px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  direction: ltr;
+}

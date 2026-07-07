@@ -132,6 +132,96 @@
       maxlength="60" placeholder="שם מנהל הקמפיין">
   </div>
 
+  <!-- ── HERO VISIBILITY ── -->
+  <div class="field-section">
+    <label class="field-label">תצוגת Hero</label>
+    <p class="field-hint">בחרו אילו אלמנטים יוצגו על תמונת הכיסוי</p>
+    <div class="hero-toggles">
+
+      <div class="toggle-row" (click)="state.patch({ showLogo: !draft.showLogo }); sync()">
+        <div class="toggle-switch" [class.toggle-on]="draft.showLogo">
+          <div class="toggle-knob"></div>
+        </div>
+        <div class="toggle-info">
+          <span class="toggle-label">הצג לוגו על ה-Hero</span>
+          <span class="toggle-sub">עיגול הלוגו מעל תמונת הכיסוי</span>
+        </div>
+      </div>
+
+      <!-- Logo options — only when logo is visible -->
+      <div class="logo-options" *ngIf="draft.showLogo">
+
+        <!-- Custom logo upload -->
+        <div class="logo-option-section">
+          <span class="logo-option-label">לוגו</span>
+          <div class="logo-source-row">
+            <div class="logo-source-preview">
+              <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
+                   [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+              <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl">🏢</span>
+            </div>
+            <input #campaignLogoInput type="file" accept="image/*"
+              (change)="onCampaignLogoChange($event)" hidden>
+            <button class="logo-upload-btn" (click)="campaignLogoInput.click()"
+              [disabled]="isUploadingLogo">
+              {{ isUploadingLogo ? 'מעלה...' : (draft.campaignLogoUrl ? 'החלף' : 'העלה לוגו מותאם') }}
+            </button>
+            <button class="logo-remove-btn" *ngIf="draft.campaignLogoUrl"
+              (click)="removeCampaignLogo()">הסר</button>
+          </div>
+          <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">מוצג לוגו העמותה</span>
+        </div>
+
+        <!-- Position picker -->
+        <div class="logo-option-section">
+          <span class="logo-option-label">מיקום</span>
+          <div class="logo-position-row">
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'left'"
+              (click)="state.patch({ heroLogoPosition: 'left' }); sync()">
+              <span class="logo-pos-icon">◀</span>
+              שמאל
+            </button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'center'"
+              (click)="state.patch({ heroLogoPosition: 'center' }); sync()">
+              <span class="logo-pos-icon">◉</span>
+              מרכז
+            </button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'above'"
+              (click)="state.patch({ heroLogoPosition: 'above' }); sync()">
+              <span class="logo-pos-icon">▲</span>
+              מעל
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="toggle-row" (click)="state.patch({ showHeroTitle: !draft.showHeroTitle }); sync()">
+        <div class="toggle-switch" [class.toggle-on]="draft.showHeroTitle">
+          <div class="toggle-knob"></div>
+        </div>
+        <div class="toggle-info">
+          <span class="toggle-label">כותרת</span>
+          <span class="toggle-sub">שם הקמפיין על ה-Hero</span>
+        </div>
+      </div>
+
+      <div class="toggle-row" (click)="state.patch({ showHeroSubtitle: !draft.showHeroSubtitle }); sync()">
+        <div class="toggle-switch" [class.toggle-on]="draft.showHeroSubtitle">
+          <div class="toggle-knob"></div>
+        </div>
+        <div class="toggle-info">
+          <span class="toggle-label">תת-כותרת</span>
+          <span class="toggle-sub">המשפט הקצר על ה-Hero</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ── SLUG (required, not advanced) ── -->
   <div class="field-section">
     <label class="field-label">כתובת הקמפיין <span class="required">*</span></label>

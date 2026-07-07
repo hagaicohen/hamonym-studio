@@ -16,10 +16,32 @@
   display: flex;
 
   align-items: flex-start;
+}
 
-  justify-content: space-between;
+.hero-icon-frame {
+  width: 48px;
 
-  gap: 24px;
+  height: 48px;
+
+  border-radius: 14px;
+
+  background: #6D5DF6;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-shrink: 0;
+}
+
+.hero-title-icon {
+  color: white;
+
+  width: 24px;
+
+  height: 24px;
 }
 
 .page-title {
@@ -29,8 +51,19 @@
 
   line-height: 1;
 
-  color: #111827;
+  color: #6D5DF6;
 }
+
+.page-title-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  direction: rtl;
+}
+
 
 .page-description {
   margin-top: 10px;
@@ -85,17 +118,29 @@
 }
 
 .status-text {
-  font-size: 14px;
+  font-size: 13px;
 
   font-weight: 700;
+
+  padding: 4px 12px;
+
+  border-radius: 999px;
 }
 
 .status-text.pending {
-  color: #c2410c;
+  background: #fff7ed;
+
+  color: #ea580c;
+
+  border: 1px solid #fed7aa;
 }
 
 .status-text.active {
-  color: #047857;
+  background: #f0fdf4;
+
+  color: #15803d;
+
+  border: 1px solid #bbf7d0;
 }
 
 /* NAVIGATION */
@@ -160,9 +205,9 @@
 }
 
 .entity-sections-nav button.active {
-  background: #eff6ff;
+  background: #ede9fe;
 
-  color: #2563eb;
+  color: #6D5DF6;
 }
 
 .entity-sections-nav button:active {
@@ -208,7 +253,7 @@
 }
 
 .save-btn {
-  background: #2563eb;
+  background: #6D5DF6;
 
   color: white;
 }

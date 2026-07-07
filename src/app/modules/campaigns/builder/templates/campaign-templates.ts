@@ -329,11 +329,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     },
   },
 
-  // 3 — Sidebar Right
+  // 3 — Sidebar Right (in RTL the sidebar block is first child → appears on physical RIGHT)
   {
     id: 'sidebar-right',
-    name: 'סיידבר ימין',
-    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
+    name: 'סיידבר שמאל',
+    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
     accent: '#7c3aed',
     layoutMode: 'standard',
     preview: [
@@ -350,11 +350,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     },
   },
 
-  // 4 — Sidebar Left
+  // 4 — Sidebar Left (in RTL the sidebar block is second child → appears on physical LEFT)
   {
     id: 'sidebar-left',
-    name: 'סיידבר שמאל',
-    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
+    name: 'סיידבר ימין',
+    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
     accent: '#f59e0b',
     layoutMode: 'standard',
     preview: [

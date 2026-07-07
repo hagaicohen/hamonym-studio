@@ -1,0 +1,32 @@
+@if (error) {
+  <div class="don-error">{{ error }}</div>
+} @else if (loading) {
+  <div class="don-card"><div class="don-loading">טוען...</div></div>
+} @else {
+
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סה"כ החודש (מול חודש קודם)</div>
+      <div class="kpi-value primary">{{ fmtMoney(thisMonth.total) }}</div>
+      <div class="kpi-change" [class]="changeClass(pctChange.total)">{{ changeLabel(pctChange.total) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">מספר תרומות החודש</div>
+      <div class="kpi-value">{{ thisMonth.count | number }}</div>
+      <div class="kpi-change" [class]="changeClass(pctChange.count)">{{ changeLabel(pctChange.count) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">תרומה ממוצעת החודש</div>
+      <div class="kpi-value">{{ fmtMoney(thisMonth.avg) }}</div>
+      <div class="kpi-change" [class]="changeClass(pctChange.avg)">{{ changeLabel(pctChange.avg) }}</div>
+    </div>
+  </div>
+
+  <div class="don-card">
+    <div class="don-card-header">{{ thisYear }} מול {{ lastYear }} — גיוס חודשי</div>
+    <div class="don-card-body">
+      <app-report-chart [labels]="chartLabels" [datasets]="chartDatasets" [height]="280" />
+    </div>
+  </div>
+
+}

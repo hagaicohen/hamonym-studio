@@ -1,0 +1,58 @@
+<div class="mock-page">
+
+  <div class="mock-card">
+
+    <div class="mock-header">
+      <span class="mock-badge">🧪 סימולטור תשלום — מצב בדיקות</span>
+      <div class="mock-campaign">{{ campaignTitle }}</div>
+      <div class="mock-amount">{{ formattedAmount }}</div>
+    </div>
+
+    <div class="mock-body">
+
+      <!-- תאריך -->
+      <div class="mock-field">
+        <label class="mock-label">תאריך ושעת התרומה</label>
+        <input class="mock-input" type="datetime-local" [(ngModel)]="completedAt" />
+      </div>
+
+      <!-- תוצאה -->
+      <div class="mock-field">
+        <label class="mock-label">תוצאת הטרנזקציה</label>
+        <div class="mock-radio-group">
+          <label class="mock-radio" [class.mock-radio--selected]="status === 'paid'">
+            <input type="radio" name="status" value="paid" [(ngModel)]="status" />
+            <span class="radio-dot radio-dot--success"></span>
+            הצלחה
+          </label>
+          <label class="mock-radio" [class.mock-radio--selected]="status === 'failed'">
+            <input type="radio" name="status" value="failed" [(ngModel)]="status" />
+            <span class="radio-dot radio-dot--fail"></span>
+            כישלון
+          </label>
+        </div>
+      </div>
+
+      <!-- סיבת כישלון -->
+      <div class="mock-field" *ngIf="status === 'failed'">
+        <label class="mock-label">סיבת הכישלון</label>
+        <select class="mock-input" [(ngModel)]="failureReason">
+          <option *ngFor="let r of failureReasons" [value]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <!-- שגיאה -->
+      <div class="mock-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+      <!-- שלח -->
+      <button class="mock-btn" [class.mock-btn--fail]="status === 'failed'" (click)="submit()" [disabled]="loading">
+        {{ loading ? 'שולח...' : (status === 'paid' ? '✓ בצע תרומה מוצלחת' : '✗ בצע תרומה כושלת') }}
+      </button>
+
+    </div>
+
+    <div class="mock-footer">donation id: {{ donationId }}</div>
+
+  </div>
+
+</div>

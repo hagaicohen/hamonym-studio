@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 interface DonationResult {
   id:             string;
@@ -30,6 +31,7 @@ export class DonationSuccessComponent implements OnInit {
   private meta   = inject(Meta);
   private title  = inject(Title);
   private http   = inject(HttpClient);
+  private loader = inject(AppLoaderService);
 
   slug       = '';
   ref        = '';
@@ -54,11 +56,13 @@ export class DonationSuccessComponent implements OnInit {
             this.amount   = parseFloat(String(d.amount));
             this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
             this.loading  = false;
+            this.loader.hide();
           },
-          error: () => { this.loading = false; },
+          error: () => { this.loading = false; this.loader.hide(); },
         });
     } else {
       this.loading = false;
+      this.loader.hide();
     }
   }
 
@@ -67,8 +71,12 @@ export class DonationSuccessComponent implements OnInit {
   }
 
   get formattedDate(): string {
-    const d = this.donation?.created_at ? new Date(this.donation.created_at) : new Date();
-    return d.toLocaleString('he-IL', { dateStyle: 'long', timeStyle: 'short' });
+    const iso = this.donation?.created_at ?? new Date().toISOString();
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    const t = new Date(iso);
+    const hh = String(t.getHours()).padStart(2, '0');
+    const mm = String(t.getMinutes()).padStart(2, '0');
+    return `${d}/${m}/${y} ${hh}:${mm}`;
   }
 
   get campaignTitle(): string {
@@ -97,6 +105,8 @@ export class DonationSuccessComponent implements OnInit {
   }
 
   backToCampaign(): void {
-    this.router.navigate(['/campaigns', this.slug, 'view']);
+    this.router.navigate(['/campaigns', this.slug, 'view'], {
+      queryParams: { since: new Date(Date.now() - 10 * 60_000).toISOString() },
+    });
   }
 }

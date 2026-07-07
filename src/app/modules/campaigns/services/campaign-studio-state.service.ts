@@ -50,6 +50,18 @@ export interface StatsBlockData {
   borderRadius:    number;
 }
 
+export interface DonorFieldsConfig {
+  showAddress:    boolean;
+  showPostalCode: boolean;
+  showIdNumber:   boolean;
+}
+
+export const DEFAULT_DONOR_FIELDS: DonorFieldsConfig = {
+  showAddress:    true,
+  showPostalCode: false,
+  showIdNumber:   false,
+};
+
 export interface DonationWidgetBlockData {
   title:            string;
   subtitle:         string;
@@ -174,9 +186,13 @@ export interface CampaignSponsor {
 }
 
 export interface CampaignAmbassador {
-  id:       string;
-  name:     string;
-  imageUrl: string | null;
+  id:              string;
+  fullName:        string;
+  phone:           string | null;
+  email:           string | null;
+  goalAmount:      number | null;
+  personalMessage: string;
+  slug:            string;
 }
 
 export interface CampaignUpdate {
@@ -212,6 +228,7 @@ export type LayoutMode =
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
+  rewardsLayout:      'standard' | 'image';
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -240,6 +257,7 @@ export interface CampaignDraft {
   status:       CampaignStatus;
   currentAmount?:   number;
   supportersCount?: number;
+  isHidden?:        boolean;
   createdAt?:   string;  // ISO timestamp
   updatedAt?:   string;  // ISO timestamp
   publishedAt?: string;  // ISO timestamp
@@ -260,6 +278,11 @@ export interface CampaignDraft {
   logoStripAlign: 'right' | 'center' | 'left';
   logoStripBg:    string;
   showEntityName: boolean;
+  showLogo:           boolean;
+  campaignLogoUrl:    string | null;
+  heroLogoPosition:   'left' | 'center' | 'above';
+  showHeroTitle:    boolean;
+  showHeroSubtitle: boolean;
 
   // Hero
   heroType:      HeroType;
@@ -283,6 +306,9 @@ export interface CampaignDraft {
 
   // Step 3 — Sponsors
   sponsors: CampaignSponsor[];
+
+  // Step 3 — Donation settings
+  donorFields: DonorFieldsConfig;
 
   // Step 4 — Ambassadors
   ambassadors: CampaignAmbassador[];
@@ -321,7 +347,12 @@ function createInitialDraft(): CampaignDraft {
     logoPlacement:  'overlay',
     logoStripAlign: 'center',
     logoStripBg:    '#ffffff',
-    showEntityName: true,
+    showEntityName:   true,
+    showLogo:         true,
+    campaignLogoUrl:  null,
+    heroLogoPosition: 'left',
+    showHeroTitle:    true,
+    showHeroSubtitle: true,
     startDate: today,
     endDate: thirtyDaysLater,
     heroType: 'image',
@@ -336,6 +367,7 @@ function createInitialDraft(): CampaignDraft {
     allowMonthlyDonation: true,
     suggestedAmounts: [50, 100, 180, 360, 500, 1000],
     monthlyAmounts: [18, 36, 54, 100],
+    donorFields: { showAddress: true, showPostalCode: false, showIdNumber: false },
     rewardsEnabled: true,
     rewards: [],
     sponsors:     [],
@@ -426,6 +458,7 @@ function createInitialDraft(): CampaignDraft {
     })(),
     layout: {
       layoutMode:          'standard' as LayoutMode,
+      rewardsLayout:       'standard',
       backgroundType:      'none',
       backgroundColor:     '#f8fafc',
       backgroundImageUrl:  '',
@@ -465,6 +498,22 @@ export class CampaignStudioStateService {
 
   draft$ = this.draftSubject.asObservable();
   isEditMode$ = this.editModeSubject.asObservable();
+
+  private _hoveredBlock = new BehaviorSubject<{ id: string | null; source: 'builder' | 'preview' | null }>({ id: null, source: null });
+  readonly hoveredBlock$ = this._hoveredBlock.asObservable();
+
+  private _pageBuilderActive = new BehaviorSubject<boolean>(false);
+  readonly pageBuilderActive$ = this._pageBuilderActive.asObservable();
+
+  setPageBuilderActive(active: boolean): void {
+    this._pageBuilderActive.next(active);
+    if (!active) this._hoveredBlock.next({ id: null, source: null });
+  }
+
+  setHoveredBlock(id: string | null, source: 'builder' | 'preview'): void {
+    if (!this._pageBuilderActive.value) return;
+    this._hoveredBlock.next({ id, source: id ? source : null });
+  }
 
   get draft(): CampaignDraft {
     return this.draftSubject.value;

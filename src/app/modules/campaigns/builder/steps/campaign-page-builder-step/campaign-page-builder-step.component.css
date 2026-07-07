@@ -51,6 +51,11 @@
 }
 .block-item:hover { border-color: #c4b5fd; }
 .block-item--hidden { opacity: 0.45; }
+.block-item--hovered > .block-header {
+  background: #faf5ff;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 2px #ede9fe;
+}
 
 /* BLOCK HEADER */
 .block-header {
@@ -91,6 +96,8 @@
 .action-btn:disabled { opacity: 0.3; cursor: default; }
 .action-btn--muted { background: #f1f5f9; color: #94a3b8; }
 .action-btn--danger:hover { border-color: #ef4444; color: #ef4444; background: #fff5f5; }
+.action-btn--swap { font-size: 15px; color: #7c3aed; }
+.action-btn--swap:hover { background: #ede9fe; border-color: #c4b5fd; color: #6d28d9; }
 
 .block-chevron {
   font-size: 18px;
@@ -310,7 +317,7 @@
 .split-editor { gap: 16px; }
 .split-percent-row { display: flex; flex-direction: column; gap: 8px; }
 .split-slider { width: 100%; accent-color: #7c3aed; }
-.split-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.split-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .split-preset-btn {
   padding: 4px 10px;
   border: 1.5px solid #e2e8f0;
@@ -321,6 +328,17 @@
   transition: all 0.15s;
 }
 .split-preset-btn.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+.swap-sides-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; width: 100%;
+  border: 1.5px dashed #c4b5fd; border-radius: 8px;
+  background: #faf5ff; color: #7c3aed;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  justify-content: center;
+}
+.swap-sides-btn:hover { background: #ede9fe; border-color: #7c3aed; }
 .split-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .split-side { display: flex; flex-direction: column; gap: 5px; }
 .split-hint {
@@ -582,6 +600,24 @@
   text-transform: lowercase;
 }
 .payment-logo-btn.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+/* Donor optional fields */
+.editor-row--col { flex-direction: column; }
+.donor-fields-list { display: flex; flex-direction: column; gap: 8px; }
+.donor-field-toggle {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #334155; cursor: pointer;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1.5px solid #e2e8f0; background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.donor-field-toggle:has(input:checked) {
+  border-color: #7c3aed; background: #f5f3ff; color: #5b21b6;
+}
+.donor-field-toggle input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: #7c3aed;
+  cursor: pointer; flex-shrink: 0;
+}
 
 /* Toggle pills */
 .donation-toggles { display: flex; flex-direction: column; gap: 8px; }
