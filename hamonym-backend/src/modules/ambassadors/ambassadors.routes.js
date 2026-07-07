@@ -21,6 +21,13 @@ router.post(
   ctrl.selfRegister
 );
 
+// Protected — entity-wide ambassadors admin page
+router.get(
+  '/entities/:id/ambassadors',
+  requireAuth,
+  ctrl.listForEntity
+);
+
 // Protected — campaign builder management
 router.get(
   '/campaigns/:campaignId/ambassadors',

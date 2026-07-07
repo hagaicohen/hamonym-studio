@@ -37,6 +37,12 @@ const mediaRoutes =
 const donationsRoutes =
   require('./modules/donations/donations.routes');
 
+const ambassadorsRoutes =
+  require('./modules/ambassadors/ambassadors.routes');
+
+const dashboardRoutes =
+  require('./modules/dashboard/dashboard.routes');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -81,6 +87,16 @@ app.use(
 app.use(
   '/api/donations',
   donationsRoutes
+);
+
+app.use(
+  '/api',
+  ambassadorsRoutes
+);
+
+app.use(
+  '/api/entities',
+  dashboardRoutes
 );
 
 /*

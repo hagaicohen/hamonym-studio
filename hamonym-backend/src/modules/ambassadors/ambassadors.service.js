@@ -88,7 +88,7 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
 const STATS_SQL = `
   COALESCE((
     SELECT SUM(d.amount) FROM donations d
-    WHERE d.ambassador_id = a.id AND d.status = 'completed'
+    WHERE d.ambassador_id = a.id AND d.status = 'paid'
   ), 0) AS raised_online,
   COALESCE((
     SELECT SUM(adj.amount) FROM ambassador_adjustments adj
@@ -96,14 +96,14 @@ const STATS_SQL = `
   ), 0) AS raised_manual,
   COALESCE((
     SELECT SUM(d.amount) FROM donations d
-    WHERE d.ambassador_id = a.id AND d.status = 'completed'
+    WHERE d.ambassador_id = a.id AND d.status = 'paid'
   ), 0) + COALESCE((
     SELECT SUM(adj.amount) FROM ambassador_adjustments adj
     WHERE adj.ambassador_id = a.id
   ), 0) AS raised_total,
   COALESCE((
     SELECT COUNT(*) FROM donations d
-    WHERE d.ambassador_id = a.id AND d.status = 'completed'
+    WHERE d.ambassador_id = a.id AND d.status = 'paid'
   ), 0) AS donor_count
 `;
 
@@ -261,6 +261,91 @@ exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amou
   return {
     slug: rows[0].slug,
     shareUrl: `${appUrl}/campaigns/${campaignSlug}/${rows[0].slug}`,
+  };
+};
+
+// ─── Entity-wide list (Ambassadors admin page) ────────────────────────────────
+
+const ENTITY_SORT_COLUMNS = {
+  name:     'a.full_name',
+  campaign: 'c.title',
+  goal:     'a.goal_amount',
+  raised:   'raised_total',
+  donors:   'donor_count',
+  status:   'a.status',
+};
+
+exports.getEntityAmbassadors = async (entityId, { search, status, campaignId, sortBy, sortDir, page = 0, limit = 25 }) => {
+  const where  = ['c.entity_id = $1'];
+  const params = [entityId];
+  let idx = 2;
+
+  if (status && status !== 'all') {
+    where.push(`a.status = $${idx++}`);
+    params.push(status);
+  }
+  if (campaignId) {
+    where.push(`a.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
+  if (search) {
+    where.push(`(a.full_name ILIKE $${idx} OR a.email ILIKE $${idx} OR a.phone ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = where.join(' AND ');
+  const sortCol   = ENTITY_SORT_COLUMNS[sortBy] || 'raised_total';
+  const sortOrd   = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  const [listRes, kpiRes, campaignsRes] = await Promise.all([
+    db.query(
+      `SELECT a.*, c.title AS campaign_title, c.slug AS campaign_slug, ${STATS_SQL}
+       FROM campaign_ambassadors a
+       JOIN campaigns c ON c.id = a.campaign_id
+       WHERE ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::int                                     AS total,
+         COUNT(*) FILTER (WHERE status = 'active')::int    AS active_count,
+         COALESCE(SUM(raised_total), 0)::float              AS total_raised,
+         COALESCE(SUM(donor_count), 0)::int                 AS total_donors
+       FROM (
+         SELECT a.status, ${STATS_SQL}
+         FROM campaign_ambassadors a
+         JOIN campaigns c ON c.id = a.campaign_id
+         WHERE ${whereStr}
+       ) sub`,
+      params
+    ),
+    db.query(
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      [entityId]
+    ),
+  ]);
+
+  const kpi = kpiRes.rows[0];
+
+  return {
+    ambassadors: listRes.rows.map(r => ({
+      ...mapRow(r),
+      campaign_title: r.campaign_title,
+      campaign_slug:  r.campaign_slug,
+    })),
+    kpi: {
+      totalAmbassadors:  kpi.total,
+      activeAmbassadors: kpi.active_count,
+      totalRaised:       kpi.total_raised,
+      totalDonors:       kpi.total_donors,
+    },
+    campaigns: campaignsRes.rows,
+    total: kpi.total,
+    page,
+    limit,
   };
 };
 

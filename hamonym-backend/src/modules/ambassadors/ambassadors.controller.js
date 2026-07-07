@@ -54,6 +54,20 @@ exports.addAdjustment = async (req, res) => {
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };
 
+exports.listForEntity = async (req, res) => {
+  try {
+    const entityId = req.params.id;
+    const page  = parseInt(req.query.page  || '0', 10);
+    const limit = parseInt(req.query.limit || '25', 10);
+    const { search, status, campaignId, sortBy, sortDir } = req.query;
+    const result = await svc.getEntityAmbassadors(entityId, { search, status, campaignId, sortBy, sortDir, page, limit });
+    res.json(result);
+  } catch (e) {
+    console.error('[listForEntity] error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+};
+
 exports.listPublic = async (req, res) => {
   try {
     const ambassadors = await svc.listPublic(req.params.campaignSlug);
