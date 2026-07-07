@@ -7,7 +7,16 @@ export interface Donor {
   name: string;
   amount: number;
   completedAt: Date;
+  isAnonymous: boolean;
+  isFirst: boolean;
 }
+
+export interface TopDonor {
+  name: string;
+  total: number;
+}
+
+export type DonorPeriod = 'all' | 'today' | 'week';
 
 export interface DonationToastItem {
   name: string;
@@ -44,13 +53,19 @@ export class DonationService {
     return this.http.post<DonationResult>(this.apiUrl, payload);
   }
 
-  getDonors(slug: string): Observable<Donor[]> {
-    return this.http.get<{ donors: any[] }>(`${this.apiUrl}/campaign/${slug}/donors`)
-      .pipe(map(r => (r.donors ?? []).map((d: any) => ({
+  getDonors(slug: string, period: DonorPeriod = 'all'): Observable<{ donors: Donor[]; topDonors: TopDonor[] }> {
+    return this.http.get<{ donors: any[]; topDonors: any[] }>(`${this.apiUrl}/campaign/${slug}/donors`, {
+      params: new HttpParams().set('period', period),
+    }).pipe(map(r => ({
+      donors: (r.donors ?? []).map((d: any) => ({
         name: d.name,
         amount: d.amount,
         completedAt: new Date(d.completed_at),
-      }))));
+        isAnonymous: d.is_anonymous,
+        isFirst: d.is_first,
+      })),
+      topDonors: (r.topDonors ?? []).map((t: any) => ({ name: t.name, total: t.total })),
+    })));
   }
 
   getLive(slug: string, since: string): Observable<DonationToastItem[]> {

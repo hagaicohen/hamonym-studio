@@ -29,22 +29,30 @@ import {
   UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
-import { DonationService, Donor } from '../../../services/donation.service';
+import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 
 const now = Date.now();
 const MOCK_DONORS: Donor[] = [
-  { name: 'ישראל ישראלי',     amount: 500,  completedAt: new Date(now - 15 * 60000) },
-  { name: 'תורמ/ה אנונימי',   amount: 1000, completedAt: new Date(now - 45 * 60000) },
-  { name: 'רחל כהן',           amount: 250,  completedAt: new Date(now - 90 * 60000) },
-  { name: 'תורמ/ה אנונימי',   amount: 750,  completedAt: new Date(now - 3 * 3600000) },
-  { name: 'אברהם לוי',         amount: 180,  completedAt: new Date(now - 5 * 3600000) },
-  { name: 'מרים ברק',          amount: 360,  completedAt: new Date(now - 8 * 3600000) },
-  { name: 'תורמ/ה אנונימי',   amount: 100,  completedAt: new Date(now - 24 * 3600000) },
-  { name: 'דוד מזרחי',         amount: 2000, completedAt: new Date(now - 48 * 3600000) },
-  { name: 'שרה גולדברג',       amount: 450,  completedAt: new Date(now - 72 * 3600000) },
-  { name: 'תורמ/ה אנונימי',   amount: 300,  completedAt: new Date(now - 96 * 3600000) },
+  { name: 'ישראל ישראלי',     amount: 500,  completedAt: new Date(now - 15 * 60000),  isAnonymous: false, isFirst: true  },
+  { name: 'תורמ/ה אנונימי',   amount: 1000, completedAt: new Date(now - 45 * 60000),  isAnonymous: true,  isFirst: false },
+  { name: 'רחל כהן',           amount: 250,  completedAt: new Date(now - 90 * 60000),  isAnonymous: false, isFirst: false },
+  { name: 'תורמ/ה אנונימי',   amount: 750,  completedAt: new Date(now - 3 * 3600000), isAnonymous: true,  isFirst: false },
+  { name: 'אברהם לוי',         amount: 180,  completedAt: new Date(now - 5 * 3600000), isAnonymous: false, isFirst: true  },
+  { name: 'מרים ברק',          amount: 360,  completedAt: new Date(now - 8 * 3600000), isAnonymous: false, isFirst: false },
+  { name: 'תורמ/ה אנונימי',   amount: 100,  completedAt: new Date(now - 24 * 3600000), isAnonymous: true, isFirst: false },
+  { name: 'דוד מזרחי',         amount: 2000, completedAt: new Date(now - 48 * 3600000), isAnonymous: false, isFirst: false },
+  { name: 'שרה גולדברג',       amount: 450,  completedAt: new Date(now - 72 * 3600000), isAnonymous: false, isFirst: true },
+  { name: 'תורמ/ה אנונימי',   amount: 300,  completedAt: new Date(now - 96 * 3600000), isAnonymous: true, isFirst: false },
+];
+const MOCK_TOP_DONORS: TopDonor[] = [
+  { name: 'דוד מזרחי',   total: 2000 },
+  { name: 'ישראל ישראלי', total: 500 },
+  { name: 'שרה גולדברג', total: 450 },
+  { name: 'מרים ברק',    total: 360 },
+  { name: 'רחל כהן',     total: 250 },
+  { name: 'אברהם לוי',   total: 180 },
 ];
 
 const FUNDING_LABELS: Record<string, string> = {
@@ -241,9 +249,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this.draft$.subscribe(draft => {
       if (draft?.slug && draft.slug !== this.loadedSlug) {
         this.loadedSlug = draft.slug;
-        this.donationService.getDonors(draft.slug).subscribe({
-          next: donors => { this.donors = donors; },
-        });
+        this.loadDonors(draft.slug);
       }
       if (draft?.slug && draft.slug !== this.loadedAmbSlug) {
         this.loadedAmbSlug = draft.slug;
@@ -650,12 +656,17 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asUpdates(data: unknown)          { return data as UpdatesBlockData; }
 
   donors: Donor[] = [];
+  topDonors: TopDonor[] = [];
+  donorPeriod: DonorPeriod = 'all';
   private loadedSlug = '';
   private shownCount = 6;
   readonly PAGE_SIZE = 6;
 
   get activeDonors(): Donor[] {
     return this.state.isEditMode ? MOCK_DONORS : this.donors;
+  }
+  get activeTopDonors(): TopDonor[] {
+    return this.state.isEditMode ? MOCK_TOP_DONORS : this.topDonors;
   }
   get visibleDonors(): Donor[] {
     return this.activeDonors.slice(0, this.shownCount);
@@ -665,6 +676,22 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
   showMoreDonors(): void {
     this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
+  }
+
+  loadDonors(slug: string): void {
+    this.donationService.getDonors(slug, this.donorPeriod).subscribe({
+      next: ({ donors, topDonors }) => {
+        this.donors     = donors;
+        this.topDonors  = topDonors;
+      },
+    });
+  }
+
+  setDonorPeriod(period: DonorPeriod): void {
+    if (this.donorPeriod === period) return;
+    this.donorPeriod  = period;
+    this.shownCount   = this.PAGE_SIZE;
+    if (this.loadedSlug) this.loadDonors(this.loadedSlug);
   }
 
   timeAgo(date: Date): string {

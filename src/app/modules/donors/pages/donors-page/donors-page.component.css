@@ -32,37 +32,10 @@
   margin: 0;
 }
 
-/* ── PERIOD TABS ── */
-.period-tabs {
-  display: flex;
-  gap: 6px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 4px;
-}
-
-.period-tabs button {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.period-tabs button.active {
-  background: #583cd6;
-  color: #fff;
-}
-
 /* ── KPI ── */
 .don-kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -80,16 +53,17 @@
   color: #64748b;
   font-weight: 500;
   margin-bottom: 6px;
+  text-align: right;
 }
 
 .kpi-value {
   font-size: 24px;
   font-weight: 700;
   color: #1e293b;
+  text-align: right;
 }
 
 .kpi-value.primary { color: #583cd6; }
-.kpi-value.danger  { color: #ef4444; }
 
 /* ── FILTERS ── */
 .don-filters {
@@ -101,8 +75,8 @@
 }
 
 .don-search {
-  flex: 1 1 160px;
-  min-width: 140px;
+  flex: 1;
+  min-width: 160px;
   padding: 9px 14px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -114,27 +88,6 @@
 }
 
 .don-search:focus { border-color: #583cd6; }
-
-.don-select {
-  flex: 1 1 160px;
-  min-width: 140px;
-  padding: 9px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  background: #fff;
-  color: #1e293b;
-  cursor: pointer;
-  outline: none;
-  direction: rtl;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.don-select:focus { border-color: #583cd6; }
-
-.don-select--campaign { flex: 1 1 160px; }
 
 .don-export-btn {
   padding: 9px 16px;
@@ -279,22 +232,10 @@
 .don-amount  { font-weight: 600; color: #1e293b; }
 .don-date    { color: #64748b; white-space: nowrap; }
 
-/* LTR content (date) inside an RTL table */
+/* LTR content (email/phone/date) inside an RTL table */
 .ltr-col { direction: ltr; text-align: right; unicode-bidi: isolate; }
 
 /* ── BADGE ── */
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.status-paid    { background: #e6f9f3; color: #0EA65A; }
-.status-failed  { background: #fef2f2; color: #ef4444; }
-.status-pending { background: #fffbeb; color: #f59e0b; }
-
 .badge-test {
   display: inline-block;
   padding: 2px 7px;
@@ -448,28 +389,21 @@
   word-break: break-word;
 }
 
-.dr-value.bold   { font-weight: 700; }
-.dr-value.danger { color: #ef4444; }
+.dr-value.bold { font-weight: 700; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  .don-kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .don-kpi-row { grid-template-columns: repeat(3, 1fr); }
   .don-page    { padding: 20px 16px; }
 }
 
 @media (max-width: 600px) {
-  .don-kpi-row { grid-template-columns: 1fr 1fr; }
+  .don-kpi-row { grid-template-columns: 1fr; }
   .don-drawer  { width: 100%; }
 
-  /* Stack filters full-width instead of squeezing them into one row.
-     flex-basis follows the main axis, so reset it to auto here —
-     otherwise the desktop pixel values (meant as widths) become heights. */
+  /* Stack filters full-width instead of squeezing them into one row */
   .don-filters { flex-direction: column; align-items: stretch; }
-  .don-search, .don-select, .don-select--campaign, .don-export-btn {
-    flex: 0 0 auto;
-    width: 100%;
-    max-width: none;
-  }
+  .don-search, .don-export-btn { flex: 0 0 auto; width: 100%; max-width: none; }
 
   /* Secondary columns move into the row drawer instead of the table */
   .col-secondary { display: none; }

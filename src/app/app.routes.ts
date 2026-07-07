@@ -191,6 +191,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'donors',
+        loadComponent: () =>
+          import('./modules/donors/pages/donors-page/donors-page.component').then(
+            (m) => m.DonorsPageComponent,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./modules/settings/pages/settings-page/settings-page.component').then(

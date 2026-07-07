@@ -971,34 +971,86 @@
 
   <!-- DONORS — grid or list -->
   <section class="hm-section hm-donors" *ngIf="block.type === 'donors'" id="section-donors">
-    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">תורמים אחרונים</h2>
+    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
 
-    <div class="hm-donors-grid">
-      <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
-        <div class="hm-donor-v2-left">
-          <div class="hm-donor-v2-avatar"
-            [style.background]="draft.layout.theme.accentColor + '22'"
-            [style.color]="draft.layout.theme.accentColor">
-            {{ donorInitials(d.name) }}
-          </div>
-          <div class="hm-donor-v2-info">
-            <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-            <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
-          </div>
-        </div>
-        <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
-          ₪{{ d.amount.toLocaleString('he-IL') }}
-        </div>
+    <!-- Stats row -->
+    <div class="hm-donors-stats">
+      <div class="hm-donors-stat">
+        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+          ₪{{ (draft.currentAmount ?? 0).toLocaleString('he-IL') }}
+        </span>
+        <span class="hm-donors-stat-label">סך התרומות</span>
+      </div>
+      <div class="hm-donors-stat">
+        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+          {{ draft.supportersCount ?? 0 | number }}
+        </span>
+        <span class="hm-donors-stat-label">תורמים</span>
+      </div>
+      <div class="hm-donors-stat">
+        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+          ₪{{ (draft.supportersCount ? (draft.currentAmount ?? 0) / draft.supportersCount : 0) | number:'1.0-0' }}
+        </span>
+        <span class="hm-donors-stat-label">תרומה ממוצעת</span>
       </div>
     </div>
 
-    <div class="hm-donors-footer" *ngIf="canShowMore">
-      <button class="hm-donors-more-btn"
-        [style.borderColor]="draft.layout.theme.accentColor"
-        [style.color]="draft.layout.theme.accentColor"
-        (click)="showMoreDonors()">
-        הצג עוד תורמים
-      </button>
+    <div class="hm-donors-layout">
+      <div class="hm-donors-main">
+        <!-- Period filter -->
+        <div class="hm-donors-period-tabs">
+          <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
+          <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
+          <button [class.active]="donorPeriod === 'today'" [style.background]="donorPeriod === 'today' ? primaryColor(draft) : ''" (click)="setDonorPeriod('today')">היום</button>
+        </div>
+
+        <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
+          <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+            <div class="hm-donor-v2-left">
+              <div class="hm-donor-v2-avatar"
+                [style.background]="draft.layout.theme.accentColor + '22'"
+                [style.color]="draft.layout.theme.accentColor">
+                {{ donorInitials(d.name) }}
+              </div>
+              <div class="hm-donor-v2-info">
+                <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+                <div class="hm-donor-v2-tags">
+                  <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
+                  <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+                </div>
+                <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
+              </div>
+            </div>
+            <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
+              ₪{{ d.amount.toLocaleString('he-IL') }}
+            </div>
+          </div>
+        </div>
+        <ng-template #donorsEmpty>
+          <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
+        </ng-template>
+
+        <div class="hm-donors-footer" *ngIf="canShowMore">
+          <button class="hm-donors-more-btn"
+            [style.borderColor]="draft.layout.theme.accentColor"
+            [style.color]="draft.layout.theme.accentColor"
+            (click)="showMoreDonors()">
+            הצג עוד תורמים
+          </button>
+        </div>
+      </div>
+
+      <!-- Top 10 leaderboard -->
+      <div class="hm-donors-top" *ngIf="activeTopDonors.length > 0">
+        <h3 class="hm-donors-top-title">Top 10 תורמים</h3>
+        <div class="hm-donors-top-list">
+          <div class="hm-donors-top-row" *ngFor="let t of activeTopDonors; let i = index">
+            <span class="hm-donors-top-rank" [style.background]="primaryColor(draft)">{{ i + 1 }}</span>
+            <span class="hm-donors-top-name">{{ t.name }}</span>
+            <span class="hm-donors-top-total" [style.color]="draft.layout.theme.accentColor">₪{{ t.total.toLocaleString('he-IL') }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 

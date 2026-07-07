@@ -45,7 +45,7 @@
       (input)="onSearch()"
     />
 
-    <select class="don-select" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
+    <select class="don-select don-select--campaign" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
       <option value="">כל הקמפיינים</option>
       @for (c of campaigns; track c.id) {
         <option [value]="c.id">{{ c.title }}</option>
@@ -58,6 +58,25 @@
       <option value="failed">נכשל</option>
       <option value="pending">ממתין</option>
     </select>
+
+    <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+
+    <div class="don-col-menu-wrap">
+      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      @if (columnsMenuOpen) {
+        <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
+        <div class="don-col-panel">
+          @for (col of columnDefs; track col.key) {
+            <label class="don-col-item">
+              <span>{{ col.label }}</span>
+              <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
   </div>
 
   <!-- ══ TABLE ══ -->
@@ -67,15 +86,31 @@
     } @else if (donations.length === 0) {
       <div class="don-empty">לא נמצאו תרומות</div>
     } @else {
-      <div class="don-table-wrap">
+      <div class="don-table-wrap" [class.refreshing]="refreshing">
         <table class="don-table">
           <thead>
             <tr>
-              <th>תורם</th>
-              <th>קמפיין</th>
-              <th>סכום</th>
-              <th>תאריך</th>
-              <th>סטטוס</th>
+              <th class="sortable" [class.active]="sortField === 'donor'" (click)="sortBy('donor')">
+                תורם<span class="sort-arrow">{{ sortField === 'donor' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('campaign')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'campaign'" (click)="sortBy('campaign')">
+                  קמפיין<span class="sort-arrow">{{ sortField === 'campaign' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              <th class="sortable" [class.active]="sortField === 'amount'" (click)="sortBy('amount')">
+                סכום<span class="sort-arrow">{{ sortField === 'amount' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('date')) {
+                <th class="sortable ltr-col" [class.active]="sortField === 'date'" (click)="sortBy('date')">
+                  תאריך<span class="sort-arrow">{{ sortField === 'date' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('status')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'status'" (click)="sortBy('status')">
+                  סטטוס<span class="sort-arrow">{{ sortField === 'status' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -85,10 +120,10 @@
                   {{ donorDisplay(d) }}
                   @if (d.is_mock) { <span class="badge-test">TEST</span> }
                 </td>
-                <td class="don-campaign">{{ d.campaign_title }}</td>
+                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ d.campaign_title }}</td> }
                 <td class="don-amount">{{ fmtMoney(d.amount) }}</td>
-                <td class="don-date">{{ fmtDate(d.completed_at ?? d.created_at) }}</td>
-                <td><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td>
+                @if (isColVisible('date'))   { <td class="don-date ltr-col">{{ fmtDate(d.completed_at ?? d.created_at) }}</td> }
+                @if (isColVisible('status')) { <td class="col-secondary"><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td> }
               </tr>
             }
           </tbody>
@@ -97,6 +132,14 @@
 
       <!-- Pagination -->
       <div class="don-pagination">
+        <label class="pag-limit">
+          שורות בעמוד:
+          <select [(ngModel)]="limit" (change)="onLimitChange()">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
         <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
         <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
         <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>

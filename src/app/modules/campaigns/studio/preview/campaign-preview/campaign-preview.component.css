@@ -1903,6 +1903,96 @@
 }
 .hm-donors-empty span { font-size: 28px; display: block; margin-bottom: 8px; }
 
+/* ── DONORS — stats row ── */
+.hm-donors-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 0 auto 28px;
+  flex-wrap: wrap;
+}
+.hm-donors-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hm-donors-stat-value { font-size: 22px; font-weight: 900; }
+.hm-donors-stat-label { font-size: 12px; color: #94a3b8; font-weight: 600; }
+
+/* ── DONORS — layout: main list + top-10 sidebar ── */
+.hm-donors-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.hm-donors-main { flex: 1; min-width: 0; }
+@media (max-width: 860px) {
+  .hm-donors-layout { flex-direction: column-reverse; }
+}
+
+/* ── DONORS — period tabs ── */
+.hm-donors-period-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.hm-donors-period-tabs button {
+  padding: 6px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.hm-donors-period-tabs button.active { color: #fff; border-color: transparent; }
+
+/* ── DONORS — tags ── */
+.hm-donor-v2-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.hm-donor-v2-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+.hm-donor-v2-tag--first { background: #fef3c7; color: #b45309; }
+
+/* ── DONORS — Top 10 leaderboard ── */
+.hm-donors-top {
+  width: 260px;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+}
+@media (max-width: 860px) {
+  .hm-donors-top { width: 100%; }
+}
+.hm-donors-top-title { font-size: 14px; font-weight: 800; margin: 0 0 12px; text-align: center; }
+.hm-donors-top-list { display: flex; flex-direction: column; gap: 8px; }
+.hm-donors-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hm-donors-top-rank {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+}
+.hm-donors-top-name {
+  flex: 1; min-width: 0; font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm-donors-top-total { font-size: 13px; font-weight: 800; white-space: nowrap; }
+
 /* ══ DONORS — grid (slider) — legacy ══ */
 .hm-donors-outer {
   display: flex; align-items: center; gap: 10px;

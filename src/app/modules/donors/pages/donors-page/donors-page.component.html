@@ -1,0 +1,196 @@
+<div class="don-page">
+
+  @if (error) {
+    <div class="don-error">{{ error }}</div>
+  } @else {
+
+  <!-- ══ HEADER ══ -->
+  <div class="don-header">
+    <h1 class="don-title">תורמים</h1>
+  </div>
+
+  <!-- ══ KPI ROW ══ -->
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סך גיוס</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">מספר תורמים</div>
+      <div class="kpi-value">{{ kpi.donorCount | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">ממוצע לתורם</div>
+      <div class="kpi-value">{{ fmtMoney(kpi.avgPerDonor) }}</div>
+    </div>
+  </div>
+
+  <!-- ══ FILTERS ══ -->
+  <div class="don-filters">
+    <input
+      class="don-search"
+      type="search"
+      placeholder="חיפוש לפי שם, אימייל או טלפון..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+    <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+
+    <div class="don-col-menu-wrap">
+      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      @if (columnsMenuOpen) {
+        <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
+        <div class="don-col-panel">
+          @for (col of columnDefs; track col.key) {
+            <label class="don-col-item">
+              <span>{{ col.label }}</span>
+              <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <div class="don-card">
+    @if (loading) {
+      <div class="don-loading">טוען...</div>
+    } @else if (donors.length === 0) {
+      <div class="don-empty">לא נמצאו תורמים</div>
+    } @else {
+      <div class="don-table-wrap" [class.refreshing]="refreshing">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th class="sortable" [class.active]="sortField === 'name'" (click)="sortBy('name')">
+                תורם<span class="sort-arrow">{{ sortField === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('email')) { <th class="ltr-col col-secondary">אימייל</th> }
+              @if (isColVisible('phone')) { <th class="ltr-col col-secondary">טלפון</th> }
+              <th class="sortable" [class.active]="sortField === 'total'" (click)="sortBy('total')">
+                סה"כ נתרם<span class="sort-arrow">{{ sortField === 'total' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+              </th>
+              @if (isColVisible('count')) {
+                <th class="sortable col-secondary" [class.active]="sortField === 'count'" (click)="sortBy('count')">
+                  תרומות<span class="sort-arrow">{{ sortField === 'count' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+              @if (isColVisible('campaigns')) { <th class="col-secondary">קמפיינים</th> }
+              @if (isColVisible('last')) {
+                <th class="sortable" [class.active]="sortField === 'last'" (click)="sortBy('last')">
+                  תרומה אחרונה<span class="sort-arrow">{{ sortField === 'last' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of donors; track d.donor_key) {
+              <tr class="don-row" (click)="openDrawer(d)">
+                <td class="don-name">
+                  {{ d.display_name }}
+                  @if (d.has_mock) { <span class="badge-test">TEST</span> }
+                </td>
+                @if (isColVisible('email')) { <td class="don-campaign ltr-col col-secondary">{{ d.email || '—' }}</td> }
+                @if (isColVisible('phone')) { <td class="don-campaign ltr-col col-secondary">{{ d.phone || '—' }}</td> }
+                <td class="don-amount">{{ fmtMoney(d.total_donated) }}</td>
+                @if (isColVisible('count'))     { <td class="don-date col-secondary">{{ d.donation_count | number }}</td> }
+                @if (isColVisible('campaigns')) { <td class="don-date col-secondary">{{ d.campaigns_count | number }}</td> }
+                @if (isColVisible('last'))      { <td class="don-date ltr-col">{{ fmtDate(d.last_donation_at) }}</td> }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="don-pagination">
+        <label class="pag-limit">
+          שורות בעמוד:
+          <select [(ngModel)]="limit" (change)="onLimitChange()">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
+        <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
+        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
+      </div>
+    }
+  </div>
+
+  }
+</div>
+
+<!-- ══ DRAWER ══ -->
+@if (selected) {
+  <div class="don-overlay" (click)="closeDrawer()"></div>
+  <div class="don-drawer">
+    <div class="drawer-header">
+      <button class="drawer-close" (click)="closeDrawer()">✕</button>
+      <h2 class="drawer-title">פרטי תורם</h2>
+    </div>
+
+    <div class="drawer-body">
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">שם</span>
+          <span class="dr-value">{{ selected.display_name }}</span>
+        </div>
+        @if (selected.email) {
+          <div class="drawer-row">
+            <span class="dr-label">אימייל</span>
+            <span class="dr-value">{{ selected.email }}</span>
+          </div>
+        }
+        @if (selected.phone) {
+          <div class="drawer-row">
+            <span class="dr-label">טלפון</span>
+            <span class="dr-value">{{ selected.phone }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">סה"כ נתרם</span>
+          <span class="dr-value bold">{{ fmtMoney(selected.total_donated) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">מספר תרומות</span>
+          <span class="dr-value">{{ selected.donation_count | number }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">קמפיינים</span>
+          <span class="dr-value">{{ selected.campaigns_count | number }}</span>
+        </div>
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">תרומה ראשונה</span>
+          <span class="dr-value">{{ fmtDate(selected.first_donation_at) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">תרומה אחרונה</span>
+          <span class="dr-value">{{ fmtDate(selected.last_donation_at) }}</span>
+        </div>
+        @if (selected.has_mock) {
+          <div class="drawer-row">
+            <span class="dr-label">סוג</span>
+            <span class="dr-value"><span class="badge-test">כולל תשלום TEST</span></span>
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+}
