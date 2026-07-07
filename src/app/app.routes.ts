@@ -198,6 +198,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'ambassadors',
+        loadComponent: () =>
+          import('./modules/ambassadors/pages/ambassadors-page/ambassadors-page.component').then(
+            (m) => m.AmbassadorsPageComponent,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./modules/settings/pages/settings-page/settings-page.component').then(
