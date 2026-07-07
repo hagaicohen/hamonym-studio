@@ -35,6 +35,32 @@ exports.getCampaignDonors = async (req, res) => {
   }
 };
 
+exports.getLiveDonations = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const since = req.query.since || new Date(Date.now() - 5 * 60_000).toISOString();
+    const donations = await donationsService.getLiveDonations(slug, since);
+    res.json({ donations });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getEntityDonations = async (req, res) => {
+  try {
+    const entityId   = req.params.id;
+    const page       = parseInt(req.query.page  || '0', 10);
+    const limit      = parseInt(req.query.limit || '25', 10);
+    const { status, campaignId, period, search } = req.query;
+    console.log('[getEntityDonations]', { entityId, status, campaignId, period, search, page, limit });
+    const result = await donationsService.getEntityDonations(entityId, { status, campaignId, period, search, page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error('[getEntityDonations] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.handleReturn = async (req, res) => {
   try {
     const { id, status, lowprofilecode, ResponseCode } = req.query;

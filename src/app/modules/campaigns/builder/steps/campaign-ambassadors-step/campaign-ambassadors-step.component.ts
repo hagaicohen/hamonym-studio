@@ -186,7 +186,8 @@ export class CampaignAmbassadorsStepComponent {
 
   onSlugInput(): void {
     this.form.slugTouched = true;
-    this.form.slug = this.form.slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    // Allow lowercase English, digits, Hebrew letters, hyphens
+    this.form.slug = this.form.slug.toLowerCase().replace(/[^a-z0-9א-ת-]/g, '');
     this.triggerSlugValidation();
   }
 
@@ -197,9 +198,9 @@ export class CampaignAmbassadorsStepComponent {
 
     this.slugStatus = 'checking';
     this.slugTimer = setTimeout(() => {
-      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      if (!/^[a-z0-9א-ת]+(?:-[a-z0-9א-ת]+)*$/.test(slug)) {
         this.slugStatus = 'invalid';
-        this.slugError  = 'רק אותיות אנגלית, מספרים ומקפים';
+        this.slugError  = 'רק אותיות, מספרים ומקפים';
         return;
       }
       const taken = this.ambassadors.some(a => a.slug === slug && a.id !== this.editingId);

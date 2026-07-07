@@ -7,6 +7,7 @@ import {
 } from 'lucide-angular';
 import { AmbassadorService, Ambassador } from '../../services/ambassador.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 @Component({
   selector: 'app-campaign-ambassadors-page',
@@ -20,6 +21,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   private router       = inject(Router);
   private ambassadorSvc = inject(AmbassadorService);
   private campaignApi  = inject(CampaignApiService);
+  private loader       = inject(AppLoaderService);
 
   readonly UsersIcon   = Users;
   readonly EyeIcon     = Eye;
@@ -47,8 +49,8 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   loadAmbassadors(): void {
     this.isLoading = true;
     this.ambassadorSvc.list(this.campaignId).subscribe({
-      next: (list) => { this.ambassadors = list; this.isLoading = false; },
-      error: ()     => { this.isLoading = false; },
+      next: (list) => { this.ambassadors = list; this.isLoading = false; this.loader.hide(); },
+      error: ()     => { this.isLoading = false; this.loader.hide(); },
     });
   }
 

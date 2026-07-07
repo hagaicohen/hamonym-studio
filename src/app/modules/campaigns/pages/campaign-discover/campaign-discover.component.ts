@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 @Component({
   selector: 'app-campaign-discover',
@@ -30,4 +31,7 @@ import { CommonModule } from '@angular/common';
     p { font-size: 15px; color: #94a3b8; margin: 0; }
   `],
 })
-export class CampaignDiscoverComponent {}
+export class CampaignDiscoverComponent implements OnInit {
+  private loader = inject(AppLoaderService);
+  ngOnInit(): void { this.loader.hide(); }
+}

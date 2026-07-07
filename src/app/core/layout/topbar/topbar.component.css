@@ -232,6 +232,14 @@
 .ctx-manage-row:hover { background: #f8fafc; color: #334155; }
 .ctx-manage-row .icon-sm { color: #94a3b8; }
 
+.ctx-logout-row { display: none; color: #ef4444; }
+.ctx-logout-row .icon-sm { color: #ef4444; }
+.ctx-logout-row:hover { background: #fef2f2; color: #dc2626; }
+
+@media (max-width: 768px) {
+  .ctx-logout-row { display: flex; }
+}
+
 /* ─── AVATAR ─────────────────────────────────────────── */
 
 .topbar-avatar {
@@ -275,12 +283,42 @@
 .mobile-menu-btn { display: none; }
 
 @media (max-width: 768px) {
-  .topbar { padding: 0 16px; }
-  .brand-logo { height: 30px; }
+  .topbar { padding: 0 12px; gap: 6px; }
+  .topbar-right, .topbar-left { gap: 6px; }
+  .brand-logo { height: 28px; }
   .mobile-menu-btn { display: flex; }
 
-  .ctx-entity-line { max-width: 100px; }
-  .ctx-user-line { font-size: 14px; }
+  /* Compact context button — show only user name */
+  .ctx-btn {
+    min-width: 0;
+    max-width: 140px;
+    padding: 5px 10px;
+  }
+  .ctx-role-line   { display: none; }
+  .ctx-entity-line { display: none; }
+  .ctx-user-line {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+    display: block;
+  }
+  .ctx-chevron { display: none; }
 
-  .ctx-dropdown { left: auto; right: 0; }
+  /* Hide logout — accessible via dropdown */
+  .logout-btn { display: none; }
+
+  /* Avatar slightly smaller */
+  .topbar-avatar { width: 32px; height: 32px; }
+
+  .ctx-dropdown {
+    position: fixed;
+    top: 72px;
+    left: 8px;
+    right: 8px;
+    min-width: 0;
+    width: auto;
+    border-radius: 12px;
+  }
 }

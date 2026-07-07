@@ -18,10 +18,11 @@ const ROLE_PRIORITY: RoleType[] = [
 ];
 
 const STORAGE_KEY = 'currentContext_v1';
+const ROLES_KEY   = 'userRoles_v1';
 
 @Injectable({ providedIn: 'root' })
 export class CurrentContextService {
-  readonly roles = signal<UserRoleGroup[]>([]);
+  readonly roles = signal<UserRoleGroup[]>(this._loadSavedRoles());
 
   readonly active = signal<ActiveContext | null>(this._loadSaved());
 
@@ -86,6 +87,7 @@ export class CurrentContextService {
     }
 
     this.roles.set(groups);
+    localStorage.setItem(ROLES_KEY, JSON.stringify(groups));
 
     // Restore last active context if it still exists, otherwise pick highest-priority
     const saved = this._loadSaved();
@@ -127,6 +129,15 @@ export class CurrentContextService {
       return s ? JSON.parse(s) : null;
     } catch {
       return null;
+    }
+  }
+
+  private _loadSavedRoles(): UserRoleGroup[] {
+    try {
+      const s = localStorage.getItem(ROLES_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
     }
   }
 }

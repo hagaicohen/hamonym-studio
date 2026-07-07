@@ -50,6 +50,17 @@ export interface AmbassadorPublicInfo {
   donorCount:      number;
 }
 
+export interface AmbassadorCampaignSummary {
+  id:               string;
+  name:             string;
+  slug:             string;
+  cover:            string | null;
+  status:           string;
+  ambassadorSlug:   string;
+  ambassadorStatus: string;
+  personalGoal:     number | null;
+}
+
 export interface AmbassadorStats {
   totalAmbassadors: number;
   activeAmbassadors: number;
@@ -178,14 +189,23 @@ export class AmbassadorService {
       .pipe(map(r => this.fromSnake(r.ambassador)));
   }
 
-  getMyCampaigns(): Observable<Array<{ id: string; name: string }>> {
+  getMyCampaigns(): Observable<AmbassadorCampaignSummary[]> {
     return this.http
-      .get<{ campaigns: Array<{ id: string; name: string }> }>(
+      .get<{ campaigns: any[] }>(
         `${this.apiBase}/campaigns/my-ambassador-campaigns`,
         { headers: this.headers() }
       )
       .pipe(
-        map(r => r.campaigns ?? []),
+        map(r => (r.campaigns ?? []).map((c: any): AmbassadorCampaignSummary => ({
+          id:               c.id,
+          name:             c.name             || '',
+          slug:             c.slug             || '',
+          cover:            c.cover            ?? null,
+          status:           c.status           || 'published',
+          ambassadorSlug:   c.ambassadorSlug   || '',
+          ambassadorStatus: c.ambassadorStatus || 'active',
+          personalGoal:     c.personalGoal     ?? null,
+        }))),
         catchError(() => of([]))
       );
   }

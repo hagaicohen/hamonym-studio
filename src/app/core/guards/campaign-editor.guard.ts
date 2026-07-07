@@ -9,11 +9,24 @@ export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot
   const token = localStorage.getItem('token');
   if (!token) return router.createUrlTree(['/login']);
 
-  if (context.active()?.role === 'ambassador') {
-    const campaignId = route.paramMap.get('id');
-    if (campaignId) {
+  const active = context.active();
+  const roles  = context.roles();
+
+  // In ambassador mode — block campaign editor regardless of other roles
+  if (active?.role === 'ambassador') {
+    const campaignId        = route.paramMap.get('id');
+    const ambassadorCampaignIds = new Set(
+      roles.find(g => g.role === 'ambassador')?.contexts.map(c => c.id) ?? []
+    );
+    if (campaignId && ambassadorCampaignIds.has(campaignId)) {
       return router.createUrlTree(['/campaigns', campaignId, 'ambassador-studio']);
     }
+    return router.createUrlTree(['/campaigns']);
+  }
+
+  // Entity-manager mode — must actually have the entity-manager role
+  const hasEntityManager = roles.some(g => g.role === 'entity-manager');
+  if (!hasEntityManager) {
     return router.createUrlTree(['/campaigns']);
   }
 

@@ -184,6 +184,13 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'donations',
+        loadComponent: () =>
+          import('./modules/donations/pages/donations-page/donations-page.component').then(
+            (m) => m.DonationsPageComponent,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./modules/settings/pages/settings-page/settings-page.component').then(

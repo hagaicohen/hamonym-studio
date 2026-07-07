@@ -1,11 +1,16 @@
-const express    = require('express');
-const router     = express.Router();
-const controller = require('./donations.controller');
+const express      = require('express');
+const router       = express.Router();
+const controller   = require('./donations.controller');
+const requireAuth  = require('../../middleware/require-auth');
 
 // Public — donors are not logged in
 router.post('/',                          controller.createDonation);
 router.get('/return',                     controller.handleReturn);
 router.get('/public/:id',                 controller.getDonationPublic);
 router.get('/campaign/:slug/donors',      controller.getCampaignDonors);
+router.get('/campaign/:slug/live',        controller.getLiveDonations);
+
+// Authenticated — entity manager
+router.get('/entity/:id',   requireAuth,  controller.getEntityDonations);
 
 module.exports = router;

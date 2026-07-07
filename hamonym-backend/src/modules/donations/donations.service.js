@@ -212,4 +212,106 @@ exports.getCampaignDonors = async (slug) => {
   return res.rows;
 };
 
+/* ─────────────────────────────────────────
+   LIVE POLLING (public, for toast)
+───────────────────────────────────────── */
+exports.getLiveDonations = async (slug, since) => {
+  const res = await db.query(
+    `SELECT d.donor_name AS name, d.amount::float AS amount,
+            d.completed_at, d.is_anonymous
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     WHERE c.slug = $1
+       AND d.status = 'paid'
+       AND d.completed_at > $2
+     ORDER BY d.completed_at ASC
+     LIMIT 10`,
+    [slug, since]
+  );
+  return res.rows;
+};
+
+/* ─────────────────────────────────────────
+   ENTITY DONATIONS PAGE (authenticated)
+───────────────────────────────────────── */
+exports.getEntityDonations = async (entityId, { status, campaignId, period, search, page = 0, limit = 25 }) => {
+  const where  = ['d.entity_id = $1'];
+  const params = [entityId];
+  let idx = 2;
+
+  if (period === 'month') {
+    where.push(`d.created_at >= date_trunc('month', NOW())`);
+  } else if (period === 'last_month') {
+    where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
+    where.push(`d.created_at <  date_trunc('month', NOW())`);
+  } else if (period === 'quarter') {
+    where.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
+  }
+
+  if (status && status !== 'all') {
+    where.push(`d.status = $${idx++}`);
+    params.push(status);
+  }
+
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
+
+  if (search) {
+    where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = where.join(' AND ');
+
+  const [listRes, kpiRes, campaignsRes] = await Promise.all([
+    db.query(
+      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous,
+              c.title AS campaign_title, c.slug AS campaign_slug
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       WHERE ${whereStr}
+       ORDER BY d.created_at DESC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
+         COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
+         COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
+         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount
+       FROM donations d
+       WHERE ${whereStr}`,
+      params
+    ),
+    db.query(
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      [entityId]
+    ),
+  ]);
+
+  const kpi = kpiRes.rows[0];
+  return {
+    donations: listRes.rows,
+    kpi: {
+      totalRaised:  kpi.total_raised,
+      paidCount:    kpi.paid_count,
+      failedCount:  kpi.failed_count,
+      pendingCount: kpi.pending_count,
+      avgAmount:    kpi.avg_amount,
+      total:        kpi.total,
+    },
+    campaigns:    campaignsRes.rows,
+    total:        kpi.total,
+    page,
+    limit,
+  };
+};
+
 function round2(n) { return Math.round(n * 100) / 100; }

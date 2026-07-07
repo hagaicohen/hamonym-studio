@@ -1,0 +1,188 @@
+<div class="don-page">
+
+  @if (error) {
+    <div class="don-error">{{ error }}</div>
+  } @else {
+
+  <!-- ══ HEADER ══ -->
+  <div class="don-header">
+    <h1 class="don-title">תרומות</h1>
+    <div class="period-tabs">
+      <button [class.active]="period === 'month'"      (click)="setPeriod('month')">החודש</button>
+      <button [class.active]="period === 'last_month'" (click)="setPeriod('last_month')">חודש שעבר</button>
+      <button [class.active]="period === 'quarter'"    (click)="setPeriod('quarter')">3 חודשים</button>
+      <button [class.active]="period === 'all'"        (click)="setPeriod('all')">הכל</button>
+    </div>
+  </div>
+
+  <!-- ══ KPI ROW ══ -->
+  <div class="don-kpi-row">
+    <div class="don-kpi-card">
+      <div class="kpi-label">סך גיוס</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">תרומות שהצליחו</div>
+      <div class="kpi-value">{{ kpi.paidCount | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">ממוצע תרומה</div>
+      <div class="kpi-value">{{ fmtMoney(kpi.avgAmount) }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">נכשלו</div>
+      <div class="kpi-value danger">{{ kpi.failedCount | number }}</div>
+    </div>
+  </div>
+
+  <!-- ══ FILTERS ══ -->
+  <div class="don-filters">
+    <input
+      class="don-search"
+      type="search"
+      placeholder="חיפוש לפי שם, אימייל או טלפון..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+
+    <select class="don-select" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
+      <option value="">כל הקמפיינים</option>
+      @for (c of campaigns; track c.id) {
+        <option [value]="c.id">{{ c.title }}</option>
+      }
+    </select>
+
+    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+      <option value="all">כל הסטטוסים</option>
+      <option value="paid">שולם</option>
+      <option value="failed">נכשל</option>
+      <option value="pending">ממתין</option>
+    </select>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <div class="don-card">
+    @if (loading) {
+      <div class="don-loading">טוען...</div>
+    } @else if (donations.length === 0) {
+      <div class="don-empty">לא נמצאו תרומות</div>
+    } @else {
+      <div class="don-table-wrap">
+        <table class="don-table">
+          <thead>
+            <tr>
+              <th>תורם</th>
+              <th>קמפיין</th>
+              <th>סכום</th>
+              <th>תאריך</th>
+              <th>סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of donations; track d.id) {
+              <tr class="don-row" (click)="openDrawer(d)">
+                <td class="don-name">
+                  {{ donorDisplay(d) }}
+                  @if (d.is_mock) { <span class="badge-test">TEST</span> }
+                </td>
+                <td class="don-campaign">{{ d.campaign_title }}</td>
+                <td class="don-amount">{{ fmtMoney(d.amount) }}</td>
+                <td class="don-date">{{ fmtDate(d.completed_at ?? d.created_at) }}</td>
+                <td><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="don-pagination">
+        <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
+        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
+      </div>
+    }
+  </div>
+
+  }
+</div>
+
+<!-- ══ DRAWER ══ -->
+@if (selected) {
+  <div class="don-overlay" (click)="closeDrawer()"></div>
+  <div class="don-drawer">
+    <div class="drawer-header">
+      <button class="drawer-close" (click)="closeDrawer()">✕</button>
+      <h2 class="drawer-title">פרטי תרומה</h2>
+    </div>
+
+    <div class="drawer-body">
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">תורם</span>
+          <span class="dr-value">{{ donorDisplay(selected) }}</span>
+        </div>
+        @if (!selected.is_anonymous && selected.donor_email) {
+          <div class="drawer-row">
+            <span class="dr-label">אימייל</span>
+            <span class="dr-value">{{ selected.donor_email }}</span>
+          </div>
+        }
+        @if (!selected.is_anonymous && selected.donor_phone) {
+          <div class="drawer-row">
+            <span class="dr-label">טלפון</span>
+            <span class="dr-value">{{ selected.donor_phone }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">קמפיין</span>
+          <span class="dr-value">{{ selected.campaign_title }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">סכום</span>
+          <span class="dr-value bold">{{ fmtMoney(selected.amount) }}</span>
+        </div>
+        <div class="drawer-row">
+          <span class="dr-label">סטטוס</span>
+          <span class="dr-value">
+            <span class="status-badge status-{{ selected.status }}">{{ statusLabel(selected.status) }}</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section">
+        <div class="drawer-row">
+          <span class="dr-label">נוצר</span>
+          <span class="dr-value">{{ fmtDateTime(selected.created_at) }}</span>
+        </div>
+        @if (selected.completed_at) {
+          <div class="drawer-row">
+            <span class="dr-label">הושלם</span>
+            <span class="dr-value">{{ fmtDateTime(selected.completed_at) }}</span>
+          </div>
+        }
+        @if (selected.failure_reason) {
+          <div class="drawer-row">
+            <span class="dr-label">סיבת כישלון</span>
+            <span class="dr-value danger">{{ selected.failure_reason }}</span>
+          </div>
+        }
+        @if (selected.is_mock) {
+          <div class="drawer-row">
+            <span class="dr-label">סוג</span>
+            <span class="dr-value"><span class="badge-test">תשלום TEST</span></span>
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+}
