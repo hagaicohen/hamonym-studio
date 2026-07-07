@@ -43,6 +43,9 @@ const ambassadorsRoutes =
 const dashboardRoutes =
   require('./modules/dashboard/dashboard.routes');
 
+const reportsRoutes =
+  require('./modules/reports/reports.routes');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -97,6 +100,11 @@ app.use(
 app.use(
   '/api/entities',
   dashboardRoutes
+);
+
+app.use(
+  '/api/reports',
+  reportsRoutes
 );
 
 /*
