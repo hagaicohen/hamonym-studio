@@ -217,6 +217,36 @@ export class EntitySettingsComponent implements OnInit {
       } catch (err) { console.error(err); }
     }
 
+    /*
+    IMPORTANT:
+    a newly selected document is stashed as a raw File on draftEntity by the
+    edit sub-component (for an immediate filename preview) but was never
+    actually uploaded — do that here, then drop the File so it isn't resent
+    on a later unrelated save.
+  */
+
+    const newTaxDocumentFile = this.draftEntity?.tax_document_file;
+    if (newTaxDocumentFile instanceof File) {
+      try {
+        await firstValueFrom(this.entitiesService.uploadTaxDocument(this.draftEntity.id, newTaxDocumentFile));
+      } catch (err) {
+        console.error(err);
+        this.saveError = 'העלאת אישור המס נכשלה';
+      }
+      this.draftEntity.tax_document_file = null;
+    }
+
+    const newAssociationCertFile = this.draftEntity?.association_certificate_file;
+    if (newAssociationCertFile instanceof File) {
+      try {
+        await firstValueFrom(this.entitiesService.uploadAssociationDocument(this.draftEntity.id, newAssociationCertFile));
+      } catch (err) {
+        console.error(err);
+        this.saveError = 'העלאת תעודת ההתאגדות נכשלה';
+      }
+      this.draftEntity.association_certificate_file = null;
+    }
+
     const optimisticEntity = structuredClone(this.draftEntity);
 
     /*
