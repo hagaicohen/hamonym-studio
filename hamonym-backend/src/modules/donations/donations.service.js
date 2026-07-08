@@ -13,6 +13,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   // 1. Fetch campaign ג†’ entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id,
+            e.status AS entity_status,
             e.cardcom_terminal, e.cardcom_api_name, e.cardcom_api_password
      FROM campaigns c
      JOIN entities  e ON e.id = c.entity_id
@@ -22,6 +23,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
 
   const campaign = campaignRes.rows[0];
   if (!campaign) throw new Error('Campaign not found');
+
+  if (campaign.entity_status !== 'active') {
+    throw new Error('Entity not approved');
+  }
 
   if (!isMock && (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password)) {
     throw new Error('Cardcom credentials not configured for this entity');

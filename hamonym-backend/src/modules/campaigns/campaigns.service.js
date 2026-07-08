@@ -683,7 +683,7 @@ exports.getCampaignBySlugPublic = async (slug) => {
     `SELECT c.*, e.display_name AS entity_name, e.logo_url AS entity_logo
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
-     WHERE c.slug = $1 AND c.status = 'published'
+     WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active'
      LIMIT 1`,
     [slug]
   );

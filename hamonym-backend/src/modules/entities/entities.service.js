@@ -890,3 +890,53 @@ exports.removeAssociationDocument =
     return result.rows[0];
 
   };
+
+async function checkOwnership(userId, entityId) {
+  const result = await db.query(
+    `SELECT 1 FROM user_entities WHERE user_id = $1 AND entity_id = $2 LIMIT 1`,
+    [userId, entityId]
+  );
+  if (!result.rows.length) throw new Error('Unauthorized');
+}
+
+exports.getApprovalStatus = async (entityId, userId) => {
+  await checkOwnership(userId, entityId);
+
+  const [entityRes, auditRes] = await Promise.all([
+    db.query(`SELECT status, updated_at FROM entities WHERE id = $1`, [entityId]),
+    db.query(
+      `SELECT a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS actor_name
+       FROM platform_audit_log a
+       JOIN users u ON u.id = a.super_admin_user_id
+       WHERE a.entity_id = $1
+       ORDER BY a.created_at DESC
+       LIMIT 1`,
+      [entityId]
+    ),
+  ]);
+
+  const entity = entityRes.rows[0];
+  const audit = auditRes.rows[0];
+
+  return {
+    status: entity.status,
+    updatedAt: audit?.created_at ?? entity.updated_at,
+    comment: audit?.notes ?? null,
+    reasonTags: audit?.reason_tags ?? [],
+    actionBy: audit?.actor_name ?? null,
+  };
+};
+
+exports.requestReview = async (entityId, userId) => {
+  await checkOwnership(userId, entityId);
+
+  const result = await db.query(
+    `UPDATE entities SET status = 'pending_review', updated_at = NOW()
+     WHERE id = $1 AND status = 'changes_requested'
+     RETURNING *`,
+    [entityId]
+  );
+
+  if (!result.rows[0]) throw new Error('Invalid transition');
+  return result.rows[0];
+};

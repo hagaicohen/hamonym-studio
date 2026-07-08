@@ -43,7 +43,10 @@ module.exports =
           decoded.userId,
 
         roleId:
-          decoded.roleId
+          decoded.roleId,
+
+        isSuperAdmin:
+          !!decoded.isSuperAdmin
 
       };
 

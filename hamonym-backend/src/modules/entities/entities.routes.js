@@ -138,4 +138,16 @@ router.delete(
   controller.removeAssociationDocument
 );
 
+router.get(
+  '/:id/approval-status',
+  requireAuth,
+  controller.getApprovalStatus
+);
+
+router.patch(
+  '/:id/request-review',
+  requireAuth,
+  controller.requestReview
+);
+
 module.exports = router;

@@ -46,6 +46,9 @@ const dashboardRoutes =
 const reportsRoutes =
   require('./modules/reports/reports.routes');
 
+const platformRoutes =
+  require('./modules/platform/platform.routes');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -105,6 +108,11 @@ app.use(
 app.use(
   '/api/reports',
   reportsRoutes
+);
+
+app.use(
+  '/api/platform',
+  platformRoutes
 );
 
 /*

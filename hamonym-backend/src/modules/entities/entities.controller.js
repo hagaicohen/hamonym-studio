@@ -500,3 +500,33 @@ exports.removeAssociationDocument =
       res.status(500).json({ error: 'Failed to remove association document' });
     }
   };
+
+// =========================================================
+// APPROVAL STATUS
+// =========================================================
+
+function statusForApproval(err) {
+  switch (err.message) {
+    case 'Unauthorized': return 403;
+    case 'Invalid transition': return 409;
+    default: return 500;
+  }
+}
+
+exports.getApprovalStatus = async (req, res) => {
+  try {
+    const result = await service.getApprovalStatus(req.params.id, req.user.id);
+    res.json(result);
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};
+
+exports.requestReview = async (req, res) => {
+  try {
+    const entity = await service.requestReview(req.params.id, req.user.id);
+    res.json({ entity });
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};

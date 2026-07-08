@@ -235,7 +235,8 @@ router.post(
 
           {
             userId: user.id,
-            roleId: user.role_id
+            roleId: user.role_id,
+            isSuperAdmin: user.is_super_admin
           },
 
           process.env.JWT_SECRET,
@@ -265,7 +266,10 @@ router.post(
             user.role_id,
 
           picture:
-            user.picture ?? null
+            user.picture ?? null,
+
+          is_super_admin:
+            user.is_super_admin
 
         },
 
@@ -438,7 +442,10 @@ router.post(
               user.id,
 
             roleId:
-              user.role_id
+              user.role_id,
+
+            isSuperAdmin:
+              user.is_super_admin
 
           },
 
@@ -472,7 +479,10 @@ router.post(
             user.role_id,
 
           picture:
-            user.picture ?? null
+            user.picture ?? null,
+
+          is_super_admin:
+            user.is_super_admin
 
         },
 
