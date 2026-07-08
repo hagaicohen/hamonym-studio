@@ -130,6 +130,9 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
+          this.currentContextService.setSuperAdmin(!!res.user?.is_super_admin);
+          this.currentContextService.setAdminMode(false);
+
           forkJoin({
             entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
@@ -214,6 +217,9 @@ export class LoginComponent implements OnInit {
           localStorage.setItem('user', JSON.stringify(res.user));
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
+
+          this.currentContextService.setSuperAdmin(!!res.user?.is_super_admin);
+          this.currentContextService.setAdminMode(false);
 
           forkJoin({
             entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),

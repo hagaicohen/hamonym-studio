@@ -11,6 +11,7 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
 
 Chart.register(...registerables);
 
@@ -46,7 +47,7 @@ interface DashboardData {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ApprovalStatusCardComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })

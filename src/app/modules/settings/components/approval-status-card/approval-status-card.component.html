@@ -1,0 +1,34 @@
+<div class="approval-card" *ngIf="!loading && data">
+
+  <div class="approval-header">
+    <span class="approval-icon">{{ meta(data.status).icon }}</span>
+    <span class="approval-label">סטטוס העמותה: {{ meta(data.status).label }}</span>
+  </div>
+
+  <div *ngIf="data.comment" class="approval-body">
+    <div class="approval-issues-title">יש להשלים את הדברים הבאים:</div>
+
+    <ul class="approval-tags" *ngIf="data.reasonTags?.length">
+      <li *ngFor="let tag of data.reasonTags">{{ reasonLabel(tag) }}</li>
+    </ul>
+
+    <p class="approval-comment">{{ data.comment }}</p>
+
+    <div class="approval-meta">
+      <span *ngIf="data.actionBy">נבדק ע"י {{ data.actionBy }}</span>
+      <span>{{ fmtDate(data.updatedAt) }}</span>
+    </div>
+  </div>
+
+  <button
+    *ngIf="data.status === 'changes_requested'"
+    class="approval-resubmit-btn"
+    [disabled]="resubmitting"
+    (click)="resubmit()"
+  >
+    {{ resubmitting ? 'שולח...' : 'שלח לבדיקה מחדש' }}
+  </button>
+
+  <div *ngIf="error" class="approval-error">{{ error }}</div>
+
+</div>

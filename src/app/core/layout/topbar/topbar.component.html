@@ -18,7 +18,8 @@
   <div class="topbar-left">
 
 
-    <!-- IDENTITY SWITCHER — always visible -->
+    <!-- IDENTITY SWITCHER — hidden in admin-only mode, since role/entity switching is irrelevant there -->
+    <ng-container *ngIf="!ctx.adminMode(); else adminIdentity">
     <div class="ctx-wrapper" (click)="toggleDropdown($event)">
 
       <!-- 3-LINE BUTTON -->
@@ -125,6 +126,22 @@
       </div>
 
     </div>
+    </ng-container>
+
+    <!-- ADMIN-ONLY IDENTITY — static, no role switching -->
+    <ng-template #adminIdentity>
+      <div class="ctx-wrapper">
+        <div class="ctx-btn admin-static">
+          <div class="ctx-btn-inner">
+            <span class="ctx-role-line">
+              <span class="ctx-role-icon">🛠️</span>
+              מנהל פלטפורמה
+            </span>
+            <span class="ctx-user-line">{{ userFullName() }}</span>
+          </div>
+        </div>
+      </div>
+    </ng-template>
 
     <!-- AVATAR: real photo if available, else default person icon -->
     <div class="topbar-avatar" [title]="userFullName()">

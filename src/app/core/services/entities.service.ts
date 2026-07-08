@@ -225,4 +225,19 @@ export class EntitiesService {
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
     );
   }
+
+  getApprovalStatus(entityId: string): Observable<any> {
+    return this.http.get(
+      `${environment.apiUrl}/api/entities/${entityId}/approval-status`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
+
+  requestReview(entityId: string): Observable<any> {
+    return this.http.patch(
+      `${environment.apiUrl}/api/entities/${entityId}/request-review`,
+      {},
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
 }

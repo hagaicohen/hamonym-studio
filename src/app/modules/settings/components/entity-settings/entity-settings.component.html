@@ -74,6 +74,8 @@
     </div>
   </div>
 
+  <app-approval-status-card *ngIf="draftEntity?.id" [entityId]="draftEntity!.id"></app-approval-status-card>
+
   <!-- INTERNAL NAVIGATION -->
 
   <div class="entity-sections-nav">

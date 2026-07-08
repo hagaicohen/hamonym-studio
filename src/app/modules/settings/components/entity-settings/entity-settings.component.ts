@@ -42,6 +42,8 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 
 import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
+import { ApprovalStatusCardComponent } from '../approval-status-card/approval-status-card.component';
+
 import { SectionSaveState } from '../../models/section-save-state.model';
 
 @Component({
@@ -69,6 +71,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
     EntityBillingSectionEditComponent,
 
     LoadingOverlayComponent,
+    ApprovalStatusCardComponent,
   ],
 
   templateUrl: './entity-settings.component.html',

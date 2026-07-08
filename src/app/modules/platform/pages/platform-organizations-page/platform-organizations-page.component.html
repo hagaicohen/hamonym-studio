@@ -1,0 +1,105 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else {
+
+  <div class="plat-header">
+    <h1 class="plat-title">עמותות</h1>
+  </div>
+
+  <div class="plat-filters">
+    <input
+      class="plat-search"
+      type="search"
+      placeholder="חיפוש לפי שם עמותה..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+  </div>
+
+  <div class="plat-chips">
+    @for (chip of chips; track chip.key) {
+      <button
+        class="plat-chip"
+        [class.active]="activeChip === chip.key"
+        (click)="selectChip(chip.key)"
+      >
+        <span class="plat-chip-dot">{{ chip.dot }}</span>
+        {{ chip.label }}
+      </button>
+    }
+  </div>
+
+  <div class="plat-card">
+    @if (loading) {
+      <div class="plat-loading">טוען...</div>
+    } @else if (organizations.length === 0) {
+      <div class="plat-empty">לא נמצאו עמותות</div>
+    } @else {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing">
+        <table class="plat-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="sortable" (click)="sortBy('name')">שם העמותה</th>
+              <th class="sortable" (click)="sortBy('status')">סטטוס</th>
+              <th>מנהל</th>
+              <th>שלמות פרופיל</th>
+              <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th>
+              <th class="sortable" (click)="sortBy('raised')">סכום שגויס</th>
+              <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th>
+              <th>פעילות אחרונה</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (org of organizations; track org.id) {
+              <tr class="plat-row" (click)="openOrganization(org)">
+                <td class="plat-logo-cell">
+                  @if (org.logo_url) {
+                    <img [src]="org.logo_url" class="plat-logo" alt="" />
+                  } @else {
+                    <div class="plat-logo-placeholder">{{ org.display_name.charAt(0) }}</div>
+                  }
+                </td>
+                <td>{{ org.display_name }}</td>
+                <td><span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span></td>
+                <td>
+                  @if (org.owner_name) {
+                    {{ org.owner_name }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td>
+                  <div class="plat-progress-wrap" [title]="org.profile_completion + '%'">
+                    <div class="plat-progress-track">
+                      <div class="plat-progress-fill" [style.width.%]="org.profile_completion"></div>
+                    </div>
+                    <span class="plat-progress-label">{{ org.profile_completion }}%</span>
+                  </div>
+                </td>
+                <td>{{ org.campaigns_count }}</td>
+                <td>{{ fmtMoney(org.total_raised) }}</td>
+                <td>{{ fmtDate(org.created_at) }}</td>
+                <td>{{ relativeTime(org.updated_at) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="plat-footer">
+        <span>{{ total }} עמותות</span>
+        <div class="plat-pager">
+          <button (click)="prevPage()" [disabled]="page === 0">←</button>
+          <span>{{ page + 1 }} / {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  }
+
+</div>

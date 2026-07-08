@@ -1,0 +1,151 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else if (loading) {
+    <div class="plat-loading">טוען...</div>
+  } @else if (kpis) {
+
+    <div class="plat-header">
+      <h1 class="plat-title">דשבורד פלטפורמה</h1>
+      <a class="plat-link-btn" routerLink="/platform/organizations">כל העמותות ←</a>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="plat-kpi-row">
+      <div class="plat-kpi-card">
+        <div class="kpi-label">סה"כ עמותות</div>
+        <div class="kpi-value">{{ kpis.totalEntities | number }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">עמותות פעילות</div>
+        <div class="kpi-value primary">{{ kpis.activeEntities | number }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">ממתינות לאישור</div>
+        <div class="kpi-value warn">{{ kpis.pendingReviewEntities | number }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">קמפיינים פעילים</div>
+        <div class="kpi-value">{{ kpis.activeCampaigns | number }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">תרומות היום</div>
+        <div class="kpi-value primary">{{ fmtMoney(kpis.donationsToday) }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">תרומות החודש</div>
+        <div class="kpi-value primary">{{ fmtMoney(kpis.donationsMonth) }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">תשלומים שנכשלו</div>
+        <div class="kpi-value danger">{{ kpis.failedPaymentsThisMonth | number }}</div>
+      </div>
+      <div class="plat-kpi-card">
+        <div class="kpi-label">תורמים חדשים החודש</div>
+        <div class="kpi-value">{{ kpis.newDonorsThisMonth | number }}</div>
+      </div>
+    </div>
+
+    <!-- CHARTS + ACTION CENTER -->
+    <div class="plat-dash-grid">
+
+      <div class="plat-card plat-charts-card">
+        <h3 class="plat-section-title">תרומות ב-30 יום</h3>
+        <svg
+          #lineSvg
+          class="plat-chart-svg"
+          [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
+          (mousemove)="onLineMove($event, lineSvg)"
+          (mouseleave)="onLineLeave()"
+        >
+          <path class="chart-area" [attr.d]="lineAreaPath"></path>
+          <path class="chart-line" [attr.d]="linePath"></path>
+          @if (lineHover) {
+            <line class="chart-guide" [attr.x1]="lineHover.x" [attr.x2]="lineHover.x" y1="10" [attr.y2]="chartHeight - 20"></line>
+            <circle class="chart-dot" [attr.cx]="lineHover.x" [attr.cy]="lineHover.y" r="4"></circle>
+          }
+        </svg>
+        @if (lineHover) {
+          <div class="chart-tooltip" [style.left.%]="(lineHover.x / chartWidth) * 100">
+            <span class="tt-date">{{ fmtDayLabel(linePoints[lineHover.index].date) }}</span>
+            <span class="tt-value">{{ fmtMoney(linePoints[lineHover.index].value) }}</span>
+          </div>
+        }
+
+        <h3 class="plat-section-title plat-section-title-2">עמותות חדשות ב-8 שבועות</h3>
+        <svg class="plat-chart-svg" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight">
+          @for (bar of barItems; track bar.date; let i = $index) {
+            <rect
+              class="chart-bar"
+              [class.hovered]="barHover?.index === i"
+              [attr.x]="bar.x"
+              [attr.y]="bar.y"
+              [attr.width]="bar.width"
+              [attr.height]="bar.height"
+              rx="4"
+              (mouseenter)="onBarEnter(i, $event)"
+              (mouseleave)="onBarLeave()"
+            ></rect>
+          }
+        </svg>
+        @if (barHover) {
+          <div class="chart-tooltip" [style.left.%]="(barHover.x / chartWidth) * 100">
+            <span class="tt-date">{{ fmtDayLabel(entitiesWeekly[barHover.index].date) }}</span>
+            <span class="tt-value">{{ entitiesWeekly[barHover.index].value }} עמותות</span>
+          </div>
+        }
+      </div>
+
+      <div class="plat-card plat-alerts-card">
+        <h3 class="plat-section-title">⚠ מרכז פעולות</h3>
+        @if (alerts.length === 0) {
+          <div class="plat-empty-small">אין פעולות ממתינות 🎉</div>
+        } @else {
+          <div class="plat-alert-list">
+            @for (alert of alerts; track alert.key) {
+              <div class="plat-alert-item" (click)="goToAlert(alert)">
+                <span class="plat-alert-label">{{ alert.label }}</span>
+                <span class="plat-alert-count">{{ alert.count }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    </div>
+
+    <!-- ACTIVITY FEED + QUICK ACTIONS -->
+    <div class="plat-dash-grid">
+
+      <div class="plat-card plat-activity-card">
+        <h3 class="plat-section-title">🕒 פעילות אחרונה</h3>
+        @if (activity.length === 0) {
+          <div class="plat-empty-small">אין פעילות עדיין</div>
+        } @else {
+          <div class="plat-activity-list">
+            @for (item of activity; track item.timestamp + item.label) {
+              <div class="plat-activity-item">
+                <span class="plat-activity-icon">{{ activityIcon(item.type) }}</span>
+                <span class="plat-activity-label">{{ item.label }}</span>
+                <span class="plat-activity-time">{{ relativeTime(item.timestamp) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="plat-card plat-quick-card">
+        <h3 class="plat-section-title">🚀 פעולות מהירות</h3>
+        <div class="plat-quick-actions">
+          <a class="plat-quick-btn" [routerLink]="['/platform/organizations']" [queryParams]="{ status: 'pending_review' }">אשר עמותה ממתינה</a>
+          <a class="plat-quick-btn" routerLink="/organization-registration">צור עמותה</a>
+          <a class="plat-quick-btn" routerLink="/platform/organizations">כל העמותות</a>
+        </div>
+      </div>
+
+    </div>
+
+  }
+
+</div>

@@ -5,6 +5,7 @@ import { AppLayoutComponent } from './core/layout/app-layout/app-layout.componen
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
+import { superAdminGuard } from './core/guards/super-admin.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -36,6 +37,18 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/campaigns/pages/mock-payment-page/mock-payment-page.component').then(
         (m) => m.MockPaymentPageComponent,
+      ),
+  },
+
+  /* ========================================
+     ADMIN — כניסה ייעודית ל-Super Admin
+     ללא auth, ללא layout, ללא Topbar/Sidebar
+  ======================================== */
+  {
+    path: 'admin',
+    loadComponent: () =>
+      import('./modules/platform/pages/admin-login-page/admin-login-page.component').then(
+        (m) => m.AdminLoginPageComponent,
       ),
   },
 
@@ -223,6 +236,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/settings/components/entity-settings/entity-settings.component').then(
             (m) => m.EntitySettingsComponent,
+          ),
+      },
+      {
+        path: 'platform',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-dashboard-page/platform-dashboard-page.component').then(
+            (m) => m.PlatformDashboardPageComponent,
+          ),
+      },
+      {
+        path: 'platform/organizations',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-organizations-page/platform-organizations-page.component').then(
+            (m) => m.PlatformOrganizationsPageComponent,
+          ),
+      },
+      {
+        path: 'platform/organizations/:id',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-organization-detail-page/platform-organization-detail-page.component').then(
+            (m) => m.PlatformOrganizationDetailPageComponent,
           ),
       },
     ],

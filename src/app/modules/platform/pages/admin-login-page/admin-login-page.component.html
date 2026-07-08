@@ -1,0 +1,27 @@
+<div class="admin-login-page">
+  <div class="admin-login-card">
+    <div class="admin-badge">ניהול פלטפורמה</div>
+    <h1 class="title">כניסת מנהל מערכת</h1>
+    <p class="subtitle">גישה מוגבלת לצוות הפלטפורמה בלבד</p>
+
+    <form class="admin-login-form" (ngSubmit)="submit()">
+      <div class="field">
+        <label>כתובת אימייל</label>
+        <input type="email" [(ngModel)]="email" name="email" autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label>סיסמה</label>
+        <input type="password" [(ngModel)]="password" name="password" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="loading">
+        {{ loading ? 'מתחבר...' : 'כניסה' }}
+      </button>
+
+      @if (errorMessage) {
+        <div class="error-message">{{ errorMessage }}</div>
+      }
+    </form>
+  </div>
+</div>

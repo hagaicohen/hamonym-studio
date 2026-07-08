@@ -19,12 +19,32 @@ const ROLE_PRIORITY: RoleType[] = [
 
 const STORAGE_KEY = 'currentContext_v1';
 const ROLES_KEY   = 'userRoles_v1';
+const SUPER_ADMIN_KEY = 'isSuperAdmin';
+const ADMIN_MODE_KEY = 'adminMode';
 
 @Injectable({ providedIn: 'root' })
 export class CurrentContextService {
   readonly roles = signal<UserRoleGroup[]>(this._loadSavedRoles());
 
   readonly active = signal<ActiveContext | null>(this._loadSaved());
+
+  // Independent of role/context switching — a super admin keeps this true
+  // regardless of which entity context is active.
+  readonly isSuperAdmin = signal<boolean>(localStorage.getItem(SUPER_ADMIN_KEY) === 'true');
+
+  setSuperAdmin(value: boolean): void {
+    this.isSuperAdmin.set(value);
+    localStorage.setItem(SUPER_ADMIN_KEY, String(value));
+  }
+
+  // Set only via the dedicated /admin entry point. While true, the sidebar shows
+  // only the platform section — entity/ambassador roles are hidden, not revoked.
+  readonly adminMode = signal<boolean>(localStorage.getItem(ADMIN_MODE_KEY) === 'true');
+
+  setAdminMode(value: boolean): void {
+    this.adminMode.set(value);
+    localStorage.setItem(ADMIN_MODE_KEY, String(value));
+  }
 
   readonly hasMultipleOptions = computed(() => {
     const groups = this.roles();

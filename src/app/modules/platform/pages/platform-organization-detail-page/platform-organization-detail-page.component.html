@@ -1,0 +1,294 @@
+<div class="plat-page">
+
+  <div class="plat-back">
+    <a routerLink="/platform/organizations">← כל העמותות</a>
+  </div>
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else if (loading) {
+    <div class="plat-loading">טוען...</div>
+  } @else if (entity) {
+
+    <div class="plat-header">
+      <div class="plat-header-title">
+        @if (entity.logo_url) {
+          <img [src]="entity.logo_url" class="plat-logo" alt="" />
+        } @else {
+          <div class="plat-logo-placeholder">{{ entity.display_name?.charAt(0) }}</div>
+        }
+        <div>
+          <h1 class="plat-title">{{ entity.display_name }}</h1>
+          <span class="plat-status" [ngClass]="'status-' + entity.status">{{ statusLabel(entity.status) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="plat-hero-kpi-row">
+      <div class="plat-hero-kpi">
+        <div class="kpi-label">סה"כ תרומות</div>
+        <div class="kpi-value primary">{{ fmtMoney(donationsKpi?.totalRaised || 0) }}</div>
+      </div>
+      <div class="plat-hero-kpi">
+        <div class="kpi-label">תורמים</div>
+        <div class="kpi-value">{{ donorCount }}</div>
+      </div>
+      <div class="plat-hero-kpi">
+        <div class="kpi-label">קמפיינים</div>
+        <div class="kpi-value">{{ campaigns.length }}</div>
+      </div>
+      <div class="plat-hero-kpi">
+        <div class="kpi-label">אחוז הצלחה</div>
+        <div class="kpi-value">{{ successRate }}%</div>
+      </div>
+    </div>
+
+    <div class="plat-tabs">
+      <button [class.active]="tab === 'overview'" (click)="setTab('overview')">סקירה ואישור</button>
+      <button [class.active]="tab === 'campaigns'" (click)="setTab('campaigns')">קמפיינים ({{ campaigns.length }})</button>
+      <button [class.active]="tab === 'ambassadors'" (click)="setTab('ambassadors')">שגרירים ({{ ambassadors.length }})</button>
+      <button [class.active]="tab === 'donations'" (click)="setTab('donations')">תרומות</button>
+      <button [class.active]="tab === 'users'" (click)="setTab('users')">משתמשים ({{ users.length }})</button>
+      <button [class.active]="tab === 'audit'" (click)="setTab('audit')">Audit Log</button>
+    </div>
+
+    <div class="plat-card">
+
+      @if (tab === 'overview') {
+        <div class="plat-overview">
+
+          <div class="plat-info-grid">
+            <div><span class="lbl">שם משפטי</span><span>{{ entity.legal_name || '—' }}</span></div>
+            <div><span class="lbl">מספר רישום</span><span>{{ entity.registration_number || '—' }}</span></div>
+            <div><span class="lbl">אימייל</span><span>{{ entity.email || '—' }}</span></div>
+            <div><span class="lbl">טלפון</span><span>{{ entity.phone || '—' }}</span></div>
+            <div><span class="lbl">עיר</span><span>{{ entity.city || '—' }}</span></div>
+            <div><span class="lbl">כתובת</span><span>{{ entity.address || '—' }}</span></div>
+          </div>
+
+          <div class="plat-health-row">
+            <div class="plat-health-score" [ngClass]="'health-' + healthScoreLevel">
+              <div class="plat-health-score-value">{{ healthScore }}%</div>
+              <div class="plat-health-score-label">Health Score</div>
+            </div>
+            <div class="plat-checklist">
+              @for (check of healthChecks; track check.label) {
+                <div class="plat-check-item">
+                  <span [class.ok]="check.ok" [class.missing]="!check.ok">{{ check.ok ? '✅' : '⬜' }}</span>
+                  <span>{{ check.label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <h3 class="plat-section-title">Timeline</h3>
+          <div class="plat-timeline">
+            @for (item of timeline; track item.timestamp + item.label) {
+              <div class="plat-timeline-item">
+                <span class="plat-timeline-icon">{{ item.icon }}</span>
+                <span class="plat-timeline-label">{{ item.label }}</span>
+                <span class="plat-timeline-date">{{ fmtDate(item.timestamp) }}</span>
+              </div>
+            }
+          </div>
+
+          <h3 class="plat-section-title">פעולות</h3>
+
+          <div class="plat-reason-tags">
+            @for (tag of reasonTagOptions; track tag.key) {
+              <label class="plat-reason-tag" [class.checked]="selectedReasonTags.includes(tag.key)">
+                <input
+                  type="checkbox"
+                  [checked]="selectedReasonTags.includes(tag.key)"
+                  (change)="toggleReasonTag(tag.key)"
+                />
+                {{ tag.label }}
+              </label>
+            }
+          </div>
+
+          <textarea
+            class="plat-notes"
+            rows="2"
+            placeholder="הערה (נדרשת לדחייה / בקשת תיקונים / השעיה)"
+            [(ngModel)]="notes"
+          ></textarea>
+          @if (noteRequiredError) {
+            <div class="plat-note-error">יש להזין הערה לפני ביצוע פעולה זו</div>
+          }
+
+          <div class="plat-actions">
+            <button class="btn btn-approve" [disabled]="actionInProgress" (click)="approve()">אישור עמותה</button>
+            <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
+            <button class="btn btn-request" [disabled]="actionInProgress" (click)="requestChanges()">בקשת השלמת מסמכים</button>
+            @if (entity.status === 'suspended') {
+              <button class="btn btn-reactivate" [disabled]="actionInProgress" (click)="reactivate()">הפעלה מחדש</button>
+            } @else {
+              <button class="btn btn-suspend" [disabled]="actionInProgress" (click)="suspend()">השעיה</button>
+            }
+          </div>
+
+        </div>
+      }
+
+      @if (tab === 'campaigns') {
+        <div class="plat-table-wrap">
+          @if (campaigns.length === 0) {
+            <div class="plat-empty">אין קמפיינים</div>
+          } @else {
+            <table class="plat-table">
+              <thead>
+                <tr>
+                  <th>כותרת</th>
+                  <th>סטטוס</th>
+                  <th>גויס</th>
+                  <th>יעד</th>
+                  <th>תומכים</th>
+                  <th>נוצר</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of campaigns; track c.id) {
+                  <tr>
+                    <td>{{ c.title }}</td>
+                    <td>{{ c.status }}</td>
+                    <td>{{ fmtMoney(c.current_amount) }}</td>
+                    <td>{{ fmtMoney(c.target_amount) }}</td>
+                    <td>{{ c.supporters_count }}</td>
+                    <td>{{ fmtDate(c.created_at) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+
+      @if (tab === 'ambassadors') {
+        <div class="plat-table-wrap">
+          @if (ambassadors.length === 0) {
+            <div class="plat-empty">אין שגרירים</div>
+          } @else {
+            <table class="plat-table">
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>קמפיין</th>
+                  <th>סטטוס</th>
+                  <th>גויס</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of ambassadors; track a.id) {
+                  <tr>
+                    <td>{{ a.full_name }}</td>
+                    <td>{{ a.campaign_title }}</td>
+                    <td>{{ a.status }}</td>
+                    <td>{{ fmtMoney(a.raised_total) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+
+      @if (tab === 'donations') {
+        <div class="plat-table-wrap">
+          @if (donationsKpi) {
+            <div class="plat-donations-kpi">
+              <span>סה"כ גויס: <strong>{{ fmtMoney(donationsKpi.totalRaised) }}</strong></span>
+              <span>שולמו: <strong>{{ donationsKpi.paidCount }}</strong></span>
+              <span>נכשלו: <strong>{{ donationsKpi.failedCount }}</strong></span>
+            </div>
+          }
+          @if (donations.length === 0) {
+            <div class="plat-empty">אין תרומות</div>
+          } @else {
+            <table class="plat-table">
+              <thead>
+                <tr>
+                  <th>תורם</th>
+                  <th>קמפיין</th>
+                  <th>סכום</th>
+                  <th>סטטוס</th>
+                  <th>תאריך</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of donations; track d.id) {
+                  <tr>
+                    <td>{{ d.is_anonymous ? 'אנונימי' : (d.donor_name || '—') }}</td>
+                    <td>{{ d.campaign_title }}</td>
+                    <td>{{ fmtMoney(d.amount) }}</td>
+                    <td>{{ d.status }}</td>
+                    <td>{{ fmtDate(d.created_at) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+
+      @if (tab === 'users') {
+        <div class="plat-table-wrap">
+          @if (users.length === 0) {
+            <div class="plat-empty">אין משתמשים משויכים</div>
+          } @else {
+            <table class="plat-table">
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>אימייל</th>
+                  <th>תפקיד</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of users; track u.id) {
+                  <tr>
+                    <td>{{ u.full_name }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.role }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+
+      @if (tab === 'audit') {
+        <div class="plat-table-wrap">
+          @if (auditLog.length === 0) {
+            <div class="plat-empty">אין רשומות</div>
+          } @else {
+            <table class="plat-table">
+              <thead>
+                <tr>
+                  <th>פעולה</th>
+                  <th>הערות</th>
+                  <th>ע"י</th>
+                  <th>תאריך</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of auditLog; track a.id) {
+                  <tr>
+                    <td>{{ actionLabel(a.action) }}</td>
+                    <td>{{ a.notes || '—' }}</td>
+                    <td>{{ a.super_admin_name }}</td>
+                    <td>{{ fmtDateTime(a.created_at) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+
+    </div>
+
+  }
+
+</div>

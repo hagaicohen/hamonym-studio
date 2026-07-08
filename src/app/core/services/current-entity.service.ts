@@ -110,6 +110,12 @@ export class CurrentEntityService {
       case 'rejected':
         return 'נדחה';
 
+      case 'changes_requested':
+        return 'נדרשים תיקונים';
+
+      case 'suspended':
+        return 'מושעה';
+
       default:
         return entity.status;
     }

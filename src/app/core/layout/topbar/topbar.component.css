@@ -73,6 +73,14 @@
   background: #f5f3ff;
 }
 
+.ctx-btn.admin-static {
+  cursor: default;
+}
+.ctx-btn.admin-static:hover {
+  border-color: #e2e8f0;
+  background: white;
+}
+
 .ctx-btn-inner {
   display: flex;
   flex-direction: column;
