@@ -699,6 +699,58 @@ exports.getCampaignBySlugPublic = async (slug) => {
   return result.rows[0] || null;
 };
 
+const DISCOVER_SORT_COLUMNS = {
+  popular: 'c.supporters_count',
+  ending_soon: 'c.end_date',
+  newest: 'c.created_at',
+};
+
+exports.discoverCampaigns = async ({ search, category, sortBy, page = 0, limit = 12 }) => {
+  const where = [`c.status = 'published'`, `e.status = 'active'`, `c.deleted_at IS NULL`];
+  const params = [];
+  let idx = 1;
+
+  if (search) {
+    where.push(`(c.title ILIKE $${idx} OR e.display_name ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+  if (category) {
+    where.push(`c.category = $${idx++}`);
+    params.push(category);
+  }
+
+  const whereStr = `WHERE ${where.join(' AND ')}`;
+  const sortCol = DISCOVER_SORT_COLUMNS[sortBy] || 'c.created_at';
+  const sortOrd = sortBy === 'ending_soon' ? 'ASC NULLS LAST' : 'DESC';
+
+  const [listRes, totalRes] = await Promise.all([
+    db.query(
+      `SELECT
+         c.id, c.title, c.slug, c.short_description, c.category, c.cover_image_url,
+         c.current_amount, c.target_amount, c.supporters_count, c.end_date, c.created_at,
+         e.display_name AS entity_name, e.logo_url AS entity_logo
+       FROM campaigns c
+       JOIN entities e ON e.id = c.entity_id
+       ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM campaigns c JOIN entities e ON e.id = c.entity_id ${whereStr}`,
+      params
+    ),
+  ]);
+
+  return {
+    campaigns: listRes.rows,
+    total: totalRes.rows[0].total,
+    page,
+    limit,
+  };
+};
+
 /*
 |--------------------------------------------------------------------------
 | CHECK SLUG AVAILABILITY

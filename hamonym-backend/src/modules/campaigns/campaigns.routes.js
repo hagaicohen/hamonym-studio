@@ -16,6 +16,12 @@ router.get(
   controller.getCampaignBySlugPublic
 );
 
+// Public — no auth — browse/search published campaigns
+router.get(
+  '/discover',
+  controller.discoverCampaigns
+);
+
 router.post(
   '/',
   requireAuth,

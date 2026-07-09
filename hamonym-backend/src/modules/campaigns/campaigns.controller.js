@@ -273,6 +273,19 @@ exports.getCampaignBySlugPublic = async (req, res) => {
   }
 };
 
+exports.discoverCampaigns = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page || '0', 10);
+    const limit = parseInt(req.query.limit || '12', 10);
+    const { search, category, sortBy } = req.query;
+    const result = await service.discoverCampaigns({ search, category, sortBy, page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'אירעה שגיאה בלתי צפויה' });
+  }
+};
+
 exports.checkSlugAvailable =
   async (req, res) => {
 
