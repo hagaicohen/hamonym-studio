@@ -1,0 +1,7 @@
+@if (impersonating()) {
+  <div class="imp-banner">
+    <span class="imp-icon">🕵️</span>
+    <span class="imp-text">מנהל הפלטפורמה {{ impersonatorName() }} מחובר כרגע בשם המשתמש הזה</span>
+    <button class="imp-btn" (click)="returnToAdmin()">חזרה לחשבון סופר אדמין</button>
+  </div>
+}

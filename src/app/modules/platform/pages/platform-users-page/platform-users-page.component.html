@@ -1,0 +1,257 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else {
+
+  <div class="plat-header">
+    <h1 class="plat-title">משתמשים</h1>
+    <button class="btn-primary" (click)="openCreateAdmin()">+ הוסף מנהל פלטפורמה</button>
+  </div>
+
+  @if (actionError) {
+    <div class="plat-action-error">{{ actionError }}</div>
+  }
+
+  <div class="plat-filters">
+    <input
+      class="plat-search"
+      type="search"
+      placeholder="חיפוש לפי שם או אימייל..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+  </div>
+
+  <div class="plat-chips">
+    @for (chip of chips; track chip.key) {
+      <button
+        class="plat-chip"
+        [class.active]="activeChip === chip.key"
+        (click)="selectChip(chip.key)"
+      >
+        <span class="plat-chip-dot">{{ chip.dot }}</span>
+        {{ chip.label }}
+      </button>
+    }
+  </div>
+
+  <div class="plat-card">
+    @if (loading) {
+      <div class="plat-loading">טוען...</div>
+    } @else if (users.length === 0) {
+      <div class="plat-empty">לא נמצאו משתמשים</div>
+    } @else {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing">
+        <table class="plat-table">
+          <thead>
+            <tr>
+              <th class="sortable" (click)="sortBy('name')">שם</th>
+              <th class="sortable" (click)="sortBy('email')">אימייל</th>
+              <th class="sortable" (click)="sortBy('role')">תפקיד</th>
+              <th>עמותות</th>
+              <th>סטטוס</th>
+              <th>הרשאות פלטפורמה</th>
+              <th class="sortable" (click)="sortBy('last_login_at')">כניסה אחרונה</th>
+              <th class="sortable" (click)="sortBy('created_at')">נרשם</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of users; track u.id) {
+              <tr class="plat-row" [class.deleted-row]="u.deleted_at">
+                <td>
+                  <div class="user-name">{{ u.full_name || '—' }}</div>
+                  @if (isSelf(u)) { <span class="user-self-tag">(אתה)</span> }
+                </td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.role_name }}</td>
+                <td>{{ u.entities_count }}</td>
+                <td>
+                  <span class="plat-status" [ngClass]="statusBadge(u).cls">{{ statusBadge(u).label }}</span>
+                </td>
+                <td>
+                  @if (u.is_super_admin) {
+                    <span class="perm-pill perm-full">גישה מלאה</span>
+                  } @else if (u.platform_permissions?.length) {
+                    @for (p of u.platform_permissions; track p) {
+                      <span class="perm-pill">{{ p === 'organizations' ? 'עמותות' : p === 'campaigns' ? 'קמפיינים' : p }}</span>
+                    }
+                  } @else {
+                    <span class="perm-none">—</span>
+                  }
+                </td>
+                <td>{{ relativeTime(u.last_login_at) }}</td>
+                <td>{{ fmtDate(u.created_at) }}</td>
+                <td>
+                  <div class="user-actions">
+                    @if (u.deleted_at) {
+                      <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(u)">שחזור</button>
+                    } @else {
+                      <button
+                        class="toggle-chip"
+                        [class.active]="u.is_active"
+                        [disabled]="actionInProgress || isSelf(u)"
+                        (click)="toggleActive(u)"
+                      >{{ u.is_active ? 'פעיל' : 'הפעל' }}</button>
+
+                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="generateResetLink(u)">קישור לאיפוס סיסמה</button>
+
+                      @if (!u.is_super_admin) {
+                        <button class="btn-secondary" [disabled]="actionInProgress || isSelf(u)" (click)="requestImpersonate(u)">התחבר כמשתמש</button>
+                        <button class="btn-secondary" [disabled]="actionInProgress || isSelf(u)" (click)="requestPermissionsEdit(u)">הרשאות</button>
+                      }
+
+                      <button
+                        class="toggle-chip"
+                        [class.active]="u.is_super_admin"
+                        [disabled]="actionInProgress || isSelf(u)"
+                        (click)="toggleSuperAdmin(u)"
+                      >{{ u.is_super_admin ? 'סופר אדמין' : 'הפוך לסופר אדמין' }}</button>
+
+                      <button class="btn-delete" [disabled]="actionInProgress || isSelf(u)" (click)="requestDelete(u)">מחיקה</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="plat-footer">
+        <span>{{ total }} משתמשים</span>
+        <div class="plat-pager">
+          <button (click)="prevPage()" [disabled]="page === 0">←</button>
+          <span>{{ page + 1 }} / {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  }
+
+  @if (pendingAction) {
+    <div class="plat-modal-backdrop" (click)="cancelPendingAction()">
+      <div class="plat-modal" (click)="$event.stopPropagation()">
+        @if (pendingAction.type === 'disable') {
+          <h3>השבתת משתמש</h3>
+        } @else if (pendingAction.type === 'delete') {
+          <h3>מחיקת משתמש</h3>
+        } @else if (pendingAction.type === 'impersonate') {
+          <h3>התחברות בשם משתמש</h3>
+        } @else if (pendingAction.type === 'grantSuperAdmin') {
+          <h3>הגדרה כסופר אדמין מלא</h3>
+        } @else if (pendingAction.type === 'revokeSuperAdmin') {
+          <h3>הסרת הרשאת סופר אדמין מלא</h3>
+        } @else {
+          <h3>עריכת הרשאות פלטפורמה</h3>
+        }
+        <p class="plat-modal-campaign">{{ pendingAction.user.full_name || pendingAction.user.email }}</p>
+        @if (pendingAction.type === 'impersonate') {
+          <p class="plat-modal-warning">כל פעולה שתבצע תוצג לך עם באנר "מחובר כ..." בראש המסך, ותתועד ביומן הפעולות. הסשן יפוג אוטומטית אחרי שעתיים.</p>
+        }
+        @if (pendingAction.type === 'grantSuperAdmin') {
+          <p class="plat-modal-warning">גישה מלאה לכל אזורי הפלטפורמה, כולל ניהול משתמשים והרשאות.</p>
+        }
+        @if (pendingAction.type === 'setPermissions') {
+          <div class="plat-modal-field">
+            <label>הרשאות</label>
+            <div class="perm-checkboxes">
+              @for (opt of permissionOptions; track opt.key) {
+                <label class="perm-checkbox">
+                  <input type="checkbox" [checked]="pendingPermissions.includes(opt.key)" (change)="togglePendingPermission(opt.key)" />
+                  {{ opt.label }}
+                </label>
+              }
+            </div>
+          </div>
+        }
+        <textarea
+          class="plat-modal-notes"
+          rows="3"
+          placeholder="נדרשת הערה לפעולה זו..."
+          [(ngModel)]="notesInput"
+        ></textarea>
+        @if (noteRequiredError) {
+          <div class="plat-modal-error">נדרשת הערה כדי להמשיך</div>
+        }
+        <div class="plat-modal-actions">
+          <button class="btn-cancel" (click)="cancelPendingAction()" [disabled]="actionInProgress">ביטול</button>
+          <button class="btn-confirm" (click)="confirmPendingAction()" [disabled]="actionInProgress">אישור</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showCreateAdmin) {
+    <div class="plat-modal-backdrop" (click)="closeCreateAdmin()">
+      <div class="plat-modal" (click)="$event.stopPropagation()">
+        <h3>הוספת מנהל פלטפורמה</h3>
+        <p class="plat-modal-warning">ייווצר משתמש חדש, ומיד לאחר מכן יוצג קישור לקביעת סיסמה — אין שליחת מייל אוטומטית, יש להעביר את הקישור ידנית.</p>
+
+        <div class="plat-modal-field">
+          <label>אימייל</label>
+          <input class="plat-modal-input" type="email" [(ngModel)]="createAdminEmail" placeholder="name@example.com" dir="ltr" />
+        </div>
+
+        <div class="plat-modal-field">
+          <label>שם מלא (אופציונלי)</label>
+          <input class="plat-modal-input" type="text" [(ngModel)]="createAdminFullName" />
+        </div>
+
+        <div class="plat-modal-field">
+          <label class="perm-checkbox">
+            <input type="checkbox" [(ngModel)]="createAdminIsSuperAdmin" />
+            סופר אדמין מלא (גישה לכל אזורי הפלטפורמה, כולל ניהול משתמשים)
+          </label>
+        </div>
+
+        @if (!createAdminIsSuperAdmin) {
+          <div class="plat-modal-field">
+            <label>הרשאות</label>
+            <div class="perm-checkboxes">
+              @for (opt of permissionOptions; track opt.key) {
+                <label class="perm-checkbox">
+                  <input type="checkbox" [checked]="createAdminPermissions.includes(opt.key)" (change)="toggleCreateAdminPermission(opt.key)" />
+                  {{ opt.label }}
+                </label>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="plat-modal-field">
+          <label>הערה (אופציונלי)</label>
+          <textarea class="plat-modal-notes" rows="2" [(ngModel)]="createAdminNotes"></textarea>
+        </div>
+
+        @if (createAdminError) {
+          <div class="plat-modal-error">{{ createAdminError }}</div>
+        }
+
+        <div class="plat-modal-actions">
+          <button class="btn-cancel" (click)="closeCreateAdmin()" [disabled]="createAdminInProgress">ביטול</button>
+          <button class="btn-confirm" (click)="submitCreateAdmin()" [disabled]="createAdminInProgress">יצירה</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (resetLinkResult) {
+    <div class="plat-modal-backdrop" (click)="closeResetLinkResult()">
+      <div class="plat-modal" (click)="$event.stopPropagation()">
+        <h3>קישור לאיפוס סיסמה</h3>
+        <p class="plat-modal-campaign">{{ resetLinkResult.user.full_name || resetLinkResult.user.email }}</p>
+        <p class="plat-modal-warning">הקישור בתוקף ל-24 שעות. יש להעביר אותו למשתמש באופן ידני (וואטסאפ/אימייל) — המערכת לא שולחת מיילים אוטומטית.</p>
+        <div class="reset-link-box">{{ resetLinkResult.url }}</div>
+        <div class="plat-modal-actions">
+          <button class="btn-cancel" (click)="closeResetLinkResult()">סגירה</button>
+          <button class="btn-confirm" (click)="copyResetLink()">{{ resetLinkCopied ? 'הועתק ✓' : 'העתקה' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

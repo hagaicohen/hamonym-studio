@@ -1,0 +1,36 @@
+:host { display: block; }
+
+.imp-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #7c2d12;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  direction: rtl;
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+}
+
+.imp-icon { font-size: 15px; }
+
+.imp-btn {
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.imp-btn:hover { background: rgba(255, 255, 255, 0.22); }
+
+@media (max-width: 560px) {
+  .imp-banner { flex-wrap: wrap; text-align: center; }
+}

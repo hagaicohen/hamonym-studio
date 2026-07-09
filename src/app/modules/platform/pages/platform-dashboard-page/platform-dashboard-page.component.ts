@@ -22,9 +22,12 @@ interface Alert {
   linkQuery: Record<string, string>;
 }
 
+type ActivityType = 'audit' | 'campaign_audit' | 'campaign' | 'donation' | 'user';
+
 interface ActivityItem {
-  type: 'audit' | 'campaign' | 'donation' | 'user';
-  label: string;
+  type: ActivityType;
+  title: string;
+  subtitle: string | null;
   timestamp: string;
 }
 
@@ -33,12 +36,32 @@ interface ChartPoint {
   value: number;
 }
 
-const ACTIVITY_ICON: Record<ActivityItem['type'], string> = {
+const ACTIVITY_ICON: Record<ActivityType, string> = {
   audit: '🛡️',
+  campaign_audit: '🛡️',
   campaign: '🎯',
   donation: '💛',
   user: '👤',
 };
+
+const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
+  audit: 'עמותה',
+  campaign_audit: 'קמפיין',
+  campaign: 'קמפיין חדש',
+  donation: 'תרומה',
+  user: 'משתמש',
+};
+
+type ActivityFilter = 'all' | ActivityType;
+
+const ACTIVITY_FILTERS: { key: ActivityFilter; label: string }[] = [
+  { key: 'all', label: 'הכל' },
+  { key: 'audit', label: 'עמותות' },
+  { key: 'campaign_audit', label: 'ניהול קמפיינים' },
+  { key: 'campaign', label: 'קמפיינים חדשים' },
+  { key: 'donation', label: 'תרומות' },
+  { key: 'user', label: 'משתמשים' },
+];
 
 @Component({
   selector: 'app-platform-dashboard-page',
@@ -56,9 +79,21 @@ export class PlatformDashboardPageComponent implements OnInit {
 
   kpis: DashboardKpis | null = null;
   alerts: Alert[] = [];
-  activity: ActivityItem[] = [];
   donationsDaily: ChartPoint[] = [];
   entitiesWeekly: ChartPoint[] = [];
+
+  readonly activityFilters = ACTIVITY_FILTERS;
+  activity: ActivityItem[] = [];
+  activityTotal = 0;
+  activityPage = 0;
+  activityLimit = 10;
+  activityLoading = false;
+  activityFilter: ActivityFilter = 'all';
+  activitySortDir: 'asc' | 'desc' = 'desc';
+
+  get activityTotalPages(): number {
+    return Math.max(1, Math.ceil(this.activityTotal / this.activityLimit));
+  }
 
   // Chart geometry (shared viewBox sizing for both inline SVG charts)
   readonly chartWidth = 560;
@@ -73,7 +108,6 @@ export class PlatformDashboardPageComponent implements OnInit {
       next: (res) => {
         this.kpis = res.kpis;
         this.alerts = res.alerts ?? [];
-        this.activity = res.activity ?? [];
         this.donationsDaily = res.charts?.donationsDaily ?? [];
         this.entitiesWeekly = res.charts?.entitiesWeekly ?? [];
         this.loading = false;
@@ -83,14 +117,61 @@ export class PlatformDashboardPageComponent implements OnInit {
         this.loading = false;
       },
     });
+
+    this.loadActivity();
+  }
+
+  loadActivity(): void {
+    this.activityLoading = true;
+    this.platformService
+      .getActivity({
+        type: this.activityFilter === 'all' ? undefined : this.activityFilter,
+        sortDir: this.activitySortDir,
+        page: this.activityPage,
+        limit: this.activityLimit,
+      })
+      .subscribe({
+        next: (res) => {
+          this.activity = res.items ?? [];
+          this.activityTotal = res.total ?? 0;
+          this.activityLoading = false;
+        },
+        error: () => {
+          this.activityLoading = false;
+        },
+      });
+  }
+
+  selectActivityFilter(filter: ActivityFilter): void {
+    this.activityFilter = filter;
+    this.activityPage = 0;
+    this.loadActivity();
+  }
+
+  toggleActivitySort(): void {
+    this.activitySortDir = this.activitySortDir === 'desc' ? 'asc' : 'desc';
+    this.activityPage = 0;
+    this.loadActivity();
+  }
+
+  prevActivityPage(): void {
+    if (this.activityPage > 0) { this.activityPage--; this.loadActivity(); }
+  }
+
+  nextActivityPage(): void {
+    if (this.activityPage < this.activityTotalPages - 1) { this.activityPage++; this.loadActivity(); }
   }
 
   goToAlert(alert: Alert): void {
     this.router.navigate(['/platform/organizations'], { queryParams: alert.linkQuery });
   }
 
-  activityIcon(type: ActivityItem['type']): string {
+  activityIcon(type: ActivityType): string {
     return ACTIVITY_ICON[type] ?? '•';
+  }
+
+  activityTypeLabel(type: ActivityType): string {
+    return ACTIVITY_TYPE_LABEL[type] ?? type;
   }
 
   relativeTime(iso: string): string {

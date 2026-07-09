@@ -24,8 +24,11 @@ export class AdminLoginPageComponent implements OnInit {
   errorMessage = '';
 
   ngOnInit(): void {
-    // Already holding a super-admin session on this browser — skip straight in.
-    if (localStorage.getItem('token') && localStorage.getItem('isSuperAdmin') === 'true') {
+    // Already holding a platform-admin session on this browser (full or scoped) — skip straight in.
+    const hasToken = !!localStorage.getItem('token');
+    const isFullAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+    const hasScopedAccess = this.ctx.platformPermissions().length > 0;
+    if (hasToken && (isFullAdmin || hasScopedAccess)) {
       this.ctx.setAdminMode(true);
       this.router.navigate(['/platform']);
     }
@@ -39,7 +42,8 @@ export class AdminLoginPageComponent implements OnInit {
 
     this.http.post<any>(`${environment.apiUrl}/auth/login`, { email: this.email, password: this.password }).subscribe({
       next: (res) => {
-        if (!res.user?.is_super_admin) {
+        const permissions: string[] = res.user?.platform_permissions || [];
+        if (!res.user?.is_super_admin && permissions.length === 0) {
           this.errorMessage = 'החשבון הזה אינו מוגדר כמנהל פלטפורמה';
           this.loading = false;
           return;
@@ -48,7 +52,8 @@ export class AdminLoginPageComponent implements OnInit {
         localStorage.setItem('token', res.token);
         localStorage.setItem('user', JSON.stringify(res.user));
 
-        this.ctx.setSuperAdmin(true);
+        this.ctx.setSuperAdmin(!!res.user?.is_super_admin);
+        this.ctx.setPlatformPermissions(permissions);
         this.ctx.setAdminMode(true);
 
         this.router.navigate(['/platform']);

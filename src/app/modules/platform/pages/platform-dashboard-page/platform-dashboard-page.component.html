@@ -119,18 +119,54 @@
     <div class="plat-dash-grid">
 
       <div class="plat-card plat-activity-card">
-        <h3 class="plat-section-title">🕒 פעילות אחרונה</h3>
-        @if (activity.length === 0) {
-          <div class="plat-empty-small">אין פעילות עדיין</div>
-        } @else {
-          <div class="plat-activity-list">
-            @for (item of activity; track item.timestamp + item.label) {
+        <div class="plat-activity-header">
+          <h3 class="plat-section-title">🕒 פעילות אחרונה</h3>
+          <button class="plat-sort-btn" (click)="toggleActivitySort()">
+            {{ activitySortDir === 'desc' ? 'החדש ביותר' : 'הישן ביותר' }}
+            <span class="plat-sort-arrow">{{ activitySortDir === 'desc' ? '↓' : '↑' }}</span>
+          </button>
+        </div>
+
+        <div class="plat-activity-filters">
+          @for (f of activityFilters; track f.key) {
+            <button
+              class="plat-activity-filter-chip"
+              [class.active]="activityFilter === f.key"
+              (click)="selectActivityFilter(f.key)"
+            >{{ f.label }}</button>
+          }
+        </div>
+
+        <div class="plat-activity-list" [class.refreshing]="activityLoading">
+          @if (activity.length === 0) {
+            <div class="plat-empty-small">אין פעילות להצגה</div>
+          } @else {
+            @for (item of activity; track item.timestamp + item.title) {
               <div class="plat-activity-item">
-                <span class="plat-activity-icon">{{ activityIcon(item.type) }}</span>
-                <span class="plat-activity-label">{{ item.label }}</span>
-                <span class="plat-activity-time">{{ relativeTime(item.timestamp) }}</span>
+                <span class="plat-activity-icon" [class]="'type-' + item.type">{{ activityIcon(item.type) }}</span>
+                <div class="plat-activity-body">
+                  <div class="plat-activity-top">
+                    <span class="plat-activity-type-tag" [class]="'type-' + item.type">{{ activityTypeLabel(item.type) }}</span>
+                    <span class="plat-activity-time">{{ relativeTime(item.timestamp) }}</span>
+                  </div>
+                  <div class="plat-activity-title">{{ item.title }}</div>
+                  @if (item.subtitle) {
+                    <div class="plat-activity-subtitle">{{ item.subtitle }}</div>
+                  }
+                </div>
               </div>
             }
+          }
+        </div>
+
+        @if (activityTotal > 0) {
+          <div class="plat-activity-footer">
+            <span>{{ activityTotal }} פעילויות</span>
+            <div class="plat-pager">
+              <button (click)="prevActivityPage()" [disabled]="activityPage === 0">←</button>
+              <span>{{ activityPage + 1 }} / {{ activityTotalPages }}</span>
+              <button (click)="nextActivityPage()" [disabled]="activityPage >= activityTotalPages - 1">→</button>
+            </div>
           </div>
         }
       </div>

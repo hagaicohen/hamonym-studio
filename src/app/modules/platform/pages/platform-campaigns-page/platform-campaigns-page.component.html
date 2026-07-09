@@ -1,0 +1,193 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else {
+
+  <div class="plat-header">
+    <h1 class="plat-title">קמפיינים</h1>
+  </div>
+
+  @if (actionError) {
+    <div class="plat-action-error">{{ actionError }}</div>
+  }
+
+  <div class="plat-filters">
+    <input
+      class="plat-search"
+      type="search"
+      placeholder="חיפוש לפי שם קמפיין..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+  </div>
+
+  <div class="plat-chips">
+    @for (chip of chips; track chip.key) {
+      <button
+        class="plat-chip"
+        [class.active]="activeChip === chip.key"
+        (click)="selectChip(chip.key)"
+      >
+        <span class="plat-chip-dot">{{ chip.dot }}</span>
+        {{ chip.label }}
+      </button>
+    }
+  </div>
+
+  <div class="plat-card">
+    @if (loading) {
+      <div class="plat-loading">טוען...</div>
+    } @else if (campaigns.length === 0) {
+      <div class="plat-empty">לא נמצאו קמפיינים</div>
+    } @else {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing">
+        <table class="plat-table">
+          <thead>
+            <tr>
+              <th class="sortable" (click)="sortBy('title')">קמפיין</th>
+              <th class="sortable" (click)="sortBy('entity')">עמותה</th>
+              <th class="sortable" (click)="sortBy('status')">סטטוס</th>
+              <th class="sortable" (click)="sortBy('raised')">גיוס</th>
+              <th>מומלץ</th>
+              <th>נעילה</th>
+              <th class="sortable" (click)="sortBy('created_at')">נוצר</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of campaigns; track c.id) {
+              <tr class="plat-row" [class.deleted-row]="c.deleted_at">
+                <td>
+                  <div class="camp-title">{{ c.title }}</div>
+                  <div class="camp-slug">/{{ c.slug }}</div>
+                </td>
+                <td>{{ c.entity_name }}</td>
+                <td>
+                  @if (c.deleted_at) {
+                    <span class="plat-status status-deleted">נמחק</span>
+                  } @else {
+                    <div class="status-select-wrap">
+                      <select class="status-select" [ngModel]="c.status" (ngModelChange)="onStatusChange(c, $event)" [disabled]="actionInProgress">
+                        @for (s of statusOptions; track s) {
+                          <option [value]="s">{{ statusLabel(s) }}</option>
+                        }
+                      </select>
+                    </div>
+                  }
+                </td>
+                <td>
+                  <div class="raised-wrap">
+                    <div class="raised-amounts">
+                      {{ fmtMoney(c.current_amount) }}
+                      @if (c.target_amount) {
+                        <span class="camp-target"> / {{ fmtMoney(c.target_amount) }}</span>
+                      }
+                    </div>
+                    @if (c.target_amount) {
+                      <div class="raised-progress-track">
+                        <div class="raised-progress-fill" [style.width.%]="progressPct(c)"></div>
+                      </div>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <button
+                    class="toggle-chip"
+                    [class.active]="c.is_featured"
+                    [disabled]="!!c.deleted_at || actionInProgress"
+                    (click)="toggleFeatured(c)"
+                    [title]="c.is_featured ? 'הסר סימון מומלץ' : 'סמן כמומלץ'"
+                  ><span class="toggle-chip-icon">⭐</span>{{ c.is_featured ? 'מומלץ' : 'סמן' }}</button>
+                </td>
+                <td>
+                  <button
+                    class="toggle-chip"
+                    [class.active]="c.is_locked"
+                    [disabled]="!!c.deleted_at || actionInProgress"
+                    (click)="toggleLock(c)"
+                    [title]="c.is_locked ? 'פתח נעילה' : 'נעל לעריכה'"
+                  ><span class="toggle-chip-icon">{{ c.is_locked ? '🔒' : '🔓' }}</span>{{ c.is_locked ? 'נעול' : 'פתוח' }}</button>
+                </td>
+                <td>{{ fmtDate(c.created_at) }}</td>
+                <td>
+                  @if (c.deleted_at) {
+                    <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(c)">שחזור</button>
+                  } @else {
+                    <div class="camp-actions">
+                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="requestTransfer(c)">העברה</button>
+                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="requestSlugChange(c)">כתובת</button>
+                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="duplicate(c)">שכפול</button>
+                      <button class="btn-delete" [disabled]="actionInProgress" (click)="requestDelete(c)">מחיקה</button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="plat-footer">
+        <span>{{ total }} קמפיינים</span>
+        <div class="plat-pager">
+          <button (click)="prevPage()" [disabled]="page === 0">←</button>
+          <span>{{ page + 1 }} / {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  }
+
+  @if (pendingAction) {
+    <div class="plat-modal-backdrop" (click)="cancelPendingAction()">
+      <div class="plat-modal" (click)="$event.stopPropagation()">
+        <h3>{{ pendingActionTitle() }}</h3>
+        <p class="plat-modal-campaign">{{ pendingAction.campaign.title }}</p>
+
+        @if (pendingAction.type === 'transfer') {
+          <div class="plat-modal-field">
+            <label>עמותת יעד</label>
+            @if (entityOptionsLoading) {
+              <div class="plat-modal-loading">טוען עמותות...</div>
+            } @else {
+              <select class="plat-modal-select" [(ngModel)]="transferEntityId">
+                <option value="">בחרו עמותה...</option>
+                @for (e of entityOptions; track e.id) {
+                  <option [value]="e.id" [disabled]="e.id === pendingAction.campaign.entity_id">{{ e.display_name }}</option>
+                }
+              </select>
+            }
+          </div>
+        }
+
+        @if (pendingAction.type === 'slug') {
+          <div class="plat-modal-field">
+            <label>כתובת חדשה</label>
+            <input class="plat-modal-input" type="text" [(ngModel)]="slugInput" placeholder="my-campaign-slug" dir="ltr" />
+            @if (slugError) {
+              <div class="plat-modal-error">{{ slugError }}</div>
+            }
+          </div>
+        }
+
+        <textarea
+          class="plat-modal-notes"
+          rows="3"
+          placeholder="נדרשת הערה לפעולה זו..."
+          [(ngModel)]="notesInput"
+        ></textarea>
+        @if (noteRequiredError) {
+          <div class="plat-modal-error">נדרשת הערה כדי להמשיך</div>
+        }
+        <div class="plat-modal-actions">
+          <button class="btn-cancel" (click)="cancelPendingAction()" [disabled]="actionInProgress">ביטול</button>
+          <button class="btn-confirm" (click)="confirmPendingAction()" [disabled]="actionInProgress">אישור</button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

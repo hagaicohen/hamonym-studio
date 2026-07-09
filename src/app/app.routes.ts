@@ -5,7 +5,7 @@ import { AppLayoutComponent } from './core/layout/app-layout/app-layout.componen
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
-import { superAdminGuard } from './core/guards/super-admin.guard';
+import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -49,6 +49,18 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/platform/pages/admin-login-page/admin-login-page.component').then(
         (m) => m.AdminLoginPageComponent,
+      ),
+  },
+
+  /* ========================================
+     RESET PASSWORD — ללא auth, ללא layout
+     נכנסים אליו דרך קישור שמייצר מנהל הפלטפורמה
+  ======================================== */
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./modules/auth/pages/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
       ),
   },
 
@@ -248,7 +260,7 @@ export const routes: Routes = [
       },
       {
         path: 'platform/organizations',
-        canActivate: [superAdminGuard],
+        canActivate: [platformSectionGuard('organizations')],
         loadComponent: () =>
           import('./modules/platform/pages/platform-organizations-page/platform-organizations-page.component').then(
             (m) => m.PlatformOrganizationsPageComponent,
@@ -256,10 +268,26 @@ export const routes: Routes = [
       },
       {
         path: 'platform/organizations/:id',
-        canActivate: [superAdminGuard],
+        canActivate: [platformSectionGuard('organizations')],
         loadComponent: () =>
           import('./modules/platform/pages/platform-organization-detail-page/platform-organization-detail-page.component').then(
             (m) => m.PlatformOrganizationDetailPageComponent,
+          ),
+      },
+      {
+        path: 'platform/campaigns',
+        canActivate: [platformSectionGuard('campaigns')],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-campaigns-page/platform-campaigns-page.component').then(
+            (m) => m.PlatformCampaignsPageComponent,
+          ),
+      },
+      {
+        path: 'platform/users',
+        canActivate: [platformSectionGuard('users')],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-users-page/platform-users-page.component').then(
+            (m) => m.PlatformUsersPageComponent,
           ),
       },
     ],

@@ -200,40 +200,172 @@
 }
 
 /* ACTIVITY FEED */
+.plat-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.plat-activity-header .plat-section-title { margin: 0; }
+
+.plat-sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plat-sort-btn:hover { border-color: #cbd5e1; color: #475569; }
+.plat-sort-arrow { font-size: 11px; }
+
+.plat-activity-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0 14px;
+}
+
+.plat-activity-filter-chip {
+  padding: 5px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.plat-activity-filter-chip:hover { border-color: #cbd5e1; }
+
+.plat-activity-filter-chip.active {
+  border-color: #583cd6;
+  background: #f5f3ff;
+  color: #583cd6;
+}
+
 .plat-activity-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 320px;
+  gap: 2px;
+  max-height: 360px;
   overflow-y: auto;
+  opacity: 1;
+  transition: opacity 0.15s;
 }
+
+.plat-activity-list.refreshing { opacity: 0.5; pointer-events: none; }
+
+.plat-activity-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.plat-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plat-pager button {
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.plat-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .plat-activity-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  padding: 8px 4px;
+  padding: 10px 4px;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
 }
 
 .plat-activity-item:last-child { border-bottom: none; }
 
-.plat-activity-icon { font-size: 15px; flex-shrink: 0; }
-
-.plat-activity-label {
-  flex: 1;
-  color: #1e293b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.plat-activity-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: #f1f5f9;
 }
+
+.plat-activity-icon.type-audit,
+.plat-activity-icon.type-campaign_audit { background: #ede9fe; }
+.plat-activity-icon.type-campaign { background: #e0f2fe; }
+.plat-activity-icon.type-donation { background: #fef9c3; }
+.plat-activity-icon.type-user { background: #ffedd5; }
+
+.plat-activity-body { flex: 1; min-width: 0; }
+
+.plat-activity-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.plat-activity-type-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.plat-activity-type-tag.type-audit,
+.plat-activity-type-tag.type-campaign_audit { color: #583cd6; }
+.plat-activity-type-tag.type-campaign { color: #0284c7; }
+.plat-activity-type-tag.type-donation { color: #ca8a04; }
+.plat-activity-type-tag.type-user { color: #ea580c; }
 
 .plat-activity-time {
   color: #94a3b8;
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.plat-activity-title {
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plat-activity-subtitle {
+  color: #64748b;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* QUICK ACTIONS */

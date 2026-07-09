@@ -21,6 +21,9 @@ const STORAGE_KEY = 'currentContext_v1';
 const ROLES_KEY   = 'userRoles_v1';
 const SUPER_ADMIN_KEY = 'isSuperAdmin';
 const ADMIN_MODE_KEY = 'adminMode';
+const IMPERSONATOR_TOKEN_KEY = 'impersonatorToken';
+const IMPERSONATOR_NAME_KEY = 'impersonatorName';
+const PLATFORM_PERMISSIONS_KEY = 'platformPermissions';
 
 @Injectable({ providedIn: 'root' })
 export class CurrentContextService {
@@ -44,6 +47,48 @@ export class CurrentContextService {
   setAdminMode(value: boolean): void {
     this.adminMode.set(value);
     localStorage.setItem(ADMIN_MODE_KEY, String(value));
+  }
+
+  // Scoped-admin access list (e.g. ['campaigns']) — irrelevant once isSuperAdmin is
+  // true, since a full super admin already has every section.
+  readonly platformPermissions = signal<string[]>(this._loadSavedPermissions());
+
+  setPlatformPermissions(value: string[]): void {
+    this.platformPermissions.set(value);
+    localStorage.setItem(PLATFORM_PERMISSIONS_KEY, JSON.stringify(value));
+  }
+
+  hasPlatformSection(section: string): boolean {
+    return this.isSuperAdmin() || this.platformPermissions().includes(section);
+  }
+
+  // True while a super admin is driving the app as another user (Impersonation).
+  readonly impersonating = signal<boolean>(!!localStorage.getItem(IMPERSONATOR_TOKEN_KEY));
+  readonly impersonatorName = signal<string | null>(localStorage.getItem(IMPERSONATOR_NAME_KEY));
+
+  beginImpersonation(newToken: string, impersonatorName: string): void {
+    const currentToken = localStorage.getItem('token');
+    if (currentToken) localStorage.setItem(IMPERSONATOR_TOKEN_KEY, currentToken);
+    localStorage.setItem(IMPERSONATOR_NAME_KEY, impersonatorName);
+    localStorage.setItem('token', newToken);
+    this.impersonating.set(true);
+    this.impersonatorName.set(impersonatorName);
+    this.setSuperAdmin(false);
+    this.setAdminMode(false);
+  }
+
+  // Restores the super admin's original token. Returns it so the caller can
+  // decide where to navigate (the users-page component does the actual redirect).
+  endImpersonation(): string | null {
+    const original = localStorage.getItem(IMPERSONATOR_TOKEN_KEY);
+    localStorage.removeItem(IMPERSONATOR_TOKEN_KEY);
+    localStorage.removeItem(IMPERSONATOR_NAME_KEY);
+    this.impersonating.set(false);
+    this.impersonatorName.set(null);
+    if (original) localStorage.setItem('token', original);
+    this.setSuperAdmin(true);
+    this.setAdminMode(true);
+    return original;
   }
 
   readonly hasMultipleOptions = computed(() => {
@@ -155,6 +200,15 @@ export class CurrentContextService {
   private _loadSavedRoles(): UserRoleGroup[] {
     try {
       const s = localStorage.getItem(ROLES_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private _loadSavedPermissions(): string[] {
+    try {
+      const s = localStorage.getItem(PLATFORM_PERMISSIONS_KEY);
       return s ? JSON.parse(s) : [];
     } catch {
       return [];

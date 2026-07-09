@@ -6,6 +6,7 @@ import { RouterOutlet } from '@angular/router';
 
 import { TopbarComponent }   from '../topbar/topbar.component';
 import { SidebarComponent }  from '../sidebar/sidebar.component';
+import { ImpersonationBannerComponent } from '../impersonation-banner/impersonation-banner.component';
 
 @Component({
   selector: 'app-layout',
@@ -15,6 +16,7 @@ import { SidebarComponent }  from '../sidebar/sidebar.component';
     RouterOutlet,
     TopbarComponent,
     SidebarComponent,
+    ImpersonationBannerComponent,
   ],
   templateUrl: './app-layout.component.html',
   styleUrls: ['./app-layout.component.css'],

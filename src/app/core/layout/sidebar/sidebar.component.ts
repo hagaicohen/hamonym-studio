@@ -25,6 +25,8 @@ const SETTINGS:    NavItem = { route: '/settings',    label: 'הגדרות',   i
 
 const PLATFORM_DASHBOARD:     NavItem = { route: '/platform',              label: 'דשבורד פלטפורמה', icon: 'platform', exactMatch: true };
 const PLATFORM_ORGANIZATIONS: NavItem = { route: '/platform/organizations', label: 'עמותות',          icon: 'ambassadors' };
+const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     label: 'קמפיינים',        icon: 'campaigns' };
+const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, DONORS, AMBASSADORS, REPORTS, SETTINGS],
@@ -58,9 +60,17 @@ export class SidebarComponent {
 
   // Only shown when the user entered via the dedicated /admin login — a regular
   // login never surfaces platform nav, even for an account flagged is_super_admin.
-  readonly platformNavItems = computed(() =>
-    this.ctx.adminMode() ? [PLATFORM_DASHBOARD, PLATFORM_ORGANIZATIONS] : []
-  );
+  // A scoped admin (not is_super_admin) only sees the sections they were granted;
+  // "משתמשים" never appears for them — admin/permission management stays
+  // full-super-admin-only.
+  readonly platformNavItems = computed(() => {
+    if (!this.ctx.adminMode()) return [];
+    const items = [PLATFORM_DASHBOARD];
+    if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS);
+    if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS);
+    return items;
+  });
 
   readonly showNewCampaignBtn = computed(() => {
     if (this.ctx.adminMode()) return false;
