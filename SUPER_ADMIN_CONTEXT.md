@@ -1,71 +1,56 @@
 # Super Admin — Session Context
 
-Summary of everything built in this session, for continuity in a new chat, plus the plan for the next piece of work (**not yet implemented**).
+Full summary of the Super Admin feature arc built in this session, for continuity in a new chat. Everything described here is implemented, smoke-tested against the real DB, and pushed.
 
 ## Project Stack (recap)
 
 - **Frontend**: Angular 17+ standalone components, signals, RxJS — this repo (`hamonym-app`)
 - **Backend**: Node.js + Express 5 + PostgreSQL (`pg` pool) — sibling repo `hamonym-backend`
-- Same git topology as documented in `DONORS_DONATIONS_CONTEXT.md`/`AMBASSADORS_CONTEXT.md` (`hamonym-backend` has no `.git` of its own; push backend changes from `c:\DEV\HamonymStudio`, with `git -c http.sslVerify=false push`).
+- **Git topology** (same as documented in `DONORS_DONATIONS_CONTEXT.md`/`AMBASSADORS_CONTEXT.md`, reconfirmed this session): `hamonym-app` and the parent `c:\DEV\HamonymStudio` repo (which contains `hamonym-backend`) **push to the same remote/branch** (`hagaicohen/hamonym-studio.git`, `main`) — they are not independent. Pushing from one advances `origin/main` out from under the other. If a push is rejected with "fetch first," that's why — just `git fetch && git rebase origin/main && git push` (they touch disjoint files, so this is always a clean rebase, never a real conflict). Use `git -c http.sslVerify=false push` on this machine (local SSL cert issue, not a permanent config change).
 
 ---
 
-## Part 1 — What's already built this session
+## 1. Super Admin MVP
 
-### 1. Super Admin MVP
+A fourth user kind, **Super Admin** — a platform operator, not tied to any entity. Deliberately minimal: one boolean flag, no roles table, no super-admin management UI. Two users get flagged manually in the DB.
 
-A fourth user kind, **Super Admin** — a platform operator, not tied to any entity. Deliberately minimal: no roles table, no super-admin management UI. Two users get flagged manually in the DB.
+- Migration `hamonym-backend/migrations/012_super_admin.sql`: `users.is_super_admin boolean NOT NULL DEFAULT false`, plus new table `platform_audit_log` (`id, super_admin_user_id bigint REFERENCES users(id), entity_id uuid REFERENCES entities(id), action text, notes text, reason_tags text[], created_at`). **Note:** `users.id` is `bigint`, `entities.id` is `uuid` — don't assume both are uuid.
+- JWT payload and `req.user` carry `isSuperAdmin` (`hamonym-backend/src/routes/auth.routes.js`, `src/middleware/require-auth.js`). `src/middleware/require-super-admin.js` gates on it (403 otherwise).
+- Backend module `hamonym-backend/src/modules/platform/` mounted at `/api/platform`, all routes `requireAuth` + `requireSuperAdmin`: `GET /dashboard`, `GET /organizations`, `GET /organizations/:id`, `POST /organizations/:id/{approve,reject,request-changes,suspend,reactivate}`.
+- **`entities.status` actually gates public campaign access** — `campaigns.service.js`'s `getCampaignBySlugPublic` requires `e.status='active'`; `donations.service.js`'s `createDonation` throws `'Entity not approved'` otherwise. (See §4 — this currently protects an endpoint the frontend doesn't call yet.)
 
-- Migration `hamonym-backend/migrations/012_super_admin.sql`: `users.is_super_admin boolean NOT NULL DEFAULT false`, plus new table `platform_audit_log` (`id, super_admin_user_id bigint REFERENCES users(id), entity_id uuid REFERENCES entities(id), action text, notes text, created_at`). **Note:** `users.id` is `bigint`, `entities.id` is `uuid` — don't assume both are uuid (bit us once already).
-- JWT payload and `req.user` gained `isSuperAdmin` (`hamonym-backend/src/routes/auth.routes.js`, `src/middleware/require-auth.js`). New `src/middleware/require-super-admin.js` (403 if `!req.user.isSuperAdmin`).
-- New backend module `hamonym-backend/src/modules/platform/` (`platform.routes.js` / `.controller.js` / `.service.js`), mounted at `/api/platform` in `server.js`. All routes `requireAuth` + `requireSuperAdmin`. Endpoints: `GET /dashboard`, `GET /organizations`, `GET /organizations/:id`, `POST /organizations/:id/{approve,reject,request-changes,suspend,reactivate}`.
-- **Load-bearing side effect**: `entities.status` now actually gates public campaign access — `campaigns.service.js`'s `getCampaignBySlugPublic` requires `e.status = 'active'`; `donations.service.js`'s `createDonation` throws `'Entity not approved'` otherwise. Before this it was purely cosmetic (see the unresolved issue in §3 — this gate currently protects a dead endpoint).
-- Frontend: Super Admin is **additive** — `CurrentContextService.isSuperAdmin` (localStorage `isSuperAdmin`) is independent of the `RoleType`/role-switching system. `contextGuard` (`src/app/core/guards/context.guard.ts`) accepts `isSuperAdmin` as valid context. Sidebar (`src/app/core/layout/sidebar/`) shows a "פלטפורמה" section *alongside* (not replacing) the normal entity nav. New guard `superAdminGuard` (one-directional — blocks non-admins from `/platform/*`, never blocks admins from anything else). Routes: `/platform`, `/platform/organizations`, `/platform/organizations/:id`, all children of the existing `AppLayoutComponent` shell.
-- **Dedicated `/admin` login entry point** (added after the additive model, per explicit later request): standalone page `src/app/modules/platform/pages/admin-login-page/`, no layout/guard, same `/auth/login` call. On success sets `isSuperAdmin` **and** a second flag `CurrentContextService.adminMode` (localStorage `adminMode`). While `adminMode` is true, the sidebar shows **only** the platform section (entity nav suppressed even for a super-admin-who-also-owns-an-org) and the topbar's role/context switcher (`src/app/core/layout/topbar/`) is replaced with a static "מנהל פלטפורמה" badge (no dropdown). Regular `/login` always calls `setAdminMode(false)`. `logout()` already does `localStorage.clear()`, wiping both flags.
-- **Superseded later in the session — read this, not the paragraph above, for current behavior**: the "additive" model (super admin sees platform nav *alongside* normal nav even on a regular login) was explicitly reversed. Now: **platform UI/access is gated on `adminMode`, not `isSuperAdmin`.** A regular `/login` — even for an account with `is_super_admin = true` — shows zero platform-related UI and cannot reach `/platform/*`; only entering through `/admin` (which sets `adminMode`) unlocks it. Changed: `sidebar.component.ts`'s `platformNavItems` now checks `ctx.adminMode()` (was `ctx.isSuperAdmin()`); `super-admin.guard.ts` now checks `context.adminMode()` (was `isSuperAdmin()`); `context.guard.ts`'s shell-entry bypass now checks `localStorage.adminMode === 'true'` (was `isSuperAdmin`). The `isSuperAdmin` signal/flag itself still exists and is still set at login (harmless, used by `admin-login-page`'s auto-skip-to-`/platform` check when a token already exists) but no longer drives any nav/guard decision on its own.
+### How platform access actually works today (final behavior — earlier "additive" design was reversed)
 
-### 2. Dashboard "control tower" upgrade
-
-External design feedback pushed for a richer feel; user explicitly scoped it to **polishing the existing 3 pages only** (no global search/Ctrl+K, no 6 new platform-wide pages for Campaigns/Donations/Users/Ambassadors/Payments/Messages, no system/infra health monitoring — none of that infrastructure exists and wasn't asked for).
-
-- `platform.service.js`'s `getKpis` → renamed `getDashboardData`, route `GET /kpis` → `GET /dashboard`. Returns `{ kpis, alerts, activity, charts }` in one call — all computed from existing tables, zero new schema:
-  - `kpis`: 8 fields (entities/campaigns/donations counts + failed payments + new donors this month)
-  - `alerts`: pending-review count, missing-docs count, cardcom-disconnected count, overdue-published-campaigns count — each with a `linkQuery` for deep-linking into the organizations page
-  - `activity`: last ~20 events merged from `platform_audit_log` + recent campaigns + recent paid donations + recent user signups, sorted by timestamp
-  - `charts`: `donationsDaily` (30d) / `entitiesWeekly` (8w), zero-filled via SQL `generate_series` + `LEFT JOIN` (deliberately not JS date math, to dodge timezone-alignment bugs)
-- `getOrganizations` gained `profile_completion` (0–100, 5-point weighted SQL CASE: display_name/legal_name/association cert/tax doc/cardcom connected) and filters `missingDocs`/`noCampaigns`/`newSince` (days). Organizations page (`platform-organizations-page`): 6 mutually-exclusive quick-filter chips (ממתינות/פעילות/מושעות/חסרות מסמכים/ללא קמפיינים/חדשות השבוע) replaced the old status dropdown; Action Center alerts deep-link here via route query params read on init.
-- `getOrganizationDetail` gained `donorCount` (distinct donor identities, paid donations only). Detail page (`platform-organization-detail-page`) gained a hero KPI row (total raised/donors/campaigns/success rate), a client-side Health Score (rollup of 5 checklist booleans, colored ring), and a Timeline merging entity-creation + campaign-creation + audit-log events chronologically (all client-side from data already fetched — no new query for the timeline itself).
-- Charts are hand-rolled inline SVG (no charting library added, none was in `package.json`) — built per the `dataviz` skill's method: single-hue since each is a single series (no legend needed per that skill's rules), 2px line with rounded caps, ~10% opacity area fill, 4px rounded bar tops, lightweight hover tooltip + guide line.
-- **Bug fixed along the way**: the original approval checklist compared `entity.cardcom_connection_status === 'connected'`, but the real DB value is `'success'` — that check always rendered as missing even when Cardcom was genuinely connected. Fixed via the new `healthChecks`/`healthScore` getters.
-- **Angular gotcha hit and fixed**: a template-ref variable declared on an `<svg>` element (`#lineSvg`) types as `HTMLElement`, not `SVGSVGElement`, under Angular's ngtsc. `npx tsc --noEmit` does **not** catch this (it doesn't run the Angular template compiler) — only `npx ng build` does. Fixed by typing the handler param as `Element` (all it actually needs is `getBoundingClientRect()`). **Lesson: verify with a real `ng build`, not just `tsc --noEmit`, whenever a template ref targets a non-Angular/SVG element.**
-
-### 3. Known unresolved issue (found, not yet fixed)
-
-The real public campaign page (`campaigns/:slug/view`, `CampaignPublicPageComponent`) does **not** call the entity-approval-gated `GET /api/campaigns/public/:slug` — it calls `CampaignApiService.getBySlug()` → `GET /api/campaigns/slug/:slug`, which is `requireAuth` + ownership-gated (`campaigns.service.js`'s `getCampaignBySlug`, comment says "public preview for manager").
-
-Consequences:
-- The entity-approval gate built in §1 doesn't actually protect the real donor-facing flow yet — it protects a dead endpoint nobody calls.
-- A genuinely anonymous visitor likely gets **401** today, since the frontend unconditionally sends `Authorization: Bearer ${localStorage.getItem('token')}` (a literal `"Bearer null"` string when logged out) via `CampaignApiService.headers()` (`campaign-api.service.ts:38-40`).
-
-Agreed direction (**not yet implemented**): point the public page at the actual public endpoint. The org admin's own "preview my campaign while my entity is still unapproved" need is separately served by the already-authenticated studio builder preview (`campaign-studio-page` → `getCampaignById`), so no owner-bypass logic is needed on the public endpoint itself — keep it strictly public/approval-gated, no exceptions.
-
-**Pick this up before assuming donations work for anonymous visitors in production.**
-
-### Test entity used throughout
-
-`קשת נחושה - ע"ר`, id `9fb88307-2999-459e-8d9c-42b53a82051c`, owner user id `9` (`hagai.cohen@gmail.com`). All smoke tests flipped `users.is_super_admin` / `entities.status` temporarily via one-off `node -e` scripts against the live DB and reverted them afterward — DB should be back to its original state (`is_super_admin=false`, entity `status='pending_review'`, no stray `platform_audit_log` rows from testing).
+**Platform UI/access is gated on `adminMode`, not `isSuperAdmin`.** A regular `/login` — even for an account with `is_super_admin=true` — shows **zero** platform-related UI and cannot reach `/platform/*`. Only the dedicated `/admin` login page (`src/app/modules/platform/pages/admin-login-page/`) sets `CurrentContextService.adminMode` (localStorage `adminMode`), and only that unlocks it:
+- `sidebar.component.ts`'s `platformNavItems` renders only when `ctx.adminMode()`.
+- `super-admin.guard.ts` blocks `/platform/*` unless `context.adminMode()`.
+- `context.guard.ts`'s shell-entry bypass (letting a context-less user into `AppLayoutComponent`) checks `localStorage.adminMode === 'true'`.
+- While `adminMode` is true, the topbar's role/context switcher is replaced with a static "מנהל פלטפורמה" badge (no dropdown), and the sidebar shows **only** the platform section (entity nav suppressed even if the account also owns an org).
+- Regular `/login` always calls `setAdminMode(false)`; `logout()` does `localStorage.clear()`, wiping everything.
+- The `isSuperAdmin` signal/flag still exists and is still set at every login (harmless) — it's only read by `admin-login-page`'s auto-skip logic (if a token + `isSuperAdmin=true` already exist when landing on `/admin`, skip straight to `/platform`). It does **not** drive any nav/guard decision by itself anymore.
 
 ---
 
-## Part 2 — Entity Approval Workflow (IMPLEMENTED — was "not yet" when this doc was first written, now done and verified)
+## 2. Dashboard "control tower" upgrade
 
-Everything below was built exactly as planned and smoke-tested end-to-end (mandatory-note 400, request-changes with reason tags, owner-facing `approval-status` read, `request-review` transition success + 409-when-invalid + 403-for-non-owner). One addition beyond the original plan: `getOrganizationDetail`'s audit-log query also now selects `reason_tags` so the super-admin Timeline/Audit-Log tab can show them too.
+Scoped explicitly to **polishing the existing 3 pages only** — no global search/Ctrl+K, no new platform-wide pages, no system/infra health monitoring (none of that exists and wasn't asked for).
 
-### Context
+- `platform.service.js`'s `getDashboardData` (route `GET /dashboard`) returns `{ kpis, alerts, activity, charts }` in one call, all computed from existing tables:
+  - `kpis`: entities/campaigns/donations counts + failed payments + new donors this month
+  - `alerts`: pending-review / missing-docs / cardcom-disconnected / overdue-published-campaigns counts, each with a `linkQuery` for deep-linking into the organizations page
+  - `activity`: last ~20 events merged from `platform_audit_log` + recent campaigns + recent paid donations + recent user signups
+  - `charts`: `donationsDaily` (30d) / `entitiesWeekly` (8w), zero-filled via SQL `generate_series` + `LEFT JOIN` (deliberately not JS date math)
+- `getOrganizations` has `profile_completion` (0–100, 5-point weighted SQL CASE) and filters `missingDocs`/`noCampaigns`/`newSince`. Organizations page: 6 mutually-exclusive quick-filter chips replaced the status dropdown.
+- `getOrganizationDetail` has `donorCount`. Detail page has a hero KPI row, a client-side Health Score (rollup of 5 checklist booleans), and a Timeline merging entity-creation + campaign-creation + audit-log events.
+- Charts are hand-rolled inline SVG (no charting library in `package.json`) — built per the `dataviz` skill's method (single-hue single-series, no legend, 2px rounded line, 4px rounded bar tops, hover tooltip).
+- **Bug fixed**: the approval checklist used to compare `cardcom_connection_status === 'connected'`; the real DB value is `'success'`. Fixed via `healthChecks`/`healthScore` getters.
+- **Angular gotcha**: a template-ref on an `<svg>` (`#lineSvg`) types as `HTMLElement` under ngtsc, not `SVGSVGElement` — `npx tsc --noEmit` doesn't catch this (no template compilation), only `npx ng build` does. Fixed by typing the handler param as `Element`. **Always verify with a real `ng build`, not just `tsc --noEmit`, when a template ref targets an SVG/non-Angular element.**
 
-Super Admin can already flip an entity's status (approve/reject/request-changes/suspend/reactivate) and leave a note, but that note only ever reaches other super admins (stored in `platform_audit_log`, exposed only via `/api/platform/*`). An organization admin whose entity is sent back for changes today sees nothing but a status-badge label ("נדרשים תיקונים") with zero explanation of what to fix, and no way to signal "I fixed it, please look again."
+---
 
-### State machine
+## 3. Entity Approval Workflow
+
+A real state machine, not just a UI tweak.
 
 **States** (`entities.status`, unchanged): `draft → pending_review → active`, with `pending_review → changes_requested/rejected` and `active → suspended` as exception branches.
 
@@ -74,54 +59,59 @@ Super Admin can already flip an entity's status (approve/reject/request-changes/
 | `pending_review` | `active` | Super Admin: Approve | optional |
 | `pending_review` | `rejected` | Super Admin: Reject | **required** |
 | `pending_review` | `changes_requested` | Super Admin: Request Changes | **required** |
-| `changes_requested` | `pending_review` | **Org admin: Resubmit for review** (new) | none |
+| `changes_requested` | `pending_review` | **Org admin: Resubmit for review** | none |
 | `active` | `suspended` | Super Admin: Suspend | **required** |
 | `suspended` | `active` | Super Admin: Reactivate | optional |
 
-`rejected` stays terminal for now (no org-initiated way out) — a re-application flow is explicitly future work. `draft → pending_review` (initial submission) already exists via `is_profile_complete` in `createEntity`/onboarding and isn't touched by this plan.
+`rejected` is terminal (no org-initiated way out — future work). `draft → pending_review` (initial submission) predates this and isn't touched.
 
-### Scope
+- Migration `013_approval_reasons.sql`: `platform_audit_log.reason_tags text[]`.
+- Mandatory-note validation (400) on `reject`/`request-changes`/`suspend` only, in `platform.controller.js`.
+- Two new **entity-facing** endpoints (`hamonym-backend/src/modules/entities/`, ownership-checked like `updateEntity`):
+  - `GET /api/entities/:id/approval-status` → `{ status, updatedAt, comment, reasonTags, actionBy }`, assembled from the entity row + the latest `platform_audit_log` row (no new table).
+  - `PATCH /api/entities/:id/request-review` → flips `changes_requested → pending_review`; the guard **is** the SQL `WHERE status='changes_requested'` (0 rows back = 409 `'Invalid transition'`).
+- Frontend: persistent (non-dismissible) `ApprovalStatusCardComponent` (`src/app/modules/settings/components/approval-status-card/`), embedded in **both** `entity-settings` and the entity-manager `dashboard`. Shows status + reason tags + comment + who/when, and a "שלח לבדיקה מחדש" button only when `changes_requested`.
+- Super-admin action panel (`platform-organization-detail-page`) has reason-tag checkboxes (shared constants in `src/app/shared/config/approval-reason-tags.ts`) and required-note validation on the three gated actions.
+- **How the org admin actually finds out**: only by visiting their own dashboard/settings (no email/SMS/push — explicitly deferred). It's pull, not push.
 
-- **MVP**: persistent (non-dismissible) approval-status display for the org admin, mandatory notes on the three "bad news" transitions (reject/request-changes/suspend), a consolidated `approvalStatus` read endpoint designed to grow without breaking callers.
-- **MVP+**: the org-initiated "Resubmit for review" transition, plus structured reason tags (checkboxes) alongside the free-text note — cheap now, valuable later for analytics on why entities bounce back.
-- **Explicitly deferred**: timeline/history of comments for the org admin, email/SMS/push notifications, multiple-correction-round tracking, a rejected→resubmit path.
+All of the above was smoke-tested end-to-end: mandatory-note 400, request-changes with tags, owner-facing read (200), non-owner (403), invalid transition (409), valid transition (200 → `pending_review`).
 
-### Backend
+---
 
-**Migration `hamonym-backend/migrations/013_approval_reasons.sql`**
-```sql
-ALTER TABLE platform_audit_log ADD COLUMN IF NOT EXISTS reason_tags text[];
-```
-No other schema change — `approvalStatus` is assembled from the entity row + the latest `platform_audit_log` row for it, not a new table.
+## 4. Known unresolved issue (found, NOT fixed — pick this up next)
 
-**`platform.controller.js`** (existing super-admin actions): add mandatory-note validation before calling the service, for `reject`/`requestChanges`/`suspend` only (`approve`/`reactivate` stay optional): `if (!req.body.notes?.trim()) return res.status(400).json({ error: 'נדרשת הערה' })`. Pass through `req.body.reasonTags` (array) for those three actions.
+The real public campaign page (`campaigns/:slug/view`, `CampaignPublicPageComponent`) does **not** call the entity-approval-gated `GET /api/campaigns/public/:slug`. It calls `CampaignApiService.getBySlug()` → `GET /api/campaigns/slug/:slug`, which is `requireAuth` + ownership-gated (`campaigns.service.js`'s `getCampaignBySlug`, comment says "public preview for manager").
 
-**`platform.service.js`**: `setStatus(...)` gains a `reasonTags` param, included in the `INSERT INTO platform_audit_log (..., reason_tags)`.
+Consequences:
+- The entity-approval gate built in §1 doesn't protect the real donor-facing flow — it protects a dead endpoint nobody calls.
+- A genuinely anonymous visitor likely gets **401**, since the frontend unconditionally sends `Authorization: Bearer ${localStorage.getItem('token')}` (literal `"Bearer null"` when logged out) via `CampaignApiService.headers()` (`campaign-api.service.ts:38-40`).
 
-**New entity-facing endpoints — `hamonym-backend/src/modules/entities/`** (same pattern as `updateEntity`: ownership check via `user_entities`, `entities.routes.js` → `.controller.js` → `.service.js`):
+Agreed direction (not implemented): point the public page at the actual public endpoint. The org admin's own "preview while unapproved" need is separately served by the already-authenticated studio builder preview — no owner-bypass logic needed on the public endpoint itself.
 
-- **`GET /api/entities/:id/approval-status`** (`requireAuth`) → `getApprovalStatus(entityId, userId)`:
-  - ownership check (copy `updateEntity`'s `SELECT 1 FROM user_entities WHERE user_id = $1 AND entity_id = $2` pattern, throw `'Unauthorized'` on failure)
-  - `SELECT status, updated_at FROM entities WHERE id = $1`
-  - `SELECT action, notes, reason_tags, created_at, u.full_name AS actor_name FROM platform_audit_log a JOIN users u ON u.id = a.super_admin_user_id WHERE entity_id = $1 ORDER BY created_at DESC LIMIT 1`
-  - returns `{ status, updatedAt: auditRow?.created_at ?? entity.updated_at, comment: auditRow?.notes ?? null, reasonTags: auditRow?.reason_tags ?? [], actionBy: auditRow?.actor_name ?? null }`
+**Don't assume donations work for anonymous visitors until this is fixed.**
 
-- **`PATCH /api/entities/:id/request-review`** (`requireAuth`) → `requestReview(entityId, userId)`:
-  - same ownership check
-  - `UPDATE entities SET status = 'pending_review', updated_at = NOW() WHERE id = $1 AND status = 'changes_requested' RETURNING *` — the `AND status = 'changes_requested'` clause *is* the transition guard (0 rows back = invalid transition)
-  - if no row returned, throw `'Invalid transition'`
+---
 
-`entities.controller.js` gets two thin handlers mapping `'Unauthorized'` → 403, `'Invalid transition'` → 409. Routes added to `entities.routes.js`, both behind `requireAuth`.
+## 5. Bug fixed this session: document uploads weren't persisting
 
-### Frontend
+Reported symptom: org admin uploads association certificate / tax document via the entity settings page; a health check elsewhere still says they're missing.
 
-- **`src/app/shared/constants/approval-reason-tags.ts`** (new, shared): the 5 predefined reason keys + Hebrew labels (מסמכים חסרים / מסמכים לא קריאים / פרטי עמותה שגויים / בעיית סליקה / אחר) — single source of truth for both sides.
-- **`EntitiesService`**: add `getApprovalStatus(entityId)`, `requestReview(entityId)`.
-- **New `ApprovalStatusCardComponent`** (`src/app/modules/settings/components/approval-status-card/`) — a persistent card (not a dismissible banner), fetches its own data given an `[entityId]` input. Shows status icon/label, reason tags + free-text comment + actionBy/when when present, and a "שלח לבדיקה מחדש" CTA only when `status === 'changes_requested'`. Dropped into **both** `entity-settings.component.html` and `dashboard.component.html` (entity-manager dashboard) — same component, two call sites.
-- **Super-admin side** (`platform-organization-detail-page`): notes `<textarea>` becomes required (button disabled without it) for Reject/Request-Changes/Suspend only; add reason-tag checkboxes above it for those three actions. `PlatformService`'s `reject`/`requestChanges`/`suspend` gain a `reasonTags?: string[]` param.
+Root cause: `entity-basic-info-section-edit.component.ts`'s `onAssociationCertificateSelected`/`onTaxDocumentSelected` only stash the raw `File` + filename locally (for an immediate preview) — they never call the real upload endpoint. `entity-settings.component.ts`'s `saveAll()` had real-endpoint logic for **removing** a document (`removeAssociationDocument`/`removeTaxDocument`) but nothing for **uploading/replacing** one — a new file just rode along in the generic `updateEntity()` JSON PATCH, whose backend SQL whitelist doesn't reference document columns at all and silently drops them.
 
-### Verification
+Fix: `saveAll()` now checks for a `File` instance on `draftEntity.association_certificate_file`/`tax_document_file` and calls `uploadAssociationDocument`/`uploadTaxDocument` (the real multipart endpoints, already correctly used elsewhere) before proceeding, then clears the `File` reference so it isn't resent on a later unrelated save.
 
-- Backend smoke test (temp super-admin token + the test entity above): request-changes with reason tags + note → confirm `platform_audit_log.reason_tags` populated. Hit `GET /api/entities/:id/approval-status` **as the entity owner** and confirm it returns comment/tags/actionBy. Hit `PATCH /api/entities/:id/request-review` — 409 when status isn't `changes_requested`, success (→`pending_review`) when it is. Confirm a non-owner gets 403 on both new endpoints.
-- `npx tsc --noEmit` **and** `npx ng build` both clean.
-- Visual: as the test org's owner, load `/settings` and the dashboard, confirm the persistent card renders correctly and the resubmit button only appears/works in `changes_requested`; as super admin, confirm the reason-tag checkboxes + required-note validation on the three gated actions.
+**Anyone who "uploaded" a document before this fix lost it** — it only ever existed as an in-memory File object, never reached the server. They need to re-upload now that it's fixed.
+
+(Separately noted, not fixed: the organization-registration wizard writes throwaway `blob:` URLs into `association_certificate_url`/`tax_document_url` at entity-creation time, before the real upload call completes later in that same flow — harmless today since that real call is correctly wired there, but stale `blob:` values were observed sitting in those `_url` columns in the DB. The health-check logic correctly ignores `_url` and checks `_name` instead, so this hasn't caused a visible bug, just dead data worth knowing about.)
+
+---
+
+## Test entity used throughout
+
+`קשת נחושה - ע"ר`, id `9fb88307-2999-459e-8d9c-42b53a82051c`, owner user id `9` (`hagai.cohen@gmail.com`). All smoke tests flipped `users.is_super_admin`/`entities.status` temporarily via one-off `node -e` scripts against the live DB and reverted afterward — DB should be at its natural state (`is_super_admin=false`, entity `status='pending_review'`, no stray `platform_audit_log` test rows).
+
+## Git state
+
+Both repos pushed to `main` this session (frontend `hamonym-app`, backend via parent `HamonymStudio` — remember they share one remote, see topology note above):
+- Super Admin MVP + dashboard + entity approval workflow (frontend `9b6e8ae`, backend `8c24833`)
+- Document upload fix (frontend `0add6dc`)
