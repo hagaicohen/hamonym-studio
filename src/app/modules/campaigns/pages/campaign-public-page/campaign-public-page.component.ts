@@ -47,6 +47,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   showFailedPopup = false;
   currentAmbassador: Ambassador | null = null;
   ambassadorsList: AmbassadorPublicInfo[] | null = null;
+  autoOpenJoin    = false;
 
   private pollSlug    = '';
   private pollSince   = '';
@@ -74,8 +75,9 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     }
 
     const sinceParm = this.route.snapshot.queryParamMap.get('since');
+    this.autoOpenJoin = this.route.snapshot.queryParamMap.get('join') === 'ambassador';
 
-    this.api.getBySlug(slug).subscribe({
+    this.api.getBySlugPublic(slug).subscribe({
       next: (data) => {
         this.state.loadDraft(data);
         this.loader.hide();

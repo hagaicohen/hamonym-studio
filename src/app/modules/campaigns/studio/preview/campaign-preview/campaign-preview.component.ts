@@ -84,6 +84,8 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
 
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
+  @Input() autoOpenJoin = false;
+  private autoOpenJoinTriggered = false;
   private ambassadorSvc = inject(AmbassadorService);
   private router        = inject(Router);
 
@@ -256,6 +258,10 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
         this.ambassadorSvc.listPublic(draft.slug).subscribe({
           next: list => { this.liveAmbassadors = list; },
         });
+      }
+      if (draft?.slug && this.autoOpenJoin && !this.autoOpenJoinTriggered) {
+        this.autoOpenJoinTriggered = true;
+        this.openJoinModal();
       }
     });
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {

@@ -4,6 +4,22 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { CampaignDraft } from './campaign-studio-state.service';
 
+export interface DiscoverCampaign {
+  id: string;
+  title: string;
+  slug: string;
+  short_description: string | null;
+  category: string | null;
+  cover_image_url: string | null;
+  current_amount: string | number;
+  target_amount: string | number;
+  supporters_count: number;
+  end_date: string | null;
+  created_at: string;
+  entity_name: string;
+  entity_logo: string | null;
+}
+
 // pg v8 returns DATE columns as Date objects. Convert to YYYY-MM-DD using local time.
 function toDateStr(v: Date | string | null | undefined): string {
   if (!v) return '';
@@ -176,6 +192,35 @@ export class CampaignApiService {
     return this.http.get<any>(`${this.apiUrl}/slug/${slug}`, {
       headers: this.headers(),
     }).pipe(map(r => this.fromSnake(r)));
+  }
+
+  // Truly public — no auth header, only resolves published campaigns of active
+  // entities. Use this for anonymous-visitor pages (the public campaign page,
+  // donation flow); getBySlug() above is entity-owner-scoped and requires login.
+  getBySlugPublic(slug: string): Observable<CampaignDraft> {
+    return this.http.get<any>(`${this.apiUrl}/public/${slug}`)
+      .pipe(map(r => this.fromSnake(r)));
+  }
+
+  discover(query: {
+    search?: string;
+    category?: string;
+    sortBy?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<{ campaigns: DiscoverCampaign[]; total: number; page: number; limit: number }> {
+    let params: Record<string, string> = {
+      page: String(query.page ?? 0),
+      limit: String(query.limit ?? 12),
+    };
+    if (query.search) params['search'] = query.search;
+    if (query.category) params['category'] = query.category;
+    if (query.sortBy) params['sortBy'] = query.sortBy;
+
+    return this.http.get<{ campaigns: DiscoverCampaign[]; total: number; page: number; limit: number }>(
+      `${this.apiUrl}/discover`,
+      { params },
+    );
   }
 
   checkSlugAvailable(slug: string, excludeId?: string): Observable<boolean> {

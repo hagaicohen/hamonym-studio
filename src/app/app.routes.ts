@@ -167,9 +167,8 @@ export const routes: Routes = [
   {
     path: 'campaigns/discover',
     loadComponent: () =>
-      import('./modules/campaigns/pages/campaign-discover/campaign-discover.component').then(
-        (m) => m.CampaignDiscoverComponent,
-      ),
+      import('./modules/campaigns/pages/campaign-discover/campaign-discover.component')
+        .then((m) => m.CampaignDiscoverComponent),
   },
 
   /* ========================================

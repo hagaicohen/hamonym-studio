@@ -1,0 +1,87 @@
+<div class="disc-page">
+  <div class="disc-header">
+    <img src="/logo.png" alt="Hamonym" class="disc-logo" />
+    <h1 class="disc-title">{{ pageTitle }}</h1>
+    <p class="disc-subtitle">{{ pageSubtitle }}</p>
+  </div>
+
+  <div class="disc-controls">
+    <input
+      class="disc-search"
+      type="search"
+      placeholder="חיפוש לפי שם קמפיין או עמותה..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+    <div class="disc-sort">
+      @for (opt of sortOptions; track opt.key) {
+        <button
+          class="disc-sort-btn"
+          [class.active]="sortBy === opt.key"
+          (click)="setSortBy(opt.key)"
+        >{{ opt.label }}</button>
+      }
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="disc-error">{{ error }}</div>
+  } @else if (loading) {
+    <div class="disc-loading">טוען קמפיינים...</div>
+  } @else if (campaigns.length === 0) {
+    <div class="disc-empty">
+      <div class="disc-empty-icon">🔍</div>
+      <p>לא נמצאו קמפיינים תואמים</p>
+    </div>
+  } @else {
+    <div class="disc-grid" [class.refreshing]="refreshing">
+      @for (c of campaigns; track c.id) {
+        <div class="disc-card" (click)="openCampaign(c)">
+          <div class="disc-card-cover">
+            @if (c.cover_image_url) {
+              <img [src]="c.cover_image_url" alt="" />
+            } @else {
+              <div class="disc-card-cover-placeholder"></div>
+            }
+          </div>
+          <div class="disc-card-body">
+            <div class="disc-card-entity">
+              @if (c.entity_logo) {
+                <img [src]="c.entity_logo" class="disc-entity-logo" alt="" />
+              } @else {
+                <div class="disc-entity-logo-placeholder">{{ c.entity_name.charAt(0) }}</div>
+              }
+              <span>{{ c.entity_name }}</span>
+            </div>
+            <h3 class="disc-card-title">{{ c.title }}</h3>
+            @if (c.short_description) {
+              <p class="disc-card-desc">{{ c.short_description }}</p>
+            }
+            <div class="disc-card-progress-track">
+              <div class="disc-card-progress-fill" [style.width.%]="progressPct(c)"></div>
+            </div>
+            <div class="disc-card-stats">
+              <span class="disc-card-raised">{{ fmtMoney(c.current_amount) }} <span class="disc-card-of">מתוך {{ fmtMoney(c.target_amount) }}</span></span>
+              <span class="disc-card-supporters">{{ c.supporters_count }} תומכים</span>
+            </div>
+            @if (daysLeft(c.end_date) !== null) {
+              <div class="disc-card-days">{{ daysLeft(c.end_date) }} ימים נותרו</div>
+            }
+            @if (mode === 'ambassador') {
+              <div class="disc-card-cta">🤝 הצטרפו כשגרירים</div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="disc-footer">
+      <span>{{ total }} קמפיינים</span>
+      <div class="disc-pager">
+        <button (click)="prevPage()" [disabled]="page === 0">←</button>
+        <span>{{ page + 1 }} / {{ totalPages }}</span>
+        <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
+      </div>
+    </div>
+  }
+</div>
