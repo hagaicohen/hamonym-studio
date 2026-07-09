@@ -46,7 +46,16 @@ module.exports =
           decoded.roleId,
 
         isSuperAdmin:
-          !!decoded.isSuperAdmin
+          !!decoded.isSuperAdmin,
+
+        platformPermissions:
+          Array.isArray(decoded.platformPermissions) ? decoded.platformPermissions : [],
+
+        impersonatedBy:
+          decoded.impersonatedBy || null,
+
+        impersonatorName:
+          decoded.impersonatorName || null
 
       };
 

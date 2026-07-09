@@ -1,0 +1,9 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS deleted_by BIGINT REFERENCES users(id),
+  ADD COLUMN IF NOT EXISTS password_reset_token TEXT,
+  ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ;
+
+ALTER TABLE platform_audit_log
+  ADD COLUMN IF NOT EXISTS target_user_id BIGINT REFERENCES users(id),
+  ADD COLUMN IF NOT EXISTS ip_address TEXT;

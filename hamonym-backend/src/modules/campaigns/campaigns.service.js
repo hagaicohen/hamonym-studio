@@ -456,6 +456,7 @@ exports.getMyCampaigns =
           ON ue.entity_id = e.id
 
         WHERE ue.user_id = $1
+        AND c.deleted_at IS NULL
 
         ORDER BY c.created_at DESC
         `,
@@ -525,7 +526,7 @@ exports.updateCampaign =
       await db.query(
 
         `
-        SELECT entity_id
+        SELECT entity_id, is_locked
         FROM campaigns
         WHERE id = $1
         LIMIT 1
@@ -560,6 +561,14 @@ exports.updateCampaign =
 
       throw new Error(
         'Unauthorized'
+      );
+
+    }
+
+    if (campaignResult.rows[0].is_locked) {
+
+      throw new Error(
+        'Campaign is locked'
       );
 
     }
@@ -683,7 +692,7 @@ exports.getCampaignBySlugPublic = async (slug) => {
     `SELECT c.*, e.display_name AS entity_name, e.logo_url AS entity_logo
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
-     WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active'
+     WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active' AND c.deleted_at IS NULL
      LIMIT 1`,
     [slug]
   );

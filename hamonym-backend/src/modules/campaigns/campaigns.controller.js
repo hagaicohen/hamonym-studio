@@ -22,6 +22,9 @@ function getStatusCode(
     case 'Campaign slug already exists':
       return 409;
 
+    case 'Campaign is locked':
+      return 423;
+
     default:
       return 500;
 
@@ -55,6 +58,9 @@ function getErrorMessage(
 
     case 'Campaign slug already exists':
       return 'כתובת הקמפיין כבר קיימת';
+
+    case 'Campaign is locked':
+      return 'הקמפיין נעול על ידי מנהל הפלטפורמה';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';

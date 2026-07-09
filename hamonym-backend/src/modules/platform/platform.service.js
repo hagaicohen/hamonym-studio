@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const db = require('../../db/db');
 const entitiesService = require('../entities/entities.service');
 const ambassadorsService = require('../ambassadors/ambassadors.service');
@@ -19,6 +22,68 @@ const ACTION_LABELS = {
   reactivate: 'הופעלה מחדש',
 };
 
+const CAMPAIGN_SORT_COLUMNS = {
+  title: 'c.title',
+  status: 'c.status',
+  created_at: 'c.created_at',
+  raised: 'c.current_amount',
+  entity: 'e.display_name',
+};
+
+const CAMPAIGN_STATUS_LABELS = {
+  draft: 'טיוטה',
+  published: 'פעיל',
+  paused: 'מושהה',
+  ended: 'הסתיים',
+};
+
+const CAMPAIGN_ACTION_LABELS = {
+  feature: 'סומן כמומלץ',
+  unfeature: 'הוסר סימון מומלץ',
+  lock: 'ננעל לעריכה',
+  unlock: 'נפתח לעריכה',
+  delete: 'נמחק',
+  restore: 'שוחזר',
+  transfer_ownership: 'הועבר לעמותה אחרת',
+  change_slug: 'כתובת הקמפיין שונתה',
+  duplicate: 'שוכפל',
+};
+
+function campaignActionLabel(action) {
+  if (action.startsWith('status_change:')) {
+    const status = action.split(':')[1];
+    return `סטטוס שונה ל${CAMPAIGN_STATUS_LABELS[status] || status}`;
+  }
+  return CAMPAIGN_ACTION_LABELS[action] || action;
+}
+
+const USER_SORT_COLUMNS = {
+  name: 'u.full_name',
+  email: 'u.email',
+  role: 'r.name',
+  created_at: 'u.created_at',
+  last_login_at: 'u.last_login_at',
+};
+
+const USER_ACTION_LABELS = {
+  disable: 'הושבת',
+  enable: 'הופעל מחדש',
+  delete: 'נמחק',
+  restore: 'שוחזר',
+  reset_password_link: 'נוצר קישור לאיפוס סיסמה',
+  impersonate: 'בוצעה התחברות בשמו (Impersonation)',
+  grant_super_admin: 'הוגדר כסופר אדמין מלא',
+  revoke_super_admin: 'הוסרה הרשאת סופר אדמין מלא',
+  set_permissions: 'הרשאות פלטפורמה עודכנו',
+  create_admin: 'נוצר כמנהל פלטפורמה',
+};
+
+const VALID_PLATFORM_PERMISSIONS = ['organizations', 'campaigns'];
+
+function userActionLabel(action) {
+  return USER_ACTION_LABELS[action] || action;
+}
+
 const PROFILE_COMPLETION_SQL = `
   ROUND((
     (CASE WHEN e.display_name IS NOT NULL AND e.display_name <> '' THEN 1 ELSE 0 END) +
@@ -30,13 +95,12 @@ const PROFILE_COMPLETION_SQL = `
 `;
 
 exports.getDashboardData = async () => {
-  const [kpis, alerts, activity, charts] = await Promise.all([
+  const [kpis, alerts, charts] = await Promise.all([
     getKpis(),
     getAlerts(),
-    getActivity(),
     getCharts(),
   ]);
-  return { kpis, alerts, activity, charts };
+  return { kpis, alerts, charts };
 };
 
 async function getKpis() {
@@ -48,7 +112,7 @@ async function getKpis() {
          COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review
        FROM entities`
     ),
-    db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published'`),
+    db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published' AND deleted_at IS NULL`),
     db.query(
       `SELECT
          COALESCE(SUM(amount) FILTER (WHERE status = 'paid' AND created_at >= CURRENT_DATE), 0)::float AS today,
@@ -115,55 +179,120 @@ async function getAlerts() {
   return alerts;
 }
 
-async function getActivity() {
-  const [auditRes, campaignsRes, donationsRes, usersRes] = await Promise.all([
+const ACTIVITY_TYPES = ['audit', 'campaign_audit', 'user_audit', 'campaign', 'donation', 'user'];
+
+const ACTIVITY_UNION_SQL = `
+  SELECT
+    'audit'::text AS type, a.created_at AS ts,
+    u.full_name AS actor_name, a.action AS action,
+    e.display_name AS entity_name, NULL::text AS campaign_title,
+    NULL::numeric AS amount, NULL::text AS user_name
+  FROM platform_audit_log a
+  JOIN users u ON u.id = a.super_admin_user_id
+  JOIN entities e ON e.id = a.entity_id
+  WHERE a.entity_id IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    'campaign_audit', a.created_at,
+    u.full_name, a.action,
+    NULL, c.title,
+    NULL, NULL
+  FROM platform_audit_log a
+  JOIN users u ON u.id = a.super_admin_user_id
+  JOIN campaigns c ON c.id = a.campaign_id
+  WHERE a.campaign_id IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    'user_audit', a.created_at,
+    u.full_name, a.action,
+    NULL, NULL,
+    NULL, COALESCE(t.full_name, t.email)
+  FROM platform_audit_log a
+  JOIN users u ON u.id = a.super_admin_user_id
+  JOIN users t ON t.id = a.target_user_id
+  WHERE a.target_user_id IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    'campaign', c.created_at,
+    NULL, NULL,
+    e.display_name, c.title,
+    NULL, NULL
+  FROM campaigns c
+  JOIN entities e ON e.id = c.entity_id
+
+  UNION ALL
+
+  SELECT
+    'donation', d.created_at,
+    NULL, NULL,
+    NULL, c.title,
+    d.amount, NULL
+  FROM donations d
+  JOIN campaigns c ON c.id = d.campaign_id
+  WHERE d.status = 'paid'
+
+  UNION ALL
+
+  SELECT
+    'user', created_at,
+    NULL, NULL,
+    NULL, NULL,
+    NULL, COALESCE(full_name, email)
+  FROM users
+`;
+
+function formatActivityRow(r) {
+  switch (r.type) {
+    case 'audit':
+      return { type: r.type, title: `עמותת ${r.entity_name}`, subtitle: `${ACTION_LABELS[r.action] || r.action} ע"י ${r.actor_name}`, timestamp: r.ts };
+    case 'campaign_audit':
+      return { type: r.type, title: `קמפיין ${r.campaign_title}`, subtitle: `${campaignActionLabel(r.action)} ע"י ${r.actor_name}`, timestamp: r.ts };
+    case 'user_audit':
+      return { type: r.type, title: `משתמש ${r.user_name}`, subtitle: `${userActionLabel(r.action)} ע"י ${r.actor_name}`, timestamp: r.ts };
+    case 'campaign':
+      return { type: r.type, title: `קמפיין חדש: ${r.campaign_title}`, subtitle: r.entity_name, timestamp: r.ts };
+    case 'donation':
+      return { type: r.type, title: `תרומה: ₪${Math.round(r.amount).toLocaleString('he-IL')}`, subtitle: `לקמפיין ${r.campaign_title}`, timestamp: r.ts };
+    case 'user':
+      return { type: r.type, title: `משתמש חדש: ${r.user_name}`, subtitle: null, timestamp: r.ts };
+    default:
+      return { type: r.type, title: r.type, subtitle: null, timestamp: r.ts };
+  }
+}
+
+exports.getActivityFeed = async ({ type, sortDir, page = 0, limit = 20 }) => {
+  const typeFilter = type && ACTIVITY_TYPES.includes(type) ? type : null;
+  const whereStr = typeFilter ? `WHERE type = $1` : '';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+  const params = typeFilter ? [typeFilter] : [];
+
+  const [listRes, totalRes] = await Promise.all([
     db.query(
-      `SELECT a.action, a.created_at, u.full_name AS actor_name, e.display_name AS entity_name
-       FROM platform_audit_log a
-       JOIN users u ON u.id = a.super_admin_user_id
-       LEFT JOIN entities e ON e.id = a.entity_id
-       ORDER BY a.created_at DESC LIMIT 10`
+      `SELECT * FROM (${ACTIVITY_UNION_SQL}) combined
+       ${whereStr}
+       ORDER BY ts ${sortOrd}
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, page * limit]
     ),
     db.query(
-      `SELECT c.title, c.created_at, e.display_name AS entity_name
-       FROM campaigns c JOIN entities e ON e.id = c.entity_id
-       ORDER BY c.created_at DESC LIMIT 10`
+      `SELECT COUNT(*)::int AS total FROM (${ACTIVITY_UNION_SQL}) combined ${whereStr}`,
+      params
     ),
-    db.query(
-      `SELECT d.amount::float, d.created_at, c.title AS campaign_title
-       FROM donations d JOIN campaigns c ON c.id = d.campaign_id
-       WHERE d.status = 'paid'
-       ORDER BY d.created_at DESC LIMIT 10`
-    ),
-    db.query(`SELECT email, full_name, created_at FROM users ORDER BY created_at DESC LIMIT 10`),
   ]);
 
-  const items = [
-    ...auditRes.rows.map((r) => ({
-      type: 'audit',
-      label: `${ACTION_LABELS[r.action] || r.action}: ${r.entity_name || '—'}`,
-      timestamp: r.created_at,
-    })),
-    ...campaignsRes.rows.map((r) => ({
-      type: 'campaign',
-      label: `קמפיין חדש: ${r.title} (${r.entity_name})`,
-      timestamp: r.created_at,
-    })),
-    ...donationsRes.rows.map((r) => ({
-      type: 'donation',
-      label: `תרומה התקבלה: ₪${Math.round(r.amount).toLocaleString('he-IL')} ל${r.campaign_title}`,
-      timestamp: r.created_at,
-    })),
-    ...usersRes.rows.map((r) => ({
-      type: 'user',
-      label: `משתמש חדש נרשם: ${r.full_name || r.email}`,
-      timestamp: r.created_at,
-    })),
-  ];
-
-  items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  return items.slice(0, 20);
-}
+  return {
+    items: listRes.rows.map(formatActivityRow),
+    total: totalRes.rows[0].total,
+    page,
+    limit,
+  };
+};
 
 async function getCharts() {
   const [dailyRes, weeklyRes] = await Promise.all([
@@ -276,9 +405,9 @@ exports.getOrganizationDetail = async (entityId) => {
       [entityId]
     ),
     db.query(
-      `SELECT id, title, slug, status, current_amount, target_amount, supporters_count, created_at
+      `SELECT id, title, slug, status, current_amount, target_amount, supporters_count, is_featured, is_locked, created_at
        FROM campaigns
-       WHERE entity_id = $1
+       WHERE entity_id = $1 AND deleted_at IS NULL
        ORDER BY created_at DESC`,
       [entityId]
     ),
@@ -314,7 +443,7 @@ exports.getOrganizationDetail = async (entityId) => {
   };
 };
 
-async function setStatus(entityId, superAdminUserId, status, action, notes, reasonTags) {
+async function setStatus(entityId, superAdminUserId, status, action, notes, reasonTags, ip) {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
@@ -326,9 +455,9 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
     if (!result.rows[0]) throw new Error('Entity not found');
 
     await client.query(
-      `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, reason_tags)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [superAdminUserId, entityId, action, notes || null, reasonTags && reasonTags.length ? reasonTags : null]
+      `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, reason_tags, ip_address)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [superAdminUserId, entityId, action, notes || null, reasonTags && reasonTags.length ? reasonTags : null, ip || null]
     );
 
     await client.query('COMMIT');
@@ -341,17 +470,521 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   }
 }
 
-exports.approve = (entityId, superAdminUserId, notes) =>
-  setStatus(entityId, superAdminUserId, 'active', 'approve', notes);
+exports.approve = (entityId, superAdminUserId, notes, reasonTags, ip) =>
+  setStatus(entityId, superAdminUserId, 'active', 'approve', notes, null, ip);
 
-exports.reject = (entityId, superAdminUserId, notes, reasonTags) =>
-  setStatus(entityId, superAdminUserId, 'rejected', 'reject', notes, reasonTags);
+exports.reject = (entityId, superAdminUserId, notes, reasonTags, ip) =>
+  setStatus(entityId, superAdminUserId, 'rejected', 'reject', notes, reasonTags, ip);
 
-exports.requestChanges = (entityId, superAdminUserId, notes, reasonTags) =>
-  setStatus(entityId, superAdminUserId, 'changes_requested', 'request_changes', notes, reasonTags);
+exports.requestChanges = (entityId, superAdminUserId, notes, reasonTags, ip) =>
+  setStatus(entityId, superAdminUserId, 'changes_requested', 'request_changes', notes, reasonTags, ip);
 
-exports.suspend = (entityId, superAdminUserId, notes, reasonTags) =>
-  setStatus(entityId, superAdminUserId, 'suspended', 'suspend', notes, reasonTags);
+exports.suspend = (entityId, superAdminUserId, notes, reasonTags, ip) =>
+  setStatus(entityId, superAdminUserId, 'suspended', 'suspend', notes, reasonTags, ip);
 
-exports.reactivate = (entityId, superAdminUserId, notes) =>
-  setStatus(entityId, superAdminUserId, 'active', 'reactivate', notes);
+exports.reactivate = (entityId, superAdminUserId, notes, reasonTags, ip) =>
+  setStatus(entityId, superAdminUserId, 'active', 'reactivate', notes, null, ip);
+
+exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page = 0, limit = 25, showDeleted, featuredOnly }) => {
+  const where = [];
+  const params = [];
+  let idx = 1;
+
+  where.push(showDeleted ? `c.deleted_at IS NOT NULL` : `c.deleted_at IS NULL`);
+
+  if (status && status !== 'all') {
+    where.push(`c.status = $${idx++}`);
+    params.push(status);
+  }
+  if (entityId) {
+    where.push(`c.entity_id = $${idx++}`);
+    params.push(entityId);
+  }
+  if (search) {
+    where.push(`c.title ILIKE $${idx}`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+  if (featuredOnly) {
+    where.push(`c.is_featured = true`);
+  }
+
+  const whereStr = `WHERE ${where.join(' AND ')}`;
+  const sortCol = CAMPAIGN_SORT_COLUMNS[sortBy] || 'c.created_at';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  const [listRes, totalRes] = await Promise.all([
+    db.query(
+      `SELECT
+         c.id, c.title, c.slug, c.status, c.current_amount, c.target_amount, c.supporters_count,
+         c.is_featured, c.is_locked, c.deleted_at, c.created_at,
+         e.id AS entity_id, e.display_name AS entity_name
+       FROM campaigns c
+       JOIN entities e ON e.id = c.entity_id
+       ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM campaigns c JOIN entities e ON e.id = c.entity_id ${whereStr}`,
+      params
+    ),
+  ]);
+
+  return {
+    campaigns: listRes.rows,
+    total: totalRes.rows[0].total,
+    page,
+    limit,
+  };
+};
+
+exports.getCampaignDetail = async (campaignId) => {
+  const [campaignRes, auditRes] = await Promise.all([
+    db.query(
+      `SELECT c.*, e.display_name AS entity_name
+       FROM campaigns c
+       JOIN entities e ON e.id = c.entity_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [campaignId]
+    ),
+    db.query(
+      `SELECT a.id, a.action, a.notes, a.created_at, u.full_name AS super_admin_name
+       FROM platform_audit_log a
+       JOIN users u ON u.id = a.super_admin_user_id
+       WHERE a.campaign_id = $1
+       ORDER BY a.created_at DESC`,
+      [campaignId]
+    ),
+  ]);
+
+  if (!campaignRes.rows.length) throw new Error('Campaign not found');
+
+  return {
+    campaign: campaignRes.rows[0],
+    auditLog: auditRes.rows,
+  };
+};
+
+async function campaignAction(campaignId, superAdminUserId, action, notes, ip, mutate) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await mutate(client);
+    if (!result.rows[0]) throw new Error('Campaign not found');
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, campaign_id, action, notes, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [superAdminUserId, campaignId, action, notes || null, ip || null]
+    );
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+exports.setCampaignStatus = (campaignId, superAdminUserId, status, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, `status_change:${status}`, notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [status, campaignId]
+    )
+  );
+
+exports.setCampaignFeatured = (campaignId, superAdminUserId, featured, ip) =>
+  campaignAction(campaignId, superAdminUserId, featured ? 'feature' : 'unfeature', null, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET is_featured = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [featured, campaignId]
+    )
+  );
+
+exports.setCampaignLocked = (campaignId, superAdminUserId, locked, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, locked ? 'lock' : 'unlock', notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET is_locked = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [locked, campaignId]
+    )
+  );
+
+exports.softDeleteCampaign = (campaignId, superAdminUserId, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, 'delete', notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET deleted_at = NOW(), deleted_by = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [superAdminUserId, campaignId]
+    )
+  );
+
+exports.restoreCampaign = (campaignId, superAdminUserId, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, 'restore', notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *`,
+      [campaignId]
+    )
+  );
+
+exports.transferCampaignOwnership = (campaignId, superAdminUserId, newEntityId, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, 'transfer_ownership', notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET entity_id = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [newEntityId, campaignId]
+    )
+  );
+
+exports.setCampaignSlug = (campaignId, superAdminUserId, newSlug, notes, ip) =>
+  campaignAction(campaignId, superAdminUserId, 'change_slug', notes, ip, (client) =>
+    client.query(
+      `UPDATE campaigns SET slug = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [newSlug, campaignId]
+    )
+  );
+
+exports.duplicateCampaign = async (campaignId, superAdminUserId, notes, ip) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const srcRes = await client.query(`SELECT * FROM campaigns WHERE id = $1 LIMIT 1`, [campaignId]);
+    const src = srcRes.rows[0];
+    if (!src) throw new Error('Campaign not found');
+
+    const columns = Object.keys(src).filter((k) => !['id', 'created_at', 'updated_at', 'published_at'].includes(k));
+    const newSlug = `${src.slug}-copy-${Date.now()}`;
+
+    // Matches campaigns.service.js's JSON_COLUMNS: these are jsonb, so they need an
+    // explicit JSON.stringify — pg's default Array.isArray branch would otherwise
+    // format them as Postgres array literals instead of JSON. Everything else
+    // (including the native numeric[] columns suggested_amounts/monthly_amounts)
+    // must be passed through untouched so pg's own array serialization applies.
+    const JSONB_COLUMNS = new Set([
+      'hero_text_style', 'hero_cta_config', 'rewards', 'sponsors',
+      'ambassadors', 'updates', 'blocks', 'layout',
+    ]);
+    const toInsertValue = (key, v) => {
+      if (v === null || v === undefined || v instanceof Date) return v;
+      return JSONB_COLUMNS.has(key) && typeof v === 'object' ? JSON.stringify(v) : v;
+    };
+
+    const values = columns.map((k) => {
+      if (k === 'slug') return newSlug;
+      if (k === 'status') return 'draft';
+      if (k === 'current_amount' || k === 'supporters_count') return 0;
+      return toInsertValue(k, src[k]);
+    });
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+
+    const insertRes = await client.query(
+      `INSERT INTO campaigns (${columns.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      values
+    );
+    const newCampaign = insertRes.rows[0];
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, campaign_id, action, notes, ip_address)
+       VALUES ($1, $2, 'duplicate', $3, $4)`,
+      [superAdminUserId, campaignId, notes || `שוכפל ל: ${newCampaign.title} (${newCampaign.id})`, ip || null]
+    );
+
+    await client.query('COMMIT');
+    return newCampaign;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+exports.getRoles = async () => {
+  const res = await db.query(`SELECT id, code, name FROM roles ORDER BY id`);
+  return res.rows;
+};
+
+exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, limit = 25 }) => {
+  const where = [];
+  const params = [];
+  let idx = 1;
+
+  if (status === 'deleted') {
+    where.push(`u.deleted_at IS NOT NULL`);
+  } else {
+    where.push(`u.deleted_at IS NULL`);
+    if (status === 'active') where.push(`u.is_active = true`);
+    if (status === 'disabled') where.push(`u.is_active = false`);
+    if (status === 'super_admin') where.push(`u.is_super_admin = true`);
+  }
+
+  if (roleId) {
+    where.push(`u.role_id = $${idx++}`);
+    params.push(roleId);
+  }
+  if (search) {
+    where.push(`(u.full_name ILIKE $${idx} OR u.email ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = `WHERE ${where.join(' AND ')}`;
+  const sortCol = USER_SORT_COLUMNS[sortBy] || 'u.created_at';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  const [listRes, totalRes] = await Promise.all([
+    db.query(
+      `SELECT
+         u.id, u.email, u.full_name, u.phone, u.role_id, r.name AS role_name,
+         u.is_active, u.is_super_admin, u.email_verified, u.last_login_at,
+         u.created_at, u.deleted_at, u.platform_permissions,
+         COALESCE(ec.entities_count, 0) AS entities_count
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS entities_count FROM user_entities ue WHERE ue.user_id = u.id
+       ) ec ON true
+       ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM users u JOIN roles r ON r.id = u.role_id ${whereStr}`,
+      params
+    ),
+  ]);
+
+  return { users: listRes.rows, total: totalRes.rows[0].total, page, limit };
+};
+
+exports.getUserDetail = async (userId) => {
+  const [userRes, entitiesRes, auditRes] = await Promise.all([
+    db.query(
+      `SELECT u.id, u.email, u.full_name, u.phone, u.role_id, r.name AS role_name,
+              u.is_active, u.is_super_admin, u.email_verified, u.last_login_at,
+              u.created_at, u.updated_at, u.deleted_at, u.platform_permissions,
+              u.google_id IS NOT NULL AS is_oauth
+       FROM users u JOIN roles r ON r.id = u.role_id
+       WHERE u.id = $1 LIMIT 1`,
+      [userId]
+    ),
+    db.query(
+      `SELECT ue.entity_id, e.display_name AS entity_name, ue.role
+       FROM user_entities ue JOIN entities e ON e.id = ue.entity_id
+       WHERE ue.user_id = $1`,
+      [userId]
+    ),
+    db.query(
+      `SELECT a.id, a.action, a.notes, a.created_at, u.full_name AS super_admin_name
+       FROM platform_audit_log a JOIN users u ON u.id = a.super_admin_user_id
+       WHERE a.target_user_id = $1 ORDER BY a.created_at DESC`,
+      [userId]
+    ),
+  ]);
+
+  if (!userRes.rows.length) throw new Error('User not found');
+
+  return { user: userRes.rows[0], entities: entitiesRes.rows, auditLog: auditRes.rows };
+};
+
+async function userAction(userId, superAdminUserId, action, notes, ip, mutate) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await mutate(client);
+    if (!result.rows[0]) throw new Error('User not found');
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, target_user_id, action, notes, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [superAdminUserId, userId, action, notes || null, ip || null]
+    );
+
+    await client.query('COMMIT');
+    const user = result.rows[0];
+    delete user.password_hash;
+    delete user.password_reset_token;
+    return user;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+exports.setUserActive = (userId, superAdminUserId, active, notes, ip) => {
+  if (String(userId) === String(superAdminUserId)) throw new Error('Cannot modify own account');
+  return userAction(userId, superAdminUserId, active ? 'enable' : 'disable', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET is_active = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [active, userId]
+    )
+  );
+};
+
+exports.softDeleteUser = (userId, superAdminUserId, notes, ip) => {
+  if (String(userId) === String(superAdminUserId)) throw new Error('Cannot modify own account');
+  return userAction(userId, superAdminUserId, 'delete', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET deleted_at = NOW(), deleted_by = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [superAdminUserId, userId]
+    )
+  );
+};
+
+exports.restoreUser = (userId, superAdminUserId, notes, ip) =>
+  userAction(userId, superAdminUserId, 'restore', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *`,
+      [userId]
+    )
+  );
+
+exports.generatePasswordResetLink = async (userId, superAdminUserId, notes, ip) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  const user = await userAction(userId, superAdminUserId, 'reset_password_link', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET password_reset_token = $1, password_reset_expires_at = $2, updated_at = NOW()
+       WHERE id = $3 AND deleted_at IS NULL RETURNING *`,
+      [tokenHash, expiresAt, userId]
+    )
+  );
+
+  return { user, resetToken: rawToken, expiresAt };
+};
+
+exports.impersonateUser = async (userId, superAdminUserId, notes, ip) => {
+  if (String(userId) === String(superAdminUserId)) throw new Error('Cannot impersonate self');
+
+  const userRes = await db.query(
+    `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL AND is_active = true LIMIT 1`,
+    [userId]
+  );
+  if (!userRes.rows.length) throw new Error('User not found');
+  const target = userRes.rows[0];
+
+  if (target.is_super_admin) throw new Error('Cannot impersonate a super admin');
+
+  const adminRes = await db.query(`SELECT full_name, email FROM users WHERE id = $1 LIMIT 1`, [superAdminUserId]);
+  const admin = adminRes.rows[0];
+
+  await db.query(
+    `INSERT INTO platform_audit_log (super_admin_user_id, target_user_id, action, notes, ip_address)
+     VALUES ($1, $2, 'impersonate', $3, $4)`,
+    [superAdminUserId, userId, notes || null, ip || null]
+  );
+
+  const token = jwt.sign(
+    {
+      userId: target.id,
+      roleId: target.role_id,
+      isSuperAdmin: false,
+      impersonatedBy: superAdminUserId,
+      impersonatorName: admin?.full_name || admin?.email,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '2h' }
+  );
+
+  return {
+    token,
+    user: {
+      id: target.id,
+      email: target.email,
+      full_name: target.full_name,
+      role_id: target.role_id,
+      picture: target.picture ?? null,
+      is_super_admin: false,
+    },
+  };
+};
+
+exports.setUserSuperAdmin = (userId, superAdminUserId, isSuperAdmin, notes, ip) => {
+  if (String(userId) === String(superAdminUserId)) throw new Error('Cannot modify own account');
+  return userAction(userId, superAdminUserId, isSuperAdmin ? 'grant_super_admin' : 'revoke_super_admin', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET is_super_admin = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [isSuperAdmin, userId]
+    )
+  );
+};
+
+exports.setUserPermissions = (userId, superAdminUserId, permissions, notes, ip) => {
+  if (String(userId) === String(superAdminUserId)) throw new Error('Cannot modify own account');
+  const clean = Array.isArray(permissions) ? permissions.filter((p) => VALID_PLATFORM_PERMISSIONS.includes(p)) : [];
+  return userAction(userId, superAdminUserId, 'set_permissions', notes, ip, (client) =>
+    client.query(
+      `UPDATE users SET platform_permissions = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING *`,
+      [clean.length ? clean : null, userId]
+    )
+  );
+};
+
+exports.createAdminUser = async ({ email, fullName, isSuperAdmin, permissions, superAdminUserId, notes, ip }) => {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) throw new Error('Email is required');
+
+  const existing = await db.query(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [cleanEmail]);
+  if (existing.rows.length) throw new Error('Email already exists');
+
+  const clean = Array.isArray(permissions) ? permissions.filter((p) => VALID_PLATFORM_PERMISSIONS.includes(p)) : [];
+
+  // Unusable random password hash — forces the new admin through the reset-password
+  // link (generated below) instead of leaving password_hash NULL, which would throw
+  // inside bcrypt.compare on login instead of cleanly rejecting with "Invalid credentials".
+  const randomPassword = crypto.randomBytes(24).toString('hex');
+  const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+  const client = await db.connect();
+  let newUser;
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO users (role_id, email, full_name, password_hash, is_active, is_super_admin, platform_permissions)
+       VALUES (5, $1, $2, $3, true, $4, $5)
+       RETURNING *`,
+      [cleanEmail, fullName || null, passwordHash, !!isSuperAdmin, clean.length ? clean : null]
+    );
+    newUser = result.rows[0];
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, target_user_id, action, notes, ip_address)
+       VALUES ($1, $2, 'create_admin', $3, $4)`,
+      [superAdminUserId, newUser.id, notes || null, ip || null]
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err.code === '23505') throw new Error('Email already exists');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await db.query(
+    `UPDATE users SET password_reset_token = $1, password_reset_expires_at = $2 WHERE id = $3`,
+    [tokenHash, expiresAt, newUser.id]
+  );
+
+  delete newUser.password_hash;
+  delete newUser.password_reset_token;
+
+  return { user: newUser, resetToken: rawToken, expiresAt };
+};
