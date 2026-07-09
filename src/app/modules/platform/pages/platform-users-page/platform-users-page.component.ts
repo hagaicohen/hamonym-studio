@@ -9,6 +9,17 @@ import { CurrentContextService } from '../../../../core/services/current-context
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AmbassadorService } from '../../../campaigns/services/ambassador.service';
+import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+
+const COLUMNS: ColumnDef[] = [
+  { key: 'email',        label: 'אימייל' },
+  { key: 'role',         label: 'תפקיד' },
+  { key: 'entities',     label: 'עמותות' },
+  { key: 'status',       label: 'סטטוס' },
+  { key: 'permissions',  label: 'הרשאות פלטפורמה' },
+  { key: 'last_login_at', label: 'כניסה אחרונה' },
+  { key: 'created_at',   label: 'נרשם' },
+];
 
 interface PlatformUser {
   id: string;
@@ -54,7 +65,7 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-users-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-users-page.component.html',
   styleUrl: './platform-users-page.component.css',
 })
@@ -63,6 +74,12 @@ export class PlatformUsersPageComponent implements OnInit {
   private ctx = inject(CurrentContextService);
   private entitiesService = inject(EntitiesService);
   private currentEntityService = inject(CurrentEntityService);
+  readonly columns = COLUMNS;
+  visibleColumns = new Set(COLUMNS.map((c) => c.key));
+
+  onVisibleColumnsChange(v: Set<string>): void {
+    this.visibleColumns = v;
+  }
   private ambassadorService = inject(AmbassadorService);
 
   readonly chips = CHIPS;

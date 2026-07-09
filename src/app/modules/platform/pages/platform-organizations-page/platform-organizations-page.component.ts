@@ -4,6 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlatformService } from '../../services/platform.service';
 import { relativeTime } from '../../utils/relative-time';
+import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+
+const COLUMNS: ColumnDef[] = [
+  { key: 'status',      label: 'סטטוס' },
+  { key: 'owner',       label: 'מנהל' },
+  { key: 'completion',  label: 'שלמות פרופיל' },
+  { key: 'campaigns',   label: 'קמפיינים' },
+  { key: 'raised',      label: 'סכום שגויס' },
+  { key: 'created_at',  label: 'תאריך הרשמה' },
+  { key: 'activity',    label: 'פעילות אחרונה' },
+];
 
 interface Organization {
   id: string;
@@ -45,7 +56,7 @@ const STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-organizations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-organizations-page.component.html',
   styleUrl: './platform-organizations-page.component.css',
 })
@@ -55,6 +66,12 @@ export class PlatformOrganizationsPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   readonly chips = CHIPS;
+  readonly columns = COLUMNS;
+  visibleColumns = new Set(COLUMNS.map((c) => c.key));
+
+  onVisibleColumnsChange(v: Set<string>): void {
+    this.visibleColumns = v;
+  }
 
   organizations: Organization[] = [];
   total = 0;

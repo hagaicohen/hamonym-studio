@@ -1,0 +1,17 @@
+<div class="col-picker">
+  <button class="col-picker-btn" (click)="toggleOpen()" type="button">
+    <span class="col-picker-icon">⚙</span> עמודות
+  </button>
+
+  @if (open) {
+    <div class="col-picker-panel">
+      @for (col of columns; track col.key) {
+        <label class="col-picker-item">
+          <input type="checkbox" [checked]="isVisible(col.key)" (change)="toggleColumn(col.key)" />
+          {{ col.label }}
+        </label>
+      }
+      <button class="col-picker-reset" (click)="resetToDefault()" type="button">איפוס לברירת מחדל</button>
+    </div>
+  }
+</div>

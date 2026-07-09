@@ -21,6 +21,7 @@
       [(ngModel)]="searchQuery"
       (input)="onSearch()"
     />
+    <app-column-picker [columns]="columns" storageKey="platformColumns_users" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
   </div>
 
   <div class="plat-chips">
@@ -47,43 +48,47 @@
           <thead>
             <tr>
               <th class="sortable" (click)="sortBy('name')">שם</th>
-              <th class="sortable" (click)="sortBy('email')">אימייל</th>
-              <th class="sortable" (click)="sortBy('role')">תפקיד</th>
-              <th>עמותות</th>
-              <th>סטטוס</th>
-              <th>הרשאות פלטפורמה</th>
-              <th class="sortable" (click)="sortBy('last_login_at')">כניסה אחרונה</th>
-              <th class="sortable" (click)="sortBy('created_at')">נרשם</th>
+              @if (visibleColumns.has('email')) { <th class="sortable" (click)="sortBy('email')">אימייל</th> }
+              @if (visibleColumns.has('role')) { <th class="sortable" (click)="sortBy('role')">תפקיד</th> }
+              @if (visibleColumns.has('entities')) { <th>עמותות</th> }
+              @if (visibleColumns.has('status')) { <th>סטטוס</th> }
+              @if (visibleColumns.has('permissions')) { <th>הרשאות פלטפורמה</th> }
+              @if (visibleColumns.has('last_login_at')) { <th class="sortable" (click)="sortBy('last_login_at')">כניסה אחרונה</th> }
+              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">נרשם</th> }
               <th>פעולות</th>
             </tr>
           </thead>
           <tbody>
             @for (u of users; track u.id) {
               <tr class="plat-row" [class.deleted-row]="u.deleted_at">
-                <td>
+                <td data-label="שם">
                   <div class="user-name">{{ u.full_name || '—' }}</div>
                   @if (isSelf(u)) { <span class="user-self-tag">(אתה)</span> }
                 </td>
-                <td>{{ u.email }}</td>
-                <td>{{ u.role_name }}</td>
-                <td>{{ u.entities_count }}</td>
-                <td>
-                  <span class="plat-status" [ngClass]="statusBadge(u).cls">{{ statusBadge(u).label }}</span>
-                </td>
-                <td>
-                  @if (u.is_super_admin) {
-                    <span class="perm-pill perm-full">גישה מלאה</span>
-                  } @else if (u.platform_permissions?.length) {
-                    @for (p of u.platform_permissions; track p) {
-                      <span class="perm-pill">{{ p === 'organizations' ? 'עמותות' : p === 'campaigns' ? 'קמפיינים' : p }}</span>
+                @if (visibleColumns.has('email')) { <td data-label="אימייל">{{ u.email }}</td> }
+                @if (visibleColumns.has('role')) { <td data-label="תפקיד">{{ u.role_name }}</td> }
+                @if (visibleColumns.has('entities')) { <td data-label="עמותות">{{ u.entities_count }}</td> }
+                @if (visibleColumns.has('status')) {
+                  <td data-label="סטטוס">
+                    <span class="plat-status" [ngClass]="statusBadge(u).cls">{{ statusBadge(u).label }}</span>
+                  </td>
+                }
+                @if (visibleColumns.has('permissions')) {
+                  <td data-label="הרשאות פלטפורמה">
+                    @if (u.is_super_admin) {
+                      <span class="perm-pill perm-full">גישה מלאה</span>
+                    } @else if (u.platform_permissions?.length) {
+                      @for (p of u.platform_permissions; track p) {
+                        <span class="perm-pill">{{ p === 'organizations' ? 'עמותות' : p === 'campaigns' ? 'קמפיינים' : p }}</span>
+                      }
+                    } @else {
+                      <span class="perm-none">—</span>
                     }
-                  } @else {
-                    <span class="perm-none">—</span>
-                  }
-                </td>
-                <td>{{ relativeTime(u.last_login_at) }}</td>
-                <td>{{ fmtDate(u.created_at) }}</td>
-                <td>
+                  </td>
+                }
+                @if (visibleColumns.has('last_login_at')) { <td data-label="כניסה אחרונה">{{ relativeTime(u.last_login_at) }}</td> }
+                @if (visibleColumns.has('created_at')) { <td data-label="נרשם">{{ fmtDate(u.created_at) }}</td> }
+                <td data-label="פעולות">
                   <div class="user-actions">
                     @if (u.deleted_at) {
                       <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(u)">שחזור</button>

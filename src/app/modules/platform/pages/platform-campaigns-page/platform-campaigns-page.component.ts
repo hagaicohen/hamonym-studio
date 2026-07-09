@@ -2,6 +2,16 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PlatformService } from '../../services/platform.service';
+import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+
+const COLUMNS: ColumnDef[] = [
+  { key: 'entity',      label: 'עמותה' },
+  { key: 'status',      label: 'סטטוס' },
+  { key: 'raised',      label: 'גיוס' },
+  { key: 'featured',    label: 'מומלץ' },
+  { key: 'locked',      label: 'נעילה' },
+  { key: 'created_at',  label: 'נוצר' },
+];
 
 interface Campaign {
   id: string;
@@ -58,7 +68,7 @@ interface EntityOption {
 @Component({
   selector: 'app-platform-campaigns-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-campaigns-page.component.html',
   styleUrl: './platform-campaigns-page.component.css',
 })
@@ -67,6 +77,12 @@ export class PlatformCampaignsPageComponent implements OnInit {
 
   readonly chips = CHIPS;
   readonly statusOptions = Object.keys(STATUS_LABELS);
+  readonly columns = COLUMNS;
+  visibleColumns = new Set(COLUMNS.map((c) => c.key));
+
+  onVisibleColumnsChange(v: Set<string>): void {
+    this.visibleColumns = v;
+  }
 
   campaigns: Campaign[] = [];
   total = 0;

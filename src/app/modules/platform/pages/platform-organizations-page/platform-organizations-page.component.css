@@ -237,6 +237,59 @@
 
 .plat-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* RESPONSIVE — card layout instead of horizontal-scroll table below 720px */
+@media (max-width: 720px) {
+  .plat-page { padding: 16px; }
+
+  .plat-header { flex-wrap: wrap; gap: 10px; }
+
+  .plat-filters { flex-direction: column; align-items: stretch; }
+
+  .plat-table-wrap { overflow-x: visible; }
+
+  .plat-table thead { display: none; }
+
+  .plat-table,
+  .plat-table tbody { display: block; width: 100%; }
+
+  .plat-table tr {
+    display: block;
+    margin: 12px;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    padding: 4px 12px;
+    background: #fff;
+  }
+
+  .plat-table td {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: normal;
+  }
+
+  .plat-table td:last-child { border-bottom: none; }
+
+  .plat-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 3px;
+  }
+
+  .plat-table td.plat-logo-cell {
+    display: flex;
+    align-items: center;
+  }
+  .plat-table td.plat-logo-cell::before { content: none; }
+
+  .plat-footer { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+}
+
 @media (max-width: 560px) {
   .plat-page { padding: 20px; }
 }

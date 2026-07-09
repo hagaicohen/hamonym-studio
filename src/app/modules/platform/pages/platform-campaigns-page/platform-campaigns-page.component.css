@@ -253,6 +253,9 @@
 .btn-secondary,
 .btn-delete,
 .btn-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -260,6 +263,12 @@
   cursor: pointer;
   border: 1px solid transparent;
   white-space: nowrap;
+}
+
+.btn-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .btn-secondary { background: #f1f5f9; color: #475569; }
@@ -393,6 +402,51 @@
 
 .btn-cancel:disabled,
 .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* RESPONSIVE — card layout instead of horizontal-scroll table below 720px */
+@media (max-width: 720px) {
+  .plat-page { padding: 16px; }
+
+  .plat-filters { flex-direction: column; align-items: stretch; }
+
+  .plat-table-wrap { overflow-x: visible; }
+
+  .plat-table thead { display: none; }
+
+  .plat-table,
+  .plat-table tbody { display: block; width: 100%; }
+
+  .plat-table tr {
+    display: block;
+    margin: 12px;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    padding: 4px 12px;
+    background: #fff;
+  }
+
+  .plat-table td {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: normal;
+  }
+
+  .plat-table td:last-child { border-bottom: none; }
+
+  .plat-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 3px;
+  }
+
+  .plat-footer { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+}
 
 @media (max-width: 560px) {
   .plat-page { padding: 20px; }

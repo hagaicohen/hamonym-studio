@@ -16,6 +16,7 @@
       [(ngModel)]="searchQuery"
       (input)="onSearch()"
     />
+    <app-column-picker [columns]="columns" storageKey="platformColumns_organizations" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
   </div>
 
   <div class="plat-chips">
@@ -43,13 +44,13 @@
             <tr>
               <th></th>
               <th class="sortable" (click)="sortBy('name')">שם העמותה</th>
-              <th class="sortable" (click)="sortBy('status')">סטטוס</th>
-              <th>מנהל</th>
-              <th>שלמות פרופיל</th>
-              <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th>
-              <th class="sortable" (click)="sortBy('raised')">סכום שגויס</th>
-              <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th>
-              <th>פעילות אחרונה</th>
+              @if (visibleColumns.has('status')) { <th class="sortable" (click)="sortBy('status')">סטטוס</th> }
+              @if (visibleColumns.has('owner')) { <th>מנהל</th> }
+              @if (visibleColumns.has('completion')) { <th>שלמות פרופיל</th> }
+              @if (visibleColumns.has('campaigns')) { <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th> }
+              @if (visibleColumns.has('raised')) { <th class="sortable" (click)="sortBy('raised')">סכום שגויס</th> }
+              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th> }
+              @if (visibleColumns.has('activity')) { <th>פעילות אחרונה</th> }
             </tr>
           </thead>
           <tbody>
@@ -62,27 +63,33 @@
                     <div class="plat-logo-placeholder">{{ org.display_name.charAt(0) }}</div>
                   }
                 </td>
-                <td>{{ org.display_name }}</td>
-                <td><span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span></td>
-                <td>
-                  @if (org.owner_name) {
-                    {{ org.owner_name }}
-                  } @else {
-                    —
-                  }
-                </td>
-                <td>
-                  <div class="plat-progress-wrap" [title]="org.profile_completion + '%'">
-                    <div class="plat-progress-track">
-                      <div class="plat-progress-fill" [style.width.%]="org.profile_completion"></div>
+                <td data-label="שם העמותה">{{ org.display_name }}</td>
+                @if (visibleColumns.has('status')) {
+                  <td data-label="סטטוס"><span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span></td>
+                }
+                @if (visibleColumns.has('owner')) {
+                  <td data-label="מנהל">
+                    @if (org.owner_name) {
+                      {{ org.owner_name }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                }
+                @if (visibleColumns.has('completion')) {
+                  <td data-label="שלמות פרופיל">
+                    <div class="plat-progress-wrap" [title]="org.profile_completion + '%'">
+                      <div class="plat-progress-track">
+                        <div class="plat-progress-fill" [style.width.%]="org.profile_completion"></div>
+                      </div>
+                      <span class="plat-progress-label">{{ org.profile_completion }}%</span>
                     </div>
-                    <span class="plat-progress-label">{{ org.profile_completion }}%</span>
-                  </div>
-                </td>
-                <td>{{ org.campaigns_count }}</td>
-                <td>{{ fmtMoney(org.total_raised) }}</td>
-                <td>{{ fmtDate(org.created_at) }}</td>
-                <td>{{ relativeTime(org.updated_at) }}</td>
+                  </td>
+                }
+                @if (visibleColumns.has('campaigns')) { <td data-label="קמפיינים">{{ org.campaigns_count }}</td> }
+                @if (visibleColumns.has('raised')) { <td data-label="סכום שגויס">{{ fmtMoney(org.total_raised) }}</td> }
+                @if (visibleColumns.has('created_at')) { <td data-label="תאריך הרשמה">{{ fmtDate(org.created_at) }}</td> }
+                @if (visibleColumns.has('activity')) { <td data-label="פעילות אחרונה">{{ relativeTime(org.updated_at) }}</td> }
               </tr>
             }
           </tbody>

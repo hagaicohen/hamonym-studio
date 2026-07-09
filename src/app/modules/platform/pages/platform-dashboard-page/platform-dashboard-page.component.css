@@ -376,6 +376,9 @@
 }
 
 .plat-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 12px 16px;
   border-radius: 8px;
   background: #f5f3ff;
@@ -383,8 +386,15 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
-  text-align: center;
+  text-align: right;
   transition: background 0.12s;
+}
+
+.plat-quick-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #583cd6;
 }
 
 .plat-quick-btn:hover { background: #eef0ff; }
