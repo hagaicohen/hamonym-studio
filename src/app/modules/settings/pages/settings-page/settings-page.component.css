@@ -34,6 +34,11 @@
 
 .section-header {
   margin-bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .section-header h2 {
@@ -635,6 +640,90 @@
   color: #111827;
 
   font-weight: 700;
+}
+
+.account-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.account-input:focus {
+  outline: none;
+  border-color: #583cd6;
+}
+
+.account-btn {
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.account-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.account-btn--save {
+  background: #583cd6;
+  color: #fff;
+}
+
+.account-btn--cancel {
+  background: #fff;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.account-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+}
+
+.account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-field label {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.account-value--readonly {
+  color: #9ca3af;
+  font-weight: 500;
+  padding: 10px 12px;
+}
+
+.account-edit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.password-error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.password-success {
+  padding: 14px 24px;
+  color: #15803d;
+  background: #f0fdf4;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {

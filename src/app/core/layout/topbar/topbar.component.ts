@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, EventEmitter, HostListener, Output, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, EventEmitter, HostListener, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -22,9 +22,9 @@ export class TopbarComponent {
   dropdownOpen = false;
   photoFailed = false;
 
-  readonly currentUser = signal<{ full_name: string; email: string; picture?: string } | null>(
-    this._loadUser(),
-  );
+  constructor(private auth: AuthService) {}
+
+  readonly currentUser = this.auth.currentUser;
 
   readonly userFullName = computed(() => this.currentUser()?.full_name ?? '');
 
@@ -34,17 +34,6 @@ export class TopbarComponent {
   });
 
   readonly userPhoto = computed(() => this.currentUser()?.picture ?? null);
-
-  constructor(private auth: AuthService) {}
-
-  private _loadUser() {
-    try {
-      const raw = localStorage.getItem('user');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
 
   toggleDropdown(event: MouseEvent): void {
     event.stopPropagation();

@@ -148,26 +148,83 @@
 
         <p>פרטי המשתמש והאבטחה</p>
       </div>
+
+      @if (!editingAccount) {
+        <button class="account-btn account-btn--save" (click)="startEditAccount()">עריכה</button>
+      }
     </div>
 
     <div class="account-card">
-      <div class="account-row">
-        <div class="account-label">שם משתמש</div>
+      @if (!editingAccount) {
+        <div class="account-row">
+          <div class="account-label">שם משתמש</div>
+          <div class="account-value">{{ currentUser()?.full_name || "—" }}</div>
+        </div>
 
-        <div class="account-value">Hagai Cohen</div>
-      </div>
+        <div class="account-row">
+          <div class="account-label">אימייל</div>
+          <div class="account-value">{{ currentUser()?.email || "—" }}</div>
+        </div>
 
-      <div class="account-row">
-        <div class="account-label">אימייל</div>
+        <div class="account-row">
+          <div class="account-label">תפקיד נוכחי</div>
+          <div class="account-value">{{ roleLabel || "—" }}</div>
+        </div>
 
-        <div class="account-value">hagai&#64;example.com</div>
-      </div>
+        <div class="account-row">
+          <div class="account-label">סיסמה</div>
+          <div class="account-value">••••••••</div>
+        </div>
+      } @else {
+        <div class="account-edit-panel">
+          <div class="account-field">
+            <label>שם משתמש</label>
+            <input class="account-input" type="text" [(ngModel)]="nameDraft" />
+          </div>
 
-      <div class="account-row">
-        <div class="account-label">תפקיד נוכחי</div>
+          <div class="account-field">
+            <label>אימייל</label>
+            <div class="account-value account-value--readonly">{{ currentUser()?.email || "—" }}</div>
+          </div>
 
-        <div class="account-value">Admin</div>
-      </div>
+          <div class="account-field">
+            <label>סיסמה חדשה</label>
+            <input
+              class="account-input"
+              type="password"
+              placeholder="השאירו ריק אם לא רוצים לשנות"
+              [(ngModel)]="newPassword"
+            />
+          </div>
+
+          <div class="account-field">
+            <label>אימות סיסמה חדשה</label>
+            <input
+              class="account-input"
+              type="password"
+              placeholder="חובה רק אם משנים סיסמה"
+              [(ngModel)]="confirmPassword"
+            />
+          </div>
+
+          @if (accountError) {
+            <div class="password-error">{{ accountError }}</div>
+          }
+
+          <div class="account-edit-actions">
+            <button class="account-btn account-btn--save" [disabled]="accountSaving" (click)="saveAccount()">
+              {{ accountSaving ? "שומר..." : "שמירה" }}
+            </button>
+            <button class="account-btn account-btn--cancel" [disabled]="accountSaving" (click)="cancelEditAccount()">
+              ביטול
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (accountSuccess) {
+        <div class="password-success">הפרטים עודכנו בהצלחה</div>
+      }
     </div>
   </section>
 </div>
