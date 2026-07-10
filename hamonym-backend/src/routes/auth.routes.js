@@ -116,6 +116,15 @@ router.post(
       const user =
         result.rows[0];
 
+      // Retroactively link any past guest donations made with this email —
+      // so a donor who registers after donating immediately sees their history.
+      await pool.query(
+        `UPDATE donations
+         SET donor_user_id = $1
+         WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
+        [user.id, email]
+      );
+
       const token =
         jwt.sign(
 
@@ -230,6 +239,14 @@ router.post(
 
         [user.id]
 
+      );
+
+      // Catches donations made as a guest with this email since the last login.
+      await pool.query(
+        `UPDATE donations
+         SET donor_user_id = $1
+         WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
+        [user.id, user.email]
       );
 
       const entities =

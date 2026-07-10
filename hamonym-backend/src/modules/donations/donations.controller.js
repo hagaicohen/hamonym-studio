@@ -10,6 +10,25 @@ exports.getDonationPublic = async (req, res) => {
   }
 };
 
+exports.getReceipt = async (req, res) => {
+  try {
+    const receipt = await donationsService.getReceipt(req.params.id);
+    if (!receipt) return res.status(404).json({ error: 'קבלה לא נמצאה' });
+    res.json(receipt);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getMyDonations = async (req, res) => {
+  try {
+    const donations = await donationsService.getMyDonations(req.user.id);
+    res.json({ donations });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.createDonation = async (req, res) => {
   try {
     const { campaignId, donor, amount, rewards, utmParams } = req.body;

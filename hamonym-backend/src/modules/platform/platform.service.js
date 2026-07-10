@@ -5,6 +5,7 @@ const db = require('../../db/db');
 const entitiesService = require('../entities/entities.service');
 const ambassadorsService = require('../ambassadors/ambassadors.service');
 const donationsService = require('../donations/donations.service');
+const emailService = require('../email/email.service');
 
 const ORG_SORT_COLUMNS = {
   name: 'e.display_name',
@@ -861,6 +862,16 @@ exports.generatePasswordResetLink = async (userId, superAdminUserId, notes, ip) 
     )
   );
 
+  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+  const resetUrl = `${frontBase}/reset-password?token=${rawToken}`;
+
+  emailService.queue({
+    template: 'reset-password',
+    to: user.email,
+    data: { fullName: user.full_name, resetUrl },
+    userId: user.id,
+  });
+
   return { user, resetToken: rawToken, expiresAt };
 };
 
@@ -985,6 +996,14 @@ exports.createAdminUser = async ({ email, fullName, isSuperAdmin, permissions, s
 
   delete newUser.password_hash;
   delete newUser.password_reset_token;
+
+  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+  emailService.queue({
+    template: 'invite-admin',
+    to: newUser.email,
+    data: { fullName: newUser.full_name, resetUrl: `${frontBase}/reset-password?token=${rawToken}` },
+    userId: newUser.id,
+  });
 
   return { user: newUser, resetToken: rawToken, expiresAt };
 };

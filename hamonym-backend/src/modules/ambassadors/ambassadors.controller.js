@@ -57,6 +57,7 @@ exports.addAdjustment = async (req, res) => {
 exports.listForEntity = async (req, res) => {
   try {
     const entityId = req.params.id;
+    await svc.verifyEntityOwnership(req.user.id, entityId);
     const page  = parseInt(req.query.page  || '0', 10);
     const limit = parseInt(req.query.limit || '25', 10);
     const { search, status, campaignId, sortBy, sortDir } = req.query;
@@ -64,7 +65,7 @@ exports.listForEntity = async (req, res) => {
     res.json(result);
   } catch (e) {
     console.error('[listForEntity] error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(e.message === 'Unauthorized' ? 403 : 500).json({ error: e.message });
   }
 };
 

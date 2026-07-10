@@ -83,6 +83,19 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
   if (rows.length === 0) throw new Error('Unauthorized');
 }
 
+// Exported (not just used internally) because the entity-manager-facing route
+// (listForEntity) needs this check, while the platform-admin route that also
+// calls getEntityAmbassadors() is already authorized via requireSuperAdmin
+// upstream and must NOT be subject to user_entities membership.
+async function verifyEntityOwnership(userId, entityId) {
+  const { rows } = await db.query(
+    `SELECT 1 FROM user_entities WHERE entity_id = $1 AND user_id = $2 LIMIT 1`,
+    [entityId, userId]
+  );
+  if (rows.length === 0) throw new Error('Unauthorized');
+}
+exports.verifyEntityOwnership = verifyEntityOwnership;
+
 // ─── Stats sub-query ─────────────────────────────────────────────────────────
 
 const STATS_SQL = `

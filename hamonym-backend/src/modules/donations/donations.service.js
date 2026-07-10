@@ -1,5 +1,65 @@
 ﻿const axios = require('axios');
 const db    = require('../../db/db');
+const emailService = require('../email/email.service');
+
+// Creates a receipt row for a paid donation (idempotent — a donation can only
+// ever get one receipt, enforced by the UNIQUE(donation_id) constraint) and
+// opportunistically links the donation to an existing user account by email,
+// so it shows up in that donor's "my donations" list immediately, without
+// waiting for them to log in again. Shared by both the mock and Cardcom
+// completion paths so receipts/linking behave identically regardless of
+// payment provider.
+async function finalizePaidDonation(donationId) {
+  await db.query(
+    `UPDATE donations d
+     SET donor_user_id = u.id
+     FROM users u
+     WHERE d.id = $1 AND d.donor_user_id IS NULL AND LOWER(u.email) = LOWER(d.donor_email)`,
+    [donationId]
+  );
+
+  const insertRes = await db.query(
+    `INSERT INTO receipts (donation_id, entity_id, campaign_id, amount, donor_name, donor_email)
+     SELECT id, entity_id, campaign_id, amount, donor_name, donor_email
+     FROM donations
+     WHERE id = $1 AND status = 'paid'
+     ON CONFLICT (donation_id) DO NOTHING
+     RETURNING id, receipt_number, entity_id, campaign_id, amount, donor_name, donor_email`,
+    [donationId]
+  );
+
+  // No row back means either the donation isn't (yet) paid, or a receipt
+  // already existed for it (e.g. a duplicate Cardcom return redirect) — in
+  // both cases the email was already sent (or never should be), so skip it.
+  const receipt = insertRes.rows[0];
+  if (!receipt || !receipt.donor_email) return;
+
+  const detailsRes = await db.query(
+    `SELECT c.title AS campaign_title, e.display_name AS entity_name
+     FROM campaigns c JOIN entities e ON e.id = c.entity_id
+     WHERE c.id = $1`,
+    [receipt.campaign_id]
+  );
+  const details = detailsRes.rows[0] || {};
+  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+  emailService.queue({
+    template: 'receipt',
+    to: receipt.donor_email,
+    data: {
+      donorName: receipt.donor_name,
+      receiptNumber: receipt.receipt_number,
+      amount: receipt.amount,
+      campaignTitle: details.campaign_title,
+      entityName: details.entity_name,
+      receiptUrl: `${frontBase}/receipts/${receipt.id}`,
+    },
+    entityId: receipt.entity_id,
+    campaignId: receipt.campaign_id,
+    donationId,
+  });
+}
+exports.finalizePaidDonation = finalizePaidDonation;
 
 const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
@@ -190,6 +250,7 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
       [amount, row.campaign_id]
     );
     if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+    await finalizePaidDonation(donationId);
   }
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
@@ -206,16 +267,49 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.getDonationPublic = async (donationId) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.created_at, d.status,
+    `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name, d.donor_email, d.donor_user_id,
             c.title AS campaign_title, c.slug AS campaign_slug,
-            c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo
+            c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo,
+            r.id AS receipt_id
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = d.entity_id
+     LEFT JOIN receipts r ON r.donation_id = d.id
      WHERE d.id = $1`,
     [donationId]
   );
   return res.rows[0] || null;
+};
+
+exports.getReceipt = async (receiptId) => {
+  const res = await db.query(
+    `SELECT r.id, r.receipt_number, r.amount, r.donor_name, r.donor_email, r.issued_at,
+            c.title AS campaign_title,
+            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name
+     FROM receipts r
+     JOIN campaigns c ON c.id = r.campaign_id
+     JOIN entities  e ON e.id = r.entity_id
+     WHERE r.id = $1`,
+    [receiptId]
+  );
+  return res.rows[0] || null;
+};
+
+exports.getMyDonations = async (userId) => {
+  const res = await db.query(
+    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous,
+            c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
+            e.display_name AS entity_name, e.logo_url AS entity_logo,
+            r.id AS receipt_id
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities  e ON e.id = d.entity_id
+     LEFT JOIN receipts r ON r.donation_id = d.id
+     WHERE d.donor_user_id = $1 AND d.status = 'paid'
+     ORDER BY d.completed_at DESC`,
+    [userId]
+  );
+  return res.rows;
 };
 
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
@@ -326,6 +420,7 @@ exports.handleMockComplete = async ({ donationId, status, failureReason, complet
        WHERE id = $2`,
       [amount, row.campaign_id]
     );
+    await finalizePaidDonation(donationId);
   }
 
   if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
