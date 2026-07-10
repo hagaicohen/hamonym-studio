@@ -245,4 +245,48 @@
       </app-entity-billing-section-edit>
     }
   </div>
+
+  <br />
+
+  <!-- DANGER ZONE -->
+
+  <div class="danger-zone">
+    <div class="danger-zone-title">מחיקת עמותה</div>
+    <div class="danger-zone-desc">
+      מחיקת העמותה תסתיר אותה ואת כל הקמפיינים שלה מהציבור באופן מיידי. הפעולה ניתנת לביטול רק על ידי צוות המונים.
+    </div>
+    <button type="button" class="danger-btn" (click)="openDeleteEntityModal()">מחיקת העמותה</button>
+  </div>
 </div>
+
+<!-- DELETE CONFIRM MODAL -->
+@if (deleteConfirmOpen) {
+  <div class="modal-backdrop" (click)="closeDeleteEntityModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h2 class="modal-title">מחיקת "{{ draftEntity?.display_name }}"</h2>
+      <p class="modal-desc">
+        פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.
+        כדי לאשר, הקלידו את שם העמותה במדויק:
+      </p>
+      <input
+        type="text"
+        class="danger-confirm-input"
+        [(ngModel)]="deleteConfirmText"
+        [placeholder]="draftEntity?.display_name"
+      />
+      @if (deleteError) {
+        <p class="modal-error">{{ deleteError }}</p>
+      }
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" [disabled]="isDeletingEntity" (click)="closeDeleteEntityModal()">ביטול</button>
+        <button
+          class="modal-btn-delete"
+          [disabled]="!deleteConfirmValid || isDeletingEntity"
+          (click)="confirmDeleteEntity()"
+        >
+          {{ isDeletingEntity ? "מוחק..." : "מחיקת העמותה" }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

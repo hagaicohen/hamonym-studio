@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
-import { LucideAngularModule, CreditCard } from 'lucide-angular';
+import { LucideAngularModule, CreditCard, Pencil } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-billing-section-view',
@@ -23,6 +23,7 @@ export class EntityBillingSectionViewComponent {
   edit = new EventEmitter<void>();
 
   readonly CreditCard = CreditCard;
+  readonly PencilIcon = Pencil;
 
   get isCreditCard(): boolean {
     return this.entity?.billing_method === 'credit-card';

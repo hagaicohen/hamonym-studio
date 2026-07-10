@@ -430,6 +430,20 @@
   text-align: center;
 }
 
+.stat-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.stat-icon {
+  color: #6D5DF6;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+}
+
 .stat-value {
   font-size: 30px;
 
@@ -518,6 +532,8 @@
   align-items: center;
 
   justify-content: center;
+
+  gap: 8px;
 
   transition:
     transform 0.18s ease,
@@ -640,6 +656,38 @@
   color: #111827;
 
   font-weight: 700;
+}
+
+.account-label-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-row-icon {
+  color: #583cd6;
+  flex-shrink: 0;
+}
+
+.account-edit-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid #583cd6;
+  background: #f5f3ff;
+  color: #583cd6;
+
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.account-edit-trigger:hover {
+  background: #ede9fe;
 }
 
 .account-input {

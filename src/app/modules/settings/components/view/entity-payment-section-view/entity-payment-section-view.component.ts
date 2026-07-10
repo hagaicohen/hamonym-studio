@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, WalletCards } from 'lucide-angular';
+import { LucideAngularModule, WalletCards, Pencil } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-payment-section-view',
@@ -20,6 +20,7 @@ export class EntityPaymentSectionViewComponent {
   testConnection = new EventEmitter<void>();
 
   readonly WalletCards = WalletCards;
+  readonly PencilIcon = Pencil;
 
   get statusLabel(): string {
     switch (this.entity?.cardcom_connection_status) {

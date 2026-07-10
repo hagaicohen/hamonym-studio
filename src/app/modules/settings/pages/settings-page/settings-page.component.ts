@@ -16,10 +16,12 @@ import { CurrentContextService } from '../../../../core/services/current-context
 
 import { AuthService } from '../../../../core/services/auth.service';
 
+import { LucideAngularModule, Pencil, User, Mail, ShieldCheck, KeyRound, Flag, Users, Settings } from 'lucide-angular';
+
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, LucideAngularModule],
   templateUrl: './settings-page.component.html',
   styleUrls: ['./settings-page.component.css'],
 })
@@ -31,6 +33,15 @@ export class SettingsPageComponent implements OnInit {
   private ctx = inject(CurrentContextService);
 
   private authService = inject(AuthService);
+
+  readonly PencilIcon = Pencil;
+  readonly UserIcon = User;
+  readonly MailIcon = Mail;
+  readonly ShieldIcon = ShieldCheck;
+  readonly KeyIcon = KeyRound;
+  readonly FlagIcon = Flag;
+  readonly UsersIcon = Users;
+  readonly SettingsIcon = Settings;
 
   entities: any[] = [];
 

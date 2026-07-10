@@ -4,9 +4,11 @@ import { Component, OnInit, inject, ViewChild } from '@angular/core';
 
 import { finalize, firstValueFrom } from 'rxjs';
 
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { CommonModule } from '@angular/common';
+
+import { FormsModule } from '@angular/forms';
 
 import { LucideAngularModule, Building2 } from 'lucide-angular';
 
@@ -53,6 +55,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 
   imports: [
     CommonModule,
+    FormsModule,
     LucideAngularModule,
 
     EntityBasicInfoSectionViewComponent,
@@ -88,6 +91,8 @@ export class EntitySettingsComponent implements OnInit {
   private entitiesService = inject(EntitiesService);
 
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   @ViewChild(EntityBillingSectionEditComponent)
   billingSection?: EntityBillingSectionEditComponent;
@@ -474,5 +479,41 @@ export class EntitySettingsComponent implements OnInit {
           }, remaining);
         },
       });
+  }
+
+  // ── DELETE ENTITY (soft) ──
+  deleteConfirmOpen = false;
+  deleteConfirmText = '';
+  isDeletingEntity = false;
+  deleteError = '';
+
+  get deleteConfirmValid(): boolean {
+    return this.deleteConfirmText.trim() === (this.draftEntity?.display_name || '').trim();
+  }
+
+  openDeleteEntityModal(): void {
+    this.deleteConfirmText = '';
+    this.deleteError = '';
+    this.deleteConfirmOpen = true;
+  }
+
+  closeDeleteEntityModal(): void {
+    this.deleteConfirmOpen = false;
+  }
+
+  confirmDeleteEntity(): void {
+    if (!this.deleteConfirmValid || this.isDeletingEntity || !this.draftEntity?.id) return;
+
+    this.isDeletingEntity = true;
+    this.entitiesService.deleteEntity(this.draftEntity.id).subscribe({
+      next: () => {
+        this.currentEntityService.setEntity(null);
+        this.router.navigate(['/settings']);
+      },
+      error: (err) => {
+        this.isDeletingEntity = false;
+        this.deleteError = err?.error?.error || 'שגיאה במחיקת העמותה';
+      },
+    });
   }
 }

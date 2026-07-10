@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
-import { LucideAngularModule, ImageIcon } from 'lucide-angular';
+import { LucideAngularModule, ImageIcon, Pencil } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-profile-section-view',
@@ -28,6 +28,7 @@ export class EntityProfileSectionViewComponent {
   @Output() edit = new EventEmitter<void>();
 
   readonly ImageIcon = ImageIcon;
+  readonly PencilIcon = Pencil;
 
   logoLoaded = false;
 

@@ -1,6 +1,6 @@
 import { Component, Input, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, TrendingUp } from 'lucide-angular';
+import { LucideAngularModule, TrendingUp, Pencil } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-goals-section-view',
@@ -17,4 +17,5 @@ export class EntityGoalsSectionViewComponent {
   @Output() edit = new EventEmitter<void>();
 
   readonly TrendingUp = TrendingUp;
+  readonly PencilIcon = Pencil;
 }

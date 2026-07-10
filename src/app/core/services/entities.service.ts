@@ -240,4 +240,13 @@ export class EntitiesService {
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
     );
   }
+
+  // Soft delete — the entity and all its campaigns disappear immediately
+  // (deleted_at set); permanent removal is a platform-admin-only action.
+  deleteEntity(entityId: string): Observable<any> {
+    return this.http.delete(
+      `${environment.apiUrl}/api/entities/${entityId}`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
 }

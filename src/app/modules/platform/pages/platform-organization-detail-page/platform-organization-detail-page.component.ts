@@ -190,6 +190,47 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   suspend(): void { this.runAction('suspend'); }
   reactivate(): void { this.runAction('reactivate'); }
 
+  // ── HARD DELETE (permanent, platform admin only) ──
+  hardDeleteConfirmOpen = false;
+  hardDeleteConfirmText = '';
+  hardDeleteNotes = '';
+  hardDeleteInProgress = false;
+  hardDeleteError = '';
+
+  get hardDeleteConfirmValid(): boolean {
+    return this.hardDeleteConfirmText.trim() === (this.entity?.display_name || '').trim();
+  }
+
+  openHardDeleteModal(): void {
+    this.hardDeleteConfirmText = '';
+    this.hardDeleteNotes = '';
+    this.hardDeleteError = '';
+    this.hardDeleteConfirmOpen = true;
+  }
+
+  closeHardDeleteModal(): void {
+    this.hardDeleteConfirmOpen = false;
+  }
+
+  confirmHardDelete(): void {
+    if (!this.hardDeleteConfirmValid || this.hardDeleteInProgress) return;
+    if (!this.hardDeleteNotes.trim()) {
+      this.hardDeleteError = 'נדרשת הערה';
+      return;
+    }
+
+    this.hardDeleteInProgress = true;
+    this.platformService.hardDelete(this.entityId, this.hardDeleteNotes.trim()).subscribe({
+      next: () => {
+        this.router.navigate(['/platform/organizations']);
+      },
+      error: (err) => {
+        this.hardDeleteInProgress = false;
+        this.hardDeleteError = err.error?.error || 'המחיקה נכשלה';
+      },
+    });
+  }
+
   fmtMoney(n: number): string {
     return '₪' + Math.round(n || 0).toLocaleString('he-IL');
   }

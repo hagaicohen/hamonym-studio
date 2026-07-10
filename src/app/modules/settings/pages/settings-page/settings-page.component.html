@@ -76,16 +76,22 @@
 
             <div class="entity-stats-row">
               <div class="entity-stat">
-                <div class="stat-value">
-                  {{ entity.campaignsCount || 0 }}
+                <div class="stat-value-row">
+                  <lucide-icon [img]="FlagIcon" [size]="22" class="stat-icon"></lucide-icon>
+                  <div class="stat-value">
+                    {{ entity.campaignsCount || 0 }}
+                  </div>
                 </div>
 
                 <div class="stat-label">קמפיינים</div>
               </div>
 
               <div class="entity-stat">
-                <div class="stat-value">
-                  {{ entity.usersCount || 1 }}
+                <div class="stat-value-row">
+                  <lucide-icon [img]="UsersIcon" [size]="22" class="stat-icon"></lucide-icon>
+                  <div class="stat-value">
+                    {{ entity.usersCount || 1 }}
+                  </div>
                 </div>
 
                 <div class="stat-label">משתמשים</div>
@@ -120,6 +126,7 @@
               [routerLink]="['/settings/entities', entity.id]"
               (click)="selectEntity(entity)"
             >
+              <lucide-icon [img]="SettingsIcon" [size]="16"></lucide-icon>
               ניהול
               {{ getEntityTypeLabel(entity.entity_type) }}
             </a>
@@ -150,29 +157,44 @@
       </div>
 
       @if (!editingAccount) {
-        <button class="account-btn account-btn--save" (click)="startEditAccount()">עריכה</button>
+        <button class="account-edit-trigger" (click)="startEditAccount()">
+          <lucide-icon [img]="PencilIcon" [size]="13" [strokeWidth]="1.75"></lucide-icon>
+          עריכה
+        </button>
       }
     </div>
 
     <div class="account-card">
       @if (!editingAccount) {
         <div class="account-row">
-          <div class="account-label">שם משתמש</div>
+          <div class="account-label-row">
+            <lucide-icon [img]="UserIcon" [size]="16" class="account-row-icon"></lucide-icon>
+            <div class="account-label">שם משתמש</div>
+          </div>
           <div class="account-value">{{ currentUser()?.full_name || "—" }}</div>
         </div>
 
         <div class="account-row">
-          <div class="account-label">אימייל</div>
+          <div class="account-label-row">
+            <lucide-icon [img]="MailIcon" [size]="16" class="account-row-icon"></lucide-icon>
+            <div class="account-label">אימייל</div>
+          </div>
           <div class="account-value">{{ currentUser()?.email || "—" }}</div>
         </div>
 
         <div class="account-row">
-          <div class="account-label">תפקיד נוכחי</div>
+          <div class="account-label-row">
+            <lucide-icon [img]="ShieldIcon" [size]="16" class="account-row-icon"></lucide-icon>
+            <div class="account-label">תפקיד נוכחי</div>
+          </div>
           <div class="account-value">{{ roleLabel || "—" }}</div>
         </div>
 
         <div class="account-row">
-          <div class="account-label">סיסמה</div>
+          <div class="account-label-row">
+            <lucide-icon [img]="KeyIcon" [size]="16" class="account-row-icon"></lucide-icon>
+            <div class="account-label">סיסמה</div>
+          </div>
           <div class="account-value">••••••••</div>
         </div>
       } @else {

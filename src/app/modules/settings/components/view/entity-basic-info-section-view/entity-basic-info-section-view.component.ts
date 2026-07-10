@@ -17,7 +17,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { EntitiesService } from '../../../../../core/services/entities.service';
 
-import { LucideAngularModule, Building2 } from 'lucide-angular';
+import { LucideAngularModule, Building2, Pencil } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-basic-info-section-view',
@@ -36,6 +36,7 @@ export class EntityBasicInfoSectionViewComponent implements OnChanges {
   private sanitizer = inject(DomSanitizer);
 
   readonly Building2 = Building2;
+  readonly PencilIcon = Pencil;
 
   @Input()
   entity: any;

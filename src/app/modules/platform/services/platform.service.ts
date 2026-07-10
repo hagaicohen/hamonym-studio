@@ -78,6 +78,11 @@ export class PlatformService {
     return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reactivate`, { notes, reasonTags }, { headers: authHeaders() });
   }
 
+  // Permanent, irreversible removal — everything under this entity is erased.
+  hardDelete(id: string, notes?: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/hard-delete`, { notes }, { headers: authHeaders() });
+  }
+
   getCampaigns(query: {
     search?: string;
     status?: string;

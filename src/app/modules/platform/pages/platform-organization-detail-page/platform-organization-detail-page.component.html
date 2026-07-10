@@ -128,6 +128,14 @@
             }
           </div>
 
+          <div class="plat-danger-zone">
+            <div class="plat-danger-title">מחיקה לצמיתות</div>
+            <div class="plat-danger-desc">
+              פעולה בלתי הפיכה — מוחקת את העמותה, כל הקמפיינים, התרומות, השגרירים והמסמכים שלה מהמערכת לצמיתות.
+            </div>
+            <button class="btn btn-hard-delete" (click)="openHardDeleteModal()">מחיקה לצמיתות</button>
+          </div>
+
         </div>
       }
 
@@ -292,3 +300,41 @@
   }
 
 </div>
+
+<!-- HARD DELETE CONFIRM MODAL -->
+@if (hardDeleteConfirmOpen) {
+  <div class="modal-backdrop" (click)="closeHardDeleteModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h2 class="modal-title">מחיקה לצמיתות של "{{ entity?.display_name }}"</h2>
+      <p class="modal-desc">
+        זו פעולה בלתי הפיכה. כל הקמפיינים, התרומות, הקבלות, השגרירים והמשתמשים המשויכים לעמותה זו יימחקו לצמיתות.
+        כדי לאשר, הקלידו את שם העמותה במדויק:
+      </p>
+      <input
+        type="text"
+        class="plat-notes"
+        [(ngModel)]="hardDeleteConfirmText"
+        [placeholder]="entity?.display_name"
+      />
+      <textarea
+        class="plat-notes"
+        rows="2"
+        placeholder="סיבת המחיקה (נדרש)"
+        [(ngModel)]="hardDeleteNotes"
+      ></textarea>
+      @if (hardDeleteError) {
+        <div class="plat-note-error">{{ hardDeleteError }}</div>
+      }
+      <div class="modal-actions">
+        <button class="btn" [disabled]="hardDeleteInProgress" (click)="closeHardDeleteModal()">ביטול</button>
+        <button
+          class="btn btn-hard-delete"
+          [disabled]="!hardDeleteConfirmValid || hardDeleteInProgress"
+          (click)="confirmHardDelete()"
+        >
+          {{ hardDeleteInProgress ? "מוחק..." : "מחיקה לצמיתות" }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -336,6 +336,74 @@
 .btn-request    { background: #f59e0b; color: #fff; }
 .btn-suspend    { background: #991b1b; color: #fff; }
 .btn-reactivate { background: #583cd6; color: #fff; }
+.btn-hard-delete { background: #7f1d1d; color: #fff; }
+
+.plat-danger-zone {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-radius: 14px;
+}
+
+.plat-danger-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #7f1d1d;
+}
+
+.plat-danger-desc {
+  margin: 8px 0 14px;
+  font-size: 13px;
+  color: #991b1b;
+  line-height: 1.6;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  text-align: right;
+  direction: rtl;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0 0 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
 
 /* TABLE */
 .plat-table-wrap { overflow-x: auto; }
