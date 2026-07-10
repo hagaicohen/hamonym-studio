@@ -268,8 +268,9 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
 exports.getDonationPublic = async (donationId) => {
   const res = await db.query(
     `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name, d.donor_email, d.donor_user_id,
-            c.title AS campaign_title, c.slug AS campaign_slug,
+            c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
             c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo,
+            e.ga_measurement_id AS entity_ga_measurement_id,
             r.id AS receipt_id
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id

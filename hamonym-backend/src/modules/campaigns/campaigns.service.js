@@ -689,7 +689,8 @@ exports.getCampaignBySlug =
 
 exports.getCampaignBySlugPublic = async (slug) => {
   const result = await db.query(
-    `SELECT c.*, e.display_name AS entity_name, e.logo_url AS entity_logo
+    `SELECT c.*, e.display_name AS entity_name, e.logo_url AS entity_logo,
+            e.ga_measurement_id AS entity_ga_measurement_id
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
      WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active' AND c.deleted_at IS NULL

@@ -49,6 +49,12 @@ const reportsRoutes =
 const platformRoutes =
   require('./modules/platform/platform.routes');
 
+const socialMetaRoutes =
+  require('./modules/social-meta/social-meta.routes');
+
+const socialMetaController =
+  require('./modules/social-meta/social-meta.controller');
+
 /*
 |--------------------------------------------------------------------------
 | MIDDLEWARE
@@ -114,6 +120,20 @@ app.use(
   '/api/platform',
   platformRoutes
 );
+
+/*
+|--------------------------------------------------------------------------
+| SOCIAL META / SEO — "dynamic rendering" for JS-blind crawlers
+|--------------------------------------------------------------------------
+| Mounted at root so /campaigns/:slug here mirrors the SPA's own public
+| campaign URL 1:1. Not wired to intercept real traffic yet — the frontend
+| is a separate host with no reverse proxy configured (production hosting
+| isn't chosen yet). Once it is, route requests from known bot user-agents
+| (facebookexternalhit, WhatsApp, LinkedInBot, Twitterbot, ...) hitting
+| /campaigns/:slug to THIS backend's same path instead of the SPA.
+*/
+app.use('/', socialMetaRoutes);
+app.get('/sitemap.xml', socialMetaController.sitemap);
 
 /*
 |--------------------------------------------------------------------------

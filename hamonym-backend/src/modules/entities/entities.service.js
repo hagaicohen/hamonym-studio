@@ -711,9 +711,11 @@ exports.updateEntity =
           billing_method = $28,
           billing_masav_file_name = $29,
 
+          ga_measurement_id = $30,
+
           updated_at = NOW()
 
-        WHERE id = $30
+        WHERE id = $31
 
         RETURNING *
         `,
@@ -760,6 +762,8 @@ exports.updateEntity =
           data.billing_method,
 
           data.billing_masav_file_name,
+
+          data.ga_measurement_id || null,
 
           entityId
 
