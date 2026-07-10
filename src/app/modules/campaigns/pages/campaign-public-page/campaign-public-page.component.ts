@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, OnDestroy, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/campaign-preview.component';
@@ -24,6 +25,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   private route           = inject(ActivatedRoute);
   private router          = inject(Router);
+  private title           = inject(Title);
   private api             = inject(CampaignApiService);
   private state           = inject(CampaignStudioStateService);
   private ui              = inject(StudioUiService);
@@ -50,8 +52,17 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   autoOpenJoin    = false;
 
   private pollSlug    = '';
-  private pollSince   = '';
+  private pollLookback = '';
   private pollInterval: ReturnType<typeof setInterval> | null = null;
+  // Snapshot moment of the current_amount we loaded — the live-poll lookback
+  // window (used for toasts) can reach further back than this and re-surface
+  // a donation already baked into that snapshot, so only items newer than
+  // this are added to the running total to avoid double-counting it.
+  private snapshotTakenAt = new Date();
+  // High-water mark of the latest completed_at already processed by a poll —
+  // advances only forward, so re-querying an overlapping window (see
+  // pollLive) can never re-count or re-toast the same donation twice.
+  private lastSeenAt = new Date();
 
   @HostListener('window:resize')
   onResize(): void { this.syncDevice(); }
@@ -79,6 +90,13 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
     this.api.getBySlugPublic(slug).subscribe({
       next: (data) => {
+        // The page never set its own title, so on arrival from the
+        // donation-success page the browser tab kept showing "תודה על
+        // תרומתך — X" indefinitely — Angular doesn't reset <title> on
+        // navigation by itself.
+        this.title.setTitle(data.title ? `${data.title} — המונים` : 'המונים');
+        this.snapshotTakenAt = new Date();
+        this.lastSeenAt      = this.snapshotTakenAt;
         this.state.loadDraft(data);
         this.loader.hide();
         this.isLoading = false;
@@ -110,19 +128,41 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   }
 
   private startLivePolling(slug: string, since?: string): void {
-    this.pollSlug  = slug;
+    this.pollSlug     = slug;
     // since param passed from success page; default 5-min lookback for fresh viewers
-    this.pollSince = since ?? new Date(Date.now() - 5 * 60_000).toISOString();
+    this.pollLookback = since ?? new Date(Date.now() - 5 * 60_000).toISOString();
     this.pollInterval = setInterval(() => this.pollLive(), 5000);
   }
 
   private pollLive(): void {
-    const since = this.pollSince;
-    this.pollSince = new Date().toISOString();
+    const since = this.pollLookback;
+    // Overlap each window a few seconds past the poll interval: since is
+    // advanced client-side before the request round-trips, a donation that
+    // completes in that gap must not permanently fall between two
+    // non-overlapping windows. lastSeenAt (below) dedupes the overlap.
+    this.pollLookback = new Date(Date.now() - 8000).toISOString();
 
     this.donationSvc.getLive(this.pollSlug, since).subscribe({
       next: items => {
-        for (const item of items) {
+        const newItems = items.filter(item => item.completedAt > this.lastSeenAt);
+        if (newItems.length === 0) return;
+
+        this.lastSeenAt = newItems.reduce(
+          (max, item) => (item.completedAt > max ? item.completedAt : max),
+          this.lastSeenAt,
+        );
+
+        // Items already reflected in the initial snapshot (possible when
+        // `since` looks further back than page load, e.g. the default
+        // lookback or the ?since= from the success-page redirect) are still
+        // shown as toasts, but must not be added to the total again.
+        const countable = newItems.filter(item => item.completedAt > this.snapshotTakenAt);
+        if (countable.length > 0) {
+          const total = countable.reduce((sum, item) => sum + item.amount, 0);
+          this.state.bumpRaisedAmount(total, countable.length);
+        }
+
+        for (const item of newItems) {
           this.toast?.add(item);
         }
       },

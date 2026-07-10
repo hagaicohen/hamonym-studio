@@ -58,11 +58,13 @@
   position: absolute;
   left: 16px;                      /* physical LEFT in RTL */
   padding: 6px 14px;
+  min-width: 150px;
+  text-align: center;
   border: 1.5px solid currentColor;
   border-radius: 20px;
   background: transparent;
   font-size: 12px; font-weight: 600;
-  cursor: default; font-family: inherit;
+  cursor: pointer; font-family: inherit;
   transition: color 0.15s, border-color 0.15s;
 }
 .site-login-btn:hover { color: #cc350f !important; border-color: #cc350f !important; }
@@ -79,10 +81,12 @@
 }
 .nav-donate-btn {
   padding: 8px 18px;
+  min-width: 150px;
+  text-align: center;
   color: #fff;
   border: none; border-radius: 20px;
   font-size: 13px; font-weight: 700;
-  cursor: default; font-family: inherit;
+  cursor: pointer; font-family: inherit;
   white-space: nowrap;
   order: 2;                        /* push to physical left in RTL flex */
 }
@@ -115,6 +119,7 @@
 
 .nav-donate-btn--sm {
   padding: 7px 14px;
+  min-width: 120px;
   font-size: 12px;
 }
 .nav-hamburger {
@@ -1010,6 +1015,7 @@
   justify-content: flex-start;
   padding: 0 16px;
 }
+.campaign-page--mobile .site-login-btn { min-width: 120px; }
 
 /* Mobile: stats + donate cards — compact */
 .campaign-page--mobile .hm-stats,

@@ -112,12 +112,55 @@
   letter-spacing: 1px;
 }
 
-/* ── RECEIPT NOTE ── */
-.success-receipt-note {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0 0 28px;
+/* ── RECEIPT LINK ── */
+.receipt-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-sizing: border-box;
 }
+
+.receipt-link-btn:hover { background: #f1f5f9; }
+
+/* ── CREATE ACCOUNT PROMPT ── */
+.create-account-box {
+  padding: 16px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  background: #f5f3ff;
+  text-align: center;
+}
+
+.create-account-text {
+  font-size: 13px;
+  color: #583cd6;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.create-account-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 8px;
+  background: #583cd6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.create-account-btn:hover { background: #4c32b8; }
 
 /* ── SHARE ── */
 .success-share { margin-bottom: 24px; }

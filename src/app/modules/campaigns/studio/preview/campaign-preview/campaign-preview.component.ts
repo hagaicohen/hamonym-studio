@@ -33,28 +33,6 @@ import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 
-const now = Date.now();
-const MOCK_DONORS: Donor[] = [
-  { name: 'ישראל ישראלי',     amount: 500,  completedAt: new Date(now - 15 * 60000),  isAnonymous: false, isFirst: true  },
-  { name: 'תורמ/ה אנונימי',   amount: 1000, completedAt: new Date(now - 45 * 60000),  isAnonymous: true,  isFirst: false },
-  { name: 'רחל כהן',           amount: 250,  completedAt: new Date(now - 90 * 60000),  isAnonymous: false, isFirst: false },
-  { name: 'תורמ/ה אנונימי',   amount: 750,  completedAt: new Date(now - 3 * 3600000), isAnonymous: true,  isFirst: false },
-  { name: 'אברהם לוי',         amount: 180,  completedAt: new Date(now - 5 * 3600000), isAnonymous: false, isFirst: true  },
-  { name: 'מרים ברק',          amount: 360,  completedAt: new Date(now - 8 * 3600000), isAnonymous: false, isFirst: false },
-  { name: 'תורמ/ה אנונימי',   amount: 100,  completedAt: new Date(now - 24 * 3600000), isAnonymous: true, isFirst: false },
-  { name: 'דוד מזרחי',         amount: 2000, completedAt: new Date(now - 48 * 3600000), isAnonymous: false, isFirst: false },
-  { name: 'שרה גולדברג',       amount: 450,  completedAt: new Date(now - 72 * 3600000), isAnonymous: false, isFirst: true },
-  { name: 'תורמ/ה אנונימי',   amount: 300,  completedAt: new Date(now - 96 * 3600000), isAnonymous: true, isFirst: false },
-];
-const MOCK_TOP_DONORS: TopDonor[] = [
-  { name: 'דוד מזרחי',   total: 2000 },
-  { name: 'ישראל ישראלי', total: 500 },
-  { name: 'שרה גולדברג', total: 450 },
-  { name: 'מרים ברק',    total: 360 },
-  { name: 'רחל כהן',     total: 250 },
-  { name: 'אברהם לוי',   total: 180 },
-];
-
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
   'flexible':       'גיוס גמיש',
@@ -543,6 +521,13 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  goToAccount(): void {
+    // A logged-in visitor here is always a donor viewing a public campaign
+    // page (entity managers/admins don't browse it while authenticated as
+    // themselves) — send them straight to their donation history.
+    this.router.navigate([localStorage.getItem('token') ? '/my-donations' : '/login']);
+  }
+
   openCheckout(draft: CampaignDraft): void {
     if (this.selectedAmount === null && !this.customAmount) {
       const effective = this.getEffectiveAmount(draft);
@@ -669,10 +654,10 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   readonly PAGE_SIZE = 6;
 
   get activeDonors(): Donor[] {
-    return this.state.isEditMode ? MOCK_DONORS : this.donors;
+    return this.donors;
   }
   get activeTopDonors(): TopDonor[] {
-    return this.state.isEditMode ? MOCK_TOP_DONORS : this.topDonors;
+    return this.topDonors;
   }
   get visibleDonors(): Donor[] {
     return this.activeDonors.slice(0, this.shownCount);

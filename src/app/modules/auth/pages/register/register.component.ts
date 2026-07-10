@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
@@ -23,7 +23,7 @@ import { LoadingOverlayComponent } from '../../../../shared/components/loading-o
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css'],
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   form: FormGroup;
 
   loading = false;
@@ -34,10 +34,13 @@ export class RegisterComponent {
 
   showConfirmPassword = false;
 
+  private returnUrl: string | null = null;
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {
     this.form = this.fb.group({
       fullName: ['', Validators.required],
@@ -48,6 +51,18 @@ export class RegisterComponent {
 
       confirmPassword: ['', Validators.required],
     });
+  }
+
+  ngOnInit(): void {
+    // Arriving from the donation-success "create an account" prompt — the
+    // donor already typed these, so prefill instead of asking again.
+    const qp = this.route.snapshot.queryParamMap;
+    const email = qp.get('email');
+    const name = qp.get('name');
+    this.returnUrl = qp.get('returnUrl');
+
+    if (email) this.form.patchValue({ email });
+    if (name) this.form.patchValue({ fullName: name });
   }
 
   togglePassword(): void {
@@ -91,7 +106,7 @@ export class RegisterComponent {
             this.authService.saveToken(response.token);
           }
 
-          this.router.navigate(['/onboarding']);
+          this.router.navigateByUrl(this.returnUrl || '/onboarding');
         },
 
         error: (error) => {

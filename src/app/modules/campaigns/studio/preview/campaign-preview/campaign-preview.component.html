@@ -35,7 +35,8 @@
         <img src="logo-hamonym.svg" class="site-logo-img" alt="המונים">
         <button class="site-login-btn"
           [style.color]="primaryColor(draft)"
-          [style.borderColor]="primaryColor(draft)">
+          [style.borderColor]="primaryColor(draft)"
+          (click)="goToAccount()">
           כניסה / אזור אישי
         </button>
       </div>
@@ -59,14 +60,14 @@
                   (click)="openJoinModal()">
             <span>🚀 הצטרפו כשגרירים</span>
           </button>
-          <button class="nav-donate-btn" [style.background]="primaryColor(draft)">
+          <button class="nav-donate-btn" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
             לתמיכה מאובטחת
           </button>
         </ng-container>
 
         <!-- Mobile: donate + hamburger -->
         <ng-container *ngIf="vm.mobile">
-          <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)">
+          <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
             לתמיכה מאובטחת
           </button>
           <button class="nav-hamburger" (click)="navOpen = !navOpen"

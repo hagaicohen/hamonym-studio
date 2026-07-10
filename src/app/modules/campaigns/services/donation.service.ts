@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -45,6 +45,33 @@ export interface DonationResult {
   donationId: string;
 }
 
+export interface Receipt {
+  id: string;
+  receipt_number: string;
+  amount: string | number;
+  donor_name: string;
+  donor_email: string;
+  issued_at: string;
+  campaign_title: string;
+  entity_name: string;
+  entity_logo: string | null;
+  legal_name: string | null;
+}
+
+export interface MyDonation {
+  id: string;
+  amount: string | number;
+  completed_at: string;
+  created_at: string;
+  is_anonymous: boolean;
+  campaign_title: string;
+  campaign_slug: string;
+  cover_image_url: string | null;
+  entity_name: string;
+  entity_logo: string | null;
+  receipt_id: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DonationService {
   private http   = inject(HttpClient);
@@ -74,9 +101,19 @@ export class DonationService {
       params: new HttpParams().set('since', since),
     }).pipe(map(r => (r.donations ?? []).map((d: any) => ({
       name: d.name,
-      amount: d.amount,
+      amount: parseFloat(d.amount),
       completedAt: new Date(d.completed_at),
       isAnonymous: d.is_anonymous,
     }))));
+  }
+
+  getReceipt(id: string): Observable<Receipt> {
+    return this.http.get<Receipt>(`${this.apiUrl}/receipt/${id}`);
+  }
+
+  getMyDonations(): Observable<MyDonation[]> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    return this.http.get<{ donations: MyDonation[] }>(`${this.apiUrl}/my`, { headers })
+      .pipe(map(r => r.donations ?? []));
   }
 }

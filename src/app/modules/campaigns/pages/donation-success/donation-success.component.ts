@@ -11,11 +11,15 @@ interface DonationResult {
   amount:         number;
   created_at:     string;
   status:         string;
+  donor_name:     string | null;
+  donor_email:    string | null;
+  donor_user_id:  string | null;
   campaign_title: string;
   campaign_slug:  string;
   cover_image_url: string | null;
   entity_name:    string;
   entity_logo:    string | null;
+  receipt_id:     string | null;
 }
 
 @Component({
@@ -85,6 +89,24 @@ export class DonationSuccessComponent implements OnInit {
 
   get campaignUrl(): string {
     return `${window.location.origin}/campaigns/${this.slug}/view`;
+  }
+
+  get receiptUrl(): string | null {
+    return this.donation?.receipt_id ? `/receipts/${this.donation.receipt_id}` : null;
+  }
+
+  // Don't pitch account creation if the donor is already logged in, or this
+  // donation is already linked to an account (e.g. they were logged in when
+  // they donated, or a matching account already existed).
+  get showCreateAccountPrompt(): boolean {
+    return !localStorage.getItem('token') && !this.donation?.donor_user_id;
+  }
+
+  get createAccountQueryParams(): Record<string, string> {
+    const params: Record<string, string> = { returnUrl: '/my-donations' };
+    if (this.donation?.donor_email) params['email'] = this.donation.donor_email;
+    if (this.donation?.donor_name) params['name'] = this.donation.donor_name;
+    return params;
   }
 
   shareWhatsApp(): void {

@@ -552,6 +552,18 @@ export class CampaignStudioStateService {
     this.draftSubject.next(data);
   }
 
+  // Applies newly-polled live donations to the displayed totals without a
+  // full page reload, so the progress bar/raised-amount move while a
+  // visitor has the public campaign page open.
+  bumpRaisedAmount(amountDelta: number, supportersDelta: number): void {
+    const current = this.draft;
+    this.draftSubject.next({
+      ...current,
+      currentAmount:   (current.currentAmount ?? 0) + amountDelta,
+      supportersCount: (current.supportersCount ?? 0) + supportersDelta,
+    });
+  }
+
   // Block operations
   addBlock(type: BlockType): void {
     const blocks = [...this.draft.blocks];

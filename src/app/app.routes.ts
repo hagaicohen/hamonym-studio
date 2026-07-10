@@ -6,6 +6,7 @@ import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-lay
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -149,6 +150,13 @@ export const routes: Routes = [
         .then((m) => m.DonationSuccessComponent),
   },
 
+  {
+    path: 'receipts/:id',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/receipt-view/receipt-view.component')
+        .then((m) => m.ReceiptViewComponent),
+  },
+
   AMBASSADOR_STUDIO_ROUTE,
   CAMPAIGN_AMBASSADORS_ROUTE,
 
@@ -169,6 +177,25 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/campaigns/pages/campaign-discover/campaign-discover.component')
         .then((m) => m.CampaignDiscoverComponent),
+  },
+
+  /* Bare /campaigns/:slug (no /view suffix) — same public, unguarded page as
+     campaigns/:slug/view, just reachable via the shorter link people actually
+     share. Must stay below every literal campaigns/<word> route above
+     (create, discover, etc.) or :slug would swallow them as a "slug" value. */
+  {
+    path: 'campaigns/:slug',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
+        .then((m) => m.CampaignPublicPageComponent),
+  },
+
+  {
+    path: 'my-donations',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./modules/campaigns/pages/my-donations/my-donations.component')
+        .then((m) => m.MyDonationsComponent),
   },
 
   /* ========================================

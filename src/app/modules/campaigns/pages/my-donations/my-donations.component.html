@@ -1,0 +1,63 @@
+<div class="md-page">
+
+  <div class="md-header">
+    <img src="/logo.png" alt="Hamonym" class="md-logo" />
+    <button class="md-logout" (click)="logout()">התנתקות</button>
+  </div>
+
+  <div class="md-hero">
+    <h1 class="md-title">💛 הפרופיל שלי</h1>
+    <p class="md-subtitle">כל התרומות שלך במקום אחד</p>
+  </div>
+
+  @if (loading) {
+    <div class="md-loading">טוען...</div>
+  } @else if (error) {
+    <div class="md-error">{{ error }}</div>
+  } @else {
+
+    <div class="md-kpi-row">
+      <div class="md-kpi-card">
+        <div class="md-kpi-value">{{ fmtMoney(totalDonated) }}</div>
+        <div class="md-kpi-label">סך תרומות</div>
+      </div>
+      <div class="md-kpi-card">
+        <div class="md-kpi-value">{{ donations.length }}</div>
+        <div class="md-kpi-label">תרומות</div>
+      </div>
+      <div class="md-kpi-card">
+        <div class="md-kpi-value">{{ campaignsSupported }}</div>
+        <div class="md-kpi-label">קמפיינים נתמכו</div>
+      </div>
+    </div>
+
+    @if (donations.length === 0) {
+      <div class="md-empty">
+        <div class="md-empty-icon">💛</div>
+        <p>עדיין לא נמצאו תרומות משויכות לחשבון שלך</p>
+        <a routerLink="/campaigns/discover">מצאו קמפיין לתרומה →</a>
+      </div>
+    } @else {
+      <div class="md-list">
+        @for (d of donations; track d.id) {
+          <div class="md-item">
+            @if (d.entity_logo) {
+              <img class="md-item-logo" [src]="d.entity_logo" alt="" />
+            } @else {
+              <div class="md-item-logo-placeholder">{{ d.entity_name.charAt(0) }}</div>
+            }
+            <div class="md-item-body">
+              <div class="md-item-campaign">{{ d.campaign_title }}</div>
+              <div class="md-item-entity">{{ d.entity_name }} · {{ fmtDate(d.completed_at) }}</div>
+            </div>
+            <div class="md-item-amount">{{ fmtMoney(d.amount) }}</div>
+            @if (d.receipt_id) {
+              <a class="md-item-receipt" [routerLink]="['/receipts', d.receipt_id]">קבלה</a>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+</div>

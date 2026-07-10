@@ -1,0 +1,61 @@
+<div class="receipt-page" dir="rtl">
+
+  @if (loading) {
+    <div class="receipt-loading">
+      <div class="loading-spinner"></div>
+    </div>
+  } @else if (notFound) {
+    <div class="receipt-card receipt-not-found">
+      <p>הקבלה לא נמצאה</p>
+      <a routerLink="/">חזרה לעמוד הבית</a>
+    </div>
+  } @else if (receipt) {
+    <div class="receipt-card">
+
+      <div class="receipt-actions no-print">
+        <button class="print-btn" (click)="print()">🖨 הדפסה / שמירה כ-PDF</button>
+      </div>
+
+      <div class="receipt-header">
+        @if (receipt.entity_logo) {
+          <img class="receipt-logo" [src]="receipt.entity_logo" [alt]="receipt.entity_name" />
+        }
+        <div class="receipt-entity-name">{{ receipt.legal_name || receipt.entity_name }}</div>
+      </div>
+
+      <div class="receipt-title-row">
+        <h1>קבלה על תרומה</h1>
+        <span class="receipt-number">מס' {{ receipt.receipt_number }}</span>
+      </div>
+
+      <div class="receipt-details">
+        <div class="receipt-row">
+          <span class="receipt-label">תאריך</span>
+          <span class="receipt-value">{{ formattedDate }}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">שם התורם/ת</span>
+          <span class="receipt-value">{{ receipt.donor_name }}</span>
+        </div>
+        <div class="receipt-row" *ngIf="receipt.donor_email">
+          <span class="receipt-label">אימייל</span>
+          <span class="receipt-value">{{ receipt.donor_email }}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">קמפיין</span>
+          <span class="receipt-value">{{ receipt.campaign_title }}</span>
+        </div>
+        <div class="receipt-row receipt-row--amount">
+          <span class="receipt-label">סכום התרומה</span>
+          <span class="receipt-value receipt-amount">{{ formattedAmount }}</span>
+        </div>
+      </div>
+
+      <p class="receipt-footer-note">
+        קבלה זו מהווה אישור על קבלת תרומה במערכת המונים.
+      </p>
+
+    </div>
+  }
+
+</div>

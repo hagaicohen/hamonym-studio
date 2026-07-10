@@ -46,7 +46,11 @@ export class MockPaymentPageComponent implements OnInit {
     this.campaignTitle = p.get('title')  || '';
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    this.completedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    // Seconds matter here: the live-donation poll filters by `completed_at
+    // > since`, so truncating to the minute (datetime-local's default) can
+    // make a fresh mock donation land at/before an already-passed `since`
+    // cursor and silently never surface.
+    this.completedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   }
 
   get formattedAmount(): string {

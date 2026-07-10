@@ -36,9 +36,14 @@
       </div>
     </div>
 
-    <p class="success-receipt-note">
-      קבלה תישלח לכתובת האימייל שהזנת בנפרד.
-    </p>
+    <a *ngIf="receiptUrl" class="receipt-link-btn" [routerLink]="receiptUrl">
+      🧾 צפייה בקבלה
+    </a>
+
+    <div class="create-account-box" *ngIf="showCreateAccountPrompt">
+      <p class="create-account-text">רוצים לשמור את כל התרומות שלכם במקום אחד?</p>
+      <a class="create-account-btn" routerLink="/register" [queryParams]="createAccountQueryParams">צרו אזור אישי בחינם</a>
+    </div>
 
     <!-- Share -->
     <div class="success-share">
