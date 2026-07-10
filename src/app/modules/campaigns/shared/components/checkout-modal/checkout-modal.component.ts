@@ -6,6 +6,7 @@ import {
   DonorFieldsConfig, DEFAULT_DONOR_FIELDS,
 } from '../../../services/campaign-studio-state.service';
 import { DonationService } from '../../../services/donation.service';
+import { AnalyticsService } from '../../../../../core/services/analytics.service';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -24,6 +25,7 @@ export class CheckoutModalComponent implements OnInit {
   @Output() closed = new EventEmitter<void>();
 
   private donationService = inject(DonationService);
+  private analytics       = inject(AnalyticsService);
 
   name        = '';
   email       = '';
@@ -141,7 +143,12 @@ export class CheckoutModalComponent implements OnInit {
     }).subscribe({
       next: (res) => {
         document.body.style.overflow = '';
-        window.location.href = res.url;
+        this.analytics.trackEventThenNavigate('donation_started', {
+          value:         this.amount,
+          currency:      'ILS',
+          campaign_name: this.draft.title,
+          campaign_id:   this.draft.id,
+        }, res.url);
       },
       error: (err) => {
         this.loading  = false;

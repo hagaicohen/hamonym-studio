@@ -12,6 +12,7 @@ import { DonationToastComponent } from '../../shared/components/donation-toast/d
 import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DonationService } from '../../services/donation.service';
+import { AnalyticsService } from '../../../../core/services/analytics.service';
 
 @Component({
   selector: 'app-campaign-public-page',
@@ -33,6 +34,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   private ambassadorSvc   = inject(AmbassadorService);
   private ctx             = inject(CurrentContextService);
   private donationSvc     = inject(DonationService);
+  private analytics       = inject(AnalyticsService);
 
   get isAmbassadorMode(): boolean {
     return this.ctx.active()?.role === 'ambassador';
@@ -100,6 +102,12 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
         this.state.loadDraft(data);
         this.loader.hide();
         this.isLoading = false;
+
+        this.analytics.init(data.entityGaMeasurementId);
+        this.analytics.trackEvent('campaign_view', {
+          campaign_name: data.title,
+          campaign_id:   data.id,
+        });
 
         this.ambassadorSvc.listPublic(slug).subscribe({
           next: list => { this.ambassadorsList = list; },

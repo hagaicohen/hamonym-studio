@@ -144,5 +144,22 @@
       >
       </app-rich-text-editor>
     </div>
+
+    <!-- ANALYTICS -->
+
+    <div class="description-section">
+      <div class="section-label">Google Analytics Measurement ID</div>
+      <div class="field-hint">
+        אופציונלי — כתובת ה-GA4 של העמותה (לדוגמה G-ABC1234567). אירועי צפייה ותרומה בקמפיינים שלכם יישלחו גם לחשבון הזה, בנוסף למדידה הפנימית של המונים.
+      </div>
+
+      <input
+        type="text"
+        class="profile-input"
+        placeholder="G-XXXXXXXXXX"
+        [ngModel]="entity?.ga_measurement_id"
+        (ngModelChange)="updateField('ga_measurement_id', $event)"
+      />
+    </div>
   </div>
 </div>

@@ -113,6 +113,7 @@ export class CampaignApiService {
       createdAt:               data.created_at,
       updatedAt:               data.updated_at,
       publishedAt:             data.published_at,
+      entityGaMeasurementId:   data.entity_ga_measurement_id ?? null,
       title:                   data.title                   ?? '',
       slug:                    data.slug                    ?? '',
       shortDescription:        data.short_description       ?? '',

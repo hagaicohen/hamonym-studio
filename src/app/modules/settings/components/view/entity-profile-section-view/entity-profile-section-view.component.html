@@ -59,13 +59,23 @@
 
       <!-- DESCRIPTION -->
 
-      <div class="info-section no-border">
+      <div class="info-section">
         <div class="section-label">תיאור קצר</div>
 
         <div
           class="profile-description html-content"
           [innerHTML]="entity?.description || '-'"
         ></div>
+      </div>
+
+      <!-- ANALYTICS -->
+
+      <div class="info-section no-border">
+        <div class="section-label">Google Analytics Measurement ID</div>
+
+        <div class="profile-name">
+          {{ entity?.ga_measurement_id || "-" }}
+        </div>
       </div>
     </div>
 

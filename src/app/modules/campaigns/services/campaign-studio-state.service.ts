@@ -261,6 +261,7 @@ export interface CampaignDraft {
   createdAt?:   string;  // ISO timestamp
   updatedAt?:   string;  // ISO timestamp
   publishedAt?: string;  // ISO timestamp
+  entityGaMeasurementId?: string | null;  // owning entity's optional GA4 property (public campaign page only)
 
   // Step 1 — Basic Info
   title: string;

@@ -5,6 +5,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { AnalyticsService } from '../../../../core/services/analytics.service';
 
 interface DonationResult {
   id:             string;
@@ -14,11 +15,13 @@ interface DonationResult {
   donor_name:     string | null;
   donor_email:    string | null;
   donor_user_id:  string | null;
+  campaign_id:    string;
   campaign_title: string;
   campaign_slug:  string;
   cover_image_url: string | null;
   entity_name:    string;
   entity_logo:    string | null;
+  entity_ga_measurement_id: string | null;
   receipt_id:     string | null;
 }
 
@@ -36,6 +39,7 @@ export class DonationSuccessComponent implements OnInit {
   private title  = inject(Title);
   private http   = inject(HttpClient);
   private loader = inject(AppLoaderService);
+  private analytics = inject(AnalyticsService);
 
   slug       = '';
   ref        = '';
@@ -61,6 +65,15 @@ export class DonationSuccessComponent implements OnInit {
             this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
             this.loading  = false;
             this.loader.hide();
+
+            this.analytics.init(d.entity_ga_measurement_id);
+            this.analytics.trackEvent('donation_completed', {
+              value:         this.amount,
+              currency:      'ILS',
+              campaign_name: d.campaign_title,
+              campaign_id:   d.campaign_id,
+              transaction_id: d.id,
+            });
           },
           error: () => { this.loading = false; this.loader.hide(); },
         });
