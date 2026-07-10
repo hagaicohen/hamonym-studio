@@ -2,8 +2,8 @@ const svc = require('./reports.service');
 
 exports.getCampaignPerformance = async (req, res) => {
   try {
-    const { sortBy, sortDir, search, status } = req.query;
-    const result = await svc.getCampaignPerformance(req.params.id, { sortBy, sortDir, search, status });
+    const { sortBy, sortDir, search, status, campaignId } = req.query;
+    const result = await svc.getCampaignPerformance(req.params.id, { sortBy, sortDir, search, status, campaignId });
     res.json(result);
   } catch (e) {
     console.error('[reports.getCampaignPerformance] error:', e.message);

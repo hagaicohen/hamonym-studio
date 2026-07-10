@@ -12,7 +12,7 @@ const CAMPAIGN_SORT = {
   avg:     (r) => r.avg ?? 0,
 };
 
-exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, status } = {}) => {
+exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, status, campaignId } = {}) => {
   const where  = ['entity_id = $1', `status != 'draft'`];
   const params = [entityId];
   let idx = 2;
@@ -24,6 +24,10 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
   if (search) {
     where.push(`title ILIKE $${idx++}`);
     params.push(`%${search}%`);
+  }
+  if (campaignId) {
+    where.push(`id = $${idx++}`);
+    params.push(campaignId);
   }
 
   const { rows } = await db.query(
