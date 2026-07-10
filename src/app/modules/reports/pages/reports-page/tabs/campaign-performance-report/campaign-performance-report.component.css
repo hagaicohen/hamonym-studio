@@ -26,3 +26,31 @@
   font-weight: 700;
   font-size: 13px;
 }
+
+.campaign-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #583cd6;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.campaign-filter-banner button {
+  padding: 6px 14px;
+  border: 1px solid #583cd6;
+  border-radius: 6px;
+  background: #fff;
+  color: #583cd6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.campaign-filter-banner button:hover { background: #ede9fe; }

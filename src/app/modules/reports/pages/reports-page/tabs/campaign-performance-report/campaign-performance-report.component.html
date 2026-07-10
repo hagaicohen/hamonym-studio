@@ -23,6 +23,13 @@
     </div>
   </div>
 
+  @if (campaignId) {
+    <div class="campaign-filter-banner">
+      <span>מציג נתונים עבור קמפיין אחד בלבד</span>
+      <button (click)="clearFilter()">הצג את כל הקמפיינים</button>
+    </div>
+  }
+
   <div class="don-filters">
     <input
       class="don-search"

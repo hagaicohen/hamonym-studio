@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -54,6 +54,10 @@ export class CampaignPerformanceReportComponent implements OnInit {
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
 
+  // Set when arriving from a specific campaign's "📊 דוחות" button — narrows
+  // the table to that campaign instead of showing the entity's full list.
+  @Input() campaignId?: string;
+
   campaigns: CampaignPerf[] = [];
   kpi: Kpi = { totalCampaigns: 0, activeCampaigns: 0, totalRaised: 0, avgProgressPct: null };
   loading    = true;
@@ -98,6 +102,11 @@ export class CampaignPerformanceReportComponent implements OnInit {
     this.load();
   }
 
+  clearFilter(): void {
+    this.campaignId = undefined;
+    this.load();
+  }
+
   onSearch(): void {
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.load(), 400);
@@ -124,6 +133,7 @@ export class CampaignPerformanceReportComponent implements OnInit {
     let params = new HttpParams().set('sortBy', this.sortField).set('sortDir', this.sortDir);
     if (this.statusFilter !== 'all')  params = params.set('status', this.statusFilter);
     if (this.searchQuery.trim())      params = params.set('search', this.searchQuery.trim());
+    if (this.campaignId)              params = params.set('campaignId', this.campaignId);
 
     this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/campaigns`, { headers, params })
       .subscribe({

@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { LucideAngularModule, ChartColumn, Megaphone, TrendingUp, TriangleAlert } from 'lucide-angular';
 import { CampaignPerformanceReportComponent } from './tabs/campaign-performance-report/campaign-performance-report.component';
 import { MarketingReportComponent } from './tabs/marketing-report/marketing-report.component';
@@ -21,7 +22,10 @@ export class ReportsPageComponent {
   readonly TrendingUpIcon  = TrendingUp;
   readonly TriangleAlertIcon = TriangleAlert;
 
+  private route = inject(ActivatedRoute);
+
   activeTab = signal<ReportTab>('campaigns');
+  campaignId = this.route.snapshot.queryParamMap.get('campaignId') || undefined;
 
   setTab(tab: ReportTab): void {
     this.activeTab.set(tab);

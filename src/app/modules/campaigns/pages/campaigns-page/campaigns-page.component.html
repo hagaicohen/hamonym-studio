@@ -177,7 +177,7 @@
                   </div>
 
                   <div class="card-actions">
-                    <button class="btn-action">📊 דוחות</button>
+                    <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
                     @if (c.slug) {
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
@@ -243,7 +243,7 @@
                 </div>
 
                 <div class="list-actions">
-                  <button class="btn-action">📊 דוחות</button>
+                  <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
                   @if (c.slug) {
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }

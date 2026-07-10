@@ -176,6 +176,10 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     this.router.navigate(['/campaigns', slug, 'view']);
   }
 
+  openReports(id: string): void {
+    this.router.navigate(['/reports'], { queryParams: { campaignId: id } });
+  }
+
   viewMyAmbassadorPage(c: AmbassadorCampaignSummary): void {
     if (c.ambassadorSlug) {
       this.router.navigate(['/campaigns', c.slug, c.ambassadorSlug]);

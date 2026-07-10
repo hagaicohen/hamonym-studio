@@ -24,7 +24,7 @@
   </div>
 
   @switch (activeTab()) {
-    @case ('campaigns') { <app-campaign-performance-report /> }
+    @case ('campaigns') { <app-campaign-performance-report [campaignId]="campaignId" /> }
     @case ('marketing') { <app-marketing-report /> }
     @case ('trends')    { <app-trends-report /> }
     @case ('failures')  { <app-failures-report /> }
