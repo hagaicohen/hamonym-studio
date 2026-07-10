@@ -98,6 +98,14 @@ exports.reactivate = async (req, res) => {
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };
 
+exports.hardDelete = async (req, res) => {
+  if (!requireNotes(req, res)) return;
+  try {
+    const result = await svc.hardDeleteEntity(req.params.id, req.user.id, req.body.notes, req.ip);
+    res.json(result);
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
 exports.getCampaigns = async (req, res) => {
   try {
     const page = parseInt(req.query.page || '0', 10);

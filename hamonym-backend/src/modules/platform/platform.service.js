@@ -486,6 +486,61 @@ exports.suspend = (entityId, superAdminUserId, notes, reasonTags, ip) =>
 exports.reactivate = (entityId, superAdminUserId, notes, reasonTags, ip) =>
   setStatus(entityId, superAdminUserId, 'active', 'reactivate', notes, null, ip);
 
+// Platform-admin-only permanent erasure — irreversible, unlike the entity
+// manager's own soft-delete (entities.service.js softDeleteEntity). Most FK
+// children (campaigns, donations, campaign_ambassadors, entity_billing,
+// user_entities) cascade automatically; receipts/email_logs/platform_audit_log
+// use ON DELETE NO ACTION (financial/audit records shouldn't silently vanish
+// via an unrelated cascade), so those are cleared explicitly first. The audit
+// trail for this exact action is preserved with entity_id set to NULL —
+// the entity is gone by the time it would try to reference it.
+exports.hardDeleteEntity = async (entityId, superAdminUserId, notes, ip) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const entityRes = await client.query(
+      `SELECT display_name FROM entities WHERE id = $1`,
+      [entityId]
+    );
+    if (!entityRes.rows[0]) throw new Error('Entity not found');
+    const entityName = entityRes.rows[0].display_name;
+
+    await client.query(
+      `DELETE FROM receipts WHERE entity_id = $1
+         OR campaign_id IN (SELECT id FROM campaigns WHERE entity_id = $1)`,
+      [entityId]
+    );
+    await client.query(
+      `DELETE FROM email_logs WHERE entity_id = $1
+         OR campaign_id IN (SELECT id FROM campaigns WHERE entity_id = $1)`,
+      [entityId]
+    );
+    await client.query(
+      `UPDATE platform_audit_log SET entity_id = NULL, campaign_id = NULL
+       WHERE entity_id = $1
+          OR campaign_id IN (SELECT id FROM campaigns WHERE entity_id = $1)`,
+      [entityId]
+    );
+
+    await client.query(`DELETE FROM entities WHERE id = $1`, [entityId]);
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
+       VALUES ($1, NULL, 'hard_delete', $2, $3)`,
+      [superAdminUserId, `מחיקה לצמיתות: ${entityName} (${entityId})${notes ? ' — ' + notes : ''}`, ip || null]
+    );
+
+    await client.query('COMMIT');
+    return { success: true, entityName };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page = 0, limit = 25, showDeleted, featuredOnly }) => {
   const where = [];
   const params = [];

@@ -530,3 +530,15 @@ exports.requestReview = async (req, res) => {
     res.status(statusForApproval(err)).json({ error: err.message });
   }
 };
+
+exports.softDeleteEntity = async (req, res) => {
+  try {
+    const entity = await service.softDeleteEntity(req.params.id, req.user.id);
+    res.json({ success: true, entity });
+  } catch (err) {
+    const status = err.message === 'Unauthorized' ? 403
+      : err.message === 'Entity not found or already deleted' ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+};

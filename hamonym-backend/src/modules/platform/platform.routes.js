@@ -20,6 +20,7 @@ router.post('/organizations/:id/reject', requirePermission('organizations'), ctr
 router.post('/organizations/:id/request-changes', requirePermission('organizations'), ctrl.requestChanges);
 router.post('/organizations/:id/suspend', requirePermission('organizations'), ctrl.suspend);
 router.post('/organizations/:id/reactivate', requirePermission('organizations'), ctrl.reactivate);
+router.post('/organizations/:id/hard-delete', requirePermission('organizations'), ctrl.hardDelete);
 
 router.get('/campaigns', requirePermission('campaigns'), ctrl.getCampaigns);
 router.get('/campaigns/:id', requirePermission('campaigns'), ctrl.getCampaign);

@@ -4,6 +4,24 @@ const db =
 const supabase =
   require('../../lib/supabase');
 
+// entities.* / RETURNING * pull in raw document bytea blobs stored on the
+// row (multi-MB PDFs) — fine for the upload/download endpoints that need
+// them, but every other entity read only ever displays metadata (name,
+// counts, etc). Sending the blobs as JSON byte arrays on those reads was
+// bloating responses to 10+ MB and made pages feel like they'd hung.
+const BLOB_COLUMNS = [
+  'registration_document_data',
+  'association_certificate_data',
+  'tax_document_data',
+  'logo_data',
+];
+
+function stripBlobs(row) {
+  if (!row) return row;
+  for (const col of BLOB_COLUMNS) delete row[col];
+  return row;
+}
+
 exports.createEntity =
   async ({
     userId,
@@ -271,7 +289,13 @@ exports.getMyEntities =
           eb.exp_month,
           eb.exp_year,
 
-          e.billing_masav_file_name
+          e.billing_masav_file_name,
+
+          (SELECT COUNT(*)::int FROM campaigns c
+            WHERE c.entity_id = e.id AND c.deleted_at IS NULL) AS "campaignsCount",
+
+          (SELECT COUNT(*)::int FROM user_entities ue2
+            WHERE ue2.entity_id = e.id) AS "usersCount"
 
         FROM entities e
 
@@ -283,6 +307,7 @@ exports.getMyEntities =
           AND eb.status = 'active'
 
         WHERE ue.user_id = $1
+          AND e.deleted_at IS NULL
 
         ORDER BY e.created_at DESC
         `,
@@ -291,7 +316,7 @@ exports.getMyEntities =
 
       );
 
-    return result.rows;
+    return result.rows.map(stripBlobs);
 
   };
 
@@ -771,7 +796,7 @@ exports.updateEntity =
 
       );
 
-    return result.rows[0];
+    return stripBlobs(result.rows[0]);
 
   };
 
@@ -827,7 +852,7 @@ exports.getEntityById =
 
       );
 
-    return result.rows[0] || null;
+    return stripBlobs(result.rows[0]) || null;
 
   };
 
@@ -942,5 +967,43 @@ exports.requestReview = async (entityId, userId) => {
   );
 
   if (!result.rows[0]) throw new Error('Invalid transition');
-  return result.rows[0];
+  return stripBlobs(result.rows[0]);
+};
+
+// Entity manager's own "delete entity" — soft delete. All the entity's
+// campaigns get soft-deleted too (same deleted_at pattern campaigns already
+// use), so they immediately drop out of every public/discover query. The
+// entity itself also flips to status='deleted', which independently drops
+// it out of the public campaign/donation queries that filter on
+// e.status = 'active'. Permanent removal is a platform-admin-only action
+// (see platform.service.js hardDeleteEntity).
+exports.softDeleteEntity = async (entityId, userId) => {
+  await checkOwnership(userId, entityId);
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `UPDATE entities SET deleted_at = NOW(), deleted_by = $1, status = 'deleted', updated_at = NOW()
+       WHERE id = $2 AND deleted_at IS NULL
+       RETURNING id, display_name`,
+      [userId, entityId]
+    );
+    if (!result.rows[0]) throw new Error('Entity not found or already deleted');
+
+    await client.query(
+      `UPDATE campaigns SET deleted_at = NOW(), deleted_by = $1, updated_at = NOW()
+       WHERE entity_id = $2 AND deleted_at IS NULL`,
+      [userId, entityId]
+    );
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 };

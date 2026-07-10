@@ -150,4 +150,10 @@ router.patch(
   controller.requestReview
 );
 
+router.delete(
+  '/:id',
+  requireAuth,
+  controller.softDeleteEntity
+);
+
 module.exports = router;

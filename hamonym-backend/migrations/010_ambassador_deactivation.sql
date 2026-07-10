@@ -3,7 +3,7 @@
 
 ALTER TABLE campaign_ambassadors
   ADD COLUMN IF NOT EXISTS deactivated_at  TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS deactivated_by  UUID REFERENCES users(id);
+  ADD COLUMN IF NOT EXISTS deactivated_by  BIGINT REFERENCES users(id);
 
 -- Prevent hard-delete of ambassadors that have any linked donations.
 -- A deactivation (status = 'inactive') must be used instead.

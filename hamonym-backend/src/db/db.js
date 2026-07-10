@@ -1,5 +1,10 @@
 const { Pool } = require("pg");
 
+// max: 10 — keep this modest, Supabase's pooler caps total concurrent
+// connections; one-off scripts (node -e ...) each open their own Pool and
+// should call pool.end() before exiting rather than process.exit()
+// immediately, or leaked connections can starve this pool.
+
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
