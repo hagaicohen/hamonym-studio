@@ -24,6 +24,9 @@ const crypto =
 const pool =
   require('../db/db');
 
+const requireAuth =
+  require('../middleware/require-auth');
+
 const router =
   express.Router();
 
@@ -382,6 +385,59 @@ router.post(
 
   }
 );
+
+/* UPDATE MY PROFILE (full name) */
+router.patch('/me', requireAuth, async (req, res) => {
+  try {
+    const fullName = (req.body.full_name || '').trim();
+    if (!fullName) {
+      return res.status(400).json({ error: 'שם מלא נדרש' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET full_name = $1, updated_at = NOW() WHERE id = $2
+       RETURNING id, email, full_name, role_id, picture, is_super_admin, platform_permissions`,
+      [fullName, req.user.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'שגיאה בעדכון הפרופיל' });
+  }
+});
+
+/* CHANGE MY PASSWORD — the JWT bearer token is already proof of identity
+   (same trust level as every other self-service action in this app), so
+   this doesn't re-ask for the current password. */
+router.post('/me/change-password', requireAuth, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'הסיסמה החדשה חייבת להכיל לפחות 8 תווים' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const result = await pool.query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+      [passwordHash, req.user.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'שגיאה בעדכון הסיסמה' });
+  }
+});
 
 /* GOOGLE LOGIN */
 
