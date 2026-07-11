@@ -22,7 +22,7 @@
 
     <div class="entities-grid">
       @for (entity of entities; track entity.id) {
-        <div class="entity-card" [class.current]="entity.isCurrent">
+        <div class="entity-card" [class.current]="entity.isCurrent" [class.card--hidden]="entity.is_hidden">
           <!-- TOP -->
 
           <div class="entity-top">
@@ -32,13 +32,18 @@
                   {{ entity.display_name }}
                 </div>
 
-                <div
-                  class="entity-status"
-                  [class.active]="entity.status === 'active'"
-                  [class.incomplete]="entity.status === 'draft'"
-                  [class.pending]="entity.status === 'pending_review'"
-                >
-                  {{ getStatusLabel(entity.status) }}
+                <div class="entity-status-group">
+                  @if (entity.is_hidden) {
+                    <span class="badge-hidden">מוסתר</span>
+                  }
+                  <div
+                    class="entity-status"
+                    [class.active]="entity.status === 'active'"
+                    [class.incomplete]="entity.status === 'draft'"
+                    [class.pending]="entity.status === 'pending_review'"
+                  >
+                    {{ getStatusLabel(entity.status) }}
+                  </div>
                 </div>
               </div>
 
@@ -121,15 +126,48 @@
           <!-- FOOTER -->
 
           <div class="entity-footer">
-            <a
-              class="manage-btn"
-              [routerLink]="['/settings/entities', entity.id]"
-              (click)="selectEntity(entity)"
-            >
-              <lucide-icon [img]="SettingsIcon" [size]="16"></lucide-icon>
-              ניהול
-              {{ getEntityTypeLabel(entity.entity_type) }}
-            </a>
+            <div class="entity-footer-row">
+              <a
+                class="manage-btn"
+                [routerLink]="['/settings/entities', entity.id]"
+                (click)="selectEntity(entity)"
+              >
+                <lucide-icon [img]="SettingsIcon" [size]="16"></lucide-icon>
+                ניהול
+                {{ getEntityTypeLabel(entity.entity_type) }}
+              </a>
+
+              @if (entity.is_hidden) {
+                <button
+                  type="button"
+                  class="btn-icon-action btn-unhide"
+                  [disabled]="hidingEntityId === entity.id"
+                  (click)="toggleEntityCardVisibility($event, entity)"
+                  title="הצג מחדש"
+                >
+                  <lucide-icon [img]="EyeIcon" [size]="15"></lucide-icon>
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn-icon-action btn-hide-entity"
+                  [disabled]="hidingEntityId === entity.id"
+                  (click)="toggleEntityCardVisibility($event, entity)"
+                  title="הסתרת העמותה"
+                >
+                  <lucide-icon [img]="EyeOffIcon" [size]="15"></lucide-icon>
+                </button>
+              }
+
+              <button
+                type="button"
+                class="btn-icon-action btn-delete-entity"
+                (click)="openDeleteEntityCardModal($event, entity)"
+                title="מחיקת העמותה"
+              >
+                <lucide-icon [img]="TrashIcon" [size]="15"></lucide-icon>
+              </button>
+            </div>
           </div>
         </div>
       }
@@ -250,3 +288,35 @@
     </div>
   </section>
 </div>
+
+<!-- DELETE ENTITY CONFIRM MODAL -->
+@if (deleteEntityTarget) {
+  <div class="modal-backdrop" (click)="closeDeleteEntityCardModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <h2 class="modal-title">מחיקת "{{ deleteEntityTarget.display_name }}"</h2>
+      <p class="modal-desc">
+        פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.
+        כדי לאשר, הקלידו את שם העמותה במדויק:
+      </p>
+      <input
+        type="text"
+        class="danger-confirm-input"
+        [(ngModel)]="deleteEntityConfirmText"
+        [placeholder]="deleteEntityTarget.display_name"
+      />
+      @if (deleteEntityCardError) {
+        <p class="modal-error">{{ deleteEntityCardError }}</p>
+      }
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" [disabled]="isDeletingEntityCard" (click)="closeDeleteEntityCardModal()">ביטול</button>
+        <button
+          class="modal-btn-delete"
+          [disabled]="!deleteEntityCardConfirmValid || isDeletingEntityCard"
+          (click)="confirmDeleteEntityCard()"
+        >
+          {{ isDeletingEntityCard ? "מוחק..." : "מחיקת העמותה" }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -249,4 +249,14 @@ export class EntitiesService {
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
     );
   }
+
+  // Reversible hide/unhide. Hiding cascades to hide the entity's campaigns
+  // too; unhiding the entity does not restore campaigns hidden separately.
+  setVisibility(entityId: string, isHidden: boolean): Observable<any> {
+    return this.http.patch(
+      `${environment.apiUrl}/api/entities/${entityId}/visibility`,
+      { is_hidden: isHidden },
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
 }

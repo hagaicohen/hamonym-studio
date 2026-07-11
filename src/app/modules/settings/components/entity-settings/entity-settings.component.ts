@@ -481,6 +481,31 @@ export class EntitySettingsComponent implements OnInit {
       });
   }
 
+  // ── HIDE / UNHIDE ENTITY ──
+  isTogglingVisibility = false;
+  visibilityError = '';
+
+  toggleEntityVisibility(): void {
+    if (this.isTogglingVisibility || !this.draftEntity?.id) return;
+
+    const nextHidden = !this.draftEntity.is_hidden;
+    this.isTogglingVisibility = true;
+    this.visibilityError = '';
+
+    this.entitiesService.setVisibility(this.draftEntity.id, nextHidden).subscribe({
+      next: () => {
+        this.isTogglingVisibility = false;
+        this.draftEntity = { ...this.draftEntity, is_hidden: nextHidden };
+        this.entity = { ...this.entity, is_hidden: nextHidden };
+        this.currentEntityService.setEntity(this.entity);
+      },
+      error: (err) => {
+        this.isTogglingVisibility = false;
+        this.visibilityError = err?.error?.error || 'שגיאה בעדכון הנראות';
+      },
+    });
+  }
+
   // ── DELETE ENTITY (soft) ──
   deleteConfirmOpen = false;
   deleteConfirmText = '';

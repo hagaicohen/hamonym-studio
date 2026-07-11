@@ -248,6 +248,33 @@
 
   <br />
 
+  <!-- VISIBILITY -->
+
+  <div class="visibility-zone">
+    @if (draftEntity?.is_hidden) {
+      <div class="visibility-zone-title">העמותה מוסתרת</div>
+      <div class="visibility-zone-desc">
+        העמותה וכל הקמפיינים שלה מוסתרים כרגע מהציבור. ניתן להציג אותם מחדש בכל עת.
+      </div>
+      <button type="button" class="visibility-btn" [disabled]="isTogglingVisibility" (click)="toggleEntityVisibility()">
+        {{ isTogglingVisibility ? "מעדכן..." : "הצגת העמותה מחדש" }}
+      </button>
+    } @else {
+      <div class="visibility-zone-title">נראות העמותה</div>
+      <div class="visibility-zone-desc">
+        הסתרת העמותה מסתירה גם את כל הקמפיינים שלה מהציבור באופן מיידי. ניתן לבטל בכל עת.
+      </div>
+      <button type="button" class="visibility-btn" [disabled]="isTogglingVisibility" (click)="toggleEntityVisibility()">
+        {{ isTogglingVisibility ? "מעדכן..." : "הסתרת העמותה" }}
+      </button>
+    }
+    @if (visibilityError) {
+      <div class="modal-error">{{ visibilityError }}</div>
+    }
+  </div>
+
+  <br />
+
   <!-- DANGER ZONE -->
 
   <div class="danger-zone">

@@ -16,7 +16,7 @@ import { CurrentContextService } from '../../../../core/services/current-context
 
 import { AuthService } from '../../../../core/services/auth.service';
 
-import { LucideAngularModule, Pencil, User, Mail, ShieldCheck, KeyRound, Flag, Users, Settings } from 'lucide-angular';
+import { LucideAngularModule, Pencil, User, Mail, ShieldCheck, KeyRound, Flag, Users, Settings, Eye, EyeOff, Trash2 } from 'lucide-angular';
 
 @Component({
   selector: 'app-settings-page',
@@ -42,6 +42,9 @@ export class SettingsPageComponent implements OnInit {
   readonly FlagIcon = Flag;
   readonly UsersIcon = Users;
   readonly SettingsIcon = Settings;
+  readonly EyeIcon = Eye;
+  readonly EyeOffIcon = EyeOff;
+  readonly TrashIcon = Trash2;
 
   entities: any[] = [];
 
@@ -180,5 +183,66 @@ export class SettingsPageComponent implements OnInit {
       default:
         return 'יישות';
     }
+  }
+
+  // ── HIDE / UNHIDE FROM CARD ──
+  hidingEntityId: string | null = null;
+
+  toggleEntityCardVisibility(event: Event, entity: any): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.hidingEntityId) return;
+
+    const nextHidden = !entity.is_hidden;
+    this.hidingEntityId = entity.id;
+
+    this.entitiesService.setVisibility(entity.id, nextHidden).subscribe({
+      next: () => {
+        entity.is_hidden = nextHidden;
+        this.hidingEntityId = null;
+      },
+      error: () => {
+        this.hidingEntityId = null;
+      },
+    });
+  }
+
+  // ── DELETE FROM CARD ──
+  deleteEntityTarget: any = null;
+  deleteEntityConfirmText = '';
+  isDeletingEntityCard = false;
+  deleteEntityCardError = '';
+
+  get deleteEntityCardConfirmValid(): boolean {
+    return this.deleteEntityConfirmText.trim() === (this.deleteEntityTarget?.display_name || '').trim();
+  }
+
+  openDeleteEntityCardModal(event: Event, entity: any): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.deleteEntityTarget = entity;
+    this.deleteEntityConfirmText = '';
+    this.deleteEntityCardError = '';
+  }
+
+  closeDeleteEntityCardModal(): void {
+    this.deleteEntityTarget = null;
+  }
+
+  confirmDeleteEntityCard(): void {
+    if (!this.deleteEntityCardConfirmValid || this.isDeletingEntityCard || !this.deleteEntityTarget) return;
+
+    this.isDeletingEntityCard = true;
+    this.entitiesService.deleteEntity(this.deleteEntityTarget.id).subscribe({
+      next: () => {
+        this.entities = this.entities.filter((e) => e.id !== this.deleteEntityTarget.id);
+        this.isDeletingEntityCard = false;
+        this.deleteEntityTarget = null;
+      },
+      error: (err) => {
+        this.isDeletingEntityCard = false;
+        this.deleteEntityCardError = err?.error?.error || 'שגיאה במחיקת העמותה';
+      },
+    });
   }
 }
