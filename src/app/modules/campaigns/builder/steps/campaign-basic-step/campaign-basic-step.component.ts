@@ -2,8 +2,6 @@ import { Component, inject, ViewChild, ElementRef, OnInit, HostListener } from '
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
-import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
-import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import {
   CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData,
@@ -21,7 +19,7 @@ import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categorie
   standalone: true,
   imports: [
     CommonModule, FormsModule, LucideAngularModule,
-    TextStyleEditorComponent, ColorPickerComponent, RichTextEditorComponent,
+    RichTextEditorComponent,
   ],
   templateUrl: './campaign-basic-step.component.html',
   styleUrl: './campaign-basic-step.component.css',

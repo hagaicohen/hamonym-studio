@@ -42,8 +42,6 @@ import { EntityBillingSectionEditComponent } from '../edit/entity-billing-sectio
 
 import { EntitiesService } from '../../../../core/services/entities.service';
 
-import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
-
 import { ApprovalStatusCardComponent } from '../approval-status-card/approval-status-card.component';
 
 import { SectionSaveState } from '../../models/section-save-state.model';
@@ -73,7 +71,6 @@ import { SectionSaveState } from '../../models/section-save-state.model';
     EntityBillingSectionViewComponent,
     EntityBillingSectionEditComponent,
 
-    LoadingOverlayComponent,
     ApprovalStatusCardComponent,
   ],
 
