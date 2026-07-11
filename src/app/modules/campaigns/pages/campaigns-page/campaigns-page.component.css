@@ -648,6 +648,44 @@
 
 .btn-delete-draft:disabled { opacity: 0.4; pointer-events: none; }
 
+@media (max-width: 640px) {
+  .draft-card {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 10px;
+    gap: 10px 12px;
+  }
+
+  .draft-cover {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+  }
+
+  .draft-body {
+    padding: 0;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .draft-title {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .draft-actions {
+    order: 3;
+    width: 100%;
+    padding: 0;
+  }
+
+  .btn-continue {
+    flex: 1;
+    padding: 10px 16px;
+    text-align: center;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* ICON-ONLY ACTION BUTTON                                             */
 /* ------------------------------------------------------------------ */
