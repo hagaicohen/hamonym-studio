@@ -72,8 +72,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
 
   // 1. Fetch campaign ג†’ entity
   const campaignRes = await db.query(
-    `SELECT c.id, c.slug, c.title, c.entity_id,
-            e.status AS entity_status,
+    `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at,
+            e.status AS entity_status, e.is_hidden AS entity_hidden,
             e.cardcom_terminal, e.cardcom_api_name, e.cardcom_api_password
      FROM campaigns c
      JOIN entities  e ON e.id = c.entity_id
@@ -86,6 +86,14 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
 
   if (campaign.entity_status !== 'active') {
     throw new Error('Entity not approved');
+  }
+
+  // Deliberately not checking campaign.status here (e.g. 'draft') — the
+  // studio editor's live preview lets a manager test-donate against their
+  // own unpublished campaign, which is a legitimate, separate use case from
+  // public visibility. Only block what "hidden"/"deleted" are meant to stop.
+  if (campaign.deleted_at || campaign.campaign_hidden || campaign.entity_hidden) {
+    throw new Error('Campaign not found');
   }
 
   if (!isMock && (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password)) {
@@ -325,9 +333,11 @@ exports.getLiveDonations = async (slug, since) => {
             d.is_anonymous
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities  e ON e.id = c.entity_id
      WHERE c.slug = $1
        AND d.status = 'paid'
        AND d.completed_at > $2
+       AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      ORDER BY d.completed_at ASC
      LIMIT 10`,
     [slug, sinceDate]
@@ -350,7 +360,9 @@ exports.getCampaignDonors = async (slug, period) => {
                 d.completed_at, d.is_anonymous
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
+         JOIN entities  e ON e.id = c.entity_id
          WHERE c.slug = $1 AND d.status = 'paid'
+           AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
        ),
        first_ids AS (
          SELECT DISTINCT ON (COALESCE(NULLIF(donor_email, ''), NULLIF(donor_phone, ''), id::text)) id
@@ -373,7 +385,9 @@ exports.getCampaignDonors = async (slug, period) => {
       `SELECT d.donor_name AS name, SUM(d.amount)::float AS total
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
+       JOIN entities  e ON e.id = c.entity_id
        WHERE c.slug = $1 AND d.status = 'paid' AND d.is_anonymous = false
+         AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
        GROUP BY d.donor_name
        ORDER BY total DESC
        LIMIT 10`,

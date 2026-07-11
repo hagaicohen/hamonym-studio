@@ -24,6 +24,7 @@ async function getCampaignMeta(slug) {
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
      WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active' AND c.deleted_at IS NULL
+       AND c.is_hidden = false AND e.is_hidden = false
      LIMIT 1`,
     [slug]
   );
@@ -134,6 +135,7 @@ exports.renderSitemap = async () => {
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
      WHERE c.status = 'published' AND e.status = 'active' AND c.deleted_at IS NULL
+       AND c.is_hidden = false AND e.is_hidden = false
      ORDER BY c.updated_at DESC`
   );
 

@@ -694,6 +694,7 @@ exports.getCampaignBySlugPublic = async (slug) => {
      FROM campaigns c
      JOIN entities e ON e.id = c.entity_id
      WHERE c.slug = $1 AND c.status = 'published' AND e.status = 'active' AND c.deleted_at IS NULL
+       AND c.is_hidden = false AND e.is_hidden = false
      LIMIT 1`,
     [slug]
   );
@@ -707,7 +708,7 @@ const DISCOVER_SORT_COLUMNS = {
 };
 
 exports.discoverCampaigns = async ({ search, category, sortBy, page = 0, limit = 12 }) => {
-  const where = [`c.status = 'published'`, `e.status = 'active'`, `c.deleted_at IS NULL`];
+  const where = [`c.status = 'published'`, `e.status = 'active'`, `c.deleted_at IS NULL`, `c.is_hidden = false`, `e.is_hidden = false`];
   const params = [];
   let idx = 1;
 

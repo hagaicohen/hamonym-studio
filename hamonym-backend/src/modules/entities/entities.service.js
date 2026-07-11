@@ -1007,3 +1007,40 @@ exports.softDeleteEntity = async (entityId, userId) => {
     client.release();
   }
 };
+
+// Entity manager's own reversible "hide entity" toggle. Hiding cascades to
+// hide every campaign under it too (mirrors campaigns' own setVisibility)
+// so nothing under a hidden entity stays publicly reachable. Unhiding the
+// entity deliberately does NOT un-hide its campaigns — a campaign could
+// have been hidden independently before the entity was hidden, and
+// blindly restoring it on entity-unhide would surprise-publish it.
+exports.setEntityVisibility = async (entityId, userId, isHidden) => {
+  await checkOwnership(userId, entityId);
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `UPDATE entities SET is_hidden = $1, updated_at = NOW() WHERE id = $2 RETURNING id, display_name, is_hidden`,
+      [isHidden, entityId]
+    );
+    if (!result.rows[0]) throw new Error('Entity not found');
+
+    if (isHidden) {
+      await client.query(
+        `UPDATE campaigns SET is_hidden = true, updated_at = NOW()
+         WHERE entity_id = $1 AND deleted_at IS NULL`,
+        [entityId]
+      );
+    }
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};

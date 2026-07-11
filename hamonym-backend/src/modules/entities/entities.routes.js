@@ -156,4 +156,10 @@ router.delete(
   controller.softDeleteEntity
 );
 
+router.patch(
+  '/:id/visibility',
+  requireAuth,
+  controller.setEntityVisibility
+);
+
 module.exports = router;

@@ -244,7 +244,9 @@ exports.listPublic = async (campaignSlug) => {
             ${STATS_SQL}
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
+     JOIN entities  e ON e.id = c.entity_id
      WHERE c.slug = $1 AND a.status = 'active'
+       AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      ORDER BY raised_total DESC`,
     [campaignSlug]
   );
@@ -255,7 +257,11 @@ exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amou
   if (!full_name?.trim()) throw new Error('Name required');
 
   const { rows: camps } = await db.query(
-    `SELECT id FROM campaigns WHERE slug = $1 AND status = 'published' LIMIT 1`,
+    `SELECT c.id FROM campaigns c
+     JOIN entities e ON e.id = c.entity_id
+     WHERE c.slug = $1 AND c.status = 'published' AND c.deleted_at IS NULL
+       AND c.is_hidden = false AND e.is_hidden = false
+     LIMIT 1`,
     [campaignSlug]
   );
   if (!camps.length) throw new Error('Campaign not found');
@@ -367,7 +373,9 @@ exports.getBySlug = async (campaignSlug, ambassadorSlug) => {
     `SELECT a.*, ${STATS_SQL}
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
+     JOIN entities  e ON e.id = c.entity_id
      WHERE c.slug = $1 AND a.slug = $2
+       AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      LIMIT 1`,
     [campaignSlug, ambassadorSlug]
   );

@@ -542,3 +542,16 @@ exports.softDeleteEntity = async (req, res) => {
     res.status(status).json({ error: err.message });
   }
 };
+
+exports.setEntityVisibility = async (req, res) => {
+  try {
+    const isHidden = req.body.is_hidden === true;
+    const entity = await service.setEntityVisibility(req.params.id, req.user.id, isHidden);
+    res.json({ success: true, entity });
+  } catch (err) {
+    const status = err.message === 'Unauthorized' ? 403
+      : err.message === 'Entity not found' ? 404
+      : 500;
+    res.status(status).json({ error: err.message });
+  }
+};
