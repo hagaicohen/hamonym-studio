@@ -902,7 +902,7 @@ exports.setCampaignVisibility =
     }
 
     await db.query(
-      `UPDATE campaigns SET is_hidden = $1 WHERE id = $2`,
+      `UPDATE campaigns SET is_hidden = $1, hidden_by_entity_cascade = false WHERE id = $2`,
       [isHidden, campaignId]
     );
 
