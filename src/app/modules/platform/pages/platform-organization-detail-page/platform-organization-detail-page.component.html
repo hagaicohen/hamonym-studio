@@ -81,13 +81,15 @@
             </div>
           </div>
 
-          <h3 class="plat-section-title">Timeline</h3>
+          <h3 class="plat-section-title">ציר הזמן</h3>
           <div class="plat-timeline">
             @for (item of timeline; track item.timestamp + item.label) {
               <div class="plat-timeline-item">
-                <span class="plat-timeline-icon">{{ item.icon }}</span>
-                <span class="plat-timeline-label">{{ item.label }}</span>
                 <span class="plat-timeline-date">{{ fmtDate(item.timestamp) }}</span>
+                <span class="plat-timeline-event">
+                  <span class="plat-timeline-icon">{{ item.icon }}</span>
+                  <span class="plat-timeline-label">{{ item.label }}</span>
+                </span>
               </div>
             }
           </div>
@@ -118,6 +120,12 @@
           }
 
           <div class="plat-actions">
+            <button class="btn btn-reactivate btn-analyze" [disabled]="actionInProgress || analyzing" (click)="recommendOrganization()">
+              ניתוח עמותה
+              @if (analyzing) {
+                <div class="btn-spinner"></div>
+              }
+            </button>
             <button class="btn btn-approve" [disabled]="actionInProgress" (click)="approve()">אישור עמותה</button>
             <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
             <button class="btn btn-request" [disabled]="actionInProgress" (click)="requestChanges()">בקשת השלמת מסמכים</button>
@@ -127,6 +135,31 @@
               <button class="btn btn-suspend" [disabled]="actionInProgress" (click)="suspend()">השעיה</button>
             }
           </div>
+
+          @if (recommendationError) {
+            <div class="plat-note-error">{{ recommendationError }}</div>
+          }
+
+          @if (recommendation) {
+            <div class="plat-ai-recommendation">
+              <div class="plat-ai-title">המלצת AI — רמת ביטחון {{ recommendation.confidence }}%</div>
+              <pre class="plat-ai-summary">{{ recommendation.summary }}</pre>
+              <div class="plat-ai-text">{{ recommendation.recommendation }}</div>
+
+              @if (recommendation.trace.length) {
+                <div class="plat-ai-trace-title">מעקב ריצה</div>
+                <div class="plat-ai-trace">
+                  @for (step of recommendation.trace; track step.tool) {
+                    <div class="plat-ai-trace-row">
+                      <span class="plat-ai-trace-mark">{{ step.success ? '✓' : '✗' }}</span>
+                      <span class="plat-ai-trace-tool">{{ step.tool }}</span>
+                      <span class="plat-ai-trace-ms">{{ step.durationMs }}ms</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
 
           <div class="plat-danger-zone">
             <div class="plat-danger-title">מחיקה לצמיתות</div>

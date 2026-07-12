@@ -64,6 +64,14 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
 
   tab: Tab = 'overview';
   actionInProgress = false;
+  analyzing = false;
+  recommendation: {
+    summary: string;
+    confidence: number;
+    recommendation: string;
+    trace: { tool: string; durationMs: number; success: boolean; meta?: Record<string, unknown> }[];
+  } | null = null;
+  recommendationError = '';
   notes = '';
   selectedReasonTags: string[] = [];
   noteRequiredError = false;
@@ -180,6 +188,32 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
       error: (err) => {
         this.error = err.error?.error || 'הפעולה נכשלה';
         this.actionInProgress = false;
+      },
+    });
+  }
+
+  // Internal/debug API — returns raw ApprovalContext, no LLM call. Not wired
+  // to any button; kept for future consumers (tests, CLI, batch jobs) that
+  // only need the collected data, not a recommendation.
+  analyzeOrganization(): void {
+    this.analyzing = true;
+    this.platformService.analyzeOrganization(this.entityId).subscribe({
+      next: (context) => { console.log('ApprovalContext', context); this.analyzing = false; },
+      error: (err) => { console.error('analyze failed', err); this.analyzing = false; },
+    });
+  }
+
+  recommendOrganization(): void {
+    this.analyzing = true;
+    this.recommendationError = '';
+    this.platformService.recommendOrganization(this.entityId).subscribe({
+      next: (result) => {
+        this.recommendation = result;
+        this.analyzing = false;
+      },
+      error: (err) => {
+        this.recommendationError = err.error?.error || 'שגיאה בהפעלת הסוכן';
+        this.analyzing = false;
       },
     });
   }

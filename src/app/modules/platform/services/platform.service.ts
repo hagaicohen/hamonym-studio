@@ -83,6 +83,14 @@ export class PlatformService {
     return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/hard-delete`, { notes }, { headers: authHeaders() });
   }
 
+  analyzeOrganization(id: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/analyze`, {}, { headers: authHeaders() });
+  }
+
+  recommendOrganization(id: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/recommend`, {}, { headers: authHeaders() });
+  }
+
   getCampaigns(query: {
     search?: string;
     status?: string;
