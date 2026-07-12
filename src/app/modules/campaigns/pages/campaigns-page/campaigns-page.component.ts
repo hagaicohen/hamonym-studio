@@ -6,7 +6,7 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/ambassador.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
-import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link } from 'lucide-angular';
+import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
 
 @Component({
   selector: 'app-campaigns-page',
@@ -30,6 +30,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   readonly UsersIcon  = Users;
   readonly EditIcon   = Pencil;
   readonly LinkIcon   = Link;
+  readonly SparklesIcon = Sparkles;
 
   confirmModal: { id: string; title: string; type: 'delete-draft' | 'hide-campaign' } | null = null;
 
@@ -42,9 +43,11 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   private currentContext = inject(CurrentContextService);
 
   constructor() {
-    // Re-load data whenever the active context changes (e.g. topbar role switch)
+    // Re-load data whenever the active context changes (e.g. topbar entity/role switch)
     effect(() => {
-      const isAmb = this.currentContext.active()?.role === 'ambassador';
+      const active = this.currentContext.active();
+      const isAmb = active?.role === 'ambassador';
+      const entityId = active?.role === 'entity-manager' ? active.context?.id : undefined;
       untracked(() => {
         this.dataSub?.unsubscribe();
         this.isLoading          = true;
@@ -58,7 +61,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
             error: ()    => { this.isLoading = false; this.loader.hide(); },
           });
         } else {
-          this.dataSub = this.campaignApi.list().subscribe({
+          this.dataSub = this.campaignApi.list(entityId).subscribe({
             next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); },
             error: ()    => { this.isLoading = false; this.loader.hide(); },
           });
@@ -220,5 +223,28 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   fmtDate(iso: string): string {
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+  }
+
+  advisingId: string | null = null;
+  advisorCampaignTitle = '';
+  advisorResult: { summary: string; strengths: string[]; tasks: { topic: string; severity: string; explanation: string; task: string }[] } | null = null;
+  advisorError = '';
+
+  analyzeCampaign(event: Event, c: any): void {
+    event.stopPropagation();
+    if (this.advisingId) return;
+    this.advisingId = c.id;
+    this.advisorCampaignTitle = c.title || 'ללא כותרת';
+    this.advisorError = '';
+    this.advisorResult = null;
+    this.campaignApi.advise(c.id).subscribe({
+      next: (result) => { this.advisorResult = result; this.advisingId = null; },
+      error: (err) => { this.advisorError = err.error?.error || 'שגיאה בקבלת המלצות'; this.advisingId = null; },
+    });
+  }
+
+  closeAdvisor(): void {
+    this.advisorResult = null;
+    this.advisorError = '';
   }
 }

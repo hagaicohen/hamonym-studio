@@ -115,6 +115,136 @@
   gap: 8px;
 }
 
+.advisor-button {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: #583cd6;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.advisor-button:hover { opacity: 0.9; }
+.advisor-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: advisor-btn-spin 0.7s linear infinite;
+}
+
+@keyframes advisor-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+.advisor-panel {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  right: 16px;
+  z-index: 999;
+  max-width: 640px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 16px 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.advisor-panel--error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #b42318;
+  background: #fef3f2;
+  border-color: #fecdca;
+}
+
+.advisor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.advisor-panel-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #583cd6;
+}
+
+.advisor-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #94a3b8;
+  padding: 4px 8px;
+}
+
+.advisor-close:hover { color: #475569; }
+
+.advisor-summary {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0 0 14px;
+}
+
+.advisor-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin: 12px 0 6px;
+}
+
+.advisor-strengths {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 13px;
+  color: #067647;
+  line-height: 1.7;
+}
+
+.advisor-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advisor-task {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.advisor-task-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.advisor-task-text { font-weight: 600; margin-bottom: 2px; }
+.advisor-task-explanation { color: #64748b; font-size: 12px; }
+
+.advisor-task.severity-high { background: #fef3f2; }
+.advisor-task.severity-medium { background: #fffaeb; }
+.advisor-task.severity-low { background: #ecfdf3; }
+
 .view-campaign-button {
   height: 34px;
   padding: 0 12px;

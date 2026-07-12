@@ -33,6 +33,14 @@
 
   <!-- RIGHT: view + save -->
   <div class="topbar-actions">
+    @if (campaignState.draft.id) {
+      <button class="advisor-button" [disabled]="advising" (click)="getAdvice()" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
+        ✨ קבל המלצות לשיפור הקמפיין
+        @if (advising) {
+          <div class="btn-spinner"></div>
+        }
+      </button>
+    }
     @if (campaignSlug) {
       <button class="view-campaign-button" (click)="viewCampaign()" title="צפה בדף הקמפיין">
         צפה בקמפיין
@@ -51,4 +59,47 @@
   </div>
 
 </header>
+
+@if (advisorError) {
+  <div class="advisor-panel advisor-panel--error">
+    <span>{{ advisorError }}</span>
+    <button class="advisor-close" (click)="closeAdvisor()">✕</button>
+  </div>
+}
+
+@if (advisorResult) {
+  <div class="advisor-panel">
+    <div class="advisor-panel-header">
+      <div class="advisor-panel-title">✨ המלצות לשיפור הקמפיין</div>
+      <button class="advisor-close" (click)="closeAdvisor()">✕</button>
+    </div>
+
+    <p class="advisor-summary">{{ advisorResult.summary }}</p>
+
+    @if (advisorResult.strengths.length) {
+      <div class="advisor-section-title">חוזקות</div>
+      <ul class="advisor-strengths">
+        @for (s of advisorResult.strengths; track s) {
+          <li>{{ s }}</li>
+        }
+      </ul>
+    }
+
+    @if (advisorResult.tasks.length) {
+      <div class="advisor-section-title">משימות לביצוע</div>
+      <div class="advisor-tasks">
+        @for (t of advisorResult.tasks; track t.task) {
+          <div class="advisor-task" [ngClass]="'severity-' + t.severity.toLowerCase()">
+            <div class="advisor-task-head">
+              <span class="advisor-task-topic">{{ t.topic }}</span>
+              <span class="advisor-task-severity">{{ t.severity }}</span>
+            </div>
+            <div class="advisor-task-text">{{ t.task }}</div>
+            <div class="advisor-task-explanation">{{ t.explanation }}</div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
 </ng-container>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
@@ -23,7 +23,7 @@ interface Kpi {
   templateUrl: './marketing-report.component.html',
   styleUrls: ['./marketing-report.component.css', '../../../../shared/reports-shared.css'],
 })
-export class MarketingReportComponent implements OnInit {
+export class MarketingReportComponent {
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
 
@@ -40,8 +40,15 @@ export class MarketingReportComponent implements OnInit {
     return Math.max(160, this.channels.length * 44);
   }
 
-  ngOnInit(): void {
-    this.load();
+  private lastLoadedEntityId: string | null = null;
+
+  constructor() {
+    effect(() => {
+      const id = this.currentEntity.currentEntity()?.id ?? null;
+      if (id === this.lastLoadedEntityId) return;
+      this.lastLoadedEntityId = id;
+      untracked(() => this.load());
+    });
   }
 
   load(): void {

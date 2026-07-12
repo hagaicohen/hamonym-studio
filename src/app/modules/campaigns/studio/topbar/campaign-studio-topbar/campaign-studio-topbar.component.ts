@@ -35,6 +35,10 @@ export class CampaignStudioTopbarComponent {
 
   saveState: SaveState = 'idle';
 
+  advising = false;
+  advisorResult: { summary: string; strengths: string[]; tasks: { topic: string; severity: string; explanation: string; task: string }[] } | null = null;
+  advisorError = '';
+
   get title(): string {
     return this.campaignState.draft.title?.trim() || 'קמפיין חדש';
   }
@@ -49,6 +53,29 @@ export class CampaignStudioTopbarComponent {
   viewCampaign(): void {
     const slug = this.campaignSlug;
     if (slug) this.router.navigate(['/campaigns', slug, 'view']);
+  }
+
+  getAdvice(): void {
+    const campaignId = this.campaignState.draft.id;
+    if (!campaignId || this.advising) return;
+
+    this.advising = true;
+    this.advisorError = '';
+    this.api.advise(campaignId).subscribe({
+      next: (result) => {
+        this.advisorResult = result;
+        this.advising = false;
+      },
+      error: (err) => {
+        this.advisorError = err.error?.error || 'שגיאה בקבלת המלצות';
+        this.advising = false;
+      },
+    });
+  }
+
+  closeAdvisor(): void {
+    this.advisorResult = null;
+    this.advisorError = '';
   }
 
   saveDraft(): void {

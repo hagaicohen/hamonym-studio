@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -76,9 +76,21 @@ export class CampaignPerformanceReportComponent implements OnInit {
 
   private searchTimer: any;
   exporting = false;
+  private lastLoadedEntityId: string | null = null;
+
+  constructor() {
+    // Reload whenever the active entity changes (topbar switcher) — currentEntity()
+    // used to only be read once at ngOnInit, so switching entities left this
+    // report frozen on whichever entity was active at page-load time.
+    effect(() => {
+      const id = this.currentEntity.currentEntity()?.id ?? null;
+      if (id === this.lastLoadedEntityId) return;
+      this.lastLoadedEntityId = id;
+      untracked(() => this.load());
+    });
+  }
 
   ngOnInit(): void {
-    this.load();
     try {
       const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
       if (saved) this.hiddenColumns = new Set(JSON.parse(saved));

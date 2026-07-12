@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
@@ -17,7 +17,7 @@ interface PctChange { total: number | null; count: number | null; avg: number | 
   templateUrl: './trends-report.component.html',
   styleUrls: ['./trends-report.component.css', '../../../../shared/reports-shared.css'],
 })
-export class TrendsReportComponent implements OnInit {
+export class TrendsReportComponent {
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
 
@@ -32,9 +32,15 @@ export class TrendsReportComponent implements OnInit {
 
   loading = true;
   error: string | null = null;
+  private lastLoadedEntityId: string | null = null;
 
-  ngOnInit(): void {
-    this.load();
+  constructor() {
+    effect(() => {
+      const id = this.currentEntity.currentEntity()?.id ?? null;
+      if (id === this.lastLoadedEntityId) return;
+      this.lastLoadedEntityId = id;
+      untracked(() => this.load());
+    });
   }
 
   load(): void {

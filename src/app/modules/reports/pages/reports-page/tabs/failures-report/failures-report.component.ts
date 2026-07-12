@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -69,13 +69,22 @@ export class FailuresReportComponent implements OnInit {
   loading    = true;
   refreshing = false;
   error: string | null = null;
+  private lastLoadedEntityId: string | null = null;
 
   get chartHeight(): number {
     return Math.max(120, this.failureReasons.length * 40);
   }
 
+  constructor() {
+    effect(() => {
+      const id = this.currentEntity.currentEntity()?.id ?? null;
+      if (id === this.lastLoadedEntityId) return;
+      this.lastLoadedEntityId = id;
+      untracked(() => this.load());
+    });
+  }
+
   ngOnInit(): void {
-    this.load();
     try {
       const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
       if (saved) this.hiddenColumns = new Set(JSON.parse(saved));

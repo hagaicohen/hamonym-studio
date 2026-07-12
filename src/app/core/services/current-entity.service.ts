@@ -1,4 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { CurrentContextService } from './current-context.service';
+import { EntitiesService } from './entities.service';
 
 @Injectable({
   providedIn: 'root',
@@ -7,6 +9,9 @@ export class CurrentEntityService {
   currentEntity = signal<any>(null);
 
   currentRole = signal<string | null>(null);
+
+  private ctx = inject(CurrentContextService);
+  private entitiesApi = inject(EntitiesService);
 
   constructor() {
     const savedEntity = localStorage.getItem('currentEntity');
@@ -20,6 +25,22 @@ export class CurrentEntityService {
     if (savedRole) {
       this.currentRole.set(savedRole);
     }
+
+    // CurrentContextService.active() is the real source of truth for "which
+    // entity is the topbar switcher pointing at" — it updates on every
+    // switchContext() call. This signal used to only be set once at login and
+    // then go stale after switching, so every entity-scoped page (reports,
+    // donors, donations, ambassadors, dashboard...) kept querying the old
+    // entity. Keep it synced whenever the active entity-manager context changes.
+    effect(() => {
+      const active = this.ctx.active();
+      if (!active || active.role !== 'entity-manager' || !active.context) return;
+      if (this.currentEntity()?.id === active.context.id) return;
+
+      this.entitiesApi.getEntityById(active.context.id).subscribe({
+        next: (entity) => this.setEntity(entity),
+      });
+    });
   }
 
   setEntity(entity: any): void {

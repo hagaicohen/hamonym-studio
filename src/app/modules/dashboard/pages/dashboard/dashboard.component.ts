@@ -1,6 +1,6 @@
 import {
   Component, OnInit, AfterViewInit,
-  ElementRef, ViewChild, inject,
+  ElementRef, ViewChild, inject, effect, untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -12,6 +12,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
+import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
 
 Chart.register(...registerables);
 
@@ -60,6 +61,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private entitiesService = inject(EntitiesService);
   private router          = inject(Router);
   private loader          = inject(AppLoaderService);
+  private campaignApi     = inject(CampaignApiService);
 
   data: DashboardData | null = null;
   error: string | null = null;
@@ -74,6 +76,20 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private chart: Chart | null = null;
   private chartPending: DashboardData['chartData'] | null = null;
   private viewReady = false;
+  private lastLoadedEntityId: string | null = null;
+
+  constructor() {
+    // currentEntity() is coarse-grained — it changes reference on every
+    // setEntity() call, including the "refresh" call inside loadDashboard()
+    // itself. Guard on the actual id so switching entities (topbar) reloads
+    // the dashboard, without looping on the internal refresh.
+    effect(() => {
+      const id = this.currentEntity.currentEntity()?.id ?? null;
+      if (id === this.lastLoadedEntityId) return;
+      this.lastLoadedEntityId = id;
+      untracked(() => this.loadDashboard());
+    });
+  }
 
   ngOnInit(): void {
     // Load user greeting
@@ -87,16 +103,18 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : (parts[0]?.[0] ?? '?').toUpperCase();
     } catch { this.userName = ''; this.userInitials = '?'; this.userPhoto = ''; }
+  }
 
-    const eName: string = this.currentEntity.currentEntity()?.display_name || '';
+  private loadDashboard(): void {
+    const entity = this.currentEntity.currentEntity();
+    if (!entity?.id) { this.error = 'לא נמצאה ישות'; this.loader.hide(); return; }
+
+    const eName: string = entity.display_name || '';
     this.entityName = eName;
     const eWords = eName.trim().split(' ').filter(Boolean);
     this.entityInitials = eWords.length >= 2
       ? (eWords[0][0] + eWords[1][0]).toUpperCase()
       : (eWords[0]?.[0] ?? '').toUpperCase();
-
-    const entity = this.currentEntity.currentEntity();
-    if (!entity?.id) { this.error = 'לא נמצאה ישות'; this.loader.hide(); return; }
 
     const raw: string = entity.logo_url || '';
     this.entityLogoUrl = raw
@@ -114,6 +132,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       },
       error: () => {},
     });
+
+    this.data = null;
+    this.error = null;
+    this.loader.show();
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
@@ -402,5 +424,27 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   viewCampaign(slug: string): void {
     this.router.navigate(['/campaigns', slug, 'view']);
+  }
+
+  advisingId: string | null = null;
+  advisorCampaignTitle = '';
+  advisorResult: { summary: string; strengths: string[]; tasks: { topic: string; severity: string; explanation: string; task: string }[] } | null = null;
+  advisorError = '';
+
+  analyzeCampaign(c: DashboardData['campaigns'][0]): void {
+    if (this.advisingId) return;
+    this.advisingId = c.id;
+    this.advisorCampaignTitle = c.title;
+    this.advisorError = '';
+    this.advisorResult = null;
+    this.campaignApi.advise(c.id).subscribe({
+      next: (result) => { this.advisorResult = result; this.advisingId = null; },
+      error: (err) => { this.advisorError = err.error?.error || 'שגיאה בקבלת המלצות'; this.advisingId = null; },
+    });
+  }
+
+  closeAdvisor(): void {
+    this.advisorResult = null;
+    this.advisorError = '';
   }
 }

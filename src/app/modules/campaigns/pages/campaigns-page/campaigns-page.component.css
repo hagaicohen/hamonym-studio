@@ -117,11 +117,6 @@
 
 .btn-action:hover { background: #f1f5f9; }
 
-.btn-edit {
-  background: #fff;
-  font-weight: 600;
-}
-
 .btn-view {
   color: #16a34a;
   border-color: #bbf7d0;
@@ -322,8 +317,16 @@
 
 .card-actions {
   display: flex;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
   margin-top: 4px;
+}
+
+.card-actions .btn-action {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 6px;
+  font-size: 12px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -711,6 +714,141 @@
 
 .btn-delete-campaign:hover { color: #ef4444; background: #fef2f2; border-color: #fecaca; }
 .btn-unhide:hover { color: #16a34a; background: #f0fdf4; border-color: #bbf7d0; }
+.btn-icon-action.btn-analyze:hover { color: #583cd6; background: #f0edfe; border-color: #d9d2fb; }
+.btn-icon-action.btn-edit-icon:hover { color: #334155; background: #f8fafc; border-color: #cbd5e1; }
+
+.draft-actions .btn-analyze {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.draft-actions .btn-analyze:hover {
+  color: #583cd6;
+  background: #f0edfe;
+  border-color: #d9d2fb;
+}
+
+.draft-actions .btn-analyze:disabled { opacity: 0.4; pointer-events: none; }
+
+.btn-spinner-sm {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(88, 60, 214, 0.25);
+  border-top-color: #583cd6;
+  border-radius: 50%;
+  animation: campaigns-advisor-spin 0.7s linear infinite;
+}
+
+@keyframes campaigns-advisor-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ══ Campaign advisor modal ══ */
+.advisor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 24px;
+}
+
+.advisor-modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  padding: 20px 24px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.advisor-modal--error { color: #b42318; }
+
+.advisor-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.advisor-modal-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #583cd6;
+}
+
+.advisor-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #94a3b8;
+  padding: 4px 8px;
+}
+
+.advisor-close:hover { color: #475569; }
+
+.advisor-summary {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0 0 14px;
+}
+
+.advisor-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin: 12px 0 6px;
+}
+
+.advisor-strengths {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 13px;
+  color: #067647;
+  line-height: 1.7;
+}
+
+.advisor-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advisor-task {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.advisor-task-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.advisor-task-text { font-weight: 600; margin-bottom: 2px; }
+.advisor-task-explanation { color: #64748b; font-size: 12px; }
+
+.advisor-task.severity-high { background: #fef3f2; }
+.advisor-task.severity-medium { background: #fffaeb; }
+.advisor-task.severity-low { background: #ecfdf3; }
 
 /* ------------------------------------------------------------------ */
 /* HIDDEN CAMPAIGN                                                      */

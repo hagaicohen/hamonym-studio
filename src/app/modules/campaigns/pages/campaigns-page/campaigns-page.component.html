@@ -106,6 +106,12 @@
             </div>
             <div class="draft-actions">
               <button class="btn-continue" (click)="editCampaign(c.id)">המשך עריכה</button>
+              <button class="btn-analyze"
+                      [disabled]="!!advisingId"
+                      (click)="analyzeCampaign($event, c)"
+                      title="נתח קמפיין עם בינה מלאכותית">
+                @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
+              </button>
               <button class="btn-delete-draft"
                       [disabled]="deletingId === c.id"
                       (click)="openDeleteModal($event, c.id, c.title)"
@@ -181,7 +187,15 @@
                     @if (c.slug) {
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
-                    <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                    <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
+                      <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
+                    </button>
+                    <button class="btn-icon-action btn-analyze"
+                            [disabled]="!!advisingId"
+                            (click)="analyzeCampaign($event, c)"
+                            title="נתח קמפיין עם בינה מלאכותית">
+                      @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
+                    </button>
                     @if (!isAmbassador) {
                       @if (c.isHidden) {
                         <button class="btn-icon-action btn-unhide"
@@ -247,7 +261,15 @@
                   @if (c.slug) {
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }
-                  <button class="btn-action btn-edit" (click)="editCampaign(c.id)">ערוך</button>
+                  <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
+                    <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
+                  </button>
+                  <button class="btn-icon-action btn-analyze"
+                          [disabled]="!!advisingId"
+                          (click)="analyzeCampaign($event, c)"
+                          title="נתח קמפיין עם בינה מלאכותית">
+                    @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
+                  </button>
                   @if (!isAmbassador) {
                     @if (c.isHidden) {
                       <button class="btn-icon-action btn-unhide"
@@ -315,6 +337,56 @@
             <lucide-angular [img]="EyeOffIcon" [size]="14"></lucide-angular>
             הסתר קמפיין
           </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ══ CAMPAIGN ADVISOR ══ -->
+@if (advisorError) {
+  <div class="advisor-overlay" (click)="closeAdvisor()">
+    <div class="advisor-modal advisor-modal--error" (click)="$event.stopPropagation()">
+      <div class="advisor-modal-header">
+        <span>{{ advisorError }}</span>
+        <button class="advisor-close" (click)="closeAdvisor()">✕</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (advisorResult) {
+  <div class="advisor-overlay" (click)="closeAdvisor()">
+    <div class="advisor-modal" (click)="$event.stopPropagation()">
+      <div class="advisor-modal-header">
+        <div class="advisor-modal-title">✨ המלצות לשיפור — {{ advisorCampaignTitle }}</div>
+        <button class="advisor-close" (click)="closeAdvisor()">✕</button>
+      </div>
+
+      <p class="advisor-summary">{{ advisorResult.summary }}</p>
+
+      @if (advisorResult.strengths.length) {
+        <div class="advisor-section-title">חוזקות</div>
+        <ul class="advisor-strengths">
+          @for (s of advisorResult.strengths; track s) {
+            <li>{{ s }}</li>
+          }
+        </ul>
+      }
+
+      @if (advisorResult.tasks.length) {
+        <div class="advisor-section-title">משימות לביצוע</div>
+        <div class="advisor-tasks">
+          @for (t of advisorResult.tasks; track t.task) {
+            <div class="advisor-task" [ngClass]="'severity-' + t.severity.toLowerCase()">
+              <div class="advisor-task-head">
+                <span class="advisor-task-topic">{{ t.topic }}</span>
+                <span class="advisor-task-severity">{{ t.severity }}</span>
+              </div>
+              <div class="advisor-task-text">{{ t.task }}</div>
+              <div class="advisor-task-explanation">{{ t.explanation }}</div>
+            </div>
+          }
         </div>
       }
     </div>

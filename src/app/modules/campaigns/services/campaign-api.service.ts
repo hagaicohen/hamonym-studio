@@ -165,9 +165,11 @@ export class CampaignApiService {
     };
   }
 
-  list(): Observable<CampaignDraft[]> {
+  list(entityId?: string): Observable<CampaignDraft[]> {
+    const params: Record<string, string> = entityId ? { entityId } : {};
     return this.http.get<{ campaigns: any[] }>(`${this.apiUrl}/my`, {
       headers: this.headers(),
+      params,
     }).pipe(map(res => (res.campaigns ?? []).map(r => this.fromSnake(r))));
   }
 
@@ -187,6 +189,12 @@ export class CampaignApiService {
     return this.http.get<any>(`${this.apiUrl}/${campaignId}`, {
       headers: this.headers(),
     }).pipe(map(r => this.fromSnake(r)));
+  }
+
+  advise(campaignId: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${campaignId}/advise`, {}, {
+      headers: this.headers(),
+    });
   }
 
   getBySlug(slug: string): Observable<CampaignDraft> {
