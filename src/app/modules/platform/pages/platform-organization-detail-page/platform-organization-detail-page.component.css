@@ -354,6 +354,42 @@
   font-weight: 600;
 }
 
+.plat-ai-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.plat-ai-check-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.plat-ai-check-title { font-weight: 700; white-space: nowrap; }
+
+.plat-ai-check-explanation { color: inherit; }
+
+.check-pass {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.check-warning {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.check-fail {
+  background: #fef3f2;
+  color: #b42318;
+}
+
 .plat-ai-trace-title {
   margin-top: 14px;
   padding-top: 10px;

@@ -69,6 +69,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
     summary: string;
     confidence: number;
     recommendation: string;
+    checks: { id: string; title: string; status: 'pass' | 'warning' | 'fail'; explanation: string }[];
     trace: { tool: string; durationMs: number; success: boolean; meta?: Record<string, unknown> }[];
   } | null = null;
   recommendationError = '';

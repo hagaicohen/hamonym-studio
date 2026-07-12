@@ -49,7 +49,7 @@
       <button [class.active]="tab === 'ambassadors'" (click)="setTab('ambassadors')">שגרירים ({{ ambassadors.length }})</button>
       <button [class.active]="tab === 'donations'" (click)="setTab('donations')">תרומות</button>
       <button [class.active]="tab === 'users'" (click)="setTab('users')">משתמשים ({{ users.length }})</button>
-      <button [class.active]="tab === 'audit'" (click)="setTab('audit')">Audit Log</button>
+      <button [class.active]="tab === 'audit'" (click)="setTab('audit')">יומן פעולות</button>
     </div>
 
     <div class="plat-card">
@@ -143,10 +143,23 @@
           @if (recommendation) {
             <div class="plat-ai-recommendation">
               <div class="plat-ai-title">המלצת AI — רמת ביטחון {{ recommendation.confidence }}%</div>
-              <pre class="plat-ai-summary">{{ recommendation.summary }}</pre>
+
+              @if (recommendation.checks.length) {
+                <div class="plat-ai-checks">
+                  @for (check of recommendation.checks; track check.id) {
+                    <div class="plat-ai-check-row" [ngClass]="'check-' + check.status">
+                      <span class="plat-ai-check-title">{{ check.title }}</span>
+                      <span class="plat-ai-check-explanation">{{ check.explanation }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <pre class="plat-ai-summary">{{ recommendation.summary }}</pre>
+              }
+
               <div class="plat-ai-text">{{ recommendation.recommendation }}</div>
 
-              @if (recommendation.trace.length) {
+              @if (recommendation.trace.length && false) {
                 <div class="plat-ai-trace-title">מעקב ריצה</div>
                 <div class="plat-ai-trace">
                   @for (step of recommendation.trace; track step.tool) {
