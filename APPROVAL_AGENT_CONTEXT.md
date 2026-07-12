@@ -95,7 +95,7 @@ Demo scripts (backend `scripts/`, matching the project's existing ad-hoc-script 
 | Documents (Tool 4) | **Real** — metadata only, no blob bytes |
 | Campaigns | **Real** — DB |
 | GuideStar (Tool 2) | **Real** — guidestar.org.il REST API (login → bearer token → org lookup by registration number). See §3c. |
-| Web search / Google (Tool 3) | **Stub** — returns `null`, deliberately skipped per explicit decision (no free Google API; a paid one like SerpAPI/Custom Search wasn't set up yet) |
+| Web search / Google (Tool 3) | **Stub, permanently for now** — Future Enhancement, not a Phase-1 requirement. See §5. |
 | Normalizer / Fact Builder | **Real** — see §3d |
 | Validation Engine | **Real** — see §3e |
 | Prompt builder | **Real** — consumes `ApprovalCheck[]` + `entityName`, not `ApprovalFacts` or `ApprovalContext` |
@@ -225,8 +225,8 @@ Verified via Playwright against the real running app: click → panel appears wi
 - No RAG / Vector DB (e.g. רשם העמותות circulars, Hamonym's own internal policies) — explicit direction: don't start until real usage (see §8) surfaces what's actually missing.
 - No MCP.
 - No multi-agent — one agent only.
-- Real web-search integration — deliberately deferred, no credentials/API chosen yet.
-- `ApprovalCheck[]` is returned by `recommend()` but not yet rendered as its own UI element (e.g. colored pass/warning/fail badges) — the panel currently only shows the LLM's prose `summary`, not the structured `checks` array directly. Not asked for yet.
+- ~~`ApprovalCheck[]` not rendered in UI~~ ✅ done — colored pass/warning/fail rows, see §3f.
+- **`WebSearchTool` — a Future Enhancement, deliberately not a Phase-1 requirement, not a gap.** Explicit reasoning (this session): an approval decision is fully answerable from GuideStar + documents + system data; a website/social-media presence is nice-to-have, not a requirement to approve or reject an organization. Building it now would mean picking a paid search provider (Google has no free API) purely speculatively, before knowing it's actually needed. **Phase 1 is considered complete without it.** Revisit only if the real-usage review (§8 step 7) shows an approval decision was genuinely blocked by missing web presence info.
 
 ## 6. Known unrelated pre-existing issues (noticed, not fixed, out of scope for this arc)
 
@@ -241,10 +241,10 @@ Verified via Playwright against the real running app: click → panel appears wi
 
 ## 8. Next steps — pivot: from "build AI system" to "build decision system" (explicit direction this session)
 
-Phase 1 (Agent → Tools → Context → Facts → Checks → Prompt → OpenAI → JSON → UI) is **complete** — this is a working system now, not a PoC. Explicit direction going forward: **stop adding layers** (no RAG, no new Tools, no Multi-Agent, no MCP) until real usage surfaces what's actually missing.
+**Phase 1 is complete and frozen.** Agent → Tools → Context → Facts → Checks → Prompt → OpenAI → JSON → UI — this is a working system now, not a PoC. `WebSearchTool` staying a stub does **not** block this declaration (§5). Explicit direction going forward: **stop adding layers** (no RAG, no new/completed Tools, no Multi-Agent, no MCP) until real usage surfaces what's actually missing.
 
 1. ~~Agent skeleton~~ ✅
-2. ~~Tools (Entity, GuideStar, WebSearch-stub, Documents, Campaigns)~~ ✅
+2. ~~Tools (Entity, GuideStar, Documents, Campaigns — WebSearch deliberately stays a stub, see §5)~~ ✅
 3. ~~Prompt Builder~~ ✅
 4. ~~Recommendation (real LLM call)~~ ✅
 4b. ~~Tracing~~ ✅ — caught and fixed one real bug (DocumentTool blob transfer, §3b); reports per-tool result metadata, not just timing
@@ -252,11 +252,12 @@ Phase 1 (Agent → Tools → Context → Facts → Checks → Prompt → OpenAI 
 5b. ~~Normalizer / Fact Builder~~ ✅ — see §3d
 5c. ~~Validation Engine / Checks~~ ✅ — see §3e — code now judges severity (fail vs. warning), not the LLM
 6. ~~Wire UI to `recommend()`, keep `analyze()` as a separate internal/debug endpoint (deliberately not merged)~~ ✅ — see §3f
-7. **← Current step, not yet started**: manually run the agent against **~50 real organizations** and, for each recommendation, ask "why did the Agent recommend this?" This is explicitly a *usage/observation* task, not a coding task — no code changes expected to come out of this step directly. Two outcomes per case, per explicit direction:
-   - If the answer is something the code already knows how to check (e.g. "no approval_46") → that's a signal a `Check` is missing or needs a different severity, not that the LLM needs a better prompt.
-   - If the answer is something requiring judgment (e.g. "the documents contradict each other") → that's exactly where the LLM is adding real value.
-8. Only after that review: decide whether the next investment is more Checks, RAG, or something else — deliberately not decided in advance.
-9. WebSearchTool stub → real integration, only if the review in step 7 shows it's actually needed.
-10. RAG (רשם העמותות circulars / Hamonym internal policies → Vector DB) — only after step 7-8.
-11. MCP
-12. Multi-agent (only if actually needed)
+6b. ~~Render `checks` as colored pass/warning/fail rows in the UI~~ ✅ — see §3f
+7. **Blocked, not abandoned**: manually run the agent against ~50 real organizations and ask "why did the Agent recommend this?" for each (usage/observation task, not coding). Checked this session: **only 2 entities exist in the current DB** — the review isn't practically doable yet at that scale. Revisit once real organizations accumulate (production usage) or another real data source is identified. Not a reason to skip straight to building the next layer in the meantime (see §5's `WebSearchTool` note and the Document Intelligence discussion below — both explicitly deferred until this review is actually possible).
+   - If the eventual answer is something the code already knows how to check (e.g. "no approval_46") → that's a signal a `Check` is missing or needs a different severity, not that the LLM needs a better prompt.
+   - If the eventual answer is something requiring judgment (e.g. "the documents contradict each other") → that's exactly where the LLM is adding real value.
+7b. **Proposed candidate for after the review — Document Intelligence** (not started, explicitly not jumped to): read the actual *content* of uploaded documents (association certificate, tax document) — today `DocumentTool` only checks whether a file was uploaded (`hasData` boolean), never what's in it. Proposed shape: `Document → Extract Text → Extract Facts → Validation` (e.g. registration number *in the document* == registration number *in the system*, PASS/FAIL) — framed as "Document Intelligence," not "OCR," since the goal is understanding the document, not just extracting text. Separately, confirmed `approval46`/`nihulTakin` correctly do NOT need this — they already come from GuideStar's registry (external source of truth), not from reading an uploaded file, so trusting GuideStar over the raw document there is fine as-is.
+8. Only after the review in step 7: decide whether the next investment is more Checks, Document Intelligence, `WebSearchTool` for real, RAG, or something else — deliberately not decided in advance.
+9. RAG (רשם העמותות circulars / Hamonym internal policies → Vector DB) — only after step 7-8.
+10. MCP
+11. Multi-agent (only if actually needed)
