@@ -267,7 +267,19 @@ exports.getMyEntities =
         `
         SELECT
 
-          e.*,
+          e.id, e.entity_type, e.display_name, e.legal_name, e.registration_number, e.description,
+          e.logo_url, e.website, e.city, e.address, e.contact_full_name, e.contact_email, e.contact_phone,
+          e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+          e.cardcom_clearing_company, e.cardcom_invoice_name, e.cardcom_invoice_email, e.cardcom_is_production,
+          e.cardcom_connection_status, e.cardcom_last_verified_at, e.cardcom_last_error,
+          e.association_certificate_url, e.bank_document_url, e.identity_document_url, e.tax_document_url,
+          e.requires_completion, e.missing_fields, e.onboarding_completed_at, e.created_by_user_id,
+          e.created_at, e.updated_at, e.created_by, e.status, e.is_profile_complete, e.type, e.email, e.phone,
+          e.onboarding_completed, e.onboarding_step, e.association_certificate_name, e.tax_document_name,
+          e.primary_category, e.secondary_categories, e.registration_document_name, e.registration_document_mime,
+          e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
+          e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
+          e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
           ue.role,
 
           CASE
@@ -288,8 +300,6 @@ exports.getMyEntities =
 
           eb.exp_month,
           eb.exp_year,
-
-          e.billing_masav_file_name,
 
           (SELECT COUNT(*)::int FROM campaigns c
             WHERE c.entity_id = e.id AND c.deleted_at IS NULL) AS "campaignsCount",
@@ -459,6 +469,30 @@ exports.getTaxDocument =
     return result.rows[0];
 
   };
+
+// Metadata only (name/mime, no bytea data) — for callers that only need to
+// know whether a document was uploaded, not download it. getAssociationDocument/
+// getTaxDocument above stay as-is since entities.controller.js's download
+// routes need the real bytes.
+exports.getAssociationDocumentMeta = async (entityId) => {
+  const { rows } = await db.query(
+    `SELECT association_certificate_name, association_certificate_mime,
+            (association_certificate_data IS NOT NULL) AS has_data
+     FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  return rows[0];
+};
+
+exports.getTaxDocumentMeta = async (entityId) => {
+  const { rows } = await db.query(
+    `SELECT tax_document_name, tax_document_mime,
+            (tax_document_data IS NOT NULL) AS has_data
+     FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  return rows[0];
+};
 
 /*exports.uploadLogo =
   async ({
@@ -742,7 +776,20 @@ exports.updateEntity =
 
         WHERE id = $31
 
-        RETURNING *
+        RETURNING
+          id, entity_type, display_name, legal_name, registration_number, description,
+          logo_url, website, city, address, contact_full_name, contact_email, contact_phone,
+          cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
+          cardcom_clearing_company, cardcom_invoice_name, cardcom_invoice_email, cardcom_is_production,
+          cardcom_connection_status, cardcom_last_verified_at, cardcom_last_error,
+          association_certificate_url, bank_document_url, identity_document_url, tax_document_url,
+          requires_completion, missing_fields, onboarding_completed_at, created_by_user_id,
+          created_at, updated_at, created_by, status, is_profile_complete, type, email, phone,
+          onboarding_completed, onboarding_step, association_certificate_name, tax_document_name,
+          primary_category, secondary_categories, registration_document_name, registration_document_mime,
+          association_certificate_mime, tax_document_mime, logo_mime, campaign_types, monthly_goal,
+          yearly_goal, billing_method, billing_masav_file_name, cardcom_terminal, cardcom_api_name,
+          cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden
         `,
 
         [
@@ -809,7 +856,19 @@ exports.getEntityById =
         `
         SELECT
 
-          e.*,
+          e.id, e.entity_type, e.display_name, e.legal_name, e.registration_number, e.description,
+          e.logo_url, e.website, e.city, e.address, e.contact_full_name, e.contact_email, e.contact_phone,
+          e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+          e.cardcom_clearing_company, e.cardcom_invoice_name, e.cardcom_invoice_email, e.cardcom_is_production,
+          e.cardcom_connection_status, e.cardcom_last_verified_at, e.cardcom_last_error,
+          e.association_certificate_url, e.bank_document_url, e.identity_document_url, e.tax_document_url,
+          e.requires_completion, e.missing_fields, e.onboarding_completed_at, e.created_by_user_id,
+          e.created_at, e.updated_at, e.created_by, e.status, e.is_profile_complete, e.type, e.email, e.phone,
+          e.onboarding_completed, e.onboarding_step, e.association_certificate_name, e.tax_document_name,
+          e.primary_category, e.secondary_categories, e.registration_document_name, e.registration_document_mime,
+          e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
+          e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
+          e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
 
           CASE
 
@@ -831,9 +890,7 @@ exports.getEntityById =
 
           eb.exp_month,
 
-          eb.exp_year,
-
-          e.billing_masav_file_name
+          eb.exp_year
 
         FROM entities e
 
@@ -962,7 +1019,20 @@ exports.requestReview = async (entityId, userId) => {
   const result = await db.query(
     `UPDATE entities SET status = 'pending_review', updated_at = NOW()
      WHERE id = $1 AND status = 'changes_requested'
-     RETURNING *`,
+     RETURNING
+       id, entity_type, display_name, legal_name, registration_number, description,
+       logo_url, website, city, address, contact_full_name, contact_email, contact_phone,
+       cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
+       cardcom_clearing_company, cardcom_invoice_name, cardcom_invoice_email, cardcom_is_production,
+       cardcom_connection_status, cardcom_last_verified_at, cardcom_last_error,
+       association_certificate_url, bank_document_url, identity_document_url, tax_document_url,
+       requires_completion, missing_fields, onboarding_completed_at, created_by_user_id,
+       created_at, updated_at, created_by, status, is_profile_complete, type, email, phone,
+       onboarding_completed, onboarding_step, association_certificate_name, tax_document_name,
+       primary_category, secondary_categories, registration_document_name, registration_document_mime,
+       association_certificate_mime, tax_document_mime, logo_mime, campaign_types, monthly_goal,
+       yearly_goal, billing_method, billing_masav_file_name, cardcom_terminal, cardcom_api_name,
+       cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden`,
     [entityId]
   );
 

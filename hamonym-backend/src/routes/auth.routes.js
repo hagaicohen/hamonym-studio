@@ -170,6 +170,10 @@ router.post(
 
     try {
 
+      const __loginT0 = Date.now();
+      const __mark = (label) => console.log(`[LOGIN TIMING] ${label}: ${Date.now() - __loginT0}ms (total so far)`);
+      console.log('[LOGIN TIMING] === request start ===');
+
       const {
         email,
         password
@@ -188,6 +192,7 @@ router.post(
           [email]
 
         );
+      __mark('1) SELECT user');
 
       if (
         result.rows.length === 0
@@ -207,6 +212,7 @@ router.post(
           password,
           user.password_hash
         );
+      __mark('2) bcrypt.compare');
 
       if (!validPassword) {
 
@@ -232,39 +238,30 @@ router.post(
 
       }
 
-      await pool.query(
-
-        `
-        UPDATE users
-        SET last_login_at = NOW()
-        WHERE id = $1
-        `,
-
-        [user.id]
-
-      );
-
-      // Catches donations made as a guest with this email since the last login.
-      await pool.query(
-        `UPDATE donations
-         SET donor_user_id = $1
-         WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
-        [user.id, user.email]
-      );
-
-      const entities =
-        await pool.query(
-
-          `
-          SELECT 1
-          FROM user_entities
-          WHERE user_id = $1
-          LIMIT 1
-          `,
-
+      // These three are independent of each other — run them together
+      // instead of paying a separate network round trip for each in turn.
+      const __sub = (label, promise) => {
+        const t0 = Date.now();
+        return promise.then((r) => { console.log(`[LOGIN TIMING]   - ${label}: ${Date.now() - t0}ms`); return r; });
+      };
+      const [, , entities] = await Promise.all([
+        __sub('update last_login_at', pool.query(
+          `UPDATE users SET last_login_at = NOW() WHERE id = $1`,
           [user.id]
-
-        );
+        )),
+        // Catches donations made as a guest with this email since the last login.
+        __sub('link guest donations', pool.query(
+          `UPDATE donations
+           SET donor_user_id = $1
+           WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
+          [user.id, user.email]
+        )),
+        __sub('check user_entities', pool.query(
+          `SELECT 1 FROM user_entities WHERE user_id = $1 LIMIT 1`,
+          [user.id]
+        )),
+      ]);
+      __mark('3) Promise.all(update last_login, link donations, check entities)');
 
       const hasEntities =
         entities.rows.length > 0;
@@ -286,6 +283,8 @@ router.post(
           }
 
         );
+      __mark('4) jwt.sign');
+      console.log('[LOGIN TIMING] === request end, total:', Date.now() - __loginT0, 'ms ===');
 
       res.json({
 
@@ -562,36 +561,21 @@ router.post(
 
       }
 
-      /* UPDATE LAST LOGIN + sync picture */
+      /* UPDATE LAST LOGIN + sync picture, and CHECK ENTITIES — independent, run together */
 
-      await pool.query(
-
-        `
-        UPDATE users
-        SET last_login_at = NOW(),
-            picture = COALESCE($2, picture)
-        WHERE id = $1
-        `,
-
-        [user.id, picture]
-
-      );
-
-      /* CHECK ENTITIES */
-
-      const entities =
-        await pool.query(
-
-          `
-          SELECT 1
-          FROM user_entities
-          WHERE user_id = $1
-          LIMIT 1
-          `,
-
+      const [, entities] = await Promise.all([
+        pool.query(
+          `UPDATE users
+           SET last_login_at = NOW(),
+               picture = COALESCE($2, picture)
+           WHERE id = $1`,
+          [user.id, picture]
+        ),
+        pool.query(
+          `SELECT 1 FROM user_entities WHERE user_id = $1 LIMIT 1`,
           [user.id]
-
-        );
+        ),
+      ]);
 
       const hasEntities =
         entities.rows.length > 0;

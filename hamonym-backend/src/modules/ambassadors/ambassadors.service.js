@@ -368,6 +368,27 @@ exports.getEntityAmbassadors = async (entityId, { search, status, campaignId, so
   };
 };
 
+// Just the ambassador list, none of getEntityAmbassadors' KPI/campaign-dropdown
+// sub-queries — for callers (like the platform org detail page) that only
+// render the table itself.
+exports.getEntityAmbassadorsList = async (entityId, { limit = 25, page = 0 } = {}) => {
+  const { rows } = await db.query(
+    `SELECT a.*, c.title AS campaign_title, c.slug AS campaign_slug, ${STATS_SQL}
+     FROM campaign_ambassadors a
+     JOIN campaigns c ON c.id = a.campaign_id
+     WHERE c.entity_id = $1
+     ORDER BY raised_total DESC
+     LIMIT $2 OFFSET $3`,
+    [entityId, limit, page * limit]
+  );
+
+  return rows.map(r => ({
+    ...mapRow(r),
+    campaign_title: r.campaign_title,
+    campaign_slug:  r.campaign_slug,
+  }));
+};
+
 exports.getBySlug = async (campaignSlug, ambassadorSlug) => {
   const { rows } = await db.query(
     `SELECT a.*, ${STATS_SQL}

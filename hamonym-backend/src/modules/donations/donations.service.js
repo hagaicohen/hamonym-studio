@@ -543,6 +543,53 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
   };
 };
 
+// Just the donation list + aggregate KPIs (donorCount folded into the same
+// aggregate scan) — none of getEntityDonations' campaign-dropdown sub-query,
+// for callers (like the platform org detail page) that don't render a filter.
+exports.getEntityDonationsSummary = async (entityId, { limit = 25, page = 0 } = {}) => {
+  const [listRes, aggRes] = await Promise.all([
+    db.query(
+      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              c.title AS campaign_title, c.slug AS campaign_slug
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       WHERE d.entity_id = $1
+       ORDER BY d.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [entityId, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
+         COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
+         COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
+         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount,
+         COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))
+           FILTER (WHERE d.status = 'paid')::int AS donor_count
+       FROM donations d
+       WHERE d.entity_id = $1`,
+      [entityId]
+    ),
+  ]);
+
+  const agg = aggRes.rows[0];
+  return {
+    donations: listRes.rows,
+    kpi: {
+      totalRaised:  agg.total_raised,
+      paidCount:    agg.paid_count,
+      failedCount:  agg.failed_count,
+      pendingCount: agg.pending_count,
+      avgAmount:    agg.avg_amount,
+      total:        agg.total,
+    },
+    donorCount: agg.donor_count,
+  };
+};
+
 /* ─────────────────────────────────────────
    ENTITY DONORS PAGE (authenticated)
    — donations grouped by donor identity

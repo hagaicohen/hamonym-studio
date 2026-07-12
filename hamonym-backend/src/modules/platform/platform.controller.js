@@ -1,4 +1,5 @@
 const svc = require('./platform.service');
+const approvalAgent = require('../../agents/approval/approval.agent');
 
 function statusFor(err) {
   switch (err.message) {
@@ -48,6 +49,20 @@ exports.getOrganizations = async (req, res) => {
 exports.getOrganization = async (req, res) => {
   try {
     const result = await svc.getOrganizationDetail(req.params.id);
+    res.json(result);
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
+exports.analyzeOrganization = async (req, res) => {
+  try {
+    const context = await approvalAgent.analyze(req.params.id);
+    res.json(context);
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
+exports.recommendOrganization = async (req, res) => {
+  try {
+    const result = await approvalAgent.recommend(req.params.id);
     res.json(result);
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };

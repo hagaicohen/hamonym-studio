@@ -396,7 +396,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
 };
 
 exports.getOrganizationDetail = async (entityId) => {
-  const [entity, usersRes, campaignsRes, ambassadors, donations, auditRes, donorCountRes] = await Promise.all([
+  const [entity, usersRes, campaignsRes, ambassadors, donations, auditRes] = await Promise.all([
     entitiesService.getEntityById(entityId),
     db.query(
       `SELECT u.id, u.full_name, u.email, ue.role
@@ -412,20 +412,14 @@ exports.getOrganizationDetail = async (entityId) => {
        ORDER BY created_at DESC`,
       [entityId]
     ),
-    ambassadorsService.getEntityAmbassadors(entityId, {}),
-    donationsService.getEntityDonations(entityId, { limit: 10 }),
+    ambassadorsService.getEntityAmbassadorsList(entityId),
+    donationsService.getEntityDonationsSummary(entityId, { limit: 10 }),
     db.query(
       `SELECT a.id, a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS super_admin_name
        FROM platform_audit_log a
        JOIN users u ON u.id = a.super_admin_user_id
        WHERE a.entity_id = $1
        ORDER BY a.created_at DESC`,
-      [entityId]
-    ),
-    db.query(
-      `SELECT COUNT(DISTINCT COALESCE(NULLIF(donor_email, ''), NULLIF(donor_phone, ''), donor_name))::int AS donor_count
-       FROM donations
-       WHERE entity_id = $1 AND status = 'paid'`,
       [entityId]
     ),
   ]);
@@ -436,11 +430,11 @@ exports.getOrganizationDetail = async (entityId) => {
     entity,
     users: usersRes.rows,
     campaigns: campaignsRes.rows,
-    ambassadors: ambassadors.ambassadors,
+    ambassadors,
     donations: donations.donations,
     donationsKpi: donations.kpi,
     auditLog: auditRes.rows,
-    donorCount: donorCountRes.rows[0].donor_count,
+    donorCount: donations.donorCount,
   };
 };
 
