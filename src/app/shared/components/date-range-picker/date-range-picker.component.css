@@ -1,0 +1,30 @@
+.range-picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: #f3f4f6;
+  border-radius: 12px;
+}
+
+.range-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.range-btn:hover { color: #374151; }
+
+.range-btn.active {
+  background: #fff;
+  color: #583cd6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}

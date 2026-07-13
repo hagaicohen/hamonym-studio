@@ -4,15 +4,17 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { AnalyticsRangeService } from '../../../../core/services/analytics-range.service';
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 Chart.register(...registerables);
 
@@ -48,7 +50,7 @@ interface DashboardData {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, ApprovalStatusCardComponent],
+  imports: [CommonModule, RouterLink, ApprovalStatusCardComponent, DateRangePickerComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -58,6 +60,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private http            = inject(HttpClient);
   currentEntity           = inject(CurrentEntityService);
   readonly ctx            = inject(CurrentContextService);
+  readonly analyticsRange = inject(AnalyticsRangeService);
   private entitiesService = inject(EntitiesService);
   private router          = inject(Router);
   private loader          = inject(AppLoaderService);
@@ -76,17 +79,20 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private chart: Chart | null = null;
   private chartPending: DashboardData['chartData'] | null = null;
   private viewReady = false;
-  private lastLoadedEntityId: string | null = null;
+  private lastLoadedKey: string | null = null;
 
   constructor() {
     // currentEntity() is coarse-grained — it changes reference on every
     // setEntity() call, including the "refresh" call inside loadDashboard()
-    // itself. Guard on the actual id so switching entities (topbar) reloads
-    // the dashboard, without looping on the internal refresh.
+    // itself. Guard on the actual id+range so switching entities (topbar)
+    // or the date range (picker) reloads the dashboard, without looping on
+    // the internal entity refresh.
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
-      if (id === this.lastLoadedEntityId) return;
-      this.lastLoadedEntityId = id;
+      const range = this.analyticsRange.activeRange();
+      const key = `${id}_${range.from}_${range.to}`;
+      if (key === this.lastLoadedKey) return;
+      this.lastLoadedKey = key;
       untracked(() => this.loadDashboard());
     });
   }
@@ -138,9 +144,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.loader.show();
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    const range = this.analyticsRange.activeRange();
+    const params = new HttpParams().set('from', range.from).set('to', range.to);
 
     this.http
-      .get<DashboardData>(`${environment.apiUrl}/api/entities/${entity.id}/dashboard`, { headers })
+      .get<DashboardData>(`${environment.apiUrl}/api/entities/${entity.id}/dashboard`, { headers, params })
       .subscribe({
         next: (res) => {
           this.data = res;

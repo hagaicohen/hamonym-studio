@@ -1,0 +1,10 @@
+<div class="range-picker">
+  @for (p of presets; track p) {
+    <button
+      class="range-btn"
+      [class.active]="range.activeRange().preset === p"
+      (click)="select(p)">
+      {{ labels[p] }}
+    </button>
+  }
+</div>

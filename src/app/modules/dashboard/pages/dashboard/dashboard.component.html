@@ -59,6 +59,11 @@
     <app-approval-status-card [entityId]="currentEntity.currentEntity()!.id"></app-approval-status-card>
   }
 
+  <!-- ══ DATE RANGE ══ -->
+  <div class="dash-range-row">
+    <app-date-range-picker></app-date-range-picker>
+  </div>
+
   <!-- ══ KPI GRID ══ -->
   <section class="kpi-grid">
 
@@ -67,14 +72,14 @@
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v1H3V7zm0 3h18v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8zm13 4a1 1 0 100 2 1 1 0 000-2z"/>
         </svg>
-        <span class="kpi-title">גויס החודש</span>
+        <span class="kpi-title">גויס בתקופה</span>
       </div>
       <div class="kpi-value kpi-centered">{{ fmt(data.kpi.fundraisingThisMonth.total) }}</div>
       <div class="kpi-trend kpi-centered"
            [class.trend-negative]="!pctIsUp(data.kpi.fundraisingThisMonth.pctChange)">
         <span class="trend-arrow">{{ pctIsUp(data.kpi.fundraisingThisMonth.pctChange) ? '▲' : '▼' }}</span>
         <span class="trend-pct">{{ pctAbs(data.kpi.fundraisingThisMonth.pctChange) }}%</span>
-        <span class="trend-label"> לעומת חודש שעבר</span>
+        <span class="trend-label"> לעומת התקופה הקודמת</span>
       </div>
     </div>
 
@@ -83,14 +88,14 @@
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>
         </svg>
-        <span class="kpi-title">תרומות החודש</span>
+        <span class="kpi-title">תרומות בתקופה</span>
       </div>
       <div class="kpi-value kpi-centered">{{ data.kpi.donationsThisMonth.count }}</div>
       <div class="kpi-trend kpi-centered"
            [class.trend-negative]="!pctIsUp(data.kpi.donationsThisMonth.pctChange)">
         <span class="trend-arrow">{{ pctIsUp(data.kpi.donationsThisMonth.pctChange) ? '▲' : '▼' }}</span>
         <span class="trend-pct">{{ pctAbs(data.kpi.donationsThisMonth.pctChange) }}%</span>
-        <span class="trend-label"> לעומת חודש שעבר</span>
+        <span class="trend-label"> לעומת התקופה הקודמת</span>
       </div>
     </div>
 

@@ -288,6 +288,15 @@
 }
 
 /* ══════════════════════════════
+   DATE RANGE
+══════════════════════════════ */
+.dash-range-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+/* ══════════════════════════════
    KPI GRID
 ══════════════════════════════ */
 .kpi-grid {
