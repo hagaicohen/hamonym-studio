@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
+import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 
 interface CampaignPerf {
   id: string;
@@ -51,8 +52,9 @@ const COLUMNS_STORAGE_KEY = 'reports-campaigns-hidden-columns';
   styleUrls: ['./campaign-performance-report.component.css', '../../../../shared/reports-shared.css'],
 })
 export class CampaignPerformanceReportComponent implements OnInit {
-  private http          = inject(HttpClient);
-  private currentEntity = inject(CurrentEntityService);
+  private http           = inject(HttpClient);
+  private currentEntity  = inject(CurrentEntityService);
+  private analyticsRange = inject(AnalyticsRangeService);
 
   // Set when arriving from a specific campaign's "📊 דוחות" button — narrows
   // the table to that campaign instead of showing the entity's full list.
@@ -76,16 +78,18 @@ export class CampaignPerformanceReportComponent implements OnInit {
 
   private searchTimer: any;
   exporting = false;
-  private lastLoadedEntityId: string | null = null;
+  private lastLoadedKey: string | null = null;
 
   constructor() {
-    // Reload whenever the active entity changes (topbar switcher) — currentEntity()
-    // used to only be read once at ngOnInit, so switching entities left this
-    // report frozen on whichever entity was active at page-load time.
+    // Reload whenever the active entity or the global date range changes.
+    // currentEntity()/activeRange() used to only be read once at ngOnInit,
+    // so switching either left this report frozen on stale data.
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
-      if (id === this.lastLoadedEntityId) return;
-      this.lastLoadedEntityId = id;
+      const range = this.analyticsRange.activeRange();
+      const key = `${id}_${range.from}_${range.to}`;
+      if (key === this.lastLoadedKey) return;
+      this.lastLoadedKey = key;
       untracked(() => this.load());
     });
   }
@@ -142,7 +146,10 @@ export class CampaignPerformanceReportComponent implements OnInit {
     else this.refreshing = true;
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-    let params = new HttpParams().set('sortBy', this.sortField).set('sortDir', this.sortDir);
+    const range = this.analyticsRange.activeRange();
+    let params = new HttpParams()
+      .set('sortBy', this.sortField).set('sortDir', this.sortDir)
+      .set('from', range.from).set('to', range.to);
     if (this.statusFilter !== 'all')  params = params.set('status', this.statusFilter);
     if (this.searchQuery.trim())      params = params.set('search', this.searchQuery.trim());
     if (this.campaignId)              params = params.set('campaignId', this.campaignId);

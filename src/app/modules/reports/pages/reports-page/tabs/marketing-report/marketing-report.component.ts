@@ -1,8 +1,9 @@
 import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
+import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 import { ReportChartComponent, ReportChartDataset } from '../../../../shared/report-chart/report-chart.component';
 
 const CHANNEL_COLORS = ['#583cd6', '#1baf7a', '#eda100', '#008300', '#e34948', '#e87ba4', '#eb6834', '#2a78d6'];
@@ -24,8 +25,9 @@ interface Kpi {
   styleUrls: ['./marketing-report.component.css', '../../../../shared/reports-shared.css'],
 })
 export class MarketingReportComponent {
-  private http          = inject(HttpClient);
-  private currentEntity = inject(CurrentEntityService);
+  private http           = inject(HttpClient);
+  private currentEntity  = inject(CurrentEntityService);
+  private analyticsRange = inject(AnalyticsRangeService);
 
   channels: Channel[] = [];
   utmBreakdown: UtmRow[] = [];
@@ -40,13 +42,15 @@ export class MarketingReportComponent {
     return Math.max(160, this.channels.length * 44);
   }
 
-  private lastLoadedEntityId: string | null = null;
+  private lastLoadedKey: string | null = null;
 
   constructor() {
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
-      if (id === this.lastLoadedEntityId) return;
-      this.lastLoadedEntityId = id;
+      const range = this.analyticsRange.activeRange();
+      const key = `${id}_${range.from}_${range.to}`;
+      if (key === this.lastLoadedKey) return;
+      this.lastLoadedKey = key;
       untracked(() => this.load());
     });
   }
@@ -56,8 +60,10 @@ export class MarketingReportComponent {
     if (!entity?.id) { this.error = 'לא נמצאה ישות'; this.loading = false; return; }
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    const range = this.analyticsRange.activeRange();
+    const params = new HttpParams().set('from', range.from).set('to', range.to);
 
-    this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/marketing`, { headers })
+    this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/marketing`, { headers, params })
       .subscribe({
         next: (res) => {
           this.channels     = res.channels ?? [];

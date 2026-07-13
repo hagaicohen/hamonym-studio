@@ -6,13 +6,14 @@ import { CampaignPerformanceReportComponent } from './tabs/campaign-performance-
 import { MarketingReportComponent } from './tabs/marketing-report/marketing-report.component';
 import { TrendsReportComponent } from './tabs/trends-report/trends-report.component';
 import { FailuresReportComponent } from './tabs/failures-report/failures-report.component';
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 
 type ReportTab = 'campaigns' | 'marketing' | 'trends' | 'failures';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, CampaignPerformanceReportComponent, MarketingReportComponent, TrendsReportComponent, FailuresReportComponent],
+  imports: [CommonModule, LucideAngularModule, CampaignPerformanceReportComponent, MarketingReportComponent, TrendsReportComponent, FailuresReportComponent, DateRangePickerComponent],
   templateUrl: './reports-page.component.html',
   styleUrls: ['./reports-page.component.css', '../../shared/reports-shared.css'],
 })

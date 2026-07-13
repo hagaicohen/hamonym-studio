@@ -6,11 +6,11 @@
 
   <div class="don-kpi-row">
     <div class="don-kpi-card">
-      <div class="kpi-label">נכשלו החודש</div>
+      <div class="kpi-label">נכשלו בתקופה</div>
       <div class="kpi-value danger">{{ kpi.failedCount | number }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">הפסד מוערך החודש</div>
+      <div class="kpi-label">הפסד מוערך בתקופה</div>
       <div class="kpi-value danger">{{ fmtMoney(kpi.failedAmount) }}</div>
     </div>
     <div class="don-kpi-card">
@@ -18,7 +18,7 @@
       <div class="kpi-value">{{ kpi.pendingCount | number }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">אחוז הצלחה החודש</div>
+      <div class="kpi-label">אחוז הצלחה בתקופה</div>
       <div class="kpi-value good">{{ kpi.successRate !== null ? kpi.successRate + '%' : '—' }}</div>
     </div>
   </div>

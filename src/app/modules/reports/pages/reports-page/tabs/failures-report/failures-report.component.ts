@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
+import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 import { ReportChartComponent, ReportChartDataset } from '../../../../shared/report-chart/report-chart.component';
 
 interface Kpi {
@@ -44,8 +45,9 @@ const COLUMNS_STORAGE_KEY = 'reports-failures-hidden-columns';
   styleUrls: ['./failures-report.component.css', '../../../../shared/reports-shared.css'],
 })
 export class FailuresReportComponent implements OnInit {
-  private http          = inject(HttpClient);
-  private currentEntity = inject(CurrentEntityService);
+  private http           = inject(HttpClient);
+  private currentEntity  = inject(CurrentEntityService);
+  private analyticsRange = inject(AnalyticsRangeService);
 
   kpi: Kpi = { failedCount: 0, failedAmount: 0, pendingCount: 0, successRate: null };
   failureReasons: FailureReason[] = [];
@@ -69,7 +71,7 @@ export class FailuresReportComponent implements OnInit {
   loading    = true;
   refreshing = false;
   error: string | null = null;
-  private lastLoadedEntityId: string | null = null;
+  private lastLoadedKey: string | null = null;
 
   get chartHeight(): number {
     return Math.max(120, this.failureReasons.length * 40);
@@ -78,8 +80,10 @@ export class FailuresReportComponent implements OnInit {
   constructor() {
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
-      if (id === this.lastLoadedEntityId) return;
-      this.lastLoadedEntityId = id;
+      const range = this.analyticsRange.activeRange();
+      const key = `${id}_${range.from}_${range.to}`;
+      if (key === this.lastLoadedKey) return;
+      this.lastLoadedKey = key;
       untracked(() => this.load());
     });
   }
@@ -131,7 +135,10 @@ export class FailuresReportComponent implements OnInit {
     else this.refreshing = true;
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-    let params = new HttpParams().set('sortBy', this.sortField).set('sortDir', this.sortDir);
+    const range = this.analyticsRange.activeRange();
+    let params = new HttpParams()
+      .set('sortBy', this.sortField).set('sortDir', this.sortDir)
+      .set('from', range.from).set('to', range.to);
     if (this.statusFilter !== 'all')  params = params.set('status', this.statusFilter);
     if (this.searchQuery.trim())      params = params.set('search', this.searchQuery.trim());
 

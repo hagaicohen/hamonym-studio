@@ -1,8 +1,9 @@
 import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
+import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 import { ReportChartComponent, ReportChartDataset } from '../../../../shared/report-chart/report-chart.component';
 
 const MONTH_LABELS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
@@ -18,8 +19,9 @@ interface PctChange { total: number | null; count: number | null; avg: number | 
   styleUrls: ['./trends-report.component.css', '../../../../shared/reports-shared.css'],
 })
 export class TrendsReportComponent {
-  private http          = inject(HttpClient);
-  private currentEntity = inject(CurrentEntityService);
+  private http           = inject(HttpClient);
+  private currentEntity  = inject(CurrentEntityService);
+  private analyticsRange = inject(AnalyticsRangeService);
 
   thisMonth: Period = { total: 0, count: 0, avg: 0 };
   lastMonth: Period = { total: 0, count: 0, avg: 0 };
@@ -32,13 +34,15 @@ export class TrendsReportComponent {
 
   loading = true;
   error: string | null = null;
-  private lastLoadedEntityId: string | null = null;
+  private lastLoadedKey: string | null = null;
 
   constructor() {
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
-      if (id === this.lastLoadedEntityId) return;
-      this.lastLoadedEntityId = id;
+      const range = this.analyticsRange.activeRange();
+      const key = `${id}_${range.from}_${range.to}`;
+      if (key === this.lastLoadedKey) return;
+      this.lastLoadedKey = key;
       untracked(() => this.load());
     });
   }
@@ -48,8 +52,10 @@ export class TrendsReportComponent {
     if (!entity?.id) { this.error = 'לא נמצאה ישות'; this.loading = false; return; }
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    const range = this.analyticsRange.activeRange();
+    const params = new HttpParams().set('from', range.from).set('to', range.to);
 
-    this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/trends`, { headers })
+    this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/trends`, { headers, params })
       .subscribe({
         next: (res) => {
           this.thisMonth = res.kpi.thisMonth;
