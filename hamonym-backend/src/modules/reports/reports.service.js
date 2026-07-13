@@ -12,7 +12,12 @@ const CAMPAIGN_SORT = {
   avg:     (r) => r.avg ?? 0,
 };
 
-exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, status, campaignId } = {}) => {
+// target_amount / current_amount / pct stay lifetime (goal completion isn't
+// a period concept — a campaign funded a year ago is still 100% funded
+// regardless of the selected date range). from/to instead scope the
+// supplementary raised_in_range / donors_in_range fields, computed from
+// actual donations in the window. See GLOBAL_DATE_RANGE_SPEC.md.
+exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, status, campaignId, from, to } = {}) => {
   const where  = ['entity_id = $1', `status != 'draft'`];
   const params = [entityId];
   let idx = 2;
@@ -30,13 +35,27 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
     params.push(campaignId);
   }
 
+  const rangeParams = [];
+  let rangeClause = '';
+  if (from && to) {
+    rangeParams.push(from, to);
+    rangeClause = `AND d.completed_at >= $${params.length + 1} AND d.completed_at < $${params.length + 2}`;
+  }
+
   const { rows } = await db.query(
-    `SELECT id, title, slug, status, cover_image_url, target_amount::float, current_amount::float,
-            supporters_count, created_at, start_date, end_date
-     FROM campaigns
+    `SELECT c.id, c.title, c.slug, c.status, c.cover_image_url, c.target_amount::float, c.current_amount::float,
+            c.supporters_count, c.created_at, c.start_date, c.end_date,
+            COALESCE(r.raised_in_range, 0)::float AS raised_in_range,
+            COALESCE(r.donors_in_range, 0)::int   AS donors_in_range
+     FROM campaigns c
+     LEFT JOIN LATERAL (
+       SELECT SUM(d.amount) AS raised_in_range, COUNT(*) AS donors_in_range
+       FROM donations d
+       WHERE d.campaign_id = c.id AND d.status = 'paid' ${rangeClause}
+     ) r ON TRUE
      WHERE ${where.join(' AND ')}
-     ORDER BY current_amount DESC`,
-    params
+     ORDER BY c.current_amount DESC`,
+    [...params, ...rangeParams]
   );
 
   const now = Date.now();
@@ -62,6 +81,7 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
       id: r.id, title: r.title, slug: r.slug, status: r.status, cover_image_url: r.cover_image_url,
       target_amount: target, current_amount: current,
       supporters_count: r.supporters_count, pct, avg,
+      raised_in_range: r.raised_in_range, donors_in_range: r.donors_in_range,
       daily_pace: dailyPace, days_remaining: daysRemaining, projected_total: projectedTotal,
       created_at: r.created_at,
     };
@@ -96,7 +116,10 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
 /* ─────────────────────────────────────────
    2. MARKETING & TRAFFIC SOURCES
 ───────────────────────────────────────── */
-exports.getMarketingSources = async (entityId) => {
+exports.getMarketingSources = async (entityId, { from, to } = {}) => {
+  const rangeClause = from && to ? `AND completed_at >= $2 AND completed_at < $3` : '';
+  const rangeParams = from && to ? [from, to] : [];
+
   const [channelRes, utmRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
@@ -108,10 +131,10 @@ exports.getMarketingSources = async (entityId) => {
          COUNT(*)::int AS count,
          COALESCE(SUM(amount), 0)::float AS total
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid'
+       WHERE entity_id = $1 AND status = 'paid' ${rangeClause}
        GROUP BY channel
        ORDER BY total DESC`,
-      [entityId]
+      [entityId, ...rangeParams]
     ),
     db.query(
       `SELECT
@@ -120,10 +143,10 @@ exports.getMarketingSources = async (entityId) => {
          COUNT(*)::int AS count,
          COALESCE(SUM(amount), 0)::float AS total
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid' AND utm_params IS NOT NULL
+       WHERE entity_id = $1 AND status = 'paid' AND utm_params IS NOT NULL ${rangeClause}
        GROUP BY utm_params->>'source', utm_params->>'medium'
        ORDER BY total DESC`,
-      [entityId]
+      [entityId, ...rangeParams]
     ),
     db.query(
       `SELECT
@@ -131,8 +154,8 @@ exports.getMarketingSources = async (entityId) => {
          COUNT(*) FILTER (WHERE utm_params IS NOT NULL)::int AS with_utm_count,
          COALESCE(SUM(amount), 0)::float AS total_raised
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid'`,
-      [entityId]
+       WHERE entity_id = $1 AND status = 'paid' ${rangeClause}`,
+      [entityId, ...rangeParams]
     ),
   ]);
 
@@ -152,24 +175,41 @@ exports.getMarketingSources = async (entityId) => {
 /* ─────────────────────────────────────────
    3. TRENDS & COMPARISONS
 ───────────────────────────────────────── */
-exports.getTrends = async (entityId) => {
+// "current period" = the global [from, to) range. "previous period" is the
+// same-length window immediately before it — e.g. a 30-day range compares
+// against the 30 days before that, not always calendar "last month". The
+// year-over-year monthly chart stays a fixed calendar-year view regardless
+// of the selected range — it answers a different question (seasonality)
+// than the period-over-period comparison above it.
+exports.getTrends = async (entityId, { from, to } = {}) => {
+  const hasRange = !!(from && to);
+  const rangeFrom = hasRange ? from : null;
+  const rangeTo   = hasRange ? to   : null;
+  let prevFrom = null, prevTo = null;
+  if (hasRange) {
+    const spanMs = new Date(rangeTo).getTime() - new Date(rangeFrom).getTime();
+    prevTo   = rangeFrom;
+    prevFrom = new Date(new Date(rangeFrom).getTime() - spanMs).toISOString().slice(0, 10);
+  }
+
   const [thisMonthRes, lastMonthRes, yearSeriesRes] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
               COALESCE(AVG(amount), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid'
-         AND completed_at >= date_trunc('month', NOW())`,
-      [entityId]
+         AND completed_at >= COALESCE($2::date, date_trunc('month', NOW()))
+         AND ($3::date IS NULL OR completed_at < $3::date)`,
+      [entityId, rangeFrom, rangeTo]
     ),
     db.query(
       `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
               COALESCE(AVG(amount), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid'
-         AND completed_at >= date_trunc('month', NOW() - INTERVAL '1 month')
-         AND completed_at  < date_trunc('month', NOW())`,
-      [entityId]
+         AND completed_at >= COALESCE($2::date, date_trunc('month', NOW() - INTERVAL '1 month'))
+         AND completed_at  < COALESCE($3::date, date_trunc('month', NOW()))`,
+      [entityId, prevFrom, prevTo]
     ),
     db.query(
       `SELECT
@@ -228,7 +268,7 @@ const FAILURES_SORT = {
   date:     'd.updated_at',
 };
 
-exports.getFailures = async (entityId, { search, status, sortBy, sortDir } = {}) => {
+exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, to } = {}) => {
   const where  = ['d.entity_id = $1', `d.status IN ('failed', 'pending')`];
   const params = [entityId];
   let idx = 2;
@@ -242,29 +282,40 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir } = {})
     params.push(`%${search}%`);
     idx++;
   }
+  if (from && to) {
+    where.push(`d.updated_at >= $${idx++} AND d.updated_at < $${idx++}`);
+    params.push(from, to);
+  }
 
   const sortCol = FAILURES_SORT[sortBy] || 'd.updated_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
+  const kpiRangeClause = from && to ? `updated_at >= $2 AND updated_at < $3` : `updated_at >= date_trunc('month', NOW())`;
+  const kpiPaidRangeClause = from && to ? `completed_at >= $2 AND completed_at < $3` : `completed_at >= date_trunc('month', NOW())`;
+  const kpiParams = from && to ? [entityId, from, to] : [entityId];
+
+  const reasonsRangeClause = from && to ? `AND updated_at >= $2 AND updated_at < $3` : '';
+  const reasonsParams = from && to ? [entityId, from, to] : [entityId];
+
   const [kpiRes, reasonsRes, listRes] = await Promise.all([
     db.query(
       `SELECT
-         COUNT(*) FILTER (WHERE status = 'failed' AND updated_at >= date_trunc('month', NOW()))::int   AS failed_count,
-         COALESCE(SUM(amount) FILTER (WHERE status = 'failed' AND updated_at >= date_trunc('month', NOW())), 0)::float AS failed_amount,
+         COUNT(*) FILTER (WHERE status = 'failed' AND ${kpiRangeClause})::int   AS failed_count,
+         COALESCE(SUM(amount) FILTER (WHERE status = 'failed' AND ${kpiRangeClause}), 0)::float AS failed_amount,
          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_count,
-         COUNT(*) FILTER (WHERE status = 'paid' AND completed_at >= date_trunc('month', NOW()))::int   AS paid_count_month
+         COUNT(*) FILTER (WHERE status = 'paid' AND ${kpiPaidRangeClause})::int   AS paid_count_month
        FROM donations
        WHERE entity_id = $1`,
-      [entityId]
+      kpiParams
     ),
     db.query(
       `SELECT COALESCE(NULLIF(failure_reason, ''), 'לא צוין') AS reason, COUNT(*)::int AS count
        FROM donations
-       WHERE entity_id = $1 AND status = 'failed'
+       WHERE entity_id = $1 AND status = 'failed' ${reasonsRangeClause}
        GROUP BY reason
        ORDER BY count DESC
        LIMIT 10`,
-      [entityId]
+      reasonsParams
     ),
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.status, d.failure_reason,
