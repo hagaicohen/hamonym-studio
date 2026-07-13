@@ -274,6 +274,25 @@
   font-size: 15px;
 }
 
+.don-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.don-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #583cd6;
+  border-radius: 50%;
+  animation: don-spin 0.7s linear infinite;
+}
+
+@keyframes don-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── TABLE ── */
 .don-table-wrap {
   overflow-x: auto;
