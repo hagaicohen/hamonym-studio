@@ -14,6 +14,8 @@ interface CampaignPerf {
   cover_image_url: string | null;
   target_amount: number;
   current_amount: number;
+  raised_in_range: number;
+  donors_in_range: number;
   supporters_count: number;
   pct: number | null;
   avg: number;
@@ -27,6 +29,8 @@ interface Kpi {
   totalCampaigns: number;
   activeCampaigns: number;
   totalRaised: number;
+  totalRaisedInRange: number;
+  totalDonorsInRange: number;
   avgProgressPct: number | null;
 }
 
@@ -61,7 +65,7 @@ export class CampaignPerformanceReportComponent implements OnInit {
   @Input() campaignId?: string;
 
   campaigns: CampaignPerf[] = [];
-  kpi: Kpi = { totalCampaigns: 0, activeCampaigns: 0, totalRaised: 0, avgProgressPct: null };
+  kpi: Kpi = { totalCampaigns: 0, activeCampaigns: 0, totalRaised: 0, totalRaisedInRange: 0, totalDonorsInRange: 0, avgProgressPct: null };
   loading    = true;
   refreshing = false;
   error: string | null = null;

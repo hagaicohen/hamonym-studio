@@ -4,21 +4,25 @@
   <div class="don-card"><div class="don-loading"><div class="don-spinner"></div></div></div>
 } @else {
 
-  <div class="don-kpi-row">
+  <div class="don-kpi-row don-kpi-row--5">
     <div class="don-kpi-card">
-      <div class="kpi-label">סה"כ גויס</div>
-      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+      <div class="kpi-label">גויס בתקופה</div>
+      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaisedInRange) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">קמפיינים</div>
-      <div class="kpi-value">{{ kpi.totalCampaigns | number }}</div>
+      <div class="kpi-label">תורמים בתקופה</div>
+      <div class="kpi-value">{{ kpi.totalDonorsInRange | number }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">פעילים</div>
-      <div class="kpi-value">{{ kpi.activeCampaigns | number }}</div>
+      <div class="kpi-label">סה"כ גויס (כל הזמן)</div>
+      <div class="kpi-value">{{ fmtMoney(kpi.totalRaised) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">התקדמות ממוצעת</div>
+      <div class="kpi-label">קמפיינים פעילים</div>
+      <div class="kpi-value">{{ kpi.activeCampaigns | number }} / {{ kpi.totalCampaigns | number }}</div>
+    </div>
+    <div class="don-kpi-card">
+      <div class="kpi-label">התקדמות ממוצעת ליעד</div>
       <div class="kpi-value">{{ kpi.avgProgressPct !== null ? kpi.avgProgressPct + '%' : '—' }}</div>
     </div>
   </div>
@@ -82,8 +86,9 @@
                 </th>
               }
               <th class="sortable" [class.active]="sortField === 'raised'" (click)="sortBy('raised')">
-                גויס<span class="sort-arrow">{{ sortField === 'raised' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                גויס (כל הזמן)<span class="sort-arrow">{{ sortField === 'raised' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
               </th>
+              <th>גויס בתקופה</th>
               @if (isColVisible('pct')) {
                 <th class="sortable col-secondary" [class.active]="sortField === 'pct'" (click)="sortBy('pct')">
                   %<span class="sort-arrow">{{ sortField === 'pct' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
@@ -119,6 +124,7 @@
                 </td>
                 @if (isColVisible('target')) { <td class="col-secondary">{{ fmtMoney(c.target_amount) }}</td> }
                 <td class="don-amount">{{ fmtMoney(c.current_amount) }}</td>
+                <td class="don-amount">{{ fmtMoney(c.raised_in_range) }}</td>
                 @if (isColVisible('pct')) {
                   <td class="col-secondary">
                     @if (c.pct !== null) {
