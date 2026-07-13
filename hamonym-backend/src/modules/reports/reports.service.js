@@ -97,6 +97,8 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
   });
 
   const totalRaised   = campaigns.reduce((s, c) => s + c.current_amount, 0);
+  const totalRaisedInRange = campaigns.reduce((s, c) => s + c.raised_in_range, 0);
+  const totalDonorsInRange = campaigns.reduce((s, c) => s + c.donors_in_range, 0);
   const withTarget    = campaigns.filter((c) => c.pct !== null);
   const avgProgressPct = withTarget.length > 0
     ? Math.round(withTarget.reduce((s, c) => s + c.pct, 0) / withTarget.length)
@@ -108,6 +110,8 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
       totalCampaigns:  campaigns.length,
       activeCampaigns: campaigns.filter((c) => c.status === 'published').length,
       totalRaised,
+      totalRaisedInRange,
+      totalDonorsInRange,
       avgProgressPct,
     },
   };
