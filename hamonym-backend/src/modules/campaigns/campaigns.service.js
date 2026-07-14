@@ -434,7 +434,14 @@ async function syncAmbassadors(campaignId, ambassadors) {
 */
 
 exports.getMyCampaigns =
-  async (userId) => {
+  async (userId, entityId) => {
+
+    const params = [userId];
+    let entityFilter = '';
+    if (entityId) {
+      params.push(entityId);
+      entityFilter = `AND c.entity_id = $${params.length}`;
+    }
 
     const result =
       await db.query(
@@ -457,11 +464,12 @@ exports.getMyCampaigns =
 
         WHERE ue.user_id = $1
         AND c.deleted_at IS NULL
+        ${entityFilter}
 
         ORDER BY c.created_at DESC
         `,
 
-        [userId]
+        params
 
       );
 

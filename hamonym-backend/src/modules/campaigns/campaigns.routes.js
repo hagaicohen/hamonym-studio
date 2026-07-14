@@ -88,5 +88,11 @@ router.patch(
   controller.setCampaignVisibility
 );
 
+router.post(
+  '/:id/advise',
+  requireAuth,
+  controller.adviseCampaign
+);
+
 module.exports =
   router;

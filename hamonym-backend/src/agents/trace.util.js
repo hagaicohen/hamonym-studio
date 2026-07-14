@@ -1,8 +1,8 @@
-// Minimal tracing for ApprovalAgent — not general logging, just "which step
-// ran, how long did it take, did it fail, and what did it actually return."
-// Every tool call, the prompt build, and the LLM call each get one line, so
-// once there are 10 tools a slow/failed/empty run points straight at the
-// culprit instead of a blank wait.
+// Shared across all agents — not general logging, just "which step ran,
+// how long did it take, did it fail, and what did it actually return." Every
+// tool call, the prompt build, and the LLM call each get one line, so once
+// there are 10 tools a slow/failed/empty run points straight at the culprit
+// instead of a blank wait.
 function createTracer(label) {
   const steps = [];
 

@@ -1,3 +1,7 @@
+// Shared across all agents (ApprovalAgent, CampaignAdvisorAgent, ...) — a
+// thin, generic OpenAI wrapper. No agent-specific knowledge here; each
+// agent's own SYSTEM_PROMPT + user prompt fully determine the shape of the
+// parsed JSON returned.
 const OpenAI = require('openai');
 
 let client = null;
@@ -11,8 +15,8 @@ function getClient() {
 
 // @param {string} systemPrompt
 // @param {string} userPrompt
-// @returns {Promise<import('./approval.types').ApprovalRecommendation>}
-exports.getApprovalRecommendation = async (systemPrompt, userPrompt) => {
+// @returns {Promise<object>} parsed JSON — shape is whatever the caller's prompt asked for.
+exports.complete = async (systemPrompt, userPrompt) => {
   const response = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },

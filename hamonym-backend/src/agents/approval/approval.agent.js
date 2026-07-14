@@ -3,11 +3,11 @@ const guidestarTool = require('./tools/guidestar.tool');
 const websearchTool = require('./tools/websearch.tool');
 const documentTool = require('./tools/document.tool');
 const campaignsTool = require('./tools/campaigns.tool');
-const llmService = require('./llm.service');
+const llmService = require('../llm.service');
 const { buildApprovalFacts } = require('./approval.facts');
 const { buildApprovalChecks } = require('./approval.checks');
 const { buildApprovalPrompt, SYSTEM_PROMPT } = require('./approval.prompt');
-const { createTracer } = require('./trace.util');
+const { createTracer } = require('../trace.util');
 
 // Collects and shapes raw data into an ApprovalContext (see
 // approval.types.js). Pure data gathering — no analysis, no LLM call.
@@ -58,7 +58,7 @@ exports.recommend = async (entityId) => {
     (c) => ({ pass: c.filter((x) => x.status === 'pass').length, warning: c.filter((x) => x.status === 'warning').length, fail: c.filter((x) => x.status === 'fail').length }));
   const userPrompt = await tracer.trace('PromptBuilder', () => Promise.resolve(buildApprovalPrompt(facts.entityName, checks)),
     (p) => ({ chars: p.length }));
-  const recommendation = await tracer.trace('LLM', () => llmService.getApprovalRecommendation(SYSTEM_PROMPT, userPrompt),
+  const recommendation = await tracer.trace('LLM', () => llmService.complete(SYSTEM_PROMPT, userPrompt),
     (r) => ({ confidence: r.confidence }));
 
   tracer.print();

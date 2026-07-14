@@ -1,6 +1,9 @@
 const service =
   require('./campaigns.service');
 
+const campaignAdvisorAgent =
+  require('../../agents/campaign-advisor/campaign-advisor.agent');
+
 function getStatusCode(
   error
 ) {
@@ -116,7 +119,8 @@ exports.getMyCampaigns =
       const campaigns =
         await service.getMyCampaigns(
 
-          req.user.id
+          req.user.id,
+          req.query.entityId
 
         );
 
@@ -375,6 +379,18 @@ exports.setCampaignVisibility =
     }
 
   };
+
+exports.adviseCampaign = async (req, res) => {
+  try {
+    const response = await campaignAdvisorAgent.advise(req.params.id, req.user.id);
+    res.json(response);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(err.status || getStatusCode(err))
+      .json({ error: getErrorMessage(err) });
+  }
+};
 
 exports.updateMyAmbassadorRecord = async (req, res) => {
   try {
