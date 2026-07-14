@@ -520,7 +520,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
       params
     ),
     db.query(
-      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 AND status != 'draft' ORDER BY title ASC`,
       [entityId]
     ),
   ]);
