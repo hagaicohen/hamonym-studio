@@ -49,3 +49,35 @@
 **Decision:** ב-Dashboard, רק `fundraisingThisMonth`/`donationsThisMonth`/`failedPayments` הפכו לתלויי-טווח. התראות, פעילות אחרונה, גרף 30 הימים, שגרירים מובילים ורשימת הקמפיינים נשארו ללא שינוי.
 
 **Reason:** אלה views של "מצב נוכחי" או "N האחרונים" — לא מטריקות תקופתיות. סינון גרף 30 יום לפי טווח נבחר, למשל, היה יוצר בלבול (מה קורה אם בוחרים "שנה"?).
+
+---
+
+**2026-07-14**
+
+**Decision:** בחירת סוג קמפיין (Campaign Preset) לעולם לא יוצרת Builder נפרד או מנוע נפרד — היא רק טוענת תצורת ברירת מחדל (תוויות, בלוקים מומלצים, CTA, Offering מוכן מראש) לאותו מנוע קמפיינים אחד.
+
+**Reason:** נמנע מ"בוא נבנה Builder מיוחד למירוץ" שחוזר כל פעם שמגיע Use Case חדש. אם החלטה דורשת שינוי ב-Backend — זו כבר לא Preset, זו Offering type חדש. ר' [CAMPAIGN_PRESETS_VISION.md](./CAMPAIGN_PRESETS_VISION.md) §0.
+
+---
+
+**2026-07-14**
+
+**Decision:** Registration הופך את `Offering` הקיים (`type: 'reward'`) לכולל גם `type: 'registration'` — לא נבנית טבלת "Registration Package" נפרדת.
+
+**Reason:** אותה בעיה עסקית (מחיר, מלאי, תיאור, בחירה בעגלה) — פיצול לישות שנייה רק כי המקרה שונה היה יוצר שני מנגנונים מקבילים לתחזק. ר' [REGISTRATION_OFFERING_SPEC.md](./REGISTRATION_OFFERING_SPEC.md) §1.4.
+
+---
+
+**2026-07-14**
+
+**Decision:** `Registration Order` הוא שכבה שמצורפת ל-`Donation` קיימת (`donation_id`, יחס 1:1) — לא ישות תשלום מקבילה. הכיוון הוא Donation → (אולי) Registration Order, לא ההפך. `Donation` נשארת ה-Source of Truth היחיד של הכסף, ללא שינוי ב-Cardcom/Webhook/סטטוס.
+
+**Reason:** שכפול מנגנון התשלום היה עבודה עצומה ומיותרת. Donation קיימת גם בלי Registration; Registration לעולם לא קיימת בלי Donation. הסטטוס של Participant נגזר מה-Donation, לא מנוהל בנפרד. ר' [REGISTRATION_OFFERING_SPEC.md](./REGISTRATION_OFFERING_SPEC.md) §1.3.
+
+---
+
+**2026-07-14**
+
+**Decision:** עמוד התורמים (`donors-page`) נשאר מבוסס `donations` בלבד, ללא שינוי. Participant Count (כמה בני אדם נרשמו) הוא KPI נפרד מ-Donation Count (כמה תשלומים) — אסור למזג ביניהם.
+
+**Reason:** הורה שרשם 3 ילדים בתשלום אחד = תורם אחד, 3 משתתפים. אלה שני מספרים לשני דברים שונים. מיזוג ביניהם ייצור דוחות תורמים שגויים. ר' [REGISTRATION_OFFERING_SPEC.md](./REGISTRATION_OFFERING_SPEC.md) §1.5.
