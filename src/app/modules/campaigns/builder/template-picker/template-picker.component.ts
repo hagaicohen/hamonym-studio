@@ -1,6 +1,11 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CAMPAIGN_TEMPLATES, CampaignTemplate } from '../templates/campaign-templates';
+import { CAMPAIGN_TEMPLATES, CampaignTemplate, TEMPLATE_PALETTES, TemplatePalette } from '../templates/campaign-templates';
+
+export interface TemplateSelection {
+  template: CampaignTemplate;
+  palette: TemplatePalette;
+}
 
 @Component({
   selector: 'app-template-picker',
@@ -10,14 +15,20 @@ import { CAMPAIGN_TEMPLATES, CampaignTemplate } from '../templates/campaign-temp
   styleUrl: './template-picker.component.css',
 })
 export class TemplatePickerComponent {
-  @Output() templateSelected = new EventEmitter<CampaignTemplate>();
+  @Output() templateSelected = new EventEmitter<TemplateSelection>();
   @Output() skipped = new EventEmitter<void>();
 
   readonly templates = CAMPAIGN_TEMPLATES;
+  readonly palettes = TEMPLATE_PALETTES;
   hoveredId: string | null = null;
+  selectedPalette: TemplatePalette = TEMPLATE_PALETTES[0];
+
+  selectPalette(palette: TemplatePalette): void {
+    this.selectedPalette = palette;
+  }
 
   select(template: CampaignTemplate): void {
-    this.templateSelected.emit(template);
+    this.templateSelected.emit({ template, palette: this.selectedPalette });
   }
 
   skip(): void {

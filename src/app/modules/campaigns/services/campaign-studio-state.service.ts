@@ -9,6 +9,11 @@ export type CampaignFundingType =
   | 'recurring'
   | 'matching';
 
+// See CAMPAIGN_PRESETS_VISION.md §5 — a fixed, deliberately short list.
+// A new value is added only for a recurring workflow that configuring
+// 'general' can't already deliver, not per customer request.
+export type PresetId = 'general' | 'donation' | 'race';
+
 export type HeroType = 'image' | 'video';
 export type HeroLayout = 'title-subtitle' | 'title-only' | 'title-cta' | 'custom';
 
@@ -24,6 +29,19 @@ export type BlockType =
   | 'container'
   | 'stats'
   | 'donation-widget'
+  // Positional marker only — Hero's actual content (title/subtitle/cover
+  // image/CTA/logo/...) still lives on CampaignDraft, edited in the "פרטי
+  // בסיס" step. A 'hero' block just says "render Hero at this tree
+  // position," giving it full access to ordinary block ordering/containers.
+  // Nothing adds one automatically — its absence means Hero keeps rendering
+  // via the older fixed-slot outlets. See DECISIONS.md (2026-07-17).
+  | 'hero'
+  // 'rewards' = the Page Builder block that renders the Offerings section.
+  // Legacy persisted value — do NOT rename to 'offerings' without a data
+  // migration. It's already stored literally as JSON in every existing
+  // campaign's `blocks` column; renaming here alone would silently stop
+  // that section rendering on every already-published campaign.
+  // See DECISIONS.md (2026-07-15).
   | 'rewards'
   | 'sponsors'
   | 'ambassadors'
@@ -130,6 +148,14 @@ export interface ContainerBlockData {
   gap:                 number;
   direction?:          'row' | 'column';
   splitPercent?:       number; // 20–80, only used when direction='row'
+  // Only meaningful for a TOP-LEVEL container when layoutMode is
+  // 'sidebar-right'/'sidebar-left' — designates this container's children as
+  // the sticky full-height rail ('sidebar') or as the entire main column,
+  // Hero included via a 'hero' block among its children ('main'), instead of
+  // rendering inline in the normal block flow. See
+  // campaign-preview.component.ts sidebarBlocks()/mainColumnBlocks() and
+  // DECISIONS.md (2026-07-17).
+  railZone?:           'sidebar' | 'main';
 }
 
 export interface CtaBlockData {
@@ -168,7 +194,11 @@ export interface CampaignBlock {
   data: BlockData;
 }
 
-export interface CampaignReward {
+// Offering = a donation perk/gift (formerly "Reward"). Race/event participant
+// categories used to live here too (`type: 'registration'`) but were pulled
+// out into their own first-class model — see RegistrationOption below and
+// DECISIONS.md (2026-07-16). Offering is a pure gift concept again.
+export interface Offering {
   id: string;
   title: string;
   description: string;
@@ -176,6 +206,22 @@ export interface CampaignReward {
   stock: number | null;
   imageUrl: string | null;
   featured?: boolean;
+}
+
+// Registration Option = an admin-defined participant category/price tier for
+// a race/event campaign (e.g. "10 ק"מ VIP", "תורם כבוד - מבוגר"). Not an
+// Offering — a race category is not a gift a donor receives, it's who's
+// participating and what they're paying. What the concept is CALLED is
+// itself configurable per campaign (see CampaignDraft.registrationFieldLabel)
+// since "route"/"tier"/"ticket" all fit different customers. Lives in its
+// own `registration_options` table server-side, not an opaque JSON blob —
+// see DECISIONS.md (2026-07-16).
+export interface RegistrationOption {
+  id: string;
+  key: string;
+  title: string;
+  description: string;
+  price: number;
 }
 
 export interface CampaignSponsor {
@@ -206,6 +252,9 @@ export interface CampaignUpdate {
   linkLabel:   string;
 }
 
+// rewardsBg/rewardCardBorder/rewardCardBorderActive: legacy persisted keys
+// (stored as-is inside every campaign's `layout` JSON) — do NOT rename
+// without a data migration. See DECISIONS.md (2026-07-15).
 export interface CampaignTheme {
   primaryColor:          string;  // --hm-primary
   secondaryColor:        string;  // --hm-secondary
@@ -228,7 +277,22 @@ export type LayoutMode =
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
-  rewardsLayout:      'standard' | 'image';
+  // Which Campaign Preset (§ CAMPAIGN_PRESETS_VISION.md) was chosen at creation.
+  // Lives here (not on CampaignDraft directly) so it's just another key inside
+  // the already-passthrough `layout` JSON blob — no backend column/migration
+  // needed, same reasoning as templateId above. Preset only ever changes
+  // *defaults*/copy, never locks capability — see DECISIONS.md.
+  preset?:            PresetId;
+  // Where the Hero renders — independent of layoutMode on purpose (a second,
+  // orthogonal axis: layoutMode says where the sidebar rail is, heroPlacement
+  // says where the Hero sits). Only meaningful when layoutMode is a sidebar
+  // variant; 'main-column' places the Hero as the first item in the main
+  // column instead of full-page-width above everything, so the sidebar rail
+  // (position: sticky within the same flex row) visually runs the full page
+  // height alongside it. Absent/'full-width' = today's behavior for every
+  // existing campaign — no migration needed. See DECISIONS.md (2026-07-16).
+  heroPlacement?:     'full-width' | 'main-column';
+  rewardsLayout:      'standard' | 'image';  // legacy persisted key — see CampaignTheme note above
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -301,11 +365,20 @@ export interface CampaignDraft {
   suggestedAmounts: number[];
   monthlyAmounts: number[];
 
-  // Step 2 — Rewards
-  rewardsEnabled: boolean;
-  rewards: CampaignReward[];
+  // Step 2 — Offerings (Page Builder block type/theme keys below stay
+  // literally 'rewards' — they're persisted as-is in existing campaigns'
+  // JSON and renaming them would silently break already-saved campaigns)
+  offeringsEnabled: boolean;
+  offerings: Offering[];
 
-  // Step 3 — Sponsors
+  // Step 3 — Registration Options. "Is registration on for this campaign?"
+  // is simply registrationOptions.length > 0 — no separate enabled flag to
+  // keep in sync with the array it describes. See DECISIONS.md (2026-07-16).
+  registrationFieldLabel: string;
+  registrationFieldIcon: string;
+  registrationOptions: RegistrationOption[];
+
+  // Step 3b — Sponsors
   sponsors: CampaignSponsor[];
 
   // Step 3 — Donation settings
@@ -369,8 +442,11 @@ function createInitialDraft(): CampaignDraft {
     suggestedAmounts: [50, 100, 180, 360, 500, 1000],
     monthlyAmounts: [18, 36, 54, 100],
     donorFields: { showAddress: true, showPostalCode: false, showIdNumber: false },
-    rewardsEnabled: true,
-    rewards: [],
+    offeringsEnabled: true,
+    offerings: [],
+    registrationFieldLabel: 'סוג משתתף',
+    registrationFieldIcon: '👤',
+    registrationOptions: [],
     sponsors:     [],
     ambassadors:  [],
     updates:      [],
@@ -459,6 +535,7 @@ function createInitialDraft(): CampaignDraft {
     })(),
     layout: {
       layoutMode:          'standard' as LayoutMode,
+      preset:              'general' as PresetId,
       rewardsLayout:       'standard',
       backgroundType:      'none',
       backgroundColor:     '#f8fafc',
@@ -537,15 +614,33 @@ export class CampaignStudioStateService {
     this.draftSubject.next(createInitialDraft());
   }
 
-  applyTemplate(blocks: CampaignBlock[], themeOverride: Record<string, any>, layoutMode?: LayoutMode, templateId?: string): void {
+  applyTemplate(
+    blocks: CampaignBlock[],
+    themeOverride: Record<string, any>,
+    layoutMode?: LayoutMode,
+    templateId?: string,
+    heroPlacement?: 'full-width' | 'main-column',
+  ): void {
+    // Preserve whatever Preset was chosen in the (earlier) preset picker step —
+    // this resets to a fresh createInitialDraft() otherwise, which would wipe it.
+    const currentPreset = this.draft.layout.preset;
     const base = createInitialDraft();
     const layout: CampaignLayout = {
       ...base.layout,
       layoutMode: layoutMode ?? 'standard',
       templateId,
+      preset: currentPreset,
+      heroPlacement,
       theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });
+  }
+
+  // Sets the chosen Campaign Preset (§ CAMPAIGN_PRESETS_VISION.md §0 — this
+  // never creates a different engine, only a default). Called once, from the
+  // preset picker shown before the Builder for a brand-new campaign.
+  applyPreset(presetId: PresetId): void {
+    this.patch({ layout: { ...this.draft.layout, preset: presetId } });
   }
 
   loadDraft(data: CampaignDraft): void {
@@ -566,7 +661,7 @@ export class CampaignStudioStateService {
   }
 
   // Block operations
-  addBlock(type: BlockType): void {
+  addBlock(type: BlockType): string {
     const blocks = [...this.draft.blocks];
     const maxOrder = blocks.reduce((max, b) => Math.max(max, b.order), 0);
     const sameType = blocks.filter(b => b.type === type).length;
@@ -588,8 +683,9 @@ export class CampaignStudioStateService {
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
+    const id = generateId();
     blocks.push({
-      id: generateId(),
+      id,
       type,
       order: maxOrder + 1,
       visible: true,
@@ -599,6 +695,7 @@ export class CampaignStudioStateService {
       data: defaultBlockData(type),
     });
     this.patch({ blocks });
+    return id;
   }
 
   removeBlock(id: string): void {
@@ -652,6 +749,13 @@ export class CampaignStudioStateService {
     const mode = draft.layout?.layoutMode;
     if (mode !== 'sidebar-right' && mode !== 'sidebar-left') return;
     if (draft.blocks.some(b => b.type === 'container')) return; // already has containers
+    // heroPlacement === 'main-column' is only ever set by the deliberate
+    // "full-height sidebar, Hero beside it" templates — they use flat
+    // sidebar-right/left blocks on purpose (that's the real, live rendering
+    // path for them, not a legacy leftover) and must never be auto-converted
+    // to the container-block/standard-mode structure, which has no concept
+    // of heroPlacement. See DECISIONS.md (2026-07-16).
+    if (draft.layout?.heroPlacement === 'main-column') return;
 
     const SIDEBAR_TYPES = ['stats', 'donation-widget'];
     const FULL_WIDTH_TYPES = ['rewards', 'donors', 'ambassadors', 'sponsors', 'updates'];
@@ -707,10 +811,10 @@ export class CampaignStudioStateService {
   }
 
   // Add a new block and register it as a child of a container
-  addBlockToContainer(containerId: string, type: BlockType): void {
+  addBlockToContainer(containerId: string, type: BlockType): string | null {
     const blocks = [...this.draft.blocks];
     const container = blocks.find(b => b.id === containerId);
-    if (!container) return;
+    if (!container) return null;
     const ctData = { ...(container.data as ContainerBlockData) };
     const siblingOrders = ctData.childBlockIds
       .map(cid => blocks.find(b => b.id === cid)?.order ?? 0);
@@ -730,6 +834,7 @@ export class CampaignStudioStateService {
     ctData.childBlockIds = [...ctData.childBlockIds, newId];
     const updatedBlocks = blocks.map(b => b.id === containerId ? { ...b, data: ctData } : b);
     this.patch({ blocks: updatedBlocks });
+    return newId;
   }
 
   toggleBlockVisibility(id: string): void {

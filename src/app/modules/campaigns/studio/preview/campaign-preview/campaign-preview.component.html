@@ -146,17 +146,34 @@
 
     </div>
 
-    <!-- Logo strip — white bar ABOVE hero, logo as plain image, no circle -->
-    <div class="hm-logo-above-strip"
-         *ngIf="draft.showLogo !== false && draft.heroLogoPosition === 'above'">
-      <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
-           class="hm-logo-above-img"
-           [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-      <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
-    </div>
+    <!-- Logo-above strip is its OWN template, separate from Hero — when the
+         full-height-sidebar layout is active (heroPlacement === 'main-column'),
+         the logo needs to sit ABOVE the whole sidebar row (spanning/centered
+         over both the Hero column AND the rail, so Hero and rail start at the
+         same height below it), not just above the Hero inside its own narrower
+         column. Everywhere else, it renders immediately before Hero, same as
+         always. See DECISIONS.md (2026-07-16). -->
+    <ng-template #logoAboveStripTpl>
+      <div class="hm-logo-above-strip"
+           *ngIf="draft.showLogo !== false && draft.heroLogoPosition === 'above'">
+        <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
+             class="hm-logo-above-img"
+             [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+        <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
+      </div>
+    </ng-template>
+
+    <!-- Hero is a reusable template (see DECISIONS.md, 2026-07-16) — rendered
+         either full-page-width above everything (today's default, and always
+         on mobile), or as the first item in the sidebar's main column when
+         layout.heroPlacement === 'main-column', so the sticky sidebar rail
+         (same .page-layout-sidebar flex row) visually runs the full page
+         height alongside it instead of only below it. -->
+    <ng-template #heroTpl>
 
     <!-- ══ HERO ══ -->
-    <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile">
+    <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile"
+      [class.hm-hero--in-column]="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
 
       <!-- Background image layer (separate div to avoid Angular [style] parsing issues) -->
       <div class="hm-hero-bg-layer" [style.backgroundImage]="heroBg(draft)"></div>
@@ -214,6 +231,20 @@
 
     </section>
 
+    </ng-template>
+
+    <!-- Full-width Hero — today's default, and always on mobile (side-by-side
+         columns don't exist on mobile in the first place). Logo strip renders
+         immediately before it, same as always. Suppressed once the user has
+         pulled Hero into the block tree via a 'hero' block (blockTpl renders
+         it at its actual position instead) — except on mobile, which always
+         wants it full-width at the top regardless. See DECISIONS.md
+         (2026-07-17). -->
+    <ng-container *ngIf="vm.mobile || (draft.layout.heroPlacement !== 'main-column' && !hasHeroBlock(draft))">
+      <ng-container [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
+      <ng-container [ngTemplateOutlet]="heroTpl"></ng-container>
+    </ng-container>
+
     <!-- ══ CONTENT BLOCKS — Standard / Magazine ══ -->
     <ng-container *ngIf="layoutMode(draft) === 'standard' || layoutMode(draft) === 'magazine'">
       <div class="page-blocks" [class.page-blocks--magazine]="layoutMode(draft) === 'magazine'">
@@ -230,7 +261,7 @@
               [style.color]="primaryColor(draft)">
               {{ block.label }}
             </div>
-            <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+            <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
           </div>
         </ng-container>
       </div>
@@ -238,6 +269,18 @@
 
     <!-- ══ CONTENT BLOCKS — Sidebar Right / Left ══ -->
     <ng-container *ngIf="layoutMode(draft) === 'sidebar-right' || layoutMode(draft) === 'sidebar-left'">
+
+      <!-- Logo strip, centered ABOVE the whole sidebar row (not just above
+           the Hero column) — so Hero and the rail both start at the same
+           height below it. Only when Hero actually lives in this row
+           (desktop + heroPlacement === 'main-column'); otherwise the
+           top-of-page outlet above already rendered it right before Hero. -->
+      <ng-container *ngIf="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
+        <div class="page-content-outer">
+          <ng-container [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
+        </div>
+      </ng-container>
+
       <div class="page-content-outer">
         <div class="page-layout-sidebar"
           [class.page-layout-sidebar--right]="layoutMode(draft) === 'sidebar-right'"
@@ -245,22 +288,56 @@
 
           <!-- Main column -->
           <div class="sidebar-main">
-            <ng-container *ngFor="let block of mainBlocks(draft)">
-              <div class="block-wrap"
-                [id]="blockSectionId(block, draft) || null"
-                [style.marginTop.px]="block.spacingTop"
-                [style.marginBottom.px]="block.spacingBottom"
-                [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
-                (mouseenter)="setHovered(block.id)"
-                (mouseleave)="setHovered(null)">
-                <div class="section-heading"
-                  *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
-                  [style.color]="primaryColor(draft)">
-                  {{ block.label }}
+            <!-- Preferred: a real top-level container tagged railZone:'main'
+                 — fully owns the main column, Hero included via a 'hero'
+                 block among its children, wherever the user placed it. See
+                 DECISIONS.md (2026-07-17). -->
+            <ng-container *ngIf="hasMainContainer(draft); else mainColumnFallback">
+              <ng-container *ngFor="let block of mainColumnBlocks(draft)">
+                <div class="block-wrap"
+                  [id]="blockSectionId(block, draft) || null"
+                  [style.marginTop.px]="block.spacingTop"
+                  [style.marginBottom.px]="block.spacingBottom"
+                  [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+                  (mouseenter)="setHovered(block.id)"
+                  (mouseleave)="setHovered(null)">
+                  <div class="section-heading"
+                    *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
+                    [style.color]="primaryColor(draft)">
+                    {{ block.label }}
+                  </div>
+                  <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
                 </div>
-                <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
-              </div>
+              </ng-container>
             </ng-container>
+            <!-- Fallback for campaigns saved before railZone:'main' existed:
+                 fixed Hero outlet (desktop only — the full-width outlet above
+                 already handles mobile) plus the implicit mainBlocks()
+                 assembly. Being the first child of this flex row is what
+                 makes the sticky sidebar rail (sibling below) visually run
+                 alongside it for the full page height. Suppressed once the
+                 user has pulled Hero into the block tree via a 'hero' block
+                 — see DECISIONS.md (2026-07-17). -->
+            <ng-template #mainColumnFallback>
+              <ng-container *ngIf="!vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasHeroBlock(draft)"
+                [ngTemplateOutlet]="heroTpl"></ng-container>
+              <ng-container *ngFor="let block of mainBlocks(draft)">
+                <div class="block-wrap"
+                  [id]="blockSectionId(block, draft) || null"
+                  [style.marginTop.px]="block.spacingTop"
+                  [style.marginBottom.px]="block.spacingBottom"
+                  [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+                  (mouseenter)="setHovered(block.id)"
+                  (mouseleave)="setHovered(null)">
+                  <div class="section-heading"
+                    *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
+                    [style.color]="primaryColor(draft)">
+                    {{ block.label }}
+                  </div>
+                  <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
+                </div>
+              </ng-container>
+            </ng-template>
           </div>
 
           <!-- Sticky sidebar -->
@@ -273,7 +350,7 @@
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
-                  <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+                  <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
                 </div>
               </ng-container>
             </div>
@@ -291,7 +368,7 @@
           [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           (mouseenter)="setHovered(block.id)"
           (mouseleave)="setHovered(null)">
-          <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft}"></ng-container>
+          <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
         </div>
       </ng-container>
 
@@ -487,18 +564,32 @@
 <app-checkout-modal
   *ngIf="checkoutOpen"
   [draft]="draft"
-  [amount]="explicitAmount + cartRewardsTotal(draft)"
-  [cartRewards]="cartRewardList(draft)"
+  [amount]="totalAmount(draft)"
+  [cartOfferings]="cartOfferingList(draft)"
+  [checkoutMode]="checkoutMode"
+  [pendingRegistration]="pendingRegistration"
   [entityLogoUrl]="entityLogoUrl"
   [entityName]="entityName"
-  (closed)="closeCheckout()">
+  (closed)="closeCheckout()"
+  (participantsSaved)="onParticipantsSaved($event)"
+  (cleared)="pendingRegistration = null">
 </app-checkout-modal>
 
 </ng-container>
 </ng-container>
 
 <!-- ══ BLOCK TEMPLATE ══ -->
-<ng-template #blockTpl let-block="block" let-draft="draft">
+<!-- blockTpl is declared outside the vm/draft-defining *ngIf scope (so it
+     can be reused across every block list without being nested inside that
+     structural directive) — it can't reference `vm`/`heroTpl` lexically,
+     they're threaded through explicitly via ngTemplateOutletContext instead,
+     same as `block`/`draft` already were. See DECISIONS.md (2026-07-17). -->
+<ng-template #blockTpl let-block="block" let-draft="draft" let-heroTpl="heroTpl" let-mobile="mobile">
+
+  <!-- HERO — positional marker only; renders wherever it sits in the tree.
+       Suppressed on mobile (Hero always full-width at the top there, same
+       deliberate simplification as the two fixed-slot outlets below). -->
+  <ng-container *ngIf="block.type === 'hero' && !mobile" [ngTemplateOutlet]="heroTpl"></ng-container>
 
   <!-- RICH TEXT -->
   <div class="block-rich-text" *ngIf="block.type === 'rich-text'"
@@ -565,12 +656,12 @@
     [style.gridTemplateColumns]="asSplit(block.data).leftPercent + '% ' + (100 - asSplit(block.data).leftPercent) + '%'">
     <div class="split-side">
       <ng-container *ngIf="blockById(asSplit(block.data).leftBlockId ?? '', draft) as lb">
-        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: lb, draft}"></ng-container>
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: lb, draft, heroTpl, mobile}"></ng-container>
       </ng-container>
     </div>
     <div class="split-side">
       <ng-container *ngIf="blockById(asSplit(block.data).rightBlockId ?? '', draft) as rb">
-        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: rb, draft}"></ng-container>
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: rb, draft, heroTpl, mobile}"></ng-container>
       </ng-container>
     </div>
   </div>
@@ -592,7 +683,7 @@
         [class.container-child--hovered]="pageBuilderActive && hoveredBlockId === child.id"
         (mouseenter)="$event.stopPropagation(); setHovered(child.id)"
         (mouseleave)="setHovered(block.id)">
-        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft}"></ng-container>
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft, heroTpl, mobile}"></ng-container>
       </div>
     </ng-container>
   </div>
@@ -620,9 +711,32 @@
     [style.margin]="asDivider(block.data).showLine ? '0 20px' : '0'">
   </div>
 
-  <!-- DONATION WIDGET -->
+  <!-- REGISTER CTA — an additional Action alongside Donate (not a Page
+       Builder content block) whenever the campaign has Registration Options.
+       Registering for the race and donating separately are two independent
+       things a visitor can do — this section never replaces the donation
+       UI below it, it sits above it. Donation-only campaigns are completely
+       unaffected: this condition is false and only the block below renders,
+       exactly as before. See DECISIONS.md (2026-07-16). -->
+  <div class="hm-donate hm-register" *ngIf="block.type === 'donation-widget' && draft.registrationOptions.length > 0">
+    <h2>{{ asDonationWidget(block.data).title || 'הרשמה' }}</h2>
+    <p class="hm-register-subtitle" *ngIf="asDonationWidget(block.data).subtitle">{{ asDonationWidget(block.data).subtitle }}</p>
+    <button class="hm-donate-btn" type="button"
+      [style.background]="asDonationWidget(block.data).ctaColor"
+      (click)="startRegistration()">
+      <span class="hm-btn-text">הרשמה עכשיו</span>
+    </button>
+  </div>
+
+  <div class="hm-donate-or-divider" *ngIf="block.type === 'donation-widget' && draft.registrationOptions.length > 0">
+    <span>או</span>
+  </div>
+
+  <!-- DONATION WIDGET (perks/explicit-amount flow) — always available,
+       regardless of Registration Options, so a visitor can support the
+       campaign financially without registering for the race. -->
   <div class="hm-donate" *ngIf="block.type === 'donation-widget'">
-    <h2>בחרו סכום לתמיכה</h2>
+    <h2>{{ draft.registrationOptions.length > 0 ? 'תרמו סכום חופשי לקמפיין' : 'בחרו סכום לתמיכה' }}</h2>
     <div class="hm-amounts">
       <button *ngFor="let a of draft.suggestedAmounts | slice:0:5; let i = index"
         class="hm-amount-preset" type="button"
@@ -640,16 +754,17 @@
         [value]="amountDisplay"
         (input)="onCustomAmountInput($event)">
     </div>
+
     <!-- Total breakdown -->
     <div class="hm-total-section" *ngIf="cartCount > 0">
       <div class="hm-total-line" *ngIf="explicitAmount > 0">
         <span class="hm-total-label">תרומה</span>
         <span class="hm-total-val">₪{{ explicitAmount.toLocaleString('he-IL') }}</span>
       </div>
-      <ng-container *ngFor="let r of cartRewardList(draft)">
+      <ng-container *ngFor="let o of cartOfferingList(draft)">
         <div class="hm-total-line">
-          <span class="hm-total-label">{{ r.title }}</span>
-          <span class="hm-total-val">₪{{ r.minimumAmount.toLocaleString('he-IL') }}</span>
+          <span class="hm-total-label">{{ o.title }}</span>
+          <span class="hm-total-val">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</span>
         </div>
       </ng-container>
       <div class="hm-total-divider"></div>
@@ -736,10 +851,10 @@
   </div>
 
   <!-- ══ REWARDS ══ -->
-  <section class="hm-rewards" *ngIf="block.type === 'rewards' && draft.rewardsEnabled !== false" id="section-rewards">
+  <section class="hm-rewards" *ngIf="block.type === 'rewards' && draft.offeringsEnabled !== false" id="section-rewards">
     <h2>בחרו את התשורה המתאימה לכם</h2>
 
-    <ng-container *ngIf="draft.rewards && draft.rewards.length > 0; else rewardsEmpty">
+    <ng-container *ngIf="draft.offerings && draft.offerings.length > 0; else rewardsEmpty">
       <div class="hm-slider-outer">
         <button class="hm-slider-arrow hm-slider-arrow--prev" (click)="scrollSlider(slider, 'prev')">‹</button>
         <div class="hm-reward-slider" #slider>
@@ -747,36 +862,36 @@
 
             <!-- ── Standard layout ── -->
             <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
-              <article *ngFor="let reward of draft.rewards"
+              <article *ngFor="let offering of draft.offerings"
                 class="hm-reward-card"
-                [class.is-featured]="reward.featured === true"
-                [class.is-selected]="isRewardInCart(reward.id)"
-                (click)="selectReward(reward.id)">
-                <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+                [class.is-featured]="offering.featured === true"
+                [class.is-selected]="isOfferingInCart(offering.id)"
+                (click)="selectOffering(offering, draft)">
+                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
                 <div class="hm-reward-card-top">
                   <div class="hm-reward-icon-wrap">
-                    <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title" class="hm-reward-img-small">
-                    <span *ngIf="!reward.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+                    <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
+                    <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
                   </div>
-                  <div class="hm-reward-price">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
+                  <div class="hm-reward-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 </div>
                 <div class="hm-reward-body">
-                  <h3>{{ reward.title }}</h3>
-                  <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
+                  <h3>{{ offering.title }}</h3>
+                  <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
-                    *ngIf="reward.description && reward.description.length > 120"
-                    (click)="toggleExpand(reward.id); $event.stopPropagation()">
-                    {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
+                    *ngIf="offering.description && offering.description.length > 120"
+                    (click)="toggleExpand(offering.id); $event.stopPropagation()">
+                    {{ isExpanded(offering.id) ? '↑ פחות' : 'קרא עוד ↓' }}
                   </button>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>
-                <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
+                <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
                   <div class="hm-reward-overlay-check">✓</div>
                   <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
-                  <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
+                  <p class="hm-reward-overlay-sub">₪{{ offering.minimumAmount.toLocaleString('he-IL') }} — {{ offering.title }}</p>
                   <div class="hm-reward-overlay-btns">
                     <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
-                    <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+                    <button class="hm-overlay-cancel-btn" (click)="removeOffering(offering.id)">בטל בחירה</button>
                   </div>
                 </div>
               </article>
@@ -784,34 +899,34 @@
 
             <!-- ── Image layout: amount → image → title + description ── -->
             <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
-              <article *ngFor="let reward of draft.rewards"
+              <article *ngFor="let offering of draft.offerings"
                 class="hm-reward-card hm-reward-card--img"
-                [class.is-featured]="reward.featured === true"
-                [class.is-selected]="isRewardInCart(reward.id)"
-                (click)="selectReward(reward.id)">
-                <div class="hm-reward-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
-                <div class="hm-reward-price-top">₪{{ reward.minimumAmount.toLocaleString('he-IL') }}</div>
+                [class.is-featured]="offering.featured === true"
+                [class.is-selected]="isOfferingInCart(offering.id)"
+                (click)="selectOffering(offering, draft)">
+                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 <div class="hm-reward-img-hero">
-                  <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" [alt]="reward.title">
-                  <span *ngIf="!reward.imageUrl" class="hm-reward-img-hero-placeholder">🎁</span>
+                  <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title">
+                  <span *ngIf="!offering.imageUrl" class="hm-reward-img-hero-placeholder">🎁</span>
                 </div>
                 <div class="hm-reward-body">
-                  <h3>{{ reward.title }}</h3>
-                  <p *ngIf="reward.description" [class.hm-reward-desc--clamped]="!isExpanded(reward.id)">{{ reward.description }}</p>
+                  <h3>{{ offering.title }}</h3>
+                  <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
-                    *ngIf="reward.description && reward.description.length > 120"
-                    (click)="toggleExpand(reward.id); $event.stopPropagation()">
-                    {{ isExpanded(reward.id) ? '↑ פחות' : 'קרא עוד ↓' }}
+                    *ngIf="offering.description && offering.description.length > 120"
+                    (click)="toggleExpand(offering.id); $event.stopPropagation()">
+                    {{ isExpanded(offering.id) ? '↑ פחות' : 'קרא עוד ↓' }}
                   </button>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>
-                <div class="hm-reward-overlay" *ngIf="isRewardInCart(reward.id)" (click)="$event.stopPropagation()">
+                <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
                   <div class="hm-reward-overlay-check">✓</div>
                   <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
-                  <p class="hm-reward-overlay-sub">₪{{ reward.minimumAmount.toLocaleString('he-IL') }} — {{ reward.title }}</p>
+                  <p class="hm-reward-overlay-sub">₪{{ offering.minimumAmount.toLocaleString('he-IL') }} — {{ offering.title }}</p>
                   <div class="hm-reward-overlay-btns">
                     <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
-                    <button class="hm-overlay-cancel-btn" (click)="removeReward(reward.id)">בטל בחירה</button>
+                    <button class="hm-overlay-cancel-btn" (click)="removeOffering(offering.id)">בטל בחירה</button>
                   </div>
                 </div>
               </article>

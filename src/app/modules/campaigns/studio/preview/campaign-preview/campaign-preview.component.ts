@@ -13,6 +13,7 @@ import {
   CampaignStudioStateService,
   CampaignDraft,
   CampaignBlock,
+  Offering,
   RichTextBlockData,
   ImageBlockData,
   VideoBlockData,
@@ -28,7 +29,7 @@ import {
   AmbassadorsBlockData,
   UpdatesBlockData,
 } from '../../../services/campaign-studio-state.service';
-import { CheckoutModalComponent } from '../../../shared/components/checkout-modal/checkout-modal.component';
+import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
@@ -189,19 +190,34 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   navOpen = false;
   showStickyBar = true;
   readonly currentYear = new Date().getFullYear();
-  private expandedRewards = new Set<string>();
-  private gallerySlides   = new Map<string, number>();
+  private expandedOfferings = new Set<string>();
+  private gallerySlides     = new Map<string, number>();
 
   // ── Checkout state ──
   checkoutOpen = false;
+  // 'registration' bypasses the cart/donation-widget entirely — the widget's
+  // primary action becomes "Register" whenever the campaign has Registration
+  // Options (see startRegistration below). See DECISIONS.md (2026-07-15,
+  // 2.4 Multi-Participant Registration; 2026-07-16, Registration Options).
+  checkoutMode: 'donation' | 'registration' = 'donation';
   selectedAmount: number | null = null;
-  cartRewardIds = new Set<string>();   // rewards in cart
+  cartOfferingIds = new Set<string>();   // perk offerings in cart (donation flow only)
   customAmount: number | null = null;
   amountDisplay = '';  // formatted display value for custom amount input
 
-  isExpanded(id: string): boolean { return this.expandedRewards.has(id); }
+  // A registration filled in and closed without paying — remembered here
+  // (outside the modal, which gets destroyed on close) so opening the
+  // donation checkout later already shows it and folds it into that one
+  // payment. See PendingRegistration / DECISIONS.md (2026-07-17).
+  pendingRegistration: PendingRegistration | null = null;
+
+  onParticipantsSaved(data: PendingRegistration): void {
+    this.pendingRegistration = data;
+  }
+
+  isExpanded(id: string): boolean { return this.expandedOfferings.has(id); }
   toggleExpand(id: string): void {
-    this.expandedRewards.has(id) ? this.expandedRewards.delete(id) : this.expandedRewards.add(id);
+    this.expandedOfferings.has(id) ? this.expandedOfferings.delete(id) : this.expandedOfferings.add(id);
   }
 
   draft$ = this.state.draft$;
@@ -302,6 +318,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return draft.layout?.layoutMode ?? 'standard';
   }
 
+  // Whether the user has explicitly pulled Hero into the block tree (via a
+  // 'hero' block, addable in the Page Builder) — if so, the two fixed-slot
+  // Hero outlets below suppress themselves and blockTpl's own 'hero' branch
+  // renders it at its actual tree position instead. See DECISIONS.md
+  // (2026-07-17).
+  hasHeroBlock(draft: CampaignDraft): boolean {
+    return draft.blocks.some(b => b.type === 'hero');
+  }
+
   // ── Content blocks for standard/magazine layouts ──
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
@@ -310,19 +335,60 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       .sort((a, b) => a.order - b.order);
   }
 
-  // Sidebar rail: top-level stats + donation-widget blocks
+  // Sidebar rail — prefers a real top-level container tagged
+  // railZone:'sidebar' (so the user can add/reorder any block type into it
+  // via the existing Page Builder container UI), falling back to the older
+  // type-based stats/donation-widget filter for campaigns saved before this
+  // existed (flat blocks, no container). See DECISIONS.md (2026-07-17).
   sidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
+    const railId = this.railZoneContainerId(draft, 'sidebar');
+    if (railId) {
+      const container = draft.blocks.find(b => b.id === railId);
+      if (container) return this.childBlocks(container, draft);
+    }
     const childIds = this.topLevelChildIds(draft);
     return draft.blocks
       .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
       .sort((a, b) => a.order - b.order);
   }
 
-  // Main column: content blocks that are NOT sidebar blocks and NOT full-width blocks
+  // Main column — prefers a real top-level container tagged railZone:'main'
+  // (so the user can add/reorder any block type into it, including a 'hero'
+  // block wherever they want Hero to sit), falling back to mainBlocks()'s
+  // implicit assembly for campaigns saved before this existed. See
+  // DECISIONS.md (2026-07-17).
+  mainColumnBlocks(draft: CampaignDraft): CampaignBlock[] {
+    const railId = this.railZoneContainerId(draft, 'main');
+    if (!railId) return [];
+    const container = draft.blocks.find(b => b.id === railId);
+    return container ? this.childBlocks(container, draft) : [];
+  }
+
+  hasMainContainer(draft: CampaignDraft): boolean {
+    return !!this.railZoneContainerId(draft, 'main');
+  }
+
+  private railZoneContainerId(draft: CampaignDraft, zone: 'sidebar' | 'main'): string | null {
+    const childIds = this.topLevelChildIds(draft);
+    const container = draft.blocks.find(b =>
+      b.type === 'container' && !childIds.has(b.id) && (b.data as ContainerBlockData).railZone === zone
+    );
+    return container?.id ?? null;
+  }
+
+  // Main column fallback (no railZone:'main' container): content blocks that
+  // are NOT sidebar blocks, NOT full-width blocks, and NOT a container
+  // claimed by a rail zone (only its children render, elsewhere — not the
+  // container itself, inline).
   mainBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
+    const railContainerIds = new Set(
+      (['sidebar', 'main'] as const)
+        .map(zone => this.railZoneContainerId(draft, zone))
+        .filter((id): id is string => !!id)
+    );
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id)
+      .filter(b => b.visible && !childIds.has(b.id) && !railContainerIds.has(b.id)
         && !this.SIDEBAR_TYPES.includes(b.type)
         && !this.FULL_WIDTH_TYPES.includes(b.type))
       .sort((a, b) => a.order - b.order);
@@ -337,6 +403,8 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
 
   private readonly SIDEBAR_TYPES = ['stats', 'donation-widget'];
+  // 'rewards' here is the legacy persisted BlockType value (Offerings section)
+  // — see the BlockType comment in campaign-studio-state.service.ts.
   private readonly FULL_WIDTH_TYPES = ['rewards', 'donors', 'ambassadors', 'sponsors', 'updates'];
 
   private topLevelChildIds(draft: CampaignDraft): Set<string> {
@@ -475,30 +543,31 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return this.selectedAmount === amount && this.customAmount === null;
   }
 
-  isRewardInCart(id: string): boolean { return this.cartRewardIds.has(id); }
+  isOfferingInCart(id: string): boolean { return this.cartOfferingIds.has(id); }
 
-  selectReward(id: string): void {
-    if (!this.cartRewardIds.has(id)) {
-      this.cartRewardIds.add(id);
-      this.cartRewardIds = new Set(this.cartRewardIds);
-    }
+  // Offering is a pure gift/perk concept again — always goes to the cart.
+  // Registration lives entirely outside this grid now (see startRegistration
+  // below). See DECISIONS.md (2026-07-16).
+  selectOffering(offering: Offering, draft: CampaignDraft): void {
+    this.cartOfferingIds.add(offering.id);
+    this.cartOfferingIds = new Set(this.cartOfferingIds);
   }
 
-  removeReward(id: string): void {
-    this.cartRewardIds.delete(id);
-    this.cartRewardIds = new Set(this.cartRewardIds);
+  removeOffering(id: string): void {
+    this.cartOfferingIds.delete(id);
+    this.cartOfferingIds = new Set(this.cartOfferingIds);
   }
 
-  toggleReward(id: string): void {
-    if (this.cartRewardIds.has(id)) {
-      this.cartRewardIds.delete(id);
+  toggleOffering(id: string): void {
+    if (this.cartOfferingIds.has(id)) {
+      this.cartOfferingIds.delete(id);
     } else {
-      this.cartRewardIds.add(id);
+      this.cartOfferingIds.add(id);
     }
-    this.cartRewardIds = new Set(this.cartRewardIds);
+    this.cartOfferingIds = new Set(this.cartOfferingIds);
   }
 
-  get cartCount(): number { return this.cartRewardIds.size; }
+  get cartCount(): number { return this.cartOfferingIds.size; }
 
   get explicitAmount(): number {
     if (this.customAmount) return this.customAmount;
@@ -506,14 +575,22 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return 0;
   }
 
-  cartRewardsTotal(draft: CampaignDraft): number {
-    return draft.rewards
-      .filter(r => this.cartRewardIds.has(r.id))
-      .reduce((sum, r) => sum + (r.minimumAmount || 0), 0);
+  cartOfferingsTotal(draft: CampaignDraft): number {
+    return draft.offerings
+      .filter(o => this.cartOfferingIds.has(o.id))
+      .reduce((sum, o) => sum + (o.minimumAmount || 0), 0);
   }
 
   totalAmount(draft: CampaignDraft): number {
-    return this.explicitAmount + this.cartRewardsTotal(draft);
+    return this.explicitAmount + this.cartOfferingsTotal(draft);
+  }
+
+  // Opens checkout directly in Registration mode — the checkout modal itself
+  // is where participants get added, each picking their own Registration
+  // Option (defaults to the first one for participant #1).
+  startRegistration(): void {
+    this.checkoutMode = 'registration';
+    this.checkoutOpen = true;
   }
 
   scrollToDonation(): void {
@@ -533,16 +610,20 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       const effective = this.getEffectiveAmount(draft);
       if (effective > 0) this.selectedAmount = effective;
     }
-    if (this.totalAmount(draft) === 0) return;
+    // A pending registration alone is enough reason to open — the visitor
+    // may just want to pay for it with zero extra donation.
+    if (this.totalAmount(draft) === 0 && !this.pendingRegistration) return;
+    this.checkoutMode = 'donation';
     this.checkoutOpen = true;
   }
 
   closeCheckout(): void {
     this.checkoutOpen = false;
+    this.checkoutMode = 'donation';
   }
 
-  cartRewardList(draft: CampaignDraft) {
-    return draft.rewards.filter(r => this.cartRewardIds.has(r.id));
+  cartOfferingList(draft: CampaignDraft) {
+    return draft.offerings.filter(o => this.cartOfferingIds.has(o.id));
   }
 
   middleIndex(len: number): number {

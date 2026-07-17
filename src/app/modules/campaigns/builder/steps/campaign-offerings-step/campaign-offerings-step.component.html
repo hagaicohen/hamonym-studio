@@ -6,21 +6,21 @@
       <div class="rs-header-icon">
         <lucide-angular [img]="Gift" [size]="18" class="rs-gift-icon"></lucide-angular>
       </div>
-      <h2 class="rs-title">תשורות</h2>
+      <h2 class="rs-title">{{ stepCopy.offeringsStepTitle }}</h2>
     </div>
-    <p class="rs-subtitle">צור תשורה שתופיע לתורמים בקמפיין שלך</p>
+    <p class="rs-subtitle">{{ stepCopy.offeringsStepSubtitle }}</p>
   </div>
 
   <!-- ── ENABLE TOGGLE ── -->
   <div class="rs-enable-row">
-    <div class="rs-enable-text">הפעל תשורות לקמפיין</div>
+    <div class="rs-enable-text">{{ stepCopy.offeringsEnableLabel }}</div>
     <label class="rs-switch">
-      <input type="checkbox" [(ngModel)]="draft.rewardsEnabled" (ngModelChange)="sync()">
+      <input type="checkbox" [(ngModel)]="draft.offeringsEnabled" (ngModelChange)="sync()">
       <span class="rs-slider"></span>
     </label>
   </div>
 
-  <ng-container *ngIf="draft.rewardsEnabled">
+  <ng-container *ngIf="draft.offeringsEnabled">
 
     <!-- ── LAYOUT PICKER ── -->
     <div class="rs-layout-picker">
@@ -28,7 +28,7 @@
       <div class="rs-layout-btns">
         <button class="rs-layout-btn"
           [class.rs-layout-btn--active]="draft.layout.rewardsLayout !== 'image'"
-          (click)="setRewardsLayout('standard')">
+          (click)="setOfferingsLayout('standard')">
           <span class="rs-layout-icon rs-layout-icon--standard">
             <span class="rli-row"><span class="rli-thumb"></span><span class="rli-lines"><span></span><span></span></span></span>
           </span>
@@ -36,7 +36,7 @@
         </button>
         <button class="rs-layout-btn"
           [class.rs-layout-btn--active]="draft.layout.rewardsLayout === 'image'"
-          (click)="setRewardsLayout('image')">
+          (click)="setOfferingsLayout('image')">
           <span class="rs-layout-icon rs-layout-icon--image">
             <span class="rli-price"></span>
             <span class="rli-img-block"></span>
@@ -56,17 +56,17 @@
         <!-- כותרת -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">כותרת התשורה <span class="rf-req">*</span></label>
-            <span class="rf-icon">🎁</span>
+            <label class="rf-label">{{ copy.titleLabel }} <span class="rf-req">*</span></label>
+            <span class="rf-icon">{{ copy.icon }}</span>
           </div>
-          <input class="rf-input" type="text" [(ngModel)]="reward.title"
+          <input class="rf-input" type="text" [(ngModel)]="offering.title"
             placeholder="ספר חתום על ידי המחבר">
         </div>
 
-        <!-- סכום מינימלי -->
+        <!-- מחיר / סכום מינימלי -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">סכום מינימלי (₪) <span class="rf-req">*</span></label>
+            <label class="rf-label">{{ copy.priceLabel }} <span class="rf-req">*</span></label>
             <span class="rf-icon">💳</span>
           </div>
           <div class="rf-currency-wrap">
@@ -81,78 +81,78 @@
         <!-- תיאור -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">תיאור התשורה <span class="rf-req">*</span></label>
+            <label class="rf-label">{{ copy.descLabel }} <span class="rf-req">*</span></label>
             <span class="rf-icon">≡</span>
           </div>
-          <textarea class="rf-input rf-textarea" [(ngModel)]="reward.description"
+          <textarea class="rf-input rf-textarea" [(ngModel)]="offering.description"
             placeholder="ספר עם הקדשה אישית ותעודת הוקרה לתורם. משלוח חינם עד הבית.">
           </textarea>
         </div>
 
         <!-- כמות -->
-        <div class="rf-field">
-          <div class="rf-label-row">
-            <label class="rf-label">כמות (אופציונלי)</label>
-            <span class="rf-icon">👥</span>
-          </div>
-          <div class="rf-select-wrap">
-            <select class="rf-input rf-select"
-              [value]="reward.stock === null ? 'unlimited' : 'limited'"
-              (change)="reward.stock = $any($event.target).value === 'unlimited' ? null : (reward.stock || 10)">
-              <option value="unlimited">ללא הגבלה</option>
-              <option value="limited">הגבלת כמות</option>
-            </select>
-          </div>
-          <input *ngIf="reward.stock !== null"
-            class="rf-input rf-input--stock" type="text"
-            [value]="stockInput"
-            (input)="onStockInput($event)"
-            placeholder="כמות יחידות">
-        </div>
-
-        <!-- תמונה -->
-        <div class="rf-field">
-          <div class="rf-label-row">
-            <label class="rf-label">תמונת התשורה</label>
+          <div class="rf-field">
+            <div class="rf-label-row">
+              <label class="rf-label">כמות (אופציונלי)</label>
+              <span class="rf-icon">👥</span>
+            </div>
+            <div class="rf-select-wrap">
+              <select class="rf-input rf-select"
+                [value]="offering.stock === null ? 'unlimited' : 'limited'"
+                (change)="offering.stock = $any($event.target).value === 'unlimited' ? null : (offering.stock || 10)">
+                <option value="unlimited">ללא הגבלה</option>
+                <option value="limited">הגבלת כמות</option>
+              </select>
+            </div>
+            <input *ngIf="offering.stock !== null"
+              class="rf-input rf-input--stock" type="text"
+              [value]="stockInput"
+              (input)="onStockInput($event)"
+              placeholder="כמות יחידות">
           </div>
 
-          <input id="reward-img-input" type="file" accept="image/*"
-            style="display:none" (change)="onImageSelected($event)">
+          <!-- תמונה -->
+          <div class="rf-field">
+            <div class="rf-label-row">
+              <label class="rf-label">{{ copy.imageLabel }}</label>
+            </div>
 
-          <div class="rf-upload-area" *ngIf="!reward.imageUrl">
-            <div class="rf-upload-icon">☁️</div>
-            <p class="rf-upload-title">גרור תמונה לכאן או
-              <label for="reward-img-input" class="rf-upload-link">לחץ להעלאה</label>
-            </p>
-            <p class="rf-upload-hint">מומלץ להעלות תמונה ברזולוציה של 1200×800 פיקסלים (יחס 3:2)</p>
-            <label for="reward-img-input" class="rf-library-btn">
-              🖼 בחר מהספריה
+            <input id="reward-img-input" type="file" accept="image/*"
+              style="display:none" (change)="onImageSelected($event)">
+
+            <div class="rf-upload-area" *ngIf="!offering.imageUrl">
+              <div class="rf-upload-icon">☁️</div>
+              <p class="rf-upload-title">גרור תמונה לכאן או
+                <label for="reward-img-input" class="rf-upload-link">לחץ להעלאה</label>
+              </p>
+              <p class="rf-upload-hint">מומלץ להעלות תמונה ברזולוציה של 1200×800 פיקסלים (יחס 3:2)</p>
+              <label for="reward-img-input" class="rf-library-btn">
+                🖼 בחר מהספריה
+              </label>
+            </div>
+
+            <div class="rf-img-preview" *ngIf="offering.imageUrl">
+              <img [src]="offering.imageUrl" alt="תמונת תשורה" class="rf-img-thumb">
+              <div class="rf-img-actions">
+                <label for="reward-img-input" class="rf-img-btn">החלף</label>
+                <button type="button" class="rf-img-btn rf-img-btn--remove" (click)="removeImage()">הסר</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- מומלץ toggle -->
+          <div class="rf-featured-row">
+            <div class="rf-featured-text">
+              <span class="rf-featured-star">⭐</span>
+              <div>
+                <div class="rf-featured-title">{{ copy.featuredTitle }}</div>
+                <div class="rf-featured-desc">{{ copy.featuredDesc }}</div>
+              </div>
+            </div>
+            <label class="rs-switch">
+              <input type="checkbox" [(ngModel)]="offering.featured">
+              <span class="rs-slider rs-slider--purple"></span>
             </label>
           </div>
-
-          <div class="rf-img-preview" *ngIf="reward.imageUrl">
-            <img [src]="reward.imageUrl" alt="תמונת תשורה" class="rf-img-thumb">
-            <div class="rf-img-actions">
-              <label for="reward-img-input" class="rf-img-btn">החלף</label>
-              <button type="button" class="rf-img-btn rf-img-btn--remove" (click)="removeImage()">הסר</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- מומלץ toggle -->
-        <div class="rf-featured-row">
-          <div class="rf-featured-text">
-            <span class="rf-featured-star">⭐</span>
-            <div>
-              <div class="rf-featured-title">תשורה מומלצת</div>
-              <div class="rf-featured-desc">תשורות מומלצות יופיעו עם כוכב בולט למבקרים</div>
-            </div>
-          </div>
-          <label class="rs-switch">
-            <input type="checkbox" [(ngModel)]="reward.featured">
-            <span class="rs-slider rs-slider--purple"></span>
-          </label>
-        </div>
 
         <!-- Actions -->
         <div class="rf-actions">
@@ -160,8 +160,8 @@
             🗑 נקה טופס
           </button>
           <button class="rf-btn-save" type="button" (click)="save()"
-            [disabled]="!reward.title.trim()">
-            💾 {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}
+            [disabled]="!isFormValid">
+            💾 {{ isEditing ? copy.updateBtn : copy.saveBtn }}
           </button>
         </div>
 
@@ -177,23 +177,23 @@
         <!-- Standard layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
           <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
             <div class="rp-card-top">
               <div class="rp-icon-wrap">
-                <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" class="rp-img" alt="">
-                <span *ngIf="!reward.imageUrl" class="rp-img-icon">🎁</span>
+                <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" class="rp-img" alt="">
+                <span *ngIf="!offering.imageUrl" class="rp-img-icon">🎁</span>
               </div>
               <div class="rp-price" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
-                ₪{{ reward.minimumAmount ? reward.minimumAmount.toLocaleString('he-IL') : '0' }}
+                ₪{{ offering.minimumAmount ? offering.minimumAmount.toLocaleString('he-IL') : '0' }}
               </div>
             </div>
             <div class="rp-body">
-              <div class="rp-title">{{ reward.title || 'כותרת התשורה' }}</div>
-              <p class="rp-desc">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <div class="rp-title">{{ offering.title || 'כותרת התשורה' }}</div>
+              <p class="rp-desc">{{ offering.description || 'תיאור התשורה יופיע כאן...' }}</p>
               <button class="rp-cta" type="button"
                 [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
                 [style.color]="'rgba(255,255,255,0.9)'">
-                בחירה בתשורה
+                {{ copy.cta }}
               </button>
             </div>
           </div>
@@ -202,21 +202,21 @@
         <!-- Image layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
           <div class="rp-card rp-card--img" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="reward.featured === true">⭐ מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
             <div class="rp-price-top" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
-              ₪{{ reward.minimumAmount ? reward.minimumAmount.toLocaleString('he-IL') : '0' }}
+              ₪{{ offering.minimumAmount ? offering.minimumAmount.toLocaleString('he-IL') : '0' }}
             </div>
             <div class="rp-img-hero">
-              <img *ngIf="reward.imageUrl" [src]="reward.imageUrl" alt="">
-              <span *ngIf="!reward.imageUrl" class="rp-img-hero-placeholder">🖼</span>
+              <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" alt="">
+              <span *ngIf="!offering.imageUrl" class="rp-img-hero-placeholder">🖼</span>
             </div>
             <div class="rp-body rp-body--img">
-              <div class="rp-title rp-title--center">{{ reward.title || 'כותרת התשורה' }}</div>
-              <p class="rp-desc rp-desc--justify">{{ reward.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <div class="rp-title rp-title--center">{{ offering.title || 'כותרת התשורה' }}</div>
+              <p class="rp-desc rp-desc--justify">{{ offering.description || 'תיאור התשורה יופיע כאן...' }}</p>
               <button class="rp-cta" type="button"
                 [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
                 [style.color]="'rgba(255,255,255,0.9)'">
-                בחירה בתשורה
+                {{ copy.cta }}
               </button>
             </div>
           </div>
@@ -226,40 +226,42 @@
 
     </div>
 
-    <!-- ── REWARDS LIST ── -->
-    <div class="rs-list-section" *ngIf="draft.rewards.length > 0">
+    <!-- ── OFFERINGS LIST ── -->
+    <div class="rs-list-section" *ngIf="draft.offerings.length > 0">
       <div class="rs-list-header">
         <div class="rs-list-title">
           <lucide-angular [img]="Gift" [size]="18" class="rs-list-icon"></lucide-angular>
-          התשורות בקמפיין ({{ draft.rewards.length }})
+          {{ stepCopy.offeringsStepTitle }} בקמפיין ({{ draft.offerings.length }})
         </div>
-        <button class="rs-add-btn" type="button" (click)="clearForm()">+ הוסף תשורה חדשה</button>
+        <button class="rs-add-btn" type="button" (click)="clearForm()">{{ stepCopy.offeringsAddButtonLabel }}</button>
       </div>
 
       <div class="rs-grid">
-        <div class="rs-card" *ngFor="let r of draft.rewards">
+        <div class="rs-card" *ngFor="let o of draft.offerings">
           <!-- Image thumb -->
-          <div class="rs-card-img" *ngIf="r.imageUrl">
-            <img [src]="r.imageUrl" alt="">
-            <div class="rs-card-badge" *ngIf="r.featured === true">★</div>
+          <div class="rs-card-img" *ngIf="o.imageUrl">
+            <img [src]="o.imageUrl" alt="">
+            <div class="rs-card-badge" *ngIf="o.featured === true">★</div>
           </div>
-          <div class="rs-card-img rs-card-img--empty" *ngIf="!r.imageUrl">
-            <span>🎁</span>
-            <div class="rs-card-badge" *ngIf="r.featured === true">★</div>
+          <div class="rs-card-img rs-card-img--empty" *ngIf="!o.imageUrl">
+            <span>{{ copy.icon }}</span>
+            <div class="rs-card-badge" *ngIf="o.featured === true">★</div>
           </div>
           <!-- Content -->
           <div class="rs-card-body">
-            <div class="rs-card-price">₪{{ r.minimumAmount.toLocaleString('he-IL') }}</div>
-            <div class="rs-card-title">{{ r.title }}</div>
-            <p class="rs-card-desc">{{ r.description }}</p>
+            <div class="rs-card-price-row">
+              <div class="rs-card-price">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</div>
+            </div>
+            <div class="rs-card-title">{{ o.title }}</div>
+            <p class="rs-card-desc">{{ o.description }}</p>
             <div class="rs-card-actions">
-              <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteReward(r.id)">
+              <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteOffering(o.id)">
                 🗑 מחיקה
               </button>
-              <button class="rs-card-btn rs-card-btn--duplicate" type="button" (click)="duplicateReward(r)">
+              <button class="rs-card-btn rs-card-btn--duplicate" type="button" (click)="duplicateOffering(o)">
                 📋 שכפל
               </button>
-              <button class="rs-card-btn rs-card-btn--edit" type="button" (click)="editReward(r)">
+              <button class="rs-card-btn rs-card-btn--edit" type="button" (click)="editOffering(o)">
                 ✏ עריכה
               </button>
             </div>

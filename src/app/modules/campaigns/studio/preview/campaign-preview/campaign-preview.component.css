@@ -281,6 +281,18 @@
 }
 .hm-hero--mobile { min-height: 480px; }
 
+/* Hero rendered inside the sidebar's main column (layout.heroPlacement ===
+   'main-column', desktop only) — narrower box, so a shorter height and
+   tighter padding reads better than the full-bleed 580px version.
+   See DECISIONS.md (2026-07-16). */
+.hm-hero--in-column {
+  min-height: 420px;
+  border-radius: 16px;
+}
+.hm-hero--in-column .hm-hero-container {
+  padding: 40px 28px 56px;
+}
+
 /* Background image via separate layer (avoids Angular [style] parsing issues) */
 .hm-hero-bg-layer {
   position: absolute;
@@ -488,6 +500,7 @@
   height: auto;
   object-fit: contain;
   display: block;
+  margin: 0 auto;
 }
 .hero-logo-emoji { font-size: 52px; }
 
@@ -591,6 +604,26 @@
   font-size: 20px; font-weight: 800;
   margin: 0 0 20px; text-align: center;
   color: var(--hm-secondary, #6fc9eb);
+}
+.hm-register h2 { margin-bottom: 8px; }
+.hm-register-subtitle {
+  font-size: 14px; color: #64748b; text-align: center;
+  margin: 0 0 20px;
+}
+.hm-donate-or-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -6px 0;
+}
+.hm-donate-or-divider span {
+  background: #f8fafc;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 999px;
+  padding: 3px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
 }
 .hm-amounts {
   display: grid;

@@ -27,8 +27,7 @@ import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-ed
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
 import { UploadService } from '../../../../../core/services/upload.service';
-import { TemplatePickerComponent } from '../../template-picker/template-picker.component';
-import { CampaignTemplate } from '../../templates/campaign-templates';
+import { TemplatePickerComponent, TemplateSelection } from '../../template-picker/template-picker.component';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -46,6 +45,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'ambassadors': 'שגרירים',
   'donors':      'תורמים',
   'updates':     'עדכונים',
+  'hero':        'Hero (תמונה ראשית)',
 };
 
 const BLOCK_ICONS: Record<BlockType, string> = {
@@ -64,14 +64,15 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'ambassadors': '⭐',
   'donors':      '💛',
   'updates':     '📢',
+  'hero':        '🌄',
 };
 
-const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates'];
+const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero'];
 
 // Block groups for the picker UI
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
-  { label: 'פריסה',   types: ['container'] },
+  { label: 'פריסה',   types: ['container', 'hero'] },
   { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
   { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
@@ -79,7 +80,7 @@ export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
 ];
 
 const ADDABLE_BLOCKS: BlockType[] = [
-  'rich-text', 'image', 'video', 'gallery', 'container',
+  'rich-text', 'image', 'video', 'gallery', 'container', 'hero',
   'stats', 'donation-widget', 'cta', 'divider',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
 ];
@@ -146,8 +147,20 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   addBlock(type: BlockType, blocks: CampaignBlock[]): void {
     if (this.isAlreadyAdded(type, blocks)) return;
-    this.state.addBlock(type);
+    const id = this.state.addBlock(type);
     this.showBlockPicker = false;
+    this.openNewBlockEditor(id);
+  }
+
+  // Opens the new block's editor panel right away (instead of leaving it
+  // collapsed like every other block) and scrolls it into view — otherwise
+  // adding a block silently did nothing visible, and it wasn't obvious the
+  // content was actually editable. See DECISIONS.md (2026-07-17).
+  private openNewBlockEditor(id: string): void {
+    this.editingBlockId = id;
+    setTimeout(() => {
+      document.getElementById('editor-blk-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   // ── Hierarchy helpers ──────────────────────────────────────────
@@ -199,12 +212,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   addBlockInsideContainer(containerId: string, type: BlockType, blocks: CampaignBlock[]): void {
     if (this.isAlreadyAdded(type, blocks)) return;
-    this.state.addBlockToContainer(containerId, type);
+    const id = this.state.addBlockToContainer(containerId, type);
     this.showContainerPickerId = null;
+    if (id) this.openNewBlockEditor(id);
   }
 
-  onTemplateSelected(template: CampaignTemplate): void {
-    this.state.applyTemplate(template.createBlocks(), template.themeOverride, template.layoutMode, template.id);
+  onTemplateSelected(selection: TemplateSelection): void {
+    const { template, palette } = selection;
+    this.state.applyTemplate(template.createBlocks(palette), template.buildTheme(palette), template.layoutMode, template.id, template.heroPlacement);
     this.showTemplatePicker = false;
   }
 
@@ -339,6 +354,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as ContainerBlockData);
+  }
+
+  setContainerRailZone(id: string, zone: 'sidebar' | 'main' | null): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = { ...(block.data as ContainerBlockData) };
+    if (zone) data.railZone = zone; else delete data.railZone;
+    this.state.updateBlockData(id, data);
   }
 
   swapContainerChildren(id: string): void {

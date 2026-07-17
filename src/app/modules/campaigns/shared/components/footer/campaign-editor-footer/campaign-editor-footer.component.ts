@@ -15,6 +15,9 @@ export class CampaignEditorFooterComponent {
   currentStep = 1;
 
   @Input()
+  totalSteps = 10;
+
+  @Input()
   canContinue = true;
 
   @Input()

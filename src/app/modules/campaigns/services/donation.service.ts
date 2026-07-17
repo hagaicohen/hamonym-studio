@@ -36,7 +36,17 @@ export interface DonationPayload {
     postalCode?: string;
   };
   amount:  number;
+  // Cardcom line items — just title + price, nothing type-specific (see
+  // hamonym-backend migrations/024_registration_orders.sql for the
+  // Registration Order/Participant side).
   rewards: Array<{ title: string; minimumAmount: number }>;
+  // 2.4 — Multi-Participant Registration: one entry per registered person
+  // (a Registration Order can have 1+ Participants). Separate from `rewards`
+  // (which drives pricing/Cardcom line items) — this is "who's registered",
+  // not "what's being charged". registrationOptionId is validated and
+  // re-priced server-side against registration_options — see DECISIONS.md
+  // (2026-07-15, 2026-07-16).
+  participants?: Array<{ name: string; registrationOptionId?: string; shirtSize?: string }>;
   utmParams?: Record<string, string>;
 }
 

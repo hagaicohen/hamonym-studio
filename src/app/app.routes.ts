@@ -242,6 +242,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'registrations',
+        loadComponent: () =>
+          import('./modules/registrations/pages/registrations-page/registrations-page.component').then(
+            (m) => m.RegistrationsPageComponent,
+          ),
+      },
+      {
         path: 'donors',
         loadComponent: () =>
           import('./modules/donors/pages/donors-page/donors-page.component').then(

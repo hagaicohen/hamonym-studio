@@ -3,12 +3,15 @@
     type="button"
     class="secondary-button"
     (click)="previous.emit()"
-    [disabled]="currentStep === 1"
+    [disabled]="currentStep === 1 || isSaving"
   >
     הקודם
   </button>
 
-  @if (currentStep < 8) {
+  <!-- Hidden only on the last step (Publish), which has its own dedicated
+       button — every other step, including the last content step before
+       Publish, needs a way to move forward. -->
+  @if (currentStep < totalSteps) {
     <button
       type="button"
       class="primary-button"

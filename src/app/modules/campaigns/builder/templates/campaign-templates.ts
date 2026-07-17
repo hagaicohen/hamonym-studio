@@ -10,15 +10,92 @@ function gid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+// ─────────────────────────────────────
+// COLOR PALETTES
+// A palette is a single base color. Every other color a template needs
+// (dark strip, pale background, active border, etc.) is derived from it
+// at selection time — this is what lets the Template Picker offer ready
+// palette swatches without a full 9-field color picker (see DECISIONS.md,
+// "Template Picker palette swatches").
+// ─────────────────────────────────────
+export interface TemplatePalette {
+  id: string;
+  name: string;
+  base: string;
+}
+
+export const TEMPLATE_PALETTES: TemplatePalette[] = [
+  { id: 'purple', name: 'סגול',     base: '#7c3aed' },
+  { id: 'blue',   name: 'כחול',     base: '#0ea5e9' },
+  { id: 'green',  name: 'ירוק',     base: '#22c55e' },
+  { id: 'teal',   name: 'טורקיז',   base: '#10b981' },
+  { id: 'orange', name: 'כתום',     base: '#f59e0b' },
+  { id: 'red',    name: 'אדום',     base: '#ef4444' },
+  { id: 'pink',   name: 'ורוד',     base: '#ec4899' },
+  { id: 'slate',  name: 'אפור כהה', base: '#475569' },
+];
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const num = parseInt(v, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const c = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+function mix(hex: string, target: [number, number, number], t: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r + (target[0] - r) * t, g + (target[1] - g) * t, b + (target[2] - b) * t);
+}
+
+const WHITE: [number, number, number] = [255, 255, 255];
+const BLACK: [number, number, number] = [0, 0, 0];
+
+interface Shades {
+  accent: string;
+  light: string;
+  pale: string;
+  paleBg: string;
+  dark: string;
+}
+
+function shadesOf(base: string): Shades {
+  return {
+    accent: base,
+    light: mix(base, WHITE, 0.35),
+    pale: mix(base, WHITE, 0.72),
+    paleBg: mix(base, WHITE, 0.93),
+    dark: mix(base, BLACK, 0.5),
+  };
+}
+
+function buildTheme(palette: TemplatePalette): Record<string, any> {
+  const s = shadesOf(palette.base);
+  return {
+    primaryColor: s.dark, secondaryColor: s.accent, accentColor: s.light, bodyTextColor: '#1e293b',
+    logoBg: '#ffffff', topStripBg: s.dark, rewardsBg: s.dark,
+    rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: s.light, lineColor: s.paleBg,
+  };
+}
+
 export interface CampaignTemplate {
   id: string;
   name: string;
   description: string;
-  accent: string;
   layoutMode: LayoutMode;
-  preview: TemplatePreviewRow[];
-  createBlocks(): CampaignBlock[];
-  themeOverride: Record<string, any>;
+  defaultPaletteId: string;
+  // Independent of layoutMode on purpose — layoutMode says where the sidebar
+  // rail is, heroPlacement says where the Hero sits. Only meaningful for the
+  // two sidebar layoutModes; absent = today's full-page-width Hero.
+  // See DECISIONS.md (2026-07-16).
+  heroPlacement?: 'full-width' | 'main-column';
+  buildPreview(palette: TemplatePalette): TemplatePreviewRow[];
+  createBlocks(palette: TemplatePalette): CampaignBlock[];
+  buildTheme(palette: TemplatePalette): Record<string, any>;
 }
 
 export interface TemplatePreviewRow {
@@ -80,17 +157,24 @@ function donationBlock(id: string, order: number, overrides: Partial<DonationWid
   };
 }
 
+function previewRows(rows: { cols: { flex: number; tone: keyof Shades; height: number }[] }[], s: Shades): TemplatePreviewRow[] {
+  return rows.map((row) => ({
+    cols: row.cols.map((col) => ({ flex: col.flex, height: col.height, color: s[col.tone] })),
+  }));
+}
+
 // ─────────────────────────────────────
 // 1. קלאסית — Classic
 // ─────────────────────────────────────
-function classicBlocks(): CampaignBlock[] {
+function classicBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
     { id: ctId, type: 'container', order: 1, visible: true, label: 'מסגרת ראשית',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 16, direction: 'row', splitPercent: 55 } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'md', '#22c55e'),
-    donationBlock(donationId, 2),
+    statsBlock(statsId, 1, 'cards', 'md', s.accent),
+    donationBlock(donationId, 2, { ctaColor: s.accent }),
     { id: gid(), type: 'rich-text', order: 2, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'rewards',   order: 3, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 4, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
@@ -99,14 +183,26 @@ function classicBlocks(): CampaignBlock[] {
   ];
 }
 
+function classicPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 55, tone: 'pale', height: 80 }, { flex: 45, tone: 'light', height: 80 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 36 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 2. תמונה גדולה — Large Hero
 // ─────────────────────────────────────
-function largeHeroBlocks(): CampaignBlock[] {
+function largeHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', '#0ea5e9', '#f0f9ff', '#bae6fd'),
-    donationBlock(donationId, 2, { ctaColor: '#0ea5e9' }),
+    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale),
+    donationBlock(donationId, 2, { ctaColor: s.accent }),
     { id: gid(), type: 'rich-text', order: 3, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'gallery',   order: 4, visible: true, label: 'גלריה',    spacingTop: 0, spacingBottom: 0, data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',   order: 5, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -114,12 +210,24 @@ function largeHeroBlocks(): CampaignBlock[] {
   ];
 }
 
+function largeHeroPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'pale', height: 96 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 40 }] },
+    { cols: [{ flex: 1, tone: 'light', height: 60 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 3. סיידבר ימין — Sidebar Right
 // Nested containers: outer row → sidebar-col (right, 36%) + content-col (left, 64%)
 // In RTL flex-row: first child appears on the RIGHT side
 // ─────────────────────────────────────
-function sidebarRightBlocks(): CampaignBlock[] {
+function sidebarRightBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const outerCtId  = gid();
   const sidebarCtId = gid();  // appears RIGHT (first child in RTL)
   const contentCtId = gid();  // appears LEFT  (second child in RTL)
@@ -139,8 +247,8 @@ function sidebarRightBlocks(): CampaignBlock[] {
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [richTextId], backgroundColor: '', borderColor: '',
               backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column' } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'sm', '#7c3aed'),
-    donationBlock(donationId, 2, { ctaColor: '#7c3aed' }),
+    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
+    donationBlock(donationId, 2, { ctaColor: s.accent }),
     { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -150,12 +258,23 @@ function sidebarRightBlocks(): CampaignBlock[] {
   ];
 }
 
+function sidebarRightPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 35, tone: 'light', height: 100 }, { flex: 65, tone: 'pale', height: 100 }] },
+    { cols: [{ flex: 35, tone: 'light', height: 28 }, { flex: 65, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 35, tone: 'light', height: 28 }, { flex: 65, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 4. סיידבר שמאל — Sidebar Left
 // Nested containers: outer row → content-col (right, 64%) + sidebar-col (left, 36%)
 // In RTL flex-row: first child appears on the RIGHT side
 // ─────────────────────────────────────
-function sidebarLeftBlocks(): CampaignBlock[] {
+function sidebarLeftBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const outerCtId  = gid();
   const contentCtId = gid();  // appears RIGHT (first child in RTL)
   const sidebarCtId = gid();  // appears LEFT  (second child in RTL)
@@ -175,8 +294,8 @@ function sidebarLeftBlocks(): CampaignBlock[] {
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
               backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column' } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'sm', '#f59e0b'),
-    donationBlock(donationId, 2, { ctaColor: '#f59e0b' }),
+    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
+    donationBlock(donationId, 2, { ctaColor: s.accent }),
     { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -186,39 +305,124 @@ function sidebarLeftBlocks(): CampaignBlock[] {
   ];
 }
 
+function sidebarLeftPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 65, tone: 'paleBg', height: 100 }, { flex: 35, tone: 'light', height: 100 }] },
+    { cols: [{ flex: 65, tone: 'paleBg', height: 28 }, { flex: 35, tone: 'light', height: 28 }] },
+    { cols: [{ flex: 65, tone: 'paleBg', height: 28 }, { flex: 35, tone: 'light', height: 28 }] },
+  ], s);
+}
+
+// ─────────────────────────────────────
+// 3b/4b. סיידבר לאורך כל העמוד (ימין/שמאל) — Hero בעמודה הראשית
+// layoutMode stays the dedicated 'sidebar-right'/'sidebar-left' value (Left
+// vs right is entirely CSS-driven — .page-layout-sidebar--right/--left — so
+// one block set serves both). Both halves are real top-level containers —
+// the rail (railZone:'sidebar') and the main column (railZone:'main',
+// holding a 'hero' block plus the "about" text) — so both are normal,
+// editable containers in the Page Builder: the user can add/reorder any
+// block type into either via the existing container UI. See
+// DECISIONS.md (2026-07-16, 2026-07-17).
+// ─────────────────────────────────────
+function sidebarFullHeightBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
+  const railCtId = gid();
+  const mainCtId = gid();
+  const statsId = gid(), donationId = gid();
+  const heroId = gid(), richTextId = gid();
+  return [
+    { id: railCtId, type: 'container', order: 1, visible: true, label: 'אזור תרומה',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column',
+              railZone: 'sidebar' } as ContainerBlockData },
+    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
+    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    { id: mainCtId, type: 'container', order: 2, visible: true, label: 'תוכן ראשי',
+      spacingTop: 0, spacingBottom: 0,
+      data: { childBlockIds: [heroId, richTextId], backgroundColor: '', borderColor: '',
+              backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column',
+              railZone: 'main' } as ContainerBlockData },
+    { id: heroId, type: 'hero', order: 1, visible: true, label: 'Hero', spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: richTextId, type: 'rich-text', order: 2, visible: true, label: 'על המיזם', spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
+    { id: gid(), type: 'rewards',     order: 3, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'ambassadors', order: 4, visible: true, label: 'שגרירים',  spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'donors',      order: 5, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
+    { id: gid(), type: 'updates',     order: 6, visible: true, label: 'עדכונים',  spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
+  ];
+}
+
+function sidebarFullHeightRightPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  // Left column (35%) stays the SAME 'light' tone across every row, reading
+  // as one continuous full-height bar; the right column (65%, main) starts
+  // 'accent' on row 1 (Hero) then transitions to lighter content tones.
+  return previewRows([
+    { cols: [{ flex: 35, tone: 'light', height: 48 },  { flex: 65, tone: 'accent', height: 48 } ] },
+    { cols: [{ flex: 35, tone: 'light', height: 100 }, { flex: 65, tone: 'pale', height: 100 }] },
+    { cols: [{ flex: 35, tone: 'light', height: 28 },  { flex: 65, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 35, tone: 'light', height: 28 },  { flex: 65, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
+function sidebarFullHeightLeftPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 65, tone: 'accent', height: 48 }, { flex: 35, tone: 'light', height: 48 } ] },
+    { cols: [{ flex: 65, tone: 'pale', height: 100 },  { flex: 35, tone: 'light', height: 100 }] },
+    { cols: [{ flex: 65, tone: 'paleBg', height: 28 }, { flex: 35, tone: 'light', height: 28 }] },
+    { cols: [{ flex: 65, tone: 'paleBg', height: 28 }, { flex: 35, tone: 'light', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 5. תרומה במרכז — Donation First
 // ─────────────────────────────────────
-function donationFirstBlocks(): CampaignBlock[] {
+function donationFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
     { id: ctId, type: 'container', order: 1, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
-      data: { childBlockIds: [donationId, statsId], backgroundColor: '#fefce8', borderColor: '', backgroundImageUrl: '', padding: 24, gap: 16, direction: 'row', splitPercent: 60 } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: '#d97706', ctaLabel: 'תרמו עכשיו', title: 'תמכו במיזם' }),
-    statsBlock(statsId, 2, 'cards', 'sm', '#d97706'),
+      data: { childBlockIds: [donationId, statsId], backgroundColor: s.paleBg, borderColor: '', backgroundImageUrl: '', padding: 24, gap: 16, direction: 'row', splitPercent: 60 } as ContainerBlockData },
+    donationBlock(donationId, 1, { ctaColor: s.accent, ctaLabel: 'תרמו עכשיו', title: 'תמכו במיזם' }),
+    statsBlock(statsId, 2, 'cards', 'sm', s.accent),
     { id: gid(), type: 'rich-text',   order: 2, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'cta',         order: 3, visible: true, label: 'קריאה לפעולה', spacingTop: 0, spacingBottom: 0,
-      data: { title: 'כל תרומה עושה את ההבדל', text: '', backgroundColor: '#d97706', textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' }, ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#ffffff', align: 'center', icon: '' } } },
+      data: { title: 'כל תרומה עושה את ההבדל', text: '', backgroundColor: s.accent, textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' }, ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#ffffff', align: 'center', icon: '' } } },
     { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',      order: 5, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 6, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
   ];
 }
 
+function donationFirstPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 60, tone: 'light', height: 90 }, { flex: 40, tone: 'pale', height: 90 }] },
+    { cols: [{ flex: 1, tone: 'dark', height: 36 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 6. סיפור קודם — Story First
 // ─────────────────────────────────────
-function storyFirstBlocks(): CampaignBlock[] {
+function storyFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
     { id: gid(), type: 'rich-text', order: 1, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 24, data: { content: '', lineHeight: 1.8 } },
     { id: gid(), type: 'image',     order: 2, visible: true, label: 'תמונה',    spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
-    statsBlock(statsId, 3, 'inline', 'lg', '#10b981', '#ecfdf5', '#a7f3d0'),
+    statsBlock(statsId, 3, 'inline', 'lg', s.accent, s.paleBg, s.pale),
     { id: ctId, type: 'container', order: 4, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: '#10b981' }),
+    donationBlock(donationId, 1, { ctaColor: s.accent }),
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'updates',     order: 6, visible: true, label: 'עדכונים',  spacingTop: 0, spacingBottom: 0, data: { viewMode: 'slider' } },
     { id: gid(), type: 'donors',      order: 7, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -226,33 +430,57 @@ function storyFirstBlocks(): CampaignBlock[] {
   ];
 }
 
+function storyFirstPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 1, tone: 'pale', height: 60 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 36 }] },
+    { cols: [{ flex: 1, tone: 'light', height: 80 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 7. שגרירים במרכז — Ambassadors First
 // ─────────────────────────────────────
-function ambassadorsFirstBlocks(): CampaignBlock[] {
+function ambassadorsFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', '#3b82f6', '#eff6ff', '#bfdbfe', true),
+    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale, true),
     { id: gid(), type: 'ambassadors', order: 2, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    donationBlock(donationId, 4, { ctaColor: '#3b82f6', ctaLabel: 'הצטרפו לקהילה' }),
+    donationBlock(donationId, 4, { ctaColor: s.accent, ctaLabel: 'הצטרפו לקהילה' }),
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
   ];
 }
 
+function ambassadorsFirstPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'pale', height: 40 }] },
+    { cols: [{ flex: 1, tone: 'light', height: 60 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 36 }] },
+    { cols: [{ flex: 1, tone: 'accent', height: 72 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 8. מגזין/כתבה — Magazine
 // ─────────────────────────────────────
-function magazineBlocks(): CampaignBlock[] {
+function magazineBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
     { id: gid(), type: 'rich-text', order: 1, visible: true, label: 'כותרת ראשית', spacingTop: 24, spacingBottom: 8,  data: { content: '', lineHeight: 1.5 } },
     { id: gid(), type: 'image',     order: 2, visible: true, label: 'תמונה',        spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
     { id: gid(), type: 'rich-text', order: 3, visible: true, label: 'גוף הכתבה',   spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.9 } },
-    statsBlock(statsId, 4, 'cards', 'sm', '#ec4899', '#fdf2f8', '#fbcfe8'),
-    donationBlock(donationId, 5, { ctaColor: '#ec4899', title: 'תמכו בכתבה' }),
+    statsBlock(statsId, 4, 'cards', 'sm', s.accent, s.paleBg, s.pale),
+    donationBlock(donationId, 5, { ctaColor: s.accent, title: 'תמכו בכתבה' }),
     { id: gid(), type: 'gallery',   order: 6, visible: true, label: 'גלריה', spacingTop: 0, spacingBottom: 0, data: { items: [], style: 'grid', aspectRatio: '4:3', showCaptions: true, showDots: false, showArrows: false, autoPlay: false } },
     { id: gid(), type: 'updates',   order: 7, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
     { id: gid(), type: 'rewards',   order: 8, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -260,17 +488,28 @@ function magazineBlocks(): CampaignBlock[] {
   ];
 }
 
+function magazinePreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 48 }] },
+    { cols: [{ flex: 60, tone: 'pale', height: 90 }, { flex: 40, tone: 'light', height: 90 }] },
+    { cols: [{ flex: 60, tone: 'paleBg', height: 40 }, { flex: 40, tone: 'light', height: 40 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
+}
+
 // ─────────────────────────────────────
 // 9. וידאו ראשון — Video Hero
 // ─────────────────────────────────────
-function videoHeroBlocks(): CampaignBlock[] {
+function videoHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
+  const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', '#ef4444', '#fef2f2', '#fecaca'),
+    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale),
     { id: ctId, type: 'container', order: 2, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: '#ef4444', ctaLabel: 'תמכו עכשיו' }),
+    donationBlock(donationId, 1, { ctaColor: s.accent, ctaLabel: 'תמכו עכשיו' }),
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'gallery',     order: 4, visible: true, label: 'גלריה',    spacingTop: 0,  spacingBottom: 0,  data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },
@@ -278,6 +517,17 @@ function videoHeroBlocks(): CampaignBlock[] {
     { id: gid(), type: 'donors',      order: 7, visible: true, label: 'תורמים',   spacingTop: 0,  spacingBottom: 0,  data: {} },
     { id: gid(), type: 'updates',     order: 8, visible: true, label: 'עדכונים',  spacingTop: 0,  spacingBottom: 0,  data: { viewMode: 'slider' } },
   ];
+}
+
+function videoHeroPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'pale', height: 80 }] },
+    { cols: [{ flex: 1, tone: 'light', height: 40 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 60 }] },
+    { cols: [{ flex: 1, tone: 'accent', height: 36 }] },
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+  ], s);
 }
 
 // ─────────────────────────────────────
@@ -290,21 +540,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'classic',
     name: 'קלאסי',
     description: 'פריסה מאוזנת. נתוני קמפיין ותרומה זה לצד זה, ואחריהם הסיפור, תשורות ושגרירים.',
-    accent: '#22c55e',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#d1fae5', height: 48 }] },
-      { cols: [{ flex: 55, color: '#a7f3d0', height: 80 }, { flex: 45, color: '#bbf7d0', height: 80 }] },
-      { cols: [{ flex: 1, color: '#e0f2fe', height: 36 }] },
-      { cols: [{ flex: 1, color: '#f0fdf4', height: 28 }] },
-      { cols: [{ flex: 1, color: '#dcfce7', height: 28 }] },
-    ],
+    defaultPaletteId: 'green',
+    buildPreview: classicPreview,
     createBlocks: classicBlocks,
-    themeOverride: {
-      primaryColor: '#333333', secondaryColor: '#22c55e', accentColor: '#10b981', bodyTextColor: '#334155',
-      logoBg: '#ffffff', topStripBg: '#052e16', rewardsBg: '#014737',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#86efac', lineColor: '#d1fae5',
-    },
+    buildTheme,
   },
 
   // 2 — Large Hero
@@ -312,63 +552,64 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'large-hero',
     name: 'תמונה גדולה',
     description: 'תמונת רקע מרשימה תופסת את כל המסך. מושלם לקמפיינים ויזואליים.',
-    accent: '#0ea5e9',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#bae6fd', height: 96 }] },
-      { cols: [{ flex: 1, color: '#e0f2fe', height: 40 }] },
-      { cols: [{ flex: 1, color: '#7dd3fc', height: 60 }] },
-      { cols: [{ flex: 1, color: '#f0f9ff', height: 28 }] },
-      { cols: [{ flex: 1, color: '#e0f2fe', height: 28 }] },
-    ],
+    defaultPaletteId: 'blue',
+    buildPreview: largeHeroPreview,
     createBlocks: largeHeroBlocks,
-    themeOverride: {
-      primaryColor: '#0c4a6e', secondaryColor: '#0ea5e9', accentColor: '#38bdf8', bodyTextColor: '#0f172a',
-      logoBg: '#ffffff', topStripBg: '#0c4a6e', rewardsBg: '#0c4a6e',
-      rewardCardBorder: 'rgba(255,255,255,.15)', rewardCardBorderActive: '#7dd3fc', lineColor: '#bae6fd',
-    },
+    buildTheme,
   },
 
   // 3 — Sidebar Right (in RTL the sidebar block is first child → appears on physical RIGHT)
   {
     id: 'sidebar-right',
-    name: 'סיידבר שמאל',
-    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
-    accent: '#7c3aed',
+    name: 'סיידבר ימין',
+    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#ede9fe', height: 48 }] },
-      { cols: [{ flex: 65, color: '#ddd6fe', height: 100 }, { flex: 35, color: '#c4b5fd', height: 100 }] },
-      { cols: [{ flex: 65, color: '#f5f3ff', height: 28 }, { flex: 35, color: '#c4b5fd', height: 28 }] },
-      { cols: [{ flex: 65, color: '#ede9fe', height: 28 }, { flex: 35, color: '#c4b5fd', height: 28 }] },
-    ],
+    defaultPaletteId: 'purple',
+    buildPreview: sidebarRightPreview,
     createBlocks: sidebarRightBlocks,
-    themeOverride: {
-      primaryColor: '#4c1d95', secondaryColor: '#7c3aed', accentColor: '#a78bfa', bodyTextColor: '#1e1b4b',
-      logoBg: '#ffffff', topStripBg: '#2e1065', rewardsBg: '#2e1065',
-      rewardCardBorder: 'rgba(255,255,255,.15)', rewardCardBorderActive: '#c4b5fd', lineColor: '#e9d5ff',
-    },
+    buildTheme,
   },
 
   // 4 — Sidebar Left (in RTL the sidebar block is second child → appears on physical LEFT)
   {
     id: 'sidebar-left',
-    name: 'סיידבר ימין',
-    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
-    accent: '#f59e0b',
+    name: 'סיידבר שמאל',
+    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#fef3c7', height: 48 }] },
-      { cols: [{ flex: 35, color: '#fcd34d', height: 100 }, { flex: 65, color: '#fef3c7', height: 100 }] },
-      { cols: [{ flex: 35, color: '#fcd34d', height: 28 }, { flex: 65, color: '#fffbeb', height: 28 }] },
-      { cols: [{ flex: 35, color: '#fcd34d', height: 28 }, { flex: 65, color: '#fef3c7', height: 28 }] },
-    ],
+    defaultPaletteId: 'orange',
+    buildPreview: sidebarLeftPreview,
     createBlocks: sidebarLeftBlocks,
-    themeOverride: {
-      primaryColor: '#78350f', secondaryColor: '#f59e0b', accentColor: '#fbbf24', bodyTextColor: '#292524',
-      logoBg: '#ffffff', topStripBg: '#451a03', rewardsBg: '#451a03',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#fcd34d', lineColor: '#fde68a',
-    },
+    buildTheme,
+  },
+
+  // 3b — Sidebar Right, full height (Hero beside the sidebar, not above it).
+  // layoutMode stays the dedicated 'sidebar-right' value on purpose — see the
+  // comment above sidebarFullHeightBlocks. heroPlacement is the new,
+  // independent axis that actually produces the visual effect.
+  {
+    id: 'sidebar-right-hero-column',
+    name: 'סיידבר ימין (לאורך כל העמוד)',
+    description: 'תיבת התרומה והנתונים לאורך כל גובה העמוד בצד ימין. התמונה הראשית מוצגת בעמודה הראשית, לצד הסיידבר — לא מעליו.',
+    layoutMode: 'sidebar-right',
+    heroPlacement: 'main-column',
+    defaultPaletteId: 'purple',
+    buildPreview: sidebarFullHeightRightPreview,
+    createBlocks: sidebarFullHeightBlocks,
+    buildTheme,
+  },
+
+  // 4b — Sidebar Left, full height.
+  {
+    id: 'sidebar-left-hero-column',
+    name: 'סיידבר שמאל (לאורך כל העמוד)',
+    description: 'תיבת התרומה והנתונים לאורך כל גובה העמוד בצד שמאל. התמונה הראשית מוצגת בעמודה הראשית, לצד הסיידבר — לא מעליו.',
+    layoutMode: 'sidebar-left',
+    heroPlacement: 'main-column',
+    defaultPaletteId: 'orange',
+    buildPreview: sidebarFullHeightLeftPreview,
+    createBlocks: sidebarFullHeightBlocks,
+    buildTheme,
   },
 
   // 5 — Donation First
@@ -376,21 +617,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'donation-first',
     name: 'תרומה במרכז',
     description: 'תיבת התרומה בולטת בחלק העליון ממש. לגיוסים עם מוטיבציה חזקה לתרומה מיידית.',
-    accent: '#d97706',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#fef3c7', height: 48 }] },
-      { cols: [{ flex: 60, color: '#fcd34d', height: 90 }, { flex: 40, color: '#fde68a', height: 90 }] },
-      { cols: [{ flex: 1, color: '#d97706', height: 36 }] },
-      { cols: [{ flex: 1, color: '#fffbeb', height: 28 }] },
-      { cols: [{ flex: 1, color: '#fef3c7', height: 28 }] },
-    ],
+    defaultPaletteId: 'orange',
+    buildPreview: donationFirstPreview,
     createBlocks: donationFirstBlocks,
-    themeOverride: {
-      primaryColor: '#451a03', secondaryColor: '#d97706', accentColor: '#f59e0b', bodyTextColor: '#292524',
-      logoBg: '#ffffff', topStripBg: '#451a03', rewardsBg: '#451a03',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#fcd34d', lineColor: '#fde68a',
-    },
+    buildTheme,
   },
 
   // 6 — Story First
@@ -398,21 +629,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'story-first',
     name: 'סיפור קודם',
     description: 'הסיפור והתמונות מובילים. התרומה מגיעה אחרי שהמבקר השתכנע.',
-    accent: '#10b981',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#d1fae5', height: 48 }] },
-      { cols: [{ flex: 1, color: '#a7f3d0', height: 60 }] },
-      { cols: [{ flex: 1, color: '#ecfdf5', height: 36 }] },
-      { cols: [{ flex: 1, color: '#6ee7b7', height: 80 }] },
-      { cols: [{ flex: 1, color: '#d1fae5', height: 28 }] },
-    ],
+    defaultPaletteId: 'teal',
+    buildPreview: storyFirstPreview,
     createBlocks: storyFirstBlocks,
-    themeOverride: {
-      primaryColor: '#064e3b', secondaryColor: '#10b981', accentColor: '#34d399', bodyTextColor: '#1e293b',
-      logoBg: '#ffffff', topStripBg: '#064e3b', rewardsBg: '#064e3b',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#6ee7b7', lineColor: '#a7f3d0',
-    },
+    buildTheme,
   },
 
   // 7 — Ambassadors First
@@ -420,21 +641,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'ambassadors-first',
     name: 'שגרירים במרכז',
     description: 'שגרירי הקמפיין בולטים מיד אחרי הנתונים. מושלם לגיוסים מבוססי קהילה.',
-    accent: '#3b82f6',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#bfdbfe', height: 40 }] },
-      { cols: [{ flex: 1, color: '#93c5fd', height: 60 }] },
-      { cols: [{ flex: 1, color: '#dbeafe', height: 36 }] },
-      { cols: [{ flex: 1, color: '#60a5fa', height: 72 }] },
-      { cols: [{ flex: 1, color: '#eff6ff', height: 28 }] },
-    ],
+    defaultPaletteId: 'blue',
+    buildPreview: ambassadorsFirstPreview,
     createBlocks: ambassadorsFirstBlocks,
-    themeOverride: {
-      primaryColor: '#1e3a5f', secondaryColor: '#3b82f6', accentColor: '#60a5fa', bodyTextColor: '#1e293b',
-      logoBg: '#ffffff', topStripBg: '#1e3a5f', rewardsBg: '#1e3a5f',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#93c5fd', lineColor: '#bfdbfe',
-    },
+    buildTheme,
   },
 
   // 8 — Magazine
@@ -442,20 +653,11 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'magazine',
     name: 'מגזין / כתבה',
     description: 'פריסת מגזין עם שני עמודות. מתאים לקמפיינים עם תוכן ארוך ועשיר.',
-    accent: '#ec4899',
     layoutMode: 'magazine',
-    preview: [
-      { cols: [{ flex: 1, color: '#fce7f3', height: 48 }] },
-      { cols: [{ flex: 60, color: '#fbcfe8', height: 90 }, { flex: 40, color: '#f9a8d4', height: 90 }] },
-      { cols: [{ flex: 60, color: '#fdf2f8', height: 40 }, { flex: 40, color: '#f9a8d4', height: 40 }] },
-      { cols: [{ flex: 1, color: '#fce7f3', height: 28 }] },
-    ],
+    defaultPaletteId: 'pink',
+    buildPreview: magazinePreview,
     createBlocks: magazineBlocks,
-    themeOverride: {
-      primaryColor: '#831843', secondaryColor: '#ec4899', accentColor: '#f472b6', bodyTextColor: '#1e1b4b',
-      logoBg: '#ffffff', topStripBg: '#500724', rewardsBg: '#500724',
-      rewardCardBorder: 'rgba(255,255,255,.15)', rewardCardBorderActive: '#f9a8d4', lineColor: '#fbcfe8',
-    },
+    buildTheme,
   },
 
   // 9 — Video Hero
@@ -463,20 +665,10 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     id: 'video-hero',
     name: 'וידאו ראשון',
     description: 'הוידאו שלכם תופס את הבמה הראשית. נתוני הגיוס ותרומה ממש מתחת.',
-    accent: '#ef4444',
     layoutMode: 'standard',
-    preview: [
-      { cols: [{ flex: 1, color: '#fee2e2', height: 80 }] },
-      { cols: [{ flex: 1, color: '#fca5a5', height: 40 }] },
-      { cols: [{ flex: 1, color: '#fef2f2', height: 60 }] },
-      { cols: [{ flex: 1, color: '#f87171', height: 36 }] },
-      { cols: [{ flex: 1, color: '#fee2e2', height: 28 }] },
-    ],
+    defaultPaletteId: 'red',
+    buildPreview: videoHeroPreview,
     createBlocks: videoHeroBlocks,
-    themeOverride: {
-      primaryColor: '#450a0a', secondaryColor: '#ef4444', accentColor: '#f87171', bodyTextColor: '#1e293b',
-      logoBg: '#ffffff', topStripBg: '#450a0a', rewardsBg: '#450a0a',
-      rewardCardBorder: 'rgba(255,255,255,.12)', rewardCardBorderActive: '#fca5a5', lineColor: '#fecaca',
-    },
+    buildTheme,
   },
 ];

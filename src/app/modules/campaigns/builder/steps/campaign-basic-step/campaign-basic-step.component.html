@@ -56,22 +56,27 @@
     </ng-container>
   </div>
 
+  <div class="tip-box">
+    <strong>טיפ:</strong>
+    אפשר למלא כאן כותרת, תת-כותרת וסיפור — הם ימלאו אוטומטית את עמוד הקמפיין, וזו הדרך המהירה ביותר להתחיל.
+    אבל זו רק נקודת התחלה: בשלב "בניית דף" תוכלו להסתיר כל אחד מהם, לשנות איפה הוא מוצג, או לספר את הסיפור שלכם בעיצוב אחר לגמרי.
+  </div>
+
   <!-- ── TITLE ── -->
   <div class="field-section">
     <div class="field-meta">
-      <label class="field-label">שם הקמפיין <span class="required">*</span></label>
+      <label class="field-label">שם הקמפיין</label>
       <span class="char-counter">{{ draft.title.length }}/80</span>
     </div>
     <input class="field-input field-input--lg" type="text"
-      [(ngModel)]="draft.title" (ngModelChange)="sync()" (blur)="titleTouched = true"
+      [(ngModel)]="draft.title" (ngModelChange)="sync()"
       maxlength="80" placeholder="שם הקמפיין שיופיע כותרת ה-Hero">
-    <div class="field-error" *ngIf="isTitleInvalid()">יש להזין שם לקמפיין</div>
   </div>
 
   <!-- ── SUBTITLE ── -->
   <div class="field-section">
     <div class="field-meta">
-      <label class="field-label">תת-כותרת <span class="required">*</span></label>
+      <label class="field-label">תת-כותרת</label>
       <span class="char-counter">{{ draft.shortDescription.length }}/160</span>
     </div>
     <input class="field-input" type="text"
@@ -81,7 +86,7 @@
 
   <!-- ── STORY ── -->
   <div class="field-section">
-    <label class="field-label">סיפור הקמפיין <span class="required">*</span></label>
+    <label class="field-label">סיפור הקמפיין</label>
     <p class="field-hint">יופיע כבלוק "על המיזם" בדף הקמפיין</p>
     <app-rich-text-editor
       [ngModel]="storyContent"
@@ -225,7 +230,7 @@
   <!-- ── SLUG (required, not advanced) ── -->
   <div class="field-section">
     <label class="field-label">כתובת הקמפיין <span class="required">*</span></label>
-    <p class="field-hint">אותיות לטיניות, מספרים ומקפים בלבד</p>
+    <p class="field-hint">אותיות (עברית או לועזית), מספרים ומקפים בלבד</p>
     <div class="url-field-wrapper" [class.focused]="slugFocused" [class.invalid]="slugAvailable === false">
       <span class="url-prefix">{{ urlPrefix }}</span>
       <input type="text" class="url-input"

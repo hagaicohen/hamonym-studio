@@ -89,8 +89,16 @@ export class CampaignApiService {
       allow_monthly_donation:   draft.allowMonthlyDonation,
       suggested_amounts:        draft.suggestedAmounts,
       monthly_amounts:          draft.monthlyAmounts,
-      rewards_enabled:          draft.rewardsEnabled,
-      rewards:                  draft.rewards,
+      // Wire keys stay 'rewards'/'rewards_enabled' — already persisted under
+      // those names for every existing campaign; only the frontend-facing
+      // name changed (CampaignReward → Offering).
+      rewards_enabled:          draft.offeringsEnabled,
+      rewards:                  draft.offerings,
+      // Registration Options — a real table server-side (registration_options),
+      // not an opaque JSON column. See DECISIONS.md (2026-07-16).
+      registration_field_label: draft.registrationFieldLabel,
+      registration_field_icon:  draft.registrationFieldIcon,
+      registration_options:     draft.registrationOptions,
       sponsors:                 draft.sponsors,
       ambassadors:              draft.ambassadors,
       updates:                  draft.updates,
@@ -149,8 +157,17 @@ export class CampaignApiService {
         showPostalCode: data.donor_fields?.show_postal_code ?? false,
         showIdNumber:   data.donor_fields?.show_id_number  ?? false,
       },
-      rewardsEnabled:          data.rewards_enabled         ?? true,
-      rewards:                 data.rewards                 ?? [],
+      offeringsEnabled:        data.rewards_enabled         ?? true,
+      offerings:               data.rewards                 ?? [],
+      registrationFieldLabel: data.registration_field_label ?? 'סוג משתתף',
+      registrationFieldIcon:  data.registration_field_icon  ?? '👤',
+      registrationOptions:    (data.registration_options ?? []).map((o: any) => ({
+        id:          o.id,
+        key:         o.key         ?? '',
+        title:       o.title       ?? '',
+        description: o.description ?? '',
+        price:       parseFloat(o.price) || 0,
+      })),
       sponsors:                data.sponsors                ?? [],
       ambassadors:             data.ambassadors             ?? [],
       updates:                 data.updates                 ?? [],
@@ -161,6 +178,28 @@ export class CampaignApiService {
       layout: {
         ...(data.layout ?? {}),
         layoutMode: data.layout?.layoutMode ?? 'standard',
+        // A campaign whose stored layout predates theme support (or was
+        // created outside the normal preset/template flow, which is the
+        // only place that populates this) would otherwise load with
+        // layout.theme === undefined. Every `draft.layout.theme.X` read in
+        // campaign-preview/page-builder templates is unguarded (no `?.`) —
+        // one throws mid-render, which aborts that change-detection pass
+        // app-wide, silently leaving whatever the app-loader overlay was
+        // doing at that moment (visible or not) stuck forever. See
+        // docs/DECISIONS.md.
+        theme: {
+          primaryColor:   '#333333',
+          secondaryColor: '#6fc9eb',
+          accentColor:    '#cc350f',
+          bodyTextColor:  '#334155',
+          logoBg:         '#ffffff',
+          topStripBg:     '#061b3a',
+          rewardsBg:              '#014737',
+          rewardCardBorder:       'rgba(255,255,255,.12)',
+          rewardCardBorderActive: '#7DD3FC',
+          lineColor:      '#e2e8f0',
+          ...(data.layout?.theme ?? {}),
+        },
       } as any,
     };
   }
@@ -195,6 +234,17 @@ export class CampaignApiService {
     return this.http.post<any>(`${this.apiUrl}/${campaignId}/advise`, {}, {
       headers: this.headers(),
     });
+  }
+
+  // Generates a title/short-description candidate from the campaign's own
+  // free-form content (rich-text blocks) — used only by the Publish step,
+  // only when the dedicated field is empty. Either field is null when it
+  // wasn't needed or there wasn't enough real content to generate one
+  // confidently — never a guessed/generic filler. See DECISIONS.md.
+  generateMetadata(campaignId: string): Observable<{ suggestedTitle: string | null; suggestedShortDescription: string | null }> {
+    return this.http.post<{ suggestedTitle: string | null; suggestedShortDescription: string | null }>(
+      `${this.apiUrl}/${campaignId}/generate-metadata`, {}, { headers: this.headers() },
+    );
   }
 
   getBySlug(slug: string): Observable<CampaignDraft> {

@@ -319,6 +319,18 @@
   padding: 12px 14px; font-size: 12px; color: #94a3b8; text-align: right;
 }
 
+/* ── TIP BOX ── */
+.tip-box {
+  border: 1px solid #e9d5ff;
+  background: #faf5ff;
+  border-radius: 16px;
+  padding: 20px;
+  color: #7c2d12;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.tip-box strong { color: #7c3aed; }
+
 @media (max-width: 768px) {
   .basic-step { padding: 5px; }
 }

@@ -6,11 +6,22 @@
       <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
     </div>
 
+    <div class="tp-palette-row">
+      <span class="tp-palette-label">צבע:</span>
+      <button class="tp-swatch"
+        *ngFor="let p of palettes"
+        [class.tp-swatch--selected]="selectedPalette.id === p.id"
+        [style.background]="p.base"
+        [title]="p.name"
+        (click)="selectPalette(p)">
+      </button>
+    </div>
+
     <div class="tp-grid">
       <div class="tp-card"
         *ngFor="let t of templates"
         [class.tp-card--hovered]="hoveredId === t.id"
-        [style.--accent]="t.accent"
+        [style.--accent]="selectedPalette.base"
         (mouseenter)="hoveredId = t.id"
         (mouseleave)="hoveredId = null">
 
@@ -20,7 +31,7 @@
           <div class="tp-preview-hero"></div>
           <!-- Content rows from template definition -->
           <div class="tp-preview-body">
-            <div class="tp-preview-row" *ngFor="let row of t.preview">
+            <div class="tp-preview-row" *ngFor="let row of t.buildPreview(selectedPalette)">
               <div class="tp-preview-col"
                 *ngFor="let col of row.cols"
                 [style.flex]="col.flex"

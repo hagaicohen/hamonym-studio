@@ -1,5 +1,33 @@
 :host { display: block; }
 
+.load-error-state {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.load-error-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.load-error-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--primary-color, #583cd6);
+  cursor: pointer;
+}
+
 :host ::ng-deep app-campaign-studio-topbar {
   position: sticky;
   top: 0;

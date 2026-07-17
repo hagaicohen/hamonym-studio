@@ -59,6 +59,7 @@
   flex-direction: column;
   gap: 0;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .summary-campaign-header {
@@ -230,15 +231,21 @@
 
 /* ── RIGHT — FORM ── */
 .checkout-form-panel {
-  padding: 40px 48px;
+  padding: 32px 40px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   background: #fff;
+  /* Without this, the grid row sizes to this panel's full content height
+     (participants + payer fields can easily exceed the modal's max-height),
+     and .checkout-modal's own overflow:hidden then clips whatever doesn't
+     fit instead of this panel's overflow-y:auto ever getting a chance to
+     scroll it — nothing below the fold was reachable. See DECISIONS.md. */
+  min-height: 0;
 }
 
 .form-header {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .form-title {
@@ -258,7 +265,7 @@
 .checkout-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   flex: 1;
 }
 
@@ -291,7 +298,7 @@
 .field-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-  background: #fff;
+  background-color: #fff;
 }
 
 .field-input-wrap {
@@ -313,21 +320,203 @@
 }
 .field-status-icon--bad { color: #ef4444; }
 
+/* Plain <select> styled with .field-input alone was visually identical to a
+   text input — nothing signaled "click to choose from a list." An explicit
+   chevron + pointer cursor makes the dropdown affordance obvious. */
+.field-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-left: 34px; /* room for the chevron on the LTR side */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 10px center;
+  background-size: 16px;
+}
+
 .field-input.field-error {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
-  background: #fff;
+  background-color: #fff;
 }
 .field-input.field-valid {
   border-color: #22c55e;
   box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
-  background: #f0fdf4;
+  background-color: #f0fdf4;
 }
 
 .error-msg {
   font-size: 12px;
   color: #ef4444;
 }
+
+.field-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── PARTICIPANTS (Registration checkout) ── */
+.participants-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.participants-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* One line per participant, not a card — column headers are shown once
+   above the list instead of a repeated label above every field, so adding
+   several participants stays compact and doesn't push "+ הוסף משתתף" and
+   the payer fields far down. The list itself still scrolls independently
+   once it grows past what fits, so the modal's own height stays fixed. See
+   DECISIONS.md (2026-07-17). */
+.participants-col-labels {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+}
+.participants-col-labels span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.pcl-name   { flex: 1.3; }
+.pcl-option { flex: 1.5; }
+.pcl-shirt  { flex: 0.7; }
+.pcl-remove { width: 26px; flex-shrink: 0; }
+
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 2px 2px 2px 0;
+  margin: 0 -2px;
+}
+
+.participant-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid #eef2f7;
+  flex-shrink: 0;
+}
+.participant-row:last-child { border-bottom: none; }
+
+.row-input { padding: 9px 10px; font-size: 13px; }
+.row-input--name   { flex: 1.3; min-width: 0; }
+.row-input--option { flex: 1.5; min-width: 0; padding-left: 26px; background-position: left 8px center; background-size: 14px; }
+.row-input--shirt  { flex: 0.7; min-width: 0; padding-left: 24px; background-position: left 6px center; background-size: 14px; }
+
+.participant-remove-btn {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.participant-remove-btn:hover { background: #fef2f2; }
+
+.participants-empty-hint {
+  margin: 0;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+  border: 1.5px dashed #e2e8f0;
+  border-radius: 10px;
+}
+
+.add-participant-btn {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border: 1.5px dashed #94a3b8;
+  border-radius: 10px;
+  background: transparent;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.add-participant-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+
+.participants-footer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.rf-btn-clear {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.rf-btn-clear:hover { background: #f1f5f9; color: #0f172a; }
+
+/* ── A registration carried over from an earlier, separately-closed
+   checkout (donation mode only) — locked in, editable only by dropping it
+   and re-opening the registration checkout instead. See PendingRegistration
+   / DECISIONS.md (2026-07-17). ── */
+.registration-locked-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.registration-locked-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: #64748b;
+}
+.registration-locked-amount { font-size: 18px; font-weight: 800; color: #0f172a; }
+.back-to-participants-btn {
+  border: none;
+  background: none;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.back-to-participants-btn:hover { text-decoration: underline; }
+
+.form-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.payer-hint { margin-top: -8px; }
 
 /* ── PAY BUTTON ── */
 .pay-btn {
@@ -564,4 +753,13 @@
   .field-input { padding: 13px 14px; font-size: 16px; }
 
   .pay-btn { font-size: 16px; padding: 16px 20px; }
+
+  /* Participant rows: too narrow for 4 inline fields — wrap the name onto
+     its own line, options/shirt/remove onto a second. */
+  .participants-col-labels { display: none; }
+  .participant-row { flex-wrap: wrap; padding: 10px 2px; border-bottom-color: #e2e8f0; }
+  .row-input--name { flex-basis: 100%; }
+  .row-input--option { flex: 1; }
+  .row-input--shirt { flex: 1; }
+  .row-input { font-size: 14px; }
 }

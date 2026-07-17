@@ -1,0 +1,18 @@
+<div class="pp-overlay">
+  <div class="pp-panel">
+
+    <div class="pp-header">
+      <h1 class="pp-title">איזה קמפיין תרצו ליצור?</h1>
+      <p class="pp-subtitle">תמיד אפשר להוסיף ולשנות הכל אחרי הבחירה</p>
+    </div>
+
+    <div class="pp-grid">
+      <button class="pp-card" type="button" *ngFor="let p of presets" (click)="select(p)">
+        <span class="pp-icon">{{ p.icon }}</span>
+        <span class="pp-name">{{ p.name }}</span>
+        <span class="pp-desc">{{ p.description }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

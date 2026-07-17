@@ -23,23 +23,42 @@
       <div class="summary-amount-mobile">
         <span class="summary-total-label">סה"כ לתשלום</span>
         <span class="summary-chip summary-chip--amount">{{ formattedAmount }}</span>
-        <div class="summary-mobile-rewards" *ngIf="cartRewards.length > 0">
-          <span class="summary-mobile-reward-tag" *ngFor="let r of cartRewards">✓ {{ r.title }}</span>
+        <div class="summary-mobile-rewards" *ngIf="!isRegistrationCheckout && cartOfferings.length > 0">
+          <span class="summary-mobile-reward-tag" *ngFor="let r of cartOfferings">✓ {{ r.title }}</span>
+        </div>
+        <div class="summary-mobile-rewards" *ngIf="isRegistrationCheckout">
+          <span class="summary-mobile-reward-tag" *ngFor="let p of participants">✓ {{ optionFor(p.optionId)?.title }}</span>
         </div>
       </div>
 
       <div class="summary-divider"></div>
 
-      <div class="summary-row">
+      <div class="summary-row" *ngIf="!isRegistrationCheckout">
         <span class="summary-label">סכום התרומה</span>
-        <span class="summary-value summary-amount">{{ formattedAmount }}</span>
+        <span class="summary-value summary-amount">₪{{ amount.toLocaleString('he-IL') }}</span>
       </div>
 
-      <ng-container *ngIf="cartRewards.length > 0">
+      <!-- A registration carried over from an earlier, separately-closed
+           checkout — see PendingRegistration / DECISIONS.md (2026-07-17). -->
+      <ng-container *ngIf="!isRegistrationCheckout && pendingRegistration">
         <div class="summary-divider"></div>
-        <div class="summary-rewards-title">תשורות נבחרות ({{ cartRewards.length }})</div>
+        <div class="summary-rewards-title">הרשמה קודמת ({{ pendingRegistration.participants.length }})</div>
         <div class="summary-rewards-list">
-          <div class="summary-reward-item" *ngFor="let r of cartRewards">
+          <div class="summary-reward-item" *ngFor="let p of pendingRegistration.participants; let i = index">
+            <span class="summary-reward-check">✓</span>
+            <div class="summary-reward-info">
+              <span class="summary-reward-name">{{ p.name || ('משתתף ' + (i + 1)) }} — {{ optionFor(p.optionId)?.title || 'לא נבחר' }}</span>
+              <span class="summary-reward-min">₪{{ (optionFor(p.optionId)?.price || 0).toLocaleString('he-IL') }}</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="!isRegistrationCheckout && cartOfferings.length > 0">
+        <div class="summary-divider"></div>
+        <div class="summary-rewards-title">תשורות נבחרות ({{ cartOfferings.length }})</div>
+        <div class="summary-rewards-list">
+          <div class="summary-reward-item" *ngFor="let r of cartOfferings">
             <span class="summary-reward-check">✓</span>
             <div class="summary-reward-info">
               <span class="summary-reward-name">{{ r.title }}</span>
@@ -49,10 +68,39 @@
         </div>
       </ng-container>
 
-      <div class="summary-row" *ngIf="cartRewards.length === 0">
+      <div class="summary-row" *ngIf="!isRegistrationCheckout && cartOfferings.length === 0 && !pendingRegistration">
         <span class="summary-label">תשורות</span>
         <span class="summary-value summary-none">ללא תשורה</span>
       </div>
+
+      <div class="summary-row" *ngIf="!isRegistrationCheckout && pendingRegistration">
+        <div class="summary-divider"></div>
+        <span class="summary-label">סה"כ לתשלום</span>
+        <span class="summary-value summary-amount">{{ formattedAmount }}</span>
+      </div>
+
+      <!-- Registration summary — Participants, not a rewards cart. No divider
+           here (unlike the donation/rewards sections above) — the unconditional
+           one right after summary-amount-mobile already separates the header
+           from this section; adding another right on top of it with nothing
+           in between rendered as two stacked gray lines. See DECISIONS.md. -->
+      <ng-container *ngIf="isRegistrationCheckout">
+        <div class="summary-rewards-title">משתתפים ({{ participants.length }})</div>
+        <div class="summary-rewards-list">
+          <div class="summary-reward-item" *ngFor="let p of participants; let i = index">
+            <span class="summary-reward-check">✓</span>
+            <div class="summary-reward-info">
+              <span class="summary-reward-name">{{ p.name || ('משתתף ' + (i + 1)) }} — {{ optionFor(p.optionId)?.title || 'לא נבחר' }}</span>
+              <span class="summary-reward-min">₪{{ (optionFor(p.optionId)?.price || 0).toLocaleString('he-IL') }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-row">
+          <span class="summary-label">סה"כ הרשמה</span>
+          <span class="summary-value summary-amount">{{ formattedAmount }}</span>
+        </div>
+      </ng-container>
 
       <div class="summary-secure-note">
         <span class="secure-icon">🔒</span>
@@ -63,11 +111,86 @@
     <!-- RIGHT PANEL — form -->
     <div class="checkout-form-panel">
       <div class="form-header">
-        <h3 class="form-title">פרטי תורם</h3>
-        <p class="form-subtitle">הזינו את פרטיכם להמשך ביצוע התרומה</p>
+        <h3 class="form-title">{{ formTitle }}</h3>
+        <p class="form-subtitle">{{ formSubtitle }}</p>
       </div>
 
       <form class="checkout-form" (ngSubmit)="onSubmit()" novalidate>
+
+        <!-- Participants repeater — Registration checkout only. Each
+             participant is an independent unit: name + one Offering (race)
+             + optional shirt size. No Schema/Rules engine. Closing this
+             modal (✕, overlay click) without submitting still remembers
+             whatever was filled in here — see participantsSaved/close() —
+             so a visitor can register now and pay later from the separate
+             donate button. See DECISIONS.md (2026-07-15, 2026-07-17). -->
+        <ng-container *ngIf="isRegistrationCheckout">
+          <div class="participants-section">
+            <h4 class="participants-title">משתתפים ({{ participants.length }})</h4>
+
+            <div class="participants-col-labels" *ngIf="participants.length > 0">
+              <span class="pcl-name">שם המשתתף</span>
+              <span class="pcl-option">{{ registrationFieldLabel }}</span>
+              <span class="pcl-shirt">מידה</span>
+              <span class="pcl-remove"></span>
+            </div>
+
+            <div class="participants-list" *ngIf="participants.length > 0">
+              <div class="participant-row" *ngFor="let p of participants; let i = index">
+                <input class="field-input row-input row-input--name" type="text"
+                  [(ngModel)]="p.name" [name]="'participantName' + i"
+                  [attr.aria-label]="'שם משתתף ' + (i + 1)"
+                  placeholder="שם מלא"
+                  [class.field-error]="submitted && p.name.trim().length < 2">
+
+                <select class="field-input field-select row-input row-input--option"
+                  [(ngModel)]="p.optionId" [name]="'participantOption' + i"
+                  [attr.aria-label]="registrationFieldLabel"
+                  [class.field-error]="submitted && !p.optionId">
+                  <option value="" disabled>בחרו</option>
+                  <option *ngFor="let o of registrationOptions" [value]="o.id">
+                    {{ o.title }} — ₪{{ o.price.toLocaleString('he-IL') }}
+                  </option>
+                </select>
+
+                <select class="field-input field-select row-input row-input--shirt"
+                  [(ngModel)]="p.shirtSize" [name]="'participantShirt' + i"
+                  aria-label="מידת חולצה">
+                  <option value="">ללא</option>
+                  <option *ngFor="let s of SHIRT_SIZES" [value]="s">{{ s }}</option>
+                </select>
+
+                <button type="button" class="participant-remove-btn"
+                  [attr.aria-label]="'הסר משתתף ' + (i + 1)"
+                  (click)="removeParticipant(i)">✕</button>
+              </div>
+            </div>
+
+            <p class="participants-empty-hint" *ngIf="participants.length === 0">עדיין לא נוספו משתתפים</p>
+            <span class="error-msg" *ngIf="submitted && !participantsValid">נא להוסיף לפחות משתתף אחד ולמלא שם ו{{ registrationFieldLabel }} עבור כל משתתף</span>
+
+            <button type="button" class="add-participant-btn" (click)="addParticipant()">+ הוסף משתתף</button>
+
+            <div class="participants-footer-actions">
+              <button type="button" class="rf-btn-clear" (click)="clearForm()">🗑 נקה טופס</button>
+              <button type="button" class="rf-btn-clear" (click)="close()">✕ סגור</button>
+            </div>
+          </div>
+
+          <div class="form-divider"></div>
+          <p class="field-hint payer-hint">פרטי מי שמבצע את התשלום (לא חייב להיות אחד המשתתפים):</p>
+        </ng-container>
+
+        <!-- Donation mode with a registration carried over from an earlier
+             checkout — locked in (edit by closing this and reopening
+             registration instead), just an amount + a way to drop it. -->
+        <div class="registration-locked-summary" *ngIf="!isRegistrationCheckout && pendingRegistration">
+          <div class="registration-locked-row">
+            <span>הרשמה קודמת ({{ pendingRegistration.participants.length }} משתתפים)</span>
+            <span class="registration-locked-amount">₪{{ pendingRegistration.total.toLocaleString('he-IL') }}</span>
+          </div>
+          <button type="button" class="back-to-participants-btn" (click)="removePendingRegistration()">✕ הסר</button>
+        </div>
 
         <div class="field-group">
           <label class="field-label">שם מלא <span class="required">*</span></label>

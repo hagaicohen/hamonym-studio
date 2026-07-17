@@ -99,7 +99,6 @@ export class CampaignBasicStepComponent implements OnInit {
   isCheckingSlug = false;
   slugAvailable: boolean | null = null;
   slugFocused = false;
-  titleTouched = false;
 
   ngOnInit(): void {
     const entity = this.entityService.currentEntity();
@@ -219,11 +218,13 @@ export class CampaignBasicStepComponent implements OnInit {
   allowSlugChars(event: KeyboardEvent): void {
     const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
     if (allowed.includes(event.key)) return;
-    if (!/^[a-zA-Z0-9-]$/.test(event.key)) event.preventDefault();
+    if (!/^[a-zA-Z0-9א-ת-]$/.test(event.key)) event.preventDefault();
   }
 
   onSlugChange(value: string): void {
-    const normalized = value.toLowerCase();
+    // Strips (not just lowercases) so pasted text can't bypass allowSlugChars —
+    // same pattern as campaign-ambassadors-step's onSlugInput().
+    const normalized = value.toLowerCase().replace(/[^a-z0-9א-ת-]/g, '');
     this.state.patch({ slug: normalized });
     clearTimeout(this.slugTimeout);
     if (!normalized || normalized.trim().length < 3) {
@@ -238,6 +239,4 @@ export class CampaignBasicStepComponent implements OnInit {
       });
     }, 800);
   }
-
-  isTitleInvalid(): boolean { return this.titleTouched && !this.draft.title.trim(); }
 }

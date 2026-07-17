@@ -91,6 +91,13 @@
 
         <div class="editor-divider"></div>
 
+        <!-- ── HERO (positional marker only) ── -->
+        <div class="editor-field" *ngIf="block.type === 'hero'">
+          <p class="system-note">
+            🌄 תוכן ה-Hero — כותרת, תמונה, טקסט — נערך בשלב "פרטי בסיס". הבלוק הזה קובע רק את המיקום שלו בדף — אפשר להזיז אותו ↑↓ או להכניס אותו לתוך מסגרת, כמו כל בלוק אחר.
+          </p>
+        </div>
+
         <!-- ── RICH TEXT ── -->
         <div class="editor-field" *ngIf="block.type === 'rich-text'">
           <app-rich-text-editor
@@ -258,6 +265,27 @@
 
         <!-- ── CONTAINER ── -->
         <div class="container-editor" *ngIf="block.type === 'container'">
+
+          <!-- Rail zone — only meaningful for a top-level container in a
+               sidebar layout: designates this container's children as the
+               sticky full-height rail, or as the entire main column (Hero
+               included, via a 'hero' block among its children), instead of
+               rendering inline. See DECISIONS.md (2026-07-17). -->
+          <div class="editor-row"
+            *ngIf="!parentBlock && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
+            <label class="editor-label">מיקום הקונטיינר</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="!asContainer(block.data).railZone"
+                (click)="setContainerRailZone(block.id, null)">רגיל</button>
+              <button class="direction-btn"
+                [class.active]="asContainer(block.data).railZone === 'sidebar'"
+                (click)="setContainerRailZone(block.id, 'sidebar')">סיידבר לאורך העמוד</button>
+              <button class="direction-btn"
+                [class.active]="asContainer(block.data).railZone === 'main'"
+                (click)="setContainerRailZone(block.id, 'main')">תוכן ראשי (כולל Hero)</button>
+            </div>
+          </div>
 
           <!-- Child blocks -->
           <div class="editor-row">

@@ -1,0 +1,175 @@
+/* ─── STEP SHELL ─── */
+.rgo-step {
+  display: flex; flex-direction: column; gap: 24px;
+  padding: 28px 28px 40px;
+  max-width: 1100px; margin: 0 auto;
+  font-family: 'Heebo', sans-serif;
+  direction: rtl;
+}
+
+/* ─── HEADER ─── */
+.rgo-title-row { display: flex; align-items: center; gap: 8px; }
+.rgo-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.rgo-subtitle { font-size: 13px; color: #64748b; margin: 4px 0 0; }
+.rgo-header-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: #ede9fe; border: 1.5px solid #c4b5fd;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+
+/* ─── BUILDER GRID ─── */
+.rgo-builder {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ─── FORM PANEL (shares visual language with campaign-offerings-step) ─── */
+.rgo-form-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 20px;
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+.rf-field { display: flex; flex-direction: column; gap: 7px; }
+.rf-label-row { display: flex; align-items: center; justify-content: space-between; }
+.rf-label { font-size: 13px; font-weight: 700; color: #374151; }
+.rf-req   { color: #ef4444; margin-right: 2px; }
+
+.rf-input {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit;
+  color: #0f172a; background: #fff; outline: none;
+  transition: border-color 0.15s;
+}
+.rf-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.rf-textarea { resize: none; height: 90px; line-height: 1.6; }
+
+.rf-currency-wrap { position: relative; }
+.rf-currency-symbol {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-weight: 700; color: #64748b; font-size: 15px; pointer-events: none;
+}
+.rf-input--currency { padding-right: 32px; }
+
+.rf-advanced-toggle {
+  align-self: flex-start;
+  border: none; background: none;
+  color: #7c3aed; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit; padding: 4px 0;
+}
+.rf-advanced-toggle:hover { text-decoration: underline; }
+
+.rf-actions { display: flex; gap: 10px; padding-top: 4px; }
+.rf-btn-clear {
+  flex: 1; padding: 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 12px;
+  background: #f8fafc; color: #64748b;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.rf-btn-clear:hover { background: #f1f5f9; color: #0f172a; }
+.rf-btn-save {
+  flex: 2; padding: 12px;
+  border: none; border-radius: 12px;
+  background: #5b3df5; color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.rf-btn-save:hover { background: #4c2ed6; }
+.rf-btn-save:disabled { opacity: 0.5; cursor: default; }
+.rf-btn-save { display: flex; align-items: center; justify-content: center; min-height: 41px; }
+
+.rf-btn-spinner {
+  width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: rf-spin 0.7s linear infinite;
+}
+@keyframes rf-spin { to { transform: rotate(360deg); } }
+
+/* ─── PREVIEW PANEL — a real <select> mockup, nod to the WordPress reference ─── */
+.rgo-preview-panel {
+  position: sticky; top: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.rgo-preview-header {
+  font-size: 13px; font-weight: 700; color: #64748b; padding: 0 4px;
+}
+.rgo-preview-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+  padding: 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.rgo-preview-label { font-size: 13px; font-weight: 700; color: #374151; }
+.rgo-preview-select {
+  width: 100%; box-sizing: border-box;
+  border: 1.5px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px; font-size: 14px; font-family: inherit;
+  color: #0f172a; background: #f8fafc;
+}
+
+/* ─── OPTIONS LIST ─── */
+.rgo-list-section { display: flex; flex-direction: column; gap: 14px; }
+.rgo-list-header { display: flex; align-items: center; justify-content: space-between; }
+.rgo-list-title { font-size: 15px; font-weight: 800; color: #0f172a; }
+.rgo-add-btn {
+  padding: 9px 16px; border: 1.5px solid #7c3aed; border-radius: 10px;
+  background: #fff; color: #7c3aed;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.rgo-add-btn:hover { background: #faf5ff; }
+
+.rgo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.rgo-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+  padding: 18px; display: flex; flex-direction: column; gap: 6px;
+  transition: background 0.4s, border-color 0.4s, box-shadow 0.4s;
+}
+.rgo-card--highlight {
+  background: #faf5ff; border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  animation: rgo-card-pulse 1s ease-in-out 1;
+}
+@keyframes rgo-card-pulse {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.rgo-card-price { font-size: 18px; font-weight: 800; color: #7c3aed; }
+.rgo-card-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+.rgo-card-desc { font-size: 12px; color: #64748b; margin: 0; line-height: 1.5; }
+.rgo-card-actions { display: flex; gap: 6px; margin-top: 8px; }
+.rgo-card-btn {
+  flex: 1; padding: 7px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: #f8fafc; color: #374151;
+  font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.rgo-card-btn:hover { background: #f1f5f9; }
+.rgo-card-btn--delete:hover { background: #fef2f2; color: #dc2626; }
+
+/* ─── MOBILE ─── (matches the sibling Offerings step's breakpoint/pattern) */
+@media (max-width: 768px) {
+  .rgo-step { padding: 10px; gap: 16px; }
+
+  .rgo-builder { grid-template-columns: none; }
+
+  .rgo-preview-panel { visibility: hidden; height: 0; }
+
+  .rgo-form-panel { padding: 16px; }
+
+  .rgo-list-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .rgo-add-btn { width: 100%; }
+
+  .rgo-grid { grid-template-columns: 1fr; }
+}

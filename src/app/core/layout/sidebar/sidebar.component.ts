@@ -9,7 +9,7 @@ import { RoleType } from '../../models/user-context.model';
 interface NavItem {
   route: string;
   label: string;
-  icon: 'dashboard' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'reports' | 'settings' | 'platform';
+  icon: 'dashboard' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'registrations' | 'reports' | 'settings' | 'platform';
   // true when another nav route is a path-prefix of this one (e.g. '/platform' vs '/platform/organizations') —
   // without it, routerLinkActive's default non-exact match would light up both at once.
   exactMatch?: boolean;
@@ -18,6 +18,7 @@ interface NavItem {
 const DASHBOARD:   NavItem = { route: '/dashboard',   label: 'דשבורד',   icon: 'dashboard' };
 const CAMPAIGNS:   NavItem = { route: '/campaigns',   label: 'קמפיינים', icon: 'campaigns' };
 const DONATIONS:   NavItem = { route: '/donations',   label: 'תרומות',   icon: 'donations' };
+const REGISTRATIONS: NavItem = { route: '/registrations', label: 'הרשמות', icon: 'registrations' };
 const DONORS:      NavItem = { route: '/donors',      label: 'תורמים',   icon: 'donors' };
 const AMBASSADORS: NavItem = { route: '/ambassadors', label: 'שגרירים',  icon: 'ambassadors' };
 const REPORTS:     NavItem = { route: '/reports',     label: 'דוחות',    icon: 'reports' };
@@ -29,8 +30,8 @@ const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     labe
 const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
-  'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, DONORS, AMBASSADORS, REPORTS, SETTINGS],
-  'campaign-manager': [CAMPAIGNS, AMBASSADORS, DONATIONS, REPORTS],
+  'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, REPORTS, SETTINGS],
+  'campaign-manager': [CAMPAIGNS, AMBASSADORS, DONATIONS, REGISTRATIONS, REPORTS],
   'ambassador':       [CAMPAIGNS, DONATIONS],
   'company':          [CAMPAIGNS],
   'donor':            [],

@@ -1,0 +1,79 @@
+.pp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.pp-panel {
+  background: #fff;
+  border-radius: 24px;
+  padding: 44px 36px 40px;
+  max-width: 780px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.28);
+  font-family: 'Heebo', sans-serif;
+  direction: rtl;
+}
+
+.pp-header { text-align: center; }
+
+.pp-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.pp-subtitle {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0;
+}
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.pp-card {
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.pp-card:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 8px 32px rgba(124,58,237,0.14);
+  transform: translateY(-3px);
+}
+
+.pp-icon { font-size: 36px; }
+.pp-name { font-size: 16px; font-weight: 800; color: #0f172a; }
+.pp-desc { font-size: 13px; color: #64748b; line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .pp-grid { grid-template-columns: 1fr; }
+  .pp-panel { padding: 28px 16px; }
+  .pp-title { font-size: 20px; }
+}

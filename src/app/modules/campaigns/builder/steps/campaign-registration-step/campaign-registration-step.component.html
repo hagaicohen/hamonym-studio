@@ -1,0 +1,110 @@
+<div class="rgo-step">
+
+  <!-- ── HEADER ── -->
+  <div class="rgo-header">
+    <div class="rgo-title-row">
+      <div class="rgo-header-icon">{{ draft.registrationFieldIcon || '👤' }}</div>
+      <h2 class="rgo-title">{{ stepCopy.registrationStepTitle }}</h2>
+    </div>
+    <p class="rgo-subtitle">{{ stepCopy.registrationStepSubtitle }}</p>
+  </div>
+
+  <!-- ── BUILDER: Form + Preview ── -->
+  <div class="rgo-builder">
+
+    <!-- FORM (right, 60%) -->
+    <div class="rgo-form-panel">
+
+      <!-- כותרת -->
+      <div class="rf-field">
+        <div class="rf-label-row">
+          <label class="rf-label">כותרת <span class="rf-req">*</span></label>
+        </div>
+        <input class="rf-input" type="text" [value]="option.title" (input)="onTitleInput($event)" placeholder="לדוגמה: 10 ק״מ">
+      </div>
+
+      <!-- מחיר -->
+      <div class="rf-field">
+        <div class="rf-label-row">
+          <label class="rf-label">מחיר למשתתף (₪) <span class="rf-req">*</span></label>
+        </div>
+        <div class="rf-currency-wrap">
+          <span class="rf-currency-symbol">₪</span>
+          <input class="rf-input rf-input--currency" type="text"
+            [value]="priceInput"
+            (input)="onPriceInput($event)"
+            placeholder="180">
+        </div>
+      </div>
+
+      <!-- תיאור -->
+      <div class="rf-field">
+        <div class="rf-label-row">
+          <label class="rf-label">תיאור (אופציונלי)</label>
+        </div>
+        <textarea class="rf-input rf-textarea" [value]="option.description" (input)="onDescriptionInput($event)"
+          placeholder="פרטים נוספים שיוצגו למשתתף, אם צריך">
+        </textarea>
+      </div>
+
+      <!-- אפשרויות מתקדמות — קוד מערכת, שדה שרוב היוזרים לא צריכים -->
+      <button type="button" class="rf-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+        {{ showAdvanced ? '− הסתר אפשרויות מתקדמות' : '+ אפשרויות מתקדמות' }}
+      </button>
+
+      <div class="rf-field" *ngIf="showAdvanced">
+        <div class="rf-label-row">
+          <label class="rf-label">קוד (אופציונלי — למערכת, לא מוצג למשתתף)</label>
+        </div>
+        <input class="rf-input" type="text" [value]="option.key" (input)="onKeyInput($event)" placeholder="RUN_10">
+      </div>
+
+      <!-- Actions -->
+      <div class="rf-actions">
+        <button class="rf-btn-clear" type="button" (click)="clearForm()" [disabled]="isSaving">🗑 נקה טופס</button>
+        <button class="rf-btn-save" type="button" (click)="save()" [disabled]="!isFormValid || isSaving">
+          <span *ngIf="isSaving" class="rf-btn-spinner"></span>
+          <ng-container *ngIf="!isSaving">💾 {{ isEditing ? 'עדכן' : 'שמור' }}</ng-container>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW (left, 40%) -->
+    <div class="rgo-preview-panel">
+      <div class="rgo-preview-header">תצוגה מקדימה — כך זה יראה בהרשמה</div>
+      <div class="rgo-preview-card">
+        <label class="rgo-preview-label">{{ draft.registrationFieldIcon }} {{ draft.registrationFieldLabel }}</label>
+        <select class="rgo-preview-select" disabled>
+          <option *ngIf="draft.registrationOptions.length === 0">— עדיין לא הוגדרו אפשרויות —</option>
+          <option *ngFor="let o of draft.registrationOptions">{{ o.title }} — ₪{{ o.price.toLocaleString('he-IL') }}</option>
+        </select>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── OPTIONS LIST ── -->
+  <div class="rgo-list-section" *ngIf="draft.registrationOptions.length > 0">
+    <div class="rgo-list-header">
+      <div class="rgo-list-title">{{ stepCopy.registrationStepTitle }} ({{ draft.registrationOptions.length }})</div>
+      <button class="rgo-add-btn" type="button" (click)="clearForm()">{{ stepCopy.registrationAddButtonLabel }}</button>
+    </div>
+
+    <div class="rgo-grid">
+      <div class="rgo-card" *ngFor="let o of draft.registrationOptions"
+        [id]="'rgo-card-' + o.id"
+        [class.rgo-card--highlight]="o.id === lastSavedOptionId">
+        <div class="rgo-card-price">₪{{ o.price.toLocaleString('he-IL') }}</div>
+        <div class="rgo-card-title">{{ o.title }}</div>
+        <p class="rgo-card-desc" *ngIf="o.description">{{ o.description }}</p>
+        <div class="rgo-card-actions">
+          <button class="rgo-card-btn rgo-card-btn--delete" type="button" (click)="deleteOption(o.id)">🗑 מחיקה</button>
+          <button class="rgo-card-btn rgo-card-btn--duplicate" type="button" (click)="duplicateOption(o)">📋 שכפל</button>
+          <button class="rgo-card-btn rgo-card-btn--edit" type="button" (click)="editOption(o)">✏ עריכה</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,4 +1,9 @@
-<ng-container *ngIf="ui.state$ | async as s">
+<div class="load-error-state" *ngIf="loadErrorMessage">
+  <p class="load-error-text">⚠ {{ loadErrorMessage }}</p>
+  <button type="button" class="load-error-btn" (click)="goBack()">לרשימת הקמפיינים</button>
+</div>
+
+<ng-container *ngIf="!loadErrorMessage && (ui.state$ | async) as s">
 <div class="studio-page"
   [class.studio-page--mobile]="s.device === 'mobile'"
   [class.studio-page--fullscreen]="s.fullscreen">
@@ -20,7 +25,13 @@
   </div>
 </div>
 
-<!-- Template picker overlay — shown when creating a new campaign -->
+<!-- Preset picker overlay — shown first when creating a new campaign -->
+<app-campaign-preset-picker
+  *ngIf="showPresetPicker"
+  (presetSelected)="onPresetSelected($event)">
+</app-campaign-preset-picker>
+
+<!-- Template picker overlay — shown after the preset is chosen -->
 <app-template-picker
   *ngIf="showTemplatePicker"
   (templateSelected)="onTemplateSelected($event)"

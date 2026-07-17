@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs';
@@ -17,7 +17,7 @@ import { CurrentEntityService }       from '../../../../../core/services/current
   templateUrl: './campaign-publish-step.component.html',
   styleUrl: './campaign-publish-step.component.css',
 })
-export class CampaignPublishStepComponent {
+export class CampaignPublishStepComponent implements OnInit {
 
   protected campaignState = inject(CampaignStudioStateService);
   private campaignApi     = inject(CampaignApiService);
@@ -26,6 +26,14 @@ export class CampaignPublishStepComponent {
 
   isPublishing = false;
   errorMessage: string | null = null;
+
+  // AI-generated title/short-description candidate (see DECISIONS.md) — only
+  // triggered when the dedicated field is actually empty. Optional/best-effort:
+  // a failure here must never surface an error or block publishing.
+  metadataSuggestion: { suggestedTitle: string | null; suggestedShortDescription: string | null } | null = null;
+  isLoadingSuggestion = false;
+  dismissedTitle = false;
+  dismissedShortDescription = false;
 
   get draft() { return this.campaignState.draft; }
 
@@ -77,12 +85,16 @@ export class CampaignPublishStepComponent {
     );
   }
 
+  // title/shortDescription are deliberately NOT hard-blocked here — a manager
+  // may design the page so they never render as literal text (showHeroTitle/
+  // showHeroSubtitle can hide them). Flagging a thin/missing title or
+  // subtitle is the Campaign Advisor's job (a recommendation), not a
+  // technical gate. Only things that would make the page structurally
+  // broken or non-functional if missing stay a hard block.
   get missingFields(): string[] {
     const d = this.draft;
     const missing: string[] = [];
-    if (!d.title?.trim())            missing.push('כותרת הקמפיין');
     if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
-    if (!d.shortDescription?.trim()) missing.push('כותרת משנה');
     if (!this.hasHero)               missing.push('תמונה / וידאו ראשי');
     if (!d.targetAmount)             missing.push('יעד גיוס');
     return missing;
@@ -90,6 +102,57 @@ export class CampaignPublishStepComponent {
 
   get isReady(): boolean {
     return this.missingFields.length === 0;
+  }
+
+  ngOnInit(): void {
+    const d = this.draft;
+    if (d.id && (!d.title?.trim() || !d.shortDescription?.trim())) {
+      this.generateSuggestion();
+    }
+  }
+
+  generateSuggestion(): void {
+    if (!this.draft.id || this.isLoadingSuggestion) return;
+    this.isLoadingSuggestion = true;
+    this.campaignApi.generateMetadata(this.draft.id).subscribe({
+      next: (res) => {
+        this.metadataSuggestion = res;
+        this.isLoadingSuggestion = false;
+      },
+      error: (err) => {
+        console.error('generateMetadata failed', err);
+        this.isLoadingSuggestion = false;
+      },
+    });
+  }
+
+  regenerateSuggestion(): void {
+    this.dismissedTitle = false;
+    this.dismissedShortDescription = false;
+    this.metadataSuggestion = null;
+    this.generateSuggestion();
+  }
+
+  adoptTitle(): void {
+    const title = this.metadataSuggestion?.suggestedTitle;
+    if (!title) return;
+    this.campaignState.patch({ title: title.slice(0, 80) });
+    this.dismissedTitle = true;
+  }
+
+  adoptShortDescription(): void {
+    const shortDescription = this.metadataSuggestion?.suggestedShortDescription;
+    if (!shortDescription) return;
+    this.campaignState.patch({ shortDescription: shortDescription.slice(0, 160) });
+    this.dismissedShortDescription = true;
+  }
+
+  dismissTitleSuggestion(): void {
+    this.dismissedTitle = true;
+  }
+
+  dismissShortDescriptionSuggestion(): void {
+    this.dismissedShortDescription = true;
   }
 
   publishCampaign(): void {

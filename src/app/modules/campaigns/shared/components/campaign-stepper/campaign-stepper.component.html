@@ -9,7 +9,7 @@
 
   <div class="stepper-items">
     @for (step of steps; track $index) {
-      <div class="stepper-item" [class.clickable]="editMode" (click)="selectStep($index)">
+      <div class="stepper-item clickable" (click)="selectStep($index)">
         <div class="step-dot" [class.active]="currentStep >= $index + 1" [class.current]="currentStep === $index + 1">
           {{ $index + 1 }}
         </div>

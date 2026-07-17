@@ -1,0 +1,76 @@
+<div class="reg-page">
+
+  @if (error) {
+    <div class="reg-error">{{ error }}</div>
+  } @else {
+
+  <!-- ══ HEADER ══ -->
+  <div class="reg-header">
+    <h1 class="reg-title">הרשמות</h1>
+  </div>
+
+  <!-- ══ FILTERS ══ -->
+  <div class="reg-filters">
+    <input
+      class="reg-search"
+      type="search"
+      placeholder="חיפוש לפי שם משתתף, מסלול או פרטי משלם..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+    <button class="reg-export-btn" (click)="exportCsv()" [disabled]="exporting">
+      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+    </button>
+  </div>
+
+  <div class="reg-card">
+    @if (loading) {
+      <div class="reg-loading">טוען...</div>
+    } @else if (participants.length === 0) {
+      <div class="reg-empty">עדיין אין נרשמים</div>
+    } @else {
+
+      <div class="reg-table-wrap" [class.refreshing]="refreshing">
+        <table class="reg-table">
+          <thead>
+            <tr>
+              <th>משתתף</th>
+              <th>מסלול</th>
+              <th>מידת חולצה</th>
+              <th class="col-secondary">קמפיין</th>
+              <th>סטטוס תשלום</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of participants; track p.id) {
+              <tr class="reg-row">
+                <td class="reg-name">{{ p.name }}</td>
+                <td>{{ p.option_title || '—' }}</td>
+                <td>{{ p.shirt_size || '—' }}</td>
+                <td class="reg-campaign col-secondary">{{ p.campaign_title }}</td>
+                <td><span class="status-badge status-{{ p.payment_status }}">{{ statusLabel(p.payment_status) }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="reg-pagination">
+        <label class="pag-limit">
+          שורות בעמוד:
+          <select [(ngModel)]="limit" (change)="onLimitChange()">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
+        <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
+        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
+      </div>
+    }
+  </div>
+
+  }
+</div>

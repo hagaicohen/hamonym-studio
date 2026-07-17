@@ -81,12 +81,54 @@
         </span>
       </div>
 
+      @if (!draft.title.trim()) {
+        @if (isLoadingSuggestion) {
+          <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לכותרת על בסיס התוכן שכתבת...</div>
+        } @else if (metadataSuggestion?.suggestedTitle && !dismissedTitle) {
+          <div class="ai-suggestion-card">
+            <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+            <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedTitle }}"</div>
+            <div class="ai-suggestion-actions">
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ את ההצעה</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
+            </div>
+          </div>
+        } @else if (metadataSuggestion && !metadataSuggestion.suggestedTitle && !dismissedTitle) {
+          <div class="ai-suggestion-empty">
+            לא נמצא מספיק תוכן ליצירת כותרת אוטומטית — אפשר למלא ידנית בשלב "פרטי בסיס".
+          </div>
+        }
+      }
+
       <div class="field-row">
         <span class="field-name">תיאור קצר</span>
         <span class="status-chip" [class.filled]="draft.shortDescription" [class.missing]="!draft.shortDescription">
           {{ draft.shortDescription ? 'הוגדר ✓' : 'חסר' }}
         </span>
       </div>
+
+      @if (!draft.shortDescription.trim()) {
+        @if (isLoadingSuggestion) {
+          <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לתיאור קצר על בסיס התוכן שכתבת...</div>
+        } @else if (metadataSuggestion?.suggestedShortDescription && !dismissedShortDescription) {
+          <div class="ai-suggestion-card">
+            <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+            <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedShortDescription }}"</div>
+            <div class="ai-suggestion-actions">
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ את ההצעה</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
+            </div>
+          </div>
+        } @else if (metadataSuggestion && !metadataSuggestion.suggestedShortDescription && !dismissedShortDescription) {
+          <div class="ai-suggestion-empty">
+            לא נמצא מספיק תוכן ליצירת תיאור קצר אוטומטי — אפשר למלא ידנית בשלב "פרטי בסיס".
+          </div>
+        }
+      }
+
+      @if (metadataSuggestion && (!draft.title.trim() || !draft.shortDescription.trim())) {
+        <button type="button" class="ai-suggestion-regenerate" (click)="regenerateSuggestion()">🔄 צור מחדש</button>
+      }
 
       <div class="field-row">
         <span class="field-name">בלוקי תוכן</span>
@@ -213,31 +255,58 @@
         <span class="card-title">תגמולים</span>
       </div>
 
-      <div *ngIf="!draft.rewardsEnabled" class="field-row">
+      <div *ngIf="!draft.offeringsEnabled" class="field-row">
         <span class="field-name">תגמולים</span>
         <span class="status-chip disabled">מושבת</span>
       </div>
 
-      <div *ngIf="draft.rewardsEnabled">
+      <div *ngIf="draft.offeringsEnabled">
 
-        <div *ngIf="draft.rewards.length === 0" class="field-row">
+        <div *ngIf="draft.offerings.length === 0" class="field-row">
           <span class="field-name">תגמולים</span>
           <span class="status-chip optional-empty">לא הוגדרו</span>
         </div>
 
-        <div *ngIf="draft.rewards.length > 0">
+        <div *ngIf="draft.offerings.length > 0">
           <div class="rewards-count">
-            <span class="status-chip filled">{{ draft.rewards.length }} תגמולים הוגדרו ✓</span>
+            <span class="status-chip filled">{{ draft.offerings.length }} תגמולים הוגדרו ✓</span>
           </div>
 
           <div class="rewards-preview">
-            <div class="reward-preview-item" *ngFor="let r of draft.rewards">
-              <span class="reward-preview-name">{{ r.title }}</span>
-              <span class="reward-preview-amount">₪{{ r.minimumAmount | number }}</span>
+            <div class="reward-preview-item" *ngFor="let o of draft.offerings">
+              <span class="reward-preview-name">{{ o.title }}</span>
+              <span class="reward-preview-amount">₪{{ o.minimumAmount | number }}</span>
             </div>
           </div>
         </div>
 
+      </div>
+
+    </div>
+
+    <!-- הרשמה -->
+    <div class="section-card">
+      <div class="card-header">
+        <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
+        <span class="card-title">הרשמה</span>
+      </div>
+
+      <div *ngIf="draft.registrationOptions.length === 0" class="field-row">
+        <span class="field-name">הרשמה</span>
+        <span class="status-chip disabled">לא בשימוש</span>
+      </div>
+
+      <div *ngIf="draft.registrationOptions.length > 0">
+        <div class="rewards-count">
+          <span class="status-chip filled">{{ draft.registrationOptions.length }} אפשרויות הרשמה הוגדרו ✓</span>
+        </div>
+
+        <div class="rewards-preview">
+          <div class="reward-preview-item" *ngFor="let o of draft.registrationOptions">
+            <span class="reward-preview-name">{{ o.title }}</span>
+            <span class="reward-preview-amount">₪{{ o.price | number }}</span>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -325,7 +394,8 @@
 
       <button
         class="publish-button"
-        [disabled]="isPublishing"
+        [disabled]="isPublishing || !isReady"
+        [title]="!isReady ? 'יש להשלים קודם את הפרטים החסרים' : ''"
         (click)="publishCampaign()"
         type="button">
         @if (isPublishing) {

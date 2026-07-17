@@ -1,26 +1,29 @@
 <div class="campaign-editor">
-  <div class="editor-content">
+  <div class="editor-content" #contentEl>
     <app-campaign-stepper
       [currentStep]="currentStep"
       [editMode]="isEditMode"
       (stepSelected)="goToStep($event)"
     />
 
-    @if (currentStep === 1) { <app-campaign-basic-step /> }
-    @if (currentStep === 2) { <app-campaign-type-step /> }
-    @if (currentStep === 3) { <app-campaign-donation-step /> }
-    @if (currentStep === 4) { <app-campaign-rewards-step /> }
-    @if (currentStep === 5) { <app-campaign-sponsors-step /> }
-    @if (currentStep === 6) { <app-campaign-ambassadors-step /> }
-    @if (currentStep === 7) { <app-campaign-updates-step /> }
-    @if (currentStep === 8) { <app-campaign-page-builder-step /> }
-    @if (currentStep === 9) { <app-campaign-publish-step /> }
+    <!-- Each block below is destroyed/recreated on every step change (not
+         just toggled), so the .step-fade CSS animation replays every time —
+         a lightweight "you moved" cue with no Angular animations module. -->
+    @if (currentStep === 1) { <div class="step-fade"><app-campaign-basic-step /></div> }
+    @if (currentStep === 2) { <div class="step-fade"><app-campaign-type-step /></div> }
+    @if (currentStep === 3) { <div class="step-fade"><app-campaign-donation-step /></div> }
+    @if (currentStep === 4) { <div class="step-fade"><app-campaign-offerings-step /></div> }
+    @if (currentStep === 5) { <div class="step-fade"><app-campaign-registration-step /></div> }
+    @if (currentStep === 6) { <div class="step-fade"><app-campaign-sponsors-step /></div> }
+    @if (currentStep === 7) { <div class="step-fade"><app-campaign-ambassadors-step /></div> }
+    @if (currentStep === 8) { <div class="step-fade"><app-campaign-updates-step /></div> }
+    @if (currentStep === 9) { <div class="step-fade"><app-campaign-page-builder-step /></div> }
+    @if (currentStep === 10) { <div class="step-fade"><app-campaign-publish-step /></div> }
   </div>
 
   <app-campaign-editor-footer
     [currentStep]="currentStep"
-    [canContinue]="canContinue()"
-    [isSaving]="isSaving"
+    [totalSteps]="TOTAL_STEPS"
     (next)="nextStep()"
     (previous)="previousStep()"
   />
