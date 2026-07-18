@@ -106,6 +106,19 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     return this.campaigns.filter(c => c.status !== 'draft');
   }
 
+  // Video-hero campaigns have no coverImageUrl — fall back to the YouTube
+  // thumbnail so the card isn't blank.
+  cardCoverUrl(c: any): string | null {
+    if (c.coverImageUrl) return c.coverImageUrl;
+    if (!c.videoUrl) return null;
+    const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
+    for (const p of patterns) {
+      const m = c.videoUrl.match(p);
+      if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+    }
+    return null;
+  }
+
   openDeleteModal(event: Event, id: string, title: string): void {
     event.stopPropagation();
     this.confirmModal = { id, title: title || 'ללא כותרת', type: 'delete-draft' };

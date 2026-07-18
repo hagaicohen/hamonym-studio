@@ -152,7 +152,7 @@
               <div class="campaign-card" [class.card--hidden]="c.isHidden">
 
                 <div class="card-cover"
-                  [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'"
+                  [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'"
                   [class.card-cover--deleting]="deletingId === c.id">
                   <span class="card-status-badge" [class]="'badge-' + c.status">
                     {{ statusLabel(c.status) }}
@@ -228,7 +228,7 @@
               <div class="list-item" [class.card--hidden]="c.isHidden">
 
                 <div class="list-cover"
-                  [style.backgroundImage]="c.coverImageUrl ? 'url(' + c.coverImageUrl + ')' : 'none'">
+                  [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'">
                 </div>
 
                 <div class="list-body">
