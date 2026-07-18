@@ -122,7 +122,14 @@ export class CampaignApiService {
       updatedAt:               data.updated_at,
       publishedAt:             data.published_at,
       entityGaMeasurementId:   data.entity_ga_measurement_id ?? null,
-      title:                   data.title                   ?? '',
+      // The backend backfills this exact placeholder on first save so a
+      // title-less draft never blocks saving mid-edit (campaigns.service.js's
+      // DEFAULT_TITLE) — showing it back in the title field/checklist as if
+      // the manager had typed a real title was confusing (and could get
+      // silently published as the literal, permanent campaign title if
+      // nobody noticed). Strip it back to empty on load. See DECISIONS.md
+      // (2026-07-17).
+      title:                   (data.title === 'קמפיין ללא כותרת' ? '' : data.title) ?? '',
       slug:                    data.slug                    ?? '',
       shortDescription:        data.short_description       ?? '',
       fundingType:             data.funding_type            ?? 'flexible',
@@ -178,6 +185,15 @@ export class CampaignApiService {
       layout: {
         ...(data.layout ?? {}),
         layoutMode: data.layout?.layoutMode ?? 'standard',
+        // Backward-compat source: the legacy flat show_hero_title/
+        // show_hero_subtitle columns, converted once here. See
+        // CampaignLayout's doc comment (campaign-studio-state.service.ts).
+        heroTitlePosition:    data.layout?.heroTitlePosition    ?? (data.show_hero_title    === false ? 'hidden' : 'hero'),
+        heroSubtitlePosition: data.layout?.heroSubtitlePosition ?? (data.show_hero_subtitle === false ? 'hidden' : 'hero'),
+        // Brand-new field, no legacy source — every existing campaign just
+        // loads with it empty (renders nothing extra).
+        projectDescription:   data.layout?.projectDescription   ?? '',
+        projectDescriptionPosition: data.layout?.projectDescriptionPosition ?? 'below',
         // A campaign whose stored layout predates theme support (or was
         // created outside the normal preset/template flow, which is the
         // only place that populates this) would otherwise load with

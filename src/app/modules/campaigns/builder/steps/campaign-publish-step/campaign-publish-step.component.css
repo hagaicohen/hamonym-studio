@@ -331,6 +331,13 @@
 }
 .ai-suggestion-btn--adopt:hover { opacity: 0.9; }
 
+.ai-suggestion-btn--adopt-hidden {
+  background: transparent;
+  color: #7c3aed;
+  border: 1.5px solid #ddd6fe;
+}
+.ai-suggestion-btn--adopt-hidden:hover { background: #f5f3ff; }
+
 .ai-suggestion-btn--dismiss {
   background: transparent;
   color: #64748b;

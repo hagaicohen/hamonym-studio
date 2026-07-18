@@ -36,6 +36,14 @@ export type BlockType =
   // Nothing adds one automatically — its absence means Hero keeps rendering
   // via the older fixed-slot outlets. See DECISIONS.md (2026-07-17).
   | 'hero'
+  // Each tab IS a regular 'container' block — TabsBlockData.childBlockIds
+  // points at N container blocks (same shape ContainerBlockData already
+  // uses), rendered as a clickable header bar + only-the-active-one's
+  // content instead of a container's "show everything." This reuses the
+  // entire existing child-management surface (add/remove/reorder/edit-any-
+  // block-type-inside) — see TabsBlockData below and DECISIONS.md
+  // (2026-07-17).
+  | 'tabs'
   // 'rewards' = the Page Builder block that renders the Offerings section.
   // Legacy persisted value — do NOT rename to 'offerings' without a data
   // migration. It's already stored literally as JSON in every existing
@@ -164,6 +172,22 @@ export interface CtaBlockData {
   backgroundColor: string;
   textStyle: TextStyle;
   ctaConfig: CtaConfig;
+  // Only relevant when the campaign has Registration Options (a race/event
+  // campaign) — lets the button open the registration flow instead of the
+  // default donation flow. Defaults to 'donate' so existing campaigns and
+  // pure-donation campaigns are unaffected.
+  ctaAction: 'donate' | 'register';
+}
+
+// childBlockIds — same shape as ContainerBlockData on purpose: each entry is
+// a real 'container' block (one per tab), so the entire existing child-
+// management surface (add/remove/reorder/edit-any-block-type-inside) works
+// unchanged. accentColor: '' = fall back to the campaign's theme color at
+// render time. See DECISIONS.md (2026-07-17).
+export interface TabsBlockData {
+  childBlockIds: string[];
+  styleVariant:  'underline' | 'pills' | 'boxed';
+  accentColor:   string;
 }
 
 export type BlockData =
@@ -173,6 +197,7 @@ export type BlockData =
   | GalleryBlockData
   | SplitBlockData
   | ContainerBlockData
+  | TabsBlockData
   | StatsBlockData
   | DonationWidgetBlockData
   | CtaBlockData
@@ -292,6 +317,29 @@ export interface CampaignLayout {
   // height alongside it. Absent/'full-width' = today's behavior for every
   // existing campaign — no migration needed. See DECISIONS.md (2026-07-16).
   heroPlacement?:     'full-width' | 'main-column';
+  // Independent per-field position for the campaign title/short-description
+  // text — NOT the same axis as heroPlacement (which says where the whole
+  // Hero *section* sits). 'hero' = today's default (overlaid inside the Hero,
+  // styled via heroTextStyle). 'above'/'below' render as plain page text
+  // immediately before/after the Hero section instead. 'hidden' renders
+  // nowhere. Lives here for the same no-migration reason as preset/
+  // templateId above — backward-compat source is the legacy flat
+  // showHeroTitle/showHeroSubtitle DB columns, converted once on load (see
+  // campaign-api.service.ts fromSnake()). See DECISIONS.md (2026-07-17).
+  heroTitlePosition?:    'above' | 'hero' | 'below' | 'hidden';
+  heroSubtitlePosition?: 'above' | 'hero' | 'below' | 'hidden';
+  // A short RICH-TEXT project description — a third, distinct tier from
+  // title and shortDescription/subtitle, per the manager's own mental model
+  // of a campaign page: title → subtitle (one short line) → this (a short
+  // formatted paragraph) → the main story (the existing 'rich-text' block,
+  // e.g. "על המיזם"). Same above/hero/below/hidden axis as title/subtitle —
+  // 'hero' overlays it on the Hero photo (styled for legibility there, not
+  // via heroTextStyle since it's not plain text-align/color/size). Lives
+  // under `layout` for the same no-migration reason as the fields above; a
+  // brand-new field, no legacy source to convert from. See DECISIONS.md
+  // (2026-07-17).
+  projectDescription?:   string;
+  projectDescriptionPosition?: 'above' | 'hero' | 'below' | 'hidden';
   rewardsLayout:      'standard' | 'image';  // legacy persisted key — see CampaignTheme note above
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
@@ -536,6 +584,10 @@ function createInitialDraft(): CampaignDraft {
     layout: {
       layoutMode:          'standard' as LayoutMode,
       preset:              'general' as PresetId,
+      heroTitlePosition:    'hero',
+      heroSubtitlePosition: 'hero',
+      projectDescription:   '',
+      projectDescriptionPosition: 'below',
       rewardsLayout:       'standard',
       backgroundType:      'none',
       backgroundColor:     '#f8fafc',
@@ -680,6 +732,7 @@ export class CampaignStudioStateService {
       'ambassadors':     'שגרירים',
       'donors':          'תורמים',
       'updates':         'עדכונים',
+      'tabs':            'טאבים',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -695,11 +748,55 @@ export class CampaignStudioStateService {
       data: defaultBlockData(type),
     });
     this.patch({ blocks });
+    // An empty tab bar looks broken (unlike an empty container, which is
+    // still a meaningful state) — start with 2 tabs. Each tab is a real
+    // 'container' block, so this just reuses addBlockToContainer. See
+    // DECISIONS.md (2026-07-17).
+    if (type === 'tabs') {
+      const tab1Id = this.addBlockToContainer(id, 'container');
+      const tab2Id = this.addBlockToContainer(id, 'container');
+      this.patch({
+        blocks: this.draft.blocks.map(b => {
+          if (b.id === tab1Id) return { ...b, label: 'טאב 1' };
+          if (b.id === tab2Id) return { ...b, label: 'טאב 2' };
+          return b;
+        }),
+      });
+    }
     return id;
   }
 
+  // Deleting a container/tabs block with children used to leave those
+  // children orphaned in draft.blocks — nothing referenced their id anymore,
+  // so topLevelBlocks()/topLevelChildIds() picked them back up as stray
+  // top-level page content. Fixed-point loop so it also handles a container
+  // nested inside another container/tabs. Also strips the removed id(s) out
+  // of any surviving parent's own childBlockIds — otherwise that parent is
+  // left pointing at a block that no longer exists (harmless today since
+  // every reader already filters dangling ids defensively, but not worth
+  // leaving as latent stale data). See DECISIONS.md (2026-07-17).
   removeBlock(id: string): void {
-    this.patch({ blocks: this.draft.blocks.filter(b => b.id !== id) });
+    const toRemove = new Set<string>([id]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const b of this.draft.blocks) {
+        if (!toRemove.has(b.id)) continue;
+        if (b.type !== 'container' && b.type !== 'tabs') continue;
+        for (const childId of (b.data as ContainerBlockData).childBlockIds) {
+          if (!toRemove.has(childId)) { toRemove.add(childId); added = true; }
+        }
+      }
+    }
+    const blocks = this.draft.blocks
+      .filter(b => !toRemove.has(b.id))
+      .map(b => {
+        if (b.type !== 'container' && b.type !== 'tabs') return b;
+        const data = b.data as ContainerBlockData;
+        if (!data.childBlockIds.some(cid => toRemove.has(cid))) return b;
+        return { ...b, data: { ...data, childBlockIds: data.childBlockIds.filter(cid => !toRemove.has(cid)) } };
+      });
+    this.patch({ blocks });
   }
 
   moveBlockUp(id: string): void {
@@ -826,7 +923,7 @@ export class CampaignStudioStateService {
       'cta': 'קריאה לפעולה', 'divider': 'מרווח', 'container': 'מסגרת',
       'stats': 'פס נתונים', 'donation-widget': 'תיבת תרומה',
       'rewards': 'תשורות', 'sponsors': 'חסויות', 'ambassadors': 'שגרירים',
-      'donors': 'תורמים', 'updates': 'עדכונים',
+      'donors': 'תורמים', 'updates': 'עדכונים', 'tabs': 'טאבים',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -850,6 +947,22 @@ export class CampaignStudioStateService {
     );
     this.patch({ blocks });
   }
+
+  // Hero title/subtitle position — shared by campaign-basic-step (step 1)
+  // and campaign-page-builder-step (step 9), so both call the same logic
+  // instead of duplicating it. See CampaignLayout's doc comment.
+  setHeroTitlePosition(pos: 'above' | 'hero' | 'below' | 'hidden'): void {
+    this.patch({ layout: { ...this.draft.layout, heroTitlePosition: pos } });
+  }
+  setHeroSubtitlePosition(pos: 'above' | 'hero' | 'below' | 'hidden'): void {
+    this.patch({ layout: { ...this.draft.layout, heroSubtitlePosition: pos } });
+  }
+  setProjectDescription(html: string): void {
+    this.patch({ layout: { ...this.draft.layout, projectDescription: html } });
+  }
+  setProjectDescriptionPosition(pos: 'above' | 'hero' | 'below' | 'hidden'): void {
+    this.patch({ layout: { ...this.draft.layout, projectDescriptionPosition: pos } });
+  }
 }
 
 function defaultBlockData(type: BlockType): BlockData {
@@ -860,6 +973,7 @@ function defaultBlockData(type: BlockType): BlockData {
     case 'gallery':     return { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: true, showDots: true, showArrows: true, autoPlay: false } as GalleryBlockData;
     case 'split':       return { leftBlockId: null, rightBlockId: null, leftPercent: 50 } as SplitBlockData;
     case 'container':   return { childBlockIds: [], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData;
+    case 'tabs':        return { childBlockIds: [], styleVariant: 'underline', accentColor: '' } as TabsBlockData;
     case 'stats':       return {
       style:           'cards',
       size:            'md',
@@ -897,6 +1011,7 @@ function defaultBlockData(type: BlockType): BlockData {
       title: '', text: '', backgroundColor: '#14532d',
       textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },
       ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#7c3aed', align: 'center', icon: '' },
+      ctaAction: 'donate',
     } as CtaBlockData;
     default:            return {};
   }

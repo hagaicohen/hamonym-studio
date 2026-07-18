@@ -20,6 +20,7 @@ import {
   GalleryBlockData,
   SplitBlockData,
   ContainerBlockData,
+  TabsBlockData,
   StatsBlockData,
   DonationWidgetBlockData,
   CtaBlockData,
@@ -276,6 +277,13 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return !draft.title && !draft.coverImageUrl && !draft.videoUrl;
   }
 
+  // ── Hero video lightbox — the play button over the Hero thumbnail had no
+  // click handler at all (pure decoration), so clicking it did nothing. See
+  // DECISIONS.md (2026-07-17).
+  heroVideoOpen = false;
+  openHeroVideo(): void { this.heroVideoOpen = true; }
+  closeHeroVideo(): void { this.heroVideoOpen = false; }
+
   // ── Hero ──
   heroBg(draft: CampaignDraft): string {
     if (draft.heroType === 'image' && draft.coverImageUrl)
@@ -410,7 +418,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private topLevelChildIds(draft: CampaignDraft): Set<string> {
     return new Set(
       draft.blocks
-        .filter(b => b.type === 'container')
+        .filter(b => b.type === 'container' || b.type === 'tabs')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
   }
@@ -425,6 +433,21 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       .map(id => draft.blocks.find(b => b.id === id))
       .filter((b): b is CampaignBlock => !!b && b.visible)
       .sort((a, b) => a.order - b.order);
+  }
+
+  // ── Tabs — which tab is active per Tabs block instance. Presentational
+  // only (not persisted): a visitor's click shouldn't change what the next
+  // visitor sees, and the Builder's own live preview shouldn't carry state
+  // across drafts. See DECISIONS.md (2026-07-17).
+  private activeTabByBlock = new Map<string, string>();
+  activeTab(block: CampaignBlock, draft: CampaignDraft): CampaignBlock | null {
+    const tabs = this.childBlocks(block, draft);
+    if (tabs.length === 0) return null;
+    const activeId = this.activeTabByBlock.get(block.id);
+    return tabs.find(t => t.id === activeId) ?? tabs[0];
+  }
+  setActiveTab(blockId: string, tabId: string): void {
+    this.activeTabByBlock.set(blockId, tabId);
   }
 
   // ── Stats ──
@@ -493,13 +516,13 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  getYoutubeEmbedUrl(url: string): SafeResourceUrl | null {
+  getYoutubeEmbedUrl(url: string, autoplay = false): SafeResourceUrl | null {
     if (!url) return null;
     const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
     for (const p of patterns) {
       const m = url.match(p);
       if (m) return this.sanitizer.bypassSecurityTrustResourceUrl(
-        `https://www.youtube.com/embed/${m[1]}?rel=0`);
+        `https://www.youtube.com/embed/${m[1]}?rel=0${autoplay ? '&autoplay=1' : ''}`);
     }
     return null;
   }
@@ -718,6 +741,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asGallery(data: unknown)          { return data as GalleryBlockData; }
   asSplit(data: unknown)            { return data as SplitBlockData; }
   asContainer(data: unknown)        { return data as ContainerBlockData; }
+  asTabs(data: unknown)             { return data as TabsBlockData; }
   asStats(data: unknown)            { return data as StatsBlockData; }
   asDonationWidget(data: unknown)   { return data as DonationWidgetBlockData; }
   asCta(data: unknown)              { return data as CtaBlockData; }

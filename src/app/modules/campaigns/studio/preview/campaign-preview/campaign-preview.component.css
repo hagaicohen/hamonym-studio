@@ -354,6 +354,62 @@
 }
 .hm-hero--mobile .hm-hero-subtitle { font-size: 14px; }
 
+/* Title/subtitle placed above/below the Hero instead of inside it — plain
+   page text, not the Hero's photo-overlay style (dark, not white/shadowed).
+   Sized/spaced like .hm-section-title so it reads as a normal page heading. */
+.hm-hero-title-external {
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 900;
+  color: var(--hm-body, #0f172a);
+  line-height: 1.2;
+  margin: 24px clamp(16px, 5vw, 48px) 12px;
+  text-align: center;
+}
+.hm-hero-subtitle-external {
+  font-size: 16px;
+  font-weight: 400;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 clamp(16px, 5vw, 48px) 20px;
+  text-align: center;
+}
+
+/* Short rich-text project description — reading text, not a heading, so
+   normal paragraph flow (not centered) like .block-rich-text. */
+.hm-project-description {
+  padding: 8px clamp(16px, 5vw, 48px) 24px;
+  font-size: 15px;
+  color: var(--hm-body);
+  text-align: justify;
+  max-width: 900px;
+  margin-inline: auto;
+  line-height: 1.5;
+}
+.hm-project-description ::ng-deep p  { margin-bottom: 10px; line-height: 1.5; }
+.hm-project-description ::ng-deep h1,
+.hm-project-description ::ng-deep h2,
+.hm-project-description ::ng-deep h3 { font-weight: 700; color: var(--hm-heading); margin: 14px 0 6px; }
+.hm-project-description ::ng-deep a  { color: var(--hm-link); }
+.hm-project-description ::ng-deep ul,
+.hm-project-description ::ng-deep ol { padding-right: 20px; margin-bottom: 10px; }
+
+/* Overlaid on the Hero photo — needs the same legibility treatment as
+   .hm-hero-subtitle (light text + shadow), not the plain-page dark text
+   used everywhere else. Not tied to heroTextStyle.color since this is rich
+   HTML, not a single-color text field. */
+.hm-project-description--in-hero {
+  max-width: 560px;
+  padding: 0;
+  text-align: center;
+  color: #ffffff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+  font-size: 15px;
+}
+.hm-project-description--in-hero ::ng-deep h1,
+.hm-project-description--in-hero ::ng-deep h2,
+.hm-project-description--in-hero ::ng-deep h3 { color: #ffffff; }
+.hm-project-description--in-hero ::ng-deep a  { color: #ffffff; text-decoration: underline; }
+
 /* Play button */
 .hm-play-trigger {
   width: 56px; height: 56px;
@@ -396,6 +452,44 @@
     border-left: 14px solid currentColor;
     margin-left: 3px;
 }
+
+/* ── Hero video lightbox ── */
+.hm-video-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.hm-video-lightbox-inner {
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16/9;
+}
+.hm-video-lightbox-iframe {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.hm-video-lightbox-close {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.hm-video-lightbox-close:hover { background: rgba(255,255,255,0.28); }
+
 /* Meta chips — always at the bottom center */
 .hm-hero-meta {
   position: absolute;
@@ -1043,6 +1137,56 @@
 }
 /* Nested containers inside a row container: no separator border */
 .block-container--row .container-child > .block-container { border-bottom: none; }
+
+/* TABS — accent color is a CSS custom property (set per-instance inline via
+   --tabs-accent) so all 3 variants share one color mechanism instead of
+   duplicating [style.*] bindings per variant. */
+.block-tabs { width: 100%; box-sizing: border-box; }
+.tabs-header {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-header::-webkit-scrollbar { display: none; }
+.tabs-header-btn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+/* Underline variant — flat row, active tab gets a colored bottom border */
+.block-tabs--underline .tabs-header { border-bottom: 1.5px solid var(--line, #e2e8f0); padding: 0 clamp(16px, 5vw, 48px); }
+.block-tabs--underline .tabs-header-btn { padding: 12px 16px; color: #64748b; border-bottom: 2.5px solid transparent; margin-bottom: -1.5px; }
+.block-tabs--underline .tabs-header-btn.active { color: var(--tabs-accent); border-bottom-color: var(--tabs-accent); }
+.block-tabs--underline .tabs-header-btn:hover:not(.active) { color: #334155; }
+
+/* Pills variant — rounded buttons, active one filled */
+.block-tabs--pills .tabs-header { padding: 16px clamp(16px, 5vw, 48px) 8px; }
+.block-tabs--pills .tabs-header-btn { padding: 9px 18px; border-radius: 999px; color: #475569; background: #f1f5f9; }
+.block-tabs--pills .tabs-header-btn.active { color: #fff; background: var(--tabs-accent); }
+.block-tabs--pills .tabs-header-btn:hover:not(.active) { background: #e2e8f0; }
+
+/* Boxed variant — segmented control, active tab elevated on white */
+.block-tabs--boxed .tabs-header {
+  margin: 16px clamp(16px, 5vw, 48px) 8px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: calc(100% - 2 * clamp(16px, 5vw, 48px));
+}
+.block-tabs--boxed .tabs-header-btn { padding: 8px 18px; border-radius: 9px; color: #64748b; }
+.block-tabs--boxed .tabs-header-btn.active { color: var(--tabs-accent); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.10); }
+
+.tabs-panel { width: 100%; }
+
 /* Mobile: site header — logo right side */
 .campaign-page--mobile .site-header {
   justify-content: flex-start;
@@ -2426,6 +2570,11 @@
   .block-container--row .container-child { flex: none !important; width: 100% !important; }
   .block-container--row .container-child > .hm-stats,
   .block-container--row .container-child > .hm-donate { height: auto; }
+
+  /* TABS — tighter side padding, header scrolls horizontally if it overflows */
+  .block-tabs--underline .tabs-header,
+  .block-tabs--pills .tabs-header { padding-left: 12px; padding-right: 12px; }
+  .block-tabs--boxed .tabs-header { margin-left: 12px; margin-right: 12px; max-width: calc(100% - 24px); }
 
   /* STATS + DONATE — compact on small screens */
   .hm-stats, .hm-donate { padding: 16px 12px; }

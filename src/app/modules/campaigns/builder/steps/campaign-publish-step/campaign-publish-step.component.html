@@ -89,7 +89,8 @@
             <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
             <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedTitle }}"</div>
             <div class="ai-suggestion-actions">
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ את ההצעה</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ והצג ב-Hero</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptTitle(false)">אמץ בלי להציג ב-Hero</button>
               <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
             </div>
           </div>
@@ -115,7 +116,8 @@
             <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
             <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedShortDescription }}"</div>
             <div class="ai-suggestion-actions">
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ את ההצעה</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ והצג ב-Hero</button>
+              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptShortDescription(false)">אמץ בלי להציג ב-Hero</button>
               <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
             </div>
           </div>

@@ -258,7 +258,7 @@
 }
 .logo-remove-btn:hover { background: #fef2f2; }
 
-.logo-position-row { display: flex; gap: 8px; }
+.logo-position-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .logo-pos-btn {
   display: flex; align-items: center; gap: 6px;

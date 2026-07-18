@@ -73,7 +73,7 @@ function shadesOf(base: string): Shades {
   };
 }
 
-function buildTheme(palette: TemplatePalette): Record<string, any> {
+export function buildTheme(palette: TemplatePalette): Record<string, any> {
   const s = shadesOf(palette.base);
   return {
     primaryColor: s.dark, secondaryColor: s.accent, accentColor: s.light, bodyTextColor: '#1e293b',

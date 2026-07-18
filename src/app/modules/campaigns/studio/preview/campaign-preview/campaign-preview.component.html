@@ -171,6 +171,19 @@
          height alongside it instead of only below it. -->
     <ng-template #heroTpl>
 
+    <!-- Title/subtitle rendered outside the Hero — independent per-field
+         position (heroTitlePosition/heroSubtitlePosition), NOT the Hero's own
+         overlay style (heroTextStyle.color is tuned for legibility over a
+         photo and would be invisible on the plain page background here) —
+         only text-align carries over, since that's still meaningful outside
+         the Hero. See CampaignLayout's doc comment. -->
+    <h1 *ngIf="draft.layout.heroTitlePosition === 'above'" class="hm-hero-title-external"
+      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+    <p *ngIf="draft.layout.heroSubtitlePosition === 'above' && draft.shortDescription" class="hm-hero-subtitle-external"
+      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+    <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'above' && draft.layout.projectDescription"
+      [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
+
     <!-- ══ HERO ══ -->
     <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile"
       [class.hm-hero--in-column]="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
@@ -182,13 +195,17 @@
 
         <!-- Title, subtitle, play button -->
         <div class="hm-hero-copy">
-          <h1 *ngIf="draft.showHeroTitle !== false" class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
             {{ draft.title }}
           </h1>
-          <p class="hm-hero-subtitle" *ngIf="draft.showHeroSubtitle !== false && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
+          <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
             {{ draft.shortDescription }}
           </p>
-          <button class="hm-play-trigger" *ngIf="draft.heroType === 'video' && draft.videoUrl" type="button">
+          <div class="hm-project-description hm-project-description--in-hero"
+            *ngIf="draft.layout.projectDescriptionPosition === 'hero' && draft.layout.projectDescription"
+            [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
+          <button class="hm-play-trigger" *ngIf="draft.heroType === 'video' && draft.videoUrl" type="button"
+            (click)="openHeroVideo()" aria-label="נגן וידאו">
             <span class="hm-play-icon"></span>
           </button>
         </div>
@@ -230,6 +247,13 @@
       </div>
 
     </section>
+
+    <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
+      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+    <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
+      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+    <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'below' && draft.layout.projectDescription"
+      [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
 
     </ng-template>
 
@@ -575,6 +599,16 @@
   (cleared)="pendingRegistration = null">
 </app-checkout-modal>
 
+<!-- ══ HERO VIDEO LIGHTBOX ══ -->
+<div class="hm-video-lightbox" *ngIf="heroVideoOpen" (click)="closeHeroVideo()">
+  <button class="hm-video-lightbox-close" type="button" (click)="closeHeroVideo()" aria-label="סגור">✕</button>
+  <div class="hm-video-lightbox-inner" (click)="$event.stopPropagation()">
+    <iframe *ngIf="getYoutubeEmbedUrl(draft.videoUrl, true) as embedUrl"
+      [src]="embedUrl" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen
+      class="hm-video-lightbox-iframe"></iframe>
+  </div>
+</div>
+
 </ng-container>
 </ng-container>
 
@@ -688,6 +722,26 @@
     </ng-container>
   </div>
 
+  <!-- TABS — each tab is a real 'container' block; only the active one's
+       content renders, via the exact same container-rendering branch above
+       (recursive blockTpl call on the active tab itself). -->
+  <div class="block-tabs" *ngIf="block.type === 'tabs'"
+    [class.block-tabs--underline]="asTabs(block.data).styleVariant === 'underline'"
+    [class.block-tabs--pills]="asTabs(block.data).styleVariant === 'pills'"
+    [class.block-tabs--boxed]="asTabs(block.data).styleVariant === 'boxed'"
+    [style.--tabs-accent]="asTabs(block.data).accentColor || primaryColor(draft)">
+    <div class="tabs-header" *ngIf="childBlocks(block, draft).length > 0">
+      <button type="button" class="tabs-header-btn" *ngFor="let tab of childBlocks(block, draft)"
+        [class.active]="activeTab(block, draft)?.id === tab.id"
+        (click)="setActiveTab(block.id, tab.id)">
+        {{ tab.label }}
+      </button>
+    </div>
+    <div class="tabs-panel" *ngIf="activeTab(block, draft) as activeTabBlock">
+      <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: activeTabBlock, draft, heroTpl, mobile}"></ng-container>
+    </div>
+  </div>
+
   <!-- CTA -->
   <div class="block-cta" *ngIf="block.type === 'cta'"
     [style.background]="asCta(block.data).backgroundColor"
@@ -697,7 +751,7 @@
     <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"
       [style.justifyContent]="ctaAlignStyle(asCta(block.data).ctaConfig.align)">
       <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color"
-        (click)="scrollToDonation()">
+        (click)="asCta(block.data).ctaAction === 'register' ? startRegistration() : scrollToDonation()">
         <span *ngIf="asCta(block.data).ctaConfig.icon">{{ asCta(block.data).ctaConfig.icon }}</span>
         {{ asCta(block.data).ctaConfig.label }}
       </button>

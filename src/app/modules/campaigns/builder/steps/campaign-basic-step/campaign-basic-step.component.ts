@@ -4,7 +4,7 @@ import { CommonModule, DOCUMENT } from '@angular/common';
 import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import {
-  CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData,
+  CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData, ContainerBlockData,
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService } from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
@@ -129,16 +129,28 @@ export class CampaignBasicStepComponent implements OnInit {
     return `${this.doc.location.origin}/campaigns/`;
   }
 
-  // ── Story (first rich-text block) ──
+  // ── Story (first TOP-LEVEL rich-text block — never one nested inside a
+  // container or tabs, so text typed into a tab can't leak into this field) ──
+  private get nestedBlockIds(): Set<string> {
+    const nested = new Set<string>();
+    for (const b of this.state.draft.blocks) {
+      if (b.type !== 'container' && b.type !== 'tabs') continue;
+      for (const childId of (b.data as ContainerBlockData).childBlockIds) nested.add(childId);
+    }
+    return nested;
+  }
+
   get storyContent(): string {
-    const block = this.state.draft.blocks.find(b => b.type === 'rich-text');
+    const nested = this.nestedBlockIds;
+    const block = this.state.draft.blocks.find(b => b.type === 'rich-text' && !nested.has(b.id));
     return (block?.data as RichTextBlockData)?.content || '';
   }
 
   setStoryContent(content: string): void {
+    const nested = this.nestedBlockIds;
     let found = false;
     const blocks = this.state.draft.blocks.map(b => {
-      if (!found && b.type === 'rich-text') {
+      if (!found && b.type === 'rich-text' && !nested.has(b.id)) {
         found = true;
         return { ...b, data: { ...(b.data as RichTextBlockData), content } };
       }

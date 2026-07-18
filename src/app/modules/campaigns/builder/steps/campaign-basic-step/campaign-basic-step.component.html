@@ -84,6 +84,36 @@
       maxlength="160" placeholder="משפט קצר שמתאר את המיזם">
   </div>
 
+  <!-- ── PROJECT DESCRIPTION — distinct from the subtitle above (one short
+       line) and the story below (the main "על המיזם" text block). A short
+       formatted paragraph. ── -->
+  <div class="field-section">
+    <label class="field-label">תיאור קצר של הפרויקט</label>
+    <app-rich-text-editor
+      [ngModel]="draft.layout.projectDescription"
+      (ngModelChange)="state.setProjectDescription($event)"
+      placeholder="תיאור קצר של הפרויקט...">
+    </app-rich-text-editor>
+  </div>
+
+  <div class="logo-option-section">
+    <span class="logo-option-label">תיאור קצר — מיקום</span>
+    <div class="logo-position-row">
+      <button class="logo-pos-btn"
+        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'above'"
+        (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+      <button class="logo-pos-btn"
+        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hero'"
+        (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+      <button class="logo-pos-btn"
+        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'below'"
+        (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+      <button class="logo-pos-btn"
+        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hidden'"
+        (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+    </div>
+  </div>
+
   <!-- ── STORY ── -->
   <div class="field-section">
     <label class="field-label">סיפור הקמפיין</label>
@@ -204,23 +234,39 @@
 
       </div>
 
-      <div class="toggle-row" (click)="state.patch({ showHeroTitle: !draft.showHeroTitle }); sync()">
-        <div class="toggle-switch" [class.toggle-on]="draft.showHeroTitle">
-          <div class="toggle-knob"></div>
-        </div>
-        <div class="toggle-info">
-          <span class="toggle-label">כותרת</span>
-          <span class="toggle-sub">שם הקמפיין על ה-Hero</span>
+      <div class="logo-option-section">
+        <span class="logo-option-label">כותרת — מיקום</span>
+        <div class="logo-position-row">
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'above'"
+            (click)="state.setHeroTitlePosition('above')">מעל</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hero'"
+            (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'below'"
+            (click)="state.setHeroTitlePosition('below')">מתחת</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hidden'"
+            (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
         </div>
       </div>
 
-      <div class="toggle-row" (click)="state.patch({ showHeroSubtitle: !draft.showHeroSubtitle }); sync()">
-        <div class="toggle-switch" [class.toggle-on]="draft.showHeroSubtitle">
-          <div class="toggle-knob"></div>
-        </div>
-        <div class="toggle-info">
-          <span class="toggle-label">תת-כותרת</span>
-          <span class="toggle-sub">המשפט הקצר על ה-Hero</span>
+      <div class="logo-option-section">
+        <span class="logo-option-label">תת-כותרת — מיקום</span>
+        <div class="logo-position-row">
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'above'"
+            (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hero'"
+            (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'below'"
+            (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hidden'"
+            (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
         </div>
       </div>
 

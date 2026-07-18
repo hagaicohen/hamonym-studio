@@ -54,9 +54,9 @@
 
       <!-- Block Header -->
       <div class="block-header" (click)="toggleEdit(block.id)">
-        <span class="block-icon">{{ blockIcon(block) }}</span>
+        <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : blockIcon(block) }}</span>
         <div class="block-header-info">
-          <span class="block-label">{{ blockLabel(block) }}</span>
+          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : blockLabel(block) }}</span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
@@ -230,6 +230,24 @@
 
         <!-- ── CTA ── -->
         <div class="editor-field cta-editor" *ngIf="block.type === 'cta'">
+
+          <!-- Purpose — the first, most important choice: what this button
+               does when clicked. Sets the action AND a matching default
+               label together, so there's nothing else required to get a
+               working button. Always visible (not tucked under "עיצוב
+               מתקדם"), so it isn't easy to miss. -->
+          <div class="editor-row">
+            <label class="editor-label">מטרת הכפתור</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="(asCta(block.data).ctaAction || 'donate') === 'donate'"
+                (click)="updateCtaAction(block.id, 'donate')">תרומה</button>
+              <button class="direction-btn"
+                [class.active]="asCta(block.data).ctaAction === 'register'"
+                (click)="updateCtaAction(block.id, 'register')">הרשמה למירוץ</button>
+            </div>
+          </div>
+
           <div class="editor-row">
             <label class="editor-label">כותרת</label>
             <input class="editor-input" type="text"
@@ -284,25 +302,6 @@
               <button class="direction-btn"
                 [class.active]="asContainer(block.data).railZone === 'main'"
                 (click)="setContainerRailZone(block.id, 'main')">תוכן ראשי (כולל Hero)</button>
-            </div>
-          </div>
-
-          <!-- Child blocks -->
-          <div class="editor-row">
-            <label class="editor-label">בלוקים בתוך הקונטיינר</label>
-            <div class="container-children">
-              <div class="container-child-row"
-                *ngFor="let b of sortedBlocks(draft.blocks)"
-                [class.container-child-row--self]="b.id === block.id"
-                [class.container-child-row--checked]="asContainer(block.data).childBlockIds.includes(b.id)"
-                (click)="b.id !== block.id && toggleContainerChild(block.id, b.id, draft.blocks)">
-                <span class="container-child-icon">{{ blockIcons[b.type] }}</span>
-                <span class="container-child-name">{{ b.label || blockLabels[b.type] }}</span>
-                <span class="container-child-check"
-                  [class.checked]="asContainer(block.data).childBlockIds.includes(b.id)">
-                  {{ asContainer(block.data).childBlockIds.includes(b.id) ? '✓' : '' }}
-                </span>
-              </div>
             </div>
           </div>
 
@@ -410,6 +409,32 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- ── TABS ── -->
+        <div class="container-editor" *ngIf="block.type === 'tabs'">
+          <div class="editor-row">
+            <label class="editor-label">סגנון טאבים</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="asTabs(block.data).styleVariant === 'underline'"
+                (click)="updateTabsField(block.id, 'styleVariant', 'underline')">קו תחתון</button>
+              <button class="direction-btn"
+                [class.active]="asTabs(block.data).styleVariant === 'pills'"
+                (click)="updateTabsField(block.id, 'styleVariant', 'pills')">פילים</button>
+              <button class="direction-btn"
+                [class.active]="asTabs(block.data).styleVariant === 'boxed'"
+                (click)="updateTabsField(block.id, 'styleVariant', 'boxed')">תחומה</button>
+            </div>
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">צבע הדגשה</label>
+            <app-color-picker
+              [value]="asTabs(block.data).accentColor"
+              (valueChange)="updateTabsField(block.id, 'accentColor', $event)"
+              [showNone]="true">
+            </app-color-picker>
+          </div>
         </div>
 
         <!-- ── STATS ── -->
@@ -674,7 +699,7 @@
         <div class="block-picker block-picker--grouped block-picker--mini"
              *ngIf="showContainerPickerId === block.id"
              (click)="$event.stopPropagation()">
-          <div class="picker-group" *ngFor="let group of blockGroups">
+          <div class="picker-group" *ngFor="let group of nestedBlockGroups">
             <div class="picker-group-label">{{ group.label }}</div>
             <div class="picker-group-items">
               <button class="picker-item"
@@ -702,6 +727,32 @@
         </ng-template>
       </div>
 
+      <!-- ── TABS CHILDREN — each tab is a real 'container' block, so it
+           already gets full label-editing/reorder/remove/nested-content-
+           editing for free via blockItem, exactly like a container's own
+           children. Only "+ הוסף טאב" is bespoke (always creates a
+           container, not an arbitrary block-type picker). ── -->
+      <div class="container-children-tree" *ngIf="block.type === 'tabs'">
+        <div class="container-tree-header">
+          <span class="container-tree-label">
+            📑 {{ containerChildren(block, draft.blocks).length }} טאבים
+          </span>
+          <button class="container-add-btn" type="button" (click)="addTab(block.id, draft.blocks)">
+            + הוסף טאב
+          </button>
+        </div>
+
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyTabsTpl">
+          <ng-container *ngFor="let tab of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: tab, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyTabsTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף טאב" כדי להתחיל</div>
+        </ng-template>
+      </div>
+
     </div>
   </ng-template>
   <!-- ════ END BLOCK TREE TEMPLATE ════ -->
@@ -714,11 +765,88 @@
     </ng-container>
   </div>
 
+  <!-- HERO TEXTS — position + style for title/subtitle, not tied to any one
+       block since Hero isn't always a block. Text VALUES stay editable only
+       in "פרטי בסיס" (step 1) — this is position/style only, so there's one
+       authoritative place to change the actual words. See DECISIONS.md
+       (2026-07-17). -->
+  <div class="campaign-theme-section">
+    <div class="campaign-bg-header">
+      <span class="campaign-bg-title">📝 טקסטי Hero</span>
+    </div>
+
+    <div class="editor-row">
+      <label class="editor-label">כותרת — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'above'"
+          (click)="state.setHeroTitlePosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hero'"
+          (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'below'"
+          (click)="state.setHeroTitlePosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hidden'"
+          (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <div class="editor-row">
+      <label class="editor-label">תת-כותרת — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'above'"
+          (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hero'"
+          (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'below'"
+          (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hidden'"
+          (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <div class="editor-row">
+      <label class="editor-label">תיאור קצר — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'above'"
+          (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hero'"
+          (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'below'"
+          (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hidden'"
+          (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <app-text-style-editor
+      [textStyle]="draft.heroTextStyle"
+      (textStyleChange)="onHeroTextStyleChange($event)"
+      [ctaConfig]="draft.heroCtaConfig"
+      (ctaConfigChange)="onHeroCtaConfigChange($event)"
+      [showPosition]="true"
+      [showCta]="true">
+    </app-text-style-editor>
+  </div>
+
   <!-- CAMPAIGN THEME COLORS -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header">
       <span class="campaign-bg-title">🎨 צבעי תמה</span>
     </div>
+
+    <!-- Presets — same palette swatches as the initial Template Picker; one
+         click sets a whole coordinated theme. The manual pickers below stay
+         available for fine-tuning afterward. -->
+    <div class="theme-palette-row">
+      <span class="theme-palette-label">צבע:</span>
+      <button class="theme-palette-swatch"
+        *ngFor="let p of themeColorPalettes"
+        [class.theme-palette-swatch--selected]="isActiveThemePalette(p, draft.layout.theme)"
+        [style.background]="p.base"
+        [title]="p.name"
+        (click)="applyThemePalette(p)">
+      </button>
+    </div>
+
     <div class="theme-colors-grid">
       <div class="theme-color-row">
         <span class="theme-color-label">ראשי</span>

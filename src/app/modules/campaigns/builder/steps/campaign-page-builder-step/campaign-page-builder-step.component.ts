@@ -13,6 +13,7 @@ import {
   GalleryBlockData,
   SplitBlockData,
   ContainerBlockData,
+  TabsBlockData,
   StatsBlockData,
   StatItem,
   DonationWidgetBlockData,
@@ -28,6 +29,7 @@ import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/colo
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TemplatePickerComponent, TemplateSelection } from '../../template-picker/template-picker.component';
+import { TEMPLATE_PALETTES, TemplatePalette, buildTheme } from '../../templates/campaign-templates';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -46,6 +48,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'donors':      'תורמים',
   'updates':     'עדכונים',
   'hero':        'Hero (תמונה ראשית)',
+  'tabs':        'טאבים',
 };
 
 const BLOCK_ICONS: Record<BlockType, string> = {
@@ -65,6 +68,7 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'donors':      '💛',
   'updates':     '📢',
   'hero':        '🌄',
+  'tabs':        '📑',
 };
 
 const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero'];
@@ -72,7 +76,7 @@ const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'don
 // Block groups for the picker UI
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
-  { label: 'פריסה',   types: ['container', 'hero'] },
+  { label: 'פריסה',   types: ['container', 'hero', 'tabs'] },
   { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
   { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
@@ -80,7 +84,7 @@ export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
 ];
 
 const ADDABLE_BLOCKS: BlockType[] = [
-  'rich-text', 'image', 'video', 'gallery', 'container', 'hero',
+  'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs',
   'stats', 'donation-widget', 'cta', 'divider',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
 ];
@@ -93,7 +97,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
   styleUrl: './campaign-page-builder-step.component.css',
 })
 export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
-  private state         = inject(CampaignStudioStateService);
+  protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
 
   readonly LayersIcon = Layers;
@@ -131,6 +135,11 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   readonly blockLabels = BLOCK_LABELS;
   readonly blockIcons = BLOCK_ICONS;
 
+  // Hero is a single top-of-page section — nesting it inside a container/tab
+  // makes no sense and only confuses the "+ הוסף לכאן" picker, so it's
+  // excluded there (still addable normally via the top-level "+ הוסף בלוק").
+  readonly nestedBlockGroups = BLOCK_GROUPS.map(g => ({ ...g, types: g.types.filter(t => t !== 'hero') }));
+
   sortedBlocks(blocks: CampaignBlock[]): CampaignBlock[] {
     return [...blocks].sort((a, b) => a.order - b.order);
   }
@@ -167,7 +176,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   private childIdSet(blocks: CampaignBlock[]): Set<string> {
     return new Set(
-      blocks.filter(b => b.type === 'container')
+      blocks.filter(b => b.type === 'container' || b.type === 'tabs')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
   }
@@ -178,7 +187,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   containerChildren(block: CampaignBlock, blocks: CampaignBlock[]): CampaignBlock[] {
-    if (block.type !== 'container') return [];
+    if (block.type !== 'container' && block.type !== 'tabs') return [];
     const ids = (block.data as ContainerBlockData).childBlockIds;
     return ids.map(id => blocks.find(b => b.id === id))
       .filter((b): b is CampaignBlock => !!b)
@@ -349,11 +358,41 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { ...block.data, ctaConfig: cfg } as CtaBlockData);
   }
 
+  // Sets the action AND a matching default label/visibility together, so
+  // picking a purpose alone is enough to get a working, visible button —
+  // no separate step required to also update the label text.
+  updateCtaAction(id: string, action: 'donate' | 'register'): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as CtaBlockData;
+    const label = action === 'register' ? 'הירשמו עכשיו' : 'תרמו עכשיו';
+    this.state.updateBlockData(id, {
+      ...data, ctaAction: action,
+      ctaConfig: { ...data.ctaConfig, label, visible: true },
+    } as CtaBlockData);
+  }
+
   // Container
   updateContainerField(id: string, field: keyof ContainerBlockData, value: string | number): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as ContainerBlockData);
+  }
+
+  // Tabs — each tab is a real 'container' block, so adding one reuses
+  // addBlockToContainer verbatim (it's already parent-type-agnostic); this
+  // just gives the new tab a nicer default label than "מסגרת". See
+  // DECISIONS.md (2026-07-17).
+  addTab(tabsBlockId: string, blocks: CampaignBlock[]): void {
+    const tabCount = this.containerChildren(blocks.find(b => b.id === tabsBlockId)!, blocks).length;
+    const newId = this.state.addBlockToContainer(tabsBlockId, 'container');
+    if (newId) this.updateLabel(newId, `טאב ${tabCount + 1}`);
+  }
+
+  updateTabsField(id: string, field: keyof TabsBlockData, value: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as TabsBlockData);
   }
 
   setContainerRailZone(id: string, zone: 'sidebar' | 'main' | null): void {
@@ -379,17 +418,6 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     const bBlock = blocks.find(b => b.id === children[1].id)!;
     [a.order, bBlock.order] = [bBlock.order, a.order];
     this.state.patch({ blocks });
-  }
-
-  toggleContainerChild(id: string, childId: string, blocks: CampaignBlock[]): void {
-    const block = blocks.find(b => b.id === id);
-    if (!block) return;
-    const data = block.data as ContainerBlockData;
-    const exists = data.childBlockIds.includes(childId);
-    const childBlockIds = exists
-      ? data.childBlockIds.filter(c => c !== childId)
-      : [...data.childBlockIds, childId];
-    this.state.updateBlockData(id, { ...data, childBlockIds } as ContainerBlockData);
   }
 
   onCampaignBgImageSelected(event: Event, draft: any): void {
@@ -488,6 +516,25 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.patch({ layout: { ...draft.layout, theme: { ...draft.layout.theme, ...partial } } });
   }
 
+  // Same base-color palettes and derivation as the initial Template Picker
+  // (app-template-picker) — one click here gives the exact same coordinated
+  // theme those swatches would have produced at campaign creation.
+  readonly themeColorPalettes = TEMPLATE_PALETTES;
+
+  applyThemePalette(palette: TemplatePalette): void {
+    this.patchTheme(buildTheme(palette) as Partial<CampaignTheme>);
+  }
+
+  isActiveThemePalette(palette: TemplatePalette, theme: CampaignTheme): boolean {
+    return theme.primaryColor === buildTheme(palette)['primaryColor'];
+  }
+
+  // Hero text style/CTA — same fields step 1 edits, surfaced here too so
+  // managers can style Hero title/subtitle while looking at the live page
+  // layout. See DECISIONS.md (2026-07-17).
+  onHeroTextStyleChange(style: TextStyle): void { this.state.patch({ heroTextStyle: style }); }
+  onHeroCtaConfigChange(cta: CtaConfig): void   { this.state.patch({ heroCtaConfig: cta }); }
+
   blockIcon(block: CampaignBlock): string  { return BLOCK_ICONS[block.type] ?? ''; }
   blockLabel(block: CampaignBlock): string { return BLOCK_LABELS[block.type] ?? block.type; }
 
@@ -497,6 +544,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   asGallery(data: unknown): GalleryBlockData         { return data as GalleryBlockData; }
   asSplit(data: unknown): SplitBlockData             { return data as SplitBlockData; }
   asContainer(data: unknown): ContainerBlockData         { return data as ContainerBlockData; }
+  asTabs(data: unknown): TabsBlockData                   { return data as TabsBlockData; }
   asStats(data: unknown): StatsBlockData                 { return data as StatsBlockData; }
   asDonationWidget(data: unknown): DonationWidgetBlockData { return data as DonationWidgetBlockData; }
   asCta(data: unknown): CtaBlockData                     { return data as CtaBlockData; }

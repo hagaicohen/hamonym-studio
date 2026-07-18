@@ -133,17 +133,27 @@ export class CampaignPublishStepComponent implements OnInit {
     this.generateSuggestion();
   }
 
-  adoptTitle(): void {
+  // showOnHero=false keeps the manager's own Hero copy untouched — the
+  // adopted text still fills draft.title (used for social-share/SEO
+  // metadata regardless of what's visually on the Hero) without forcing it
+  // onto the page. See DECISIONS.md (2026-07-17).
+  adoptTitle(showOnHero = true): void {
     const title = this.metadataSuggestion?.suggestedTitle;
     if (!title) return;
-    this.campaignState.patch({ title: title.slice(0, 80) });
+    this.campaignState.patch({
+      title: title.slice(0, 80),
+      ...(showOnHero ? {} : { showHeroTitle: false }),
+    });
     this.dismissedTitle = true;
   }
 
-  adoptShortDescription(): void {
+  adoptShortDescription(showOnHero = true): void {
     const shortDescription = this.metadataSuggestion?.suggestedShortDescription;
     if (!shortDescription) return;
-    this.campaignState.patch({ shortDescription: shortDescription.slice(0, 160) });
+    this.campaignState.patch({
+      shortDescription: shortDescription.slice(0, 160),
+      ...(showOnHero ? {} : { showHeroSubtitle: false }),
+    });
     this.dismissedShortDescription = true;
   }
 
