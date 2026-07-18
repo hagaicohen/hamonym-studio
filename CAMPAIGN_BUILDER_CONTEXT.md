@@ -16,12 +16,14 @@ three pushes to `main`: `1c99818`, `11dc818`, `144a0bf`.
 
 ## 1. Registration, Presets, Flexible Layouts (`1c99818`)
 
-- **Registration Options**: a first-class step, distinct from Offerings (donation perks). Race/event campaigns (e.g. a running race) define participant options (route, ticket type, etc.); the checkout flow lets a visitor register (multi-participant) and separately donate, in one modal, remembered across open/close cycles.
-- **Offerings**: the old "Rewards" step/model renamed and split cleanly from Registration Options — pure donation perks only.
-- **Preset picker**: a new first step ("what kind of campaign?" — donation / race / general) ahead of the Template picker (visual style), driving copy/suggestions elsewhere in the builder. See `builder/presets/campaign-presets.ts`.
+- **Registration Options**: a first-class step (`campaign-registration-step/`), distinct from Offerings (donation perks). Race/event campaigns (e.g. a running race) define participant options (route, ticket type, etc.); the checkout flow lets a visitor register (multi-participant) and separately donate, in one modal, remembered across open/close cycles. `DonationPayload` (`donation.service.ts`) gained a parallel `participants?: Array<{ name, registrationOptionId?, shirtSize? }>` field alongside `rewards` — "who's registered" vs. "what's being charged," re-priced server-side against `registration_options`.
+- **Offerings**: the old "Rewards" step/model renamed to `campaign-offerings-step/` and split cleanly from Registration Options — pure donation perks only.
+- **Preset picker**: a new first step ("what kind of campaign?" — donation / race / general) ahead of the Template picker (visual style), driving copy/suggestions elsewhere in the builder. See `builder/presets/campaign-presets.ts` and the new `campaign-preset-picker/` component.
+- **Template Picker gained its own palette row**: `TemplatePickerComponent` now emits `{ template, palette }` instead of just `template` — a row of solid-color swatches (`TEMPLATE_PALETTES`, `.tp-swatch`) lets the manager pick a base color at campaign creation, which `buildTheme(palette)` expands into a full 9-field `CampaignTheme`. This is the exact mechanism §5 below reuses in step 9.
 - **Hero as a real block**: Hero became an orderable block type (`BlockType = 'hero'`) instead of an implicit, fixed page element. Containers can claim the sticky sidebar rail or the entire main column (`railZone`), making the full-height sidebar layout mode fully symmetric and editable on both sides.
+- **Builder navigation became free and purely local**: the stepper (`campaign-stepper.component.ts`) gained a "הרשמה" step (9 steps → 10, `TOTAL_STEPS` in `campaign-editor.component.ts`) and can jump to *any* step directly, not just sequentially or only in edit mode. More importantly, `nextStep()`/`previousStep()`/`goToStep()` no longer save the draft to the backend as a side effect of navigating — `CampaignStudioStateService` already holds the whole draft in memory, so moving between steps (including jumping straight to step 5) never touches the server. The campaign is now only ever persisted by an explicit action: the topbar's "שמור טיוטה" button or reaching Publish. Step transitions also scroll the content panel back to top.
 - **Checkout modal fixes**: registration no longer auto-adds a blank participant (only on explicit "+ הוסף משתתף"), participants are always removable to zero, rows are compact single lines instead of large cards, and a `min-height: 0` fix on `.checkout-form-panel` stopped content below the fold from being clipped instead of scrollable.
-- New Registrations admin page/module.
+- New Registrations admin page/module (`campaigns/pages/registrations-page/`).
 - Misc: fixed a stuck loader on campaign load failure, `AppLoaderService` NgZone safety, sidebar nav updates, and traced a Hero-above logo appearing off-center all the way to the uploaded logo *file* having 78px of asymmetric transparent padding — fixed by cropping and re-uploading the asset (not a CSS bug).
 - Also fixed: a Hero video that didn't play on click — it was missing a `(click)` handler entirely, not a browser/environment issue.
 
@@ -90,7 +92,15 @@ Every change this session was verified with `npx ng build --configuration develo
 | `src/app/modules/campaigns/builder/steps/campaign-basic-step/` | Step 1 — title/subtitle/description fields + position pickers, Story field |
 | `src/app/modules/campaigns/builder/steps/campaign-page-builder-step/` | Step 9 — full block tree editor, Tabs editor, CTA editor, theme colors |
 | `src/app/modules/campaigns/builder/steps/campaign-publish-step/` | AI title/description suggestions (see Known Issue above) |
+| `src/app/modules/campaigns/builder/steps/campaign-registration-step/` | New step — Registration Options (race/event participant options) |
+| `src/app/modules/campaigns/builder/steps/campaign-offerings-step/` | Renamed from `campaign-rewards-step` — pure donation perks |
+| `src/app/modules/campaigns/builder/presets/campaign-presets.ts` + `builder/preset-picker/` | "What kind of campaign?" step, ahead of the Template Picker |
+| `src/app/modules/campaigns/builder/template-picker/` | Initial design picker — now also emits a base-color palette (`TemplateSelection`) |
 | `src/app/modules/campaigns/builder/templates/campaign-templates.ts` | `TEMPLATE_PALETTES`, `buildTheme()` (now exported, reused by step 9's palette presets) |
+| `src/app/modules/campaigns/studio/editor/campaign-editor/campaign-editor.component.ts` | Step navigation — now free/local-only, no backend save on transition (see §1) |
+| `src/app/modules/campaigns/shared/components/campaign-stepper/` | Stepper UI — 10 steps, click any step to jump directly |
 | `src/app/modules/campaigns/studio/preview/campaign-preview/` | Public-facing render: Hero tiers, Tabs, CTA, checkout modal wiring |
 | `src/app/modules/campaigns/shared/components/checkout-modal/` | Combined registration + donation checkout |
+| `src/app/modules/campaigns/services/donation.service.ts` | `DonationPayload.participants` — registration data on the donate/checkout call |
+| `src/app/modules/campaigns/pages/registrations-page/` | New admin page — registrations across a campaign/entity |
 | `src/app/modules/campaigns/pages/campaigns-page/` | Campaigns list — grid/list cards, video-thumbnail fallback |
