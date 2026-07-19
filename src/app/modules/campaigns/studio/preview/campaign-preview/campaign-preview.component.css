@@ -879,6 +879,18 @@
   border-radius: 6px;
 }
 
+/* Containers get a stronger "selected"-looking treatment than the plain
+   hover outline above — a filled tint + solid border around the whole
+   container, not just a thin ring, so its full extent reads clearly at a
+   glance (a container can wrap a lot of varied content). */
+.block-wrap--hovered-container {
+  outline: 2px solid #7c3aed;
+  outline-offset: 0;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.06);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+}
+
 /* Magazine layout — two-column masonry-like */
 .page-blocks--magazine {
   display: grid;
@@ -1128,6 +1140,16 @@
   outline: 2px solid #a78bfa;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Same "selected"-looking treatment as .block-wrap--hovered-container,
+   for a container nested inside another container/tab/panel. */
+.container-child--hovered-container {
+  outline: 2px solid #7c3aed;
+  outline-offset: 0;
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.06);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
 }
 .block-container--row .container-child {
   flex: 1;

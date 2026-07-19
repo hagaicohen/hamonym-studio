@@ -278,6 +278,7 @@
             [style.marginTop.px]="block.spacingTop"
             [style.marginBottom.px]="block.spacingBottom"
             [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
             (mouseenter)="setHovered(block.id)"
             (mouseleave)="setHovered(null)">
             <div class="section-heading"
@@ -323,6 +324,7 @@
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
                   <div class="section-heading"
@@ -351,6 +353,7 @@
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
                   <div class="section-heading"
@@ -372,6 +375,7 @@
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
                   <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
@@ -390,6 +394,7 @@
           [style.marginTop.px]="block.spacingTop"
           [style.marginBottom.px]="block.spacingBottom"
           [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
+          [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
           (mouseenter)="setHovered(block.id)"
           (mouseleave)="setHovered(null)">
           <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
@@ -715,6 +720,7 @@
           ? (i === 0 ? (asContainer(block.data).splitPercent ?? 50) + ' 0 0%' : (100 - (asContainer(block.data).splitPercent ?? 50)) + ' 0 0%')
           : '1'"
         [class.container-child--hovered]="pageBuilderActive && hoveredBlockId === child.id"
+        [class.container-child--hovered-container]="pageBuilderActive && hoveredBlockId === child.id && child.type === 'container'"
         (mouseenter)="$event.stopPropagation(); setHovered(child.id)"
         (mouseleave)="setHovered(block.id)">
         <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft, heroTpl, mobile}"></ng-container>
