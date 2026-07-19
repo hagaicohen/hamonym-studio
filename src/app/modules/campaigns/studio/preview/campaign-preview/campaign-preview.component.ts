@@ -419,6 +419,17 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return !!this.railZoneContainerId(draft, 'main');
   }
 
+  // A container claimed by a rail zone ('sidebar'/'main') never gets its own
+  // .block-wrap — sidebarBlocks()/mainColumnBlocks() return its CHILDREN
+  // directly, not the container itself, so nothing in the DOM has the
+  // container's own id to match hoveredBlockId against. Hovering that
+  // container's row in the builder would silently do nothing in preview.
+  // Bound onto the rail's own wrapper element instead.
+  isRailZoneContainerHovered(draft: CampaignDraft, zone: 'sidebar' | 'main'): boolean {
+    const id = this.railZoneContainerId(draft, zone);
+    return this.pageBuilderActive && !!id && this.hoveredBlockId === id;
+  }
+
   private railZoneContainerId(draft: CampaignDraft, zone: 'sidebar' | 'main'): string | null {
     const childIds = this.topLevelChildIds(draft);
     const container = draft.blocks.find(b =>

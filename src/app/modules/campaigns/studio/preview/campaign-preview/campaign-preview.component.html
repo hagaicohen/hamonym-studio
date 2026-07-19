@@ -312,7 +312,8 @@
           [class.page-layout-sidebar--left]="layoutMode(draft) === 'sidebar-left'">
 
           <!-- Main column -->
-          <div class="sidebar-main">
+          <div class="sidebar-main"
+            [class.block-wrap--hovered-container]="isRailZoneContainerHovered(draft, 'main')">
             <!-- Preferred: a real top-level container tagged railZone:'main'
                  — fully owns the main column, Hero included via a 'hero'
                  block among its children, wherever the user placed it. See
@@ -369,7 +370,8 @@
 
           <!-- Sticky sidebar -->
           <div class="sidebar-rail" id="section-donate">
-            <div class="sidebar-rail-inner">
+            <div class="sidebar-rail-inner"
+              [class.block-wrap--hovered-container]="isRailZoneContainerHovered(draft, 'sidebar')">
               <ng-container *ngFor="let block of sidebarBlocks(draft)">
                 <div class="block-wrap"
                   [style.marginTop.px]="block.spacingTop"
