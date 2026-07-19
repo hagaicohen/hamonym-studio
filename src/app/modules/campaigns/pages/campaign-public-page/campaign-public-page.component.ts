@@ -49,6 +49,12 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   isLoading       = true;
   notFound        = false;
   showFailedPopup = false;
+  // True when the page loaded via the authenticated owner-scoped fallback
+  // below, not the true public endpoint — happens when the campaign is
+  // published but the owning entity isn't approved (active) yet, so
+  // anonymous visitors can't see it, but the manager themselves should
+  // still be able to preview their own work in progress.
+  ownerPreview    = false;
   currentAmbassador: Ambassador | null = null;
   ambassadorsList: AmbassadorPublicInfo[] | null = null;
   autoOpenJoin    = false;
@@ -91,48 +97,68 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     this.autoOpenJoin = this.route.snapshot.queryParamMap.get('join') === 'ambassador';
 
     this.api.getBySlugPublic(slug).subscribe({
-      next: (data) => {
-        // The page never set its own title, so on arrival from the
-        // donation-success page the browser tab kept showing "תודה על
-        // תרומתך — X" indefinitely — Angular doesn't reset <title> on
-        // navigation by itself.
-        this.title.setTitle(data.title ? `${data.title} — המונים` : 'המונים');
-        this.snapshotTakenAt = new Date();
-        this.lastSeenAt      = this.snapshotTakenAt;
-        this.state.loadDraft(data);
-        this.loader.hide();
-        this.isLoading = false;
-
-        this.analytics.init(data.entityGaMeasurementId);
-        this.analytics.trackEvent('campaign_view', {
-          campaign_name: data.title,
-          campaign_id:   data.id,
-        });
-
-        this.ambassadorSvc.listPublic(slug).subscribe({
-          next: list => { this.ambassadorsList = list; },
-        });
-
-        if (ambassadorSlug) {
-          this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({
-            next: amb => {
-              if (amb?.status === 'inactive') {
-                this.router.navigate(['/campaigns', slug, 'view'], { replaceUrl: true });
-                return;
-              }
-              this.currentAmbassador = amb;
-            },
-          });
-        }
-
-        this.startLivePolling(slug, sinceParm ?? undefined);
-      },
+      next: (data) => this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm),
       error: () => {
-        this.loader.hide();
-        this.notFound  = true;
-        this.isLoading = false;
+        // The true public endpoint 404s whenever the owning entity isn't
+        // approved (active) yet — even for the campaign's own manager,
+        // who should still be able to preview their own work in progress.
+        // Fall back to the authenticated, ownership-scoped lookup (no
+        // entity/publish-status restriction) before giving up.
+        const token = localStorage.getItem('token');
+        if (!token) { this.showNotFound(); return; }
+
+        this.api.getBySlug(slug).subscribe({
+          next: (data) => {
+            this.ownerPreview = true;
+            this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm);
+          },
+          error: () => this.showNotFound(),
+        });
       },
     });
+  }
+
+  private showNotFound(): void {
+    this.loader.hide();
+    this.notFound  = true;
+    this.isLoading = false;
+  }
+
+  private onCampaignLoaded(data: any, slug: string, ambassadorSlug: string | null, sinceParm: string | null): void {
+    // The page never set its own title, so on arrival from the
+    // donation-success page the browser tab kept showing "תודה על
+    // תרומתך — X" indefinitely — Angular doesn't reset <title> on
+    // navigation by itself.
+    this.title.setTitle(data.title ? `${data.title} — המונים` : 'המונים');
+    this.snapshotTakenAt = new Date();
+    this.lastSeenAt      = this.snapshotTakenAt;
+    this.state.loadDraft(data);
+    this.loader.hide();
+    this.isLoading = false;
+
+    this.analytics.init(data.entityGaMeasurementId);
+    this.analytics.trackEvent('campaign_view', {
+      campaign_name: data.title,
+      campaign_id:   data.id,
+    });
+
+    this.ambassadorSvc.listPublic(slug).subscribe({
+      next: list => { this.ambassadorsList = list; },
+    });
+
+    if (ambassadorSlug) {
+      this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({
+        next: amb => {
+          if (amb?.status === 'inactive') {
+            this.router.navigate(['/campaigns', slug, 'view'], { replaceUrl: true });
+            return;
+          }
+          this.currentAmbassador = amb;
+        },
+      });
+    }
+
+    this.startLivePolling(slug, sinceParm ?? undefined);
   }
 
   private startLivePolling(slug: string, since?: string): void {
