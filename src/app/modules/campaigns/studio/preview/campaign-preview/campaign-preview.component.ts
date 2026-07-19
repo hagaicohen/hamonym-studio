@@ -58,7 +58,11 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   hoveredBlockId: string | null = null;
   pageBuilderActive = false;
   private _destroy$ = new Subject<void>();
-  setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'preview'); }
+  // Hovering the preview no longer highlights the builder panel — only the
+  // other direction (builder → preview) stays active. Left as a no-op
+  // rather than removing every (mouseenter)/(mouseleave) binding in the
+  // template, so this is a one-line revert if that's ever wanted back.
+  setHovered(id: string | null): void {}
   private sanitizer       = inject(DomSanitizer);
   private entityService   = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);

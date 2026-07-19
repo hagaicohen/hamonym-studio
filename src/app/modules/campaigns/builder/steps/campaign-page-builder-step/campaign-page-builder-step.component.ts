@@ -121,12 +121,8 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.state.migrateSidebarToContainers();
     this.state.setPageBuilderActive(true);
-    this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id, source }) => {
+    this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
-      if (id && source === 'preview') {
-        setTimeout(() => document.getElementById(`editor-blk-${id}`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-      }
     });
   }
 
