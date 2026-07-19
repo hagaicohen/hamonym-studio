@@ -221,6 +221,11 @@ export interface TabsBlockData {
   childBlockIds: string[];
   styleVariant:  'underline' | 'pills' | 'boxed';
   accentColor:   string;
+  // 'same' (or undefined) = render as this block's own `type` on every
+  // device. 'tabs'/'accordion' overrides the layout on mobile only — e.g. a
+  // block whose type is 'tabs' can still show as panels on small screens.
+  // Desktop always renders as `type`, regardless of this field.
+  mobileLayout?: 'same' | 'tabs' | 'accordion';
 }
 
 // Deliberately the exact same shape as TabsBlockData (see BlockType's
@@ -230,6 +235,7 @@ export interface AccordionBlockData {
   childBlockIds: string[];
   styleVariant:  'underline' | 'pills' | 'boxed';
   accentColor:   string;
+  mobileLayout?: 'same' | 'tabs' | 'accordion';
 }
 
 export type BlockData =

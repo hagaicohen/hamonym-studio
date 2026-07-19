@@ -13,6 +13,7 @@ import {
   CampaignStudioStateService,
   CampaignDraft,
   CampaignBlock,
+  BlockType,
   Offering,
   RichTextBlockData,
   ImageBlockData,
@@ -486,6 +487,18 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
   setActiveTab(blockId: string, tabId: string): void {
     this.activeTabByBlock.set(blockId, tabId);
+  }
+
+  // Lets a single tabs/accordion block render differently on mobile than on
+  // desktop (e.g. tabs on desktop, panels on mobile) — desktop always uses
+  // the block's own `type`; mobile uses it too unless mobileLayout overrides
+  // it. TabsBlockData/AccordionBlockData share the exact same shape, so this
+  // cast is safe regardless of which of the two `block.type` actually is.
+  effectiveBlockType(block: CampaignBlock, mobile: boolean): BlockType {
+    if (block.type !== 'tabs' && block.type !== 'accordion') return block.type;
+    const layout = (block.data as TabsBlockData).mobileLayout;
+    if (mobile && layout && layout !== 'same') return layout;
+    return block.type;
   }
 
   // ── Accordion (panels) — independent, multi-open by design: each panel

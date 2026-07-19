@@ -725,7 +725,7 @@
   <!-- TABS — each tab is a real 'container' block; only the active one's
        content renders, via the exact same container-rendering branch above
        (recursive blockTpl call on the active tab itself). -->
-  <div class="block-tabs" *ngIf="block.type === 'tabs'"
+  <div class="block-tabs" *ngIf="effectiveBlockType(block, mobile) === 'tabs'"
     [class.block-tabs--underline]="asTabs(block.data).styleVariant === 'underline'"
     [class.block-tabs--pills]="asTabs(block.data).styleVariant === 'pills'"
     [class.block-tabs--boxed]="asTabs(block.data).styleVariant === 'boxed'"
@@ -745,7 +745,7 @@
   <!-- ACCORDION (panels) — each panel is a real 'container' block, same as
        tabs above, but every panel can be open/closed independently instead
        of only one active child at a time. -->
-  <div class="block-accordion" *ngIf="block.type === 'accordion'"
+  <div class="block-accordion" *ngIf="effectiveBlockType(block, mobile) === 'accordion'"
     [class.block-accordion--underline]="asAccordion(block.data).styleVariant === 'underline'"
     [class.block-accordion--pills]="asAccordion(block.data).styleVariant === 'pills'"
     [class.block-accordion--boxed]="asAccordion(block.data).styleVariant === 'boxed'"

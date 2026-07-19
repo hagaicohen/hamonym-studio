@@ -463,6 +463,17 @@
               [showNone]="true">
             </app-color-picker>
           </div>
+          <div class="editor-row">
+            <label class="editor-label">תצוגה במובייל</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="!asTabs(block.data).mobileLayout || asTabs(block.data).mobileLayout === 'same'"
+                (click)="updateTabsField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
+              <button class="direction-btn"
+                [class.active]="asTabs(block.data).mobileLayout === 'accordion'"
+                (click)="updateTabsField(block.id, 'mobileLayout', 'accordion')">🗂️ פאנלים</button>
+            </div>
+          </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
             🗂️ הפוך לפאנלים (נפתחים/נסגרים)
@@ -492,6 +503,17 @@
               (valueChange)="updateAccordionField(block.id, 'accentColor', $event)"
               [showNone]="true">
             </app-color-picker>
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">תצוגה במובייל</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="!asAccordion(block.data).mobileLayout || asAccordion(block.data).mobileLayout === 'same'"
+                (click)="updateAccordionField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
+              <button class="direction-btn"
+                [class.active]="asAccordion(block.data).mobileLayout === 'tabs'"
+                (click)="updateAccordionField(block.id, 'mobileLayout', 'tabs')">📑 טאבים</button>
+            </div>
           </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
