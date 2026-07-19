@@ -20,6 +20,7 @@ import {
   CtaBlockData,
   DividerBlockData,
   UpdatesBlockData,
+  ShareBlockData,
   CampaignDraft,
   CampaignTheme,
 } from '../../../services/campaign-studio-state.service';
@@ -49,6 +50,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'updates':     'עדכונים',
   'hero':        'Hero (תמונה ראשית)',
   'tabs':        'טאבים',
+  'share':       'שיתוף',
 };
 
 const BLOCK_ICONS: Record<BlockType, string> = {
@@ -69,15 +71,16 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'updates':     '📢',
   'hero':        '🌄',
   'tabs':        '📑',
+  'share':       '🔗',
 };
 
-const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero'];
+const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share'];
 
 // Block groups for the picker UI
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
   { label: 'פריסה',   types: ['container', 'hero', 'tabs'] },
-  { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards'] },
+  { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards', 'share'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
   { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
   { label: 'עיצוב',   types: ['divider'] },
@@ -85,7 +88,7 @@ export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
 
 const ADDABLE_BLOCKS: BlockType[] = [
   'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs',
-  'stats', 'donation-widget', 'cta', 'divider',
+  'stats', 'donation-widget', 'cta', 'divider', 'share',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
 ];
 
@@ -555,11 +558,21 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   asDonationWidget(data: unknown): DonationWidgetBlockData { return data as DonationWidgetBlockData; }
   asCta(data: unknown): CtaBlockData                     { return data as CtaBlockData; }
   asDivider(data: unknown): DividerBlockData             { return data as DividerBlockData; }
+  asShare(data: unknown): ShareBlockData                 { return data as ShareBlockData; }
 
   updateDividerField(id: string, field: keyof DividerBlockData, value: number | boolean | string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as DividerBlockData);
+  }
+
+  toggleSharePlatform(id: string, platform: keyof ShareBlockData['platforms']): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as ShareBlockData;
+    this.state.updateBlockData(id, {
+      ...data, platforms: { ...data.platforms, [platform]: !data.platforms[platform] },
+    } as ShareBlockData);
   }
 
   asUpdatesBlock(data: unknown): UpdatesBlockData { return data as UpdatesBlockData; }

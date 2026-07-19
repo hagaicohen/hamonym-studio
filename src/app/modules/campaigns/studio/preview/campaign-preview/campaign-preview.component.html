@@ -248,25 +248,6 @@
 
     </section>
 
-    <!-- SHARE — dynamic, always reflects this campaign's own title/URL -->
-    <div class="hm-share-row">
-      <button class="hm-share-btn hm-share-btn--link" type="button" (click)="copyShareLink(draft)">
-        <span class="hm-share-icon">🔗</span> {{ linkCopied ? 'הועתק!' : 'העתקת קישור' }}
-      </button>
-      <button class="hm-share-btn hm-share-btn--email" type="button" (click)="shareEmail(draft)">
-        <span class="hm-share-icon">✉️</span> אימייל
-      </button>
-      <button class="hm-share-btn hm-share-btn--x" type="button" (click)="shareX(draft)" aria-label="שתפו ב-X">
-        𝕏
-      </button>
-      <button class="hm-share-btn hm-share-btn--facebook" type="button" (click)="shareFacebook(draft)">
-        <span class="hm-share-icon">📘</span> Facebook
-      </button>
-      <button class="hm-share-btn hm-share-btn--whatsapp" type="button" (click)="shareWhatsApp(draft)">
-        <span class="hm-share-icon">💬</span> WhatsApp
-      </button>
-    </div>
-
     <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
       [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
@@ -778,6 +759,25 @@
         {{ asCta(block.data).ctaConfig.label }}
       </button>
     </div>
+  </div>
+
+  <!-- SHARE -->
+  <div class="hm-share-row" *ngIf="block.type === 'share'">
+    <button class="hm-share-btn hm-share-btn--link" type="button" *ngIf="asShare(block.data).platforms.link" (click)="copyShareLink(draft)">
+      <span class="hm-share-icon">🔗</span> {{ linkCopied ? 'הועתק!' : 'העתקת קישור' }}
+    </button>
+    <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)">
+      <span class="hm-share-icon">✉️</span> אימייל
+    </button>
+    <button class="hm-share-btn hm-share-btn--x" type="button" *ngIf="asShare(block.data).platforms.x" (click)="shareX(draft)" aria-label="שתפו ב-X">
+      𝕏
+    </button>
+    <button class="hm-share-btn hm-share-btn--facebook" type="button" *ngIf="asShare(block.data).platforms.facebook" (click)="shareFacebook(draft)">
+      <span class="hm-share-icon">📘</span> Facebook
+    </button>
+    <button class="hm-share-btn hm-share-btn--whatsapp" type="button" *ngIf="asShare(block.data).platforms.whatsapp" (click)="shareWhatsApp(draft)">
+      <span class="hm-share-icon">💬</span> WhatsApp
+    </button>
   </div>
 
   <!-- SPACER / DIVIDER -->

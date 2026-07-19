@@ -688,6 +688,46 @@
           </div>
         </div>
 
+        <!-- ── SHARE ── -->
+        <div class="editor-field" *ngIf="block.type === 'share'">
+          <label class="editor-label">אילו אפשרויות שיתוף להציג</label>
+          <div class="donation-toggle-item"
+            (click)="toggleSharePlatform(block.id, 'link')">
+            <span class="donation-toggle-text">🔗 העתקת קישור</span>
+            <span class="toggle-pill" [class.on]="asShare(block.data).platforms.link">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+          <div class="donation-toggle-item"
+            (click)="toggleSharePlatform(block.id, 'email')">
+            <span class="donation-toggle-text">✉️ אימייל</span>
+            <span class="toggle-pill" [class.on]="asShare(block.data).platforms.email">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+          <div class="donation-toggle-item"
+            (click)="toggleSharePlatform(block.id, 'x')">
+            <span class="donation-toggle-text">𝕏 X (טוויטר)</span>
+            <span class="toggle-pill" [class.on]="asShare(block.data).platforms.x">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+          <div class="donation-toggle-item"
+            (click)="toggleSharePlatform(block.id, 'facebook')">
+            <span class="donation-toggle-text">📘 Facebook</span>
+            <span class="toggle-pill" [class.on]="asShare(block.data).platforms.facebook">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+          <div class="donation-toggle-item"
+            (click)="toggleSharePlatform(block.id, 'whatsapp')">
+            <span class="donation-toggle-text">💬 WhatsApp</span>
+            <span class="toggle-pill" [class.on]="asShare(block.data).platforms.whatsapp">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── CONTAINER CHILDREN TREE ── (always visible when block is a container) -->

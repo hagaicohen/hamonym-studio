@@ -54,7 +54,12 @@ export type BlockType =
   | 'sponsors'
   | 'ambassadors'
   | 'donors'
-  | 'updates';
+  | 'updates'
+  // Social-share buttons (copy link/email/X/Facebook/WhatsApp) — content is
+  // always derived from the campaign's own title/slug, nothing to store per
+  // instance. Opt-in only: nothing adds one automatically, the manager adds
+  // it (and positions it) like any other block. See DECISIONS.md (2026-07-19).
+  | 'share';
 
 export type StatKey =
   | 'target' | 'raised' | 'percent' | 'supporters'
@@ -112,6 +117,16 @@ export interface DividerBlockData {
 
 export interface DonorsBlockData {
   viewMode: 'grid' | 'list';
+}
+
+export interface ShareBlockData {
+  platforms: {
+    link:     boolean;
+    email:    boolean;
+    x:        boolean;
+    facebook: boolean;
+    whatsapp: boolean;
+  };
 }
 
 // Block-level view configs — content lives at draft root level
@@ -211,6 +226,7 @@ export type BlockData =
   | SponsorsBlockData
   | AmbassadorsBlockData
   | UpdatesBlockData
+  | ShareBlockData
   | Record<string, never>;
 
 export interface CampaignBlock {
@@ -738,6 +754,7 @@ export class CampaignStudioStateService {
       'donors':          'תורמים',
       'updates':         'עדכונים',
       'tabs':            'טאבים',
+      'share':           'שיתוף',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -928,7 +945,7 @@ export class CampaignStudioStateService {
       'cta': 'קריאה לפעולה', 'divider': 'מרווח', 'container': 'מסגרת',
       'stats': 'פס נתונים', 'donation-widget': 'תיבת תרומה',
       'rewards': 'תשורות', 'sponsors': 'חסויות', 'ambassadors': 'שגרירים',
-      'donors': 'תורמים', 'updates': 'עדכונים', 'tabs': 'טאבים',
+      'donors': 'תורמים', 'updates': 'עדכונים', 'tabs': 'טאבים', 'share': 'שיתוף',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -1012,6 +1029,7 @@ function defaultBlockData(type: BlockType): BlockData {
     case 'sponsors':    return {} as SponsorsBlockData;
     case 'ambassadors': return {} as AmbassadorsBlockData;
     case 'updates':     return { viewMode: 'slider' } as UpdatesBlockData;
+    case 'share':       return { platforms: { link: true, email: true, x: true, facebook: true, whatsapp: true } } as ShareBlockData;
     case 'cta':         return {
       title: '', text: '', backgroundColor: '#14532d',
       textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },

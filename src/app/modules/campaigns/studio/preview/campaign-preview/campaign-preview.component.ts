@@ -29,6 +29,7 @@ import {
   SponsorsBlockData,
   AmbassadorsBlockData,
   UpdatesBlockData,
+  ShareBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
@@ -782,6 +783,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asDonationWidget(data: unknown)   { return data as DonationWidgetBlockData; }
   asCta(data: unknown)              { return data as CtaBlockData; }
   ctaGap(blockHeight?: number): number { return Math.max(6, Math.round((blockHeight || 32) * 0.35)); }
+  asShare(data: unknown)            { return data as ShareBlockData; }
   asDivider(data: unknown)          { return data as DividerBlockData; }
   asDonors(data: unknown)           { return data as DonorsBlockData; }
   asSponsorsBlock(data: unknown)    { return data as SponsorsBlockData; }
