@@ -50,6 +50,20 @@
   direction: rtl;
 }
 
+/* Normal document flow (not fixed) — sits above the page and pushes it
+   down, rather than floating over the nav bar like .ambassador-edit-bar. */
+.owner-preview-bar {
+  background: #6D5DF6;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 14px;
+  text-align: center;
+  direction: rtl;
+}
+
 .ambassador-edit-label {
   opacity: 0.9;
 }
