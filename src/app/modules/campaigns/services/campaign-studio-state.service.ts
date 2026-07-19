@@ -44,6 +44,13 @@ export type BlockType =
   // block-type-inside) — see TabsBlockData below and DECISIONS.md
   // (2026-07-17).
   | 'tabs'
+  // Same architecture as 'tabs' — each panel IS a regular 'container' block
+  // (AccordionBlockData shares TabsBlockData's exact shape on purpose), just
+  // rendered as a vertically-stacked, independently expand/collapse list
+  // instead of a header-bar-plus-one-active-child. Because the shapes are
+  // identical, converting a block between 'tabs' and 'accordion' is just
+  // swapping its `type` — no data migration. See DECISIONS.md (2026-07-19).
+  | 'accordion'
   // 'rewards' = the Page Builder block that renders the Offerings section.
   // Legacy persisted value — do NOT rename to 'offerings' without a data
   // migration. It's already stored literally as JSON in every existing
@@ -179,6 +186,12 @@ export interface ContainerBlockData {
   // campaign-preview.component.ts sidebarBlocks()/mainColumnBlocks() and
   // DECISIONS.md (2026-07-17).
   railZone?:           'sidebar' | 'main';
+  // Only meaningful when this container is a child of an 'accordion' block
+  // (i.e. IS a panel) — whether the panel starts expanded, and an optional
+  // icon shown in its header. The panel's header TEXT is just the block's
+  // own `label`, same as a tab's title — no separate field needed for that.
+  panelDefaultOpen?:   boolean;
+  panelIcon?:          string;
 }
 
 export interface CtaBlockData {
@@ -210,6 +223,15 @@ export interface TabsBlockData {
   accentColor:   string;
 }
 
+// Deliberately the exact same shape as TabsBlockData (see BlockType's
+// 'accordion' doc comment) — converting a block between the two types is
+// just swapping `type`, no data transformation needed.
+export interface AccordionBlockData {
+  childBlockIds: string[];
+  styleVariant:  'underline' | 'pills' | 'boxed';
+  accentColor:   string;
+}
+
 export type BlockData =
   | RichTextBlockData
   | ImageBlockData
@@ -218,6 +240,7 @@ export type BlockData =
   | SplitBlockData
   | ContainerBlockData
   | TabsBlockData
+  | AccordionBlockData
   | StatsBlockData
   | DonationWidgetBlockData
   | CtaBlockData
@@ -754,6 +777,7 @@ export class CampaignStudioStateService {
       'donors':          'תורמים',
       'updates':         'עדכונים',
       'tabs':            'טאבים',
+      'accordion':       'פאנלים',
       'share':           'שיתוף',
     };
     const baseName = defaultLabels[type] ?? type;
@@ -785,7 +809,31 @@ export class CampaignStudioStateService {
         }),
       });
     }
+    // Same reasoning as tabs above — an empty panel list looks broken.
+    // First panel starts open so the accordion isn't fully collapsed/empty-
+    // looking on first add.
+    if (type === 'accordion') {
+      const panel1Id = this.addBlockToContainer(id, 'container');
+      const panel2Id = this.addBlockToContainer(id, 'container');
+      this.patch({
+        blocks: this.draft.blocks.map(b => {
+          if (b.id === panel1Id) return { ...b, label: 'פאנל 1', data: { ...(b.data as ContainerBlockData), panelDefaultOpen: true } };
+          if (b.id === panel2Id) return { ...b, label: 'פאנל 2', data: { ...(b.data as ContainerBlockData), panelDefaultOpen: false } };
+          return b;
+        }),
+      });
+    }
     return id;
+  }
+
+  // Tabs and accordion share the exact same data shape (childBlockIds +
+  // styleVariant + accentColor) — converting between them is just swapping
+  // `type`, no data transformation. See BlockType's 'accordion' doc comment.
+  convertTabsAccordionType(id: string): void {
+    const block = this.draft.blocks.find(b => b.id === id);
+    if (!block || (block.type !== 'tabs' && block.type !== 'accordion')) return;
+    const newType: BlockType = block.type === 'tabs' ? 'accordion' : 'tabs';
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, type: newType } : b) });
   }
 
   // Deleting a container/tabs block with children used to leave those
@@ -804,7 +852,7 @@ export class CampaignStudioStateService {
       added = false;
       for (const b of this.draft.blocks) {
         if (!toRemove.has(b.id)) continue;
-        if (b.type !== 'container' && b.type !== 'tabs') continue;
+        if (b.type !== 'container' && b.type !== 'tabs' && b.type !== 'accordion') continue;
         for (const childId of (b.data as ContainerBlockData).childBlockIds) {
           if (!toRemove.has(childId)) { toRemove.add(childId); added = true; }
         }
@@ -813,7 +861,7 @@ export class CampaignStudioStateService {
     const blocks = this.draft.blocks
       .filter(b => !toRemove.has(b.id))
       .map(b => {
-        if (b.type !== 'container' && b.type !== 'tabs') return b;
+        if (b.type !== 'container' && b.type !== 'tabs' && b.type !== 'accordion') return b;
         const data = b.data as ContainerBlockData;
         if (!data.childBlockIds.some(cid => toRemove.has(cid))) return b;
         return { ...b, data: { ...data, childBlockIds: data.childBlockIds.filter(cid => !toRemove.has(cid)) } };
@@ -996,6 +1044,7 @@ function defaultBlockData(type: BlockType): BlockData {
     case 'split':       return { leftBlockId: null, rightBlockId: null, leftPercent: 50 } as SplitBlockData;
     case 'container':   return { childBlockIds: [], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData;
     case 'tabs':        return { childBlockIds: [], styleVariant: 'underline', accentColor: '' } as TabsBlockData;
+    case 'accordion':   return { childBlockIds: [], styleVariant: 'underline', accentColor: '' } as AccordionBlockData;
     case 'stats':       return {
       style:           'cards',
       size:            'md',

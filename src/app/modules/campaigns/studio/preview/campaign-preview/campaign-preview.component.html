@@ -742,6 +742,28 @@
     </div>
   </div>
 
+  <!-- ACCORDION (panels) — each panel is a real 'container' block, same as
+       tabs above, but every panel can be open/closed independently instead
+       of only one active child at a time. -->
+  <div class="block-accordion" *ngIf="block.type === 'accordion'"
+    [class.block-accordion--underline]="asAccordion(block.data).styleVariant === 'underline'"
+    [class.block-accordion--pills]="asAccordion(block.data).styleVariant === 'pills'"
+    [class.block-accordion--boxed]="asAccordion(block.data).styleVariant === 'boxed'"
+    [style.--accordion-accent]="asAccordion(block.data).accentColor || primaryColor(draft)">
+    <div class="accordion-panel" *ngFor="let panel of childBlocks(block, draft)">
+      <button type="button" class="accordion-panel-header"
+        [class.open]="isPanelOpen(block.id, panel.id, childBlocks(block, draft))"
+        (click)="togglePanel(block.id, panel.id, childBlocks(block, draft))">
+        <span class="accordion-panel-icon" *ngIf="asContainer(panel.data).panelIcon">{{ asContainer(panel.data).panelIcon }}</span>
+        <span class="accordion-panel-title">{{ panel.label }}</span>
+        <span class="accordion-panel-chevron" [class.open]="isPanelOpen(block.id, panel.id, childBlocks(block, draft))">›</span>
+      </button>
+      <div class="accordion-panel-body" *ngIf="isPanelOpen(block.id, panel.id, childBlocks(block, draft))">
+        <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: panel, draft, heroTpl, mobile}"></ng-container>
+      </div>
+    </div>
+  </div>
+
   <!-- CTA -->
   <div class="block-cta" *ngIf="block.type === 'cta'"
     [style.background]="asCta(block.data).backgroundColor"

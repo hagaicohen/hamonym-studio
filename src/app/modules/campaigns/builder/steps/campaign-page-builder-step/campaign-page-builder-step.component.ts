@@ -14,6 +14,7 @@ import {
   SplitBlockData,
   ContainerBlockData,
   TabsBlockData,
+  AccordionBlockData,
   StatsBlockData,
   StatItem,
   DonationWidgetBlockData,
@@ -50,6 +51,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'updates':     'עדכונים',
   'hero':        'Hero (תמונה ראשית)',
   'tabs':        'טאבים',
+  'accordion':   'פאנלים',
   'share':       'שיתוף',
 };
 
@@ -71,6 +73,7 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'updates':     '📢',
   'hero':        '🌄',
   'tabs':        '📑',
+  'accordion':   '🗂️',
   'share':       '🔗',
 };
 
@@ -79,7 +82,7 @@ const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'don
 // Block groups for the picker UI
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
-  { label: 'פריסה',   types: ['container', 'hero', 'tabs'] },
+  { label: 'פריסה',   types: ['container', 'hero', 'tabs', 'accordion'] },
   { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards', 'share'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
   { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
@@ -87,7 +90,7 @@ export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
 ];
 
 const ADDABLE_BLOCKS: BlockType[] = [
-  'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs',
+  'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs', 'accordion',
   'stats', 'donation-widget', 'cta', 'divider', 'share',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
 ];
@@ -179,7 +182,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   private childIdSet(blocks: CampaignBlock[]): Set<string> {
     return new Set(
-      blocks.filter(b => b.type === 'container' || b.type === 'tabs')
+      blocks.filter(b => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
   }
@@ -190,7 +193,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   containerChildren(block: CampaignBlock, blocks: CampaignBlock[]): CampaignBlock[] {
-    if (block.type !== 'container' && block.type !== 'tabs') return [];
+    if (block.type !== 'container' && block.type !== 'tabs' && block.type !== 'accordion') return [];
     const ids = (block.data as ContainerBlockData).childBlockIds;
     return ids.map(id => blocks.find(b => b.id === id))
       .filter((b): b is CampaignBlock => !!b)
@@ -398,10 +401,33 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     if (newId) this.updateLabel(newId, `טאב ${tabCount + 1}`);
   }
 
+  // Panels — same reasoning as addTab above. New panels start closed
+  // (panelDefaultOpen defaults to falsy/undefined) so adding one doesn't
+  // suddenly expand something the manager didn't ask to open.
+  addPanel(accordionBlockId: string, blocks: CampaignBlock[]): void {
+    const panelCount = this.containerChildren(blocks.find(b => b.id === accordionBlockId)!, blocks).length;
+    const newId = this.state.addBlockToContainer(accordionBlockId, 'container');
+    if (newId) this.updateLabel(newId, `פאנל ${panelCount + 1}`);
+  }
+
+  convertTabsAccordionType(id: string): void { this.state.convertTabsAccordionType(id); }
+
+  updatePanelField(id: string, field: 'panelDefaultOpen' | 'panelIcon', value: boolean | string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as ContainerBlockData);
+  }
+
   updateTabsField(id: string, field: keyof TabsBlockData, value: string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as TabsBlockData);
+  }
+
+  updateAccordionField(id: string, field: keyof AccordionBlockData, value: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as AccordionBlockData);
   }
 
   setContainerRailZone(id: string, zone: 'sidebar' | 'main' | null): void {
@@ -554,6 +580,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   asSplit(data: unknown): SplitBlockData             { return data as SplitBlockData; }
   asContainer(data: unknown): ContainerBlockData         { return data as ContainerBlockData; }
   asTabs(data: unknown): TabsBlockData                   { return data as TabsBlockData; }
+  asAccordion(data: unknown): AccordionBlockData         { return data as AccordionBlockData; }
   asStats(data: unknown): StatsBlockData                 { return data as StatsBlockData; }
   asDonationWidget(data: unknown): DonationWidgetBlockData { return data as DonationWidgetBlockData; }
   asCta(data: unknown): CtaBlockData                     { return data as CtaBlockData; }

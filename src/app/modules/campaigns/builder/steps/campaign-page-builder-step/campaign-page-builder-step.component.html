@@ -54,9 +54,9 @@
 
       <!-- Block Header -->
       <div class="block-header" (click)="toggleEdit(block.id)">
-        <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : blockIcon(block) }}</span>
+        <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : parentBlock?.type === 'accordion' ? '🗂️' : blockIcon(block) }}</span>
         <div class="block-header-info">
-          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : blockLabel(block) }}</span>
+          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}</span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
@@ -292,6 +292,26 @@
         <!-- ── CONTAINER ── -->
         <div class="container-editor" *ngIf="block.type === 'container'">
 
+          <!-- Panel settings — only shown when this container IS a panel
+               (its parent is an 'accordion' block). -->
+          <ng-container *ngIf="parentBlock?.type === 'accordion'">
+            <div class="donation-toggle-item"
+              (click)="updatePanelField(block.id, 'panelDefaultOpen', !asContainer(block.data).panelDefaultOpen)">
+              <span class="donation-toggle-text">פתוח בהתחלה</span>
+              <span class="toggle-pill" [class.on]="asContainer(block.data).panelDefaultOpen">
+                <span class="toggle-pill-dot"></span>
+              </span>
+            </div>
+            <div class="editor-row" style="margin-top:8px">
+              <label class="editor-label">אייקון (אופציונלי)</label>
+              <input class="editor-input" type="text" maxlength="4" style="max-width:70px; text-align:center"
+                [value]="asContainer(block.data).panelIcon || ''"
+                (input)="updatePanelField(block.id, 'panelIcon', $any($event.target).value)"
+                placeholder="🎯">
+            </div>
+            <div class="editor-divider"></div>
+          </ng-container>
+
           <!-- Rail zone — only meaningful for a top-level container in a
                sidebar layout: designates this container's children as the
                sticky full-height rail, or as the entire main column (Hero
@@ -443,6 +463,40 @@
               [showNone]="true">
             </app-color-picker>
           </div>
+          <button class="container-add-btn" type="button" style="margin-top:8px"
+            (click)="convertTabsAccordionType(block.id)">
+            🗂️ הפוך לפאנלים (נפתחים/נסגרים)
+          </button>
+        </div>
+
+        <!-- ── ACCORDION (panels) ── -->
+        <div class="container-editor" *ngIf="block.type === 'accordion'">
+          <div class="editor-row">
+            <label class="editor-label">סגנון פאנלים</label>
+            <div class="direction-toggle">
+              <button class="direction-btn"
+                [class.active]="asAccordion(block.data).styleVariant === 'underline'"
+                (click)="updateAccordionField(block.id, 'styleVariant', 'underline')">פשוט</button>
+              <button class="direction-btn"
+                [class.active]="asAccordion(block.data).styleVariant === 'pills'"
+                (click)="updateAccordionField(block.id, 'styleVariant', 'pills')">מעוגל</button>
+              <button class="direction-btn"
+                [class.active]="asAccordion(block.data).styleVariant === 'boxed'"
+                (click)="updateAccordionField(block.id, 'styleVariant', 'boxed')">תחום</button>
+            </div>
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">צבע הדגשה</label>
+            <app-color-picker
+              [value]="asAccordion(block.data).accentColor"
+              (valueChange)="updateAccordionField(block.id, 'accentColor', $event)"
+              [showNone]="true">
+            </app-color-picker>
+          </div>
+          <button class="container-add-btn" type="button" style="margin-top:8px"
+            (click)="convertTabsAccordionType(block.id)">
+            📑 הפוך לטאבים
+          </button>
         </div>
 
         <!-- ── STATS ── -->
@@ -798,6 +852,29 @@
         </ng-container>
         <ng-template #emptyTabsTpl>
           <div class="container-empty-hint">לחצו על "+ הוסף טאב" כדי להתחיל</div>
+        </ng-template>
+      </div>
+
+      <!-- ── ACCORDION CHILDREN — same reasoning as TABS CHILDREN above,
+           each panel is a real 'container' block. ── -->
+      <div class="container-children-tree" *ngIf="block.type === 'accordion'">
+        <div class="container-tree-header">
+          <span class="container-tree-label">
+            🗂️ {{ containerChildren(block, draft.blocks).length }} פאנלים
+          </span>
+          <button class="container-add-btn" type="button" (click)="addPanel(block.id, draft.blocks)">
+            + הוסף פאנל
+          </button>
+        </div>
+
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyAccordionTpl">
+          <ng-container *ngFor="let panel of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: panel, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyAccordionTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף פאנל" כדי להתחיל</div>
         </ng-template>
       </div>
 

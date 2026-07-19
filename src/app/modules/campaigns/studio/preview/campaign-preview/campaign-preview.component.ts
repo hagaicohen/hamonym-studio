@@ -21,6 +21,7 @@ import {
   SplitBlockData,
   ContainerBlockData,
   TabsBlockData,
+  AccordionBlockData,
   StatsBlockData,
   DonationWidgetBlockData,
   CtaBlockData,
@@ -455,7 +456,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private topLevelChildIds(draft: CampaignDraft): Set<string> {
     return new Set(
       draft.blocks
-        .filter(b => b.type === 'container' || b.type === 'tabs')
+        .filter(b => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
   }
@@ -485,6 +486,25 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
   setActiveTab(blockId: string, tabId: string): void {
     this.activeTabByBlock.set(blockId, tabId);
+  }
+
+  // ── Accordion (panels) — independent, multi-open by design: each panel
+  // toggles on its own, unlike tabs' single-active-child. Seeded lazily from
+  // each panel's own panelDefaultOpen the first time an accordion is touched.
+  private openPanelsByAccordion = new Map<string, Set<string>>();
+  private ensureAccordionInit(accordionId: string, panels: CampaignBlock[]): Set<string> {
+    if (!this.openPanelsByAccordion.has(accordionId)) {
+      const openIds = panels.filter(p => (p.data as ContainerBlockData).panelDefaultOpen).map(p => p.id);
+      this.openPanelsByAccordion.set(accordionId, new Set(openIds));
+    }
+    return this.openPanelsByAccordion.get(accordionId)!;
+  }
+  isPanelOpen(accordionId: string, panelId: string, panels: CampaignBlock[]): boolean {
+    return this.ensureAccordionInit(accordionId, panels).has(panelId);
+  }
+  togglePanel(accordionId: string, panelId: string, panels: CampaignBlock[]): void {
+    const open = this.ensureAccordionInit(accordionId, panels);
+    if (open.has(panelId)) open.delete(panelId); else open.add(panelId);
   }
 
   // ── Stats ──
@@ -779,6 +799,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asSplit(data: unknown)            { return data as SplitBlockData; }
   asContainer(data: unknown)        { return data as ContainerBlockData; }
   asTabs(data: unknown)             { return data as TabsBlockData; }
+  asAccordion(data: unknown)        { return data as AccordionBlockData; }
   asStats(data: unknown)            { return data as StatsBlockData; }
   asDonationWidget(data: unknown)   { return data as DonationWidgetBlockData; }
   asCta(data: unknown)              { return data as CtaBlockData; }
