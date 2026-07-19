@@ -94,5 +94,11 @@ router.post(
   controller.adviseCampaign
 );
 
+router.post(
+  '/:id/generate-metadata',
+  requireAuth,
+  controller.generateCampaignMetadata
+);
+
 module.exports =
   router;

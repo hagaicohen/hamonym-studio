@@ -1,6 +1,15 @@
 const db =
   require('../../db/db');
 
+const { isEntityMember } =
+  require('../../middleware/entity-permission.middleware');
+
+// The placeholder createCampaign backfills when a draft has no title yet
+// (see below) — exported so anything that needs to tell "a real title" apart
+// from "just the cosmetic default" (e.g. CampaignAdvisorAgent's hasTitle
+// fact) can compare against it instead of duplicating the literal.
+exports.DEFAULT_TITLE = 'קמפיין ללא כותרת';
+
 /*
 |--------------------------------------------------------------------------
 | HELPERS
@@ -12,25 +21,7 @@ async function validateOwnership(
   entityId
 ) {
 
-  const result =
-    await db.query(
-
-      `
-      SELECT 1
-      FROM user_entities
-      WHERE user_id = $1
-      AND entity_id = $2
-      LIMIT 1
-      `,
-
-      [
-        userId,
-        entityId
-      ]
-
-    );
-
-  return result.rows.length > 0;
+  return isEntityMember(userId, entityId);
 
 }
 
@@ -139,13 +130,16 @@ exports.createCampaign =
 
     }
 
-    if (!data.title) {
-
-      throw new Error(
-        'Title is required'
-      );
-
-    }
+    // טיוטה ללא כותרת נשארת ריקה בפועל — לא חוסמים יצירת קמפיין רק כי עדיין
+    // לא מולאה כותרת (המשתמש עדיין "בבנייה" ויכול לנווט חופשי בין השלבים
+    // בכל סדר, ר' DECISIONS.md), אבל אין סיבה לכתוב ערך פיקטיבי לעמודה —
+    // ה-DB כבר מקבל '' (ברירת המחדל של העמודה עצמה), ואין דבר שדורש כאן ערך
+    // אמת. כתיבת "קמפיין ללא כותרת" בעבר גרמה לכותרת הזו להיראות כאילו היא
+    // אמיתית בכל מקום שקורא אותה — בשדה הכותרת עצמו, בצ'קליסט הפרסום, ואצל
+    // CampaignAdvisorAgent (שדילג על הצעת כותרת כי חשב שכבר יש אחת). ר.
+    // DEFAULT_TITLE למעלה — עדיין נשמר כתאימות-לאחור לקמפיינים ישנים שכבר
+    // נשמרו עם הערך הזה, לא לשימוש חדש. See DECISIONS.md (2026-07-17).
+    data.title = data.title || '';
 
     // טיוטה ללא slug — מייצרים אוטומטית
     if (!data.slug) {
@@ -224,7 +218,10 @@ exports.createCampaign =
             updates,
 
             blocks,
-            layout
+            layout,
+
+            registration_field_label,
+            registration_field_icon
 
           )
 
@@ -254,7 +251,9 @@ exports.createCampaign =
 
             $34,$35,$36,$37,
 
-            $38,$39
+            $38,$39,
+
+            $40,$41
 
           )
 
@@ -349,7 +348,10 @@ exports.createCampaign =
 
             JSON.stringify(
               data.layout || {}
-            )
+            ),
+
+            data.registration_field_label || null,
+            data.registration_field_icon  || null
 
           ]
 
@@ -357,6 +359,8 @@ exports.createCampaign =
 
       const campaign = result.rows[0];
       await syncAmbassadors(campaign.id, data.ambassadors);
+      await syncRegistrationOptions(campaign.id, data.registration_options);
+      campaign.registration_options = await getRegistrationOptions(campaign.id);
       require('../dashboard/dashboard.service').invalidateDashboard(campaign.entity_id);
       return campaign;
 
@@ -425,6 +429,48 @@ async function syncAmbassadors(campaignId, ambassadors) {
       ]
     );
   }
+}
+
+/*
+|--------------------------------------------------------------------------
+| SYNC REGISTRATION OPTIONS (JSON draft array → registration_options table)
+|--------------------------------------------------------------------------
+| Delete-all + reinsert rather than a slug-style upsert (unlike
+| syncAmbassadors above) — options have no natural business key to match on
+| (the optional `key` field can be empty/duplicate), the array is small and
+| edited by one admin, and existing registration_participants rows keep
+| their own option_key/option_title snapshot regardless (ON DELETE SET NULL
+| on registration_option_id), so re-numbering ids on every save is harmless.
+| See docs/DECISIONS.md (2026-07-16).
+*/
+
+async function syncRegistrationOptions(campaignId, options) {
+  if (options === undefined) return;
+
+  await db.query('DELETE FROM registration_options WHERE campaign_id = $1', [campaignId]);
+
+  if (!Array.isArray(options) || options.length === 0) return;
+
+  for (let i = 0; i < options.length; i++) {
+    const o = options[i];
+    if (!o || !o.title || o.price == null) continue;
+    await db.query(
+      `INSERT INTO registration_options (campaign_id, key, title, description, price, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [campaignId, o.key || null, o.title, o.description || null, o.price, i]
+    );
+  }
+}
+
+async function getRegistrationOptions(campaignId) {
+  const { rows } = await db.query(
+    `SELECT id, key, title, description, price, sort_order
+     FROM registration_options
+     WHERE campaign_id = $1
+     ORDER BY sort_order`,
+    [campaignId]
+  );
+  return rows;
 }
 
 /*
@@ -513,7 +559,11 @@ exports.getCampaignById =
 
       );
 
-    return result.rows[0] || null;
+    const campaign = result.rows[0] || null;
+    if (campaign) {
+      campaign.registration_options = await getRegistrationOptions(campaign.id);
+    }
+    return campaign;
 
   };
 
@@ -581,6 +631,12 @@ exports.updateCampaign =
 
     }
 
+    // registration_options isn't a campaigns column — it's synced into its
+    // own table separately, below.
+    const registrationOptions = data.registration_options;
+    data = { ...data };
+    delete data.registration_options;
+
     data =
       sanitizeUpdateData(
         data
@@ -628,6 +684,8 @@ exports.updateCampaign =
       if (data.ambassadors !== undefined) {
         await syncAmbassadors(campaignId, data.ambassadors);
       }
+      await syncRegistrationOptions(campaignId, registrationOptions);
+      campaign.registration_options = await getRegistrationOptions(campaignId);
       require('../dashboard/dashboard.service').invalidateDashboard(campaign.entity_id);
       return campaign;
 
@@ -685,7 +743,11 @@ exports.getCampaignBySlug =
 
       );
 
-    return result.rows[0] || null;
+    const campaign = result.rows[0] || null;
+    if (campaign) {
+      campaign.registration_options = await getRegistrationOptions(campaign.id);
+    }
+    return campaign;
 
   };
 
@@ -706,7 +768,11 @@ exports.getCampaignBySlugPublic = async (slug) => {
      LIMIT 1`,
     [slug]
   );
-  return result.rows[0] || null;
+  const campaign = result.rows[0] || null;
+  if (campaign) {
+    campaign.registration_options = await getRegistrationOptions(campaign.id);
+  }
+  return campaign;
 };
 
 const DISCOVER_SORT_COLUMNS = {

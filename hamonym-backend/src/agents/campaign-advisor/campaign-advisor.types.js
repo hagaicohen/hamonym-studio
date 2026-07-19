@@ -38,9 +38,11 @@
  * doesn't validate). Every value here is something the code already
  * computed; the LLM interprets these, it doesn't derive them.
  * @property {string} title
+ * @property {boolean} hasTitle
  * @property {boolean} hasShortDescription
  * @property {number} contentTextLength - Approximate char count across all page-builder blocks (no dedicated "story" column exists — this is a best-effort proxy, not an exact story-only measure).
  * @property {boolean} hasContentBlocks
+ * @property {boolean} hasStoryContent - Whether any rich-text block has real text content. Unlike contentTextLength/hasContentBlocks, this counts only story text, not other block types — mirrors the frontend's hasStoryBlock check. title/shortDescription/story are intentionally NOT required to publish (a manager may hide them from the hero or tell the story differently in the page body) — this Agent is where "you don't have one" becomes a recommendation instead.
  * @property {boolean} hasHeroImage
  * @property {boolean} hasVideo
  * @property {boolean} hasHeroCta
@@ -61,6 +63,18 @@
  * @property {string} summary - 2-3 sentences, Hebrew.
  * @property {string[]} strengths - What's already working well.
  * @property {Array<{ topic: string, severity: 'Low'|'Medium'|'High', explanation: string, task: string }>} tasks
+ */
+
+/**
+ * @typedef {Object} MetadataSuggestion
+ * Returned by CampaignAdvisorAgent.generateMetadata (campaign-advisor.agent.js).
+ * A title/short-description candidate generated from the manager's own free
+ * text (rich-text blocks) — never invented, never a generic filler. Either
+ * field is null when it wasn't needed (the dedicated field already had a
+ * value) or when there wasn't enough real content to generate one
+ * confidently.
+ * @property {string|null} suggestedTitle - Max 80 chars.
+ * @property {string|null} suggestedShortDescription - Max 160 chars.
  */
 
 module.exports = {};

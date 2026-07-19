@@ -40,6 +40,9 @@ const donationsRoutes =
 const ambassadorsRoutes =
   require('./modules/ambassadors/ambassadors.routes');
 
+const registrationsRoutes =
+  require('./modules/registrations/registrations.routes');
+
 const dashboardRoutes =
   require('./modules/dashboard/dashboard.routes');
 
@@ -107,6 +110,11 @@ app.use(
 app.use(
   '/api/donations',
   donationsRoutes
+);
+
+app.use(
+  '/api/registrations',
+  registrationsRoutes
 );
 
 app.use(

@@ -61,12 +61,79 @@ async function finalizePaidDonation(donationId) {
 }
 exports.finalizePaidDonation = finalizePaidDonation;
 
+// Looks up every registrationOptionId a participant references, scoped to
+// this campaign and active — and rejects the whole request if any of them
+// don't resolve. Called BEFORE the donation row is created, so a bad/foreign
+// option id fails cleanly with no orphaned pending donation left behind.
+// Unlike the old Offering.type === 'registration' flow (a JSONB array with
+// zero backend awareness of its contents), Registration Options are a real
+// table now, so this is finally possible. See docs/DECISIONS.md (2026-07-16).
+async function loadRegistrationOptions(campaignId, participants) {
+  if (!participants || participants.length === 0) return new Map();
+
+  const ids = [...new Set(participants.map(p => p.registrationOptionId).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  const { rows } = await db.query(
+    `SELECT id, key, title FROM registration_options
+     WHERE campaign_id = $1 AND is_active = true AND id = ANY($2::uuid[])`,
+    [campaignId, ids]
+  );
+  const byId = new Map(rows.map(r => [r.id, { key: r.key, title: r.title }]));
+
+  const missing = ids.filter(id => !byId.has(id));
+  if (missing.length > 0) {
+    throw new Error('One or more registration options are invalid for this campaign');
+  }
+
+  return byId;
+}
+
+// Business-flow step (not a utility) that turns a donation with one or more
+// registered Participants into a Registration Order + one Participant row
+// each (2.4 — Multi-Participant Registration, 2026-07-15; Registration
+// Options data-model split, 2026-07-16). Runs regardless of payment
+// provider/outcome: there is no separate status here on purpose, it's
+// always derived by joining to the donation's own status. Deliberately NOT
+// a Schema/Rules engine — each participant just picks one existing
+// Registration Option, same shape as before. option_key/option_title are
+// snapshotted from `registrationOptionsById` (DB-sourced, via
+// loadRegistrationOptions above) rather than trusted client strings.
+// See docs/REGISTRATION_OFFERING_SPEC.md §1.3 and docs/DECISIONS.md.
+async function processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById) {
+  if (!participants || participants.length === 0) return;
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const orderRes = await client.query(
+      `INSERT INTO registration_orders (donation_id, campaign_id) VALUES ($1, $2) RETURNING id`,
+      [donationId, campaignId]
+    );
+    for (const p of participants) {
+      const option = p.registrationOptionId ? registrationOptionsById.get(p.registrationOptionId) : null;
+      await client.query(
+        `INSERT INTO registration_participants
+           (registration_order_id, registration_option_id, option_key, option_title, name, shirt_size)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [orderRes.rows[0].id, p.registrationOptionId || null, option?.key || null, option?.title || null, p.name, p.shirtSize || null]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmParams, ipAddress, userAgent }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent }) => {
 
   const isMock = process.env.PAYMENT_PROVIDER === 'mock';
 
@@ -100,6 +167,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
     throw new Error('Cardcom credentials not configured for this entity');
   }
 
+  // Validate participants' Registration Options before creating anything —
+  // see loadRegistrationOptions above.
+  const registrationOptionsById = await loadRegistrationOptions(campaignId, participants);
+
   // 2. Save pending donation
   const donationRes = await db.query(
     `INSERT INTO donations (
@@ -129,6 +200,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
     ]
   );
   const donationId = donationRes.rows[0].id;
+
+  await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
 
   // 3. Mock provider ג€” skip Cardcom, return mock payment URL
   if (isMock) {

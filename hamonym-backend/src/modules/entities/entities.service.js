@@ -4,6 +4,9 @@ const db =
 const supabase =
   require('../../lib/supabase');
 
+const { isEntityMember } =
+  require('../../middleware/entity-permission.middleware');
+
 // entities.* / RETURNING * pull in raw document bytea blobs stored on the
 // row (multi-MB PDFs) — fine for the upload/download endpoints that need
 // them, but every other entity read only ever displays metadata (name,
@@ -660,35 +663,8 @@ exports.updateEntity =
     // OWNERSHIP CHECK
     // =====================================================
 
-    const ownershipResult =
-      await db.query(
-
-        `
-        SELECT 1
-
-        FROM user_entities
-
-        WHERE user_id = $1
-        AND entity_id = $2
-
-        LIMIT 1
-        `,
-
-        [
-          userId,
-          entityId
-        ]
-
-      );
-
-    if (
-      !ownershipResult.rows.length
-    ) {
-
-      throw new Error(
-        'Unauthorized'
-      );
-
+    if (!(await isEntityMember(userId, entityId))) {
+      throw new Error('Unauthorized');
     }
 
     /*
@@ -978,11 +954,7 @@ exports.removeAssociationDocument =
   };
 
 async function checkOwnership(userId, entityId) {
-  const result = await db.query(
-    `SELECT 1 FROM user_entities WHERE user_id = $1 AND entity_id = $2 LIMIT 1`,
-    [userId, entityId]
-  );
-  if (!result.rows.length) throw new Error('Unauthorized');
+  if (!(await isEntityMember(userId, entityId))) throw new Error('Unauthorized');
 }
 
 exports.getApprovalStatus = async (entityId, userId) => {

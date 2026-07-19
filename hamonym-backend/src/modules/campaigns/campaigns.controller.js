@@ -17,7 +17,6 @@ function getStatusCode(
       return 404;
 
     case 'Slug is required':
-    case 'Title is required':
     case 'Entity ID is required':
     case 'No fields supplied':
       return 400;
@@ -49,9 +48,6 @@ function getErrorMessage(
 
     case 'Slug is required':
       return 'יש להזין כתובת קמפיין';
-
-    case 'Title is required':
-      return 'יש להזין שם קמפיין';
 
     case 'Entity ID is required':
       return 'יש לבחור עמותה';
@@ -383,6 +379,18 @@ exports.setCampaignVisibility =
 exports.adviseCampaign = async (req, res) => {
   try {
     const response = await campaignAdvisorAgent.advise(req.params.id, req.user.id);
+    res.json(response);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(err.status || getStatusCode(err))
+      .json({ error: getErrorMessage(err) });
+  }
+};
+
+exports.generateCampaignMetadata = async (req, res) => {
+  try {
+    const response = await campaignAdvisorAgent.generateMetadata(req.params.id, req.user.id);
     res.json(response);
   } catch (err) {
     console.error(err);

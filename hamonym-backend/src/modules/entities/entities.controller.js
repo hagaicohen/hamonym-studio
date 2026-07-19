@@ -448,9 +448,10 @@ exports.updateEntity =
 
       console.error(err);
 
-      res.status(500).json({
+      const status = err.message === 'Unauthorized' ? 403 : 500;
+      res.status(status).json({
         error:
-          'Failed to update entity'
+          status === 403 ? err.message : 'Failed to update entity'
       });
 
     }

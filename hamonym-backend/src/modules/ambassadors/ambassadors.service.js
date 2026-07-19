@@ -1,4 +1,5 @@
 const db = require('../../db/db');
+const { isEntityMember } = require('../../middleware/entity-permission.middleware');
 
 // ─── Slug helpers ────────────────────────────────────────────────────────────
 
@@ -88,11 +89,7 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
 // calls getEntityAmbassadors() is already authorized via requireSuperAdmin
 // upstream and must NOT be subject to user_entities membership.
 async function verifyEntityOwnership(userId, entityId) {
-  const { rows } = await db.query(
-    `SELECT 1 FROM user_entities WHERE entity_id = $1 AND user_id = $2 LIMIT 1`,
-    [entityId, userId]
-  );
-  if (rows.length === 0) throw new Error('Unauthorized');
+  if (!(await isEntityMember(userId, entityId))) throw new Error('Unauthorized');
 }
 exports.verifyEntityOwnership = verifyEntityOwnership;
 

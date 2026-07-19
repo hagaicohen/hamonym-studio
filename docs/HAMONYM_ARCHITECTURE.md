@@ -122,6 +122,7 @@ External Services: Cardcom · OpenAI · GuideStar · Google OAuth
 - **User** — משתמש במערכת, יכול להחזיק כמה תפקידים (מנהל עמותה, שגריר, קמפיינר, תורם).
 - **Entity** — עמותה. הישות המרכזית שאליה כל שאר הנתונים משויכים.
 - **Campaign** — קמפיין גיוס של עמותה.
+- **Offering** — מה שהתורם/המשתתף בוחר בעת התרומה. `type` קובע איזה סוג: `perk` (תשורה — תמורה פיזית/סמלית תמורת תרומה) או `registration` (מסלול הרשמה — ר' [REGISTRATION_OFFERING_SPEC.md](./REGISTRATION_OFFERING_SPEC.md)). ערכי `type` נוספים (raffle/ticket/וכו') ייכנסו רק כשיהיה להם use case פעיל — ר' [CAMPAIGN_PRESETS_VISION.md](./CAMPAIGN_PRESETS_VISION.md) §5. שם ה-`type` הוא Domain decision מתועד (ר' `DECISIONS.md`, 2026-07-15) — לא לשנות/להוסיף בלי לעדכן גם כאן.
 - **Donation** — תרומה בודדת, עם סטטוס (`pending`/`paid`/`failed`).
 - **Donor** — תורם. נגזר מהתרומות (לפי אימייל/טלפון), לא בהכרח טבלה עצמאית בכל מקום.
 - **Ambassador** — שגריר שמגייס עבור קמפיין ספציפי.
