@@ -248,6 +248,25 @@
 
     </section>
 
+    <!-- SHARE — dynamic, always reflects this campaign's own title/URL -->
+    <div class="hm-share-row">
+      <button class="hm-share-btn hm-share-btn--link" type="button" (click)="copyShareLink(draft)">
+        <span class="hm-share-icon">🔗</span> {{ linkCopied ? 'הועתק!' : 'העתקת קישור' }}
+      </button>
+      <button class="hm-share-btn hm-share-btn--email" type="button" (click)="shareEmail(draft)">
+        <span class="hm-share-icon">✉️</span> אימייל
+      </button>
+      <button class="hm-share-btn hm-share-btn--x" type="button" (click)="shareX(draft)" aria-label="שתפו ב-X">
+        𝕏
+      </button>
+      <button class="hm-share-btn hm-share-btn--facebook" type="button" (click)="shareFacebook(draft)">
+        <span class="hm-share-icon">📘</span> Facebook
+      </button>
+      <button class="hm-share-btn hm-share-btn--whatsapp" type="button" (click)="shareWhatsApp(draft)">
+        <span class="hm-share-icon">💬</span> WhatsApp
+      </button>
+    </div>
+
     <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
       [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
@@ -745,7 +764,10 @@
   <!-- CTA -->
   <div class="block-cta" *ngIf="block.type === 'cta'"
     [style.background]="asCta(block.data).backgroundColor"
-    [style.textAlign]="asCta(block.data).textStyle.align">
+    [style.textAlign]="asCta(block.data).textStyle.align"
+    [style.paddingTop.px]="asCta(block.data).blockHeight || 32"
+    [style.paddingBottom.px]="asCta(block.data).blockHeight || 32"
+    [style.gap.px]="ctaGap(asCta(block.data).blockHeight)">
     <h2 class="cta-title" [style.color]="asCta(block.data).textStyle.color">{{ asCta(block.data).title }}</h2>
     <p class="cta-text" [style.color]="asCta(block.data).textStyle.color" *ngIf="asCta(block.data).text">{{ asCta(block.data).text }}</p>
     <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"

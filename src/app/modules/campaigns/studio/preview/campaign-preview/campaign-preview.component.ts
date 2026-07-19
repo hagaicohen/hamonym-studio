@@ -186,6 +186,42 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     navigator.clipboard.writeText(url).catch(() => {});
   }
 
+  // ── Share ──────────────────────────────────────────────────
+  linkCopied = false;
+
+  campaignShareUrl(draft: CampaignDraft): string {
+    return `${window.location.origin}/campaigns/${draft.slug}/view`;
+  }
+
+  copyShareLink(draft: CampaignDraft): void {
+    navigator.clipboard.writeText(this.campaignShareUrl(draft)).then(() => {
+      this.linkCopied = true;
+      setTimeout(() => this.linkCopied = false, 2000);
+    });
+  }
+
+  shareEmail(draft: CampaignDraft): void {
+    const subject = encodeURIComponent(draft.title || 'קמפיין גיוס');
+    const body = encodeURIComponent(`${draft.title}\n${this.campaignShareUrl(draft)}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+  }
+
+  shareX(draft: CampaignDraft): void {
+    const text = encodeURIComponent(draft.title || '');
+    const url = encodeURIComponent(this.campaignShareUrl(draft));
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+  }
+
+  shareFacebook(draft: CampaignDraft): void {
+    const url = encodeURIComponent(this.campaignShareUrl(draft));
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+  }
+
+  shareWhatsApp(draft: CampaignDraft): void {
+    const text = encodeURIComponent(`${draft.title}\n${this.campaignShareUrl(draft)}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }
+
   entityLogoUrl: string | null = null;
   entityName = '';
   navOpen = false;
@@ -745,6 +781,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asStats(data: unknown)            { return data as StatsBlockData; }
   asDonationWidget(data: unknown)   { return data as DonationWidgetBlockData; }
   asCta(data: unknown)              { return data as CtaBlockData; }
+  ctaGap(blockHeight?: number): number { return Math.max(6, Math.round((blockHeight || 32) * 0.35)); }
   asDivider(data: unknown)          { return data as DividerBlockData; }
   asDonors(data: unknown)           { return data as DonorsBlockData; }
   asSponsorsBlock(data: unknown)    { return data as SponsorsBlockData; }

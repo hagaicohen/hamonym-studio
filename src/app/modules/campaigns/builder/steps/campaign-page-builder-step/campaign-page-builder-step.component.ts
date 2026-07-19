@@ -372,6 +372,12 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     } as CtaBlockData);
   }
 
+  updateCtaBlockHeight(id: string, height: number): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, blockHeight: height } as CtaBlockData);
+  }
+
   // Container
   updateContainerField(id: string, field: keyof ContainerBlockData, value: string | number): void {
     const block = this.state.draft.blocks.find(b => b.id === id);

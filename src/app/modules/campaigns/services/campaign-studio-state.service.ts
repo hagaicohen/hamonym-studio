@@ -177,6 +177,11 @@ export interface CtaBlockData {
   // default donation flow. Defaults to 'donate' so existing campaigns and
   // pure-donation campaigns are unaffected.
   ctaAction: 'donate' | 'register';
+  // Vertical padding (px) — controls how much height the whole block takes.
+  // Gap between title/text/button scales proportionally with it in the
+  // renderer, so there's one simple control instead of two technical ones.
+  // Undefined on older blocks falls back to 32 (the original fixed value).
+  blockHeight?: number;
 }
 
 // childBlockIds — same shape as ContainerBlockData on purpose: each entry is
@@ -1012,6 +1017,7 @@ function defaultBlockData(type: BlockType): BlockData {
       textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },
       ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#7c3aed', align: 'center', icon: '' },
       ctaAction: 'donate',
+      blockHeight: 32,
     } as CtaBlockData;
     default:            return {};
   }

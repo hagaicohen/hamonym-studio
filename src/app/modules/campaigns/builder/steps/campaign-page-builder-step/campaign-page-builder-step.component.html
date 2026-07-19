@@ -279,6 +279,14 @@
             [showPosition]="false"
             [showCta]="true">
           </app-text-style-editor>
+
+          <div class="spacing-row" style="margin-top:10px">
+            <span class="spacing-label">גובה הבלוק</span>
+            <input type="range" class="split-slider" min="12" max="56" step="4"
+              [value]="asCta(block.data).blockHeight || 32"
+              (input)="updateCtaBlockHeight(block.id, +$any($event.target).value)">
+            <span class="spacing-val">{{ (asCta(block.data).blockHeight || 32) === 12 ? 'קומפקטי' : (asCta(block.data).blockHeight || 32) >= 48 ? 'מרווח' : 'רגיל' }}</span>
+          </div>
         </div>
 
         <!-- ── CONTAINER ── -->
