@@ -215,49 +215,56 @@
       <a class="view-all-link" routerLink="/campaigns">לכל הקמפיינים</a>
     </div>
     <div class="campaigns-grid">
-      @for (c of data.campaigns; track c.id; let i = $index) {
+      @for (c of data.campaigns; track c.id) {
         <div class="campaign-card">
-          <div class="card-image-placeholder" [class]="'img-' + ((i % 4) + 1)">
-            @if (c.cover_image_url) {
-              <img [src]="c.cover_image_url" [alt]="c.title" class="cover-img">
-            }
-            <span class="card-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
+          <div class="card-cover" [style.backgroundImage]="c.cover_image_url ? 'url(' + c.cover_image_url + ')' : 'none'">
+            <span class="card-status-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
           </div>
           <div class="card-body">
-            <h3>{{ c.title }}</h3>
+            <h3 class="card-title">{{ c.title }}</h3>
+            @if (c.status !== 'draft') {
+              <span class="card-funding-type">{{ fundingLabel(c.funding_type) }}</span>
+            }
+
             @if (c.status === 'draft') {
               @if (c.created_at) {
                 <p class="camp-created">נוצר ב- {{ fmtDate(c.created_at) }}</p>
               }
-              <div class="card-action-row">
-                <button class="card-action-btn" (click)="editCampaign(c.id)">המשך עריכה</button>
-                <button class="card-analyze-btn" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
-                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { ✨ }
-                  נתח קמפיין
+              <div class="card-actions">
+                <button class="btn-action" (click)="editCampaign(c.id)">המשך עריכה</button>
+                <button class="btn-icon-action btn-analyze" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
+                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
                 </button>
               </div>
             } @else {
-              @if (c.target_amount > 0) {
-                <div class="progress-stats">
-                  <strong>{{ fmt(c.current_amount) }}</strong>
-                  <span>מתוך {{ fmt(c.target_amount) }}</span>
-                </div>
-                <div class="progress-bar-container">
-                  <div class="progress-bar"
-                       [class.bg-success]="progressPct(c) >= 60"
-                       [class.bg-info]="progressPct(c) < 60"
-                       [style.width.%]="progressPct(c)"></div>
-                </div>
-                <div class="progress-percentage">{{ progressPct(c) }}%</div>
-              } @else {
-                <div class="progress-stats"><span>{{ c.supporters_count }} תורמים</span></div>
-                <div class="progress-percentage">&nbsp;</div>
-              }
-              <div class="card-action-row">
-                <button class="card-action-btn" (click)="viewCampaign(c.slug)">צפייה בקמפיין</button>
-                <button class="card-analyze-btn" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
-                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { ✨ }
-                  נתח קמפיין
+              <div class="card-progress">
+                @if (c.target_amount > 0) {
+                  <div class="card-progress-row">
+                    <span class="progress-raised">{{ fmt(c.current_amount) }}</span>
+                    <span class="progress-target">מתוך {{ fmt(c.target_amount) }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="progressPct(c)"></div>
+                  </div>
+                  <div class="progress-pct">{{ progressPct(c) | number:'1.1-1' }}% הושג</div>
+                } @else {
+                  <div class="card-progress-row"><span class="progress-target">{{ c.supporters_count }} תורמים</span></div>
+                }
+              </div>
+
+              <div class="card-meta">
+                <span class="meta-item">📅 {{ daysRemaining(c.end_date) }} ימים</span>
+                <span class="meta-item">↗ {{ c.supporters_count }} תורמים</span>
+              </div>
+
+              <div class="card-actions">
+                <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
+                <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
+                <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
+                  <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
+                </button>
+                <button class="btn-icon-action btn-analyze" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
+                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
                 </button>
               </div>
             }

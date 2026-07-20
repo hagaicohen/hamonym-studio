@@ -15,6 +15,7 @@ import { AnalyticsRangeService } from '../../../../core/services/analytics-range
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { LucideAngularModule, Pencil, Sparkles } from 'lucide-angular';
 
 Chart.register(...registerables);
 
@@ -44,13 +45,14 @@ interface DashboardData {
     cover_image_url: string | null;
     current_amount: number; target_amount: number;
     supporters_count: number; created_at?: string;
+    end_date: string | null; funding_type: string;
   }>;
 }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, ApprovalStatusCardComponent, DateRangePickerComponent],
+  imports: [CommonModule, RouterLink, LucideAngularModule, ApprovalStatusCardComponent, DateRangePickerComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -65,6 +67,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private router          = inject(Router);
   private loader          = inject(AppLoaderService);
   private campaignApi     = inject(CampaignApiService);
+
+  readonly EditIcon     = Pencil;
+  readonly SparklesIcon = Sparkles;
 
   data: DashboardData | null = null;
   error: string | null = null;
@@ -359,6 +364,27 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   statusLabel(s: string): string {
     return ({ published:'פעיל', draft:'טיוטה', pending_review:'ממתין', ended:'הסתיים' })[s] ?? s;
+  }
+
+  private readonly fundingLabels: Record<string, string> = {
+    'flexible':       'גיוס גמיש',
+    'all-or-nothing': 'הכל או כלום',
+    'recurring':      'הוראות קבע',
+    'matching':       "מאצ'ינג",
+  };
+
+  fundingLabel(type: string): string {
+    return this.fundingLabels[type] ?? type;
+  }
+
+  daysRemaining(endDate: string | null): number {
+    if (!endDate) return 0;
+    const diff = new Date(endDate).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }
+
+  openReports(id: string): void {
+    this.router.navigate(['/reports'], { queryParams: { campaignId: id } });
   }
 
   imgClass(i: number): string {
