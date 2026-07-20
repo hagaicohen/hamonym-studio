@@ -233,9 +233,14 @@ export class SettingsPageComponent implements OnInit {
     if (!this.deleteEntityCardConfirmValid || this.isDeletingEntityCard || !this.deleteEntityTarget) return;
 
     this.isDeletingEntityCard = true;
-    this.entitiesService.deleteEntity(this.deleteEntityTarget.id).subscribe({
+    const entityId = this.deleteEntityTarget.id;
+    this.entitiesService.deleteEntity(entityId).subscribe({
       next: () => {
-        this.entities = this.entities.filter((e) => e.id !== this.deleteEntityTarget.id);
+        this.entities = this.entities.filter((e) => e.id !== entityId);
+        this.ctx.removeEntityContext(entityId);
+        if (this.currentEntityService.currentEntity()?.id === entityId) {
+          this.currentEntityService.setEntity(null);
+        }
         this.isDeletingEntityCard = false;
         this.deleteEntityTarget = null;
       },

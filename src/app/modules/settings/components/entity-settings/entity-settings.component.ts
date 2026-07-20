@@ -14,6 +14,8 @@ import { LucideAngularModule, Building2 } from 'lucide-angular';
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+
 import { CAMPAIGN_TYPES } from '../../../organization-registration/constants/campaign-types';
 
 import { ENTITY_CONFIGS } from '../../../organization-registration/config/entity-config';
@@ -84,6 +86,8 @@ export class EntitySettingsComponent implements OnInit {
   readonly Building2 = Building2;
 
   private currentEntityService = inject(CurrentEntityService);
+
+  private currentContextService = inject(CurrentContextService);
 
   private entitiesService = inject(EntitiesService);
 
@@ -527,8 +531,10 @@ export class EntitySettingsComponent implements OnInit {
     if (!this.deleteConfirmValid || this.isDeletingEntity || !this.draftEntity?.id) return;
 
     this.isDeletingEntity = true;
-    this.entitiesService.deleteEntity(this.draftEntity.id).subscribe({
+    const entityId = this.draftEntity.id;
+    this.entitiesService.deleteEntity(entityId).subscribe({
       next: () => {
+        this.currentContextService.removeEntityContext(entityId);
         this.currentEntityService.setEntity(null);
         this.router.navigate(['/settings']);
       },

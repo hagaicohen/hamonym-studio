@@ -163,6 +163,30 @@ export class CurrentContextService {
     }
   }
 
+  // Called right after an entity is deleted — the deleted entity must not
+  // keep showing up under "התפקידים שלי" until the next full login refetches
+  // roles from the server. Removes it from the entity-manager group's
+  // contexts (dropping the whole group if it was the last one), and if the
+  // active context was pointing at it, falls back to the next available
+  // role/context (or clears active entirely if none remain).
+  removeEntityContext(entityId: string): void {
+    const groups = this.roles()
+      .map((g) => g.role === 'entity-manager'
+        ? { ...g, contexts: g.contexts.filter((c) => c.id !== entityId) }
+        : g)
+      .filter((g) => g.role !== 'entity-manager' || g.contexts.length > 0);
+
+    this.roles.set(groups);
+    localStorage.setItem(ROLES_KEY, JSON.stringify(groups));
+
+    const a = this.active();
+    if (a?.role === 'entity-manager' && a.context?.id === entityId) {
+      this.active.set(null);
+      localStorage.removeItem(STORAGE_KEY);
+      this._setDefault(groups);
+    }
+  }
+
   switchContext(role: RoleType, contextId: string | null): void {
     const group = this.roles().find((g) => g.role === role);
     if (!group) return;
