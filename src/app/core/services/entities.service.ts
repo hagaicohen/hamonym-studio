@@ -5,6 +5,15 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface EntityNotification {
+  id: number;
+  action: 'approve' | 'reject' | 'request_changes' | 'suspend' | 'reactivate';
+  notes: string | null;
+  reasonTags: string[];
+  createdAt: string;
+  actorName: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -229,6 +238,21 @@ export class EntitiesService {
   getApprovalStatus(entityId: string): Observable<any> {
     return this.http.get(
       `${environment.apiUrl}/api/entities/${entityId}/approval-status`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
+
+  getNotifications(entityId: string): Observable<{ notifications: EntityNotification[] }> {
+    return this.http.get<{ notifications: EntityNotification[] }>(
+      `${environment.apiUrl}/api/entities/${entityId}/notifications`,
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+    );
+  }
+
+  acknowledgeNotifications(entityId: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(
+      `${environment.apiUrl}/api/entities/${entityId}/notifications/acknowledge`,
+      {},
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
     );
   }

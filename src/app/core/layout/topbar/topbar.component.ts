@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CurrentContextService } from '../../services/current-context.service';
 import { RoleType } from '../../models/user-context.model';
+import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NotificationBellComponent],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.css'],
 })

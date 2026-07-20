@@ -17,6 +17,12 @@ export class PlatformService {
     return this.http.get(`${environment.apiUrl}/api/platform/dashboard`, { headers: authHeaders() });
   }
 
+  getNotificationsCount(): Observable<{ pendingReviewCount: number }> {
+    return this.http.get<{ pendingReviewCount: number }>(
+      `${environment.apiUrl}/api/platform/notifications-count`, { headers: authHeaders() },
+    );
+  }
+
   getActivity(query: { type?: string; sortDir?: string; page?: number; limit?: number }): Observable<any> {
     let params = new HttpParams()
       .set('page', String(query.page ?? 0))

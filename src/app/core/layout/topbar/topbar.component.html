@@ -17,6 +17,7 @@
   <!-- LEFT: notifications + identity switcher + avatar -->
   <div class="topbar-left">
 
+    <app-notification-bell></app-notification-bell>
 
     <!-- IDENTITY SWITCHER — hidden in admin-only mode, since role/entity switching is irrelevant there -->
     <ng-container *ngIf="!ctx.adminMode(); else adminIdentity">

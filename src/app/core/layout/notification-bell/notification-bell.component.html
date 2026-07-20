@@ -1,0 +1,36 @@
+<div class="bell-wrapper" *ngIf="count > 0 || dropdownOpen">
+
+  <!-- ADMIN MODE — single action (go review pending entities), no dropdown needed -->
+  <button *ngIf="ctx.adminMode(); else entityBell"
+    class="bell-btn" type="button" title="עמותות ממתינות לאישור"
+    (click)="goToPendingReview($event)">
+    <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
+    <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
+  </button>
+
+  <!-- ENTITY-MANAGER MODE — dropdown listing unread admin decisions -->
+  <ng-template #entityBell>
+    <div class="bell-btn-wrap">
+      <button class="bell-btn" type="button" title="הודעות" (click)="toggle($event)">
+        <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
+        <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
+      </button>
+
+      <div class="bell-dropdown" *ngIf="dropdownOpen">
+        <div class="bell-dropdown-title">הודעות</div>
+
+        <div class="bell-empty" *ngIf="notifications.length === 0">אין הודעות חדשות</div>
+
+        <div class="bell-item" *ngFor="let n of notifications">
+          <span class="bell-item-icon">✉️</span>
+          <div class="bell-item-body">
+            <div class="bell-item-title">{{ actionLabels[n.action] }}</div>
+            <div class="bell-item-notes" *ngIf="n.notes">{{ n.notes }}</div>
+            <div class="bell-item-meta">{{ n.actorName }} · {{ n.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+</div>
