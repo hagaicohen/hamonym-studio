@@ -304,6 +304,19 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     });
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
+      // Scroll the preview to whatever the manager is hovering in the
+      // builder panel — the two panes scroll independently, so without this
+      // the highlighted element can be way off-screen with nothing to show
+      // for it. Queried by the highlight classes themselves (only one
+      // element has any of them at a time) rather than a dedicated id,
+      // since not every block wrapper carries one.
+      if (id) {
+        setTimeout(() => {
+          document.querySelector(
+            '.block-wrap--hovered, .block-wrap--hovered-container, .container-child--hovered, .container-child--hovered-container'
+          )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 30);
+      }
     });
     this.state.pageBuilderActive$.pipe(takeUntil(this._destroy$)).subscribe(active => {
       this.pageBuilderActive = active;
