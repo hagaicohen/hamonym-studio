@@ -310,11 +310,24 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       // for it. Queried by the highlight classes themselves (only one
       // element has any of them at a time) rather than a dedicated id,
       // since not every block wrapper carries one.
+      //
+      // Deliberately NOT using target.scrollIntoView() — it walks every
+      // scrollable ancestor (including the page/window, which has its own
+      // extra height beyond the viewport here), so it was also scrolling
+      // the builder panel's own scroll position. Computing the offset by
+      // hand and scrolling only .preview-inner's own scrollTop keeps this
+      // fully contained to the preview pane.
       if (id) {
         setTimeout(() => {
-          document.querySelector(
+          const scrollEl = document.querySelector('.preview-inner');
+          const target = document.querySelector(
             '.block-wrap--hovered, .block-wrap--hovered-container, .container-child--hovered, .container-child--hovered-container'
-          )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          );
+          if (!scrollEl || !target) return;
+          const containerRect = scrollEl.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const delta = (targetRect.top + targetRect.height / 2) - (containerRect.top + containerRect.height / 2);
+          scrollEl.scrollBy({ top: delta, behavior: 'smooth' });
         }, 30);
       }
     });
