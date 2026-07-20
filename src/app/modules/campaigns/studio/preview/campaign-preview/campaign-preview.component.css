@@ -883,12 +883,16 @@
    hover outline above — a filled tint + solid border around the whole
    container, not just a thin ring, so its full extent reads clearly at a
    glance (a container can wrap a lot of varied content). */
+/* !important — this class is also applied to structural wrapper elements
+   (.sidebar-rail, .sidebar-main) that already set their own background/
+   border-radius/box-shadow; without it those rules (same specificity, later
+   in this file) silently win and the highlight becomes invisible. */
 .block-wrap--hovered-container {
   outline: 2px solid #7c3aed;
   outline-offset: 0;
-  border-radius: 10px;
-  background: rgba(124, 58, 237, 0.06);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  border-radius: 10px !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12) !important;
 }
 
 /* Magazine layout — two-column masonry-like */
@@ -1147,9 +1151,9 @@
 .container-child--hovered-container {
   outline: 2px solid #7c3aed;
   outline-offset: 0;
-  border-radius: 8px;
-  background: rgba(124, 58, 237, 0.06);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  border-radius: 8px !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12) !important;
 }
 .block-container--row .container-child {
   flex: 1;

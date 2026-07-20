@@ -369,9 +369,9 @@
           </div>
 
           <!-- Sticky sidebar -->
-          <div class="sidebar-rail" id="section-donate">
-            <div class="sidebar-rail-inner"
-              [class.block-wrap--hovered-container]="isRailZoneContainerHovered(draft, 'sidebar')">
+          <div class="sidebar-rail" id="section-donate"
+            [class.block-wrap--hovered-container]="isRailZoneContainerHovered(draft, 'sidebar')">
+            <div class="sidebar-rail-inner">
               <ng-container *ngFor="let block of sidebarBlocks(draft)">
                 <div class="block-wrap"
                   [style.marginTop.px]="block.spacingTop"
