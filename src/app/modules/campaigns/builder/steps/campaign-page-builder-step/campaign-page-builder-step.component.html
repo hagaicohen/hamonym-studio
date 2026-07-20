@@ -53,10 +53,15 @@
          (mouseleave)="setHovered(null)">
 
       <!-- Block Header -->
-      <div class="block-header" (click)="toggleEdit(block.id)">
+      <div class="block-header" (click)="toggleEdit(block.id, block.type)">
         <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : parentBlock?.type === 'accordion' ? '🗂️' : blockIcon(block) }}</span>
         <div class="block-header-info">
-          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}</span>
+          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}
+            <span class="block-closed-count"
+              *ngIf="(block.type === 'container' || block.type === 'tabs' || block.type === 'accordion') && getContainerViewState(block.id) === 'closed'">
+              · {{ containerChildren(block, draft.blocks).length }} בלוקים
+            </span>
+          </span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
@@ -74,7 +79,9 @@
             (click)="toggleVisibility(block.id)">{{ block.visible ? '👁' : '🙈' }}</button>
           <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)">✕</button>
         </div>
-        <span class="block-chevron" [class.open]="editingBlockId === block.id">›</span>
+        <span class="block-chevron"
+          [class.open]="editingBlockId === block.id"
+          [class.block-chevron--closed]="(block.type === 'container' || block.type === 'tabs' || block.type === 'accordion') && getContainerViewState(block.id) === 'closed'">›</span>
       </div>
 
       <!-- Block Editor -->
@@ -806,8 +813,8 @@
 
       </div>
 
-      <!-- ── CONTAINER CHILDREN TREE ── (always visible when block is a container) -->
-      <div class="container-children-tree" *ngIf="block.type === 'container'">
+      <!-- ── CONTAINER CHILDREN TREE ── hidden only in the fully-'closed' state -->
+      <div class="container-children-tree" *ngIf="block.type === 'container' && getContainerViewState(block.id) !== 'closed'">
         <div class="container-tree-header">
           <span class="container-tree-label">
             {{ asContainer(block.data).direction === 'row' ? '⬛⬜ שורה' : '☰ עמודה' }}
@@ -856,7 +863,7 @@
            editing for free via blockItem, exactly like a container's own
            children. Only "+ הוסף טאב" is bespoke (always creates a
            container, not an arbitrary block-type picker). ── -->
-      <div class="container-children-tree" *ngIf="block.type === 'tabs'">
+      <div class="container-children-tree" *ngIf="block.type === 'tabs' && getContainerViewState(block.id) !== 'closed'">
         <div class="container-tree-header">
           <span class="container-tree-label">
             📑 {{ containerChildren(block, draft.blocks).length }} טאבים
@@ -879,7 +886,7 @@
 
       <!-- ── ACCORDION CHILDREN — same reasoning as TABS CHILDREN above,
            each panel is a real 'container' block. ── -->
-      <div class="container-children-tree" *ngIf="block.type === 'accordion'">
+      <div class="container-children-tree" *ngIf="block.type === 'accordion' && getContainerViewState(block.id) !== 'closed'">
         <div class="container-tree-header">
           <span class="container-tree-label">
             🗂️ {{ containerChildren(block, draft.blocks).length }} פאנלים
@@ -912,16 +919,24 @@
     </ng-container>
   </div>
 
+  <!-- Clear separation between the page's actual content blocks (above) and
+       overall design settings that aren't tied to any one block (below). -->
+  <div class="design-settings-divider">
+    <span class="design-settings-divider-label">🎨 עיצוב כללי</span>
+  </div>
+
   <!-- HERO TEXTS — position + style for title/subtitle, not tied to any one
        block since Hero isn't always a block. Text VALUES stay editable only
        in "פרטי בסיס" (step 1) — this is position/style only, so there's one
        authoritative place to change the actual words. See DECISIONS.md
        (2026-07-17). -->
   <div class="campaign-theme-section">
-    <div class="campaign-bg-header">
+    <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
       <span class="campaign-bg-title">📝 טקסטי Hero</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
     </div>
 
+    <ng-container *ngIf="!isSectionCollapsed('hero-texts')">
     <div class="editor-row">
       <label class="editor-label">כותרת — מיקום</label>
       <div class="direction-toggle">
@@ -972,14 +987,17 @@
       [showPosition]="true"
       [showCta]="true">
     </app-text-style-editor>
+    </ng-container>
   </div>
 
   <!-- CAMPAIGN THEME COLORS -->
   <div class="campaign-theme-section">
-    <div class="campaign-bg-header">
+    <div class="campaign-bg-header" (click)="toggleSection('theme-colors')">
       <span class="campaign-bg-title">🎨 צבעי תמה</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('theme-colors')">›</span>
     </div>
 
+    <ng-container *ngIf="!isSectionCollapsed('theme-colors')">
     <!-- Presets — same palette swatches as the initial Template Picker; one
          click sets a whole coordinated theme. The manual pickers below stay
          available for fine-tuning afterward. -->
@@ -1017,14 +1035,17 @@
       </div>
     </div>
     <p class="theme-hint">שינוי צבע משני יעדכן את כל הכותרות בדף. שינוי הדגשה יעדכן קישורים וכפתורי CTA.</p>
+    </ng-container>
   </div>
 
   <!-- CAMPAIGN BACKGROUND -->
   <div class="campaign-bg-section">
-    <div class="campaign-bg-header">
+    <div class="campaign-bg-header" (click)="toggleSection('background')">
       <span class="campaign-bg-title">🖼️ רקע הקמפיין</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('background')">›</span>
     </div>
 
+    <ng-container *ngIf="!isSectionCollapsed('background')">
     <!-- Type selector -->
     <div class="bg-type-toggle">
       <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'none'"
@@ -1059,6 +1080,7 @@
         {{ draft.layout.backgroundImageUrl ? 'החלף תמונת רקע' : '+ הוסף תמונת רקע / GIF' }}
       </button>
     </ng-container>
+    </ng-container>
   </div>
 
   <!-- BOTTOM BANNER (פרטי קמפיין) -->
@@ -1084,7 +1106,7 @@
 
   <!-- FOOTER -->
   <div class="campaign-bg-section">
-    <div class="campaign-bg-header">
+    <div class="campaign-bg-header" (click)="toggleSection('footer')">
       <span class="section-icon-box">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -1094,14 +1116,15 @@
       </span>
       <span class="campaign-bg-title">פוטר</span>
       <div class="footer-toggle-inline"
-        (click)="updateLayoutBg('showFooter', !(draft.layout.showFooter !== false), draft)">
+        (click)="$event.stopPropagation(); updateLayoutBg('showFooter', !(draft.layout.showFooter !== false), draft)">
         <span class="toggle-pill" [class.on]="draft.layout.showFooter !== false">
           <span class="toggle-pill-dot"></span>
         </span>
       </div>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('footer')">›</span>
     </div>
 
-    <ng-container *ngIf="draft.layout.showFooter !== false">
+    <ng-container *ngIf="!isSectionCollapsed('footer') && draft.layout.showFooter !== false">
 
       <!-- Colors -->
       <div class="footer-colors-row">

@@ -113,6 +113,34 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   showTemplatePicker = false;
   editingBlockId: string | null = null;
 
+  // Container/tabs/accordion blocks get a 3-way disclosure instead of every
+  // other block type's plain open/closed: 'closed' (default on entering the
+  // step — header only, matching every other block type starting collapsed)
+  // → 'preview' (header + children list, no own settings) → 'open' (also
+  // shows own settings, via editingBlockId same as any other block). See
+  // DECISIONS.md (2026-07-20).
+  private containerViewState = new Map<string, 'open' | 'preview' | 'closed'>();
+  getContainerViewState(id: string): 'open' | 'preview' | 'closed' {
+    return this.containerViewState.get(id) ?? 'closed';
+  }
+  private cycleContainerView(id: string): void {
+    const current = this.getContainerViewState(id);
+    const next = current === 'closed' ? 'preview' : current === 'preview' ? 'open' : 'closed';
+    this.containerViewState.set(id, next);
+    this.editingBlockId = next === 'open' ? id : (this.editingBlockId === id ? null : this.editingBlockId);
+  }
+
+  // The design-settings sections below the block list (Hero texts, theme
+  // colors, background, footer, ...) — collapsible for the same reason
+  // containers are, and same default: all closed on entering the step, the
+  // manager expands only what they're working on right now.
+  private expandedSections = new Set<string>();
+  isSectionCollapsed(key: string): boolean { return !this.expandedSections.has(key); }
+  toggleSection(key: string): void {
+    if (this.expandedSections.has(key)) this.expandedSections.delete(key);
+    else this.expandedSections.add(key);
+  }
+
   hoveredBlockId: string | null = null;
   private _destroy$ = new Subject<void>();
 
@@ -245,8 +273,12 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   toggleVisibility(id: string): void { this.state.toggleBlockVisibility(id); }
 
-  toggleEdit(id: string): void {
-    this.editingBlockId = this.editingBlockId === id ? null : id;
+  toggleEdit(id: string, type: BlockType): void {
+    if (type === 'container' || type === 'tabs' || type === 'accordion') {
+      this.cycleContainerView(id);
+    } else {
+      this.editingBlockId = this.editingBlockId === id ? null : id;
+    }
   }
 
   updateLabel(id: string, label: string): void {
