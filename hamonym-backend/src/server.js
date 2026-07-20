@@ -55,6 +55,9 @@ const platformRoutes =
 const socialMetaRoutes =
   require('./modules/social-meta/social-meta.routes');
 
+const commentsRoutes =
+  require('./modules/comments/comments.routes');
+
 const socialMetaController =
   require('./modules/social-meta/social-meta.controller');
 
@@ -135,6 +138,11 @@ app.use(
 app.use(
   '/api/platform',
   platformRoutes
+);
+
+app.use(
+  '/api/comments',
+  commentsRoutes
 );
 
 /*

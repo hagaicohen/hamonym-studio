@@ -174,7 +174,9 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
         current_amount::float,
         target_amount::float,
         supporters_count,
-        created_at
+        created_at,
+        end_date,
+        funding_type
       FROM campaigns
       WHERE entity_id = $1
         AND status IN ('published', 'pending_review', 'draft')
