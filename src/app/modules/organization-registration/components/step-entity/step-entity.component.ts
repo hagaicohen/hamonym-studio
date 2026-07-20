@@ -285,8 +285,7 @@ export class StepEntityComponent {
       this.primaryCategory &&
       this.fullName.trim() &&
       this.isPhoneValid &&
-      this.isEmailValid &&
-      this.certificateFileName
+      this.isEmailValid
     );
   }
 }
