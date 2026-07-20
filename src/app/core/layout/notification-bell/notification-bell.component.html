@@ -1,8 +1,12 @@
 <div class="bell-wrapper" *ngIf="count > 0 || dropdownOpen">
 
-  <!-- ADMIN MODE — single action (go review pending entities), no dropdown needed -->
+  <!-- ADMIN MODE — single action (go review pending entities), no dropdown needed.
+       Tooltip is deliberately generic ("הודעות"), not "עמותות ממתינות לאישור" —
+       today the only admin notification type is pending-entity approvals, but
+       the count/click-through shouldn't imply that's the only kind there'll
+       ever be. See DECISIONS.md (2026-07-20). -->
   <button *ngIf="ctx.adminMode(); else entityBell"
-    class="bell-btn" type="button" title="עמותות ממתינות לאישור"
+    class="bell-btn" type="button" title="הודעות"
     (click)="goToPendingReview($event)">
     <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
     <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
