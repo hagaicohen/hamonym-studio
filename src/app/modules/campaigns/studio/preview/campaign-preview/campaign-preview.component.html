@@ -1336,4 +1336,51 @@
     </ng-template>
   </section>
 
+  <!-- COMMENTS — public, anonymous (name + email), chronological, searchable -->
+  <section class="hm-section hm-comments" *ngIf="block.type === 'comments'" id="section-comments">
+    <div class="hm-comments-header">
+      <h2 class="hm-section-title" [style.color]="primaryColor(draft)">תגובות</h2>
+      <span class="hm-comments-count" *ngIf="comments.length > 0">{{ comments.length }}</span>
+    </div>
+
+    <div class="hm-comments-search" *ngIf="comments.length > 0 || commentSearchTerm">
+      <input type="text" placeholder="חיפוש בתגובות..."
+        [ngModel]="commentSearchTerm"
+        (ngModelChange)="onCommentSearchChange($event)">
+    </div>
+
+    <div class="hm-comments-list" *ngIf="comments.length > 0; else commentsEmpty">
+      <article class="hm-comment-item" *ngFor="let c of comments">
+        <div class="hm-comment-avatar">{{ c.authorName.charAt(0) }}</div>
+        <div class="hm-comment-body">
+          <div class="hm-comment-meta">
+            <span class="hm-comment-author">{{ c.authorName }}</span>
+            <span class="hm-comment-date">{{ formatCommentDate(c.createdAt) }}</span>
+          </div>
+          <p class="hm-comment-content">{{ c.content }}</p>
+        </div>
+      </article>
+    </div>
+    <ng-template #commentsEmpty>
+      <div class="hm-section-placeholder">
+        <span>💬</span><p>{{ commentSearchTerm ? 'לא נמצאו תגובות תואמות' : 'אין עדיין תגובות — היו הראשונים להגיב' }}</p>
+      </div>
+    </ng-template>
+
+    <form class="hm-comment-form" (ngSubmit)="submitComment(draft)" #cf="ngForm">
+      <h3 class="hm-comment-form-title">הוסיפו תגובה</h3>
+      <textarea class="hm-comment-form-textarea" placeholder="התגובה שלכם"
+        [(ngModel)]="commentForm.content" name="content" rows="3"></textarea>
+      <div class="hm-comment-form-row">
+        <input type="text" placeholder="שם" [(ngModel)]="commentForm.authorName" name="authorName">
+        <input type="email" placeholder="אימייל" [(ngModel)]="commentForm.authorEmail" name="authorEmail">
+      </div>
+      <div class="hm-comment-form-error" *ngIf="commentSubmitError">{{ commentSubmitError }}</div>
+      <div class="hm-comment-form-success" *ngIf="commentSubmitted">התגובה פורסמה, תודה!</div>
+      <button type="submit" class="hm-comment-form-submit" [style.background]="primaryColor(draft)" [disabled]="commentSubmitting">
+        {{ commentSubmitting ? 'שולח...' : 'שתף' }}
+      </button>
+    </form>
+  </section>
+
 </ng-template>

@@ -53,6 +53,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'tabs':        'טאבים',
   'accordion':   'פאנלים',
   'share':       'שיתוף',
+  'comments':    'תגובות',
 };
 
 const BLOCK_ICONS: Record<BlockType, string> = {
@@ -75,9 +76,10 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'tabs':        '📑',
   'accordion':   '🗂️',
   'share':       '🔗',
+  'comments':    '💬',
 };
 
-const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share'];
+const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments'];
 
 // Block groups for the picker UI
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
@@ -85,14 +87,14 @@ export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'פריסה',   types: ['container', 'hero', 'tabs', 'accordion'] },
   { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards', 'share'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
-  { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates'] },
+  { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates', 'comments'] },
   { label: 'עיצוב',   types: ['divider'] },
 ];
 
 const ADDABLE_BLOCKS: BlockType[] = [
   'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs', 'accordion',
   'stats', 'donation-widget', 'cta', 'divider', 'share',
-  'rewards', 'sponsors', 'ambassadors', 'donors', 'updates',
+  'rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'comments',
 ];
 
 @Component({

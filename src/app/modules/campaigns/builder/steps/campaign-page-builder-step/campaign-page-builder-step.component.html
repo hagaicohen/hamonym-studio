@@ -747,6 +747,11 @@
           </div>
         </div>
 
+        <!-- COMMENTS — public, unmoderated; posted directly by site visitors -->
+        <div class="system-note" *ngIf="block.type === 'comments'">
+          <span>💬</span> כל מבקר באתר יכול להוסיף תגובה (שם + אימייל, ללא הרשמה). התגובות מוצגות כאן לפי סדר כרונולוגי.
+        </div>
+
         <!-- ── SPACER / DIVIDER ── -->
         <div class="editor-field" *ngIf="block.type === 'divider'">
           <div class="spacing-row">

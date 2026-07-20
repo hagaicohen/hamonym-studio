@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, Input } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
@@ -32,11 +32,13 @@ import {
   AmbassadorsBlockData,
   UpdatesBlockData,
   ShareBlockData,
+  CommentsBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
+import { CommentsService, CampaignComment } from '../../../services/comments.service';
 
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
@@ -68,6 +70,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private entitiesService = inject(EntitiesService);
   private ui              = inject(StudioUiService);
   private donationService = inject(DonationService);
+  private commentsService = inject(CommentsService);
 
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
@@ -297,10 +300,17 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
           next: list => { this.liveAmbassadors = list; },
         });
       }
+      if (draft?.slug && draft.slug !== this.loadedCommentsSlug) {
+        this.loadedCommentsSlug = draft.slug;
+        this.loadComments(draft.slug);
+      }
       if (draft?.slug && this.autoOpenJoin && !this.autoOpenJoinTriggered) {
         this.autoOpenJoinTriggered = true;
         this.openJoinModal();
       }
+    });
+    this.commentSearch$.pipe(debounceTime(300), takeUntil(this._destroy$)).subscribe(term => {
+      if (this.loadedCommentsSlug) this.loadComments(this.loadedCommentsSlug, term);
     });
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
@@ -797,6 +807,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     if (block.type === 'donors')       return 'section-donors';
     if (block.type === 'ambassadors')  return 'section-ambassadors';
     if (block.type === 'sponsors')     return 'section-sponsors';
+    if (block.type === 'comments')     return 'section-comments';
     if (block.type === 'container' && draft) {
       const ids = (block.data as ContainerBlockData).childBlockIds;
       if (ids.some(id => draft.blocks.find(b => b.id === id)?.type === 'donation-widget'))
@@ -813,6 +824,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       'donors':       'תורמים',
       'ambassadors':  'שגרירים',
       'sponsors':     'תומכים',
+      'comments':     'תגובות',
     };
     const seen = new Set<string>();
     const items: { label: string; sectionId: string; count?: number }[] = [];
@@ -825,6 +837,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       const count =
         block.type === 'ambassadors' ? (this.ambEffective.length || undefined) :
         block.type === 'donors'      ? (this.activeDonors.length  || undefined) :
+        block.type === 'comments'    ? (this.comments.length      || undefined) :
         undefined;
       items.push({ label, sectionId, count });
     }
@@ -864,6 +877,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asSponsorsBlock(data: unknown)    { return data as SponsorsBlockData; }
   asAmbassadorsBlock(data: unknown) { return data as AmbassadorsBlockData; }
   asUpdates(data: unknown)          { return data as UpdatesBlockData; }
+  asComments(data: unknown)         { return data as CommentsBlockData; }
 
   donors: Donor[] = [];
   topDonors: TopDonor[] = [];
@@ -902,6 +916,59 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this.donorPeriod  = period;
     this.shownCount   = this.PAGE_SIZE;
     if (this.loadedSlug) this.loadDonors(this.loadedSlug);
+  }
+
+  // ── Comments — public, anonymous (name + email, no login) ──
+  comments: CampaignComment[] = [];
+  private loadedCommentsSlug = '';
+  commentSearchTerm = '';
+  private commentSearch$ = new Subject<string>();
+  commentForm = { authorName: '', authorEmail: '', content: '' };
+  commentSubmitting = false;
+  commentSubmitError: string | null = null;
+  commentSubmitted = false;
+
+  loadComments(slug: string, search?: string): void {
+    this.commentsService.getComments(slug, search).subscribe({
+      next: list => { this.comments = list; },
+    });
+  }
+
+  onCommentSearchChange(term: string): void {
+    this.commentSearchTerm = term;
+    this.commentSearch$.next(term);
+  }
+
+  submitComment(draft: CampaignDraft): void {
+    const { authorName, authorEmail, content } = this.commentForm;
+    if (!authorName.trim() || !authorEmail.trim() || !content.trim()) {
+      this.commentSubmitError = 'נא למלא שם, אימייל ותוכן התגובה';
+      return;
+    }
+    this.commentSubmitting = true;
+    this.commentSubmitError = null;
+    this.commentsService.postComment(draft.slug!, { authorName, authorEmail, content }).subscribe({
+      next: comment => {
+        this.comments = [...this.comments, comment];
+        this.commentForm = { authorName: '', authorEmail: '', content: '' };
+        this.commentSubmitting = false;
+        this.commentSubmitted = true;
+        setTimeout(() => { this.commentSubmitted = false; }, 3000);
+      },
+      error: () => {
+        this.commentSubmitting = false;
+        this.commentSubmitError = 'משהו השתבש, נסו שוב';
+      },
+    });
+  }
+
+  formatCommentDate(date: Date): string {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${d}/${m}/${y} ${hh}:${mm}`;
   }
 
   timeAgo(date: Date): string {

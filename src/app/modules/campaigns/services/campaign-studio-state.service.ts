@@ -66,7 +66,13 @@ export type BlockType =
   // always derived from the campaign's own title/slug, nothing to store per
   // instance. Opt-in only: nothing adds one automatically, the manager adds
   // it (and positions it) like any other block. See DECISIONS.md (2026-07-19).
-  | 'share';
+  | 'share'
+  // Public comment thread — any site visitor can post (name + email, no
+  // login required) and read chronologically, with a simple content search.
+  // Comments themselves live in the backend `campaign_comments` table, keyed
+  // by campaign slug, not in this block's own `data` — same reasoning as
+  // Sponsors/Ambassadors ("view config only").
+  | 'comments';
 
 export type StatKey =
   | 'target' | 'raised' | 'percent' | 'supporters'
@@ -139,6 +145,7 @@ export interface ShareBlockData {
 // Block-level view configs — content lives at draft root level
 export interface SponsorsBlockData    { /* view config only */ }
 export interface AmbassadorsBlockData { /* view config only */ }
+export interface CommentsBlockData    { /* view config only — comments live in campaign_comments table */ }
 export interface UpdatesBlockData {
   viewMode: 'slider' | 'list';
 }
@@ -256,6 +263,7 @@ export type BlockData =
   | AmbassadorsBlockData
   | UpdatesBlockData
   | ShareBlockData
+  | CommentsBlockData
   | Record<string, never>;
 
 export interface CampaignBlock {
@@ -785,6 +793,7 @@ export class CampaignStudioStateService {
       'tabs':            'טאבים',
       'accordion':       'פאנלים',
       'share':           'שיתוף',
+      'comments':        'תגובות',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -1000,6 +1009,7 @@ export class CampaignStudioStateService {
       'stats': 'פס נתונים', 'donation-widget': 'תיבת תרומה',
       'rewards': 'תשורות', 'sponsors': 'חסויות', 'ambassadors': 'שגרירים',
       'donors': 'תורמים', 'updates': 'עדכונים', 'tabs': 'טאבים', 'share': 'שיתוף',
+      'comments': 'תגובות',
     };
     const baseName = defaultLabels[type] ?? type;
     const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
