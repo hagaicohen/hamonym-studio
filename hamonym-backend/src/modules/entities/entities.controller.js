@@ -523,6 +523,24 @@ exports.getApprovalStatus = async (req, res) => {
   }
 };
 
+exports.getNotifications = async (req, res) => {
+  try {
+    const notifications = await service.getNotifications(req.params.id, req.user.id);
+    res.json({ notifications });
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};
+
+exports.acknowledgeNotifications = async (req, res) => {
+  try {
+    await service.acknowledgeNotifications(req.params.id, req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};
+
 exports.requestReview = async (req, res) => {
   try {
     const entity = await service.requestReview(req.params.id, req.user.id);

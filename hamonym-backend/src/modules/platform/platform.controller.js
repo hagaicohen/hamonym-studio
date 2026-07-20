@@ -16,6 +16,13 @@ function statusFor(err) {
   }
 }
 
+exports.getNotificationsCount = async (req, res) => {
+  try {
+    const result = await svc.getNotificationsCount();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 exports.getDashboard = async (req, res) => {
   try {
     const dashboard = await svc.getDashboardData();

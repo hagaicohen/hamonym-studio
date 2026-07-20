@@ -172,6 +172,18 @@ router.patch(
   controller.requestReview
 );
 
+router.get(
+  '/:id/notifications',
+  requireAuth,
+  controller.getNotifications
+);
+
+router.post(
+  '/:id/notifications/acknowledge',
+  requireAuth,
+  controller.acknowledgeNotifications
+);
+
 router.delete(
   '/:id',
   requireAuth,

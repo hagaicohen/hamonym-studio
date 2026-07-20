@@ -985,6 +985,41 @@ exports.getApprovalStatus = async (entityId, userId) => {
   };
 };
 
+// Unread platform-admin decisions for this entity — powers the entity-
+// manager-facing notification bell. Every admin action already writes a
+// platform_audit_log row; "unread" just means acknowledged_at IS NULL.
+exports.getNotifications = async (entityId, userId) => {
+  await checkOwnership(userId, entityId);
+
+  const result = await db.query(
+    `SELECT a.id, a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS actor_name
+     FROM platform_audit_log a
+     JOIN users u ON u.id = a.super_admin_user_id
+     WHERE a.entity_id = $1 AND a.acknowledged_at IS NULL
+     ORDER BY a.created_at DESC`,
+    [entityId]
+  );
+
+  return result.rows.map(r => ({
+    id: r.id,
+    action: r.action,
+    notes: r.notes,
+    reasonTags: r.reason_tags,
+    createdAt: r.created_at,
+    actorName: r.actor_name,
+  }));
+};
+
+exports.acknowledgeNotifications = async (entityId, userId) => {
+  await checkOwnership(userId, entityId);
+
+  await db.query(
+    `UPDATE platform_audit_log SET acknowledged_at = NOW()
+     WHERE entity_id = $1 AND acknowledged_at IS NULL`,
+    [entityId]
+  );
+};
+
 exports.requestReview = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 

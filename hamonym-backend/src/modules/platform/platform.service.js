@@ -95,6 +95,14 @@ const PROFILE_COMPLETION_SQL = `
   ) / 5.0 * 100)::int AS profile_completion
 `;
 
+// Lightweight — powers the notification bell, which polls far more often
+// than the dashboard is loaded. Same query getAlerts() already runs for the
+// 'pending_review' entry, split out so a poll doesn't also pay for KPIs/charts.
+exports.getNotificationsCount = async () => {
+  const result = await db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`);
+  return { pendingReviewCount: result.rows[0].c };
+};
+
 exports.getDashboardData = async () => {
   const [kpis, alerts, charts] = await Promise.all([
     getKpis(),
