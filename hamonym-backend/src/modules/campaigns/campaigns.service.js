@@ -732,6 +732,7 @@ exports.getCampaignBySlug =
 
         WHERE c.slug = $1
         AND ue.user_id = $2
+        AND c.deleted_at IS NULL
 
         LIMIT 1
         `,
