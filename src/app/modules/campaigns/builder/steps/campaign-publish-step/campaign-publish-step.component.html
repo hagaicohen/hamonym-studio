@@ -84,20 +84,24 @@
       @if (!draft.title.trim()) {
         @if (isLoadingSuggestion) {
           <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לכותרת על בסיס התוכן שכתבת...</div>
-        } @else if (metadataSuggestion?.suggestedTitle && !dismissedTitle) {
-          <div class="ai-suggestion-card">
-            <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
-            <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedTitle }}"</div>
-            <div class="ai-suggestion-actions">
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ והצג ב-Hero</button>
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptTitle(false)">אמץ בלי להציג ב-Hero</button>
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
-            </div>
-          </div>
-        } @else if (metadataSuggestion && !metadataSuggestion.suggestedTitle && !dismissedTitle) {
-          <div class="ai-suggestion-empty">
-            לא נמצא מספיק תוכן ליצירת כותרת אוטומטית — אפשר למלא ידנית בשלב "פרטי בסיס".
-          </div>
+        } @else {
+          @if (metadataSuggestion; as suggestion) {
+            @if (suggestion.suggestedTitle && !dismissedTitle) {
+              <div class="ai-suggestion-card">
+                <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-value">"{{ suggestion.suggestedTitle }}"</div>
+                <div class="ai-suggestion-actions">
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ והצג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptTitle(false)">אמץ בלי להציג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
+                </div>
+              </div>
+            } @else if (!suggestion.suggestedTitle && !dismissedTitle) {
+              <div class="ai-suggestion-empty">
+                לא נמצא מספיק תוכן ליצירת כותרת אוטומטית — אפשר למלא ידנית בשלב "פרטי בסיס".
+              </div>
+            }
+          }
         }
       }
 
@@ -111,20 +115,24 @@
       @if (!draft.shortDescription.trim()) {
         @if (isLoadingSuggestion) {
           <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לתיאור קצר על בסיס התוכן שכתבת...</div>
-        } @else if (metadataSuggestion?.suggestedShortDescription && !dismissedShortDescription) {
-          <div class="ai-suggestion-card">
-            <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
-            <div class="ai-suggestion-value">"{{ metadataSuggestion?.suggestedShortDescription }}"</div>
-            <div class="ai-suggestion-actions">
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ והצג ב-Hero</button>
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptShortDescription(false)">אמץ בלי להציג ב-Hero</button>
-              <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
-            </div>
-          </div>
-        } @else if (metadataSuggestion && !metadataSuggestion.suggestedShortDescription && !dismissedShortDescription) {
-          <div class="ai-suggestion-empty">
-            לא נמצא מספיק תוכן ליצירת תיאור קצר אוטומטי — אפשר למלא ידנית בשלב "פרטי בסיס".
-          </div>
+        } @else {
+          @if (metadataSuggestion; as suggestion) {
+            @if (suggestion.suggestedShortDescription && !dismissedShortDescription) {
+              <div class="ai-suggestion-card">
+                <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-value">"{{ suggestion.suggestedShortDescription }}"</div>
+                <div class="ai-suggestion-actions">
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ והצג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptShortDescription(false)">אמץ בלי להציג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
+                </div>
+              </div>
+            } @else if (!suggestion.suggestedShortDescription && !dismissedShortDescription) {
+              <div class="ai-suggestion-empty">
+                לא נמצא מספיק תוכן ליצירת תיאור קצר אוטומטי — אפשר למלא ידנית בשלב "פרטי בסיס".
+              </div>
+            }
+          }
         }
       }
 
