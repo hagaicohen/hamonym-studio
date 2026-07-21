@@ -155,6 +155,13 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
     return STATUS_LABELS[status] ?? status;
   }
 
+  // Same gap as the organizations list — display_name is only filled in
+  // step 2 of the registration wizard, so an entity that only completed
+  // step 1 would otherwise show a blank title/placeholder here.
+  get orgName(): string {
+    return this.entity?.display_name || this.entity?.legal_name || 'ללא שם';
+  }
+
   actionLabel(action: string): string {
     return ACTION_LABELS[action] ?? action;
   }
@@ -233,7 +240,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   hardDeleteError = '';
 
   get hardDeleteConfirmValid(): boolean {
-    return this.hardDeleteConfirmText.trim() === (this.entity?.display_name || '').trim();
+    return this.hardDeleteConfirmText.trim() === this.orgName.trim();
   }
 
   openHardDeleteModal(): void {

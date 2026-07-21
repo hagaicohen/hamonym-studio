@@ -38,6 +38,8 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   dropdownOpen = false;
   count = 0;
+  pendingReviewCount = 0;
+  incompleteDraftsCount = 0;
   notifications: EntityNotification[] = [];
   private acknowledgeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -58,8 +60,12 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   private fetch() {
     if (this.ctx.adminMode()) {
       return this.platformApi.getNotificationsCount().pipe(
-        tap(r => { this.count = r.pendingReviewCount; }),
-        catchError(() => { this.count = 0; return of(null); }),
+        tap(r => {
+          this.pendingReviewCount = r.pendingReviewCount;
+          this.incompleteDraftsCount = r.incompleteDraftsCount;
+          this.count = r.pendingReviewCount + r.incompleteDraftsCount;
+        }),
+        catchError(() => { this.count = 0; this.pendingReviewCount = 0; this.incompleteDraftsCount = 0; return of(null); }),
       );
     }
     const entityId = this.currentEntity.currentEntity()?.id;
@@ -70,6 +76,10 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     );
   }
 
+  // Both modes now open the same dropdown — a plain navigate-away used to
+  // be a no-op whenever the admin clicked the bell while already sitting on
+  // /platform, which looked like the bell did nothing. See DECISIONS.md
+  // (2026-07-20).
   toggle(event: MouseEvent): void {
     event.stopPropagation();
     this.dropdownOpen = !this.dropdownOpen;
@@ -88,10 +98,10 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     }
   }
 
-  goToPendingReview(event: MouseEvent): void {
+  goToOrganizations(status: 'pending_review' | 'draft', event: MouseEvent): void {
     event.stopPropagation();
     this.dropdownOpen = false;
-    this.router.navigate(['/platform/organizations'], { queryParams: { status: 'pending_review' } });
+    this.router.navigate(['/platform/organizations'], { queryParams: { status } });
   }
 
   @HostListener('document:click', ['$event'])

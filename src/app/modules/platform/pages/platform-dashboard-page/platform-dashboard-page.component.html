@@ -22,8 +22,8 @@
         <div class="kpi-value primary">{{ kpis.activeEntities | number }}</div>
       </div>
       <div class="plat-kpi-card">
-        <div class="kpi-label">ממתינות לאישור</div>
-        <div class="kpi-value warn">{{ kpis.pendingReviewEntities | number }}</div>
+        <div class="kpi-label">ממתינות לאישור/פרטים חסרים</div>
+        <div class="kpi-value warn">{{ kpis.pendingReviewEntities + kpis.incompleteDraftEntities | number }}</div>
       </div>
       <div class="plat-kpi-card">
         <div class="kpi-label">קמפיינים פעילים</div>

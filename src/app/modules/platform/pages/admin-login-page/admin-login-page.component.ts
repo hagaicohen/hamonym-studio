@@ -20,6 +20,7 @@ export class AdminLoginPageComponent implements OnInit {
 
   email = '';
   password = '';
+  showPassword = false;
   loading = false;
   errorMessage = '';
 

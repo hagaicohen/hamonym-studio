@@ -19,6 +19,7 @@ const COLUMNS: ColumnDef[] = [
 interface Organization {
   id: string;
   display_name: string;
+  legal_name: string | null;
   logo_url: string | null;
   status: string;
   created_at: string;
@@ -176,6 +177,13 @@ export class PlatformOrganizationsPageComponent implements OnInit {
 
   statusLabel(status: string): string {
     return STATUS_LABELS[status] ?? status;
+  }
+
+  // display_name is only filled in step 2 of the registration wizard —
+  // an entity that only completed step 1 (legal_name + registration_number)
+  // would otherwise show a blank name here.
+  orgName(org: Organization): string {
+    return org.display_name || org.legal_name || 'ללא שם';
   }
 
   relativeTime(iso: string): string {

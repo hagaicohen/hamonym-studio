@@ -60,10 +60,10 @@
                   @if (org.logo_url) {
                     <img [src]="org.logo_url" class="plat-logo" alt="" />
                   } @else {
-                    <div class="plat-logo-placeholder">{{ org.display_name.charAt(0) }}</div>
+                    <div class="plat-logo-placeholder">{{ orgName(org).charAt(0) }}</div>
                   }
                 </td>
-                <td data-label="שם העמותה">{{ org.display_name }}</td>
+                <td data-label="שם העמותה">{{ orgName(org) }}</td>
                 @if (visibleColumns.has('status')) {
                   <td data-label="סטטוס"><span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span></td>
                 }

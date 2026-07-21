@@ -109,7 +109,7 @@ export class CurrentContextService {
    * Future: ambassadorCampaigns, campaignManagerCampaigns, isDonor.
    */
   initFromLogin(params: {
-    entities?: Array<{ id: string; display_name: string }>;
+    entities?: Array<{ id: string; display_name: string; legal_name?: string }>;
     ambassadorCampaigns?: Array<{ id: string; name: string }>;
     campaignManagerCampaigns?: Array<{ id: string; name: string }>;
     isDonor?: boolean;
@@ -122,7 +122,10 @@ export class CurrentContextService {
         role: 'entity-manager',
         label: m.label,
         icon: m.icon,
-        contexts: params.entities.map((e) => ({ id: e.id, name: e.display_name })),
+        // display_name is only filled in step 2 of the registration wizard —
+        // an entity that only completed step 1 would otherwise show up with
+        // a blank name in the topbar identity switcher.
+        contexts: params.entities.map((e) => ({ id: e.id, name: e.display_name || e.legal_name || 'ללא שם' })),
       });
     }
 

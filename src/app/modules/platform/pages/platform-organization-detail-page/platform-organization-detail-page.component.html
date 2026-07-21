@@ -15,10 +15,10 @@
         @if (entity.logo_url) {
           <img [src]="entity.logo_url" class="plat-logo" alt="" />
         } @else {
-          <div class="plat-logo-placeholder">{{ entity.display_name?.charAt(0) }}</div>
+          <div class="plat-logo-placeholder">{{ orgName.charAt(0) }}</div>
         }
         <div>
-          <h1 class="plat-title">{{ entity.display_name }}</h1>
+          <h1 class="plat-title">{{ orgName }}</h1>
           <span class="plat-status" [ngClass]="'status-' + entity.status">{{ statusLabel(entity.status) }}</span>
         </div>
       </div>
@@ -351,7 +351,7 @@
 @if (hardDeleteConfirmOpen) {
   <div class="modal-backdrop" (click)="closeHardDeleteModal()">
     <div class="modal-box" (click)="$event.stopPropagation()">
-      <h2 class="modal-title">מחיקה לצמיתות של "{{ entity?.display_name }}"</h2>
+      <h2 class="modal-title">מחיקה לצמיתות של "{{ orgName }}"</h2>
       <p class="modal-desc">
         זו פעולה בלתי הפיכה. כל הקמפיינים, התרומות, הקבלות, השגרירים והמשתמשים המשויכים לעמותה זו יימחקו לצמיתות.
         כדי לאשר, הקלידו את שם העמותה במדויק:
@@ -360,7 +360,7 @@
         type="text"
         class="plat-notes"
         [(ngModel)]="hardDeleteConfirmText"
-        [placeholder]="entity?.display_name"
+        [placeholder]="orgName"
       />
       <textarea
         class="plat-notes"

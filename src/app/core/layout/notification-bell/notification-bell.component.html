@@ -1,28 +1,37 @@
 <div class="bell-wrapper" *ngIf="count > 0 || dropdownOpen">
+  <div class="bell-btn-wrap">
+    <button class="bell-btn" type="button" title="הודעות" (click)="toggle($event)">
+      <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
+      <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
+    </button>
 
-  <!-- ADMIN MODE — single action (go review pending entities), no dropdown needed.
-       Tooltip is deliberately generic ("הודעות"), not "עמותות ממתינות לאישור" —
-       today the only admin notification type is pending-entity approvals, but
-       the count/click-through shouldn't imply that's the only kind there'll
-       ever be. See DECISIONS.md (2026-07-20). -->
-  <button *ngIf="ctx.adminMode(); else entityBell"
-    class="bell-btn" type="button" title="הודעות"
-    (click)="goToPendingReview($event)">
-    <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
-    <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
-  </button>
+    <div class="bell-dropdown" *ngIf="dropdownOpen">
+      <div class="bell-dropdown-title">הודעות</div>
 
-  <!-- ENTITY-MANAGER MODE — dropdown listing unread admin decisions -->
-  <ng-template #entityBell>
-    <div class="bell-btn-wrap">
-      <button class="bell-btn" type="button" title="הודעות" (click)="toggle($event)">
-        <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
-        <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
-      </button>
+      <!-- ADMIN MODE — each notification kind is its own row, linking to
+           the organizations list filtered by the matching real status.
+           Kept as separate rows (not one merged count) since "ממתינות
+           לאישור" and "פרטים חסרים" need different admin actions. -->
+      <ng-container *ngIf="ctx.adminMode(); else entityItems">
+        <div class="bell-empty" *ngIf="count === 0">אין הודעות חדשות</div>
 
-      <div class="bell-dropdown" *ngIf="dropdownOpen">
-        <div class="bell-dropdown-title">הודעות</div>
+        <div class="bell-item bell-item--link" *ngIf="pendingReviewCount > 0" (click)="goToOrganizations('pending_review', $event)">
+          <span class="bell-item-icon">🕒</span>
+          <div class="bell-item-body">
+            <div class="bell-item-title">{{ pendingReviewCount }} עמותות ממתינות לאישור</div>
+          </div>
+        </div>
 
+        <div class="bell-item bell-item--link" *ngIf="incompleteDraftsCount > 0" (click)="goToOrganizations('draft', $event)">
+          <span class="bell-item-icon">📝</span>
+          <div class="bell-item-body">
+            <div class="bell-item-title">{{ incompleteDraftsCount }} עמותות עם פרטים חסרים</div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ENTITY-MANAGER MODE — dropdown listing unread admin decisions -->
+      <ng-template #entityItems>
         <div class="bell-empty" *ngIf="notifications.length === 0">אין הודעות חדשות</div>
 
         <div class="bell-item" *ngFor="let n of notifications">
@@ -33,8 +42,7 @@
             <div class="bell-item-meta">{{ n.actorName }} · {{ n.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
           </div>
         </div>
-      </div>
+      </ng-template>
     </div>
-  </ng-template>
-
+  </div>
 </div>

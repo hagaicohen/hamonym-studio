@@ -8,6 +8,7 @@ interface DashboardKpis {
   totalEntities: number;
   activeEntities: number;
   pendingReviewEntities: number;
+  incompleteDraftEntities: number;
   activeCampaigns: number;
   donationsToday: number;
   donationsMonth: number;

@@ -17,8 +17,8 @@ export class PlatformService {
     return this.http.get(`${environment.apiUrl}/api/platform/dashboard`, { headers: authHeaders() });
   }
 
-  getNotificationsCount(): Observable<{ pendingReviewCount: number }> {
-    return this.http.get<{ pendingReviewCount: number }>(
+  getNotificationsCount(): Observable<{ pendingReviewCount: number; incompleteDraftsCount: number }> {
+    return this.http.get<{ pendingReviewCount: number; incompleteDraftsCount: number }>(
       `${environment.apiUrl}/api/platform/notifications-count`, { headers: authHeaders() },
     );
   }
