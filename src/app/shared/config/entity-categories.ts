@@ -3,7 +3,7 @@ export interface EntityCategory {
   label: string;
 }
 
-export const ENTITY_CATEGORIES: EntityCategory[] = [
+const RAW_ENTITY_CATEGORIES: EntityCategory[] = [
   { id: 'aid-support',           label: 'סיוע לנזקקים' },
   { id: 'animals',               label: 'בעלי חיים' },
   { id: 'art',                   label: 'אמנות' },
@@ -36,4 +36,17 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
   { id: 'social-change',         label: 'שינוי חברתי' },
   { id: 'sports',                label: 'ספורט' },
   { id: 'other',                 label: 'אחר' },
+];
+
+// Sorted alphabetically (Hebrew locale) by label — every consumer (dropdown
+// and chip pickers alike) imports this single ordered array, so sorting it
+// once here keeps them all in sync automatically. "אחר" (Other) is pinned
+// last regardless — it starts with א like several real categories, and
+// alphabetizing it in would bury it near the top instead of at the
+// conventional catch-all spot.
+export const ENTITY_CATEGORIES: EntityCategory[] = [
+  ...RAW_ENTITY_CATEGORIES
+    .filter((c) => c.id !== 'other')
+    .sort((a, b) => a.label.localeCompare(b.label, 'he')),
+  ...RAW_ENTITY_CATEGORIES.filter((c) => c.id === 'other'),
 ];

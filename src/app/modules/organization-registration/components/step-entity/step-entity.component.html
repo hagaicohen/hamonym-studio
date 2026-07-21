@@ -173,7 +173,15 @@
           <div class="section-title">קטגוריות</div>
         </div>
 
-        <label class="field-label"> קטגוריה ראשית * </label>
+        <div class="field-label-row">
+          <label class="field-label"> קטגוריה ראשית * </label>
+
+          @if (primaryCategory) {
+            <button type="button" class="clear-selection-btn" (click)="clearPrimaryCategory()">
+              נקה בחירה
+            </button>
+          }
+        </div>
 
         <select
           [(ngModel)]="primaryCategory"

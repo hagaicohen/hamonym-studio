@@ -1,4 +1,37 @@
 <div class="wizard-page">
+
+  @if (draftToResume()) {
+    <div class="draft-resume-banner">
+      <div class="draft-resume-text">
+        <strong>נמצאה טיוטה קודמת</strong> — "{{ draftToResume().legal_name || draftToResume().display_name || 'ללא שם' }}",
+        נשמרה לאחרונה ב-{{ draftToResume().updated_at | date:'dd/MM/yyyy HH:mm' }}.
+      </div>
+      <div class="draft-resume-actions">
+        <button type="button" class="draft-resume-btn draft-resume-btn--primary" (click)="resumeDraft()">המשך מהטיוטה</button>
+        <button type="button" class="draft-resume-btn" (click)="dismissDraftPrompt()">התחל טיוטה חדשה</button>
+      </div>
+    </div>
+  }
+
+  <div class="draft-save-bar">
+    <button
+      type="button"
+      class="save-draft-btn"
+      [disabled]="!stateService.canSaveDraft || savingDraft()"
+      [title]="!stateService.canSaveDraft ? 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה' : ''"
+      (click)="saveDraft()"
+    >
+      {{ savingDraft() ? 'שומר...' : '💾 שמור טיוטה' }}
+    </button>
+
+    @if (draftSaved()) {
+      <span class="draft-save-status draft-save-status--ok">הטיוטה נשמרה — אפשר לחזור אליה בכל שלב</span>
+    }
+    @if (draftSaveError()) {
+      <span class="draft-save-status draft-save-status--error">{{ draftSaveError() }}</span>
+    }
+  </div>
+
   @if (currentStep === 1) {
     <app-step-entity (continue)="nextStep()"> </app-step-entity>
   }

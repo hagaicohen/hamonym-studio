@@ -233,6 +233,44 @@
   color: #0f172a;
 }
 
+.field-label-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.field-label-row .field-label {
+  margin-bottom: 8px;
+}
+
+.clear-selection-btn {
+  border: none;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  font-weight: 500;
+
+  color: #64748b;
+
+  margin-bottom: 8px;
+
+  transition: color 0.2s ease;
+}
+
+.clear-selection-btn:hover {
+  color: #14b8a6;
+
+  text-decoration: underline;
+}
+
 /* INPUTS */
 
 input,

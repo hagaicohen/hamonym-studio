@@ -22,15 +22,9 @@ import {
   EntityType,
 } from '../../config/entity-config';
 
-import { EntitiesService } from '../../../../core/services/entities.service';
-
 import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
-
-import { forkJoin } from 'rxjs';
-
-import { BillingService } from '../../services/billing.service';
 
 @Component({
   selector: 'app-step-review',
@@ -40,13 +34,9 @@ import { BillingService } from '../../services/billing.service';
   styleUrls: ['./step-review.component.css'],
 })
 export class StepReviewComponent {
-  private entitiesService = inject(EntitiesService);
-
   private router = inject(Router);
 
   private currentEntityService = inject(CurrentEntityService);
-
-  private readonly billingService = inject(BillingService);
 
   @Output()
   back = new EventEmitter<void>();
@@ -234,20 +224,14 @@ export class StepReviewComponent {
   // =========================================================
 
   get isProfileComplete(): boolean {
-    return !!(
-      this.state().entityType &&
-      this.organizationName &&
-      this.organizationNumber &&
-      this.displayName &&
-      this.email &&
-      this.phone &&
-      this.organizationDescription
-    );
+    return this.stateService.isProfileComplete;
   }
 
   loading = false;
 
   success = false;
+
+  submitError = '';
 
   submitApplication(): void {
     if (this.loading) {
@@ -255,200 +239,14 @@ export class StepReviewComponent {
     }
 
     this.loading = true;
+    this.submitError = '';
 
-    console.log('REVIEW STATE', this.state());
-
-    console.log({
-      monthlyGoal: this.state().monthlyGoal,
-
-      yearlyGoal: this.state().yearlyGoal,
-    });
-
-    const payload = {
-      // =========================
-      // BASIC
-      // =========================
-
-      entity_type: this.state().entityType,
-
-      legal_name: this.organizationName,
-
-      display_name: this.displayName,
-
-      registration_number: this.organizationNumber,
-
-      email: this.email,
-
-      phone: this.phone,
-
-      website: null,
-
-      description: this.organizationDescription,
-
-      // IMPORTANT:
-      // do not save blob url
-
-      logo_url: null,
-
-      is_profile_complete: this.isProfileComplete,
-
-      primary_category: this.state().primaryCategory,
-
-      secondary_categories: this.state().selectedCategories,
-
-      campaign_types: this.state().selectedCampaignTypes,
-
-      // =========================
-      // GOALS
-      // =========================
-
-      monthly_goal: this.state().monthlyGoal,
-
-      yearly_goal: this.state().yearlyGoal,
-
-      // =========================
-      // ORGANIZATION CARDCOM
-      // =========================
-
-      billing_provider: this.state().provider,
-
-      billing_skip_setup: this.state().useExistingTerminal,
-
-      cardcom_terminal_number: this.state().terminalNumber,
-
-      cardcom_api_username: this.state().apiUsername,
-
-      cardcom_api_password_encrypted: this.state().apiPassword,
-
-      cardcom_connection_status: this.state().useExistingTerminal
-        ? 'skipped'
-        : this.state().connectionSuccess
-          ? 'success'
-          : 'not_tested',
-
-      // =========================
-      // CONTACT
-      // =========================
-
-      contact_full_name: this.fullName,
-
-      contact_phone: this.phone,
-
-      contact_email: this.email,
-
-      // =========================
-      // DOCUMENTS
-      // =========================
-
-      association_certificate_url: this.certificateFileUrl,
-
-      association_certificate_name: this.certificateFileName,
-
-      tax_document_url: this.section46FileUrl,
-
-      tax_document_name: this.section46FileName,
-    };
-
-    console.log('FINAL PAYLOAD', payload);
-
-    this.entitiesService.createEntity(payload).subscribe({
-      next: (res) => {
-        const entityId = res.entity.id;
-
-        const uploads = [];
-
-        if (this.state().certificateFile) {
-          uploads.push(
-            this.entitiesService.uploadAssociationDocument(
-              entityId,
-
-              this.state().certificateFile!,
-            ),
-          );
-        }
-
-        if (this.state().section46File) {
-          uploads.push(
-            this.entitiesService.uploadTaxDocument(
-              entityId,
-
-              this.state().section46File!,
-            ),
-          );
-        }
-
-        if (this.state().logoFile) {
-          uploads.push(
-            this.entitiesService.uploadLogo(
-              entityId,
-
-              this.state().logoFile!,
-            ),
-          );
-        }
-
-        // =========================
-        // BILLING
-        // =========================
-
-        if (this.state().cardcomInternalDealNumber) {
-          uploads.push(
-            this.billingService.createEntityBilling({
-              entityId,
-
-              provider: 'cardcom',
-
-              lowProfileId: this.state().cardcomLowProfileId,
-
-              internalDealNumber: this.state().cardcomInternalDealNumber,
-            }),
-          );
-        }
-
-        if (!uploads.length) {
-          this.finishRegistration(res.entity);
-
-          return;
-        }
-
-        forkJoin(uploads).subscribe({
-          next: (results: any[]) => {
-            console.log('UPLOAD RESULTS', results);
-
-            const updatedEntity = {
-              ...res.entity,
-
-              logo_url:
-                results.find((r) => r?.result?.logo_url)?.result?.logo_url ||
-                res.entity.logo_url,
-
-              association_certificate_url:
-                results.find((r) => r?.result?.association_certificate_url)
-                  ?.result?.association_certificate_url ||
-                res.entity.association_certificate_url,
-
-              tax_document_url:
-                results.find((r) => r?.result?.tax_document_url)?.result
-                  ?.tax_document_url || res.entity.tax_document_url,
-            };
-
-            console.log('UPDATED ENTITY', updatedEntity);
-
-            this.finishRegistration(updatedEntity);
-          },
-
-          error: (err) => {
-            console.error('UPLOAD ERROR', err);
-
-            this.loading = false;
-          },
-        });
-      },
-
+    this.stateService.save({ includeBilling: true }).subscribe({
+      next: (entity) => this.finishRegistration(entity),
       error: (err) => {
-        console.error('CREATE ENTITY ERROR', err);
-
+        console.error('SUBMIT APPLICATION ERROR', err);
         this.loading = false;
+        this.submitError = err?.error?.error || 'שגיאה בשליחת הבקשה. נסו שוב.';
       },
     });
   }

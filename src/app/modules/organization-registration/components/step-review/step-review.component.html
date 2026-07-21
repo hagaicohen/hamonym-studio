@@ -619,6 +619,8 @@
 
   <!-- ACTIONS -->
 
+  <div class="field-error" *ngIf="submitError">{{ submitError }}</div>
+
   <div class="wizard-actions">
     <button type="button" class="secondary-btn" (click)="back.emit()">
       חזרה

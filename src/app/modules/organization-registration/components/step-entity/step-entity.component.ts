@@ -187,7 +187,20 @@ export class StepEntityComponent {
     });
   }
 
+  clearPrimaryCategory(): void {
+    this.primaryCategory = '';
+  }
+
   toggleCategory(categoryId: string): void {
+    // No primary category chosen yet — a click on a chip picks it as the
+    // primary category (fills the dropdown) instead of toggling it as a
+    // secondary one, so the chips work as a second way to answer the same
+    // required question, not just an "extra categories" add-on.
+    if (!this.primaryCategory) {
+      this.primaryCategory = categoryId;
+      return;
+    }
+
     const exists = this.selectedCategories.includes(categoryId);
 
     if (exists) {
