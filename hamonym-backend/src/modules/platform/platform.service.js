@@ -8,7 +8,7 @@ const donationsService = require('../donations/donations.service');
 const emailService = require('../email/email.service');
 
 const ORG_SORT_COLUMNS = {
-  name: 'e.display_name',
+  name: 'COALESCE(NULLIF(e.display_name, \'\'), e.legal_name)',
   status: 'e.status',
   created_at: 'e.created_at',
   campaigns: 'campaigns_count',
@@ -95,12 +95,26 @@ const PROFILE_COMPLETION_SQL = `
   ) / 5.0 * 100)::int AS profile_completion
 `;
 
+// Any 'draft' entity — a registration with missing details — should chase
+// up the platform admin immediately, same as a pending_review one. No time
+// buffer: flagged the moment it exists, even mid-wizard. See
+// DECISIONS.md (2026-07-20).
+const INCOMPLETE_DRAFT_SQL = `(status = 'draft')`;
+
 // Lightweight — powers the notification bell, which polls far more often
 // than the dashboard is loaded. Same query getAlerts() already runs for the
 // 'pending_review' entry, split out so a poll doesn't also pay for KPIs/charts.
 exports.getNotificationsCount = async () => {
-  const result = await db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`);
-  return { pendingReviewCount: result.rows[0].c };
+  const result = await db.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
+       COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
+     FROM entities`
+  );
+  return {
+    pendingReviewCount: result.rows[0].pending_review,
+    incompleteDraftsCount: result.rows[0].incomplete_drafts,
+  };
 };
 
 exports.getDashboardData = async () => {
@@ -118,7 +132,8 @@ async function getKpis() {
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
-         COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review
+         COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
+         COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
        FROM entities`
     ),
     db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published' AND deleted_at IS NULL`),
@@ -147,6 +162,7 @@ async function getKpis() {
     totalEntities: entitiesRes.rows[0].total,
     activeEntities: entitiesRes.rows[0].active,
     pendingReviewEntities: entitiesRes.rows[0].pending_review,
+    incompleteDraftEntities: entitiesRes.rows[0].incomplete_drafts,
     activeCampaigns: campaignsRes.rows[0].active,
     donationsToday: donationsRes.rows[0].today,
     donationsMonth: donationsRes.rows[0].month,
@@ -156,8 +172,9 @@ async function getKpis() {
 }
 
 async function getAlerts() {
-  const [pendingRes, missingDocsRes, cardcomRes, overdueRes] = await Promise.all([
+  const [pendingRes, incompleteDraftsRes, missingDocsRes, cardcomRes, overdueRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`),
+    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${INCOMPLETE_DRAFT_SQL}`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities
        WHERE association_certificate_name IS NULL OR tax_document_name IS NULL`
@@ -175,6 +192,12 @@ async function getAlerts() {
   const alerts = [];
   if (pendingRes.rows[0].c > 0) {
     alerts.push({ key: 'pending_review', label: 'עמותות ממתינות לאישור', count: pendingRes.rows[0].c, linkQuery: { status: 'pending_review' } });
+  }
+  if (incompleteDraftsRes.rows[0].c > 0) {
+    // Same treatment/urgency as pending_review, kept as its own alert (not
+    // merged into the count above) so clicking through actually filters to
+    // entities with this real status instead of silently showing nothing.
+    alerts.push({ key: 'incomplete_drafts', label: 'עמותות עם פרטים חסרים', count: incompleteDraftsRes.rows[0].c, linkQuery: { status: 'draft' } });
   }
   if (missingDocsRes.rows[0].c > 0) {
     alerts.push({ key: 'missing_docs', label: 'עמותות ללא מסמכים', count: missingDocsRes.rows[0].c, linkQuery: { missingDocs: '1' } });
@@ -335,7 +358,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
     params.push(status);
   }
   if (search) {
-    where.push(`e.display_name ILIKE $${idx}`);
+    where.push(`(e.display_name ILIKE $${idx} OR e.legal_name ILIKE $${idx})`);
     params.push(`%${search}%`);
     idx++;
   }
@@ -357,7 +380,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
-         e.id, e.display_name, e.logo_url, e.status, e.created_at, e.updated_at,
+         e.id, e.display_name, e.legal_name, e.logo_url, e.status, e.created_at, e.updated_at,
          ${PROFILE_COMPLETION_SQL},
          owner.full_name AS owner_name, owner.email AS owner_email,
          COALESCE(camp.campaigns_count, 0) AS campaigns_count,

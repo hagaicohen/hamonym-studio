@@ -748,6 +748,22 @@ exports.updateEntity =
 
           ga_measurement_id = $30,
 
+          entity_type = COALESCE($32, entity_type),
+          -- $33 is NULL for ordinary entity-settings edits (which never send
+          -- is_profile_complete at all) — COALESCE leaves the existing value
+          -- alone in that case, rather than forcing it back to false.
+          is_profile_complete = COALESCE($33, is_profile_complete),
+
+          -- A draft entity that just became fully filled-in graduates to
+          -- pending_review on its own — this is the same rule createEntity
+          -- uses at creation time, applied here too so "save draft" and
+          -- "finish registration" can be the exact same call. Only ever
+          -- touches rows still in 'draft'; every other status (pending_review,
+          -- active, changes_requested, rejected, suspended) is untouched, so
+          -- this is safe for the ordinary post-approval entity-settings edits
+          -- that also go through this same function.
+          status = CASE WHEN status = 'draft' AND COALESCE($33, is_profile_complete) THEN 'pending_review' ELSE status END,
+
           updated_at = NOW()
 
         WHERE id = $31
@@ -813,7 +829,10 @@ exports.updateEntity =
 
           data.ga_measurement_id || null,
 
-          entityId
+          entityId,
+
+          data.entity_type || null,
+          data.is_profile_complete === undefined ? null : !!data.is_profile_complete
 
         ]
 
