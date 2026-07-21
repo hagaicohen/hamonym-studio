@@ -17,7 +17,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { EntitiesService } from '../../../../../core/services/entities.service';
 
-import { LucideAngularModule, Building2, Pencil } from 'lucide-angular';
+import { LucideAngularModule, Building2, Pencil, TriangleAlert } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-basic-info-section-view',
@@ -37,12 +37,22 @@ export class EntityBasicInfoSectionViewComponent implements OnChanges {
 
   readonly Building2 = Building2;
   readonly PencilIcon = Pencil;
+  readonly AlertIcon = TriangleAlert;
 
   @Input()
   entity: any;
 
+  @Input()
+  hasUnsavedChanges = false;
+
   @Output()
   edit = new EventEmitter<void>();
+
+  @Output()
+  save = new EventEmitter<void>();
+
+  @Output()
+  cancel = new EventEmitter<void>();
 
   categories = ENTITY_CATEGORIES;
 

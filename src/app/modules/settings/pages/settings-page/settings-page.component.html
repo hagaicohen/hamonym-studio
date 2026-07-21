@@ -29,7 +29,7 @@
             <div class="entity-header">
               <div class="entity-title-row">
                 <div class="entity-name">
-                  {{ entity.display_name }}
+                  {{ entityName(entity) }}
                 </div>
 
                 <div class="entity-status-group">
@@ -293,7 +293,7 @@
 @if (deleteEntityTarget) {
   <div class="modal-backdrop" (click)="closeDeleteEntityCardModal()">
     <div class="modal-box" (click)="$event.stopPropagation()">
-      <h2 class="modal-title">מחיקת "{{ deleteEntityTarget.display_name }}"</h2>
+      <h2 class="modal-title">מחיקת "{{ entityName(deleteEntityTarget) }}"</h2>
       <p class="modal-desc">
         פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.
         כדי לאשר, הקלידו את שם העמותה במדויק:
@@ -302,7 +302,7 @@
         type="text"
         class="danger-confirm-input"
         [(ngModel)]="deleteEntityConfirmText"
-        [placeholder]="deleteEntityTarget.display_name"
+        [placeholder]="entityName(deleteEntityTarget)"
       />
       @if (deleteEntityCardError) {
         <p class="modal-error">{{ deleteEntityCardError }}</p>

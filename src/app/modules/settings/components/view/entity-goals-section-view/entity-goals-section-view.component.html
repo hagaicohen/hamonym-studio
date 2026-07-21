@@ -1,4 +1,11 @@
 <div class="settings-card">
+  @if (hasUnsavedChanges) {
+    <div class="unsaved-banner">
+      <span>יש שינויים שלא נשמרו</span>
+      <lucide-icon [img]="AlertIcon" [size]="15" [strokeWidth]="2"></lucide-icon>
+    </div>
+  }
+
   <div class="card-top">
     <div>
       <div class="header-content">
@@ -15,10 +22,15 @@
     </div>
 
     <div class="card-actions">
-      <button type="button" class="edit-btn" (click)="edit.emit()">
-        <lucide-icon [img]="PencilIcon" [size]="13" [strokeWidth]="1.75"></lucide-icon>
-        עריכה
-      </button>
+      @if (hasUnsavedChanges) {
+        <button type="button" class="cancel-btn" (click)="cancel.emit()">ביטול</button>
+        <button type="button" class="save-btn" (click)="save.emit()">שמירה</button>
+      } @else {
+        <button type="button" class="edit-btn" (click)="edit.emit()">
+          <lucide-icon [img]="PencilIcon" [size]="13" [strokeWidth]="1.75"></lucide-icon>
+          עריכה
+        </button>
+      }
     </div>
   </div>
 

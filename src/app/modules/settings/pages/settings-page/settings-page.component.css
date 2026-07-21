@@ -15,7 +15,7 @@
 
   font-size: 36px;
 
-  font-weight: 700;
+  font-weight: 800;
 
   color: #111827;
 }
@@ -23,17 +23,17 @@
 .page-header p {
   margin-top: 10px;
 
-  color: #6b7280;
+  color: #4b5563;
 
   font-size: 16px;
 }
 
 .settings-section {
-  margin-bottom: 40px;
+  margin-bottom: 42px;
 }
 
 .section-header {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 
   display: flex;
   align-items: center;
@@ -46,173 +46,6 @@
 
   font-size: 24px;
 
-  font-weight: 700;
-
-  color: #111827;
-}
-
-.section-header p {
-  margin-top: 8px;
-
-  color: #6b7280;
-}
-
-.entities-grid {
-  display: grid;
-
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-
-  gap: 20px;
-}
-
-.entity-card {
-  background: white;
-
-  border: 1px solid #e5e7eb;
-
-  border-radius: 24px;
-
-  padding: 24px;
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 20px;
-
-  transition: 0.2s ease;
-
-  position: relative;
-}
-
-.entity-card:hover {
-  transform: translateY(-2px);
-
-  border-color: #d1d5db;
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-}
-
-.entity-card.current {
-  border: 2px solid #6D5DF6;
-  box-shadow: 0 8px 24px rgba(109, 93, 246, 0.12);
-}
-
-.entity-top {
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: flex-start;
-
-  gap: 12px;
-}
-
-.entity-name {
-  font-size: 20px;
-
-  font-weight: 700;
-
-  color: #111827;
-}
-
-.entity-type {
-  margin-top: 6px;
-
-  color: #6b7280;
-
-  font-size: 14px;
-}
-
-.entity-status {
-  padding: 8px 12px;
-
-  border-radius: 999px;
-
-  font-size: 13px;
-
-  font-weight: 600;
-
-  white-space: nowrap;
-}
-
-.entity-status.active {
-  background: #ecfdf5;
-
-  color: #047857;
-}
-
-.entity-status.incomplete {
-  background: #fffbeb;
-
-  color: #b45309;
-}
-
-.entity-status.pending {
-  background: #eff6ff;
-
-  color: #1d4ed8;
-}
-
-.current-badge {
-  background: #eff6ff;
-
-  color: #1d4ed8;
-
-  border: 1px solid #bfdbfe;
-
-  padding: 10px 14px;
-
-  border-radius: 14px;
-
-  font-size: 14px;
-
-  font-weight: 600;
-}
-
-.settings-page {
-  padding: 32px;
-
-  max-width: 1400px;
-
-  margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 40px;
-}
-
-.page-header h1 {
-  margin: 0;
-
-  font-size: 36px;
-
-  font-weight: 800;
-
-  color: #111827;
-}
-
-.page-header p {
-  margin-top: 10px;
-
-  color: #6b7280;
-
-  font-size: 16px;
-}
-
-.settings-section {
-  margin-bottom: 42px;
-}
-
-.section-header {
-  margin-bottom: 22px;
-}
-
-.section-header h2 {
-  margin: 0;
-
-  font-size: 24px;
-
   font-weight: 800;
 
   color: #111827;
@@ -221,7 +54,7 @@
 .section-header p {
   margin-top: 8px;
 
-  color: #6b7280;
+  color: #4b5563;
 
   font-size: 15px;
 }
@@ -297,9 +130,9 @@
 .entity-name {
   font-size: 22px;
 
-  font-weight: 800;
+  font-weight: 700;
 
-  color: #111827;
+  color: #1e293b;
 
   line-height: 1.2;
 }
@@ -309,7 +142,7 @@
 
   font-size: 14px;
 
-  color: #64748b;
+  color: #4b5563;
 
   font-weight: 600;
 }
@@ -412,7 +245,7 @@
 .detail-label {
   font-size: 13px;
 
-  color: #6b7280;
+  color: #4b5563;
 
   font-weight: 600;
 }
@@ -786,7 +619,7 @@
 .add-title {
   font-size: 19px;
 
-  font-weight: 800;
+  font-weight: 700;
 
   color: #111827;
 }
@@ -824,7 +657,7 @@
 }
 
 .account-label {
-  color: #6b7280;
+  color: #4b5563;
 
   font-size: 14px;
 }
@@ -921,7 +754,7 @@
 }
 
 .account-field label {
-  color: #6b7280;
+  color: #4b5563;
   font-size: 13px;
   font-weight: 600;
 }

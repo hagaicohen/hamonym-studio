@@ -150,6 +150,12 @@ export class SettingsPageComponent implements OnInit {
     this.currentEntityService.currentEntity.set(entity);
   }
 
+  // display_name is only filled in step 2 of the registration wizard — an
+  // entity that only completed step 1 would otherwise show a blank name.
+  entityName(entity: any): string {
+    return entity?.display_name || entity?.legal_name || 'ללא שם';
+  }
+
   getStatusLabel(status: string): string {
     switch (status) {
       case 'active':
@@ -214,7 +220,7 @@ export class SettingsPageComponent implements OnInit {
   deleteEntityCardError = '';
 
   get deleteEntityCardConfirmValid(): boolean {
-    return this.deleteEntityConfirmText.trim() === (this.deleteEntityTarget?.display_name || '').trim();
+    return this.deleteEntityConfirmText.trim() === this.entityName(this.deleteEntityTarget).trim();
   }
 
   openDeleteEntityCardModal(event: Event, entity: any): void {

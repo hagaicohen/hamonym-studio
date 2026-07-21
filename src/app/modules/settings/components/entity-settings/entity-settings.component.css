@@ -612,6 +612,15 @@
   line-height: 1.6;
 }
 
+.unsaved-card-wrap {
+  border-radius: 24px;
+  transition: box-shadow 0.15s ease;
+}
+
+.unsaved-card-wrap.has-unsaved {
+  box-shadow: 0 0 0 2px #f97316;
+}
+
 .visibility-btn {
   margin-top: 16px;
   height: 44px;

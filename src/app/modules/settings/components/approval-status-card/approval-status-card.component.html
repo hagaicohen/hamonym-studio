@@ -8,7 +8,7 @@
   <div *ngIf="data.comment" class="approval-body">
     <div class="approval-issues-title">יש להשלים את הדברים הבאים:</div>
 
-    <ul class="approval-tags" *ngIf="data.reasonTags?.length">
+    <ul class="approval-tags" *ngIf="data.reasonTags.length">
       <li *ngFor="let tag of data.reasonTags">{{ reasonLabel(tag) }}</li>
     </ul>
 

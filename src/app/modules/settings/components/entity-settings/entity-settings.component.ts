@@ -102,6 +102,13 @@ export class EntitySettingsComponent implements OnInit {
 
   editingSection: string | null = null;
 
+  // Sections left mid-edit with unsaved changes (switched away without
+  // saving) — draftEntity is NOT reset when that happens (see startEdit),
+  // so nothing typed is lost, but the section's own card needs to show it
+  // still has pending changes. Highlighted directly on that card instead of
+  // a page-level banner.
+  dirtySections = new Set<string>();
+
   saveError = '';
   showInlineError = false;
 
@@ -141,9 +148,31 @@ export class EntitySettingsComponent implements OnInit {
     };
   }
 
+  private hasUnsavedChanges(): boolean {
+    return JSON.stringify(this.draftEntity) !== JSON.stringify(this.entity);
+  }
+
   startEdit(section?: string): void {
     this.saveError = '';
 
+    if (
+      this.editMode &&
+      section &&
+      section !== this.editingSection &&
+      this.hasUnsavedChanges()
+    ) {
+      // Switching to a different section while the current one still has
+      // unsaved edits — keep draftEntity as-is instead of resetting it from
+      // the last-saved entity, so nothing typed is lost. It'll ride along
+      // and get saved the next time ANY section's save button is pressed
+      // (saveAll() always saves the whole draftEntity). Mark the section
+      // being left so its card shows a "not saved yet" highlight.
+      if (this.editingSection) this.dirtySections.add(this.editingSection);
+      this.editingSection = section;
+      return;
+    }
+
+    if (section) this.dirtySections.delete(section);
     this.draftEntity = structuredClone(this.entity);
 
     this.editMode = true;
@@ -153,6 +182,7 @@ export class EntitySettingsComponent implements OnInit {
 
   cancelEdit(): void {
     this.saveError = '';
+    this.dirtySections.clear();
 
     this.draftEntity = structuredClone(this.entity);
 
@@ -317,6 +347,11 @@ export class EntitySettingsComponent implements OnInit {
           this.saveState.isSaving = false;
 
           this.saveState.saveFailed = false;
+
+          // saveAll() always persists the whole draftEntity in one PATCH,
+          // so a save from any single section's button saves every pending
+          // change, not just that section's — clear all the highlights.
+          this.dirtySections.clear();
 
           this.saveState.saveCompleted = true;
 
@@ -514,7 +549,14 @@ export class EntitySettingsComponent implements OnInit {
   deleteError = '';
 
   get deleteConfirmValid(): boolean {
-    return this.deleteConfirmText.trim() === (this.draftEntity?.display_name || '').trim();
+    return this.deleteConfirmText.trim() === this.entityName.trim();
+  }
+
+  // display_name is only filled in step 2 of the registration wizard — an
+  // entity that only completed step 1 would otherwise show a blank name
+  // (and, worse, let the delete-confirmation input pass while empty).
+  get entityName(): string {
+    return this.draftEntity?.display_name || this.draftEntity?.legal_name || 'ללא שם';
   }
 
   openDeleteEntityModal(): void {

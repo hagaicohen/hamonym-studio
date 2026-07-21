@@ -97,6 +97,14 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
   }
 
   toggleSecondaryCategory(categoryId: string) {
+    // No primary category chosen yet — a click on a chip picks it as the
+    // primary category (fills the dropdown) instead of toggling it as a
+    // secondary one, matching the same behavior in the registration wizard.
+    if (!this.entity?.primary_category) {
+      this.updateField('primary_category', categoryId);
+      return;
+    }
+
     const current = this.entity?.secondary_categories || [];
 
     const exists = current.includes(categoryId);

@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
-import { LucideAngularModule, ImageIcon, Pencil } from 'lucide-angular';
+import { LucideAngularModule, ImageIcon, Pencil, TriangleAlert } from 'lucide-angular';
 
 @Component({
   selector: 'app-entity-profile-section-view',
@@ -25,10 +25,16 @@ export class EntityProfileSectionViewComponent {
   @Input()
   campaignTypes: any[] = [];
 
+  @Input()
+  hasUnsavedChanges = false;
+
   @Output() edit = new EventEmitter<void>();
+  @Output() save = new EventEmitter<void>();
+  @Output() cancel = new EventEmitter<void>();
 
   readonly ImageIcon = ImageIcon;
   readonly PencilIcon = Pencil;
+  readonly AlertIcon = TriangleAlert;
 
   logoLoaded = false;
 

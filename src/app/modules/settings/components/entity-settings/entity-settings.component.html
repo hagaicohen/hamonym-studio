@@ -17,7 +17,7 @@
         </div>
 
         <div class="page-description">
-          {{ draftEntity?.display_name }}
+          {{ entityName }}
         </div>
       </div>
 
@@ -132,11 +132,16 @@
 
   <div #basicInfoSection>
     @if (!editMode || editingSection !== "basic-info") {
-      <app-entity-basic-info-section-view
-        [entity]="draftEntity"
-        (edit)="startEdit('basic-info')"
-      >
-      </app-entity-basic-info-section-view>
+      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('basic-info')">
+        <app-entity-basic-info-section-view
+          [entity]="draftEntity"
+          [hasUnsavedChanges]="dirtySections.has('basic-info')"
+          (edit)="startEdit('basic-info')"
+          (save)="saveAll()"
+          (cancel)="cancelEdit()"
+        >
+        </app-entity-basic-info-section-view>
+      </div>
     } @else {
       <app-entity-basic-info-section-edit
         [entity]="draftEntity"
@@ -158,13 +163,18 @@
 
   <div #profileSection>
     @if (!editMode || editingSection !== "profile") {
-      <app-entity-profile-section-view
-        [entity]="draftEntity"
-        [entityTypeLabel]="entityTypeLabel"
-        [campaignTypes]="campaignTypes"
-        (edit)="startEdit('profile')"
-      >
-      </app-entity-profile-section-view>
+      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('profile')">
+        <app-entity-profile-section-view
+          [entity]="draftEntity"
+          [entityTypeLabel]="entityTypeLabel"
+          [campaignTypes]="campaignTypes"
+          [hasUnsavedChanges]="dirtySections.has('profile')"
+          (edit)="startEdit('profile')"
+          (save)="saveAll()"
+          (cancel)="cancelEdit()"
+        >
+        </app-entity-profile-section-view>
+      </div>
     } @else {
       <app-entity-profile-section-edit
         [entity]="draftEntity"
@@ -183,11 +193,16 @@
 
   <div #goalsSection>
     @if (!editMode || editingSection !== "goals") {
-      <app-entity-goals-section-view
-        [entity]="draftEntity"
-        (edit)="startEdit('goals')"
-      >
-      </app-entity-goals-section-view>
+      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('goals')">
+        <app-entity-goals-section-view
+          [entity]="draftEntity"
+          [hasUnsavedChanges]="dirtySections.has('goals')"
+          (edit)="startEdit('goals')"
+          (save)="saveAll()"
+          (cancel)="cancelEdit()"
+        >
+        </app-entity-goals-section-view>
+      </div>
     } @else {
       <app-entity-goals-section-edit
         [entity]="draftEntity"
@@ -203,12 +218,17 @@
   <br />
   <div #paymentSection>
     @if (!editMode || editingSection !== "payment") {
-      <app-entity-payment-section-view
-        [entity]="draftEntity"
-        (edit)="startEdit('payment')"
-        (testConnection)="testBillingConnection()"
-      >
-      </app-entity-payment-section-view>
+      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('payment')">
+        <app-entity-payment-section-view
+          [entity]="draftEntity"
+          [hasUnsavedChanges]="dirtySections.has('payment')"
+          (edit)="startEdit('payment')"
+          (save)="saveAll()"
+          (cancel)="cancelEdit()"
+          (testConnection)="testBillingConnection()"
+        >
+        </app-entity-payment-section-view>
+      </div>
     } @else {
       <app-entity-payment-section-edit
         [model]="draftEntity"
@@ -229,11 +249,16 @@
 
   <div #billingSection>
     @if (!editMode || editingSection !== "billing") {
-      <app-entity-billing-section-view
-        [entity]="draftEntity"
-        (edit)="startEdit('billing')"
-      >
-      </app-entity-billing-section-view>
+      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('billing')">
+        <app-entity-billing-section-view
+          [entity]="draftEntity"
+          [hasUnsavedChanges]="dirtySections.has('billing')"
+          (edit)="startEdit('billing')"
+          (save)="saveAll()"
+          (cancel)="cancelEdit()"
+        >
+        </app-entity-billing-section-view>
+      </div>
     } @else {
       <app-entity-billing-section-edit
         [entity]="draftEntity"
@@ -290,7 +315,7 @@
 @if (deleteConfirmOpen) {
   <div class="modal-backdrop" (click)="closeDeleteEntityModal()">
     <div class="modal-box" (click)="$event.stopPropagation()">
-      <h2 class="modal-title">מחיקת "{{ draftEntity?.display_name }}"</h2>
+      <h2 class="modal-title">מחיקת "{{ entityName }}"</h2>
       <p class="modal-desc">
         פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.
         כדי לאשר, הקלידו את שם העמותה במדויק:
@@ -299,7 +324,7 @@
         type="text"
         class="danger-confirm-input"
         [(ngModel)]="deleteConfirmText"
-        [placeholder]="draftEntity?.display_name"
+        [placeholder]="entityName"
       />
       @if (deleteError) {
         <p class="modal-error">{{ deleteError }}</p>
