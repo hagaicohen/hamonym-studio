@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -39,7 +39,7 @@ type SourceMode = 'free_text' | 'website';
   templateUrl: './ai-campaign-creation-page.component.html',
   styleUrl: './ai-campaign-creation-page.component.css',
 })
-export class AiCampaignCreationPageComponent {
+export class AiCampaignCreationPageComponent implements OnInit {
   private http   = inject(HttpClient);
   private loader = inject(AppLoaderService);
   private router = inject(Router);
@@ -49,6 +49,17 @@ export class AiCampaignCreationPageComponent {
   brief  = signal<Brief | null>(null);
   error  = signal<string | null>(null);
   submitting = signal(false);
+
+  ngOnInit(): void {
+    // AppComponent's router-level loader deliberately stays up after
+    // navigating to any /campaigns/* route (SELF_HIDING_PREFIXES in
+    // app.component.ts) — it expects the destination page to dismiss it once
+    // its own initial data load finishes. This page has no initial data
+    // fetch of its own, so without this the overlay never gets dismissed at
+    // all — it silently blocks every click on the page forever, which is
+    // exactly the "spinner never stops" bug found via live testing.
+    this.loader.hide();
+  }
 
   setMode(mode: SourceMode): void {
     this.mode.set(mode);
