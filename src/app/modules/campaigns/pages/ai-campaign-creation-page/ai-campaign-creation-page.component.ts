@@ -26,6 +26,7 @@ interface Brief {
   entityType: string | null;
   title: string | null;
   shortDescription: string | null;
+  heroVideoUrl: string | null;
   category: SuggestedValue;
   suggestedTargetAmount: SuggestedValue;
   suggestedTone: SuggestedValue;

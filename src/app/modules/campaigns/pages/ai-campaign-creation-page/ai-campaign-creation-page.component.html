@@ -127,6 +127,14 @@
             {{ b.suggestedHero.value || '—' }}
             <span class="reason">— {{ b.suggestedHero.reason }}</span>
           </div>
+
+          @if (b.heroVideoUrl) {
+            <div class="field">
+              <span class="label">וידאו לפתיחה (Hero):</span>
+              {{ b.heroVideoUrl }}
+              <span class="reason">— זיהינו קישור לסרטון בטקסט שלכם, הוא יוצג כווידאו הפותח של הקמפיין</span>
+            </div>
+          }
         </div>
 
         <p class="brief-note">
