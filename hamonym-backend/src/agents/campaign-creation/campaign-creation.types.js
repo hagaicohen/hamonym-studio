@@ -31,6 +31,7 @@
  * @property {string|null} suggestedShortDescription
  * @property {number|null} suggestedTargetAmount - Only filled when an explicit amount appears in the source.
  * @property {string[]} socialLinks
+ * @property {string|null} heroVideoUrl - Only filled when an explicit YouTube/Vimeo URL appears in the source AND the surrounding text signals it's meant to represent the campaign (not just any video link mentioned in passing). Same "never invent" discipline as socialLinks.
  * @property {string|null} contactEmail - Public contact found in the source, shown as supporting info only — never auto-written to a registration form's own "who's filling this out" fields. See MVP doc §5.
  * @property {string|null} contactPhone
  */
@@ -69,6 +70,7 @@
  * @property {string|null} entityType - Carried over from ExtractedFacts.entityTypeGuess (added Sprint 3, found missing while mapping to OrganizationRegistrationState.entityType).
  * @property {string|null} title
  * @property {string|null} shortDescription
+ * @property {string|null} heroVideoUrl - Plain carry-over from ExtractedFacts, not a SuggestedValue: either the user gave an explicit video URL or they didn't, nothing for Brief to judge/reason about.
  * @property {SuggestedValue} category - Picks ONE category from ExtractedFacts.categoryGuess (a decision), or {value: null, reason: '...'} if categoryGuess was empty.
  * @property {SuggestedValue} suggestedTargetAmount - {value: <amount>, reason: 'explicit in source'} when ExtractedFacts.suggestedTargetAmount was set; otherwise {value: null, reason: '...'} — never a guessed/benchmark figure.
  * @property {SuggestedValue} suggestedTone - Short mood/style description (e.g. "תקווה ואופטימיות"), not a specific frontend palette key — TEMPLATE_PALETTES mapping is frontend-owned, deferred to the Draft-mapping sprint.

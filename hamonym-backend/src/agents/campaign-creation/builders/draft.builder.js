@@ -55,6 +55,18 @@ exports.toCampaignDraftPatch = (brief) => {
     patch.heroCtaConfig = { visible: true, label: brief.suggestedCtaLabel.value, color: '#06b6d4', align: 'center', icon: '' };
   }
 
+  // Unlike suggestedHero (a mood/emphasis sentence with no matching UI
+  // concept — stays unmapped), heroVideoUrl maps onto a real pair of
+  // CampaignDraft fields: heroType decides image vs. video, videoUrl is the
+  // source. createInitialDraft() defaults heroType to 'image' — only
+  // override both together, never videoUrl alone (an 'image' hero with a
+  // videoUrl set would just be ignored by the renderer, silently losing the
+  // one piece of media info the user explicitly gave us).
+  if (brief.heroVideoUrl) {
+    patch.heroType = 'video';
+    patch.videoUrl = brief.heroVideoUrl;
+  }
+
   return { patch, unmapped: pickUnmapped(brief) };
 };
 

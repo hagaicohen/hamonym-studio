@@ -17,6 +17,12 @@ const { SYSTEM_PROMPT, buildExtractionPrompt } = require('../campaign-creation.p
 // skipped it entirely).
 const MIN_TEXT_LENGTH = 10;
 
+// Same "don't trust the model, re-verify at the boundary" discipline as
+// organizationNumber — the prompt asks the model to only fill heroVideoUrl
+// for youtube/vimeo links, but this is cheap to double-check in code rather
+// than hoping the prompt was followed.
+const VIDEO_URL_PATTERN = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/)/i;
+
 function empty(text) {
   return {
     source: 'free_text',
@@ -30,6 +36,7 @@ function empty(text) {
     suggestedShortDescription: null,
     suggestedTargetAmount: null,
     socialLinks: [],
+    heroVideoUrl: null,
     contactEmail: null,
     contactPhone: null,
   };
@@ -54,6 +61,7 @@ function project(text, raw) {
     suggestedShortDescription: raw.suggestedShortDescription ?? null,
     suggestedTargetAmount: typeof raw.suggestedTargetAmount === 'number' ? raw.suggestedTargetAmount : null,
     socialLinks: Array.isArray(raw.socialLinks) ? raw.socialLinks : [],
+    heroVideoUrl: typeof raw.heroVideoUrl === 'string' && VIDEO_URL_PATTERN.test(raw.heroVideoUrl) ? raw.heroVideoUrl : null,
     contactEmail: raw.contactEmail ?? null,
     contactPhone: raw.contactPhone ?? null,
   };

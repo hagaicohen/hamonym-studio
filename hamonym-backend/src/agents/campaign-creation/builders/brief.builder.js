@@ -23,6 +23,7 @@ function project(facts, raw) {
     entityType: facts.entityTypeGuess ?? null,
     title: facts.suggestedTitle ?? null,
     shortDescription: facts.suggestedShortDescription ?? null,
+    heroVideoUrl: facts.heroVideoUrl ?? null,
     category: suggested(raw.category?.value, raw.category?.reason),
     suggestedTargetAmount: suggested(raw.suggestedTargetAmount?.value, raw.suggestedTargetAmount?.reason),
     suggestedTone: suggested(raw.suggestedTone?.value, raw.suggestedTone?.reason),
