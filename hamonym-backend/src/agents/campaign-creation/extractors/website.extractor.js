@@ -99,12 +99,24 @@ async function fetchHtml(url) {
 // Readability first; if the result is too thin (non-standard page structure,
 // landing page, etc.), fall back to all visible body text rather than
 // failing the whole request — MVP §10.
+// Collapses whitespace runs (tabs/newlines from indented markup, common on
+// page-builder/WordPress-style sites with lots of empty wrapper divs) down
+// to single spaces. Found live (2026-07-22, real site test): Readability's
+// textContent can carry large amounts of this noise through even when the
+// extracted content itself is good — wastes LLM tokens and makes sourceRaw
+// unreadable for debugging, even though it didn't change extraction
+// quality in that case. Applied to both paths for consistency — the
+// fallback path already did this, Readability's didn't.
+function normalizeWhitespace(text) {
+  return text.trim().replace(/\s+/g, ' ');
+}
+
 function extractMainContent(html, url) {
   const dom = new JSDOM(html, { url });
   let readabilityText = '';
   try {
     const article = new Readability(dom.window.document).parse();
-    readabilityText = (article?.textContent || '').trim();
+    readabilityText = normalizeWhitespace(article?.textContent || '');
   } catch {
     readabilityText = '';
   }
@@ -113,7 +125,7 @@ function extractMainContent(html, url) {
     return readabilityText;
   }
 
-  const fallback = (dom.window.document.body?.textContent || '').trim().replace(/\s+/g, ' ');
+  const fallback = normalizeWhitespace(dom.window.document.body?.textContent || '');
   return fallback.length > readabilityText.length ? fallback : readabilityText;
 }
 
