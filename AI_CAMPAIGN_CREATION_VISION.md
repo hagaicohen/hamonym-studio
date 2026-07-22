@@ -2,7 +2,7 @@
 
 > שינוי שם מ-"AI Campaign Creation": ה-AI לא יוצר קמפיין — הוא עוזר ליצור. עקבי עם החלטה 6 (AI לא עוקף אף כלל עסקי, רק ממלא Draft). שם הקובץ נשאר `AI_CAMPAIGN_CREATION_VISION.md` כדי לא לשבור קישורים קיימים.
 
-**סטטוס:** Pipeline הליבה מומש ומאומת בקוד (Sprints 1-3) — ר' "מצב נוכחי" למטה
+**סטטוס:** Pipeline הליבה + שני Extractors מומשו ומאומתים בקוד (Sprints 1-4) — ר' "מצב נוכחי" למטה
 **תאריך:** 2026-07-22
 **שייך ל:** Campaign Studio, Entity Onboarding
 
@@ -11,10 +11,10 @@
 שלוש שכבות ברורות, במכוון לא מעורבבות:
 
 **1. Proven — קיים, עובד, מאומת ב-corpus (`hamonym-backend/src/agents/campaign-creation/`)**
-Extraction (Sprint 1) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). כל שלב עם fixture corpus משלו, נבדק וחתום ב-commit. ר' "קוד קיים" למטה לפירוט.
+שני Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). כל שלב עם fixture corpus משלו, נבדק וחתום ב-commit. ר' "קוד קיים" למטה לפירוט.
 
 **2. Next MVP — מתוכנן, טרם נבנה**
-Website Extractor (החלטה 8/MVP §MVP v1) → מסך UI לבחירת מקור → מסך Brief Review. זה מה שהופך את ה-pipeline המוכח לתכונה שמשתמש אמיתי יכול לגעת בה.
+מסך UI לבחירת מקור (החלטה 8) → מסך Brief Review. זה מה שהופך את ה-pipeline המוכח לתכונה שמשתמש אמיתי יכול לגעת בה — כל השכבות מתחת ל-UI כבר מוכחות.
 
 **3. Vision — רעיונות עתידיים, לא מחייבים, לא בסקופ נוכחי**
 Document Collection, ריבוי מקורות + Facts Merger, Campaign Advisor/Readiness Check (כבר קיימים בקוד בהקשר אחר — ר' "קוד קיים"). ר' סעיף "Vision (Non-binding)" למטה.
@@ -274,6 +274,20 @@ src/agents/campaign-creation/
 ## שינוי דגש בין הספרינטים — מתועד לצורך המשכיות
 
 Sprint 1-2 בדקו את ה-AI עצמו (איכות Extraction/Brief). Sprint 3 היה הראשון שבו ה-AI שימש בעצם כ**מבחן מאמץ** למודל המוצר הקיים — וחשף שני פערים אמיתיים ב-`CampaignDraft`/`OrganizationRegistrationState` שלא נבעו מבעיית AI כלל (ר' למעלה). זה סימן שה-pipeline עצמו התייצב: השאלות הפתוחות הבאות כנראה יהיו יותר ב-Domain Model/UX, פחות במנגנון ה-AI.
+
+---
+
+## Pipeline Milestone (2026-07-22): Website Extractor validated
+
+Sprint 4 — לפי MVP §10. `website.extractor.js` הוא **Adapter דק**, לא Extractor שני עם לוגיקה כפולה: `Fetch → Readability (עם fallback ל-body text גולמי אם Readability מחזיר תוכן דל) → אותו FreeTextExtractor בדיוק`. אפס שכפול prompt/LLM logic.
+
+**קריטריון הקבלה שהוגדר מראש (MVP §10) — נבדק ישירות**: אותו ארגון (`health-ambulance`) הורץ גם דרך ✍️ Free Text (Sprint 1) וגם דרך 🌐 Website (fixture HTML עם אותו תוכן עסקי, עטוף ב-nav/footer/aside אמיתיים) — Readability הצליח לנקות את כל ה-noise (ניווט, footer, זכויות יוצרים, widgets צדדיים) והשאיר רק את התוכן האמיתי. תוצאה: `organizationName`, `organizationNumber`, `suggestedTargetAmount`, `contactEmail`, `contactPhone` **זהים** בין שתי הריצות. פער אחד נמצא ולא תוקן באופן עיוור: `categoryGuess` יצא ריק בגרסת ה-Website מול `["חירום","רפואה"]` בגרסת ה-Free Text (ניסוח שונה מעט בין שני הטקסטים, לא bug מובהק ב-Extractor) — מתועד כפער איכות פתוח, לא שיפור פרומפט "עיוור".
+
+**אימות אבטחה (MVP §8) — נבדק מול רשת אמיתית, לא רק תיאורטית**: SSRF guard חוסם בהצלחה `localhost`/`127.0.0.1` **לפני** כל קריאת LLM (נכשל על resolve/בדיקת IP, לא מגיע בכלל ל-fetch); `file://` ופרוטוקולים לא נתמכים נדחים מיד; URL לא תקין נכשל מיד. Smoke test מול אתר אמיתי (ויקיפדיה עברית) עבר מקצה לקצה — fetch, ניקוי Readability (~10.8K תווים תוכן נקי), extraction — בלי קריסה.
+
+**אימות "Weak Result → Fallback" (הוספה שנקבעה לפני כתיבת קוד, MVP §10)**: fixture של landing page ללא תגיות סמנטיות (`<article>`/`<main>`) גרם ל-Readability להחזיר תוכן דל כצפוי — ה-fallback ל-body text גולמי תפס את התוכן האמיתי (61 תווים) והזרים אותו ל-Extraction בהצלחה, במקום כישלון גורף.
+
+**תלות חדשה**: `@mozilla/readability` + `jsdom` (מוצמד ל-`^24.1.3` — גרסאות חדשות יותר של jsdom תלויות ב-ESM שלא תואם ל-CommonJS `require()` בגרסת Node הנוכחית של הפרויקט; אומת ידנית).
 
 ---
 
