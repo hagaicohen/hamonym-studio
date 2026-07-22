@@ -1,0 +1,281 @@
+# AI-Assisted Campaign Creation — מסמך חזון וארכיטקטורה (ADR)
+
+> שינוי שם מ-"AI Campaign Creation": ה-AI לא יוצר קמפיין — הוא עוזר ליצור. עקבי עם החלטה 6 (AI לא עוקף אף כלל עסקי, רק ממלא Draft). שם הקובץ נשאר `AI_CAMPAIGN_CREATION_VISION.md` כדי לא לשבור קישורים קיימים.
+
+**סטטוס:** מאושר לתכנון (טרם מומש בקוד)
+**תאריך:** 2026-07-22
+**שייך ל:** Campaign Studio, Entity Onboarding
+
+## הקשר
+
+היום קיים מסלול יצירה אחד: **Campaign Studio** — אשף בן 8 שלבים (`CampaignStudioStateService`, מודל `CampaignDraft`) שמאפשר שליטה מלאה כמעט ברמת עורך עמודים (Elementor-like). זה נכון למשתמשים מתקדמים, אבל מהווה חסם כניסה גבוה לרוב המשתמשים.
+
+המסמך הזה מקבע את ההחלטות האדריכליות להוספת נקודות כניסה נוספות — כולל כניסה מבוססת AI — **בלי** לשכפל את המודל, התהליכים העסקיים או תהליכי האישור הקיימים.
+
+באותה נשימה, יצירת עמותה חדשה במערכת ("הקמת עמותה") נשענת על אשף ומודל נפרדים (`OrganizationRegistrationStateService`, 6 שלבים, `status: draft → pending_review → approved`). כל התייחסות ל-"AI פותח עמותה" במסמך הזה משמעה **מילוי הטופס הפנימי של המונים** — לא אינטראקציה עם רשם העמותות או כל גורם חיצוני.
+
+## תרשים כללי (Overview)
+
+נקודות כניסה — כולן מזינות את אותו מודל (החלטה 1):
+
+```
+                CampaignDraft
+                     ▲
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+   AI Start     Quick Wizard   Campaign Studio
+```
+
+זרימת ה-AI Pipeline (החלטות 2, 3, 5):
+
+```
+Input
+  │
+  ▼
+Extraction
+  │
+  ▼
+ExtractedFacts
+  │
+  ▼
+Brief
+  │
+  ▼
+CampaignDraft
+```
+
+פירוט מלא של כל שלב בהחלטות שלהלן.
+
+---
+
+## החלטה 1 — סטודיו אחד, מספר נקודות כניסה
+
+לא נבנה כמה מנגנוני יצירת קמפיין מקבילים. יש מוצר אחד — Campaign Studio — עם מספר דלתות כניסה שכולן מזינות את אותו `CampaignDraft`:
+
+```
+        Campaign Studio (CampaignDraft)
+              ▲        ▲        ▲
+         AI Start   Quick    Advanced
+                     Wizard   Studio
+```
+
+**למה:** כל פיצ'ר עתידי על ה-draft (Theme, Rewards, Analytics, Approval וכו') נכתב פעם אחת. שום מסלול כניסה לא "מפצל" את המודל.
+
+---
+
+## החלטה 2 — AI v1 הוא One-shot, לא Agent
+
+אין Session, אין Chat רב-תורי, אין ניהול Context מתמשך. הזרימה:
+
+```
+Input → Extraction → ExtractedFacts → Brief → CampaignDraft
+```
+
+משתמש נותן קלט (אתר / מסמך / טקסט חופשי), המערכת מציגה Brief אחד לאישור, ורק אז נוצר/מתעדכן ה-Draft. פשוט, צפוי, ניתן לבדיקה.
+
+**חזון "Agent" (שאלה→תשובה איטרטיבית, "חסר לי הלוגו, העלה בבקשה") הוא הרחבה עתידית לגיטימית — לא נדרש ב-v1.** הפייפליין (החלטה 5) בנוי כך שהרחבה כזו תיכנס כשלב נוסף (`Missing Fields`) בלי לפרק את הזרימה הקיימת.
+
+---
+
+## החלטה 3 — הפרדת Facts מ-Brief
+
+שני מושגים שונים לחלוטין, לא לערבב:
+
+| | מייצג | דוגמה |
+|---|---|---|
+| **ExtractedFacts** | מה הצלחנו לחלץ (עובדה אובייקטיבית) | שם עמותה, מספר עמותה, אתר, תחום פעילות, has_logo |
+| **Brief** | מה החלטנו לעשות עם זה (החלטה עסקית/יצירתית) | Template, יעד גיוס מוצע, טון, CTA, Hero, צבעים |
+
+**למה זה קריטי:** מאפשר להריץ מחדש רק את שכבת ה-Brief (למשל "תן טון יותר אופטימי") **בלי** לחזור על ה-Extraction היקר/איטי (scraping, parsing). ר' החלטה 5.
+
+---
+
+## החלטה 4 — ExtractedFacts הוא DTO ממוקד, לא שכבת פלטפורמה
+
+```typescript
+interface ExtractedFacts {
+  organizationName?: string;
+  organizationNumber?: string;
+  website?: string;
+  category?: string;
+  hasLogo: boolean;
+  heroImages?: string[];
+  socialLinks?: string[];
+  // ...בדיוק מה ש-Extraction v1 באמת מפיק
+}
+```
+
+- **לא** נבנה עכשיו Facts Engine / Knowledge Layer / Shared Platform עבור צרכנים היפותטיים (SEO, Analytics, Template Selector וכו') — אלה לא קיימים היום.
+- **כן** ניתן שם ברור ל-shape, כדי שלא ייווצר דריפט משתמע בין `extractOrganization()` / `buildBrief()` / עתידיים אחרים שכל אחד מפרש `data: any` אחרת.
+- כשיגיע צרכן שני אמיתי — מרפקטרים אז, לא מנחשים עכשיו.
+
+> **עדכון (2026-07-22):** השם המקורי שנבחר כאן היה `CampaignFacts` — התברר שזה מתנגש עם type אמיתי וקיים בקוד (`campaign-advisor.types.js`'s `CampaignFacts`, משמעות שונה לגמרי — ר' §"קוד קיים" למטה). שונה ל-`ExtractedFacts` בכל המסמך.
+
+---
+
+## החלטה 5 — Extraction ו-Generation הם שני שלבים נפרדים ב-Pipeline
+
+```
+Input
+   │
+   ▼
+Extractor           ← איטי/יקר: scraping, parsing מסמכים
+   │
+   ▼
+ExtractedFacts
+   │
+   ▼
+Brief Builder        ← זול/מהיר: קריאת LLM בודדת על נתונים קיימים
+   │
+   ▼
+CampaignDraft
+   │
+   ▼
+Campaign Studio (עריכה ידנית, כמו היום)
+```
+
+**דרישה מפורשת:** Brief regeneration מקבל `ExtractedFacts` כפרמטר — לעולם לא גוזר אותו מחדש מה-Input הגולמי. כך "תן טון אחר" הוא פעולה מהירה וזולה.
+
+**נקודת הרחבה עתידית (לא ל-v1):** `Missing Fields` בין Facts ל-Brief — v1 רק מסמן שדות חסרים בתוך ה-Brief לתיקון ידני; בעתיד יכול להפוך לשכבת שאלות השלמה (multi-turn) **בלי לשנות את שאר הפייפליין**. הכללים ל"מה נחשב מספיק" לא מומצאים מחדש — נשענים על מה שכבר קיים ב-`OrganizationRegistrationStateService` (למשל: minimum לשמירת draft כבר קיים בגלל `registration_number` UNIQUE).
+
+---
+
+## החלטה 6 — AI לא עוקף אף כלל עסקי קיים
+
+AI **אינו** נוגע ב:
+
+- Validation
+- Approval workflow (`draft → pending_review → approved`)
+- Draft/status semantics
+- Billing
+- הרשאות (Permissions)
+
+הוא רק ממלא `ExtractedFacts`/`Brief`/`CampaignDraft` — כל השאר עובר דרך אותם services קיימים בדיוק כמו מילוי ידני. במפורש: יצירת עמותה חדשה דרך AI נכנסת בתור `status: 'draft'` בדיוק כמו טיוטה שהתחילה ידנית ולא הושלמה, ומקודמת ל-`pending_review` רק כש-`is_profile_complete` (אותו מנגנון COALESCE הקיים כבר ב-`updateEntity`) — ללא endpoint נפרד, ללא קיצור דרך של אישור admin.
+
+---
+
+## החלטה 7 — מידע רגיש מחוץ ל-AI לגמרי — ברמת סכימה, לא רק מדיניות
+
+חשבון בנק, כרטיס אשראי, API Keys, סיסמאות — **לא** קיימים כשדות אפשריים לא ב-`ExtractedFacts`, לא ב-`Brief`, לא בשום prompt שנשלח ל-LLM.
+
+זו לא רק החלטת מדיניות ("אל תבקש") — זו **type-level guarantee**: אם השדה לא קיים בסכימה, אי אפשר בטעות לכתוב אליו גם אם ה-extraction "מנחש" לא נכון מתוך מסמך. פרטי סליקה/בנקאות ממשיכים לעבור אך ורק דרך המסכים הייעודיים (Cardcom Openfields עבור עמלת פלטפורמה, שלב הבנקאות הייעודי ב-wizard הרישום).
+
+> **אימות מול קוד קיים (2026-07-22):** אותו עיקרון בדיוק כבר מיושם היום ב-`hamonym-backend/src/agents/approval/tools/entity.tool.js` — ה-`Entity` type שם מדיר במפורש `cardcom_api_password` וכל credential תשלומי אחר מהשורה הגולמית לפני שהיא מגיעה ל-Context/Prompt. ר' גם §"קוד קיים" למטה.
+
+---
+
+## החלטה 8 — נקודת הכניסה של המשתמש
+
+```
+איך תרצה להתחיל?
+
+🌐 מהאתר שלנו
+📄 ממסמך
+✍️ אספר בכמה מילים
+⚡ Wizard מהיר
+🛠 Studio מתקדם
+```
+
+בחירה מפורשת (chips), **לא** drop-zone עם auto-detect ו**לא** תיבת צ'אט יחידה.
+
+**למה:** כל chip ממופה ישירות ל-Extractor אחד — הבחירה **היא** ה-dispatch של הפייפליין, לא רק UI. אפשר להציג רק chips שיש להם Extractor מוכן (למשל בגל ראשון: רק 🌐 ו-✍️), ולהוסיף 📄 כשמוכן, בלי לשנות תפיסת מוצר.
+
+תיבת צ'אט יחידה נפסלה במפורש ל-v1: היא מבטיחה ויזואלית יכולת רב-תורית (multi-turn) שסותרת את החלטה 2 (one-shot). כש-`Missing Fields` יתפתח ל-multi-turn אמיתי (הרחבה עתידית), ✍️ הוא המועמד הטבעי להפוך לחוויית שיחה — לא לפני שיש session אמיתי מאחוריו.
+
+---
+
+## החלטה 9 — אין להניח מראש שצרכני עתיד ישתמשו ב-ExtractedFacts
+
+כל יכולת עתידית (Campaign Advisor, Readiness Check, וכו' — ר' "קוד קיים" ו-"חזון" למטה) בוחרת את מודל הנתונים שלה לפי הבעיה שהיא פותרת בפועל, לא לפי מה ש-`ExtractedFacts` כבר מכיל.
+
+**למה:** בדיקה קצרה של שני "צרכנים היפותטיים" חשפה שהם בכלל לא רוצים את אותה צורת נתונים — ומאז אומתה מול קוד אמיתי (ר' §"קוד קיים" למטה):
+
+- **Campaign Advisor** ("איך לשפר את הקמפיין") צריך נתוני **שלמות/ביצועים של קמפיין קיים** (hasTitle, hasHeroImage, supportersCount...). אין לזה קשר ל-Extraction בכלל.
+- **Readiness Check** ("האם הקמפיין מוכן לפרסום") עובד על **`CampaignDraft`**, לא על `ExtractedFacts` — הרחבה טבעית של רעיון `Missing Fields` (החלטה 5), רק שבודק שלמות לפרסום ולא שלמות ל-extraction.
+
+זה מאשש את הזהירות בהחלטה 4: כשמגיע צרכן שני אמיתי (או מדומיין ברצינות), הוא בדרך כלל מלמד שהסכימה המשותפת שדמיינו מראש לא הייתה נכונה מלכתחילה. לא מתכננים "גנרי" בלי צרכן שני קונקרטי.
+
+---
+
+## החלטה 10 — Brief אחד משולב לעמותה חדשה + קמפיין
+
+כשקלט משתמש מכיל גם פרטי עמותה חדשה וגם פרטי קמפיין (למשל: "עמותת X פועלת כבר 12 שנה ומגייסת כסף ל-Y..."), מוצג **Brief אחד משולב** — לא שני אישורים נפרדים ברצף.
+
+**למה:** מבחינת המשתמש אין שתי ישויות נפרדות — הוא חושב "אני רוצה להתחיל לגייס", לא "אני רוצה להקים Entity ואז Campaign". שני אישורים נפרדים מוסיפים חיכוך בלי תועלת.
+
+מבחינה פנימית עדיין נוצרים שני אובייקטים נפרדים (`OrganizationDraft` + `CampaignDraft`, כל אחד דרך ה-service שלו — ר' החלטה 6) — ההפרדה הזו נשארת שקופה למשתמש, לא רק שכבת UI.
+
+---
+
+## החלטה 11 — מיקום הקוד: `src/agents/`, לא תיקיית-על נפרדת
+
+בבדיקת הקוד הקיים (2026-07-22) התגלה ש-`ApprovalAgent` ו-`CampaignAdvisorAgent` **כבר קיימים ופועלים** ב-`hamonym-backend/src/agents/` — לא היפותטיים כפי שהמסמך הניח קודם (ר' §"קוד קיים" למטה). יש להם shape זהה למה שתוכנן כאן: `Context (tools) → Facts (דטרמיניסטי) → Prompt → LLM → Response`, כולל `llm.service.js` ו-`trace.util.js` משותפים.
+
+**החלטה:** קוד ה-AI Campaign Creation נכנס תחת אותה תיקייה — `src/agents/campaign-creation/` — **לא** תיקיית-על נפרדת (`src/ai/` וכו'). המילה "Agent" בקונבנציה הקיימת לא מרמזת autonomy/multi-turn — היא רק מסמנת "יכולת LLM חד-פעמית". פיצול תיקיית-העל למי שמחפש "איפה גר קוד AI" גרוע יותר מהערך הסמנטי של ההבחנה Agent/Pipeline.
+
+ההבחנה בין "שופט/מייעץ" (Approval, Advisor) ל"בונה state חדש" (Creation) מסומנת **בשם הקובץ הראשי**, לא במיקום:
+
+```
+src/agents/campaign-creation/
+  campaign-creation.pipeline.js   ← לא .agent.js — מסמן "בונה", לא "שופט"
+  campaign-creation.prompt.js
+  campaign-creation.types.js       ← ExtractedFacts, Brief
+  extractors/
+    free-text.extractor.js
+    website.extractor.js
+```
+
+ר' `hamonym-backend/CLAUDE.md` — נוספה שם הקונבנציה הזו כתיעוד ריפו-רחב, כי היא רלוונטית לכל יכולת LLM עתידית, לא רק לתכונה הזו.
+
+---
+
+## קוד קיים שרלוונטי (התגלה 2026-07-22 בבדיקת הקוד, לא הונח מראש)
+
+- **`hamonym-backend/src/agents/approval/`** — ApprovalAgent אמיתי, פועל: `approval.agent.js`/`.facts.js`/`.checks.js`/`.prompt.js`/`.types.js` + `tools/` (entity, campaigns, document, guidestar, websearch). מפיק `ApprovalCheck[]` עם `status: 'pass'|'warning'|'fail'` — קרוב מאוד למה שהחזון (למטה) דמיין בתור "Readiness Check". יש לבדוק לעומק לפני שבונים Readiness חדש — אולי זה כבר קיים בפועל.
+- **`hamonym-backend/src/agents/campaign-advisor/`** — CampaignAdvisorAgent אמיתי, פועל: `advise()` ו-`generateMetadata()`. יש לו `CampaignFacts` type משלו (שלמות קמפיין קיים — booleans/counts כמו hasTitle/hasHeroImage/supportersCount) — **שונה** מ-`ExtractedFacts` שלנו, ומכאן ההתנגשות שגרמה לשינוי השם בהחלטה 4.
+- **`hamonym-backend/src/agents/llm.service.js`** — wrapper גנרי סביב OpenAI (`gpt-4o-mini`), `complete(systemPrompt, userPrompt) → parsed JSON`. משותף לכל ה-agents, כולל campaign-creation העתידי.
+- **`hamonym-backend/src/agents/approval/guidestar.service.js`** — אינטגרציה אמיתית מול guidestar.org.il (מרשם עמותות ישראלי). רלוונטי ישירות לבעיית "`organizationNumber` לא אמין מ-Extraction" — פוטנציאל לאימות מספר עמותה מול מקור רשמי, במקום לסמוך על ניחוש LLM בלבד. לא הוחלט עדיין אם/איך לשלב זאת ב-v1 — לבחון במסמך ה-MVP.
+
+---
+
+## סקופ MVP (Extraction v1)
+
+מוגבל במכוון:
+
+- מקור קלט **אחד** בכל הרצה (אתר **או** מסמך **או** טקסט חופשי) — לא שילוב של כמה מקורות יחד.
+- **לא** נתמך ב-v1: Canva, Dropbox, Facebook, Instagram, YouTube, OCR, הודעות קוליות.
+- AI Creator פועל **רק** על עמותה קיימת ומאושרת, או יוצר טיוטת עמותה חדשה (`status: draft`) — לעולם לא "מקים עמותה" מול רשם העמותות בפועל.
+
+## MVP v1 — Extractors בגל הראשון: Free Text + Website
+
+שני מקורות קלט ב-release הראשון למשתמשים אמיתיים (לא רק Free Text):
+
+- **✍️ טקסט חופשי** — נבנה ראשון (Sprint 1), מוכיח את כל ה-pipeline מקצה לקצה בלי תלות בתשתית extraction חיצונית.
+- **🌐 אתר אינטרנט** — נבנה שני (Sprint 2), על גבי אותו Facts/Brief. זו יכולת ה-"wow" שמדגימה את הערך הייחודי של המוצר ("תן לי את האתר שלך → 30 שניות → הנה הקמפיין"), ולכן שייכת ל-v1 גם אם free text מספיק כדי להוכיח את הארכיטקטורה.
+
+**חשוב לתקצוב**: ה-Website Extractor אינו "עוד שלב קטן" מעל free text — הוא מכניס שטח כשלים ואבטחה משלו שלא קיים ב-free text בכלל: SSRF (יש לחסום fetch לכתובות פנימיות/private ranges), timeouts, אתרים לא נגישים, JS-rendered SPAs, robots/rate-limits. יש לתקצב אותו כ-scope גדול משמעותית מ-Sprint 1, לא כתוספת שולית. פרטי טיפול בכשלים אלה (Failure Strategy) שייכים למסמך ה-MVP.
+
+**נדחים לגלים הבאים**: PDF, Word, OCR, Canva, רשתות חברתיות, הודעות קוליות.
+
+---
+
+## מה הלאה
+
+מסמך זה **לא** כולל: רשימת שדות מפורטת, מסכי UI, פירוק למשימות פיתוח. אלה שייכים למסמך MVP נפרד ([AI_CAMPAIGN_CREATION_MVP.md](AI_CAMPAIGN_CREATION_MVP.md)).
+
+---
+
+## Vision (Non-binding) — כיוון עתידי, לא בסיס להחלטות
+
+הסעיף הזה הוא מצפן לטווח ארוך, **לא** ארכיטקטורה מאושרת. שום דבר כאן לא גובר על ההחלטות 1–11 למעלה, ואין לתכנן סכימות/מודלים של ה-MVP כדי "להתאים מראש" למה שמתואר כאן.
+
+החזון: המונים הופך בהדרגה מ"בונה קמפיינים" ל-**Campaign Creation Platform** — כמה שכבות יכולת, כולן פועלות מעל אותו `CampaignDraft`, בלי לפצל את הארכיטקטורה:
+
+- 🧠 **AI Start** — יוצר Draft כמעט מוכן מתוך חומרי מקור (זה שכבר מתוכנן ב-MVP הזה).
+- ⚡ **Quick Wizard** — הקמת קמפיין בכמה דקות, ללא AI.
+- 🛠 **Campaign Studio** — עורך מתקדם, שליטה מלאה (קיים היום).
+- 🔍 **Campaign Advisor** *(קיים בפועל, לא היפותטי — ר' "קוד קיים" למעלה)* — ייעוץ לשיפור קמפיין קיים על בסיס שלמות/ביצועים — מודל נתונים נפרד מ-`ExtractedFacts` (ר' החלטה 9).
+- ✅ **Readiness Check** *(ייתכן שכבר קיים בפועל כ-ApprovalAgent — ר' "קוד קיים" למעלה; יש לבדוק לפני שבונים משהו נפרד)* — בדיקת מוכנות-לפרסום. אם נבנה כחלק נפרד, השם חייב להימנע מ-"Approval" — זה כבר מונח עסקי תפוס (`pending_review → approved`, בסמכות admin אנושי בלבד — ר' החלטה 6).
+
+**עיקרון מנחה**: לא לתת לחזון העתידי לעצב קוד של היום. כל שכבה עתידית תתוכנן ותיבנה כשתהיה לה הצדקה קונקרטית, לפי הבעיה שהיא פותרת בפועל — לא לפי ניחוש מראש. וכפי שהתגלה עכשיו: לפני שבונים "עתידי" — לבדוק שהוא לא כבר קיים.
