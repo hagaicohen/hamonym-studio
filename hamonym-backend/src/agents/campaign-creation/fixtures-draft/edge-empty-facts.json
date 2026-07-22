@@ -1,0 +1,28 @@
+{
+  "organizationName": null,
+  "organizationNumber": null,
+  "organizationDescription": null,
+  "entityType": null,
+  "title": null,
+  "shortDescription": null,
+  "category": {
+    "value": null,
+    "reason": "לא היה מידע מספיק לבחור קטגוריה."
+  },
+  "suggestedTargetAmount": {
+    "value": null,
+    "reason": "לא צוין סכום במקור ונדרש למלא ידנית."
+  },
+  "suggestedTone": {
+    "value": null,
+    "reason": "לא היה מידע מספיק כדי לקבוע את הטון."
+  },
+  "suggestedCtaLabel": {
+    "value": null,
+    "reason": "לא היה מידע מספיק כדי לקבוע טקסט לכפתור קריאה לפעולה."
+  },
+  "suggestedHero": {
+    "value": null,
+    "reason": "לא היה מידע מספיק כדי לקבוע מה להבליט בחלק הפותח."
+  }
+}

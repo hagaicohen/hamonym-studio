@@ -13,6 +13,7 @@
 
 const freeTextExtractor = require('./extractors/free-text.extractor');
 const briefBuilder = require('./builders/brief.builder');
+const draftBuilder = require('./builders/draft.builder');
 const { createTracer } = require('../trace.util');
 
 // @param {string} text
@@ -40,4 +41,19 @@ exports.buildBriefFromFacts = async (facts) => {
 
   tracer.print();
   return { ...brief, trace: tracer.steps };
+};
+
+// Sprint 3 — no LLM, deterministic. Not named with an async tracer step the
+// way Extraction/Brief are (there's no LLM call to time/trace) — this is
+// plain data mapping, exposed directly for that reason.
+// @param {import('./campaign-creation.types').Brief} brief
+// @returns {{ campaignDraftPatch: object, organizationDraftPatch: object, unmapped: object }}
+exports.mapBriefToDraftPatches = (brief) => {
+  const campaign = draftBuilder.toCampaignDraftPatch(brief);
+  const organization = draftBuilder.toOrganizationDraftPatch(brief);
+  return {
+    campaignDraftPatch: campaign.patch,
+    organizationDraftPatch: organization.patch,
+    unmapped: campaign.unmapped,
+  };
 };

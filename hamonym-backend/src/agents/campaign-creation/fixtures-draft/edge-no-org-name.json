@@ -1,0 +1,28 @@
+{
+  "organizationName": null,
+  "organizationNumber": null,
+  "organizationDescription": "אנחנו קבוצת מתנדבים שמחלקת מזון למשפחות נזקקות בערב שבת בשכונות הדרומיות של חיפה.",
+  "entityType": "קבוצת מתנדבים",
+  "title": null,
+  "shortDescription": null,
+  "category": {
+    "value": "חלוקת מזון",
+    "reason": "הארגון עוסק בחלוקת מזון למשפחות נזקקות."
+  },
+  "suggestedTargetAmount": {
+    "value": null,
+    "reason": "לא צוין סכום במקור ונדרש למלא ידנית."
+  },
+  "suggestedTone": {
+    "value": "חמלה וקהילתיות",
+    "reason": "הארגון מתמקד בעזרה לנזקקים ובתמיכה קהילתית."
+  },
+  "suggestedCtaLabel": {
+    "value": "עזרו לנו לעזור",
+    "reason": "הכפתור מעודד תרומה למען המטרה החשובה."
+  },
+  "suggestedHero": {
+    "value": "תמכו במאבק נגד העוני והרעב בשכונות חיפה.",
+    "reason": "המשפט מדגיש את המטרה החברתית והרגשית של הקמפיין."
+  }
+}

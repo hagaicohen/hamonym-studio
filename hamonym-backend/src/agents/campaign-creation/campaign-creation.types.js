@@ -54,15 +54,19 @@
  * sourceRaw (see ADR decision 5: Brief regeneration must be cheap, no
  * re-running Extraction). Two kinds of field:
  *  - Plain carry-overs from ExtractedFacts (organizationName, organizationNumber,
- *    organizationDescription, title, shortDescription) — nothing to reason
- *    about, Extraction already did that work in Sprint 1; kept as bare
- *    values, not wrapped in SuggestedValue.
+ *    organizationDescription, entityType, title, shortDescription) — nothing
+ *    to reason about, Extraction already did that work in Sprint 1; kept as
+ *    bare values, not wrapped in SuggestedValue. entityType specifically:
+ *    unlike category, ExtractedFacts.entityTypeGuess is already a single
+ *    guess, not a list to choose from — nothing for Brief to decide, so it
+ *    stays a bare carry-over rather than a SuggestedValue.
  *  - Genuine Brief-level decisions (category, suggestedTargetAmount,
  *    suggestedTone, suggestedCtaLabel, suggestedHero) — wrapped in
  *    SuggestedValue because a human should be able to see *why*.
  * @property {string|null} organizationName
  * @property {string|null} organizationNumber - Always requires manual confirmation before commit regardless of confidence (MVP doc §5/§6) — Brief doesn't add a confidence signal here, just passes it through as-is.
  * @property {string|null} organizationDescription
+ * @property {string|null} entityType - Carried over from ExtractedFacts.entityTypeGuess (added Sprint 3, found missing while mapping to OrganizationRegistrationState.entityType).
  * @property {string|null} title
  * @property {string|null} shortDescription
  * @property {SuggestedValue} category - Picks ONE category from ExtractedFacts.categoryGuess (a decision), or {value: null, reason: '...'} if categoryGuess was empty.

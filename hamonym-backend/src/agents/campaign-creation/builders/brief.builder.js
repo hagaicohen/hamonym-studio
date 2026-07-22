@@ -20,6 +20,7 @@ function project(facts, raw) {
     organizationName: facts.organizationName ?? null,
     organizationNumber: facts.organizationNumber ?? null,
     organizationDescription: facts.organizationDescription ?? null,
+    entityType: facts.entityTypeGuess ?? null,
     title: facts.suggestedTitle ?? null,
     shortDescription: facts.suggestedShortDescription ?? null,
     category: suggested(raw.category?.value, raw.category?.reason),
