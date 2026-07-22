@@ -1,0 +1,74 @@
+.idle-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  direction: rtl;
+}
+
+.idle-modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.idle-modal-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.idle-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.idle-modal-text {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.idle-modal-countdown {
+  font-weight: 700;
+  color: #ef4444;
+  font-variant-numeric: tabular-nums;
+}
+
+.idle-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.idle-btn {
+  flex: 1;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.idle-btn:hover { opacity: 0.9; }
+
+.idle-btn-stay {
+  background: #583cd6;
+  color: #fff;
+}
+
+.idle-btn-logout {
+  background: #f1f5f9;
+  color: #475569;
+}

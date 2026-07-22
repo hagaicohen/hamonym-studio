@@ -10,4 +10,12 @@ export const environment = {
   // Measurement ID is provisioned — analytics.service.ts simply won't load
   // gtag.js if this is blank.
   gaMeasurementId: '',
+
+  // Minutes of inactivity before auto-logout (idle-timeout.service.ts) — a
+  // 60s warning modal shows before the actual logout, so the real "silent"
+  // budget is this value minus one minute.
+  idleTimeoutMinutes: {
+    admin: 15,
+    regular: 30,
+  },
 };

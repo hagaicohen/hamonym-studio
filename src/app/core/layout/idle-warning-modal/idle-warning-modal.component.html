@@ -1,0 +1,17 @@
+@if (idle.warningVisible()) {
+  <div class="idle-modal-backdrop">
+    <div class="idle-modal-box">
+      <div class="idle-modal-icon">⏱️</div>
+      <div class="idle-modal-title">עדיין שם?</div>
+      <div class="idle-modal-text">
+        עקב חוסר פעילות, תנותק אוטומטית בעוד
+        <span class="idle-modal-countdown">{{ idle.secondsRemaining() }}</span>
+        שניות.
+      </div>
+      <div class="idle-modal-actions">
+        <button class="idle-btn idle-btn-logout" (click)="logoutNow()">התנתקות</button>
+        <button class="idle-btn idle-btn-stay" (click)="stayLoggedIn()">המשך להיות מחובר</button>
+      </div>
+    </div>
+  </div>
+}
