@@ -106,6 +106,24 @@ Fix: `saveAll()` now checks for a `File` instance on `draftEntity.association_ce
 
 ---
 
+## 6. Reapproval flag — an approved entity can silently drift from what was reviewed
+
+The approval workflow in §3 only covers the `pending_review → active` transition. Nothing watched an entity **after** it became `active` — an org admin could remove their association certificate, change their registration number, or swap Cardcom credentials, and the admin who approved them would never know; `status` just stayed `active` forever.
+
+- Migration `hamonym-backend/migrations/028_entity_flagged_for_review.sql`: `entities.flagged_for_review boolean DEFAULT false`, `flagged_for_review_reason text`, `flagged_for_review_at timestamptz`.
+- `entities.service.js`: `computeReapprovalFlag()` (used by `updateEntity`) and `flagForReviewIfActive()` (used by the document upload/remove endpoints) both only act when the entity's current `status = 'active'`. Sensitive fields: `registration_number`, the three `cardcom_*` credential columns, `billing_method`, and association/tax document presence. Flag only ever flips to `true` here — it never clears itself.
+- `platform.service.js`'s `setStatus()` (backs approve/reject/request-changes/suspend/reactivate) clears the flag whenever the target status is `'active'` — i.e. Approve and Reactivate both double as "I reviewed this again, it's fine now."
+- Surfaced to the admin four ways: notification bell (new count, polls same as pending/incomplete), dashboard alert card, a filter chip + row badge on the organizations list, and a banner on the entity detail page with the exact reason + timestamp.
+- **Proactive email alert**: every user with `is_super_admin=true` or `'organizations'` in `platform_permissions` gets emailed on the false→true transition only (not re-sent on further edits while still flagged, only again after a fresh approval and a new flag). Template: `hamonym-backend/src/modules/email/templates/entity-flagged-for-review.js`.
+- **New: a real email provider.** Nothing in this app sent real email before — `EMAIL_PROVIDER` was always `stub` (console.log only). Added `providers/resend.provider.js`; set `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` in `.env` to activate. **Not yet activated** — waiting on the user to verify a sending domain in Resend's dashboard and hand over an API key. `EMAIL_ENABLED` also still needs to flip to `true`, which affects *all* email types (receipts, password reset, admin invites), not just this alert.
+- Verified end-to-end against the live DB with throwaway test entities/users (created + cleaned up via one-off scripts, not left in the DB): sensitive-field diffing, admin-approve clearing, document-removal flagging, non-active entities never flagged, exactly-one email per flag cycle. Caught and fixed a real Postgres "inconsistent types deduced for parameter" bug in the clearing query along the way (same `$1` reused as both a column value and a string-literal comparison — fixed by passing a plain JS boolean instead of re-deriving it in SQL).
+
+### Actions panel UX redesign (same page, unrelated to the flag itself)
+
+User testing found the existing approve/reject/request-changes/suspend panel (reason-tag checkboxes + note textarea + 5 buttons in a row) confusing — unclear ordering, unclear which action requires a note, and "ניתוח עמותה" (AI recommendation) sat in the same button row as the real decisions despite not being one. Redesigned as three numbered steps (סיבה → הערה → פעולה), buttons grouped by whether a note is required, and the AI tool pulled into its own outlined "assist" button above the decision panel.
+
+---
+
 ## Test entity used throughout
 
 `קשת נחושה - ע"ר`, id `9fb88307-2999-459e-8d9c-42b53a82051c`, owner user id `9` (`hagai.cohen@gmail.com`). All smoke tests flipped `users.is_super_admin`/`entities.status` temporarily via one-off `node -e` scripts against the live DB and reverted afterward — DB should be at its natural state (`is_super_admin=false`, entity `status='pending_review'`, no stray `platform_audit_log` test rows).
@@ -115,3 +133,4 @@ Fix: `saveAll()` now checks for a `File` instance on `draftEntity.association_ce
 Both repos pushed to `main` this session (frontend `hamonym-app`, backend via parent `HamonymStudio` — remember they share one remote, see topology note above):
 - Super Admin MVP + dashboard + entity approval workflow (frontend `9b6e8ae`, backend `8c24833`)
 - Document upload fix (frontend `0add6dc`)
+- Reapproval flag + actions panel UX (frontend `8c6552b`; backend `544239d` flag, `ef81d52` Resend provider + email, pushed to `feature/approval-agent-skeleton`, **not** `main` — see `SESSION_2026-07-22_CONTEXT.md` for why the backend branch differs from `main` this round)
