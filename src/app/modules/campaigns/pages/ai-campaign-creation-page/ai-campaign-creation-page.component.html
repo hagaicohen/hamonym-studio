@@ -54,6 +54,13 @@
         </div>
       </div>
 
+      <div class="intake-section intake-toggle">
+        <label class="toggle-label">
+          <input type="checkbox" [ngModel]="createNewOrg()" (ngModelChange)="createNewOrg.set($event)" />
+          🏢 ליצור עמותה חדשה מהפרטים האלה <span class="optional">(במקום קמפיין תחת העמותה הקיימת שלי)</span>
+        </label>
+      </div>
+
       <p class="intake-hint">אפשר למלא כל שילוב — רק טקסט, רק קישור, רק קבצים, או כמה ביחד. צריך למלא לפחות אחד מהם.</p>
 
       @if (error()) {
@@ -79,7 +86,32 @@
           <span class="brief-badge">הצעה של ה-AI — לבדיקה ואישור</span>
         </div>
 
-        @if (b.organizationName || b.organizationDescription) {
+        @if (createNewOrg()) {
+          <div class="brief-section">
+            <h3>עמותה חדשה — לבדיקה והשלמה לפני יצירה</h3>
+            <label class="edit-field-label">סוג ישות</label>
+            <select class="ai-input" [ngModel]="newOrgEntityType()" (ngModelChange)="newOrgEntityType.set($event)">
+              <option value="" disabled>בחר סוג ישות</option>
+              @for (opt of entityTypeOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+
+            <label class="edit-field-label">שם העמותה</label>
+            <input class="ai-input" type="text" [ngModel]="newOrgName()" (ngModelChange)="newOrgName.set($event)" />
+
+            <label class="edit-field-label">מספר עמותה</label>
+            <input class="ai-input" type="text" placeholder="לא זוהה בטקסט — יש להזין ידנית"
+              [ngModel]="newOrgNumber()" (ngModelChange)="newOrgNumber.set($event)" />
+
+            <label class="edit-field-label">תיאור העמותה</label>
+            <textarea class="ai-input" rows="3" [ngModel]="newOrgDescription()" (ngModelChange)="newOrgDescription.set($event)"></textarea>
+
+            @if (!canCreateNewOrg()) {
+              <p class="field-missing">יש להשלים סוג ישות, שם עמותה ומספר עמותה לפני יצירה.</p>
+            }
+          </div>
+        } @else if (b.organizationName || b.organizationDescription) {
           <div class="brief-section">
             <h3>העמותה</h3>
             @if (b.organizationName) { <div class="field"><span class="label">שם:</span> {{ b.organizationName }}</div> }
@@ -138,7 +170,11 @@
         </div>
 
         <p class="brief-note">
-          זו הצעה של ה-AI — לחיצה על "אשר וצור קמפיין" תיצור קמפיין אמיתי תחת העמותה שלכם, ותעביר אתכם לעריכה מלאה בסטודיו. אפשר לשנות שם כל שדה.
+          @if (createNewOrg()) {
+            זו הצעה של ה-AI — לחיצה על "אשר וצור" תיצור עמותה חדשה עם הפרטים שלמעלה, תעביר אתכם לניהול שלה, ותיצור תחתיה קמפיין אמיתי, עם מעבר לעריכה מלאה בסטודיו.
+          } @else {
+            זו הצעה של ה-AI — לחיצה על "אשר וצור קמפיין" תיצור קמפיין אמיתי תחת העמותה שלכם, ותעביר אתכם לעריכה מלאה בסטודיו. אפשר לשנות שם כל שדה.
+          }
         </p>
 
         @if (createError()) {
@@ -148,8 +184,8 @@
         <div class="ai-actions">
           <button type="button" class="btn-link" (click)="backToEdit()">→ חזרה לעריכת הנתונים</button>
           <button type="button" class="btn-link" (click)="reset()">התחל מחדש עם קלט אחר לגמרי</button>
-          <button type="button" class="btn-primary" [disabled]="creatingCampaign()" (click)="approveAndCreate()">
-            {{ creatingCampaign() ? 'יוצרים...' : 'אשר וצור קמפיין ←' }}
+          <button type="button" class="btn-primary" [disabled]="creatingCampaign() || (createNewOrg() && !canCreateNewOrg())" (click)="approveAndCreate()">
+            {{ creatingCampaign() ? 'יוצרים...' : (createNewOrg() ? 'אשר וצור עמותה + קמפיין ←' : 'אשר וצור קמפיין ←') }}
           </button>
         </div>
       </div>

@@ -190,6 +190,23 @@ export class CurrentContextService {
     }
   }
 
+  // Counterpart to removeEntityContext() — needed when a NEW entity is
+  // created mid-session (e.g. AI campaign-creation flow creating an
+  // organization on the fly) and has to become switchable/active immediately,
+  // without waiting for the next full login to re-fetch getMyEntities().
+  addEntityContext(entity: { id: string; display_name?: string; legal_name?: string }): void {
+    const groups = this.roles();
+    const idx = groups.findIndex((g) => g.role === 'entity-manager');
+    const contextEntry = { id: entity.id, name: entity.display_name || entity.legal_name || 'ללא שם' };
+
+    const next = idx >= 0
+      ? groups.map((g, i) => (i === idx ? { ...g, contexts: [...g.contexts, contextEntry] } : g))
+      : [...groups, { role: 'entity-manager' as RoleType, ...ROLE_META['entity-manager'], contexts: [contextEntry] }];
+
+    this.roles.set(next);
+    localStorage.setItem(ROLES_KEY, JSON.stringify(next));
+  }
+
   switchContext(role: RoleType, contextId: string | null): void {
     const group = this.roles().find((g) => g.role === role);
     if (!group) return;

@@ -3,12 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { timeout } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { timeout, map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { EntitiesService } from '../../../../core/services/entities.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { buildPayload as buildOrgPayload, initialState as initialOrgState, OrganizationRegistrationState } from '../../../organization-registration/services/organization-registration-state.service';
 
 // Website extraction alone can take ~12s (real-world test); LLM calls add
 // more on top. 45s is generous slack, not a "should normally take this
@@ -55,6 +59,34 @@ interface DraftPatches {
 // taxonomy nobody asked for) rather than a free-for-all.
 const FILE_TYPE_OPTIONS = ['לוגו', 'תעודת התאגדות', 'דוח שנתי', 'עלון / ברושור', 'תמונות מהפעילות', 'אחר'];
 
+// Same fixed enum step-entity.component.html's dropdown offers — entity_type
+// is one of the 3 fields required just to save an entity at all
+// (canSaveDraft), so an AI-created org needs a real value from this exact
+// list, not free text. Brief.entityType is an LLM guess in Hebrew prose
+// (entityTypeGuess) and is only ever used to best-effort match one of these
+// codes (guessEntityTypeCode below) — if it doesn't match confidently, the
+// field is left blank and the user must pick manually, same interactive
+// pattern as a missing organizationNumber (2026-07-23 decision).
+const ENTITY_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'association', label: 'עמותה' },
+  { value: 'chalatz', label: 'חל״צ' },
+  { value: 'political_party_new', label: 'מפלגה פוליטית חדשה' },
+  { value: 'political_party_registered', label: 'מפלגה פוליטית רשומה' },
+  { value: 'sole_exempt', label: 'עוסק פטור (יוצרי תוכן בלבד)' },
+  { value: 'sole_registered', label: 'עוסק מורשה (יוצרי תוכן בלבד)' },
+];
+
+function guessEntityTypeCode(text: string | null): string {
+  if (!text) return '';
+  if (text.includes('עמות')) return 'association';
+  if (text.includes('חל״צ') || text.includes('חל"ץ') || text.includes('לתועלת הציבור')) return 'chalatz';
+  if (text.includes('עוסק פטור')) return 'sole_exempt';
+  if (text.includes('עוסק מורשה')) return 'sole_registered';
+  if (text.includes('מפלגה') && text.includes('חדשה')) return 'political_party_new';
+  if (text.includes('מפלגה')) return 'political_party_registered';
+  return '';
+}
+
 @Component({
   selector: 'app-ai-campaign-creation-page',
   standalone: true,
@@ -63,14 +95,39 @@ const FILE_TYPE_OPTIONS = ['לוגו', 'תעודת התאגדות', 'דוח שנ
   styleUrl: './ai-campaign-creation-page.component.css',
 })
 export class AiCampaignCreationPageComponent implements OnInit {
-  private http          = inject(HttpClient);
-  private loader        = inject(AppLoaderService);
-  private router        = inject(Router);
-  private currentEntity = inject(CurrentEntityService);
-  private campaignState = inject(CampaignStudioStateService);
-  private campaignApi   = inject(CampaignApiService);
+  private http           = inject(HttpClient);
+  private loader         = inject(AppLoaderService);
+  private router         = inject(Router);
+  private currentEntity  = inject(CurrentEntityService);
+  private currentContext = inject(CurrentContextService);
+  private entitiesApi    = inject(EntitiesService);
+  private campaignState  = inject(CampaignStudioStateService);
+  private campaignApi    = inject(CampaignApiService);
 
   fileTypeOptions = FILE_TYPE_OPTIONS;
+  entityTypeOptions = ENTITY_TYPE_OPTIONS;
+
+  // Explicit toggle (2026-07-23 decision) — NOT inferred from free-text
+  // wording. Creating a real entity + owning it is consequential enough that
+  // guessing intent from prose felt too risky; the user picks this
+  // deliberately before submitting.
+  createNewOrg = signal(false);
+
+  // Editable "new organization" review fields — prefilled from the Brief
+  // once it arrives (see submit()), but always user-editable/confirmable
+  // before creation, same "AI proposes, human confirms" principle as the
+  // rest of the Brief. organizationNumber and entityType specifically often
+  // arrive empty (Facts never guesses a registration number; entityType is
+  // free-text prose that may not map to a real code) and BLOCK submission
+  // until filled — same DB-level requirement a human hits in canSaveDraft().
+  newOrgEntityType    = signal('');
+  newOrgName          = signal('');
+  newOrgNumber        = signal('');
+  newOrgDescription   = signal('');
+
+  canCreateNewOrg = computed(() =>
+    !!this.newOrgEntityType().trim() && !!this.newOrgName().trim() && !!this.newOrgNumber().trim()
+  );
 
   // Combined intake (per explicit request): free text + website + files are
   // NOT mutually exclusive tabs — a user can fill in any combination of the
@@ -151,6 +208,12 @@ export class AiCampaignCreationPageComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.brief.set(res.brief);
+          if (this.createNewOrg()) {
+            this.newOrgEntityType.set(guessEntityTypeCode(res.brief.entityType));
+            this.newOrgName.set(res.brief.organizationName || '');
+            this.newOrgNumber.set(res.brief.organizationNumber || '');
+            this.newOrgDescription.set(res.brief.organizationDescription || '');
+          }
           this.submitting.set(false);
           this.loader.hide();
         },
@@ -162,27 +225,80 @@ export class AiCampaignCreationPageComponent implements OnInit {
       });
   }
 
-  // Approve the Brief -> create a real CampaignDraft under the user's
-  // current entity -> hand off to Campaign Studio for full editing. Scope
-  // decision (2026-07-22): only attaches to the entity the user is already
-  // managing (CurrentEntityService) — creating a *new* entity from AI
-  // Brief data is deliberately deferred, not built here. Reaching this page
-  // at all already requires the entity-manager role (campaignEditorGuard),
-  // so the common case — an existing entity — is what this covers.
+  // Approve the Brief -> (optionally create a new entity first) -> create a
+  // real CampaignDraft under that entity -> hand off to Campaign Studio for
+  // full editing. Two paths, chosen by the explicit createNewOrg toggle
+  // (2026-07-23) — no longer only "attach to the entity the user already
+  // manages" (that was the original 2026-07-22 scope-deferral; the user
+  // explicitly asked for real org creation afterward).
   approveAndCreate(): void {
     const brief = this.brief();
     if (!brief || this.creatingCampaign()) return;
 
-    const entityId = this.currentEntity.currentEntity()?.id;
-    if (!entityId) {
-      this.createError.set('לא נמצאה עמותה פעילה — יש לבחור עמותה לפני יצירת קמפיין.');
+    if (this.createNewOrg() && !this.canCreateNewOrg()) {
+      this.createError.set('יש להשלים סוג ישות, שם עמותה ומספר עמותה לפני יצירה.');
       return;
     }
 
     this.createError.set(null);
     this.creatingCampaign.set(true);
-    this.loader.show('יוצרים את הקמפיין...');
 
+    if (this.createNewOrg()) {
+      this.loader.show('יוצרים את העמותה...');
+      this.createOrganization().subscribe({
+        next: (entity) => {
+          // "Login" into the new entity, per explicit request: make it the
+          // active context immediately, not just after the next full login.
+          // CurrentEntityService follows CurrentContextService.active() via
+          // its own effect() — no need to also call setEntity()/setRole()
+          // directly here, that would just race the effect.
+          this.currentContext.addEntityContext(entity);
+          this.currentContext.switchContext('entity-manager', entity.id);
+          this.createCampaignUnder(entity.id, brief);
+        },
+        error: (err) => {
+          this.creatingCampaign.set(false);
+          this.loader.hide();
+          this.createError.set(err?.error?.message || err?.error?.error || 'יצירת העמותה נכשלה, נסו שוב');
+        },
+      });
+      return;
+    }
+
+    const entityId = this.currentEntity.currentEntity()?.id;
+    if (!entityId) {
+      this.creatingCampaign.set(false);
+      this.createError.set('לא נמצאה עמותה פעילה — יש לבחור עמותה לפני יצירת קמפיין.');
+      return;
+    }
+    this.loader.show('יוצרים את הקמפיין...');
+    this.createCampaignUnder(entityId, brief);
+  }
+
+  // Reuses organization-registration's own buildPayload() — same field
+  // mapping a human's wizard submission produces, so this new entity is
+  // indistinguishable from a manually-created one (same draft/pending_review
+  // rule via is_profile_complete, same DB constraints). email/phone/fullName
+  // are always blank here (Brief never carries contact info) — that keeps
+  // is_profile_complete false, so the entity lands in 'draft' status exactly
+  // like a human who only filled step 1, completable later in Entity Settings.
+  private createOrganization(): Observable<any> {
+    const brief = this.brief();
+    const category = (brief?.category.value as string) || '';
+    const state: OrganizationRegistrationState = {
+      ...initialOrgState,
+      entityType: this.newOrgEntityType(),
+      organizationName: this.newOrgName(),
+      displayName: this.newOrgName(),
+      organizationNumber: this.newOrgNumber(),
+      organizationDescription: this.newOrgDescription(),
+      primaryCategory: category,
+      selectedCategories: category ? [category] : [],
+    };
+    return this.entitiesApi.createEntity(buildOrgPayload(state)).pipe(map((res) => res.entity));
+  }
+
+  private createCampaignUnder(entityId: string, brief: Brief): void {
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     this.http
       .post<DraftPatches>(`${environment.apiUrl}/api/campaign-creation/map-to-draft`, { brief }, { headers })
@@ -256,6 +372,11 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.freeText.set('');
     this.websiteUrl.set('');
     this.files.set([]);
+    this.createNewOrg.set(false);
+    this.newOrgEntityType.set('');
+    this.newOrgName.set('');
+    this.newOrgNumber.set('');
+    this.newOrgDescription.set('');
   }
 
   goToQuickStudio(): void {

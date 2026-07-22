@@ -99,7 +99,7 @@ export interface OrganizationRegistrationState {
   cardcomInternalDealNumber?: number;
 }
 
-const initialState: OrganizationRegistrationState = {
+export const initialState: OrganizationRegistrationState = {
   entityId: null,
 
   // STEP 1
@@ -217,7 +217,12 @@ export function canSaveDraft(state: OrganizationRegistrationState): boolean {
   );
 }
 
-function buildPayload(state: OrganizationRegistrationState) {
+// Exported so the AI campaign-creation flow (ai-campaign-creation-page) can
+// build a real createEntity payload from Brief-derived data without
+// duplicating this field mapping — same reasoning as reusing
+// CampaignApiService.toSnake() instead of re-deriving CampaignDraft's field
+// names elsewhere.
+export function buildPayload(state: OrganizationRegistrationState) {
   return {
     entity_type: state.entityType,
     legal_name: state.organizationName,
