@@ -49,16 +49,19 @@ exports.extractFromWebsite = async (url) => {
   return { ...facts, trace: tracer.steps };
 };
 
-// Document Collection Extractor — one Extraction call over a whole batch of
-// uploaded, type-tagged files (+ optional accompanying free text), not
-// per-file extraction + merge (that's the rejected Facts Merger idea).
+// Combined intake — one Extraction call over any mix of free text, a
+// website URL, and uploaded type-tagged files, all optional (at least one
+// required — enforced by the controller, not here). Not per-source
+// extraction + merge (the rejected Facts Merger idea) — everything is
+// aggregated into one prompt before the single LLM call happens.
 // @param {Array<{ buffer: Buffer, mimeType: string, typeLabel: string, note?: string }>} files
 // @param {string} [freeText]
+// @param {string} [websiteUrl]
 // @returns {Promise<import('./campaign-creation.types').ExtractedFacts & { trace: object[] }>}
-exports.extractFromDocuments = async (files, freeText) => {
+exports.extractFromDocuments = async (files, freeText, websiteUrl) => {
   const tracer = createTracer('CampaignCreationPipeline.extractFromDocuments');
 
-  const facts = await tracer.trace('DocumentCollectionExtractor', () => documentCollectionExtractor.extract(files, freeText),
+  const facts = await tracer.trace('DocumentCollectionExtractor', () => documentCollectionExtractor.extract(files, freeText, websiteUrl),
     (f) => ({ hasOrgName: !!f.organizationName, hasTitle: !!f.suggestedTitle, fileCount: files.length }));
 
   tracer.print();

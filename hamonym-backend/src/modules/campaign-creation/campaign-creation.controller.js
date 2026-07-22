@@ -9,14 +9,14 @@ const { WebsiteFetchError } =
 
 function getStatusCode(error) {
   if (error.message === 'Source and input are required') return 400;
-  if (error.message === 'At least one file is required') return 400;
+  if (error.message === 'At least one of text, a website URL, or a file is required') return 400;
   if (error instanceof WebsiteFetchError) return 400;
   return 500;
 }
 
 function getErrorMessage(error) {
   if (error.message === 'Source and input are required') return 'חסר קלט';
-  if (error.message === 'At least one file is required') return 'צריך להעלות לפחות קובץ אחד';
+  if (error.message === 'At least one of text, a website URL, or a file is required') return 'צריך למלא לפחות דבר אחד — טקסט, קישור לאתר, או קובץ';
   if (error instanceof WebsiteFetchError) return error.message; // already Hebrew, user-facing (see website.extractor.js)
   return 'משהו השתבש, נסו שוב';
 }
@@ -49,13 +49,17 @@ exports.extractAndBuildBrief = async (req, res) => {
 };
 
 // POST /api/campaign-creation/extract-documents (multipart/form-data)
-// fields: files[] (the uploaded files), filesMeta (JSON string, array of
-// { typeLabel, note } in the same order as files), freeText (optional)
+// Combined intake — any mix of the three, all optional individually:
+// fields: files[] (uploaded files), filesMeta (JSON string, array of
+// { typeLabel, note } in the same order as files), freeText, websiteUrl.
 exports.extractFromDocuments = async (req, res) => {
   try {
     const uploaded = req.files || [];
-    if (!uploaded.length) {
-      throw new Error('At least one file is required');
+    const freeText = (req.body.freeText || '').trim();
+    const websiteUrl = (req.body.websiteUrl || '').trim();
+
+    if (!uploaded.length && !freeText && !websiteUrl) {
+      throw new Error('At least one of text, a website URL, or a file is required');
     }
 
     let meta = [];
@@ -72,7 +76,7 @@ exports.extractFromDocuments = async (req, res) => {
       note: meta[i]?.note || '',
     }));
 
-    const facts = await pipeline.extractFromDocuments(files, req.body.freeText);
+    const facts = await pipeline.extractFromDocuments(files, freeText, websiteUrl);
     const brief = await pipeline.buildBriefFromFacts(facts);
 
     res.json({ facts, brief });

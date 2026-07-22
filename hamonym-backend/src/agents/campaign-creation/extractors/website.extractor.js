@@ -136,12 +136,26 @@ function extractMainContent(html, url) {
   return fallback.length > readabilityText.length ? fallback : readabilityText;
 }
 
+// Fetch + normalize only, no LLM call — split out so a combined submission
+// (free text + website + files together, see document-collection.extractor.js)
+// can reuse just this step and fold the result into one aggregated
+// extraction call, rather than website getting its own separate
+// ExtractedFacts that would then need merging (the rejected Facts Merger
+// problem). Still throws WebsiteFetchError on hard failure (MVP §10) —
+// callers decide whether that's fatal for them or just means "skip this
+// part, use whatever else was provided."
+// @param {string} rawUrl
+// @returns {Promise<string>}
+exports.fetchMainContent = async (rawUrl) => {
+  const url = await assertSafeUrl(rawUrl);
+  const html = await fetchHtml(url.toString());
+  return extractMainContent(html, url.toString());
+};
+
 // @param {string} rawUrl
 // @returns {Promise<import('../campaign-creation.types').ExtractedFacts>}
 exports.extract = async (rawUrl) => {
-  const url = await assertSafeUrl(rawUrl);
-  const html = await fetchHtml(url.toString());
-  const text = extractMainContent(html, url.toString());
+  const text = await exports.fetchMainContent(rawUrl);
 
   // Reuses FreeTextExtractor entirely (same prompt, same "don't invent"
   // rules, same temperature: 0) — thin content still degrades gracefully to

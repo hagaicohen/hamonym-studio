@@ -1,10 +1,16 @@
-// DocumentCollectionExtractor — turns a batch of uploaded files (each
-// tagged with a type by the user: לוגו/תעודת התאגדות/דוח שנתי/etc.) into
-// ExtractedFacts. Same principle as website.extractor.js and the
-// "Document Collection" design note in AI_CAMPAIGN_CREATION_VISION.md:
-// this is an adapter, not a second pipeline — ONE Extraction call over
-// aggregated content, never per-file extraction + a merge stage (that's
-// the rejected Facts Merger idea, explicitly out of scope).
+// DocumentCollectionExtractor — turns a combined submission (free text +/or
+// a website URL +/or uploaded files, each tagged with a type by the user:
+// לוגו/תעודת התאגדות/דוח שנתי/etc.) into ExtractedFacts. Same principle as
+// the "Document Collection" design note in AI_CAMPAIGN_CREATION_VISION.md,
+// now generalized to the full combined-intake screen: this is an adapter,
+// not a second pipeline — ONE Extraction call over aggregated content,
+// never per-source extraction + a merge stage (that's the rejected Facts
+// Merger idea — still avoided, because there's nothing separate to merge;
+// everything becomes text/images in one prompt before the single LLM call
+// happens). A website fetch that fails doesn't fail the whole request —
+// it's noted and the rest of the submission (files/text) still goes
+// through, same "partial success" philosophy as website.extractor.js's own
+// failure handling.
 //
 // Per-file content normalization:
 //   - image/* -> passed to the LLM directly as vision input (base64 data
@@ -27,6 +33,7 @@
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const freeTextExtractor = require('./free-text.extractor');
+const websiteExtractor = require('./website.extractor');
 
 const MIN_CONTENT_LENGTH = 10; // same spirit as free-text.extractor.js's own gate
 const SCANNED_PDF_NOTE = '[קובץ PDF זה נראה סרוק (אין בו טקסט לחילוץ) — סוג זה עדיין לא נתמך. אפשר להעלות אותו כתמונה (צילום/סריקה) במקום.]';
@@ -62,11 +69,25 @@ async function fileToTextBlock(file) {
 
 // @param {Array<{ buffer: Buffer, mimeType: string, typeLabel: string, note?: string }>} files
 // @param {string} [freeText] - optional accompanying free text from the same submission
+// @param {string} [websiteUrl] - optional accompanying website URL from the same submission
 // @returns {Promise<import('../campaign-creation.types').ExtractedFacts>}
-exports.extract = async (files, freeText) => {
+exports.extract = async (files, freeText, websiteUrl) => {
   const textBlocks = [];
   if (freeText && freeText.trim()) {
     textBlocks.push(`טקסט חופשי מהמשתמש:\n${freeText.trim()}`);
+  }
+
+  if (websiteUrl && websiteUrl.trim()) {
+    try {
+      const siteText = await websiteExtractor.fetchMainContent(websiteUrl.trim());
+      textBlocks.push(`[תוכן מהאתר ${websiteUrl.trim()}]\n${siteText}`);
+    } catch {
+      // Doesn't fail the whole request — whatever else was provided
+      // (files/text) still goes through. The note tells the model (and via
+      // sourceRaw, eventually a human reviewing the Brief) that this piece
+      // didn't come through, rather than silently pretending it wasn't asked for.
+      textBlocks.push(`[לא הצלחנו לגשת לאתר שסופק: ${websiteUrl.trim()}]`);
+    }
   }
 
   const imageFiles = files.filter((f) => f.mimeType.startsWith('image/'));
@@ -88,7 +109,7 @@ exports.extract = async (files, freeText) => {
     // hardcodes 'free_text' internally, which is wrong for this caller —
     // same pattern website.extractor.js uses.
     const facts = await freeTextExtractor.extract(combinedText);
-    return { ...facts, source: 'document_collection' };
+    return { ...facts, source: 'combined' };
   }
 
   // Multi-modal: at least one image present, build a content-parts array
@@ -104,5 +125,5 @@ exports.extract = async (files, freeText) => {
   ];
 
   const facts = await freeTextExtractor.runExtraction(sourceRaw, userPromptContent);
-  return { ...facts, source: 'document_collection' };
+  return { ...facts, source: 'combined' };
 };
