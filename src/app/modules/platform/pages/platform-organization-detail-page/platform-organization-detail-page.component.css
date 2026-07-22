@@ -68,6 +68,32 @@
   font-weight: 600;
 }
 
+.plat-flagged-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+
+.plat-flagged-banner-icon { font-size: 18px; flex-shrink: 0; }
+
+.plat-flagged-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #9a3412;
+  margin-bottom: 2px;
+}
+
+.plat-flagged-banner-text {
+  font-size: 13px;
+  color: #c2410c;
+  line-height: 1.5;
+}
+
 .status-active            { background: #e6f9f3; color: #0EA65A; }
 .status-pending_review    { background: #fffbeb; color: #f59e0b; }
 .status-draft             { background: #f1f5f9; color: #64748b; }
@@ -265,11 +291,98 @@
   color: #1e293b;
 }
 
+.plat-section-hint {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: -8px 0 16px;
+  line-height: 1.5;
+}
+
+.plat-ai-tool-row {
+  margin-bottom: 20px;
+}
+
+.btn-ai-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #fff;
+  border: 1px solid #583cd6;
+  border-radius: 8px;
+  color: #583cd6;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.btn-ai-tool:hover:not(:disabled) { background: #f5f3ff; }
+.btn-ai-tool:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-tool-icon { font-size: 14px; }
+
+.ai-tool-note {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.plat-step {
+  padding: 14px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.plat-step:first-of-type { border-top: none; padding-top: 0; }
+
+.plat-step-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.plat-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #583cd6;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.plat-step-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.plat-actions-group {
+  margin-bottom: 12px;
+}
+
+.plat-actions-group:last-child { margin-bottom: 0; }
+
+.plat-actions-group-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
 .plat-reason-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .plat-reason-tag {
@@ -439,8 +552,6 @@
 .btn-reactivate { background: #583cd6; color: #fff; }
 .btn-hard-delete { background: #7f1d1d; color: #fff; }
 
-.btn-analyze { display: inline-flex; align-items: center; gap: 8px; }
-
 .btn-spinner {
   width: 14px;
   height: 14px;
@@ -448,6 +559,11 @@
   border-top-color: #fff;
   border-radius: 50%;
   animation: plat-btn-spin 0.7s linear infinite;
+}
+
+.btn-ai-tool .btn-spinner {
+  border-color: rgba(88, 60, 214, 0.25);
+  border-top-color: #583cd6;
 }
 
 @keyframes plat-btn-spin {

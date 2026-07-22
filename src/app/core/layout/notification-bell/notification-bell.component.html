@@ -28,6 +28,13 @@
             <div class="bell-item-title">{{ incompleteDraftsCount }} עמותות עם פרטים חסרים</div>
           </div>
         </div>
+
+        <div class="bell-item bell-item--link" *ngIf="flaggedForReviewCount > 0" (click)="goToFlaggedOrganizations($event)">
+          <span class="bell-item-icon">⚠️</span>
+          <div class="bell-item-body">
+            <div class="bell-item-title">{{ flaggedForReviewCount }} עמותות פעילות דורשות בדיקה חוזרת</div>
+          </div>
+        </div>
       </ng-container>
 
       <!-- ENTITY-MANAGER MODE — dropdown listing unread admin decisions -->

@@ -24,6 +24,19 @@
       </div>
     </div>
 
+    @if (entity.flagged_for_review) {
+      <div class="plat-flagged-banner">
+        <span class="plat-flagged-banner-icon">⚠️</span>
+        <div class="plat-flagged-banner-body">
+          <div class="plat-flagged-banner-title">עמותה זו דורשת בדיקה חוזרת</div>
+          <div class="plat-flagged-banner-text">
+            {{ entity.flagged_for_review_reason }} — לאחר האישור המקורי, ב-{{ fmtDate(entity.flagged_for_review_at) }}.
+            לחצו "אישור עמותה" בלשונית "סקירה ואישור" כדי להסיר את הסימון.
+          </div>
+        </div>
+      </div>
+    }
+
     <div class="plat-hero-kpi-row">
       <div class="plat-hero-kpi">
         <div class="kpi-label">סה"כ תרומות</div>
@@ -95,50 +108,78 @@
           </div>
 
           <h3 class="plat-section-title">פעולות</h3>
+          <p class="plat-section-hint">
+            סיבה והערה (למטה) מצורפות לפעולה שתבחרו בסוף — זו פעולה אחת, לא כמה שלבים נפרדים.
+          </p>
 
-          <div class="plat-reason-tags">
-            @for (tag of reasonTagOptions; track tag.key) {
-              <label class="plat-reason-tag" [class.checked]="selectedReasonTags.includes(tag.key)">
-                <input
-                  type="checkbox"
-                  [checked]="selectedReasonTags.includes(tag.key)"
-                  (change)="toggleReasonTag(tag.key)"
-                />
-                {{ tag.label }}
-              </label>
-            }
-          </div>
-
-          <textarea
-            class="plat-notes"
-            rows="2"
-            placeholder="הערה (נדרשת לדחייה / בקשת תיקונים / השעיה)"
-            [(ngModel)]="notes"
-          ></textarea>
-          @if (noteRequiredError) {
-            <div class="plat-note-error">יש להזין הערה לפני ביצוע פעולה זו</div>
-          }
-
-          <div class="plat-actions">
-            <button class="btn btn-reactivate btn-analyze" [disabled]="actionInProgress || analyzing" (click)="recommendOrganization()">
-              ניתוח עמותה
+          <div class="plat-ai-tool-row">
+            <button class="btn-ai-tool" [disabled]="actionInProgress || analyzing" (click)="recommendOrganization()">
+              <span class="ai-tool-icon">✨</span>
+              קבלת המלצת AI לפני החלטה
+              <span class="ai-tool-note">(כלי עזר בלבד, לא פעולה)</span>
               @if (analyzing) {
                 <div class="btn-spinner"></div>
               }
             </button>
-            <button class="btn btn-approve" [disabled]="actionInProgress" (click)="approve()">אישור עמותה</button>
-            <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
-            <button class="btn btn-request" [disabled]="actionInProgress" (click)="requestChanges()">בקשת השלמת מסמכים</button>
-            @if (entity.status === 'suspended') {
-              <button class="btn btn-reactivate" [disabled]="actionInProgress" (click)="reactivate()">הפעלה מחדש</button>
-            } @else {
-              <button class="btn btn-suspend" [disabled]="actionInProgress" (click)="suspend()">השעיה</button>
-            }
           </div>
 
           @if (recommendationError) {
             <div class="plat-note-error">{{ recommendationError }}</div>
           }
+
+          <div class="plat-step">
+            <div class="plat-step-label"><span class="plat-step-num">1</span> סיבה <span class="plat-step-tag">לא חובה</span></div>
+            <div class="plat-reason-tags">
+              @for (tag of reasonTagOptions; track tag.key) {
+                <label class="plat-reason-tag" [class.checked]="selectedReasonTags.includes(tag.key)">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedReasonTags.includes(tag.key)"
+                    (change)="toggleReasonTag(tag.key)"
+                  />
+                  {{ tag.label }}
+                </label>
+              }
+            </div>
+          </div>
+
+          <div class="plat-step">
+            <div class="plat-step-label"><span class="plat-step-num">2</span> הערה <span class="plat-step-tag">חובה לדחייה / בקשת השלמות / השעיה</span></div>
+            <textarea
+              class="plat-notes"
+              rows="2"
+              placeholder="לדוגמה: חסר אישור ניהול תקין בתוקף"
+              [(ngModel)]="notes"
+            ></textarea>
+            @if (noteRequiredError) {
+              <div class="plat-note-error">יש להזין הערה לפני ביצוע פעולה זו</div>
+            }
+          </div>
+
+          <div class="plat-step">
+            <div class="plat-step-label"><span class="plat-step-num">3</span> פעולה <span class="plat-step-tag">בחרו אחת</span></div>
+
+            <div class="plat-actions-group">
+              <span class="plat-actions-group-label">מאשר / משחזר גישה</span>
+              <div class="plat-actions">
+                <button class="btn btn-approve" [disabled]="actionInProgress" (click)="approve()">אישור עמותה</button>
+                @if (entity.status === 'suspended') {
+                  <button class="btn btn-reactivate" [disabled]="actionInProgress" (click)="reactivate()">הפעלה מחדש</button>
+                }
+              </div>
+            </div>
+
+            <div class="plat-actions-group">
+              <span class="plat-actions-group-label">דורש הערה למעלה</span>
+              <div class="plat-actions">
+                <button class="btn btn-request" [disabled]="actionInProgress" (click)="requestChanges()">בקשת השלמת מסמכים</button>
+                @if (entity.status !== 'suspended') {
+                  <button class="btn btn-suspend" [disabled]="actionInProgress" (click)="suspend()">השעיה</button>
+                }
+                <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
+              </div>
+            </div>
+          </div>
 
           @if (recommendation) {
             <div class="plat-ai-recommendation">

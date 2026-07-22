@@ -40,6 +40,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   count = 0;
   pendingReviewCount = 0;
   incompleteDraftsCount = 0;
+  flaggedForReviewCount = 0;
   notifications: EntityNotification[] = [];
   private acknowledgeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -63,9 +64,16 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
         tap(r => {
           this.pendingReviewCount = r.pendingReviewCount;
           this.incompleteDraftsCount = r.incompleteDraftsCount;
-          this.count = r.pendingReviewCount + r.incompleteDraftsCount;
+          this.flaggedForReviewCount = r.flaggedForReviewCount;
+          this.count = r.pendingReviewCount + r.incompleteDraftsCount + r.flaggedForReviewCount;
         }),
-        catchError(() => { this.count = 0; this.pendingReviewCount = 0; this.incompleteDraftsCount = 0; return of(null); }),
+        catchError(() => {
+          this.count = 0;
+          this.pendingReviewCount = 0;
+          this.incompleteDraftsCount = 0;
+          this.flaggedForReviewCount = 0;
+          return of(null);
+        }),
       );
     }
     const entityId = this.currentEntity.currentEntity()?.id;
@@ -102,6 +110,12 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.dropdownOpen = false;
     this.router.navigate(['/platform/organizations'], { queryParams: { status } });
+  }
+
+  goToFlaggedOrganizations(event: MouseEvent): void {
+    event.stopPropagation();
+    this.dropdownOpen = false;
+    this.router.navigate(['/platform/organizations'], { queryParams: { flaggedForReview: '1' } });
   }
 
   @HostListener('document:click', ['$event'])

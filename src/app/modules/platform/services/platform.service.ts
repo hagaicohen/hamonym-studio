@@ -17,8 +17,8 @@ export class PlatformService {
     return this.http.get(`${environment.apiUrl}/api/platform/dashboard`, { headers: authHeaders() });
   }
 
-  getNotificationsCount(): Observable<{ pendingReviewCount: number; incompleteDraftsCount: number }> {
-    return this.http.get<{ pendingReviewCount: number; incompleteDraftsCount: number }>(
+  getNotificationsCount(): Observable<{ pendingReviewCount: number; incompleteDraftsCount: number; flaggedForReviewCount: number }> {
+    return this.http.get<{ pendingReviewCount: number; incompleteDraftsCount: number; flaggedForReviewCount: number }>(
       `${environment.apiUrl}/api/platform/notifications-count`, { headers: authHeaders() },
     );
   }
@@ -42,6 +42,7 @@ export class PlatformService {
     page?: number;
     limit?: number;
     missingDocs?: boolean;
+    flaggedForReview?: boolean;
     noCampaigns?: boolean;
     newSince?: number;
   }): Observable<any> {
@@ -54,6 +55,7 @@ export class PlatformService {
     if (query.sortBy) params = params.set('sortBy', query.sortBy);
     if (query.sortDir) params = params.set('sortDir', query.sortDir);
     if (query.missingDocs) params = params.set('missingDocs', '1');
+    if (query.flaggedForReview) params = params.set('flaggedForReview', '1');
     if (query.noCampaigns) params = params.set('noCampaigns', '1');
     if (query.newSince) params = params.set('newSince', String(query.newSince));
 

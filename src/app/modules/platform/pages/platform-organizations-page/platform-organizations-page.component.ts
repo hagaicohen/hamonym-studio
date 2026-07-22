@@ -24,6 +24,9 @@ interface Organization {
   status: string;
   created_at: string;
   updated_at: string;
+  flagged_for_review: boolean;
+  flagged_for_review_reason: string | null;
+  flagged_for_review_at: string | null;
   profile_completion: number;
   owner_name: string | null;
   owner_email: string | null;
@@ -34,15 +37,16 @@ interface Organization {
 type SortField = 'name' | 'status' | 'created_at' | 'campaigns' | 'raised';
 type SortDir = 'asc' | 'desc';
 
-type ChipKey = 'all' | 'pending_review' | 'active' | 'suspended' | 'missing_docs' | 'no_campaigns' | 'new_week';
+type ChipKey = 'all' | 'pending_review' | 'active' | 'suspended' | 'missing_docs' | 'flagged_for_review' | 'no_campaigns' | 'new_week';
 
 const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
-  { key: 'pending_review', label: 'ממתינות', dot: '🔴' },
-  { key: 'active',         label: 'פעילות',   dot: '🟢' },
-  { key: 'suspended',      label: 'מושעות',   dot: '⚫' },
-  { key: 'missing_docs',   label: 'חסרות מסמכים', dot: '🟠' },
-  { key: 'no_campaigns',   label: 'ללא קמפיינים', dot: '🔵' },
-  { key: 'new_week',       label: 'חדשות השבוע',  dot: '🟣' },
+  { key: 'pending_review',    label: 'ממתינות', dot: '🔴' },
+  { key: 'active',            label: 'פעילות',   dot: '🟢' },
+  { key: 'suspended',         label: 'מושעות',   dot: '⚫' },
+  { key: 'missing_docs',      label: 'חסרות מסמכים', dot: '🟠' },
+  { key: 'flagged_for_review', label: 'דורשות בדיקה חוזרת', dot: '⚠️' },
+  { key: 'no_campaigns',      label: 'ללא קמפיינים', dot: '🔵' },
+  { key: 'new_week',          label: 'חדשות השבוע',  dot: '🟣' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -95,10 +99,13 @@ export class PlatformOrganizationsPageComponent implements OnInit {
     const qp = this.route.snapshot.queryParamMap;
     const status = qp.get('status');
     const missingDocs = qp.get('missingDocs');
+    const flaggedForReview = qp.get('flaggedForReview');
     if (status && CHIPS.some((c) => c.key === status)) {
       this.activeChip = status as ChipKey;
     } else if (missingDocs) {
       this.activeChip = 'missing_docs';
+    } else if (flaggedForReview) {
+      this.activeChip = 'flagged_for_review';
     }
 
     this.load();
@@ -134,15 +141,16 @@ export class PlatformOrganizationsPageComponent implements OnInit {
       });
   }
 
-  private chipToParams(chip: ChipKey): { status?: string; missingDocs?: boolean; noCampaigns?: boolean; newSince?: number } {
+  private chipToParams(chip: ChipKey): { status?: string; missingDocs?: boolean; flaggedForReview?: boolean; noCampaigns?: boolean; newSince?: number } {
     switch (chip) {
-      case 'pending_review': return { status: 'pending_review' };
-      case 'active':         return { status: 'active' };
-      case 'suspended':      return { status: 'suspended' };
-      case 'missing_docs':   return { missingDocs: true };
-      case 'no_campaigns':   return { noCampaigns: true };
-      case 'new_week':       return { newSince: 7 };
-      default:               return {};
+      case 'pending_review':     return { status: 'pending_review' };
+      case 'active':             return { status: 'active' };
+      case 'suspended':          return { status: 'suspended' };
+      case 'missing_docs':       return { missingDocs: true };
+      case 'flagged_for_review': return { flaggedForReview: true };
+      case 'no_campaigns':       return { noCampaigns: true };
+      case 'new_week':           return { newSince: 7 };
+      default:                   return {};
     }
   }
 
