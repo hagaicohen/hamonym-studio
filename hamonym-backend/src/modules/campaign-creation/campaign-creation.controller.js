@@ -9,12 +9,14 @@ const { WebsiteFetchError } =
 
 function getStatusCode(error) {
   if (error.message === 'Source and input are required') return 400;
+  if (error.message === 'At least one file is required') return 400;
   if (error instanceof WebsiteFetchError) return 400;
   return 500;
 }
 
 function getErrorMessage(error) {
   if (error.message === 'Source and input are required') return 'חסר קלט';
+  if (error.message === 'At least one file is required') return 'צריך להעלות לפחות קובץ אחד';
   if (error instanceof WebsiteFetchError) return error.message; // already Hebrew, user-facing (see website.extractor.js)
   return 'משהו השתבש, נסו שוב';
 }
@@ -35,6 +37,42 @@ exports.extractAndBuildBrief = async (req, res) => {
       ? await pipeline.extractFromWebsite(input.trim())
       : await pipeline.extractFromFreeText(input.trim());
 
+    const brief = await pipeline.buildBriefFromFacts(facts);
+
+    res.json({ facts, brief });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(getStatusCode(err))
+      .json({ error: getErrorMessage(err) });
+  }
+};
+
+// POST /api/campaign-creation/extract-documents (multipart/form-data)
+// fields: files[] (the uploaded files), filesMeta (JSON string, array of
+// { typeLabel, note } in the same order as files), freeText (optional)
+exports.extractFromDocuments = async (req, res) => {
+  try {
+    const uploaded = req.files || [];
+    if (!uploaded.length) {
+      throw new Error('At least one file is required');
+    }
+
+    let meta = [];
+    try {
+      meta = JSON.parse(req.body.filesMeta || '[]');
+    } catch {
+      meta = [];
+    }
+
+    const files = uploaded.map((f, i) => ({
+      buffer: f.buffer,
+      mimeType: f.mimetype,
+      typeLabel: meta[i]?.typeLabel || 'קובץ',
+      note: meta[i]?.note || '',
+    }));
+
+    const facts = await pipeline.extractFromDocuments(files, req.body.freeText);
     const brief = await pipeline.buildBriefFromFacts(facts);
 
     res.json({ facts, brief });
