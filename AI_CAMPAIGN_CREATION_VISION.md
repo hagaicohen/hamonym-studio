@@ -10,14 +10,16 @@
 
 שלוש שכבות ברורות, במכוון לא מעורבבות:
 
-**1. Proven — קיים, עובד, מאומת ב-corpus (`hamonym-backend/src/agents/campaign-creation/`)**
-שני Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). כל שלב עם fixture corpus משלו, נבדק וחתום ב-commit. ר' "קוד קיים" למטה לפירוט.
+**1. Proven — קיים, עובד, מחובר ל-UI אמיתי (`hamonym-backend/src/agents/campaign-creation/` + `hamonym-app`'s `/campaigns/create/ai`)**
+שלושה Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4, 📄 Document Collection — Sprint 6, כולל Vision לתמונות) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). מסך UI אמיתי (Sprint 5) מחבר את כל זה למשתמש: בחירת מקור, קלט, ותצוגת Brief. מאומת עם משתמש אמיתי דרך הדפדפן, לא רק ב-corpus. ר' "קוד קיים" למטה לפירוט.
 
-**2. Next MVP — מתוכנן, טרם נבנה**
-מסך UI לבחירת מקור (החלטה 8) → מסך Brief Review. זה מה שהופך את ה-pipeline המוכח לתכונה שמשתמש אמיתי יכול לגעת בה — כל השכבות מתחת ל-UI כבר מוכחות.
+**2. Next MVP — נשאר**
+מסך Brief Review מלא (עריכה + אישור → יצירת Draft בפועל ב-`CampaignStudioStateService`/`OrganizationRegistrationStateService`) — כרגע ה-Brief מוצג לקריאה בלבד, "עדיין לא נוצר קמפיין" כתוב במפורש במסך.
 
 **3. Vision — רעיונות עתידיים, לא מחייבים, לא בסקופ נוכחי**
-Document Collection, ריבוי מקורות + Facts Merger, Campaign Advisor/Readiness Check (כבר קיימים בקוד בהקשר אחר — ר' "קוד קיים"). ר' סעיף "Vision (Non-binding)" למטה.
+ריבוי מקורות + Facts Merger, Campaign Advisor/Readiness Check (כבר קיימים בקוד בהקשר אחר — ר' "קוד קיים"). ר' סעיף "Vision (Non-binding)" למטה.
+
+**סטייה מודעת מהעיקרון (2026-07-22)**: Document Collection נבנה **לפני** ולידציה עם משתמשים אמיתיים על הזרימה הבסיסית — בניגוד לעיקרון "צוואר הבקבוק" (למטה) שקבע שהרחבות מנוע ממתינות לוולידציה כזו. זו הייתה בקשה מפורשת של המשתמש, לא סטייה שקטה — מתועד כדי שהעיקרון עצמו יישאר אמין (לא "תמיד נכון בלי יוצא מן הכלל", אלא ברירת המחדל שסטייה ממנה דורשת החלטה מודעת, לא רק מומנטום).
 
 **העיקרון**: חזון יכול להתרחב בלי שה-MVP יזוז — כל תוספת ל-Vision נבדקת מול אותה משמעת (משנה MVP? מוסיפה שכבה גנרית? יש צורך מוכח?) לפני שהיא זזה משם.
 
@@ -290,6 +292,20 @@ Sprint 4 — לפי MVP §10. `website.extractor.js` הוא **Adapter דק**, ל
 **אימות "Weak Result → Fallback" (הוספה שנקבעה לפני כתיבת קוד, MVP §10)**: fixture של landing page ללא תגיות סמנטיות (`<article>`/`<main>`) גרם ל-Readability להחזיר תוכן דל כצפוי — ה-fallback ל-body text גולמי תפס את התוכן האמיתי (61 תווים) והזרים אותו ל-Extraction בהצלחה, במקום כישלון גורף.
 
 **תלות חדשה**: `@mozilla/readability` + `jsdom` (מוצמד ל-`^24.1.3` — גרסאות חדשות יותר של jsdom תלויות ב-ESM שלא תואם ל-CommonJS `require()` בגרסת Node הנוכחית של הפרויקט; אומת ידנית).
+
+---
+
+## Pipeline Milestone (2026-07-22): מחובר ל-UI אמיתי, נבדק עם משתמש אמיתי
+
+**Sprint 5 — המסך הראשון.** `/campaigns/create/ai` (Angular) + `POST /api/campaign-creation/extract` (Express, `src/modules/campaign-creation/`) — תרשים הכניסה (החלטה 8), קלט טקסט/אתר, תצוגת Brief מלאה עם reason לכל שדה. זה השלב שהופך את ה-pipeline המוכח ל"תכונה שמשתמש יכול לגעת בה".
+
+**באג אמיתי נמצא ותוקן דרך שימוש חי, לא רק corpus**: `[(ngModel)]` נקשר ישירות ל-signal (`input = signal('')`) — קשירה שגויה שמחליפה בשקט את ה-signal במחרוזת רגילה בהקלדה ראשונה, וקוראסת בקריאה הבאה ל-`input()`. תוקן ל-`[ngModel]="input()"` + `(ngModelChange)="input.set($event)"`.
+
+**באג שני, יותר משמעותי, נמצא רק אחרי דיבאג ארוך**: "הספינר לא מפסיק להסתובב" לא היה קשור בכלל ל-AI, ל-CORS, או ל-backend (כולם אומתו תקינים בנפרד) — `AppComponent` משאיר בכוונה overlay טעינה גלובלי פתוח אחרי ניווט לכל route שמתחיל ב-`/campaigns` (`SELF_HIDING_PREFIXES`), ומצפה שהעמוד היעד יסגור אותו בעצמו אחרי טעינת הנתונים שלו. המסך החדש לא עשה זאת (אין `ngOnInit`) — ה-overlay חסם כל קליק על העמוד מרגע הניווט, לפני שהמשתמש בכלל נגע בכפתור. **נמצא ואומת רק דרך שחזור מלא עם Playwright** (session מחובר אמיתי, לא רק בדיקות שרת) — לקח מהותי: כש-curl/בדיקות שרת כולן עוברות אבל המשתמש עדיין רואה תקלה, הבעיה כנראה ב-UI layer שלא נבדק ישירות.
+
+**Sprint 6 — Document Collection.** נבנה **מיד** אחרי Sprint 5 לפי בקשה מפורשת של המשתמש (ר' "סטייה מודעת" ב"מצב נוכחי" למעלה) — לא אחרי ולידציה עם משתמשים אמיתיים כפי שהעיקרון "צוואר הבקבוק" קבע. תמיכה בתמונות (Vision — לוגו, תמונות פעילות, מסמכים מצולמים), PDF טקסטואלי (`pdf-parse`), Word (`mammoth`). PDF סרוק (ללא שכבת טקסט) מזוהה ומסומן כלא-נתמך במפורש במקום כישלון שקט — עקיפה: להעלות כתמונה במקום. אימות אמיתי: תמונה שנוצרה בפועל (טקסט מצויר עם `System.Drawing`) עברה דרך ה-API האמיתי של OpenAI Vision וחילצה נכון מספר עמותה/שם/תיאור; PDF נבדק עם mock (הספרייה עצמה לא נבדקה מחדש — ספרייה בוגרת), Word נבדק מול fixture אמיתי מ-test suite של mammoth עצמה.
+
+**תלויות חדשות נוספות**: `pdf-parse` (מוצמד ל-`^1.x` — אותה בעיית Node<20/ESM כמו jsdom, גרסה 2 קרסה), `mammoth`. `llm.service.js`'s `complete()` כבר תמך ב-multi-modal content arrays (תמונות) בלי שום שינוי — `userPrompt` תמיד הועבר ישירות ל-`content` של הבקשה ל-OpenAI.
 
 ---
 
