@@ -130,11 +130,18 @@
         </div>
 
         <p class="brief-note">
-          זו הצעה בלבד — עדיין לא נוצר שום קמפיין. שלב האישור וההמשך לעריכה מלאה בסטודיו עוד לא מחובר למסך הזה.
+          זו הצעה של ה-AI — לחיצה על "אשר וצור קמפיין" תיצור קמפיין אמיתי תחת העמותה שלכם, ותעביר אתכם לעריכה מלאה בסטודיו. אפשר לשנות שם כל שדה.
         </p>
+
+        @if (createError()) {
+          <div class="ai-error">{{ createError() }}</div>
+        }
 
         <div class="ai-actions">
           <button type="button" class="btn-link" (click)="reset()">נסה שוב עם קלט אחר</button>
+          <button type="button" class="btn-primary" [disabled]="creatingCampaign()" (click)="approveAndCreate()">
+            {{ creatingCampaign() ? 'יוצרים...' : 'אשר וצור קמפיין ←' }}
+          </button>
         </div>
       </div>
     }

@@ -6,6 +6,9 @@ import { Router } from '@angular/router';
 import { timeout } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
+import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
+import { CampaignApiService } from '../../services/campaign-api.service';
 
 // Website extraction alone can take ~12s (real-world test); LLM calls add
 // more on top. 45s is generous slack, not a "should normally take this
@@ -36,6 +39,16 @@ interface UploadedFile {
   note: string;
 }
 
+// Mirrors draft.builder.js's return shape (Sprint 3, now exposed over HTTP
+// via POST /api/campaign-creation/map-to-draft). campaignDraftPatch's field
+// names were hand-verified against the real CampaignDraft interface back
+// in Sprint 3 — safe to merge directly via CampaignStudioStateService.patch().
+interface DraftPatches {
+  campaignDraftPatch: Record<string, unknown>;
+  organizationDraftPatch: Record<string, unknown>;
+  unmapped: Record<string, unknown>;
+}
+
 // Mirrors document-collection.extractor.js's own labels — kept as a fixed,
 // deliberately short list (ADR decision-4 spirit: don't build a generic
 // taxonomy nobody asked for) rather than a free-for-all.
@@ -49,9 +62,12 @@ const FILE_TYPE_OPTIONS = ['לוגו', 'תעודת התאגדות', 'דוח שנ
   styleUrl: './ai-campaign-creation-page.component.css',
 })
 export class AiCampaignCreationPageComponent implements OnInit {
-  private http   = inject(HttpClient);
-  private loader = inject(AppLoaderService);
-  private router = inject(Router);
+  private http          = inject(HttpClient);
+  private loader        = inject(AppLoaderService);
+  private router        = inject(Router);
+  private currentEntity = inject(CurrentEntityService);
+  private campaignState = inject(CampaignStudioStateService);
+  private campaignApi   = inject(CampaignApiService);
 
   fileTypeOptions = FILE_TYPE_OPTIONS;
 
@@ -68,6 +84,9 @@ export class AiCampaignCreationPageComponent implements OnInit {
   brief  = signal<Brief | null>(null);
   error  = signal<string | null>(null);
   submitting = signal(false);
+
+  creatingCampaign = signal(false);
+  createError = signal<string | null>(null);
 
   canSubmit = computed(() =>
     !this.submitting() && (!!this.freeText().trim() || !!this.websiteUrl().trim() || this.files().length > 0)
@@ -138,6 +157,61 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
           this.submitting.set(false);
           this.loader.hide();
+        },
+      });
+  }
+
+  // Approve the Brief -> create a real CampaignDraft under the user's
+  // current entity -> hand off to Campaign Studio for full editing. Scope
+  // decision (2026-07-22): only attaches to the entity the user is already
+  // managing (CurrentEntityService) — creating a *new* entity from AI
+  // Brief data is deliberately deferred, not built here. Reaching this page
+  // at all already requires the entity-manager role (campaignEditorGuard),
+  // so the common case — an existing entity — is what this covers.
+  approveAndCreate(): void {
+    const brief = this.brief();
+    if (!brief || this.creatingCampaign()) return;
+
+    const entityId = this.currentEntity.currentEntity()?.id;
+    if (!entityId) {
+      this.createError.set('לא נמצאה עמותה פעילה — יש לבחור עמותה לפני יצירת קמפיין.');
+      return;
+    }
+
+    this.createError.set(null);
+    this.creatingCampaign.set(true);
+    this.loader.show('יוצרים את הקמפיין...');
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    this.http
+      .post<DraftPatches>(`${environment.apiUrl}/api/campaign-creation/map-to-draft`, { brief }, { headers })
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
+      .subscribe({
+        next: (patches) => {
+          // Fresh draft, not whatever was left over from an unrelated
+          // earlier Studio session in this same browser tab — the service
+          // is an app-wide singleton, reset() guarantees a clean slate
+          // before merging the AI-derived fields onto it.
+          this.campaignState.reset();
+          this.campaignState.patch(patches.campaignDraftPatch as any);
+
+          this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
+            next: (created) => {
+              this.creatingCampaign.set(false);
+              this.loader.hide();
+              this.router.navigate(['/campaigns', created.id, 'edit']);
+            },
+            error: (err) => {
+              this.creatingCampaign.set(false);
+              this.loader.hide();
+              this.createError.set(err?.error?.error || 'יצירת הקמפיין נכשלה, נסו שוב');
+            },
+          });
+        },
+        error: () => {
+          this.creatingCampaign.set(false);
+          this.loader.hide();
+          this.createError.set('משהו השתבש בהכנת הקמפיין, נסו שוב');
         },
       });
   }
