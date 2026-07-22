@@ -13,6 +13,8 @@
 **1. Proven — המסלול המלא עובד קצה לקצה, כולל יצירת קמפיין אמיתי (`hamonym-backend/src/agents/campaign-creation/` + `hamonym-app`'s `/campaigns/create/ai`)**
 שלושה Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4, 📄 Document Collection — Sprint 6, כולל Vision לתמונות, ומאז Sprint 7 גם קלט משולב — טקסט+אתר+קבצים ביחד, לא tabs נפרדים) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3, נחשף ב-HTTP רק ב-Sprint 7) → **קמפיין אמיתי נוצר בפועל** תחת העמותה הקיימת של המשתמש, עם ניווט אוטומטי ל-Campaign Studio להמשך עריכה (Sprint 7). מאומת עם Playwright אמיתי כולל שאילתת DB ישירה שהשדות (title/description/target_amount/CTA) אכן נשמרו נכון. ר' "קוד קיים" למטה לפירוט.
 
+**באג אמיתי שנמצא ע"י המשתמש בבדיקה חיה (2026-07-22), תוקן ומאומת**: "יצרתי קמפיין עם AI, אני לא רואה שום טקסט". הסיבה: `draft.builder.js` (בקאנד) ממפה רק שדות שטוחים של `CampaignDraft` (title/shortDescription/category/targetAmount/heroCtaConfig) — הוא לא נוגע כלל ב-`blocks`, כי המערך הזה קיים רק ב-`createInitialDraft()` בפרונטאנד ואין לבקאנד שום ידיעה עליו. בלוק הטקסט הראשי ("על המיזם") נשאר עם `content: ""` בברירת מחדל. תוקן ע"י `applyStoryContent()` חדש ב-`ai-campaign-creation-page.component.ts` שממפה את `organizationDescription` (עם fallback ל-`shortDescription`) ישירות ל-blocks בפרונטאנד, אחרי `campaignState.patch()` — כולל `escapeHtml()` מפורש כי הטקסט יכול להגיע מתוכן אתר חיצוני דרך קלט משולב, ואסור לסמוך עליו כ-HTML בטוח. מאומת עם שאילתת DB ישירה על קמפיין אמיתי שנוצר.
+
 **2. Next MVP — נשאר**
 יצירת **עמותה חדשה** (לא רק קמפיין תחת עמותה קיימת) מתוך Brief — הוחלט במפורש להישאר מחוץ לסקופ ב-Sprint 7 (ר' Pipeline Milestone למטה). כרגע ה-AI Creator עובד רק כשלמשתמש כבר יש עמותה מנוהלת.
 
