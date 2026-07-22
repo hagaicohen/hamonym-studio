@@ -2,9 +2,24 @@
 
 > שינוי שם מ-"AI Campaign Creation": ה-AI לא יוצר קמפיין — הוא עוזר ליצור. עקבי עם החלטה 6 (AI לא עוקף אף כלל עסקי, רק ממלא Draft). שם הקובץ נשאר `AI_CAMPAIGN_CREATION_VISION.md` כדי לא לשבור קישורים קיימים.
 
-**סטטוס:** מאושר לתכנון (טרם מומש בקוד)
+**סטטוס:** Pipeline הליבה מומש ומאומת בקוד (Sprints 1-3) — ר' "מצב נוכחי" למטה
 **תאריך:** 2026-07-22
 **שייך ל:** Campaign Studio, Entity Onboarding
+
+## מצב נוכחי (2026-07-22)
+
+שלוש שכבות ברורות, במכוון לא מעורבבות:
+
+**1. Proven — קיים, עובד, מאומת ב-corpus (`hamonym-backend/src/agents/campaign-creation/`)**
+Extraction (Sprint 1) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). כל שלב עם fixture corpus משלו, נבדק וחתום ב-commit. ר' "קוד קיים" למטה לפירוט.
+
+**2. Next MVP — מתוכנן, טרם נבנה**
+Website Extractor (החלטה 8/MVP §MVP v1) → מסך UI לבחירת מקור → מסך Brief Review. זה מה שהופך את ה-pipeline המוכח לתכונה שמשתמש אמיתי יכול לגעת בה.
+
+**3. Vision — רעיונות עתידיים, לא מחייבים, לא בסקופ נוכחי**
+Document Collection, ריבוי מקורות + Facts Merger, Campaign Advisor/Readiness Check (כבר קיימים בקוד בהקשר אחר — ר' "קוד קיים"). ר' סעיף "Vision (Non-binding)" למטה.
+
+**העיקרון**: חזון יכול להתרחב בלי שה-MVP יזוז — כל תוספת ל-Vision נבדקת מול אותה משמעת (משנה MVP? מוסיפה שכבה גנרית? יש צורך מוכח?) לפני שהיא זזה משם.
 
 ## הקשר
 
