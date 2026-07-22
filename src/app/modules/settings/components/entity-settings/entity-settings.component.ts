@@ -283,6 +283,18 @@ export class EntitySettingsComponent implements OnInit {
       this.draftEntity.association_certificate_file = null;
     }
 
+    const newLogoFile = this.draftEntity?.logo_file;
+    if (newLogoFile instanceof File) {
+      try {
+        const res: any = await firstValueFrom(this.entitiesService.uploadLogo(this.draftEntity.id, newLogoFile));
+        this.draftEntity.logo_url = res?.result?.logo_url || this.draftEntity.logo_url;
+      } catch (err) {
+        console.error(err);
+        this.saveError = 'העלאת הלוגו נכשלה';
+      }
+      this.draftEntity.logo_file = null;
+    }
+
     const optimisticEntity = structuredClone(this.draftEntity);
 
     /*
@@ -329,6 +341,7 @@ export class EntitySettingsComponent implements OnInit {
         : {}),
 
       logo_data: undefined,
+      logo_file: undefined,
 
       association_certificate_data: undefined,
 
@@ -464,7 +477,7 @@ export class EntitySettingsComponent implements OnInit {
 
           apiName: this.draftEntity.cardcom_api_username,
 
-          apiPassword: this.draftEntity.cardcom_api_password,
+          apiPassword: this.draftEntity.cardcom_api_password_encrypted,
 
           environment: 'sandbox',
         },

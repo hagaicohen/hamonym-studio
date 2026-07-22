@@ -86,8 +86,12 @@ export class EntityProfileSectionEditComponent {
     const reader = new FileReader();
 
     reader.onload = () => {
+      // logo_url here is only a local base64 preview until save; the raw
+      // File is kept on logo_file so the parent can actually upload it
+      // (mirrors association_certificate_file/tax_document_file).
       this.entityChange.emit({
         logo_url: reader.result,
+        logo_file: file,
       });
     };
 

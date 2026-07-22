@@ -49,7 +49,7 @@ export class EntityPaymentSectionEditComponent {
       this.model?.billing_provider &&
       this.model?.cardcom_terminal_number?.trim() &&
       this.model?.cardcom_api_username?.trim() &&
-      this.model?.cardcom_api_password?.trim()
+      this.model?.cardcom_api_password_encrypted?.trim()
     );
   }
 
