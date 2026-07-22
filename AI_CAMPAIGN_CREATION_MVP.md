@@ -137,6 +137,7 @@ Brief לא "מאשר" בעצמו השלמות — הוא רק ממלא שדות.
 
 - שמירת טיוטת עמותה עדיין דורשת `entityType` + `organizationName` + `organizationNumber` (ה-minimum הקיים, עקב `registration_number` UNIQUE) — אם Extraction לא מצא `organizationNumber`, ה-Brief חוסם commit של קטע העמותה עד שהמשתמש ימלא אותו ידנית (בדיוק כמו wizard רגיל).
 - אם למשתמש כבר יש entity מאושר (`status: approved`), קטע העמותה ב-Brief לא מוצג בכלל — ה-AI יוצר קמפיין בלבד תחת ה-entity הקיים.
+- **חשוב (הובהר 2026-07-22)**: הבדיקה "האם יש למשתמש עמותה קיימת?" היא **לא יכולת AI** — זו שאילתת DB דטרמיניסטית (`GET /me/entities`) שרצה **לפני** קריאה כלשהי ל-pipeline, לא שיחה עם ה-AI. `0 entities → זרימת עמותה+קמפיין`, `1 approved entity → קמפיין בלבד`, `כמה entities → מסך בחירה`. זה UX/routing רגיל, שייך לשכבת ה-UI/endpoint שטרם נבנתה — לא דורש שום הרחבה של ה-pipeline עצמו.
 
 ## 7. Failure Strategy
 
