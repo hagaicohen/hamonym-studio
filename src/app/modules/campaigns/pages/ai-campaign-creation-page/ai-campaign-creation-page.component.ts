@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -30,8 +30,6 @@ interface Brief {
   suggestedHero: SuggestedValue;
 }
 
-type SourceMode = 'free_text' | 'website' | 'documents';
-
 interface UploadedFile {
   file: File;
   typeLabel: string;
@@ -57,12 +55,23 @@ export class AiCampaignCreationPageComponent implements OnInit {
 
   fileTypeOptions = FILE_TYPE_OPTIONS;
 
-  mode   = signal<SourceMode>('free_text');
-  input  = signal('');
-  files  = signal<UploadedFile[]>([]);
+  // Combined intake (per explicit request): free text + website + files are
+  // NOT mutually exclusive tabs — a user can fill in any combination of the
+  // three. This doesn't reopen the rejected "Facts Merger" problem: there's
+  // no per-source Facts to reconcile, everything is aggregated into one
+  // prompt server-side before a single extraction call (see
+  // document-collection.extractor.js).
+  freeText   = signal('');
+  websiteUrl = signal('');
+  files      = signal<UploadedFile[]>([]);
+
   brief  = signal<Brief | null>(null);
   error  = signal<string | null>(null);
   submitting = signal(false);
+
+  canSubmit = computed(() =>
+    !this.submitting() && (!!this.freeText().trim() || !!this.websiteUrl().trim() || this.files().length > 0)
+  );
 
   ngOnInit(): void {
     // AppComponent's router-level loader deliberately stays up after
@@ -73,11 +82,6 @@ export class AiCampaignCreationPageComponent implements OnInit {
     // all — it silently blocks every click on the page forever, which is
     // exactly the "spinner never stops" bug found via live testing.
     this.loader.hide();
-  }
-
-  setMode(mode: SourceMode): void {
-    this.mode.set(mode);
-    this.error.set(null);
   }
 
   onFilesSelected(event: Event): void {
@@ -106,61 +110,43 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.files.update((current) => current.map((f, i) => (i === index ? { ...f, note } : f)));
   }
 
-  canSubmit(): boolean {
-    if (this.submitting()) return false;
-    if (this.mode() === 'documents') return this.files().length > 0;
-    return !!this.input().trim();
-  }
-
   submit(): void {
     if (!this.canSubmit()) return;
 
     this.error.set(null);
     this.brief.set(null);
     this.submitting.set(true);
+    this.loader.show(this.websiteUrl().trim() ? 'קוראים את המידע שלכם...' : 'מנתחים את המידע...');
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-
-    const request$ = this.mode() === 'documents'
-      ? this.submitDocuments(headers)
-      : this.submitTextOrUrl(headers);
-
-    request$.pipe(timeout(REQUEST_TIMEOUT_MS)).subscribe({
-      next: (res) => {
-        this.brief.set(res.brief);
-        this.submitting.set(false);
-        this.loader.hide();
-      },
-      error: (err) => {
-        this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
-        this.submitting.set(false);
-        this.loader.hide();
-      },
-    });
-  }
-
-  private submitTextOrUrl(headers: HttpHeaders) {
-    this.loader.show(this.mode() === 'website' ? 'קוראים את האתר שלכם...' : 'מנתחים את המידע...');
-    return this.http.post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract`, {
-      source: this.mode(),
-      input: this.input().trim(),
-    }, { headers });
-  }
-
-  private submitDocuments(headers: HttpHeaders) {
-    this.loader.show('קוראים את הקבצים שהעלית...');
     const formData = new FormData();
     for (const f of this.files()) formData.append('files', f.file, f.file.name);
     formData.append('filesMeta', JSON.stringify(this.files().map((f) => ({ typeLabel: f.typeLabel, note: f.note }))));
-    if (this.input().trim()) formData.append('freeText', this.input().trim());
+    if (this.freeText().trim()) formData.append('freeText', this.freeText().trim());
+    if (this.websiteUrl().trim()) formData.append('websiteUrl', this.websiteUrl().trim());
 
-    return this.http.post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers });
+    this.http
+      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
+      .subscribe({
+        next: (res) => {
+          this.brief.set(res.brief);
+          this.submitting.set(false);
+          this.loader.hide();
+        },
+        error: (err) => {
+          this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
+          this.submitting.set(false);
+          this.loader.hide();
+        },
+      });
   }
 
   reset(): void {
     this.brief.set(null);
     this.error.set(null);
-    this.input.set('');
+    this.freeText.set('');
+    this.websiteUrl.set('');
     this.files.set([]);
   }
 

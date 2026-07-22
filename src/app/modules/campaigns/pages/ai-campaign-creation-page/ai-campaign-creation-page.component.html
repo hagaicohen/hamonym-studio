@@ -1,47 +1,33 @@
 <div class="ai-page">
   <div class="ai-card">
     <h1 class="ai-title">✨ יצירת קמפיין עם AI</h1>
-    <p class="ai-subtitle">ספרו לנו על העמותה שלכם, או תנו לנו קישור לאתר — ונכין לכם הצעה ראשונית לבדיקה.</p>
+    <p class="ai-subtitle">ספרו לנו על העמותה שלכם — בכמה מילים, קישור לאתר, קבצים, או כל שילוב — ונכין לכם הצעה ראשונית לבדיקה.</p>
 
     @if (!brief()) {
-      <div class="mode-toggle">
-        <button
-          type="button"
-          class="mode-btn"
-          [class.active]="mode() === 'free_text'"
-          (click)="setMode('free_text')"
-        >✍️ אספר בכמה מילים</button>
-        <button
-          type="button"
-          class="mode-btn"
-          [class.active]="mode() === 'website'"
-          (click)="setMode('website')"
-        >🌐 מהאתר שלנו</button>
-        <button
-          type="button"
-          class="mode-btn"
-          [class.active]="mode() === 'documents'"
-          (click)="setMode('documents')"
-        >📄 קבצים</button>
-      </div>
-
-      @if (mode() === 'free_text') {
+      <div class="intake-section">
+        <label class="intake-label">✍️ ספרו לנו בכמה מילים <span class="optional">(לא חובה)</span></label>
         <textarea
           class="ai-input"
-          rows="6"
+          rows="4"
           placeholder="לדוגמה: אנחנו עמותת... פועלים כבר... ורוצים לגייס כסף בשביל..."
-          [ngModel]="input()"
-          (ngModelChange)="input.set($event)"
+          [ngModel]="freeText()"
+          (ngModelChange)="freeText.set($event)"
         ></textarea>
-      } @else if (mode() === 'website') {
+      </div>
+
+      <div class="intake-section">
+        <label class="intake-label">🌐 קישור לאתר שלכם <span class="optional">(לא חובה)</span></label>
         <input
           type="url"
           class="ai-input ai-input-url"
           placeholder="https://example.org"
-          [ngModel]="input()"
-          (ngModelChange)="input.set($event)"
+          [ngModel]="websiteUrl()"
+          (ngModelChange)="websiteUrl.set($event)"
         />
-      } @else {
+      </div>
+
+      <div class="intake-section">
+        <label class="intake-label">📄 קבצים <span class="optional">(לא חובה)</span></label>
         <div class="files-zone">
           <label class="file-picker-btn">
             📎 בחר קבצים (לוגו, PDF, Word, תמונות)
@@ -65,16 +51,10 @@
               </div>
             }
           </div>
-
-          <textarea
-            class="ai-input files-free-text"
-            rows="3"
-            placeholder="אפשר להוסיף גם כמה מילים חופשיות (לא חובה)..."
-            [ngModel]="input()"
-            (ngModelChange)="input.set($event)"
-          ></textarea>
         </div>
-      }
+      </div>
+
+      <p class="intake-hint">אפשר למלא כל שילוב — רק טקסט, רק קישור, רק קבצים, או כמה ביחד. צריך למלא לפחות אחד מהם.</p>
 
       @if (error()) {
         <div class="ai-error">{{ error() }}</div>
