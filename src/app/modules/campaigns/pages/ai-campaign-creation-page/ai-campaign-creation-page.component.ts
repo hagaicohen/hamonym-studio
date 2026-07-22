@@ -238,9 +238,20 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.campaignState.patch({ blocks });
   }
 
+  // Goes back to the intake form WITHOUT discarding what the user already
+  // typed/uploaded — the Brief was just a proposal, not a commitment, so a
+  // user who wants to tweak their input and retry shouldn't have to retype
+  // everything from scratch.
+  backToEdit(): void {
+    this.brief.set(null);
+    this.error.set(null);
+    this.createError.set(null);
+  }
+
   reset(): void {
     this.brief.set(null);
     this.error.set(null);
+    this.createError.set(null);
     this.freeText.set('');
     this.websiteUrl.set('');
     this.files.set([]);

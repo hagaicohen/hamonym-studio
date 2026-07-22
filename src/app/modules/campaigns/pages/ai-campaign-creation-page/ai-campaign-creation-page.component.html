@@ -138,7 +138,8 @@
         }
 
         <div class="ai-actions">
-          <button type="button" class="btn-link" (click)="reset()">נסה שוב עם קלט אחר</button>
+          <button type="button" class="btn-link" (click)="backToEdit()">→ חזרה לעריכת הנתונים</button>
+          <button type="button" class="btn-link" (click)="reset()">התחל מחדש עם קלט אחר לגמרי</button>
           <button type="button" class="btn-primary" [disabled]="creatingCampaign()" (click)="approveAndCreate()">
             {{ creatingCampaign() ? 'יוצרים...' : 'אשר וצור קמפיין ←' }}
           </button>
