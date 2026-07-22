@@ -7,6 +7,31 @@ const supabase =
 const { isEntityMember } =
   require('../../middleware/entity-permission.middleware');
 
+const emailService = require('../email/email.service');
+
+// Fire-and-forget alert to every platform admin who can act on organizations
+// (super admins + anyone granted the 'organizations' permission — same
+// eligibility require-permission.js uses), when a previously-approved entity
+// gets flagged for review. Never awaited by callers — a slow/down email
+// provider must not stall the document upload / entity save request that
+// triggered it.
+function notifyAdminsEntityFlagged(entityId, entityName, reason) {
+  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+  db.query(
+    `SELECT email FROM users
+     WHERE is_active = true AND (is_super_admin = true OR 'organizations' = ANY(platform_permissions))`
+  ).then(({ rows: admins }) => {
+    for (const admin of admins) {
+      emailService.queue({
+        template: 'entity-flagged-for-review',
+        to: admin.email,
+        data: { entityName, reason, entityUrl: `${frontBase}/platform/organizations/${entityId}` },
+        entityId,
+      });
+    }
+  }).catch((err) => console.error('[notifyAdminsEntityFlagged]', err.message));
+}
+
 // entities.* / RETURNING * pull in raw document bytea blobs stored on the
 // row (multi-MB PDFs) — fine for the upload/download endpoints that need
 // them, but every other entity read only ever displays metadata (name,
@@ -283,6 +308,7 @@ exports.getMyEntities =
           e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
           e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
           e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
+          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
           ue.role,
 
           CASE
@@ -333,11 +359,45 @@ exports.getMyEntities =
 
   };
 
+// multer/busboy decode multipart filenames as latin1 even when the browser
+// sent UTF-8 bytes (e.g. Hebrew filenames) — re-decode to recover the
+// original text instead of storing mojibake.
+function fixFilenameEncoding(name) {
+  return Buffer.from(name, 'latin1').toString('utf8');
+}
+
+// Same reapproval flag as computeReapprovalFlag in updateEntity, but for the
+// document upload/remove endpoints, which write directly and don't go
+// through updateEntity at all.
+async function flagForReviewIfActive(entityId, reasonLabel) {
+  const { rows } = await db.query(
+    `SELECT status, display_name, flagged_for_review FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  const before = rows[0];
+  if (!before || before.status !== 'active') return;
+
+  await db.query(
+    `UPDATE entities
+     SET flagged_for_review = true,
+         flagged_for_review_reason = $2,
+         flagged_for_review_at = NOW()
+     WHERE id = $1`,
+    [entityId, reasonLabel]
+  );
+
+  if (!before.flagged_for_review) {
+    notifyAdminsEntityFlagged(entityId, before.display_name, reasonLabel);
+  }
+}
+
 exports.uploadAssociationDocument =
   async ({
     entityId,
     file
   }) => {
+
+    await flagForReviewIfActive(entityId, 'תעודת ההתאגדות הוחלפה');
 
     const result =
       await db.query(
@@ -359,7 +419,7 @@ exports.uploadAssociationDocument =
 
         [
 
-          file.originalname,
+          fixFilenameEncoding(file.originalname),
 
           file.mimetype,
 
@@ -381,6 +441,8 @@ exports.uploadTaxDocument =
     file
   }) => {
 
+    await flagForReviewIfActive(entityId, 'אישור סעיף 46 הוחלף');
+
     const result =
       await db.query(
 
@@ -401,7 +463,7 @@ exports.uploadTaxDocument =
 
         [
 
-          file.originalname,
+          fixFilenameEncoding(file.originalname),
 
           file.mimetype,
 
@@ -652,6 +714,44 @@ exports.uploadLogo =
 
 };*/
 
+// Sensitive fields that, if changed on an already-approved (active) entity,
+// invalidate the admin's original review without them ever seeing it happen —
+// flag the entity so it resurfaces for another look. Approving/reactivating
+// (setStatus in platform.service.js) clears the flag again.
+const REAPPROVAL_SENSITIVE_FIELDS = {
+  registration_number: 'מספר הרישום השתנה',
+  cardcom_terminal_number: 'פרטי הסליקה (קארדקום) השתנו',
+  cardcom_api_username: 'פרטי הסליקה (קארדקום) השתנו',
+  cardcom_api_password_encrypted: 'פרטי הסליקה (קארדקום) השתנו',
+  billing_method: 'שיטת החיוב השתנתה',
+};
+
+async function computeReapprovalFlag(entityId, data) {
+  const { rows } = await db.query(
+    `SELECT status, display_name, flagged_for_review, registration_number, cardcom_terminal_number,
+            cardcom_api_username, cardcom_api_password_encrypted, billing_method
+     FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  const before = rows[0];
+  if (!before || before.status !== 'active') return { flag: false, reason: null, shouldNotify: false, entityName: null };
+
+  const reasons = new Set();
+  for (const [field, label] of Object.entries(REAPPROVAL_SENSITIVE_FIELDS)) {
+    if ((before[field] ?? null) !== (data[field] ?? null)) reasons.add(label);
+  }
+  const flag = reasons.size > 0;
+  return {
+    flag,
+    reason: flag ? [...reasons].join('; ') : null,
+    // Only alert admins on the false→true transition — an entity that's
+    // already flagged and gets a second sensitive edit before anyone
+    // reviewed the first one shouldn't re-spam the same admins.
+    shouldNotify: flag && !before.flagged_for_review,
+    entityName: before.display_name,
+  };
+}
+
 exports.updateEntity =
   async ({
     entityId,
@@ -666,6 +766,8 @@ exports.updateEntity =
     if (!(await isEntityMember(userId, entityId))) {
       throw new Error('Unauthorized');
     }
+
+    const reapproval = await computeReapprovalFlag(entityId, data);
 
     /*
     |--------------------------------------------------------------------------
@@ -764,6 +866,12 @@ exports.updateEntity =
           -- that also go through this same function.
           status = CASE WHEN status = 'draft' AND COALESCE($33, is_profile_complete) THEN 'pending_review' ELSE status END,
 
+          -- see computeReapprovalFlag above — only ever flips true here, never
+          -- resets to false (that only happens via admin approve/reactivate)
+          flagged_for_review = CASE WHEN $34 THEN true ELSE flagged_for_review END,
+          flagged_for_review_reason = CASE WHEN $34 THEN $35 ELSE flagged_for_review_reason END,
+          flagged_for_review_at = CASE WHEN $34 THEN NOW() ELSE flagged_for_review_at END,
+
           updated_at = NOW()
 
         WHERE id = $31
@@ -781,7 +889,8 @@ exports.updateEntity =
           primary_category, secondary_categories, registration_document_name, registration_document_mime,
           association_certificate_mime, tax_document_mime, logo_mime, campaign_types, monthly_goal,
           yearly_goal, billing_method, billing_masav_file_name, cardcom_terminal, cardcom_api_name,
-          cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden
+          cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden,
+          flagged_for_review, flagged_for_review_reason, flagged_for_review_at
         `,
 
         [
@@ -832,11 +941,18 @@ exports.updateEntity =
           entityId,
 
           data.entity_type || null,
-          data.is_profile_complete === undefined ? null : !!data.is_profile_complete
+          data.is_profile_complete === undefined ? null : !!data.is_profile_complete,
+
+          reapproval.flag,
+          reapproval.reason
 
         ]
 
       );
+
+    if (reapproval.shouldNotify) {
+      notifyAdminsEntityFlagged(entityId, reapproval.entityName, reapproval.reason);
+    }
 
     return stripBlobs(result.rows[0]);
 
@@ -864,6 +980,7 @@ exports.getEntityById =
           e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
           e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
           e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
+          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
 
           CASE
 
@@ -911,6 +1028,8 @@ exports.getEntityById =
   exports.removeTaxDocument =
   async (entityId) => {
 
+    await flagForReviewIfActive(entityId, 'אישור סעיף 46 הוסר');
+
     const result =
       await db.query(
 
@@ -944,6 +1063,8 @@ exports.getEntityById =
 
 exports.removeAssociationDocument =
   async (entityId) => {
+
+    await flagForReviewIfActive(entityId, 'תעודת ההתאגדות הוסרה');
 
     const result =
       await db.query(

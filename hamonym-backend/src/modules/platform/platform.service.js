@@ -108,12 +108,14 @@ exports.getNotificationsCount = async () => {
   const result = await db.query(
     `SELECT
        COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
-       COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
+       COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts,
+       COUNT(*) FILTER (WHERE status = 'active' AND flagged_for_review)::int AS flagged_for_review
      FROM entities`
   );
   return {
     pendingReviewCount: result.rows[0].pending_review,
     incompleteDraftsCount: result.rows[0].incomplete_drafts,
+    flaggedForReviewCount: result.rows[0].flagged_for_review,
   };
 };
 
@@ -172,13 +174,14 @@ async function getKpis() {
 }
 
 async function getAlerts() {
-  const [pendingRes, incompleteDraftsRes, missingDocsRes, cardcomRes, overdueRes] = await Promise.all([
+  const [pendingRes, incompleteDraftsRes, missingDocsRes, flaggedRes, cardcomRes, overdueRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`),
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${INCOMPLETE_DRAFT_SQL}`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities
        WHERE association_certificate_name IS NULL OR tax_document_name IS NULL`
     ),
+    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'active' AND flagged_for_review`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities
        WHERE status = 'active' AND cardcom_connection_status IS DISTINCT FROM 'success'`
@@ -198,6 +201,13 @@ async function getAlerts() {
     // merged into the count above) so clicking through actually filters to
     // entities with this real status instead of silently showing nothing.
     alerts.push({ key: 'incomplete_drafts', label: 'עמותות עם פרטים חסרים', count: incompleteDraftsRes.rows[0].c, linkQuery: { status: 'draft' } });
+  }
+  if (flaggedRes.rows[0].c > 0) {
+    // An already-approved entity changed something sensitive (documents,
+    // registration number, billing) — the original approval no longer
+    // reflects what's actually on file. See entities.service.js
+    // computeReapprovalFlag / flagForReviewIfActive.
+    alerts.push({ key: 'flagged_for_review', label: 'עמותות פעילות שדורשות בדיקה חוזרת', count: flaggedRes.rows[0].c, linkQuery: { flaggedForReview: '1' } });
   }
   if (missingDocsRes.rows[0].c > 0) {
     alerts.push({ key: 'missing_docs', label: 'עמותות ללא מסמכים', count: missingDocsRes.rows[0].c, linkQuery: { missingDocs: '1' } });
@@ -348,7 +358,7 @@ async function getCharts() {
   };
 }
 
-exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, limit = 25, missingDocs, noCampaigns, newSince }) => {
+exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, limit = 25, missingDocs, flaggedForReview, noCampaigns, newSince }) => {
   const where = [];
   const params = [];
   let idx = 1;
@@ -364,6 +374,9 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   }
   if (missingDocs) {
     where.push(`(e.association_certificate_name IS NULL OR e.tax_document_name IS NULL)`);
+  }
+  if (flaggedForReview) {
+    where.push(`e.flagged_for_review = true`);
   }
   if (newSince) {
     where.push(`e.created_at >= NOW() - ($${idx++} || ' days')::interval`);
@@ -381,6 +394,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
     db.query(
       `SELECT
          e.id, e.display_name, e.legal_name, e.logo_url, e.status, e.created_at, e.updated_at,
+         e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
          ${PROFILE_COMPLETION_SQL},
          owner.full_name AS owner_name, owner.email AS owner_email,
          COALESCE(camp.campaigns_count, 0) AS campaigns_count,
@@ -474,9 +488,19 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   try {
     await client.query('BEGIN');
 
+    // Approving/reactivating is the admin's sign-off on the entity as it
+    // currently stands, so it also clears any reapproval flag raised by
+    // computeReapprovalFlag/flagForReviewIfActive since the last review.
+    const clearsFlag = status === 'active';
     const result = await client.query(
-      `UPDATE entities SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [status, entityId]
+      `UPDATE entities
+       SET status = $1,
+           updated_at = NOW(),
+           flagged_for_review = CASE WHEN $3 THEN false ELSE flagged_for_review END,
+           flagged_for_review_reason = CASE WHEN $3 THEN NULL ELSE flagged_for_review_reason END,
+           flagged_for_review_at = CASE WHEN $3 THEN NULL ELSE flagged_for_review_at END
+       WHERE id = $2 RETURNING *`,
+      [status, entityId, clearsFlag]
     );
     if (!result.rows[0]) throw new Error('Entity not found');
 
