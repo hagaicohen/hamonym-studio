@@ -15,11 +15,18 @@ function getClient() {
 
 // @param {string} systemPrompt
 // @param {string} userPrompt
+// @param {{ temperature?: number }} [options] - temperature is omitted by
+//   default (OpenAI's own default applies) to leave existing callers
+//   (ApprovalAgent, CampaignAdvisorAgent — advice/judgment prose, where some
+//   variance is fine) unaffected. Pass temperature: 0 for callers doing
+//   deterministic fact extraction, where run-to-run consistency matters more
+//   than phrasing variety (see campaign-creation's free-text.extractor.js).
 // @returns {Promise<object>} parsed JSON — shape is whatever the caller's prompt asked for.
-exports.complete = async (systemPrompt, userPrompt) => {
+exports.complete = async (systemPrompt, userPrompt, options = {}) => {
   const response = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
+    ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },

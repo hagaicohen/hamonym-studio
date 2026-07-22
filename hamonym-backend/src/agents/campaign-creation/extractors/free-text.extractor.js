@@ -1,0 +1,76 @@
+// FreeTextExtractor — turns raw free text into ExtractedFacts. See
+// AI_CAMPAIGN_CREATION_MVP.md §2/§7. This is the cheapest Extractor (no
+// scraping/parsing infra) — deliberately built and validated first, before
+// the Website Extractor, which carries its own SSRF/failure surface (see
+// AI_CAMPAIGN_CREATION_VISION.md §8) and is only worth building once
+// ExtractedFacts quality from free text is proven.
+
+const llmService = require('../../llm.service');
+const { SYSTEM_PROMPT, buildExtractionPrompt } = require('../campaign-creation.prompt');
+
+// Below this length there's nothing real to extract — skip the LLM call
+// entirely rather than spend an API call on a couple of words. Lower than
+// campaign-advisor.agent.js's MIN_STORY_TEXT_LENGTH (20) — that guard exists
+// to skip title/description generation from a near-empty story block, but a
+// short factual sentence here ("אנחנו עוזרים לנוער", 18 chars) is still
+// worth sending to the LLM (found via fixtures/edge-sparse.txt — 20 silently
+// skipped it entirely).
+const MIN_TEXT_LENGTH = 10;
+
+function empty(text) {
+  return {
+    source: 'free_text',
+    sourceRaw: text,
+    organizationName: null,
+    organizationNumber: null,
+    entityTypeGuess: null,
+    categoryGuess: [],
+    organizationDescription: null,
+    suggestedTitle: null,
+    suggestedShortDescription: null,
+    suggestedTargetAmount: null,
+    socialLinks: [],
+    contactEmail: null,
+    contactPhone: null,
+  };
+}
+
+// Re-projects the raw LLM response onto the known ExtractedFacts whitelist —
+// never passes the model's JSON through as-is. Mirrors the tools/*.tool.js
+// pattern (e.g. approval/tools/entity.tool.js excluding cardcom_api_password)
+// of shaping raw data before it leaves the boundary: a field the schema
+// doesn't define — accidentally invented by the model, or anything
+// resembling a sensitive field — can never reach a Brief or Draft this way,
+// regardless of what the model actually returned.
+function project(text, raw) {
+  return {
+    ...empty(text),
+    organizationName: raw.organizationName ?? null,
+    organizationNumber: raw.organizationNumber ?? null,
+    entityTypeGuess: raw.entityTypeGuess ?? null,
+    categoryGuess: Array.isArray(raw.categoryGuess) ? raw.categoryGuess : [],
+    organizationDescription: raw.organizationDescription ?? null,
+    suggestedTitle: raw.suggestedTitle ?? null,
+    suggestedShortDescription: raw.suggestedShortDescription ?? null,
+    suggestedTargetAmount: typeof raw.suggestedTargetAmount === 'number' ? raw.suggestedTargetAmount : null,
+    socialLinks: Array.isArray(raw.socialLinks) ? raw.socialLinks : [],
+    contactEmail: raw.contactEmail ?? null,
+    contactPhone: raw.contactPhone ?? null,
+  };
+}
+
+// @param {string} text
+// @returns {Promise<import('../campaign-creation.types').ExtractedFacts>}
+exports.extract = async (text) => {
+  if (!text || text.trim().length < MIN_TEXT_LENGTH) {
+    return empty(text || '');
+  }
+
+  const userPrompt = buildExtractionPrompt(text);
+  // temperature: 0 — this is fact extraction, not advice/prose generation;
+  // run-to-run consistency matters for the fixture corpus to mean anything
+  // (see AI_CAMPAIGN_CREATION_MVP.md testing notes — found via a real
+  // regression where re-running the same fixture gave different results).
+  const raw = await llmService.complete(SYSTEM_PROMPT, userPrompt, { temperature: 0 });
+  return project(text, raw);
+};
