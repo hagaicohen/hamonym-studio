@@ -50,19 +50,21 @@
               (change)="onFilesSelected($event)" />
           </label>
 
-          @for (f of files(); track f.file.name + $index; let i = $index) {
-            <div class="file-row">
-              <span class="file-name">{{ f.file.name }}</span>
-              <select class="file-type-select" [ngModel]="f.typeLabel" (ngModelChange)="updateFileType(i, $event)">
-                @for (opt of fileTypeOptions; track opt) {
-                  <option [value]="opt">{{ opt }}</option>
-                }
-              </select>
-              <input class="file-note-input" type="text" placeholder="הערה קצרה (לא חובה)"
-                [ngModel]="f.note" (ngModelChange)="updateFileNote(i, $event)" />
-              <button type="button" class="file-remove-btn" (click)="removeFile(i)">✕</button>
-            </div>
-          }
+          <div class="files-grid">
+            @for (f of files(); track f.file.name + $index; let i = $index) {
+              <div class="file-card">
+                <button type="button" class="file-remove-btn" (click)="removeFile(i)" title="הסר קובץ">✕</button>
+                <div class="file-name">{{ f.file.name }}</div>
+                <select class="file-type-select" [ngModel]="f.typeLabel" (ngModelChange)="updateFileType(i, $event)">
+                  @for (opt of fileTypeOptions; track opt) {
+                    <option [value]="opt">{{ opt }}</option>
+                  }
+                </select>
+                <input class="file-note-input" type="text" placeholder="הערה קצרה (לא חובה)"
+                  [ngModel]="f.note" (ngModelChange)="updateFileNote(i, $event)" />
+              </div>
+            }
+          </div>
 
           <textarea
             class="ai-input files-free-text"

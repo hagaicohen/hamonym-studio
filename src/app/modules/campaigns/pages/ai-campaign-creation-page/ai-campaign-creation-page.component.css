@@ -94,43 +94,56 @@
   cursor: pointer;
 }
 
-.file-row {
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.file-card {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 12px 12px;
+  background: #fff;
 }
 
 .file-name {
-  flex: 1 1 160px;
   font-size: 13px;
+  font-weight: 600;
   color: #344054;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding-left: 20px; /* room for the remove button in the top-left corner */
 }
 
 .file-type-select,
 .file-note-input {
+  width: 100%;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 13px;
   font-family: inherit;
-}
-
-.file-note-input {
-  flex: 1 1 140px;
+  box-sizing: border-box;
 }
 
 .file-remove-btn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
   background: none;
   border: none;
   color: #b91c1c;
   cursor: pointer;
-  font-size: 14px;
-  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px;
 }
 
 .files-free-text {
