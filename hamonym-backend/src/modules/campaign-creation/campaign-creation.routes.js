@@ -44,5 +44,11 @@ router.post(
   controller.extractFromDocuments
 );
 
+router.post(
+  '/map-to-draft',
+  requireAuth,
+  controller.mapToDraft
+);
+
 module.exports =
   router;

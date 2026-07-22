@@ -48,6 +48,27 @@ exports.extractAndBuildBrief = async (req, res) => {
   }
 };
 
+// POST /api/campaign-creation/map-to-draft
+// body: { brief: Brief }
+// Deterministic, no LLM (Sprint 3's draft.builder.js, unexposed until now).
+// Returns field-name-verified patches meant to be merged onto the frontend's
+// own CampaignDraft/OrganizationRegistrationState defaults via their
+// existing .patch()/save() methods — this endpoint never creates anything
+// itself, it only maps Brief -> the same field shapes those services expect.
+exports.mapToDraft = (req, res) => {
+  try {
+    const { brief } = req.body;
+    if (!brief) {
+      throw new Error('Brief is required');
+    }
+    res.json(pipeline.mapBriefToDraftPatches(brief));
+  } catch (err) {
+    console.error(err);
+    res.status(err.message === 'Brief is required' ? 400 : 500)
+      .json({ error: err.message === 'Brief is required' ? 'חסר Brief' : 'משהו השתבש' });
+  }
+};
+
 // POST /api/campaign-creation/extract-documents (multipart/form-data)
 // Combined intake — any mix of the three, all optional individually:
 // fields: files[] (uploaded files), filesMeta (JSON string, array of
