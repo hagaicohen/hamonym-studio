@@ -48,7 +48,14 @@ async function assertSafeUrl(rawUrl) {
   const dns = require('dns').promises;
   let addresses;
   try {
-    addresses = await dns.lookup(url.hostname, { all: true });
+    // dns.lookup() has no built-in timeout — found while debugging a report
+    // of the whole request hanging indefinitely. A stalled DNS resolver
+    // would otherwise block here forever, before FETCH_TIMEOUT_MS (which
+    // only guards the fetch() call itself) ever gets a chance to apply.
+    addresses = await Promise.race([
+      dns.lookup(url.hostname, { all: true }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DNS timeout')), FETCH_TIMEOUT_MS)),
+    ]);
   } catch {
     throw new WebsiteFetchError('לא ניתן היה לפענח את הכתובת');
   }

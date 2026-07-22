@@ -58,6 +58,9 @@ const socialMetaRoutes =
 const commentsRoutes =
   require('./modules/comments/comments.routes');
 
+const campaignCreationRoutes =
+  require('./modules/campaign-creation/campaign-creation.routes');
+
 const socialMetaController =
   require('./modules/social-meta/social-meta.controller');
 
@@ -143,6 +146,11 @@ app.use(
 app.use(
   '/api/comments',
   commentsRoutes
+);
+
+app.use(
+  '/api/campaign-creation',
+  campaignCreationRoutes
 );
 
 /*
