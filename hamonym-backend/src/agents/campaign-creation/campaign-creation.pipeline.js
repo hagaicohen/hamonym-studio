@@ -12,6 +12,7 @@
 // good enough to build a Brief on top of, without revisiting the Extractor.
 
 const freeTextExtractor = require('./extractors/free-text.extractor');
+const websiteExtractor = require('./extractors/website.extractor');
 const briefBuilder = require('./builders/brief.builder');
 const draftBuilder = require('./builders/draft.builder');
 const { createTracer } = require('../trace.util');
@@ -22,6 +23,25 @@ exports.extractFromFreeText = async (text) => {
   const tracer = createTracer('CampaignCreationPipeline.extractFromFreeText');
 
   const facts = await tracer.trace('FreeTextExtractor', () => freeTextExtractor.extract(text),
+    (f) => ({ hasOrgName: !!f.organizationName, hasTitle: !!f.suggestedTitle }));
+
+  tracer.print();
+  return { ...facts, trace: tracer.steps };
+};
+
+// Website Extractor — MVP §10. Hard failures (invalid URL, SSRF-blocked,
+// timeout, non-2xx) throw WebsiteFetchError *before* the FreeTextExtractor
+// step even starts — callers should catch that specifically to show the
+// "couldn't reach this site" message immediately, per the hard-fail/
+// partial-success boundary in the acceptance criteria (thin-but-fetched
+// content is NOT a hard failure — it flows through to FreeTextExtractor's
+// own graceful-null handling instead).
+// @param {string} url
+// @returns {Promise<import('./campaign-creation.types').ExtractedFacts & { trace: object[] }>}
+exports.extractFromWebsite = async (url) => {
+  const tracer = createTracer('CampaignCreationPipeline.extractFromWebsite');
+
+  const facts = await tracer.trace('WebsiteExtractor', () => websiteExtractor.extract(url),
     (f) => ({ hasOrgName: !!f.organizationName, hasTitle: !!f.suggestedTitle }));
 
   tracer.print();
