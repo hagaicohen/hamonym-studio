@@ -135,13 +135,12 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent }) => {
 
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
-
-  // 1. Fetch campaign ג†’ entity
+  // 1. Fetch campaign → entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at,
             e.status AS entity_status, e.is_hidden AS entity_hidden,
-            e.cardcom_terminal, e.cardcom_api_name, e.cardcom_api_password
+            e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+            e.cardcom_connection_status
      FROM campaigns c
      JOIN entities  e ON e.id = c.entity_id
      WHERE c.id = $1`,
@@ -163,9 +162,19 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     throw new Error('Campaign not found');
   }
 
-  if (!isMock && (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password)) {
-    throw new Error('Cardcom credentials not configured for this entity');
-  }
+  // Per-entity provider switch: an entity only goes live on Cardcom once it has
+  // full credentials AND an admin has verified them via "בדוק חיבור" in Settings
+  // (cardcom_connection_status = 'success') — otherwise it stays on Mock so a
+  // half-filled-in payment section never silently breaks real donations.
+  // PAYMENT_PROVIDER=mock is a global dev-environment override that forces Mock
+  // for every entity regardless of their Cardcom setup.
+  const hasVerifiedCardcom = !!(
+    campaign.cardcom_terminal_number &&
+    campaign.cardcom_api_username &&
+    campaign.cardcom_api_password_encrypted &&
+    campaign.cardcom_connection_status === 'success'
+  );
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || !hasVerifiedCardcom;
 
   // Validate participants' Registration Options before creating anything —
   // see loadRegistrationOptions above.
@@ -243,9 +252,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const frontBase  = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   const payload = {
-    TerminalNumber: campaign.cardcom_terminal,
-    ApiName:        campaign.cardcom_api_name,
-    ApiPassword:    campaign.cardcom_api_password,
+    TerminalNumber: campaign.cardcom_terminal_number,
+    ApiName:        campaign.cardcom_api_username,
+    ApiPassword:    campaign.cardcom_api_password_encrypted,
     Amount:         round2(amount),
     Language:       'he',
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
