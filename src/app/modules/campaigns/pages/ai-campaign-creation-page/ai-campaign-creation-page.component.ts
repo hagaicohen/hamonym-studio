@@ -30,7 +30,18 @@ interface Brief {
   suggestedHero: SuggestedValue;
 }
 
-type SourceMode = 'free_text' | 'website';
+type SourceMode = 'free_text' | 'website' | 'documents';
+
+interface UploadedFile {
+  file: File;
+  typeLabel: string;
+  note: string;
+}
+
+// Mirrors document-collection.extractor.js's own labels — kept as a fixed,
+// deliberately short list (ADR decision-4 spirit: don't build a generic
+// taxonomy nobody asked for) rather than a free-for-all.
+const FILE_TYPE_OPTIONS = ['לוגו', 'תעודת התאגדות', 'דוח שנתי', 'עלון / ברושור', 'תמונות מהפעילות', 'אחר'];
 
 @Component({
   selector: 'app-ai-campaign-creation-page',
@@ -44,8 +55,11 @@ export class AiCampaignCreationPageComponent implements OnInit {
   private loader = inject(AppLoaderService);
   private router = inject(Router);
 
+  fileTypeOptions = FILE_TYPE_OPTIONS;
+
   mode   = signal<SourceMode>('free_text');
   input  = signal('');
+  files  = signal<UploadedFile[]>([]);
   brief  = signal<Brief | null>(null);
   error  = signal<string | null>(null);
   submitting = signal(false);
@@ -66,40 +80,88 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.error.set(null);
   }
 
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    if (!picked.length) return;
+
+    const additions: UploadedFile[] = picked.map((file) => ({
+      file,
+      typeLabel: guessTypeLabel(file.name),
+      note: '',
+    }));
+    this.files.update((current) => [...current, ...additions]);
+    input.value = ''; // allow re-selecting the same file name later
+  }
+
+  removeFile(index: number): void {
+    this.files.update((current) => current.filter((_, i) => i !== index));
+  }
+
+  updateFileType(index: number, typeLabel: string): void {
+    this.files.update((current) => current.map((f, i) => (i === index ? { ...f, typeLabel } : f)));
+  }
+
+  updateFileNote(index: number, note: string): void {
+    this.files.update((current) => current.map((f, i) => (i === index ? { ...f, note } : f)));
+  }
+
+  canSubmit(): boolean {
+    if (this.submitting()) return false;
+    if (this.mode() === 'documents') return this.files().length > 0;
+    return !!this.input().trim();
+  }
+
   submit(): void {
-    const value = this.input().trim();
-    if (!value || this.submitting()) return;
+    if (!this.canSubmit()) return;
 
     this.error.set(null);
     this.brief.set(null);
     this.submitting.set(true);
-    this.loader.show(this.mode() === 'website' ? 'קוראים את האתר שלכם...' : 'מנתחים את המידע...');
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-    this.http
-      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract`, {
-        source: this.mode(),
-        input: value,
-      }, { headers })
-      .pipe(timeout(REQUEST_TIMEOUT_MS))
-      .subscribe({
-        next: (res) => {
-          this.brief.set(res.brief);
-          this.submitting.set(false);
-          this.loader.hide();
-        },
-        error: (err) => {
-          this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
-          this.submitting.set(false);
-          this.loader.hide();
-        },
-      });
+
+    const request$ = this.mode() === 'documents'
+      ? this.submitDocuments(headers)
+      : this.submitTextOrUrl(headers);
+
+    request$.pipe(timeout(REQUEST_TIMEOUT_MS)).subscribe({
+      next: (res) => {
+        this.brief.set(res.brief);
+        this.submitting.set(false);
+        this.loader.hide();
+      },
+      error: (err) => {
+        this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
+        this.submitting.set(false);
+        this.loader.hide();
+      },
+    });
+  }
+
+  private submitTextOrUrl(headers: HttpHeaders) {
+    this.loader.show(this.mode() === 'website' ? 'קוראים את האתר שלכם...' : 'מנתחים את המידע...');
+    return this.http.post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract`, {
+      source: this.mode(),
+      input: this.input().trim(),
+    }, { headers });
+  }
+
+  private submitDocuments(headers: HttpHeaders) {
+    this.loader.show('קוראים את הקבצים שהעלית...');
+    const formData = new FormData();
+    for (const f of this.files()) formData.append('files', f.file, f.file.name);
+    formData.append('filesMeta', JSON.stringify(this.files().map((f) => ({ typeLabel: f.typeLabel, note: f.note }))));
+    if (this.input().trim()) formData.append('freeText', this.input().trim());
+
+    return this.http.post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers });
   }
 
   reset(): void {
     this.brief.set(null);
     this.error.set(null);
     this.input.set('');
+    this.files.set([]);
   }
 
   goToQuickStudio(): void {
@@ -107,4 +169,10 @@ export class AiCampaignCreationPageComponent implements OnInit {
     // proven Studio flow (ADR decision 1: one Studio, multiple doors in).
     this.router.navigate(['/campaigns/create']);
   }
+}
+
+function guessTypeLabel(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (lower.includes('logo') || lower.includes('לוגו')) return 'לוגו';
+  return 'אחר';
 }

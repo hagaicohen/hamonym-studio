@@ -77,6 +77,66 @@
   text-align: right;
 }
 
+.files-zone {
+  border: 2px dashed #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.file-picker-btn {
+  display: inline-block;
+  background: #f5f3ff;
+  color: #583cd6;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.file-name {
+  flex: 1 1 160px;
+  font-size: 13px;
+  color: #344054;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-type-select,
+.file-note-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.file-note-input {
+  flex: 1 1 140px;
+}
+
+.file-remove-btn {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+
+.files-free-text {
+  margin-top: 14px;
+}
+
 .ai-error {
   background: #fef2f2;
   color: #b91c1c;

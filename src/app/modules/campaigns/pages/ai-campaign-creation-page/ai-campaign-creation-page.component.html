@@ -17,6 +17,12 @@
           [class.active]="mode() === 'website'"
           (click)="setMode('website')"
         >🌐 מהאתר שלנו</button>
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="mode() === 'documents'"
+          (click)="setMode('documents')"
+        >📄 קבצים</button>
       </div>
 
       @if (mode() === 'free_text') {
@@ -27,7 +33,7 @@
           [ngModel]="input()"
           (ngModelChange)="input.set($event)"
         ></textarea>
-      } @else {
+      } @else if (mode() === 'website') {
         <input
           type="url"
           class="ai-input ai-input-url"
@@ -35,6 +41,37 @@
           [ngModel]="input()"
           (ngModelChange)="input.set($event)"
         />
+      } @else {
+        <div class="files-zone">
+          <label class="file-picker-btn">
+            📎 בחר קבצים (לוגו, PDF, Word, תמונות)
+            <input type="file" multiple hidden
+              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              (change)="onFilesSelected($event)" />
+          </label>
+
+          @for (f of files(); track f.file.name + $index; let i = $index) {
+            <div class="file-row">
+              <span class="file-name">{{ f.file.name }}</span>
+              <select class="file-type-select" [ngModel]="f.typeLabel" (ngModelChange)="updateFileType(i, $event)">
+                @for (opt of fileTypeOptions; track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+              <input class="file-note-input" type="text" placeholder="הערה קצרה (לא חובה)"
+                [ngModel]="f.note" (ngModelChange)="updateFileNote(i, $event)" />
+              <button type="button" class="file-remove-btn" (click)="removeFile(i)">✕</button>
+            </div>
+          }
+
+          <textarea
+            class="ai-input files-free-text"
+            rows="3"
+            placeholder="אפשר להוסיף גם כמה מילים חופשיות (לא חובה)..."
+            [ngModel]="input()"
+            (ngModelChange)="input.set($event)"
+          ></textarea>
+        </div>
       }
 
       @if (error()) {
@@ -45,7 +82,7 @@
         <button
           type="button"
           class="btn-primary"
-          [disabled]="!input().trim() || submitting()"
+          [disabled]="!canSubmit()"
           (click)="submit()"
         >{{ submitting() ? 'עובדים על זה...' : 'צור הצעה עם AI' }}</button>
         <button type="button" class="btn-link" (click)="goToQuickStudio()">
