@@ -10,11 +10,11 @@
 
 שלוש שכבות ברורות, במכוון לא מעורבבות:
 
-**1. Proven — קיים, עובד, מחובר ל-UI אמיתי (`hamonym-backend/src/agents/campaign-creation/` + `hamonym-app`'s `/campaigns/create/ai`)**
-שלושה Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4, 📄 Document Collection — Sprint 6, כולל Vision לתמונות) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3). מסך UI אמיתי (Sprint 5) מחבר את כל זה למשתמש: בחירת מקור, קלט, ותצוגת Brief. מאומת עם משתמש אמיתי דרך הדפדפן, לא רק ב-corpus. ר' "קוד קיים" למטה לפירוט.
+**1. Proven — המסלול המלא עובד קצה לקצה, כולל יצירת קמפיין אמיתי (`hamonym-backend/src/agents/campaign-creation/` + `hamonym-app`'s `/campaigns/create/ai`)**
+שלושה Extractors (✍️ Free Text — Sprint 1, 🌐 Website — Sprint 4, 📄 Document Collection — Sprint 6, כולל Vision לתמונות, ומאז Sprint 7 גם קלט משולב — טקסט+אתר+קבצים ביחד, לא tabs נפרדים) → `ExtractedFacts` → Brief (Sprint 2) → Draft Patches (Sprint 3, נחשף ב-HTTP רק ב-Sprint 7) → **קמפיין אמיתי נוצר בפועל** תחת העמותה הקיימת של המשתמש, עם ניווט אוטומטי ל-Campaign Studio להמשך עריכה (Sprint 7). מאומת עם Playwright אמיתי כולל שאילתת DB ישירה שהשדות (title/description/target_amount/CTA) אכן נשמרו נכון. ר' "קוד קיים" למטה לפירוט.
 
 **2. Next MVP — נשאר**
-מסך Brief Review מלא (עריכה + אישור → יצירת Draft בפועל ב-`CampaignStudioStateService`/`OrganizationRegistrationStateService`) — כרגע ה-Brief מוצג לקריאה בלבד, "עדיין לא נוצר קמפיין" כתוב במפורש במסך.
+יצירת **עמותה חדשה** (לא רק קמפיין תחת עמותה קיימת) מתוך Brief — הוחלט במפורש להישאר מחוץ לסקופ ב-Sprint 7 (ר' Pipeline Milestone למטה). כרגע ה-AI Creator עובד רק כשלמשתמש כבר יש עמותה מנוהלת.
 
 **3. Vision — רעיונות עתידיים, לא מחייבים, לא בסקופ נוכחי**
 ריבוי מקורות + Facts Merger, Campaign Advisor/Readiness Check (כבר קיימים בקוד בהקשר אחר — ר' "קוד קיים"). ר' סעיף "Vision (Non-binding)" למטה.
@@ -306,6 +306,18 @@ Sprint 4 — לפי MVP §10. `website.extractor.js` הוא **Adapter דק**, ל
 **Sprint 6 — Document Collection.** נבנה **מיד** אחרי Sprint 5 לפי בקשה מפורשת של המשתמש (ר' "סטייה מודעת" ב"מצב נוכחי" למעלה) — לא אחרי ולידציה עם משתמשים אמיתיים כפי שהעיקרון "צוואר הבקבוק" קבע. תמיכה בתמונות (Vision — לוגו, תמונות פעילות, מסמכים מצולמים), PDF טקסטואלי (`pdf-parse`), Word (`mammoth`). PDF סרוק (ללא שכבת טקסט) מזוהה ומסומן כלא-נתמך במפורש במקום כישלון שקט — עקיפה: להעלות כתמונה במקום. אימות אמיתי: תמונה שנוצרה בפועל (טקסט מצויר עם `System.Drawing`) עברה דרך ה-API האמיתי של OpenAI Vision וחילצה נכון מספר עמותה/שם/תיאור; PDF נבדק עם mock (הספרייה עצמה לא נבדקה מחדש — ספרייה בוגרת), Word נבדק מול fixture אמיתי מ-test suite של mammoth עצמה.
 
 **תלויות חדשות נוספות**: `pdf-parse` (מוצמד ל-`^1.x` — אותה בעיית Node<20/ESM כמו jsdom, גרסה 2 קרסה), `mammoth`. `llm.service.js`'s `complete()` כבר תמך ב-multi-modal content arrays (תמונות) בלי שום שינוי — `userPrompt` תמיד הועבר ישירות ל-`content` של הבקשה ל-OpenAI.
+
+---
+
+## Pipeline Milestone (2026-07-22): קלט משולב + יצירת קמפיין אמיתי מקצה לקצה
+
+**Sprint 7א — קלט משולב.** לפי בקשה מפורשת: טקסט/אתר/קבצים הפכו מ-3 טאבים בלעדיים לשלושה שדות שכולם אופציונליים, ניתן למלא כל שילוב (לפחות אחד נדרש). **לא** פותח מחדש את בעיית ה-Facts Merger שנדחתה — כי אין כאן חילוץ נפרד לכל מקור ומיזוג של תוצאות נפרדות; הכול מתאחד לטקסט/תמונות **לפני** קריאת LLM בודדת, בדיוק כמו ש-Document Collection כבר עשה לכמה קבצים. `website.extractor.js` פוצל: `fetchMainContent(url)` (fetch+נרמול בלבד) נחשף בנפרד מ-`extract()` (שעדיין עושה גם את קריאת ה-LLM, למקרה השימוש הבודד). כשל fetch של אתר לא מכשיל את כל הבקשה — מצוין, וההגשה ממשיכה עם מה שכן סופק (טקסט/קבצים).
+
+**Sprint 7ב — יצירת קמפיין אמיתי + מעבר לסטודיו.** לפי בקשה מפורשת: "אחרי שיוזר בונה דרך AI, הוא אחר כך יכול לערוך את זה דרך ה-Wizard". נחשף `POST /api/campaign-creation/map-to-draft` (Sprint 3's `draft.builder.js`, סוף סוף מחובר ל-HTTP). כפתור "אשר וצור קמפיין" חדש במסך ה-Brief: ממפה ל-patches → `CampaignStudioStateService.reset()+patch()` → `CampaignApiService.create()` (**שימוש חוזר** בשירותים הקיימים של הסטודיו, לא HTTP calls חדשים בעברית-סנייק ידנית) → ניווט אוטומטי ל-`/campaigns/:id/edit`.
+
+**החלטת סקופ (2026-07-22, מפורשת)**: מחובר **רק** לעמותה הקיימת של המשתמש (`CurrentEntityService`) — יצירת עמותה **חדשה** מתוך Brief נדחתה במפורש לשלב אחר, לא נבנתה כאן. הגעה לדף הזה כבר דורשת תפקיד entity-manager (`campaignEditorGuard`), כך שהמקרה הנפוץ (עמותה קיימת) מכוסה.
+
+**אימות אמיתי, לא רק "זה בונה"**: Playwright מקצה לקצה (הזנה → Brief → אישור → `POST /api/campaigns` בפועל → ניווט לסטודיו) הורץ פעמיים, כולל **שאילתת DB ישירה** על השורה שנוצרה לאימות שהשדות (title, short_description, target_amount, hero_cta_config עם visible:true) אכן נשמרו נכון תחת ה-entity_id האמיתי. ממצא כן אבל: עם קלט שנוסח כ"עמותת נסיון לבדיקה" (מטא-התייחסות לבדיקה עצמה), ה-AI נמנע במכוון מלהמציא כותרת/תיאור — נבדק שוב עם טקסט "אמיתי" (עמותת לב אחד/אמבולנס) והשדות התמלאו נכון; לא באג. ממצא נוסף: `category` יצא `null` בהרצה זו למרות שטקסט דומה בעבר הפיק קטגוריה — הנתיב המשולב עוטף טקסט חופשי ב"טקסט חופשי מהמשתמש:\n" לפני החילוץ, ומכיוון שה-temperature הוא 0 (דטרמיניסטי לפי קלט מדויק), עטיפה כזו יכולה לשנות תוצאה — שונות איכות קלה, לא באג בחיווט.
 
 ---
 
