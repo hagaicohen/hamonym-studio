@@ -1,0 +1,123 @@
+<div class="ai-page">
+  <div class="ai-card">
+    <h1 class="ai-title">✨ יצירת קמפיין עם AI</h1>
+    <p class="ai-subtitle">ספרו לנו על העמותה שלכם, או תנו לנו קישור לאתר — ונכין לכם הצעה ראשונית לבדיקה.</p>
+
+    @if (!brief()) {
+      <div class="mode-toggle">
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="mode() === 'free_text'"
+          (click)="setMode('free_text')"
+        >✍️ אספר בכמה מילים</button>
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="mode() === 'website'"
+          (click)="setMode('website')"
+        >🌐 מהאתר שלנו</button>
+      </div>
+
+      @if (mode() === 'free_text') {
+        <textarea
+          class="ai-input"
+          rows="6"
+          placeholder="לדוגמה: אנחנו עמותת... פועלים כבר... ורוצים לגייס כסף בשביל..."
+          [ngModel]="input()"
+          (ngModelChange)="input.set($event)"
+        ></textarea>
+      } @else {
+        <input
+          type="url"
+          class="ai-input ai-input-url"
+          placeholder="https://example.org"
+          [ngModel]="input()"
+          (ngModelChange)="input.set($event)"
+        />
+      }
+
+      @if (error()) {
+        <div class="ai-error">{{ error() }}</div>
+      }
+
+      <div class="ai-actions">
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!input().trim() || submitting()"
+          (click)="submit()"
+        >{{ submitting() ? 'עובדים על זה...' : 'צור הצעה עם AI' }}</button>
+        <button type="button" class="btn-link" (click)="goToQuickStudio()">
+          אעדיף להתחיל ידנית ←
+        </button>
+      </div>
+    }
+
+    @if (brief(); as b) {
+      <div class="brief-result">
+        <div class="brief-header">
+          <span class="brief-badge">הצעה של ה-AI — לבדיקה ואישור</span>
+        </div>
+
+        @if (b.organizationName || b.organizationDescription) {
+          <div class="brief-section">
+            <h3>העמותה</h3>
+            @if (b.organizationName) { <div class="field"><span class="label">שם:</span> {{ b.organizationName }}</div> }
+            @if (b.organizationNumber) { <div class="field"><span class="label">מספר עמותה:</span> {{ b.organizationNumber }}</div> }
+            @if (!b.organizationNumber) { <div class="field field-missing">מספר עמותה — לא נמצא, יש להזין ידנית</div> }
+            @if (b.organizationDescription) { <div class="field"><span class="label">תיאור:</span> {{ b.organizationDescription }}</div> }
+          </div>
+        }
+
+        <div class="brief-section">
+          <h3>הקמפיין</h3>
+          @if (b.title) { <div class="field"><span class="label">כותרת:</span> {{ b.title }}</div> }
+          @if (b.shortDescription) { <div class="field"><span class="label">תיאור קצר:</span> {{ b.shortDescription }}</div> }
+
+          <div class="field">
+            <span class="label">קטגוריה:</span>
+            {{ b.category.value || 'לא זוהתה' }}
+            <span class="reason">— {{ b.category.reason }}</span>
+          </div>
+
+          <div class="field">
+            <span class="label">יעד גיוס:</span>
+            @if (b.suggestedTargetAmount.value) {
+              {{ $any(b.suggestedTargetAmount.value) | number }} ₪
+            } @else {
+              <span class="field-missing">לא צוין — יש להזין ידנית</span>
+            }
+            <span class="reason">— {{ b.suggestedTargetAmount.reason }}</span>
+          </div>
+
+          <div class="field">
+            <span class="label">טון מוצע:</span>
+            {{ b.suggestedTone.value || '—' }}
+            <span class="reason">— {{ b.suggestedTone.reason }}</span>
+          </div>
+
+          <div class="field">
+            <span class="label">טקסט לכפתור:</span>
+            {{ b.suggestedCtaLabel.value || '—' }}
+            <span class="reason">— {{ b.suggestedCtaLabel.reason }}</span>
+          </div>
+
+          <div class="field">
+            <span class="label">הצעה לפתיחה (Hero):</span>
+            {{ b.suggestedHero.value || '—' }}
+            <span class="reason">— {{ b.suggestedHero.reason }}</span>
+          </div>
+        </div>
+
+        <p class="brief-note">
+          זו הצעה בלבד — עדיין לא נוצר שום קמפיין. שלב האישור וההמשך לעריכה מלאה בסטודיו עוד לא מחובר למסך הזה.
+        </p>
+
+        <div class="ai-actions">
+          <button type="button" class="btn-link" (click)="reset()">נסה שוב עם קלט אחר</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

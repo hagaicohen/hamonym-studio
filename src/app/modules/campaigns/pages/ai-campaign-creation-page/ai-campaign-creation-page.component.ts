@@ -1,0 +1,99 @@
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { timeout } from 'rxjs/operators';
+import { environment } from '../../../../../environments/environment';
+import { AppLoaderService } from '../../../../core/services/app-loader.service';
+
+// Website extraction alone can take ~12s (real-world test); LLM calls add
+// more on top. 45s is generous slack, not a "should normally take this
+// long" figure — this exists purely so a stuck/slow backend call can never
+// spin the loader forever, regardless of the cause.
+const REQUEST_TIMEOUT_MS = 45000;
+
+// Mirrors campaign-creation.types.js's SuggestedValue / Brief / ExtractedFacts
+// shape (backend, plain JSDoc — no shared TS types across the repo boundary).
+interface SuggestedValue { value: unknown; reason: string; }
+interface Brief {
+  organizationName: string | null;
+  organizationNumber: string | null;
+  organizationDescription: string | null;
+  entityType: string | null;
+  title: string | null;
+  shortDescription: string | null;
+  category: SuggestedValue;
+  suggestedTargetAmount: SuggestedValue;
+  suggestedTone: SuggestedValue;
+  suggestedCtaLabel: SuggestedValue;
+  suggestedHero: SuggestedValue;
+}
+
+type SourceMode = 'free_text' | 'website';
+
+@Component({
+  selector: 'app-ai-campaign-creation-page',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './ai-campaign-creation-page.component.html',
+  styleUrl: './ai-campaign-creation-page.component.css',
+})
+export class AiCampaignCreationPageComponent {
+  private http   = inject(HttpClient);
+  private loader = inject(AppLoaderService);
+  private router = inject(Router);
+
+  mode   = signal<SourceMode>('free_text');
+  input  = signal('');
+  brief  = signal<Brief | null>(null);
+  error  = signal<string | null>(null);
+  submitting = signal(false);
+
+  setMode(mode: SourceMode): void {
+    this.mode.set(mode);
+    this.error.set(null);
+  }
+
+  submit(): void {
+    const value = this.input().trim();
+    if (!value || this.submitting()) return;
+
+    this.error.set(null);
+    this.brief.set(null);
+    this.submitting.set(true);
+    this.loader.show(this.mode() === 'website' ? 'קוראים את האתר שלכם...' : 'מנתחים את המידע...');
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    this.http
+      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract`, {
+        source: this.mode(),
+        input: value,
+      }, { headers })
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
+      .subscribe({
+        next: (res) => {
+          this.brief.set(res.brief);
+          this.submitting.set(false);
+          this.loader.hide();
+        },
+        error: (err) => {
+          this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
+          this.submitting.set(false);
+          this.loader.hide();
+        },
+      });
+  }
+
+  reset(): void {
+    this.brief.set(null);
+    this.error.set(null);
+    this.input.set('');
+  }
+
+  goToQuickStudio(): void {
+    // Escape hatch — every AI entry point still leads back to the existing,
+    // proven Studio flow (ADR decision 1: one Studio, multiple doors in).
+    this.router.navigate(['/campaigns/create']);
+  }
+}

@@ -176,6 +176,10 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     this.router.navigate(['/campaigns/create']);
   }
 
+  createCampaignWithAi(): void {
+    this.router.navigate(['/campaigns/create/ai']);
+  }
+
   openAmbassadorStudio(id: string): void {
     this.router.navigate(['/campaigns', id, 'ambassador-studio']);
   }

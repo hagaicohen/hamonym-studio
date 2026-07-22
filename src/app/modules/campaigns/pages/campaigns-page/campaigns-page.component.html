@@ -68,7 +68,10 @@
       <h1 class="campaigns-title">קמפיינים</h1>
       <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
-    <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
+    <div class="header-actions">
+      <button class="btn-new btn-ai" (click)="createCampaignWithAi()">✨ צור עם AI</button>
+      <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
+    </div>
   </div>
 
   <!-- ALERT -->
@@ -130,6 +133,7 @@
     <div class="campaigns-empty">
       <div class="empty-icon">📋</div>
       <p>אין קמפיינים עדיין</p>
+      <button class="btn-new btn-ai" (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   } @else {

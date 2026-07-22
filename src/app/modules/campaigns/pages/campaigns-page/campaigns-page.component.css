@@ -101,6 +101,11 @@
 
 .btn-new:hover { background: #0f766e; }
 
+.header-actions { display: flex; gap: 10px; align-items: flex-start; }
+
+.btn-ai { background: #583cd6; }
+.btn-ai:hover { background: #4730b0; }
+
 .btn-action {
   background: #f8fafc;
   color: #334155;

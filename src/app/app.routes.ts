@@ -124,6 +124,15 @@ export const routes: Routes = [
   },
 
   {
+    path: 'campaigns/create/ai',
+    canActivate: [campaignEditorGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/pages/ai-campaign-creation-page/ai-campaign-creation-page.component'
+      ).then((m) => m.AiCampaignCreationPageComponent),
+  },
+
+  {
     path: 'campaigns/:id/edit',
     canActivate: [campaignEditorGuard],
     loadComponent: () =>
