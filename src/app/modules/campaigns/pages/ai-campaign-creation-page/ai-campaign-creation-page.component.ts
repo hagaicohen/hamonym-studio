@@ -194,6 +194,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
           // before merging the AI-derived fields onto it.
           this.campaignState.reset();
           this.campaignState.patch(patches.campaignDraftPatch as any);
+          this.applyStoryContent(brief);
 
           this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
             next: (created) => {
@@ -216,6 +217,27 @@ export class AiCampaignCreationPageComponent implements OnInit {
       });
   }
 
+  // draft.builder.js (backend) deliberately never touches `blocks` — that
+  // array only exists in the frontend's default-draft structure
+  // (CampaignStudioStateService's createInitialDraft()), so mapping into it
+  // has to happen here, not server-side. Without this, the campaign's main
+  // "story" rich-text block stays at its default empty content — title/
+  // description/amount would all be set, but the actual body text visible
+  // on the campaign page would be blank. Found via live testing: a user
+  // created a campaign through this flow and reported "no text at all" —
+  // traced to exactly this gap, not a mapping bug in the fields that *were*
+  // wired.
+  private applyStoryContent(brief: Brief): void {
+    const text = (brief.organizationDescription || brief.shortDescription || '').trim();
+    if (!text) return;
+
+    const html = `<p>${escapeHtml(text)}</p>`;
+    const blocks = this.campaignState.draft.blocks.map((b: any) =>
+      b.type === 'rich-text' ? { ...b, data: { ...b.data, content: html } } : b
+    );
+    this.campaignState.patch({ blocks });
+  }
+
   reset(): void {
     this.brief.set(null);
     this.error.set(null);
@@ -235,4 +257,17 @@ function guessTypeLabel(fileName: string): string {
   const lower = fileName.toLowerCase();
   if (lower.includes('logo') || lower.includes('לוגו')) return 'לוגו';
   return 'אחר';
+}
+
+// AI-derived text can originate from a website's content (via the "combined
+// intake" path) — it must never be trusted as safe HTML before being
+// embedded into the story block's Tiptap content, or a malicious/compromised
+// site could inject arbitrary markup into a real user's campaign page.
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
