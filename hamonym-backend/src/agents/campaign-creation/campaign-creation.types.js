@@ -35,4 +35,41 @@
  * @property {string|null} contactPhone
  */
 
+/**
+ * @typedef {Object} SuggestedValue
+ * A recommendation, not a decision (ADR decision 6 — AI never bypasses
+ * business rules, it only proposes what a human still confirms). `value` is
+ * null when there's no real basis to suggest one — Brief doesn't invent
+ * facts/numbers any more than Extraction does (see brief.builder.js on
+ * suggestedTargetAmount specifically); it only generates for genuinely
+ * creative/organizational judgment calls, where "propose something
+ * reasonable" is literally the job.
+ * @property {*} value
+ * @property {string} reason - One sentence, Hebrew, explaining the suggestion (or explaining why value is null).
+ */
+
+/**
+ * @typedef {Object} Brief
+ * Built by brief.builder.js from ExtractedFacts alone — never re-reads
+ * sourceRaw (see ADR decision 5: Brief regeneration must be cheap, no
+ * re-running Extraction). Two kinds of field:
+ *  - Plain carry-overs from ExtractedFacts (organizationName, organizationNumber,
+ *    organizationDescription, title, shortDescription) — nothing to reason
+ *    about, Extraction already did that work in Sprint 1; kept as bare
+ *    values, not wrapped in SuggestedValue.
+ *  - Genuine Brief-level decisions (category, suggestedTargetAmount,
+ *    suggestedTone, suggestedCtaLabel, suggestedHero) — wrapped in
+ *    SuggestedValue because a human should be able to see *why*.
+ * @property {string|null} organizationName
+ * @property {string|null} organizationNumber - Always requires manual confirmation before commit regardless of confidence (MVP doc §5/§6) — Brief doesn't add a confidence signal here, just passes it through as-is.
+ * @property {string|null} organizationDescription
+ * @property {string|null} title
+ * @property {string|null} shortDescription
+ * @property {SuggestedValue} category - Picks ONE category from ExtractedFacts.categoryGuess (a decision), or {value: null, reason: '...'} if categoryGuess was empty.
+ * @property {SuggestedValue} suggestedTargetAmount - {value: <amount>, reason: 'explicit in source'} when ExtractedFacts.suggestedTargetAmount was set; otherwise {value: null, reason: '...'} — never a guessed/benchmark figure.
+ * @property {SuggestedValue} suggestedTone - Short mood/style description (e.g. "תקווה ואופטימיות"), not a specific frontend palette key — TEMPLATE_PALETTES mapping is frontend-owned, deferred to the Draft-mapping sprint.
+ * @property {SuggestedValue} suggestedCtaLabel - Short button text, e.g. "תרמו עכשיו".
+ * @property {SuggestedValue} suggestedHero - One sentence describing what the Hero section should emphasize visually/emotionally.
+ */
+
 module.exports = {};

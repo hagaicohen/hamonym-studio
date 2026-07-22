@@ -12,6 +12,7 @@
 // good enough to build a Brief on top of, without revisiting the Extractor.
 
 const freeTextExtractor = require('./extractors/free-text.extractor');
+const briefBuilder = require('./builders/brief.builder');
 const { createTracer } = require('../trace.util');
 
 // @param {string} text
@@ -24,4 +25,19 @@ exports.extractFromFreeText = async (text) => {
 
   tracer.print();
   return { ...facts, trace: tracer.steps };
+};
+
+// Sprint 2 — validates the Facts→Brief contract in isolation. Takes
+// ExtractedFacts directly (not text) so it can be tested/regenerated without
+// touching Extraction at all (ADR decision 5).
+// @param {import('./campaign-creation.types').ExtractedFacts} facts
+// @returns {Promise<import('./campaign-creation.types').Brief & { trace: object[] }>}
+exports.buildBriefFromFacts = async (facts) => {
+  const tracer = createTracer('CampaignCreationPipeline.buildBriefFromFacts');
+
+  const brief = await tracer.trace('BriefBuilder', () => briefBuilder.build(facts),
+    (b) => ({ category: b.category.value, hasTargetAmount: b.suggestedTargetAmount.value != null }));
+
+  tracer.print();
+  return { ...brief, trace: tracer.steps };
 };

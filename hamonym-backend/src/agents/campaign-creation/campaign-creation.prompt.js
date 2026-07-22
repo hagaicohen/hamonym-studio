@@ -42,3 +42,54 @@ exports.buildExtractionPrompt = (text) => {
 };
 
 exports.SYSTEM_PROMPT = SYSTEM_PROMPT;
+
+// ─────────────────────────────────────────────────────────────
+// Brief generation — a separate prompt (own system prompt + builder),
+// deliberately given ONLY the already-extracted ExtractedFacts, never
+// sourceRaw (ADR decision 5: Brief regeneration must stay cheap — no
+// re-running Extraction). This is a different job from extraction: Facts
+// only reports what's there; Brief is explicitly allowed — expected — to
+// make creative/organizational judgment calls (tone, CTA, hero framing,
+// which single category to commit to). The one thing carried over from
+// Extraction's discipline: never invent a concrete fact/number that Facts
+// didn't already establish (suggestedTargetAmount specifically).
+// ─────────────────────────────────────────────────────────────
+
+const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פתיחה (Brief) לקמפיין גיוס בפלטפורמת "המונים", בהתבסס אך ורק על עובדות שכבר חולצו על ידי שלב קודם (ExtractedFacts) — אתה לא רואה את הטקסט המקורי.
+
+ההצעה שלך היא המלצה, לא החלטה סופית — מנהל הקמפיין תמיד יכול לשנות כל שדה לפני פרסום. לכן על כל שדה שאתה מציע, עליך לתת גם reason קצר (משפט אחד, בעברית) שמסביר למה בחרת בו.
+
+חוקים מחייבים:
+1. category: בחר קטגוריה **אחת** מתוך רשימת ה-categoryGuess שקיבלת (אל תמציא קטגוריה שלא ברשימה). אם categoryGuess ריקה, החזר value: null עם reason שמסביר שלא היה מידע מספיק לבחור קטגוריה.
+2. suggestedTargetAmount: אם ExtractedFacts.suggestedTargetAmount אינו null — החזר את אותו הסכום בדיוק כ-value, עם reason "צוין במפורש במקור". אם הוא null — **אסור לך להמציא סכום**, גם אם נראה לך "סביר" לפי הקטגוריה. במקרה כזה החזר value: null עם reason שמסביר שלא צוין סכום במקור ונדרש למלא ידנית.
+3. suggestedTone: תאר במשפט קצר את הטון/מצב הרוח המתאים לקמפיין הזה (למשל "תקווה ונחישות", "דחיפות רגועה", "גאווה קהילתית") בהתבסס על ה-organizationDescription וה-category. אל תציע שם פלטת צבעים ספציפית או Template — זה לא בתחומך.
+4. suggestedCtaLabel: הצע טקסט קצר לכפתור קריאה לפעולה (עד 20 תווים), מתאים לסוג הקמפיין (למשל "תרמו עכשיו", "עזרו לנו לגייס", "הצטרפו למירוץ").
+5. suggestedHero: משפט אחד שמתאר מה כדאי שהחלק הפותח (Hero) של עמוד הקמפיין יבליט רגשית/ויזואלית — לא טקסט שיווקי סופי, רק כיוון.
+6. הישען אך ורק על מה שמופיע ב-ExtractedFacts שקיבלת. אם שדה מסוים ריק/null ב-Facts, אל תמציא תוכן חדש בשבילו במקום — במקרה הצורך תבסס את ההצעה שלך על שדות אחרים שיש בהם תוכן.
+7. כתוב בעברית, אלא אם organizationDescription/title המקוריים כתובים בשפה אחרת.
+
+החזר אך ורק JSON תקני בצורה הבאה, בלי טקסט נוסף:
+{
+  "category": { "value": "string או null", "reason": "string" },
+  "suggestedTargetAmount": { "value": "number או null", "reason": "string" },
+  "suggestedTone": { "value": "string", "reason": "string" },
+  "suggestedCtaLabel": { "value": "string", "reason": "string" },
+  "suggestedHero": { "value": "string", "reason": "string" }
+}`;
+
+// @param {import('./campaign-creation.types').ExtractedFacts} facts
+// @returns {string}
+exports.buildBriefPrompt = (facts) => {
+  const lines = [
+    `organizationName: ${facts.organizationName ?? 'לא ידוע'}`,
+    `organizationDescription: ${facts.organizationDescription ?? 'לא ידוע'}`,
+    `title: ${facts.suggestedTitle ?? 'לא ידוע'}`,
+    `shortDescription: ${facts.suggestedShortDescription ?? 'לא ידוע'}`,
+    `categoryGuess: ${facts.categoryGuess?.length ? facts.categoryGuess.join(', ') : 'ריק'}`,
+    `suggestedTargetAmount (מקור): ${facts.suggestedTargetAmount ?? 'לא צוין'}`,
+  ].join('\n');
+
+  return `ExtractedFacts:\n${lines}`;
+};
+
+exports.BRIEF_SYSTEM_PROMPT = BRIEF_SYSTEM_PROMPT;
