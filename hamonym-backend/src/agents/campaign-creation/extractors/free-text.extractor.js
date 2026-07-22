@@ -59,6 +59,27 @@ function project(text, raw) {
   };
 }
 
+// Shared with document-collection.extractor.js — that extractor builds its
+// own userPrompt (possibly a multi-modal content array with images, which
+// plain free text never needs), but reuses this exact LLM-call +
+// whitelist-projection logic rather than duplicating it. `sourceRaw` is
+// whatever the caller wants recorded for debug/regenerate purposes — for
+// document collections that's a text summary of what was submitted, not
+// literal image bytes.
+// @param {string} sourceRaw
+// @param {string | Array<object>} userPromptContent
+// @returns {Promise<import('../campaign-creation.types').ExtractedFacts>}
+exports.runExtraction = async (sourceRaw, userPromptContent) => {
+  // temperature: 0 — this is fact extraction, not advice/prose generation;
+  // run-to-run consistency matters for the fixture corpus to mean anything
+  // (see AI_CAMPAIGN_CREATION_MVP.md testing notes — found via a real
+  // regression where re-running the same fixture gave different results).
+  const raw = await llmService.complete(SYSTEM_PROMPT, userPromptContent, { temperature: 0 });
+  return project(sourceRaw, raw);
+};
+
+exports.empty = empty;
+
 // @param {string} text
 // @returns {Promise<import('../campaign-creation.types').ExtractedFacts>}
 exports.extract = async (text) => {
@@ -67,10 +88,5 @@ exports.extract = async (text) => {
   }
 
   const userPrompt = buildExtractionPrompt(text);
-  // temperature: 0 — this is fact extraction, not advice/prose generation;
-  // run-to-run consistency matters for the fixture corpus to mean anything
-  // (see AI_CAMPAIGN_CREATION_MVP.md testing notes — found via a real
-  // regression where re-running the same fixture gave different results).
-  const raw = await llmService.complete(SYSTEM_PROMPT, userPrompt, { temperature: 0 });
-  return project(text, raw);
+  return exports.runExtraction(text, userPrompt);
 };

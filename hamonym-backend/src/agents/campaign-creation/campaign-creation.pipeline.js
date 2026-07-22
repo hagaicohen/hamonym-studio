@@ -13,6 +13,7 @@
 
 const freeTextExtractor = require('./extractors/free-text.extractor');
 const websiteExtractor = require('./extractors/website.extractor');
+const documentCollectionExtractor = require('./extractors/document-collection.extractor');
 const briefBuilder = require('./builders/brief.builder');
 const draftBuilder = require('./builders/draft.builder');
 const { createTracer } = require('../trace.util');
@@ -43,6 +44,22 @@ exports.extractFromWebsite = async (url) => {
 
   const facts = await tracer.trace('WebsiteExtractor', () => websiteExtractor.extract(url),
     (f) => ({ hasOrgName: !!f.organizationName, hasTitle: !!f.suggestedTitle }));
+
+  tracer.print();
+  return { ...facts, trace: tracer.steps };
+};
+
+// Document Collection Extractor — one Extraction call over a whole batch of
+// uploaded, type-tagged files (+ optional accompanying free text), not
+// per-file extraction + merge (that's the rejected Facts Merger idea).
+// @param {Array<{ buffer: Buffer, mimeType: string, typeLabel: string, note?: string }>} files
+// @param {string} [freeText]
+// @returns {Promise<import('./campaign-creation.types').ExtractedFacts & { trace: object[] }>}
+exports.extractFromDocuments = async (files, freeText) => {
+  const tracer = createTracer('CampaignCreationPipeline.extractFromDocuments');
+
+  const facts = await tracer.trace('DocumentCollectionExtractor', () => documentCollectionExtractor.extract(files, freeText),
+    (f) => ({ hasOrgName: !!f.organizationName, hasTitle: !!f.suggestedTitle, fileCount: files.length }));
 
   tracer.print();
   return { ...facts, trace: tracer.steps };

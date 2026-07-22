@@ -20,7 +20,7 @@
  * Deliberately excludes anything resembling bank/payment/credential fields
  * (ADR decision 7) — there is no field here for them to ever land in, even
  * if a source document mentioned one.
- * @property {'free_text'|'website'} source
+ * @property {'free_text'|'website'|'document_collection'} source
  * @property {string} sourceRaw - The raw input, kept for regenerate/debug — never persisted to a Draft.
  * @property {string|null} organizationName
  * @property {string|null} organizationNumber - Only filled when an explicit number appears in the source; never guessed. See MVP doc §5/§6 — always requires manual confirmation regardless.
