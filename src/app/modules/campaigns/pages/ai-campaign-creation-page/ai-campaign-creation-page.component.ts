@@ -39,6 +39,7 @@ interface Brief {
   suggestedCtaLabel: SuggestedValue;
   suggestedHero: SuggestedValue;
   story: SuggestedValue;
+  researchSources: Array<{ title: string; url: string }>;
 }
 
 interface UploadedFile {
@@ -155,6 +156,11 @@ export class AiCampaignCreationPageComponent implements OnInit {
   websiteUrl = signal('');
   files      = signal<UploadedFile[]>([]);
 
+  // Explicit opt-in (2026-07-23) — a real web_search call costs money and
+  // adds latency, so this is never on by default. See
+  // organization-research.tool.js on the backend.
+  enableWebResearch = signal(false);
+
   // Local preview only (createObjectURL, never uploaded) — lets the user
   // visually confirm it's the right image in the Brief-review screen
   // before approving, rather than only seeing a filename.
@@ -225,6 +231,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     formData.append('filesMeta', JSON.stringify(this.files().map((f) => ({ typeLabel: f.typeLabel, note: f.note }))));
     if (this.freeText().trim()) formData.append('freeText', this.freeText().trim());
     if (this.websiteUrl().trim()) formData.append('websiteUrl', this.websiteUrl().trim());
+    if (this.enableWebResearch()) formData.append('enableWebResearch', 'true');
 
     this.http
       .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
@@ -503,6 +510,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.freeText.set('');
     this.websiteUrl.set('');
     this.files.set([]);
+    this.enableWebResearch.set(false);
     this.creationMode.set('campaign');
     this.newOrgEntityType.set('');
     this.newOrgName.set('');

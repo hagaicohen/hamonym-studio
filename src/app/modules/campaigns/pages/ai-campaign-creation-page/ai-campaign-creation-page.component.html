@@ -86,6 +86,13 @@
         </div>
       </div>
 
+      <div class="intake-section intake-toggle">
+        <label class="toggle-label">
+          <input type="checkbox" class="toggle-checkbox" [ngModel]="enableWebResearch()" (ngModelChange)="enableWebResearch.set($event)" />
+          <span>🔎 חפש מידע נוסף באינטרנט על העמותה <span class="optional">(עשוי להוסיף כמה שניות; משתמש בחיפוש אמיתי כדי לכתוב תיאור עשיר יותר)</span></span>
+        </label>
+      </div>
+
       <p class="intake-hint">אפשר למלא כל שילוב — רק טקסט, רק קישור, רק קבצים, או כמה ביחד. צריך למלא לפחות אחד מהם.</p>
 
       @if (error()) {
@@ -179,6 +186,17 @@
               <span class="field-missing">אין מספיק חומר מקור לכתוב תיאור מורחב — יש להשלים ידנית בסטודיו</span>
             }
             <span class="reason">— {{ b.story.reason }}</span>
+
+            @if (b.researchSources.length) {
+              <div class="research-sources">
+                <span class="research-sources-label">מקורות מהחיפוש באינטרנט:</span>
+                <ul>
+                  @for (source of b.researchSources; track source.url) {
+                    <li><a [href]="source.url" target="_blank" rel="noopener">{{ source.title }}</a></li>
+                  }
+                </ul>
+              </div>
+            }
           </div>
 
           <div class="field">
