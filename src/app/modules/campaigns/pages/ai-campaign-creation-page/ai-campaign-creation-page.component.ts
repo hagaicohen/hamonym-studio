@@ -109,17 +109,15 @@ export class AiCampaignCreationPageComponent implements OnInit {
   fileTypeOptions = FILE_TYPE_OPTIONS;
   entityTypeOptions = ENTITY_TYPE_OPTIONS;
 
-  // Explicit toggle (2026-07-23 decision) — NOT inferred from free-text
-  // wording. Creating a real entity + owning it is consequential enough that
-  // guessing intent from prose felt too risky; the user picks this
-  // deliberately before submitting.
-  createNewOrg = signal(false);
-
-  // Only relevant when createNewOrg is on — explicit per the same reasoning
-  // as createNewOrg itself (2026-07-23): "create only the org, no campaign
-  // yet" is a real, distinct request the user made, not something to infer
-  // from free-text wording like "רק עמותה".
-  orgOnly = signal(false);
+  // A single explicit 3-way choice (2026-07-23, replacing an earlier
+  // 2-level "create new org" checkbox + nested "org only" checkbox — the
+  // user found that unclear and asked for a straightforward pick between
+  // the 3 real outcomes instead). Deliberately NOT inferred from free-text
+  // wording: creating a real owned entity is consequential enough that the
+  // user picks this up front, before the Brief is even generated.
+  creationMode = signal<'campaign' | 'org-only' | 'org-and-campaign'>('campaign');
+  createNewOrg = computed(() => this.creationMode() !== 'campaign');
+  orgOnly = computed(() => this.creationMode() === 'org-only');
 
   // Editable "new organization" review fields — prefilled from the Brief
   // once it arrives (see submit()), but always user-editable/confirmable
@@ -263,17 +261,19 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.currentContext.addEntityContext(entity);
           this.currentContext.switchContext('entity-manager', entity.id);
 
-          if (this.orgOnly()) {
-            // Explicit request (2026-07-23): "create ONLY the org, don't
-            // create a campaign" — stop here instead of always chaining
-            // into createCampaignUnder().
-            this.creatingCampaign.set(false);
-            this.loader.hide();
-            this.router.navigate(['/settings/entities', entity.id]);
-            return;
-          }
+          this.uploadOrganizationFiles(entity.id).subscribe(() => {
+            if (this.orgOnly()) {
+              // Explicit request (2026-07-23): "create ONLY the org, don't
+              // create a campaign" — stop here instead of always chaining
+              // into createCampaignUnder().
+              this.creatingCampaign.set(false);
+              this.loader.hide();
+              this.router.navigate(['/settings/entities', entity.id]);
+              return;
+            }
 
-          this.createCampaignUnder(entity.id, brief);
+            this.createCampaignUnder(entity.id, brief);
+          });
         },
         error: (err) => {
           this.creatingCampaign.set(false);
@@ -315,6 +315,24 @@ export class AiCampaignCreationPageComponent implements OnInit {
       selectedCategories: category ? [category] : [],
     };
     return this.entitiesApi.createEntity(buildOrgPayload(state)).pipe(map((res) => res.entity));
+  }
+
+  // Uploaded files tagged "לוגו"/"תעודת התאגדות" belong to the ORG itself,
+  // not a future campaign — reuses EntitiesService's own upload endpoints
+  // (the same ones organization-registration's manual wizard uses after
+  // creating an entity), rather than leaving them undelivered the way
+  // uploadCampaignImages() already fixed for campaign-level images. Doesn't
+  // block on failure, same partial-success philosophy used throughout.
+  private uploadOrganizationFiles(entityId: string): Observable<unknown> {
+    const logoFile = this.files().find((f) => f.typeLabel === 'לוגו');
+    const certFile = this.files().find((f) => f.typeLabel === 'תעודת התאגדות');
+
+    const uploads: Observable<unknown>[] = [];
+    if (logoFile) uploads.push(this.entitiesApi.uploadLogo(entityId, logoFile.file));
+    if (certFile) uploads.push(this.entitiesApi.uploadAssociationDocument(entityId, certFile.file));
+
+    if (!uploads.length) return of(null);
+    return forkJoin(uploads).pipe(catchError(() => of(null)));
   }
 
   private createCampaignUnder(entityId: string, brief: Brief): void {
@@ -439,8 +457,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.freeText.set('');
     this.websiteUrl.set('');
     this.files.set([]);
-    this.createNewOrg.set(false);
-    this.orgOnly.set(false);
+    this.creationMode.set('campaign');
     this.newOrgEntityType.set('');
     this.newOrgName.set('');
     this.newOrgNumber.set('');

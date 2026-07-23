@@ -54,18 +54,36 @@
         </div>
       </div>
 
-      <div class="intake-section intake-toggle">
-        <label class="toggle-label">
-          <input type="checkbox" class="toggle-checkbox" [ngModel]="createNewOrg()" (ngModelChange)="createNewOrg.set($event)" />
-          <span>🏢 ליצור עמותה חדשה מהפרטים האלה <span class="optional">(במקום קמפיין תחת העמותה הקיימת שלי)</span></span>
-        </label>
-
-        @if (createNewOrg()) {
-          <label class="toggle-label toggle-label--nested">
-            <input type="checkbox" class="toggle-checkbox" [ngModel]="orgOnly()" (ngModelChange)="orgOnly.set($event)" />
-            <span>ליצור רק את העמותה, בלי קמפיין בינתיים <span class="optional">(אפשר יהיה ליצור קמפיין בנפרד אחר כך)</span></span>
+      <div class="intake-section intake-mode">
+        <label class="intake-label">מה ליצור?</label>
+        <div class="mode-options">
+          <label class="mode-option" [class.selected]="creationMode() === 'campaign'" (click)="creationMode.set('campaign')">
+            <input type="radio" name="creationMode" [checked]="creationMode() === 'campaign'" />
+            <span class="mode-option-icon">🎯</span>
+            <span class="mode-option-text">
+              <span class="mode-option-title">קמפיין</span>
+              <span class="mode-option-desc">מתבסס על העמותה הקיימת שלי</span>
+            </span>
           </label>
-        }
+
+          <label class="mode-option" [class.selected]="creationMode() === 'org-only'" (click)="creationMode.set('org-only')">
+            <input type="radio" name="creationMode" [checked]="creationMode() === 'org-only'" />
+            <span class="mode-option-icon">🏢</span>
+            <span class="mode-option-text">
+              <span class="mode-option-title">עמותה חדשה</span>
+              <span class="mode-option-desc">רק עמותה, בלי קמפיין בינתיים</span>
+            </span>
+          </label>
+
+          <label class="mode-option" [class.selected]="creationMode() === 'org-and-campaign'" (click)="creationMode.set('org-and-campaign')">
+            <input type="radio" name="creationMode" [checked]="creationMode() === 'org-and-campaign'" />
+            <span class="mode-option-icon">🏢🎯</span>
+            <span class="mode-option-text">
+              <span class="mode-option-title">עמותה חדשה + קמפיין</span>
+              <span class="mode-option-desc">עמותה חדשה, ומיד קמפיין תחתיה</span>
+            </span>
+          </label>
+        </div>
       </div>
 
       <p class="intake-hint">אפשר למלא כל שילוב — רק טקסט, רק קישור, רק קבצים, או כמה ביחד. צריך למלא לפחות אחד מהם.</p>
