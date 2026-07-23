@@ -41,6 +41,9 @@ interface Brief {
   story: SuggestedValue;
   researchSources: Array<{ title: string; url: string }>;
   clarifyingQuestions: string[];
+  designIntent: { emotion: string | null; urgency: string | null; focus: string | null; energy: string | null } | null;
+  contentStrategy: { primaryAudience: string | null; storyPattern: string | null; ctaApproach: string | null } | null;
+  galleryCuration: { hero: string | null; gallery: string[]; hidden: string[]; reason: string } | null;
 }
 
 // Opaque to the frontend — passed back verbatim to /refine-brief, never
@@ -444,7 +447,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.campaignState.patch(patches.campaignDraftPatch as any);
           this.applyStoryContent(brief);
 
-          this.uploadCampaignImages().subscribe(() => {
+          this.uploadCampaignImages(brief).subscribe(() => {
             this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
               next: (created) => {
                 this.creatingCampaign.set(false);
@@ -484,14 +487,30 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // (the same first one also still becomes the hero cover — some overlap
   // is fine, it's normal for a campaign's hero photo to also appear in its
   // own gallery).
-  private uploadCampaignImages(): Observable<unknown> {
+  private uploadCampaignImages(brief: Brief): Observable<unknown> {
     const images = this.files().filter((f) => f.file.type.startsWith('image/'));
     const logoFile = images.find((f) => f.typeLabel === 'לוגו');
+    // Same order/filter the backend used to build its "image1"/"image2"...
+    // labels (see campaign-creation.controller.js) — indices have to line
+    // up exactly for galleryCuration's codes to map back to real files.
     const contentImages = images.filter((f) => f.typeLabel !== 'לוגו');
-    // heroVideoUrl (an explicit link the user gave) takes priority over an
-    // uploaded photo when both are present, since a video is a more
-    // deliberate choice — no cover image needed in that case.
-    const heroFile = this.campaignState.draft.heroType !== 'video' ? contentImages[0] : undefined;
+    const byLabel = (label: string | null) => {
+      const i = label ? Number(label.replace('image', '')) - 1 : -1;
+      return i >= 0 ? contentImages[i] : undefined;
+    };
+
+    const curation = brief.galleryCuration;
+    // Falls back to the old naive rule (first content image = hero, rest in
+    // upload order = gallery, none hidden) when curation is missing/empty
+    // — e.g. no images were sent to the Brief call, or the model returned
+    // nothing usable. heroVideoUrl (an explicit link the user gave) takes
+    // priority over any uploaded photo when both are present.
+    const heroFile = this.campaignState.draft.heroType === 'video'
+      ? undefined
+      : (curation ? byLabel(curation.hero) : contentImages[0]);
+    const galleryFiles = curation
+      ? curation.gallery.map(byLabel).filter((f): f is UploadedFile => !!f)
+      : contentImages.filter((f) => f !== heroFile);
 
     const uploads: Observable<unknown>[] = [];
     if (logoFile) {
@@ -504,9 +523,9 @@ export class AiCampaignCreationPageComponent implements OnInit {
         tap((url) => this.campaignState.patch({ coverImageUrl: url })),
       ));
     }
-    if (contentImages.length) {
+    if (galleryFiles.length) {
       uploads.push(
-        forkJoin(contentImages.map((f) =>
+        forkJoin(galleryFiles.map((f) =>
           this.uploadService.upload(f.file, 'campaigns/gallery').pipe(
             map((url) => ({ url, caption: f.note || undefined })),
           ),
