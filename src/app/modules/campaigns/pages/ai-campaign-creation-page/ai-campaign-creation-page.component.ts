@@ -416,15 +416,23 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // creation on failure (catchError swallows it) — same "partial success"
   // philosophy as a failed website fetch during combined intake: missing
   // images shouldn't prevent the campaign from being created at all.
+  //
+  // Found via live testing (2026-07-23): a user uploaded several photos and
+  // explicitly asked for all of them to appear — only the first non-logo
+  // image was ever used (as the hero cover), the rest were silently
+  // dropped. createInitialDraft() has no default gallery block, so one is
+  // now built here and inserted into blocks, holding EVERY non-logo image
+  // (the same first one also still becomes the hero cover — some overlap
+  // is fine, it's normal for a campaign's hero photo to also appear in its
+  // own gallery).
   private uploadCampaignImages(): Observable<unknown> {
     const images = this.files().filter((f) => f.file.type.startsWith('image/'));
     const logoFile = images.find((f) => f.typeLabel === 'לוגו');
-    // First non-logo image becomes the hero background — heroVideoUrl (an
-    // explicit link the user gave) takes priority over an uploaded photo
-    // when both are present, since a video is a more deliberate choice.
-    const heroFile = this.campaignState.draft.heroType !== 'video'
-      ? images.find((f) => f.typeLabel !== 'לוגו')
-      : undefined;
+    const contentImages = images.filter((f) => f.typeLabel !== 'לוגו');
+    // heroVideoUrl (an explicit link the user gave) takes priority over an
+    // uploaded photo when both are present, since a video is a more
+    // deliberate choice — no cover image needed in that case.
+    const heroFile = this.campaignState.draft.heroType !== 'video' ? contentImages[0] : undefined;
 
     const uploads: Observable<unknown>[] = [];
     if (logoFile) {
@@ -437,9 +445,48 @@ export class AiCampaignCreationPageComponent implements OnInit {
         tap((url) => this.campaignState.patch({ coverImageUrl: url })),
       ));
     }
+    if (contentImages.length) {
+      uploads.push(
+        forkJoin(contentImages.map((f) =>
+          this.uploadService.upload(f.file, 'campaigns/gallery').pipe(
+            map((url) => ({ url, caption: f.note || undefined })),
+          ),
+        )).pipe(
+          tap((items) => this.addGalleryBlock(items)),
+        ),
+      );
+    }
 
     if (!uploads.length) return of(null);
     return forkJoin(uploads).pipe(catchError(() => of(null)));
+  }
+
+  // No default gallery block exists in createInitialDraft() — has to be
+  // inserted, not patched. Placed right after the story block (order 2.5,
+  // between rich-text's 2 and rewards' 3 — CampaignPreviewComponent sorts
+  // blocks by `.order`, fractional values work fine) so the photos show up
+  // near the story rather than buried at the bottom of the page.
+  private addGalleryBlock(items: Array<{ url: string; caption?: string }>): void {
+    if (!items.length) return;
+    const block = {
+      id: Math.random().toString(36).slice(2, 10),
+      type: 'gallery',
+      order: 2.5,
+      visible: true,
+      spacingTop: 0,
+      spacingBottom: 0,
+      label: 'גלריה',
+      data: {
+        items,
+        style: 'slider',
+        aspectRatio: '16:9',
+        showCaptions: true,
+        showDots: true,
+        showArrows: true,
+        autoPlay: false,
+      },
+    };
+    this.campaignState.patch({ blocks: [...this.campaignState.draft.blocks, block as any] });
   }
 
   // draft.builder.js (backend) deliberately never touches `blocks` — that
