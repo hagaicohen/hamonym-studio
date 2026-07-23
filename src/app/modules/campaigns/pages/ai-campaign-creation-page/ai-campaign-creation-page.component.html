@@ -56,8 +56,8 @@
 
       <div class="intake-section intake-toggle">
         <label class="toggle-label">
-          <input type="checkbox" [ngModel]="createNewOrg()" (ngModelChange)="createNewOrg.set($event)" />
-          🏢 ליצור עמותה חדשה מהפרטים האלה <span class="optional">(במקום קמפיין תחת העמותה הקיימת שלי)</span>
+          <input type="checkbox" class="toggle-checkbox" [ngModel]="createNewOrg()" (ngModelChange)="createNewOrg.set($event)" />
+          <span>🏢 ליצור עמותה חדשה מהפרטים האלה <span class="optional">(במקום קמפיין תחת העמותה הקיימת שלי)</span></span>
         </label>
       </div>
 
