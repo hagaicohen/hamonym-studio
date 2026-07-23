@@ -65,3 +65,17 @@
 ## נקודת המשך טבעית
 
 ברגע שיהיה קטלוג Templates/Palettes אמיתי וסגור (מקביל ל-`entity-categories.ts` הקיים), `designIntent` כבר מוכן להיות הקלט לשכבת Mapping כזו — בלי לגעת שוב בפרומפט של ה-Brief.
+
+## Brief כ-Campaign Specification — שינוי קונספטואלי, לא Rename
+
+דיון המשך זיהה נקודה חשובה: `Brief` הוא שם היסטורי שהפך לא-מדויק. כשהוא נולד (Sprint 2), הוא היה באמת בריף טקסטואלי פשוט. היום הוא כבר מכיל תוכן, Hero, Gallery Curation, Tone, Category, החלטות מדיה, תוצאות חיפוש אינטרנט, ופערי מידע (`clarifyingQuestions`) — הרבה מעבר ל"בריף".
+
+**ההחלטה: לא לבצע Rename בקוד.** `Brief` מככב כשם קובץ (`brief.builder.js`), נתיבי endpoint (`/map-to-draft`, `/refine-brief`), טיפוס בפרונטאנד, סיגנל, מחלקות CSS, ולאורך כל ה-ADR הקיים — rename מלא הוא refactor רחב-היקף עם סיכון אמיתי, לתועלת שהיא כמעט כולה רעיונית. השינוי הנכון הוא **קונספטואלי, לא נומנקלטורה**: לתעד את איך חושבים על האובייקט, לא לשנות את שמו.
+
+**איך לחשוב על זה מעכשיו**: למרות השם ההיסטורי, מבחינה ארכיטקטונית `Brief` מהווה את ה-**Campaign Specification v1** של המערכת. עם התפתחות יכולות ה-AI (Media Decisions, Design Intent, Gallery Curation, Content Strategy — כולן כבר קרו) הוא צפוי להתרחב עוד באופן אורגני — אך **לא** יעבור הפשטה או פיצול למנגנון כללי (Directors נפרדים, Framework, Interfaces) לפני שיהיה לכך צורך עסקי אמיתי ומוכח. זו אותה משמעת בדיוק שכבר מוכיחה את עצמה שוב ושוב בפרויקט הזה:
+
+> **No generic abstractions before a second real consumer.**
+
+**עיקרון ארכיטקטוני**: The Brief is an implementation detail today and an architectural boundary tomorrow. היום זה אובייקט שמעביר מידע בין ה-AI ל-`draft.builder.js`. בעתיד הוא עשוי להתפתח ל-Specification עשיר יותר — אך ההתרחבות תמיד תהיה אינקרמנטלית ומונעת-צורך, לא Framework כללי שנבנה מראש.
+
+הארכיטקטורה האמיתית לא נקבעת לפי שם קובץ — היא נקבעת לפי הגבול בין האחריות של הרכיבים (AI מייצר / `draft.builder.js` מממש). הגבול הזה כבר קיים ועובד. השם `Brief` הוא חוב היסטורי קטן וקוסמטי, לא בעיה ארכיטקטונית.
