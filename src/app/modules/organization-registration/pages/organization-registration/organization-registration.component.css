@@ -1,5 +1,11 @@
+/* 734px = .step-card's TRUE rendered width below: 680 content + 26px
+   padding x2 + 1px border x2 (step-card is content-box, no box-sizing
+   reset in this app) — box-sizing: border-box here so this max-width is
+   the same kind of "true outer width", not just a matching nominal number
+   that then drifts apart once padding/border are added on top. */
 .draft-resume-banner {
-  max-width: 680px;
+  box-sizing: border-box;
+  max-width: 734px;
   margin: 20px auto 0;
   padding: 16px 20px;
   background: #f0fdfa;
@@ -49,13 +55,19 @@
 }
 
 .draft-save-bar {
-  max-width: 680px;
+  max-width: 734px; /* see .draft-resume-banner comment */
   margin: 20px auto 0;
   display: flex;
   justify-content: left;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Tighter gap when it's grouped directly under the resume banner instead
+   of standing alone at the top of the page. */
+.draft-resume-banner + .draft-save-bar {
+  margin-top: 12px;
 }
 
 @media (max-width: 768px) {

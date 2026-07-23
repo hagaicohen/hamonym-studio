@@ -1,9 +1,10 @@
 <div class="wizard-page">
 
   @if (draftToResume()) {
-    <!-- Resuming vs. starting fresh is the only decision that matters here —
-         "שמור טיוטה" doesn't apply until that's resolved, so it's hidden
-         instead of competing for attention alongside an unrelated action. -->
+    <!-- Nothing forces resolving this before touching the form below (the
+         user can just start typing and ignore it), so "שמור טיוטה" stays
+         available the whole time — hiding it here left users with an
+         in-progress draft and no way to save it. -->
     <div class="draft-resume-banner">
       <div class="draft-resume-text">
         <strong>נמצאה טיוטה קודמת</strong> — "{{ draftToResume().legal_name || draftToResume().display_name || 'ללא שם' }}",
@@ -14,26 +15,26 @@
         <button type="button" class="draft-resume-btn" (click)="dismissDraftPrompt()">התחל טיוטה חדשה</button>
       </div>
     </div>
-  } @else {
-    <div class="draft-save-bar">
-      <button
-        type="button"
-        class="save-draft-btn"
-        [disabled]="!stateService.canSaveDraft || savingDraft()"
-        [title]="!stateService.canSaveDraft ? 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה' : ''"
-        (click)="saveDraft()"
-      >
-        {{ savingDraft() ? 'שומר...' : '💾 שמור טיוטה' }}
-      </button>
-
-      @if (draftSaved()) {
-        <span class="draft-save-status draft-save-status--ok">הטיוטה נשמרה — אפשר לחזור אליה בכל שלב</span>
-      }
-      @if (draftSaveError()) {
-        <span class="draft-save-status draft-save-status--error">{{ draftSaveError() }}</span>
-      }
-    </div>
   }
+
+  <div class="draft-save-bar">
+    <button
+      type="button"
+      class="save-draft-btn"
+      [disabled]="!stateService.canSaveDraft || savingDraft()"
+      [title]="!stateService.canSaveDraft ? 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה' : ''"
+      (click)="saveDraft()"
+    >
+      {{ savingDraft() ? 'שומר...' : '💾 שמור טיוטה' }}
+    </button>
+
+    @if (draftSaved()) {
+      <span class="draft-save-status draft-save-status--ok">הטיוטה נשמרה — אפשר לחזור אליה בכל שלב</span>
+    }
+    @if (draftSaveError()) {
+      <span class="draft-save-status draft-save-status--error">{{ draftSaveError() }}</span>
+    }
+  </div>
 
   @if (currentStep === 1) {
     <app-step-entity (continue)="nextStep()"> </app-step-entity>
