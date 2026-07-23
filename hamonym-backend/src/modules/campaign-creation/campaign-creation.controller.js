@@ -121,7 +121,17 @@ exports.extractFromDocuments = async (req, res) => {
     const enableWebResearch = req.body.enableWebResearch === 'true';
     const research = await resolveResearch(enableWebResearch, facts.organizationName, websiteUrl || facts.socialLinks?.[0]);
 
-    const brief = await pipeline.buildBriefFromFacts(facts, research);
+    // Labeled "image1", "image2"... in upload order — the SAME order/filter
+    // the frontend applies to its own files() signal (image mimetypes,
+    // excluding anything tagged "לוגו" — a logo isn't a hero/gallery
+    // candidate, it's handled as its own separate upload) when mapping
+    // galleryCuration's codes back to real File objects, so the indices
+    // line up without any id round-tripping.
+    const images = files
+      .filter((f) => f.mimeType.startsWith('image/') && f.typeLabel !== 'לוגו')
+      .map((f, i) => ({ label: `image${i + 1}`, mimeType: f.mimeType, buffer: f.buffer }));
+
+    const brief = await pipeline.buildBriefFromFacts(facts, research, undefined, images);
 
     res.json({ facts, brief, enableWebResearch, websiteUrl });
   } catch (err) {

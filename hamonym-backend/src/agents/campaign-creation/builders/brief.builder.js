@@ -11,11 +11,26 @@ function suggested(value, reason) {
   return { value: value ?? null, reason: reason || '' };
 }
 
+// Whitelists galleryCuration's hero/gallery/hidden codes against the labels
+// this specific request actually sent (e.g. ["image1","image2"]) — same
+// "don't trust the model, re-verify at the boundary" discipline as
+// organizationNumber/heroVideoUrl. A hallucinated or stale label (e.g. from
+// a previous round, or just made up) would otherwise silently break the
+// frontend's index-based mapping back to real files.
+function sanitizeGalleryCuration(raw, imageLabels) {
+  if (!raw || !imageLabels?.length) return null;
+  const known = new Set(imageLabels);
+  const hero = known.has(raw.hero) ? raw.hero : null;
+  const gallery = Array.isArray(raw.gallery) ? raw.gallery.filter((l) => known.has(l) && l !== hero) : [];
+  const hidden = Array.isArray(raw.hidden) ? raw.hidden.filter((l) => known.has(l) && l !== hero && !gallery.includes(l)) : [];
+  return { hero, gallery, hidden, reason: raw.reason || '' };
+}
+
 // Re-projects the raw LLM response onto the known Brief whitelist — same
 // boundary discipline as free-text.extractor.js's project(). Plain
 // carry-over fields come straight from `facts`, never from the model's
 // output, so the model has no way to alter them even if it tried.
-function project(facts, raw) {
+function project(facts, raw, imageLabels) {
   return {
     organizationName: facts.organizationName ?? null,
     organizationNumber: facts.organizationNumber ?? null,
@@ -31,15 +46,28 @@ function project(facts, raw) {
     suggestedHero: suggested(raw.suggestedHero?.value, raw.suggestedHero?.reason),
     story: suggested(raw.story?.value, raw.story?.reason),
     clarifyingQuestions: Array.isArray(raw.clarifyingQuestions) ? raw.clarifyingQuestions : [],
+    designIntent: raw.designIntent && typeof raw.designIntent === 'object' ? {
+      emotion: raw.designIntent.emotion || null,
+      urgency: raw.designIntent.urgency || null,
+      focus: raw.designIntent.focus || null,
+      energy: raw.designIntent.energy || null,
+    } : null,
+    contentStrategy: raw.contentStrategy && typeof raw.contentStrategy === 'object' ? {
+      primaryAudience: raw.contentStrategy.primaryAudience || null,
+      storyPattern: raw.contentStrategy.storyPattern || null,
+      ctaApproach: raw.contentStrategy.ctaApproach || null,
+    } : null,
+    galleryCuration: sanitizeGalleryCuration(raw.galleryCuration, imageLabels),
   };
 }
 
 // @param {import('../campaign-creation.types').ExtractedFacts} facts
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research about the organization (2026-07-23)
 // @param {Array<{question: string, answer: string}>} [userAnswers] - optional, campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23)
+// @param {Array<{label: string, mimeType: string, buffer: Buffer}>} [images] - optional, uploaded images for galleryCuration (2026-07-23)
 // @returns {Promise<import('../campaign-creation.types').Brief>}
-exports.build = async (facts, research, userAnswers) => {
-  const userPrompt = buildBriefPrompt(facts, research, userAnswers);
+exports.build = async (facts, research, userAnswers, images) => {
+  const userPrompt = buildBriefPrompt(facts, research, userAnswers, images);
   // temperature: 0 — same reasoning as free-text.extractor.js: this corpus
   // exists to be diffed across prompt changes, which only means something if
   // reruns are stable.
@@ -51,7 +79,7 @@ exports.build = async (facts, research, userAnswers) => {
   // where "the model didn't listen" must never leak through, since it's the
   // exact kind of invented number the whole ADR was built to prevent (see
   // Sprint 1 fixture findings).
-  const brief = project(facts, raw);
+  const brief = project(facts, raw, images?.map((img) => img.label));
   if (facts.suggestedTargetAmount == null) {
     brief.suggestedTargetAmount = suggested(null, brief.suggestedTargetAmount.reason || 'לא צוין סכום יעד במקור — יש להזין ידנית.');
   }

@@ -77,6 +77,9 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
    **אם צורף לכם OnlineResearch — חובה** לשלב בפסקה לפחות 2-3 פרטים קונקרטיים וייחודיים ממנו בפועל (למשל: שם תוכנית/פרויקט ספציפי של הארגון, נתון מספרי מדויק עם שנה, עובדה קונקרטית על הקמת הארגון או היקף הפעילות שלו) — לא רק ניסוח כללי-שיווקי ("פועלים למען...", "מאמינים שכל ילד..."). פסקה שהתעלמה מהפרטים הספציפיים שסופקו לכם ב-OnlineResearch והסתפקה בניסוח כללי/גנרי, למרות שהם היו זמינים לכם — נחשבת לא מספקת, גם אם אורכה תקין.
    **אם צורף לכם UserAnswers** (תשובות שהמשתמש עצמו נתן לשאלות הבהרה על הקמפיין הספציפי הזה) — אלה המקור האמין ביותר שיש לכם, אמין יותר מ-ExtractedFacts ומ-OnlineResearch, כי הן מגיעות ישירות ממי שמנהל את הקמפיין. שלבו אותן בפסקה כעובדות מבוססות, ללא היסוס.
 9. clarifyingQuestions: אחרי שכתבתם את story, הביטו במה שבאמת היה לכם (ExtractedFacts + OnlineResearch, אם היה) ושאלו את עצמכם: האם לקמפיין הזה חסרים פרטים תפעוליים קונקרטיים שהיו הופכים את הסיפור מכללי-שיווקי לספציפי ומשכנע (למשל: כמה אנשים/ילדים ייהנו מהתוכנית, מתי בדיוק מתרחש האירוע, כמה עולה להשתתף/לתרום ליחידה אחת, היכן זה קורה)? אם כן — הציעו 2 עד 5 שאלות **קצרות, קונקרטיות וממוקדות** (לא כלליות כמו "ספר לי עוד") שרק מנהל הקמפיין יכול לענות עליהן, שהתשובות להן היו משפרות משמעותית את הסיפור. אם ה-story שכתבתם כבר מבוסס על מספיק פרטים ספציפיים (מה-Facts, מה-OnlineResearch, או מ-UserAnswers שכבר סופקו) — החזירו מערך ריק, אל תשאלו שאלות רק כדי "להיראות יסודיים".
+10. designIntent: תארו את **כוונת** העיצוב הרגשית של הקמפיין הזה — לא צבעים, לא Template, לא CSS (זו החלטה של המערכת, לא שלכם) — רק תיאור מובנה: emotion (רגש מרכזי, מילה או שתיים — למשל "תקווה", "דחיפות", "הכרת תודה"), urgency ("low"/"medium"/"high"), focus (על מי/מה מתמקד הקמפיין — למשל "ילדים", "משפחות", "קהילה"), energy ("calm"/"energetic"). תמיד מלאו את זה, גם אם ה-story קצר — זה מבוסס על category/tone שכבר קבעתם, לא דורש חומר מקור נוסף.
+11. contentStrategy: לא מוצג למשתמש — Metadata פנימי שיכול לשמש בעתיד ניתוח/שיפור של קמפיינים. תארו בקצרה: primaryAudience (למי הקמפיין מדבר בעיקר — למשל "הורים", "קהילה מקומית"), storyPattern ("problem-solution"/"personal-story"/"impact-first"), ctaApproach ("individual-impact"/"collective-impact"/"urgency-driven"). תמיד מלאו, מבוסס על מה שכבר כתבתם ב-story.
+12. galleryCuration: **רק אם צורפו לכם תמונות** (מסומנות image1, image2 וכו' בהודעה) — הביטו בהן בפועל והחליטו: איזו אחת הכי מתאימה כתמונת Hero פותחת (hero — קוד אחד, למשל "image2"), באיזה סדר להציג את השאר בגלריה (gallery — מערך קודים, לא כולל את זו שבחרתם כ-hero, אלא אם אין תמונות אחרות בכלל), ואילו תמונות עדיף להשמיט לגמרי (hidden — למשל תמונה מטושטשת, לא רלוונטית, או כפולה) עם reason קצר שמסביר את הבחירה הכוללת. אם לא צורפו תמונות כלל — החזירו null.
 
 החזר אך ורק JSON תקני בצורה הבאה, בלי טקסט נוסף:
 {
@@ -86,14 +89,18 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
   "suggestedCtaLabel": { "value": "string", "reason": "string" },
   "suggestedHero": { "value": "string", "reason": "string" },
   "story": { "value": "string או null", "reason": "string" },
-  "clarifyingQuestions": ["string", "..."]
+  "clarifyingQuestions": ["string", "..."],
+  "designIntent": { "emotion": "string", "urgency": "low|medium|high", "focus": "string", "energy": "calm|energetic" },
+  "contentStrategy": { "primaryAudience": "string", "storyPattern": "string", "ctaApproach": "string" },
+  "galleryCuration": { "hero": "string או null", "gallery": ["string", "..."], "hidden": ["string", "..."], "reason": "string" } או null
 }`;
 
 // @param {import('./campaign-creation.types').ExtractedFacts} facts
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research (2026-07-23, explicit opt-in — see organization-research.tool.js)
 // @param {Array<{question: string, answer: string}>} [userAnswers] - optional, the campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23 — see rule 9). The single most trustworthy source available: unlike Facts/OnlineResearch, this comes directly from the person running the campaign.
-// @returns {string}
-exports.buildBriefPrompt = (facts, research, userAnswers) => {
+// @param {Array<{label: string, mimeType: string, buffer: Buffer}>} [images] - optional, uploaded image files for galleryCuration (2026-07-23, rule 12). `label` (e.g. "image1") is the caller's own stable identifier — carried straight through into the model's hero/gallery/hidden output so the frontend can map back to real files without guessing.
+// @returns {string | Array<object>} plain string when there are no images (same as before); a multi-modal content-parts array when there are, same pattern as free-text.extractor.js's document-collection path.
+exports.buildBriefPrompt = (facts, research, userAnswers, images) => {
   const lines = [
     `organizationName: ${facts.organizationName ?? 'לא ידוע'}`,
     `organizationDescription: ${facts.organizationDescription ?? 'לא ידוע'}`,
@@ -109,7 +116,18 @@ exports.buildBriefPrompt = (facts, research, userAnswers) => {
     ? `\n\nUserAnswers (תשובות ישירות ממנהל הקמפיין, ר' כלל 8 לגבי story):\n${userAnswers.map((a) => `- ${a.question}\n  ${a.answer}`).join('\n')}`
     : '';
 
-  return `ExtractedFacts:\n${lines}${researchBlock}${answersBlock}`;
+  const text = `ExtractedFacts:\n${lines}${researchBlock}${answersBlock}`;
+
+  if (!images?.length) return text;
+
+  const imagesIntro = `\n\nהתמונות הבאות צורפו לקמפיין, כל אחת מסומנת בקוד שמופיע ממש לפניה — השתמשו באותם קודים בדיוק ב-galleryCuration (כלל 12):`;
+  return [
+    { type: 'text', text: text + imagesIntro },
+    ...images.flatMap((img) => [
+      { type: 'text', text: img.label },
+      { type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.buffer.toString('base64')}` } },
+    ]),
+  ];
 };
 
 exports.BRIEF_SYSTEM_PROMPT = BRIEF_SYSTEM_PROMPT;
