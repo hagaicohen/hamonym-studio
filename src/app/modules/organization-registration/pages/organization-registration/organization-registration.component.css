@@ -5,23 +5,19 @@
   background: #f0fdfa;
   border: 1px solid #99f6e4;
   border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
 }
 
 .draft-resume-text {
   font-size: 14px;
   color: #0f172a;
   line-height: 1.5;
+  margin-bottom: 12px;
 }
 
 .draft-resume-actions {
   display: flex;
+  justify-content: right;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .draft-resume-btn {
@@ -54,7 +50,7 @@
 
 .draft-save-bar {
   max-width: 680px;
-  margin: 12px auto 0;
+  margin: 20px auto 0;
   display: flex;
   justify-content: left;
   align-items: center;
@@ -68,10 +64,6 @@
     max-width: none;
     margin-left: 12px;
     margin-right: 12px;
-  }
-
-  .draft-save-bar {
-    margin-top: 12px;
   }
 }
 
