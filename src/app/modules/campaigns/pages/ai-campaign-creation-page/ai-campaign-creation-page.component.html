@@ -146,6 +146,7 @@
           </div>
         }
 
+        @if (!orgOnly()) {
         <div class="brief-section">
           <h3>הקמפיין</h3>
           @if (b.title) { <div class="field"><span class="label">כותרת:</span> {{ b.title }}</div> }
@@ -193,6 +194,7 @@
             </div>
           }
         </div>
+        }
 
         <p class="brief-note">
           @if (createNewOrg() && orgOnly()) {
