@@ -1,6 +1,6 @@
 <div class="ai-page">
   <div class="ai-card">
-    <h1 class="ai-title">✨ יצירת קמפיין עם AI</h1>
+    <h1 class="ai-title">{{ pageTitle() }}</h1>
     <p class="ai-subtitle">ספרו לנו על העמותה שלכם — בכמה מילים, קישור לאתר, קבצים, או כל שילוב — ונכין לכם הצעה ראשונית לבדיקה.</p>
 
     @if (!brief()) {
@@ -143,6 +143,25 @@
             @if (b.organizationNumber) { <div class="field"><span class="label">מספר עמותה:</span> {{ b.organizationNumber }}</div> }
             @if (!b.organizationNumber) { <div class="field field-missing">מספר עמותה — לא נמצא, יש להזין ידנית</div> }
             @if (b.organizationDescription) { <div class="field"><span class="label">תיאור:</span> {{ b.organizationDescription }}</div> }
+          </div>
+        }
+
+        @if (files().length > 0) {
+          <div class="brief-section">
+            <h3>קבצים שיצורפו</h3>
+            <div class="files-summary">
+              @for (f of files(); track f.file.name + $index) {
+                <div class="file-summary-item">
+                  @if (f.typeLabel === 'לוגו' && logoPreviewUrl()) {
+                    <img [src]="logoPreviewUrl()" class="file-summary-thumb" alt="לוגו" />
+                  } @else {
+                    <span class="file-summary-thumb file-summary-thumb--placeholder">📄</span>
+                  }
+                  <span class="file-summary-name">{{ f.file.name }}</span>
+                  <span class="file-summary-type">{{ f.typeLabel }}</span>
+                </div>
+              }
+            </div>
           </div>
         }
 

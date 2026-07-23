@@ -119,6 +119,14 @@ export class AiCampaignCreationPageComponent implements OnInit {
   createNewOrg = computed(() => this.creationMode() !== 'campaign');
   orgOnly = computed(() => this.creationMode() === 'org-only');
 
+  pageTitle = computed(() => {
+    switch (this.creationMode()) {
+      case 'org-only': return '✨ יצירת עמותה עם AI';
+      case 'org-and-campaign': return '✨ יצירת עמותה וקמפיין עם AI';
+      default: return '✨ יצירת קמפיין עם AI';
+    }
+  });
+
   // Editable "new organization" review fields — prefilled from the Brief
   // once it arrives (see submit()), but always user-editable/confirmable
   // before creation, same "AI proposes, human confirms" principle as the
@@ -144,6 +152,14 @@ export class AiCampaignCreationPageComponent implements OnInit {
   freeText   = signal('');
   websiteUrl = signal('');
   files      = signal<UploadedFile[]>([]);
+
+  // Local preview only (createObjectURL, never uploaded) — lets the user
+  // visually confirm it's the right image in the Brief-review screen
+  // before approving, rather than only seeing a filename.
+  logoPreviewUrl = computed(() => {
+    const logoFile = this.files().find((f) => f.typeLabel === 'לוגו' && f.file.type.startsWith('image/'));
+    return logoFile ? URL.createObjectURL(logoFile.file) : null;
+  });
 
   brief  = signal<Brief | null>(null);
   error  = signal<string | null>(null);
