@@ -23,6 +23,33 @@ const MIN_TEXT_LENGTH = 10;
 // than hoping the prompt was followed.
 const VIDEO_URL_PATTERN = /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/)/i;
 
+// Deterministic backstop for entityTypeGuess — found live (2026-07-23):
+// even with an explicit prompt rule (SYSTEM_PROMPT rule 13), the model
+// still sometimes missed an explicit "עמותת X" mention once it was buried
+// inside a longer combined submission (free text + website + files all
+// aggregated together, see document-collection.extractor.js) — plausibly
+// an attention/priority issue with the extra volume, not a rule-following
+// one. Rather than keep tuning prompt wording against non-determinism,
+// this is a plain keyword scan over the same source text as a fallback:
+// only used when the model returned null, and only for terms that are
+// unambiguous enough to hardcode (a text saying "עמותת X" essentially
+// never means anything else). Order matters — checked most-specific first
+// so e.g. "עמותה... עוסק מורשה" doesn't accidentally match the wrong one.
+const ENTITY_TYPE_KEYWORDS = [
+  [/עוסק\s+פטור/, 'עוסק פטור'],
+  [/עוסק\s+מורשה/, 'עוסק מורשה'],
+  [/חל[״"]?ץ/, 'חל״ץ'],
+  [/מפלגה/, 'מפלגה'],
+  [/עמות(ה|ת)/, 'עמותה'],
+];
+
+function detectEntityTypeFallback(text) {
+  for (const [pattern, value] of ENTITY_TYPE_KEYWORDS) {
+    if (pattern.test(text)) return value;
+  }
+  return null;
+}
+
 function empty(text) {
   return {
     source: 'free_text',
@@ -54,7 +81,7 @@ function project(text, raw) {
     ...empty(text),
     organizationName: raw.organizationName ?? null,
     organizationNumber: raw.organizationNumber ?? null,
-    entityTypeGuess: raw.entityTypeGuess ?? null,
+    entityTypeGuess: raw.entityTypeGuess ?? detectEntityTypeFallback(text),
     categoryGuess: Array.isArray(raw.categoryGuess) ? raw.categoryGuess : [],
     organizationDescription: raw.organizationDescription ?? null,
     suggestedTitle: raw.suggestedTitle ?? null,
