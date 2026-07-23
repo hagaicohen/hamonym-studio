@@ -40,7 +40,13 @@ interface Brief {
   suggestedHero: SuggestedValue;
   story: SuggestedValue;
   researchSources: Array<{ title: string; url: string }>;
+  clarifyingQuestions: string[];
 }
+
+// Opaque to the frontend — passed back verbatim to /refine-brief, never
+// read/displayed directly (see campaign-creation.types.js's ExtractedFacts
+// on the backend for the real shape).
+type ExtractedFacts = Record<string, unknown>;
 
 interface UploadedFile {
   file: File;
@@ -170,8 +176,17 @@ export class AiCampaignCreationPageComponent implements OnInit {
   });
 
   brief  = signal<Brief | null>(null);
+  facts  = signal<ExtractedFacts | null>(null);
   error  = signal<string | null>(null);
   submitting = signal(false);
+
+  // Clarifying-questions round (2026-07-23) — a bounded, ONE-shot follow-up,
+  // not a multi-turn conversation: the backend has no session memory of any
+  // of this, the frontend just carries `facts` forward and sends a second
+  // ordinary request. See campaign-creation.controller.js's refineBrief.
+  clarifyingAnswers = signal<Array<{ question: string; answer: string }>>([]);
+  refiningStory = signal(false);
+  refineError = signal<string | null>(null);
 
   creatingCampaign = signal(false);
   createError = signal<string | null>(null);
@@ -234,11 +249,13 @@ export class AiCampaignCreationPageComponent implements OnInit {
     if (this.enableWebResearch()) formData.append('enableWebResearch', 'true');
 
     this.http
-      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
+      .post<{ brief: Brief; facts: ExtractedFacts }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
         next: (res) => {
           this.brief.set(res.brief);
+          this.facts.set(res.facts);
+          this.clarifyingAnswers.set(res.brief.clarifyingQuestions.map((question) => ({ question, answer: '' })));
           if (this.createNewOrg()) {
             this.newOrgEntityType.set(guessEntityTypeCode(res.brief.entityType));
             this.newOrgName.set(res.brief.organizationName || '');
@@ -252,6 +269,48 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.error.set(err?.error?.error || 'הבקשה נכשלה או נמשכה יותר מדי זמן — נסו שוב');
           this.submitting.set(false);
           this.loader.hide();
+        },
+      });
+  }
+
+  updateClarifyingAnswer(index: number, answer: string): void {
+    this.clarifyingAnswers.update((current) => current.map((a, i) => (i === index ? { ...a, answer } : a)));
+  }
+
+  // One-shot refine: sends facts (already extracted, no re-parsing) +
+  // whatever answers were filled in (blanks are fine — the model still
+  // knows what wasn't answered) back to the SAME kind of stateless request
+  // as submit(), asking for a better-grounded Brief. Replaces the whole
+  // Brief, including a fresh (always empty, per backend) clarifyingQuestions
+  // — capped at one round so this can't turn into an endless Q&A loop.
+  refineStory(): void {
+    const facts = this.facts();
+    if (!facts || this.refiningStory()) return;
+
+    const answered = this.clarifyingAnswers().filter((a) => a.answer.trim());
+    if (!answered.length) return;
+
+    this.refineError.set(null);
+    this.refiningStory.set(true);
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    this.http
+      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/refine-brief`, {
+        facts,
+        userAnswers: answered,
+        enableWebResearch: this.enableWebResearch(),
+        websiteUrl: this.websiteUrl().trim() || undefined,
+      }, { headers })
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
+      .subscribe({
+        next: (res) => {
+          this.brief.set(res.brief);
+          this.clarifyingAnswers.set([]);
+          this.refiningStory.set(false);
+        },
+        error: (err) => {
+          this.refineError.set(err?.error?.error || 'עדכון הטקסט נכשל, נסו שוב');
+          this.refiningStory.set(false);
         },
       });
   }
@@ -539,6 +598,8 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // everything from scratch.
   backToEdit(): void {
     this.brief.set(null);
+    this.clarifyingAnswers.set([]);
+    this.refineError.set(null);
     this.error.set(null);
     this.createError.set(null);
   }
@@ -552,6 +613,9 @@ export class AiCampaignCreationPageComponent implements OnInit {
 
   reset(): void {
     this.brief.set(null);
+    this.facts.set(null);
+    this.clarifyingAnswers.set([]);
+    this.refineError.set(null);
     this.error.set(null);
     this.createError.set(null);
     this.freeText.set('');

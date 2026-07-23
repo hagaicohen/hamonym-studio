@@ -197,6 +197,24 @@
                 </ul>
               </details>
             }
+
+            @if (clarifyingAnswers().length) {
+              <div class="clarifying-questions">
+                <p class="clarifying-questions-intro">✨ כמה פרטים שרק אתם יודעים יעזרו לנו לכתוב טקסט הרבה יותר טוב <span class="optional">(לא חובה)</span>:</p>
+                @for (qa of clarifyingAnswers(); track qa.question; let i = $index) {
+                  <label class="clarifying-question-label">{{ qa.question }}</label>
+                  <input class="ai-input" type="text" [ngModel]="qa.answer" (ngModelChange)="updateClarifyingAnswer(i, $event)" />
+                }
+
+                @if (refineError()) {
+                  <div class="ai-error">{{ refineError() }}</div>
+                }
+
+                <button type="button" class="btn-secondary" [disabled]="refiningStory()" (click)="refineStory()">
+                  {{ refiningStory() ? 'מעדכנים...' : 'עדכנו את הטקסט עם התשובות ←' }}
+                </button>
+              </div>
+            }
           </div>
 
           <div class="field">
