@@ -6,6 +6,13 @@
 // onto that whitelist regardless of what the model actually returns — this
 // prompt describes the contract, it doesn't enforce it.
 
+// Bump this string any time BRIEF_SYSTEM_PROMPT's rules change meaningfully
+// (not for typo fixes) — logged verbatim into campaign_ai_generations
+// (2026-07-23) so a future "why did results change" question has a real
+// answer instead of a guess. Plain "YYYY-MM-DD.N" — no build tooling
+// needed, just bump N (or the date) by hand when you touch the rules.
+exports.PROMPT_VERSION = '2026-07-23.1';
+
 const SYSTEM_PROMPT = `אתה עוזר לחלץ עובדות אובייקטיביות מטקסט חופשי שכתב מנהל עמותה, לצורך הקמת עמותה וקמפיין גיוס בפלטפורמת "המונים".
 
 חוקים מחייבים:

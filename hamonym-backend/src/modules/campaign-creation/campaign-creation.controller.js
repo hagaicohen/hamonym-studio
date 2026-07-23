@@ -10,6 +10,15 @@ const { WebsiteFetchError } =
 const organizationResearchTool =
   require('../../agents/campaign-creation/tools/organization-research.tool');
 
+const generationLog =
+  require('../../agents/campaign-creation/generation-log');
+
+const { PROMPT_VERSION } =
+  require('../../agents/campaign-creation/campaign-creation.prompt');
+
+const llmService =
+  require('../../agents/llm.service');
+
 function getStatusCode(error) {
   if (error.message === 'Source and input are required') return 400;
   if (error.message === 'At least one of text, a website URL, or a file is required') return 400;
@@ -131,9 +140,26 @@ exports.extractFromDocuments = async (req, res) => {
       .filter((f) => f.mimeType.startsWith('image/') && f.typeLabel !== 'לוגו')
       .map((f, i) => ({ label: `image${i + 1}`, mimeType: f.mimeType, buffer: f.buffer }));
 
+    const startedAt = Date.now();
     const brief = await pipeline.buildBriefFromFacts(facts, research, undefined, images);
 
-    res.json({ facts, brief, enableWebResearch, websiteUrl });
+    // "regenerated" vs "initial" — the frontend knows whether this is the
+    // user's first submit() in this session or a resubmission after
+    // backToEdit(); the backend has no session state to infer that from
+    // (ADR decision 2), so it's told explicitly.
+    const generationReason = req.body.isRegeneration === 'true' ? 'regenerated' : 'initial';
+    const generationId = await generationLog.logGeneration({
+      userId: req.user?.id,
+      promptVersion: PROMPT_VERSION,
+      model: llmService.MODEL,
+      brief,
+      webSearchUsed: enableWebResearch,
+      webSources: brief.researchSources,
+      generationTimeMs: Date.now() - startedAt,
+      generationReason,
+    });
+
+    res.json({ facts, brief, enableWebResearch, websiteUrl, generationId });
   } catch (err) {
     console.error(err);
     res
@@ -159,12 +185,46 @@ exports.refineBrief = async (req, res) => {
     }
 
     const research = await resolveResearch(!!enableWebResearch, facts.organizationName, websiteUrl || facts.socialLinks?.[0]);
+    const startedAt = Date.now();
     const brief = await pipeline.buildBriefFromFacts(facts, research, userAnswers);
 
-    res.json({ brief });
+    const generationId = await generationLog.logGeneration({
+      userId: req.user?.id,
+      promptVersion: PROMPT_VERSION,
+      model: llmService.MODEL,
+      brief,
+      webSearchUsed: !!enableWebResearch,
+      webSources: brief.researchSources,
+      generationTimeMs: Date.now() - startedAt,
+      generationReason: 'refined',
+    });
+
+    res.json({ brief, generationId });
   } catch (err) {
     console.error(err);
     res.status(err.message === 'Facts is required' ? 400 : 500)
       .json({ error: err.message === 'Facts is required' ? 'חסר Facts' : 'משהו השתבש, נסו שוב' });
+  }
+};
+
+// PATCH /api/campaign-creation/generations/:id/link-campaign
+// body: { campaignId: string }
+// Fired once, right after the campaign is actually created (see
+// approveAndCreate() in ai-campaign-creation-page.component.ts) — links an
+// existing, already-logged generation row to the campaign it produced.
+// Not every generation gets linked (a user can regenerate/abandon without
+// ever creating a campaign) -- that's fine, campaign_id just stays NULL.
+exports.linkGenerationToCampaign = async (req, res) => {
+  try {
+    const { campaignId } = req.body;
+    if (!campaignId) {
+      throw new Error('campaignId is required');
+    }
+    await generationLog.linkCampaign(req.params.id, campaignId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(err.message === 'campaignId is required' ? 400 : 500)
+      .json({ error: err.message === 'campaignId is required' ? 'חסר campaignId' : 'משהו השתבש' });
   }
 };

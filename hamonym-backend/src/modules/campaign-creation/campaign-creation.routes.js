@@ -56,5 +56,11 @@ router.post(
   controller.refineBrief
 );
 
+router.patch(
+  '/generations/:id/link-campaign',
+  requireAuth,
+  controller.linkGenerationToCampaign
+);
+
 module.exports =
   router;

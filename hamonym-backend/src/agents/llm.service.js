@@ -4,6 +4,11 @@
 // parsed JSON returned.
 const OpenAI = require('openai');
 
+// Exported so callers that log what model actually produced a result
+// (campaign_ai_generations, 2026-07-23) don't hardcode this string in a
+// second place — one real source of truth for "what model are we on."
+exports.MODEL = 'gpt-4o-mini';
+
 let client = null;
 function getClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -24,7 +29,7 @@ function getClient() {
 // @returns {Promise<object>} parsed JSON — shape is whatever the caller's prompt asked for.
 exports.complete = async (systemPrompt, userPrompt, options = {}) => {
   const response = await getClient().chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: exports.MODEL,
     response_format: { type: 'json_object' },
     ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
     messages: [
@@ -47,7 +52,7 @@ exports.complete = async (systemPrompt, userPrompt, options = {}) => {
 // @returns {Promise<{ text: string, sources: Array<{title: string, url: string}> }>}
 exports.completeWithWebSearch = async (prompt) => {
   const response = await getClient().responses.create({
-    model: 'gpt-4o-mini',
+    model: exports.MODEL,
     tools: [{ type: 'web_search' }],
     input: prompt,
   });
