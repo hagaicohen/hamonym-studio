@@ -30,14 +30,16 @@ function project(facts, raw) {
     suggestedCtaLabel: suggested(raw.suggestedCtaLabel?.value, raw.suggestedCtaLabel?.reason),
     suggestedHero: suggested(raw.suggestedHero?.value, raw.suggestedHero?.reason),
     story: suggested(raw.story?.value, raw.story?.reason),
+    clarifyingQuestions: Array.isArray(raw.clarifyingQuestions) ? raw.clarifyingQuestions : [],
   };
 }
 
 // @param {import('../campaign-creation.types').ExtractedFacts} facts
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research about the organization (2026-07-23)
+// @param {Array<{question: string, answer: string}>} [userAnswers] - optional, campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23)
 // @returns {Promise<import('../campaign-creation.types').Brief>}
-exports.build = async (facts, research) => {
-  const userPrompt = buildBriefPrompt(facts, research);
+exports.build = async (facts, research, userAnswers) => {
+  const userPrompt = buildBriefPrompt(facts, research, userAnswers);
   // temperature: 0 — same reasoning as free-text.extractor.js: this corpus
   // exists to be diffed across prompt changes, which only means something if
   // reruns are stable.
@@ -52,6 +54,15 @@ exports.build = async (facts, research) => {
   const brief = project(facts, raw);
   if (facts.suggestedTargetAmount == null) {
     brief.suggestedTargetAmount = suggested(null, brief.suggestedTargetAmount.reason || 'לא צוין סכום יעד במקור — יש להזין ידנית.');
+  }
+
+  // Capped at one round on purpose — after the campaign manager already
+  // answered a round of clarifyingQuestions, asking yet another round would
+  // start to feel like an interrogation instead of a quick assist. If the
+  // model still doesn't have enough after UserAnswers, better to write the
+  // best story it can with an honest reason than to keep asking.
+  if (userAnswers?.length) {
+    brief.clarifyingQuestions = [];
   }
 
   // Carried straight through, never re-derived from the model's output —

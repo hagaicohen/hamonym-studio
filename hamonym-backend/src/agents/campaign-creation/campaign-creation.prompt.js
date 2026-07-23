@@ -75,6 +75,8 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
 7. כתוב בעברית, אלא אם organizationDescription/title המקוריים כתובים בשפה אחרת.
 8. story: פסקה עשירה יותר (בערך 150–350 מילים) שמתארת את המיזם/הקמפיין בעמוד הקמפיין עצמו — לא רק תמצית של shortDescription, אלא טקסט שיווקי מלא וזורם שמזמין לתרום. מותר לנסח מחדש, להרחיב ולשפר זרימה סיפורית על סמך organizationDescription/title/shortDescription/categoryGuess שקיבלתם, וכן על סמך OnlineResearch אם צורף לכם (ר' למטה) — **אסור** להמציא עובדות/מספרים/פרטים קונקרטיים חדשים שלא הופיעו באחד מהמקורות האלה (למשל שנת ייסוד, מספר מוטבים, סטטיסטיקות). אם אין לכם מספיק חומר מקור (לא מ-ExtractedFacts ולא מ-OnlineResearch) לבנות פסקה משמעותית — החזירו value: null עם reason שמסביר שאין מספיק חומר מקור, אל תמלאו טקסט גנרי כדי "להיראות שלם".
    **אם צורף לכם OnlineResearch — חובה** לשלב בפסקה לפחות 2-3 פרטים קונקרטיים וייחודיים ממנו בפועל (למשל: שם תוכנית/פרויקט ספציפי של הארגון, נתון מספרי מדויק עם שנה, עובדה קונקרטית על הקמת הארגון או היקף הפעילות שלו) — לא רק ניסוח כללי-שיווקי ("פועלים למען...", "מאמינים שכל ילד..."). פסקה שהתעלמה מהפרטים הספציפיים שסופקו לכם ב-OnlineResearch והסתפקה בניסוח כללי/גנרי, למרות שהם היו זמינים לכם — נחשבת לא מספקת, גם אם אורכה תקין.
+   **אם צורף לכם UserAnswers** (תשובות שהמשתמש עצמו נתן לשאלות הבהרה על הקמפיין הספציפי הזה) — אלה המקור האמין ביותר שיש לכם, אמין יותר מ-ExtractedFacts ומ-OnlineResearch, כי הן מגיעות ישירות ממי שמנהל את הקמפיין. שלבו אותן בפסקה כעובדות מבוססות, ללא היסוס.
+9. clarifyingQuestions: אחרי שכתבתם את story, הביטו במה שבאמת היה לכם (ExtractedFacts + OnlineResearch, אם היה) ושאלו את עצמכם: האם לקמפיין הזה חסרים פרטים תפעוליים קונקרטיים שהיו הופכים את הסיפור מכללי-שיווקי לספציפי ומשכנע (למשל: כמה אנשים/ילדים ייהנו מהתוכנית, מתי בדיוק מתרחש האירוע, כמה עולה להשתתף/לתרום ליחידה אחת, היכן זה קורה)? אם כן — הציעו 2 עד 5 שאלות **קצרות, קונקרטיות וממוקדות** (לא כלליות כמו "ספר לי עוד") שרק מנהל הקמפיין יכול לענות עליהן, שהתשובות להן היו משפרות משמעותית את הסיפור. אם ה-story שכתבתם כבר מבוסס על מספיק פרטים ספציפיים (מה-Facts, מה-OnlineResearch, או מ-UserAnswers שכבר סופקו) — החזירו מערך ריק, אל תשאלו שאלות רק כדי "להיראות יסודיים".
 
 החזר אך ורק JSON תקני בצורה הבאה, בלי טקסט נוסף:
 {
@@ -83,13 +85,15 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
   "suggestedTone": { "value": "string", "reason": "string" },
   "suggestedCtaLabel": { "value": "string", "reason": "string" },
   "suggestedHero": { "value": "string", "reason": "string" },
-  "story": { "value": "string או null", "reason": "string" }
+  "story": { "value": "string או null", "reason": "string" },
+  "clarifyingQuestions": ["string", "..."]
 }`;
 
 // @param {import('./campaign-creation.types').ExtractedFacts} facts
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research (2026-07-23, explicit opt-in — see organization-research.tool.js)
+// @param {Array<{question: string, answer: string}>} [userAnswers] - optional, the campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23 — see rule 9). The single most trustworthy source available: unlike Facts/OnlineResearch, this comes directly from the person running the campaign.
 // @returns {string}
-exports.buildBriefPrompt = (facts, research) => {
+exports.buildBriefPrompt = (facts, research, userAnswers) => {
   const lines = [
     `organizationName: ${facts.organizationName ?? 'לא ידוע'}`,
     `organizationDescription: ${facts.organizationDescription ?? 'לא ידוע'}`,
@@ -101,7 +105,11 @@ exports.buildBriefPrompt = (facts, research) => {
 
   const researchBlock = research?.text ? `\n\nOnlineResearch (חיפוש אינטרנט אמיתי על הארגון, ר' כלל 8 לגבי story):\n${research.text}` : '';
 
-  return `ExtractedFacts:\n${lines}${researchBlock}`;
+  const answersBlock = userAnswers?.length
+    ? `\n\nUserAnswers (תשובות ישירות ממנהל הקמפיין, ר' כלל 8 לגבי story):\n${userAnswers.map((a) => `- ${a.question}\n  ${a.answer}`).join('\n')}`
+    : '';
+
+  return `ExtractedFacts:\n${lines}${researchBlock}${answersBlock}`;
 };
 
 exports.BRIEF_SYSTEM_PROMPT = BRIEF_SYSTEM_PROMPT;

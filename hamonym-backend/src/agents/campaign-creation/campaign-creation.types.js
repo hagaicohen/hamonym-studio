@@ -78,6 +78,7 @@
  * @property {SuggestedValue} suggestedHero - One sentence describing what the Hero section should emphasize visually/emotionally.
  * @property {SuggestedValue} story - A longer (~150-350 word) narrative paragraph for the campaign page's main body — creative expansion/rephrasing of organizationDescription/title/shortDescription (and OnlineResearch when provided), never new invented facts. {value: null, reason: '...'} when there isn't enough source material to expand from.
  * @property {Array<{title: string, url: string}>} researchSources - URLs actually cited by OpenAI's web_search tool when the user opted into online research (2026-07-23); [] when research wasn't requested or found nothing. Shown to the user for transparency, not consumed structurally.
+ * @property {string[]} clarifyingQuestions - 2-5 short, specific questions the Brief LLM step generated when it judged the story would materially improve with operational details only the campaign manager would know (exact dates, headcounts, costs — the kind of thing no web search or Facts extraction can invent). [] when there was already enough to work with, or after a round of userAnswers was already incorporated (capped at one round). See campaign-creation.prompt.js rule 9.
  */
 
 module.exports = {};

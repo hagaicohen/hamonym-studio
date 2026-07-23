@@ -24,6 +24,16 @@ function getErrorMessage(error) {
   return 'משהו השתבש, נסו שוב';
 }
 
+// Shared by extract-documents and refine-brief so a refine round asks for
+// research the same way the first round did — organization-research.tool.js
+// is cache-backed (30-day TTL), so re-requesting it here on refine is
+// effectively free/instant when it's the same org, not a second real
+// web_search call.
+async function resolveResearch(enableWebResearch, organizationName, websiteUrl) {
+  if (!enableWebResearch) return null;
+  return organizationResearchTool.research({ organizationName, websiteUrl: websiteUrl || null });
+}
+
 // POST /api/campaign-creation/extract
 // body: { source: 'free_text' | 'website', input: string }
 // Single-shot, no session (ADR decision 2) — this call does Extraction +
@@ -109,20 +119,42 @@ exports.extractFromDocuments = async (req, res) => {
     // input, so this stays grounded in the same Facts the rest of the Brief
     // is built from.
     const enableWebResearch = req.body.enableWebResearch === 'true';
-    const research = enableWebResearch
-      ? await organizationResearchTool.research({
-        organizationName: facts.organizationName,
-        websiteUrl: websiteUrl || facts.socialLinks?.[0] || null,
-      })
-      : null;
+    const research = await resolveResearch(enableWebResearch, facts.organizationName, websiteUrl || facts.socialLinks?.[0]);
 
     const brief = await pipeline.buildBriefFromFacts(facts, research);
 
-    res.json({ facts, brief });
+    res.json({ facts, brief, enableWebResearch, websiteUrl });
   } catch (err) {
     console.error(err);
     res
       .status(getStatusCode(err))
       .json({ error: getErrorMessage(err) });
+  }
+};
+
+// POST /api/campaign-creation/refine-brief (application/json)
+// body: { facts: ExtractedFacts, userAnswers: Array<{question, answer}>,
+//   enableWebResearch?: boolean, websiteUrl?: string }
+// Second round of the clarifyingQuestions flow (2026-07-23) — takes the
+// SAME facts already extracted (no re-extraction, nothing new to parse)
+// plus the campaign manager's own answers, and rebuilds just the Brief.
+// Deliberately NOT a multi-turn/session agent (ADR decision 2 still holds):
+// this is one more ordinary, stateless request — the frontend carries facts
+// forward, the backend has no memory of the first round at all.
+exports.refineBrief = async (req, res) => {
+  try {
+    const { facts, userAnswers, enableWebResearch, websiteUrl } = req.body;
+    if (!facts) {
+      throw new Error('Facts is required');
+    }
+
+    const research = await resolveResearch(!!enableWebResearch, facts.organizationName, websiteUrl || facts.socialLinks?.[0]);
+    const brief = await pipeline.buildBriefFromFacts(facts, research, userAnswers);
+
+    res.json({ brief });
+  } catch (err) {
+    console.error(err);
+    res.status(err.message === 'Facts is required' ? 400 : 500)
+      .json({ error: err.message === 'Facts is required' ? 'חסר Facts' : 'משהו השתבש, נסו שוב' });
   }
 };

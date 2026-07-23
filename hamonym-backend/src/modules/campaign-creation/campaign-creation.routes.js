@@ -50,5 +50,11 @@ router.post(
   controller.mapToDraft
 );
 
+router.post(
+  '/refine-brief',
+  requireAuth,
+  controller.refineBrief
+);
+
 module.exports =
   router;
