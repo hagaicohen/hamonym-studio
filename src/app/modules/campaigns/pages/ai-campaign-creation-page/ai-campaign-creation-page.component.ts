@@ -183,6 +183,15 @@ export class AiCampaignCreationPageComponent implements OnInit {
   error  = signal<string | null>(null);
   submitting = signal(false);
 
+  // campaign_ai_generations logging (2026-07-23) — best-effort on the
+  // backend (never blocks the actual flow if it fails). generationId tracks
+  // whichever generation call produced the CURRENT brief (initial submit,
+  // regeneration, or refine), so it can be linked to the real campaign once
+  // one gets created. hasGeneratedOnce distinguishes "initial" from
+  // "regenerated" for the backend, which has no session state of its own.
+  generationId = signal<string | null>(null);
+  hasGeneratedOnce = signal(false);
+
   // Clarifying-questions round (2026-07-23) — a bounded, ONE-shot follow-up,
   // not a multi-turn conversation: the backend has no session memory of any
   // of this, the frontend just carries `facts` forward and sends a second
@@ -250,14 +259,17 @@ export class AiCampaignCreationPageComponent implements OnInit {
     if (this.freeText().trim()) formData.append('freeText', this.freeText().trim());
     if (this.websiteUrl().trim()) formData.append('websiteUrl', this.websiteUrl().trim());
     if (this.enableWebResearch()) formData.append('enableWebResearch', 'true');
+    if (this.hasGeneratedOnce()) formData.append('isRegeneration', 'true');
 
     this.http
-      .post<{ brief: Brief; facts: ExtractedFacts }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
+      .post<{ brief: Brief; facts: ExtractedFacts; generationId: string | null }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
         next: (res) => {
           this.brief.set(res.brief);
           this.facts.set(res.facts);
+          this.generationId.set(res.generationId);
+          this.hasGeneratedOnce.set(true);
           this.clarifyingAnswers.set(res.brief.clarifyingQuestions.map((question) => ({ question, answer: '' })));
           if (this.createNewOrg()) {
             this.newOrgEntityType.set(guessEntityTypeCode(res.brief.entityType));
@@ -298,7 +310,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     this.http
-      .post<{ brief: Brief }>(`${environment.apiUrl}/api/campaign-creation/refine-brief`, {
+      .post<{ brief: Brief; generationId: string | null }>(`${environment.apiUrl}/api/campaign-creation/refine-brief`, {
         facts,
         userAnswers: answered,
         enableWebResearch: this.enableWebResearch(),
@@ -308,6 +320,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.brief.set(res.brief);
+          this.generationId.set(res.generationId);
           this.clarifyingAnswers.set([]);
           this.refiningStory.set(false);
         },
@@ -450,6 +463,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.uploadCampaignImages(brief).subscribe(() => {
             this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
               next: (created) => {
+                if (created.id) this.linkGenerationToCampaign(created.id);
                 this.creatingCampaign.set(false);
                 this.loader.hide();
                 this.router.navigate(['/campaigns', created.id, 'edit']);
@@ -468,6 +482,20 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.createError.set('משהו השתבש בהכנת הקמפיין, נסו שוב');
         },
       });
+  }
+
+  // Best-effort, fire-and-forget on purpose (campaign_ai_generations,
+  // 2026-07-23) — links the generation that produced this Brief to the real
+  // campaign it resulted in. Not every generation gets linked (regenerated/
+  // abandoned attempts stay unlinked, campaign_id just stays NULL) — that's
+  // expected, not an error. Never blocks navigation on success/failure.
+  private linkGenerationToCampaign(campaignId: string): void {
+    const generationId = this.generationId();
+    if (!generationId) return;
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    this.http
+      .patch(`${environment.apiUrl}/api/campaign-creation/generations/${generationId}/link-campaign`, { campaignId }, { headers })
+      .subscribe({ error: () => {} });
   }
 
   // Uploaded files were only ever used as Vision-LLM input for extraction
@@ -633,6 +661,8 @@ export class AiCampaignCreationPageComponent implements OnInit {
   reset(): void {
     this.brief.set(null);
     this.facts.set(null);
+    this.generationId.set(null);
+    this.hasGeneratedOnce.set(false);
     this.clarifyingAnswers.set([]);
     this.refineError.set(null);
     this.error.set(null);
