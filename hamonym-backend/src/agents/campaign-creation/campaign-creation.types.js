@@ -76,7 +76,8 @@
  * @property {SuggestedValue} suggestedTone - Short mood/style description (e.g. "תקווה ואופטימיות"), not a specific frontend palette key — TEMPLATE_PALETTES mapping is frontend-owned, deferred to the Draft-mapping sprint.
  * @property {SuggestedValue} suggestedCtaLabel - Short button text, e.g. "תרמו עכשיו".
  * @property {SuggestedValue} suggestedHero - One sentence describing what the Hero section should emphasize visually/emotionally.
- * @property {SuggestedValue} story - A longer (~150-350 word) narrative paragraph for the campaign page's main body — creative expansion/rephrasing of organizationDescription/title/shortDescription, never new invented facts. {value: null, reason: '...'} when there isn't enough source material to expand from.
+ * @property {SuggestedValue} story - A longer (~150-350 word) narrative paragraph for the campaign page's main body — creative expansion/rephrasing of organizationDescription/title/shortDescription (and OnlineResearch when provided), never new invented facts. {value: null, reason: '...'} when there isn't enough source material to expand from.
+ * @property {Array<{title: string, url: string}>} researchSources - URLs actually cited by OpenAI's web_search tool when the user opted into online research (2026-07-23); [] when research wasn't requested or found nothing. Shown to the user for transparency, not consumed structurally.
  */
 
 module.exports = {};

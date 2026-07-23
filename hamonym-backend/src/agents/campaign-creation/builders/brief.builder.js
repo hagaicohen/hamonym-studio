@@ -34,9 +34,10 @@ function project(facts, raw) {
 }
 
 // @param {import('../campaign-creation.types').ExtractedFacts} facts
+// @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research about the organization (2026-07-23)
 // @returns {Promise<import('../campaign-creation.types').Brief>}
-exports.build = async (facts) => {
-  const userPrompt = buildBriefPrompt(facts);
+exports.build = async (facts, research) => {
+  const userPrompt = buildBriefPrompt(facts, research);
   // temperature: 0 — same reasoning as free-text.extractor.js: this corpus
   // exists to be diffed across prompt changes, which only means something if
   // reruns are stable.
@@ -52,6 +53,13 @@ exports.build = async (facts) => {
   if (facts.suggestedTargetAmount == null) {
     brief.suggestedTargetAmount = suggested(null, brief.suggestedTargetAmount.reason || 'לא צוין סכום יעד במקור — יש להזין ידנית.');
   }
+
+  // Carried straight through, never re-derived from the model's output —
+  // these are the actual URLs OpenAI's web_search tool cited, not something
+  // the LLM could alter. Shown to the user for transparency (which real
+  // pages backed the generated story) even though nothing downstream
+  // consumes them structurally yet.
+  brief.researchSources = research?.sources || [];
 
   return brief;
 };

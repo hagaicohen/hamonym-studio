@@ -7,6 +7,9 @@ const pipeline =
 const { WebsiteFetchError } =
   require('../../agents/campaign-creation/extractors/website.extractor');
 
+const organizationResearchTool =
+  require('../../agents/campaign-creation/tools/organization-research.tool');
+
 function getStatusCode(error) {
   if (error.message === 'Source and input are required') return 400;
   if (error.message === 'At least one of text, a website URL, or a file is required') return 400;
@@ -98,7 +101,22 @@ exports.extractFromDocuments = async (req, res) => {
     }));
 
     const facts = await pipeline.extractFromDocuments(files, freeText, websiteUrl);
-    const brief = await pipeline.buildBriefFromFacts(facts);
+
+    // Explicit opt-in only (2026-07-23) — a real web_search call costs
+    // money and adds latency, so this only runs when the user deliberately
+    // checked the box, never automatically. facts.organizationName/
+    // socialLinks come from what was actually extracted, not raw user
+    // input, so this stays grounded in the same Facts the rest of the Brief
+    // is built from.
+    const enableWebResearch = req.body.enableWebResearch === 'true';
+    const research = enableWebResearch
+      ? await organizationResearchTool.research({
+        organizationName: facts.organizationName,
+        websiteUrl: websiteUrl || facts.socialLinks?.[0] || null,
+      })
+      : null;
+
+    const brief = await pipeline.buildBriefFromFacts(facts, research);
 
     res.json({ facts, brief });
   } catch (err) {

@@ -73,7 +73,7 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
 5. suggestedHero: משפט אחד שמתאר מה כדאי שהחלק הפותח (Hero) של עמוד הקמפיין יבליט רגשית/ויזואלית — לא טקסט שיווקי סופי, רק כיוון.
 6. הישען אך ורק על מה שמופיע ב-ExtractedFacts שקיבלת. אם שדה מסוים ריק/null ב-Facts, אל תמציא תוכן חדש בשבילו במקום — במקרה הצורך תבסס את ההצעה שלך על שדות אחרים שיש בהם תוכן.
 7. כתוב בעברית, אלא אם organizationDescription/title המקוריים כתובים בשפה אחרת.
-8. story: פסקה עשירה יותר (בערך 150–350 מילים) שמתארת את המיזם/הקמפיין בעמוד הקמפיין עצמו — לא רק תמצית של shortDescription, אלא טקסט שיווקי מלא וזורם שמזמין לתרום. מותר לנסח מחדש, להרחיב ולשפר זרימה סיפורית על סמך organizationDescription/title/shortDescription/categoryGuess שקיבלתם — **אסור** להמציא עובדות/מספרים/פרטים קונקרטיים חדשים שלא הופיעו כבר בשדות האלה (למשל שנת ייסוד, מספר מוטבים, סטטיסטיקות). אם organizationDescription ו-shortDescription שקיבלתם ריקים או קצרים מדי לבנות מהם פסקה משמעותית — החזירו value: null עם reason שמסביר שאין מספיק חומר מקור, אל תמלאו טקסט גנרי כדי "להיראות שלם".
+8. story: פסקה עשירה יותר (בערך 150–350 מילים) שמתארת את המיזם/הקמפיין בעמוד הקמפיין עצמו — לא רק תמצית של shortDescription, אלא טקסט שיווקי מלא וזורם שמזמין לתרום. מותר לנסח מחדש, להרחיב ולשפר זרימה סיפורית על סמך organizationDescription/title/shortDescription/categoryGuess שקיבלתם, וכן על סמך OnlineResearch אם צורף לכם (ר' למטה) — **אסור** להמציא עובדות/מספרים/פרטים קונקרטיים חדשים שלא הופיעו באחד מהמקורות האלה (למשל שנת ייסוד, מספר מוטבים, סטטיסטיקות). אם אין לכם מספיק חומר מקור (לא מ-ExtractedFacts ולא מ-OnlineResearch) לבנות פסקה משמעותית — החזירו value: null עם reason שמסביר שאין מספיק חומר מקור, אל תמלאו טקסט גנרי כדי "להיראות שלם". כשיש OnlineResearch — שלבו אותו באופן טבעי לתוך הסיפור (עובדות אמיתיות על הארגון מחזקות את הפסקה), לא כפסקה נפרדת/מודבקת.
 
 החזר אך ורק JSON תקני בצורה הבאה, בלי טקסט נוסף:
 {
@@ -86,8 +86,9 @@ const BRIEF_SYSTEM_PROMPT = `אתה עוזר יצירתי שמכין הצעת פ
 }`;
 
 // @param {import('./campaign-creation.types').ExtractedFacts} facts
+// @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research (2026-07-23, explicit opt-in — see organization-research.tool.js)
 // @returns {string}
-exports.buildBriefPrompt = (facts) => {
+exports.buildBriefPrompt = (facts, research) => {
   const lines = [
     `organizationName: ${facts.organizationName ?? 'לא ידוע'}`,
     `organizationDescription: ${facts.organizationDescription ?? 'לא ידוע'}`,
@@ -97,7 +98,9 @@ exports.buildBriefPrompt = (facts) => {
     `suggestedTargetAmount (מקור): ${facts.suggestedTargetAmount ?? 'לא צוין'}`,
   ].join('\n');
 
-  return `ExtractedFacts:\n${lines}`;
+  const researchBlock = research?.text ? `\n\nOnlineResearch (חיפוש אינטרנט אמיתי על הארגון, ר' כלל 8 לגבי story):\n${research.text}` : '';
+
+  return `ExtractedFacts:\n${lines}${researchBlock}`;
 };
 
 exports.BRIEF_SYSTEM_PROMPT = BRIEF_SYSTEM_PROMPT;

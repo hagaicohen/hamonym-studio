@@ -35,3 +35,31 @@ exports.complete = async (systemPrompt, userPrompt, options = {}) => {
 
   return JSON.parse(response.choices[0].message.content);
 };
+
+// Real internet search, grounded via OpenAI's own web_search tool (Responses
+// API — a different endpoint from chat.completions, doesn't support
+// response_format: json_object combined with tools, hence plain text out
+// rather than reusing complete()'s JSON-mode contract). Same OPENAI_API_KEY,
+// no separate search-provider account — billed per OpenAI's own usage-based
+// pricing for the tool call (2026-07-23 decision, see
+// organization-research.tool.js for the first real caller).
+// @param {string} prompt
+// @returns {Promise<{ text: string, sources: Array<{title: string, url: string}> }>}
+exports.completeWithWebSearch = async (prompt) => {
+  const response = await getClient().responses.create({
+    model: 'gpt-4o-mini',
+    tools: [{ type: 'web_search' }],
+    input: prompt,
+  });
+
+  const message = response.output?.find((item) => item.type === 'message');
+  const content = message?.content?.find((c) => c.type === 'output_text');
+  const text = content?.text || '';
+
+  const seen = new Set();
+  const sources = (content?.annotations || [])
+    .filter((a) => a.type === 'url_citation' && a.url && !seen.has(a.url) && seen.add(a.url))
+    .map((a) => ({ title: a.title || a.url, url: a.url }));
+
+  return { text, sources };
+};

@@ -72,12 +72,13 @@ exports.extractFromDocuments = async (files, freeText, websiteUrl) => {
 // ExtractedFacts directly (not text) so it can be tested/regenerated without
 // touching Extraction at all (ADR decision 5).
 // @param {import('./campaign-creation.types').ExtractedFacts} facts
+// @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research (2026-07-23, explicit opt-in — see organization-research.tool.js)
 // @returns {Promise<import('./campaign-creation.types').Brief & { trace: object[] }>}
-exports.buildBriefFromFacts = async (facts) => {
+exports.buildBriefFromFacts = async (facts, research) => {
   const tracer = createTracer('CampaignCreationPipeline.buildBriefFromFacts');
 
-  const brief = await tracer.trace('BriefBuilder', () => briefBuilder.build(facts),
-    (b) => ({ category: b.category.value, hasTargetAmount: b.suggestedTargetAmount.value != null }));
+  const brief = await tracer.trace('BriefBuilder', () => briefBuilder.build(facts, research),
+    (b) => ({ category: b.category.value, hasTargetAmount: b.suggestedTargetAmount.value != null, hasResearch: !!research }));
 
   tracer.print();
   return { ...brief, trace: tracer.steps };
