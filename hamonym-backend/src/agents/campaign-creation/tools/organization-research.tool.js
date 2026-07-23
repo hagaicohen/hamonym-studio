@@ -44,7 +44,7 @@ async function getCached(organizationName, websiteUrl) {
       [organizationName || '', websiteUrl || ''],
     );
     if (!result.rows.length) return null;
-    return { text: result.rows[0].research_text, sources: result.rows[0].sources };
+    return { text: result.rows[0].research_text, sources: result.rows[0].sources, fromCache: true };
   } catch {
     return null; // cache lookup failing shouldn't block a fresh search
   }
@@ -64,7 +64,11 @@ async function saveToCache(organizationName, websiteUrl, research) {
 }
 
 // @param {{ organizationName?: string|null, websiteUrl?: string|null }} params
-// @returns {Promise<{ text: string, sources: Array<{title: string, url: string}> } | null>} null when there's nothing to search for
+// @returns {Promise<{ text: string, sources: Array<{title: string, url: string}>, fromCache: boolean } | null>} null when there's nothing to search for.
+//   fromCache costs nothing to carry today (observability — was this a real
+//   API call or a cache hit) and leaves room to grow this shape later (e.g.
+//   an eventual `facts` field) without an internal API break — per review
+//   feedback, not because there's a concrete second consumer yet.
 exports.research = async ({ organizationName, websiteUrl }) => {
   if (!organizationName && !websiteUrl) return null;
 
@@ -85,7 +89,7 @@ exports.research = async ({ organizationName, websiteUrl }) => {
   try {
     const fresh = await llmService.completeWithWebSearch(prompt);
     await saveToCache(organizationName, websiteUrl, fresh);
-    return fresh;
+    return { ...fresh, fromCache: false };
   } catch {
     // Search failing (rate limit, network, no results) shouldn't fail the
     // whole campaign-creation request — same partial-success philosophy as
