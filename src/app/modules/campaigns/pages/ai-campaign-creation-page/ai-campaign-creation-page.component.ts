@@ -14,6 +14,7 @@ import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { buildPayload as buildOrgPayload, initialState as initialOrgState, OrganizationRegistrationState } from '../../../organization-registration/services/organization-registration-state.service';
+import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
 // Website extraction alone can take ~12s (real-world test); LLM calls add
 // more on top. 45s is generous slack, not a "should normally take this
@@ -37,6 +38,7 @@ interface Brief {
   suggestedTone: SuggestedValue;
   suggestedCtaLabel: SuggestedValue;
   suggestedHero: SuggestedValue;
+  story: SuggestedValue;
 }
 
 interface UploadedFile {
@@ -444,14 +446,20 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // traced to exactly this gap, not a mapping bug in the fields that *were*
   // wired.
   private applyStoryContent(brief: Brief): void {
+    // brief.story is a purpose-written campaign-page narrative (Brief-level
+    // creative expansion, not just a carried-over fact) — prefer it when
+    // present. Falls back through progressively shorter/less-tailored text
+    // when the AI didn't have enough source material for a real story.
     // When creating a new org, newOrgDescription is prefilled from
     // brief.organizationDescription but the user can edit it (e.g. fill it
-    // in when the AI found none at all) — that edit has to win here too, or
-    // it silently never reaches the campaign even though it's what created
-    // the entity's own description. Found via live testing: a user filled
-    // in a description manually because the AI didn't extract one, and the
-    // campaign still came out with zero body text.
+    // in when the AI found none at all) — that edit has to win over the
+    // stale brief value too, or it silently never reaches the campaign even
+    // though it's what created the entity's own description. Found via live
+    // testing: a user filled in a description manually because the AI
+    // didn't extract one, and the campaign still came out with zero body
+    // text.
     const text = (
+      (brief.story?.value as string) ||
       (this.createNewOrg() ? this.newOrgDescription() : '') ||
       brief.organizationDescription ||
       brief.shortDescription ||
@@ -459,7 +467,12 @@ export class AiCampaignCreationPageComponent implements OnInit {
     ).trim();
     if (!text) return;
 
-    const html = `<p>${escapeHtml(text)}</p>`;
+    const html = text
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `<p>${escapeHtml(p)}</p>`)
+      .join('');
     const blocks = this.campaignState.draft.blocks.map((b: any) =>
       b.type === 'rich-text' ? { ...b, data: { ...b.data, content: html } } : b
     );
@@ -474,6 +487,13 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.brief.set(null);
     this.error.set(null);
     this.createError.set(null);
+  }
+
+  // Brief.category.value is one of ENTITY_CATEGORIES' real ids (English,
+  // per the extraction prompt) — shown to the user as the Hebrew label from
+  // the same shared source of truth the manual category picker uses.
+  categoryLabel(id: unknown): string {
+    return ENTITY_CATEGORIES.find((c) => c.id === id)?.label || '';
   }
 
   reset(): void {

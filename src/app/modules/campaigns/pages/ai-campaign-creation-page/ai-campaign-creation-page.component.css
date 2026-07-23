@@ -238,6 +238,16 @@
   font-style: italic;
 }
 
+.story-preview {
+  background: #f8fafc;
+  border: 1px solid #eef0f3;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 6px 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
 .mode-options {
   display: flex;
   flex-direction: column;

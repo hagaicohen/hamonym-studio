@@ -172,8 +172,18 @@
           @if (b.shortDescription) { <div class="field"><span class="label">תיאור קצר:</span> {{ b.shortDescription }}</div> }
 
           <div class="field">
+            <span class="label">טקסט לעמוד הקמפיין:</span>
+            @if (b.story.value) {
+              <p class="story-preview">{{ b.story.value }}</p>
+            } @else {
+              <span class="field-missing">אין מספיק חומר מקור לכתוב תיאור מורחב — יש להשלים ידנית בסטודיו</span>
+            }
+            <span class="reason">— {{ b.story.reason }}</span>
+          </div>
+
+          <div class="field">
             <span class="label">קטגוריה:</span>
-            {{ b.category.value || 'לא זוהתה' }}
+            {{ categoryLabel(b.category.value) || 'לא זוהתה' }}
             <span class="reason">— {{ b.category.reason }}</span>
           </div>
 
