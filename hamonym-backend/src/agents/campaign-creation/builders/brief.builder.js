@@ -29,6 +29,7 @@ function project(facts, raw) {
     suggestedTone: suggested(raw.suggestedTone?.value, raw.suggestedTone?.reason),
     suggestedCtaLabel: suggested(raw.suggestedCtaLabel?.value, raw.suggestedCtaLabel?.reason),
     suggestedHero: suggested(raw.suggestedHero?.value, raw.suggestedHero?.reason),
+    story: suggested(raw.story?.value, raw.story?.reason),
   };
 }
 
