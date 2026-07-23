@@ -279,8 +279,13 @@
   font-size: 12px;
 }
 
-.research-sources-label {
+.research-sources summary {
   color: #98a2b3;
+  cursor: pointer;
+}
+
+.research-sources summary:hover {
+  color: #583cd6;
 }
 
 .research-sources ul {
