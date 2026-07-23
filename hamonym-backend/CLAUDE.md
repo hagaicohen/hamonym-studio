@@ -83,7 +83,7 @@ Shared shape across all of them: `Context (via tools/) → Facts (deterministic)
 - `*.agent.js` — judges/advises on something that already exists (ApprovalAgent, CampaignAdvisorAgent).
 - `*.pipeline.js` — constructs new state from external input (campaign-creation).
 
-See `hamonym-app/AI_CAMPAIGN_CREATION_VISION.md` and `AI_CAMPAIGN_CREATION_MVP.md` for the campaign-creation pipeline's own ADR.
+See `hamonym-app/AI_CAMPAIGN_CREATION_VISION.md` and `AI_CAMPAIGN_CREATION_MVP.md` for the campaign-creation pipeline's own ADR, and **`AI_ARCHITECTURE.md`** (this repo's root) for the cross-agent principles — read that one first when adding a new AI capability.
 
 ## Payment Provider
 
