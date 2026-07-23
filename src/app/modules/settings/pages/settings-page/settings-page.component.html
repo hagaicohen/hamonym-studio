@@ -104,25 +104,6 @@
             </div>
           </div>
 
-          <!-- COMPLETION -->
-
-          @if (entity.status === "draft") {
-            <div class="completion-section">
-              <div class="completion-label">
-                <span> השלמת הגדרה </span>
-
-                <span> {{ entity.completionPercentage || 72 }}% </span>
-              </div>
-
-              <div class="completion-bar">
-                <div
-                  class="completion-fill"
-                  [style.width.%]="entity.completionPercentage || 72"
-                ></div>
-              </div>
-            </div>
-          }
-
           <!-- FOOTER -->
 
           <div class="entity-footer">

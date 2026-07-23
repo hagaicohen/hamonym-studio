@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { timeout, map } from 'rxjs/operators';
+import { Observable, forkJoin, of } from 'rxjs';
+import { timeout, map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
+import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { buildPayload as buildOrgPayload, initialState as initialOrgState, OrganizationRegistrationState } from '../../../organization-registration/services/organization-registration-state.service';
@@ -101,6 +102,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
   private currentEntity  = inject(CurrentEntityService);
   private currentContext = inject(CurrentContextService);
   private entitiesApi    = inject(EntitiesService);
+  private uploadService  = inject(UploadService);
   private campaignState  = inject(CampaignStudioStateService);
   private campaignApi    = inject(CampaignApiService);
 
@@ -313,17 +315,19 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.campaignState.patch(patches.campaignDraftPatch as any);
           this.applyStoryContent(brief);
 
-          this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
-            next: (created) => {
-              this.creatingCampaign.set(false);
-              this.loader.hide();
-              this.router.navigate(['/campaigns', created.id, 'edit']);
-            },
-            error: (err) => {
-              this.creatingCampaign.set(false);
-              this.loader.hide();
-              this.createError.set(err?.error?.error || 'יצירת הקמפיין נכשלה, נסו שוב');
-            },
+          this.uploadCampaignImages().subscribe(() => {
+            this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
+              next: (created) => {
+                this.creatingCampaign.set(false);
+                this.loader.hide();
+                this.router.navigate(['/campaigns', created.id, 'edit']);
+              },
+              error: (err) => {
+                this.creatingCampaign.set(false);
+                this.loader.hide();
+                this.createError.set(err?.error?.error || 'יצירת הקמפיין נכשלה, נסו שוב');
+              },
+            });
           });
         },
         error: () => {
@@ -332,6 +336,40 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.createError.set('משהו השתבש בהכנת הקמפיין, נסו שוב');
         },
       });
+  }
+
+  // Uploaded files were only ever used as Vision-LLM input for extraction
+  // and then discarded — real images (a logo, a hero photo) never actually
+  // reached the created campaign. Reuses the same UploadService +
+  // /api/media/upload endpoint Campaign Studio's own basic-info step uses,
+  // rather than building separate storage plumbing. Doesn't block campaign
+  // creation on failure (catchError swallows it) — same "partial success"
+  // philosophy as a failed website fetch during combined intake: missing
+  // images shouldn't prevent the campaign from being created at all.
+  private uploadCampaignImages(): Observable<unknown> {
+    const images = this.files().filter((f) => f.file.type.startsWith('image/'));
+    const logoFile = images.find((f) => f.typeLabel === 'לוגו');
+    // First non-logo image becomes the hero background — heroVideoUrl (an
+    // explicit link the user gave) takes priority over an uploaded photo
+    // when both are present, since a video is a more deliberate choice.
+    const heroFile = this.campaignState.draft.heroType !== 'video'
+      ? images.find((f) => f.typeLabel !== 'לוגו')
+      : undefined;
+
+    const uploads: Observable<unknown>[] = [];
+    if (logoFile) {
+      uploads.push(this.uploadService.upload(logoFile.file, 'campaigns/logos').pipe(
+        tap((url) => this.campaignState.patch({ campaignLogoUrl: url })),
+      ));
+    }
+    if (heroFile) {
+      uploads.push(this.uploadService.upload(heroFile.file, 'campaigns/covers').pipe(
+        tap((url) => this.campaignState.patch({ coverImageUrl: url })),
+      ));
+    }
+
+    if (!uploads.length) return of(null);
+    return forkJoin(uploads).pipe(catchError(() => of(null)));
   }
 
   // draft.builder.js (backend) deliberately never touches `blocks` — that
@@ -345,7 +383,19 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // traced to exactly this gap, not a mapping bug in the fields that *were*
   // wired.
   private applyStoryContent(brief: Brief): void {
-    const text = (brief.organizationDescription || brief.shortDescription || '').trim();
+    // When creating a new org, newOrgDescription is prefilled from
+    // brief.organizationDescription but the user can edit it (e.g. fill it
+    // in when the AI found none at all) — that edit has to win here too, or
+    // it silently never reaches the campaign even though it's what created
+    // the entity's own description. Found via live testing: a user filled
+    // in a description manually because the AI didn't extract one, and the
+    // campaign still came out with zero body text.
+    const text = (
+      (this.createNewOrg() ? this.newOrgDescription() : '') ||
+      brief.organizationDescription ||
+      brief.shortDescription ||
+      ''
+    ).trim();
     if (!text) return;
 
     const html = `<p>${escapeHtml(text)}</p>`;
