@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
-import { timeout, map, tap, catchError } from 'rxjs/operators';
+import { timeout, map, tap, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
@@ -269,26 +269,36 @@ export class AiCampaignCreationPageComponent implements OnInit {
       this.loader.show('יוצרים את העמותה...');
       this.createOrganization().subscribe({
         next: (entity) => {
-          // "Login" into the new entity, per explicit request: make it the
-          // active context immediately, not just after the next full login.
-          // CurrentEntityService follows CurrentContextService.active() via
-          // its own effect() — no need to also call setEntity()/setRole()
-          // directly here, that would just race the effect.
-          this.currentContext.addEntityContext(entity);
-          this.currentContext.switchContext('entity-manager', entity.id);
+          // Upload files, THEN explicitly re-fetch + cache the entity,
+          // THEN switch context/navigate — in that order, all awaited.
+          // Found live: switchContext() alone triggers CurrentEntityService's
+          // own effect(), which fetches the entity asynchronously in the
+          // background — navigating to /settings/entities/:id right after
+          // (entity-settings.component.ts reads the cached signal ONCE in
+          // ngOnInit, not reactively) could easily win that race and show a
+          // pre-upload snapshot with no logo/certificate, even though both
+          // were correctly saved to the DB moments later. Fetching and
+          // calling setEntity() directly here, before navigating, removes
+          // the race instead of just narrowing it.
+          this.uploadOrganizationFiles(entity.id).pipe(
+            switchMap(() => this.entitiesApi.getEntityById(entity.id)),
+            catchError(() => of(entity)), // fall back to the pre-upload snapshot rather than block navigation entirely
+          ).subscribe((freshEntity) => {
+            this.currentEntity.setEntity(freshEntity);
+            this.currentContext.addEntityContext(freshEntity);
+            this.currentContext.switchContext('entity-manager', freshEntity.id);
 
-          this.uploadOrganizationFiles(entity.id).subscribe(() => {
             if (this.orgOnly()) {
               // Explicit request (2026-07-23): "create ONLY the org, don't
               // create a campaign" — stop here instead of always chaining
               // into createCampaignUnder().
               this.creatingCampaign.set(false);
               this.loader.hide();
-              this.router.navigate(['/settings/entities', entity.id]);
+              this.router.navigate(['/settings/entities', freshEntity.id]);
               return;
             }
 
-            this.createCampaignUnder(entity.id, brief);
+            this.createCampaignUnder(freshEntity.id, brief);
           });
         },
         error: (err) => {
