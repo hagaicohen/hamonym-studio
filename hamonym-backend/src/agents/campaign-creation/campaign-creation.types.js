@@ -51,6 +51,17 @@
 
 /**
  * @typedef {Object} Brief
+ * NAMING NOTE (2026-07-23, see AI_CREATIVE_DIRECTOR_CONCEPT.md in hamonym-app):
+ * despite the historical name, this is architecturally the Campaign
+ * Specification v1 of the system — it started as a literal text brief
+ * (Sprint 2) but has since grown to cover media decisions, design intent,
+ * gallery curation and content strategy. Expected to keep growing
+ * organically as real needs appear. Deliberately NOT renamed (touches too
+ * much surface area for a purely cosmetic win) and deliberately NOT split
+ * into a generic multi-"Director" framework ahead of a second real
+ * consumer — same "no generic abstractions before a second real consumer"
+ * discipline this whole pipeline has followed from the start.
+ *
  * Built by brief.builder.js from ExtractedFacts alone — never re-reads
  * sourceRaw (see ADR decision 5: Brief regeneration must be cheap, no
  * re-running Extraction). Two kinds of field:
