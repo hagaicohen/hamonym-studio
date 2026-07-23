@@ -59,6 +59,13 @@
           <input type="checkbox" class="toggle-checkbox" [ngModel]="createNewOrg()" (ngModelChange)="createNewOrg.set($event)" />
           <span>🏢 ליצור עמותה חדשה מהפרטים האלה <span class="optional">(במקום קמפיין תחת העמותה הקיימת שלי)</span></span>
         </label>
+
+        @if (createNewOrg()) {
+          <label class="toggle-label toggle-label--nested">
+            <input type="checkbox" class="toggle-checkbox" [ngModel]="orgOnly()" (ngModelChange)="orgOnly.set($event)" />
+            <span>ליצור רק את העמותה, בלי קמפיין בינתיים <span class="optional">(אפשר יהיה ליצור קמפיין בנפרד אחר כך)</span></span>
+          </label>
+        }
       </div>
 
       <p class="intake-hint">אפשר למלא כל שילוב — רק טקסט, רק קישור, רק קבצים, או כמה ביחד. צריך למלא לפחות אחד מהם.</p>
@@ -170,7 +177,9 @@
         </div>
 
         <p class="brief-note">
-          @if (createNewOrg()) {
+          @if (createNewOrg() && orgOnly()) {
+            זו הצעה של ה-AI — לחיצה על "אשר וצור עמותה" תיצור עמותה חדשה עם הפרטים שלמעלה ותעביר אתכם לניהול שלה. לא ייווצר קמפיין — אפשר ליצור אחד בנפרד בכל שלב.
+          } @else if (createNewOrg()) {
             זו הצעה של ה-AI — לחיצה על "אשר וצור" תיצור עמותה חדשה עם הפרטים שלמעלה, תעביר אתכם לניהול שלה, ותיצור תחתיה קמפיין אמיתי, עם מעבר לעריכה מלאה בסטודיו.
           } @else {
             זו הצעה של ה-AI — לחיצה על "אשר וצור קמפיין" תיצור קמפיין אמיתי תחת העמותה שלכם, ותעביר אתכם לעריכה מלאה בסטודיו. אפשר לשנות שם כל שדה.
@@ -185,7 +194,15 @@
           <button type="button" class="btn-link" (click)="backToEdit()">→ חזרה לעריכת הנתונים</button>
           <button type="button" class="btn-link" (click)="reset()">התחל מחדש עם קלט אחר לגמרי</button>
           <button type="button" class="btn-primary" [disabled]="creatingCampaign() || (createNewOrg() && !canCreateNewOrg())" (click)="approveAndCreate()">
-            {{ creatingCampaign() ? 'יוצרים...' : (createNewOrg() ? 'אשר וצור עמותה + קמפיין ←' : 'אשר וצור קמפיין ←') }}
+            @if (creatingCampaign()) {
+              יוצרים...
+            } @else if (createNewOrg() && orgOnly()) {
+              אשר וצור עמותה ←
+            } @else if (createNewOrg()) {
+              אשר וצור עמותה + קמפיין ←
+            } @else {
+              אשר וצור קמפיין ←
+            }
           </button>
         </div>
       </div>

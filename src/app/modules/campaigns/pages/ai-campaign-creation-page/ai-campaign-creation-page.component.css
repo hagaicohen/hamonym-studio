@@ -264,6 +264,13 @@
   font-size: 12px;
 }
 
+.toggle-label--nested {
+  margin-top: 10px;
+  margin-right: 24px; /* indent under the parent checkbox, RTL */
+  font-weight: 500;
+  font-size: 13px;
+}
+
 .edit-field-label {
   display: block;
   font-size: 13px;

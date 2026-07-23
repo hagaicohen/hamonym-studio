@@ -115,6 +115,12 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // deliberately before submitting.
   createNewOrg = signal(false);
 
+  // Only relevant when createNewOrg is on — explicit per the same reasoning
+  // as createNewOrg itself (2026-07-23): "create only the org, no campaign
+  // yet" is a real, distinct request the user made, not something to infer
+  // from free-text wording like "רק עמותה".
+  orgOnly = signal(false);
+
   // Editable "new organization" review fields — prefilled from the Brief
   // once it arrives (see submit()), but always user-editable/confirmable
   // before creation, same "AI proposes, human confirms" principle as the
@@ -256,6 +262,17 @@ export class AiCampaignCreationPageComponent implements OnInit {
           // directly here, that would just race the effect.
           this.currentContext.addEntityContext(entity);
           this.currentContext.switchContext('entity-manager', entity.id);
+
+          if (this.orgOnly()) {
+            // Explicit request (2026-07-23): "create ONLY the org, don't
+            // create a campaign" — stop here instead of always chaining
+            // into createCampaignUnder().
+            this.creatingCampaign.set(false);
+            this.loader.hide();
+            this.router.navigate(['/settings/entities', entity.id]);
+            return;
+          }
+
           this.createCampaignUnder(entity.id, brief);
         },
         error: (err) => {
@@ -423,6 +440,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.websiteUrl.set('');
     this.files.set([]);
     this.createNewOrg.set(false);
+    this.orgOnly.set(false);
     this.newOrgEntityType.set('');
     this.newOrgName.set('');
     this.newOrgNumber.set('');
