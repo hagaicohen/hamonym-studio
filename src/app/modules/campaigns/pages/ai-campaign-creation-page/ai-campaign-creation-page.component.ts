@@ -558,13 +558,81 @@ export class AiCampaignCreationPageComponent implements OnInit {
             map((url) => ({ url, caption: f.note || undefined })),
           ),
         )).pipe(
-          tap((items) => this.addGalleryBlock(items)),
+          tap((items) => this.interleaveStoryWithImages(brief, items)),
         ),
       );
     }
 
     if (!uploads.length) return of(null);
     return forkJoin(uploads).pipe(catchError(() => of(null)));
+  }
+
+  // Found via live feedback (2026-07-24): uploaded photos all landing in one
+  // gallery block AFTER the story read as low-effort — "יותר נכון שהם
+  // ישתלבו עם הטקסט" (more correct for them to be woven into the text).
+  // Splits the story into paragraphs (the Brief prompt now asks for 2-4,
+  // separated by blank lines — see rule 8) and alternates a text block with
+  // a single-image block between each pair of paragraphs, replacing the one
+  // big rich-text block applyStoryContent() created. Images left over once
+  // paragraph gaps run out (more photos than breaks) still go into a
+  // trailing gallery block — nothing uploaded is ever silently dropped.
+  private interleaveStoryWithImages(brief: Brief, images: Array<{ url: string; caption?: string }>): void {
+    if (!images.length) return;
+
+    const text = this.resolveStoryText(brief);
+    const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    const storyIndex = this.campaignState.draft.blocks.findIndex((b: any) => b.type === 'rich-text');
+
+    // Nothing meaningful to interleave with (no story, or it's one
+    // unbroken block) — same trailing-gallery behavior as before.
+    if (paragraphs.length < 2 || storyIndex === -1) {
+      this.addGalleryBlock(images);
+      return;
+    }
+
+    const template = this.campaignState.draft.blocks[storyIndex];
+    let imageIndex = 0;
+    const interleaved: any[] = [];
+    paragraphs.forEach((paragraph, i) => {
+      interleaved.push({
+        ...template,
+        id: Math.random().toString(36).slice(2, 10),
+        order: template.order + i * 0.01,
+        // Only the first split block keeps the section heading (e.g. "על
+        // המיזם") — otherwise every paragraph repeats it in the rendered
+        // page (found via live preview screenshot, not just DB inspection).
+        // A single space, not '': campaign-api.service.ts's block-loading
+        // normalization replaces any falsy label with a type default
+        // ("טקסט") on every load, which would bring the repeat right back.
+        label: i === 0 ? template.label : ' ',
+        data: { ...template.data, content: `<p>${escapeHtml(paragraph)}</p>` },
+      });
+      // No image after the very last paragraph — ends on text, not a
+      // dangling photo.
+      if (imageIndex < images.length && i < paragraphs.length - 1) {
+        const img = images[imageIndex++];
+        interleaved.push({
+          id: Math.random().toString(36).slice(2, 10),
+          type: 'image',
+          order: template.order + i * 0.01 + 0.005,
+          visible: true,
+          spacingTop: 0,
+          spacingBottom: 0,
+          label: 'תמונה',
+          data: { url: img.url, caption: img.caption },
+        });
+      }
+    });
+
+    const blocks = [
+      ...this.campaignState.draft.blocks.slice(0, storyIndex),
+      ...interleaved,
+      ...this.campaignState.draft.blocks.slice(storyIndex + 1),
+    ];
+    this.campaignState.patch({ blocks });
+
+    const leftover = images.slice(imageIndex);
+    if (leftover.length) this.addGalleryBlock(leftover);
   }
 
   // No default gallery block exists in createInitialDraft() — has to be
@@ -605,26 +673,27 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // created a campaign through this flow and reported "no text at all" —
   // traced to exactly this gap, not a mapping bug in the fields that *were*
   // wired.
-  private applyStoryContent(brief: Brief): void {
-    // brief.story is a purpose-written campaign-page narrative (Brief-level
-    // creative expansion, not just a carried-over fact) — prefer it when
-    // present. Falls back through progressively shorter/less-tailored text
-    // when the AI didn't have enough source material for a real story.
-    // When creating a new org, newOrgDescription is prefilled from
-    // brief.organizationDescription but the user can edit it (e.g. fill it
-    // in when the AI found none at all) — that edit has to win over the
-    // stale brief value too, or it silently never reaches the campaign even
-    // though it's what created the entity's own description. Found via live
-    // testing: a user filled in a description manually because the AI
-    // didn't extract one, and the campaign still came out with zero body
-    // text.
-    const text = (
+  // brief.story is a purpose-written campaign-page narrative (Brief-level
+  // creative expansion, not just a carried-over fact) — prefer it when
+  // present. Falls back through progressively shorter/less-tailored text
+  // when the AI didn't have enough source material for a real story. When
+  // creating a new org, newOrgDescription is prefilled from
+  // brief.organizationDescription but the user can edit it (e.g. fill it in
+  // when the AI found none at all) — that edit has to win over the stale
+  // brief value too, or it silently never reaches the campaign even though
+  // it's what created the entity's own description.
+  private resolveStoryText(brief: Brief): string {
+    return (
       (brief.story?.value as string) ||
       (this.createNewOrg() ? this.newOrgDescription() : '') ||
       brief.organizationDescription ||
       brief.shortDescription ||
       ''
     ).trim();
+  }
+
+  private applyStoryContent(brief: Brief): void {
+    const text = this.resolveStoryText(brief);
     if (!text) return;
 
     const html = text
