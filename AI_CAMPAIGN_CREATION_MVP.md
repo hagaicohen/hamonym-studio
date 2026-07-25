@@ -1,6 +1,6 @@
 # AI-Assisted Campaign Creation — מסמך MVP
 
-**סטטוס:** טיוטה לאישור (טרם מומש בקוד)
+**סטטוס:** מומש ופרוס בפועל (Sprints 1-7 + המשך עבודה עד 2026-07-24) — המסמך הזה תיעד את התכנון **לפני** המימוש; לסטטוס/יומן עדכני ר' [AI_CAMPAIGN_CREATION_VISION.md](AI_CAMPAIGN_CREATION_VISION.md)'s "מצב נוכחי" ו-Pipeline Milestones. נשאר כאן כתיעוד החלטות v1 (שדות/מסכים/Failure Strategy) — עדיין רלוונטי ברובו, לא עודכן שורה-שורה מול הקוד הסופי.
 **תאריך:** 2026-07-22
 **נשען על:** [AI_CAMPAIGN_CREATION_VISION.md](AI_CAMPAIGN_CREATION_VISION.md) (13 החלטות ארכיטקטוניות, מאושר)
 

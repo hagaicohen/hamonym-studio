@@ -3,7 +3,7 @@
 Summary of a long, continuous session of work on the Campaign Studio /
 Page Builder (steps 1 and 9 of the campaign builder, plus the public
 preview and the campaigns list). For continuity in a new chat. Covers
-three pushes to `main`: `1c99818`, `11dc818`, `144a0bf`.
+four pushes to `main`: `1c99818`, `11dc818`, `144a0bf`, `3b9ded2`.
 
 ## Project Stack (recap)
 
@@ -70,6 +70,10 @@ The Page Builder's "צבעי תמה" section (step 9) previously only had 4 manu
 ## 6. Campaign Card Video Thumbnail (`144a0bf`)
 
 The campaigns list (`/campaigns`, grid and list views) only ever checked `coverImageUrl` for the card background. Video-hero campaigns have `coverImageUrl: null`, so their cards rendered blank/gray. Added `cardCoverUrl(c)` — falls back to the YouTube thumbnail (`https://img.youtube.com/vi/<id>/hqdefault.jpg`) extracted from `videoUrl`, same regex pattern already used in the builder (`getYoutubeThumbnail`, duplicated locally rather than extracted to a shared util, matching this codebase's existing pattern).
+
+## 7. Mobile Device-Preview Scroll Blocked (`3b9ded2`)
+
+Reported live by the user: viewing the campaign preview in the Studio's mobile-device simulator (the phone-frame toggle in the topbar, `s.device === 'mobile'`), scrolling inside the frame didn't work at all. Root cause: `.preview-inner--mobile` (`campaign-studio-page.component.css`) had `overflow: hidden` — added only to clip content at the phone frame's rounded corners (`border-radius: 24px`), but `overflow: hidden` disables scrolling on both axes, not just the clipping it was meant for. Fixed to `overflow-y: auto; overflow-x: hidden` — still clips horizontally at the rounded frame, restores vertical scroll. Verified via Playwright: with real overflow content (2480px inside an 877px frame), `scrollTop` now moves on assignment and `getComputedStyle(...).overflowY` reads `auto`; the rounded-corner clipping still renders correctly (confirmed via screenshot, no square corners bleeding past the phone-frame shape).
 
 ---
 
