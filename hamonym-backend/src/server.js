@@ -40,6 +40,9 @@ const donationsRoutes =
 const ambassadorsRoutes =
   require('./modules/ambassadors/ambassadors.routes');
 
+const registrationsRoutes =
+  require('./modules/registrations/registrations.routes');
+
 const dashboardRoutes =
   require('./modules/dashboard/dashboard.routes');
 
@@ -51,6 +54,12 @@ const platformRoutes =
 
 const socialMetaRoutes =
   require('./modules/social-meta/social-meta.routes');
+
+const commentsRoutes =
+  require('./modules/comments/comments.routes');
+
+const campaignCreationRoutes =
+  require('./modules/campaign-creation/campaign-creation.routes');
 
 const socialMetaController =
   require('./modules/social-meta/social-meta.controller');
@@ -64,6 +73,14 @@ const socialMetaController =
 app.use(cors());
 
 app.use(express.json());
+
+app.use((req, res, next) => {
+  const t0 = Date.now();
+  res.on('finish', () => {
+    console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - t0}ms)`);
+  });
+  next();
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -102,6 +119,11 @@ app.use(
 );
 
 app.use(
+  '/api/registrations',
+  registrationsRoutes
+);
+
+app.use(
   '/api',
   ambassadorsRoutes
 );
@@ -119,6 +141,16 @@ app.use(
 app.use(
   '/api/platform',
   platformRoutes
+);
+
+app.use(
+  '/api/comments',
+  commentsRoutes
+);
+
+app.use(
+  '/api/campaign-creation',
+  campaignCreationRoutes
 );
 
 /*

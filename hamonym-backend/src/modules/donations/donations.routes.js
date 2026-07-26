@@ -2,6 +2,7 @@ const express     = require('express');
 const router      = express.Router();
 const controller  = require('./donations.controller');
 const requireAuth = require('../../middleware/require-auth');
+const { requireEntityOwnership } = require('../../middleware/entity-permission.middleware');
 
 // Public — donors are not logged in
 router.post('/',                          controller.createDonation);
@@ -16,7 +17,7 @@ router.get('/receipt/:id',                controller.getReceipt);
 router.get('/my', requireAuth, controller.getMyDonations);
 
 // Authenticated — entity manager
-router.get('/entity/:id',          requireAuth,  controller.getEntityDonations);
-router.get('/entity/:id/donors',   requireAuth,  controller.getEntityDonors);
+router.get('/entity/:id',          requireAuth, requireEntityOwnership(), controller.getEntityDonations);
+router.get('/entity/:id/donors',   requireAuth, requireEntityOwnership(), controller.getEntityDonors);
 
 module.exports = router;

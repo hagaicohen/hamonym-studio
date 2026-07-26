@@ -61,20 +61,86 @@ async function finalizePaidDonation(donationId) {
 }
 exports.finalizePaidDonation = finalizePaidDonation;
 
+// Looks up every registrationOptionId a participant references, scoped to
+// this campaign and active — and rejects the whole request if any of them
+// don't resolve. Called BEFORE the donation row is created, so a bad/foreign
+// option id fails cleanly with no orphaned pending donation left behind.
+// Unlike the old Offering.type === 'registration' flow (a JSONB array with
+// zero backend awareness of its contents), Registration Options are a real
+// table now, so this is finally possible. See docs/DECISIONS.md (2026-07-16).
+async function loadRegistrationOptions(campaignId, participants) {
+  if (!participants || participants.length === 0) return new Map();
+
+  const ids = [...new Set(participants.map(p => p.registrationOptionId).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  const { rows } = await db.query(
+    `SELECT id, key, title FROM registration_options
+     WHERE campaign_id = $1 AND is_active = true AND id = ANY($2::uuid[])`,
+    [campaignId, ids]
+  );
+  const byId = new Map(rows.map(r => [r.id, { key: r.key, title: r.title }]));
+
+  const missing = ids.filter(id => !byId.has(id));
+  if (missing.length > 0) {
+    throw new Error('One or more registration options are invalid for this campaign');
+  }
+
+  return byId;
+}
+
+// Business-flow step (not a utility) that turns a donation with one or more
+// registered Participants into a Registration Order + one Participant row
+// each (2.4 — Multi-Participant Registration, 2026-07-15; Registration
+// Options data-model split, 2026-07-16). Runs regardless of payment
+// provider/outcome: there is no separate status here on purpose, it's
+// always derived by joining to the donation's own status. Deliberately NOT
+// a Schema/Rules engine — each participant just picks one existing
+// Registration Option, same shape as before. option_key/option_title are
+// snapshotted from `registrationOptionsById` (DB-sourced, via
+// loadRegistrationOptions above) rather than trusted client strings.
+// See docs/REGISTRATION_OFFERING_SPEC.md §1.3 and docs/DECISIONS.md.
+async function processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById) {
+  if (!participants || participants.length === 0) return;
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const orderRes = await client.query(
+      `INSERT INTO registration_orders (donation_id, campaign_id) VALUES ($1, $2) RETURNING id`,
+      [donationId, campaignId]
+    );
+    for (const p of participants) {
+      const option = p.registrationOptionId ? registrationOptionsById.get(p.registrationOptionId) : null;
+      await client.query(
+        `INSERT INTO registration_participants
+           (registration_order_id, registration_option_id, option_key, option_title, name, shirt_size)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [orderRes.rows[0].id, p.registrationOptionId || null, option?.key || null, option?.title || null, p.name, p.shirtSize || null]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmParams, ipAddress, userAgent }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent }) => {
 
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
-
-  // 1. Fetch campaign ג†’ entity
+  // 1. Fetch campaign → entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at,
             e.status AS entity_status, e.is_hidden AS entity_hidden,
-            e.cardcom_terminal, e.cardcom_api_name, e.cardcom_api_password
+            e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+            e.cardcom_connection_status
      FROM campaigns c
      JOIN entities  e ON e.id = c.entity_id
      WHERE c.id = $1`,
@@ -96,9 +162,23 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
     throw new Error('Campaign not found');
   }
 
-  if (!isMock && (!campaign.cardcom_terminal || !campaign.cardcom_api_name || !campaign.cardcom_api_password)) {
-    throw new Error('Cardcom credentials not configured for this entity');
-  }
+  // Per-entity provider switch: an entity only goes live on Cardcom once it has
+  // full credentials AND an admin has verified them via "בדוק חיבור" in Settings
+  // (cardcom_connection_status = 'success') — otherwise it stays on Mock so a
+  // half-filled-in payment section never silently breaks real donations.
+  // PAYMENT_PROVIDER=mock is a global dev-environment override that forces Mock
+  // for every entity regardless of their Cardcom setup.
+  const hasVerifiedCardcom = !!(
+    campaign.cardcom_terminal_number &&
+    campaign.cardcom_api_username &&
+    campaign.cardcom_api_password_encrypted &&
+    campaign.cardcom_connection_status === 'success'
+  );
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || !hasVerifiedCardcom;
+
+  // Validate participants' Registration Options before creating anything —
+  // see loadRegistrationOptions above.
+  const registrationOptionsById = await loadRegistrationOptions(campaignId, participants);
 
   // 2. Save pending donation
   const donationRes = await db.query(
@@ -129,6 +209,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
     ]
   );
   const donationId = donationRes.rows[0].id;
+
+  await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
 
   // 3. Mock provider ג€” skip Cardcom, return mock payment URL
   if (isMock) {
@@ -170,9 +252,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], utmPa
   const frontBase  = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   const payload = {
-    TerminalNumber: campaign.cardcom_terminal,
-    ApiName:        campaign.cardcom_api_name,
-    ApiPassword:    campaign.cardcom_api_password,
+    TerminalNumber: campaign.cardcom_terminal_number,
+    ApiName:        campaign.cardcom_api_username,
+    ApiPassword:    campaign.cardcom_api_password_encrypted,
     Amount:         round2(amount),
     Language:       'he',
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
@@ -520,7 +602,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
       params
     ),
     db.query(
-      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 AND status != 'draft' ORDER BY title ASC`,
       [entityId]
     ),
   ]);
@@ -540,6 +622,53 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     total:     kpi.total,
     page,
     limit,
+  };
+};
+
+// Just the donation list + aggregate KPIs (donorCount folded into the same
+// aggregate scan) — none of getEntityDonations' campaign-dropdown sub-query,
+// for callers (like the platform org detail page) that don't render a filter.
+exports.getEntityDonationsSummary = async (entityId, { limit = 25, page = 0 } = {}) => {
+  const [listRes, aggRes] = await Promise.all([
+    db.query(
+      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              c.title AS campaign_title, c.slug AS campaign_slug
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       WHERE d.entity_id = $1
+       ORDER BY d.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [entityId, limit, page * limit]
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
+         COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
+         COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
+         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount,
+         COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))
+           FILTER (WHERE d.status = 'paid')::int AS donor_count
+       FROM donations d
+       WHERE d.entity_id = $1`,
+      [entityId]
+    ),
+  ]);
+
+  const agg = aggRes.rows[0];
+  return {
+    donations: listRes.rows,
+    kpi: {
+      totalRaised:  agg.total_raised,
+      paidCount:    agg.paid_count,
+      failedCount:  agg.failed_count,
+      pendingCount: agg.pending_count,
+      avgAmount:    agg.avg_amount,
+      total:        agg.total,
+    },
+    donorCount: agg.donor_count,
   };
 };
 

@@ -1,4 +1,5 @@
 const db = require('../../db/db');
+const { isEntityMember } = require('../../middleware/entity-permission.middleware');
 
 // ─── Slug helpers ────────────────────────────────────────────────────────────
 
@@ -88,11 +89,7 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
 // calls getEntityAmbassadors() is already authorized via requireSuperAdmin
 // upstream and must NOT be subject to user_entities membership.
 async function verifyEntityOwnership(userId, entityId) {
-  const { rows } = await db.query(
-    `SELECT 1 FROM user_entities WHERE entity_id = $1 AND user_id = $2 LIMIT 1`,
-    [entityId, userId]
-  );
-  if (rows.length === 0) throw new Error('Unauthorized');
+  if (!(await isEntityMember(userId, entityId))) throw new Error('Unauthorized');
 }
 exports.verifyEntityOwnership = verifyEntityOwnership;
 
@@ -342,7 +339,7 @@ exports.getEntityAmbassadors = async (entityId, { search, status, campaignId, so
       params
     ),
     db.query(
-      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 ORDER BY title ASC`,
+      `SELECT id::text, title FROM campaigns WHERE entity_id = $1 AND status != 'draft' ORDER BY title ASC`,
       [entityId]
     ),
   ]);
@@ -366,6 +363,27 @@ exports.getEntityAmbassadors = async (entityId, { search, status, campaignId, so
     page,
     limit,
   };
+};
+
+// Just the ambassador list, none of getEntityAmbassadors' KPI/campaign-dropdown
+// sub-queries — for callers (like the platform org detail page) that only
+// render the table itself.
+exports.getEntityAmbassadorsList = async (entityId, { limit = 25, page = 0 } = {}) => {
+  const { rows } = await db.query(
+    `SELECT a.*, c.title AS campaign_title, c.slug AS campaign_slug, ${STATS_SQL}
+     FROM campaign_ambassadors a
+     JOIN campaigns c ON c.id = a.campaign_id
+     WHERE c.entity_id = $1
+     ORDER BY raised_total DESC
+     LIMIT $2 OFFSET $3`,
+    [entityId, limit, page * limit]
+  );
+
+  return rows.map(r => ({
+    ...mapRow(r),
+    campaign_title: r.campaign_title,
+    campaign_slug:  r.campaign_slug,
+  }));
 };
 
 exports.getBySlug = async (campaignSlug, ambassadorSlug) => {

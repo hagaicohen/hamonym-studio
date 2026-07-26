@@ -4,6 +4,8 @@ const templates = require('./templates');
 function getProvider() {
   const name = process.env.EMAIL_PROVIDER || 'stub';
   switch (name) {
+    case 'resend':
+      return require('./providers/resend.provider');
     case 'stub':
     default:
       return require('./providers/stub.provider');

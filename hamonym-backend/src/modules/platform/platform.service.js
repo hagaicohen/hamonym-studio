@@ -8,7 +8,7 @@ const donationsService = require('../donations/donations.service');
 const emailService = require('../email/email.service');
 
 const ORG_SORT_COLUMNS = {
-  name: 'e.display_name',
+  name: 'COALESCE(NULLIF(e.display_name, \'\'), e.legal_name)',
   status: 'e.status',
   created_at: 'e.created_at',
   campaigns: 'campaigns_count',
@@ -95,6 +95,30 @@ const PROFILE_COMPLETION_SQL = `
   ) / 5.0 * 100)::int AS profile_completion
 `;
 
+// Any 'draft' entity — a registration with missing details — should chase
+// up the platform admin immediately, same as a pending_review one. No time
+// buffer: flagged the moment it exists, even mid-wizard. See
+// DECISIONS.md (2026-07-20).
+const INCOMPLETE_DRAFT_SQL = `(status = 'draft')`;
+
+// Lightweight — powers the notification bell, which polls far more often
+// than the dashboard is loaded. Same query getAlerts() already runs for the
+// 'pending_review' entry, split out so a poll doesn't also pay for KPIs/charts.
+exports.getNotificationsCount = async () => {
+  const result = await db.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
+       COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts,
+       COUNT(*) FILTER (WHERE status = 'active' AND flagged_for_review)::int AS flagged_for_review
+     FROM entities`
+  );
+  return {
+    pendingReviewCount: result.rows[0].pending_review,
+    incompleteDraftsCount: result.rows[0].incomplete_drafts,
+    flaggedForReviewCount: result.rows[0].flagged_for_review,
+  };
+};
+
 exports.getDashboardData = async () => {
   const [kpis, alerts, charts] = await Promise.all([
     getKpis(),
@@ -110,7 +134,8 @@ async function getKpis() {
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
-         COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review
+         COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
+         COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
        FROM entities`
     ),
     db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published' AND deleted_at IS NULL`),
@@ -139,6 +164,7 @@ async function getKpis() {
     totalEntities: entitiesRes.rows[0].total,
     activeEntities: entitiesRes.rows[0].active,
     pendingReviewEntities: entitiesRes.rows[0].pending_review,
+    incompleteDraftEntities: entitiesRes.rows[0].incomplete_drafts,
     activeCampaigns: campaignsRes.rows[0].active,
     donationsToday: donationsRes.rows[0].today,
     donationsMonth: donationsRes.rows[0].month,
@@ -148,12 +174,14 @@ async function getKpis() {
 }
 
 async function getAlerts() {
-  const [pendingRes, missingDocsRes, cardcomRes, overdueRes] = await Promise.all([
+  const [pendingRes, incompleteDraftsRes, missingDocsRes, flaggedRes, cardcomRes, overdueRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`),
+    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${INCOMPLETE_DRAFT_SQL}`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities
        WHERE association_certificate_name IS NULL OR tax_document_name IS NULL`
     ),
+    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'active' AND flagged_for_review`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities
        WHERE status = 'active' AND cardcom_connection_status IS DISTINCT FROM 'success'`
@@ -167,6 +195,19 @@ async function getAlerts() {
   const alerts = [];
   if (pendingRes.rows[0].c > 0) {
     alerts.push({ key: 'pending_review', label: 'עמותות ממתינות לאישור', count: pendingRes.rows[0].c, linkQuery: { status: 'pending_review' } });
+  }
+  if (incompleteDraftsRes.rows[0].c > 0) {
+    // Same treatment/urgency as pending_review, kept as its own alert (not
+    // merged into the count above) so clicking through actually filters to
+    // entities with this real status instead of silently showing nothing.
+    alerts.push({ key: 'incomplete_drafts', label: 'עמותות עם פרטים חסרים', count: incompleteDraftsRes.rows[0].c, linkQuery: { status: 'draft' } });
+  }
+  if (flaggedRes.rows[0].c > 0) {
+    // An already-approved entity changed something sensitive (documents,
+    // registration number, billing) — the original approval no longer
+    // reflects what's actually on file. See entities.service.js
+    // computeReapprovalFlag / flagForReviewIfActive.
+    alerts.push({ key: 'flagged_for_review', label: 'עמותות פעילות שדורשות בדיקה חוזרת', count: flaggedRes.rows[0].c, linkQuery: { flaggedForReview: '1' } });
   }
   if (missingDocsRes.rows[0].c > 0) {
     alerts.push({ key: 'missing_docs', label: 'עמותות ללא מסמכים', count: missingDocsRes.rows[0].c, linkQuery: { missingDocs: '1' } });
@@ -317,7 +358,7 @@ async function getCharts() {
   };
 }
 
-exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, limit = 25, missingDocs, noCampaigns, newSince }) => {
+exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, limit = 25, missingDocs, flaggedForReview, noCampaigns, newSince }) => {
   const where = [];
   const params = [];
   let idx = 1;
@@ -327,12 +368,15 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
     params.push(status);
   }
   if (search) {
-    where.push(`e.display_name ILIKE $${idx}`);
+    where.push(`(e.display_name ILIKE $${idx} OR e.legal_name ILIKE $${idx})`);
     params.push(`%${search}%`);
     idx++;
   }
   if (missingDocs) {
     where.push(`(e.association_certificate_name IS NULL OR e.tax_document_name IS NULL)`);
+  }
+  if (flaggedForReview) {
+    where.push(`e.flagged_for_review = true`);
   }
   if (newSince) {
     where.push(`e.created_at >= NOW() - ($${idx++} || ' days')::interval`);
@@ -349,7 +393,8 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
-         e.id, e.display_name, e.logo_url, e.status, e.created_at, e.updated_at,
+         e.id, e.display_name, e.legal_name, e.logo_url, e.status, e.created_at, e.updated_at,
+         e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
          ${PROFILE_COMPLETION_SQL},
          owner.full_name AS owner_name, owner.email AS owner_email,
          COALESCE(camp.campaigns_count, 0) AS campaigns_count,
@@ -396,7 +441,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
 };
 
 exports.getOrganizationDetail = async (entityId) => {
-  const [entity, usersRes, campaignsRes, ambassadors, donations, auditRes, donorCountRes] = await Promise.all([
+  const [entity, usersRes, campaignsRes, ambassadors, donations, auditRes] = await Promise.all([
     entitiesService.getEntityById(entityId),
     db.query(
       `SELECT u.id, u.full_name, u.email, ue.role
@@ -412,20 +457,14 @@ exports.getOrganizationDetail = async (entityId) => {
        ORDER BY created_at DESC`,
       [entityId]
     ),
-    ambassadorsService.getEntityAmbassadors(entityId, {}),
-    donationsService.getEntityDonations(entityId, { limit: 10 }),
+    ambassadorsService.getEntityAmbassadorsList(entityId),
+    donationsService.getEntityDonationsSummary(entityId, { limit: 10 }),
     db.query(
       `SELECT a.id, a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS super_admin_name
        FROM platform_audit_log a
        JOIN users u ON u.id = a.super_admin_user_id
        WHERE a.entity_id = $1
        ORDER BY a.created_at DESC`,
-      [entityId]
-    ),
-    db.query(
-      `SELECT COUNT(DISTINCT COALESCE(NULLIF(donor_email, ''), NULLIF(donor_phone, ''), donor_name))::int AS donor_count
-       FROM donations
-       WHERE entity_id = $1 AND status = 'paid'`,
       [entityId]
     ),
   ]);
@@ -436,11 +475,11 @@ exports.getOrganizationDetail = async (entityId) => {
     entity,
     users: usersRes.rows,
     campaigns: campaignsRes.rows,
-    ambassadors: ambassadors.ambassadors,
+    ambassadors,
     donations: donations.donations,
     donationsKpi: donations.kpi,
     auditLog: auditRes.rows,
-    donorCount: donorCountRes.rows[0].donor_count,
+    donorCount: donations.donorCount,
   };
 };
 
@@ -449,9 +488,19 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   try {
     await client.query('BEGIN');
 
+    // Approving/reactivating is the admin's sign-off on the entity as it
+    // currently stands, so it also clears any reapproval flag raised by
+    // computeReapprovalFlag/flagForReviewIfActive since the last review.
+    const clearsFlag = status === 'active';
     const result = await client.query(
-      `UPDATE entities SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [status, entityId]
+      `UPDATE entities
+       SET status = $1,
+           updated_at = NOW(),
+           flagged_for_review = CASE WHEN $3 THEN false ELSE flagged_for_review END,
+           flagged_for_review_reason = CASE WHEN $3 THEN NULL ELSE flagged_for_review_reason END,
+           flagged_for_review_at = CASE WHEN $3 THEN NULL ELSE flagged_for_review_at END
+       WHERE id = $2 RETURNING *`,
+      [status, entityId, clearsFlag]
     );
     if (!result.rows[0]) throw new Error('Entity not found');
 

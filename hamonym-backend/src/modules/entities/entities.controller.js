@@ -448,9 +448,10 @@ exports.updateEntity =
 
       console.error(err);
 
-      res.status(500).json({
+      const status = err.message === 'Unauthorized' ? 403 : 500;
+      res.status(status).json({
         error:
-          'Failed to update entity'
+          status === 403 ? err.message : 'Failed to update entity'
       });
 
     }
@@ -517,6 +518,24 @@ exports.getApprovalStatus = async (req, res) => {
   try {
     const result = await service.getApprovalStatus(req.params.id, req.user.id);
     res.json(result);
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const notifications = await service.getNotifications(req.params.id, req.user.id);
+    res.json({ notifications });
+  } catch (err) {
+    res.status(statusForApproval(err)).json({ error: err.message });
+  }
+};
+
+exports.acknowledgeNotifications = async (req, res) => {
+  try {
+    await service.acknowledgeNotifications(req.params.id, req.user.id);
+    res.json({ success: true });
   } catch (err) {
     res.status(statusForApproval(err)).json({ error: err.message });
   }

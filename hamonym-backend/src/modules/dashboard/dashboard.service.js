@@ -1,17 +1,35 @@
 const db = require('../../db/db');
 
-// In-memory cache: entityId → { data, expiresAt }
+// In-memory cache: `${entityId}_${from}_${to}` → { data, expiresAt } — keyed
+// by range too, not just entityId, so switching the global date range can't
+// serve back a different range's cached numbers.
 const cache = new Map();
 const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 exports.invalidateDashboard = (entityId) => {
-  cache.delete(String(entityId));
+  for (const key of cache.keys()) {
+    if (key.startsWith(`${entityId}_`)) cache.delete(key);
+  }
 };
 
-exports.getDashboardData = async (entityId) => {
-  const key = String(entityId);
+// Only fundraisingThisMonth / donationsThisMonth / failedPayments are period
+// KPIs and honor from/to (falling back to the historical "this month" /
+// "last month" behavior when no range is given). Everything else on this
+// dashboard — alerts, recent activity, the 30-day chart, top ambassadors,
+// the campaigns list — is a current-state or "most recent N" view, not a
+// period metric, and deliberately stays unscoped. See GLOBAL_DATE_RANGE_SPEC.md.
+exports.getDashboardData = async (entityId, { from, to } = {}) => {
+  const key = `${entityId}_${from || 'default'}_${to || 'default'}`;
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  const hasRange = !!(from && to);
+  let prevFrom = null, prevTo = null;
+  if (hasRange) {
+    const spanMs = new Date(to).getTime() - new Date(from).getTime();
+    prevTo   = from;
+    prevFrom = new Date(new Date(from).getTime() - spanMs).toISOString().slice(0, 10);
+  }
 
   const [
     thisMonthRes,
@@ -36,8 +54,9 @@ exports.getDashboardData = async (entityId) => {
       FROM donations
       WHERE entity_id = $1
         AND status = 'paid'
-        AND completed_at >= date_trunc('month', NOW())
-    `, [entityId]),
+        AND completed_at >= COALESCE($2::date, date_trunc('month', NOW()))
+        AND ($3::date IS NULL OR completed_at < $3::date)
+    `, [entityId, from || null, to || null]),
 
     db.query(`
       SELECT
@@ -46,9 +65,9 @@ exports.getDashboardData = async (entityId) => {
       FROM donations
       WHERE entity_id = $1
         AND status = 'paid'
-        AND completed_at >= date_trunc('month', NOW() - INTERVAL '1 month')
-        AND completed_at  < date_trunc('month', NOW())
-    `, [entityId]),
+        AND completed_at >= COALESCE($2::date, date_trunc('month', NOW() - INTERVAL '1 month'))
+        AND completed_at  < COALESCE($3::date, date_trunc('month', NOW()))
+    `, [entityId, prevFrom, prevTo]),
 
     db.query(`
       SELECT
@@ -65,8 +84,9 @@ exports.getDashboardData = async (entityId) => {
       FROM donations
       WHERE entity_id = $1
         AND status = 'failed'
-        AND updated_at >= date_trunc('month', NOW())
-    `, [entityId]),
+        AND updated_at >= COALESCE($2::date, date_trunc('month', NOW()))
+        AND ($3::date IS NULL OR updated_at < $3::date)
+    `, [entityId, from || null, to || null]),
 
     db.query(`
       SELECT
@@ -154,7 +174,9 @@ exports.getDashboardData = async (entityId) => {
         current_amount::float,
         target_amount::float,
         supporters_count,
-        created_at
+        created_at,
+        end_date,
+        funding_type
       FROM campaigns
       WHERE entity_id = $1
         AND status IN ('published', 'pending_review', 'draft')

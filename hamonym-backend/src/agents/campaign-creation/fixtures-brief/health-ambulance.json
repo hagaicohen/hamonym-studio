@@ -1,0 +1,14 @@
+{
+  "source": "free_text",
+  "organizationName": "לב אחד",
+  "organizationNumber": "580123456",
+  "entityTypeGuess": "עמותה",
+  "categoryGuess": ["חירום", "רפואה"],
+  "organizationDescription": "עמותת \"לב אחד\" פועלת בבאר שבע ובאזור הדרום כבר 15 שנה. אנחנו מפעילים שירותי חירום התנדבותיים ומגיעים לאירועי חירום רפואיים לפני שירותי הביניים המקצועיים.",
+  "suggestedTitle": "גיוס כספים לרכישת אמבולנס חדש",
+  "suggestedShortDescription": "אנחנו זקוקים לעזרתכם לרכישת רכב אמבולנס חדש בעלות של 450,000 שקלים.",
+  "suggestedTargetAmount": 450000,
+  "socialLinks": [],
+  "contactEmail": "info@levechad.org.il",
+  "contactPhone": "08-1234567"
+}
