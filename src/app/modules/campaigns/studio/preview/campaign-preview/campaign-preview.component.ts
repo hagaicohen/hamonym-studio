@@ -24,6 +24,7 @@ import {
   TabsBlockData,
   AccordionBlockData,
   StatsBlockData,
+  StatKey,
   DonationWidgetBlockData,
   CtaBlockData,
   DividerBlockData,
@@ -991,6 +992,17 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return (block.data as StatsBlockData).items
       .filter(i => i.visible)
       .sort((a, b) => a.order - b.order);
+  }
+
+  // 'raised'/'target'/'percent' render fixed above (ring + raised-info) and
+  // aren't part of the reorderable KPI grid — same for the always-on
+  // "נותר ליעד" figure, which isn't a StatKey at all. Only these five are
+  // the actual configurable KPI list (Builder's "סדר וחשיפה" editor).
+  private readonly GRID_STAT_KEYS: StatKey[] =
+    ['supporters', 'ambassadors', 'days_remaining', 'start_date', 'end_date'];
+
+  visibleGridStats(block: CampaignBlock): StatsBlockData['items'] {
+    return this.visibleStats(block).filter(i => this.GRID_STAT_KEYS.includes(i.key));
   }
 
   readonly Math = Math;

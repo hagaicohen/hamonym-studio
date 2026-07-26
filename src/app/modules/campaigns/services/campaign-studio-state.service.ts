@@ -399,6 +399,12 @@ export interface CampaignLayout {
   projectDescription?:   string;
   projectDescriptionPosition?: 'above' | 'hero' | 'below' | 'hidden';
   rewardsLayout:      'standard' | 'image';  // legacy persisted key — see CampaignTheme note above
+  // How the 'stats' + 'donation-widget' blocks present together (the
+  // "Conversion Widget"). Pure visual choice — same data/functions/events for
+  // all three, only markup/CSS differs. Absent/'classic' = today's stacked
+  // look for every existing campaign — no migration needed, same pattern as
+  // heroPlacement above. See DECISIONS.md (2026-07-26).
+  conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;

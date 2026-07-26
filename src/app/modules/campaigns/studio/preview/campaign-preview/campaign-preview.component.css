@@ -634,6 +634,130 @@
   direction: rtl
 }
 
+/* ══ CONVERSION WIDGET LAYOUT — Unified/Compact (draft.layout.conversionWidgetLayout) ══
+   Pure visual variants: same block data, functions and events as Classic —
+   only markup classes + these rules differ. See DECISIONS.md (2026-07-26). */
+
+/* Unified — stats + donation-widget merge into one continuous card */
+.hm-stats.conv-unified {
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+}
+.sidebar-rail-inner .hm-stats.conv-unified {
+  margin-bottom: -16px; /* cancels .sidebar-rail-inner's gap so the two cards touch */
+}
+.hm-donate.conv-unified {
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+  padding-top: 24px;
+}
+
+/* Compact — denser spacing, smaller type, for small screens/busy pages */
+.hm-stats.conv-compact, .hm-donate.conv-compact {
+  padding: 16px 14px;
+}
+.hm-stats.conv-compact .hm-stats-top { gap: 16px; margin-bottom: 16px; }
+.hm-stats.conv-compact .hm-ring-wrapper,
+.hm-stats.conv-compact .hm-ring-svg { width: 64px; height: 64px; }
+.hm-stats.conv-compact .hm-raised-amount { font-size: 22px; }
+.hm-stats.conv-compact .hm-stat-box { padding: 12px 6px 0; }
+.hm-stats.conv-compact .hm-stat-icon { width: 32px; height: 32px; }
+.hm-donate.conv-compact h2 { font-size: 16px; margin-bottom: 10px; }
+.hm-donate.conv-compact .hm-amounts { gap: 6px; margin-bottom: 10px; }
+.hm-donate.conv-compact .hm-amount-preset { padding: 8px 4px; font-size: 12px; }
+.hm-donate.conv-compact .hm-custom-amount-wrap { margin-bottom: 10px; }
+.hm-donate.conv-compact .hm-donate-btn { height: 44px; font-size: 14px; }
+
+/* Hero Card — stats + donation merge into one bold card in the campaign's own
+   theme colors (var(--hm-primary)/var(--hm-secondary), set on .campaign-page),
+   white text/contrast throughout. Reuses the Unified merge (radius+gap cancel). */
+.hm-stats.conv-hero {
+  border-radius: 8px 8px 0 0;
+  border: none;
+  background: linear-gradient(135deg, var(--hm-primary, #583cd6), var(--hm-secondary, #6fc9eb));
+}
+.sidebar-rail-inner .hm-stats.conv-hero {
+  margin-bottom: -16px;
+}
+.hm-donate.conv-hero {
+  border-radius: 0 0 8px 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--hm-primary, #583cd6), var(--hm-secondary, #6fc9eb));
+  padding-top: 20px;
+}
+.hm-stats.conv-hero .hm-raised-title,
+.hm-stats.conv-hero .hm-raised-goal,
+.hm-stats.conv-hero .hm-ring-text span,
+.hm-stats.conv-hero .hm-stat-box > span:not(.hm-stat-icon) { color: rgba(255,255,255,0.75); }
+.hm-stats.conv-hero .hm-raised-amount,
+.hm-stats.conv-hero .hm-ring-text strong,
+.hm-stats.conv-hero .hm-stat-box strong { color: #ffffff; }
+.hm-stats.conv-hero .hm-ring-bg { stroke: rgba(255,255,255,0.25); }
+.hm-stats.conv-hero .hm-ring-fill { stroke: #ffffff; }
+.hm-stats.conv-hero .hm-stat-grid { border-top-color: rgba(255,255,255,0.25); }
+.hm-stats.conv-hero .hm-stat-box { border-left-color: rgba(255,255,255,0.25); }
+.hm-stats.conv-hero .hm-stat-icon { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5); color: #ffffff; }
+.hm-donate.conv-hero h2 { color: #ffffff; }
+.hm-donate.conv-hero .hm-amount-preset { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.4); color: #ffffff; }
+.hm-donate.conv-hero .hm-amount-preset:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
+.hm-donate.conv-hero .hm-amount-preset.is-selected { background: #ffffff; border-color: #ffffff; color: var(--hm-primary, #583cd6); box-shadow: none; }
+.hm-donate.conv-hero .hm-currency-symbol { color: rgba(255,255,255,0.75); }
+.hm-donate.conv-hero .hm-custom-amount { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.4); color: #fff; }
+.hm-donate.conv-hero .hm-custom-amount::placeholder { color: rgba(255,255,255,0.6); }
+.hm-donate.conv-hero .hm-donate-btn { background: #ffffff; color: var(--hm-primary, #583cd6); }
+.hm-donate.conv-hero .hm-donate-btn:hover { background: #f3f0ff; box-shadow: none; }
+.hm-donate.conv-hero .hm-total-label, .hm-donate.conv-hero .hm-total-val,
+.hm-donate.conv-hero .hm-total-sum { color: #ffffff; }
+.hm-donate.conv-hero .hm-total-divider, .hm-donate.conv-hero .hm-total-line { border-color: rgba(255,255,255,0.25); }
+
+/* Split Horizontal — stats becomes a narrow list rail beside a wide donation
+   column. Only safe when stats+donation are the rail's only two children
+   (true for every default template — see sidebarBlocks()); a custom sidebar
+   container with other blocks mixed in won't split. Known MVP limitation,
+   same category as Unified's vertical-stack assumption above. */
+.sidebar-rail-inner:has(> .block-wrap > .hm-stats.conv-split) {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+}
+.hm-stats.conv-split {
+  flex: 0 0 34%;
+  border-radius: 8px 0 0 8px;
+  border-left: none;
+  justify-content: flex-start;
+}
+.hm-donate.conv-split {
+  flex: 1;
+  border-radius: 0 8px 8px 0;
+}
+.hm-stats.conv-split .hm-stats-top {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.hm-stats.conv-split .hm-stat-grid {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line, #e2e8f0);
+  padding-top: 4px;
+  direction: rtl;
+}
+.hm-stats.conv-split .hm-stat-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+  border-left: none;
+  border-top: 1px solid var(--line, #e2e8f0);
+  padding: 10px 2px;
+}
+.hm-stats.conv-split .hm-stat-box:first-child { border-top: none; }
+.hm-stats.conv-split .hm-stat-icon { margin: 0; flex-shrink: 0; }
+.hm-stats.conv-split .hm-stat-box strong,
+.hm-stats.conv-split .hm-stat-box > span:not(.hm-stat-icon) { display: inline; margin: 0; }
+
 /* ── STATS CARD ── */
 .hm-stats-top {
     display: flex;
@@ -667,7 +791,11 @@
 
 .hm-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0, 1fr), not plain 1fr — a grid track never shrinks below its
+     content's min-content width by default, so a wide number (e.g.
+     ₪250,000) would otherwise steal space from the other columns and
+     throw off the equal spacing between icons. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--line, #e2e8f0);
   margin-top: auto;
   direction: ltr
@@ -676,6 +804,12 @@
   text-align: center;
   padding: 20px 8px 0;
   border-left: 1px solid var(--line, #e2e8f0);
+  /* lets the value's font-size below react to this box's own width via cqw,
+     not the viewport's — so a long value (a large ₪ amount, a dd/mm/yyyy
+     date) shrinks to fit its equal-width column instead of wrapping/cutting
+     off, and every box in the row scales together since they're all the
+     same width. */
+  container-type: inline-size;
 }
 .hm-stat-box:first-child { 
   border-left: none; 
@@ -690,7 +824,15 @@
   display: inline-flex; align-items: center; justify-content: center;
   margin: 0 auto 8px;
 }
-.hm-stat-box strong { display: block; font-size: 18px; font-weight: 800; color: var(--hm-secondary, #6fc9eb); }
+.hm-stat-box strong {
+  display: block;
+  font-size: clamp(11px, 17cqw, 18px);
+  font-weight: 800;
+  color: var(--hm-secondary, #6fc9eb);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .hm-stat-box > span:not(.hm-stat-icon) { font-size: 11px; color: #62728d; font-weight: 700; display: block; margin-top: 2px; }
 
 /* ── DONATION CARD ── */
@@ -1283,7 +1425,7 @@
 .campaign-page--mobile .hm-raised-amount { font-size: 22px; }
 /* 2-column stat grid on mobile */
 .campaign-page--mobile .hm-stat-grid {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .campaign-page--mobile .hm-stat-box { padding: 10px 4px 0; }
 .campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-left: none; }
@@ -1319,7 +1461,7 @@
 .container-child .hm-ring-text strong { font-size: 16px; }
 .container-child .hm-raised-amount   { font-size: 22px; }
 /* 2-column stat grid inside any container */
-.container-child .hm-stat-grid { grid-template-columns: repeat(2, 1fr); }
+.container-child .hm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .container-child .hm-stat-box { padding: 12px 6px 0; }
 .container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
 .container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
@@ -2746,7 +2888,7 @@
   .hm-ring-svg    { width: 80px; height: 80px; }
   .hm-ring-text strong { font-size: 16px; }
   .hm-raised-amount { font-size: 22px; }
-  .hm-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .hm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-stat-box  { padding: 10px 4px 0; }
   .hm-stat-box:nth-child(2n+1) { border-left: none; }
   .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }

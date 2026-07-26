@@ -572,6 +572,22 @@
             </div>
 
             <div class="editor-row">
+              <label class="editor-label">פריסת אזור ההמרה (נתונים + תרומה)</label>
+              <div class="direction-toggle">
+                <button class="direction-btn" [class.active]="(draft.layout.conversionWidgetLayout ?? 'classic') === 'classic'"
+                  (click)="setConversionWidgetLayout('classic')">קלאסי</button>
+                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'unified'"
+                  (click)="setConversionWidgetLayout('unified')">מאוחד</button>
+                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'compact'"
+                  (click)="setConversionWidgetLayout('compact')">קומפקטי</button>
+                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'hero'"
+                  (click)="setConversionWidgetLayout('hero')">כרטיס Hero</button>
+                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'split-horizontal'"
+                  (click)="setConversionWidgetLayout('split-horizontal')">פיצול אופקי</button>
+              </div>
+            </div>
+
+            <div class="editor-row">
               <label class="editor-label">צבע אייקונים</label>
               <app-color-picker
                 [value]="asStats(block.data).iconColor"

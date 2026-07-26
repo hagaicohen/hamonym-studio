@@ -554,6 +554,12 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { items } as StatsBlockData);
   }
 
+  // Conversion Widget layout — how 'stats' + 'donation-widget' present
+  // together. Layout-level (like rewardsLayout), not per-block.
+  setConversionWidgetLayout(value: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal'): void {
+    this.state.patch({ layout: { ...this.state.draft.layout, conversionWidgetLayout: value } });
+  }
+
   // Donation widget
   updateDonationWidgetField(id: string, field: keyof DonationWidgetBlockData, value: string | boolean): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
