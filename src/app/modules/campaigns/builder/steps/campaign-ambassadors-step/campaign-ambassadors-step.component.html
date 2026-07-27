@@ -36,6 +36,15 @@
     </div>
   </div>
 
+  <!-- PLACEMENT — only meaningful when there's a sidebar to place it in -->
+  <div class="amb-placement-row" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
+    <span class="amb-placement-label">מיקום השגרירים</span>
+    <button class="amb-placement-btn" [class.amb-placement-btn--active]="!state.isSidebarSection('ambassadors')"
+            (click)="state.setSidebarSection('ambassadors', false)">מתחת לתוכן (רוחב מלא)</button>
+    <button class="amb-placement-btn" [class.amb-placement-btn--active]="state.isSidebarSection('ambassadors')"
+            (click)="state.setSidebarSection('ambassadors', true)">בסיידבר</button>
+  </div>
+
   <!-- TOOLBAR -->
   <div class="amb-toolbar">
     <div class="amb-search-wrap">

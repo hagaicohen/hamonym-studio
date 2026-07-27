@@ -399,6 +399,17 @@ export interface CampaignLayout {
   projectDescription?:   string;
   projectDescriptionPosition?: 'above' | 'hero' | 'below' | 'hidden';
   rewardsLayout:      'standard' | 'image';  // legacy persisted key — see CampaignTheme note above
+  // Which of the five full-width-by-default sections (Rewards/Offerings,
+  // Donors, Ambassadors, Updates, Sponsors) the owner has chosen to render INSIDE the
+  // sidebar rail (below stats+donation) instead of full-width below the
+  // sidebar row — as a compact vertical list, not their normal wide
+  // grid/carousel layout. Independent of each section's own content-style
+  // field (e.g. rewardsLayout) — this is *placement*, not card content.
+  // Only meaningful when layoutMode is a sidebar variant (there's no sidebar
+  // to place it in otherwise). Absent/empty = today's behavior for every
+  // existing campaign — no migration needed, same pattern as heroPlacement.
+  // See DECISIONS.md (2026-07-26).
+  sidebarSections?: Array<'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors'>;
   // How the 'stats' + 'donation-widget' blocks present together (the
   // "Conversion Widget"). Pure visual choice — same data/functions/events for
   // all three, only markup/CSS differs. Absent/'classic' = today's stacked
@@ -750,6 +761,21 @@ export class CampaignStudioStateService {
       theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });
+  }
+
+  // Sidebar section placement — shared by every step editor whose section
+  // (rewards/donors/ambassadors/updates) supports rendering in the sidebar
+  // rail. See CampaignLayout.sidebarSections doc comment.
+  isSidebarSection(type: 'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors'): boolean {
+    return !!this.draft.layout.sidebarSections?.includes(type);
+  }
+
+  setSidebarSection(type: 'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors', inSidebar: boolean): void {
+    const current = this.draft.layout.sidebarSections ?? [];
+    const next = inSidebar
+      ? (current.includes(type) ? current : [...current, type])
+      : current.filter(t => t !== type);
+    this.patch({ layout: { ...this.draft.layout, sidebarSections: next } });
   }
 
   // Sets the chosen Campaign Preset (§ CAMPAIGN_PRESETS_VISION.md §0 — this

@@ -747,6 +747,18 @@
           <span>⭐</span> השגרירים מנוהלים בצעד 5 — שגרירים
         </div>
 
+        <!-- DONORS — no dedicated step; placement only, only shown when
+             there's a sidebar to place it in -->
+        <div class="editor-field" *ngIf="block.type === 'donors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
+          <label class="editor-label">מיקום התורמים</label>
+          <div class="tse-chips">
+            <button class="tse-chip" [class.active]="!state.isSidebarSection('donors')"
+              (click)="state.setSidebarSection('donors', false)">מתחת לתוכן (רוחב מלא)</button>
+            <button class="tse-chip" [class.active]="state.isSidebarSection('donors')"
+              (click)="state.setSidebarSection('donors', true)">בסיידבר</button>
+          </div>
+        </div>
+
         <!-- UPDATES — view mode only, content in step 6 -->
         <div class="editor-field" *ngIf="block.type === 'updates'">
           <div class="system-note" style="margin-bottom:10px">

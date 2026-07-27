@@ -55,6 +55,15 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   // anonymous visitors can't see it, but the manager themselves should
   // still be able to preview their own work in progress.
   ownerPreview    = false;
+  // True when the logged-in visitor manages this campaign's entity — shows
+  // a "back to edit" affordance. Deliberately checked via an authenticated
+  // API call (reusing getBySlug()'s existing user_entities ownership join),
+  // never via a URL flag/query-param/referrer — those could be guessed,
+  // bookmarked, or shared, exposing the affordance (even just its
+  // existence) to an outside visitor. A stranger's request to the
+  // authenticated endpoint below simply 403/404s, so canEdit stays false
+  // for them regardless of how they arrived at this URL.
+  canEdit         = false;
   currentAmbassador: Ambassador | null = null;
   ambassadorsList: AmbassadorPublicInfo[] | null = null;
   autoOpenJoin    = false;
@@ -97,7 +106,15 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     this.autoOpenJoin = this.route.snapshot.queryParamMap.get('join') === 'ambassador';
 
     this.api.getBySlugPublic(slug).subscribe({
-      next: (data) => this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm),
+      next: (data) => {
+        this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm);
+        // Normal case (campaign already public): the public call already
+        // succeeded, so this ownership check runs silently in the
+        // background purely to decide whether to show "back to edit" — it
+        // never blocks the page or is shown as an error to a visitor who
+        // isn't the manager.
+        if (localStorage.getItem('token')) this.checkOwnership(slug);
+      },
       error: () => {
         // The true public endpoint 404s whenever the owning entity isn't
         // approved (active) yet — even for the campaign's own manager,
@@ -110,12 +127,29 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
         this.api.getBySlug(slug).subscribe({
           next: (data) => {
             this.ownerPreview = true;
+            this.canEdit       = true;
             this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm);
           },
           error: () => this.showNotFound(),
         });
       },
     });
+  }
+
+  // Silent ownership probe for the common case (campaign already public) —
+  // reuses getBySlug()'s existing entity_id/user_entities authorization
+  // join; a non-manager (or anonymous visitor, though this is only called
+  // when a token exists) just gets a 403/404 here and canEdit stays false.
+  private checkOwnership(slug: string): void {
+    this.api.getBySlug(slug).subscribe({
+      next: () => { this.canEdit = true; },
+      error: () => {},
+    });
+  }
+
+  goToEdit(): void {
+    const id = this.state.draft?.id;
+    if (id) this.router.navigate(['/campaigns', id, 'edit']);
   }
 
   private showNotFound(): void {

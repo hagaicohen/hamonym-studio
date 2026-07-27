@@ -17,9 +17,16 @@
         ✏️ ערוך הדף שלי
       </button>
     </div>
+  } @else if (canEdit) {
+    <div class="ambassador-edit-bar">
+      <span class="ambassador-edit-label">אתה צופה בתצוגה הציבורית של הקמפיין שלך</span>
+      <button class="ambassador-edit-btn" (click)="goToEdit()">
+        ✏️ חזרה לעריכה
+      </button>
+    </div>
   }
 
-  <div class="public-preview-wrap" [class.has-edit-bar]="isAmbassadorMode && currentAmbassador">
+  <div class="public-preview-wrap" [class.has-edit-bar]="(isAmbassadorMode && currentAmbassador) || canEdit">
     <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" />
   </div>
 }

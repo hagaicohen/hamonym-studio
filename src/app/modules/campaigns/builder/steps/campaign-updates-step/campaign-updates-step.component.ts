@@ -13,7 +13,7 @@ import { UploadService } from '../../../../../core/services/upload.service';
   styleUrl: './campaign-updates-step.component.css',
 })
 export class CampaignUpdatesStepComponent {
-  private state         = inject(CampaignStudioStateService);
+  protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
 
   readonly MegaphoneIcon = Megaphone;
