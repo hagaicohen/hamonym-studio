@@ -1,4 +1,5 @@
 const svc = require('./platform.service');
+const approvalAgent = require('../../agents/approval/approval.agent');
 
 function statusFor(err) {
   switch (err.message) {
@@ -14,6 +15,13 @@ function statusFor(err) {
     default: return 500;
   }
 }
+
+exports.getNotificationsCount = async (req, res) => {
+  try {
+    const result = await svc.getNotificationsCount();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
 
 exports.getDashboard = async (req, res) => {
   try {
@@ -38,9 +46,10 @@ exports.getOrganizations = async (req, res) => {
     const limit = parseInt(req.query.limit || '25', 10);
     const { search, status, sortBy, sortDir } = req.query;
     const missingDocs = req.query.missingDocs === '1' || req.query.missingDocs === 'true';
+    const flaggedForReview = req.query.flaggedForReview === '1' || req.query.flaggedForReview === 'true';
     const noCampaigns = req.query.noCampaigns === '1' || req.query.noCampaigns === 'true';
     const newSince = req.query.newSince ? parseInt(req.query.newSince, 10) : undefined;
-    const result = await svc.getOrganizations({ search, status, sortBy, sortDir, page, limit, missingDocs, noCampaigns, newSince });
+    const result = await svc.getOrganizations({ search, status, sortBy, sortDir, page, limit, missingDocs, flaggedForReview, noCampaigns, newSince });
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -48,6 +57,20 @@ exports.getOrganizations = async (req, res) => {
 exports.getOrganization = async (req, res) => {
   try {
     const result = await svc.getOrganizationDetail(req.params.id);
+    res.json(result);
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
+exports.analyzeOrganization = async (req, res) => {
+  try {
+    const context = await approvalAgent.analyze(req.params.id);
+    res.json(context);
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
+exports.recommendOrganization = async (req, res) => {
+  try {
+    const result = await approvalAgent.recommend(req.params.id);
     res.json(result);
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };

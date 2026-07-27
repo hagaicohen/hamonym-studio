@@ -64,6 +64,27 @@ db.query(`SELECT ... WHERE ${where.join(' AND ')} LIMIT $${idx} OFFSET $${idx+1}
 
 > **Warning:** In PowerShell `-replace`, `$1` in the replacement string is a capture group reference and gets erased. Never use PowerShell regex replace to write JS files containing `$1`/`$2`.
 
+## AI / LLM Capabilities
+
+All LLM-backed capabilities live under `src/agents/`, one subfolder per capability — **regardless of whether it's an autonomous judgment-style Agent or a one-shot generation Pipeline**. Don't create a second top-level location (e.g. `src/ai/`) for this — one place to look for "where does AI code live" matters more than the Agent/Pipeline distinction.
+
+```
+src/agents/
+  llm.service.js        # shared OpenAI wrapper — complete(systemPrompt, userPrompt) → parsed JSON
+  trace.util.js          # createTracer(name).trace(step, fn, summarize) for pipeline step tracing
+  approval/               # ApprovalAgent — judges an existing entity's readiness for admin approval
+  campaign-advisor/       # CampaignAdvisorAgent — advises on an existing campaign
+  campaign-creation/       # AI-Assisted Campaign Creation — generates a new draft from source material
+```
+
+Shared shape across all of them: `Context (via tools/) → Facts (deterministic) → Prompt → LLM → structured Response`. The LLM never derives facts itself — it only interprets facts the code already computed.
+
+**Naming signals the distinction that matters** (judging vs. constructing), not folder location:
+- `*.agent.js` — judges/advises on something that already exists (ApprovalAgent, CampaignAdvisorAgent).
+- `*.pipeline.js` — constructs new state from external input (campaign-creation).
+
+See `hamonym-app/AI_CAMPAIGN_CREATION_VISION.md` and `AI_CAMPAIGN_CREATION_MVP.md` for the campaign-creation pipeline's own ADR, and **`AI_ARCHITECTURE.md`** (this repo's root) for the cross-agent principles — read that one first when adding a new AI capability.
+
 ## Payment Provider
 
 Set `PAYMENT_PROVIDER=mock` in `.env` to use the mock payment flow instead of Cardcom.

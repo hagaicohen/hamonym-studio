@@ -12,6 +12,9 @@ const controller =
 const requireAuth =
   require('../../middleware/require-auth');
 
+const { requireEntityOwnership } =
+  require('../../middleware/entity-permission.middleware');
+
 const upload = multer({
 
   storage:
@@ -53,6 +56,8 @@ router.patch(
 
   requireAuth,
 
+  requireEntityOwnership(),
+
   upload.single('file'),
 
   controller.uploadAssociationDocument
@@ -65,6 +70,8 @@ router.patch(
 
   requireAuth,
 
+  requireEntityOwnership(),
+
   upload.single('file'),
 
   controller.uploadTaxDocument
@@ -75,6 +82,10 @@ router.get(
 
   '/:id/association-document',
 
+  requireAuth,
+
+  requireEntityOwnership(),
+
   controller.getAssociationDocument
 
 );
@@ -82,6 +93,10 @@ router.get(
 router.get(
 
   '/:id/tax-document',
+
+  requireAuth,
+
+  requireEntityOwnership(),
 
   controller.getTaxDocument
 
@@ -92,6 +107,8 @@ router.patch(
   '/:id/logo',
 
   requireAuth,
+
+  requireEntityOwnership(),
 
   upload.single('file'),
 
@@ -113,9 +130,11 @@ router.get(
 
   requireAuth,
 
+  requireEntityOwnership(),
+
   controller.getEntityById
 
-);  
+);
 
 router.patch(
 
@@ -129,12 +148,15 @@ router.patch(
 
 router.delete(
   '/:id/tax-document',
+  requireAuth,
+  requireEntityOwnership(),
   controller.removeTaxDocument
 );
 
 router.delete(
   '/:id/association-document',
   requireAuth,
+  requireEntityOwnership(),
   controller.removeAssociationDocument
 );
 
@@ -148,6 +170,18 @@ router.patch(
   '/:id/request-review',
   requireAuth,
   controller.requestReview
+);
+
+router.get(
+  '/:id/notifications',
+  requireAuth,
+  controller.getNotifications
+);
+
+router.post(
+  '/:id/notifications/acknowledge',
+  requireAuth,
+  controller.acknowledgeNotifications
 );
 
 router.delete(
