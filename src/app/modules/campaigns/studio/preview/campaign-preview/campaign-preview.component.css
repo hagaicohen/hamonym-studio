@@ -1084,7 +1084,17 @@
   align-self: flex-start;
   background: #f8fafc;
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: hidden;
+  /* Stacking several optional sections (rewards/donors/ambassadors/updates/
+     sponsors) into the rail can make it taller than the main column next to
+     it — without a height cap, the whole page grows to match the rail,
+     leaving the shorter main column blank once you scroll past its own
+     content. Capping + scrolling internally keeps the rail's own nav-link
+     targets reachable (scrollIntoView still finds them inside this
+     scrollable ancestor) without stretching the page. See DECISIONS.md
+     (2026-07-26). */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
 }
 .sidebar-rail-inner {
@@ -1108,6 +1118,8 @@
   border-radius: 0;
   box-shadow: none;
   order: -1; /* rail on top on mobile */
+  max-height: none; /* not sticky here — no need to cap/scroll internally */
+  overflow-y: visible;
 }
 .campaign-page--mobile .sidebar-rail-inner { padding: 16px; }
 .campaign-page--mobile .sidebar-main { width: 100%; }
@@ -1550,6 +1562,85 @@
   color: rgba(255,255,255,0.55);
   font-size: 14px; margin: 0;
 }
+
+/* ── Rewards: sidebar placement (compact vertical list, no carousel) ──
+   Sits inside .sidebar-rail-inner alongside .hm-stats/.hm-donate — matches
+   their white-card look instead of the full-width dark-green section
+   styling above. See DECISIONS.md (2026-07-26). */
+.hm-rewards--sidebar-list {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-bottom: none;
+}
+.hm-rewards--sidebar-list h2 {
+  color: #0f2747;
+  font-size: 16px;
+  text-align: center;
+  margin: 0 0 14px;
+}
+.hm-reward-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hm-reward-list-card {
+  background: #ffffff;
+  border: 1.5px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+.hm-reward-list-card:hover { border-color: var(--hm-secondary, #6fc9eb); }
+.hm-reward-list-card.is-selected { border-color: var(--hm-secondary, #6fc9eb); border-width: 2px; }
+.hm-reward-list-card .hm-reward-badge { top: -12px; font-size: 10px; padding: 3px 10px; }
+.hm-reward-list-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.hm-reward-list-card .hm-reward-icon-wrap {
+  width: 40px; height: 40px;
+  background: #f8fafc;
+  border: 1px solid var(--line, #e2e8f0);
+}
+.hm-reward-list-card .hm-reward-avatar-icon { font-size: 20px; }
+.hm-reward-list-info { flex: 1; min-width: 0; }
+.hm-reward-list-info h3 {
+  font-size: 14px; font-weight: 800; color: #0f2747;
+  margin: 0 0 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hm-reward-list-card .hm-reward-price {
+  font-size: 13px; font-weight: 700; color: var(--hm-secondary, #6fc9eb);
+  line-height: 1.2;
+}
+.hm-reward-list-desc {
+  font-size: 12px; color: #64748b; line-height: 1.4;
+  margin: 0 0 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hm-reward-list-btn {
+  width: 100%; padding: 9px; border: none; border-radius: 8px;
+  background: var(--hm-secondary, #6fc9eb); color: #fff;
+  font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
+}
+.hm-reward-list-card.is-selected .hm-reward-list-btn { background: #16a34a; }
+
+/* The "added to cart" overlay (.hm-reward-overlay etc.) is sized for the
+   much taller carousel card (~216px of padding+content) — the compact
+   sidebar card is only ~150px tall, so it needs its own smaller version or
+   the content overflows/looks clipped. */
+.hm-reward-list-card { min-height: 160px; }
+.hm-reward-list-card .hm-reward-overlay { padding: 14px 12px; gap: 6px; }
+.hm-reward-list-card .hm-reward-overlay-check { width: 34px; height: 34px; font-size: 16px; box-shadow: 0 0 0 5px rgba(34,197,94,0.18); }
+.hm-reward-list-card .hm-reward-overlay-title { font-size: 13px; }
+.hm-reward-list-card .hm-reward-overlay-sub { font-size: 11px; }
+.hm-reward-list-card .hm-overlay-continue-btn,
+.hm-reward-list-card .hm-overlay-cancel-btn { padding: 8px 6px; font-size: 11px; border-radius: 8px; }
 
 /* Slider outer */
 .hm-slider-outer {
@@ -2092,6 +2183,7 @@
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; margin-bottom: 8px;
 }
+.hm-lb-section-header--center { justify-content: center; }
 .hm-lb-section-title { font-size: 24px; font-weight: 900; margin: 0; }
 
 .hm-lb-proof { font-size: 13px; color: #64748b; margin-bottom: 22px; }
@@ -2206,6 +2298,35 @@
   color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
 }
 
+/* ── AMBASSADORS: sidebar placement (compact vertical list) — no search/sort
+   controls, no 2-col grid; reuses ambVisible/ambPct()/viewAmbassador(). ── */
+.hm-ambassadors--sidebar-list { padding: 0; }
+.hm-amb-list-title { font-size: 16px; text-align: center; margin: 0 0 12px; }
+.hm-ambassadors--sidebar-list .hm-lb-empty { padding: 24px 12px; gap: 8px; }
+.hm-ambassadors--sidebar-list .hm-lb-empty-icon { font-size: 32px; }
+.hm-ambassadors--sidebar-list .hm-lb-empty-title { font-size: 14px; }
+.hm-ambassadors--sidebar-list .hm-lb-empty-btn { padding: 9px 16px; font-size: 12px; border-radius: 8px; }
+.hm-amb-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
+.hm-amb-list-row {
+  background: #ffffff; border: 1.5px solid var(--line, #e2e8f0); border-radius: 10px;
+  padding: 12px;
+}
+.hm-amb-list-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.hm-amb-list-sidebar .hm-lb-avatar { width: 32px; height: 32px; font-size: 12px; }
+.hm-amb-list-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hm-amb-list-name {
+  font-size: 13px; font-weight: 700; color: #0f2747;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hm-amb-list-raised { font-size: 12px; font-weight: 800; }
+.hm-amb-list-sidebar .hm-lb-bar { height: 5px; margin-bottom: 10px; }
+.hm-amb-list-btn {
+  width: 100%; padding: 8px; border: none; border-radius: 8px;
+  background: #f1f5f9; color: #0f2747; font-weight: 700; font-size: 12px;
+  cursor: pointer; font-family: inherit;
+}
+.hm-amb-list-btn:hover { background: #e2e8f0; }
+
 /* Show more / No results */
 .hm-lb-show-more  { text-align: center; margin-top: 24px; }
 .hm-lb-more-btn {
@@ -2241,6 +2362,14 @@
 .hm-sponsor-card img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .hm-sponsor-name-text { font-size: 13px; font-weight: 700; color: #475569; text-align: center; }
 
+/* ── SPONSORS: sidebar placement — single narrow column instead of the
+   wide wrapping grid; same .hm-sponsor-card markup, just re-laid-out. ── */
+.hm-sponsors--sidebar-list { padding: 0; }
+.hm-sponsors--sidebar-list .hm-sponsors-grid {
+  flex-direction: column; max-width: none; gap: 10px;
+}
+.hm-sponsors--sidebar-list .hm-sponsor-card { width: 100%; height: 64px; }
+
 /* Empty state (shared) */
 .hm-section-placeholder {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -2254,6 +2383,19 @@
   font-size: 12px; font-weight: 700; color: var(--hm-secondary, #6fc9eb);
   text-decoration: none; margin-top: 4px; display: inline-block;
 }
+
+/* ── UPDATES: sidebar placement (compact vertical list) — own pagination
+   (visibleUpdates()/canShowMoreUpdates()/showMoreUpdates()), no media, no
+   carousel/list-view toggle (that's the below-sidebar variant's concern). ── */
+.hm-updates--sidebar-list { padding: 0; }
+.hm-update-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
+.hm-update-list-sidebar-item {
+  background: #ffffff; border: 1.5px solid var(--line, #e2e8f0); border-radius: 10px;
+  padding: 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.hm-update-list-sidebar-item .hm-update-title { font-size: 13px; }
+.hm-update-list-sidebar-item .hm-update-desc { font-size: 12px; -webkit-line-clamp: 2; line-clamp: 2; }
+.hm-update-list-sidebar-item .hm-update-date-badge { font-size: 10px; padding: 2px 8px; }
 
 /* Comments — public, anonymous thread */
 .hm-comments-header {
@@ -2390,6 +2532,35 @@
   text-align: center; padding: 32px 16px; color: #94a3b8; font-size: 14px;
 }
 .hm-donors-empty span { font-size: 28px; display: block; margin-bottom: 8px; }
+
+/* ── DONORS: sidebar placement (compact vertical list) — skips the stats
+   row/period tabs/Top-10 panel, reuses visibleDonors/canShowMore/showMoreDonors. ── */
+.hm-donors--sidebar-list { padding: 0; }
+.hm-donor-list-title { font-size: 16px; text-align: center; margin: 0 0 12px; }
+.hm-donor-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
+.hm-donor-list-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #ffffff; border: 1.5px solid var(--line, #e2e8f0); border-radius: 10px;
+  padding: 10px 12px;
+}
+.hm-donor-list-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+.hm-donor-list-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hm-donor-list-name {
+  font-size: 13px; font-weight: 700; color: #0f2747;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hm-donor-list-time { font-size: 11px; color: #94a3b8; }
+.hm-donor-list-amount { font-size: 13px; font-weight: 800; flex-shrink: 0; }
+.hm-donor-list-more {
+  width: 100%; padding: 9px; margin-top: 2px; border: 1.5px solid var(--line, #e2e8f0); border-radius: 8px;
+  background: transparent; font-weight: 700; font-size: 12px; cursor: pointer; font-family: inherit;
+  color: #64748b;
+}
+.hm-donor-list-more:hover { border-color: #94a3b8; }
 
 /* ── DONORS — stats row ── */
 .hm-donors-stats {
@@ -2931,6 +3102,8 @@
     border-radius: 0;
     box-shadow: none;
     order: -1;
+    max-height: none;
+    overflow-y: visible;
   }
   .sidebar-rail-inner { padding: 16px; }
   .sidebar-main { width: 100%; }

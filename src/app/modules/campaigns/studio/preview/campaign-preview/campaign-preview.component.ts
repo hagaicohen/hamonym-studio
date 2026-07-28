@@ -32,6 +32,7 @@ import {
   SponsorsBlockData,
   AmbassadorsBlockData,
   UpdatesBlockData,
+  CampaignUpdate,
   ShareBlockData,
   CommentsBlockData,
 } from '../../../services/campaign-studio-state.service';
@@ -415,6 +416,13 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return draft.blocks.some(b => b.type === 'hero');
   }
 
+  // Whether the owner chose to render this FULL_WIDTH_TYPES section inside
+  // the sidebar rail instead of full-width below it. See sidebarSections
+  // doc comment on CampaignLayout.
+  inSidebarSection(draft: CampaignDraft, type: 'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors'): boolean {
+    return !!draft.layout.sidebarSections?.includes(type);
+  }
+
   // ── Content blocks for standard/magazine layouts ──
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
@@ -430,14 +438,30 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // existed (flat blocks, no container). See DECISIONS.md (2026-07-17).
   sidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
     const railId = this.railZoneContainerId(draft, 'sidebar');
+    let blocks: CampaignBlock[];
     if (railId) {
       const container = draft.blocks.find(b => b.id === railId);
-      if (container) return this.childBlocks(container, draft);
+      blocks = container ? this.childBlocks(container, draft) : [];
+    } else {
+      const childIds = this.topLevelChildIds(draft);
+      blocks = draft.blocks
+        .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
+        .sort((a, b) => a.order - b.order);
     }
-    const childIds = this.topLevelChildIds(draft);
-    return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
-      .sort((a, b) => a.order - b.order);
+    // sidebarSections appends any (top-level, not-already-claimed) blocks of
+    // the chosen FULL_WIDTH_TYPES after whatever the container/fallback above
+    // produced, in their own `order` — works the same whether this campaign
+    // uses an explicit railZone container or the older flat-blocks fallback.
+    const sections = draft.layout.sidebarSections;
+    if (sections && sections.length > 0) {
+      const childIds = this.topLevelChildIds(draft);
+      const claimed = new Set(blocks.map(b => b.type));
+      const extra = draft.blocks
+        .filter(b => b.visible && !childIds.has(b.id) && sections.includes(b.type as any) && !claimed.has(b.type))
+        .sort((a, b) => a.order - b.order);
+      blocks = [...blocks, ...extra];
+    }
+    return blocks;
   }
 
   // Main column — prefers a real top-level container tagged railZone:'main'
@@ -493,11 +517,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       .sort((a, b) => a.order - b.order);
   }
 
-  // Full-width blocks rendered below the sidebar two-column area
+  // Full-width blocks rendered below the sidebar two-column area. Any type
+  // listed in sidebarSections is excluded here whenever sidebarBlocks()
+  // already claimed it — otherwise it would render twice.
   belowSidebarBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
+    const sections = draft.layout.sidebarSections ?? [];
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && this.FULL_WIDTH_TYPES.includes(b.type))
+      .filter(b => b.visible && !childIds.has(b.id) && this.FULL_WIDTH_TYPES.includes(b.type)
+        && !sections.includes(b.type as any))
       .sort((a, b) => a.order - b.order);
   }
 
@@ -901,6 +929,19 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
   showMoreDonors(): void {
     this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
+  }
+
+  // Sidebar placement only — the below-sidebar slider/list variants render
+  // draft.updates in full (no pagination needed at full section width).
+  private updatesShownCount = this.PAGE_SIZE;
+  visibleUpdates(draft: CampaignDraft): CampaignUpdate[] {
+    return (draft.updates ?? []).slice(0, this.updatesShownCount);
+  }
+  canShowMoreUpdates(draft: CampaignDraft): boolean {
+    return this.updatesShownCount < (draft.updates?.length ?? 0);
+  }
+  showMoreUpdates(draft: CampaignDraft): void {
+    this.updatesShownCount = Math.min(this.updatesShownCount + this.PAGE_SIZE, draft.updates?.length ?? 0);
   }
 
   loadDonors(slug: string): void {

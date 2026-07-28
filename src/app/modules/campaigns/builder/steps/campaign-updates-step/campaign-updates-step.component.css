@@ -4,6 +4,14 @@
   font-family: 'Heebo', sans-serif; direction: rtl;
 }
 .upd-header-top { display: flex; align-items: center; justify-content: space-between; }
+.upd-placement-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.upd-placement-label { font-size: 13px; font-weight: 700; color: #64748b; }
+.upd-placement-btn {
+  height: 32px; padding: 0 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  background: white; color: #64748b; font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s, border-color 0.15s;
+}
+.upd-placement-btn--active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
 .upd-title-row { display: flex; align-items: center; gap: 8px; }
 .upd-visibility-toggle { display: flex; align-items: center; gap: 8px; }
 .upd-toggle-label { font-size: 12px; color: #64748b; font-weight: 500; white-space: nowrap; }

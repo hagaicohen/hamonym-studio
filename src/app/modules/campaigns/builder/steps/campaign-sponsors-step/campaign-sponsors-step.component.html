@@ -18,6 +18,15 @@
       </div>
     </div>
     <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
+
+    <!-- PLACEMENT — only meaningful when there's a sidebar to place it in -->
+    <div class="ss-placement-row" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
+      <span class="ss-placement-label">מיקום החסויות</span>
+      <button class="ss-placement-btn" [class.ss-placement-btn--active]="!state.isSidebarSection('sponsors')"
+              (click)="state.setSidebarSection('sponsors', false)">מתחת לתוכן (רוחב מלא)</button>
+      <button class="ss-placement-btn" [class.ss-placement-btn--active]="state.isSidebarSection('sponsors')"
+              (click)="state.setSidebarSection('sponsors', true)">בסיידבר</button>
+    </div>
   </div>
 
   <!-- BUILDER: Form + Preview -->

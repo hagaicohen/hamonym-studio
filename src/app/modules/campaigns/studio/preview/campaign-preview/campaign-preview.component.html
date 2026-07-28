@@ -978,11 +978,46 @@
   </div>
 
   <!-- ══ REWARDS ══ -->
-  <section class="hm-rewards" *ngIf="block.type === 'rewards' && draft.offeringsEnabled !== false" id="section-rewards">
+  <section class="hm-rewards" [class.hm-rewards--sidebar-list]="inSidebarSection(draft, 'rewards')"
+    *ngIf="block.type === 'rewards' && draft.offeringsEnabled !== false" id="section-rewards">
     <h2>בחרו את התשורה המתאימה לכם</h2>
 
     <ng-container *ngIf="draft.offerings && draft.offerings.length > 0; else rewardsEmpty">
-      <div class="hm-slider-outer">
+
+      <!-- ── Sidebar placement: compact vertical list, no carousel shell ── -->
+      <div class="hm-reward-list" *ngIf="inSidebarSection(draft, 'rewards')">
+        <article *ngFor="let offering of draft.offerings"
+          class="hm-reward-list-card"
+          [class.is-featured]="offering.featured === true"
+          [class.is-selected]="isOfferingInCart(offering.id)"
+          (click)="selectOffering(offering, draft)">
+          <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+          <div class="hm-reward-list-top">
+            <div class="hm-reward-icon-wrap">
+              <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
+              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+            </div>
+            <div class="hm-reward-list-info">
+              <h3>{{ offering.title }}</h3>
+              <div class="hm-reward-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
+            </div>
+          </div>
+          <p class="hm-reward-list-desc" *ngIf="offering.description">{{ offering.description }}</p>
+          <button class="hm-reward-list-btn" type="button">לבחירה</button>
+          <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
+            <div class="hm-reward-overlay-check">✓</div>
+            <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
+            <p class="hm-reward-overlay-sub">₪{{ offering.minimumAmount.toLocaleString('he-IL') }} — {{ offering.title }}</p>
+            <div class="hm-reward-overlay-btns">
+              <button class="hm-overlay-continue-btn" (click)="scrollToDonation()">המשך לתשלום</button>
+              <button class="hm-overlay-cancel-btn" (click)="removeOffering(offering.id)">בטל בחירה</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- ── Below-sidebar placement (default): horizontal carousel, unchanged ── -->
+      <div class="hm-slider-outer" *ngIf="!inSidebarSection(draft, 'rewards')">
         <button class="hm-slider-arrow hm-slider-arrow--prev" (click)="scrollSlider(slider, 'prev')">‹</button>
         <div class="hm-reward-slider" #slider>
           <div class="hm-slider-track">
@@ -1074,8 +1109,9 @@
   </section>
 
   <!-- SPONSORS -->
-  <section class="hm-section hm-sponsors" *ngIf="block.type === 'sponsors'" id="section-sponsors">
-    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">חסויות</h2>
+  <section class="hm-section hm-sponsors" [class.hm-sponsors--sidebar-list]="inSidebarSection(draft, 'sponsors')"
+    *ngIf="block.type === 'sponsors'" id="section-sponsors">
+    <h2 [class.hm-section-title]="!inSidebarSection(draft, 'sponsors')" [class.hm-amb-list-title]="inSidebarSection(draft, 'sponsors')" [style.color]="primaryColor(draft)">חסויות</h2>
     <ng-container *ngIf="draft.sponsors?.length > 0; else sponsorsEmpty">
       <div class="hm-sponsors-grid">
         <div class="hm-sponsor-card" *ngFor="let sp of draft.sponsors">
@@ -1092,13 +1128,55 @@
   </section>
 
   <!-- AMBASSADORS — leaderboard -->
-  <section class="hm-section hm-ambassadors" *ngIf="block.type === 'ambassadors'" id="section-ambassadors">
+  <section class="hm-section hm-ambassadors" [class.hm-ambassadors--sidebar-list]="inSidebarSection(draft, 'ambassadors')"
+    *ngIf="block.type === 'ambassadors'" id="section-ambassadors">
     <div class="hm-lb-container">
 
-      <!-- ── Section header ── -->
-      <div class="hm-lb-section-header">
+      <!-- ── Sidebar placement: compact vertical list, no search/sort/2-col grid ── -->
+      <ng-container *ngIf="inSidebarSection(draft, 'ambassadors')">
+        <h2 class="hm-amb-list-title" [style.color]="primaryColor(draft)">שגרירים</h2>
+        <div class="hm-amb-list-sidebar" *ngIf="ambEffective.length > 0; else ambassadorsEmptySidebar">
+          <div class="hm-amb-list-row" *ngFor="let a of ambVisible">
+            <div class="hm-amb-list-top">
+              <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
+                {{ a.fullName.charAt(0) }}
+              </div>
+              <div class="hm-amb-list-info">
+                <span class="hm-amb-list-name">{{ a.fullName }}</span>
+                <span class="hm-amb-list-raised" [style.color]="primaryColor(draft)">₪{{ a.raisedTotal | number }}</span>
+              </div>
+            </div>
+            <div class="hm-lb-bar" *ngIf="a.goalAmount">
+              <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+            </div>
+            <button class="hm-amb-list-btn" (click)="viewAmbassador(a.slug, draft)">לדף השגריר ←</button>
+          </div>
+          <button class="hm-donor-list-more" *ngIf="ambFiltered.length > ambShowCount" (click)="ambShowCount = ambShowCount + 6">
+            הצג עוד שגרירים
+          </button>
+        </div>
+        <ng-template #ambassadorsEmptySidebar>
+          <div class="hm-lb-empty">
+            <div class="hm-lb-empty-icon">🤝</div>
+            <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
+            <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
+              🚀 הצטרפו כשגרירים
+            </button>
+          </div>
+        </ng-template>
+      </ng-container>
+
+      <!-- ── Below-sidebar placement (default): unchanged ── -->
+      <ng-container *ngIf="!inSidebarSection(draft, 'ambassadors')">
+
+      <!-- ── Section header — join button only shown here once there's a
+           leaderboard to show it alongside; when the list is empty, the
+           #ambassadorsEmpty block below already has its own centered join
+           button, so this one is hidden (not duplicated) and the title
+           centers on its own. -->
+      <div class="hm-lb-section-header" [class.hm-lb-section-header--center]="ambEffective.length === 0">
         <h2 class="hm-lb-section-title" [style.color]="primaryColor(draft)">שגרירים</h2>
-        <button class="hm-amb-join-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
+        <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
           🚀 הצטרפו כשגרירים
         </button>
       </div>
@@ -1209,96 +1287,149 @@
         </div>
       </ng-template>
 
+      </ng-container>
     </div>
   </section>
 
   <!-- DONORS — grid or list -->
-  <section class="hm-section hm-donors" *ngIf="block.type === 'donors'" id="section-donors">
-    <h2 class="hm-section-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
+  <section class="hm-section hm-donors" [class.hm-donors--sidebar-list]="inSidebarSection(draft, 'donors')"
+    *ngIf="block.type === 'donors'" id="section-donors">
 
-    <!-- Stats row -->
-    <div class="hm-donors-stats">
-      <div class="hm-donors-stat">
-        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
-          ₪{{ (draft.currentAmount ?? 0).toLocaleString('he-IL') }}
-        </span>
-        <span class="hm-donors-stat-label">סך התרומות</span>
-      </div>
-      <div class="hm-donors-stat">
-        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
-          {{ draft.supportersCount ?? 0 | number }}
-        </span>
-        <span class="hm-donors-stat-label">תורמים</span>
-      </div>
-      <div class="hm-donors-stat">
-        <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
-          ₪{{ (draft.supportersCount ? (draft.currentAmount ?? 0) / draft.supportersCount : 0) | number:'1.0-0' }}
-        </span>
-        <span class="hm-donors-stat-label">תרומה ממוצעת</span>
-      </div>
-    </div>
-
-    <div class="hm-donors-layout">
-      <div class="hm-donors-main">
-        <!-- Period filter -->
-        <div class="hm-donors-period-tabs">
-          <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
-          <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
-          <button [class.active]="donorPeriod === 'today'" [style.background]="donorPeriod === 'today' ? primaryColor(draft) : ''" (click)="setDonorPeriod('today')">היום</button>
+    <!-- ── Sidebar placement: compact vertical list, no stats row/period tabs/Top-10 ── -->
+    <ng-container *ngIf="inSidebarSection(draft, 'donors')">
+      <h2 class="hm-donor-list-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
+      <div class="hm-donor-list-sidebar">
+        <div class="hm-donor-list-row" *ngFor="let d of visibleDonors">
+          <div class="hm-donor-list-avatar"
+            [style.background]="draft.layout.theme.accentColor + '22'"
+            [style.color]="draft.layout.theme.accentColor">
+            {{ donorInitials(d.name) }}
+          </div>
+          <div class="hm-donor-list-info">
+            <span class="hm-donor-list-name">{{ d.name }}</span>
+            <span class="hm-donor-list-time">{{ timeAgo(d.completedAt) }}</span>
+          </div>
+          <div class="hm-donor-list-amount" [style.color]="draft.layout.theme.accentColor">
+            ₪{{ d.amount.toLocaleString('he-IL') }}
+          </div>
         </div>
+        <div class="hm-donors-empty" *ngIf="visibleDonors.length === 0">אין עדיין תרומות</div>
+        <button class="hm-donor-list-more" *ngIf="canShowMore" (click)="showMoreDonors()">הצג עוד תורמים</button>
+      </div>
+    </ng-container>
 
-        <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
-          <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
-            <div class="hm-donor-v2-left">
-              <div class="hm-donor-v2-avatar"
-                [style.background]="draft.layout.theme.accentColor + '22'"
-                [style.color]="draft.layout.theme.accentColor">
-                {{ donorInitials(d.name) }}
-              </div>
-              <div class="hm-donor-v2-info">
-                <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-                <div class="hm-donor-v2-tags">
-                  <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
-                  <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+    <!-- ── Below-sidebar placement (default): unchanged ── -->
+    <ng-container *ngIf="!inSidebarSection(draft, 'donors')">
+      <h2 class="hm-section-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
+
+      <!-- Stats row -->
+      <div class="hm-donors-stats">
+        <div class="hm-donors-stat">
+          <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+            ₪{{ (draft.currentAmount ?? 0).toLocaleString('he-IL') }}
+          </span>
+          <span class="hm-donors-stat-label">סך התרומות</span>
+        </div>
+        <div class="hm-donors-stat">
+          <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+            {{ draft.supportersCount ?? 0 | number }}
+          </span>
+          <span class="hm-donors-stat-label">תורמים</span>
+        </div>
+        <div class="hm-donors-stat">
+          <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
+            ₪{{ (draft.supportersCount ? (draft.currentAmount ?? 0) / draft.supportersCount : 0) | number:'1.0-0' }}
+          </span>
+          <span class="hm-donors-stat-label">תרומה ממוצעת</span>
+        </div>
+      </div>
+
+      <div class="hm-donors-layout">
+        <div class="hm-donors-main">
+          <!-- Period filter -->
+          <div class="hm-donors-period-tabs">
+            <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
+            <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
+            <button [class.active]="donorPeriod === 'today'" [style.background]="donorPeriod === 'today' ? primaryColor(draft) : ''" (click)="setDonorPeriod('today')">היום</button>
+          </div>
+
+          <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
+            <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+              <div class="hm-donor-v2-left">
+                <div class="hm-donor-v2-avatar"
+                  [style.background]="draft.layout.theme.accentColor + '22'"
+                  [style.color]="draft.layout.theme.accentColor">
+                  {{ donorInitials(d.name) }}
                 </div>
-                <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
+                <div class="hm-donor-v2-info">
+                  <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+                  <div class="hm-donor-v2-tags">
+                    <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
+                    <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+                  </div>
+                  <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
+                </div>
+              </div>
+              <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
+                ₪{{ d.amount.toLocaleString('he-IL') }}
               </div>
             </div>
-            <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
-              ₪{{ d.amount.toLocaleString('he-IL') }}
+          </div>
+          <ng-template #donorsEmpty>
+            <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
+          </ng-template>
+
+          <div class="hm-donors-footer" *ngIf="canShowMore">
+            <button class="hm-donors-more-btn"
+              [style.borderColor]="draft.layout.theme.accentColor"
+              [style.color]="draft.layout.theme.accentColor"
+              (click)="showMoreDonors()">
+              הצג עוד תורמים
+            </button>
+          </div>
+        </div>
+
+        <!-- Top 10 leaderboard -->
+        <div class="hm-donors-top" *ngIf="activeTopDonors.length > 0">
+          <h3 class="hm-donors-top-title">Top 10 תורמים</h3>
+          <div class="hm-donors-top-list">
+            <div class="hm-donors-top-row" *ngFor="let t of activeTopDonors; let i = index">
+              <span class="hm-donors-top-rank" [style.background]="primaryColor(draft)">{{ i + 1 }}</span>
+              <span class="hm-donors-top-name">{{ t.name }}</span>
+              <span class="hm-donors-top-total" [style.color]="draft.layout.theme.accentColor">₪{{ t.total.toLocaleString('he-IL') }}</span>
             </div>
           </div>
         </div>
-        <ng-template #donorsEmpty>
-          <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
-        </ng-template>
-
-        <div class="hm-donors-footer" *ngIf="canShowMore">
-          <button class="hm-donors-more-btn"
-            [style.borderColor]="draft.layout.theme.accentColor"
-            [style.color]="draft.layout.theme.accentColor"
-            (click)="showMoreDonors()">
-            הצג עוד תורמים
-          </button>
-        </div>
       </div>
-
-      <!-- Top 10 leaderboard -->
-      <div class="hm-donors-top" *ngIf="activeTopDonors.length > 0">
-        <h3 class="hm-donors-top-title">Top 10 תורמים</h3>
-        <div class="hm-donors-top-list">
-          <div class="hm-donors-top-row" *ngFor="let t of activeTopDonors; let i = index">
-            <span class="hm-donors-top-rank" [style.background]="primaryColor(draft)">{{ i + 1 }}</span>
-            <span class="hm-donors-top-name">{{ t.name }}</span>
-            <span class="hm-donors-top-total" [style.color]="draft.layout.theme.accentColor">₪{{ t.total.toLocaleString('he-IL') }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </ng-container>
   </section>
 
-  <!-- UPDATES — slider or list -->
-  <section class="hm-section hm-updates" *ngIf="block.type === 'updates'" id="section-updates">
+  <!-- UPDATES — slider, list, or compact sidebar list -->
+  <section class="hm-section hm-updates" [class.hm-updates--sidebar-list]="inSidebarSection(draft, 'updates')"
+    *ngIf="block.type === 'updates'" id="section-updates">
+
+    <!-- ── Sidebar placement: compact vertical list, own pagination ── -->
+    <ng-container *ngIf="inSidebarSection(draft, 'updates')">
+      <h2 class="hm-amb-list-title" [style.color]="primaryColor(draft)">עדכונים</h2>
+      <ng-container *ngIf="draft.updates?.length > 0; else updatesEmpty">
+        <div class="hm-update-list-sidebar">
+          <article class="hm-update-list-sidebar-item" *ngFor="let u of visibleUpdates(draft)">
+            <span class="hm-update-date-badge">{{ formatDate(u.date) }}</span>
+            <h3 class="hm-update-title" [style.color]="primaryColor(draft)">{{ u.title }}</h3>
+            <p class="hm-update-desc">{{ u.description }}</p>
+            <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+              {{ u.linkLabel || 'קרא עוד' }} →
+            </a>
+          </article>
+          <button class="hm-donor-list-more" *ngIf="canShowMoreUpdates(draft)" (click)="showMoreUpdates(draft)">
+            הצג עוד עדכונים
+          </button>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <!-- ── Below-sidebar placement (default): unchanged ── -->
+    <ng-container *ngIf="!inSidebarSection(draft, 'updates')">
     <h2 class="hm-section-title" [style.color]="primaryColor(draft)">עדכונים</h2>
 
     <ng-container *ngIf="draft.updates?.length > 0; else updatesEmpty">
@@ -1349,6 +1480,7 @@
         </div>
       </ng-container>
 
+    </ng-container>
     </ng-container>
     <ng-template #updatesEmpty>
       <div class="hm-section-placeholder">

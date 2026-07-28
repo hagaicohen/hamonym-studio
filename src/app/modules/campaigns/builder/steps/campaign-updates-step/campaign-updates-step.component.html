@@ -17,6 +17,15 @@
       </div>
     </div>
     <p class="upd-subtitle">עדכנו את התומכים על התקדמות הקמפיין</p>
+
+    <!-- PLACEMENT — only meaningful when there's a sidebar to place it in -->
+    <div class="upd-placement-row" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
+      <span class="upd-placement-label">מיקום העדכונים</span>
+      <button class="upd-placement-btn" [class.upd-placement-btn--active]="!state.isSidebarSection('updates')"
+              (click)="state.setSidebarSection('updates', false)">מתחת לתוכן (רוחב מלא)</button>
+      <button class="upd-placement-btn" [class.upd-placement-btn--active]="state.isSidebarSection('updates')"
+              (click)="state.setSidebarSection('updates', true)">בסיידבר</button>
+    </div>
   </div>
 
   <div class="upd-builder">

@@ -68,7 +68,7 @@ const EMPTY_FORM: FormModel = {
   styleUrl: './campaign-ambassadors-step.component.css',
 })
 export class CampaignAmbassadorsStepComponent {
-  private state  = inject(CampaignStudioStateService);
+  protected state  = inject(CampaignStudioStateService);
   private router = inject(Router);
   readonly svc   = inject(AmbassadorService);
 

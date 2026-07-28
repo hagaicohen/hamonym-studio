@@ -47,6 +47,23 @@
       </div>
     </div>
 
+    <!-- ── PLACEMENT PICKER — only meaningful when there's a sidebar to place it in ── -->
+    <div class="rs-layout-picker" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
+      <div class="rs-layout-label">מיקום התשורות</div>
+      <div class="rs-layout-btns">
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="!state.isSidebarSection('rewards')"
+          (click)="state.setSidebarSection('rewards', false)">
+          מתחת לתוכן (רוחב מלא)
+        </button>
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="state.isSidebarSection('rewards')"
+          (click)="state.setSidebarSection('rewards', true)">
+          בסיידבר (מתחת לנתונים ולתרומה)
+        </button>
+      </div>
+    </div>
+
     <!-- ── BUILDER: Form + Preview ── -->
     <div class="rs-builder">
 

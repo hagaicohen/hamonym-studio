@@ -14,7 +14,7 @@ import { UploadService } from '../../../../../core/services/upload.service';
   styleUrl: './campaign-sponsors-step.component.css',
 })
 export class CampaignSponsorsStepComponent {
-  private state         = inject(CampaignStudioStateService);
+  protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
 
   readonly HandshakeIcon = Handshake;
