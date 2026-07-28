@@ -1,6 +1,6 @@
 # ADR — Partner Domain Model
 
-**Status:** מוצע (Proposed) — תכנון בלבד, טרם מומש בקוד.
+**Status:** ✅ **Implemented (Phase 2 — Domain Foundation)** — הדומיין (`entity_roles`, `campaign_partners`, API) ממומש ומוזג ל-`main` (2026-07-28). Phase 3 (Builder) ואילך — עדיין Proposed, לא מומש. ראה "יישום Phase 2" למטה לפרטים המלאים.
 **תאריך:** 2026-07-28
 **קשור:** [PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md](./PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md)
 

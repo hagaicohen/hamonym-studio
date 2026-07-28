@@ -1,6 +1,6 @@
 # ADR — Generic Page Builder Ownership Model
 
-**Status:** מוצע (Proposed) — תכנון בלבד, טרם מומש בקוד.
+**Status:** מוצע (Proposed) — תכנון בלבד, טרם מומש בקוד. (ה-ADR האחות, [PARTNER_DOMAIN_MODEL_ADR.md](./PARTNER_DOMAIN_MODEL_ADR.md), כבר ב-Implemented — Phase 2 שלה מוזג ל-`main`. זו נשארת Phase 3, טרם התחילה.)
 **תאריך:** 2026-07-28
 **קשור:** [PARTNER_DOMAIN_MODEL_ADR.md](./PARTNER_DOMAIN_MODEL_ADR.md)
 
@@ -88,3 +88,12 @@ Opening Hours (חדש)→ Partner בלבד
 - Navigation (למשל ניווט בין שותפים, ראה Partner Domain Model ADR §5) — מיושם כיכולת שה-Owner Type "מספק", לא כתנאי מותנה בתוך רכיב משותף.
 
 אם בעתיד יתווסף Owner Type שלישי (Organization Profile / Event וכו'), המבחן לכך שהעיקרון נשמר: אין צורך לגעת בקוד ה-Builder/Renderer הקיים — רק להוסיף קונפיגורציה חדשה (Sections + availableFor + capabilities) עבור ה-Owner Type החדש.
+
+## Definition of Done — Phase 3 (נקבע 2026-07-28, לפני תחילת המימוש)
+
+מבחני הקבלה של ה-ADR הזו. כל אחד מהם צריך להיות אמת לפני שה-Phase נחשב גמור — לא רק "יש קוד שעובד":
+
+- [ ] **אין `if (ownerType === ...)` / `switch (ownerType)` מפוזר** בקוד ה-Builder/Renderer/State Service. Owner-specific-ness מרוכזת אך ורק ב-`availableFor` + קונפיגורציית capabilities per-owner-type (ראה "הנחיית מימוש" למעלה).
+- [ ] **הוספת Owner Type שלישי היא קונפיגורציה בלבד** — לא נדרש לגעת בקוד הקיים של ה-Builder/Renderer כדי להוסיף אותו (זה המבחן המעשי שכבר מנוסח למעלה; כאן הוא הופך למבחן קבלה רשמי).
+- [ ] **כל Section רשום ב-Registry**, לא ב-`switch`/`if` שמפרט את כל הסוגים במקום אחד — הוספת Section חדש (כולל Coupons/Map/Opening Hours, §3) היא רישום חדש ב-Registry, לא עריכת ענף קיים.
+- [ ] **Builder של Campaign ממשיך לעבוד ללא Regression** — כל היכולות הקיימות של עורך הקמפיין (Rewards, Stats, Donation Widget, Sponsors, Ambassadors, Donors, Updates, כל Layout שנבנה בסשנים קודמים) עדיין עובדות זהה אחרי ה-Refactor, מאומת live (לא רק type-check), לא רק "לא זרק שגיאה".
