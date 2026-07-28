@@ -196,4 +196,28 @@ router.patch(
   controller.setEntityVisibility
 );
 
+// Entity Roles — Partner Domain Model (Phase 2). Unlike PATCH /:id above
+// (which self-checks ownership inside the service), these use the
+// requireEntityOwnership() middleware directly.
+router.get(
+  '/:id/roles',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.getRoles
+);
+
+router.post(
+  '/:id/roles',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.addRole
+);
+
+router.delete(
+  '/:id/roles/:role',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.removeRole
+);
+
 module.exports = router;

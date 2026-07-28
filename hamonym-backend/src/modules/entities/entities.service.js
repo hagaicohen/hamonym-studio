@@ -1268,3 +1268,46 @@ exports.setEntityVisibility = async (entityId, userId, isHidden) => {
     client.release();
   }
 };
+// ─────────────────────────────────────────────────────────────────────────
+// Entity Roles — see docs/PARTNER_DOMAIN_MODEL_ADR.md §1/§7. A join table,
+// not a column on `entities`: an entity can hold multiple roles at once
+// (e.g. Organization AND Partner), and adding a new role later (sponsor,
+// vendor, ...) is a data change, not a migration. 'organization' is a valid
+// CHECK value but no row is ever inserted for it — nothing gates "can this
+// entity run a campaign" on this table, that's unrelated to Partner roles.
+// ─────────────────────────────────────────────────────────────────────────
+
+exports.hasRole = async (entityId, role) => {
+  const { rows } = await db.query(
+    `SELECT 1 FROM entity_roles WHERE entity_id = $1 AND role = $2 LIMIT 1`,
+    [entityId, role]
+  );
+  return rows.length > 0;
+};
+
+exports.getRoles = async (entityId) => {
+  const { rows } = await db.query(
+    `SELECT role FROM entity_roles WHERE entity_id = $1 ORDER BY role`,
+    [entityId]
+  );
+  return rows.map(r => r.role);
+};
+
+exports.addRole = async (entityId, role) => {
+  await db.query(
+    `INSERT INTO entity_roles (entity_id, role) VALUES ($1, $2)
+     ON CONFLICT (entity_id, role) DO NOTHING`,
+    [entityId, role]
+  );
+  return exports.getRoles(entityId);
+};
+
+// Deliberately NOT blocked by existing campaign_partners rows — revoking a
+// role stops NEW links (campaign-partners.service.js#create checks hasRole
+// at creation time) but does not retroactively invalidate links already
+// made while the role was held. See docs/PARTNER_DOMAIN_MODEL_ADR.md,
+// "יישום Phase 2" — explicit decision, not an oversight.
+exports.removeRole = async (entityId, role) => {
+  await db.query(`DELETE FROM entity_roles WHERE entity_id = $1 AND role = $2`, [entityId, role]);
+  return exports.getRoles(entityId);
+};
