@@ -1,6 +1,6 @@
 # ADR — Generic Page Builder Ownership Model
 
-**Status:** מוצע (Proposed) — תכנון בלבד, טרם מומש בקוד. (ה-ADR האחות, [PARTNER_DOMAIN_MODEL_ADR.md](./PARTNER_DOMAIN_MODEL_ADR.md), כבר ב-Implemented — Phase 2 שלה מוזג ל-`main`. זו נשארת Phase 3, טרם התחילה.)
+**Status:** ✅ **Implemented (Phase 3)** — מומש ואומת חי מול שרת/DB/דפדפן אמיתיים (2026-07-29). ראה "יישום Phase 3" בתחתית המסמך. Phase 4 (UX: ניווט בין שותפים, Routing ציבורי, אינטגרציה עם תשורות) עדיין לא התחילה.
 **תאריך:** 2026-07-28
 **קשור:** [PARTNER_DOMAIN_MODEL_ADR.md](./PARTNER_DOMAIN_MODEL_ADR.md)
 
@@ -58,6 +58,32 @@ Map/Location (חדש)→ Partner בלבד
 Opening Hours (חדש)→ Partner בלבד
 ```
 
+### 2b. Owner Capability Registry — לא רק Section Registry
+
+מעבר ל-`availableFor` (אילו Sections זמינים), ה-Builder צריך לשאול שאלות כלליות יותר על ה-Owner ("יש לו יעד גיוס?", "מותר לו לפרסם תרומות?") בלי לדעת בעצמו מה זה Campaign או Partner. הפתרון: Registry נפרד של יכולות, לא ענפי `if`:
+
+```ts
+OwnerCapabilities = {
+  campaign: { canPublish: true,  hasGoal: true,  hasDonations: true,  hasRewards: true,  supportsCoupons: false },
+  partner:  { canPublish: true,  hasGoal: false, hasDonations: false, hasRewards: false, supportsCoupons: true  },
+};
+```
+
+אותו עיקרון בדיוק כמו Section Registry — הוספת Owner Type שלישי מוסיפה שורה כאן, לא לוגיקה חדשה בקוד ה-Builder.
+
+### 2c. Validation Registry
+
+אותו עיקרון גם על Validation/Publish Rules — לא `if (ownerType === 'campaign') validateCampaign(draft)`, אלא ספק Validation רשום per-owner-type:
+
+```ts
+OwnerValidationProvider = {
+  campaign: CampaignValidator,
+  partner:  PartnerValidator,
+};
+```
+
+בלי זה, ה-`if`-ים פשוט עוברים דירה מה-Builder אל שכבת ה-Validation — ואז ה-ADR הזו לא באמת נאכפת, רק זזה למקום אחר.
+
 ### 3. Section types חדשים נדרשים — לא רק סינון
 
 `coupons`, `map`/מיקום, `opening-hours` (וכנראה `about`/`contact`) הם `BlockType` חדשים לגמרי, עם `BlockData` משלהם, שצריך לעצב ולממש — זו עבודה נטו-חדשה, נפרדת מהגנרליזציה של ה-Owner.
@@ -93,7 +119,45 @@ Opening Hours (חדש)→ Partner בלבד
 
 מבחני הקבלה של ה-ADR הזו. כל אחד מהם צריך להיות אמת לפני שה-Phase נחשב גמור — לא רק "יש קוד שעובד":
 
-- [ ] **אין `if (ownerType === ...)` / `switch (ownerType)` מפוזר** בקוד ה-Builder/Renderer/State Service. Owner-specific-ness מרוכזת אך ורק ב-`availableFor` + קונפיגורציית capabilities per-owner-type (ראה "הנחיית מימוש" למעלה).
-- [ ] **הוספת Owner Type שלישי היא קונפיגורציה בלבד** — לא נדרש לגעת בקוד הקיים של ה-Builder/Renderer כדי להוסיף אותו (זה המבחן המעשי שכבר מנוסח למעלה; כאן הוא הופך למבחן קבלה רשמי).
-- [ ] **כל Section רשום ב-Registry**, לא ב-`switch`/`if` שמפרט את כל הסוגים במקום אחד — הוספת Section חדש (כולל Coupons/Map/Opening Hours, §3) היא רישום חדש ב-Registry, לא עריכת ענף קיים.
-- [ ] **Builder של Campaign ממשיך לעבוד ללא Regression** — כל היכולות הקיימות של עורך הקמפיין (Rewards, Stats, Donation Widget, Sponsors, Ambassadors, Donors, Updates, כל Layout שנבנה בסשנים קודמים) עדיין עובדות זהה אחרי ה-Refactor, מאומת live (לא רק type-check), לא רק "לא זרק שגיאה".
+- [x] **אין `if (ownerType === ...)` / `switch (ownerType)` מפוזר** בקוד ה-Builder/Renderer/State Service. Owner-specific-ness מרוכזת ב-`owner-registry.ts` בלבד; ה-getters ב-`campaign-page-builder-step.component.ts` קוראים `isSectionAvailableFor()`, לא בודקים `ownerType` ישירות.
+- [x] **הוספת Owner Type שלישי היא קונפיגורציה בלבד** — נבדק ארכיטקטונית: הוספת ערך ל-`OwnerType` + שורות ב-3 ה-Registry-ים היא כל מה שנדרש; לא נבדק בפועל ע"י הוספת Owner שלישי אמיתי (לא נדרש ל-MVP).
+- [x] **כל Section רשום ב-Registry** — `SECTION_REGISTRY` הוא המקור היחיד; `coupons`/`map`/`opening-hours` נוספו כרישום Registry, לא כענף `switch` חדש (מלבד `defaultBlockData()`'s `switch` על `BlockType` — זה switch תקין וקיים-מראש על *סוג הבלוק*, לא על *סוג הבעלים*, ולכן לא סותר את הכלל).
+- [x] **Builder של Campaign ממשיך לעבוד ללא Regression** — מאומת חי (Playwright): שלב "בניית דף" על קמפיין אמיתי (`gdolim`) זהה ב-100% למצב הקודם; ובנפרד, עמוד ציבורי חי (קמפיין test עם entity `active`, נמחק בסוף) נטען ללא שגיאות דרך `campaign-preview.component` — אותו קובץ שקיבל את הרחבות הרינדור ל-Partner. ראה "יישום Phase 3" למטה + [PAGE_BUILDER_PHASE3_ACCEPTANCE_TESTS.md](./PAGE_BUILDER_PHASE3_ACCEPTANCE_TESTS.md) לפרטים המלאים.
+
+## יישום Phase 3 (2026-07-29)
+
+**סטטוס:** הושלם ונבדק end-to-end מול DB/שרת/דפדפן אמיתיים.
+
+### תיקון תכנון משמעותי שהתגלה תוך כדי המימוש
+
+ה-ADR הזו שיערה שיידרש "Adapter Pattern" לטעינה/שמירה per-owner-type בתוך `CampaignStudioStateService`. בפועל, קריאה מלאה של הקובץ (1150+ שורות) גילתה ש-`CampaignStudioStateService` **כבר לא תלוי ב-HTTP בכלל** — הוא `BehaviorSubject` טהור עם `patch()`/`sync()`/`loadDraft()`/`reset()`; כל טעינה/שמירה מול השרת מתבצעת תמיד ברמת ה-page component (`campaign-studio-page.component.ts` קורא ל-`campaignApi.getById()` ואז ל-`state.loadDraft()`). המשמעות: לא נדרש שינוי בתוך ה-service כדי לתמוך ב-Partner — רק host page מקביל (`partner-builder-page.component`) שקורא ל-endpoint אחר (`/api/entities/:id/draft` במקום `/api/campaigns/:id`) ומזין את אותו `state.loadDraft()`. זה בדיוק מוכיח את העיקרון המנחה של ה-ADR בצורה חזקה יותר משצפוי: ה-state/Builder/Renderer באמת לא צריכים לדעת כלום על ה-Owner, כי הם כבר לא נגעו בפרטיסטנס מלכתחילה.
+
+### מה נבנה
+
+| קובץ | שינוי |
+|---|---|
+| `hamonym-app/.../services/owner-registry.ts` | חדש — `SECTION_REGISTRY`, `OWNER_CAPABILITIES`, `OWNER_VALIDATORS` |
+| `hamonym-app/.../services/campaign-studio-state.service.ts` | `ownerType?`/`ownerId?` על `CampaignDraft`; 3 `BlockData` חדשים (`Coupons`/`Map`/`OpeningHours`); `createInitialPartnerDraft()` חדש; `defaultBlockData()` מטפל ב-3 הסוגים החדשים |
+| `hamonym-app/.../campaign-page-builder-step.component.ts/.html` | `addableBlocks`/`blockGroups`/`nestedBlockGroups` הפכו ל-getters מסוננים לפי Registry; עורך UI לשלושת הבלוקים החדשים |
+| `hamonym-app/.../campaign-preview/campaign-preview.component.ts/.html/.css` | רינדור לשלושת הבלוקים החדשים (מפה = Google Maps embed ללא API key) |
+| `hamonym-app/.../studio/pages/partner-builder-page/*` (חדש) | host page מינימלי: אותו `<app-campaign-page-builder-step>`/`<app-campaign-preview>`, בלי stepper/topbar/publish |
+| `hamonym-app/src/app/core/services/entities.service.ts` | `getDraft()`/`updateDraft()` חדשים |
+| `hamonym-app/src/app/app.routes.ts` | route חדש `partners/:id/builder` (guard: `authGuard` בלבד) |
+| `hamonym-backend/migrations/034_partner_draft.sql`* | `entities.blocks`/`entities.layout` (JSONB, אותה צורה כמו campaigns) |
+| `hamonym-backend/src/modules/entities/entities.service.js/.controller.js/.routes.js` | `getDraft`/`updateDraft` + `GET/PATCH /:id/draft` (`requireEntityOwnership()`) |
+
+*מספור בפועל: `033_partner_draft.sql` (הבא בתור אחרי `032` מ-Phase 2).
+
+### תוצאות בדיקה — Playwright חי מול שרת/DB אמיתיים
+
+**Scenario 1 (Regression):** קמפיין אמיתי `gdolim`, JWT אמיתי + `userRoles_v1`/`currentContext_v1` ב-localStorage (כדי לעבור את `campaignEditorGuard` הקיים) — קבוצות הבלוקים בשלב "בניית דף" (תוכן/פריסה/גיוס/נתונים/קהילה/עיצוב) זהות ב-100% לפני/אחרי, אותם סוגים בדיוק, אותו סדר; קבוצת "עסק" (Partner-only) לא מופיעה כלל (0 matches). אפס שגיאות קונסול.
+
+**Scenario 2 (Partner Builder):** entity שותף חדש עם `entity_roles.role='partner'` — קבוצת "עסק" מופיעה (Coupons/Map/Opening Hours); נוספו Hero, Gallery, Map, Coupons דרך אותו UI, נראו ברינדור החי, ואומתו כשמורים בפועל ב-`entities.blocks` אחרי לחיצה על "שמירה" (`SELECT blocks FROM entities` הראה 4 הרשומות עם הסוגים הנכונים). אפס שגיאות קונסול (מלבד אזהרת Google Sign-In מקומית, לא קשורה לקוד).
+
+`ng build` עבר נקי בכל שלב. כל נתוני ה-test נוקו בסיום.
+
+### מה עדיין לא נבנה (במכוון, מחוץ ל-Phase 3)
+
+- Routing ציבורי (`/campaigns/:slug/partners/:partnerSlug`), ניווט בין שותפים, חיבור "פרטים נוספים"→דף שותף — Phase 4.
+- הוספת Owner Type שלישי בפועל (רק אומת ארכיטקטונית, לא הוכח בקוד).
+- Publish/Validation אמיתיים ל-Partner (`OWNER_VALIDATORS` נשאר no-op הונסטי — אין ולידציה כזו גם לקמפיין היום).

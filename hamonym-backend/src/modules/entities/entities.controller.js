@@ -609,3 +609,53 @@ exports.removeRole = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// =========================================================
+// PARTNER DRAFT (Page Builder Owner Context — Phase 3)
+// =========================================================
+// Ownership already checked by requireEntityOwnership() on these routes.
+
+exports.getDraft = async (req, res) => {
+  try {
+    const draft = await service.getDraft(req.params.id);
+    res.json(draft);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.updateDraft = async (req, res) => {
+  try {
+    const draft = await service.updateDraft(req.params.id, req.body);
+    res.json(draft);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+// =========================================================
+// PARTNER SEARCH (Phase 4 — Partner Management, Discovery)
+// =========================================================
+
+exports.searchPartners = async (req, res) => {
+  try {
+    const partners = await service.searchPartners(req.query.q);
+    res.json({ partners });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// =========================================================
+// PARTNER INVITE (Phase 4 — Partner Management, Epic 3)
+// =========================================================
+
+exports.createInvite = async (req, res) => {
+  try {
+    const partnerInvitesService = require('../partner-invites/partner-invites.service');
+    const result = await partnerInvitesService.createInvite(req.user.id, req.params.id, req.body.email);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
