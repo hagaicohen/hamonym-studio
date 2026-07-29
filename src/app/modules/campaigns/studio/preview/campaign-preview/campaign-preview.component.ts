@@ -35,6 +35,9 @@ import {
   CampaignUpdate,
   ShareBlockData,
   CommentsBlockData,
+  CouponsBlockData,
+  MapBlockData,
+  OpeningHoursBlockData,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
@@ -267,6 +270,34 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   isExpanded(id: string): boolean { return this.expandedOfferings.has(id); }
   toggleExpand(id: string): void {
     this.expandedOfferings.has(id) ? this.expandedOfferings.delete(id) : this.expandedOfferings.add(id);
+  }
+
+  // ── Sidebar reward card: image position + "more details" modal ──
+  // A modal (not inline expand) specifically for the sidebar card — the
+  // rail is height-capped with internal scroll (see DECISIONS.md
+  // 2026-07-27), so expanding a long description in place would push every
+  // other sidebar section further into that scroll instead of just
+  // overlaying on top, unaffected by the rail's own height budget.
+  rewardsImagePosition(draft: CampaignDraft): 'inline' | 'full' {
+    return draft.layout.rewardsImagePosition ?? 'full';
+  }
+
+  // Height (px) of the full-width image row in 'full' mode — user-controlled
+  // so it's never forced to a large fixed size.
+  rewardsImageSize(draft: CampaignDraft): number {
+    return draft.layout.rewardsImageSize ?? 120;
+  }
+
+  rewardDetailsOffering: Offering | null = null;
+  openRewardDetails(offering: Offering): void { this.rewardDetailsOffering = offering; }
+  closeRewardDetails(): void { this.rewardDetailsOffering = null; }
+
+  // Splits a description into non-empty lines — a plain single-line
+  // description renders as one paragraph; a manager who wrote multiple
+  // lines (e.g. numbered terms, one per line) gets a real list instead of
+  // one run-on paragraph, without requiring a separate rich-text field.
+  descriptionLines(text: string): string[] {
+    return (text || '').split('\n').map(l => l.trim()).filter(Boolean);
   }
 
   draft$ = this.state.draft$;
@@ -902,6 +933,18 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   ctaGap(blockHeight?: number): number { return Math.max(6, Math.round((blockHeight || 32) * 0.35)); }
   asShare(data: unknown)            { return data as ShareBlockData; }
   asDivider(data: unknown)          { return data as DividerBlockData; }
+  asCoupons(data: unknown)          { return data as CouponsBlockData; }
+  asMap(data: unknown)              { return data as MapBlockData; }
+  asOpeningHours(data: unknown)     { return data as OpeningHoursBlockData; }
+
+  // No Google Maps API key configured anywhere in this project (checked
+  // environment.ts) — uses the key-less Google Maps embed query form
+  // instead of the JS Maps Embed API.
+  mapEmbedUrl(data: MapBlockData): SafeResourceUrl {
+    const q = data.lat != null && data.lng != null ? `${data.lat},${data.lng}` : (data.address || '');
+    const url = `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
   asDonors(data: unknown)           { return data as DonorsBlockData; }
   asSponsorsBlock(data: unknown)    { return data as SponsorsBlockData; }
   asAmbassadorsBlock(data: unknown) { return data as AmbassadorsBlockData; }

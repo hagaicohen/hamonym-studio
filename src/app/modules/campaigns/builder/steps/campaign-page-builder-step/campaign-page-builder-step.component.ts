@@ -22,6 +22,9 @@ import {
   DividerBlockData,
   UpdatesBlockData,
   ShareBlockData,
+  CouponsBlockData,
+  MapBlockData,
+  OpeningHoursBlockData,
   CampaignDraft,
   CampaignTheme,
 } from '../../../services/campaign-studio-state.service';
@@ -32,6 +35,7 @@ import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.mo
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TemplatePickerComponent, TemplateSelection } from '../../template-picker/template-picker.component';
 import { TEMPLATE_PALETTES, TemplatePalette, buildTheme } from '../../templates/campaign-templates';
+import { OwnerType, isSectionAvailableFor } from '../../../services/owner-registry';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -54,6 +58,9 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'accordion':   'פאנלים',
   'share':       'שיתוף',
   'comments':    'תגובות',
+  'coupons':       'קופון',
+  'map':           'מפה / מיקום',
+  'opening-hours': 'שעות פתיחה',
 };
 
 const BLOCK_ICONS: Record<BlockType, string> = {
@@ -77,17 +84,25 @@ const BLOCK_ICONS: Record<BlockType, string> = {
   'accordion':   '🗂️',
   'share':       '🔗',
   'comments':    '💬',
+  'coupons':       '🏷️',
+  'map':           '📍',
+  'opening-hours': '🕒',
 };
 
-const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments'];
+const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments', 'map', 'opening-hours'];
 
-// Block groups for the picker UI
+// Block groups for the picker UI. Groups/types are filtered per Owner Type
+// (see blockGroups() below) — a group whose types are all unavailable for
+// the current owner simply disappears, it's never listed empty. Every
+// existing type here already includes 'campaign' in SECTION_REGISTRY, so
+// this filtering is a no-op for ownerType 'campaign' (today's only owner).
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
   { label: 'פריסה',   types: ['container', 'hero', 'tabs', 'accordion'] },
   { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards', 'share'] },
   { label: 'נתונים',  types: ['stats', 'donors'] },
   { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates', 'comments'] },
+  { label: 'עסק',     types: ['map', 'opening-hours', 'coupons'] },
   { label: 'עיצוב',   types: ['divider'] },
 ];
 
@@ -95,6 +110,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
   'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs', 'accordion',
   'stats', 'donation-widget', 'cta', 'divider', 'share',
   'rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'comments',
+  'map', 'opening-hours', 'coupons',
 ];
 
 @Component({
@@ -162,15 +178,31 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this._destroy$.complete();
   }
 
-  readonly addableBlocks = ADDABLE_BLOCKS;
-  readonly blockGroups = BLOCK_GROUPS;
+  // Owner Context (Phase 3 — see owner-registry.ts). Undefined draft.ownerType
+  // means 'campaign', exactly today's only owner — every filter below is a
+  // no-op for it since every pre-existing BlockType's SECTION_REGISTRY entry
+  // already includes 'campaign'.
+  get ownerType(): OwnerType { return (this.state.draft.ownerType ?? 'campaign') as OwnerType; }
+
+  get addableBlocks(): BlockType[] {
+    return ADDABLE_BLOCKS.filter(t => isSectionAvailableFor(t, this.ownerType));
+  }
+
+  get blockGroups(): { label: string; types: BlockType[] }[] {
+    return BLOCK_GROUPS
+      .map(g => ({ ...g, types: g.types.filter(t => isSectionAvailableFor(t, this.ownerType)) }))
+      .filter(g => g.types.length > 0);
+  }
+
   readonly blockLabels = BLOCK_LABELS;
   readonly blockIcons = BLOCK_ICONS;
 
   // Hero is a single top-of-page section — nesting it inside a container/tab
   // makes no sense and only confuses the "+ הוסף לכאן" picker, so it's
   // excluded there (still addable normally via the top-level "+ הוסף בלוק").
-  readonly nestedBlockGroups = BLOCK_GROUPS.map(g => ({ ...g, types: g.types.filter(t => t !== 'hero') }));
+  get nestedBlockGroups(): { label: string; types: BlockType[] }[] {
+    return this.blockGroups.map(g => ({ ...g, types: g.types.filter(t => t !== 'hero') }));
+  }
 
   sortedBlocks(blocks: CampaignBlock[]): CampaignBlock[] {
     return [...blocks].sort((a, b) => a.order - b.order);
@@ -622,11 +654,34 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   asCta(data: unknown): CtaBlockData                     { return data as CtaBlockData; }
   asDivider(data: unknown): DividerBlockData             { return data as DividerBlockData; }
   asShare(data: unknown): ShareBlockData                 { return data as ShareBlockData; }
+  asCoupons(data: unknown): CouponsBlockData             { return data as CouponsBlockData; }
+  asMap(data: unknown): MapBlockData                     { return data as MapBlockData; }
+  asOpeningHours(data: unknown): OpeningHoursBlockData   { return data as OpeningHoursBlockData; }
 
   updateDividerField(id: string, field: keyof DividerBlockData, value: number | boolean | string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as DividerBlockData);
+  }
+
+  updateCouponsField(id: string, field: keyof CouponsBlockData, value: string | null): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as CouponsBlockData);
+  }
+
+  updateMapField(id: string, field: keyof MapBlockData, value: string | number | null): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as MapBlockData);
+  }
+
+  updateOpeningHoursDay(id: string, index: number, field: 'label' | 'hours' | 'closed', value: string | boolean): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as OpeningHoursBlockData;
+    const days = data.days.map((d, i) => i === index ? { ...d, [field]: value } : d);
+    this.state.updateBlockData(id, { days } as OpeningHoursBlockData);
   }
 
   toggleSharePlatform(id: string, platform: keyof ShareBlockData['platforms']): void {

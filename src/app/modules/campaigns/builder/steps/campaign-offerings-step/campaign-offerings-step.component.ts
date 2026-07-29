@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Gift, Settings2, ChevronDown, ChevronUp, Eye } from 'lucide-angular';
@@ -8,17 +8,62 @@ import {
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { UploadService } from '../../../../../core/services/upload.service';
+import { CampaignPartnersService, CampaignPartner } from '../../../services/campaign-partners.service';
+import { PartnerLinkModalComponent } from '../../../shared/components/partner-link-modal/partner-link-modal.component';
 
 @Component({
   selector: 'app-campaign-offerings-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, PartnerLinkModalComponent],
   templateUrl: './campaign-offerings-step.component.html',
   styleUrl: './campaign-offerings-step.component.css',
 })
-export class CampaignOfferingsStepComponent {
+export class CampaignOfferingsStepComponent implements OnInit {
   protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
+  private campaignPartnersService = inject(CampaignPartnersService);
+
+  // ── Partner linking (Phase 4 — Partner Management, Epic 4) ──
+  // Only meaningful once the campaign has a real id (saved at least once) —
+  // CampaignPartner rows reference campaigns.id, which doesn't exist yet for
+  // a brand-new unsaved draft.
+  campaignPartners: CampaignPartner[] = [];
+  linkModalRewardId: string | null = null;
+  linkModalRewardTitle = '';
+
+  ngOnInit(): void {
+    if (this.draft.id) this.loadCampaignPartners();
+  }
+
+  private loadCampaignPartners(): void {
+    this.campaignPartnersService.listForCampaign(this.draft.id!).subscribe({
+      next: res => { this.campaignPartners = res.partners; },
+    });
+  }
+
+  linkedPartnerFor(rewardId: string): CampaignPartner | undefined {
+    return this.campaignPartners.find(cp => cp.rewardId === rewardId);
+  }
+
+  openLinkModal(o: Offering): void {
+    this.linkModalRewardId = o.id;
+    this.linkModalRewardTitle = o.title;
+  }
+
+  onPartnerLinked(cp: CampaignPartner): void {
+    this.campaignPartners = [...this.campaignPartners.filter(x => x.id !== cp.id), cp];
+    this.linkModalRewardId = null;
+  }
+
+  onLinkModalClosed(): void {
+    this.linkModalRewardId = null;
+  }
+
+  unlinkPartner(cp: CampaignPartner): void {
+    this.campaignPartnersService.remove(cp.id).subscribe({
+      next: () => { this.campaignPartners = this.campaignPartners.filter(x => x.id !== cp.id); },
+    });
+  }
 
   readonly Gift        = Gift;
   readonly Settings2   = Settings2;
@@ -141,6 +186,16 @@ export class CampaignOfferingsStepComponent {
   // campaign-studio-state.service.ts) even though the method reads "Offerings".
   setOfferingsLayout(layout: 'standard' | 'image'): void {
     this.state.patch({ layout: { ...this.draft.layout, rewardsLayout: layout } });
+    this.sync();
+  }
+
+  setRewardsImagePosition(position: 'full' | 'inline'): void {
+    this.state.patch({ layout: { ...this.draft.layout, rewardsImagePosition: position } });
+    this.sync();
+  }
+
+  setRewardsImageSize(size: number): void {
+    this.state.patch({ layout: { ...this.draft.layout, rewardsImageSize: size } });
     this.sync();
   }
 
