@@ -1371,3 +1371,33 @@ exports.searchPartners = async (query) => {
   );
   return rows;
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Public Partner Page — Phase 5, Sprint 5.1. Public Pages are Renderers
+// only: this function does no business logic beyond visibility gating —
+// it hands back exactly what the Builder already decided (blocks/layout),
+// unchanged. No caching, no "publish" step: reads the same row the Builder
+// writes to (getDraft/updateDraft), so an edit is visible on refresh
+// immediately by construction, not by any extra mechanism.
+// ─────────────────────────────────────────────────────────────────────────
+exports.getPublicPartner = async (entityId) => {
+  const { rows } = await db.query(
+    `SELECT e.display_name, e.logo_url, e.blocks, e.layout
+     FROM entities e
+     JOIN entity_roles er ON er.entity_id = e.id AND er.role = 'partner'
+     WHERE e.id = $1 AND e.deleted_at IS NULL AND e.is_hidden = false`,
+    [entityId]
+  );
+  if (!rows.length) {
+    const err = new Error('Partner not found');
+    err.status = 404;
+    throw err;
+  }
+  const row = rows[0];
+  return {
+    displayName: row.display_name,
+    logoUrl: row.logo_url,
+    blocks: row.blocks ?? [],
+    layout: row.layout ?? {},
+  };
+};

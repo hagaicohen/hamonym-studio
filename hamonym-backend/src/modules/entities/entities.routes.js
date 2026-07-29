@@ -50,6 +50,15 @@ router.get(
   controller.searchPartners
 );
 
+// Public Partner Page — Phase 5, Sprint 5.1. No auth. Visibility gated
+// inside the service (not deleted, not hidden, actually holds the
+// 'partner' role) — everything else about "what to show" was already
+// decided in the Builder/Domain, this route just reads it back.
+router.get(
+  '/:id/public',
+  controller.getPublicPartner
+);
+
 router.patch(
 
    '/:id/association-document',

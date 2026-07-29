@@ -136,6 +136,8 @@ CampaignPartner    → באילו קמפיינים ה-Partner משתתף
 
 **מבחן מעשי להוספת שדה ל-`CampaignPartner` (Phase 2):** אם שינוי בשדה אמור להשפיע על **כל** הקמפיינים שבהם השותף משתתף — הוא שייך ל-Partner Profile. אם השינוי אמור להשפיע **רק** על קמפיין אחד — הוא שייך ל-`CampaignPartner`. יש להריץ את המבחן הזה על כל שדה חדש לפני שהוא נוסף, כדי למנוע זליגת אחריות בין שתי הישויות עם הזמן.
 
+**עיקרון הנדסי נוסף (נקבע 2026-07-29, תוך כדי Sprint 5.1 — חל על כל Phase מכאן ואילך):** אם כדי להדגים יכולת חדשה צריך להיכנס למסד הנתונים, להרכיב URL ידנית, או לערוך `localStorage`/JSON ידנית — כנראה שחסרה נקודת כניסה ב-UI. זה לא אומר שכל יכולת חייבת להיות נגישה לכל משתמש (הרשאות עדיין חלות), אלא שלכל יכולת צריכה להיות דרך טבעית להגיע אליה עבור מי שאמור להשתמש/לפתח/לבדוק אותה. שני הקישורים שנוספו ("✏ ערוך דף שותף" בכרטיס תשורה מחוברת, "👁 צפייה בדף הציבורי" בטופבר ה-Builder) הם דוגמה ליישום העיקרון הזה בפועל — **הם אינם scaffolding זמני**, הם Developer/Manager UX לגיטימי שסביר שיישאר גם אחרי ש-Sprint 5.2-5.4 יסתיימו (מנהל קמפיין באמת ירצה לערוך את דף השותף; מי שעורך תוכן באמת ירצה לראות תצוגה מקדימה חיה).
+
 ## שיקולים עתידיים (Future Considerations — לא MVP)
 
 **Visibility/Status ברמת ה-Partner Profile:** מעבר ל-`visible` שכבר קיים ברמת `CampaignPartner` (האם שותף מוצג *בקמפיין ספציפי*, §4), ייתכן שיידרש בעתיד status ברמת ה-Partner Profile עצמו — למשל `draft / active / hidden / archived` — כדי להבדיל בין "לא מוצג בקמפיין X" לבין "לא מוצג בשום חיפוש/מדריך שותפים כללי, אך עדיין מקושר לקמפיינים קיימים". זה משתלב טבעית עם מודל ה-Entity הקיים (ראה `is_hidden`/`deleted_at` הקיימים כבר על `entities`, ב-`ENTITY_LIFECYCLE_AND_SEO_CONTEXT.md`) ולא דורש שינוי כיוון — רק לא נכלל ב-MVP.
@@ -150,7 +152,7 @@ CampaignPartner    → באילו קמפיינים ה-Partner משתתף
 | 2 — Domain | טבלאות `campaign_partners` + `entity_roles`, הרשאות/בעלות, API | ✅ הושלם (2026-07-28) — ראה "יישום Phase 2" למטה |
 | 3 — Builder | Refactor ל-Owner Context ([PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md](./PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md)), Partner Drafts, Sections חדשים | ✅ הושלם (2026-07-29) |
 | 4 — Partner Management | 5 Epics (למטה) | ✅ הושלם (2026-07-29) — Epics 1-4; Epic 5 (Merge) נשאר לא-חובה כמתוכנן |
-| 5 — Public Experience | Routing ציבורי (`/campaigns/:slug/partners/:partnerSlug`), ניווט בין שותפים, "חזרה לקמפיין", "על השותף" ליד "פרטי התשורה" (§12) | טרם התחיל |
+| 5 — Public Experience | 4 Sprints (למטה) | ▶️ בתהליך — Sprint 5.1 ✅ הושלם (2026-07-29) |
 | 6 — הרחבות (V2+) | Analytics, Marketplace דו-צדדי (השתתפות ביוזמת השותף) | נדחה במפורש |
 
 **עדכון 2026-07-29 — פיצול Phase 4 המקורית לשתיים:** "UX" הישנה התבררה כשני עניינים נפרדים בעלי סדר תלות טבעי — קודם המערכת צריכה לדעת *מי השותפים ואיך מנהלים אותם* (Partner Management = Back Office), ורק אחר כך נבנית *החוויה הציבורית* סביבם (Public Experience = Front Office). Invite (שהיה תחת "הרחבות V2" הישן) עבר לתוך Phase 4 — הוא חלק אינטגרלי מ"איך יוצרים/מנהלים Partner", לא הרחבה נפרדת.
@@ -166,6 +168,33 @@ CampaignPartner    → באילו קמפיינים ה-Partner משתתף
 5. **Duplicate Merge** — לא חובה לבנות מיידית, אך כדאי להשאיר לפחות Endpoint/Admin Tool בסיסי (ר' ההערה תחת §10 — זו פעולת איחוד נתונים אמיתית, לא "מגיעה בחינם"). **לא נבנה ב-Phase 4** — נשאר עתידי כמתוכנן.
 
 Phase 2 ו-3 יכולים להתקדם בקצב נפרד זה מזה (זו בדיוק הסיבה ששתי ה-ADR נפרדות) — Phase 4 תלוי בהשלמתן; Phase 5 תלויה בהשלמת Phase 4.
+
+### Phase 5 — Public Experience: 4 Sprints (מוגדר 2026-07-29, Sprint 5.1 ✅ הושלם 2026-07-29)
+
+בניגוד ל-Phase 3/4 (שנבנו כמקשה אחת), Phase 5 מחולקת לספרינטים שכל אחד נותן ערך עצמאי — לא ממתינים לסוף כדי לראות תוצאה:
+
+1. **Sprint 5.1 — Public Partner Page.** יעד: כתובת ציבורית קיימת, נטענת ישירות, מציגה דף Partner מלא (Hero/Story/Gallery/Map/Opening Hours/Coupons) דרך Renderer ציבורי. **בלי** ניווט, **בלי** הקשר קמפיין, **בלי** "הבא/קודם" — עמוד עצמאי בלבד.
+2. **Sprint 5.2 — Campaign Integration.** מחבר את מה שכבר קיים: תשורה → "על השותף" (§12) → דף השותף מ-5.1, ועם כפתור "← חזרה לקמפיין".
+3. **Sprint 5.3 — Partner Navigation.** הבא/קודם בין שותפי קמפיין, לפי `display_order`/`visible` (השדות כבר קיימים מ-Phase 2 — רק UI).
+4. **Sprint 5.4 — Polish.** Loading states, SEO/OpenGraph, Breadcrumbs, 404, Empty states, UX ל-sponsor-only (Partner בלי תשורה מקושרת).
+
+**Acceptance Test עסקי נוסף ל-Phase 5 (מוגדר 2026-07-29, לפני תחילת המימוש):** עריכת ה-Hero של Partner, שמירה, ורענון הדף הציבורי — משקף את השינוי **מיד**, בלי "פרסום" נפרד, ובלי להשפיע על קמפיינים אחרים שמשתמשים באותו Partner. זו לא בדיקת Regression רגילה — היא מאמתת את ההבטחה המרכזית של המודל כולו: **Partner אחד, דף אחד, שימוש חוזר במספר קמפיינים** (העיקרון המנחה, למעלה). אם הבדיקה הזו נכשלת, זה סימן שמשהו בדרך חזר בטעות למודל "עותק per-קמפיין" שה-ADR דחה במפורש (§ Partner Domain Model, ההשוואה ל"ארומה בית שמש").
+
+## יישום Sprint 5.1 — Public Partner Page (2026-07-29)
+
+**סטטוס:** הושלם ונבדק חי. כל 5 קריטריוני ה-DoD אומתו + Acceptance Test ה-Live-Edit + regression מלא.
+
+**מה נבנה:** `GET /api/entities/:id/public` (`entities.service.js#getPublicPartner` — ללא auth, מסונן ל-`deleted_at IS NULL AND is_hidden=false` וקיום `entity_roles.role='partner'`), route ציבורי `partners/:id/view` וקומפוננטה `partner-public-page` (מייבאת רק `CampaignPreviewComponent`, לא את ה-Builder בכלל — אין אפילו אפשרות טכנית לערוך דרך המסלול הזה).
+
+**באג אמיתי שהתגלה ותוקן (לא ספציפי ל-Partner):** כפתורי "לתמיכה מאובטחת" (nav עליון + sticky bar תחתון ב-`campaign-preview.component`) מעולם לא היו מותנים בקיום בלוק `donation-widget` בפועל — עבדו "במקרה" כי לכל קמפיין קיים תמיד יש כזה. דף Partner (שאין לו בלוק כזה בכלל) חשף את זה מיד. תוקן ע"י `hasDonationWidget(draft)` חדש, אותו דפוס בדיוק כמו `hasAmbassadorsSection()` הקיים.
+
+**תוצאות בדיקה:**
+- דף Partner אמיתי (בלוק Hero) נטען **ללא כל token** — הוצג נכון, אפס שגיאות, ללא כפתור שמירה/רכיבי עורך.
+- **Live-Edit:** `PATCH /draft` אמיתי (מדמה Save) הוסיף בלוק עם טקסט ייחודי; רענון הדף הציבורי (session אנונימי חדש) הציג אותו מיד — בלי caching, בלי "פרסום".
+- Partner מוסתר / לא-קיים → `404` בשני המקרים.
+- Regression: קמפיין test עם בלוק donation-widget אמיתי — כפתור התרומה עדיין מופיע (3 מופעים: nav דסקטופ/מובייל + sticky), אפס שגיאות.
+
+`ng build` עבר נקי. כל נתוני ה-test נוקו בסוף.
 
 ## יישום Phase 4 (2026-07-29)
 
