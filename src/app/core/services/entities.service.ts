@@ -184,6 +184,14 @@ export class EntitiesService {
     );
   }
 
+  // Public Partner Page — Phase 5, Sprint 5.1. No auth header — this must
+  // work for anonymous visitors.
+  getPublicPartner(entityId: string): Observable<{ displayName: string; logoUrl: string | null; blocks: any[]; layout: any }> {
+    return this.http.get<{ displayName: string; logoUrl: string | null; blocks: any[]; layout: any }>(
+      `${environment.apiUrl}/api/entities/${entityId}/public`,
+    );
+  }
+
   // Entity Roles — Phase 2 (Partner Domain Model)
   addRole(entityId: string, role: 'organization' | 'partner'): Observable<{ roles: string[] }> {
     return this.http.post<{ roles: string[] }>(

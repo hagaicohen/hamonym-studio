@@ -177,6 +177,17 @@ export const routes: Routes = [
         .then((m) => m.CampaignPublicPageComponent),
   },
 
+  // Phase 5, Sprint 5.1 — Public Partner Page. id-based (no slug yet — see
+  // docs/PARTNER_DOMAIN_MODEL_ADR.md §8, deliberately not implemented until
+  // actually needed). Renderer-only: no Builder, no auth, no navigation —
+  // those are later sprints.
+  {
+    path: 'partners/:id/view',
+    loadComponent: () =>
+      import('./modules/campaigns/pages/partner-public-page/partner-public-page.component')
+        .then((m) => m.PartnerPublicPageComponent),
+  },
+
   {
     path: 'campaigns/:slug/success',
     loadComponent: () =>

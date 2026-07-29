@@ -108,6 +108,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return (draft.blocks ?? []).some(b => b.type === 'ambassadors');
   }
 
+  // Gates the nav/sticky "לתמיכה מאובטחת" donate CTAs — these were
+  // previously unconditional (every campaign always had a donation-widget
+  // block, so it went unnoticed), which leaked a broken "donate" button
+  // onto Partner pages that have no donation flow at all. See
+  // docs/PARTNER_DOMAIN_MODEL_ADR.md Phase 5, Sprint 5.1.
+  hasDonationWidget(draft: CampaignDraft): boolean {
+    return (draft.blocks ?? []).some(b => b.type === 'donation-widget');
+  }
+
   openJoinModal(): void {
     this.joinForm        = { fullName: '', phone: '', email: '', goalAmount: null };
     this.joinGoalDisplay = '';

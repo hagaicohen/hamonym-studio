@@ -6,6 +6,7 @@
   <div class="pb-topbar">
     <span class="pb-title">עריכת דף שותף</span>
     <div class="pb-topbar-actions">
+      <a class="pb-invite-btn" [routerLink]="['/partners', entityId, 'view']" target="_blank" rel="noopener">👁 צפייה בדף הציבורי</a>
       <button type="button" class="pb-invite-btn" (click)="showInviteForm = !showInviteForm">👥 הזמן עורך</button>
       <button type="button" class="pb-save-btn" [disabled]="saving" (click)="save()">
         {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
