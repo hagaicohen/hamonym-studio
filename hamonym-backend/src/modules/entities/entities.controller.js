@@ -574,3 +574,38 @@ exports.setEntityVisibility = async (req, res) => {
     res.status(status).json({ error: err.message });
   }
 };
+// =========================================================
+// ENTITY ROLES (Partner Domain Model — Phase 2)
+// =========================================================
+// Ownership already checked by requireEntityOwnership() on these routes.
+
+exports.getRoles = async (req, res) => {
+  try {
+    const roles = await service.getRoles(req.params.id);
+    res.json({ roles });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.addRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['organization', 'partner'].includes(role)) {
+      return res.status(400).json({ error: `Unknown role: ${role}` });
+    }
+    const roles = await service.addRole(req.params.id, role);
+    res.json({ roles });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.removeRole = async (req, res) => {
+  try {
+    const roles = await service.removeRole(req.params.id, req.params.role);
+    res.json({ roles });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
