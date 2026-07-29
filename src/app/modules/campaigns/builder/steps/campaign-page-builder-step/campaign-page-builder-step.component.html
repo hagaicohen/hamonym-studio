@@ -844,6 +844,72 @@
           </div>
         </div>
 
+        <!-- ── COUPONS (Partner-only, Phase 3) ── -->
+        <div class="editor-field" *ngIf="block.type === 'coupons'">
+          <div class="editor-row">
+            <label class="editor-label">קוד קופון</label>
+            <input class="editor-input" type="text"
+              [value]="asCoupons(block.data).code || ''"
+              (input)="updateCouponsField(block.id, 'code', $any($event.target).value)">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">תיאור ההטבה</label>
+            <input class="editor-input" type="text"
+              [value]="asCoupons(block.data).discountLabel || ''"
+              placeholder="למשל: 10% הנחה"
+              (input)="updateCouponsField(block.id, 'discountLabel', $any($event.target).value)">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">תיאור מלא</label>
+            <input class="editor-input" type="text"
+              [value]="asCoupons(block.data).description || ''"
+              (input)="updateCouponsField(block.id, 'description', $any($event.target).value)">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">בתוקף עד (רשות)</label>
+            <input class="editor-input" type="date"
+              [value]="asCoupons(block.data).expiresAt || ''"
+              (input)="updateCouponsField(block.id, 'expiresAt', $any($event.target).value || null)">
+          </div>
+        </div>
+
+        <!-- ── MAP / LOCATION (Partner-only, Phase 3) ── -->
+        <div class="editor-field" *ngIf="block.type === 'map'">
+          <div class="editor-row">
+            <label class="editor-label">כתובת</label>
+            <input class="editor-input" type="text"
+              [value]="asMap(block.data).address || ''"
+              (input)="updateMapField(block.id, 'address', $any($event.target).value)">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">קו רוחב (lat)</label>
+            <input class="editor-input" type="number" step="any"
+              [value]="asMap(block.data).lat ?? ''"
+              (input)="updateMapField(block.id, 'lat', $any($event.target).value === '' ? null : +$any($event.target).value)">
+          </div>
+          <div class="editor-row">
+            <label class="editor-label">קו אורך (lng)</label>
+            <input class="editor-input" type="number" step="any"
+              [value]="asMap(block.data).lng ?? ''"
+              (input)="updateMapField(block.id, 'lng', $any($event.target).value === '' ? null : +$any($event.target).value)">
+          </div>
+        </div>
+
+        <!-- ── OPENING HOURS (Partner-only, Phase 3) ── -->
+        <div class="editor-field" *ngIf="block.type === 'opening-hours'">
+          <div class="editor-row" *ngFor="let day of asOpeningHours(block.data).days; let i = index" style="display:flex; gap:8px; align-items:center;">
+            <span class="editor-label" style="min-width:48px">{{ day.label }}</span>
+            <input class="editor-input" type="text" [disabled]="day.closed"
+              [value]="day.hours"
+              (input)="updateOpeningHoursDay(block.id, i, 'hours', $any($event.target).value)">
+            <span class="donation-toggle-text" style="white-space:nowrap">סגור</span>
+            <span class="toggle-pill" [class.on]="day.closed"
+              (click)="updateOpeningHoursDay(block.id, i, 'closed', !day.closed)">
+              <span class="toggle-pill-dot"></span>
+            </span>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── CONTAINER CHILDREN TREE ── hidden only in the fully-'closed' state -->

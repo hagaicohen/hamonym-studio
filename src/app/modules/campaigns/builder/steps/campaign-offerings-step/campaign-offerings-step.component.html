@@ -64,6 +64,31 @@
       </div>
     </div>
 
+    <!-- ── IMAGE POSITION — only meaningful when rewards are actually placed
+         in the sidebar (the below-sidebar carousel uses "מבנה כרטיסיה" above
+         instead) ── -->
+    <div class="rs-layout-picker" *ngIf="state.isSidebarSection('rewards')">
+      <div class="rs-layout-label">מיקום התמונה בכרטיסיה</div>
+      <div class="rs-layout-btns">
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="(draft.layout.rewardsImagePosition ?? 'full') === 'full'"
+          (click)="setRewardsImagePosition('full')">
+          מתחת לכותרת (ברירת מחדל)
+        </button>
+        <button class="rs-layout-btn"
+          [class.rs-layout-btn--active]="draft.layout.rewardsImagePosition === 'inline'"
+          (click)="setRewardsImagePosition('inline')">
+          אייקון קטן בצד הכותרת
+        </button>
+      </div>
+      <div class="rs-layout-size-row" *ngIf="(draft.layout.rewardsImagePosition ?? 'full') === 'full'">
+        <label class="rs-layout-size-label">גובה התמונה ({{ draft.layout.rewardsImageSize ?? 120 }}px)</label>
+        <input type="range" min="60" max="240" step="10"
+          [value]="draft.layout.rewardsImageSize ?? 120"
+          (input)="setRewardsImageSize(+$any($event.target).value)">
+      </div>
+    </div>
+
     <!-- ── BUILDER: Form + Preview ── -->
     <div class="rs-builder">
 
@@ -112,13 +137,13 @@
               <label class="rf-label">כמות (אופציונלי)</label>
               <span class="rf-icon">👥</span>
             </div>
-            <div class="rf-select-wrap">
-              <select class="rf-input rf-select"
-                [value]="offering.stock === null ? 'unlimited' : 'limited'"
-                (change)="offering.stock = $any($event.target).value === 'unlimited' ? null : (offering.stock || 10)">
-                <option value="unlimited">ללא הגבלה</option>
-                <option value="limited">הגבלת כמות</option>
-              </select>
+            <div class="rf-stock-toggle-row">
+              <span class="rf-stock-toggle-label">{{ offering.stock === null ? 'ללא הגבלה' : 'הגבלת כמות' }}</span>
+              <label class="rs-switch">
+                <input type="checkbox" [checked]="offering.stock !== null"
+                  (change)="offering.stock = $any($event.target).checked ? (offering.stock || 10) : null">
+                <span class="rs-slider"></span>
+              </label>
             </div>
             <input *ngIf="offering.stock !== null"
               class="rf-input rf-input--stock" type="text"
@@ -271,6 +296,20 @@
             </div>
             <div class="rs-card-title">{{ o.title }}</div>
             <p class="rs-card-desc">{{ o.description }}</p>
+
+            <!-- Partner linking (Phase 4) — only once the campaign is saved -->
+            <div class="rs-card-partner" *ngIf="draft.id">
+              <ng-container *ngIf="linkedPartnerFor(o.id) as cp; else noPartner">
+                <span class="rs-card-partner-label">🤝 מחובר ל: {{ cp.partnerDisplayName }}</span>
+                <button class="rs-card-btn rs-card-btn--unlink" type="button" (click)="unlinkPartner(cp)">ניתוק</button>
+              </ng-container>
+              <ng-template #noPartner>
+                <button class="rs-card-btn rs-card-btn--partner" type="button" (click)="openLinkModal(o)">
+                  🤝 חבר שותף
+                </button>
+              </ng-template>
+            </div>
+
             <div class="rs-card-actions">
               <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteOffering(o.id)">
                 🗑 מחיקה
@@ -286,6 +325,15 @@
         </div>
       </div>
     </div>
+
+    <app-partner-link-modal
+      *ngIf="linkModalRewardId"
+      [campaignId]="draft.id!"
+      [rewardId]="linkModalRewardId"
+      [rewardTitle]="linkModalRewardTitle"
+      (linked)="onPartnerLinked($event)"
+      (closed)="onLinkModalClosed()">
+    </app-partner-link-modal>
 
     <!-- ── ADVANCED (colors) ── -->
     <button class="rewards-advanced-toggle" type="button" (click)="showAdvanced = !showAdvanced">

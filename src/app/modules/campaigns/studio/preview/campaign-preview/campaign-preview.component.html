@@ -591,6 +591,36 @@
   </ng-container>
 </ng-container>
 
+<!-- ══ REWARD DETAILS MODAL — sidebar reward card's "לפרטים נוספים" ══ -->
+<ng-container *ngIf="rewardDetailsOffering as offering">
+  <div class="hm-join-overlay" (click)="closeRewardDetails()"></div>
+  <div class="hm-join-modal hm-reward-details-modal">
+    <div class="hm-join-header">
+      <h3 class="hm-join-title">{{ offering.title }}</h3>
+      <button class="hm-join-close" (click)="closeRewardDetails()">✕</button>
+    </div>
+    <div class="hm-join-body">
+      <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-details-img">
+      <div class="hm-reward-details-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
+
+      <!-- Multi-line description (e.g. numbered terms, one per line) renders
+           as a real list; a single-line description stays a plain paragraph. -->
+      <ol class="hm-reward-details-list" *ngIf="descriptionLines(offering.description).length > 1">
+        <li *ngFor="let line of descriptionLines(offering.description)">{{ line }}</li>
+      </ol>
+      <p class="hm-reward-details-desc" *ngIf="descriptionLines(offering.description).length === 1">
+        {{ descriptionLines(offering.description)[0] }}
+      </p>
+    </div>
+    <div class="hm-join-footer">
+      <button class="hm-join-submit" [style.background]="primaryColor(draft)"
+              (click)="selectOffering(offering, draft); closeRewardDetails()">
+        לבחירה
+      </button>
+    </div>
+  </div>
+</ng-container>
+
 <!-- ══ CHECKOUT MODAL ══ -->
 <app-checkout-modal
   *ngIf="checkoutOpen"
@@ -817,6 +847,31 @@
     [style.margin]="asDivider(block.data).showLine ? '0 20px' : '0'">
   </div>
 
+  <!-- COUPONS (Partner-only, Phase 3) -->
+  <div class="hm-coupon-card" *ngIf="block.type === 'coupons' && asCoupons(block.data).code">
+    <div class="hm-coupon-label" *ngIf="asCoupons(block.data).discountLabel">{{ asCoupons(block.data).discountLabel }}</div>
+    <div class="hm-coupon-code">{{ asCoupons(block.data).code }}</div>
+    <p class="hm-coupon-desc" *ngIf="asCoupons(block.data).description">{{ asCoupons(block.data).description }}</p>
+    <div class="hm-coupon-expiry" *ngIf="asCoupons(block.data).expiresAt">בתוקף עד {{ asCoupons(block.data).expiresAt }}</div>
+  </div>
+
+  <!-- MAP / LOCATION (Partner-only, Phase 3) -->
+  <div class="hm-map-block" *ngIf="block.type === 'map' && (asMap(block.data).address || (asMap(block.data).lat && asMap(block.data).lng))">
+    <p class="hm-map-address" *ngIf="asMap(block.data).address">📍 {{ asMap(block.data).address }}</p>
+    <iframe class="hm-map-embed"
+      [src]="mapEmbedUrl(asMap(block.data))"
+      loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+  </div>
+
+  <!-- OPENING HOURS (Partner-only, Phase 3) -->
+  <div class="hm-hours-block" *ngIf="block.type === 'opening-hours'">
+    <div class="hm-hours-row" *ngFor="let day of asOpeningHours(block.data).days">
+      <span class="hm-hours-day">{{ day.label }}</span>
+      <span class="hm-hours-value">{{ day.closed ? 'סגור' : day.hours }}</span>
+    </div>
+  </div>
+
   <!-- REGISTER CTA — an additional Action alongside Donate (not a Page
        Builder content block) whenever the campaign has Registration Options.
        Registering for the race and donating separately are two independent
@@ -992,17 +1047,35 @@
           [class.is-selected]="isOfferingInCart(offering.id)"
           (click)="selectOffering(offering, draft)">
           <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
-          <div class="hm-reward-list-top">
-            <div class="hm-reward-icon-wrap">
+
+          <!-- Fixed order: price → title (+ small icon when there's no
+               separate full-image row) → full image row (default mode) →
+               description. -->
+          <div class="hm-reward-list-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
+
+          <div class="hm-reward-list-title-row">
+            <div class="hm-reward-icon-wrap" *ngIf="!offering.imageUrl || rewardsImagePosition(draft) === 'inline'">
               <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
               <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
             </div>
-            <div class="hm-reward-list-info">
-              <h3>{{ offering.title }}</h3>
-              <div class="hm-reward-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
-            </div>
+            <h3>{{ offering.title }}</h3>
           </div>
+
+          <!-- Full image row — the default mode; skipped entirely in
+               'inline' mode, where the same image already shows as the
+               small icon above instead. Size controlled by
+               rewardsImageSize (px), so it's never forced large. -->
+          <div class="hm-reward-list-img" *ngIf="offering.imageUrl && rewardsImagePosition(draft) !== 'inline'"
+            [style.height.px]="rewardsImageSize(draft)">
+            <img [src]="offering.imageUrl" [alt]="offering.title">
+          </div>
+
           <p class="hm-reward-list-desc" *ngIf="offering.description">{{ offering.description }}</p>
+          <button class="hm-reward-list-more" type="button" *ngIf="offering.description"
+            (click)="openRewardDetails(offering); $event.stopPropagation()">
+            לפרטים נוספים
+          </button>
+
           <button class="hm-reward-list-btn" type="button">לבחירה</button>
           <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
             <div class="hm-reward-overlay-check">✓</div>

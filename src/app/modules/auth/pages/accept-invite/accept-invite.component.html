@@ -1,0 +1,41 @@
+<div class="ai-page">
+  <div class="ai-card">
+
+    <p class="ai-loading" *ngIf="loading">טוען הזמנה...</p>
+
+    <ng-container *ngIf="!loading && loadError">
+      <p class="ai-error">⚠ {{ loadError }}</p>
+    </ng-container>
+
+    <ng-container *ngIf="!loading && !loadError">
+
+      <ng-container *ngIf="!accepted">
+        <h2 class="ai-title">הוזמנת לנהל את העמוד העסקי של</h2>
+        <p class="ai-entity-name">{{ entityName }}</p>
+        <p class="ai-email">ההזמנה נשלחה אל: {{ inviteEmail }}</p>
+
+        <ng-container *ngIf="isLoggedIn; else notLoggedIn">
+          <button class="ai-accept-btn" type="button" [disabled]="accepting" (click)="accept()">
+            {{ accepting ? 'מאשר...' : 'קבלת ההזמנה' }}
+          </button>
+          <p class="ai-error" *ngIf="acceptError">⚠ {{ acceptError }}</p>
+        </ng-container>
+
+        <ng-template #notLoggedIn>
+          <p class="ai-hint">יש להתחבר או להירשם עם הכתובת {{ inviteEmail }} כדי לקבל את ההזמנה.</p>
+          <div class="ai-auth-actions">
+            <a class="ai-auth-btn" [routerLink]="['/login']" [queryParams]="{ email: inviteEmail, returnUrl: returnHereUrl }">כניסה</a>
+            <a class="ai-auth-btn ai-auth-btn--secondary" [routerLink]="['/register']" [queryParams]="{ email: inviteEmail, returnUrl: returnHereUrl }">הרשמה</a>
+          </div>
+        </ng-template>
+      </ng-container>
+
+      <ng-container *ngIf="accepted">
+        <p class="ai-success">✓ הצטרפת בהצלחה כעורך של {{ entityName }}</p>
+        <button class="ai-accept-btn" type="button" (click)="goToPartnerPage()">מעבר לעריכת הדף</button>
+      </ng-container>
+
+    </ng-container>
+
+  </div>
+</div>

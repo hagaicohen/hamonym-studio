@@ -160,6 +160,87 @@ export class EntitiesService {
     );
   }
 
+  // Partner Draft — Page Builder Owner Context (Phase 3)
+  getDraft(entityId: string): Observable<{ blocks: any[]; layout: any }> {
+    return this.http.get<{ blocks: any[]; layout: any }>(
+      `${environment.apiUrl}/api/entities/${entityId}/draft`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
+  updateDraft(entityId: string, data: { blocks: any[]; layout: any }): Observable<{ blocks: any[]; layout: any }> {
+    return this.http.patch<{ blocks: any[]; layout: any }>(
+      `${environment.apiUrl}/api/entities/${entityId}/draft`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
+  // Entity Roles — Phase 2 (Partner Domain Model)
+  addRole(entityId: string, role: 'organization' | 'partner'): Observable<{ roles: string[] }> {
+    return this.http.post<{ roles: string[] }>(
+      `${environment.apiUrl}/api/entities/${entityId}/roles`,
+      { role },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
+  // Partner Search — Phase 4 (Discovery)
+  searchPartners(q: string): Observable<{ partners: { id: string; display_name: string; logo_url: string | null; website: string | null }[] }> {
+    return this.http.get<{ partners: any[] }>(
+      `${environment.apiUrl}/api/entities/search-partners`,
+      {
+        params: { q: q || '' },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
+  // Partner Invite — Phase 4 (Epic 3)
+  createInvite(entityId: string, email: string): Observable<{ email: string; expiresAt: string }> {
+    return this.http.post<{ email: string; expiresAt: string }>(
+      `${environment.apiUrl}/api/entities/${entityId}/invites`,
+      { email },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
+  getInvite(token: string): Observable<{ email: string; entityName: string }> {
+    return this.http.get<{ email: string; entityName: string }>(
+      `${environment.apiUrl}/api/invites/${token}`,
+    );
+  }
+
+  acceptInvite(token: string): Observable<{ entityId: string }> {
+    return this.http.post<{ entityId: string }>(
+      `${environment.apiUrl}/api/invites/${token}/accept`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
   uploadAssociationDocument(entityId: string, file: File): Observable<any> {
     const formData = new FormData();
 

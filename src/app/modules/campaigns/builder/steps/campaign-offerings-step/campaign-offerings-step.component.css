@@ -11,6 +11,8 @@
 .rs-layout-picker { display: flex; flex-direction: column; gap: 10px; }
 .rs-layout-label  { font-size: 13px; font-weight: 700; color: #374151; }
 .rs-layout-btns   { display: flex; gap: 12px; }
+.rs-layout-size-row { display: flex; flex-direction: column; gap: 6px; }
+.rs-layout-size-label { font-size: 12px; font-weight: 600; color: #64748b; }
 
 .rs-layout-btn {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -156,8 +158,8 @@
 .rf-type-btn:hover { border-color: #c4b5fd; color: #7c3aed; }
 .rf-type-btn--active { border-color: #7c3aed; background: #faf5ff; color: #7c3aed; }
 
-.rf-select-wrap { position: relative; }
-.rf-select { appearance: auto; cursor: pointer; }
+.rf-stock-toggle-row { display: flex; align-items: center; justify-content: space-between; }
+.rf-stock-toggle-label { font-size: 13px; font-weight: 600; color: #475569; }
 .rf-input--stock { margin-top: 8px; }
 
 /* Upload area */
@@ -446,6 +448,13 @@
 .rs-card-btn--edit:hover      { background: #f1f5f9; }
 .rs-card-btn--delete:hover    { background: #fee2e2; }
 .rs-card-btn--duplicate:hover { background: #dbeafe; }
+
+.rs-card-partner { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+.rs-card-partner-label { flex: 1; font-size: 12px; font-weight: 700; color: #166534; }
+.rs-card-btn--partner { border-color: #bbf7d0; background: #f0fdf4; color: #16a34a; width: 100%; }
+.rs-card-btn--partner:hover { background: #dcfce7; }
+.rs-card-btn--unlink { border-color: #fecdd3; background: #fff1f2; color: #ef4444; flex: 0 0 auto; padding: 6px 12px; }
+.rs-card-btn--unlink:hover { background: #fee2e2; }
 
 /* ─── ADVANCED ─── */
 .rewards-advanced-toggle {

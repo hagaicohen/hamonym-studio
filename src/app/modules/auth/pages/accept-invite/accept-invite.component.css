@@ -1,0 +1,26 @@
+.ai-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: #f8fafc; padding: 20px;
+}
+.ai-card {
+  background: #fff; border-radius: 16px; padding: 32px; max-width: 420px; width: 100%;
+  text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+.ai-loading { color: #64748b; font-size: 14px; }
+.ai-error { color: #dc2626; font-size: 14px; margin-top: 8px; }
+.ai-title { font-size: 16px; color: #475569; margin: 0 0 8px; }
+.ai-entity-name { font-size: 22px; font-weight: 900; color: #1e293b; margin: 0 0 12px; }
+.ai-email { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+.ai-hint { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+.ai-accept-btn {
+  width: 100%; padding: 12px; background: #583cd6; color: #fff; border: none;
+  border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.ai-accept-btn:disabled { opacity: 0.6; cursor: default; }
+.ai-auth-actions { display: flex; gap: 10px; }
+.ai-auth-btn {
+  flex: 1; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
+  text-decoration: none; background: #583cd6; color: #fff;
+}
+.ai-auth-btn--secondary { background: #f1f5f9; color: #1e293b; }
+.ai-success { font-size: 16px; font-weight: 700; color: #16a34a; margin-bottom: 16px; }

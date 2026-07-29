@@ -26,7 +26,7 @@ import {
   Validators,
 } from '@angular/forms';
 
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 
@@ -58,12 +58,19 @@ export class LoginComponent implements OnInit {
 
   errorMessage = '';
 
+  // Populated from ?returnUrl= (e.g. arriving via a Partner invite link) —
+  // additive, existing hardcoded /campaigns|/welcome navigation below is
+  // untouched when absent.
+  private returnUrl: string | null = null;
+
   constructor(
     private fb: FormBuilder,
 
     private http: HttpClient,
 
     private router: Router,
+
+    private route: ActivatedRoute,
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -82,6 +89,11 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this._initGoogle();
+
+    const qp = this.route.snapshot.queryParamMap;
+    this.returnUrl = qp.get('returnUrl');
+    const email = qp.get('email');
+    if (email) this.loginForm.patchValue({ email });
   }
 
   private _initGoogle(): void {
@@ -167,6 +179,12 @@ export class LoginComponent implements OnInit {
               // =========================
               // NAVIGATION FLOW
               // =========================
+
+              if (this.returnUrl) {
+                this.router.navigateByUrl(this.returnUrl);
+
+                return;
+              }
 
               if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
@@ -255,6 +273,12 @@ export class LoginComponent implements OnInit {
               // =========================
               // NAVIGATION FLOW
               // =========================
+
+              if (this.returnUrl) {
+                this.router.navigateByUrl(this.returnUrl);
+
+                return;
+              }
 
               if (res.hasEntities || ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);

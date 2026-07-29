@@ -1,0 +1,37 @@
+<div class="pb-load-state" *ngIf="loading">טוען את דף השותף...</div>
+
+<div class="pb-load-state pb-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+
+<div class="pb-page" *ngIf="!loading && !loadError">
+  <div class="pb-topbar">
+    <span class="pb-title">עריכת דף שותף</span>
+    <div class="pb-topbar-actions">
+      <button type="button" class="pb-invite-btn" (click)="showInviteForm = !showInviteForm">👥 הזמן עורך</button>
+      <button type="button" class="pb-save-btn" [disabled]="saving" (click)="save()">
+        {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="pb-invite-panel" *ngIf="showInviteForm">
+    <ng-container *ngIf="!inviteSent; else inviteSentTpl">
+      <input class="pb-invite-input" type="email" [(ngModel)]="inviteEmail" placeholder="אימייל העסק, למשל marketing@landwer.co.il">
+      <button class="pb-invite-send-btn" type="button" [disabled]="inviteSending" (click)="sendInvite()">
+        {{ inviteSending ? 'שולח...' : 'שליחת הזמנה' }}
+      </button>
+    </ng-container>
+    <ng-template #inviteSentTpl>
+      <span class="pb-invite-sent">✓ ההזמנה נשלחה ל-{{ inviteEmail }}</span>
+    </ng-template>
+    <p class="pb-invite-error" *ngIf="inviteError">⚠ {{ inviteError }}</p>
+  </div>
+
+  <div class="pb-workspace">
+    <div class="pb-editor-card">
+      <app-campaign-page-builder-step />
+    </div>
+    <div class="pb-preview-card">
+      <app-campaign-preview />
+    </div>
+  </div>
+</div>

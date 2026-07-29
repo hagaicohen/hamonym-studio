@@ -141,9 +141,34 @@ export const routes: Routes = [
       ).then((m) => m.CampaignStudioPageComponent),
   },
 
+  // Phase 3 — Page Builder Owner Context. Same Builder/Renderer as
+  // campaigns/:id/edit, pointed at a Partner entity's own draft instead of a
+  // campaign's — see docs/PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md. Ownership is
+  // enforced server-side (requireEntityOwnership on /api/entities/:id/draft),
+  // authGuard here only gates "must be logged in".
+  {
+    path: 'partners/:id/builder',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/partner-builder-page/partner-builder-page.component'
+      ).then((m) => m.PartnerBuilderPageComponent),
+  },
+
   /* ========================================
      PUBLIC — no shell, no auth
   ======================================== */
+
+  // Phase 4 — Partner Management, Epic 3 (Invite). No guard — must render
+  // for logged-out visitors (offers login/register) and logged-in ones
+  // (offers accept) alike; the accept action itself is auth-checked
+  // server-side (POST /api/invites/:token/accept requires a valid JWT).
+  {
+    path: 'accept-invite',
+    loadComponent: () =>
+      import('./modules/auth/pages/accept-invite/accept-invite.component')
+        .then((m) => m.AcceptInviteComponent),
+  },
 
   {
     path: 'campaigns/:slug/view',

@@ -72,7 +72,14 @@ export type BlockType =
   // Comments themselves live in the backend `campaign_comments` table, keyed
   // by campaign slug, not in this block's own `data` — same reasoning as
   // Sponsors/Ambassadors ("view config only").
-  | 'comments';
+  | 'comments'
+  // Partner-only block types (Phase 3 — Page Builder Owner Context). See
+  // owner-registry.ts's SECTION_REGISTRY — these are never available for
+  // ownerType 'campaign', so their existence has zero effect on any
+  // existing campaign.
+  | 'coupons'
+  | 'map'
+  | 'opening-hours';
 
 export type StatKey =
   | 'target' | 'raised' | 'percent' | 'supporters'
@@ -245,6 +252,24 @@ export interface AccordionBlockData {
   mobileLayout?: 'same' | 'tabs' | 'accordion';
 }
 
+export interface CouponsBlockData {
+  code:           string;
+  discountLabel:  string;   // free text, e.g. "10% הנחה" — no fixed discount model imposed
+  description:    string;
+  expiresAt:      string | null; // ISO date, null = no expiry
+}
+
+export interface MapBlockData {
+  address: string;
+  lat:     number | null;
+  lng:     number | null;
+  zoom:    number; // default 14
+}
+
+export interface OpeningHoursBlockData {
+  days: { label: string; hours: string; closed: boolean }[];
+}
+
 export type BlockData =
   | RichTextBlockData
   | ImageBlockData
@@ -264,6 +289,9 @@ export type BlockData =
   | UpdatesBlockData
   | ShareBlockData
   | CommentsBlockData
+  | CouponsBlockData
+  | MapBlockData
+  | OpeningHoursBlockData
   | Record<string, never>;
 
 export interface CampaignBlock {
@@ -410,6 +438,18 @@ export interface CampaignLayout {
   // existing campaign — no migration needed, same pattern as heroPlacement.
   // See DECISIONS.md (2026-07-26).
   sidebarSections?: Array<'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors'>;
+  // Reward card structure is fixed: price → title → image → description.
+  // This only controls where the IMAGE sits within that order — only
+  // meaningful for the compact sidebar reward card (the below-sidebar
+  // carousel has its own separate standard/image distinction via
+  // rewardsLayout above). Absent/'full' (the default) = its own full-width
+  // row below the title, sized via rewardsImageSize. 'inline' = a small
+  // icon beside the title instead, no separate image row.
+  rewardsImagePosition?: 'full' | 'inline';
+  // Height (px) of the full-width reward image row (rewardsImagePosition
+  // 'full') — lets the owner control the size instead of a fixed banner.
+  // Absent defaults to a modest 120px.
+  rewardsImageSize?: number;
   // How the 'stats' + 'donation-widget' blocks present together (the
   // "Conversion Widget"). Pure visual choice — same data/functions/events for
   // all three, only markup/CSS differs. Absent/'classic' = today's stacked
@@ -438,6 +478,14 @@ export interface CampaignLayout {
 export type CampaignStatus = 'draft' | 'published' | 'paused' | 'ended';
 
 export interface CampaignDraft {
+  // Phase 3 — Page Builder Owner Context (see owner-registry.ts and
+  // docs/PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md). Undefined = 'campaign'/id,
+  // exactly today's behavior — every existing campaign draft is
+  // unaffected. Only ever 'partner' when the Builder is opened against a
+  // Partner entity's own draft instead of a campaign's.
+  ownerType?: 'campaign' | 'partner';
+  ownerId?:   string;
+
   // Server-managed (populated after save/load — undefined for new campaigns)
   id?:          string;
   entityId?:    string;
@@ -689,6 +737,99 @@ function createInitialDraft(): CampaignDraft {
         rewardCardBorder:       'rgba(255,255,255,.12)',
         rewardCardBorderActive: '#7DD3FC',
         lineColor:      '#e2e8f0',
+      },
+    },
+  };
+}
+
+// Phase 3 — Page Builder Owner Context (see owner-registry.ts). Deliberately
+// NOT built on top of createInitialDraft() — that factory seeds Campaign-
+// only starter blocks (stats/donation-widget/rewards/ambassadors/...), none
+// of which are available for ownerType 'partner' (SECTION_REGISTRY). A
+// Partner draft starts with an empty block list instead; every other field
+// is a harmless placeholder default the Partner Builder UI never surfaces
+// (CampaignDraft stays one shared interface — see the ADR's Consequences —
+// splitting it is out of scope for this phase).
+export function createInitialPartnerDraft(entityId: string, displayName: string): CampaignDraft {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    ownerType: 'partner',
+    ownerId:   entityId,
+    entityId,
+    status: 'draft',
+    title: displayName,
+    slug: '',
+    shortDescription: '',
+    fundingType: 'flexible',
+    category: '',
+    managerName: '',
+    targetAmount: 0,
+    logoPlacement: 'overlay',
+    logoStripAlign: 'center',
+    logoStripBg: '#ffffff',
+    showEntityName: true,
+    showLogo: true,
+    campaignLogoUrl: null,
+    heroLogoPosition: 'left',
+    showHeroTitle: true,
+    showHeroSubtitle: true,
+    startDate: today,
+    endDate: today,
+    heroType: 'image',
+    heroLayout: 'title-subtitle',
+    heroTextStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' },
+    heroCtaConfig: { visible: false, label: '', color: '#06b6d4', align: 'center', icon: '' },
+    heroCustomHtml: '',
+    coverImageUrl: null,
+    videoUrl: '',
+    enableSuggestedAmounts: false,
+    allowCustomAmount: false,
+    allowMonthlyDonation: false,
+    suggestedAmounts: [],
+    monthlyAmounts: [],
+    donorFields: { showAddress: false, showPostalCode: false, showIdNumber: false },
+    offeringsEnabled: false,
+    offerings: [],
+    registrationFieldLabel: '',
+    registrationFieldIcon: '',
+    registrationOptions: [],
+    sponsors: [],
+    ambassadors: [],
+    updates: [],
+    blocks: [],
+    layout: {
+      layoutMode: 'standard' as LayoutMode,
+      preset: 'general' as PresetId,
+      heroTitlePosition: 'hero',
+      heroSubtitlePosition: 'hero',
+      projectDescription: '',
+      projectDescriptionPosition: 'below',
+      rewardsLayout: 'standard',
+      backgroundType: 'none',
+      backgroundColor: '#f8fafc',
+      backgroundImageUrl: '',
+      sectionBgOdd: '#ffffff',
+      sectionBgEven: '#f8fafc',
+      sectionDividerColor: '#e2e8f0',
+      showBottomBanner: false,
+      showFooter: false,
+      showFooterContact: false,
+      footerBg: '#030712',
+      footerTextColor: 'rgba(255,255,255,0.85)',
+      footerEmail: '',
+      footerPhone: '',
+      footerHours: '',
+      theme: {
+        primaryColor: '#333333',
+        secondaryColor: '#6fc9eb',
+        accentColor: '#cc350f',
+        bodyTextColor: '#334155',
+        logoBg: '#ffffff',
+        topStripBg: '#061b3a',
+        rewardsBg: '#014737',
+        rewardCardBorder: 'rgba(255,255,255,.12)',
+        rewardCardBorderActive: '#7DD3FC',
+        lineColor: '#e2e8f0',
       },
     },
   };
@@ -1134,6 +1275,17 @@ function defaultBlockData(type: BlockType): BlockData {
       ctaAction: 'donate',
       blockHeight: 32,
     } as CtaBlockData;
+    case 'coupons':      return { code: '', discountLabel: '', description: '', expiresAt: null } as CouponsBlockData;
+    case 'map':          return { address: '', lat: null, lng: null, zoom: 14 } as MapBlockData;
+    case 'opening-hours': return { days: [
+      { label: 'ראשון',  hours: '09:00–17:00', closed: false },
+      { label: 'שני',    hours: '09:00–17:00', closed: false },
+      { label: 'שלישי',  hours: '09:00–17:00', closed: false },
+      { label: 'רביעי',  hours: '09:00–17:00', closed: false },
+      { label: 'חמישי',  hours: '09:00–17:00', closed: false },
+      { label: 'שישי',   hours: '09:00–13:00', closed: false },
+      { label: 'שבת',    hours: '',            closed: true  },
+    ] } as OpeningHoursBlockData;
     default:            return {};
   }
 }

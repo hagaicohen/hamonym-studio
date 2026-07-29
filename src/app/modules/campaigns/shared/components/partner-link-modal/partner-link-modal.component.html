@@ -1,0 +1,54 @@
+<div class="plm-overlay" (click)="close()"></div>
+<div class="plm-modal">
+  <div class="plm-header">
+    <h3 class="plm-title">חיבור שותף לתשורה{{ rewardTitle ? ' — ' + rewardTitle : '' }}</h3>
+    <button class="plm-close" type="button" (click)="close()">✕</button>
+  </div>
+
+  <div class="plm-tabs">
+    <button class="plm-tab" [class.plm-tab--active]="mode === 'search'" type="button" (click)="mode = 'search'">חיפוש שותף קיים</button>
+    <button class="plm-tab" [class.plm-tab--active]="mode === 'create'" type="button" (click)="mode = 'create'">יצירת שותף חדש</button>
+  </div>
+
+  <div class="plm-body">
+
+    <ng-container *ngIf="mode === 'search'">
+      <input class="plm-input" type="text" [(ngModel)]="query" (input)="search()" placeholder="חפשו לפי שם העסק, למשל: קפה לנדוור">
+
+      <div class="plm-results" *ngIf="!searching">
+        <div class="plm-result-row" *ngFor="let p of results">
+          <img *ngIf="p.logo_url" [src]="p.logo_url" class="plm-result-logo" alt="">
+          <div class="plm-result-logo plm-result-logo--empty" *ngIf="!p.logo_url">🏢</div>
+          <div class="plm-result-name">{{ p.display_name }}</div>
+          <button class="plm-select-btn" type="button" [disabled]="linking" (click)="selectExisting(p)">בחירה</button>
+        </div>
+        <p class="plm-empty" *ngIf="searched && results.length === 0">לא נמצא שותף בשם הזה. אפשר ליצור שותף חדש בלשונית השנייה.</p>
+      </div>
+      <p class="plm-loading" *ngIf="searching">מחפש...</p>
+    </ng-container>
+
+    <ng-container *ngIf="mode === 'create'">
+      <div class="plm-field">
+        <label class="plm-label">שם העסק *</label>
+        <input class="plm-input" type="text" [(ngModel)]="newPartner.display_name" placeholder="קפה לנדוור">
+      </div>
+      <div class="plm-field">
+        <label class="plm-label">אתר (רשות)</label>
+        <input class="plm-input" type="text" [(ngModel)]="newPartner.website" placeholder="https://...">
+      </div>
+      <div class="plm-field">
+        <label class="plm-label">אימייל איש קשר (רשות)</label>
+        <input class="plm-input" type="email" [(ngModel)]="newPartner.contact_email">
+      </div>
+      <div class="plm-field">
+        <label class="plm-label">טלפון איש קשר (רשות)</label>
+        <input class="plm-input" type="text" [(ngModel)]="newPartner.contact_phone">
+      </div>
+      <button class="plm-create-btn" type="button" [disabled]="!newPartner.display_name.trim() || linking" (click)="createAndLink()">
+        {{ linking ? 'יוצר ומחבר...' : 'יצירה וחיבור לתשורה' }}
+      </button>
+    </ng-container>
+
+    <p class="plm-error" *ngIf="error">⚠ {{ error }}</p>
+  </div>
+</div>
