@@ -89,9 +89,44 @@ campaign_message  -- הודעה ספציפית לקמפיין הזה
 
 ### 9. נדחה במפורש ל-V2 (לא MVP)
 
-- **Claim Ownership** — מנהל קמפיין יוצר Partner (`Pending Claim`) לפני שהעסק נרשם בעצמו; מייל הזמנה; ברגע ה-Claim השליטה עוברת לשותף. מודל מוכר (Google Business Profile). לא נדרש ל-MVP כי מנהל הקמפיין יכול פשוט למלא את הפרטים בעצמו.
+- **Invite Existing Business Users to Partner** *(נקרא בעבר "Claim Ownership" — שונה במכוון, ראה §10)* — מנהל קמפיין יוצר Partner ועורך אותו; מאוחר יותר שולח הזמנה במייל לאיש קשר אצל השותף; כשההזמנה מתקבלת, המשתמש הזה מתווסף כ-**עורך נוסף** על אותו entity (שורה חדשה ב-`user_entities`, לא שינוי לשורה קיימת). **אין** מצב `pending_claim`/`unclaimed` בסכימה — היעדר עורך נוסף הוא פשוט המצב הרגיל (entity עם עורך אחד), לא סטטוס שצריך לייצג. לא נדרש ל-MVP כי מנהל הקמפיין יכול פשוט למלא את הפרטים בעצמו עד שיש למי לשלוח הזמנה.
 - **Partner Analytics** (חשיפות, קליקים, קופונים שנוצלו) — נשען על `CampaignPartner` כטבלה קיימת, אז לא חוסם ארכיטקטונית; רק לא נבנה עכשיו.
 - **Partner-initiated participation** ("מצא קמפיינים / הגש בקשה") — הרחבה לכיוון Marketplace דו-צדדי. משמעותית מספיק כדי להישאר שלב נפרד לגמרי.
+
+### 10. עריכה = `user_entities` הקיים, לא Owner/Editor חדש (נעול 2026-07-29)
+
+מי רשאי לערוך Partner נקבע **אך ורק** ע"י שורות ב-`user_entities` הקיים (`user_id, entity_id, role`) — בדיוק אותו מנגנון שכבר קובע מי מנהל כל entity אחר במערכת. **אין** צורך במושג חדש ("Editor"/"Owner"/"Claim"/"Ownership Transfer") — `user_entities` הוא כבר טבלת many-to-many, ושום קוד קיים לא מניח שורה יחידה per entity (`isEntityMember`/`requireEntityOwnership` בודקים "האם קיימת שורה", לא "יש בדיוק שורה אחת"). מכאן:
+
+- מי שיוצר Partner מקבל שורת `user_entities` אוטומטית (בדיוק כמו `createEntity` היום) — הוא "העורך הראשון", בלי צורך במונח מיוחד.
+- הוספת עורך נוסף (למשל איש קשר אצל השותף עצמו, אחרי §9) היא **שורה נוספת** על אותו `entity_id` — לא "העברה", לא מחיקת השורה הקיימת.
+- מנהל קמפיין שרק מקשר Partner קיים דרך `CampaignPartner` **לעולם לא** מקבל שורת `user_entities` על ה-Partner — הוא מקבל רק reference (בדיוק כפי שכבר ממומש ב-Phase 2; §4 ו-Ownership Split כבר תיארו את זה נכון).
+
+**שני צירים נפרדים לגמרי**, ולא להתבלבל ביניהם:
+
+```
+user_entities      → מי רשאי לערוך את ה-Partner Profile עצמו
+CampaignPartner    → באילו קמפיינים ה-Partner משתתף
+```
+
+זו בדיוק ההפרדה שכבר קיימת בעיקרון המנחה (למטה) בין "Partner Profile" ל-"היחס לקמפיין ספציפי" — §10 רק מבהיר איזו טבלה קונקרטית אחראית על כל ציר.
+
+**שלושה מסלולים בלבד להיהפך לעורך (`user_entities`), נעול 2026-07-29 — אין מסלול רביעי, ואין מנגנון הרשאות נוסף:**
+
+1. **מנהל קמפיין** יוצר Partner (אם אינו קיים), בונה לו דף, מחבר אותו לקמפיין שלו — הופך לעורך **כי הוא היוצר** (בדיוק כמו `createEntity` הקיים היום לכל entity).
+2. **העסק עצמו** מקבל Invite (§9) ומצטרף כעורך **כי הוזמן** — שורה נוספת על אותו `entity_id`, לא העברה.
+3. **Super Admin** יכול הכל — ליצור/לערוך כל Partner, להזמין, להוסיף/להסיר עורכים — **כי הוא מנהל מערכת**, לא כי יש לו שורת `user_entities` משלו (Super Admin routes כבר עוקפים לחלוטין את בדיקת `user_entities`, ר' `entity-permission.middleware.js` — זהה למנגנון הקיים לכל entity אחר בפלטפורמה).
+
+**הערה חשובה — לא לבלבל עם "אין מנגנון חדש":** מיזוג Partners כפולים (למשל שני "קפה לנדוור" שנוצרו בטעות ע"י שני מנהלי קמפיין שונים) **אינו** כלול במודל הזה כפי שהוא — זו לא שאלת הרשאות (`user_entities`) אלא פעולת איחוד נתונים (העברת `campaign_partners.partner_entity_id` מהכפילות לרשומה האמיתית, מיזוג שורות `user_entities`, ואז מחיקה/הסתרה של הכפילות). כלי Super-Admin-בלבד עתידי, קטן אך אמיתי — לא להניח שהוא "מגיע בחינם" מהמודל הקיים.
+
+### 11. Partner יכול להתקיים בלי אף קמפיין (נעול 2026-07-29 — כבר נכון בסכימה הקיימת, ללא שינוי)
+
+**כן.** `Partner ← 0..N CampaignPartners`, לא `Campaign → Partner`. זה כבר בדיוק המצב בסכימה שנבנתה ב-Phase 2, בלי שנדרש לחשוב על זה במפורש עד עכשיו: `entities`/`entity_roles` (הזהות/תפקיד של Partner) אינם תלויים בשום צורה ב-`campaign_partners` — אין FK, אין CHECK, אין טריגר שדורש קיום קישור לקמפיין. entity עם `entity_roles.role='partner'` ואפס שורות `campaign_partners` הוא מצב תקין לגמרי, לא מקרה קצה. המשמעות המעשית: אפשר ליצור Partner, לערוך לו דף מלא, ואפילו להזמין את העסק כעורך (§9) — הכל **לפני** שהוא מקושר לקמפיין ראשון כלשהו. זה בדיוק מה שמאפשר את הרצף הטבעי ב-Phase 4 (יצירה → Discovery/עריכה → רק אז Campaign Linking כ-Epic נפרד ומאוחר).
+
+### 12. "פרטים נוספים" מול "על השותף" — שני מושגים נפרדים (נעול 2026-07-29, לפני Phase 5)
+
+כשתשורה מקושרת ל-Partner (`CampaignPartner`), לחיצת "פרטים נוספים" הקיימת (פותחת את המודל הקיים עם תיאור/מחיר/תמונת התשורה — נבנה מוקדם בסשן זה, לפני שהיה קיים מושג Partner) **לא משתנה ולא מוחלפת**. במקום זאת, מתווספת פעולה נפרדת — **"על השותף"** — שמופיעה **רק** כשלתשורה יש `CampaignPartner` מקושר, ומובילה לדף ה-Partner (Phase 5 Routing, §5 למעלה).
+
+**למה לא החלפה (אופציה A) ולא השארה בלבד (אופציה B):** "מה אני מקבל?" (תוכן התשורה) ו-"מי נותן את ההטבה?" (מי השותף) הן שתי שאלות שונות מבחינת המשתמש. החלפה מלאה מאבדת את תיאור התשורה המהיר; השארה בלבד לא נותנת גישה לדף השותף בכלל. הפרדה לשתי פעולות נפרדות פותרת את שתיהן בלי לפגוע אחת בשנייה, ולא דורשת שינוי במודל/במודל ה-Modal הקיים — רק תנאי הצגה נוסף (`*ngIf` על קיום `CampaignPartner` עבור אותה תשורה) ופעולה חדשה לצידו.
 
 ## עיקרון מנחה (Guiding Principle)
 
@@ -113,11 +148,66 @@ campaign_message  -- הודעה ספציפית לקמפיין הזה
 |---|---|---|
 | 1 — Foundation | שני ה-ADR, ההחלטות הארכיטקטוניות (§1-8) | ✅ הושלם (תכנון) |
 | 2 — Domain | טבלאות `campaign_partners` + `entity_roles`, הרשאות/בעלות, API | ✅ הושלם (2026-07-28) — ראה "יישום Phase 2" למטה |
-| 3 — Builder | Refactor ל-Owner Context ([PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md](./PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md)), Partner Drafts, Sections חדשים | טרם התחיל |
-| 4 — UX | ניווט בין שותפים, חזרה לקמפיין, אינטגרציה עם תשורות | טרם התחיל |
-| 5 — הרחבות (V2+) | Claim, Analytics, Marketplace, הזמנות לשותפים (§9) | נדחה במפורש |
+| 3 — Builder | Refactor ל-Owner Context ([PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md](./PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md)), Partner Drafts, Sections חדשים | ✅ הושלם (2026-07-29) |
+| 4 — Partner Management | 5 Epics (למטה) | ✅ הושלם (2026-07-29) — Epics 1-4; Epic 5 (Merge) נשאר לא-חובה כמתוכנן |
+| 5 — Public Experience | Routing ציבורי (`/campaigns/:slug/partners/:partnerSlug`), ניווט בין שותפים, "חזרה לקמפיין", "על השותף" ליד "פרטי התשורה" (§12) | טרם התחיל |
+| 6 — הרחבות (V2+) | Analytics, Marketplace דו-צדדי (השתתפות ביוזמת השותף) | נדחה במפורש |
 
-Phase 2 ו-3 יכולים להתקדם בקצב נפרד זה מזה (זו בדיוק הסיבה ששתי ה-ADR נפרדות) — Phase 4 תלוי בהשלמת שתיהן.
+**עדכון 2026-07-29 — פיצול Phase 4 המקורית לשתיים:** "UX" הישנה התבררה כשני עניינים נפרדים בעלי סדר תלות טבעי — קודם המערכת צריכה לדעת *מי השותפים ואיך מנהלים אותם* (Partner Management = Back Office), ורק אחר כך נבנית *החוויה הציבורית* סביבם (Public Experience = Front Office). Invite (שהיה תחת "הרחבות V2" הישן) עבר לתוך Phase 4 — הוא חלק אינטגרלי מ"איך יוצרים/מנהלים Partner", לא הרחבה נפרדת.
+
+### Phase 4 — Partner Management: 5 Epics (מוגדר 2026-07-29, ✅ הושלם 2026-07-29)
+
+מטרת הפאזה כולה: לענות על שאלה אחת — **איך Partner נכנס למערכת ואיך מחברים אותו לקמפיינים?**
+
+1. **Partner Creation** — שלושת המסלולים (§10): מנהל קמפיין יוצר Partner; העסק נרשם בעצמו; Super Admin יוצר Partner.
+2. **Partner Discovery** — חיפוש Partner קיים (לפני יצירת חדש), מניעת כפילויות, יצירה רק אם לא נמצא.
+3. **Invite** (§9) — הזמנה במייל; משתמש קיים → `user_entities` ישירות; משתמש חדש → הרשמה ואז `user_entities`.
+4. **Campaign Linking** — מנהל קמפיין בוחר Partner קיים, מחבר לקמפיין, בוחר תשורה, מגדיר Coupon/Visibility/Order (UI מעל ה-API הקיים מ-Phase 2).
+5. **Duplicate Merge** — לא חובה לבנות מיידית, אך כדאי להשאיר לפחות Endpoint/Admin Tool בסיסי (ר' ההערה תחת §10 — זו פעולת איחוד נתונים אמיתית, לא "מגיעה בחינם"). **לא נבנה ב-Phase 4** — נשאר עתידי כמתוכנן.
+
+Phase 2 ו-3 יכולים להתקדם בקצב נפרד זה מזה (זו בדיוק הסיבה ששתי ה-ADR נפרדות) — Phase 4 תלוי בהשלמתן; Phase 5 תלויה בהשלמת Phase 4.
+
+## יישום Phase 4 (2026-07-29)
+
+**סטטוס:** Epics 1-4 הושלמו ונבדקו end-to-end מול DB/שרת/דפדפן אמיתיים — כל 8 הצעדים של תרחיש ה-Definition of Done שנקבע מראש (מנהל קמפיין → תשורה → "חבר שותף" → חיפוש/יצירה → חיבור → הזמנה → שימוש חוזר ע"י מנהל אחר). Epic 5 (Duplicate Merge) לא נבנה, כמתוכנן.
+
+### תיקון סכימה אמיתי שהתגלה תוך כדי (לא היה ידוע קודם)
+
+`entities.entity_type` הוא **NOT NULL** בפועל ב-DB — לא נראה בשום migration מתועד (אותה תופעה בדיוק כמו ה-CHECK constraint שהתגלה ב-Phase 2: העמודה/האילוץ קדמו לתיקיית ה-migrations). זה סתר ישירות את העיקרון של §1 (סיווג משפטי נפרד לגמרי מתפקיד פלטפורמה) — Partner שנוצר מהר ("שם, לוגו, טלפון, אתר" בלבד, ר' §10 מסלול 1) לא אמור להיאלץ לבחור סיווג משפטי שאין לו. תוקן ב-migration `035_entity_type_nullable.sql`: `ALTER TABLE entities ALTER COLUMN entity_type DROP NOT NULL`. Organizations (דרך אשף "הקמת עמותה/ארגון" הקיים) לא מושפעות — אותו flow כבר תמיד אוסף `entity_type` לפני שליחה.
+
+### מה נבנה
+
+| קובץ | שינוי |
+|---|---|
+| `hamonym-backend/migrations/034_partner_invites.sql` | טבלה חדשה `partner_invites` (raw token + SHA-256 hash, אותו דפוס כמו `users.password_reset_token`) |
+| `hamonym-backend/migrations/035_entity_type_nullable.sql` | `entity_type` הופך Nullable |
+| `hamonym-backend/src/modules/partner-invites/*` | חדש — `getInviteByToken` (ציבורי), `acceptInvite` (מאומת, בודק התאמת אימייל + מונע קבלה כפולה) |
+| `hamonym-backend/src/modules/email/templates/invite-partner-editor.js` | תבנית מייל חדשה |
+| `hamonym-backend/src/modules/entities/entities.service.js/.controller.js/.routes.js` | `searchPartners` (Discovery), `createInvite` |
+| `hamonym-app/.../core/services/entities.service.ts` | `searchPartners`, `addRole`, `createInvite`, `getInvite`, `acceptInvite` |
+| `hamonym-app/.../campaigns/services/campaign-partners.service.ts` (חדש) | צרכן Frontend ראשון ל-API של Phase 2 |
+| `hamonym-app/.../shared/components/partner-link-modal/*` (חדש) | חיפוש/יצירה/חיבור שותף לתשורה |
+| `hamonym-app/.../campaign-offerings-step.component.ts/.html/.css` | כפתור "חבר שותף" / "מחובר ל:" לכל תשורה |
+| `hamonym-app/.../partner-builder-page.component.ts/.html/.css` | כפתור "הזמן עורך" |
+| `hamonym-app/.../auth/pages/accept-invite/*` (חדש) | עמוד ציבורי לקבלת הזמנה |
+| `hamonym-app/.../auth/pages/login/login.component.ts` | תמיכה ב-`?returnUrl=` נוספה (אדיטיבי — לא משנה את הניווט הקיים כשה-param נעדר; `register.component.ts` כבר תמך בזה) |
+| `hamonym-app/src/app/app.routes.ts` | route חדש `accept-invite` (ציבורי, ללא guard) |
+
+### תוצאות בדיקה — כל 8 הצעדים אומתו, כולל 2 Security Guards
+
+1-2. תשורה חדשה נוספה בפועל דרך ה-UI לקמפיין אמיתי (`gdolim`).
+3-4. "חבר שותף" נלחץ; חיפוש "קפה לנדוור" הראה "לא נמצא שותף" (שם ייחודי, לא קיים עדיין).
+5-6. Partner נוצר דרך הלשונית השנייה (שם בלבד) **וחובר מיידית** לתשורה — אומת גם ב-DOM ("🤝 מחובר ל:") וגם ב-DB (`campaign_partners.reward_id` תואם בדיוק את `offering.id`).
+7. הזמנה נשלחה (נבדק ב-`email_logs`: תבנית ונושא נכונים, `status='disabled'` כצפוי בסביבת dev); התקבלה ע"י משתמש עם אימייל תואם → **שורת `user_entities` שנייה** נוספה (שני עורכים, ללא "העברת בעלות"). **Guards שנבדקו במפורש:** קבלת הזמנה שכבר התקבלה → `410`; קבלת הזמנה ע"י משתמש שהאימייל שלו לא תואם → `403`.
+8. מנהל קמפיין **אחר לגמרי** (entity/campaign נפרדים) מצא את אותו Partner דרך `search-partners` וחיבר אותו לקמפיין השני שלו **בלי תשורה** (`reward_id: null`) — מוכיח בפועל את §4 (Reward אופציונלי).
+
+`ng build` עבר נקי בכל שלב. כל נתוני ה-test (2 entities, קמפיין, invites, משתמש) נוקו בסוף; `gdolim` שוחזר במדויק למצבו המקורי (2 תשורות).
+
+### מה עדיין לא נבנה (במכוון, מחוץ ל-Phase 4)
+
+- Epic 5 (Duplicate Merge) — לא MVP.
+- UI לעריכת שדות `CampaignPartner` (Coupon/Order/Visibility/Campaign Message) אחרי החיבור הראשוני — כרגע ניתן ליצור/לנתק בלבד דרך ה-UI; עדכון שדות קיים ב-API (Phase 2) אך אין לו טופס.
+- Routing ציבורי, ניווט בין שותפים, חיבור "פרטים נוספים" — Phase 5.
 
 ## שאלות פתוחות לפני מימוש
 

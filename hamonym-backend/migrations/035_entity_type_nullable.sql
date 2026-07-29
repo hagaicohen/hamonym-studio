@@ -1,0 +1,13 @@
+-- Phase 4 — Partner Management, Epic 1 (quick Partner creation by a
+-- campaign manager). Discovered live: entities.entity_type is NOT NULL in
+-- the actual DB (not visible in any tracked migration — predates this
+-- migrations folder, same situation as the entity_type CHECK constraint
+-- found during Phase 2). This directly conflicts with
+-- docs/PARTNER_DOMAIN_MODEL_ADR.md §1: entity_type is legal/tax
+-- classification, a separate axis from platform role — a Partner quickly
+-- created by a campaign manager (name/logo/contact only, see §10 path 1)
+-- has no legal classification yet, and forcing one would mean asserting a
+-- legal status nobody actually confirmed. Organizations (created via the
+-- existing "הקמת עמותה/ארגון" wizard) are unaffected — that flow already
+-- always collects entity_type before submitting.
+ALTER TABLE entities ALTER COLUMN entity_type DROP NOT NULL;

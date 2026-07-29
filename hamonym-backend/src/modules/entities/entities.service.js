@@ -1311,3 +1311,63 @@ exports.removeRole = async (entityId, role) => {
   await db.query(`DELETE FROM entity_roles WHERE entity_id = $1 AND role = $2`, [entityId, role]);
   return exports.getRoles(entityId);
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Partner Draft — Phase 3 (Page Builder Owner Context). Same JSONB shape as
+// campaigns.blocks/campaigns.layout, kept as its own small pair of
+// functions (not threaded into the giant createEntity/updateEntity SQL
+// above) since this is a genuinely separate concern from entity-profile
+// settings (documents, Cardcom, onboarding, ...).
+// ─────────────────────────────────────────────────────────────────────────
+
+exports.getDraft = async (entityId) => {
+  const { rows } = await db.query(`SELECT blocks, layout FROM entities WHERE id = $1`, [entityId]);
+  if (!rows.length) {
+    const err = new Error('Entity not found');
+    err.status = 404;
+    throw err;
+  }
+  return { blocks: rows[0].blocks ?? [], layout: rows[0].layout ?? {} };
+};
+
+exports.updateDraft = async (entityId, { blocks, layout }) => {
+  const { rows } = await db.query(
+    `UPDATE entities SET blocks = $2, layout = $3, updated_at = NOW() WHERE id = $1 RETURNING blocks, layout`,
+    [entityId, JSON.stringify(blocks ?? []), JSON.stringify(layout ?? {})]
+  );
+  if (!rows.length) {
+    const err = new Error('Entity not found');
+    err.status = 404;
+    throw err;
+  }
+  return rows[0];
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Partner Search — Phase 4 (Partner Management, Epic 2: Discovery). Mirrors
+// the ILIKE-search idiom already used in campaigns.service.js#discoverCampaigns
+// and platform.service.js#getOrganizations. Deliberately platform-wide (any
+// authenticated campaign manager can search ANY partner, not scoped to
+// their own entities) — that's the whole point of Discovery preventing
+// duplicate creation. Returns only safe/public-ish fields, not the full
+// entity row (no Cardcom/documents/etc — same reasoning as stripBlobs()).
+// ─────────────────────────────────────────────────────────────────────────
+exports.searchPartners = async (query) => {
+  const q = (query || '').trim();
+  const params = [];
+  let where = `er.role = 'partner' AND e.deleted_at IS NULL AND e.is_hidden = false`;
+  if (q) {
+    params.push(`%${q}%`);
+    where += ` AND e.display_name ILIKE $${params.length}`;
+  }
+  const { rows } = await db.query(
+    `SELECT e.id, e.display_name, e.logo_url, e.website
+     FROM entities e
+     JOIN entity_roles er ON er.entity_id = e.id
+     WHERE ${where}
+     ORDER BY e.display_name ASC
+     LIMIT 20`,
+    params
+  );
+  return rows;
+};

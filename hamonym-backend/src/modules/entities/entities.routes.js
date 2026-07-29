@@ -42,6 +42,14 @@ router.get(
 
 );
 
+// Partner Search — Phase 4 (Discovery). Platform-wide, any authenticated
+// user; not scoped to the caller's own entities (that's the whole point).
+router.get(
+  '/search-partners',
+  requireAuth,
+  controller.searchPartners
+);
+
 router.patch(
 
    '/:id/association-document',
@@ -218,6 +226,30 @@ router.delete(
   requireAuth,
   requireEntityOwnership(),
   controller.removeRole
+);
+
+// Partner Draft — Page Builder Owner Context (Phase 3)
+router.get(
+  '/:id/draft',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.getDraft
+);
+
+router.patch(
+  '/:id/draft',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.updateDraft
+);
+
+// Partner Invite — Phase 4 (Partner Management, Epic 3). Only an existing
+// editor (user_entities row) can invite another one.
+router.post(
+  '/:id/invites',
+  requireAuth,
+  requireEntityOwnership(),
+  controller.createInvite
 );
 
 module.exports = router;
