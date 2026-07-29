@@ -1,0 +1,5 @@
+<div class="ppp-load-state" *ngIf="loading">טוען...</div>
+
+<div class="ppp-load-state ppp-load-state--error" *ngIf="loadErrorMessage">⚠ {{ loadErrorMessage }}</div>
+
+<app-campaign-preview *ngIf="!loading && !loadErrorMessage" />

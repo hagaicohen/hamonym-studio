@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Gift, Settings2, ChevronDown, ChevronUp, Eye } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
 import {
   CampaignStudioStateService,
   Offering,
@@ -14,7 +15,7 @@ import { PartnerLinkModalComponent } from '../../../shared/components/partner-li
 @Component({
   selector: 'app-campaign-offerings-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, PartnerLinkModalComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, ColorPickerComponent, PartnerLinkModalComponent],
   templateUrl: './campaign-offerings-step.component.html',
   styleUrl: './campaign-offerings-step.component.css',
 })

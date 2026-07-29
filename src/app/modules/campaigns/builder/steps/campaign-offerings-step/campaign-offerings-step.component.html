@@ -301,6 +301,7 @@
             <div class="rs-card-partner" *ngIf="draft.id">
               <ng-container *ngIf="linkedPartnerFor(o.id) as cp; else noPartner">
                 <span class="rs-card-partner-label">🤝 מחובר ל: {{ cp.partnerDisplayName }}</span>
+                <a class="rs-card-btn rs-card-btn--edit" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener">✏ ערוך דף שותף</a>
                 <button class="rs-card-btn rs-card-btn--unlink" type="button" (click)="unlinkPartner(cp)">ניתוק</button>
               </ng-container>
               <ng-template #noPartner>

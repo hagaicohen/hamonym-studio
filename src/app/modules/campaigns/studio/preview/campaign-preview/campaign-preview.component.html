@@ -60,14 +60,14 @@
                   (click)="openJoinModal()">
             <span>🚀 הצטרפו כשגרירים</span>
           </button>
-          <button class="nav-donate-btn" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
+          <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
             לתמיכה מאובטחת
           </button>
         </ng-container>
 
         <!-- Mobile: donate + hamburger -->
         <ng-container *ngIf="vm.mobile">
-          <button class="nav-donate-btn nav-donate-btn--sm" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
+          <button class="nav-donate-btn nav-donate-btn--sm" *ngIf="hasDonationWidget(draft)" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
             לתמיכה מאובטחת
           </button>
           <button class="nav-hamburger" (click)="navOpen = !navOpen"
@@ -482,7 +482,7 @@
     </footer>
 
   <!-- ══ STICKY BOTTOM BAR ══ -->
-  <div class="hm-sticky-bar" *ngIf="showStickyBar">
+  <div class="hm-sticky-bar" *ngIf="showStickyBar && hasDonationWidget(draft)">
     <button class="hm-sticky-close" (click)="showStickyBar = false" aria-label="סגור">✕</button>
     <div class="hm-sticky-inner">
       <div class="hm-sticky-stats">

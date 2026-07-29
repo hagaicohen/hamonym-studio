@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaign-preview.component';
 import { CampaignStudioStateService, createInitialPartnerDraft } from '../../../services/campaign-studio-state.service';
@@ -16,7 +16,7 @@ import { EntitiesService } from '../../../../../core/services/entities.service';
 @Component({
   selector: 'app-partner-builder-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
+  imports: [CommonModule, FormsModule, RouterLink, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
   templateUrl: './partner-builder-page.component.html',
   styleUrl: './partner-builder-page.component.css',
 })
