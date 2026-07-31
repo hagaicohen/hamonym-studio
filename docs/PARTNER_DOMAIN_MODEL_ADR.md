@@ -152,7 +152,7 @@ CampaignPartner    → באילו קמפיינים ה-Partner משתתף
 | 2 — Domain | טבלאות `campaign_partners` + `entity_roles`, הרשאות/בעלות, API | ✅ הושלם (2026-07-28) — ראה "יישום Phase 2" למטה |
 | 3 — Builder | Refactor ל-Owner Context ([PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md](./PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md)), Partner Drafts, Sections חדשים | ✅ הושלם (2026-07-29) |
 | 4 — Partner Management | 5 Epics (למטה) | ✅ הושלם (2026-07-29) — Epics 1-4; Epic 5 (Merge) נשאר לא-חובה כמתוכנן |
-| 5 — Public Experience | 4 Sprints (למטה) | ▶️ בתהליך — Sprint 5.1 ✅ הושלם (2026-07-29) |
+| 5 — Public Experience | 5 Sprints (למטה) | ▶️ בתהליך — Sprint 0/5.1/5.2/5.3 ✅ הושלמו; 5.4 (Polish) נותר |
 | 6 — הרחבות (V2+) | Analytics, Marketplace דו-צדדי (השתתפות ביוזמת השותף) | נדחה במפורש |
 
 **עדכון 2026-07-29 — פיצול Phase 4 המקורית לשתיים:** "UX" הישנה התבררה כשני עניינים נפרדים בעלי סדר תלות טבעי — קודם המערכת צריכה לדעת *מי השותפים ואיך מנהלים אותם* (Partner Management = Back Office), ורק אחר כך נבנית *החוויה הציבורית* סביבם (Public Experience = Front Office). Invite (שהיה תחת "הרחבות V2" הישן) עבר לתוך Phase 4 — הוא חלק אינטגרלי מ"איך יוצרים/מנהלים Partner", לא הרחבה נפרדת.
@@ -169,16 +169,85 @@ CampaignPartner    → באילו קמפיינים ה-Partner משתתף
 
 Phase 2 ו-3 יכולים להתקדם בקצב נפרד זה מזה (זו בדיוק הסיבה ששתי ה-ADR נפרדות) — Phase 4 תלוי בהשלמתן; Phase 5 תלויה בהשלמת Phase 4.
 
-### Phase 5 — Public Experience: 4 Sprints (מוגדר 2026-07-29, Sprint 5.1 ✅ הושלם 2026-07-29)
+### Phase 5 — Public Experience: 5 Sprints (מוגדר 2026-07-29, Sprint 5.1 ✅ + Sprint 0 ✅ הושלמו 2026-07-29)
 
-בניגוד ל-Phase 3/4 (שנבנו כמקשה אחת), Phase 5 מחולקת לספרינטים שכל אחד נותן ערך עצמאי — לא ממתינים לסוף כדי לראות תוצאה:
+בניגוד ל-Phase 3/4 (שנבנו כמקשה אחת), Phase 5 מחולקת לספרינטים שכל אחד נותן ערך עצמאי — לא ממתינים לסוף כדי לראות תוצאה. **הוסף בדיעבד, בסדר-קדימות ראשון:**
+
+0. **Sprint 0 — Partner First (Partners Back-Office).** יעד: נקודת כניסה עצמאית ליצירת/ניהול Partner, בלתי-תלויה בקמפיין כלשהו — לא רק תרחיש בדיקה חסר אלא Use Case עסקי חסר (זוהה ע"י המשתמש תוך כדי בדיקת Sprint 5.1). עד אז יצירת Partner התאפשרה רק כתופעת-לוואי של עריכת תשורה בקמפיין, בסתירה בפועל ל-§11 (Partner הוא Entity עצמאי). היצירה-מתוך-קמפיין **נשארת** כקיצור-דרך לגיטימי, אך אינה עוד נקודת הכניסה היחידה/הראשית.
 
 1. **Sprint 5.1 — Public Partner Page.** יעד: כתובת ציבורית קיימת, נטענת ישירות, מציגה דף Partner מלא (Hero/Story/Gallery/Map/Opening Hours/Coupons) דרך Renderer ציבורי. **בלי** ניווט, **בלי** הקשר קמפיין, **בלי** "הבא/קודם" — עמוד עצמאי בלבד.
-2. **Sprint 5.2 — Campaign Integration.** מחבר את מה שכבר קיים: תשורה → "על השותף" (§12) → דף השותף מ-5.1, ועם כפתור "← חזרה לקמפיין".
-3. **Sprint 5.3 — Partner Navigation.** הבא/קודם בין שותפי קמפיין, לפי `display_order`/`visible` (השדות כבר קיימים מ-Phase 2 — רק UI).
+2. **Sprint 5.2 — Campaign Integration ✅ הושלם (2026-07-30).** מחבר את מה שכבר קיים: תשורה → "🤝 בשיתוף עם X" (§12 — נפרד מ"לפרטים נוספים") → דף השותף מ-5.1, ועם כפתור "← חזרה לקמפיין".
+3. **Sprint 5.3 — Partner Navigation ✅ הושלם (2026-07-30).** הבא/קודם בין שותפי קמפיין, לפי הרשימה הציבורית הממוינת (`display_order`) שכבר קיימת מ-Phase 2 — רק UI.
 4. **Sprint 5.4 — Polish.** Loading states, SEO/OpenGraph, Breadcrumbs, 404, Empty states, UX ל-sponsor-only (Partner בלי תשורה מקושרת).
 
 **Acceptance Test עסקי נוסף ל-Phase 5 (מוגדר 2026-07-29, לפני תחילת המימוש):** עריכת ה-Hero של Partner, שמירה, ורענון הדף הציבורי — משקף את השינוי **מיד**, בלי "פרסום" נפרד, ובלי להשפיע על קמפיינים אחרים שמשתמשים באותו Partner. זו לא בדיקת Regression רגילה — היא מאמתת את ההבטחה המרכזית של המודל כולו: **Partner אחד, דף אחד, שימוש חוזר במספר קמפיינים** (העיקרון המנחה, למעלה). אם הבדיקה הזו נכשלת, זה סימן שמשהו בדרך חזר בטעות למודל "עותק per-קמפיין" שה-ADR דחה במפורש (§ Partner Domain Model, ההשוואה ל"ארומה בית שמש").
+
+### §13 — מודל שכבתי: Partner Profile / Campaign Participation (נעול 2026-07-30, אחרי Sprint 5.2/5.3)
+
+**הבעיה שהתגלתה:** תצפית ישירה על דף שותף ישן (אמיתי) הראתה שכמעט כל תוכנו — מבצע, קופון, תמונות/סיפור, מיתוג, "בשיתוף עם X" — שייך בפועל **לקמפיין הספציפי**, לא לעסק עצמו. דף Partner יחיד ומשותף (כפי שנבנה ב-Sprint 5.1) לא יכול לשאת תוכן כזה בלי אחת משתי בעיות: (א) לאבד את הפרסום הספציפי-לקמפיין לגמרי, או (ב) לחזור למודל "עותק per-קמפיין" שכבר נדחה במפורש למעלה (ההשוואה ל"ארומה בית שמש") — כי שני קמפיינים ששניהם משתמשים באותו Partner היו "נלחמים" על אותו תוכן משותף.
+
+**הפתרון — שני Owners נפרדים, לא Entity אחד:**
+
+| שכבה | Storage | תוכן | Hero נקרא |
+|---|---|---|---|
+| **Partner Profile** | `entities.blocks/layout` (Phase 3, קיים) | נצחי: אודות, גלריה, מיקום, שעות פתיחה, אתר, שיתוף | קאבר העסק |
+| **Campaign Participation** | `campaign_partners.blocks/layout` (**חדש**, migration `036`) | משתנה מקמפיין לקמפיין: מבצע/קופון, תמונות/סיפור ספציפיים, CTA | באנר המבצע |
+
+הדף הציבורי **מרכיב** (Composition, לא Entity אחד) את שתי השכבות: שדות ה-Hero הקבועים (כותרת, תמונת רקע) **תמיד** מגיעים מ-Partner Profile; Campaign Participation תורם רק **בלוקים** נוספים, מוצגים ראשונים (לפני תוכן ה-Profile) כשיש הקשר קמפיין (`?campaignSlug=`). ביקור ישיר בלי הקשר קמפיין (המקרה שקיים מ-Sprint 5.1) מציג Partner Profile בלבד — שום דבר לא נשבר.
+
+**כלל נעול ב-`owner-registry.ts`:** בלוק שמייצג תוכן פרסומי-לקמפיין (`coupons`) שייך **תמיד** ל-`campaign-partner` בלבד — לעולם לא גם ל-`partner`, כדי שלא יהיה מצב שאף אחד לא זוכר איפה לערוך אותו. `hero` נשאר משותף לשלושת ה-Owners (`campaign`/`partner`/`campaign-partner`) — זה **לא** אותה בעיה, כי כל Owner הוא storage נפרד לגמרי; רק התווית שונה ("Hero" / "קאבר העסק" / "באנר המבצע").
+
+**מה נבנה:**
+- Backend: migration `036` (`campaign_partners.blocks/layout`); `getDraft`/`updateDraft`/`getOne` ב-`campaign-partners.service.js` (בעלות = בעלות הקמפיין, כמו `update`/`remove`); `mapPublicRow`/`listPublicForCampaign` מחזירים גם `blocks`/`layout`; routes `GET/PATCH /:id/draft`, `GET /:id`.
+- `owner-registry.ts`: `OwnerType` שלישי `'campaign-partner'`; `SECTION_REGISTRY`/`OWNER_CAPABILITIES`/`OWNER_VALIDATORS` מורחבים.
+- `createInitialCampaignPartnerDraft()` חדש (מבוסס על `createInitialPartnerDraft`, לא `createInitialDraft` — אותו נימוק).
+- `campaign-partner-builder-page` חדש (route `campaign-partners/:id/builder`) — REUSE מלא של Editor+Preview (בדיוק כמו Partner Builder), פלוס מתג דסקטופ/מובייל (`StudioUiService`) שהיה חסר גם ב-Partner Builder עד כה.
+- `partner-public-page.component`: `forkJoin` בין Profile ל-Participation (כשיש `campaignSlug`), הרכבה עם namespacing של IDs (`cp-` prefix) כדי למנוע התנגשות.
+- קישור "🎯 תוכן ההשתתפות בקמפיין" נוסף ליד "✏ פרופיל השותף" (שונה שם, לא הוסר) בכרטיס תשורה מחובר.
+- `isCampaign(draft)`/getter `isCampaign` חדשים ב-Renderer/Editor — מחליפים את כל בדיקות `ownerType !== 'partner'` הקודמות (שפספסו את ה-Owner השלישי) בבדיקה חיובית אחת.
+
+**באג אמיתי שהתגלה ותוקן תוך כדי אימות:** `CampaignPartnersService.listPublicForCampaign` (נבנה קודם באותה ישיבה, ל-Sprint 5.2) לא פרק את עטיפת ה-JSON (`{partners:[...]}`) — גרם ל-`TypeError: X is not iterable` בזמן אמת בכל צרכן של ה-endpoint, כולל תג "בשיתוף עם" עצמו. לא נתפס עד לבדיקה החיה של הפיצ'ר הזה (`ng build` לא תופס טעויות runtime כאלה).
+
+**תוצאות בדיקה (Playwright חי):** שותף נוצר, קושר לקמפיין test אמיתי, "🎯 תוכן ההשתתפות בקמפיין" נפתח, נוסף בלוק קופון (זמין רק כאן), נשמר ואומת ב-DB. הדף הציבורי המורכב (session אנונימי) הציג, בסדר הנכון: פס חזרה לקמפיין ← קאבר העסק (Profile) ← כרטיס הקופון עם קוד/הנחה אמיתיים (Participation) ← תוכן "אודות" (Profile) — בדיוק המבנה שנקבע. אפס שגיאות קונסול אחרי התיקון. `ng build --configuration development` נקי.
+
+**עוד לא נבנה (מחוץ להיקף):** UI לעריכת שדות ה-Hero הקבוע (כותרת/תמונת רקע) בתוך אחד משני ה-Builders עצמם — עדיין רק ב"פרטי בסיס" (שלב 1 קמפיין), לא חלק מהם. אם יתברר כחוסם (למשל: אין דרך להעלות תמונת קאבר לשותף כלל), נדרש Epic נפרד.
+
+## יישום Sprint 0 — Partners Back-Office / Partner First (2026-07-29)
+
+**סטטוס:** הושלם ונבדק חי. Scenario 0 (10 צעדים) אומת מקצה לקצה דרך UI בלבד.
+
+**מה נבנה:**
+- `GET /api/entities/my-partners` (`getMyPartners` — `entities` ∩ `user_entities` ∩ `entity_roles.role='partner'`, ממוין לפי שם).
+- `GET /api/campaign-partners/partner/:partnerId` (`listCampaignsForPartner` — סימטרי ל-`GET /campaign/:campaignId` הקיים, בעלות נבדקת דרך `isEntityMember`).
+- `PartnersListPageComponent` חדש ב-route `/partners` (בתוך ה-shell עם sidebar, לא route ציבורי כמו `partners/:id/view`) — רשימה + טופס יצירה מוטמע ("+ שותף חדש": שם/אתר/קשר, אותו מינימום בדיוק כמו היצירה מתוך `PartnerLinkModalComponent`), מנווט ל-Builder מיד אחרי היצירה (`createEntity` → `addRole(id,'partner')` → navigate).
+- פריט ניווט "שותפים" (`PARTNERS`, אייקון חדש) נוסף ל-`NAV_BY_ROLE['entity-manager']` ב-sidebar, אחרי "שגרירים".
+- ב-`partner-builder-page`: פאנל "קמפיינים שמשתמשים בשותף הזה (N)" עם מצב-ריק מפורש — הופך את §11 (Partner יכול להתקיים בלי שום קמפיין) לעובדה גלויה בממשק, לא רק הנחת מודל.
+
+**Reason:** תוך כדי בדיקת Sprint 5.1, המשתמש זיהה שזה לא פער-בדיקה אלא Use Case עסקי חסר — יצירת Partner הייתה אפשרית *רק* כתופעת-לוואי של עריכת תשורה בקמפיין, מה שסותר בפועל את §11 (Partner ← 0..N CampaignPartners, קיום עצמאי הוא מצב תקין ולא edge-case). הוגדר "Scenario 0 — Partner First" כ-Acceptance Test מרכזי: כניסה עצמאית ← יצירה ← בניית דף ← הזמנת עורך ← דף ציבורי ← אימות 0 קמפיינים ← קישור מאוחר מתוך קמפיין קיים (חיפוש, לא יצירה חוזרת) ← אימות שהדף הציבורי לא השתנה. היצירה-מתוך-קמפיין נשארת קיימת במפורש כקיצור-דרך, לא בוטלה — רק הפסיקה להיות נקודת הכניסה היחידה.
+
+**תוצאות בדיקה — כל 10 הצעדים אומתו (Playwright, קליקים אמיתיים בלבד, ללא הזרקת נתונים ל-DB):**
+1. "שותפים" מוצג ב-sidebar ותפקודי. 2. "שותף חדש" פותח טופס מוטמע. 3. יצירה מעבירה אוטומטית ל-Builder. 4. בלוק Hero נוסף ונשמר. 5. הזמנת עורך נשלחה. 6. פאנל "קמפיינים שמשתמשים" מציג `(0)` + משפט מצב-הריק המדויק. 7. הדף הציבורי נפתח בטאב חדש ומציג תוכן. 8. קמפיין אחר לגמרי → "חבר שותף" → חיפוש (לא יצירה) מוצא את אותו Partner. 9. אחרי החיבור — הדף הציבורי נבדק מ-session אנונימי חדש לגמרי: **ללא שינוי**. 10. הפאנל נבדק מחדש: מציג `(1)`.
+
+אפס שגיאות קונסול. `ng build` עבר נקי. נתוני ה-test נוקו בסוף (כולל סדר מחיקה `email_logs` לפני `entities`, עקב `email_logs_entity_id_fkey` ללא CASCADE).
+
+## יישום Sprint 5.2 + 5.3 — Campaign Integration + Partner Navigation (2026-07-30)
+
+**סטטוס:** הושלם ונבדק חי. נבע מתצפית ישירה של המשתמש בדף השותף שנבנה ב-Sprint 0/5.1 בפועל: "זה לא קמפיין, זה דף עסקי" — חשף שהעורך/הרינדור המשותפים היו ממשיכים "לדלוף" מושגים קמפיין-בלבד (לוגו, תאריך/קטגוריה/מנהל, "₪0 סך גיוס") גם אחרי שהוגדר `ownerType`, כי אף אחד עדיין לא בדק אותם ישירות מול Partner בדפדפן אמיתי.
+
+**תיקוני "Renderer/Editor דולפים" (לא בשום ADR קודם — התגלו בבדיקה חיה):**
+- `campaign-preview.component`: לוגו (hero/logo-above-strip/פוטר), meta chips (תאריך סיום/קטגוריה/מנהל), ופס-סטטיסטיקות-גיוס תחתון — כולם `*ngIf` חדש `draft.ownerType !== 'partner'` (לא "אין ערך", אלא "לא רלוונטי בעיקרון"). קישורי ניווט ל"תשורות"/"עדכונים"/"תרומה" הפכו מותנים בקיום הבלוק בפועל (`hasBlockType()` חדש) — קודם היו קבועים ומצביעים לסקשנים שלא קיימים כלל לשותף.
+- `campaign-page-builder-step.component` (ה-**עורך**, לא רק הרינדור!): כותרת הצעד, כותרת בלוק-הרקע, וסקשן "פרטי קמפיין" (טוגל לאותו פס-סטטיסטיקות) — תוקנו/הוסתרו לפי `ownerType`.
+- שורת הזכויות בפוטר השתמשה ב-`entityName` (שם ה-Entity ה**פעיל של המשתמש המחובר**, לא של השותף המוצג!) — תוקן להשתמש ב-`draft.title` (שם השותף עצמו) כש-`ownerType==='partner'`. זה היה יכול להציג בטעות את שם הארגון של מנהל הקמפיין בפוטר של דף שותף שהוא רק עורך, לא בעלים.
+
+**CTA "קישור לאתר" (נדרש לשותף שאין לו תרומה/הרשמה):** `ctaAction` קיבל ערך שלישי `'link'` + שדה `linkUrl`. Partner חדש מקבל ברירת מחדל `'link'` (לא `'donate'`). בעורך, "תרומה"/"הרשמה למירוץ" מוסתרים ל-Partner; "קישור לאתר" מוצג לכולם (שימושי גם לקמפיין שרוצה כפתור לאתר חיצוני).
+
+**"🤝 בשיתוף עם X" (Sprint 5.2):** `CampaignPartnersService.listPublicForCampaign(slug)` חדש (עוטף `GET /api/campaign-partners/public/:slug` הקיים מ-Phase 2 — לא היה לו צרכן ציבורי עד כה). מוצג בכל 3 תבניות כרטיס תשורה + במודל "פרטים נוספים", **כקישור נפרד** מ"לפרטים נוספים" (§12). מוביל ל-`/partners/:id/view?campaignSlug=&campaignTitle=`.
+
+**"← חזרה לקמפיין" + ניווט בין שותפים (Sprint 5.3):** `partner-public-page.component` קורא `campaignSlug`/`campaignTitle` מ-query params (לא endpoint חדש — נגזר מהקישור הנכנס). אם קיימים: פס עליון לחזרה, ופס תחתון עם שותף קודם/הבא (מאותה רשימה ציבורית, אחרי דה-דופליקציה לפי `partner.id` — שותף יכול לחסות כמה תשורות). ביקור ישיר בכתובת (בלי query params) — המקרה שהיה קיים מאז Sprint 5.1 — פשוט לא מציג את שני הפסים; שום דבר לא נשבר.
+
+**מחיקת שותף:** נעשה שימוש ב-endpoint הקיים `DELETE /api/entities/:id` (soft delete, אותו מסלול self-service כמו מחיקת עמותה). כפתור + מודל type-to-confirm בטופבר ה-Builder וברשימת `/partners`.
+
+**תוצאות בדיקה (Playwright חי, JWT אמיתי):** שותף חדש → Builder ללא לוגו כלל, ללא "קמפיין" בעורך או בפריוויו → הוספת CTA עם "קישור לאתר" בלבד → נשמר ומוצג נכון → מחיקה עם type-to-confirm → נעלם מהרשימה. אפס שגיאות Angular (2 אזהרות Google Sign-In origin, ידועות ולא קשורות). `ng build --configuration development` נקי. **`ng build` production נכשל על budget קיים-מראש** של `campaign-preview.component.css`/`campaign-page-builder-step.component.css` — אומת מול `git show HEAD` שזה קדם לחלוטין לשינוי הזה (לא נגרם כאן, לא תוקן כאן, ממתין לטיפול נפרד באנחלה.json/פיצול קובץ).
 
 ## יישום Sprint 5.1 — Public Partner Page (2026-07-29)
 

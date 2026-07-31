@@ -38,6 +38,12 @@ function mapPublicRow(r) {
     order: r.display_order,
     coupon: r.coupon,
     campaignMessage: r.campaign_message,
+    // Campaign Participation content (Phase 5 model refinement — see
+    // migration 036 + docs/PARTNER_DOMAIN_MODEL_ADR.md). Composed by the
+    // public Partner page together with the Partner Profile's own
+    // blocks/layout when a campaign context is present.
+    blocks: r.blocks ?? [],
+    layout: r.layout ?? {},
     partner: {
       id: r.partner_id,
       displayName: r.partner_display_name,
@@ -70,6 +76,37 @@ async function assertCampaignOwnership(userId, campaignId) {
   }
 }
 
+// Reverse direction of listForCampaign — "which campaigns use MY partner",
+// for the standalone Partner back-office (Scenario 0 / "Partner First").
+// Ownership checked against the PARTNER itself (caller must be an editor
+// of it, per user_entities) — not against any campaign, since there may be
+// zero, one, or many campaigns linked (§11: Partner can exist independently).
+exports.listCampaignsForPartner = async (userId, partnerEntityId) => {
+  if (!(await isEntityMember(userId, partnerEntityId))) {
+    const err = new Error('Unauthorized');
+    err.status = 403;
+    throw err;
+  }
+  const { rows } = await db.query(
+    `SELECT cp.id AS campaign_partner_id, cp.reward_id, cp.visible,
+            c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug, c.status AS campaign_status
+     FROM campaign_partners cp
+     JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.partner_entity_id = $1 AND c.deleted_at IS NULL
+     ORDER BY c.created_at DESC`,
+    [partnerEntityId]
+  );
+  return rows.map(r => ({
+    campaignPartnerId: r.campaign_partner_id,
+    rewardId: r.reward_id,
+    visible: r.visible,
+    campaignId: r.campaign_id,
+    campaignTitle: r.campaign_title,
+    campaignSlug: r.campaign_slug,
+    campaignStatus: r.campaign_status,
+  }));
+};
+
 // Deliberately shows ALL links, including ones pointing at a since
 // soft-deleted/hidden partner (partnerDeleted/partnerHidden flags let the
 // manager notice and remove a stale link) — only the public listing filters
@@ -94,6 +131,7 @@ exports.listForCampaign = async (userId, campaignId) => {
 exports.listPublicForCampaign = async (slug) => {
   const { rows } = await db.query(
     `SELECT cp.id, cp.reward_id, cp.display_order, cp.coupon, cp.campaign_message,
+            cp.blocks, cp.layout,
             e.id AS partner_id, e.display_name AS partner_display_name,
             e.logo_url AS partner_logo_url, e.website AS partner_website
      FROM campaign_partners cp
@@ -143,6 +181,33 @@ exports.create = async (userId, campaignId, data) => {
   return mapRow(rows[0]);
 };
 
+// Single-row fetch — needed by the Campaign Participation Builder page to
+// show "which partner × which campaign" context (topbar/back-link), not
+// otherwise exposed today (only whole-campaign listing existed).
+exports.getOne = async (userId, campaignPartnerId) => {
+  const { rows } = await db.query(
+    `SELECT cp.*, e.display_name AS partner_display_name,
+            c.title AS campaign_title, c.slug AS campaign_slug
+     FROM campaign_partners cp
+     JOIN entities e ON e.id = cp.partner_entity_id
+     JOIN campaigns c ON c.id = cp.campaign_id
+     WHERE cp.id = $1`,
+    [campaignPartnerId]
+  );
+  if (rows.length === 0) {
+    const err = new Error('Not found');
+    err.status = 404;
+    throw err;
+  }
+  await assertCampaignOwnership(userId, rows[0].campaign_id);
+  return {
+    ...mapRow(rows[0]),
+    partnerDisplayName: rows[0].partner_display_name,
+    campaignTitle: rows[0].campaign_title,
+    campaignSlug: rows[0].campaign_slug,
+  };
+};
+
 exports.update = async (userId, campaignPartnerId, data) => {
   const existing = await db.query(`SELECT campaign_id FROM campaign_partners WHERE id = $1`, [campaignPartnerId]);
   if (existing.rows.length === 0) {
@@ -172,6 +237,41 @@ exports.update = async (userId, campaignPartnerId, data) => {
     ]
   );
   return mapRow(rows[0]);
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Campaign Participation draft (Phase 5 model refinement — migration 036).
+// Mirrors entities.service.js#getDraft/updateDraft exactly (same JSONB
+// shape/pattern, just gated by campaign ownership instead of entity
+// ownership — this content belongs to the campaign side of the
+// relationship, same as the rest of campaign_partners' editable fields).
+// ─────────────────────────────────────────────────────────────────────────
+exports.getDraft = async (userId, campaignPartnerId) => {
+  const existing = await db.query(`SELECT campaign_id, blocks, layout FROM campaign_partners WHERE id = $1`, [campaignPartnerId]);
+  if (existing.rows.length === 0) {
+    const err = new Error('Not found');
+    err.status = 404;
+    throw err;
+  }
+  await assertCampaignOwnership(userId, existing.rows[0].campaign_id);
+  return { blocks: existing.rows[0].blocks ?? [], layout: existing.rows[0].layout ?? {} };
+};
+
+exports.updateDraft = async (userId, campaignPartnerId, { blocks, layout }) => {
+  const existing = await db.query(`SELECT campaign_id FROM campaign_partners WHERE id = $1`, [campaignPartnerId]);
+  if (existing.rows.length === 0) {
+    const err = new Error('Not found');
+    err.status = 404;
+    throw err;
+  }
+  await assertCampaignOwnership(userId, existing.rows[0].campaign_id);
+
+  const { rows } = await db.query(
+    `UPDATE campaign_partners SET blocks = $2, layout = $3, updated_at = NOW()
+     WHERE id = $1 RETURNING blocks, layout`,
+    [campaignPartnerId, JSON.stringify(blocks ?? []), JSON.stringify(layout ?? {})]
+  );
+  return rows[0];
 };
 
 exports.remove = async (userId, campaignPartnerId) => {

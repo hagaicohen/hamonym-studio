@@ -347,6 +347,21 @@ exports.getMyEntities =
 
         WHERE ue.user_id = $1
           AND e.deleted_at IS NULL
+          -- Partner entities are managed entirely via /partners (their own
+          -- dedicated Builder/back-office) — they are never a "run the whole
+          -- app as this organization" dashboard context the way a real
+          -- fundraising organization is (no campaigns of their own under
+          -- this model, per PARTNER_DOMAIN_MODEL_ADR.md §11). Without this,
+          -- a Partner an editor created/was invited to shows up in the
+          -- entity-manager topbar switcher mislabeled "מנהל עמותה" (that
+          -- role label is hardcoded per-role, not per-entity — see
+          -- current-context.service.ts ROLE_META). §7's "one Entity can be
+          -- both Organization and Partner" is a documented future case, not
+          -- relied on anywhere yet (no entity_roles row is ever created for
+          -- 'organization' in practice) — revisit this filter if that changes.
+          AND NOT EXISTS (
+            SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner'
+          )
 
         ORDER BY e.created_at DESC
         `,
@@ -1400,4 +1415,24 @@ exports.getPublicPartner = async (entityId) => {
     blocks: row.blocks ?? [],
     layout: row.layout ?? {},
   };
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// My Partners — standalone Partner back-office (Scenario 0 / "Partner
+// First"). Entities where the caller is an editor (user_entities) AND
+// actually holds the 'partner' role — same two axes as everywhere else in
+// this domain (§10 of PARTNER_DOMAIN_MODEL_ADR.md): editing rights via
+// user_entities, "is this a Partner at all" via entity_roles.
+// ─────────────────────────────────────────────────────────────────────────
+exports.getMyPartners = async (userId) => {
+  const { rows } = await db.query(
+    `SELECT e.id, e.display_name, e.logo_url, e.website
+     FROM entities e
+     JOIN user_entities ue ON ue.entity_id = e.id AND ue.user_id = $1
+     JOIN entity_roles er ON er.entity_id = e.id AND er.role = 'partner'
+     WHERE e.deleted_at IS NULL
+     ORDER BY e.display_name ASC`,
+    [userId]
+  );
+  return rows;
 };
