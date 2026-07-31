@@ -2,19 +2,44 @@
 
 <div class="pb-load-state pb-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
 
-<div class="pb-page" *ngIf="!loading && !loadError">
+<ng-container *ngIf="ui.state$ | async as s">
+<div class="pb-page" [class.pb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">
   <div class="pb-topbar">
-    <span class="pb-title">עריכת דף שותף</span>
-    <div class="pb-topbar-actions">
+    <div class="pb-title-group">
+      <button type="button" class="pb-back-button" *ngIf="s.fullscreen" (click)="toggleFullscreen()">
+        <lucide-icon [img]="ArrowRight" [size]="16"></lucide-icon>
+        חזרה לעריכה
+      </button>
+      <span class="pb-title" *ngIf="!s.fullscreen">עריכת דף שותף</span>
+    </div>
+
+    <!-- CENTER: device + fullscreen switcher — same cluster/icons as the
+         campaign Studio's own topbar (campaign-studio-topbar.component),
+         so both Builders look and behave identically. -->
+    <div class="pb-device-switch">
+      <button type="button" class="pb-device-btn" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+        <lucide-icon [img]="Monitor" [size]="16"></lucide-icon>
+      </button>
+      <button type="button" class="pb-device-btn" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+        <lucide-icon [img]="Smartphone" [size]="16"></lucide-icon>
+      </button>
+      <div class="pb-device-divider"></div>
+      <button type="button" class="pb-device-btn" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+        <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2" [size]="16"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="pb-topbar-actions" *ngIf="!s.fullscreen">
       <a class="pb-invite-btn" [routerLink]="['/partners', entityId, 'view']" target="_blank" rel="noopener">👁 צפייה בדף הציבורי</a>
       <button type="button" class="pb-invite-btn" (click)="showInviteForm = !showInviteForm">👥 הזמן עורך</button>
+      <button type="button" class="pb-delete-btn" (click)="openDeleteModal()">🗑 מחק שותף</button>
       <button type="button" class="pb-save-btn" [disabled]="saving" (click)="save()">
         {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
       </button>
     </div>
   </div>
 
-  <div class="pb-invite-panel" *ngIf="showInviteForm">
+  <div class="pb-invite-panel" *ngIf="showInviteForm && !s.fullscreen">
     <ng-container *ngIf="!inviteSent; else inviteSentTpl">
       <input class="pb-invite-input" type="email" [(ngModel)]="inviteEmail" placeholder="אימייל העסק, למשל marketing@landwer.co.il">
       <button class="pb-invite-send-btn" type="button" [disabled]="inviteSending" (click)="sendInvite()">
@@ -27,12 +52,39 @@
     <p class="pb-invite-error" *ngIf="inviteError">⚠ {{ inviteError }}</p>
   </div>
 
-  <div class="pb-workspace">
-    <div class="pb-editor-card">
+  <div class="pb-using-campaigns" *ngIf="!s.fullscreen">
+    <span class="pb-using-title">קמפיינים שמשתמשים בשותף הזה ({{ usingCampaigns.length }})</span>
+    <span class="pb-using-empty" *ngIf="usingCampaigns.length === 0">עדיין אין קמפיינים מחוברים — זה תקין, שותף יכול להתקיים גם בלי קמפיין.</span>
+    <div class="pb-using-list" *ngIf="usingCampaigns.length > 0">
+      <span class="pb-using-chip" *ngFor="let c of usingCampaigns">{{ c.campaignTitle }}</span>
+    </div>
+  </div>
+
+  <div class="pb-workspace" (window:mousemove)="onResizeMove($event)" (window:mouseup)="stopResize()">
+    <div class="pb-editor-card" [class.pb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : editorWidth">
       <app-campaign-page-builder-step />
     </div>
-    <div class="pb-preview-card">
+    <div class="pb-resizer" *ngIf="!s.fullscreen" (mousedown)="startResize($event)"></div>
+    <div class="pb-preview-card" [class.pb-preview-card--mobile]="s.device === 'mobile'">
       <app-campaign-preview />
+    </div>
+  </div>
+</div>
+</ng-container>
+
+<!-- Delete Partner — type-to-confirm, same pattern as org delete -->
+<div class="pb-delete-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+  <div class="pb-delete-modal" (click)="$event.stopPropagation()">
+    <h3>מחיקת השותף "{{ displayName }}"</h3>
+    <p>הפעולה תסתיר את דף השותף לצמיתות (הדף הציבורי יחזיר "לא נמצא"). קמפיינים שכבר קישרו לשותף הזה ימשיכו להציג שהקישור מצביע על שותף שנמחק. הפעולה הפיכה רק ע"י Super Admin.</p>
+    <label class="pb-delete-label">להקלדת אישור, יש להקליד את שם השותף במדויק:</label>
+    <input class="pb-invite-input" type="text" [(ngModel)]="deleteConfirmText" [placeholder]="displayName">
+    <p class="pb-invite-error" *ngIf="deleteError">⚠ {{ deleteError }}</p>
+    <div class="pb-delete-actions">
+      <button type="button" class="pb-invite-btn" (click)="closeDeleteModal()">ביטול</button>
+      <button type="button" class="pb-delete-confirm-btn" [disabled]="!deleteConfirmValid || isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? 'מוחק...' : 'מחק לצמיתות' }}
+      </button>
     </div>
   </div>
 </div>

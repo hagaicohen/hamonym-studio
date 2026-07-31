@@ -5,7 +5,7 @@
       <span class="step-icon-wrapper">
         <lucide-angular [img]="LayersIcon" [size]="18" class="step-icon"></lucide-angular>
       </span>
-      <h2 class="step-title">בניית דף הקמפיין</h2>
+      <h2 class="step-title">{{ isCampaign ? 'בניית דף הקמפיין' : (ownerType === 'partner' ? 'בניית דף השותף' : 'עריכת תוכן ההשתתפות בקמפיין') }}</h2>
     </div>
     <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
     <button class="btn-change-template" type="button" (click)="showTemplatePicker = true">
@@ -20,27 +20,40 @@
     (skipped)="onTemplateSkipped()">
   </app-template-picker>
 
-  <!-- ADD BLOCK — TOP -->
-  <div class="add-block-area add-block-area--top">
-    <button class="btn-add-block" (click)="showBlockPicker = !showBlockPicker" type="button">
-      {{ showBlockPicker ? '✕ סגור' : '+ הוסף בלוק' }}
-    </button>
-    <div class="block-picker block-picker--grouped" *ngIf="showBlockPicker">
-      <div class="picker-group" *ngFor="let group of blockGroups">
-        <div class="picker-group-label">{{ group.label }}</div>
-        <div class="picker-group-items">
-          <button class="picker-item"
-            *ngFor="let type of group.types"
-            [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
-            [disabled]="isAlreadyAdded(type, draft.blocks)"
-            (click)="addBlock(type, draft.blocks)">
-            <span class="picker-icon">{{ blockIcons[type] }}</span>
-            <span class="picker-label">{{ blockLabels[type] }}</span>
-            <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
-          </button>
+  <!-- ══ ZONE 1 — THE STORE: block TYPES you CAN add, not yet on the page.
+       Deliberately its own visually-distinct panel (purple accent, matching
+       the add-button's existing color) so it never blends into "the page's
+       actual content" below it. One header IS the open/close toggle
+       (reuses showBlockPicker directly — no second, redundant toggle
+       control). See DECISIONS.md (2026-07-31 — three-zone Builder layout). ══ -->
+  <div class="builder-zone builder-zone--store">
+    <div class="builder-zone-header" (click)="showBlockPicker = !showBlockPicker">
+      <span class="section-icon-box section-icon-box--store">🧱</span>
+      <span class="builder-zone-title">הוסיפו בלוקים לדף</span>
+      <span class="section-chevron" [class.open]="showBlockPicker">›</span>
+    </div>
+    <ng-container *ngIf="showBlockPicker">
+      <p class="picker-hint">💡 גררו בלוק ישירות למיקום הרצוי בתצוגה שמימין, או פשוט לחצו עליו כדי להוסיף אותו בסוף הדף</p>
+      <div class="block-picker block-picker--grouped">
+        <div class="picker-group" *ngFor="let group of blockGroups">
+          <div class="picker-group-label">{{ group.label }}</div>
+          <div class="picker-group-items">
+            <button class="picker-item"
+              *ngFor="let type of group.types"
+              [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
+              [disabled]="isAlreadyAdded(type, draft.blocks)"
+              draggable="true"
+              (dragstart)="onPickerDragStart($event, type, draft.blocks)"
+              (dragend)="onPickerDragEnd()"
+              (click)="addBlock(type, draft.blocks)">
+              <span class="picker-icon">{{ blockIcons[type] }}</span>
+              <span class="picker-label">{{ blockTypeLabel(type) }}</span>
+              <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </ng-container>
   </div>
 
   <!-- ════ BLOCK TREE TEMPLATE (recursive) ════ -->
@@ -54,6 +67,15 @@
 
       <!-- Block Header -->
       <div class="block-header" (click)="toggleEdit(block.id, block.type)">
+        <!-- Drag handle — dragging THIS onto the live preview relocates the
+             block there directly (moveBlockTo), instead of using the ↑/↓
+             buttons. A dedicated handle (not the whole header) so it never
+             conflicts with clicking the header to expand/collapse, or the
+             action buttons beside it. See DECISIONS.md (2026-07-31). -->
+        <span class="block-drag-handle" draggable="true" title="גררו לשינוי מיקום"
+          (click)="$event.stopPropagation()"
+          (dragstart)="onBlockDragStart($event, block.id)"
+          (dragend)="onBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : parentBlock?.type === 'accordion' ? '🗂️' : blockIcon(block) }}</span>
         <div class="block-header-info">
           <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}
@@ -84,19 +106,129 @@
           [class.block-chevron--closed]="(block.type === 'container' || block.type === 'tabs' || block.type === 'accordion') && getContainerViewState(block.id) === 'closed'">›</span>
       </div>
 
+      <!-- ── CONTAINER NAME FIELD — pulled out of .block-editor and up to the
+           very top of the panel per user request (2026-07-30): the block's
+           own identifying name should be the first thing seen, above the
+           children tree. Same SIBLING-of-.block-editor reasoning as the tree
+           below — must not depend on editingBlockId. ── -->
+      <div class="container-name-field" *ngIf="block.type === 'container' && getContainerViewState(block.id) !== 'closed'">
+        <label class="editor-label">שם הבלוק (לצורך זיהוי)</label>
+        <input class="editor-input" type="text"
+          [value]="block.label"
+          (input)="updateLabel(block.id, $any($event.target).value)"
+          placeholder="למשל: סיפור, תמונה ראשית...">
+      </div>
+
+      <!-- ── CONTAINER CHILDREN TREE — the elements that make up the
+           table, shown FIRST (before any design settings) since that's
+           what a user actually needs to do first: put something in it.
+           Deliberately a SIBLING of .block-editor (gated only by
+           getContainerViewState, never by editingBlockId) — adding a child
+           via "+ הוסף לכאן" moves editingBlockId to that new child (so ITS
+           own editor opens), which would otherwise close this whole tree
+           along with the container's own settings. A manager adding
+           several blocks in a row needs this to stay put. See DECISIONS.md
+           (2026-07-30 — "אל תסגור את הפאנל"). ── -->
+      <div class="container-children-tree" *ngIf="block.type === 'container' && getContainerViewState(block.id) !== 'closed'">
+        <div class="container-tree-header">
+          <div class="direction-toggle direction-toggle--full" (click)="$event.stopPropagation()">
+            <button type="button" class="direction-btn"
+              [class.active]="(asContainer(block.data).direction || 'column') === 'column'"
+              (click)="updateContainerField(block.id, 'direction', 'column')">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="3" y="2" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.9"/>
+                <rect x="3" y="6.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
+                <rect x="3" y="11" width="10" height="3" rx="1.5" fill="currentColor" opacity="0.35"/>
+              </svg>
+              זה מעל זה (עמודה)
+            </button>
+            <button type="button" class="direction-btn"
+              [class.active]="asContainer(block.data).direction === 'row'"
+              (click)="updateContainerField(block.id, 'direction', 'row')">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.9"/>
+                <rect x="6" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.6"/>
+                <rect x="11" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.35"/>
+              </svg>
+              זה לצד זה (שורה)
+            </button>
+          </div>
+          <div class="container-tree-actions-row">
+            <span class="container-tree-count">{{ containerChildren(block, draft.blocks).length }} בלוקים</span>
+            <button class="container-add-btn" type="button"
+              (click)="$event.stopPropagation(); showContainerPickerId = (showContainerPickerId === block.id ? null : block.id)">
+              + הוסף לכאן
+            </button>
+          </div>
+        </div>
+
+        <!-- Mini block picker for this container -->
+        <div class="block-picker block-picker--grouped block-picker--mini"
+             *ngIf="showContainerPickerId === block.id"
+             (click)="$event.stopPropagation()">
+          <div class="picker-group" *ngFor="let group of nestedBlockGroups">
+            <div class="picker-group-label">{{ group.label }}</div>
+            <div class="picker-group-items">
+              <button class="picker-item"
+                *ngFor="let type of group.types"
+                [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
+                [disabled]="isAlreadyAdded(type, draft.blocks)"
+                draggable="true"
+                (dragstart)="onPickerDragStart($event, type, draft.blocks)"
+                (dragend)="onPickerDragEnd()"
+                (click)="addBlockInsideContainer(block.id, type, draft.blocks)">
+                <span class="picker-icon">{{ blockIcons[type] }}</span>
+                <span class="picker-label">{{ blockTypeLabel(type) }}</span>
+                <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Children (recursive) -->
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyContainerTpl">
+          <ng-container *ngFor="let child of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: child, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyContainerTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף לכאן" להוספת בלוק</div>
+        </ng-template>
+      </div>
+
       <!-- Block Editor -->
       <div class="block-editor" *ngIf="editingBlockId === block.id">
 
-        <!-- LABEL -->
-        <div class="editor-field">
-          <label class="editor-label">שם הבלוק (לצורך זיהוי)</label>
+        <!-- LABEL — for rich-text/video/gallery this is genuinely rendered
+             as a visible heading on the page (see campaign-preview.component
+             .html's .section-heading, gated on the same 3 types) — not just
+             an internal identifier, so it's labeled as an actual (optional)
+             title here. For every other block type it really is
+             editor-only, used only in this block-list/header display. -->
+        <div class="editor-field" *ngIf="block.type !== 'container'">
+          <label class="editor-label">{{ ['rich-text','video','gallery'].includes(block.type) ? 'כותרת (רשות — מוצגת בדף)' : 'שם הבלוק (לצורך זיהוי)' }}</label>
           <input class="editor-input" type="text"
             [value]="block.label"
             (input)="updateLabel(block.id, $any($event.target).value)"
-            placeholder="למשל: סיפור, תמונה ראשית...">
+            [placeholder]="['rich-text','video','gallery'].includes(block.type) ? 'למשל: הסיפור שלנו' : 'למשל: סיפור, תמונה ראשית...'">
+
+          <!-- Heading style — right after the heading field itself, since
+               it styles exactly that text. Collapsed by default (the
+               editor's own "עיצוב מתקדם" toggle). See DECISIONS.md
+               (2026-07-31). -->
+          <div class="editor-row" *ngIf="block.type === 'rich-text' && block.label" style="margin-top:10px">
+            <label class="editor-label">עיצוב הכותרת</label>
+            <app-text-style-editor
+              [textStyle]="richTextHeadingStyle(block)"
+              (textStyleChange)="updateRichTextHeadingStyle(block.id, $event)"
+              [showPosition]="false"
+              [showCta]="false">
+            </app-text-style-editor>
+          </div>
         </div>
 
-        <div class="editor-divider"></div>
+        <div class="editor-divider" *ngIf="block.type !== 'container'"></div>
 
         <!-- ── HERO (positional marker only) ── -->
         <div class="editor-field" *ngIf="block.type === 'hero'">
@@ -146,6 +278,42 @@
               (input)="updateImageField(block.id, 'caption', $any($event.target).value)"
               placeholder="תיאור התמונה...">
           </div>
+
+          <div class="spacing-row" style="margin-top:10px">
+            <span class="spacing-label">רוחב התמונה</span>
+            <input type="range" class="split-slider" min="20" max="100" step="5"
+              [value]="asImage(block.data).widthPercent ?? 100"
+              (input)="updateImageWidth(block.id, +$any($event.target).value)">
+            <span>{{ asImage(block.data).widthPercent ?? 100 }}%</span>
+          </div>
+
+          <div class="editor-row" *ngIf="(asImage(block.data).widthPercent ?? 100) < 100">
+            <label class="editor-label">מיקום</label>
+            <div class="direction-toggle">
+              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'right'"
+                (click)="updateImageField(block.id, 'align', 'right')">ימין</button>
+              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'center'"
+                (click)="updateImageField(block.id, 'align', 'center')">מרכז</button>
+              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'left'"
+                (click)="updateImageField(block.id, 'align', 'left')">שמאל</button>
+            </div>
+          </div>
+
+          <!-- Independent height — "רוחב התמונה" above still scales both
+               width AND height together (browser's natural aspect ratio,
+               unchanged). This lets the manager set an exact height on its
+               own; the image gets cropped (object-fit: cover) to fill it,
+               so width and height become two separate controls instead of
+               always moving together. See DECISIONS.md (2026-07-31). -->
+          <div class="spacing-row" style="margin-top:10px">
+            <span class="spacing-label">גובה התמונה</span>
+            <input type="range" class="split-slider" min="80" max="600" step="10"
+              [value]="asImage(block.data).heightPx || 240"
+              (input)="updateImageHeight(block.id, +$any($event.target).value)">
+            <span>{{ asImage(block.data).heightPx ? (asImage(block.data).heightPx + 'px') : 'אוטומטי' }}</span>
+          </div>
+          <button class="editor-btn" type="button" *ngIf="asImage(block.data).heightPx"
+            (click)="resetImageHeight(block.id)" style="margin-top:6px">↺ גובה אוטומטי (לפי התמונה)</button>
         </div>
 
         <!-- ── VIDEO ── -->
@@ -246,13 +414,24 @@
           <div class="editor-row">
             <label class="editor-label">מטרת הכפתור</label>
             <div class="direction-toggle">
-              <button class="direction-btn"
+              <button class="direction-btn" *ngIf="isCampaign"
                 [class.active]="(asCta(block.data).ctaAction || 'donate') === 'donate'"
                 (click)="updateCtaAction(block.id, 'donate')">תרומה</button>
-              <button class="direction-btn"
+              <button class="direction-btn" *ngIf="isCampaign"
                 [class.active]="asCta(block.data).ctaAction === 'register'"
                 (click)="updateCtaAction(block.id, 'register')">הרשמה למירוץ</button>
+              <button class="direction-btn"
+                [class.active]="asCta(block.data).ctaAction === 'link'"
+                (click)="updateCtaAction(block.id, 'link')">קישור לאתר</button>
             </div>
+          </div>
+
+          <div class="editor-row" *ngIf="asCta(block.data).ctaAction === 'link'">
+            <label class="editor-label">כתובת הקישור</label>
+            <input class="editor-input" type="url"
+              [value]="asCta(block.data).linkUrl || ''"
+              (input)="updateCtaLinkUrl(block.id, $any($event.target).value)"
+              placeholder="https://example.com">
           </div>
 
           <div class="editor-row">
@@ -297,7 +476,20 @@
         </div>
 
         <!-- ── CONTAINER ── -->
-        <div class="container-editor" *ngIf="block.type === 'container'">
+        <!-- Design settings collapsed into their own panel, BELOW the
+             children tree above — the children/"+ הוסף לכאן" is the thing a
+             user actually needs first; colors/borders/spacing are
+             secondary and were cluttering the view by always being open.
+             Same toggleSection/isSectionCollapsed mechanism as "רקע הדף"
+             etc., keyed per-block since multiple tables can exist on one
+             page. See DECISIONS.md (2026-07-30). -->
+        <div class="container-design-section" *ngIf="block.type === 'container'">
+          <div class="container-design-header" (click)="toggleSection('container-design-' + block.id)">
+            <span class="container-design-title">🎨 עיצוב</span>
+            <span class="section-chevron" [class.open]="!isSectionCollapsed('container-design-' + block.id)">›</span>
+          </div>
+
+          <div class="container-editor" *ngIf="!isSectionCollapsed('container-design-' + block.id)">
 
           <!-- Panel settings — only shown when this container IS a panel
                (its parent is an 'accordion' block). -->
@@ -340,9 +532,13 @@
             </div>
           </div>
 
-          <!-- Direction -->
+          <!-- Direction — the one thing this block is actually for: hold 2+
+               blocks and arrange them either stacked or side by side. Stated
+               plainly (not just "כיוון") since this was the single most
+               confusing part of the whole element. -->
+          <p class="container-hint">טבלת פריסה מחזיקה כמה בלוקים ומסדרת אותם זה מעל זה או זה לצד זה. הוסיפו בלוקים מתחת, ובחרו כאן איך יוצגו:</p>
           <div class="editor-row">
-            <label class="editor-label">כיוון</label>
+            <label class="editor-label">סידור הבלוקים</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="(asContainer(block.data).direction || 'column') === 'column'"
@@ -352,7 +548,7 @@
                   <rect x="3" y="6.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
                   <rect x="3" y="11" width="10" height="3" rx="1.5" fill="currentColor" opacity="0.35"/>
                 </svg>
-                עמודה
+                זה מעל זה (עמודה)
               </button>
               <button class="direction-btn"
                 [class.active]="asContainer(block.data).direction === 'row'"
@@ -362,7 +558,7 @@
                   <rect x="6" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.6"/>
                   <rect x="11" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.35"/>
                 </svg>
-                שורה
+                זה לצד זה (שורה)
               </button>
             </div>
           </div>
@@ -404,12 +600,48 @@
               </app-color-picker>
             </div>
             <div class="editor-row">
-              <label class="editor-label">מסגרת</label>
+              <label class="editor-label">מסגרת חיצונית</label>
               <app-color-picker
                 [value]="asContainer(block.data).borderColor"
                 (valueChange)="updateContainerField(block.id, 'borderColor', $event)"
                 [showNone]="true">
               </app-color-picker>
+            </div>
+          </div>
+
+          <!-- Outer border thickness/radius — only meaningful once a border
+               color is actually set. -->
+          <div class="container-sliders" *ngIf="asContainer(block.data).borderColor">
+            <div class="slider-row">
+              <span class="slider-label">עובי מסגרת ({{ asContainer(block.data).borderWidth ?? 1.5 }}px)</span>
+              <input type="range" class="split-slider" min="1" max="10" step="0.5"
+                [value]="asContainer(block.data).borderWidth ?? 1.5"
+                (input)="updateContainerField(block.id, 'borderWidth', +$any($event.target).value)">
+            </div>
+            <div class="slider-row">
+              <span class="slider-label">עיגול פינות ({{ asContainer(block.data).borderRadius ?? 0 }}px)</span>
+              <input type="range" class="split-slider" min="0" max="40" step="2"
+                [value]="asContainer(block.data).borderRadius ?? 0"
+                (input)="updateContainerField(block.id, 'borderRadius', +$any($event.target).value)">
+            </div>
+          </div>
+
+          <!-- Divider BETWEEN the blocks inside — separate from the outer
+               frame border above (e.g. table-style cell lines). -->
+          <div class="editor-row">
+            <label class="editor-label">גבול בין הבלוקים</label>
+            <app-color-picker
+              [value]="asContainer(block.data).childDividerColor || ''"
+              (valueChange)="updateContainerField(block.id, 'childDividerColor', $event)"
+              [showNone]="true">
+            </app-color-picker>
+          </div>
+          <div class="container-sliders" *ngIf="asContainer(block.data).childDividerColor">
+            <div class="slider-row">
+              <span class="slider-label">עובי הגבול הפנימי ({{ asContainer(block.data).childDividerWidth ?? 1 }}px)</span>
+              <input type="range" class="split-slider" min="1" max="10" step="0.5"
+                [value]="asContainer(block.data).childDividerWidth ?? 1"
+                (input)="updateContainerField(block.id, 'childDividerWidth', +$any($event.target).value)">
             </div>
           </div>
 
@@ -444,6 +676,30 @@
             </div>
           </div>
 
+          <!-- Outer spacing (above/below the whole table) — same
+               spacingTop/spacingBottom every block type has, kept here
+               instead of the generic section below so it's grouped with
+               the rest of this block's own design controls, not a
+               separate always-visible strip. -->
+          <div class="editor-field spacing-editor">
+            <label class="editor-label">מרווחים חיצוניים</label>
+            <div class="spacing-row">
+              <span class="spacing-label">למעלה</span>
+              <input type="range" class="split-slider" min="0" max="80" step="4"
+                [value]="block.spacingTop"
+                (input)="updateSpacing(block.id, 'spacingTop', +$any($event.target).value)">
+              <span class="spacing-val">{{ block.spacingTop }}px</span>
+            </div>
+            <div class="spacing-row">
+              <span class="spacing-label">למטה</span>
+              <input type="range" class="split-slider" min="0" max="80" step="4"
+                [value]="block.spacingBottom"
+                (input)="updateSpacing(block.id, 'spacingBottom', +$any($event.target).value)">
+              <span class="spacing-val">{{ block.spacingBottom }}px</span>
+            </div>
+          </div>
+
+          </div>
         </div>
 
         <!-- ── TABS ── -->
@@ -713,8 +969,10 @@
           </div>
         </div>
 
-        <!-- ── SPACING ── -->
-        <div class="editor-field spacing-editor">
+        <!-- ── SPACING — for a container, these same sliders are rendered
+             INSIDE the "עיצוב" panel instead (see below), so they're not
+             shown twice. ── -->
+        <div class="editor-field spacing-editor" *ngIf="block.type !== 'container'">
           <label class="editor-label">מרווחים חיצוניים</label>
           <div class="spacing-row">
             <span class="spacing-label">למעלה</span>
@@ -912,51 +1170,6 @@
 
       </div>
 
-      <!-- ── CONTAINER CHILDREN TREE ── hidden only in the fully-'closed' state -->
-      <div class="container-children-tree" *ngIf="block.type === 'container' && getContainerViewState(block.id) !== 'closed'">
-        <div class="container-tree-header">
-          <span class="container-tree-label">
-            {{ asContainer(block.data).direction === 'row' ? '⬛⬜ שורה' : '☰ עמודה' }}
-            <span class="container-tree-count">{{ containerChildren(block, draft.blocks).length }} בלוקים</span>
-          </span>
-          <button class="container-add-btn" type="button"
-            (click)="$event.stopPropagation(); showContainerPickerId = (showContainerPickerId === block.id ? null : block.id)">
-            + הוסף לכאן
-          </button>
-        </div>
-
-        <!-- Mini block picker for this container -->
-        <div class="block-picker block-picker--grouped block-picker--mini"
-             *ngIf="showContainerPickerId === block.id"
-             (click)="$event.stopPropagation()">
-          <div class="picker-group" *ngFor="let group of nestedBlockGroups">
-            <div class="picker-group-label">{{ group.label }}</div>
-            <div class="picker-group-items">
-              <button class="picker-item"
-                *ngFor="let type of group.types"
-                [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
-                [disabled]="isAlreadyAdded(type, draft.blocks)"
-                (click)="addBlockInsideContainer(block.id, type, draft.blocks)">
-                <span class="picker-icon">{{ blockIcons[type] }}</span>
-                <span class="picker-label">{{ blockLabels[type] }}</span>
-                <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Children (recursive) -->
-        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyContainerTpl">
-          <ng-container *ngFor="let child of containerChildren(block, draft.blocks); trackBy: trackById">
-            <ng-container *ngTemplateOutlet="blockItem; context: { block: child, parentBlock: block }">
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <ng-template #emptyContainerTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף לכאן" להוספת בלוק</div>
-        </ng-template>
-      </div>
-
       <!-- ── TABS CHILDREN — each tab is a real 'container' block, so it
            already gets full label-editing/reorder/remove/nested-content-
            editing for free via blockItem, exactly like a container's own
@@ -1010,19 +1223,42 @@
   </ng-template>
   <!-- ════ END BLOCK TREE TEMPLATE ════ -->
 
-  <!-- BLOCKS LIST -->
-  <div class="blocks-list">
-    <ng-container *ngFor="let block of topLevelBlocks(draft.blocks); trackBy: trackById">
-      <ng-container *ngTemplateOutlet="blockItem; context: { block: block, parentBlock: null }">
-      </ng-container>
+  <!-- ══ ZONE 2 — THE PAGE ITSELF: blocks already ON the page, in the exact
+       order they'll render. Starts OPEN by default (seeded in
+       expandedSections, see ngOnInit) — unlike Zone 1/Zone 3, this is the
+       main thing a manager is here to look at. See DECISIONS.md
+       (2026-07-31). ══ -->
+  <div class="builder-zone builder-zone--content">
+    <div class="builder-zone-header" (click)="toggleSection('zone-content')">
+      <span class="section-icon-box section-icon-box--content">📄</span>
+      <span class="builder-zone-title">תוכן הדף</span>
+      <span class="builder-zone-count" *ngIf="topLevelBlocks(draft.blocks).length">{{ topLevelBlocks(draft.blocks).length }} בלוקים</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-content')">›</span>
+    </div>
+    <ng-container *ngIf="!isSectionCollapsed('zone-content')">
+      <div class="blocks-list" *ngIf="topLevelBlocks(draft.blocks).length > 0; else zoneContentEmptyTpl">
+        <ng-container *ngFor="let block of topLevelBlocks(draft.blocks); trackBy: trackById">
+          <ng-container *ngTemplateOutlet="blockItem; context: { block: block, parentBlock: null }">
+          </ng-container>
+        </ng-container>
+      </div>
+      <ng-template #zoneContentEmptyTpl>
+        <p class="zone-content-empty">עדיין אין בלוקים בדף — הוסיפו את הראשון מהחנות שמעל ⬆️</p>
+      </ng-template>
     </ng-container>
   </div>
 
-  <!-- Clear separation between the page's actual content blocks (above) and
-       overall design settings that aren't tied to any one block (below). -->
-  <div class="design-settings-divider">
-    <span class="design-settings-divider-label">🎨 עיצוב כללי</span>
-  </div>
+  <!-- ══ ZONE 3 — GENERAL DESIGN: site-wide settings not tied to any one
+       block (Hero text style/position, theme colors, page background,
+       footer). Closed by default, same reasoning as Zone 1 — opt-in, not
+       the main thing a manager looks at on every visit. ══ -->
+  <div class="builder-zone builder-zone--design">
+    <div class="builder-zone-header" (click)="toggleSection('zone-design')">
+      <span class="section-icon-box section-icon-box--design">🎨</span>
+      <span class="builder-zone-title">עיצוב כללי</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-design')">›</span>
+    </div>
+    <ng-container *ngIf="!isSectionCollapsed('zone-design')">
 
   <!-- HERO TEXTS — position + style for title/subtitle, not tied to any one
        block since Hero isn't always a block. Text VALUES stay editable only
@@ -1031,7 +1267,7 @@
        (2026-07-17). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
-      <span class="campaign-bg-title">📝 טקסטי Hero</span>
+      <span class="campaign-bg-title">📝 {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
     </div>
 
@@ -1140,7 +1376,7 @@
   <!-- CAMPAIGN BACKGROUND -->
   <div class="campaign-bg-section">
     <div class="campaign-bg-header" (click)="toggleSection('background')">
-      <span class="campaign-bg-title">🖼️ רקע הקמפיין</span>
+      <span class="campaign-bg-title">🖼️ {{ isCampaign ? 'רקע הקמפיין' : 'רקע הדף' }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('background')">›</span>
     </div>
 
@@ -1182,8 +1418,10 @@
     </ng-container>
   </div>
 
-  <!-- BOTTOM BANNER (פרטי קמפיין) -->
-  <div class="campaign-bg-section">
+  <!-- BOTTOM BANNER (פרטי קמפיין) — donation/goal/supporter stats, meaningless
+       for a Partner page (no donation flow of its own), so hidden entirely
+       there rather than offering a toggle for content that can't show. -->
+  <div class="campaign-bg-section" *ngIf="isCampaign">
     <div class="campaign-bg-header">
       <span class="section-icon-box">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -1278,28 +1516,8 @@
 
     </ng-container>
   </div>
-
-  <!-- ADD BLOCK — BOTTOM -->
-  <div class="add-block-area">
-    <button class="btn-add-block" (click)="showBlockPicker = !showBlockPicker" type="button">
-      {{ showBlockPicker ? '✕ סגור' : '+ הוסף בלוק' }}
-    </button>
-    <div class="block-picker block-picker--grouped" *ngIf="showBlockPicker">
-      <div class="picker-group" *ngFor="let group of blockGroups">
-        <div class="picker-group-label">{{ group.label }}</div>
-        <div class="picker-group-items">
-          <button class="picker-item"
-            *ngFor="let type of group.types"
-            [class.picker-item--disabled]="isAlreadyAdded(type, draft.blocks)"
-            [disabled]="isAlreadyAdded(type, draft.blocks)"
-            (click)="addBlock(type, draft.blocks)">
-            <span class="picker-icon">{{ blockIcons[type] }}</span>
-            <span class="picker-label">{{ blockLabels[type] }}</span>
-            <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
-          </button>
-        </div>
-      </div>
-    </div>
+  <!-- ══ END ZONE 3 ══ -->
+  </ng-container>
   </div>
 
 </div>

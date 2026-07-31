@@ -1,9 +1,11 @@
-import { Component, inject, OnInit, OnDestroy, Input } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, OnInit, OnDestroy, Input, HostListener } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
+import { LucideAngularModule, GripVertical } from 'lucide-angular';
+import { TextStyle } from '../../../../../shared/models/text-style.model';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
@@ -44,6 +46,7 @@ import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { CommentsService, CampaignComment } from '../../../services/comments.service';
+import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 
 const FUNDING_LABELS: Record<string, string> = {
   'all-or-nothing': 'הכל או כלום',
@@ -55,12 +58,13 @@ const FUNDING_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckoutModalComponent],
+  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, LucideAngularModule],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
 export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private state           = inject(CampaignStudioStateService);
+  readonly GripVertical = GripVertical;
 
   hoveredBlockId: string | null = null;
   pageBuilderActive = false;
@@ -70,12 +74,50 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // rather than removing every (mouseenter)/(mouseleave) binding in the
   // template, so this is a one-line revert if that's ever wanted back.
   setHovered(id: string | null): void {}
+
+  // ── Drag-to-reorder FROM the preview itself — a small "⠿" handle shown
+  // on hover over each block (see .preview-drag-handle in the template, all
+  // 6 wrap sites) lets a manager pick up a block right where they see it,
+  // instead of having to go find its row in the Builder's own block list.
+  // Same shared drag state as the Builder's own grip handle (onBlockDragStart
+  // in campaign-page-builder-step.component.ts) — the dragover/drop
+  // handlers below don't care which UI the drag started from, only that
+  // draggedExistingBlockId is set. See DECISIONS.md (2026-07-31).
+  onExistingBlockDragStart(event: DragEvent, blockId: string): void {
+    event.stopPropagation();
+    event.dataTransfer?.setData('text/plain', blockId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    this.state.setDraggedExistingBlockId(blockId);
+  }
+
+  onExistingBlockDragEnd(): void {
+    this.state.setDraggedExistingBlockId(null);
+  }
+
+  // ── Drag-and-drop (block picker → live preview, and existing-block
+  // drag-to-reorder) ────────────────────────────────────────────────────
+  // draggingType/draggingExistingId mirror state.draggedBlockType$/
+  // draggedExistingBlockId$ (kept local so the template doesn't need an
+  // async pipe just for this) — mutually exclusive, never both set at
+  // once. dropTarget is recomputed on every dragover tick via
+  // resolveDropTarget() — it's the ONLY thing 'drop' actually acts on, so
+  // hit-testing and committing the move/insertion never disagree with each
+  // other or with what's drawn on screen. See DECISIONS.md (2026-07-31).
+  draggingType: BlockType | null = null;
+  draggingExistingId: string | null = null;
+  dropTarget: {
+    parentId: string | null;
+    index: number;
+    indicatorRect: { top: number; left: number; width: number; height: number };
+    mode: 'line-h' | 'line-v' | 'box';
+  } | null = null;
   private sanitizer       = inject(DomSanitizer);
   private entityService   = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);
   private ui              = inject(StudioUiService);
   private donationService = inject(DonationService);
   private commentsService = inject(CommentsService);
+  private campaignPartnersService = inject(CampaignPartnersService);
 
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
@@ -115,6 +157,24 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // docs/PARTNER_DOMAIN_MODEL_ADR.md Phase 5, Sprint 5.1.
   hasDonationWidget(draft: CampaignDraft): boolean {
     return (draft.blocks ?? []).some(b => b.type === 'donation-widget');
+  }
+
+  // Generic "does this draft have a block of this type" check — used to gate
+  // nav/footer links that would otherwise scroll to a non-existent section
+  // (e.g. "תשורות"/"עדכונים" on a Partner page, which never has those block
+  // types — see SECTION_REGISTRY in owner-registry.ts).
+  hasBlockType(draft: CampaignDraft, type: BlockType): boolean {
+    return (draft.blocks ?? []).some(b => b.type === type);
+  }
+
+  // True only for a real campaign draft — false for both Partner Profile
+  // ('partner') and Campaign Participation ('campaign-partner') drafts.
+  // Gates logo/meta-chips/donation-stats/footer-tax-text — concepts that
+  // only make sense for an actual fundraising campaign, not a business
+  // profile or a campaign-specific promo layer. See docs/PARTNER_DOMAIN_MODEL_ADR.md
+  // Phase 5 (Sprint 5.1 donation-CTA fix, then the 2026-07-30 model refinement).
+  isCampaign(draft: CampaignDraft): boolean {
+    return (draft.ownerType ?? 'campaign') === 'campaign';
   }
 
   openJoinModal(): void {
@@ -350,6 +410,20 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
         this.autoOpenJoinTriggered = true;
         this.openJoinModal();
       }
+      // Sprint 5.2 — "בשיתוף עם X" badge on reward cards linking to the
+      // partner's own public page. Campaign-only (a Partner draft has no
+      // rewards of its own — 'rewards' isn't even in its SECTION_REGISTRY).
+      if (draft?.slug && this.isCampaign(draft) && draft.slug !== this.loadedPartnersSlug) {
+        this.loadedPartnersSlug = draft.slug;
+        this.campaignPartnersService.listPublicForCampaign(draft.slug).subscribe({
+          next: links => {
+            this.partnerByRewardId = {};
+            for (const link of links) {
+              if (link.rewardId) this.partnerByRewardId[link.rewardId] = link.partner;
+            }
+          },
+        });
+      }
     });
     this.commentSearch$.pipe(debounceTime(300), takeUntil(this._destroy$)).subscribe(term => {
       if (this.loadedCommentsSlug) this.loadComments(this.loadedCommentsSlug, term);
@@ -387,6 +461,14 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       this.pageBuilderActive = active;
       if (!active) this.hoveredBlockId = null;
     });
+    this.state.draggedBlockType$.pipe(takeUntil(this._destroy$)).subscribe(type => {
+      this.draggingType = type;
+      if (!type && !this.draggingExistingId) this.dropTarget = null;
+    });
+    this.state.draggedExistingBlockId$.pipe(takeUntil(this._destroy$)).subscribe(id => {
+      this.draggingExistingId = id;
+      if (!id && !this.draggingType) this.dropTarget = null;
+    });
   }
 
   ngOnDestroy(): void {
@@ -394,7 +476,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this._destroy$.complete();
   }
 
+  // Campaign: unchanged (title/cover/video all falsy — the pre-existing
+  // rule). Partner/CampaignPartner: title is ALWAYS set (business name /
+  // "partner × campaign" label — see createInitialPartnerDraft), and since
+  // §13 removed the forced Hero for these owners, a fresh draft with zero
+  // blocks would otherwise render literally nothing with no indication the
+  // preview pane is even working — looks identical to "there's no preview
+  // here at all." Judge emptiness by block count instead for these owners.
   isEmpty(draft: CampaignDraft): boolean {
+    if (!this.isCampaign(draft)) return (draft.blocks ?? []).length === 0;
     return !draft.title && !draft.coverImageUrl && !draft.videoUrl;
   }
 
@@ -531,7 +621,11 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return this.pageBuilderActive && !!id && this.hoveredBlockId === id;
   }
 
-  private railZoneContainerId(draft: CampaignDraft, zone: 'sidebar' | 'main'): string | null {
+  // Public — also read by the template to tag each rail's block-wrap divs
+  // with the real container id they belong to (data-parent-id), so
+  // drag-and-drop hit-testing resolves the correct insertion scope. See
+  // resolveDropTarget() below.
+  railZoneContainerId(draft: CampaignDraft, zone: 'sidebar' | 'main'): string | null {
     const childIds = this.topLevelChildIds(draft);
     const container = draft.blocks.find(b =>
       b.type === 'container' && !childIds.has(b.id) && (b.data as ContainerBlockData).railZone === zone
@@ -580,6 +674,249 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
         .filter(b => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion')
         .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
     );
+  }
+
+  // ══ Drag-and-drop (block picker → live preview) ═══════════════════════
+  // Attached via HostListener rather than template bindings on a specific
+  // wrapper element — this component is embedded inside a different scroll
+  // wrapper (.preview-inner) on every host page (campaign-studio-page,
+  // partner-builder-page, campaign-partner-builder-page), and drag events
+  // bubble up to the host element regardless of that page's own markup, so
+  // this works unmodified on all three. See DECISIONS.md (2026-07-31).
+
+  // Same scope logic as CampaignStudioStateService#insertBlockAt (NOT
+  // filtered to visible-only, unlike childBlocks()/topLevelChildIds() above,
+  // which exist purely for rendering) — the index computed here must match
+  // exactly what insertBlockAt expects, including any hidden siblings.
+  private scopeBlocksAll(parentId: string | null, draft: CampaignDraft): CampaignBlock[] {
+    if (parentId) {
+      const parent = draft.blocks.find(b => b.id === parentId);
+      if (!parent) return [];
+      const ids = (parent.data as ContainerBlockData).childBlockIds;
+      return ids.map(id => draft.blocks.find(b => b.id === id))
+        .filter((b): b is CampaignBlock => !!b)
+        .sort((a, b) => a.order - b.order);
+    }
+    const childIds = this.topLevelChildIds(draft);
+    return draft.blocks.filter(b => !childIds.has(b.id)).sort((a, b) => a.order - b.order);
+  }
+
+  // Hit-tests the real point under the cursor against every rendered block
+  // wrapper (tagged data-block-id/data-parent-id in the template) and
+  // resolves it to an exact {parentId, index} insertion point — null means
+  // "not over anything recognizable" (background/header/whitespace), which
+  // the caller (onPreviewDragOver) falls back to "append at the very end."
+  private resolveDropTarget(clientX: number, clientY: number, draft: CampaignDraft):
+    { parentId: string | null; index: number; indicatorRect: { top: number; left: number; width: number; height: number }; mode: 'line-h' | 'line-v' | 'box' } | null {
+
+    const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    if (!el) return null;
+
+    // Empty-container placeholder ("+ הוסף לכאן"-equivalent drop hint) —
+    // the container has zero rendered children, so there's nothing to
+    // compute before/after against. data-empty-container carries the
+    // container's own id directly.
+    const emptyEl = el.closest('[data-empty-container]') as HTMLElement | null;
+    if (emptyEl) {
+      const rect = emptyEl.getBoundingClientRect();
+      return {
+        parentId: emptyEl.getAttribute('data-empty-container'),
+        index: 0,
+        indicatorRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+        mode: 'box',
+      };
+    }
+
+    const hitEl = el.closest('[data-block-id]') as HTMLElement | null;
+    if (!hitEl) return null;
+
+    const blockId = hitEl.getAttribute('data-block-id')!;
+    const block = draft.blocks.find(b => b.id === blockId);
+    if (!block) return null;
+
+    // Landed on a container's OWN wrapper — its padding/gap area, not on
+    // any specific child (data-container-body marks that div). Insert
+    // INTO it: as the first child near its top/start edge, last otherwise.
+    if (hitEl.hasAttribute('data-container-body')) {
+      const children = this.scopeBlocksAll(block.id, draft);
+      const rect = hitEl.getBoundingClientRect();
+      const nearStart = (clientY - rect.top) < rect.height * 0.25;
+      const index = children.length === 0 ? 0 : (nearStart ? 0 : children.length);
+      return {
+        parentId: block.id,
+        index,
+        indicatorRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+        mode: 'box',
+      };
+    }
+
+    // Ordinary block wrapper (top-level, or a specific container's child) —
+    // insert before/after IT within its own scope, based on cursor position
+    // relative to its own box. Absent data-parent-id means flat top-level.
+    const parentId = hitEl.getAttribute('data-parent-id') || null;
+    const scope = this.scopeBlocksAll(parentId, draft);
+    const idx = scope.findIndex(b => b.id === blockId);
+    if (idx < 0) return null;
+
+    const rect = hitEl.getBoundingClientRect();
+    const parentBlock = parentId ? draft.blocks.find(b => b.id === parentId) : null;
+    const isRow = parentBlock?.type === 'container' && (parentBlock.data as ContainerBlockData).direction === 'row';
+
+    if (isRow) {
+      // RTL: index 0 of a row-direction container renders RIGHTMOST — so
+      // "insert before index N" visually means "place it to the RIGHT of
+      // element N," i.e. the right half of its box, not the left.
+      const midX = rect.left + rect.width / 2;
+      const before = clientX > midX;
+      const lineX = before ? rect.right : rect.left;
+      return {
+        parentId, index: before ? idx : idx + 1,
+        indicatorRect: { top: rect.top, left: lineX - 1, width: 2, height: rect.height },
+        mode: 'line-v',
+      };
+    }
+    const midY = rect.top + rect.height / 2;
+    const before = clientY < midY;
+    const lineY = before ? rect.top : rect.bottom;
+    return {
+      parentId, index: before ? idx : idx + 1,
+      indicatorRect: { top: lineY - 1, left: rect.left, width: rect.width, height: 2 },
+      mode: 'line-h',
+    };
+  }
+
+  // The scroll wrapper is named differently per host page — .preview-inner
+  // (campaign-studio-page), .pb-preview-card (partner-builder-page),
+  // .cpb-preview-card (campaign-partner-builder-page) — try all three
+  // rather than assuming one specific name.
+  private autoScrollPreview(clientY: number): void {
+    const scrollEl = document.querySelector('.preview-inner, .pb-preview-card, .cpb-preview-card') as HTMLElement | null;
+    if (!scrollEl) return;
+    const rect = scrollEl.getBoundingClientRect();
+    const EDGE = 56;
+    if (clientY < rect.top + EDGE) scrollEl.scrollTop -= 14;
+    else if (clientY > rect.bottom - EDGE) scrollEl.scrollTop += 14;
+  }
+
+  // True if `candidateId` IS `rootId` or lives anywhere in its descendant
+  // tree — mirrors the same-named guard in campaign-studio-state.service.ts
+  // (moveBlockTo), used here to SUPPRESS a misleading drop indicator while
+  // hovering a spot that the service would reject anyway (dropping a
+  // container into itself or one of its own children).
+  private isSameOrDescendant(candidateId: string, rootId: string, draft: CampaignDraft): boolean {
+    if (candidateId === rootId) return true;
+    const root = draft.blocks.find(b => b.id === rootId);
+    if (!root || (root.type !== 'container' && root.type !== 'tabs' && root.type !== 'accordion')) return false;
+    return (root.data as ContainerBlockData).childBlockIds.some(cid => this.isSameOrDescendant(candidateId, cid, draft));
+  }
+
+  // Listening on `document` (not the component's own host element) is
+  // deliberate: below/around the actual rendered .campaign-page content
+  // there's blank space that belongs to the HOST PAGE's own scroll wrapper
+  // (.preview-inner, in partner-builder-page/campaign-studio-page/
+  // campaign-partner-builder-page — outside this component's own DOM
+  // subtree entirely), so a dragover there would never bubble to a
+  // HostListener bound to <app-campaign-preview> itself. A document-level
+  // listener plus elementFromPoint-based hit-testing (already how
+  // resolveDropTarget works) catches it regardless. Harmless when nothing
+  // is being dragged — every handler bails out on `!this.draggingType &&
+  // !this.draggingExistingId` immediately. See DECISIONS.md (2026-07-31,
+  // "לגרור אלמנט מתחת לאלמנט הראשון" fix).
+  @HostListener('document:dragover', ['$event'])
+  onPreviewDragOver(event: DragEvent): void {
+    if (!this.draggingType && !this.draggingExistingId) return;
+    event.preventDefault();
+    // Must match the dragstart's effectAllowed ('copy' for a new block from
+    // the picker, 'move' for an existing block's grip handle — see
+    // onPickerDragStart/onBlockDragStart/onExistingBlockDragStart) — some
+    // browsers silently refuse to fire 'drop' at all when dropEffect isn't
+    // one of the allowed effects, even though dragover itself fires fine
+    // and preventDefault() is called. Reported 2026-07-31 ("הגרירה לא
+    // עובדת", existing-block reorder from the preview).
+    if (event.dataTransfer) event.dataTransfer.dropEffect = this.draggingExistingId ? 'move' : 'copy';
+
+    const draft = this.state.draft;
+    let target = this.resolveDropTarget(event.clientX, event.clientY, draft);
+
+    // Nothing recognizable under the cursor (background/header/whitespace,
+    // or the empty-state hint on a brand-new page) — append at the very
+    // end of the flat top-level scope instead of showing no feedback at all.
+    if (!target) {
+      const scope = this.scopeBlocksAll(null, draft);
+      const lastEl = scope.length
+        ? document.querySelector(`[data-block-id="${scope[scope.length - 1].id}"]`)
+        : document.querySelector('.empty-state, .campaign-page');
+      const rect = lastEl?.getBoundingClientRect();
+      if (rect) {
+        target = scope.length
+          ? { parentId: null, index: scope.length, indicatorRect: { top: rect.bottom - 1, left: rect.left, width: rect.width, height: 2 }, mode: 'line-h' }
+          : { parentId: null, index: 0, indicatorRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, mode: 'box' };
+      }
+    }
+
+    // Dragging an EXISTING block: never allow dropping it into itself or
+    // one of its own children (the service would just no-op it anyway —
+    // this only avoids showing a misleading indicator there). Fall back to
+    // "nothing valid here" rather than silently keeping the previous
+    // target, which would look like a stale/stuck indicator.
+    if (target && target.parentId && this.draggingExistingId && this.isSameOrDescendant(target.parentId, this.draggingExistingId, draft)) {
+      target = null;
+    }
+
+    // Hero is a single top-of-page marker — never nestable inside a
+    // container/tabs/accordion. Force it back to the flat top-level scope
+    // regardless of what was actually hovered. Applies whether it's a new
+    // Hero from the picker OR an existing Hero block being repositioned.
+    // See BlockType's 'hero' doc comment in campaign-studio-state.service.ts.
+    const draggingType = this.draggingType ?? (this.draggingExistingId ? draft.blocks.find(b => b.id === this.draggingExistingId)?.type : null);
+    if (target && target.parentId && draggingType === 'hero') {
+      const scope = this.scopeBlocksAll(null, draft);
+      const lastEl = scope.length ? document.querySelector(`[data-block-id="${scope[scope.length - 1].id}"]`) : null;
+      const rect = lastEl?.getBoundingClientRect();
+      target = rect
+        ? { parentId: null, index: scope.length, indicatorRect: { top: rect.bottom - 1, left: rect.left, width: rect.width, height: 2 }, mode: 'line-h' }
+        : null;
+    }
+
+    this.dropTarget = target;
+    this.autoScrollPreview(event.clientY);
+  }
+
+  // document-scoped for the same reason as onPreviewDragOver above — a drop
+  // can land on blank space that belongs to the host page's own scroll
+  // wrapper, outside this component's own DOM subtree.
+  @HostListener('document:drop', ['$event'])
+  onPreviewDrop(event: DragEvent): void {
+    if ((!this.draggingType && !this.draggingExistingId) || !this.dropTarget) return;
+    event.preventDefault();
+    const { parentId, index } = this.dropTarget;
+    this.dropTarget = null;
+
+    if (this.draggingExistingId) {
+      const id = this.draggingExistingId;
+      this.state.setDraggedExistingBlockId(null);
+      this.state.moveBlockTo(id, parentId, index);
+      return;
+    }
+
+    const type = this.draggingType!;
+    this.state.setDraggedBlockType(null);
+    const id = this.state.insertBlockAt(type, parentId, index);
+    if (id) this.state.requestFocusBlock(id, type);
+  }
+
+  // Clears the (purely visual) indicator whenever ANY drag ends anywhere —
+  // dragend always fires on the source regardless of whether the drop
+  // landed inside the preview, was cancelled (Escape), or was dropped
+  // outside the browser window entirely (where dragover simply stops
+  // firing, which would otherwise leave a stale indicator on screen). The
+  // shared drag state itself (draggedBlockType/draggedExistingBlockId) is
+  // cleared by the SOURCE's own dragend handler — see
+  // campaign-page-builder-step.component.ts's onPickerDragEnd/
+  // onBlockDragEnd.
+  @HostListener('document:dragend')
+  onAnyDragEnd(): void {
+    this.dropTarget = null;
   }
 
   blockById(id: string, draft: CampaignDraft): CampaignBlock | undefined {
@@ -693,7 +1030,24 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
 
   // ── Utilities ──
   safeHtml(html: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(html || '');
+    return this.sanitizer.bypassSecurityTrustHtml(this.forceLinksNewTab(html || ''));
+  }
+
+  // Forces target="_blank" on every link inside rich-text content,
+  // regardless of whether the editor itself set it — covers rich-text
+  // blocks saved BEFORE the rich-text-editor's Link extension started
+  // setting this itself (see rich-text-editor.component.ts). A donor
+  // clicking a link inside campaign body text shouldn't get navigated away
+  // from the donation page. See DECISIONS.md (2026-07-31).
+  private forceLinksNewTab(html: string): string {
+    if (!html.includes('<a ')) return html;
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    div.querySelectorAll('a[href]').forEach(a => {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+    });
+    return div.innerHTML;
   }
 
   getYoutubeThumbnail(url: string): string | null {
@@ -811,6 +1165,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  onCtaClick(cta: CtaBlockData): void {
+    if (cta.ctaAction === 'link') {
+      if (cta.linkUrl) window.open(cta.linkUrl, '_blank', 'noopener');
+      return;
+    }
+    if (cta.ctaAction === 'register') { this.startRegistration(); return; }
+    this.scrollToDonation();
+  }
+
   goToAccount(): void {
     // A logged-in visitor here is always a donor viewing a public campaign
     // page (entity managers/admins don't browse it while authenticated as
@@ -868,6 +1231,31 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return draft.layout?.theme?.secondaryColor || '#6fc9eb';
   }
 
+  // Heading style for .section-heading (rich-text/video/gallery's own
+  // `label`, rendered as a real page heading) — only rich-text carries a
+  // headingStyle field (see RichTextBlockData); video/gallery keep the
+  // exact fixed look they always had. Undefined color/fontSize/align fall
+  // back to the SAME defaults .section-heading's CSS already used (22px,
+  // center, primaryColor) — no visual change for any existing block that
+  // never touched this. See DECISIONS.md (2026-07-31).
+  private readonly HEADING_FONT_SIZES: Record<string, string> = { sm: '16px', md: '19px', lg: '22px', xl: '28px' };
+
+  private richTextHeadingStyle(block: CampaignBlock): TextStyle | undefined {
+    return block.type === 'rich-text' ? (block.data as RichTextBlockData).headingStyle : undefined;
+  }
+
+  sectionHeadingColor(block: CampaignBlock, draft: CampaignDraft): string {
+    return this.richTextHeadingStyle(block)?.color || this.primaryColor(draft);
+  }
+
+  sectionHeadingFontSize(block: CampaignBlock): string {
+    return this.HEADING_FONT_SIZES[this.richTextHeadingStyle(block)?.fontSize || 'lg'];
+  }
+
+  sectionHeadingAlign(block: CampaignBlock): string {
+    return this.richTextHeadingStyle(block)?.align || 'center';
+  }
+
   blockSectionId(block: CampaignBlock, draft?: CampaignDraft): string {
     if (block.type === 'rich-text')        return 'section-story';
     if (block.type === 'donation-widget') return 'section-donate';
@@ -901,7 +1289,9 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
       const sectionId = this.blockSectionId(block, draft);
       if (!sectionId || seen.has(sectionId)) continue;
       seen.add(sectionId);
-      const label = LABELS[block.type];
+      const label = block.type === 'rich-text'
+        ? (this.isCampaign(draft) ? 'אודות הקמפיין' : 'אודות')
+        : LABELS[block.type];
       if (!label) continue;
       const count =
         block.type === 'ambassadors' ? (this.ambEffective.length || undefined) :
@@ -964,6 +1354,19 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   topDonors: TopDonor[] = [];
   donorPeriod: DonorPeriod = 'all';
   private loadedSlug = '';
+  private loadedPartnersSlug = '';
+  partnerByRewardId: Record<string, { id: string; displayName: string; logoUrl: string | null; website: string | null }> = {};
+
+  partnerForOffering(offeringId: string): { id: string; displayName: string } | null {
+    return this.partnerByRewardId[offeringId] ?? null;
+  }
+
+  // Query params carried onto the Partner public page so it can show a
+  // "← חזרה לקמפיין" bar and prev/next navigation among this campaign's
+  // other partners, without a separate lookup (Sprint 5.2/5.3).
+  partnerLinkQueryParams(draft: CampaignDraft): { campaignSlug: string; campaignTitle: string } {
+    return { campaignSlug: draft.slug, campaignTitle: draft.title };
+  }
   private shownCount = 6;
   readonly PAGE_SIZE = 6;
 

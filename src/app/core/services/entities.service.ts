@@ -160,6 +160,18 @@ export class EntitiesService {
     );
   }
 
+  // Standalone Partner back-office (Scenario 0 / "Partner First")
+  getMyPartners(): Observable<{ partners: { id: string; display_name: string; logo_url: string | null; website: string | null }[] }> {
+    return this.http.get<{ partners: any[] }>(
+      `${environment.apiUrl}/api/entities/my-partners`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      },
+    );
+  }
+
   // Partner Draft — Page Builder Owner Context (Phase 3)
   getDraft(entityId: string): Observable<{ blocks: any[]; layout: any }> {
     return this.http.get<{ blocks: any[]; layout: any }>(

@@ -1,0 +1,54 @@
+<div class="cpb-load-state" *ngIf="loading">טוען את תוכן ההשתתפות...</div>
+
+<div class="cpb-load-state cpb-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+
+<ng-container *ngIf="ui.state$ | async as s">
+<div class="cpb-page" [class.cpb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">
+  <div class="cpb-topbar">
+    <div class="cpb-topbar-title">
+      <button type="button" class="cpb-back-button" *ngIf="s.fullscreen" (click)="toggleFullscreen()">
+        <lucide-icon [img]="ArrowRight" [size]="16"></lucide-icon>
+        חזרה לעריכה
+      </button>
+      <ng-container *ngIf="!s.fullscreen">
+        <span class="cpb-title">עריכת תוכן ההשתתפות בקמפיין</span>
+        <span class="cpb-subtitle">{{ partnerDisplayName }} × {{ campaignTitle }}</span>
+      </ng-container>
+    </div>
+
+    <!-- CENTER: device + fullscreen switcher — same cluster/icons as
+         campaign-studio-topbar.component, for full parity with the main
+         campaign Builder and the Partner Profile Builder. -->
+    <div class="cpb-device-switch">
+      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+        <lucide-icon [img]="Monitor" [size]="16"></lucide-icon>
+      </button>
+      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+        <lucide-icon [img]="Smartphone" [size]="16"></lucide-icon>
+      </button>
+      <div class="cpb-device-divider"></div>
+      <button type="button" class="cpb-device-btn" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+        <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2" [size]="16"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="cpb-topbar-actions" *ngIf="!s.fullscreen">
+      <a class="cpb-link-btn" [routerLink]="['/partners', partnerEntityId, 'builder']" target="_blank" rel="noopener">🤝 פרופיל השותף</a>
+      <a class="cpb-link-btn" [routerLink]="['/partners', partnerEntityId, 'view']" [queryParams]="{ campaignSlug, campaignTitle }" target="_blank" rel="noopener">👁 צפייה בדף המורכב</a>
+      <button type="button" class="cpb-save-btn" [disabled]="saving" (click)="save()">
+        {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="cpb-workspace" (window:mousemove)="onResizeMove($event)" (window:mouseup)="stopResize()">
+    <div class="cpb-editor-card" [class.cpb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : editorWidth">
+      <app-campaign-page-builder-step />
+    </div>
+    <div class="cpb-resizer" *ngIf="!s.fullscreen" (mousedown)="startResize($event)"></div>
+    <div class="cpb-preview-card" [class.cpb-preview-card--mobile]="s.device === 'mobile'">
+      <app-campaign-preview />
+    </div>
+  </div>
+</div>
+</ng-container>

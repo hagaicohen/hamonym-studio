@@ -20,11 +20,25 @@
   [style.--hm-footer-bg]="draft.layout.footerBg || '#030712'"
   [style.--hm-footer-text]="draft.layout.footerTextColor || 'rgba(255,255,255,0.85)'">
 
+  <!-- ── DRAG-AND-DROP INSERTION INDICATOR — position:fixed, driven purely
+       by dropTarget.indicatorRect (already computed in real viewport
+       coordinates by resolveDropTarget()), so it's correct regardless of
+       this element's own place in the DOM/scroll/zoom. See
+       campaign-preview.component.ts's dragover/drop HostListeners. ── -->
+  <div class="dnd-drop-indicator" *ngIf="dropTarget && draggingType"
+    [class.dnd-drop-indicator--box]="dropTarget.mode === 'box'"
+    [style.top.px]="dropTarget.indicatorRect.top"
+    [style.left.px]="dropTarget.indicatorRect.left"
+    [style.width.px]="dropTarget.indicatorRect.width"
+    [style.height.px]="dropTarget.indicatorRect.height">
+  </div>
+
   <!-- ── EMPTY STATE ── -->
   <div class="empty-state" *ngIf="isEmpty(draft)">
     <div class="empty-icon">👁️</div>
     <div class="empty-title">תצוגה מקדימה חיה</div>
-    <div class="empty-desc">הזינו כותרת ותמונה<br>הדף יופיע כאן בזמן אמת</div>
+    <div class="empty-desc" *ngIf="isCampaign(draft)">הזינו כותרת ותמונה<br>הדף יופיע כאן בזמן אמת</div>
+    <div class="empty-desc" *ngIf="!isCampaign(draft)">הוסיפו בלוק ראשון מהעריכה שמימין<br>הדף יופיע כאן בזמן אמת</div>
   </div>
 
   <ng-container *ngIf="!isEmpty(draft)">
@@ -41,8 +55,12 @@
         </button>
       </div>
 
-      <!-- ══ CAMPAIGN NAV ══ -->
-      <nav class="campaign-nav" [class.campaign-nav--mobile]="vm.mobile">
+      <!-- ══ CAMPAIGN NAV ══ — campaign-only. On a Partner/Campaign
+           Participation page this row only ever has room for "אודות"
+           (donate/ambassador buttons never apply — see SECTION_REGISTRY),
+           so a whole dedicated strip for one link is pointless clutter on
+           what's meant to be a short, single-scroll page. -->
+      <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile">
 
         <!-- Desktop: links + donate -->
         <ng-container *ngIf="!vm.mobile">
@@ -79,10 +97,9 @@
       </nav>
 
       <!-- Mobile nav drawer -->
-      <div class="nav-mobile-drawer" *ngIf="vm.mobile && navOpen">
-        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-story'); navOpen=false">אודות הקמפיין</a>
-        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-rewards'); navOpen=false">תשורות</a>
-        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="scrollTo('section-updates'); navOpen=false">עדכונים</a>
+      <div class="nav-mobile-drawer" *ngIf="isCampaign(draft) && vm.mobile && navOpen">
+        <a class="nav-drawer-link" *ngFor="let item of navItems(draft)"
+          [style.color]="primaryColor(draft)" (click)="scrollTo(item.sectionId); navOpen=false">{{ item.label }}</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
       </div>
 
@@ -155,7 +172,7 @@
          always. See DECISIONS.md (2026-07-16). -->
     <ng-template #logoAboveStripTpl>
       <div class="hm-logo-above-strip"
-           *ngIf="draft.showLogo !== false && draft.heroLogoPosition === 'above'">
+           *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition === 'above'">
         <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
              class="hm-logo-above-img"
              [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
@@ -212,7 +229,7 @@
 
         <!-- Logo overlaid on hero (left or center) -->
         <div class="hm-hero-org-logo"
-             *ngIf="draft.showLogo !== false && draft.heroLogoPosition !== 'above'"
+             *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition !== 'above'"
              [class.hm-hero-org-logo--center]="draft.heroLogoPosition === 'center'">
           <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
           <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
@@ -220,8 +237,10 @@
 
       </div>
 
-      <!-- Meta chips — always visible at the absolute bottom center -->
-      <div class="hm-hero-meta">
+      <!-- Meta chips — always visible at the absolute bottom center. Pure
+           campaign metadata (end date/category/manager) — meaningless on a
+           Partner business page, so hidden entirely there. -->
+      <div class="hm-hero-meta" *ngIf="isCampaign(draft)">
         <span class="hm-meta-badge">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -263,8 +282,11 @@
          pulled Hero into the block tree via a 'hero' block (blockTpl renders
          it at its actual position instead) — except on mobile, which always
          wants it full-width at the top regardless. See DECISIONS.md
-         (2026-07-17). -->
-    <ng-container *ngIf="vm.mobile || (draft.layout.heroPlacement !== 'main-column' && !hasHeroBlock(draft))">
+         (2026-07-17). Campaign-only: a Partner Profile/Campaign Participation
+         draft starts on a genuinely blank page — no auto-Hero at all unless
+         the user explicitly adds a 'hero' block themselves (see §13 in
+         PARTNER_DOMAIN_MODEL_ADR.md — "don't get stuck with the Hero"). -->
+    <ng-container *ngIf="isCampaign(draft) && (vm.mobile || (draft.layout.heroPlacement !== 'main-column' && !hasHeroBlock(draft)))">
       <ng-container [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
       <ng-container [ngTemplateOutlet]="heroTpl"></ng-container>
     </ng-container>
@@ -275,15 +297,21 @@
         <ng-container *ngFor="let block of contentBlocks(draft)">
           <div class="block-wrap"
             [id]="blockSectionId(block, draft) || null"
+            [attr.data-block-id]="pageBuilderActive ? block.id : null"
             [style.marginTop.px]="block.spacingTop"
             [style.marginBottom.px]="block.spacingBottom"
             [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
             (mouseenter)="setHovered(block.id)"
             (mouseleave)="setHovered(null)">
+            <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+              (dragstart)="onExistingBlockDragStart($event, block.id)"
+              (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
             <div class="section-heading"
               *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
-              [style.color]="primaryColor(draft)">
+              [style.color]="sectionHeadingColor(block, draft)"
+              [style.fontSize]="sectionHeadingFontSize(block)"
+              [style.textAlign]="sectionHeadingAlign(block)">
               {{ block.label }}
             </div>
             <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
@@ -322,15 +350,22 @@
               <ng-container *ngFor="let block of mainColumnBlocks(draft)">
                 <div class="block-wrap"
                   [id]="blockSectionId(block, draft) || null"
+                  [attr.data-block-id]="pageBuilderActive ? block.id : null"
+                  [attr.data-parent-id]="pageBuilderActive ? railZoneContainerId(draft, 'main') : null"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
+                  <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+                    (dragstart)="onExistingBlockDragStart($event, block.id)"
+                    (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
                   <div class="section-heading"
                     *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
-                    [style.color]="primaryColor(draft)">
+                    [style.color]="sectionHeadingColor(block, draft)"
+                    [style.fontSize]="sectionHeadingFontSize(block)"
+                    [style.textAlign]="sectionHeadingAlign(block)">
                     {{ block.label }}
                   </div>
                   <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
@@ -346,20 +381,26 @@
                  user has pulled Hero into the block tree via a 'hero' block
                  — see DECISIONS.md (2026-07-17). -->
             <ng-template #mainColumnFallback>
-              <ng-container *ngIf="!vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasHeroBlock(draft)"
+              <ng-container *ngIf="isCampaign(draft) && !vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasHeroBlock(draft)"
                 [ngTemplateOutlet]="heroTpl"></ng-container>
               <ng-container *ngFor="let block of mainBlocks(draft)">
                 <div class="block-wrap"
                   [id]="blockSectionId(block, draft) || null"
+                  [attr.data-block-id]="pageBuilderActive ? block.id : null"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
+                  <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+                    (dragstart)="onExistingBlockDragStart($event, block.id)"
+                    (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
                   <div class="section-heading"
                     *ngIf="block.label && ['rich-text','video','gallery'].includes(block.type)"
-                    [style.color]="primaryColor(draft)">
+                    [style.color]="sectionHeadingColor(block, draft)"
+                    [style.fontSize]="sectionHeadingFontSize(block)"
+                    [style.textAlign]="sectionHeadingAlign(block)">
                     {{ block.label }}
                   </div>
                   <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
@@ -374,12 +415,17 @@
             <div class="sidebar-rail-inner">
               <ng-container *ngFor="let block of sidebarBlocks(draft)">
                 <div class="block-wrap"
+                  [attr.data-block-id]="pageBuilderActive ? block.id : null"
+                  [attr.data-parent-id]="pageBuilderActive ? railZoneContainerId(draft, 'sidebar') : null"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
                   (mouseleave)="setHovered(null)">
+                  <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+                    (dragstart)="onExistingBlockDragStart($event, block.id)"
+                    (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
                   <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
                 </div>
               </ng-container>
@@ -393,12 +439,16 @@
       <ng-container *ngFor="let block of belowSidebarBlocks(draft)">
         <div class="block-wrap"
           [id]="blockSectionId(block, draft)"
+          [attr.data-block-id]="pageBuilderActive ? block.id : null"
           [style.marginTop.px]="block.spacingTop"
           [style.marginBottom.px]="block.spacingBottom"
           [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
           (mouseenter)="setHovered(block.id)"
           (mouseleave)="setHovered(null)">
+          <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+            (dragstart)="onExistingBlockDragStart($event, block.id)"
+            (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
           <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block, draft, heroTpl, mobile: vm.mobile}"></ng-container>
         </div>
       </ng-container>
@@ -406,7 +456,7 @@
     </ng-container>
 
     <!-- ══ BOTTOM CAMPAIGN BANNER ══ -->
-    <div class="hm-bottom-banner" *ngIf="draft.layout.showBottomBanner !== false">
+    <div class="hm-bottom-banner" *ngIf="isCampaign(draft) && draft.layout.showBottomBanner !== false">
       <div class="hm-bottom-stat">
         <strong [style.color]="primaryColor(draft)">{{ daysRemaining(draft) }}</strong>
         <span>ימים נותרו</span>
@@ -433,11 +483,11 @@
 
       <!-- Brand -->
       <div class="hm-footer-brand">
-        <div class="hm-footer-logo">
+        <div class="hm-footer-logo" *ngIf="isCampaign(draft)">
           <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
           <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hm-footer-logo-name">{{ entityName || 'לוגו עמותה' }}</span>
         </div>
-        <p>{{ draft.shortDescription || 'תיאור קצר של הקמפיין יופיע כאן.' }}</p>
+        <p>{{ draft.shortDescription || (isCampaign(draft) ? 'תיאור קצר של הקמפיין יופיע כאן.' : '') }}</p>
         <div class="hm-footer-social">
           <a href="#" aria-label="LinkedIn">LN</a>
           <a href="#" aria-label="Instagram">IG</a>
@@ -448,10 +498,10 @@
       <!-- Quick nav -->
       <div class="hm-footer-links">
         <h3>ניווט מהיר</h3>
-        <a (click)="scrollTo('section-donate')">תרומה</a>
-        <a (click)="scrollTo('section-story')">אודות הקמפיין</a>
-        <a (click)="scrollTo('section-rewards')">תשורות</a>
-        <a (click)="scrollTo('section-updates')">עדכונים</a>
+        <a *ngIf="hasDonationWidget(draft)" (click)="scrollTo('section-donate')">תרומה</a>
+        <a (click)="scrollTo('section-story')">{{ isCampaign(draft) ? 'אודות הקמפיין' : 'אודות' }}</a>
+        <a *ngIf="hasBlockType(draft, 'rewards')" (click)="scrollTo('section-rewards')">תשורות</a>
+        <a *ngIf="hasBlockType(draft, 'updates')" (click)="scrollTo('section-updates')">עדכונים</a>
       </div>
 
       <!-- Newsletter -->
@@ -476,7 +526,7 @@
 
       <!-- Bottom strip -->
       <div class="hm-footer-bottom">
-        <p>© {{ currentYear }} {{ entityName || 'המונים' }} — כל הזכויות שמורות. תרומות מוכרות לצרכי מס לפי סעיף 46.</p>
+        <p>© {{ currentYear }} {{ (isCampaign(draft) ? entityName : draft.title) || 'המונים' }} — כל הזכויות שמורות.<ng-container *ngIf="isCampaign(draft)"> תרומות מוכרות לצרכי מס לפי סעיף 46.</ng-container></p>
       </div>
 
     </footer>
@@ -611,6 +661,10 @@
       <p class="hm-reward-details-desc" *ngIf="descriptionLines(offering.description).length === 1">
         {{ descriptionLines(offering.description)[0] }}
       </p>
+      <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
+        [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)">
+        🤝 בשיתוף עם {{ p.displayName }} — לדף השותף
+      </a>
     </div>
     <div class="hm-join-footer">
       <button class="hm-join-submit" [style.background]="primaryColor(draft)"
@@ -669,8 +723,14 @@
   </div>
 
   <!-- IMAGE -->
-  <div class="block-image" *ngIf="block.type === 'image' && asImage(block.data).url">
-    <img [src]="asImage(block.data).url" alt="{{ asImage(block.data).caption || '' }}">
+  <div class="block-image"
+    *ngIf="block.type === 'image' && asImage(block.data).url"
+    [style.alignItems]="(asImage(block.data).widthPercent ?? 100) >= 100 ? null : (asImage(block.data).align === 'left' ? 'flex-end' : asImage(block.data).align === 'right' ? 'flex-start' : 'center')">
+    <img [src]="asImage(block.data).url"
+      [style.width.%]="asImage(block.data).widthPercent ?? 100"
+      [style.height.px]="asImage(block.data).heightPx || null"
+      [style.objectFit]="asImage(block.data).heightPx ? 'cover' : null"
+      alt="{{ asImage(block.data).caption || '' }}">
     <p class="block-caption" *ngIf="asImage(block.data).caption">{{ asImage(block.data).caption }}</p>
   </div>
 
@@ -740,24 +800,45 @@
   <!-- CONTAINER -->
   <div class="block-container" *ngIf="block.type === 'container'"
     [class.block-container--row]="asContainer(block.data).direction === 'row'"
+    [class.block-container--zone]="pageBuilderActive"
+    [attr.data-block-id]="pageBuilderActive ? block.id : null"
+    [attr.data-container-body]="pageBuilderActive ? '' : null"
     [style.background]="asContainer(block.data).backgroundColor || 'transparent'"
-    [style.border]="asContainer(block.data).borderColor ? '1.5px solid ' + asContainer(block.data).borderColor : 'none'"
+    [style.border]="asContainer(block.data).borderColor ? (asContainer(block.data).borderWidth ?? 1.5) + 'px solid ' + asContainer(block.data).borderColor : 'none'"
+    [style.borderRadius.px]="asContainer(block.data).borderRadius ?? 0"
     [style.padding.px]="asContainer(block.data).padding"
     [style.gap.px]="asContainer(block.data).gap"
     [style.backgroundImage]="asContainer(block.data).backgroundImageUrl ? 'url(' + asContainer(block.data).backgroundImageUrl + ')' : ''">
-    <ng-container *ngFor="let child of childBlocks(block, draft); let i = index">
+    <ng-container *ngFor="let child of childBlocks(block, draft); let i = index; let last = last">
       <div class="container-child"
         [id]="blockSectionId(child, draft) || null"
+        [attr.data-block-id]="pageBuilderActive ? child.id : null"
+        [attr.data-parent-id]="pageBuilderActive ? block.id : null"
         [style.flex]="asContainer(block.data).direction === 'row' && childBlocks(block, draft).length === 2
           ? (i === 0 ? (asContainer(block.data).splitPercent ?? 50) + ' 0 0%' : (100 - (asContainer(block.data).splitPercent ?? 50)) + ' 0 0%')
           : '1'"
+        [style.borderInlineEnd]="!last && asContainer(block.data).direction === 'row' && asContainer(block.data).childDividerColor
+          ? (asContainer(block.data).childDividerWidth ?? 1) + 'px solid ' + asContainer(block.data).childDividerColor : 'none'"
+        [style.borderBottom]="!last && asContainer(block.data).direction !== 'row' && asContainer(block.data).childDividerColor
+          ? (asContainer(block.data).childDividerWidth ?? 1) + 'px solid ' + asContainer(block.data).childDividerColor : 'none'"
         [class.container-child--hovered]="pageBuilderActive && hoveredBlockId === child.id"
         [class.container-child--hovered-container]="pageBuilderActive && hoveredBlockId === child.id && child.type === 'container'"
         (mouseenter)="$event.stopPropagation(); setHovered(child.id)"
         (mouseleave)="setHovered(block.id)">
+        <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
+          (dragstart)="onExistingBlockDragStart($event, child.id)"
+          (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
         <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: child, draft, heroTpl, mobile}"></ng-container>
       </div>
     </ng-container>
+    <!-- Empty-container drop hint — builder-only. Gives an empty container
+         real, hoverable height so it's a workable drag target (otherwise it
+         collapses to near-zero height with nothing to drop onto). See
+         resolveDropTarget()'s data-empty-container handling. -->
+    <div class="container-empty-drop-hint" *ngIf="pageBuilderActive && childBlocks(block, draft).length === 0"
+      [attr.data-empty-container]="block.id">
+      גררו בלוק לכאן, או השתמשו ב"+ הוסף לכאן" בעריכה
+    </div>
   </div>
 
   <!-- TABS — each tab is a real 'container' block; only the active one's
@@ -814,7 +895,7 @@
     <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"
       [style.justifyContent]="ctaAlignStyle(asCta(block.data).ctaConfig.align)">
       <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color"
-        (click)="asCta(block.data).ctaAction === 'register' ? startRegistration() : scrollToDonation()">
+        (click)="onCtaClick(asCta(block.data))">
         <span *ngIf="asCta(block.data).ctaConfig.icon">{{ asCta(block.data).ctaConfig.icon }}</span>
         {{ asCta(block.data).ctaConfig.label }}
       </button>
@@ -1075,6 +1156,11 @@
             (click)="openRewardDetails(offering); $event.stopPropagation()">
             לפרטים נוספים
           </button>
+          <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
+            [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
+            (click)="$event.stopPropagation()">
+            🤝 בשיתוף עם {{ p.displayName }}
+          </a>
 
           <button class="hm-reward-list-btn" type="button">לבחירה</button>
           <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
@@ -1118,6 +1204,11 @@
                     (click)="toggleExpand(offering.id); $event.stopPropagation()">
                     {{ isExpanded(offering.id) ? '↑ פחות' : 'קרא עוד ↓' }}
                   </button>
+                  <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
+                    [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
+                    (click)="$event.stopPropagation()">
+                    🤝 בשיתוף עם {{ p.displayName }}
+                  </a>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>
                 <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
@@ -1153,6 +1244,11 @@
                     (click)="toggleExpand(offering.id); $event.stopPropagation()">
                     {{ isExpanded(offering.id) ? '↑ פחות' : 'קרא עוד ↓' }}
                   </button>
+                  <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
+                    [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
+                    (click)="$event.stopPropagation()">
+                    🤝 בשיתוף עם {{ p.displayName }}
+                  </a>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>
                 <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">

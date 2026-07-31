@@ -9,7 +9,7 @@ import { RoleType } from '../../models/user-context.model';
 interface NavItem {
   route: string;
   label: string;
-  icon: 'dashboard' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'registrations' | 'reports' | 'settings' | 'platform';
+  icon: 'dashboard' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'registrations' | 'reports' | 'settings' | 'platform' | 'partners';
   // true when another nav route is a path-prefix of this one (e.g. '/platform' vs '/platform/organizations') —
   // without it, routerLinkActive's default non-exact match would light up both at once.
   exactMatch?: boolean;
@@ -21,6 +21,7 @@ const DONATIONS:   NavItem = { route: '/donations',   label: 'תרומות',   i
 const REGISTRATIONS: NavItem = { route: '/registrations', label: 'הרשמות', icon: 'registrations' };
 const DONORS:      NavItem = { route: '/donors',      label: 'תורמים',   icon: 'donors' };
 const AMBASSADORS: NavItem = { route: '/ambassadors', label: 'שגרירים',  icon: 'ambassadors' };
+const PARTNERS:    NavItem = { route: '/partners',    label: 'שותפים',   icon: 'partners' };
 const REPORTS:     NavItem = { route: '/reports',     label: 'דוחות',    icon: 'reports' };
 const SETTINGS:    NavItem = { route: '/settings',    label: 'הגדרות',   icon: 'settings' };
 
@@ -30,7 +31,7 @@ const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     labe
 const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
-  'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, REPORTS, SETTINGS],
+  'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
   'campaign-manager': [CAMPAIGNS, AMBASSADORS, DONATIONS, REGISTRATIONS, REPORTS],
   'ambassador':       [CAMPAIGNS, DONATIONS],
   'company':          [CAMPAIGNS],

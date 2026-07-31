@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { TextStyle, CtaConfig } from '../../../shared/models/text-style.model';
 export { TextStyle, CtaConfig, TextAlign, TextFontSize, TextPosition } from '../../../shared/models/text-style.model';
 
@@ -127,6 +127,12 @@ export interface DonationWidgetBlockData {
 export interface RichTextBlockData {
   content:     string;
   lineHeight?: number; // default 1.6
+  // Style for the block's own `label`, when rendered on the page as
+  // .section-heading (rich-text/video/gallery — see campaign-preview
+  // .component.html). Undefined = today's fixed look (primaryColor, fixed
+  // size/weight) — unchanged for existing blocks. See DECISIONS.md
+  // (2026-07-31).
+  headingStyle?: TextStyle;
 }
 
 export interface DividerBlockData {
@@ -160,6 +166,19 @@ export interface UpdatesBlockData {
 export interface ImageBlockData {
   url: string;
   caption?: string;
+  // Undefined/100 = full-bleed across the whole block (today's only
+  // behavior, unchanged for existing images). Below 100, the image shrinks
+  // and `align` decides where it sits in the remaining space.
+  widthPercent?: number;
+  align?: 'right' | 'center' | 'left';
+  // Independent of widthPercent — undefined/0 means natural height (the
+  // image's own aspect ratio, today's only behavior). Once set, the image
+  // is cropped (object-fit: cover) to this exact height regardless of
+  // widthPercent, so width and height become two independently-adjustable
+  // dimensions instead of widthPercent always scaling both together via
+  // the browser's default aspect-ratio preservation. See DECISIONS.md
+  // (2026-07-31).
+  heightPx?: number;
 }
 
 export interface VideoBlockData {
@@ -187,11 +206,20 @@ export interface ContainerBlockData {
   childBlockIds:       string[];
   backgroundColor:     string;
   borderColor:         string;
+  // Undefined = 1.5 (today's old hardcoded value, unchanged for existing
+  // containers). 0 = no border regardless of borderColor.
+  borderWidth?:        number;
+  borderRadius?:       number; // px, default 0 — square corners unchanged
   backgroundImageUrl:  string;
   padding:             number;
   gap:                 number;
   direction?:          'row' | 'column';
   splitPercent?:       number; // 20–80, only used when direction='row'
+  // A line drawn BETWEEN children (not around the whole frame) — e.g. a
+  // table-style cell divider. Empty/undefined = none. Independent of
+  // borderColor/borderWidth (the frame's own outer border).
+  childDividerColor?:  string;
+  childDividerWidth?:  number; // default 1
   // Only meaningful for a TOP-LEVEL container when layoutMode is
   // 'sidebar-right'/'sidebar-left' — designates this container's children as
   // the sticky full-height rail ('sidebar') or as the entire main column,
@@ -214,11 +242,15 @@ export interface CtaBlockData {
   backgroundColor: string;
   textStyle: TextStyle;
   ctaConfig: CtaConfig;
-  // Only relevant when the campaign has Registration Options (a race/event
-  // campaign) — lets the button open the registration flow instead of the
-  // default donation flow. Defaults to 'donate' so existing campaigns and
-  // pure-donation campaigns are unaffected.
-  ctaAction: 'donate' | 'register';
+  // 'register' only relevant when the campaign has Registration Options (a
+  // race/event campaign). 'link' opens an arbitrary external URL — the only
+  // option that makes sense for a Partner page (no donation/registration
+  // flow of its own), also usable on a campaign CTA that should point
+  // off-site (e.g. the partner's own website). Defaults to 'donate' so
+  // existing campaigns are unaffected.
+  ctaAction: 'donate' | 'register' | 'link';
+  // Only used when ctaAction === 'link'.
+  linkUrl?: string;
   // Vertical padding (px) — controls how much height the whole block takes.
   // Gap between title/text/button scales proportionally with it in the
   // renderer, so there's one simple control instead of two technical ones.
@@ -481,9 +513,11 @@ export interface CampaignDraft {
   // Phase 3 — Page Builder Owner Context (see owner-registry.ts and
   // docs/PAGE_BUILDER_OWNERSHIP_MODEL_ADR.md). Undefined = 'campaign'/id,
   // exactly today's behavior — every existing campaign draft is
-  // unaffected. Only ever 'partner' when the Builder is opened against a
-  // Partner entity's own draft instead of a campaign's.
-  ownerType?: 'campaign' | 'partner';
+  // unaffected. 'partner' when editing a Partner entity's own evergreen
+  // Profile. 'campaign-partner' (Phase 5 model refinement, 2026-07-30) when
+  // editing one campaign_partners row's own "Campaign Participation"
+  // content — ownerId is then the campaign_partners.id, NOT an entity id.
+  ownerType?: 'campaign' | 'partner' | 'campaign-partner';
   ownerId?:   string;
 
   // Server-managed (populated after save/load — undefined for new campaigns)
@@ -835,6 +869,23 @@ export function createInitialPartnerDraft(entityId: string, displayName: string)
   };
 }
 
+// Phase 5 model refinement (2026-07-30) — "Campaign Participation" content,
+// scoped to one campaign_partners row (campaignPartnerId), NOT an entity.
+// Built the same way as createInitialPartnerDraft (empty blocks, no
+// campaign-only starter content) rather than createInitialDraft — see that
+// factory's own comment for why. `title` is a display label only (e.g.
+// "{partner} × {campaign}") — there's no dedicated title field surfaced in
+// this Builder (no campaign-basic-step import), same as Partner Profile.
+export function createInitialCampaignPartnerDraft(campaignPartnerId: string, title: string): CampaignDraft {
+  const base = createInitialPartnerDraft(campaignPartnerId, title);
+  return {
+    ...base,
+    ownerType: 'campaign-partner',
+    ownerId: campaignPartnerId,
+    entityId: '', // not an entity — see ownerId above
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -860,6 +911,42 @@ export class CampaignStudioStateService {
     if (!this._pageBuilderActive.value) return;
     this._hoveredBlock.next({ id, source: id ? source : null });
   }
+
+  // ── Drag-and-drop (block picker → live preview) ─────────────────────
+  // Holds the BlockType being dragged FROM a picker (top or nested "+ הוסף
+  // לכאן") — the live preview reads this on drop to know what to insert.
+  // Mutually exclusive with draggedExistingBlockId below (starting one
+  // clears the other) — only one drag can be in flight at a time.
+  private _draggedBlockType = new BehaviorSubject<BlockType | null>(null);
+  readonly draggedBlockType$ = this._draggedBlockType.asObservable();
+  get draggedBlockType(): BlockType | null { return this._draggedBlockType.value; }
+  setDraggedBlockType(type: BlockType | null): void {
+    this._draggedBlockType.next(type);
+    if (type) this._draggedExistingBlockId.next(null);
+  }
+
+  // ── Drag-to-reorder (an EXISTING block, dragged by its own grip handle
+  // in the Builder's block list, onto the live preview) — same drop-target
+  // hit-testing/indicator as the picker-drag above (see campaign-preview
+  // .component.ts's resolveDropTarget), but commits via moveBlockTo() below
+  // instead of insertBlockAt(). See DECISIONS.md (2026-07-31).
+  private _draggedExistingBlockId = new BehaviorSubject<string | null>(null);
+  readonly draggedExistingBlockId$ = this._draggedExistingBlockId.asObservable();
+  get draggedExistingBlockId(): string | null { return this._draggedExistingBlockId.value; }
+  setDraggedExistingBlockId(id: string | null): void {
+    this._draggedExistingBlockId.next(id);
+    if (id) this._draggedBlockType.next(null);
+  }
+
+  // One-shot "open this block's editor" request, emitted after a successful
+  // drag-drop insertion. The drop itself happens over the PREVIEW pane,
+  // which has no access to the Builder panel's own editingBlockId/
+  // containerViewState — campaign-page-builder-step.component subscribes to
+  // this and reuses its existing openNewBlockEditor(), the same one used
+  // right after a click-to-add.
+  private _focusBlockRequest = new Subject<{ id: string; type: BlockType }>();
+  readonly focusBlockRequest$ = this._focusBlockRequest.asObservable();
+  requestFocusBlock(id: string, type: BlockType): void { this._focusBlockRequest.next({ id, type }); }
 
   get draft(): CampaignDraft {
     return this.draftSubject.value;
@@ -943,33 +1030,42 @@ export class CampaignStudioStateService {
     });
   }
 
+  // Shared default label logic — "טקסט", "טקסט 2", "טקסט 3"... for a second/
+  // third block of the same type. Used by addBlock()/addBlockToContainer()/
+  // insertBlockAt() (the last one backs drag-and-drop from the picker onto
+  // the live preview — see DECISIONS.md 2026-07-31).
+  private readonly DEFAULT_BLOCK_LABELS: Partial<Record<BlockType, string>> = {
+    'rich-text':       'טקסט',
+    'image':           'תמונה',
+    'video':           'וידאו',
+    'gallery':         'גלריה',
+    'cta':             'קריאה לפעולה',
+    'divider':         'מרווח',
+    'container':       'טבלת פריסה',
+    'stats':           'פס נתונים',
+    'donation-widget': 'תיבת תרומה',
+    'rewards':         'תשורות',
+    'sponsors':        'חסויות',
+    'ambassadors':     'שגרירים',
+    'donors':          'תורמים',
+    'updates':         'עדכונים',
+    'tabs':            'טאבים',
+    'accordion':       'פאנלים',
+    'share':           'שיתוף',
+    'comments':        'תגובות',
+  };
+
+  private defaultBlockLabel(type: BlockType, blocks: CampaignBlock[]): string {
+    const baseName = this.DEFAULT_BLOCK_LABELS[type] ?? type;
+    const sameType = blocks.filter(b => b.type === type).length;
+    return sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
+  }
+
   // Block operations
   addBlock(type: BlockType): string {
     const blocks = [...this.draft.blocks];
     const maxOrder = blocks.reduce((max, b) => Math.max(max, b.order), 0);
-    const sameType = blocks.filter(b => b.type === type).length;
-    const defaultLabels: Partial<Record<BlockType, string>> = {
-      'rich-text':       'טקסט',
-      'image':           'תמונה',
-      'video':           'וידאו',
-      'gallery':         'גלריה',
-      'cta':             'קריאה לפעולה',
-      'divider':         'מרווח',
-      'container':       'מסגרת',
-      'stats':           'פס נתונים',
-      'donation-widget': 'תיבת תרומה',
-      'rewards':         'תשורות',
-      'sponsors':        'חסויות',
-      'ambassadors':     'שגרירים',
-      'donors':          'תורמים',
-      'updates':         'עדכונים',
-      'tabs':            'טאבים',
-      'accordion':       'פאנלים',
-      'share':           'שיתוף',
-      'comments':        'תגובות',
-    };
-    const baseName = defaultLabels[type] ?? type;
-    const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
+    const label = this.defaultBlockLabel(type, blocks);
     const id = generateId();
     blocks.push({
       id,
@@ -979,7 +1075,7 @@ export class CampaignStudioStateService {
       label,
       spacingTop: 0,
       spacingBottom: 0,
-      data: defaultBlockData(type),
+      data: defaultBlockData(type, this.draft.ownerType),
     });
     this.patch({ blocks });
     // An empty tab bar looks broken (unlike an empty container, which is
@@ -1175,22 +1271,139 @@ export class CampaignStudioStateService {
       .map(cid => blocks.find(b => b.id === cid)?.order ?? 0);
     const maxOrder = siblingOrders.length ? Math.max(...siblingOrders) : 0;
     const newId = Math.random().toString(36).slice(2, 10);
-    const sameType = blocks.filter(b => b.type === type).length;
-    const defaultLabels: Partial<Record<BlockType, string>> = {
-      'rich-text': 'טקסט', 'image': 'תמונה', 'video': 'וידאו', 'gallery': 'גלריה',
-      'cta': 'קריאה לפעולה', 'divider': 'מרווח', 'container': 'מסגרת',
-      'stats': 'פס נתונים', 'donation-widget': 'תיבת תרומה',
-      'rewards': 'תשורות', 'sponsors': 'חסויות', 'ambassadors': 'שגרירים',
-      'donors': 'תורמים', 'updates': 'עדכונים', 'tabs': 'טאבים', 'share': 'שיתוף',
-      'comments': 'תגובות',
-    };
-    const baseName = defaultLabels[type] ?? type;
-    const label = sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
-    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: defaultBlockData(type) });
+    const label = this.defaultBlockLabel(type, blocks);
+    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: defaultBlockData(type, this.draft.ownerType) });
     ctData.childBlockIds = [...ctData.childBlockIds, newId];
     const updatedBlocks = blocks.map(b => b.id === containerId ? { ...b, data: ctData } : b);
     this.patch({ blocks: updatedBlocks });
     return newId;
+  }
+
+  private topLevelChildIds(blocks: CampaignBlock[]): Set<string> {
+    return new Set(
+      blocks.filter(b => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion')
+        .flatMap(b => (b.data as ContainerBlockData).childBlockIds)
+    );
+  }
+
+  // Ordered ids of a scope — top-level (parentId null) or a specific
+  // container/tabs/accordion's children (parentId = that block's own id).
+  // Shared by insertBlockAt()/moveBlockTo() below, and by resolveDropTarget
+  // in campaign-preview.component.ts (kept in sync there as
+  // scopeBlocksAll — NOT filtered to visible-only, unlike the components'
+  // own read-only childBlocks()/topLevelChildIds(), which exist purely for
+  // rendering).
+  private scopeIdsFor(parentId: string | null, blocks: CampaignBlock[]): string[] {
+    if (parentId) {
+      const parent = blocks.find(b => b.id === parentId);
+      if (!parent || (parent.type !== 'container' && parent.type !== 'tabs' && parent.type !== 'accordion')) return [];
+      return (parent.data as ContainerBlockData).childBlockIds
+        .map(cid => blocks.find(b => b.id === cid))
+        .filter((b): b is CampaignBlock => !!b)
+        .sort((a, b) => a.order - b.order)
+        .map(b => b.id);
+    }
+    const childIds = this.topLevelChildIds(blocks);
+    return blocks.filter(b => !childIds.has(b.id)).sort((a, b) => a.order - b.order).map(b => b.id);
+  }
+
+  // Inserts a brand-new block of `type` at an EXACT position within a scope
+  // — unlike addBlock()/addBlockToContainer() above, which always append at
+  // the end. Backs drag-and-drop from the block picker onto the live
+  // preview: the drop point resolves to a real insertion position, not
+  // just "the end." The whole scope's `order` is re-sequenced (1..N) rather
+  // than only the two touched neighbors, so the new position is
+  // unambiguous regardless of any pre-existing gaps in `order`. See
+  // DECISIONS.md (2026-07-31).
+  insertBlockAt(type: BlockType, parentId: string | null, index: number): string | null {
+    const existing = this.draft.blocks;
+    if (parentId && !existing.find(b => b.id === parentId && (b.type === 'container' || b.type === 'tabs' || b.type === 'accordion'))) return null;
+
+    const scopeIds = this.scopeIdsFor(parentId, existing);
+    const clampedIndex = Math.max(0, Math.min(index, scopeIds.length));
+    const id = generateId();
+    const newBlock: CampaignBlock = {
+      id, type, order: 0, visible: true,
+      label: this.defaultBlockLabel(type, existing),
+      spacingTop: 0, spacingBottom: 0,
+      data: defaultBlockData(type, this.draft.ownerType),
+    };
+
+    const newScopeIds = [...scopeIds];
+    newScopeIds.splice(clampedIndex, 0, id);
+    const orderById = new Map(newScopeIds.map((bid, i) => [bid, i + 1]));
+
+    const blocks = existing.map(b => orderById.has(b.id) ? { ...b, order: orderById.get(b.id)! } : b);
+    blocks.push({ ...newBlock, order: orderById.get(id)! });
+
+    if (parentId) {
+      const idx = blocks.findIndex(b => b.id === parentId);
+      const parent = blocks[idx];
+      const ctData = parent.data as ContainerBlockData;
+      blocks[idx] = { ...parent, data: { ...ctData, childBlockIds: [...ctData.childBlockIds, id] } };
+    }
+
+    this.patch({ blocks });
+    return id;
+  }
+
+  // True if `candidateId` IS `rootId`, or lives anywhere in its descendant
+  // tree — guards moveBlockTo() against dropping a block into itself or
+  // into one of its own children (which would make it unreachable: a
+  // container can't be its own descendant's child).
+  private isSameOrDescendant(candidateId: string, rootId: string, blocks: CampaignBlock[]): boolean {
+    if (candidateId === rootId) return true;
+    const root = blocks.find(b => b.id === rootId);
+    if (!root || (root.type !== 'container' && root.type !== 'tabs' && root.type !== 'accordion')) return false;
+    return (root.data as ContainerBlockData).childBlockIds.some(cid => this.isSameOrDescendant(candidateId, cid, blocks));
+  }
+
+  // Relocates an EXISTING block to an exact position within a scope — the
+  // drag-to-reorder counterpart of insertBlockAt() above, used when the
+  // thing dragged onto the preview is an already-existing block (via its
+  // grip handle in the Builder's block list) rather than a new type from
+  // the picker. `index` is resolved the same way (same resolveDropTarget in
+  // campaign-preview.component.ts, same scope), which means it may still
+  // count `id` at its OLD position if the move is within the SAME scope —
+  // adjusted for below (removing `id` shifts every later index down by 1).
+  // See DECISIONS.md (2026-07-31).
+  moveBlockTo(id: string, parentId: string | null, index: number): void {
+    const existing = this.draft.blocks;
+    if (!existing.find(b => b.id === id)) return;
+    if (parentId && this.isSameOrDescendant(parentId, id, existing)) return; // can't drop into itself/its own subtree
+
+    const oldScopeIds = this.scopeIdsFor(parentId, existing);
+    const oldIdx = oldScopeIds.indexOf(id);
+    const adjustedIndex = (oldIdx !== -1 && oldIdx < index) ? index - 1 : index;
+
+    // Detach from whatever container currently claims `id` as a child
+    // (no-op if it was already top-level, or already a child of `parentId`
+    // — it gets re-added below in its new position either way).
+    const detached = existing.map(b => {
+      if (b.type !== 'container' && b.type !== 'tabs' && b.type !== 'accordion') return b;
+      const data = b.data as ContainerBlockData;
+      if (!data.childBlockIds.includes(id)) return b;
+      return { ...b, data: { ...data, childBlockIds: data.childBlockIds.filter(cid => cid !== id) } };
+    });
+
+    const scopeIds = this.scopeIdsFor(parentId, detached).filter(bid => bid !== id);
+    const clampedIndex = Math.max(0, Math.min(adjustedIndex, scopeIds.length));
+    const newScopeIds = [...scopeIds];
+    newScopeIds.splice(clampedIndex, 0, id);
+    const orderById = new Map(newScopeIds.map((bid, i) => [bid, i + 1]));
+
+    const blocks = detached.map(b => orderById.has(b.id) ? { ...b, order: orderById.get(b.id)! } : b);
+
+    if (parentId) {
+      const idx = blocks.findIndex(b => b.id === parentId);
+      const parent = blocks[idx];
+      const ctData = parent.data as ContainerBlockData;
+      if (!ctData.childBlockIds.includes(id)) {
+        blocks[idx] = { ...parent, data: { ...ctData, childBlockIds: [...ctData.childBlockIds, id] } };
+      }
+    }
+
+    this.patch({ blocks });
   }
 
   toggleBlockVisibility(id: string): void {
@@ -1224,7 +1437,7 @@ export class CampaignStudioStateService {
   }
 }
 
-function defaultBlockData(type: BlockType): BlockData {
+function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | 'campaign-partner' = 'campaign'): BlockData {
   switch (type) {
     case 'rich-text':   return { content: '', lineHeight: 1.6 };
     case 'image':       return { url: '' };
@@ -1268,7 +1481,14 @@ function defaultBlockData(type: BlockType): BlockData {
     case 'ambassadors': return {} as AmbassadorsBlockData;
     case 'updates':     return { viewMode: 'slider' } as UpdatesBlockData;
     case 'share':       return { platforms: { link: true, email: true, x: true, facebook: true, whatsapp: true } } as ShareBlockData;
-    case 'cta':         return {
+    case 'cta':         return ownerType !== 'campaign' ? {
+      title: '', text: '', backgroundColor: '#14532d',
+      textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },
+      ctaConfig: { visible: true, label: 'לאתר שלנו', color: '#7c3aed', align: 'center', icon: '' },
+      ctaAction: 'link',
+      linkUrl: '',
+      blockHeight: 32,
+    } as CtaBlockData : {
       title: '', text: '', backgroundColor: '#14532d',
       textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'bottom' },
       ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#7c3aed', align: 'center', icon: '' },

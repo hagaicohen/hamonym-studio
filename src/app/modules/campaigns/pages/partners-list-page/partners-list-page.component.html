@@ -1,0 +1,73 @@
+<div class="pl-page">
+  <div class="pl-header">
+    <div class="pl-header-text">
+      <h1 class="pl-title">שותפים</h1>
+      <p class="pl-description">נהל את השותפים העסקיים שלך</p>
+    </div>
+    <div class="pl-header-actions">
+      <button class="pl-new-btn" type="button" (click)="showCreateForm = !showCreateForm">+ שותף חדש</button>
+    </div>
+  </div>
+
+  <div class="pl-create-panel" *ngIf="showCreateForm">
+    <div class="pl-field">
+      <label class="pl-label">שם העסק *</label>
+      <input class="pl-input" type="text" [(ngModel)]="newPartner.display_name" placeholder="קפה לנדוור">
+    </div>
+    <div class="pl-field">
+      <label class="pl-label">אתר (רשות)</label>
+      <input class="pl-input" type="text" [(ngModel)]="newPartner.website" placeholder="https://...">
+    </div>
+    <div class="pl-field">
+      <label class="pl-label">אימייל איש קשר (רשות)</label>
+      <input class="pl-input" type="email" [(ngModel)]="newPartner.contact_email">
+    </div>
+    <div class="pl-field">
+      <label class="pl-label">טלפון איש קשר (רשות)</label>
+      <input class="pl-input" type="text" [(ngModel)]="newPartner.contact_phone">
+    </div>
+    <button class="pl-create-btn" type="button" [disabled]="!newPartner.display_name.trim() || creating" (click)="createPartner()">
+      {{ creating ? 'יוצר...' : 'יצירת שותף' }}
+    </button>
+    <p class="pl-error" *ngIf="createError">⚠ {{ createError }}</p>
+  </div>
+
+  <p class="pl-loading" *ngIf="loading">טוען...</p>
+
+  <div class="pl-grid" *ngIf="!loading">
+    <div class="pl-card" *ngFor="let p of partners">
+      <img *ngIf="p.logo_url" [src]="p.logo_url" class="pl-card-logo" alt="">
+      <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url">🏢</div>
+      <div class="pl-card-name">{{ p.display_name }}</div>
+      <div class="pl-card-actions">
+        <a class="pl-card-btn" [routerLink]="['/partners', p.id, 'builder']">✏ עריכה</a>
+        <a class="pl-card-btn pl-card-btn--secondary" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener">👁 צפייה</a>
+      </div>
+      <button class="pl-card-btn pl-card-btn--danger" type="button" (click)="openDeleteModal(p)">🗑 מחיקה</button>
+    </div>
+
+  </div>
+
+  <div class="pl-empty" *ngIf="!loading && partners.length === 0">
+    <div class="pl-empty-icon">🤝</div>
+    <p>אין שותפים עדיין</p>
+    <button class="pl-new-btn" type="button" (click)="showCreateForm = true">+ שותף חדש</button>
+  </div>
+</div>
+
+<!-- Delete Partner — type-to-confirm -->
+<div class="pl-delete-overlay" *ngIf="deleteTarget" (click)="closeDeleteModal()">
+  <div class="pl-delete-modal" (click)="$event.stopPropagation()">
+    <h3>מחיקת השותף "{{ deleteTarget!.display_name }}"</h3>
+    <p>הפעולה תסתיר את דף השותף לצמיתות (הדף הציבורי יחזיר "לא נמצא"). קמפיינים שכבר קישרו לשותף הזה ימשיכו להציג שהקישור מצביע על שותף שנמחק. הפעולה הפיכה רק ע"י Super Admin.</p>
+    <label class="pl-delete-label">להקלדת אישור, יש להקליד את שם השותף במדויק:</label>
+    <input class="pl-input" type="text" [(ngModel)]="deleteConfirmText" [placeholder]="deleteTarget!.display_name">
+    <p class="pl-error" *ngIf="deleteError">⚠ {{ deleteError }}</p>
+    <div class="pl-delete-actions">
+      <button type="button" class="pl-card-btn" (click)="closeDeleteModal()">ביטול</button>
+      <button type="button" class="pl-delete-confirm-btn" [disabled]="!deleteConfirmValid || isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? 'מוחק...' : 'מחק לצמיתות' }}
+      </button>
+    </div>
+  </div>
+</div>

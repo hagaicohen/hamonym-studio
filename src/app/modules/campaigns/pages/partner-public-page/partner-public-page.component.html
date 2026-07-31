@@ -2,4 +2,35 @@
 
 <div class="ppp-load-state ppp-load-state--error" *ngIf="loadErrorMessage">⚠ {{ loadErrorMessage }}</div>
 
-<app-campaign-preview *ngIf="!loading && !loadErrorMessage" />
+<ng-container *ngIf="!loading && !loadErrorMessage">
+
+  <div class="ppp-edit-bar" *ngIf="canEdit">
+    <span class="ppp-edit-label">אתה צופה בדף הציבורי של השותף שלך</span>
+    <button class="ppp-edit-btn" type="button" (click)="goToEdit()">✏️ חזרה לעריכה</button>
+  </div>
+
+  <div class="ppp-back-bar" *ngIf="campaignSlug">
+    <a class="ppp-back-link" [routerLink]="['/campaigns', campaignSlug, 'view']">
+      ← חזרה ל{{ campaignTitle ? '"' + campaignTitle + '"' : 'קמפיין' }}
+    </a>
+  </div>
+
+  <app-campaign-preview />
+
+  <div class="ppp-partner-nav" *ngIf="prevPartner || nextPartner">
+    <a class="ppp-partner-nav-link ppp-partner-nav-link--prev" *ngIf="prevPartner"
+      [routerLink]="['/partners', prevPartner.id, 'view']"
+      [queryParams]="{ campaignSlug, campaignTitle }">
+      <span class="ppp-partner-nav-label">השותף הקודם</span>
+      <span class="ppp-partner-nav-name">{{ prevPartner.displayName }}</span>
+    </a>
+    <span class="ppp-partner-nav-spacer" *ngIf="!prevPartner"></span>
+    <a class="ppp-partner-nav-link ppp-partner-nav-link--next" *ngIf="nextPartner"
+      [routerLink]="['/partners', nextPartner.id, 'view']"
+      [queryParams]="{ campaignSlug, campaignTitle }">
+      <span class="ppp-partner-nav-label">השותף הבא</span>
+      <span class="ppp-partner-nav-name">{{ nextPartner.displayName }}</span>
+    </a>
+  </div>
+
+</ng-container>

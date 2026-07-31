@@ -86,7 +86,14 @@
             Underline,
             CustomTextStyle,
             Highlight.configure({ multicolor: true }),
-            Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
+            // Every link a manager inserts opens in a NEW tab — a donor
+            // clicking an external link inside campaign body text
+            // shouldn't get navigated away from the donation page itself.
+            // See DECISIONS.md (2026-07-31).
+            Link.configure({
+              openOnClick: false, autolink: true, linkOnPaste: true,
+              HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
+            }),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             Placeholder.configure({ placeholder: this.placeholder }),
           ],

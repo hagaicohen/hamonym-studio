@@ -31,6 +31,39 @@
 .empty-title { font-size: 15px; font-weight: 700; color: #64748b; }
 .empty-desc  { font-size: 13px; line-height: 1.7; }
 
+/* ── Drag-and-drop insertion indicator (block picker → live preview) ──
+   position:fixed + real viewport coordinates from resolveDropTarget(), so
+   it's correct regardless of scroll position or where it sits in the DOM. */
+.dnd-drop-indicator {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: #7c3aed;
+  border-radius: 2px;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+.dnd-drop-indicator--box {
+  background: rgba(124, 58, 237, 0.08);
+  border: 2px dashed #7c3aed;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.container-empty-drop-hint {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  border: 1.5px dashed #c4b5fd;
+  border-radius: 8px;
+  color: #a78bfa;
+  font-size: 12px;
+  background: rgba(124, 58, 237, 0.03);
+}
+
 /* ══ STICKY HEADER WRAPPER ══ */
 .hm-sticky-header {
   position: sticky;
@@ -1150,8 +1183,8 @@
 .block-rich-text ::ng-deep ol { padding-right: 20px; margin-bottom: 10px; }
 
 /* IMAGE */
-.block-image { padding: 0; }
-.block-image img { width: 100%; display: block; object-fit: cover; }
+.block-image { padding: 0; display: flex; flex-direction: column; }
+.block-image img { display: block; object-fit: cover; }
 .block-caption { font-size: 12px; color: #94a3b8; text-align: center; padding: 6px; }
 
 /* VIDEO */
@@ -1292,6 +1325,20 @@
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* Builder-only visual cue ("טבלת פריסה") — a real visitor never sees this
+   (gated on pageBuilderActive). outline (not border) so it never fights
+   with a manager's own chosen border color/width on the SAME element —
+   outline sits outside the box model entirely and doesn't affect layout.
+   Always visible while in the Builder, not just while dragging: the whole
+   point is that a manager recognizes "this is a container I can drop
+   things into" even before they've picked anything up. See DECISIONS.md
+   (2026-07-31). */
+.block-container--zone {
+  outline: 1.5px dashed #c4b5fd;
+  outline-offset: -1px;
+}
+
 .container-child { width: 100%; position: relative; }
 
 .container-child--hovered {
@@ -1965,6 +2012,19 @@
   color: var(--hm-reward-border-active, #7DD3FC);
 }
 
+/* "🤝 בשיתוף עם X" — reward → Partner public page (Sprint 5.2). Distinct
+   from "לפרטים נוספים" on purpose — one is about the reward, this is about
+   who's behind it (§12: two separate questions, two separate entry points). */
+.hm-reward-partner-link {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-primary, #7c3aed);
+  text-decoration: underline;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
 /* ── Selection overlay ── */
 .hm-reward-overlay {
   position: absolute;
@@ -2114,10 +2174,63 @@
 }
 /* ══ ALTERNATING SECTION BACKGROUNDS ══ */
 .block-wrap {
+  position: relative;
   border-bottom: 1px solid var(--hm-section-divider, #e2e8f0);
 }
 .block-wrap:nth-child(odd)  { background: var(--hm-section-odd, #ffffff); }
 .block-wrap:nth-child(even) { background: var(--hm-section-even, #f8fafc); }
+
+/* Drag-to-reorder handle, shown directly on the live preview (in addition
+   to the Builder's own grip handle in the block list) — hidden until the
+   block is hovered, so it never competes visually with the actual page
+   content a visitor would see. z-index above everything in the block so
+   it's always grabbable, even over an image/video. */
+.preview-drag-handle {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  z-index: 20;
+  width: 34px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.92);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  /* Deliberately ALWAYS clickable, not just on hover — native HTML5 drag
+     needs a real mousedown+small-movement on the handle itself to engage.
+     Gating pointer-events on :hover meant the drag could lose hover (and
+     therefore pointer-events) mid-gesture on this small a target, silently
+     cancelling it — reported 2026-07-31 ("הגרירה לא עובדת"). Opacity alone
+     now does the "only show on hover" job; interactivity no longer depends
+     on hover surviving the whole gesture. */
+}
+.block-wrap:hover .preview-drag-handle,
+.container-child:hover > .preview-drag-handle {
+  opacity: 1;
+}
+.preview-drag-handle:hover { background: rgba(109, 40, 217, 1); }
+.preview-drag-handle:active { cursor: grabbing; }
+/* [size]="16" alone left the icon visibly off-center vertically inside the
+   handle (measured: 5px gap above vs 11px below) — lucide-icon's host
+   element doesn't fill the flex item's cross-axis by default. Forcing it
+   to be a flex box itself, matched to the icon's own pixel size, makes its
+   centering unambiguous instead of relying on inline/baseline layout.
+   Reported 2026-07-31 ("הנקודות הלבנות... יהיו במרכז"). */
+.preview-drag-handle lucide-icon {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
 
 /* Sidebar main column — no section borders or alternating backgrounds */
 .sidebar-main .block-wrap {

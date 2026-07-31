@@ -1,0 +1,127 @@
+.cpb-load-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 16px;
+  color: #64748b;
+}
+.cpb-load-state--error { color: #dc2626; }
+
+.cpb-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.cpb-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #1e293b;
+  color: #fff;
+}
+.cpb-topbar-title { justify-self: start; display: flex; flex-direction: column; }
+.cpb-title { font-weight: 700; font-size: 15px; }
+.cpb-subtitle { font-size: 12px; color: #94a3b8; }
+.cpb-back-button {
+  display: flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border: 1px solid #334155; border-radius: 10px;
+  background: #0f172a; color: #e2e8f0; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  transition: all 0.15s;
+}
+.cpb-back-button:hover { background: #334155; border-color: #7c3aed; color: #c4b5fd; }
+
+/* CENTER: device + fullscreen switcher — same cluster as
+   campaign-studio-topbar.component.css's .device-switcher. */
+.cpb-device-switch {
+  justify-self: center;
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px; background: rgba(255,255,255,0.08); border-radius: 12px;
+}
+.cpb-device-btn {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: #94a3b8; border-radius: 10px; cursor: pointer;
+  padding: 0; line-height: 0;
+}
+.cpb-device-btn.active { background: #583cd6; color: #fff; }
+.cpb-device-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
+
+.cpb-topbar-actions { justify-self: end; display: flex; align-items: center; gap: 10px; }
+.cpb-link-btn {
+  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  text-decoration: none; display: inline-block; white-space: nowrap;
+}
+.cpb-save-btn {
+  background: #6fc9eb; color: #061b3a; border: none; border-radius: 8px;
+  padding: 8px 20px; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.cpb-save-btn:disabled { opacity: 0.6; cursor: default; }
+
+.cpb-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.cpb-editor-card {
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+.cpb-preview-card {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Draggable divider between editor and preview. */
+.cpb-resizer {
+  flex-shrink: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: #e2e8f0;
+  position: relative;
+}
+.cpb-resizer:hover, .cpb-resizer:active { background: #583cd6; }
+.cpb-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+}
+
+/* ── FULLSCREEN MODE — hide the editor panel, preview takes the whole
+   workspace (same behavior as campaign-studio-page.component.css). ── */
+.cpb-editor-card--hidden { display: none; }
+.cpb-page--fullscreen .cpb-workspace { background: #0f172a; }
+.cpb-page--fullscreen .cpb-preview-card { flex: 1; }
+
+/* Mobile preview frame — same phone-frame pattern as
+   campaign-studio-page.component.css (.preview-inner--mobile). */
+.cpb-preview-card--mobile {
+  display: flex;
+  justify-content: center;
+  background: #cbd5e1;
+  padding: 20px 0;
+}
+.cpb-preview-card--mobile app-campaign-preview {
+  display: block;
+  width: 390px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px #1e293b,
+    0 0 0 10px #334155,
+    0 12px 40px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 900px) {
+  .cpb-workspace { flex-direction: column; }
+  .cpb-editor-card { width: 100% !important; border-bottom: 1px solid #e2e8f0; max-height: 50vh; }
+  .cpb-resizer { display: none; }
+  .cpb-topbar { flex-wrap: wrap; }
+}

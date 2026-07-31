@@ -70,6 +70,24 @@
 }
 .block-header:hover { background: #f1f5f9; }
 
+.block-drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: #cbd5e1;
+  cursor: grab;
+  padding: 2px;
+}
+.block-drag-handle:hover { color: #7c3aed; }
+.block-drag-handle:active { cursor: grabbing; }
+.block-drag-handle lucide-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
 .block-icon  { font-size: 16px; flex-shrink: 0; }
 .block-label { font-size: 13px; font-weight: 700; color: #334155; flex: 1; }
 
@@ -404,14 +422,33 @@
 }
 .editor-textarea:focus { border-color: #7c3aed; }
 
-/* CONTAINER EDITOR */
+/* CONTAINER DESIGN PANEL — collapsible wrapper around the container's own
+   settings (colors/borders/spacing), same visual language as the page-level
+   "רקע הדף" etc. sections. Keyed per-block (toggleSection('container-design-'
+   + block.id)) since more than one table can exist on a page. */
+.container-design-section {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+.container-design-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer; user-select: none;
+}
+.container-design-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+
+/* CONTAINER EDITOR — the design panel's actual content, once expanded. No
+   border/background of its own anymore: the section above already draws
+   the card, this used to duplicate it as a stray line right above the
+   direction hint. */
 .container-editor {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 14px;
-  border-top: 1.5px solid #e2e8f0;
-  background: #fafafa;
+  padding: 0 14px 14px;
 }
 
 .container-colors-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -628,25 +665,82 @@
 }
 .bg-type-btn.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
 
-/* Divider between page content blocks and overall design settings */
-.design-settings-divider {
+/* ══ THREE-ZONE BUILDER LAYOUT ══ — the Store (block types you CAN add),
+   the Page itself (blocks already on it), and General Design (site-wide
+   settings not tied to any block). Each is its own bordered panel with a
+   clickable header (icon + title + chevron) that toggles its own content,
+   same open/close mechanics as every other collapsible section here — the
+   goal is just to make the three categories impossible to visually confuse
+   with each other. See DECISIONS.md (2026-07-31). */
+.builder-zone {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.builder-zone-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 20px 0 4px;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
 }
-.design-settings-divider::before,
-.design-settings-divider::after {
-  content: '';
-  flex: 1;
-  height: 1.5px;
-  background: #e2e8f0;
-}
-.design-settings-divider-label {
-  font-size: 13px;
+.builder-zone-title { font-size: 15px; font-weight: 800; color: #0f172a; }
+.builder-zone-count {
+  font-size: 12px;
   font-weight: 700;
   color: #64748b;
-  white-space: nowrap;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.builder-zone > .block-picker,
+.builder-zone > .blocks-list,
+.builder-zone > .zone-content-empty {
+  margin: 0 16px 16px;
+}
+
+/* Explains, right where the picker opens, that a block can either be
+   dragged to an exact spot in the live preview OR just clicked to add at
+   the end — the two entry points aren't obvious from the picker grid
+   alone. See DECISIONS.md (2026-07-31). */
+.picker-hint {
+  font-size: 12px;
+  color: #7c3aed;
+  line-height: 1.6;
+  margin: 0 16px 12px;
+  padding: 8px 10px;
+  background: #f3e8ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+}
+.builder-zone--store { border-color: #d8b4fe; }
+.builder-zone--store .builder-zone-header { background: #faf5ff; }
+.section-icon-box--store { background: #ede9fe; border-color: #c4b5fd; color: #7c3aed; }
+
+.builder-zone--content { border-color: #bae6fd; }
+.builder-zone--content .builder-zone-header { background: #f0f9ff; }
+.section-icon-box--content { background: #e0f2fe; border-color: #7dd3fc; color: #0369a1; }
+
+.builder-zone--design { border-color: #fde68a; }
+.builder-zone--design .builder-zone-header { background: #fffbeb; }
+.section-icon-box--design { background: #fef3c7; border-color: #fcd34d; color: #b45309; }
+/* Sub-sections (theme colors, background, footer, ...) already have their
+   own card look (.campaign-theme-section/.campaign-bg-section) — inside
+   Zone 3 they just need breathing room from its outer border. Selecting
+   "every direct child except the header" rather than a specific section
+   class, since <ng-container> wrappers leave no element in the rendered
+   DOM (its children become direct children of .builder-zone--design). */
+.builder-zone--design > *:not(.builder-zone-header) {
+  margin: 0 16px 16px;
+}
+
+.zone-content-empty {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 24px 16px;
 }
 
 /* CAMPAIGN THEME */
@@ -823,6 +917,7 @@
   position: relative;
 }
 .picker-item:hover:not(:disabled) { border-color: #7c3aed; background: #faf5ff; }
+.picker-item:active:not(:disabled) { cursor: grabbing; }
 .picker-item--disabled { opacity: 0.45; cursor: default; background: #f8fafc; }
 
 .picker-icon  { font-size: 20px; }
@@ -856,27 +951,33 @@
 
 .container-tree-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
-.container-tree-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #7c3aed;
+.direction-toggle--full {
+  display: flex;
+  width: 100%;
+}
+.direction-toggle--full .direction-btn {
+  flex: 1;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.container-tree-actions-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  justify-content: space-between;
 }
 
 .container-tree-count {
+  font-size: 11px;
   font-weight: 500;
   color: #94a3b8;
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .container-add-btn {
@@ -893,6 +994,19 @@
 }
 .container-add-btn:hover { background: #7c3aed; color: #fff; border-color: #7c3aed; }
 
+.container-name-field {
+  padding: 10px 10px 0 10px;
+  background: #f8f4ff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.container-name-field .editor-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
 .container-empty-hint {
   font-size: 12px;
   color: #94a3b8;
@@ -901,6 +1015,16 @@
   border: 1.5px dashed #e2e8f0;
   border-radius: 8px;
   background: #fff;
+}
+
+.container-hint {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border-radius: 8px;
 }
 
 /* Mini block picker inside container */

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Layers } from 'lucide-angular';
+import { LucideAngularModule, Layers, GripVertical } from 'lucide-angular';
 import {
   CampaignStudioStateService,
   CampaignBlock,
@@ -45,7 +45,7 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   'split':       'עמודות',
   'cta':         'קריאה לפעולה',
   'divider':     'מרווח / קו',
-  'container':       'מסגרת',
+  'container':       'טבלת פריסה',
   'stats':           'פס נתונים',
   'donation-widget': 'תיבת תרומה',
   'rewards':         'תשורות',
@@ -125,6 +125,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   private uploadService = inject(UploadService);
 
   readonly LayersIcon = Layers;
+  readonly GripVertical = GripVertical;
   draft$ = this.state.draft$;
 
   showBlockPicker = false;
@@ -132,18 +133,21 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   editingBlockId: string | null = null;
 
   // Container/tabs/accordion blocks get a 3-way disclosure instead of every
-  // other block type's plain open/closed: 'closed' (default on entering the
-  // step — header only, matching every other block type starting collapsed)
-  // → 'preview' (header + children list, no own settings) → 'open' (also
-  // shows own settings, via editingBlockId same as any other block). See
-  // DECISIONS.md (2026-07-20).
-  private containerViewState = new Map<string, 'open' | 'preview' | 'closed'>();
-  getContainerViewState(id: string): 'open' | 'preview' | 'closed' {
+  // Plain open/closed, same as every other block type — 'closed' by default
+  // on entering the step (header only). Used to have a 3rd 'preview' state
+  // (children list only, own settings — i.e. the row/column choice — hidden
+  // behind a 2nd click) but that buried the one control a container's whole
+  // purpose depends on: a user only ever saw a bare "+ הוסף לכאן" box with
+  // no visible way to choose side-by-side vs. stacked. 'open' now always
+  // shows settings + children together. See DECISIONS.md (2026-07-20, then
+  // revised 2026-07-30).
+  private containerViewState = new Map<string, 'open' | 'closed'>();
+  getContainerViewState(id: string): 'open' | 'closed' {
     return this.containerViewState.get(id) ?? 'closed';
   }
   private cycleContainerView(id: string): void {
     const current = this.getContainerViewState(id);
-    const next = current === 'closed' ? 'preview' : current === 'preview' ? 'open' : 'closed';
+    const next = current === 'closed' ? 'open' : 'closed';
     this.containerViewState.set(id, next);
     this.editingBlockId = next === 'open' ? id : (this.editingBlockId === id ? null : this.editingBlockId);
   }
@@ -151,8 +155,13 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // The design-settings sections below the block list (Hero texts, theme
   // colors, background, footer, ...) — collapsible for the same reason
   // containers are, and same default: all closed on entering the step, the
-  // manager expands only what they're working on right now.
-  private expandedSections = new Set<string>();
+  // manager expands only what they're working on right now. 'zone-content'
+  // (Zone 2 — the page's actual blocks, see the three-zone layout in the
+  // template) is the one seeded-open exception: it's the main thing a
+  // manager is here to look at, unlike Zone 1 (the block picker/"store")
+  // and Zone 3 (general design), which stay opt-in closed. See
+  // DECISIONS.md (2026-07-31).
+  private expandedSections = new Set<string>(['zone-content']);
   isSectionCollapsed(key: string): boolean { return !this.expandedSections.has(key); }
   toggleSection(key: string): void {
     if (this.expandedSections.has(key)) this.expandedSections.delete(key);
@@ -170,6 +179,13 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
     });
+    // A block dragged from the picker and dropped onto the live preview is
+    // inserted by the preview component itself (it owns the drop-target
+    // hit-testing) — it then asks US to open/focus the new block's editor,
+    // since editingBlockId/containerViewState are private to this panel.
+    this.state.focusBlockRequest$.pipe(takeUntil(this._destroy$)).subscribe(({ id, type }) => {
+      this.openNewBlockEditor(id, type);
+    });
   }
 
   ngOnDestroy(): void {
@@ -183,6 +199,12 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // no-op for it since every pre-existing BlockType's SECTION_REGISTRY entry
   // already includes 'campaign'.
   get ownerType(): OwnerType { return (this.state.draft.ownerType ?? 'campaign') as OwnerType; }
+
+  // True only for a real campaign — false for both 'partner' and
+  // 'campaign-partner' (see campaign-preview.component.ts#isCampaign, same
+  // reasoning: donation/registration CTAs and campaign-only sections don't
+  // apply to either non-campaign owner).
+  get isCampaign(): boolean { return this.ownerType === 'campaign'; }
 
   get addableBlocks(): BlockType[] {
     return ADDABLE_BLOCKS.filter(t => isSectionAvailableFor(t, this.ownerType));
@@ -222,15 +244,55 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     if (this.isAlreadyAdded(type, blocks)) return;
     const id = this.state.addBlock(type);
     this.showBlockPicker = false;
-    this.openNewBlockEditor(id);
+    this.openNewBlockEditor(id, type);
+  }
+
+  // ── Drag-to-add (picker → live preview) ─────────────────────────────
+  // The picker item itself never moves — only its BlockType is carried, via
+  // the shared state service, to whatever drop-target the live preview
+  // resolves (see campaign-preview.component.ts's dragover/drop handlers).
+  // dataTransfer is set too (not just the service field) because some
+  // browsers refuse to fire 'drop' at all on a dragover that never called
+  // setData(). See DECISIONS.md (2026-07-31).
+  onPickerDragStart(event: DragEvent, type: BlockType, blocks: CampaignBlock[]): void {
+    if (this.isAlreadyAdded(type, blocks)) { event.preventDefault(); return; }
+    event.dataTransfer?.setData('text/plain', type);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+    this.state.setDraggedBlockType(type);
+  }
+
+  onPickerDragEnd(): void {
+    this.state.setDraggedBlockType(null);
+  }
+
+  // ── Drag-to-reorder (an EXISTING block's own grip handle → live preview) ──
+  // Same shared drag state / drop-target resolution as drag-to-add above,
+  // just carrying an existing block's id instead of a new BlockType — the
+  // preview commits via state.moveBlockTo() instead of insertBlockAt().
+  onBlockDragStart(event: DragEvent, blockId: string): void {
+    event.dataTransfer?.setData('text/plain', blockId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    this.state.setDraggedExistingBlockId(blockId);
+  }
+
+  onBlockDragEnd(): void {
+    this.state.setDraggedExistingBlockId(null);
   }
 
   // Opens the new block's editor panel right away (instead of leaving it
   // collapsed like every other block) and scrolls it into view — otherwise
   // adding a block silently did nothing visible, and it wasn't obvious the
-  // content was actually editable. See DECISIONS.md (2026-07-17).
-  private openNewBlockEditor(id: string): void {
+  // content was actually editable. See DECISIONS.md (2026-07-17). For a
+  // container/tabs/accordion this must also mark its own view-state 'open'
+  // (a separate flag from editingBlockId, see getContainerViewState) —
+  // otherwise a freshly-added one showed its settings but not its (empty)
+  // children tree/"+ הוסף לכאן", the exact "what do I do with this" gap
+  // reported 2026-07-30.
+  private openNewBlockEditor(id: string, type?: BlockType): void {
     this.editingBlockId = id;
+    if (type === 'container' || type === 'tabs' || type === 'accordion') {
+      this.containerViewState.set(id, 'open');
+    }
     setTimeout(() => {
       document.getElementById('editor-blk-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
@@ -287,7 +349,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     if (this.isAlreadyAdded(type, blocks)) return;
     const id = this.state.addBlockToContainer(containerId, type);
     this.showContainerPickerId = null;
-    if (id) this.openNewBlockEditor(id);
+    if (id) this.openNewBlockEditor(id, type);
   }
 
   onTemplateSelected(selection: TemplateSelection): void {
@@ -332,10 +394,46 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { ...prev, lineHeight } as RichTextBlockData);
   }
 
+  // Default look matches what .section-heading already renders today for a
+  // block with no headingStyle set (empty color = fall back to
+  // primaryColor in the preview) — so picking a style here never causes an
+  // unexpected jump for an existing heading.
+  private readonly DEFAULT_HEADING_STYLE: TextStyle = { align: 'center', color: '', fontSize: 'lg', position: 'top' };
+
+  richTextHeadingStyle(block: CampaignBlock): TextStyle {
+    return (block.data as RichTextBlockData).headingStyle ?? this.DEFAULT_HEADING_STYLE;
+  }
+
+  updateRichTextHeadingStyle(id: string, style: TextStyle): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    const prev = block?.data as RichTextBlockData;
+    this.state.updateBlockData(id, { ...prev, headingStyle: style } as RichTextBlockData);
+  }
+
   updateImageField(id: string, field: keyof ImageBlockData, value: string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as ImageBlockData);
+  }
+
+  updateImageWidth(id: string, widthPercent: number): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, widthPercent } as ImageBlockData);
+  }
+
+  updateImageHeight(id: string, heightPx: number): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, heightPx } as ImageBlockData);
+  }
+
+  resetImageHeight(id: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = { ...(block.data as ImageBlockData) };
+    delete data.heightPx;
+    this.state.updateBlockData(id, data);
   }
 
   onImageFileSelected(id: string, event: Event): void {
@@ -429,15 +527,21 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // Sets the action AND a matching default label/visibility together, so
   // picking a purpose alone is enough to get a working, visible button —
   // no separate step required to also update the label text.
-  updateCtaAction(id: string, action: 'donate' | 'register'): void {
+  updateCtaAction(id: string, action: 'donate' | 'register' | 'link'): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     const data = block.data as CtaBlockData;
-    const label = action === 'register' ? 'הירשמו עכשיו' : 'תרמו עכשיו';
+    const label = action === 'register' ? 'הירשמו עכשיו' : action === 'link' ? 'לאתר שלנו' : 'תרמו עכשיו';
     this.state.updateBlockData(id, {
       ...data, ctaAction: action,
       ctaConfig: { ...data.ctaConfig, label, visible: true },
     } as CtaBlockData);
+  }
+
+  updateCtaLinkUrl(id: string, url: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, linkUrl: url } as CtaBlockData);
   }
 
   updateCtaBlockHeight(id: string, height: number): void {
@@ -639,7 +743,20 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   onHeroCtaConfigChange(cta: CtaConfig): void   { this.state.patch({ heroCtaConfig: cta }); }
 
   blockIcon(block: CampaignBlock): string  { return BLOCK_ICONS[block.type] ?? ''; }
-  blockLabel(block: CampaignBlock): string { return BLOCK_LABELS[block.type] ?? block.type; }
+  blockLabel(block: CampaignBlock): string { return this.blockTypeLabel(block.type); }
+
+  // 'hero' is the one block type genuinely reused across all three owners
+  // with different intent (see owner-registry.ts SECTION_REGISTRY comment)
+  // — labeled differently per owner so nobody confuses a business's own
+  // evergreen cover photo with a campaign-specific promotional banner.
+  blockTypeLabel(type: BlockType): string {
+    if (type === 'hero') {
+      if (this.ownerType === 'partner') return 'קאבר העסק';
+      if (this.ownerType === 'campaign-partner') return 'באנר המבצע';
+      return BLOCK_LABELS[type];
+    }
+    return BLOCK_LABELS[type] ?? type;
+  }
 
   asRichText(data: unknown): RichTextBlockData       { return data as RichTextBlockData; }
   asImage(data: unknown): ImageBlockData             { return data as ImageBlockData; }

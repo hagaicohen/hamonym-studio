@@ -155,6 +155,19 @@ export const routes: Routes = [
       ).then((m) => m.PartnerBuilderPageComponent),
   },
 
+  // Campaign Participation Builder (Phase 5 model refinement, 2026-07-30) —
+  // :id is a campaign_partners row id, not an entity. Ownership enforced
+  // server-side the same way (requireAuth + assertCampaignOwnership inside
+  // the service), authGuard here only gates "must be logged in".
+  {
+    path: 'campaign-partners/:id/builder',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-partner-builder-page/campaign-partner-builder-page.component'
+      ).then((m) => m.CampaignPartnerBuilderPageComponent),
+  },
+
   /* ========================================
      PUBLIC — no shell, no auth
   ======================================== */
@@ -278,6 +291,16 @@ export const routes: Routes = [
               ),
           },
         ],
+      },
+      // Standalone Partner back-office (Scenario 0 / "Partner First" — see
+      // docs/PARTNER_DOMAIN_MODEL_ADR.md §11). Primary entry point for
+      // creating/managing a Partner independently of any campaign.
+      {
+        path: 'partners',
+        loadComponent: () =>
+          import('./modules/campaigns/pages/partners-list-page/partners-list-page.component').then(
+            (m) => m.PartnersListPageComponent,
+          ),
       },
       {
         path: 'donations',
