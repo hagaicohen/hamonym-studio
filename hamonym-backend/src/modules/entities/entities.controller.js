@@ -659,3 +659,16 @@ exports.createInvite = async (req, res) => {
     res.status(err.status || 500).json({ error: err.message });
   }
 };
+
+// =========================================================
+// PUBLIC PARTNER PAGE (Phase 5, Sprint 5.1)
+// =========================================================
+
+exports.getPublicPartner = async (req, res) => {
+  try {
+    const partner = await service.getPublicPartner(req.params.id);
+    res.json(partner);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
