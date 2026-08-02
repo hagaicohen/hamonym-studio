@@ -69,6 +69,15 @@ exports.getCampaignDonors = async (req, res) => {
   }
 };
 
+exports.getRewardCounts = async (req, res) => {
+  try {
+    const counts = await donationsService.getRewardCounts(req.params.slug);
+    res.json({ counts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.mockComplete = async (req, res) => {
   if (process.env.PAYMENT_PROVIDER !== 'mock') {
     return res.status(403).json({ error: 'Mock payments are disabled' });

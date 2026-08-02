@@ -5,7 +5,7 @@
 // (see AI_CAMPAIGN_CREATION_VISION.md decision 3/5).
 
 const llmService = require('../../llm.service');
-const { BRIEF_SYSTEM_PROMPT, buildBriefPrompt } = require('../campaign-creation.prompt');
+const { getBriefSystemPrompt, buildBriefPrompt } = require('../campaign-creation.prompt');
 
 function suggested(value, reason) {
   return { value: value ?? null, reason: reason || '' };
@@ -65,13 +65,14 @@ function project(facts, raw, imageLabels) {
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research about the organization (2026-07-23)
 // @param {Array<{question: string, answer: string}>} [userAnswers] - optional, campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23)
 // @param {Array<{label: string, mimeType: string, buffer: Buffer}>} [images] - optional, uploaded images for galleryCuration (2026-07-23)
+// @param {'campaign'|'partner'} [targetType] - which system prompt to use (2026-07-31) — same Brief shape either way, only the framing/rules differ (donation appeal vs. evergreen business profile). Defaults to 'campaign'.
 // @returns {Promise<import('../campaign-creation.types').Brief>}
-exports.build = async (facts, research, userAnswers, images) => {
+exports.build = async (facts, research, userAnswers, images, targetType) => {
   const userPrompt = buildBriefPrompt(facts, research, userAnswers, images);
   // temperature: 0 — same reasoning as free-text.extractor.js: this corpus
   // exists to be diffed across prompt changes, which only means something if
   // reruns are stable.
-  const raw = await llmService.complete(BRIEF_SYSTEM_PROMPT, userPrompt, { temperature: 0 });
+  const raw = await llmService.complete(getBriefSystemPrompt(targetType), userPrompt, { temperature: 0 });
 
   // suggestedTargetAmount carries a hard guarantee beyond what the prompt
   // asks for: if Facts had no explicit amount, the value is forced to null

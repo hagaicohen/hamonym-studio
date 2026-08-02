@@ -163,10 +163,20 @@ exports.create = async (userId, campaignId, data) => {
     throw err;
   }
 
+  // A partner can only have ONE row per campaign (UNIQUE campaign_id,
+  // partner_entity_id — see ADR §4, reward_id is subordinate to that single
+  // row, not a separate dimension). Picking an already-linked partner for a
+  // reward (e.g. one auto-linked as sponsor-only, reward_id NULL, by the
+  // Deterministic Clone flow) is a real, expected path — not an error —
+  // so this re-links/reassigns the existing row's reward instead of letting
+  // the unique constraint reject a second INSERT.
   const { rows } = await db.query(
     `INSERT INTO campaign_partners
        (campaign_id, partner_entity_id, reward_id, display_order, visible, coupon, campaign_message)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (campaign_id, partner_entity_id) DO UPDATE
+       SET reward_id  = COALESCE(EXCLUDED.reward_id, campaign_partners.reward_id),
+           updated_at = now()
      RETURNING *`,
     [
       campaignId,

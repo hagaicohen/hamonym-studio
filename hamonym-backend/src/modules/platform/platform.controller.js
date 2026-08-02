@@ -54,6 +54,19 @@ exports.getOrganizations = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+exports.getPartners = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page || '0', 10);
+    const limit = parseInt(req.query.limit || '25', 10);
+    const { search, sortBy, sortDir } = req.query;
+    const noCampaigns = req.query.noCampaigns === '1' || req.query.noCampaigns === 'true';
+    const hidden = req.query.hidden === '1' || req.query.hidden === 'true';
+    const newSince = req.query.newSince ? parseInt(req.query.newSince, 10) : undefined;
+    const result = await svc.getPartners({ search, sortBy, sortDir, page, limit, noCampaigns, hidden, newSince });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 exports.getOrganization = async (req, res) => {
   try {
     const result = await svc.getOrganizationDetail(req.params.id);

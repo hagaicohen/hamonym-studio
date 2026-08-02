@@ -140,8 +140,13 @@ exports.extractFromDocuments = async (req, res) => {
       .filter((f) => f.mimeType.startsWith('image/') && f.typeLabel !== 'לוגו')
       .map((f, i) => ({ label: `image${i + 1}`, mimeType: f.mimeType, buffer: f.buffer }));
 
+    // 'campaign' (default) or 'partner' — see campaign-creation.prompt.js's
+    // getBriefSystemPrompt(). Extraction itself never needs this (Facts is
+    // fully generic either way) — only Brief-writing framing differs.
+    const targetType = req.body.targetType === 'partner' ? 'partner' : 'campaign';
+
     const startedAt = Date.now();
-    const brief = await pipeline.buildBriefFromFacts(facts, research, undefined, images);
+    const brief = await pipeline.buildBriefFromFacts(facts, research, undefined, images, targetType);
 
     // "regenerated" vs "initial" — the frontend knows whether this is the
     // user's first submit() in this session or a resubmission after
@@ -179,14 +184,14 @@ exports.extractFromDocuments = async (req, res) => {
 // forward, the backend has no memory of the first round at all.
 exports.refineBrief = async (req, res) => {
   try {
-    const { facts, userAnswers, enableWebResearch, websiteUrl } = req.body;
+    const { facts, userAnswers, enableWebResearch, websiteUrl, targetType } = req.body;
     if (!facts) {
       throw new Error('Facts is required');
     }
 
     const research = await resolveResearch(!!enableWebResearch, facts.organizationName, websiteUrl || facts.socialLinks?.[0]);
     const startedAt = Date.now();
-    const brief = await pipeline.buildBriefFromFacts(facts, research, userAnswers);
+    const brief = await pipeline.buildBriefFromFacts(facts, research, userAnswers, undefined, targetType === 'partner' ? 'partner' : 'campaign');
 
     const generationId = await generationLog.logGeneration({
       userId: req.user?.id,

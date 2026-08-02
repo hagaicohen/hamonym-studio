@@ -584,7 +584,7 @@ exports.updateCampaign =
       await db.query(
 
         `
-        SELECT entity_id, is_locked
+        SELECT entity_id, is_locked, title
         FROM campaigns
         WHERE id = $1
         LIMIT 1
@@ -602,6 +602,21 @@ exports.updateCampaign =
         'Campaign not found'
       );
 
+    }
+
+    // A campaign can't be published nameless — this PATCH-based publish
+    // call (campaign-api.service.ts#publish) only ever sends
+    // {status:'published'}, never the whole draft, so the title to check is
+    // whichever one is already saved (data.title, if this same call also
+    // updates it) or the one already in the DB row fetched above. The
+    // frontend's own missingFields check (campaign-publish-step.component.ts)
+    // already blocks this in the UI — this is the server-side backstop for
+    // anyone calling the API directly. See DECISIONS.md (2026-08-02).
+    if (data.status === 'published') {
+      const effectiveTitle = (data.title ?? campaignResult.rows[0].title ?? '').trim();
+      if (!effectiveTitle) {
+        throw new Error('Campaign title is required to publish');
+      }
     }
 
     const hasAccess =

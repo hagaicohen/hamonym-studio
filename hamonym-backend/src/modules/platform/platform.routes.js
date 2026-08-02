@@ -15,6 +15,11 @@ router.get('/notifications-count', ctrl.getNotificationsCount);
 router.get('/activity', ctrl.getActivity);
 
 router.get('/organizations', requirePermission('organizations'), ctrl.getOrganizations);
+// Partners reuse the 'organizations' permission scope (entity-management,
+// adjacent concern) rather than a new permission key — adding a dedicated
+// 'partners' scope would also require wiring it into the scoped-admin
+// permission picker UI, out of scope for "add a partners list screen".
+router.get('/partners', requirePermission('organizations'), ctrl.getPartners);
 router.get('/organizations/:id', requirePermission('organizations'), ctrl.getOrganization);
 router.post('/organizations/:id/approve', requirePermission('organizations'), ctrl.approve);
 router.post('/organizations/:id/reject', requirePermission('organizations'), ctrl.reject);

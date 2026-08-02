@@ -67,6 +67,9 @@ const campaignPartnersRoutes =
 const partnerInvitesRoutes =
   require('./modules/partner-invites/partner-invites.routes');
 
+const partnerImportRoutes =
+  require('./modules/partner-import/partner-import.routes');
+
 const socialMetaController =
   require('./modules/social-meta/social-meta.controller');
 
@@ -167,6 +170,11 @@ app.use(
 app.use(
   '/api/invites',
   partnerInvitesRoutes
+);
+
+app.use(
+  '/api/partner-import',
+  partnerImportRoutes
 );
 
 /*

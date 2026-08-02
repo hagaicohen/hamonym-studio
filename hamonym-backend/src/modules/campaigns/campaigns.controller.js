@@ -19,6 +19,7 @@ function getStatusCode(
     case 'Slug is required':
     case 'Entity ID is required':
     case 'No fields supplied':
+    case 'Campaign title is required to publish':
       return 400;
 
     case 'Campaign slug already exists':
@@ -60,6 +61,9 @@ function getErrorMessage(
 
     case 'Campaign is locked':
       return 'הקמפיין נעול על ידי מנהל הפלטפורמה';
+
+    case 'Campaign title is required to publish':
+      return 'לא ניתן לפרסם קמפיין בלי שם';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';

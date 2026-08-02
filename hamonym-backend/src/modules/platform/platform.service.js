@@ -363,6 +363,12 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   const params = [];
   let idx = 1;
 
+  // Partner (business) entities are managed exclusively via /partners, never
+  // through this nonprofit approval workflow — same exclusion as
+  // entities.service.js#getMyEntities, so a business never gets shown or
+  // treated as an עמותה here.
+  where.push(`NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')`);
+
   if (status && status !== 'all') {
     where.push(`e.status = $${idx++}`);
     params.push(status);
@@ -434,6 +440,92 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
 
   return {
     organizations: listRes.rows,
+    total: totalRes.rows[0].total,
+    page,
+    limit,
+  };
+};
+
+const PARTNER_SORT_COLUMNS = {
+  name: 'COALESCE(NULLIF(e.display_name, \'\'), e.legal_name)',
+  created_at: 'e.created_at',
+  campaigns: 'campaigns_count',
+};
+
+// Partners (entity_roles.role='partner') never go through the nonprofit
+// approval lifecycle (draft/pending_review/active, association_certificate,
+// tax_document) — getOrganizations' filters/PROFILE_COMPLETION_SQL don't
+// apply to them at all, hence a separate query rather than a shared one with
+// extra branches. campaigns_count here counts DISTINCT campaign_partners
+// rows, not campaigns.entity_id (a Partner owns no campaigns of its own —
+// see PARTNER_DOMAIN_MODEL_ADR.md §11).
+exports.getPartners = async ({ search, sortBy, sortDir, page = 0, limit = 25, noCampaigns, newSince, hidden }) => {
+  const where = [`er.role = 'partner'`, `e.deleted_at IS NULL`];
+  const params = [];
+  let idx = 1;
+
+  if (search) {
+    where.push(`(e.display_name ILIKE $${idx} OR e.legal_name ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+  if (hidden) {
+    where.push(`e.is_hidden = true`);
+  }
+  if (newSince) {
+    where.push(`e.created_at >= NOW() - ($${idx++} || ' days')::interval`);
+    params.push(String(newSince));
+  }
+
+  const whereStr = `WHERE ${where.join(' AND ')}`;
+  const sortCol = PARTNER_SORT_COLUMNS[sortBy] || 'e.created_at';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+  const noCampaignsClause = noCampaigns ? `AND COALESCE(camp.campaigns_count, 0) = 0` : '';
+
+  const [listRes, totalRes] = await Promise.all([
+    db.query(
+      `SELECT
+         e.id, e.display_name, e.legal_name, e.logo_url, e.website, e.is_hidden,
+         e.created_at, e.updated_at,
+         owner.full_name AS owner_name, owner.email AS owner_email,
+         COALESCE(camp.campaigns_count, 0) AS campaigns_count
+       FROM entities e
+       JOIN entity_roles er ON er.entity_id = e.id
+       LEFT JOIN LATERAL (
+         SELECT u.full_name, u.email
+         FROM user_entities ue
+         JOIN users u ON u.id = ue.user_id
+         WHERE ue.entity_id = e.id AND ue.role = 'owner'
+         LIMIT 1
+       ) owner ON true
+       LEFT JOIN LATERAL (
+         SELECT COUNT(DISTINCT cp.campaign_id)::int AS campaigns_count
+         FROM campaign_partners cp
+         WHERE cp.partner_entity_id = e.id
+       ) camp ON true
+       ${whereStr}
+       ${noCampaignsClause}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total
+       FROM entities e
+       JOIN entity_roles er ON er.entity_id = e.id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(DISTINCT cp.campaign_id)::int AS campaigns_count
+         FROM campaign_partners cp
+         WHERE cp.partner_entity_id = e.id
+       ) camp ON true
+       ${whereStr}
+       ${noCampaignsClause}`,
+      params
+    ),
+  ]);
+
+  return {
+    partners: listRes.rows,
     total: totalRes.rows[0].total,
     page,
     limit,

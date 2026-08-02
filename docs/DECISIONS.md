@@ -746,3 +746,18 @@ Backend: migration `033_partner_draft.sql` — `entities.blocks`/`entities.layou
 **המשתמש ביקש אישור מפורש** שהקו המקווקו הוא **עריכה-בלבד** ונעלם כשמציגים את הדף בפועל. במקום להסתפק בהצהרה, בוצע אימות end-to-end אמיתי: נוצר container בבילדר → `hasZoneClass:true, outlineStyle:'dashed'` → **נשמר בפועל** (לחיצה על "שמירה", לא רק state בזיכרון) → נטען הדף הציבורי האמיתי (`/partners/:id/view`, ללא הרשאות עריכה) → `hasZoneClass:false, outlineStyle:'none'`. מאומת גם חזותית — צילום מסך של הדף הציבורי מראה עמוד נקי לגמרי, בלי שום עקבות לקו המקווקו או ל-placeholder הריק (שגם הוא מותנה `pageBuilderActive`). נתוני test (כולל השותף השמור) נוקו.
 
 ---
+
+**2026-07-31 (המשך — יצירת דף שותף בעזרת AI, על גבי הצינור הקיים של "יצירת קמפיין עם AI")**
+
+**הבקשה:** להרחיב את `/campaigns/create/ai` (extract-documents → Brief → Draft) כך שיתמוך גם ביצירת **דף שותף עסקי**, לא רק קמפיין — מסמך/תמונה של עסק (PDF, JPEG וכו') → דף שותף מוכן עם Hero + טקסט "אודות" + גלריה, בלי שהמנהל יצטרך להקליד הכל ידנית.
+
+**החלטת מפתח: שימוש חוזר מלא בצינור הקיים, בלי לבנות משהו חדש.** בדיקה (agent חקירה) גילתה שהארכיטקטורה הקיימת כבר מפרידה בין "חילוץ עובדות" (`ExtractedFacts`, גנרי לגמרי) ל"כתיבת Brief" (הפרומפט היחיד שבאמת תלוי בהקשר — קמפיין=תרומה מול שותף=עסק) ל"בניית בלוקים" (100% בצד ה-frontend, גנרי לחלוטין, לא תלוי ב-ownerType). המשמעות: כל הלוגיקה של `applyStoryContent`/`interleaveStoryWithImages`/`addGalleryBlock` ב-`ai-campaign-creation-page.component.ts` נעשית שימוש חוזר **בלי שינוי אחד** — רק שכבת ניתוב/UI חדשה סביבה.
+
+**מימוש:**
+- **Backend:** `targetType: 'campaign'|'partner'` מועבר מה-frontend דרך `extract-documents`/`refine-brief` עד ל-`briefBuilder.build()`, שבוחר בין `BRIEF_SYSTEM_PROMPT` (קמפיין) ל-`BRIEF_SYSTEM_PROMPT_PARTNER` (שותף) — פרומפט Hebrew מקביל מלא עם מסגור עסקי: `suggestedTargetAmount` תמיד null (לא רלוונטי), קריאות-לפעולה בלי שפת תרומה ("בקרו באתר שלנו"/"צרו קשר"), הסיפור מתאר את העסק עצמו (מסגרת "אודות" ירוקה-עד, לא appeal לתרומה), ו-`urgency` כמעט תמיד low/medium. אותה צורת JSON בדיוק כמו הפרומפט של קמפיין — Extraction עצמו לא צריך לדעת כלום על ה-targetType (Facts גנרי לגמרי).
+- **Frontend:** route חדש `/partners/create/ai` (עם `authGuard` בלבד, לא `campaignEditorGuard` — כי משתמש שיוצר את השותף הראשון שלו עדיין אין לו role של entity-manager, וה-guard הרגיל היה חוסם אותו). אותו קומפוננטה בדיוק (`AiCampaignCreationPageComponent`) מזהה `creationMode:'partner'` לפי ה-URL, ומחביאה את בורר "קמפיין/עמותה חדשה/שניהם" ואת שדה "יעד גיוס" (שניהם לא רלוונטיים לשותף). יצירה בפועל: `createEntity()` + `addRole('partner')` (הרבה יותר פשוט מהאשף הרב-שדות של הקמת עמותה) → זריעת `draft.blocks = [heroBlock, storyBlock]` ידנית (כי `createInitialPartnerDraft()` מתחיל עם `blocks:[]`, בניגוד לקמפיין) → אותם helper methods הגנריים בונים את שאר הבלוקים → שמירה → ניווט ל-`/partners/:id/builder`.
+- **UI entry point:** כפתור "🤖 צור בעזרת AI" ב-`partners-list-page` (גם בכותרת וגם ב-empty state) — בלי זה, ה-route היה קיים אבל בלתי-נגיש מהממשק.
+
+**תוצאות בדיקה (Playwright, end-to-end אמיתי מול backend+DB אמיתיים):** קלט טקסט חופשי על עסק נגרות בדיוני → ה-UI הציג נכון מסך ייעודי ("✨ יצירת דף שותף עם AI") בלי בורר-מצב ובלי שדה יעד-גיוס → ה-Brief שחזר תיאר את העסק במסגרת "אודות" גנרית (לא תרומה) → אישור יצר entity אמיתי עם role `partner`, בנה draft עם 2 בלוקים (Hero + טקסט "אודות" עם התוכן שנוצר), שמר, וניווט ל-`/partners/:id/builder` בפועל — מאומת חזותית בצילום מסך של הבילדר האמיתי מציג את שם העסק ואת טקסט "אודות". אפס שגיאות קונסול. `ng build --configuration development` נקי (frontend). נתוני test (השותף שנוצר, וגם entity זמני נפרד לבדיקת הכפתור ב-partners-list-page) נוקו דרך `DELETE /api/entities/:id`.
+
+---
