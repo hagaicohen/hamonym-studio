@@ -9,6 +9,15 @@ exports.listForCampaign = async (req, res) => {
   }
 };
 
+exports.listCampaignsForPartner = async (req, res) => {
+  try {
+    const campaigns = await service.listCampaignsForPartner(req.user.id, req.params.partnerId);
+    res.json({ campaigns });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
 exports.listPublicForCampaign = async (req, res) => {
   try {
     const partners = await service.listPublicForCampaign(req.params.slug);
@@ -30,10 +39,37 @@ exports.create = async (req, res) => {
   }
 };
 
+exports.getOne = async (req, res) => {
+  try {
+    const partner = await service.getOne(req.user.id, req.params.id);
+    res.json({ partner });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
 exports.update = async (req, res) => {
   try {
     const partner = await service.update(req.user.id, req.params.id, req.body);
     res.json({ partner });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.getDraft = async (req, res) => {
+  try {
+    const draft = await service.getDraft(req.user.id, req.params.id);
+    res.json(draft);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.updateDraft = async (req, res) => {
+  try {
+    const draft = await service.updateDraft(req.user.id, req.params.id, req.body);
+    res.json(draft);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }

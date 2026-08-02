@@ -42,6 +42,14 @@ router.get(
 
 );
 
+// Standalone Partner back-office (Scenario 0 / "Partner First") — entities
+// the caller edits AND that actually hold the 'partner' role.
+router.get(
+  '/my-partners',
+  requireAuth,
+  controller.getMyPartners
+);
+
 // Partner Search — Phase 4 (Discovery). Platform-wide, any authenticated
 // user; not scoped to the caller's own entities (that's the whole point).
 router.get(

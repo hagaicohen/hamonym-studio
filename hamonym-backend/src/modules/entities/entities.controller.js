@@ -672,3 +672,16 @@ exports.getPublicPartner = async (req, res) => {
     res.status(err.status || 500).json({ error: err.message });
   }
 };
+
+// =========================================================
+// MY PARTNERS (standalone Partner back-office)
+// =========================================================
+
+exports.getMyPartners = async (req, res) => {
+  try {
+    const partners = await service.getMyPartners(req.user.id);
+    res.json({ partners });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

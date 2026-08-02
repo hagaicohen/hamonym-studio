@@ -11,7 +11,18 @@ router.get('/public/:slug', controller.listPublicForCampaign);
 // docs/PARTNER_DOMAIN_MODEL_ADR.md §4 ownership split.
 router.get('/campaign/:campaignId', requireAuth, controller.listForCampaign);
 router.post('/campaign/:campaignId', requireAuth, controller.create);
+
+// Reverse direction — "which campaigns use my partner" (standalone Partner
+// back-office, Scenario 0). Ownership resolved against the partner itself.
+router.get('/partner/:partnerId', requireAuth, controller.listCampaignsForPartner);
+
+router.get('/:id', requireAuth, controller.getOne);
 router.patch('/:id', requireAuth, controller.update);
 router.delete('/:id', requireAuth, controller.remove);
+
+// Campaign Participation draft — Phase 5 model refinement (migration 036).
+// Ownership resolved against the campaign, same as PATCH/DELETE above.
+router.get('/:id/draft', requireAuth, controller.getDraft);
+router.patch('/:id/draft', requireAuth, controller.updateDraft);
 
 module.exports = router;
