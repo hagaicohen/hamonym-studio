@@ -36,10 +36,12 @@ export interface DonationPayload {
     postalCode?: string;
   };
   amount:  number;
-  // Cardcom line items — just title + price, nothing type-specific (see
-  // hamonym-backend migrations/024_registration_orders.sql for the
+  // Cardcom line items — title + price drive pricing; id is optional (absent
+  // for registration-option lines, which have no Offering) and is only used
+  // to attribute a paid donation to an Offering for the "X מתוך Y" purchase
+  // count (see hamonym-backend migrations/024_registration_orders.sql for the
   // Registration Order/Participant side).
-  rewards: Array<{ title: string; minimumAmount: number }>;
+  rewards: Array<{ id?: string; title: string; minimumAmount: number }>;
   // 2.4 — Multi-Participant Registration: one entry per registered person
   // (a Registration Order can have 1+ Participants). Separate from `rewards`
   // (which drives pricing/Cardcom line items) — this is "who's registered",
@@ -115,6 +117,11 @@ export class DonationService {
       completedAt: new Date(d.completed_at),
       isAnonymous: d.is_anonymous,
     }))));
+  }
+
+  getRewardCounts(slug: string): Observable<Record<string, number>> {
+    return this.http.get<{ counts: Record<string, number> }>(`${this.apiUrl}/campaign/${slug}/reward-counts`)
+      .pipe(map(r => r.counts ?? {}));
   }
 
   getReceipt(id: string): Observable<Receipt> {

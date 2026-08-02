@@ -11,7 +11,7 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { UploadService } from '../../../../core/services/upload.service';
-import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
+import { CampaignStudioStateService, createInitialPartnerDraft, CampaignBlock } from '../../services/campaign-studio-state.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { buildPayload as buildOrgPayload, initialState as initialOrgState, OrganizationRegistrationState } from '../../../organization-registration/services/organization-registration-state.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
@@ -121,23 +121,37 @@ export class AiCampaignCreationPageComponent implements OnInit {
   fileTypeOptions = FILE_TYPE_OPTIONS;
   entityTypeOptions = ENTITY_TYPE_OPTIONS;
 
-  // A single explicit 3-way choice (2026-07-23, replacing an earlier
-  // 2-level "create new org" checkbox + nested "org only" checkbox — the
-  // user found that unclear and asked for a straightforward pick between
-  // the 3 real outcomes instead). Deliberately NOT inferred from free-text
-  // wording: creating a real owned entity is consequential enough that the
-  // user picks this up front, before the Brief is even generated.
-  creationMode = signal<'campaign' | 'org-only' | 'org-and-campaign'>('campaign');
-  createNewOrg = computed(() => this.creationMode() !== 'campaign');
+  // A single explicit choice (2026-07-23, replacing an earlier 2-level
+  // "create new org" checkbox + nested "org only" checkbox — the user found
+  // that unclear and asked for a straightforward pick between the real
+  // outcomes instead). Deliberately NOT inferred from free-text wording:
+  // creating a real owned entity is consequential enough that the user
+  // picks this up front, before the Brief is even generated. 'partner'
+  // (2026-07-31) is its own outcome, not a 4th org-creation variant — a
+  // Partner is a much simpler entity (see createPartnerAndBuildPage()) with
+  // no org registration wizard at all, and always starts on this route
+  // (partners/create/ai) rather than being selectable from campaign mode.
+  creationMode = signal<'campaign' | 'org-only' | 'org-and-campaign' | 'partner'>('campaign');
+  createNewOrg = computed(() => this.creationMode() === 'org-only' || this.creationMode() === 'org-and-campaign');
   orgOnly = computed(() => this.creationMode() === 'org-only');
+  isPartnerMode = computed(() => this.creationMode() === 'partner');
 
   pageTitle = computed(() => {
     switch (this.creationMode()) {
       case 'org-only': return '✨ יצירת עמותה עם AI';
       case 'org-and-campaign': return '✨ יצירת עמותה וקמפיין עם AI';
+      case 'partner': return '✨ יצירת דף שותף עם AI';
       default: return '✨ יצירת קמפיין עם AI';
     }
   });
+
+  // Simplified "review" field for Partner mode — a business Partner is just
+  // display_name/website/contact (see createEntity() payload in
+  // partners-list-page.component.ts), not the full multi-field org
+  // registration wizard newOrgName/newOrgNumber/etc. below serve. Prefilled
+  // from the Brief in submit(), always user-editable before creation.
+  newPartnerName = signal('');
+  canCreatePartner = computed(() => !!this.newPartnerName().trim());
 
   // Editable "new organization" review fields — prefilled from the Brief
   // once it arrives (see submit()), but always user-editable/confirmable
@@ -216,6 +230,15 @@ export class AiCampaignCreationPageComponent implements OnInit {
     // all — it silently blocks every click on the page forever, which is
     // exactly the "spinner never stops" bug found via live testing.
     this.loader.hide();
+
+    // Two routes, one component (2026-07-31) — partners/create/ai is the
+    // Partner entry point (see app.routes.ts), campaigns/create/ai the
+    // original campaign one. Checked once here rather than injecting
+    // ActivatedRoute for a single boolean, since neither route ever passes
+    // route params/data this page reads.
+    if (this.router.url.startsWith('/partners/create/ai')) {
+      this.creationMode.set('partner');
+    }
   }
 
   onFilesSelected(event: Event): void {
@@ -260,6 +283,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     if (this.websiteUrl().trim()) formData.append('websiteUrl', this.websiteUrl().trim());
     if (this.enableWebResearch()) formData.append('enableWebResearch', 'true');
     if (this.hasGeneratedOnce()) formData.append('isRegeneration', 'true');
+    if (this.isPartnerMode()) formData.append('targetType', 'partner');
 
     this.http
       .post<{ brief: Brief; facts: ExtractedFacts; generationId: string | null }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
@@ -276,6 +300,9 @@ export class AiCampaignCreationPageComponent implements OnInit {
             this.newOrgName.set(res.brief.organizationName || '');
             this.newOrgNumber.set(res.brief.organizationNumber || '');
             this.newOrgDescription.set(res.brief.organizationDescription || '');
+          }
+          if (this.isPartnerMode()) {
+            this.newPartnerName.set(res.brief.organizationName || res.brief.title || '');
           }
           this.submitting.set(false);
           this.loader.hide();
@@ -315,6 +342,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
         userAnswers: answered,
         enableWebResearch: this.enableWebResearch(),
         websiteUrl: this.websiteUrl().trim() || undefined,
+        targetType: this.isPartnerMode() ? 'partner' : 'campaign',
       }, { headers })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
@@ -340,6 +368,18 @@ export class AiCampaignCreationPageComponent implements OnInit {
   approveAndCreate(): void {
     const brief = this.brief();
     if (!brief || this.creatingCampaign()) return;
+
+    if (this.isPartnerMode()) {
+      if (!this.canCreatePartner()) {
+        this.createError.set('יש להשלים שם עסק לפני יצירה.');
+        return;
+      }
+      this.createError.set(null);
+      this.creatingCampaign.set(true);
+      this.loader.show('יוצרים את דף השותף...');
+      this.createPartnerAndBuildPage(brief);
+      return;
+    }
 
     if (this.createNewOrg() && !this.canCreateNewOrg()) {
       this.createError.set('יש להשלים סוג ישות, שם עמותה ומספר עמותה לפני יצירה.');
@@ -427,6 +467,80 @@ export class AiCampaignCreationPageComponent implements OnInit {
     return this.entitiesApi.createEntity(buildOrgPayload(state)).pipe(map((res) => res.entity));
   }
 
+  // Partner creation (2026-07-31) — a Partner is a much simpler entity than
+  // an organization: no legal-name/registration-number/category wizard, no
+  // draft/pending_review gate, just display_name + optional website/contact
+  // (exact same createEntity() + addRole('partner') pair
+  // partners-list-page.component.ts's own manual "+ שותף חדש" flow uses —
+  // an AI-created partner is indistinguishable from a manually-created one).
+  // website/contact aren't in Brief itself (see campaign-creation.types.js —
+  // Brief never carries them, only Facts does) — read straight from `facts`
+  // instead, which the page already carries forward through the whole flow.
+  private createPartnerAndBuildPage(brief: Brief): void {
+    const facts = (this.facts() || {}) as Record<string, unknown>;
+    const payload: Record<string, string> = { display_name: this.newPartnerName().trim() };
+    const website = this.websiteUrl().trim() || (facts['socialLinks'] as string[] | undefined)?.[0];
+    if (website) payload['website'] = website;
+    if (facts['contactEmail']) payload['contact_email'] = facts['contactEmail'] as string;
+    if (facts['contactPhone']) payload['contact_phone'] = facts['contactPhone'] as string;
+
+    this.entitiesApi.createEntity(payload).pipe(
+      switchMap((res) => this.entitiesApi.addRole(res.entity.id, 'partner').pipe(map(() => res.entity))),
+    ).subscribe({
+      next: (entity) => this.buildPartnerDraftAndSave(entity.id, brief),
+      error: (err) => {
+        this.creatingCampaign.set(false);
+        this.loader.hide();
+        this.createError.set(err?.error?.error || 'יצירת השותף נכשלה, נסו שוב');
+      },
+    });
+  }
+
+  // createInitialPartnerDraft() starts with EMPTY blocks (§13 — "don't get
+  // stuck with the Hero," see campaign-studio-state.service.ts) — unlike
+  // createInitialDraft() (campaigns), there's no starter rich-text block for
+  // applyStoryContent()/interleaveStoryWithImages() to find and replace, and
+  // Hero never auto-renders for a Partner without an explicit 'hero' block
+  // in the tree. Both are seeded here, once, before reusing those SAME
+  // helper methods completely unmodified — they only ever operate on
+  // `campaignState.draft.blocks` generically, regardless of ownerType.
+  private buildPartnerDraftAndSave(entityId: string, brief: Brief): void {
+    const displayName = this.newPartnerName().trim();
+    const draft = createInitialPartnerDraft(entityId, displayName);
+    if (brief.shortDescription) draft.shortDescription = brief.shortDescription;
+
+    const heroBlock: CampaignBlock = {
+      id: Math.random().toString(36).slice(2, 10), type: 'hero', order: 1, visible: true,
+      spacingTop: 0, spacingBottom: 0, label: '', data: {},
+    };
+    const storyBlock: CampaignBlock = {
+      id: Math.random().toString(36).slice(2, 10), type: 'rich-text', order: 2, visible: true,
+      spacingTop: 0, spacingBottom: 0, label: 'אודות', data: { content: '', lineHeight: 1.6 },
+    };
+    draft.blocks = [heroBlock, storyBlock];
+
+    this.campaignState.loadDraft(draft);
+    this.applyStoryContent(brief);
+
+    this.uploadImages(brief, 'partners').subscribe(() => {
+      this.entitiesApi.updateDraft(entityId, {
+        blocks: this.campaignState.draft.blocks,
+        layout: this.campaignState.draft.layout,
+      }).subscribe({
+        next: () => {
+          this.creatingCampaign.set(false);
+          this.loader.hide();
+          this.router.navigate(['/partners', entityId, 'builder']);
+        },
+        error: (err) => {
+          this.creatingCampaign.set(false);
+          this.loader.hide();
+          this.createError.set(err?.error?.error || 'שמירת דף השותף נכשלה, נסו שוב');
+        },
+      });
+    });
+  }
+
   // Uploaded files tagged "לוגו"/"תעודת התאגדות" belong to the ORG itself,
   // not a future campaign — reuses EntitiesService's own upload endpoints
   // (the same ones organization-registration's manual wizard uses after
@@ -460,7 +574,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
           this.campaignState.patch(patches.campaignDraftPatch as any);
           this.applyStoryContent(brief);
 
-          this.uploadCampaignImages(brief).subscribe(() => {
+          this.uploadImages(brief, 'campaigns').subscribe(() => {
             this.campaignApi.create(entityId, this.campaignState.draft).subscribe({
               next: (created) => {
                 if (created.id) this.linkGenerationToCampaign(created.id);
@@ -500,22 +614,28 @@ export class AiCampaignCreationPageComponent implements OnInit {
 
   // Uploaded files were only ever used as Vision-LLM input for extraction
   // and then discarded — real images (a logo, a hero photo) never actually
-  // reached the created campaign. Reuses the same UploadService +
+  // reached the created campaign/partner. Reuses the same UploadService +
   // /api/media/upload endpoint Campaign Studio's own basic-info step uses,
-  // rather than building separate storage plumbing. Doesn't block campaign
-  // creation on failure (catchError swallows it) — same "partial success"
-  // philosophy as a failed website fetch during combined intake: missing
-  // images shouldn't prevent the campaign from being created at all.
+  // rather than building separate storage plumbing. Doesn't block creation
+  // on failure (catchError swallows it) — same "partial success" philosophy
+  // as a failed website fetch during combined intake: missing images
+  // shouldn't prevent the campaign/partner from being created at all.
   //
   // Found via live testing (2026-07-23): a user uploaded several photos and
   // explicitly asked for all of them to appear — only the first non-logo
   // image was ever used (as the hero cover), the rest were silently
-  // dropped. createInitialDraft() has no default gallery block, so one is
-  // now built here and inserted into blocks, holding EVERY non-logo image
-  // (the same first one also still becomes the hero cover — some overlap
-  // is fine, it's normal for a campaign's hero photo to also appear in its
-  // own gallery).
-  private uploadCampaignImages(brief: Brief): Observable<unknown> {
+  // dropped. createInitialDraft()/createInitialPartnerDraft() have no
+  // default gallery block, so one is now built here and inserted into
+  // blocks, holding EVERY non-logo image (the same first one also still
+  // becomes the hero cover — some overlap is fine, it's normal for a hero
+  // photo to also appear in its own gallery).
+  //
+  // `folderPrefix` ('campaigns' or 'partners', 2026-07-31) is the only
+  // thing that differs between the two owners — everything else (which
+  // photo becomes hero/gallery/hidden, patching campaignLogoUrl/
+  // coverImageUrl, interleaving with the story) is the exact same generic
+  // CampaignDraft field/blocks logic regardless of ownerType.
+  private uploadImages(brief: Brief, folderPrefix: 'campaigns' | 'partners'): Observable<unknown> {
     const images = this.files().filter((f) => f.file.type.startsWith('image/'));
     const logoFile = images.find((f) => f.typeLabel === 'לוגו');
     // Same order/filter the backend used to build its "image1"/"image2"...
@@ -542,19 +662,19 @@ export class AiCampaignCreationPageComponent implements OnInit {
 
     const uploads: Observable<unknown>[] = [];
     if (logoFile) {
-      uploads.push(this.uploadService.upload(logoFile.file, 'campaigns/logos').pipe(
+      uploads.push(this.uploadService.upload(logoFile.file, `${folderPrefix}/logos`).pipe(
         tap((url) => this.campaignState.patch({ campaignLogoUrl: url })),
       ));
     }
     if (heroFile) {
-      uploads.push(this.uploadService.upload(heroFile.file, 'campaigns/covers').pipe(
+      uploads.push(this.uploadService.upload(heroFile.file, `${folderPrefix}/covers`).pipe(
         tap((url) => this.campaignState.patch({ coverImageUrl: url })),
       ));
     }
     if (galleryFiles.length) {
       uploads.push(
         forkJoin(galleryFiles.map((f) =>
-          this.uploadService.upload(f.file, 'campaigns/gallery').pipe(
+          this.uploadService.upload(f.file, `${folderPrefix}/gallery`).pipe(
             map((url) => ({ url, caption: f.note || undefined })),
           ),
         )).pipe(
@@ -740,17 +860,24 @@ export class AiCampaignCreationPageComponent implements OnInit {
     this.websiteUrl.set('');
     this.files.set([]);
     this.enableWebResearch.set(false);
-    this.creationMode.set('campaign');
+    // Reset back to the mode this ROUTE started in, not always 'campaign' —
+    // partners/create/ai must stay in 'partner' mode after a reset, same as
+    // it was set once in ngOnInit (there's no toggle back to campaign mode
+    // on this route at all, see the template).
+    this.creationMode.set(this.isPartnerMode() ? 'partner' : 'campaign');
     this.newOrgEntityType.set('');
     this.newOrgName.set('');
     this.newOrgNumber.set('');
     this.newOrgDescription.set('');
+    this.newPartnerName.set('');
   }
 
   goToQuickStudio(): void {
     // Escape hatch — every AI entry point still leads back to the existing,
-    // proven Studio flow (ADR decision 1: one Studio, multiple doors in).
-    this.router.navigate(['/campaigns/create']);
+    // proven manual flow (ADR decision 1: one Studio, multiple doors in).
+    // Partner mode has no equivalent "manual builder" route of its own —
+    // /partners (the list page) is where "+ שותף חדש" already lives.
+    this.router.navigate([this.isPartnerMode() ? '/partners' : '/campaigns/create']);
   }
 }
 

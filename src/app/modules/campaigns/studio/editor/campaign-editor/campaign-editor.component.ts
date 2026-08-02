@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, Input, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CampaignStepperComponent } from '../../../shared/components/campaign-stepper/campaign-stepper.component';
 import { CampaignEditorFooterComponent } from '../../../shared/components/footer/campaign-editor-footer/campaign-editor-footer.component';
@@ -36,7 +36,7 @@ const TOTAL_STEPS = 10;
   templateUrl: './campaign-editor.component.html',
   styleUrls: ['./campaign-editor.component.css'],
 })
-export class CampaignEditorComponent {
+export class CampaignEditorComponent implements OnInit {
   state = inject(CampaignStudioStateService);
 
   @ViewChild(CampaignBasicStepComponent)
@@ -47,7 +47,20 @@ export class CampaignEditorComponent {
 
   readonly TOTAL_STEPS = TOTAL_STEPS;
 
+  // Set when returning from a "create a partner mid-campaign" side-trip to
+  // /partners (see partner-link-modal's 'create' tab / §14) — lands the
+  // manager back on the step they left, instead of step 1. Purely a UX
+  // convenience; campaign-studio-page.component.ts reads the ?returnStep=
+  // query param and passes it here.
+  @Input() initialStep?: number;
+
   currentStep = 1;
+
+  ngOnInit(): void {
+    if (this.initialStep && this.initialStep >= 1 && this.initialStep <= TOTAL_STEPS) {
+      this.currentStep = this.initialStep;
+    }
+  }
 
   get isEditMode(): boolean {
     return this.state.isEditMode;

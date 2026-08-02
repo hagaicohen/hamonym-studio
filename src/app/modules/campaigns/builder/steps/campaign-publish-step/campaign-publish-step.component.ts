@@ -85,15 +85,16 @@ export class CampaignPublishStepComponent implements OnInit {
     );
   }
 
-  // title/shortDescription are deliberately NOT hard-blocked here — a manager
-  // may design the page so they never render as literal text (showHeroTitle/
-  // showHeroSubtitle can hide them). Flagging a thin/missing title or
-  // subtitle is the Campaign Advisor's job (a recommendation), not a
-  // technical gate. Only things that would make the page structurally
-  // broken or non-functional if missing stay a hard block.
+  // title IS a hard block (2026-08-02) — a campaign can't be published
+  // nameless. shortDescription stays a soft recommendation (the Campaign
+  // Advisor's job), same reasoning as before: a manager may design the page
+  // so it never renders as literal text (showHeroSubtitle can hide it) —
+  // but the title is the campaign's identity, shown everywhere (lists,
+  // admin, browser tab), not just optionally on the Hero.
   get missingFields(): string[] {
     const d = this.draft;
     const missing: string[] = [];
+    if (!d.title?.trim())            missing.push('שם הקמפיין');
     if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
     if (!this.hasHero)               missing.push('תמונה / וידאו ראשי');
     if (!d.targetAmount)             missing.push('יעד גיוס');

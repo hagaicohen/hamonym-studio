@@ -1,11 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideAngularModule, Monitor, Smartphone, Maximize2, Minimize2, ArrowRight } from 'lucide-angular';
+import { LucideAngularModule, Monitor, Smartphone, Maximize2, Minimize2, ArrowRight, House, Eye, User, Save, Check, LoaderCircle } from 'lucide-angular';
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaign-preview.component';
 import { CampaignStudioStateService, createInitialCampaignPartnerDraft } from '../../../services/campaign-studio-state.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
+import { CampaignApiService } from '../../../services/campaign-api.service';
 import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
 
 // Phase 5 model refinement (2026-07-30) — "Campaign Participation" Builder.
@@ -26,6 +27,7 @@ import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
 export class CampaignPartnerBuilderPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private campaignPartnersService = inject(CampaignPartnersService);
+  private campaignApiService = inject(CampaignApiService);
   ui = inject(StudioUiService);
   state = inject(CampaignStudioStateService);
 
@@ -34,12 +36,24 @@ export class CampaignPartnerBuilderPageComponent implements OnInit {
   readonly Maximize2 = Maximize2;
   readonly Minimize2 = Minimize2;
   readonly ArrowRight = ArrowRight;
+  readonly House = House;
+  readonly Eye = Eye;
+  readonly User = User;
+  readonly Save = Save;
+  readonly Check = Check;
+  readonly LoaderCircle = LoaderCircle;
 
   campaignPartnerId = '';
   partnerEntityId = '';
   partnerDisplayName = '';
   campaignTitle = '';
   campaignSlug = '';
+
+  // Live campaign banner, same as partner-public-page.component.ts — shown
+  // in the preview pane so the manager sees exactly what donors will see,
+  // without needing to open the composed public page separately.
+  campaignCoverImageUrl: string | null = null;
+  campaignEntityLogo: string | null = null;
 
   loading = true;
   saving = false;
@@ -61,6 +75,16 @@ export class CampaignPartnerBuilderPageComponent implements OnInit {
         this.partnerDisplayName = row.partner.partnerDisplayName;
         this.campaignTitle = row.partner.campaignTitle;
         this.campaignSlug = row.partner.campaignSlug;
+
+        if (this.campaignSlug) {
+          this.campaignApiService.getBySlugPublic(this.campaignSlug).subscribe({
+            next: campaign => {
+              this.campaignCoverImageUrl = campaign.coverImageUrl;
+              this.campaignEntityLogo = campaign.entityLogo ?? null;
+            },
+            error: () => {},
+          });
+        }
 
         this.campaignPartnersService.getDraft(id).subscribe({
           next: draft => {

@@ -382,6 +382,15 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.patch({ blocks });
   }
 
+  clearImportReview(id: string): void {
+    const blocks = this.state.draft.blocks.map(b => {
+      if (b.id !== id) return b;
+      const { importReview, ...rest } = b;
+      return rest as CampaignBlock;
+    });
+    this.state.patch({ blocks });
+  }
+
   updateRichText(id: string, content: string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     const prev = block?.data as RichTextBlockData;

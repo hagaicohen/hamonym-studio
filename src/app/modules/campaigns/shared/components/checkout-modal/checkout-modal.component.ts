@@ -270,6 +270,7 @@ export class CheckoutModalComponent implements OnInit {
         })
       : [
           ...this.cartOfferings.map(o => ({
+            id:            o.id,
             title:         o.title,
             minimumAmount: o.minimumAmount ?? 0,
           })),

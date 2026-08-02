@@ -71,17 +71,17 @@
       <div class="rs-layout-label">מיקום התמונה בכרטיסיה</div>
       <div class="rs-layout-btns">
         <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="(draft.layout.rewardsImagePosition ?? 'full') === 'full'"
-          (click)="setRewardsImagePosition('full')">
-          מתחת לכותרת (ברירת מחדל)
+          [class.rs-layout-btn--active]="(draft.layout.rewardsImagePosition ?? 'inline') === 'inline'"
+          (click)="setRewardsImagePosition('inline')">
+          אייקון קטן בצד הכותרת (ברירת מחדל)
         </button>
         <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="draft.layout.rewardsImagePosition === 'inline'"
-          (click)="setRewardsImagePosition('inline')">
-          אייקון קטן בצד הכותרת
+          [class.rs-layout-btn--active]="draft.layout.rewardsImagePosition === 'full'"
+          (click)="setRewardsImagePosition('full')">
+          תמונה מתחת לכותרת
         </button>
       </div>
-      <div class="rs-layout-size-row" *ngIf="(draft.layout.rewardsImagePosition ?? 'full') === 'full'">
+      <div class="rs-layout-size-row" *ngIf="draft.layout.rewardsImagePosition === 'full'">
         <label class="rs-layout-size-label">גובה התמונה ({{ draft.layout.rewardsImageSize ?? 120 }}px)</label>
         <input type="range" min="60" max="240" step="10"
           [value]="draft.layout.rewardsImageSize ?? 120"
@@ -150,6 +150,28 @@
               [value]="stockInput"
               (input)="onStockInput($event)"
               placeholder="כמות יחידות">
+          </div>
+
+          <!-- עסק שמספק את התשורה (אופציונלי) -->
+          <div class="rf-field">
+            <div class="rf-label-row">
+              <label class="rf-label">עסק שמספק את התשורה (אופציונלי)</label>
+              <span class="rf-icon">🤝</span>
+            </div>
+
+            <div class="rf-partner-linked" *ngIf="linkedPartnerFor(offering.id) as cp; else pickPartner">
+              <span class="rf-partner-name">🤝 {{ cp.partnerDisplayName }}</span>
+              <button type="button" class="rf-partner-unlink" (click)="unlinkPartner(cp)">הסר</button>
+            </div>
+            <ng-template #pickPartner>
+              <button type="button" class="rf-partner-pick-btn"
+                [disabled]="!isFormValid || savingCampaignForLink"
+                (click)="openPartnerPickerForCurrentOffering()">
+                {{ savingCampaignForLink ? 'שומר קמפיין...' : '🤝 בחר עסק' }}
+              </button>
+              <p class="rf-partner-hint" *ngIf="!isFormValid">מלאו כותרת לתשורה קודם</p>
+              <p class="rf-partner-hint rf-partner-hint--error" *ngIf="linkPartnerError">{{ linkPartnerError }}</p>
+            </ng-template>
           </div>
 
           <!-- תמונה -->
@@ -297,19 +319,25 @@
             <div class="rs-card-title">{{ o.title }}</div>
             <p class="rs-card-desc">{{ o.description }}</p>
 
-            <!-- Partner linking (Phase 4) — only once the campaign is saved -->
-            <div class="rs-card-partner" *ngIf="draft.id">
-              <ng-container *ngIf="linkedPartnerFor(o.id) as cp; else noPartner">
-                <span class="rs-card-partner-label">🤝 מחובר ל: {{ cp.partnerDisplayName }}</span>
-                <a class="rs-card-btn rs-card-btn--edit" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener">✏ פרופיל השותף</a>
-                <a class="rs-card-btn rs-card-btn--edit" [routerLink]="['/campaign-partners', cp.id, 'builder']" target="_blank" rel="noopener">🎯 תוכן ההשתתפות בקמפיין</a>
-                <button class="rs-card-btn rs-card-btn--unlink" type="button" (click)="unlinkPartner(cp)">ניתוק</button>
-              </ng-container>
-              <ng-template #noPartner>
-                <button class="rs-card-btn rs-card-btn--partner" type="button" (click)="openLinkModal(o)">
-                  🤝 חבר שותף
+            <!-- Partner linking now happens from the create/edit form above
+                 (rf-field "עסק שמספק את התשורה") — this is just a read-only
+                 indicator + quick unlink/edit shortcuts for an already-linked
+                 reward, so managers browsing the saved list still see it.
+                 Small icon buttons (not full-text pills) — the card is only
+                 ~280px wide and long Hebrew labels wrapped into a mess. -->
+            <div class="rs-card-partner" *ngIf="linkedPartnerFor(o.id) as cp">
+              <span class="rs-card-partner-label">🤝 {{ cp.partnerDisplayName }}</span>
+              <div class="rs-card-partner-icons">
+                <a class="rs-card-icon-btn" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener" title="פרופיל השותף">
+                  <lucide-angular [img]="Building2" [size]="13"></lucide-angular>
+                </a>
+                <a class="rs-card-icon-btn" [routerLink]="['/campaign-partners', cp.id, 'builder']" target="_blank" rel="noopener" title="תוכן ההשתתפות בקמפיין">
+                  <lucide-angular [img]="Gift" [size]="13"></lucide-angular>
+                </a>
+                <button class="rs-card-icon-btn rs-card-icon-btn--danger" type="button" (click)="unlinkPartner(cp)" title="ניתוק">
+                  <lucide-angular [img]="X" [size]="13"></lucide-angular>
                 </button>
-              </ng-template>
+              </div>
             </div>
 
             <div class="rs-card-actions">
@@ -333,6 +361,8 @@
       [campaignId]="draft.id!"
       [rewardId]="linkModalRewardId"
       [rewardTitle]="linkModalRewardTitle"
+      [campaignTitle]="draft.title"
+      [campaignShortDescription]="draft.shortDescription"
       (linked)="onPartnerLinked($event)"
       (closed)="onLinkModalClosed()">
     </app-partner-link-modal>
@@ -359,6 +389,16 @@
         <label class="adv-label">נבחר / Hover</label>
         <app-color-picker [value]="draft.layout.theme.rewardCardBorderActive"
           (valueChange)="patchTheme({ rewardCardBorderActive: $event })"></app-color-picker>
+      </div>
+      <div class="adv-row">
+        <label class="adv-label">צבע כותרת</label>
+        <app-color-picker [value]="draft.layout.theme.rewardTitleColor ?? '#ffffff'"
+          (valueChange)="patchTheme({ rewardTitleColor: $event })"></app-color-picker>
+      </div>
+      <div class="adv-row">
+        <label class="adv-label">צבע תיאור</label>
+        <app-color-picker [value]="draft.layout.theme.rewardDescColor ?? '#ffffff'"
+          (valueChange)="patchTheme({ rewardDescColor: $event })"></app-color-picker>
       </div>
     </div>
 

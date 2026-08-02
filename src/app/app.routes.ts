@@ -132,6 +132,22 @@ export const routes: Routes = [
       ).then((m) => m.AiCampaignCreationPageComponent),
   },
 
+  // Same component as campaigns/create/ai — it reads the URL itself to
+  // decide creationMode('partner') vs the campaign flow (see
+  // ai-campaign-creation-page.component.ts's ngOnInit). authGuard, not
+  // campaignEditorGuard: creating a first Partner must work for a user with
+  // NO existing entity-manager role yet — campaignEditorGuard would block
+  // exactly that person (see partners-list-page.component.ts's own
+  // createPartner(), which has the same no-prerequisite requirement).
+  {
+    path: 'partners/create/ai',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/pages/ai-campaign-creation-page/ai-campaign-creation-page.component'
+      ).then((m) => m.AiCampaignCreationPageComponent),
+  },
+
   {
     path: 'campaigns/:id/edit',
     canActivate: [campaignEditorGuard],
@@ -373,6 +389,17 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/platform/pages/platform-organization-detail-page/platform-organization-detail-page.component').then(
             (m) => m.PlatformOrganizationDetailPageComponent,
+          ),
+      },
+      {
+        // Reuses the 'organizations' platform permission scope — see
+        // platform.routes.js's own comment on why a dedicated 'partners'
+        // scope wasn't introduced here.
+        path: 'platform/partners',
+        canActivate: [platformSectionGuard('organizations')],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-partners-page/platform-partners-page.component').then(
+            (m) => m.PlatformPartnersPageComponent,
           ),
       },
       {

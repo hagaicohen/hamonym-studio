@@ -32,6 +32,7 @@
   border: 1px solid #334155; border-radius: 10px;
   background: #0f172a; color: #e2e8f0; cursor: pointer;
   font-size: 13px; font-weight: 600;
+  text-decoration: none;
   transition: all 0.15s;
 }
 .cpb-back-button:hover { background: #334155; border-color: #7c3aed; color: #c4b5fd; }
@@ -51,17 +52,21 @@
 .cpb-device-btn.active { background: #583cd6; color: #fff; }
 .cpb-device-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
 
-.cpb-topbar-actions { justify-self: end; display: flex; align-items: center; gap: 10px; }
-.cpb-link-btn {
-  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
-  text-decoration: none; display: inline-block; white-space: nowrap;
+.cpb-topbar-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.cpb-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: 1px solid #334155; border-radius: 10px;
+  background: #0f172a; color: #e2e8f0; cursor: pointer; text-decoration: none;
+  transition: all 0.15s;
 }
-.cpb-save-btn {
-  background: #6fc9eb; color: #061b3a; border: none; border-radius: 8px;
-  padding: 8px 20px; font-weight: 700; font-size: 13px; cursor: pointer;
-}
-.cpb-save-btn:disabled { opacity: 0.6; cursor: default; }
+.cpb-icon-btn:hover { background: #334155; border-color: #7c3aed; color: #c4b5fd; }
+.cpb-icon-btn--save { background: #6fc9eb; color: #061b3a; border: none; }
+.cpb-icon-btn--save:hover { background: #5bb8da; }
+.cpb-icon-btn--save:disabled { opacity: 0.6; cursor: default; }
+.cpb-icon-btn--save.cpb-icon-btn--saved { background: #22c55e; color: #052e13; }
+.cpb-spin { animation: cpb-spin 0.8s linear infinite; }
+@keyframes cpb-spin { to { transform: rotate(360deg); } }
 
 .cpb-workspace {
   display: flex;
@@ -77,6 +82,46 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+}
+
+/* Live campaign banner — same look as partner-public-page.component.css'
+   .ppp-campaign-banner, shown above the block preview so this matches what
+   donors will actually see on the composed public page. */
+.cpb-campaign-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 140px;
+  padding: 20px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+.cpb-campaign-banner-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,.15), rgba(15,23,42,.55));
+}
+.cpb-campaign-banner-logo {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.cpb-campaign-banner-title {
+  position: relative;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,.35);
+  max-width: 34ch;
 }
 
 /* Draggable divider between editor and preview. */
@@ -111,8 +156,11 @@
 .cpb-preview-card--mobile app-campaign-preview {
   display: block;
   width: 390px;
+  height: 100%;
+  max-height: 100%;
   border-radius: 24px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow:
     0 0 0 2px #1e293b,
     0 0 0 10px #334155,
@@ -123,5 +171,9 @@
   .cpb-workspace { flex-direction: column; }
   .cpb-editor-card { width: 100% !important; border-bottom: 1px solid #e2e8f0; max-height: 50vh; }
   .cpb-resizer { display: none; }
-  .cpb-topbar { flex-wrap: wrap; }
+  .cpb-topbar { grid-template-columns: 1fr; justify-items: center; gap: 12px; padding: 12px; }
+  .cpb-topbar-title, .cpb-topbar-actions { justify-self: center; }
+  .cpb-topbar-title { align-items: center; text-align: center; }
+  .cpb-topbar-actions { flex-wrap: wrap; justify-content: center; row-gap: 8px; }
+  .cpb-device-switch { border: 1px solid rgba(255,255,255,0.12); }
 }

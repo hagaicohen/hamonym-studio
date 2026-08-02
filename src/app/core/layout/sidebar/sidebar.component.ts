@@ -27,6 +27,7 @@ const SETTINGS:    NavItem = { route: '/settings',    label: 'הגדרות',   i
 
 const PLATFORM_DASHBOARD:     NavItem = { route: '/platform',              label: 'דשבורד פלטפורמה', icon: 'platform', exactMatch: true };
 const PLATFORM_ORGANIZATIONS: NavItem = { route: '/platform/organizations', label: 'עמותות',          icon: 'ambassadors' };
+const PLATFORM_PARTNERS:      NavItem = { route: '/platform/partners',      label: 'שותפים',          icon: 'partners' };
 const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     label: 'קמפיינים',        icon: 'campaigns' };
 const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
 
@@ -68,7 +69,7 @@ export class SidebarComponent {
   readonly platformNavItems = computed(() => {
     if (!this.ctx.adminMode()) return [];
     const items = [PLATFORM_DASHBOARD];
-    if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS);
+    if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
     if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS);
     return items;

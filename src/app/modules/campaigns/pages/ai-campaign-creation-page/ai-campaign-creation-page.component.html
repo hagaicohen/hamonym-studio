@@ -1,7 +1,13 @@
 <div class="ai-page">
   <div class="ai-card">
     <h1 class="ai-title">{{ pageTitle() }}</h1>
-    <p class="ai-subtitle">ספרו לנו על העמותה שלכם — בכמה מילים, קישור לאתר, קבצים, או כל שילוב — ונכין לכם הצעה ראשונית לבדיקה.</p>
+    <p class="ai-subtitle">
+      @if (isPartnerMode()) {
+        ספרו לנו על העסק שלכם — בכמה מילים, קישור לאתר, קבצים (לוגו, תמונות), או כל שילוב — ונכין לכם הצעה ראשונית לדף השותף, לבדיקה.
+      } @else {
+        ספרו לנו על העמותה שלכם — בכמה מילים, קישור לאתר, קבצים, או כל שילוב — ונכין לכם הצעה ראשונית לבדיקה.
+      }
+    </p>
 
     @if (!brief()) {
       <div class="intake-section">
@@ -54,6 +60,7 @@
         </div>
       </div>
 
+      @if (!isPartnerMode()) {
       <div class="intake-section intake-mode">
         <label class="intake-label">מה ליצור?</label>
         <div class="mode-options">
@@ -85,6 +92,7 @@
           </label>
         </div>
       </div>
+      }
 
       <div class="intake-section intake-toggle">
         <label class="toggle-label">
@@ -118,7 +126,17 @@
           <span class="brief-badge">הצעה של ה-AI — לבדיקה ואישור</span>
         </div>
 
-        @if (createNewOrg()) {
+        @if (isPartnerMode()) {
+          <div class="brief-section">
+            <h3>השותף העסקי — לבדיקה והשלמה לפני יצירה</h3>
+            <label class="edit-field-label">שם העסק</label>
+            <input class="ai-input" type="text" [ngModel]="newPartnerName()" (ngModelChange)="newPartnerName.set($event)" />
+
+            @if (!canCreatePartner()) {
+              <p class="field-missing">יש להשלים שם עסק לפני יצירה.</p>
+            }
+          </div>
+        } @else if (createNewOrg()) {
           <div class="brief-section">
             <h3>עמותה חדשה — לבדיקה והשלמה לפני יצירה</h3>
             <label class="edit-field-label">סוג ישות</label>
@@ -174,12 +192,12 @@
 
         @if (!orgOnly()) {
         <div class="brief-section">
-          <h3>הקמפיין</h3>
+          <h3>{{ isPartnerMode() ? 'דף השותף' : 'הקמפיין' }}</h3>
           @if (b.title) { <div class="field"><span class="label">כותרת:</span> {{ b.title }}</div> }
           @if (b.shortDescription) { <div class="field"><span class="label">תיאור קצר:</span> {{ b.shortDescription }}</div> }
 
           <div class="field">
-            <span class="label">טקסט לעמוד הקמפיין:</span>
+            <span class="label">{{ isPartnerMode() ? 'טקסט לדף השותף:' : 'טקסט לעמוד הקמפיין:' }}</span>
             @if (b.story.value) {
               <p class="story-preview">{{ b.story.value }}</p>
             } @else {
@@ -223,6 +241,7 @@
             <span class="reason">— {{ b.category.reason }}</span>
           </div>
 
+          @if (!isPartnerMode()) {
           <div class="field">
             <span class="label">יעד גיוס:</span>
             @if (b.suggestedTargetAmount.value) {
@@ -232,6 +251,7 @@
             }
             <span class="reason">— {{ b.suggestedTargetAmount.reason }}</span>
           </div>
+          }
 
           <div class="field">
             <span class="label">טון מוצע:</span>
@@ -246,7 +266,7 @@
           </div>
 
           <div class="field">
-            <span class="label">הצעה לפתיחה (Hero):</span>
+            <span class="label">{{ isPartnerMode() ? 'הצעה לתמונת הקאבר:' : 'הצעה לפתיחה (Hero):' }}</span>
             {{ b.suggestedHero.value || '—' }}
             <span class="reason">— {{ b.suggestedHero.reason }}</span>
           </div>
@@ -255,14 +275,16 @@
             <div class="field">
               <span class="label">וידאו לפתיחה (Hero):</span>
               {{ b.heroVideoUrl }}
-              <span class="reason">— זיהינו קישור לסרטון בטקסט שלכם, הוא יוצג כווידאו הפותח של הקמפיין</span>
+              <span class="reason">— זיהינו קישור לסרטון בטקסט שלכם, הוא יוצג כווידאו הפותח</span>
             </div>
           }
         </div>
         }
 
         <p class="brief-note">
-          @if (createNewOrg() && orgOnly()) {
+          @if (isPartnerMode()) {
+            זו הצעה של ה-AI — לחיצה על "אשר וצור דף שותף" תיצור דף שותף עסקי אמיתי עם הפרטים שלמעלה, ותעביר אתכם לעריכה מלאה בבילדר. אפשר לשנות כל שדה שם.
+          } @else if (createNewOrg() && orgOnly()) {
             זו הצעה של ה-AI — לחיצה על "אשר וצור עמותה" תיצור עמותה חדשה עם הפרטים שלמעלה ותעביר אתכם לניהול שלה. לא ייווצר קמפיין — אפשר ליצור אחד בנפרד בכל שלב.
           } @else if (createNewOrg()) {
             זו הצעה של ה-AI — לחיצה על "אשר וצור" תיצור עמותה חדשה עם הפרטים שלמעלה, תעביר אתכם לניהול שלה, ותיצור תחתיה קמפיין אמיתי, עם מעבר לעריכה מלאה בסטודיו.
@@ -278,9 +300,11 @@
         <div class="ai-actions">
           <button type="button" class="btn-link" (click)="backToEdit()">→ חזרה לעריכת הנתונים</button>
           <button type="button" class="btn-link" (click)="reset()">התחל מחדש עם קלט אחר לגמרי</button>
-          <button type="button" class="btn-primary" [disabled]="creatingCampaign() || (createNewOrg() && !canCreateNewOrg())" (click)="approveAndCreate()">
+          <button type="button" class="btn-primary" [disabled]="creatingCampaign() || (isPartnerMode() ? !canCreatePartner() : (createNewOrg() && !canCreateNewOrg()))" (click)="approveAndCreate()">
             @if (creatingCampaign()) {
               יוצרים...
+            } @else if (isPartnerMode()) {
+              אשר וצור דף שותף ←
             } @else if (createNewOrg() && orgOnly()) {
               אשר וצור עמותה ←
             } @else if (createNewOrg()) {

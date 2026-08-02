@@ -1,15 +1,46 @@
 <div class="pl-page">
+  <div class="pl-return-banner" *ngIf="returnCampaignId">
+    ↩ הקמפיין שלך נשמר. צרו את השותף כאן — בסיום, כפתור בעמוד העריכה שלו יחזיר אתכם לקמפיין עם השותף כבר מקושר לתשורה.
+  </div>
   <div class="pl-header">
     <div class="pl-header-text">
       <h1 class="pl-title">שותפים</h1>
       <p class="pl-description">נהל את השותפים העסקיים שלך</p>
     </div>
     <div class="pl-header-actions">
-      <button class="pl-new-btn" type="button" (click)="showCreateForm = !showCreateForm">+ שותף חדש</button>
+      <button class="pl-new-btn" type="button" (click)="createMode = createMode ? null : 'choose'">+ שותף חדש</button>
     </div>
   </div>
 
-  <div class="pl-create-panel" *ngIf="showCreateForm">
+  <!-- Three ways to create a Partner, deliberately no more. -->
+  <div class="pl-create-panel pl-create-panel--choose" *ngIf="createMode === 'choose'">
+    <button class="pl-choice-btn" type="button" [disabled]="partners.length === 0" (click)="duplicateSourceId = ''; createMode = 'duplicate-pick'">
+      <span class="pl-choice-icon">🧬</span>
+      <span class="pl-choice-text"><b>שכפול שותף קיים</b><small>מעתיק את תוכן הדף כנקודת פתיחה</small></span>
+    </button>
+    <button class="pl-choice-btn" type="button" (click)="createMode = 'clone'; loadMyCampaigns()">
+      <span class="pl-choice-icon">🌐</span>
+      <span class="pl-choice-text"><b>ייבוא מאתר (URL)</b><small>בונה את הדף אוטומטית מהאתר, כולל תמונות</small></span>
+    </button>
+    <button class="pl-choice-btn" type="button" (click)="createMode = 'blank'">
+      <span class="pl-choice-icon">📄</span>
+      <span class="pl-choice-text"><b>דף ריק</b><small>מתחילים מאפס, בונים ידנית</small></span>
+    </button>
+  </div>
+
+  <div class="pl-create-panel" *ngIf="createMode === 'duplicate-pick'">
+    <label class="pl-label">שכפול מ:</label>
+    <select class="pl-input" [(ngModel)]="duplicateSourceId">
+      <option value="" disabled selected>בחרו שותף</option>
+      <option *ngFor="let p of partners" [value]="p.id">{{ p.display_name }}</option>
+    </select>
+    <div class="pl-create-panel-actions">
+      <button class="pl-card-btn" type="button" (click)="createMode = 'choose'">חזרה</button>
+      <button class="pl-new-btn" type="button" [disabled]="!duplicateSourceId" (click)="pickDuplicateSource()">המשך</button>
+    </div>
+  </div>
+
+  <div class="pl-create-panel" *ngIf="createMode === 'blank'">
     <div class="pl-field">
       <label class="pl-label">שם העסק *</label>
       <input class="pl-input" type="text" [(ngModel)]="newPartner.display_name" placeholder="קפה לנדוור">
@@ -26,10 +57,35 @@
       <label class="pl-label">טלפון איש קשר (רשות)</label>
       <input class="pl-input" type="text" [(ngModel)]="newPartner.contact_phone">
     </div>
-    <button class="pl-create-btn" type="button" [disabled]="!newPartner.display_name.trim() || creating" (click)="createPartner()">
-      {{ creating ? 'יוצר...' : 'יצירת שותף' }}
-    </button>
+    <div class="pl-create-panel-actions">
+      <button class="pl-card-btn" type="button" (click)="createMode = 'choose'">חזרה</button>
+      <button class="pl-new-btn" type="button" [disabled]="!newPartner.display_name.trim() || creating" (click)="createPartner()">
+        {{ creating ? 'יוצר...' : 'יצירת שותף' }}
+      </button>
+    </div>
     <p class="pl-error" *ngIf="createError">⚠ {{ createError }}</p>
+  </div>
+
+  <!-- Clone from URL — deterministic, no review step: paste a URL, get a
+       finished page. -->
+  <div class="pl-create-panel" *ngIf="createMode === 'clone'">
+    <label class="pl-label">לאיזה קמפיין מחברים את השותף? (רשות)</label>
+    <select class="pl-input" [(ngModel)]="cloneCampaignId" [disabled]="cloning || loadingCampaigns">
+      <option value="">בלי קמפיין כרגע</option>
+      <option *ngFor="let c of myCampaigns" [value]="c.id">{{ c.title }}</option>
+    </select>
+    <p class="pl-hint">בלי בחירה, כפתורי "לתרומה"/"חזרה לקמפיין" באתר המקור לא יקושרו לשום מקום עד שתחברו ידנית.</p>
+    <label class="pl-label" style="margin-top:10px">כתובת אתר העסק</label>
+    <input class="pl-input" type="text" [(ngModel)]="cloneUrl" placeholder="https://..." [disabled]="cloning">
+    <label class="pl-label" style="margin-top:10px">שם העסק (רשות — אחרת ננסה לזהות מהאתר)</label>
+    <input class="pl-input" type="text" [(ngModel)]="cloneDisplayName" placeholder="קפה לנדוור" [disabled]="cloning">
+    <div class="pl-create-panel-actions">
+      <button class="pl-card-btn" type="button" [disabled]="cloning" (click)="createMode = 'choose'">חזרה</button>
+      <button class="pl-new-btn" type="button" [disabled]="!cloneUrl.trim() || cloning" (click)="cloneFromUrl()">
+        {{ cloning ? 'בונה את הדף...' : 'בניית הדף' }}
+      </button>
+    </div>
+    <p class="pl-error" *ngIf="cloneError">⚠ {{ cloneError }}</p>
   </div>
 
   <p class="pl-loading" *ngIf="loading">טוען...</p>
@@ -40,10 +96,19 @@
       <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url">🏢</div>
       <div class="pl-card-name">{{ p.display_name }}</div>
       <div class="pl-card-actions">
-        <a class="pl-card-btn" [routerLink]="['/partners', p.id, 'builder']">✏ עריכה</a>
-        <a class="pl-card-btn pl-card-btn--secondary" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener">👁 צפייה</a>
+        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener" title="צפייה בדף הציבורי">
+          <lucide-icon [img]="Eye" [size]="15"></lucide-icon>
+        </a>
+        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'builder']" [queryParams]="returnQueryParams" title="עריכה">
+          <lucide-icon [img]="Pencil" [size]="15"></lucide-icon>
+        </a>
+        <button class="pl-icon-btn" type="button" (click)="openDuplicateModal(p)" title="שכפול">
+          <lucide-icon [img]="Copy" [size]="15"></lucide-icon>
+        </button>
+        <button class="pl-icon-btn pl-icon-btn--danger" type="button" (click)="openDeleteModal(p)" title="מחיקה">
+          <lucide-icon [img]="Trash2" [size]="15"></lucide-icon>
+        </button>
       </div>
-      <button class="pl-card-btn pl-card-btn--danger" type="button" (click)="openDeleteModal(p)">🗑 מחיקה</button>
     </div>
 
   </div>
@@ -51,7 +116,27 @@
   <div class="pl-empty" *ngIf="!loading && partners.length === 0">
     <div class="pl-empty-icon">🤝</div>
     <p>אין שותפים עדיין</p>
-    <button class="pl-new-btn" type="button" (click)="showCreateForm = true">+ שותף חדש</button>
+    <div class="pl-empty-actions">
+      <button class="pl-new-btn" type="button" (click)="createMode = 'choose'">+ שותף חדש</button>
+    </div>
+  </div>
+</div>
+
+<!-- Duplicate Partner — copies the Profile (blocks/layout) as a starting
+     point for a new one, contact fields left blank on purpose. -->
+<div class="pl-delete-overlay" *ngIf="duplicateTarget" (click)="closeDuplicateModal()">
+  <div class="pl-delete-modal" (click)="$event.stopPropagation()">
+    <h3>שכפול "{{ duplicateTarget!.display_name }}"</h3>
+    <p>ייווצר שותף חדש עם אותו תוכן דף (בלוקים ועיצוב) — פרטי יצירת קשר ישארו ריקים למילוי. תוכלו לשנות הכל אחר כך בעורך.</p>
+    <label class="pl-delete-label">שם העסק החדש:</label>
+    <input class="pl-input" type="text" [(ngModel)]="duplicateName">
+    <p class="pl-error" *ngIf="duplicateError">⚠ {{ duplicateError }}</p>
+    <div class="pl-delete-actions">
+      <button type="button" class="pl-card-btn" (click)="closeDuplicateModal()">ביטול</button>
+      <button type="button" class="pl-new-btn" [disabled]="!duplicateName.trim() || duplicating" (click)="confirmDuplicate()">
+        {{ duplicating ? 'משכפל...' : 'שכפול ומעבר לעריכה' }}
+      </button>
+    </div>
   </div>
 </div>
 

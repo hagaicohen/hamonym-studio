@@ -46,6 +46,43 @@
 }
 .ppp-back-link:hover { text-decoration: underline; }
 
+.ppp-campaign-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 180px;
+  padding: 24px 20px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+.ppp-campaign-banner-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,.15), rgba(15,23,42,.55));
+}
+.ppp-campaign-banner-logo {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.ppp-campaign-banner-title {
+  position: relative;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,.35);
+  max-width: 34ch;
+}
+
 .ppp-partner-nav {
   display: flex;
   justify-content: space-between;

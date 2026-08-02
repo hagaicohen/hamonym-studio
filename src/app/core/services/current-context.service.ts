@@ -1,13 +1,35 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { ActiveContext, RoleType, UserContext, UserRoleGroup } from '../models/user-context.model';
 
+// entity-manager's group can hold both nonprofits and businesses (a Partner
+// entity, or any entity registered as עוסק פטור/מורשה) — 'מנהל עמותה' is
+// only correct for an association, not an umbrella term. The GROUP label
+// stays neutral; the ACTIVE context's label is computed per-entity below via
+// entityManagerLabel().
 const ROLE_META: Record<RoleType, { label: string; icon: string }> = {
-  'entity-manager':   { label: 'מנהל עמותה', icon: '🏢' },
+  'entity-manager':   { label: 'הגופים שלי', icon: '🏢' },
   'ambassador':       { label: 'שגריר',       icon: '🤝' },
   'campaign-manager': { label: 'קמפיינר',     icon: '🎯' },
   'company':          { label: 'חברה',         icon: '🏭' },
   'donor':            { label: 'תורם',         icon: '💛' },
 };
+
+// Mirrors organization-registration/config/entity-config.ts's EntityType
+// labels, phrased as a role/identity label rather than a form-field label —
+// kept as its own small map here (not imported from that feature module) to
+// avoid coupling a core service to a specific feature module.
+const ENTITY_TYPE_ROLE_LABELS: Record<string, string> = {
+  association: 'מנהל עמותה',
+  chalatz: 'מנהל חל״צ',
+  political_party_new: 'מנהל מפלגה',
+  political_party_registered: 'מנהל מפלגה',
+  sole_exempt: 'בעל עסק',
+  sole_registered: 'בעל עסק',
+};
+
+function entityManagerLabel(entityType?: string): string {
+  return (entityType && ENTITY_TYPE_ROLE_LABELS[entityType]) || ROLE_META['entity-manager'].label;
+}
 
 const ROLE_PRIORITY: RoleType[] = [
   'entity-manager',
@@ -109,7 +131,7 @@ export class CurrentContextService {
    * Future: ambassadorCampaigns, campaignManagerCampaigns, isDonor.
    */
   initFromLogin(params: {
-    entities?: Array<{ id: string; display_name: string; legal_name?: string }>;
+    entities?: Array<{ id: string; display_name: string; legal_name?: string; entity_type?: string }>;
     ambassadorCampaigns?: Array<{ id: string; name: string }>;
     campaignManagerCampaigns?: Array<{ id: string; name: string }>;
     isDonor?: boolean;
@@ -125,7 +147,11 @@ export class CurrentContextService {
         // display_name is only filled in step 2 of the registration wizard —
         // an entity that only completed step 1 would otherwise show up with
         // a blank name in the topbar identity switcher.
-        contexts: params.entities.map((e) => ({ id: e.id, name: e.display_name || e.legal_name || 'ללא שם' })),
+        contexts: params.entities.map((e) => ({
+          id: e.id,
+          name: e.display_name || e.legal_name || 'ללא שם',
+          entityType: e.entity_type,
+        })),
       });
     }
 
@@ -194,10 +220,10 @@ export class CurrentContextService {
   // created mid-session (e.g. AI campaign-creation flow creating an
   // organization on the fly) and has to become switchable/active immediately,
   // without waiting for the next full login to re-fetch getMyEntities().
-  addEntityContext(entity: { id: string; display_name?: string; legal_name?: string }): void {
+  addEntityContext(entity: { id: string; display_name?: string; legal_name?: string; entity_type?: string }): void {
     const groups = this.roles();
     const idx = groups.findIndex((g) => g.role === 'entity-manager');
-    const contextEntry = { id: entity.id, name: entity.display_name || entity.legal_name || 'ללא שם' };
+    const contextEntry = { id: entity.id, name: entity.display_name || entity.legal_name || 'ללא שם', entityType: entity.entity_type };
 
     const next = idx >= 0
       ? groups.map((g, i) => (i === idx ? { ...g, contexts: [...g.contexts, contextEntry] } : g))
@@ -214,7 +240,8 @@ export class CurrentContextService {
       ? (group.contexts.find((c) => c.id === contextId) ?? null)
       : null;
     const m = ROLE_META[role];
-    const next: ActiveContext = { role, roleLabel: m.label, roleIcon: m.icon, context };
+    const roleLabel = role === 'entity-manager' ? entityManagerLabel(context?.entityType) : m.label;
+    const next: ActiveContext = { role, roleLabel, roleIcon: m.icon, context };
     this.active.set(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
@@ -224,7 +251,9 @@ export class CurrentContextService {
       const g = groups.find((gr) => gr.role === role);
       if (g) {
         const m = ROLE_META[role];
-        const next: ActiveContext = { role, roleLabel: m.label, roleIcon: m.icon, context: g.contexts[0] ?? null };
+        const context = g.contexts[0] ?? null;
+        const roleLabel = role === 'entity-manager' ? entityManagerLabel(context?.entityType) : m.label;
+        const next: ActiveContext = { role, roleLabel, roleIcon: m.icon, context };
         this.active.set(next);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         return;

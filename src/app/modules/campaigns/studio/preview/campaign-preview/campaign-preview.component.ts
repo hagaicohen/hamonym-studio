@@ -348,7 +348,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // other sidebar section further into that scroll instead of just
   // overlaying on top, unaffected by the rail's own height budget.
   rewardsImagePosition(draft: CampaignDraft): 'inline' | 'full' {
-    return draft.layout.rewardsImagePosition ?? 'full';
+    return draft.layout.rewardsImagePosition ?? 'inline';
   }
 
   // Height (px) of the full-width image row in 'full' mode — user-controlled
@@ -422,6 +422,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
               if (link.rewardId) this.partnerByRewardId[link.rewardId] = link.partner;
             }
           },
+        });
+      }
+      // "X רכשו מתוך Y" badge on reward cards with a quantity limit
+      // (offering.stock) — live count of paid donations selecting this
+      // reward, so a manager doesn't need to track it manually.
+      if (draft?.slug && this.isCampaign(draft) && draft.slug !== this.loadedRewardCountsSlug) {
+        this.loadedRewardCountsSlug = draft.slug;
+        this.donationService.getRewardCounts(draft.slug).subscribe({
+          next: counts => { this.rewardCounts = counts; },
         });
       }
     });
@@ -1359,6 +1368,13 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
 
   partnerForOffering(offeringId: string): { id: string; displayName: string } | null {
     return this.partnerByRewardId[offeringId] ?? null;
+  }
+
+  private loadedRewardCountsSlug = '';
+  rewardCounts: Record<string, number> = {};
+
+  purchasedCount(offeringId: string): number {
+    return this.rewardCounts[offeringId] ?? 0;
   }
 
   // Query params carried onto the Partner public page so it can show a

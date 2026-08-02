@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideAngularModule, Monitor, Smartphone, Maximize2, Minimize2, ArrowRight } from 'lucide-angular';
+import { LucideAngularModule, Monitor, Smartphone, Maximize2, Minimize2, ArrowRight, House, Eye, UserPlus, Trash2, Save, Check, LoaderCircle } from 'lucide-angular';
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaign-preview.component';
 import { CampaignStudioStateService, createInitialPartnerDraft } from '../../../services/campaign-studio-state.service';
@@ -36,6 +36,13 @@ export class PartnerBuilderPageComponent implements OnInit {
   readonly Maximize2 = Maximize2;
   readonly Minimize2 = Minimize2;
   readonly ArrowRight = ArrowRight;
+  readonly House = House;
+  readonly Eye = Eye;
+  readonly UserPlus = UserPlus;
+  readonly Trash2 = Trash2;
+  readonly Save = Save;
+  readonly Check = Check;
+  readonly LoaderCircle = LoaderCircle;
 
   entityId = '';
   loading = true;
@@ -49,7 +56,21 @@ export class PartnerBuilderPageComponent implements OnInit {
   // normal state, not an edge case).
   usingCampaigns: { campaignId: string; campaignTitle: string; campaignStatus: string; visible: boolean }[] = [];
 
+  // §14 — arrived here from the "המשך ליצירת שותף" redirect in
+  // partner-link-modal. When present, a persistent bar offers to link this
+  // Partner to the reward that's waiting and return to the campaign.
+  returnCampaignId: string | null = null;
+  returnRewardId: string | null = null;
+  returnStep: string | null = null;
+  returningToCampaign = false;
+  returnError = '';
+
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    this.returnCampaignId = qp.get('returnCampaignId');
+    this.returnRewardId = qp.get('returnRewardId');
+    this.returnStep = qp.get('returnStep');
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.loadError = 'לא נמצא מזהה שותף.';
@@ -112,6 +133,40 @@ export class PartnerBuilderPageComponent implements OnInit {
     }).subscribe({
       next: () => { this.saving = false; this.saved = true; },
       error: () => { this.saving = false; },
+    });
+  }
+
+  // Saves the current draft first, then links — never link ahead of a save
+  // that could still fail, and never navigate away before the block content
+  // has actually persisted.
+  returnAndLink(): void {
+    if (!this.returnCampaignId || this.returningToCampaign) return;
+    this.returningToCampaign = true;
+    this.returnError = '';
+    this.entitiesService.updateDraft(this.entityId, {
+      blocks: this.state.draft.blocks,
+      layout: this.state.draft.layout,
+    }).subscribe({
+      next: () => {
+        this.campaignPartnersService.create(this.returnCampaignId!, {
+          partnerEntityId: this.entityId,
+          rewardId: this.returnRewardId || null,
+        }).subscribe({
+          next: () => {
+            this.router.navigate(['/campaigns', this.returnCampaignId, 'edit'], {
+              queryParams: this.returnStep ? { returnStep: this.returnStep } : undefined,
+            });
+          },
+          error: err => {
+            this.returningToCampaign = false;
+            this.returnError = err?.error?.error || 'שגיאה בחיבור השותף לקמפיין';
+          },
+        });
+      },
+      error: () => {
+        this.returningToCampaign = false;
+        this.returnError = 'שגיאה בשמירת דף השותף';
+      },
     });
   }
 

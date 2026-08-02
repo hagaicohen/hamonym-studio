@@ -47,7 +47,15 @@ export class CampaignStudioPageComponent implements OnInit {
   // campaign-editor.component.ts). See docs/DECISIONS.md.
   loadErrorMessage: string | null = null;
 
+  // ?returnStep=4 — set when arriving back from the "create a partner
+  // mid-campaign" side-trip to /partners (see partner-link-modal's 'create'
+  // tab / §14). Read once on load; CampaignEditorComponent applies it.
+  returnStep?: number;
+
   ngOnInit(): void {
+    const returnStepParam = this.route.snapshot.queryParamMap.get('returnStep');
+    if (returnStepParam) this.returnStep = parseInt(returnStepParam, 10);
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.campaignApi.getById(id).subscribe({

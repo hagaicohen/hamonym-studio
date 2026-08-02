@@ -30,20 +30,16 @@
   border: 1px solid #334155; border-radius: 10px;
   background: #0f172a; color: #e2e8f0; cursor: pointer;
   font-size: 13px; font-weight: 600;
+  text-decoration: none;
   transition: all 0.15s;
 }
 .pb-back-button:hover { background: #334155; border-color: #7c3aed; color: #c4b5fd; }
-.pb-save-btn {
-  background: #6fc9eb;
-  color: #061b3a;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 20px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-}
-.pb-save-btn:disabled { opacity: 0.6; cursor: default; }
+.pb-icon-btn--save { background: #6fc9eb; color: #061b3a; border: none; }
+.pb-icon-btn--save:hover { background: #5bb8da; }
+.pb-icon-btn--save:disabled { opacity: 0.6; cursor: default; }
+.pb-icon-btn--save.pb-icon-btn--saved { background: #22c55e; color: #052e13; }
+.pb-spin { animation: pb-spin 0.8s linear infinite; }
+@keyframes pb-spin { to { transform: rotate(360deg); } }
 
 /* CENTER: device + fullscreen switcher — same cluster as
    campaign-studio-topbar.component.css's .device-switcher. */
@@ -60,7 +56,18 @@
 .pb-device-btn.active { background: #583cd6; color: #fff; }
 .pb-device-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
 
-.pb-topbar-actions { justify-self: end; display: flex; align-items: center; gap: 10px; }
+.pb-topbar-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }
+
+.pb-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: 1px solid #334155; border-radius: 10px;
+  background: #0f172a; color: #e2e8f0; cursor: pointer; text-decoration: none;
+  transition: all 0.15s;
+}
+.pb-icon-btn:hover { background: #334155; border-color: #7c3aed; color: #c4b5fd; }
+.pb-icon-btn--danger { color: #fca5a5; }
+.pb-icon-btn--danger:hover { background: rgba(252,165,165,0.12); border-color: rgba(252,165,165,0.45); color: #fca5a5; }
 
 /* ── FULLSCREEN MODE — same behavior as campaign-studio-page.component.css:
    hide the editor panel, let the preview take the whole workspace. ── */
@@ -76,6 +83,17 @@
   display: flex; align-items: center; gap: 10px; padding: 10px 20px;
   background: #f8fafc; border-bottom: 1px solid #e2e8f0;
 }
+.pb-return-bar {
+  display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+  background: #eef2ff; border-bottom: 1px solid #c7d2fe; color: #3730a3;
+  font-size: 13px; font-weight: 600;
+}
+.pb-return-btn {
+  background: #4338ca; color: #fff; border: none; border-radius: 8px;
+  padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.pb-return-btn:hover { background: #3730a3; }
+.pb-return-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .pb-invite-input {
   flex: 1; max-width: 320px; padding: 8px 12px; border: 1px solid #cbd5e1;
   border-radius: 8px; font-size: 13px; font-family: inherit;
@@ -167,8 +185,11 @@
 .pb-preview-card--mobile app-campaign-preview {
   display: block;
   width: 390px;
+  height: 100%;
+  max-height: 100%;
   border-radius: 24px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow:
     0 0 0 2px #1e293b,
     0 0 0 10px #334155,
@@ -181,4 +202,8 @@
      desktop resizer (inline styles otherwise outrank stylesheet rules). */
   .pb-editor-card { width: 100% !important; border-bottom: 1px solid #e2e8f0; max-height: 50vh; }
   .pb-resizer { display: none; }
+  .pb-topbar { grid-template-columns: 1fr; justify-items: center; gap: 12px; padding: 12px; }
+  .pb-title-group, .pb-topbar-actions { justify-self: center; }
+  .pb-topbar-actions { flex-wrap: wrap; justify-content: center; row-gap: 8px; }
+  .pb-device-switch { border: 1px solid rgba(255,255,255,0.12); }
 }

@@ -48,6 +48,8 @@ export interface OrganizationRegistrationState {
 
   organizationDescription: string;
 
+  website: string;
+
   selectedCampaignTypes: string[];
 
   logoPreview: string;
@@ -137,6 +139,8 @@ export const initialState: OrganizationRegistrationState = {
   displayName: '',
 
   organizationDescription: '',
+
+  website: '',
 
   selectedCampaignTypes: ['one-time', 'recurring'],
 
@@ -230,7 +234,7 @@ export function buildPayload(state: OrganizationRegistrationState) {
     registration_number: state.organizationNumber,
     email: state.email,
     phone: state.phone,
-    website: null,
+    website: state.website.trim() || null,
     description: state.organizationDescription,
     logo_url: null,
     is_profile_complete: isProfileComplete(state),
@@ -368,6 +372,7 @@ export class OrganizationRegistrationStateService {
       section46FileUrl: entity.tax_document_url || '',
       displayName: entity.display_name || '',
       organizationDescription: entity.description || '',
+      website: entity.website || '',
       selectedCampaignTypes: entity.campaign_types?.length ? entity.campaign_types : initialState.selectedCampaignTypes,
       logoPreview: entity.logo_url || '',
       monthlyGoal: entity.monthly_goal != null ? String(entity.monthly_goal) : '',

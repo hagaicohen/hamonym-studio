@@ -71,6 +71,16 @@ export class StepProfileComponent {
     });
   }
 
+  get website(): string {
+    return this.state.website;
+  }
+
+  set website(value: string) {
+    this.updateState({
+      website: value,
+    });
+  }
+
   get selectedCampaignTypes(): string[] {
     return this.state.selectedCampaignTypes;
   }

@@ -1,0 +1,102 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else {
+
+  <div class="plat-header">
+    <h1 class="plat-title">שותפים</h1>
+  </div>
+
+  <div class="plat-filters">
+    <input
+      class="plat-search"
+      type="search"
+      placeholder="חיפוש לפי שם שותף..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+    <app-column-picker [columns]="columns" storageKey="platformColumns_partners" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
+  </div>
+
+  <div class="plat-chips">
+    <button class="plat-chip" [class.active]="activeChip === 'no_campaigns'" (click)="selectChip('no_campaigns')">
+      <span class="plat-chip-dot">🔵</span> ללא קמפיינים
+    </button>
+    <button class="plat-chip" [class.active]="activeChip === 'new_week'" (click)="selectChip('new_week')">
+      <span class="plat-chip-dot">🟣</span> חדשים השבוע
+    </button>
+    <button class="plat-chip" [class.active]="activeChip === 'hidden'" (click)="selectChip('hidden')">
+      <span class="plat-chip-dot">⚫</span> מוסתרים
+    </button>
+  </div>
+
+  <div class="plat-card">
+    @if (loading) {
+      <div class="plat-loading">טוען...</div>
+    } @else if (partners.length === 0) {
+      <div class="plat-empty">לא נמצאו שותפים</div>
+    } @else {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing">
+        <table class="plat-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="sortable" (click)="sortBy('name')">שם השותף</th>
+              @if (visibleColumns.has('website')) { <th>אתר</th> }
+              @if (visibleColumns.has('owner')) { <th>מנהל</th> }
+              @if (visibleColumns.has('campaigns')) { <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th> }
+              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th> }
+              @if (visibleColumns.has('activity')) { <th>פעילות אחרונה</th> }
+              @if (visibleColumns.has('hidden')) { <th>מוסתר</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of partners; track p.id) {
+              <tr class="plat-row plat-row--static">
+                <td class="plat-logo-cell">
+                  @if (p.logo_url) {
+                    <img [src]="p.logo_url" class="plat-logo" alt="" />
+                  } @else {
+                    <div class="plat-logo-placeholder">{{ partnerName(p).charAt(0) }}</div>
+                  }
+                </td>
+                <td data-label="שם השותף">{{ partnerName(p) }}</td>
+                @if (visibleColumns.has('website')) {
+                  <td data-label="אתר">
+                    @if (p.website) {
+                      <a [href]="p.website" target="_blank" rel="noopener" class="plat-link" (click)="$event.stopPropagation()">{{ p.website }}</a>
+                    } @else { — }
+                  </td>
+                }
+                @if (visibleColumns.has('owner')) {
+                  <td data-label="מנהל">{{ p.owner_name || '—' }}</td>
+                }
+                @if (visibleColumns.has('campaigns')) { <td data-label="קמפיינים">{{ p.campaigns_count }}</td> }
+                @if (visibleColumns.has('created_at')) { <td data-label="תאריך הרשמה">{{ fmtDate(p.created_at) }}</td> }
+                @if (visibleColumns.has('activity')) { <td data-label="פעילות אחרונה">{{ relativeTime(p.updated_at) }}</td> }
+                @if (visibleColumns.has('hidden')) {
+                  <td data-label="מוסתר">
+                    @if (p.is_hidden) { <span class="plat-status status-suspended">מוסתר</span> } @else { — }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="plat-footer">
+        <span>{{ total }} שותפים</span>
+        <div class="plat-pager">
+          <button (click)="prevPage()" [disabled]="page === 0">←</button>
+          <span>{{ page + 1 }} / {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  }
+
+</div>

@@ -30,13 +30,35 @@
     </div>
 
     <div class="pb-topbar-actions" *ngIf="!s.fullscreen">
-      <a class="pb-invite-btn" [routerLink]="['/partners', entityId, 'view']" target="_blank" rel="noopener">👁 צפייה בדף הציבורי</a>
-      <button type="button" class="pb-invite-btn" (click)="showInviteForm = !showInviteForm">👥 הזמן עורך</button>
-      <button type="button" class="pb-delete-btn" (click)="openDeleteModal()">🗑 מחק שותף</button>
-      <button type="button" class="pb-save-btn" [disabled]="saving" (click)="save()">
-        {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
+      <a class="pb-icon-btn" [routerLink]="['/partners', entityId, 'view']" target="_blank" rel="noopener" title="צפייה בדף הציבורי">
+        <lucide-icon [img]="Eye" [size]="16"></lucide-icon>
+      </a>
+      <button type="button" class="pb-icon-btn" (click)="showInviteForm = !showInviteForm" title="הזמן עורך">
+        <lucide-icon [img]="UserPlus" [size]="16"></lucide-icon>
       </button>
+      <button type="button" class="pb-icon-btn pb-icon-btn--danger" (click)="openDeleteModal()" title="מחק שותף">
+        <lucide-icon [img]="Trash2" [size]="16"></lucide-icon>
+      </button>
+      <button type="button" class="pb-icon-btn pb-icon-btn--save" [class.pb-icon-btn--saved]="saved" [disabled]="saving" (click)="save()" [title]="saving ? 'שומר...' : (saved ? 'נשמר' : 'שמירה')">
+        <lucide-icon *ngIf="saving" [img]="LoaderCircle" [size]="16" class="pb-spin"></lucide-icon>
+        <lucide-icon *ngIf="!saving && saved" [img]="Check" [size]="16"></lucide-icon>
+        <lucide-icon *ngIf="!saving && !saved" [img]="Save" [size]="16"></lucide-icon>
+      </button>
+      <a class="pb-icon-btn" [routerLink]="['/partners']" title="יציאה לרשימת השותפים">
+        <lucide-icon [img]="House" [size]="16"></lucide-icon>
+      </a>
     </div>
+  </div>
+
+  <!-- §14 — arrived from a campaign's "המשך ליצירת שותף" redirect. Save
+       first, then this links the Partner to the waiting reward and sends
+       the manager back to the campaign. -->
+  <div class="pb-return-bar" *ngIf="returnCampaignId && !s.fullscreen">
+    <span>סיימתם לבנות את דף השותף?</span>
+    <button type="button" class="pb-return-btn" [disabled]="returningToCampaign" (click)="returnAndLink()">
+      {{ returningToCampaign ? 'שומר ומחבר...' : 'שמירה וחזרה לקמפיין, עם השותף מקושר ←' }}
+    </button>
+    <span class="pb-invite-error" *ngIf="returnError">⚠ {{ returnError }}</span>
   </div>
 
   <div class="pb-invite-panel" *ngIf="showInviteForm && !s.fullscreen">

@@ -33,11 +33,20 @@
     </div>
 
     <div class="cpb-topbar-actions" *ngIf="!s.fullscreen">
-      <a class="cpb-link-btn" [routerLink]="['/partners', partnerEntityId, 'builder']" target="_blank" rel="noopener">🤝 פרופיל השותף</a>
-      <a class="cpb-link-btn" [routerLink]="['/partners', partnerEntityId, 'view']" [queryParams]="{ campaignSlug, campaignTitle }" target="_blank" rel="noopener">👁 צפייה בדף המורכב</a>
-      <button type="button" class="cpb-save-btn" [disabled]="saving" (click)="save()">
-        {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
+      <a class="cpb-icon-btn" [routerLink]="['/partners', partnerEntityId, 'builder']" target="_blank" rel="noopener" title="פרופיל השותף">
+        <lucide-icon [img]="User" [size]="16"></lucide-icon>
+      </a>
+      <a class="cpb-icon-btn" [routerLink]="['/partners', partnerEntityId, 'view']" [queryParams]="{ campaignSlug, campaignTitle }" target="_blank" rel="noopener" title="צפייה בדף המורכב">
+        <lucide-icon [img]="Eye" [size]="16"></lucide-icon>
+      </a>
+      <button type="button" class="cpb-icon-btn cpb-icon-btn--save" [class.cpb-icon-btn--saved]="saved" [disabled]="saving" (click)="save()" [title]="saving ? 'שומר...' : (saved ? 'נשמר' : 'שמירה')">
+        <lucide-icon *ngIf="saving" [img]="LoaderCircle" [size]="16" class="cpb-spin"></lucide-icon>
+        <lucide-icon *ngIf="!saving && saved" [img]="Check" [size]="16"></lucide-icon>
+        <lucide-icon *ngIf="!saving && !saved" [img]="Save" [size]="16"></lucide-icon>
       </button>
+      <a class="cpb-icon-btn" [routerLink]="['/partners']" title="יציאה לרשימת השותפים">
+        <lucide-icon [img]="House" [size]="16"></lucide-icon>
+      </a>
     </div>
   </div>
 
@@ -47,6 +56,11 @@
     </div>
     <div class="cpb-resizer" *ngIf="!s.fullscreen" (mousedown)="startResize($event)"></div>
     <div class="cpb-preview-card" [class.cpb-preview-card--mobile]="s.device === 'mobile'">
+      <div class="cpb-campaign-banner" *ngIf="campaignCoverImageUrl" [style.backgroundImage]="'url(' + campaignCoverImageUrl + ')'">
+        <div class="cpb-campaign-banner-scrim"></div>
+        <img *ngIf="campaignEntityLogo" [src]="campaignEntityLogo" alt="" class="cpb-campaign-banner-logo" />
+        <span class="cpb-campaign-banner-title">{{ campaignTitle }}</span>
+      </div>
       <app-campaign-preview />
     </div>
   </div>

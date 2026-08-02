@@ -86,7 +86,7 @@ export class PlatformOrganizationsPageComponent implements OnInit {
   refreshing = false;
   error: string | null = null;
 
-  activeChip: ChipKey = 'all';
+  activeChip: ChipKey = 'active';
   searchQuery = '';
   sortField: SortField = 'created_at';
   sortDir: SortDir = 'desc';

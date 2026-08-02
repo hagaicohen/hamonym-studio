@@ -13,7 +13,7 @@
   <div class="studio-workspace">
 
     <div class="editor-card" [class.editor-card--hidden]="s.fullscreen">
-      <app-campaign-editor />
+      <app-campaign-editor [initialStep]="returnStep" />
     </div>
 
     <div class="preview-card">

@@ -8,6 +8,7 @@
   <div class="plm-tabs">
     <button class="plm-tab" [class.plm-tab--active]="mode === 'search'" type="button" (click)="mode = 'search'">חיפוש שותף קיים</button>
     <button class="plm-tab" [class.plm-tab--active]="mode === 'create'" type="button" (click)="mode = 'create'">יצירת שותף חדש</button>
+    <button class="plm-tab" [class.plm-tab--active]="mode === 'import'" type="button" (click)="mode = 'import'">ייבוא מאתר</button>
   </div>
 
   <div class="plm-body">
@@ -28,25 +29,96 @@
     </ng-container>
 
     <ng-container *ngIf="mode === 'create'">
-      <div class="plm-field">
-        <label class="plm-label">שם העסק *</label>
-        <input class="plm-input" type="text" [(ngModel)]="newPartner.display_name" placeholder="קפה לנדוור">
-      </div>
-      <div class="plm-field">
-        <label class="plm-label">אתר (רשות)</label>
-        <input class="plm-input" type="text" [(ngModel)]="newPartner.website" placeholder="https://...">
-      </div>
-      <div class="plm-field">
-        <label class="plm-label">אימייל איש קשר (רשות)</label>
-        <input class="plm-input" type="email" [(ngModel)]="newPartner.contact_email">
-      </div>
-      <div class="plm-field">
-        <label class="plm-label">טלפון איש קשר (רשות)</label>
-        <input class="plm-input" type="text" [(ngModel)]="newPartner.contact_phone">
-      </div>
-      <button class="plm-create-btn" type="button" [disabled]="!newPartner.display_name.trim() || linking" (click)="createAndLink()">
-        {{ linking ? 'יוצר ומחבר...' : 'יצירה וחיבור לתשורה' }}
+      <!-- §14 — manual Partner creation lives in the Partners Library, not
+           in this modal (only AI Import stays atomic/in-modal). The
+           campaign is saved first so nothing is lost; the manager returns
+           here already linked once they're done building the partner. -->
+      <p class="plm-create-explainer">
+        יצירת שותף חדש נעשית במסך "שותפים" — שם תוכלו לבנות את הדף שלו במלואו.
+        הקמפיין יישמר, ולאחר יצירת השותף תוכלו לחזור לכאן — הוא כבר יהיה מקושר לתשורה.
+      </p>
+      <button class="plm-create-btn" type="button" [disabled]="creatingRedirect" (click)="goCreateNewPartner()">
+        {{ creatingRedirect ? 'שומר קמפיין...' : 'המשך ליצירת שותף ←' }}
       </button>
+    </ng-container>
+
+    <ng-container *ngIf="mode === 'import'">
+
+      <ng-container *ngIf="importStep === 'input'">
+        <p class="plm-import-hint">תנו לנו קישור לאתר העסק — נחלץ ממנו את התוכן (מילה במילה, בלי לשכתב כלום), ותוכלו לבחור מה להשתמש ממנו לפני שנוצר השותף.</p>
+        <div class="plm-field">
+          <label class="plm-label">כתובת אתר העסק</label>
+          <input class="plm-input" type="text" [(ngModel)]="importUrl" placeholder="https://..." [disabled]="extracting">
+        </div>
+        <button class="plm-create-btn" type="button" [disabled]="!importUrl.trim() || extracting" (click)="extractWebsite()">
+          {{ extracting ? 'בודקים את האתר...' : 'בדיקת האתר' }}
+        </button>
+
+        <div class="plm-signals" *ngIf="extractResult">
+          <p class="plm-signals-title">מצאנו בדף "{{ extractResult.pageTitle }}":</p>
+          <div class="plm-signals-grid">
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.businessName">{{ extractResult.foundSignals.businessName ? '✔' : '⚠' }} שם העסק</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.gallery">{{ extractResult.foundSignals.gallery ? '✔' : '⚠' }} גלריית תמונות</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.contact">{{ extractResult.foundSignals.contact ? '✔' : '⚠' }} פרטי קשר</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.address">{{ extractResult.foundSignals.address ? '✔' : '⚠' }} כתובת</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.openingHours">{{ extractResult.foundSignals.openingHours ? '✔' : '⚠' }} שעות פתיחה</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.offerLanguage">{{ extractResult.foundSignals.offerLanguage ? '✔' : '⚠' }} הטבה לקמפיין</span>
+          </div>
+          <button class="plm-create-btn" type="button" [disabled]="classifying" (click)="continueToClassify()">
+            {{ classifying ? 'מסווגים תוכן...' : 'המשך לסיווג' }}
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="importStep === 'review'">
+        <div class="plm-field">
+          <label class="plm-label">שם העסק *</label>
+          <input class="plm-input" type="text" [(ngModel)]="importDisplayName" placeholder="שם העסק">
+        </div>
+        <div class="plm-field">
+          <label class="plm-label">אימייל איש קשר (רשות)</label>
+          <input class="plm-input" type="email" [(ngModel)]="importContactEmail">
+        </div>
+        <div class="plm-field">
+          <label class="plm-label">טלפון איש קשר (רשות)</label>
+          <input class="plm-input" type="text" [(ngModel)]="importContactPhone">
+        </div>
+
+        <div class="plm-review-section">
+          <p class="plm-review-title">פרופיל השותף (יופיע בכל הקמפיינים)</p>
+          <div class="plm-review-item plm-review-item--auto" *ngFor="let e of profileAuto">{{ e.value }}</div>
+          <div class="plm-review-item plm-review-item--review" *ngFor="let e of profileReview">⚠ לבדיקה: {{ e.value }}</div>
+          <ng-container *ngIf="profileSuggestions.length">
+            <p class="plm-suggestions-title">הצעות נוספות:</p>
+            <div class="plm-suggestion-row" *ngFor="let e of profileSuggestions">
+              <span>{{ e.value }}</span>
+              <button type="button" class="plm-suggestion-add" [disabled]="linking || acceptedSuggestionIds.has('profile:' + e.sourceId)" (click)="acceptProfileSuggestion(e)">
+                {{ acceptedSuggestionIds.has('profile:' + e.sourceId) ? 'נוסף ✓' : 'הוסף' }}
+              </button>
+            </div>
+          </ng-container>
+        </div>
+
+        <div class="plm-review-section">
+          <p class="plm-review-title">השתתפות בקמפיין הזה</p>
+          <div class="plm-review-item plm-review-item--auto" *ngFor="let e of participationAuto">{{ e.value }}</div>
+          <div class="plm-review-item plm-review-item--review" *ngFor="let e of participationReview">⚠ לבדיקה: {{ e.value }}</div>
+          <ng-container *ngIf="participationSuggestions.length">
+            <p class="plm-suggestions-title">הצעות נוספות:</p>
+            <div class="plm-suggestion-row" *ngFor="let e of participationSuggestions">
+              <span>{{ e.value }}</span>
+              <button type="button" class="plm-suggestion-add" [disabled]="linking || acceptedSuggestionIds.has('participation:' + e.sourceId)" (click)="acceptParticipationSuggestion(e)">
+                {{ acceptedSuggestionIds.has('participation:' + e.sourceId) ? 'נוסף ✓' : 'הוסף' }}
+              </button>
+            </div>
+          </ng-container>
+          <p class="plm-empty" *ngIf="!participationAuto.length && !participationReview.length && !participationSuggestions.length">לא נמצא תוכן שרלוונטי במיוחד לקמפיין הזה — אפשר להוסיף ידנית אחר כך בבילדר.</p>
+        </div>
+
+        <button class="plm-create-btn" type="button" [disabled]="!importDisplayName.trim() || linking" (click)="createAndLinkImport()">
+          {{ linking ? 'יוצר ומחבר...' : 'יצירה וחיבור' }}
+        </button>
+      </ng-container>
     </ng-container>
 
     <p class="plm-error" *ngIf="error">⚠ {{ error }}</p>

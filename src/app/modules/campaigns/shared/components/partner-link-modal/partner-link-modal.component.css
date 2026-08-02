@@ -54,3 +54,34 @@
 .plm-create-btn:disabled { opacity: 0.6; cursor: default; }
 
 .plm-error { color: #dc2626; font-size: 13px; margin-top: 10px; }
+
+/* ── AI Website Import ── */
+.plm-import-hint { font-size: 13px; color: #64748b; margin: 0 0 12px; line-height: 1.5; }
+
+.plm-signals { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+.plm-signals-title { font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 8px; }
+.plm-signals-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.plm-signal {
+  font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  background: #fef2f2; color: #b91c1c;
+}
+.plm-signal--ok { background: #f0fdf4; color: #15803d; }
+
+.plm-review-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+.plm-review-title { font-size: 13px; font-weight: 800; color: #1e293b; margin: 0 0 8px; }
+.plm-review-item {
+  font-size: 13px; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+  background: #f8fafc; color: #334155; line-height: 1.5;
+}
+.plm-review-item--review { background: #fffbeb; color: #92400e; }
+.plm-suggestions-title { font-size: 12px; font-weight: 700; color: #64748b; margin: 10px 0 6px; }
+.plm-suggestion-row {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569;
+  padding: 6px 10px; border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 6px;
+}
+.plm-suggestion-row span { flex: 1; }
+.plm-suggestion-add {
+  background: #fff; color: #583cd6; border: 1px solid #583cd6; border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.plm-suggestion-add:disabled { opacity: 0.6; cursor: default; }

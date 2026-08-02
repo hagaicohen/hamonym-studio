@@ -2,10 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/campaign-preview.component';
 import { CampaignBlock, CampaignStudioStateService, createInitialPartnerDraft } from '../../services/campaign-studio-state.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { CampaignPartnersService } from '../../services/campaign-partners.service';
+import { CampaignApiService } from '../../services/campaign-api.service';
 
 // Phase 5, Sprint 5.1 — Public Partner Page. Guiding principle (see
 // docs/PARTNER_DOMAIN_MODEL_ADR.md "Phase 5"): public pages are Renderers
@@ -41,6 +43,7 @@ export class PartnerPublicPageComponent implements OnInit {
   private router = inject(Router);
   private entitiesService = inject(EntitiesService);
   private campaignPartnersService = inject(CampaignPartnersService);
+  private campaignApiService = inject(CampaignApiService);
   state = inject(CampaignStudioStateService);
 
   loading = true;
@@ -65,6 +68,13 @@ export class PartnerPublicPageComponent implements OnInit {
   prevPartner: { id: string; displayName: string } | null = null;
   nextPartner: { id: string; displayName: string } | null = null;
 
+  // Campaign banner (image + title + owning-entity logo) — pulled LIVE from
+  // the campaign itself, never copied into campaign_partners.blocks. Every
+  // partner in this campaign shows the exact same banner, always current —
+  // see the "Partner Model Overview" artifact discussion (2026-08-02).
+  campaignCoverImageUrl: string | null = null;
+  campaignEntityLogo: string | null = null;
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     const qp = this.route.snapshot.queryParamMap;
@@ -85,13 +95,26 @@ export class PartnerPublicPageComponent implements OnInit {
       });
     }
 
+    // campaignLinks/campaign are optional context (breadcrumb + prev/next
+    // partner nav, campaign banner) — a Partner page must still render on
+    // its own even if that campaign is since unpublished/hidden/not yet
+    // approved, so failures there degrade to null instead of failing the
+    // whole forkJoin and showing a misleading "partner not found" error.
     forkJoin({
       partner: this.entitiesService.getPublicPartner(id),
       campaignLinks: this.campaignSlug
-        ? this.campaignPartnersService.listPublicForCampaign(this.campaignSlug)
+        ? this.campaignPartnersService.listPublicForCampaign(this.campaignSlug).pipe(catchError(() => of(null)))
+        : of(null),
+      campaign: this.campaignSlug
+        ? this.campaignApiService.getBySlugPublic(this.campaignSlug).pipe(catchError(() => of(null)))
         : of(null),
     }).subscribe({
-      next: ({ partner, campaignLinks }) => {
+      next: ({ partner, campaignLinks, campaign }) => {
+        if (campaign) {
+          this.campaignCoverImageUrl = campaign.coverImageUrl;
+          this.campaignEntityLogo = campaign.entityLogo ?? null;
+          this.campaignTitle = campaign.title || this.campaignTitle;
+        }
         const initial = createInitialPartnerDraft(id, partner.displayName || '');
 
         let campaignBlocks: CampaignBlock[] = [];

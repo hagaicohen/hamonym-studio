@@ -122,6 +122,8 @@ export class CampaignApiService {
       updatedAt:               data.updated_at,
       publishedAt:             data.published_at,
       entityGaMeasurementId:   data.entity_ga_measurement_id ?? null,
+      entityName:              data.entity_name,
+      entityLogo:              data.entity_logo ?? null,
       // The backend backfills this exact placeholder on first save so a
       // title-less draft never blocks saving mid-edit (campaigns.service.js's
       // DEFAULT_TITLE) — showing it back in the title field/checklist as if

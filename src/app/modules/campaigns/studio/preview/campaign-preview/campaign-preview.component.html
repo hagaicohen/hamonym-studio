@@ -13,6 +13,8 @@
   [style.--hm-rewards-bg]="draft.layout.theme.rewardsBg"
   [style.--hm-reward-border]="draft.layout.theme.rewardCardBorder"
   [style.--hm-reward-border-active]="draft.layout.theme.rewardCardBorderActive"
+  [style.--hm-reward-title]="draft.layout.theme.rewardTitleColor"
+  [style.--hm-reward-desc]="draft.layout.theme.rewardDescColor"
   [style.--line]="draft.layout.theme.lineColor"
   [style.--hm-section-odd]="draft.layout.sectionBgOdd || '#ffffff'"
   [style.--hm-section-even]="draft.layout.sectionBgEven || '#f8fafc'"
@@ -641,7 +643,13 @@
   </ng-container>
 </ng-container>
 
-<!-- ══ REWARD DETAILS MODAL — sidebar reward card's "לפרטים נוספים" ══ -->
+<!-- ══ REWARD DETAILS MODAL — sidebar reward card's "קרא עוד". Deliberately a
+     modal, not an inline expand: the sidebar rail is height-capped with its
+     own internal scroll (DECISIONS.md 2026-07-27), so expanding text in
+     place would push every other sidebar section further down instead of
+     just overlaying on top. Also repeats the partner link shown on the
+     card itself — a visitor who opened this modal shouldn't have to close
+     it first to reach the business page. ══ -->
 <ng-container *ngIf="rewardDetailsOffering as offering">
   <div class="hm-join-overlay" (click)="closeRewardDetails()"></div>
   <div class="hm-join-modal hm-reward-details-modal">
@@ -652,6 +660,7 @@
     <div class="hm-join-body">
       <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-details-img">
       <div class="hm-reward-details-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
+      <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
 
       <!-- Multi-line description (e.g. numbered terms, one per line) renders
            as a real list; a single-line description stays a plain paragraph. -->
@@ -663,7 +672,7 @@
       </p>
       <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
         [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)">
-        🤝 בשיתוף עם {{ p.displayName }} — לדף השותף
+        {{ p.displayName }} ←
       </a>
     </div>
     <div class="hm-join-footer">
@@ -904,20 +913,20 @@
 
   <!-- SHARE -->
   <div class="hm-share-row" *ngIf="block.type === 'share'">
-    <button class="hm-share-btn hm-share-btn--link" type="button" *ngIf="asShare(block.data).platforms.link" (click)="copyShareLink(draft)">
-      <span class="hm-share-icon">🔗</span> {{ linkCopied ? 'הועתק!' : 'העתקת קישור' }}
+    <button class="hm-share-btn hm-share-btn--link" type="button" *ngIf="asShare(block.data).platforms.link" (click)="copyShareLink(draft)" [attr.aria-label]="linkCopied ? 'הועתק!' : 'העתקת קישור'" [title]="linkCopied ? 'הועתק!' : 'העתקת קישור'">
+      <span class="hm-share-icon">🔗</span>
     </button>
-    <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)">
-      <span class="hm-share-icon">✉️</span> אימייל
+    <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)" aria-label="שיתוף באימייל" title="אימייל">
+      <span class="hm-share-icon">✉️</span>
     </button>
-    <button class="hm-share-btn hm-share-btn--x" type="button" *ngIf="asShare(block.data).platforms.x" (click)="shareX(draft)" aria-label="שתפו ב-X">
-      𝕏
+    <button class="hm-share-btn hm-share-btn--x" type="button" *ngIf="asShare(block.data).platforms.x" (click)="shareX(draft)" aria-label="שתפו ב-X" title="X">
+      <span class="hm-share-icon hm-share-icon--x">𝕏</span>
     </button>
-    <button class="hm-share-btn hm-share-btn--facebook" type="button" *ngIf="asShare(block.data).platforms.facebook" (click)="shareFacebook(draft)">
-      <span class="hm-share-icon">📘</span> Facebook
+    <button class="hm-share-btn hm-share-btn--facebook" type="button" *ngIf="asShare(block.data).platforms.facebook" (click)="shareFacebook(draft)" aria-label="שיתוף בפייסבוק" title="Facebook">
+      <span class="hm-share-icon">📘</span>
     </button>
-    <button class="hm-share-btn hm-share-btn--whatsapp" type="button" *ngIf="asShare(block.data).platforms.whatsapp" (click)="shareWhatsApp(draft)">
-      <span class="hm-share-icon">💬</span> WhatsApp
+    <button class="hm-share-btn hm-share-btn--whatsapp" type="button" *ngIf="asShare(block.data).platforms.whatsapp" (click)="shareWhatsApp(draft)" aria-label="שיתוף בוואטסאפ" title="WhatsApp">
+      <span class="hm-share-icon">💬</span>
     </button>
   </div>
 
@@ -1133,20 +1142,23 @@
                separate full-image row) → full image row (default mode) →
                description. -->
           <div class="hm-reward-list-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
+          <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
 
           <div class="hm-reward-list-title-row">
-            <div class="hm-reward-icon-wrap" *ngIf="!offering.imageUrl || rewardsImagePosition(draft) === 'inline'">
-              <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
-              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
-            </div>
             <h3>{{ offering.title }}</h3>
           </div>
 
-          <!-- Full image row — the default mode; skipped entirely in
-               'inline' mode, where the same image already shows as the
-               small icon above instead. Size controlled by
-               rewardsImageSize (px), so it's never forced large. -->
-          <div class="hm-reward-list-img" *ngIf="offering.imageUrl && rewardsImagePosition(draft) !== 'inline'"
+          <!-- 'inline' mode (default) — small round icon centered on its own
+               row below the title, not beside it. 'full' mode — the same
+               image spans the card width instead, sized via rewardsImageSize
+               so it's never forced large. -->
+          <div class="hm-reward-list-icon-row" *ngIf="rewardsImagePosition(draft) === 'inline'">
+            <div class="hm-reward-icon-wrap hm-reward-icon-wrap--center">
+              <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
+              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+            </div>
+          </div>
+          <div class="hm-reward-list-img" *ngIf="offering.imageUrl && rewardsImagePosition(draft) === 'full'"
             [style.height.px]="rewardsImageSize(draft)">
             <img [src]="offering.imageUrl" [alt]="offering.title">
           </div>
@@ -1154,12 +1166,12 @@
           <p class="hm-reward-list-desc" *ngIf="offering.description">{{ offering.description }}</p>
           <button class="hm-reward-list-more" type="button" *ngIf="offering.description"
             (click)="openRewardDetails(offering); $event.stopPropagation()">
-            לפרטים נוספים
+            קרא עוד
           </button>
           <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
             [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
             (click)="$event.stopPropagation()">
-            🤝 בשיתוף עם {{ p.displayName }}
+            {{ p.displayName }} ←
           </a>
 
           <button class="hm-reward-list-btn" type="button">לבחירה</button>
@@ -1198,6 +1210,7 @@
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
+                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
                   <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
                     *ngIf="offering.description && offering.description.length > 120"
@@ -1207,7 +1220,7 @@
                   <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
                     [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
                     (click)="$event.stopPropagation()">
-                    🤝 בשיתוף עם {{ p.displayName }}
+                    {{ p.displayName }} ←
                   </a>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>
@@ -1238,6 +1251,7 @@
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
+                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
                   <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
                     *ngIf="offering.description && offering.description.length > 120"
@@ -1247,7 +1261,7 @@
                   <a *ngIf="partnerForOffering(offering.id) as p" class="hm-reward-partner-link"
                     [routerLink]="['/partners', p.id, 'view']" [queryParams]="partnerLinkQueryParams(draft)"
                     (click)="$event.stopPropagation()">
-                    🤝 בשיתוף עם {{ p.displayName }}
+                    {{ p.displayName }} ←
                   </a>
                   <div class="hm-reward-select-hint">לחץ לבחירה</div>
                 </div>

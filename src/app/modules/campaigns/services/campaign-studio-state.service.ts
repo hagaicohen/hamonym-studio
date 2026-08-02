@@ -335,6 +335,12 @@ export interface CampaignBlock {
   spacingTop:    number;
   spacingBottom: number;
   data: BlockData;
+  // AI Website Import (2026-07-31) — set only on medium-confidence blocks
+  // created by the partner-import-mapper; absent everywhere else (every
+  // other block-creation path is unaffected). Cleared by the "סמן כנבדק"
+  // action once the manager has looked at it — see
+  // campaign-page-builder-step's block-list header.
+  importReview?: { needsReview: boolean; confidence: number; sourceId: string };
 }
 
 // Offering = a donation perk/gift (formerly "Reward"). Race/event participant
@@ -408,6 +414,8 @@ export interface CampaignTheme {
   rewardsBg:             string;  // --hm-rewards-bg
   rewardCardBorder:      string;  // --hm-reward-border
   rewardCardBorderActive:string;  // --hm-reward-border-active
+  rewardTitleColor?:     string;  // --hm-reward-title — optional; falls back to each card layout's own default color in CSS when unset
+  rewardDescColor?:      string;  // --hm-reward-desc — optional; same fallback behavior
   lineColor:             string;  // --line
 }
 
@@ -531,6 +539,8 @@ export interface CampaignDraft {
   updatedAt?:   string;  // ISO timestamp
   publishedAt?: string;  // ISO timestamp
   entityGaMeasurementId?: string | null;  // owning entity's optional GA4 property (public campaign page only)
+  entityName?: string;         // owning entity's display name (public campaign page only)
+  entityLogo?: string | null;  // owning entity's logo_url (public campaign page only)
 
   // Step 1 — Basic Info
   title: string;
@@ -869,6 +879,40 @@ export function createInitialPartnerDraft(entityId: string, displayName: string)
   };
 }
 
+// Auto-seeded starter content for a brand-new Partner Profile — locked
+// decision (2026-08-02): there is exactly ONE recommended structure today
+// (Hero/About/Gallery/Map/Opening Hours/Coupons/CTA), so auto-applying it
+// beats offering a template-picker with nothing real to choose between (see
+// DECISIONS.md). Purely additive/editable like any other blocks — freely
+// removable/reorderable, NOT a locked-in template. Only used by manual
+// Partner-creation call sites (partners-list-page's quick-create,
+// partner-link-modal's "יצירת שותף חדש" tab) — AI Import stays purely
+// additive to what it actually classifies from the site, never seeded with
+// these placeholder defaults, which would violate its own "never invent"
+// contract (see partner-import-mapper.ts).
+// 'coupons' deliberately excluded — owner-registry.ts locks it to
+// ownerType 'campaign-partner' only, never 'partner' (see §13: campaign-
+// specific promo content belongs to exactly one owner). Including it here
+// would violate that already-settled rule.
+const PARTNER_DEFAULT_LAYOUT_TYPES: BlockType[] = ['hero', 'rich-text', 'gallery', 'map', 'opening-hours', 'cta'];
+const PARTNER_DEFAULT_LAYOUT_LABELS: Partial<Record<BlockType, string>> = {
+  'hero': 'הירו', 'rich-text': 'אודות', 'gallery': 'גלריה', 'map': 'מפה',
+  'opening-hours': 'שעות פתיחה', 'cta': 'קריאה לפעולה',
+};
+
+export function defaultPartnerLayoutBlocks(): CampaignBlock[] {
+  return PARTNER_DEFAULT_LAYOUT_TYPES.map((type, i) => ({
+    id: generateId(),
+    type,
+    order: i + 1,
+    visible: true,
+    label: PARTNER_DEFAULT_LAYOUT_LABELS[type] ?? type,
+    spacingTop: 0,
+    spacingBottom: 0,
+    data: defaultBlockData(type, 'partner'),
+  }));
+}
+
 // Phase 5 model refinement (2026-07-30) — "Campaign Participation" content,
 // scoped to one campaign_partners row (campaignPartnerId), NOT an entity.
 // Built the same way as createInitialPartnerDraft (empty blocks, no
@@ -1061,6 +1105,21 @@ export class CampaignStudioStateService {
     return sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
   }
 
+  // 'cta' only, by explicit product decision — a manager tuning a CTA's
+  // color/height wants the next CTA to match, but the same isn't true for
+  // e.g. free-text/image blocks, which are independent content each time.
+  // See DECISIONS.md (2026-08-01).
+  private readonly CLONE_LAST_OF_TYPE = new Set<BlockType>(['cta']);
+
+  private startingBlockData(type: BlockType, blocks: CampaignBlock[]): BlockData {
+    if (this.CLONE_LAST_OF_TYPE.has(type)) {
+      const sameType = blocks.filter(b => b.type === type);
+      const last = sameType[sameType.length - 1];
+      if (last) return structuredClone(last.data);
+    }
+    return defaultBlockData(type, this.draft.ownerType);
+  }
+
   // Block operations
   addBlock(type: BlockType): string {
     const blocks = [...this.draft.blocks];
@@ -1075,7 +1134,7 @@ export class CampaignStudioStateService {
       label,
       spacingTop: 0,
       spacingBottom: 0,
-      data: defaultBlockData(type, this.draft.ownerType),
+      data: this.startingBlockData(type, blocks),
     });
     this.patch({ blocks });
     // An empty tab bar looks broken (unlike an empty container, which is
@@ -1272,7 +1331,7 @@ export class CampaignStudioStateService {
     const maxOrder = siblingOrders.length ? Math.max(...siblingOrders) : 0;
     const newId = Math.random().toString(36).slice(2, 10);
     const label = this.defaultBlockLabel(type, blocks);
-    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: defaultBlockData(type, this.draft.ownerType) });
+    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: this.startingBlockData(type, blocks) });
     ctData.childBlockIds = [...ctData.childBlockIds, newId];
     const updatedBlocks = blocks.map(b => b.id === containerId ? { ...b, data: ctData } : b);
     this.patch({ blocks: updatedBlocks });
@@ -1326,7 +1385,7 @@ export class CampaignStudioStateService {
       id, type, order: 0, visible: true,
       label: this.defaultBlockLabel(type, existing),
       spacingTop: 0, spacingBottom: 0,
-      data: defaultBlockData(type, this.draft.ownerType),
+      data: this.startingBlockData(type, existing),
     };
 
     const newScopeIds = [...scopeIds];

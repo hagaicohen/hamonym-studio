@@ -15,6 +15,15 @@
     </a>
   </div>
 
+  <!-- Campaign banner — same image/title/logo as the campaign's own public
+       page, pulled live (not authored per-partner). Identical for every
+       partner in this campaign. -->
+  <div class="ppp-campaign-banner" *ngIf="campaignSlug && campaignCoverImageUrl" [style.backgroundImage]="'url(' + campaignCoverImageUrl + ')'">
+    <div class="ppp-campaign-banner-scrim"></div>
+    <img *ngIf="campaignEntityLogo" [src]="campaignEntityLogo" alt="" class="ppp-campaign-banner-logo" />
+    <span class="ppp-campaign-banner-title">{{ campaignTitle }}</span>
+  </div>
+
   <app-campaign-preview />
 
   <div class="ppp-partner-nav" *ngIf="prevPartner || nextPartner">

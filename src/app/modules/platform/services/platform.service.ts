@@ -66,6 +66,30 @@ export class PlatformService {
     return this.http.get(`${environment.apiUrl}/api/platform/organizations/${id}`, { headers: authHeaders() });
   }
 
+  getPartners(query: {
+    search?: string;
+    sortBy?: string;
+    sortDir?: string;
+    page?: number;
+    limit?: number;
+    noCampaigns?: boolean;
+    hidden?: boolean;
+    newSince?: number;
+  }): Observable<any> {
+    let params = new HttpParams()
+      .set('page', String(query.page ?? 0))
+      .set('limit', String(query.limit ?? 25));
+
+    if (query.search) params = params.set('search', query.search);
+    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+    if (query.sortDir) params = params.set('sortDir', query.sortDir);
+    if (query.noCampaigns) params = params.set('noCampaigns', '1');
+    if (query.hidden) params = params.set('hidden', '1');
+    if (query.newSince) params = params.set('newSince', String(query.newSince));
+
+    return this.http.get(`${environment.apiUrl}/api/platform/partners`, { headers: authHeaders(), params });
+  }
+
   approve(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
     return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/approve`, { notes, reasonTags }, { headers: authHeaders() });
   }

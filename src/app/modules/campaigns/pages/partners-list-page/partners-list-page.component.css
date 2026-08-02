@@ -1,4 +1,9 @@
 .pl-page { padding: 32px; direction: rtl; }
+.pl-return-banner {
+  background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3;
+  border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600;
+  margin-bottom: 20px;
+}
 .pl-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
 .pl-header-text { text-align: right; flex: 1; }
 .pl-header-actions { display: flex; gap: 10px; align-items: flex-start; }
@@ -7,9 +12,9 @@
 .pl-new-btn {
   background: #583cd6; color: #fff; border: none; border-radius: 10px;
   padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+  display: inline-block; text-decoration: none; line-height: 1.4;
 }
 .pl-new-btn:hover { background: #4730b0; }
-
 .pl-create-panel {
   background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
   padding: 18px; margin-bottom: 20px; max-width: 420px;
@@ -20,11 +25,24 @@
   width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
   font-size: 14px; font-family: inherit; box-sizing: border-box;
 }
-.pl-create-btn {
-  width: 100%; padding: 10px; background: #583cd6; color: #fff;
-  border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+.pl-create-panel-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.pl-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 0; }
+
+/* Three-option "create a Partner" chooser — no more than these three. */
+.pl-create-panel--choose { display: flex; flex-direction: column; gap: 8px; }
+.pl-choice-btn {
+  display: flex; align-items: center; gap: 12px; text-align: right;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: border-color 0.12s, background 0.12s;
+  text-decoration: none;
 }
-.pl-create-btn:disabled { opacity: 0.6; cursor: default; }
+.pl-choice-btn:hover { border-color: #583cd6; background: #f5f3ff; }
+.pl-choice-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.pl-choice-btn:disabled:hover { border-color: #e2e8f0; background: #fff; }
+.pl-choice-icon { font-size: 20px; }
+.pl-choice-text { display: flex; flex-direction: column; gap: 2px; }
+.pl-choice-text b { font-size: 14px; color: #1e293b; }
+.pl-choice-text small { font-size: 12px; color: #64748b; }
 .pl-error { color: #dc2626; font-size: 13px; margin-top: 8px; }
 
 .pl-loading { color: #64748b; font-size: 14px; }
@@ -39,6 +57,7 @@
   gap: 16px;
 }
 .pl-empty-icon { font-size: 48px; }
+.pl-empty-actions { display: flex; gap: 10px; }
 
 .pl-grid {
   display: grid;
@@ -56,17 +75,28 @@
   background: #f1f5f9; font-size: 24px;
 }
 .pl-card-name { font-size: 14px; font-weight: 700; color: #1e293b; }
-.pl-card-actions { display: flex; gap: 8px; width: 100%; }
+
+/* Small, delicate icon-only actions — not bold full-width pills. Same
+   language as campaign-preview's .hm-share-btn (2026-08-02). */
+.pl-card-actions { display: flex; justify-content: center; gap: 8px; width: 100%; }
+.pl-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border: 1px solid #e5e9f0; border-radius: 50%;
+  background: #fff; color: #64748b;
+  cursor: pointer; text-decoration: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s, color 0.12s;
+}
+.pl-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(15, 23, 42, .1); border-color: #c4b5fd; color: #583cd6; }
+.pl-icon-btn--danger { color: #dc2626; }
+.pl-icon-btn--danger:hover { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+
+/* Plain text button — used for modal "ביטול" actions. */
 .pl-card-btn {
-  flex: 1; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
-  text-decoration: none; background: #583cd6; color: #fff; text-align: center;
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  background: #f1f5f9; color: #1e293b; border: none; cursor: pointer;
 }
-.pl-card-btn--secondary { background: #f1f5f9; color: #1e293b; }
-.pl-card-btn--danger {
-  width: 100%; background: transparent; color: #dc2626; border: 1px solid #fecaca;
-  padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
-}
-.pl-card-btn--danger:hover { background: #fef2f2; }
 
 .pl-delete-overlay {
   position: fixed; inset: 0; background: rgba(15,23,42,0.55);

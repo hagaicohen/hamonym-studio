@@ -8,7 +8,12 @@
       <h2 class="step-title">{{ isCampaign ? 'בניית דף הקמפיין' : (ownerType === 'partner' ? 'בניית דף השותף' : 'עריכת תוכן ההשתתפות בקמפיין') }}</h2>
     </div>
     <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
-    <button class="btn-change-template" type="button" (click)="showTemplatePicker = true">
+    <!-- Campaign only — Partner/Campaign-Participation have exactly one
+         recommended structure today (auto-seeded on creation), so a
+         template picker with nothing real to choose between stays hidden
+         until there's actually more than one option. See DECISIONS.md
+         (2026-08-02). -->
+    <button class="btn-change-template" type="button" *ngIf="isCampaign" (click)="showTemplatePicker = true">
       ✦ שנה תבנית
     </button>
   </div>
@@ -85,8 +90,11 @@
             </span>
           </span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
+          <span class="block-import-review-chip" *ngIf="block.importReview?.needsReview" title="נוצר אוטומטית מייבוא אתר, ברמת ביטחון בינונית — כדאי לבדוק">לבדיקה ⚠</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
+          <button class="action-btn" *ngIf="block.importReview?.needsReview"
+            (click)="clearImportReview(block.id)" title="סמן כנבדק">✓ נבדק</button>
           <button class="action-btn"
             (click)="moveInScope(block.id, parentBlock, draft.blocks, -1)"
             [disabled]="isFirstInScopeOf(block, parentBlock, draft.blocks)" title="למעלה">↑</button>

@@ -132,6 +132,19 @@
         </app-rich-text-editor>
       </div>
 
+      <!-- WEBSITE -->
+
+      <div class="field-block">
+        <label> קישור לאתר {{ entityConfig.labels.entity }} (לא חובה) </label>
+
+        <input
+          type="url"
+          class="base-input"
+          [(ngModel)]="website"
+          placeholder="https://..."
+        />
+      </div>
+
       <!-- LOGO -->
 
       <div class="field-block">
