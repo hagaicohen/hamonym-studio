@@ -35,6 +35,12 @@ exports.create = async (req, res) => {
     const partner = await service.create(req.user.id, req.params.campaignId, req.body);
     res.status(201).json({ partner });
   } catch (err) {
+    // 23505 = unique_violation — the service already reassigns reward_id on
+    // an existing (campaign, partner) row instead of inserting a duplicate,
+    // so this is only a safety net for a genuine race between two requests.
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'השותף כבר מקושר לקמפיין הזה, נסו שוב' });
+    }
     res.status(err.status || 500).json({ error: err.message });
   }
 };

@@ -75,11 +75,12 @@ exports.extractFromDocuments = async (files, freeText, websiteUrl) => {
 // @param {{ text: string, sources: Array<{title: string, url: string}> } | null} [research] - optional, real internet research (2026-07-23, explicit opt-in — see organization-research.tool.js)
 // @param {Array<{question: string, answer: string}>} [userAnswers] - optional, campaign manager's own answers to a previous round's clarifyingQuestions (2026-07-23)
 // @param {Array<{label: string, mimeType: string, buffer: Buffer}>} [images] - optional, uploaded images for galleryCuration (2026-07-23)
+// @param {'campaign'|'partner'} [targetType] - which Brief prompt/framing to use (2026-07-31) — see builders/brief.builder.js
 // @returns {Promise<import('./campaign-creation.types').Brief & { trace: object[] }>}
-exports.buildBriefFromFacts = async (facts, research, userAnswers, images) => {
+exports.buildBriefFromFacts = async (facts, research, userAnswers, images, targetType) => {
   const tracer = createTracer('CampaignCreationPipeline.buildBriefFromFacts');
 
-  const brief = await tracer.trace('BriefBuilder', () => briefBuilder.build(facts, research, userAnswers, images),
+  const brief = await tracer.trace('BriefBuilder', () => briefBuilder.build(facts, research, userAnswers, images, targetType),
     (b) => ({ category: b.category.value, hasTargetAmount: b.suggestedTargetAmount.value != null, hasResearch: !!research, questionCount: b.clarifyingQuestions.length, imageCount: images?.length || 0 }));
 
   tracer.print();

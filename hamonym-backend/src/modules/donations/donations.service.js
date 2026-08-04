@@ -427,6 +427,28 @@ exports.getLiveDonations = async (slug, since) => {
   return res.rows;
 };
 
+/* ──────────────────────────────────────────────────────
+   REWARD PURCHASE COUNTS (public — "X נרכשו מתוך Y" badge)
+────────────────────────────────────────────────────── */
+exports.getRewardCounts = async (slug) => {
+  const res = await db.query(
+    `SELECT elem->>'id' AS reward_id, COUNT(*)::int AS count
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities  e ON e.id = c.entity_id
+     CROSS JOIN LATERAL jsonb_array_elements(d.rewards) AS elem
+     WHERE c.slug = $1
+       AND d.status = 'paid'
+       AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
+       AND elem->>'id' IS NOT NULL
+     GROUP BY elem->>'id'`,
+    [slug]
+  );
+  const counts = {};
+  for (const row of res.rows) counts[row.reward_id] = row.count;
+  return counts;
+};
+
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    PUBLIC DONORS LIST (for campaign page)
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */

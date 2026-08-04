@@ -11,6 +11,7 @@ router.get('/return',                     controller.handleReturn);
 router.get('/public/:id',                 controller.getDonationPublic);
 router.get('/campaign/:slug/donors',      controller.getCampaignDonors);
 router.get('/campaign/:slug/live',        controller.getLiveDonations);
+router.get('/campaign/:slug/reward-counts', controller.getRewardCounts);
 router.get('/receipt/:id',                controller.getReceipt);
 
 // Authenticated — donor's own donation history
