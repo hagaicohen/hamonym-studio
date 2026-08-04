@@ -1,5 +1,24 @@
 ﻿const donationsService = require('./donations.service');
 
+// Donor-facing translation for createDonation's internal error messages —
+// these were previously sent to the checkout form verbatim in English
+// (e.g. "Entity not approved"), which is both untranslated and leaks an
+// internal admin-approval detail no donor needs to know about.
+function getDonationErrorMessage(error) {
+  switch (error.message) {
+    case 'Entity not approved':
+      return 'לא ניתן לתרום לקמפיין זה כרגע — העמותה המפעילה אותו ממתינה לאישור.';
+    case 'Campaign not found':
+      return 'הקמפיין לא נמצא';
+    case 'One or more registration options are invalid for this campaign':
+      return 'אחת האפשרויות שנבחרו אינה תקפה יותר לקמפיין זה, רעננו את הדף ונסו שוב';
+    default:
+      return error.message?.toLowerCase().includes('cardcom')
+        ? 'אירעה שגיאה בעיבוד התשלום, נסו שוב'
+        : 'אירעה שגיאה, נסו שוב';
+  }
+}
+
 exports.getDonationPublic = async (req, res) => {
   try {
     const donation = await donationsService.getDonationPublic(req.params.id);
@@ -47,7 +66,7 @@ exports.createDonation = async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('createDonation error:', err.message);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: getDonationErrorMessage(err) });
   }
 };
 

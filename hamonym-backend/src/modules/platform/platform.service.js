@@ -85,12 +85,19 @@ function userActionLabel(action) {
   return USER_ACTION_LABELS[action] || action;
 }
 
+// tax_document (סעיף 46) is only ever collected for entity_type='association'
+// — it's the only type whose registration wizard shows that upload field at
+// all (organization-registration/config/entity-config.ts's showSection46).
+// A חל״צ/מפלגה/עוסק פטור/עוסק מורשה has no way to upload one and shouldn't
+// be penalized/flagged for a document that doesn't apply to them.
+const TAX_DOCUMENT_REQUIRED_SQL = `e.entity_type = 'association'`;
+
 const PROFILE_COMPLETION_SQL = `
   ROUND((
     (CASE WHEN e.display_name IS NOT NULL AND e.display_name <> '' THEN 1 ELSE 0 END) +
     (CASE WHEN e.legal_name IS NOT NULL AND e.legal_name <> '' THEN 1 ELSE 0 END) +
     (CASE WHEN e.association_certificate_name IS NOT NULL THEN 1 ELSE 0 END) +
-    (CASE WHEN e.tax_document_name IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN NOT (${TAX_DOCUMENT_REQUIRED_SQL}) OR e.tax_document_name IS NOT NULL THEN 1 ELSE 0 END) +
     (CASE WHEN e.cardcom_connection_status = 'success' THEN 1 ELSE 0 END)
   ) / 5.0 * 100)::int AS profile_completion
 `;
@@ -130,13 +137,19 @@ exports.getDashboardData = async () => {
 
 async function getKpis() {
   const [entitiesRes, campaignsRes, donationsRes, newDonorsRes] = await Promise.all([
+    // Excludes soft-deleted rows (status='deleted' — a hard-deleted, test-data-only
+    // status; a real deletion removes the row entirely, see entities.service.js)
+    // and Partner-role entities (a different concept from an "organization" for
+    // this KPI — see getMyEntities()'s equivalent exclusion).
     db.query(
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
          COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
          COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
-       FROM entities`
+       FROM entities e
+       WHERE e.status != 'deleted'
+         AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')`
     ),
     db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published' AND deleted_at IS NULL`),
     db.query(
@@ -178,8 +191,9 @@ async function getAlerts() {
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`),
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${INCOMPLETE_DRAFT_SQL}`),
     db.query(
-      `SELECT COUNT(*)::int AS c FROM entities
-       WHERE association_certificate_name IS NULL OR tax_document_name IS NULL`
+      `SELECT COUNT(*)::int AS c FROM entities e
+       WHERE e.association_certificate_name IS NULL
+          OR (${TAX_DOCUMENT_REQUIRED_SQL} AND e.tax_document_name IS NULL)`
     ),
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'active' AND flagged_for_review`),
     db.query(
@@ -368,6 +382,10 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   // entities.service.js#getMyEntities, so a business never gets shown or
   // treated as an עמותה here.
   where.push(`NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')`);
+  // Hard-deleted-in-spirit — status='deleted' is a real soft-delete (see
+  // entities.service.js#deleteEntity), not a working state, and should never
+  // surface in this admin list regardless of which status chip is active.
+  where.push(`e.status != 'deleted'`);
 
   if (status && status !== 'all') {
     where.push(`e.status = $${idx++}`);
@@ -379,7 +397,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
     idx++;
   }
   if (missingDocs) {
-    where.push(`(e.association_certificate_name IS NULL OR e.tax_document_name IS NULL)`);
+    where.push(`(e.association_certificate_name IS NULL OR (${TAX_DOCUMENT_REQUIRED_SQL} AND e.tax_document_name IS NULL))`);
   }
   if (flaggedForReview) {
     where.push(`e.flagged_for_review = true`);
@@ -488,7 +506,8 @@ exports.getPartners = async ({ search, sortBy, sortDir, page = 0, limit = 25, no
          e.id, e.display_name, e.legal_name, e.logo_url, e.website, e.is_hidden,
          e.created_at, e.updated_at,
          owner.full_name AS owner_name, owner.email AS owner_email,
-         COALESCE(camp.campaigns_count, 0) AS campaigns_count
+         COALESCE(camp.campaigns_count, 0) AS campaigns_count,
+         primary_campaign.slug AS campaign_slug
        FROM entities e
        JOIN entity_roles er ON er.entity_id = e.id
        LEFT JOIN LATERAL (
@@ -503,6 +522,18 @@ exports.getPartners = async ({ search, sortBy, sortDir, page = 0, limit = 25, no
          FROM campaign_partners cp
          WHERE cp.partner_entity_id = e.id
        ) camp ON true
+       -- "אתר" here is a link into OUR system, not the partner's own real-world
+       -- website (entities.website is unreliable for clone-imported partners —
+       -- it holds the SOURCE page's URL the content was cloned from, not a
+       -- real site of theirs). Most-recently-linked campaign, if any.
+       LEFT JOIN LATERAL (
+         SELECT c.slug
+         FROM campaign_partners cp
+         JOIN campaigns c ON c.id = cp.campaign_id
+         WHERE cp.partner_entity_id = e.id AND c.deleted_at IS NULL
+         ORDER BY cp.created_at DESC
+         LIMIT 1
+       ) primary_campaign ON true
        ${whereStr}
        ${noCampaignsClause}
        ORDER BY ${sortCol} ${sortOrd}

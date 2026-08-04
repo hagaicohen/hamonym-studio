@@ -1424,12 +1424,31 @@ exports.getPublicPartner = async (entityId) => {
 // this domain (§10 of PARTNER_DOMAIN_MODEL_ADR.md): editing rights via
 // user_entities, "is this a Partner at all" via entity_roles.
 // ─────────────────────────────────────────────────────────────────────────
+// Fallback icon (2026-08-04): if the partner never set their own logo_url,
+// fall back to the imageUrl of a reward (campaigns.rewards is a JSONB array;
+// campaign_partners.reward_id is a soft/unenforced reference into it — see
+// migration 032) this partner is linked to, rather than the generic building
+// placeholder. Most-recently-linked reward wins if there's more than one;
+// still null (placeholder shown) if neither exists.
 exports.getMyPartners = async (userId) => {
   const { rows } = await db.query(
-    `SELECT e.id, e.display_name, e.logo_url, e.website
+    `SELECT e.id, e.display_name, e.website,
+            COALESCE(e.logo_url, fallback_img.image_url) AS logo_url
      FROM entities e
      JOIN user_entities ue ON ue.entity_id = e.id AND ue.user_id = $1
      JOIN entity_roles er ON er.entity_id = e.id AND er.role = 'partner'
+     LEFT JOIN LATERAL (
+       SELECT elem->>'imageUrl' AS image_url
+       FROM campaign_partners cp
+       JOIN campaigns c ON c.id = cp.campaign_id
+       CROSS JOIN LATERAL jsonb_array_elements(c.rewards) AS elem
+       WHERE cp.partner_entity_id = e.id
+         AND cp.reward_id IS NOT NULL
+         AND elem->>'id' = cp.reward_id
+         AND NULLIF(elem->>'imageUrl', '') IS NOT NULL
+       ORDER BY cp.created_at DESC
+       LIMIT 1
+     ) fallback_img ON true
      WHERE e.deleted_at IS NULL
      ORDER BY e.display_name ASC`,
     [userId]
