@@ -596,8 +596,8 @@
   transform: translateY(-50%);
   width: 128px; height: 128px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid rgba(255,255,255,0.95);
+  background: var(--hm-logo-bg, #ffffff);
+  border: var(--hm-logo-border-width, 3px) var(--hm-logo-border-style, solid) var(--hm-logo-border-color, rgba(255,255,255,0.95));
   box-shadow: 0 8px 32px rgba(0,0,0,0.45);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
@@ -609,10 +609,11 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
-/* ── Logo above-hero strip ── */
+/* ── Logo above-hero strip — background lives on a circular badge around
+   the logo, never a full-width bar, same visual language as the
+   Hero-overlay circle (.hm-hero-org-logo) below. ── */
 .hm-logo-above-strip {
   width: 100%;
-  background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
@@ -620,14 +621,21 @@
   padding: 20px 32px;
   box-sizing: border-box;
 }
+.hm-logo-above-badge {
+  width: 112px; height: 112px;
+  border-radius: 50%;
+  background: var(--hm-logo-bg, #ffffff);
+  border: var(--hm-logo-border-width, 1px) var(--hm-logo-border-style, solid) var(--hm-logo-border-color, rgba(0,0,0,0.06));
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
 .hm-logo-above-img {
-  max-height: 72px;
-  max-width: 260px;
-  width: auto;
-  height: auto;
+  width: 78%;
+  height: 78%;
   object-fit: contain;
+  object-position: center;
   display: block;
-  margin: 0 auto;
 }
 .hero-logo-emoji { font-size: 52px; }
 
@@ -850,10 +858,10 @@
 
 .hm-stat-icon {
   width: 40px; height: 40px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid var(--hm-accent, #cc350f);
-  color: var(--hm-accent, #cc350f);
+  border-radius: var(--stat-icon-radius, 8px);
+  background: var(--stat-icon-bg, #ffffff);
+  border: 1px solid var(--stat-icon-border, var(--stat-icon-color, var(--hm-accent, #cc350f)));
+  color: var(--stat-icon-color, var(--hm-accent, #cc350f));
   display: inline-flex; align-items: center; justify-content: center;
   margin: 0 auto 8px;
 }
@@ -1118,16 +1126,20 @@
   background: #f8fafc;
   border-radius: 16px;
   overflow-x: hidden;
-  /* Stacking several optional sections (rewards/donors/ambassadors/updates/
-     sponsors) into the rail can make it taller than the main column next to
-     it — without a height cap, the whole page grows to match the rail,
-     leaving the shorter main column blank once you scroll past its own
-     content. Capping + scrolling internally keeps the rail's own nav-link
-     targets reachable (scrollIntoView still finds them inside this
-     scrollable ancestor) without stretching the page. See DECISIONS.md
-     (2026-07-26). */
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
+  /* Independent scroll pane (2026-08-04): a FIXED height (not max-height —
+     that only capped/scrolled once content happened to be taller, which
+     read as randomly "running out" rather than a predictable, always-there
+     boundary) matching the viewport, so this column scrolls entirely on its
+     own, independent of the main column's scroll — same split-pane feel
+     regardless of which side (`page-layout-sidebar--right/--left`) it's on.
+     `overflow: hidden` here only clips; the actual scrolling happens on
+     .sidebar-rail-inner (see DECISIONS.md — keeping sticky and the
+     scrollable region on the SAME element previously caused content to
+     vanish instead of scrolling in some browsers). */
+  height: calc(100vh - 32px);
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
 }
 .sidebar-rail-inner {
@@ -1135,6 +1147,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  height: 100%;
 }
 
 /* Mobile: stack sidebar on top */
@@ -1151,10 +1165,10 @@
   border-radius: 0;
   box-shadow: none;
   order: -1; /* rail on top on mobile */
-  max-height: none; /* not sticky here — no need to cap/scroll internally */
+  height: auto; /* not sticky here — no need for an independent scroll pane */
   overflow-y: visible;
 }
-.campaign-page--mobile .sidebar-rail-inner { padding: 16px; }
+.campaign-page--mobile .sidebar-rail-inner { padding: 16px; overflow-y: visible; height: auto; }
 .campaign-page--mobile .sidebar-main { width: 100%; }
 
 /* Section heading */
@@ -1395,17 +1409,21 @@
   transition: all 0.15s;
 }
 
-/* Underline variant — flat row, active tab gets a colored bottom border */
-.block-tabs--underline .tabs-header { border-bottom: 1.5px solid var(--line, #e2e8f0); padding: 0 clamp(16px, 5vw, 48px); }
-.block-tabs--underline .tabs-header-btn { padding: 12px 16px; color: #64748b; border-bottom: 2.5px solid transparent; margin-bottom: -1.5px; }
-.block-tabs--underline .tabs-header-btn.active { color: var(--tabs-accent); border-bottom-color: var(--tabs-accent); }
-.block-tabs--underline .tabs-header-btn:hover:not(.active) { color: #334155; }
+/* Underline variant — flat row, active tab gets a colored bottom border.
+   Top padding matches the pills/boxed variants (they already had breathing
+   room above the header; this one didn't, so it read as crowded against
+   whatever block sits above it) — independent of the block's own
+   configurable spacingTop, which still applies additively on top of this. */
+.block-tabs--underline .tabs-header { border-bottom: 1.5px solid var(--line, #e2e8f0); padding: 16px clamp(16px, 5vw, 48px) 0; }
+.block-tabs--underline .tabs-header-btn { padding: 12px 16px; color: var(--tabs-label, #64748b); background: var(--tabs-bg, transparent); font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1.5px; border-radius: 6px 6px 0 0; }
+.block-tabs--underline .tabs-header-btn.active { color: var(--tabs-accent); font-weight: 800; border-bottom-color: var(--tabs-accent); }
+.block-tabs--underline .tabs-header-btn:hover:not(.active) { color: #334155; background: rgba(15, 23, 42, 0.04); }
 
 /* Pills variant — rounded buttons, active one filled */
 .block-tabs--pills .tabs-header { padding: 16px clamp(16px, 5vw, 48px) 8px; }
-.block-tabs--pills .tabs-header-btn { padding: 9px 18px; border-radius: 999px; color: #475569; background: #f1f5f9; }
+.block-tabs--pills .tabs-header-btn { padding: 9px 18px; border-radius: 999px; color: var(--tabs-label, #475569); background: var(--tabs-bg, #f1f5f9); }
 .block-tabs--pills .tabs-header-btn.active { color: #fff; background: var(--tabs-accent); }
-.block-tabs--pills .tabs-header-btn:hover:not(.active) { background: #e2e8f0; }
+.block-tabs--pills .tabs-header-btn:hover:not(.active) { filter: brightness(0.96); }
 
 /* Boxed variant — segmented control, active tab elevated on white */
 .block-tabs--boxed .tabs-header {
@@ -1416,8 +1434,12 @@
   width: fit-content;
   max-width: calc(100% - 2 * clamp(16px, 5vw, 48px));
 }
-.block-tabs--boxed .tabs-header-btn { padding: 8px 18px; border-radius: 9px; color: #64748b; }
+.block-tabs--boxed .tabs-header-btn { padding: 8px 18px; border-radius: 9px; color: var(--tabs-label, #64748b); background: var(--tabs-bg, transparent); }
 .block-tabs--boxed .tabs-header-btn.active { color: var(--tabs-accent); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.10); }
+
+/* Optional border around the active tab's content panel — off by default
+   (contentBorder), style/color controllable from "מתקדם". */
+.tabs-panel--bordered { border-width: 1.5px; border-radius: 12px; padding: 16px; }
 
 .tabs-panel { width: 100%; }
 
@@ -1570,8 +1592,23 @@
   box-shadow: 0 3px 8px rgba(15, 23, 42, .1);
   border-color: #cbd5e1;
 }
-.hm-share-icon { font-size: 14px; line-height: 1; }
+.hm-share-icon { font-size: 14px; line-height: 1; color: #0f172a; }
 .hm-share-icon--x { font-size: 13px; font-weight: 700; color: #0f172a; }
+
+/* Real brand colors for the icon itself, and on hover the button fills with
+   that same color (icon flips to white) — same treatment already used for
+   the footer's social icons (.hm-footer-social a:hover), just per-platform
+   here instead of one shared theme color. */
+.hm-share-btn--whatsapp .hm-share-icon { color: #25d366; }
+.hm-share-btn--whatsapp:hover { background: #25d366; border-color: #25d366; }
+.hm-share-btn--whatsapp:hover .hm-share-icon { color: #fff; }
+
+.hm-share-btn--facebook .hm-share-icon { color: #1877f2; }
+.hm-share-btn--facebook:hover { background: #1877f2; border-color: #1877f2; }
+.hm-share-btn--facebook:hover .hm-share-icon { color: #fff; }
+
+.hm-share-btn--x:hover { background: #000; border-color: #000; }
+.hm-share-btn--x:hover .hm-share-icon--x { color: #fff; }
 
 @media (max-width: 768px) {
   .hm-share-row { gap: 6px; padding: 12px 16px; }
@@ -1762,7 +1799,7 @@
 .hm-reward-list-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hm-reward-list-btn {
   width: 100%; padding: 9px; border: none; border-radius: 8px;
-  background: var(--hm-secondary, #6fc9eb); color: #fff;
+  background: var(--hm-reward-button, var(--hm-secondary, #6fc9eb)); color: #fff;
   font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
 }
 .hm-reward-list-card.is-selected .hm-reward-list-btn { background: #16a34a; }

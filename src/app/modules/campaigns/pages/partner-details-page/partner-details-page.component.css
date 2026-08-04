@@ -1,0 +1,66 @@
+:host { display: block; }
+
+.pd-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+  direction: rtl;
+}
+
+.pd-load-state {
+  display: flex; align-items: center; justify-content: center;
+  height: 40vh; font-size: 15px; color: #64748b;
+}
+.pd-load-state--error { color: #dc2626; }
+
+.pd-header { margin-bottom: 20px; }
+.pd-back-link {
+  display: inline-block; font-size: 13px; font-weight: 600; color: #64748b;
+  text-decoration: none; margin-bottom: 12px;
+}
+.pd-back-link:hover { color: #583cd6; }
+.pd-title { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0 0 4px; }
+.pd-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+
+.pd-card {
+  background: #fff; border: 1px solid #e5e9f0; border-radius: 16px;
+  padding: 24px; box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.pd-logo-row { display: flex; align-items: center; gap: 14px; }
+.pd-logo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pd-logo--empty {
+  display: flex; align-items: center; justify-content: center;
+  background: #f1f5f9; font-size: 24px;
+}
+.pd-logo-btn {
+  display: inline-block; padding: 8px 16px; border-radius: 8px;
+  border: 1px solid #c4b5fd; background: #fff; color: #583cd6;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.pd-logo-btn:hover { background: #f5f3ff; }
+.pd-logo-btn--busy { opacity: 0.6; pointer-events: none; }
+
+.pd-fields { display: flex; flex-direction: column; gap: 14px; }
+.pd-field { display: flex; flex-direction: column; gap: 6px; }
+.pd-field label { font-size: 13px; font-weight: 700; color: #374151; }
+.pd-input {
+  padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 14px; font-family: inherit; box-sizing: border-box;
+}
+.pd-input:focus { outline: none; border-color: #583cd6; }
+
+.pd-actions { display: flex; align-items: center; gap: 12px; }
+.pd-save-btn {
+  background: #583cd6; color: #fff; border: none; border-radius: 8px;
+  padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.pd-save-btn:disabled { opacity: 0.6; cursor: default; }
+.pd-error { color: #dc2626; font-size: 13px; }
+
+.pd-builder-link {
+  display: block; margin-top: 18px; text-align: center;
+  font-size: 13px; font-weight: 700; color: #583cd6; text-decoration: none;
+}
+.pd-builder-link:hover { text-decoration: underline; }

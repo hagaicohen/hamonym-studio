@@ -3,8 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
+import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import {
-  CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData, ContainerBlockData,
+  CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData, ContainerBlockData, CampaignTheme,
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService } from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
@@ -19,7 +20,7 @@ import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categorie
   standalone: true,
   imports: [
     CommonModule, FormsModule, LucideAngularModule,
-    RichTextEditorComponent,
+    RichTextEditorComponent, ColorPickerComponent,
   ],
   templateUrl: './campaign-basic-step.component.html',
   styleUrl: './campaign-basic-step.component.css',
@@ -51,6 +52,18 @@ export class CampaignBasicStepComponent implements OnInit {
   entityName = '';
 
   showAdvanced = false;
+  logoDesignOpen = false;
+
+  // Heavier sections (rich-text editors, the Hero-display toggles box)
+  // collapsed by default — same "expand only what you're working on"
+  // pattern as the page-builder step's design panels, to keep this step's
+  // default view short.
+  private expandedSections = new Set<string>();
+  isSectionCollapsed(key: string): boolean { return !this.expandedSections.has(key); }
+  toggleSection(key: string): void {
+    if (this.expandedSections.has(key)) this.expandedSections.delete(key);
+    else this.expandedSections.add(key);
+  }
 
   // ── Category picker ──
   categorySearch = '';
@@ -181,9 +194,58 @@ export class CampaignBasicStepComponent implements OnInit {
     if (!file) return;
     this.isUploadingLogo = true;
     this.uploadService.upload(file, 'campaigns/logos').subscribe({
-      next: url => { this.state.patch({ campaignLogoUrl: url }); this.isUploadingLogo = false; },
+      next: url => {
+        this.state.patch({ campaignLogoUrl: url });
+        this.isUploadingLogo = false;
+        this.autoContrastLogoBg(url);
+      },
       error: ()  => { this.isUploadingLogo = false; },
     });
+  }
+
+  // ── Logo background ──
+  patchTheme(partial: Partial<CampaignTheme>): void {
+    const draft = this.state.draft;
+    this.state.patch({ layout: { ...draft.layout, theme: { ...draft.layout.theme, ...partial } } });
+  }
+
+  // A near-white logo on the default white/transparent background is
+  // invisible — when a freshly uploaded logo turns out to be mostly light,
+  // switch its background to a dark shade automatically so it stays legible.
+  // Only kicks in while the background is still untouched (default white),
+  // so it never overrides a color the manager picked on purpose.
+  private autoContrastLogoBg(url: string): void {
+    if (this.state.draft.layout.theme.logoBg !== '#ffffff') return;
+    const img = this.doc.createElement('img');
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = this.doc.createElement('canvas');
+      const size = 40;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, size, size);
+      let data: Uint8ClampedArray;
+      try {
+        data = ctx.getImageData(0, 0, size, size).data;
+      } catch {
+        return; // canvas tainted by a cross-origin image without CORS headers
+      }
+      let total = 0, litSum = 0, opaquePixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        if (alpha < 20) continue; // ignore transparent background
+        opaquePixels++;
+        const lightness = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
+        litSum += lightness;
+        total++;
+      }
+      if (!total || opaquePixels < 10) return;
+      const avgLightness = litSum / total;
+      if (avgLightness > 220) this.patchTheme({ logoBg: '#1e293b' });
+    };
+    img.onerror = () => {};
+    img.src = url;
   }
 
   removeCampaignLogo(): void {

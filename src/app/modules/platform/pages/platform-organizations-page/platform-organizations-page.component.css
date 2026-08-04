@@ -46,23 +46,75 @@
 
 .plat-search:focus { border-color: #583cd6; }
 
-/* QUICK FILTER CHIPS */
-.plat-chips {
+/* STATUS TAB BAR — a mutually-exclusive "pick a state" choice, so it reads
+   as tabs (underline indicator, no pill background) rather than chips. */
+.plat-tabs {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  border-bottom: 1.5px solid #e2e8f0;
+  margin-bottom: 14px;
+}
+.plat-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 4px;
+  margin-bottom: -1.5px;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.plat-tab + .plat-tab { margin-inline-start: 14px; }
+.plat-tab:hover { color: #1e293b; }
+.plat-tab.active { color: #583cd6; border-bottom-color: #583cd6; }
+
+/* Small color dots replacing the old colored emoji (looked noisy/inconsistent
+   across platforms) — same semantic colors, quieter execution. */
+.plat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.plat-dot--red    { background: #ef4444; }
+.plat-dot--green  { background: #22c55e; }
+.plat-dot--gray   { background: #94a3b8; }
+.plat-dot--orange { background: #f97316; }
+.plat-dot--amber  { background: #f59e0b; }
+.plat-dot--blue   { background: #3b82f6; }
+.plat-dot--purple { background: #a855f7; }
+
+/* FILTERS — independent attributes layered on top of the active status tab.
+   Deliberately lighter/smaller than the tabs above so the two groups don't
+   visually compete for the same "primary navigation" weight. */
+.plat-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+.plat-filters-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.plat-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .plat-chip {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 5px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
   background: #fff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #475569;
   cursor: pointer;
@@ -76,8 +128,6 @@
   background: #f5f3ff;
   color: #583cd6;
 }
-
-.plat-chip-dot { font-size: 10px; }
 
 /* PROFILE COMPLETION PROGRESS BAR */
 .plat-progress-wrap {

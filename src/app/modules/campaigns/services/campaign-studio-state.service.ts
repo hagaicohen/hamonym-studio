@@ -272,6 +272,16 @@ export interface TabsBlockData {
   // block whose type is 'tabs' can still show as panels on small screens.
   // Desktop always renders as `type`, regardless of this field.
   mobileLayout?: 'same' | 'tabs' | 'accordion';
+  // Advanced design (2026-08-04) — all optional, each falls back to the
+  // chosen styleVariant's own built-in look when unset. Scoped to 'tabs'
+  // only (not threaded into AccordionBlockData) — panels render every child
+  // expanded/stacked, so a per-tab label/background color and a border
+  // around "the content" don't map onto that layout the same way.
+  labelColor?:         string;  // tab label text color (inactive state; active still follows accentColor)
+  tabBgColor?:         string;  // background color of each tab button itself
+  contentBorder?:      boolean; // show a border around the active tab's content panel
+  contentBorderStyle?: 'solid' | 'dashed';
+  contentBorderColor?: string;
 }
 
 // Deliberately the exact same shape as TabsBlockData (see BlockType's
@@ -410,12 +420,16 @@ export interface CampaignTheme {
   accentColor:           string;  // --hm-accent
   bodyTextColor:         string;  // --hm-body
   logoBg:                string;  // --hm-logo-bg
+  logoBorderColor?:      string;  // --hm-logo-border-color
+  logoBorderStyle?:      'solid' | 'dashed'; // --hm-logo-border-style
+  logoBorderWidth?:      number;  // --hm-logo-border-width (px)
   topStripBg:            string;  // --hm-top-strip-bg
   rewardsBg:             string;  // --hm-rewards-bg
   rewardCardBorder:      string;  // --hm-reward-border
   rewardCardBorderActive:string;  // --hm-reward-border-active
   rewardTitleColor?:     string;  // --hm-reward-title — optional; falls back to each card layout's own default color in CSS when unset
   rewardDescColor?:      string;  // --hm-reward-desc — optional; same fallback behavior
+  rewardButtonColor?:    string;  // --hm-reward-button — optional; the "לבחירה" button's background
   lineColor:             string;  // --line
 }
 

@@ -143,6 +143,18 @@
 .editor-field { display: flex; flex-direction: column; gap: 6px; }
 .editor-row   { display: flex; flex-direction: column; gap: 5px; }
 
+.stats-contrast-warning {
+  margin: -4px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .editor-label {
   font-size: 12px;
   font-weight: 600;

@@ -333,7 +333,13 @@
 }
 
 .plat-modal h3 { margin: 0 0 6px; font-size: 17px; color: #1e293b; }
-.plat-modal-campaign { margin: 0 0 16px; font-size: 13px; color: #64748b; }
+.plat-modal-campaign { margin: 0 0 2px; font-size: 13px; color: #64748b; }
+.plat-modal-campaign-slug {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-family: monospace;
+}
 
 .plat-modal-notes {
   width: 100%;
@@ -350,6 +356,18 @@
 .plat-modal-notes:focus { outline: none; border-color: #583cd6; }
 
 .plat-modal-error { color: #ef4444; font-size: 12px; margin-top: 6px; }
+
+/* A failed action's reason, shown inline instead of only as a page-level
+   banner outside the (now-closed) modal — see confirmPendingAction(). */
+.plat-modal-error--action {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
 
 .plat-modal-field { margin-bottom: 14px; }
 

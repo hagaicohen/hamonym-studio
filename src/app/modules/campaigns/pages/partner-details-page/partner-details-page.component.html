@@ -1,0 +1,55 @@
+<div class="pd-page">
+
+  <div class="pd-load-state" *ngIf="loading">טוען את פרטי השותף...</div>
+  <div class="pd-load-state pd-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+
+  <ng-container *ngIf="!loading && !loadError && fullEntity">
+    <div class="pd-header">
+      <a class="pd-back-link" [routerLink]="['/partners']">→ חזרה לרשימת השותפים</a>
+      <h1 class="pd-title">פרטי שותף</h1>
+      <p class="pd-subtitle">שם, איש קשר ולוגו — בלי קשר לתוכן דף העסק עצמו</p>
+    </div>
+
+    <div class="pd-card">
+      <div class="pd-logo-row">
+        <img *ngIf="fullEntity.logo_url" [src]="fullEntity.logo_url" class="pd-logo" alt="">
+        <div class="pd-logo pd-logo--empty" *ngIf="!fullEntity.logo_url">🏢</div>
+        <div class="pd-logo-actions">
+          <input id="pd-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
+          <label for="pd-logo-input" class="pd-logo-btn" [class.pd-logo-btn--busy]="logoUploading">
+            {{ logoUploading ? 'מעלה...' : (fullEntity.logo_url ? 'החלפת לוגו' : '📷 העלאת לוגו') }}
+          </label>
+        </div>
+      </div>
+
+      <div class="pd-fields">
+        <div class="pd-field">
+          <label>שם העסק</label>
+          <input class="pd-input" type="text" [(ngModel)]="fullEntity.display_name">
+        </div>
+        <div class="pd-field">
+          <label>טלפון</label>
+          <input class="pd-input" type="tel" dir="ltr" [(ngModel)]="fullEntity.contact_phone" placeholder="050-1234567">
+        </div>
+        <div class="pd-field">
+          <label>אימייל</label>
+          <input class="pd-input" type="email" dir="ltr" [(ngModel)]="fullEntity.contact_email" placeholder="business@example.com">
+        </div>
+        <div class="pd-field">
+          <label>אתר</label>
+          <input class="pd-input" type="text" dir="ltr" [(ngModel)]="fullEntity.website" placeholder="https://example.com">
+        </div>
+      </div>
+
+      <div class="pd-actions">
+        <button type="button" class="pd-save-btn" [disabled]="saving" (click)="save()">
+          {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
+        </button>
+        <span class="pd-error" *ngIf="saveError">⚠ {{ saveError }}</span>
+      </div>
+    </div>
+
+    <a class="pd-builder-link" [routerLink]="['/partners', entityId, 'builder']">✏ עריכת תוכן דף העסק ←</a>
+  </ng-container>
+
+</div>

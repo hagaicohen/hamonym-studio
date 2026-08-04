@@ -749,6 +749,64 @@
             (click)="convertTabsAccordionType(block.id)">
             🗂️ הפוך לפאנלים (נפתחים/נסגרים)
           </button>
+
+          <!-- Advanced tab colors/border — collapsed by default, same
+               toggleSection/isSectionCollapsed mechanism as "עיצוב" on
+               containers etc., keyed per-block. -->
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('tabs-advanced-' + block.id)">
+              <span class="container-design-title">🎨 מתקדם</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('tabs-advanced-' + block.id)">›</span>
+            </div>
+
+            <div class="container-editor" *ngIf="!isSectionCollapsed('tabs-advanced-' + block.id)">
+              <div class="editor-row">
+                <label class="editor-label">צבע כותרת</label>
+                <app-color-picker
+                  [value]="asTabs(block.data).labelColor ?? ''"
+                  (valueChange)="updateTabsField(block.id, 'labelColor', $event)"
+                  [showNone]="true">
+                </app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">צבע רקע של לשונית</label>
+                <app-color-picker
+                  [value]="asTabs(block.data).tabBgColor ?? ''"
+                  (valueChange)="updateTabsField(block.id, 'tabBgColor', $event)"
+                  [showNone]="true">
+                </app-color-picker>
+              </div>
+
+              <div class="donation-toggle-item" style="margin-top:10px"
+                (click)="updateTabsField(block.id, 'contentBorder', !asTabs(block.data).contentBorder)">
+                <span class="donation-toggle-text">— הצג קווים מסביב לתוכן</span>
+                <span class="toggle-pill" [class.on]="asTabs(block.data).contentBorder">
+                  <span class="toggle-pill-dot"></span>
+                </span>
+              </div>
+
+              <ng-container *ngIf="asTabs(block.data).contentBorder">
+                <div class="editor-row" style="margin-top:8px">
+                  <label class="editor-label">סגנון קו</label>
+                  <div class="direction-toggle">
+                    <button class="direction-btn"
+                      [class.active]="(asTabs(block.data).contentBorderStyle || 'solid') === 'solid'"
+                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'solid')">רגיל</button>
+                    <button class="direction-btn"
+                      [class.active]="asTabs(block.data).contentBorderStyle === 'dashed'"
+                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'dashed')">מקווקו</button>
+                  </div>
+                </div>
+                <div class="editor-row">
+                  <label class="editor-label">צבע קו</label>
+                  <app-color-picker
+                    [value]="asTabs(block.data).contentBorderColor || '#e2e8f0'"
+                    (valueChange)="updateTabsField(block.id, 'contentBorderColor', $event)">
+                  </app-color-picker>
+                </div>
+              </ng-container>
+            </div>
+          </div>
         </div>
 
         <!-- ── ACCORDION (panels) ── -->
@@ -876,6 +934,10 @@
                 [showNone]="true">
               </app-color-picker>
             </div>
+
+            <p class="stats-contrast-warning" *ngIf="statsLowContrast(asStats(block.data))">
+              ⚠ צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
+            </p>
 
             <div class="editor-row">
               <label class="editor-label">עיגול פינות ({{ asStats(block.data).borderRadius }}px)</label>

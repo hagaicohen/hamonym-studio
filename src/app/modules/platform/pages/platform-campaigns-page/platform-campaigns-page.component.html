@@ -124,17 +124,11 @@
                     <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(c)">שחזור</button>
                   } @else {
                     <div class="camp-actions">
-                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="requestTransfer(c)">
-                        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                        </svg>
-                        העברה
-                      </button>
                       <button class="btn-secondary" [disabled]="actionInProgress" (click)="requestSlugChange(c)">
                         <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                         </svg>
-                        כתובת
+                        כתובת URL
                       </button>
                       <button class="btn-secondary" [disabled]="actionInProgress" (click)="duplicate(c)">
                         <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -175,42 +169,38 @@
       <div class="plat-modal" (click)="$event.stopPropagation()">
         <h3>{{ pendingActionTitle() }}</h3>
         <p class="plat-modal-campaign">{{ pendingAction.campaign.title }}</p>
-
-        @if (pendingAction.type === 'transfer') {
-          <div class="plat-modal-field">
-            <label>עמותת יעד</label>
-            @if (entityOptionsLoading) {
-              <div class="plat-modal-loading">טוען עמותות...</div>
-            } @else {
-              <select class="plat-modal-select" [(ngModel)]="transferEntityId">
-                <option value="">בחרו עמותה...</option>
-                @for (e of entityOptions; track e.id) {
-                  <option [value]="e.id" [disabled]="e.id === pendingAction.campaign.entity_id">{{ e.display_name }}</option>
-                }
-              </select>
-            }
-          </div>
-        }
+        <!-- Two campaigns can share a title (e.g. one duplicated from the
+             other) — the slug is what actually distinguishes them, and
+             without it here a manager confirming an action (especially
+             delete) has no way to notice they're looking at the wrong row. -->
+        <p class="plat-modal-campaign-slug">/{{ pendingAction.campaign.slug }}</p>
 
         @if (pendingAction.type === 'slug') {
           <div class="plat-modal-field">
-            <label>כתובת חדשה</label>
-            <input class="plat-modal-input" type="text" [(ngModel)]="slugInput" placeholder="my-campaign-slug" dir="ltr" />
+            <label>כתובת URL חדשה</label>
+            <input class="plat-modal-input" type="text" [(ngModel)]="slugInput" placeholder="קיץ-כמו-כולם" />
             @if (slugError) {
               <div class="plat-modal-error">{{ slugError }}</div>
             }
           </div>
         }
 
-        <textarea
-          class="plat-modal-notes"
-          rows="3"
-          placeholder="נדרשת הערה לפעולה זו..."
-          [(ngModel)]="notesInput"
-        ></textarea>
-        @if (noteRequiredError) {
-          <div class="plat-modal-error">נדרשת הערה כדי להמשיך</div>
+        @if (pendingActionError) {
+          <div class="plat-modal-error plat-modal-error--action">{{ pendingActionError }}</div>
         }
+
+        <div class="plat-modal-field">
+          <label>הערה (חובה) *</label>
+          <textarea
+            class="plat-modal-notes"
+            rows="3"
+            placeholder="נדרשת הערה לפעולה זו..."
+            [(ngModel)]="notesInput"
+          ></textarea>
+          @if (noteRequiredError) {
+            <div class="plat-modal-error">נדרשת הערה כדי להמשיך</div>
+          }
+        </div>
         <div class="plat-modal-actions">
           <button class="btn-cancel" (click)="cancelPendingAction()" [disabled]="actionInProgress">ביטול</button>
           <button class="btn-confirm" (click)="confirmPendingAction()" [disabled]="actionInProgress">אישור</button>

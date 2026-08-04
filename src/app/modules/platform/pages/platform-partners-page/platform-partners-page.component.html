@@ -43,7 +43,7 @@
             <tr>
               <th></th>
               <th class="sortable" (click)="sortBy('name')">שם השותף</th>
-              @if (visibleColumns.has('website')) { <th>אתר</th> }
+              @if (visibleColumns.has('website')) { <th>קישור בקמפיין</th> }
               @if (visibleColumns.has('owner')) { <th>מנהל</th> }
               @if (visibleColumns.has('campaigns')) { <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th> }
               @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th> }
@@ -63,9 +63,9 @@
                 </td>
                 <td data-label="שם השותף">{{ partnerName(p) }}</td>
                 @if (visibleColumns.has('website')) {
-                  <td data-label="אתר">
-                    @if (p.website) {
-                      <a [href]="p.website" target="_blank" rel="noopener" class="plat-link" (click)="$event.stopPropagation()">{{ p.website }}</a>
+                  <td data-label="קישור בקמפיין">
+                    @if (partnerLink(p); as link) {
+                      <a [href]="link" target="_blank" rel="noopener" class="plat-link" dir="ltr" [title]="link" (click)="$event.stopPropagation()">{{ link }}</a>
                     } @else { — }
                   </td>
                 }

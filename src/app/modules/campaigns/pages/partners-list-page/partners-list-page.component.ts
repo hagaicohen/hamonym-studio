@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideAngularModule, Eye, Pencil, Copy, Trash2 } from 'lucide-angular';
+import { LucideAngularModule, Eye, Pencil, Copy, Trash2, CircleUserRound } from 'lucide-angular';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { defaultPartnerLayoutBlocks } from '../../services/campaign-studio-state.service';
 import { PartnerImportService } from '../../services/partner-import.service';
@@ -37,6 +37,7 @@ export class PartnersListPageComponent implements OnInit {
   readonly Pencil = Pencil;
   readonly Copy = Copy;
   readonly Trash2 = Trash2;
+  readonly CircleUserRound = CircleUserRound;
   private entitiesService = inject(EntitiesService);
   private partnerImportService = inject(PartnerImportService);
   private campaignApiService = inject(CampaignApiService);

@@ -116,13 +116,21 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
 
   get healthChecks(): HealthCheck[] {
     if (!this.entity) return [];
-    return [
+    const checks: HealthCheck[] = [
       { label: 'מסמכי רישום', ok: !!this.entity.association_certificate_name },
-      { label: 'אישור מס', ok: !!this.entity.tax_document_name },
+    ];
+    // אישור מס (סעיף 46) רלוונטי רק לעמותה — חל״צ/מפלגה/עוסק פטור/עוסק
+    // מורשה לא מעלים את המסמך הזה בכלל באשף ההרשמה (entity-config.ts,
+    // showSection46), אז זה לא "חסר" אצלם — זה פשוט לא רלוונטי.
+    if (this.entity.entity_type === 'association') {
+      checks.push({ label: 'אישור מס', ok: !!this.entity.tax_document_name });
+    }
+    checks.push(
       { label: 'סליקה מחוברת', ok: this.entity.cardcom_connection_status === 'success' },
       { label: 'איש קשר מוגדר', ok: !!this.entity.contact_full_name },
       { label: 'קמפיין קיים', ok: this.campaigns.length > 0 },
-    ];
+    );
+    return checks;
   }
 
   get healthScore(): number {

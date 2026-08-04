@@ -144,6 +144,16 @@
 .plat-link { color: #583cd6; text-decoration: none; }
 .plat-link:hover { text-decoration: underline; }
 
+/* Cloned-from-URL partners can carry a very long (percent-encoded) source
+   URL as their website — capped here regardless of content length so this
+   one column can't force the whole table wider than the page and push
+   other columns out of view. */
+.plat-table td[data-label="קישור בקמפיין"] {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .plat-logo-cell { width: 40px; }
 
 .plat-logo {
