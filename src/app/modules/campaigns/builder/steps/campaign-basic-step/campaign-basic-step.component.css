@@ -21,6 +21,28 @@
 .step-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .step-desc  { font-size: 13px; color: #64748b; margin: 4px 0 0; }
 
+/* ── COLLAPSIBLE SECTION — heavier groups (rich text, Hero-display toggles)
+   default closed, same "expand only what you're working on" pattern as the
+   page-builder step's design panels. ── */
+.step-collapse-section {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px; border: 1.5px solid #e2e8f0; border-radius: 12px;
+  background: #f8fafc;
+}
+.step-collapse-header {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; user-select: none;
+}
+.step-collapse-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+.step-collapse-chevron {
+  margin-right: auto;
+  font-size: 16px; color: #94a3b8;
+  transform: rotate(90deg);
+  transition: transform 0.2s;
+  flex-shrink: 0; line-height: 1;
+}
+.step-collapse-chevron.open { transform: rotate(-90deg); }
+
 /* ── FIELD ── */
 .field-section { display: flex; flex-direction: column; gap: 8px; }
 .field-meta    { display: flex; justify-content: space-between; align-items: center; }
@@ -218,6 +240,34 @@
 }
 
 .logo-option-section { display: flex; flex-direction: column; gap: 6px; }
+
+/* Wraps the title/subtitle position pickers with the same padding the
+   toggle row and logo-options box already have — without it, these two
+   sections sat as bare flex children of .hero-toggles with zero padding,
+   so their buttons rendered flush against the outer border. */
+.logo-meta-options {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.logo-border-width-slider {
+  width: 100%;
+  accent-color: #7c3aed;
+}
+
+.logo-design-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px dashed #d8d3f5; border-radius: 8px;
+  background: #fff;
+  color: #7c3aed;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-design-toggle:hover { background: #f5f3ff; border-color: #7c3aed; }
 
 .logo-option-label {
   font-size: 11px; font-weight: 700; color: #9ca3af;

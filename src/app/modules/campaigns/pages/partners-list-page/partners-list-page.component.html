@@ -96,6 +96,9 @@
       <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url">🏢</div>
       <div class="pl-card-name">{{ p.display_name }}</div>
       <div class="pl-card-actions">
+        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'details']" title="פרטי שותף (שם, טלפון, מייל, לוגו)">
+          <lucide-icon [img]="CircleUserRound" [size]="15"></lucide-icon>
+        </a>
         <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener" title="צפייה בדף הציבורי">
           <lucide-icon [img]="Eye" [size]="15"></lucide-icon>
         </a>
@@ -105,10 +108,13 @@
         <button class="pl-icon-btn" type="button" (click)="openDuplicateModal(p)" title="שכפול">
           <lucide-icon [img]="Copy" [size]="15"></lucide-icon>
         </button>
-        <button class="pl-icon-btn pl-icon-btn--danger" type="button" (click)="openDeleteModal(p)" title="מחיקה">
-          <lucide-icon [img]="Trash2" [size]="15"></lucide-icon>
-        </button>
       </div>
+      <!-- Delete pulled out of the row entirely — a destructive action
+           deserves visual separation, not another circle competing for
+           space in the same row. -->
+      <button class="pl-delete-corner" type="button" (click)="openDeleteModal(p)" title="מחיקה">
+        <lucide-icon [img]="Trash2" [size]="15"></lucide-icon>
+      </button>
     </div>
 
   </div>

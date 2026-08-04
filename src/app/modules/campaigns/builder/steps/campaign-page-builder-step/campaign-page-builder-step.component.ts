@@ -593,7 +593,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { ...block.data, [field]: value } as ContainerBlockData);
   }
 
-  updateTabsField(id: string, field: keyof TabsBlockData, value: string): void {
+  updateTabsField(id: string, field: keyof TabsBlockData, value: string | boolean): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as TabsBlockData);
@@ -678,6 +678,34 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as StatsBlockData);
+  }
+
+  // Warn (don't block) when the icon color is nearly invisible against its
+  // own background — e.g. a white icon on a white/transparent background.
+  // Transparent background is checked against the page's own white card,
+  // since that's what actually shows through.
+  statsLowContrast(data: StatsBlockData): boolean {
+    const bg = data.backgroundColor === '' ? '#ffffff' : data.backgroundColor;
+    if (!bg || !data.iconColor) return false;
+    return this.colorDistance(data.iconColor, bg) < 40;
+  }
+
+  private colorDistance(hexA: string, hexB: string): number {
+    const a = this.toRgb(hexA);
+    const b = this.toRgb(hexB);
+    if (!a || !b) return Infinity;
+    return Math.sqrt((a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2);
+  }
+
+  private toRgb(hex: string): { r: number; g: number; b: number } | null {
+    if (!hex.startsWith('#')) return null;
+    const full = hex.length === 4 ? '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3] : hex;
+    if (full.length !== 7) return null;
+    return {
+      r: parseInt(full.slice(1, 3), 16),
+      g: parseInt(full.slice(3, 5), 16),
+      b: parseInt(full.slice(5, 7), 16),
+    };
   }
 
   toggleStatItem(id: string, key: string, visible: boolean): void {

@@ -19,17 +19,37 @@
     <app-column-picker [columns]="columns" storageKey="platformColumns_organizations" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
   </div>
 
-  <div class="plat-chips">
-    @for (chip of chips; track chip.key) {
-      <button
-        class="plat-chip"
-        [class.active]="activeChip === chip.key"
-        (click)="selectChip(chip.key)"
-      >
-        <span class="plat-chip-dot">{{ chip.dot }}</span>
+  <!-- Status — a tab bar, not chips: an organization has exactly one status,
+       so this is a mutually-exclusive choice ("pick a state to view"). -->
+  <div class="plat-tabs">
+    <button class="plat-tab" [class.active]="!isStatusChipActive()" (click)="selectAllStatuses()">
+      הכל
+    </button>
+    @for (chip of statusChips; track chip.key) {
+      <button class="plat-tab" [class.active]="activeChip === chip.key" (click)="selectChip(chip.key)">
+        <span class="plat-dot" [class]="'plat-dot--' + chip.dot"></span>
         {{ chip.label }}
       </button>
     }
+  </div>
+
+  <!-- Filters — independent attributes layered on top of whichever status
+       tab is active (missing docs, flagged, etc.), styled lighter than the
+       status tabs so the two don't visually compete. -->
+  <div class="plat-filters-row">
+    <span class="plat-filters-label">סינון נוסף:</span>
+    <div class="plat-chips">
+      @for (chip of filterChips; track chip.key) {
+        <button
+          class="plat-chip"
+          [class.active]="activeChip === chip.key"
+          (click)="selectChip(chip.key)"
+        >
+          <span class="plat-dot" [class]="'plat-dot--' + chip.dot"></span>
+          {{ chip.label }}
+        </button>
+      }
+    </div>
   </div>
 
   <div class="plat-card">

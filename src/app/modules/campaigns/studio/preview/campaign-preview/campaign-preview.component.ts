@@ -4,7 +4,7 @@ import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
-import { LucideAngularModule, GripVertical } from 'lucide-angular';
+import { LucideAngularModule, GripVertical, Mail, Facebook } from 'lucide-angular';
 import { TextStyle } from '../../../../../shared/models/text-style.model';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
@@ -65,6 +65,8 @@ const FUNDING_LABELS: Record<string, string> = {
 export class CampaignPreviewComponent implements OnInit, OnDestroy {
   private state           = inject(CampaignStudioStateService);
   readonly GripVertical = GripVertical;
+  readonly Mail = Mail;
+  readonly Facebook = Facebook;
 
   hoveredBlockId: string | null = null;
   pageBuilderActive = false;

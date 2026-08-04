@@ -84,45 +84,55 @@
       maxlength="160" placeholder="משפט קצר שמתאר את המיזם">
   </div>
 
-  <!-- ── PROJECT DESCRIPTION — distinct from the subtitle above (one short
-       line) and the story below (the main "על המיזם" text block). A short
-       formatted paragraph. ── -->
-  <div class="field-section">
-    <label class="field-label">תיאור קצר של הפרויקט</label>
-    <app-rich-text-editor
-      [ngModel]="draft.layout.projectDescription"
-      (ngModelChange)="state.setProjectDescription($event)"
-      placeholder="תיאור קצר של הפרויקט...">
-    </app-rich-text-editor>
-  </div>
-
-  <div class="logo-option-section">
-    <span class="logo-option-label">תיאור קצר — מיקום</span>
-    <div class="logo-position-row">
-      <button class="logo-pos-btn"
-        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'above'"
-        (click)="state.setProjectDescriptionPosition('above')">מעל</button>
-      <button class="logo-pos-btn"
-        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hero'"
-        (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
-      <button class="logo-pos-btn"
-        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'below'"
-        (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
-      <button class="logo-pos-btn"
-        [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hidden'"
-        (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+  <!-- ── PROJECT DESCRIPTION + STORY — the two heaviest fields on this step
+       (both rich-text editors); collapsed by default so the page doesn't
+       open on a wall of empty editors. ── -->
+  <div class="step-collapse-section">
+    <div class="step-collapse-header" (click)="toggleSection('story')">
+      <span class="step-collapse-title">📝 תיאור מורחב וסיפור הקמפיין</span>
+      <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('story')">›</span>
     </div>
-  </div>
 
-  <!-- ── STORY ── -->
-  <div class="field-section">
-    <label class="field-label">סיפור הקמפיין</label>
-    <p class="field-hint">יופיע כבלוק "על המיזם" בדף הקמפיין</p>
-    <app-rich-text-editor
-      [ngModel]="storyContent"
-      (ngModelChange)="setStoryContent($event)"
-      placeholder="ספרו את הסיפור שלכם...">
-    </app-rich-text-editor>
+    <ng-container *ngIf="!isSectionCollapsed('story')">
+      <!-- Project description — distinct from the subtitle above (one short
+           line) and the story below (the main "על המיזם" text block). -->
+      <div class="field-section">
+        <label class="field-label">תיאור קצר של הפרויקט</label>
+        <app-rich-text-editor
+          [ngModel]="draft.layout.projectDescription"
+          (ngModelChange)="state.setProjectDescription($event)"
+          placeholder="תיאור קצר של הפרויקט...">
+        </app-rich-text-editor>
+      </div>
+
+      <div class="logo-option-section">
+        <span class="logo-option-label">תיאור קצר — מיקום</span>
+        <div class="logo-position-row">
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'above'"
+            (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hero'"
+            (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'below'"
+            (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+          <button class="logo-pos-btn"
+            [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hidden'"
+            (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+        </div>
+      </div>
+
+      <div class="field-section">
+        <label class="field-label">סיפור הקמפיין</label>
+        <p class="field-hint">יופיע כבלוק "על המיזם" בדף הקמפיין</p>
+        <app-rich-text-editor
+          [ngModel]="storyContent"
+          (ngModelChange)="setStoryContent($event)"
+          placeholder="ספרו את הסיפור שלכם...">
+        </app-rich-text-editor>
+      </div>
+    </ng-container>
   </div>
 
   <!-- ── CATEGORY ── -->
@@ -168,10 +178,14 @@
   </div>
 
   <!-- ── HERO VISIBILITY ── -->
-  <div class="field-section">
-    <label class="field-label">תצוגת Hero</label>
-    <p class="field-hint">בחרו אילו אלמנטים יוצגו על תמונת הכיסוי</p>
-    <div class="hero-toggles">
+  <div class="step-collapse-section">
+    <div class="step-collapse-header" (click)="toggleSection('hero-display')">
+      <span class="step-collapse-title">🎯 תצוגת Hero — לוגו, כותרת ותת-כותרת</span>
+      <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('hero-display')">›</span>
+    </div>
+    <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">בחרו אילו אלמנטים יוצגו על תמונת הכיסוי</p>
+
+    <div class="hero-toggles" *ngIf="!isSectionCollapsed('hero-display')">
 
       <div class="toggle-row" (click)="state.patch({ showLogo: !draft.showLogo }); sync()">
         <div class="toggle-switch" [class.toggle-on]="draft.showLogo">
@@ -207,66 +221,113 @@
           <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">מוצג לוגו העמותה</span>
         </div>
 
-        <!-- Position picker -->
+        <!-- Fine-tuning (position/background/border) collapsed by default —
+             the upload above is the one decision most managers need to make;
+             everyone else can leave the rest at their defaults. -->
+        <button class="logo-design-toggle" type="button" (click)="logoDesignOpen = !logoDesignOpen">
+          <span>עיצוב הלוגו — מיקום, רקע ומסגרת</span>
+          <lucide-angular [img]="logoDesignOpen ? ChevronUp : ChevronDown" [size]="14"></lucide-angular>
+        </button>
+
+        <ng-container *ngIf="logoDesignOpen">
+
+          <!-- Position picker -->
+          <div class="logo-option-section">
+            <span class="logo-option-label">מיקום</span>
+            <div class="logo-position-row">
+              <button class="logo-pos-btn"
+                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'left'"
+                (click)="state.patch({ heroLogoPosition: 'left' }); sync()">
+                <span class="logo-pos-icon">◀</span>
+                שמאל
+              </button>
+              <button class="logo-pos-btn"
+                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'center'"
+                (click)="state.patch({ heroLogoPosition: 'center' }); sync()">
+                <span class="logo-pos-icon">◉</span>
+                מרכז
+              </button>
+              <button class="logo-pos-btn"
+                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'above'"
+                (click)="state.patch({ heroLogoPosition: 'above' }); sync()">
+                <span class="logo-pos-icon">▲</span>
+                מעל
+              </button>
+            </div>
+          </div>
+
+          <!-- Background behind the logo itself — a white/transparent logo
+               disappears on a light Hero photo without this. Auto-set to a
+               dark shade on upload when the logo turns out to be mostly
+               light (see autoContrastLogoBg()); always overridable here. -->
+          <div class="logo-option-section">
+            <span class="logo-option-label">רקע ללוגו</span>
+            <app-color-picker [value]="draft.layout.theme.logoBg"
+              (valueChange)="patchTheme({ logoBg: $event })"
+              [showNone]="true">
+            </app-color-picker>
+            <span class="logo-option-hint">לוגו בצבע בהיר? תנו לו רקע כהה כדי שיישאר גלוי.</span>
+          </div>
+
+          <div class="logo-option-section">
+            <span class="logo-option-label">מסגרת סביב הלוגו</span>
+            <app-color-picker [value]="draft.layout.theme.logoBorderColor || ''"
+              (valueChange)="patchTheme({ logoBorderColor: $event })"
+              [showNone]="true">
+            </app-color-picker>
+            <div class="logo-position-row" style="margin-top:6px">
+              <button class="logo-pos-btn"
+                [class.logo-pos-btn--active]="(draft.layout.theme.logoBorderStyle || 'solid') === 'solid'"
+                (click)="patchTheme({ logoBorderStyle: 'solid' })">קו רציף</button>
+              <button class="logo-pos-btn"
+                [class.logo-pos-btn--active]="draft.layout.theme.logoBorderStyle === 'dashed'"
+                (click)="patchTheme({ logoBorderStyle: 'dashed' })">מקווקו</button>
+            </div>
+            <input type="range" class="logo-border-width-slider" min="0" max="10" step="1"
+              [value]="draft.layout.theme.logoBorderWidth ?? 3"
+              (input)="patchTheme({ logoBorderWidth: +$any($event.target).value })">
+            <span class="logo-option-hint">עובי הקו: {{ draft.layout.theme.logoBorderWidth ?? 3 }}px</span>
+          </div>
+
+        </ng-container>
+
+      </div>
+
+      <div class="logo-meta-options">
         <div class="logo-option-section">
-          <span class="logo-option-label">מיקום</span>
+          <span class="logo-option-label">כותרת — מיקום</span>
           <div class="logo-position-row">
             <button class="logo-pos-btn"
-              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'left'"
-              (click)="state.patch({ heroLogoPosition: 'left' }); sync()">
-              <span class="logo-pos-icon">◀</span>
-              שמאל
-            </button>
+              [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'above'"
+              (click)="state.setHeroTitlePosition('above')">מעל</button>
             <button class="logo-pos-btn"
-              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'center'"
-              (click)="state.patch({ heroLogoPosition: 'center' }); sync()">
-              <span class="logo-pos-icon">◉</span>
-              מרכז
-            </button>
+              [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hero'"
+              (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
             <button class="logo-pos-btn"
-              [class.logo-pos-btn--active]="draft.heroLogoPosition === 'above'"
-              (click)="state.patch({ heroLogoPosition: 'above' }); sync()">
-              <span class="logo-pos-icon">▲</span>
-              מעל
-            </button>
+              [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'below'"
+              (click)="state.setHeroTitlePosition('below')">מתחת</button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hidden'"
+              (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
           </div>
         </div>
 
-      </div>
-
-      <div class="logo-option-section">
-        <span class="logo-option-label">כותרת — מיקום</span>
-        <div class="logo-position-row">
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'above'"
-            (click)="state.setHeroTitlePosition('above')">מעל</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hero'"
-            (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'below'"
-            (click)="state.setHeroTitlePosition('below')">מתחת</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hidden'"
-            (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
-        </div>
-      </div>
-
-      <div class="logo-option-section">
-        <span class="logo-option-label">תת-כותרת — מיקום</span>
-        <div class="logo-position-row">
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'above'"
-            (click)="state.setHeroSubtitlePosition('above')">מעל</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hero'"
-            (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'below'"
-            (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
-          <button class="logo-pos-btn"
-            [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hidden'"
-            (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+        <div class="logo-option-section">
+          <span class="logo-option-label">תת-כותרת — מיקום</span>
+          <div class="logo-position-row">
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'above'"
+              (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hero'"
+              (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'below'"
+              (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+            <button class="logo-pos-btn"
+              [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hidden'"
+              (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+          </div>
         </div>
       </div>
 

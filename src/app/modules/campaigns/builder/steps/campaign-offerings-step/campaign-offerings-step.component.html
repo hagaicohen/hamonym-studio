@@ -400,6 +400,11 @@
         <app-color-picker [value]="draft.layout.theme.rewardDescColor ?? '#ffffff'"
           (valueChange)="patchTheme({ rewardDescColor: $event })"></app-color-picker>
       </div>
+      <div class="adv-row">
+        <label class="adv-label">צבע כפתור "לבחירה"</label>
+        <app-color-picker [value]="draft.layout.theme.rewardButtonColor ?? draft.layout.theme.secondaryColor"
+          (valueChange)="patchTheme({ rewardButtonColor: $event })"></app-color-picker>
+      </div>
     </div>
 
   </ng-container>

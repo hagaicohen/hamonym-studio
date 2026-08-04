@@ -6,7 +6,7 @@ import { relativeTime } from '../../utils/relative-time';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'website',    label: 'אתר' },
+  { key: 'website',    label: 'קישור בקמפיין' },
   { key: 'owner',      label: 'מנהל' },
   { key: 'campaigns',  label: 'קמפיינים' },
   { key: 'created_at', label: 'תאריך הרשמה' },
@@ -26,6 +26,7 @@ interface Partner {
   owner_name: string | null;
   owner_email: string | null;
   campaigns_count: number;
+  campaign_slug: string | null;
 }
 
 type SortField = 'name' | 'created_at' | 'campaigns';
@@ -146,5 +147,14 @@ export class PlatformPartnersPageComponent implements OnInit {
     if (!iso) return '—';
     const [y, m, d] = iso.slice(0, 10).split('-');
     return `${d}/${m}/${y}`;
+  }
+
+  // A link into OUR OWN system, not the partner's own external website —
+  // entities.website is unreliable for clone-imported partners (it holds
+  // the SOURCE page's URL the content was cloned from, e.g. an old
+  // hamonym.com page — not a real site of theirs, and not useful to an
+  // admin trying to see this partner live in the current system).
+  partnerLink(p: Partner): string | null {
+    return p.campaign_slug ? `${window.location.origin}/campaigns/${p.campaign_slug}` : null;
   }
 }

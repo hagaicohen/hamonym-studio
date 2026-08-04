@@ -8,13 +8,17 @@
   [style.--hm-secondary]="draft.layout.theme.secondaryColor"
   [style.--hm-accent]="draft.layout.theme.accentColor"
   [style.--hm-body]="draft.layout.theme.bodyTextColor"
-  [style.--hm-logo-bg]="draft.layout.theme.logoBg"
+  [style.--hm-logo-bg]="draft.layout.theme.logoBg === '' ? 'transparent' : (draft.layout.theme.logoBg || null)"
+  [style.--hm-logo-border-color]="draft.layout.theme.logoBorderColor || null"
+  [style.--hm-logo-border-style]="draft.layout.theme.logoBorderStyle || null"
+  [style.--hm-logo-border-width.px]="draft.layout.theme.logoBorderWidth ?? null"
   [style.--hm-top-strip-bg]="draft.layout.theme.topStripBg"
   [style.--hm-rewards-bg]="draft.layout.theme.rewardsBg"
   [style.--hm-reward-border]="draft.layout.theme.rewardCardBorder"
   [style.--hm-reward-border-active]="draft.layout.theme.rewardCardBorderActive"
   [style.--hm-reward-title]="draft.layout.theme.rewardTitleColor"
   [style.--hm-reward-desc]="draft.layout.theme.rewardDescColor"
+  [style.--hm-reward-button]="draft.layout.theme.rewardButtonColor"
   [style.--line]="draft.layout.theme.lineColor"
   [style.--hm-section-odd]="draft.layout.sectionBgOdd || '#ffffff'"
   [style.--hm-section-even]="draft.layout.sectionBgEven || '#f8fafc'"
@@ -175,10 +179,12 @@
     <ng-template #logoAboveStripTpl>
       <div class="hm-logo-above-strip"
            *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition === 'above'">
-        <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
-             class="hm-logo-above-img"
-             [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-        <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
+        <div class="hm-logo-above-badge">
+          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
+               class="hm-logo-above-img"
+               [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
+        </div>
       </div>
     </ng-template>
 
@@ -857,7 +863,9 @@
     [class.block-tabs--underline]="asTabs(block.data).styleVariant === 'underline'"
     [class.block-tabs--pills]="asTabs(block.data).styleVariant === 'pills'"
     [class.block-tabs--boxed]="asTabs(block.data).styleVariant === 'boxed'"
-    [style.--tabs-accent]="asTabs(block.data).accentColor || primaryColor(draft)">
+    [style.--tabs-accent]="asTabs(block.data).accentColor || primaryColor(draft)"
+    [style.--tabs-label]="asTabs(block.data).labelColor || null"
+    [style.--tabs-bg]="asTabs(block.data).tabBgColor || null">
     <div class="tabs-header" *ngIf="childBlocks(block, draft).length > 0">
       <button type="button" class="tabs-header-btn" *ngFor="let tab of childBlocks(block, draft)"
         [class.active]="activeTab(block, draft)?.id === tab.id"
@@ -865,7 +873,10 @@
         {{ tab.label }}
       </button>
     </div>
-    <div class="tabs-panel" *ngIf="activeTab(block, draft) as activeTabBlock">
+    <div class="tabs-panel" *ngIf="activeTab(block, draft) as activeTabBlock"
+      [class.tabs-panel--bordered]="asTabs(block.data).contentBorder"
+      [style.border-style]="asTabs(block.data).contentBorderStyle || 'solid'"
+      [style.border-color]="asTabs(block.data).contentBorderColor || 'var(--line, #e2e8f0)'">
       <ng-container [ngTemplateOutlet]="blockTpl" [ngTemplateOutletContext]="{block: activeTabBlock, draft, heroTpl, mobile}"></ng-container>
     </div>
   </div>
@@ -917,16 +928,18 @@
       <span class="hm-share-icon">🔗</span>
     </button>
     <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)" aria-label="שיתוף באימייל" title="אימייל">
-      <span class="hm-share-icon">✉️</span>
+      <lucide-icon [img]="Mail" [size]="16" class="hm-share-icon"></lucide-icon>
     </button>
     <button class="hm-share-btn hm-share-btn--x" type="button" *ngIf="asShare(block.data).platforms.x" (click)="shareX(draft)" aria-label="שתפו ב-X" title="X">
       <span class="hm-share-icon hm-share-icon--x">𝕏</span>
     </button>
     <button class="hm-share-btn hm-share-btn--facebook" type="button" *ngIf="asShare(block.data).platforms.facebook" (click)="shareFacebook(draft)" aria-label="שיתוף בפייסבוק" title="Facebook">
-      <span class="hm-share-icon">📘</span>
+      <lucide-icon [img]="Facebook" [size]="15" class="hm-share-icon"></lucide-icon>
     </button>
     <button class="hm-share-btn hm-share-btn--whatsapp" type="button" *ngIf="asShare(block.data).platforms.whatsapp" (click)="shareWhatsApp(draft)" aria-label="שיתוף בוואטסאפ" title="WhatsApp">
-      <span class="hm-share-icon">💬</span>
+      <svg class="hm-share-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.97L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.004c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.2 0 4.26.86 5.82 2.42a8.183 8.183 0 0 1 2.41 5.82c0 4.54-3.7 8.24-8.25 8.24a8.24 8.24 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.39c0-4.55 3.7-8.23 8.26-8.23zm-4.42 4.4c-.17 0-.44.06-.67.32-.23.25-.87.85-.87 2.08 0 1.22.89 2.4 1.01 2.57.13.17 1.74 2.78 4.29 3.79.6.24 1.06.38 1.43.49.6.19 1.15.16 1.58.1.48-.07 1.49-.61 1.7-1.2.21-.59.21-1.09.15-1.2-.06-.11-.23-.17-.48-.3-.25-.13-1.49-.74-1.72-.82-.23-.08-.4-.13-.57.13-.17.25-.65.82-.8.99-.15.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.01-.38.11-.51.11-.12.25-.29.37-.44.12-.15.16-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.57-1.4-.79-1.91-.2-.5-.42-.43-.57-.44-.15-.01-.32-.01-.49-.01z"/>
+      </svg>
     </button>
   </div>
 
@@ -1052,7 +1065,11 @@
     [class.conv-unified]="draft.layout.conversionWidgetLayout === 'unified'"
     [class.conv-compact]="draft.layout.conversionWidgetLayout === 'compact'"
     [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
-    [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'">
+    [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'"
+    [style.--stat-icon-color]="asStats(block.data).iconColor || null"
+    [style.--stat-icon-bg]="asStats(block.data).backgroundColor === '' ? 'transparent' : (asStats(block.data).backgroundColor || null)"
+    [style.--stat-icon-border]="asStats(block.data).borderColor === '' ? 'transparent' : (asStats(block.data).borderColor || null)"
+    [style.--stat-icon-radius.px]="asStats(block.data).borderRadius">
     <div class="hm-stats-top">
       <div class="hm-ring-wrapper">
         <svg class="hm-ring-svg" viewBox="0 0 36 36">

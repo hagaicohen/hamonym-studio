@@ -39,14 +39,22 @@ type SortDir = 'asc' | 'desc';
 
 type ChipKey = 'all' | 'pending_review' | 'active' | 'suspended' | 'missing_docs' | 'flagged_for_review' | 'no_campaigns' | 'new_week';
 
-const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
-  { key: 'pending_review',    label: 'ממתינות', dot: '🔴' },
-  { key: 'active',            label: 'פעילות',   dot: '🟢' },
-  { key: 'suspended',         label: 'מושעות',   dot: '⚫' },
-  { key: 'missing_docs',      label: 'חסרות מסמכים', dot: '🟠' },
-  { key: 'flagged_for_review', label: 'דורשות בדיקה חוזרת', dot: '⚠️' },
-  { key: 'no_campaigns',      label: 'ללא קמפיינים', dot: '🔵' },
-  { key: 'new_week',          label: 'חדשות השבוע',  dot: '🟣' },
+// Split into two conceptually different groups, styled differently (see
+// .html/.css) — an organization has exactly one STATUS (a tab-like,
+// mutually-exclusive choice), while the FILTERS below are independent
+// attributes layered on top. Flattening all 7 into one identical row of
+// chips was the reported "בלגן" (visual mess) — this is the fix.
+const STATUS_CHIPS: { key: ChipKey; label: string; dot: string }[] = [
+  { key: 'pending_review', label: 'ממתינות', dot: 'red' },
+  { key: 'active',         label: 'פעילות',   dot: 'green' },
+  { key: 'suspended',      label: 'מושעות',   dot: 'gray' },
+];
+
+const FILTER_CHIPS: { key: ChipKey; label: string; dot: string }[] = [
+  { key: 'missing_docs',       label: 'חסרות מסמכים',      dot: 'orange' },
+  { key: 'flagged_for_review', label: 'דורשות בדיקה חוזרת', dot: 'amber' },
+  { key: 'no_campaigns',       label: 'ללא קמפיינים',       dot: 'blue' },
+  { key: 'new_week',           label: 'חדשות השבוע',        dot: 'purple' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -70,7 +78,8 @@ export class PlatformOrganizationsPageComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  readonly chips = CHIPS;
+  readonly statusChips = STATUS_CHIPS;
+  readonly filterChips = FILTER_CHIPS;
   readonly columns = COLUMNS;
   visibleColumns = new Set(COLUMNS.map((c) => c.key));
 
@@ -100,7 +109,7 @@ export class PlatformOrganizationsPageComponent implements OnInit {
     const status = qp.get('status');
     const missingDocs = qp.get('missingDocs');
     const flaggedForReview = qp.get('flaggedForReview');
-    if (status && CHIPS.some((c) => c.key === status)) {
+    if (status && [...STATUS_CHIPS, ...FILTER_CHIPS].some((c) => c.key === status)) {
       this.activeChip = status as ChipKey;
     } else if (missingDocs) {
       this.activeChip = 'missing_docs';
@@ -158,6 +167,16 @@ export class PlatformOrganizationsPageComponent implements OnInit {
     this.activeChip = this.activeChip === chip ? 'all' : chip;
     this.page = 0;
     this.load();
+  }
+
+  selectAllStatuses(): void {
+    this.activeChip = 'all';
+    this.page = 0;
+    this.load();
+  }
+
+  isStatusChipActive(): boolean {
+    return this.statusChips.some((c) => c.key === this.activeChip);
   }
 
   onSearch(): void {

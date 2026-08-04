@@ -52,17 +52,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 const NOTES_REQUIRED_STATUSES = new Set(['paused', 'ended']);
 
-type PendingActionType = 'status' | 'lock' | 'delete' | 'transfer' | 'slug';
+type PendingActionType = 'status' | 'lock' | 'delete' | 'slug';
 
 interface PendingAction {
   type: PendingActionType;
   campaign: Campaign;
   status?: string;
-}
-
-interface EntityOption {
-  id: string;
-  display_name: string;
 }
 
 @Component({
@@ -102,10 +97,11 @@ export class PlatformCampaignsPageComponent implements OnInit {
   notesInput = '';
   noteRequiredError = false;
   actionInProgress = false;
-
-  transferEntityId = '';
-  entityOptions: EntityOption[] = [];
-  entityOptionsLoading = false;
+  // Shown inside the modal itself (unlike actionError, which is a page-level
+  // banner) — a failed action (e.g. a duplicate slug) used to silently close
+  // the modal and rely on that banner alone, easy to miss and confusing
+  // ("it just closes the popup"). Now the modal stays open with the reason.
+  pendingActionError: string | null = null;
 
   slugInput = '';
   slugError: string | null = null;
@@ -280,25 +276,6 @@ export class PlatformCampaignsPageComponent implements OnInit {
     });
   }
 
-  requestTransfer(campaign: Campaign): void {
-    this.actionError = null;
-    this.pendingAction = { type: 'transfer', campaign };
-    this.notesInput = '';
-    this.noteRequiredError = false;
-    this.transferEntityId = '';
-
-    if (this.entityOptions.length === 0) {
-      this.entityOptionsLoading = true;
-      this.platformService.getOrganizations({ limit: 200, sortBy: 'name', sortDir: 'asc' }).subscribe({
-        next: (res) => {
-          this.entityOptionsLoading = false;
-          this.entityOptions = (res.organizations ?? []).map((o: any) => ({ id: o.id, display_name: o.display_name }));
-        },
-        error: () => { this.entityOptionsLoading = false; },
-      });
-    }
-  }
-
   requestSlugChange(campaign: Campaign): void {
     this.actionError = null;
     this.pendingAction = { type: 'slug', campaign };
@@ -325,6 +302,7 @@ export class PlatformCampaignsPageComponent implements OnInit {
     this.notesInput = '';
     this.noteRequiredError = false;
     this.slugError = null;
+    this.pendingActionError = null;
   }
 
   confirmPendingAction(): void {
@@ -337,24 +315,31 @@ export class PlatformCampaignsPageComponent implements OnInit {
 
     const { type, campaign, status } = this.pendingAction;
 
-    if (type === 'transfer' && !this.transferEntityId) {
-      this.actionError = 'יש לבחור עמותת יעד';
+    // Hebrew is a valid slug character here too — matches the regular
+    // campaign editor's own slug field (campaign-basic-step's onSlugChange),
+    // which already allows א-ת. This panel's stricter English-only regex was
+    // inconsistent with that and rejected perfectly normal Hebrew URLs.
+    if (type === 'slug' && !/^[a-z0-9א-ת-]+$/.test(this.slugInput.trim())) {
+      this.slugError = 'כתובת לא תקינה — אותיות (עברית/לועזית קטנות), מספרים ומקפים בלבד';
       return;
-    }
-    if (type === 'slug') {
-      if (!/^[a-z0-9-]+$/.test(this.slugInput.trim())) {
-        this.slugError = 'כתובת לא תקינה — אותיות לועזיות קטנות, מספרים ומקפים בלבד';
-        return;
-      }
     }
 
     this.actionInProgress = true;
+    this.pendingActionError = null;
+    this.slugError = null;
 
     const done = () => { this.actionInProgress = false; this.pendingAction = null; this.load(); };
+    // A failed action (most commonly: the slug is already taken by another
+    // campaign) used to silently close the modal here, leaving only a
+    // page-level banner as the explanation — easy to miss, and looked like
+    // "it just closes without letting me do anything". Now the modal stays
+    // open with the real reason shown inline, so it can be corrected and
+    // retried immediately.
     const fail = (err: any) => {
       this.actionInProgress = false;
-      this.actionError = err.error?.error || 'הפעולה נכשלה';
-      this.pendingAction = null;
+      const message = err.error?.error || 'הפעולה נכשלה';
+      if (type === 'slug') this.slugError = message;
+      else this.pendingActionError = message;
     };
 
     if (type === 'status' && status) {
@@ -363,8 +348,6 @@ export class PlatformCampaignsPageComponent implements OnInit {
       this.platformService.setCampaignLocked(campaign.id, true, trimmedNotes).subscribe({ next: done, error: fail });
     } else if (type === 'delete') {
       this.platformService.deleteCampaign(campaign.id, trimmedNotes).subscribe({ next: done, error: fail });
-    } else if (type === 'transfer') {
-      this.platformService.transferCampaignOwnership(campaign.id, this.transferEntityId, trimmedNotes).subscribe({ next: done, error: fail });
     } else if (type === 'slug') {
       this.platformService.setCampaignSlug(campaign.id, this.slugInput.trim(), trimmedNotes).subscribe({ next: done, error: fail });
     }
@@ -376,8 +359,7 @@ export class PlatformCampaignsPageComponent implements OnInit {
       case 'status': return `שינוי סטטוס ל"${this.statusLabel(this.pendingAction.status!)}"`;
       case 'lock': return 'נעילת קמפיין לעריכה';
       case 'delete': return 'מחיקת קמפיין';
-      case 'transfer': return 'העברת קמפיין לעמותה אחרת';
-      case 'slug': return 'שינוי כתובת קמפיין';
+      case 'slug': return 'שינוי כתובת URL של הקמפיין';
       default: return '';
     }
   }

@@ -171,6 +171,18 @@ export const routes: Routes = [
       ).then((m) => m.PartnerBuilderPageComponent),
   },
 
+  // Partner identity/contact details (name/phone/email/website/logo) —
+  // deliberately separate from the Builder above, which is only about the
+  // public page's own content. See docs/DECISIONS.md (2026-08-04).
+  {
+    path: 'partners/:id/details',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/pages/partner-details-page/partner-details-page.component'
+      ).then((m) => m.PartnerDetailsPageComponent),
+  },
+
   // Campaign Participation Builder (Phase 5 model refinement, 2026-07-30) —
   // :id is a campaign_partners row id, not an entity. Ownership enforced
   // server-side the same way (requireAuth + assertCampaignOwnership inside
