@@ -207,122 +207,15 @@
   </section>
   }
 
-  <!-- ══ CAMPAIGNS ══ -->
-  @if (data.campaigns.length > 0) {
-  <section class="campaigns-section">
-    <div class="section-header">
-      <h2>הקמפיינים שלי</h2>
-      <a class="view-all-link" routerLink="/campaigns">לכל הקמפיינים</a>
-    </div>
-    <div class="campaigns-grid">
-      @for (c of data.campaigns; track c.id) {
-        <div class="campaign-card">
-          <div class="card-cover" [style.backgroundImage]="c.cover_image_url ? 'url(' + c.cover_image_url + ')' : 'none'">
-            <span class="card-status-badge" [class]="'badge-' + c.status">{{ statusLabel(c.status) }}</span>
-          </div>
-          <div class="card-body">
-            <h3 class="card-title">{{ c.title }}</h3>
-            @if (c.status !== 'draft') {
-              <span class="card-funding-type">{{ fundingLabel(c.funding_type) }}</span>
-            }
+  <!-- Campaigns-list preview removed 2026-08-05 — redundant with /campaigns
+       (sidebar tab one click away); the alerts section above already
+       surfaces anything that actually needs attention (goal 90%, ending
+       soon, no donations, unpublished drafts) in a more targeted way than a
+       raw grid of every campaign. See docs/ — Campaign Management Dashboard
+       work this same week established the "don't duplicate a screen that
+       already exists" principle; this applies it in reverse (retiring a
+       duplicate instead of avoiding building one). -->
 
-            @if (c.status === 'draft') {
-              @if (c.created_at) {
-                <p class="camp-created">נוצר ב- {{ fmtDate(c.created_at) }}</p>
-              }
-              <div class="card-actions">
-                <button class="btn-action" (click)="editCampaign(c.id)">המשך עריכה</button>
-                <button class="btn-icon-action btn-analyze" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
-                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
-                </button>
-              </div>
-            } @else {
-              <div class="card-progress">
-                @if (c.target_amount > 0) {
-                  <div class="card-progress-row">
-                    <span class="progress-raised">{{ fmt(c.current_amount) }}</span>
-                    <span class="progress-target">מתוך {{ fmt(c.target_amount) }}</span>
-                  </div>
-                  <div class="progress-bar">
-                    <div class="progress-fill" [style.width.%]="progressPct(c)"></div>
-                  </div>
-                  <div class="progress-pct">{{ progressPct(c) | number:'1.1-1' }}% הושג</div>
-                } @else {
-                  <div class="card-progress-row"><span class="progress-target">{{ c.supporters_count }} תורמים</span></div>
-                }
-              </div>
-
-              <div class="card-meta">
-                <span class="meta-item">📅 {{ daysRemaining(c.end_date) }} ימים</span>
-                <span class="meta-item">↗ {{ c.supporters_count }} תורמים</span>
-              </div>
-
-              <div class="card-actions">
-                <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
-                <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
-                <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
-                  <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
-                </button>
-                <button class="btn-icon-action btn-analyze" [disabled]="!!advisingId" (click)="analyzeCampaign(c)" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
-                  @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
-                </button>
-              </div>
-            }
-          </div>
-        </div>
-      }
-    </div>
-  </section>
-  }
-
-  @if (advisorError) {
-    <div class="advisor-overlay" (click)="closeAdvisor()">
-      <div class="advisor-modal advisor-modal--error" (click)="$event.stopPropagation()">
-        <div class="advisor-modal-header">
-          <span>{{ advisorError }}</span>
-          <button class="advisor-close" (click)="closeAdvisor()">✕</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (advisorResult) {
-    <div class="advisor-overlay" (click)="closeAdvisor()">
-      <div class="advisor-modal" (click)="$event.stopPropagation()">
-        <div class="advisor-modal-header">
-          <div class="advisor-modal-title">✨ המלצות לשיפור — {{ advisorCampaignTitle }}</div>
-          <button class="advisor-close" (click)="closeAdvisor()">✕</button>
-        </div>
-
-        <p class="advisor-summary">{{ advisorResult.summary }}</p>
-
-        @if (advisorResult.strengths.length) {
-          <div class="advisor-section-title">חוזקות</div>
-          <ul class="advisor-strengths">
-            @for (s of advisorResult.strengths; track s) {
-              <li>{{ s }}</li>
-            }
-          </ul>
-        }
-
-        @if (advisorResult.tasks.length) {
-          <div class="advisor-section-title">משימות לביצוע</div>
-          <div class="advisor-tasks">
-            @for (t of advisorResult.tasks; track t.task) {
-              <div class="advisor-task" [ngClass]="'severity-' + t.severity.toLowerCase()">
-                <div class="advisor-task-head">
-                  <span class="advisor-task-topic">{{ t.topic }}</span>
-                  <span class="advisor-task-severity">{{ t.severity }}</span>
-                </div>
-                <div class="advisor-task-text">{{ t.task }}</div>
-                <div class="advisor-task-explanation">{{ t.explanation }}</div>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  }
 
   <!-- ══ BOTTOM 3-COL GRID ══ -->
   <section class="bottom-tables-grid">

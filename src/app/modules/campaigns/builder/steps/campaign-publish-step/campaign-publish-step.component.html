@@ -38,13 +38,17 @@
             {{ draft.targetAmount ? ('₪' + (draft.targetAmount | number)) : '—' }}
           </div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" *ngIf="!isOngoing">
           <div class="stat-label">משך הקמפיין</div>
           <div class="stat-value">{{ campaignDays > 0 ? (campaignDays + ' ימים') : '—' }}</div>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" *ngIf="!isOngoing">
           <div class="stat-label">תאריכים</div>
           <div class="stat-value small">{{ formatDate(draft.startDate) }} – {{ formatDate(draft.endDate) }}</div>
+        </div>
+        <div class="stat-item" *ngIf="isOngoing">
+          <div class="stat-label">משך הקמפיין</div>
+          <div class="stat-value">מתמשך</div>
         </div>
       </div>
 

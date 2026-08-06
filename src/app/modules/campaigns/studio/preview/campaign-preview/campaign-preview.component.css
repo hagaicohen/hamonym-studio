@@ -2742,7 +2742,11 @@
 /* ══ DONORS v2 — 2-per-row grid + show more ══ */
 .hm-donors-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* auto-fit instead of a fixed 2 columns — with 1 (or any odd number of)
+     donor, a rigid 2-column grid leaves a visibly empty cell next to the
+     real card. auto-fit collapses to exactly as many columns as there's
+     real content for. */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
   max-width: 860px;
   margin: 0 auto;
@@ -2862,6 +2866,7 @@
 .hm-donors-period-tabs {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
 }
@@ -3020,7 +3025,7 @@
 }
 /* Media area — fixed height so all cards match */
 .hm-update-media {
-  width: 100%; height: 200px;
+  width: 100%; height: 200px; position: relative;
   flex-shrink: 0; overflow: hidden;
   background: #f1f5f9;
 }
@@ -3050,14 +3055,50 @@
   padding: 3px 10px;
   align-self: flex-start;
 }
+.hm-update-date-badge--floating {
+  position: absolute; top: 12px; inset-inline-end: 12px;
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(2px);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
 .hm-update-title {
   font-size: 16px; font-weight: 800; margin: 0; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
 }
 .hm-update-desc {
   font-size: 13px; color: #475569; line-height: 1.6; margin: 0;
   display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
   -webkit-box-orient: vertical; overflow: hidden;
 }
+.hm-update-readmore {
+  align-self: flex-start; margin-top: 4px;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.hm-update-readmore:hover { text-decoration: underline; }
+
+/* ── "קראו עוד" popup ── */
+.hm-update-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  padding: 20px; backdrop-filter: blur(2px);
+}
+.hm-update-modal-box {
+  background: #fff; border-radius: 16px; max-width: 560px; width: 100%;
+  max-height: 85vh; overflow-y: auto; position: relative; direction: rtl;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+.hm-update-modal-close {
+  position: absolute; top: 12px; inset-inline-end: 12px; z-index: 1;
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(255, 255, 255, 0.9); cursor: pointer; font-size: 14px;
+}
+.hm-update-modal-image { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+.hm-update-modal-date { font-size: 12px; color: #94a3b8; padding: 20px 24px 0; }
+.hm-update-modal-title { font-size: 20px; font-weight: 800; margin: 6px 0 0; padding: 0 24px; line-height: 1.4; }
+.hm-update-modal-desc { font-size: 14px; color: #475569; line-height: 1.7; padding: 12px 24px 24px; }
+.hm-update-modal-desc :is(p, h1, h2, h3) { margin: 0 0 10px; }
+.hm-update-modal-desc :last-child { margin-bottom: 0; }
 
 /* UPDATES — list view */
 .hm-updates-list-view {

@@ -1,0 +1,145 @@
+<div class="rw-shell">
+  <p class="rw-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
+
+    <div class="rw-main">
+      <button type="button" class="rw-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="rw-title">🎁 תשורות</h1>
+      <p class="rw-subtitle">{{ d.title }} · {{ d.offerings.length }} תשורות</p>
+
+      <div class="rw-form-panel">
+        <h2 class="rw-form-title">{{ isEditing ? 'עריכת תשורה' : 'תשורה חדשה' }}</h2>
+
+        <div class="rw-form-grid">
+          <div class="rf-field">
+            <label class="rf-label">כותרת התשורה *</label>
+            <input class="rf-input" type="text" [(ngModel)]="offering.title" placeholder="ספר חתום על ידי המחבר">
+          </div>
+
+          <div class="rf-field">
+            <label class="rf-label">סכום מינימלי (₪) *</label>
+            <input class="rf-input" type="text" inputmode="numeric" [value]="minimumAmountInput" (keydown)="allowDigitsOnly($event)" (input)="onAmountInput($event)" placeholder="250">
+          </div>
+
+          <div class="rf-field">
+            <label class="rf-label">תיאור התשורה</label>
+            <textarea class="rf-input rf-textarea" [(ngModel)]="offering.description" placeholder="ספר עם הקדשה אישית..."></textarea>
+          </div>
+
+          <div class="rf-field">
+            <div class="rf-stock-row">
+              <label class="rf-switch">
+                <input type="checkbox" [checked]="offering.stock !== null"
+                  (change)="offering.stock = $any($event.target).checked ? (offering.stock || 10) : null">
+                <span class="rf-slider"></span>
+              </label>
+              <span class="rf-stock-label">{{ offering.stock === null ? 'ללא הגבלת כמות' : 'כמות מוגבלת' }}</span>
+            </div>
+            <input *ngIf="offering.stock !== null" class="rf-input rf-stock-input" type="text" inputmode="numeric" [value]="stockInput" (keydown)="allowDigitsOnly($event)" (input)="onStockInput($event)" placeholder="כמות יחידות">
+          </div>
+
+          <div class="rf-field">
+            <label class="rf-label">תמונה (אופציונלי)</label>
+            <input id="rw-img-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
+            <label for="rw-img-input" class="rf-upload" *ngIf="!offering.imageUrl">
+              <span class="rf-upload-icon">☁️</span>
+              <span class="rf-upload-label">{{ isUploadingImage ? 'מעלה…' : 'לחצו להעלאת תמונה' }}</span>
+            </label>
+            <div class="rf-img-preview" *ngIf="offering.imageUrl">
+              <img [src]="offering.imageUrl" alt="">
+              <div class="rf-img-actions">
+                <label for="rw-img-input" class="rf-link-btn">החלף תמונה</label>
+                <button type="button" class="rf-link-btn rf-link-btn--danger" (click)="removeImage()">הסר</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rf-field">
+            <label class="rf-label">עסק שמספק את התשורה (אופציונלי)</label>
+            <div class="rf-partner-linked" *ngIf="linkedPartnerFor(offering.id) as cp; else pickPartner">
+              <span>🤝 {{ cp.partnerDisplayName }}</span>
+              <button type="button" class="rf-link-btn" (click)="unlinkPartner(cp)">הסר קישור</button>
+            </div>
+            <ng-template #pickPartner>
+              <button type="button" class="rf-partner-btn" [disabled]="!isFormValid" (click)="openPartnerPicker()">🤝 בחר עסק</button>
+              <p class="rf-hint" *ngIf="!isFormValid">מלאו כותרת לתשורה קודם</p>
+            </ng-template>
+          </div>
+
+          <div class="rf-featured-row">
+            <label class="rf-switch">
+              <input type="checkbox" [(ngModel)]="offering.featured">
+              <span class="rf-slider"></span>
+            </label>
+            <span>⭐ תשורה מומלצת</span>
+          </div>
+
+          <div class="rf-actions">
+            <button type="button" class="rf-btn-clear" (click)="clearForm()">🗑 נקה</button>
+            <button type="button" class="rf-btn-save" [disabled]="!isFormValid" (click)="save()">💾 {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reward list — same visual language as the live campaign page's
+           own reward cards (icon circle, price top, title/description),
+           just with management actions instead of "לבחירה". Carousel
+           (horizontal scroll + arrows) instead of a long vertical list, same
+           scroll-by-one-card pattern as the public page's own reward
+           slider. -->
+      <div class="rw-list-section" *ngIf="d.offerings.length">
+        <div class="rw-list-header">
+          <h2 class="rw-list-title">תשורות בקמפיין ({{ filteredOfferings(d).length }})</h2>
+          <input class="rw-search" type="text" [(ngModel)]="searchTerm" placeholder="🔍 חיפוש תשורה…">
+        </div>
+
+        <div class="rw-carousel-wrap" *ngIf="filteredOfferings(d).length">
+          <button type="button" class="rw-arrow" (click)="scrollCarousel(carousel, 'prev')">‹</button>
+          <div class="rw-carousel" #carousel>
+            <div class="rw-carousel-track">
+              <article class="rw-reward-card" *ngFor="let o of filteredOfferings(d)">
+                <div class="rw-reward-top">
+                  <div class="rw-reward-icon-wrap">
+                    <img *ngIf="o.imageUrl" [src]="o.imageUrl" alt="">
+                    <span *ngIf="!o.imageUrl" class="rw-reward-icon">🎁</span>
+                  </div>
+                  <div class="rw-reward-price">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</div>
+                </div>
+                <span class="rw-reward-badge" *ngIf="o.featured">⭐ מומלץ</span>
+                <div class="rw-reward-body">
+                  <div class="rw-reward-title">{{ o.title }}</div>
+                  <p class="rw-reward-desc" *ngIf="o.description">{{ o.description }}</p>
+                  <span class="rw-reward-out" *ngIf="o.stock === 0">אזל המלאי</span>
+                  <div class="rw-reward-partner" *ngIf="linkedPartnerFor(o.id) as cp">🤝 {{ cp.partnerDisplayName }}</div>
+                </div>
+                <div class="rw-reward-actions">
+                  <button type="button" class="rw-icon-btn" (click)="editOffering(o)" title="עריכה">✏️</button>
+                  <button type="button" class="rw-icon-btn" (click)="duplicateOffering(o)" title="שכפל">📋</button>
+                  <button type="button" class="rw-icon-btn rw-icon-btn--danger" (click)="deleteOffering(o.id)" title="מחיקה">🗑</button>
+                </div>
+              </article>
+            </div>
+          </div>
+          <button type="button" class="rw-arrow" (click)="scrollCarousel(carousel, 'next')">›</button>
+        </div>
+
+        <p class="rw-empty" *ngIf="!filteredOfferings(d).length">לא נמצאו תשורות התואמות לחיפוש "{{ searchTerm }}"</p>
+      </div>
+
+      <p class="rw-empty" *ngIf="!d.offerings.length">אין עדיין תשורות. הוסיפו את הראשונה למעלה.</p>
+    </div>
+
+    <app-partner-link-modal
+      *ngIf="linkModalRewardId"
+      [campaignId]="campaignId"
+      [rewardId]="linkModalRewardId"
+      [rewardTitle]="linkModalRewardTitle"
+      [campaignTitle]="d.title"
+      [campaignShortDescription]="d.shortDescription"
+      (linked)="onPartnerLinked($event)"
+      (closed)="onLinkModalClosed()">
+    </app-partner-link-modal>
+  </ng-container>
+</div>

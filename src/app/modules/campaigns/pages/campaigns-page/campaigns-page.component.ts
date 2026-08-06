@@ -7,6 +7,7 @@ import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/amb
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
+import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaigns-page',
@@ -33,6 +34,28 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   readonly SparklesIcon = Sparkles;
 
   confirmModal: { id: string; title: string; type: 'delete-draft' | 'hide-campaign' } | null = null;
+
+  // Card redesign 2026-08-05 — the card is a gateway into the Campaign
+  // Dashboard (root of all business actions on a campaign, see
+  // docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md), not a panel of 5 competing
+  // buttons. Whole card + a primary button both lead to Dashboard; the "AI
+  // analyze" action is deliberately NOT in the "⋯" menu — it already lives
+  // in the Builder topbar, adding a 3rd home for the same feature would be
+  // duplication, not relocation.
+  openMenuId: string | null = null;
+
+  manageCampaign(id: string): void {
+    this.router.navigate(['/campaigns', id, 'dashboard']);
+  }
+
+  toggleMenu(event: Event, id: string): void {
+    event.stopPropagation();
+    this.openMenuId = this.openMenuId === id ? null : id;
+  }
+
+  closeMenu(): void {
+    this.openMenuId = null;
+  }
 
   ambassadorCampaigns: AmbassadorCampaignSummary[] = [];
 
@@ -86,13 +109,6 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   private hasEntityManagerRole(): boolean {
     return this.currentContext.roles().some(g => g.role === 'entity-manager');
   }
-
-  private readonly fundingLabels: Record<string, string> = {
-    'flexible':       'גיוס גמיש',
-    'all-or-nothing': 'הכל או כלום',
-    'recurring':      'הוראות קבע',
-    'matching':       "מאצ'ינג",
-  };
 
   ngOnInit(): void {}
 
@@ -223,7 +239,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   }
 
   fundingLabel(type: string): string {
-    return this.fundingLabels[type] ?? type;
+    return FUNDING_TYPE_LABELS[type as keyof typeof FUNDING_TYPE_LABELS] ?? type;
   }
 
   progressPercent(campaign: any): number {

@@ -8,11 +8,12 @@ import {
 import { AmbassadorService, Ambassador } from '../../services/ambassador.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 @Component({
   selector: 'app-campaign-ambassadors-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, CampaignManagementSidebarComponent],
   templateUrl: './campaign-ambassadors-page.component.html',
   styleUrls: ['./campaign-ambassadors-page.component.css'],
 })
@@ -31,6 +32,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
 
   campaignId    = '';
   campaignTitle = '';
+  isOngoing = false;
   ambassadors: Ambassador[] = [];
   isLoading   = true;
   togglingId: string | null = null;
@@ -40,7 +42,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   ngOnInit(): void {
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
     this.campaignApi.getById(this.campaignId).subscribe({
-      next: (c) => { this.campaignTitle = c.title; },
+      next: (c) => { this.campaignTitle = c.title; this.isOngoing = c.campaignLifecycle === 'ongoing'; },
       error: () => {},
     });
     this.loadAmbassadors();
@@ -108,7 +110,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     }
   }
 
-  back(): void { this.router.navigate(['/campaigns']); }
+  back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
 
   fmtMoney(n: number): string { return '₪' + n.toLocaleString('he-IL'); }
   initials(name: string): string {

@@ -1,0 +1,50 @@
+:host { display: block; }
+
+.rg-shell {
+  max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px;
+  display: flex; gap: 20px; align-items: flex-start;
+  font-family: 'Heebo', sans-serif; direction: rtl;
+}
+.rg-main { flex: 1; min-width: 0; }
+.rg-loading { text-align: center; padding: 60px 0; color: #94a3b8; width: 100%; }
+
+.rg-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
+.rg-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
+.rg-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
+
+.rg-form-panel {
+  padding: 20px 22px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: 14px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;
+  box-sizing: border-box;
+}
+.rg-form-panel * { box-sizing: border-box; }
+.rg-form-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0; }
+
+.rgf-field { display: flex; flex-direction: column; gap: 5px; }
+.rgf-label { font-size: 12px; font-weight: 700; color: #64748b; }
+.rgf-input {
+  width: 100%; font-family: inherit; font-size: 14px; color: #0f172a;
+  padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
+}
+.rgf-input:focus { outline: none; border-color: #7c3aed; }
+.rgf-textarea { min-height: 60px; resize: vertical; }
+
+.rgf-actions { display: flex; gap: 10px; }
+.rgf-btn-clear, .rgf-btn-save {
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  padding: 9px 16px; border-radius: 8px; border: 1.5px solid transparent;
+}
+.rgf-btn-clear { background: #fff; color: #64748b; border-color: #e2e8f0; }
+.rgf-btn-save { background: linear-gradient(135deg, #7c3aed, #583cd6); color: #fff; flex: 1; }
+.rgf-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.rg-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.rg-card { background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); border-radius: 14px; padding: 14px; }
+.rg-card-price { font-size: 15px; font-weight: 800; color: #583cd6; }
+.rg-card-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+.rg-card-desc { font-size: 12px; color: #64748b; margin: 4px 0 0; }
+.rg-card-actions { display: flex; gap: 6px; margin-top: 10px; }
+.rg-icon-btn { font-size: 11px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+.rg-icon-btn--danger:hover { background: #fee2e2; border-color: #fecaca; }
+
+.rg-empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 30px 0; }

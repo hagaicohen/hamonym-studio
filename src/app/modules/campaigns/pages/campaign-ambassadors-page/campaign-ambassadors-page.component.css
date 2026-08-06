@@ -1,7 +1,16 @@
-.amb-page {
-  padding: 32px;
-  max-width: 1100px;
+.amb-shell {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 24px 20px 60px;
+  direction: rtl;
+}
+
+.amb-page {
+  flex: 1;
+  min-width: 0;
   direction: rtl;
 }
 

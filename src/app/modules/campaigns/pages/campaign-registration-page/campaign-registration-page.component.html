@@ -1,0 +1,53 @@
+<div class="rg-shell">
+  <p class="rg-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
+
+    <div class="rg-main">
+      <button type="button" class="rg-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="rg-title">📝 הרשמה</h1>
+      <p class="rg-subtitle">{{ d.title }} · {{ d.registrationOptions.length }} קטגוריות</p>
+
+      <div class="rg-form-panel">
+        <h2 class="rg-form-title">{{ isEditing ? 'עריכת קטגוריה' : 'קטגוריה חדשה' }}</h2>
+
+        <div class="rgf-field">
+          <label class="rgf-label">כותרת *</label>
+          <input class="rgf-input" type="text" [(ngModel)]="option.title" placeholder="לדוגמה: 10 ק״מ">
+        </div>
+
+        <div class="rgf-field">
+          <label class="rgf-label">מחיר למשתתף (₪) *</label>
+          <input class="rgf-input" type="text" [value]="priceInput" (input)="onPriceInput($event)" placeholder="180">
+        </div>
+
+        <div class="rgf-field">
+          <label class="rgf-label">תיאור (אופציונלי)</label>
+          <textarea class="rgf-input rgf-textarea" [(ngModel)]="option.description" placeholder="פרטים נוספים שיוצגו למשתתף"></textarea>
+        </div>
+
+        <div class="rgf-actions">
+          <button type="button" class="rgf-btn-clear" (click)="clearForm()">🗑 נקה</button>
+          <button type="button" class="rgf-btn-save" [disabled]="!isFormValid" (click)="save()">
+            💾 {{ isEditing ? 'עדכן' : 'שמור' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="rg-list" *ngIf="d.registrationOptions.length">
+        <div class="rg-card" *ngFor="let o of d.registrationOptions">
+          <div class="rg-card-price">₪{{ o.price.toLocaleString('he-IL') }}</div>
+          <div class="rg-card-title">{{ o.title }}</div>
+          <p class="rg-card-desc" *ngIf="o.description">{{ o.description }}</p>
+          <div class="rg-card-actions">
+            <button type="button" class="rg-icon-btn" (click)="editOption(o)">✏ עריכה</button>
+            <button type="button" class="rg-icon-btn rg-icon-btn--danger" (click)="deleteOption(o.id)">🗑 מחיקה</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="rg-empty" *ngIf="!d.registrationOptions.length">אין עדיין קטגוריות הרשמה.</p>
+    </div>
+  </ng-container>
+</div>

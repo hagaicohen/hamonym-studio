@@ -1,0 +1,62 @@
+<div class="cvp-shell">
+  <p class="cvp-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+    <div class="cvp-main">
+      <button type="button" class="cvp-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="cvp-title">👁 נראות לציבור</h1>
+      <p class="cvp-subtitle">מה מהקמפיין מוצג בפועל בדף הציבורי</p>
+
+      <div class="cvp-panel">
+        <div class="cvp-row cvp-row--primary">
+          <span class="cvp-label">הצג את הקמפיין (לא מוסתר)</span>
+          <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="!d.isHidden" (click)="toggleHidden()">
+            {{ d.isHidden ? 'מוסתר' : 'גלוי' }}
+          </button>
+        </div>
+
+        <div class="cvp-group">
+          <div class="cvp-row">
+            <span class="cvp-label">🎁 תשורות</span>
+            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="d.offeringsEnabled" (click)="toggleOfferings()">
+              {{ d.offeringsEnabled ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+
+          <div class="cvp-row" *ngIf="blockVisible('sponsors') !== null">
+            <span class="cvp-label">🤝 חסויות</span>
+            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('sponsors')" (click)="toggleBlockVisible('sponsors')">
+              {{ blockVisible('sponsors') ? 'מוצג' : 'מוסתר' }}
+            </button>
+          </div>
+
+          <div class="cvp-row" *ngIf="blockVisible('ambassadors') !== null">
+            <span class="cvp-label">🏃 שגרירים</span>
+            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('ambassadors')" (click)="toggleBlockVisible('ambassadors')">
+              {{ blockVisible('ambassadors') ? 'מוצג' : 'מוסתר' }}
+            </button>
+          </div>
+
+          <div class="cvp-row" *ngIf="blockVisible('updates') !== null">
+            <span class="cvp-label">📰 עדכונים</span>
+            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('updates')" (click)="toggleBlockVisible('updates')">
+              {{ blockVisible('updates') ? 'מוצג' : 'מוסתר' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="cvp-group" *ngIf="statItems.length">
+          <span class="cvp-group-label">פס נתונים (בלוק בעמוד)</span>
+          <div class="cvp-row" *ngFor="let item of statItems">
+            <span class="cvp-label">{{ statLabels[item.key] }}</span>
+            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="item.visible" (click)="toggleStatItem(item.key)">
+              {{ item.visible ? 'מוצג' : 'מוסתר' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

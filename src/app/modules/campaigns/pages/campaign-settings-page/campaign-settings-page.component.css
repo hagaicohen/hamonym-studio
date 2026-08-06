@@ -1,0 +1,38 @@
+:host { display: block; }
+
+.csp-shell {
+  max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px;
+  display: flex; gap: 20px; align-items: flex-start;
+  font-family: 'Heebo', sans-serif; direction: rtl;
+}
+.csp-main { flex: 1; min-width: 0; }
+.csp-loading { text-align: center; padding: 60px 0; color: #94a3b8; width: 100%; }
+
+.csp-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
+.csp-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
+.csp-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
+
+.csp-panel {
+  padding: 20px 22px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: 14px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;
+}
+.csp-panel * { box-sizing: border-box; }
+
+.csp-row { display: flex; flex-direction: column; gap: 5px; }
+.csp-row--pair { flex-direction: row; gap: 12px; }
+.csp-row--pair > div { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+
+.csp-label { font-size: 12px; font-weight: 700; color: #64748b; }
+.csp-input {
+  width: 100%; font-family: inherit; font-size: 14px; color: #0f172a;
+  padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
+}
+.csp-input:focus { outline: none; border-color: #7c3aed; }
+.csp-input--readonly { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+
+.csp-note { font-size: 12px; color: #94a3b8; margin: 0; }
+
+.csp-setup { margin-top: 4px; padding-top: 16px; border-top: 1px dashed #eef2f7; display: flex; flex-direction: column; gap: 16px; }
+.csp-setup-label { font-size: 11px; color: #94a3b8; font-weight: 700; }
+
+@media (max-width: 480px) { .csp-row--pair { flex-direction: column; } }

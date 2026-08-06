@@ -6,7 +6,7 @@
 <div class="cpb-page" [class.cpb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">
   <div class="cpb-topbar">
     <div class="cpb-topbar-title">
-      <button type="button" class="cpb-back-button" *ngIf="s.fullscreen" (click)="toggleFullscreen()">
+      <button type="button" class="cpb-back-button" *ngIf="s.fullscreen" (click)="ui.setFullscreen(!s.fullscreen)">
         <lucide-icon [img]="ArrowRight" [size]="16"></lucide-icon>
         חזרה לעריכה
       </button>
@@ -20,14 +20,14 @@
          campaign-studio-topbar.component, for full parity with the main
          campaign Builder and the Partner Profile Builder. -->
     <div class="cpb-device-switch">
-      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'desktop'" (click)="ui.setDevice('desktop')" title="דסקטופ">
         <lucide-icon [img]="Monitor" [size]="16"></lucide-icon>
       </button>
-      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+      <button type="button" class="cpb-device-btn" [class.active]="s.device === 'mobile'" (click)="ui.setDevice('mobile')" title="מובייל">
         <lucide-icon [img]="Smartphone" [size]="16"></lucide-icon>
       </button>
       <div class="cpb-device-divider"></div>
-      <button type="button" class="cpb-device-btn" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+      <button type="button" class="cpb-device-btn" [class.active]="s.fullscreen" (click)="ui.setFullscreen(!s.fullscreen)" title="תצוגה מלאה">
         <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2" [size]="16"></lucide-icon>
       </button>
     </div>
@@ -50,11 +50,11 @@
     </div>
   </div>
 
-  <div class="cpb-workspace" (window:mousemove)="onResizeMove($event)" (window:mouseup)="stopResize()">
-    <div class="cpb-editor-card" [class.cpb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : editorWidth">
+  <div class="cpb-workspace" (window:mousemove)="ui.onResizeMove($event)" (window:mouseup)="ui.stopResize()">
+    <div class="cpb-editor-card" [class.cpb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : ui.editorWidth">
       <app-campaign-page-builder-step />
     </div>
-    <div class="cpb-resizer" *ngIf="!s.fullscreen" (mousedown)="startResize($event)"></div>
+    <div class="cpb-resizer" *ngIf="!s.fullscreen" (mousedown)="ui.startResize($event)"></div>
     <div class="cpb-preview-card" [class.cpb-preview-card--mobile]="s.device === 'mobile'">
       <div class="cpb-campaign-banner" *ngIf="campaignCoverImageUrl" [style.backgroundImage]="'url(' + campaignCoverImageUrl + ')'">
         <div class="cpb-campaign-banner-scrim"></div>

@@ -14,6 +14,7 @@ import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaig
 import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-publish-step/campaign-publish-step.component';
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
 const TOTAL_STEPS = 10;
+const REGISTRATION_STEP = 5;
 
 @Component({
   selector: 'app-campaign-editor',
@@ -58,12 +59,27 @@ export class CampaignEditorComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.initialStep && this.initialStep >= 1 && this.initialStep <= TOTAL_STEPS) {
-      this.currentStep = this.initialStep;
+      this.currentStep = (this.initialStep === REGISTRATION_STEP && this.isOngoing)
+        ? REGISTRATION_STEP - 1
+        : this.initialStep;
     }
   }
 
   get isEditMode(): boolean {
     return this.state.isEditMode;
+  }
+
+  // Registration ("הרשמה") only makes sense for a bounded campaign with an
+  // event to register for — an ongoing campaign has no such event, so the
+  // step is skipped entirely rather than shown-but-empty. Kept inside the
+  // fixed 1-10 numbering (see campaign-stepper's disabledSteps) instead of
+  // renumbering the whole wizard.
+  get isOngoing(): boolean {
+    return this.state.draft.campaignLifecycle === 'ongoing';
+  }
+
+  get disabledSteps(): number[] {
+    return this.isOngoing ? [REGISTRATION_STEP] : [];
   }
 
   nextStep(): void {
@@ -88,7 +104,11 @@ export class CampaignEditorComponent implements OnInit {
   }
 
   private navigateToStep(target: number): void {
-    if (target < 1 || target > TOTAL_STEPS || target === this.currentStep) return;
+    if (target < 1 || target > TOTAL_STEPS) return;
+    if (target === REGISTRATION_STEP && this.isOngoing) {
+      target = target > this.currentStep ? REGISTRATION_STEP + 1 : REGISTRATION_STEP - 1;
+    }
+    if (target === this.currentStep) return;
     this.currentStep = target;
     // Wait a tick for the new step's content to render before scrolling —
     // otherwise the container's scrollHeight is still the previous step's.

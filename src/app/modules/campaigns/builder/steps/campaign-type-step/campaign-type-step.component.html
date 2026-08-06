@@ -1,6 +1,6 @@
 <div class="type-goals-step">
 
-  <!-- ── SECTION: סוג קמפיין ── -->
+  <!-- ── SECTION: משך הקמפיין — ההחלטה הראשונה (Doc §1-2) ── -->
   <div class="tg-section-header">
     <div class="tg-title-row">
       <div class="tg-icon-box">
@@ -8,31 +8,95 @@
       </div>
       <h2 class="tg-section-title">סוג קמפיין</h2>
     </div>
-    <p class="tg-section-desc">כל סוג מתאים למטרה אחרת</p>
+    <p class="tg-section-desc">האם זו מטרה חד־פעמית, או גיוס שוטף לאורך זמן?</p>
   </div>
 
   <div class="types-grid">
-    @for (type of campaignTypes; track type.id) {
+    @for (lc of lifecycleOptions; track lc.id) {
       <button type="button" class="type-card"
-        [class.selected]="draft.fundingType === type.id"
-        (click)="selectType(type.id)">
+        [class.selected]="draft.campaignLifecycle === lc.id"
+        (click)="selectLifecycle(lc.id)">
         <div class="tc-top">
           <div class="tc-icon-wrap">
-            <lucide-angular [img]="type.icon" [size]="18" class="tc-icon"></lucide-angular>
+            <lucide-angular [img]="lc.icon" [size]="18" class="tc-icon"></lucide-angular>
           </div>
           <div class="tc-radio">
-            @if (draft.fundingType === type.id) {
+            @if (draft.campaignLifecycle === lc.id) {
               <lucide-angular [img]="CircleCheck" [size]="18" class="tc-check"></lucide-angular>
             } @else {
               <lucide-angular [img]="Circle"      [size]="18" class="tc-circle"></lucide-angular>
             }
           </div>
         </div>
-        <div class="tc-title">{{ type.title }}</div>
-        <div class="tc-desc">{{ type.description }}</div>
+        <div class="tc-title">{{ lc.title }}</div>
+        <div class="tc-desc">{{ lc.description }}</div>
       </button>
     }
   </div>
+
+  @if (showRaceConflict) {
+    <div class="tg-conflict">
+      <p class="tg-conflict-title">הבחירה "קמפיין מתמשך" אינה תואמת לקמפיין מסוג "מירוץ".</p>
+      <p class="tg-conflict-desc">באפשרותכם:</p>
+      <div class="tg-conflict-actions">
+        <button type="button" class="tg-conflict-btn" (click)="keepOneTimeForRace()">להישאר בקמפיין חד־פעמי (עם מירוץ)</button>
+        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="dropRaceForOngoing()">להסיר את המירוץ ולעבור למתמשך</button>
+      </div>
+    </div>
+  }
+
+  @if (askAboutRace) {
+    <div class="tg-followup">
+      <p class="tg-followup-title">עברתם לקמפיין חד־פעמי — האם תרצו לשלב בו מירוץ?</p>
+      <div class="tg-conflict-actions">
+        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="confirmMakeRace()">כן, הפכו אותו למירוץ</button>
+        <button type="button" class="tg-conflict-btn" (click)="dismissRaceQuestion()">לא, קמפיין רגיל</button>
+      </div>
+    </div>
+  }
+
+  <div class="tg-divider"></div>
+
+  <!-- ── SECTION: מודל גיוס — מוצג רק לקמפיין חד־פעמי; קמפיין מתמשך הוא
+       תמיד הוראת קבע, אין כאן בחירה אמיתית להציג (Doc §1-2). ── -->
+  <div class="tg-section-header">
+    <div class="tg-title-row">
+      <div class="tg-icon-box">
+        <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
+      </div>
+      <h2 class="tg-section-title">מודל גיוס</h2>
+    </div>
+    <p class="tg-section-desc">כל מודל מתאים למטרה אחרת</p>
+  </div>
+
+  @if (!isOngoing) {
+    <div class="types-grid types-grid--3col">
+      @for (type of campaignTypes; track type.id) {
+        <button type="button" class="type-card"
+          [class.selected]="draft.fundingType === type.id"
+          (click)="selectType(type.id)">
+          <div class="tc-top">
+            <div class="tc-icon-wrap">
+              <lucide-angular [img]="type.icon" [size]="18" class="tc-icon"></lucide-angular>
+            </div>
+            <div class="tc-radio">
+              @if (draft.fundingType === type.id) {
+                <lucide-angular [img]="CircleCheck" [size]="18" class="tc-check"></lucide-angular>
+              } @else {
+                <lucide-angular [img]="Circle"      [size]="18" class="tc-circle"></lucide-angular>
+              }
+            </div>
+          </div>
+          <div class="tc-title">{{ type.title }}</div>
+          <div class="tc-desc">{{ type.description }}</div>
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="tg-tip">
+      קמפיין מתמשך פועל בהוראת קבע חודשית — אך תמיד תתאפשר גם תרומה חד־פעמית.
+    </div>
+  }
 
   <!-- ── DIVIDER ── -->
   <div class="tg-divider"></div>
@@ -43,8 +107,13 @@
       <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
     </div>
     <div>
-      <h2 class="tg-section-title">יעד הגיוס ומשך הקמפיין</h2>
-      <p class="tg-section-desc">הגדירו כמה תרצו לגייס ובאיזה טווח זמן</p>
+      @if (!isOngoing) {
+        <h2 class="tg-section-title">יעד הגיוס ומשך הקמפיין</h2>
+        <p class="tg-section-desc">הגדירו כמה תרצו לגייס ובאיזה טווח זמן</p>
+      } @else {
+        <h2 class="tg-section-title">יעד הגיוס</h2>
+        <p class="tg-section-desc">הגדירו כמה תרצו לגייס</p>
+      }
     </div>
   </div>
 
@@ -78,27 +147,36 @@
     </div>
   }
 
-  <!-- Dates -->
-  <div class="tg-dates-row">
-    <div class="tg-field">
-      <label class="tg-label">תאריך התחלה</label>
-      <input class="tg-date-input" type="date" [(ngModel)]="draft.startDate" (ngModelChange)="sync()">
+  <!-- Dates — meaningless for an ongoing campaign (Doc §1: "ללא הגבלת
+       זמן"), so hidden rather than shown-but-ignored. draft.startDate/
+       endDate keep whatever createInitialDraft() seeded; nothing reads them
+       while ongoing, so a stale value sitting unused is harmless. -->
+  @if (!isOngoing) {
+    <div class="tg-dates-row">
+      <div class="tg-field">
+        <label class="tg-label">תאריך התחלה</label>
+        <input class="tg-date-input" type="date" [(ngModel)]="draft.startDate" (ngModelChange)="sync()">
+      </div>
+      <div class="tg-field">
+        <label class="tg-label">תאריך סיום</label>
+        <input class="tg-date-input" type="date" [(ngModel)]="draft.endDate"   (ngModelChange)="sync()">
+      </div>
     </div>
-    <div class="tg-field">
-      <label class="tg-label">תאריך סיום</label>
-      <input class="tg-date-input" type="date" [(ngModel)]="draft.endDate"   (ngModelChange)="sync()">
+
+    @if (getCampaignDays() > 0) {
+      <div class="tg-duration">משך הקמפיין: <strong>{{ getCampaignDays() }} ימים</strong></div>
+    }
+    @if (isDateRangeInvalid()) {
+      <div class="tg-error">תאריך הסיום חייב להיות אחרי תאריך ההתחלה</div>
+    }
+
+    <div class="tg-tip">
+      <strong>טיפ:</strong> קמפיינים עם יעד ריאלי ומשך זמן מוגדר נוטים לגייס יותר תרומות.
     </div>
-  </div>
-
-  @if (getCampaignDays() > 0) {
-    <div class="tg-duration">משך הקמפיין: <strong>{{ getCampaignDays() }} ימים</strong></div>
+  } @else {
+    <div class="tg-tip">
+      קמפיין מתמשך אינו מוגבל בזמן — יעד הגיוס נמדד מדי חודש.
+    </div>
   }
-  @if (isDateRangeInvalid()) {
-    <div class="tg-error">תאריך הסיום חייב להיות אחרי תאריך ההתחלה</div>
-  }
-
-  <div class="tg-tip">
-    <strong>טיפ:</strong> קמפיינים עם יעד ריאלי ומשך זמן מוגדר נוטים לגייס יותר תרומות.
-  </div>
 
 </div>

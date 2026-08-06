@@ -1,28 +1,30 @@
-<div class="editor-shell">
+<div class="editor-shell" [class.editor-shell--compact]="compact">
 
   <div class="editor-toolbar" *ngIf="editor">
 
-    <!-- BLOCK TYPE -->
-    <div class="toolbar-group">
-      <select class="toolbar-select" [value]="getCurrentBlockType()" (change)="onBlockTypeChange($event)">
-        <option value="paragraph">טקסט</option>
-        <option value="h1">כותרת 1</option>
-        <option value="h2">כותרת 2</option>
-        <option value="h3">כותרת 3</option>
-      </select>
-    </div>
+    <ng-container *ngIf="!compact">
+      <!-- BLOCK TYPE -->
+      <div class="toolbar-group">
+        <select class="toolbar-select" [value]="getCurrentBlockType()" (change)="onBlockTypeChange($event)">
+          <option value="paragraph">טקסט</option>
+          <option value="h1">כותרת 1</option>
+          <option value="h2">כותרת 2</option>
+          <option value="h3">כותרת 3</option>
+        </select>
+      </div>
 
-    <div class="toolbar-sep"></div>
+      <div class="toolbar-sep"></div>
 
-    <!-- INLINE FORMATTING -->
-    <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" [class.active]="isActive('bold')"      (click)="toggleBold()"      title="מודגש"><strong>B</strong></button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('italic')"    (click)="toggleItalic()"    title="נטוי"><em>I</em></button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" title="קו תחתון"><u>U</u></button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('strike')"    (click)="toggleStrike()"    title="קו חוצה"><s>S</s></button>
-    </div>
+      <!-- INLINE FORMATTING -->
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" [class.active]="isActive('bold')"      (click)="toggleBold()"      title="מודגש"><strong>B</strong></button>
+        <button type="button" class="toolbar-btn" [class.active]="isActive('italic')"    (click)="toggleItalic()"    title="נטוי"><em>I</em></button>
+        <button type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" title="קו תחתון"><u>U</u></button>
+        <button type="button" class="toolbar-btn" [class.active]="isActive('strike')"    (click)="toggleStrike()"    title="קו חוצה"><s>S</s></button>
+      </div>
 
-    <div class="toolbar-sep"></div>
+      <div class="toolbar-sep"></div>
+    </ng-container>
 
     <!-- FONT SIZE (selection-only) -->
     <div class="toolbar-group">
@@ -65,13 +67,15 @@
       </div>
     </div>
 
-    <div class="toolbar-sep"></div>
+    <ng-container *ngIf="!compact">
+      <div class="toolbar-sep"></div>
 
-    <!-- LISTS -->
-    <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" [class.active]="isActive('bulletList')"  (click)="toggleBulletList()"  title="רשימה">•≡</button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" title="רשימה ממוספרת">1.</button>
-    </div>
+      <!-- LISTS -->
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" [class.active]="isActive('bulletList')"  (click)="toggleBulletList()"  title="רשימה">•≡</button>
+        <button type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" title="רשימה ממוספרת">1.</button>
+      </div>
+    </ng-container>
 
     <div class="toolbar-sep"></div>
 
@@ -82,14 +86,16 @@
       <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'left' })"   (click)="setTextAlign('left')"   title="שמאל">←≡</button>
     </div>
 
-    <div class="toolbar-sep"></div>
+    <ng-container *ngIf="!compact">
+      <div class="toolbar-sep"></div>
 
-    <!-- LINK + EXTRA -->
-    <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" [class.active]="isActive('link')"       (click)="addLink()"          title="קישור">🔗</button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" title="ציטוט">❝</button>
-      <button type="button" class="toolbar-btn"                                          (click)="clearFormatting()"  title="נקה עיצוב">Tx</button>
-    </div>
+      <!-- LINK + EXTRA -->
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" [class.active]="isActive('link')"       (click)="addLink()"          title="קישור">🔗</button>
+        <button type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" title="ציטוט">❝</button>
+        <button type="button" class="toolbar-btn"                                          (click)="clearFormatting()"  title="נקה עיצוב">Tx</button>
+      </div>
+    </ng-container>
 
   </div>
 

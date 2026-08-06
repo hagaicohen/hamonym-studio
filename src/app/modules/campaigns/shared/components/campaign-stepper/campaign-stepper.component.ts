@@ -23,6 +23,11 @@ export class CampaignStepperComponent {
   @Input() currentStep = 1;
   @Input() editMode = false;
 
+  // Steps that exist in the fixed 1-10 numbering but aren't applicable right
+  // now (e.g. "הרשמה" for an ongoing campaign) — shown greyed out rather
+  // than removed from the list, so the numbering/count never shifts.
+  @Input() disabledSteps: number[] = [];
+
   get steps(): string[] {
     return CampaignStepperComponent.BASE_STEPS;
   }
@@ -33,6 +38,7 @@ export class CampaignStepperComponent {
   // 1 → 4 → 2), not just sequentially or only once already in edit mode.
   // The editor saves the draft on every transition, so nothing is lost.
   selectStep(index: number): void {
+    if (this.disabledSteps.includes(index + 1)) return;
     this.stepSelected.emit(index + 1);
   }
 }

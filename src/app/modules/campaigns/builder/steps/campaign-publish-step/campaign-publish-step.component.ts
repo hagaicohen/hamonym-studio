@@ -6,7 +6,7 @@ import {
   LucideAngularModule,
   FileText, Heart, Settings, Gift, Info, CreditCard, Check, CircleAlert, Rocket, Loader, Users,
 } from 'lucide-angular';
-import { CampaignStudioStateService } from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignStudioStateService, FUNDING_TYPE_LABELS } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService }         from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService }       from '../../../../../core/services/current-entity.service';
 
@@ -49,16 +49,11 @@ export class CampaignPublishStepComponent implements OnInit {
   readonly Loader      = Loader;
   readonly Users       = Users;
 
-  private readonly fundingTypeLabels: Record<string, string> = {
-    'flexible':       'קמפיין גמיש',
-    'all-or-nothing': 'הכל או כלום',
-    'recurring':      'הוראות קבע',
-    'matching':       "מאצ'ינג",
-  };
-
   get fundingTypeLabel(): string {
-    return this.fundingTypeLabels[this.draft.fundingType] ?? '';
+    return FUNDING_TYPE_LABELS[this.draft.fundingType] ?? '';
   }
+
+  get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
 
   get campaignDays(): number {
     if (!this.draft.startDate || !this.draft.endDate) return 0;
@@ -98,6 +93,12 @@ export class CampaignPublishStepComponent implements OnInit {
     if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
     if (!this.hasHero)               missing.push('תמונה / וידאו ראשי');
     if (!d.targetAmount)             missing.push('יעד גיוס');
+    // Dates are meaningless for an ongoing campaign (hidden entirely in
+    // campaign-type-step) — only enforce the range for a one-time campaign,
+    // where they're real user-entered values.
+    if (!this.isOngoing && d.startDate && d.endDate && new Date(d.endDate) < new Date(d.startDate)) {
+      missing.push('טווח תאריכים תקין');
+    }
     return missing;
   }
 

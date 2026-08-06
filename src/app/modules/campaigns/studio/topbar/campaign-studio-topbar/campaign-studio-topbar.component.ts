@@ -55,6 +55,13 @@ export class CampaignStudioTopbarComponent {
     if (slug) this.router.navigate(['/campaigns', slug, 'view']);
   }
 
+  // Sprint 1 shell (see docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md) — needs a
+  // saved campaign id, same gate as "צפה בקמפיין" needing a slug.
+  openDashboard(): void {
+    const id = this.campaignState.draft.id;
+    if (id) this.router.navigate(['/campaigns', id, 'dashboard']);
+  }
+
   getAdvice(): void {
     const campaignId = this.campaignState.draft.id;
     if (!campaignId || this.advising) return;

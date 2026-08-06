@@ -1,0 +1,58 @@
+<div class="csp-shell">
+  <p class="csp-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+    <div class="csp-main">
+      <button type="button" class="csp-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="csp-title">⚙️ הגדרות קמפיין</h1>
+      <p class="csp-subtitle">{{ d.title }}</p>
+
+      <div class="csp-panel">
+        <div class="csp-row">
+          <label class="csp-label">🎯 יעד גיוס (₪)</label>
+          <input class="csp-input" type="text" inputmode="numeric"
+            [ngModel]="d.targetAmount" (change)="patchTarget($any($event.target).value)">
+        </div>
+
+        <div class="csp-row csp-row--pair" *ngIf="!isOngoing">
+          <div>
+            <label class="csp-label">📅 תאריך התחלה</label>
+            <input class="csp-input" type="date" [ngModel]="d.startDate" (change)="patchDate('startDate', $any($event.target).value)">
+          </div>
+          <div>
+            <label class="csp-label">📅 תאריך סיום</label>
+            <input class="csp-input" type="date" [ngModel]="d.endDate" (change)="patchDate('endDate', $any($event.target).value)">
+          </div>
+        </div>
+        <p class="csp-note" *ngIf="isOngoing">קמפיין מתמשך — ללא תאריך סיום.</p>
+
+        <div class="csp-setup">
+          <span class="csp-setup-label">פרטי קמפיין (נדיר לשינוי)</span>
+
+          <div class="csp-row">
+            <label class="csp-label">שם קמפיין</label>
+            <input class="csp-input" type="text" [ngModel]="d.title" (change)="patchText('title', $any($event.target).value)">
+          </div>
+
+          <div class="csp-row">
+            <label class="csp-label">קטגוריה</label>
+            <input class="csp-input" type="text" [ngModel]="d.category" (change)="patchText('category', $any($event.target).value)">
+          </div>
+
+          <div class="csp-row">
+            <label class="csp-label">שם מנהל</label>
+            <input class="csp-input" type="text" [ngModel]="d.managerName" (change)="patchText('managerName', $any($event.target).value)">
+          </div>
+
+          <div class="csp-row">
+            <label class="csp-label">כתובת (Slug)</label>
+            <input class="csp-input csp-input--readonly" type="text" [value]="d.slug" readonly
+              title="שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה כאן">
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

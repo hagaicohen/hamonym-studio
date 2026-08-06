@@ -1,0 +1,37 @@
+:host { display: block; }
+
+.dp-shell {
+  max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px;
+  display: flex; gap: 20px; align-items: flex-start;
+  font-family: 'Heebo', sans-serif; direction: rtl;
+}
+.dp-main { flex: 1; min-width: 0; }
+.dp-loading { text-align: center; padding: 60px 0; color: #94a3b8; width: 100%; }
+
+.dp-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
+.dp-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
+.dp-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
+
+.dp-panel {
+  padding: 20px 22px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: 14px; display: flex; flex-direction: column; gap: 20px;
+}
+
+.dp-section { display: flex; flex-direction: column; gap: 10px; }
+.dp-section:not(:first-child) { padding-top: 16px; border-top: 1px dashed #eef2f7; }
+.dp-section-title { font-size: 14px; font-weight: 800; color: #0f172a; }
+.dp-section-desc { font-size: 12px; color: #94a3b8; margin: -4px 0 4px; }
+
+.dp-toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #1e293b; font-weight: 600; }
+.dp-toggle {
+  font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 6px 14px; border-radius: 999px; border: 1.5px solid #e2e8f0; background: #fff; color: #64748b;
+  min-width: 64px;
+}
+.dp-toggle--on { background: #dcfce7; border-color: #bbf7d0; color: #16a34a; }
+
+.dp-amounts { display: flex; flex-wrap: wrap; gap: 8px; }
+.dp-amount-chip { display: flex; align-items: center; gap: 4px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; }
+.dp-amount-chip input { width: 60px; border: none; background: transparent; font-size: 13px; font-family: inherit; outline: none; }
+.dp-amount-chip button { border: none; background: none; color: #94a3b8; cursor: pointer; font-size: 12px; }
+.dp-amount-add { font-size: 12px; font-weight: 700; color: #7c3aed; background: #faf5ff; border: 1.5px dashed #ddd6fe; border-radius: 8px; padding: 6px 12px; cursor: pointer; }

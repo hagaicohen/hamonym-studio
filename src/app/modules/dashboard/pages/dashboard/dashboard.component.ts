@@ -13,9 +13,8 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { AnalyticsRangeService } from '../../../../core/services/analytics-range.service';
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
-import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
-import { LucideAngularModule, Pencil, Sparkles } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 
 Chart.register(...registerables);
 
@@ -66,10 +65,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private entitiesService = inject(EntitiesService);
   private router          = inject(Router);
   private loader          = inject(AppLoaderService);
-  private campaignApi     = inject(CampaignApiService);
-
-  readonly EditIcon     = Pencil;
-  readonly SparklesIcon = Sparkles;
 
   data: DashboardData | null = null;
   error: string | null = null;
@@ -340,10 +335,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return (n ?? 0) >= 0;
   }
 
-  progressPct(c: DashboardData['campaigns'][0]): number {
-    return c.target_amount > 0 ? Math.min(100, Math.round(c.current_amount / c.target_amount * 100)) : 0;
-  }
-
   timeAgo(iso: string): string {
     if (!iso) return '—';
     const ts = new Date(iso).getTime();
@@ -360,31 +351,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   fmtDate(iso: string): string {
     const [y, m, d] = iso.slice(0, 10).split('-');
     return `${d}/${m}/${y}`;
-  }
-
-  statusLabel(s: string): string {
-    return ({ published:'פעיל', draft:'טיוטה', pending_review:'ממתין', ended:'הסתיים' })[s] ?? s;
-  }
-
-  private readonly fundingLabels: Record<string, string> = {
-    'flexible':       'גיוס גמיש',
-    'all-or-nothing': 'הכל או כלום',
-    'recurring':      'הוראות קבע',
-    'matching':       "מאצ'ינג",
-  };
-
-  fundingLabel(type: string): string {
-    return this.fundingLabels[type] ?? type;
-  }
-
-  daysRemaining(endDate: string | null): number {
-    if (!endDate) return 0;
-    const diff = new Date(endDate).getTime() - Date.now();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }
-
-  openReports(id: string): void {
-    this.router.navigate(['/reports'], { queryParams: { campaignId: id } });
   }
 
   imgClass(i: number): string {
@@ -452,33 +418,4 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return name.split(' ').slice(0,2).map(w => w[0] ?? '').join('');
   }
 
-  editCampaign(id: string): void {
-    this.router.navigate(['/campaigns', id, 'edit']);
-  }
-
-  viewCampaign(slug: string): void {
-    this.router.navigate(['/campaigns', slug, 'view']);
-  }
-
-  advisingId: string | null = null;
-  advisorCampaignTitle = '';
-  advisorResult: { summary: string; strengths: string[]; tasks: { topic: string; severity: string; explanation: string; task: string }[] } | null = null;
-  advisorError = '';
-
-  analyzeCampaign(c: DashboardData['campaigns'][0]): void {
-    if (this.advisingId) return;
-    this.advisingId = c.id;
-    this.advisorCampaignTitle = c.title;
-    this.advisorError = '';
-    this.advisorResult = null;
-    this.campaignApi.advise(c.id).subscribe({
-      next: (result) => { this.advisorResult = result; this.advisingId = null; },
-      error: (err) => { this.advisorError = err.error?.error || 'שגיאה בקבלת המלצות'; this.advisingId = null; },
-    });
-  }
-
-  closeAdvisor(): void {
-    this.advisorResult = null;
-    this.advisorError = '';
-  }
 }

@@ -25,4 +25,28 @@ export class StudioUiService {
 
   setDevice(mode: DeviceMode): void { this.deviceSubject.next(mode); }
   setFullscreen(v: boolean): void  { this.fullscreenSubject.next(v); }
+
+  // ── Draggable editor/preview split — shared by every Builder host page
+  // (Partner Builder, Campaign-Partner Builder) that offers this layout.
+  // Previously duplicated verbatim in each host page's own component; moved
+  // here since device/fullscreen above were already shared the same way.
+  // Editor sits on the right (RTL: first DOM child), so its width is
+  // measured from the divider to the window's right edge, i.e.
+  // window.innerWidth - clientX.
+  editorWidth = 480;
+  private resizing = false;
+
+  startResize(event: MouseEvent): void {
+    this.resizing = true;
+    event.preventDefault();
+  }
+
+  onResizeMove(event: MouseEvent): void {
+    if (!this.resizing) return;
+    this.editorWidth = Math.min(900, Math.max(320, window.innerWidth - event.clientX));
+  }
+
+  stopResize(): void {
+    this.resizing = false;
+  }
 }

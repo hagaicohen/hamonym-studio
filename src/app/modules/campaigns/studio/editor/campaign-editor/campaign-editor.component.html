@@ -3,6 +3,7 @@
     <app-campaign-stepper
       [currentStep]="currentStep"
       [editMode]="isEditMode"
+      [disabledSteps]="disabledSteps"
       (stepSelected)="goToStep($event)"
     />
 
@@ -13,7 +14,7 @@
     @if (currentStep === 2) { <div class="step-fade"><app-campaign-type-step /></div> }
     @if (currentStep === 3) { <div class="step-fade"><app-campaign-donation-step /></div> }
     @if (currentStep === 4) { <div class="step-fade"><app-campaign-offerings-step /></div> }
-    @if (currentStep === 5) { <div class="step-fade"><app-campaign-registration-step /></div> }
+    @if (currentStep === 5 && !isOngoing) { <div class="step-fade"><app-campaign-registration-step /></div> }
     @if (currentStep === 6) { <div class="step-fade"><app-campaign-sponsors-step /></div> }
     @if (currentStep === 7) { <div class="step-fade"><app-campaign-ambassadors-step /></div> }
     @if (currentStep === 8) { <div class="step-fade"><app-campaign-updates-step /></div> }

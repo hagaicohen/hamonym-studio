@@ -153,7 +153,7 @@
         @if (viewMode === 'grid') {
           <div class="campaigns-grid">
             @for (c of activeCampaigns; track c.id) {
-              <div class="campaign-card" [class.card--hidden]="c.isHidden">
+              <div class="campaign-card campaign-card--clickable" [class.card--hidden]="c.isHidden" (click)="manageCampaign(c.id)">
 
                 <div class="card-cover"
                   [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'"
@@ -182,41 +182,39 @@
                   </div>
 
                   <div class="card-meta">
-                    <span class="meta-item">📅 {{ daysRemaining(c.endDate) }} ימים</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'">📅 {{ daysRemaining(c.endDate) }} ימים</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'">🔁 מתמשך</span>
                     <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
                   </div>
 
-                  <div class="card-actions">
-                    <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
+                  <div class="card-actions" (click)="$event.stopPropagation()">
+                    <button class="btn-manage" (click)="manageCampaign(c.id)">ניהול קמפיין</button>
                     @if (c.slug) {
                       <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                     }
-                    <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
-                      <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
-                    </button>
-                    <button class="btn-icon-action btn-analyze"
-                            [disabled]="!!advisingId"
-                            (click)="analyzeCampaign($event, c)"
-                            title="נתח קמפיין עם בינה מלאכותית">
-                      @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
-                    </button>
-                    @if (!isAmbassador) {
-                      @if (c.isHidden) {
-                        <button class="btn-icon-action btn-unhide"
-                                [disabled]="hidingId === c.id"
-                                (click)="unhide($event, c)"
-                                title="הצג מחדש">
-                          <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
-                        </button>
-                      } @else {
-                        <button class="btn-icon-action btn-delete-campaign"
-                                [disabled]="hidingId === c.id"
-                                (click)="openHideModal($event, c)"
-                                title="הסר קמפיין">
-                          <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
-                        </button>
+                    <div class="card-menu-wrap">
+                      <button class="btn-icon-action btn-menu" (click)="toggleMenu($event, c.id)" title="עוד פעולות">⋯</button>
+                      @if (openMenuId === c.id) {
+                        <div class="card-menu-backdrop" (click)="closeMenu()"></div>
+                        <div class="card-menu">
+                          <button class="card-menu-item" (click)="editCampaign(c.id); closeMenu()">
+                            <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular> עריכת עיצוב
+                          </button>
+                          <button class="card-menu-item" (click)="openReports(c.id); closeMenu()">📊 דוחות</button>
+                          @if (!isAmbassador) {
+                            @if (c.isHidden) {
+                              <button class="card-menu-item" [disabled]="hidingId === c.id" (click)="unhide($event, c); closeMenu()">
+                                <lucide-angular [img]="EyeIcon" [size]="14"></lucide-angular> הצג מחדש
+                              </button>
+                            } @else {
+                              <button class="card-menu-item card-menu-item--danger" [disabled]="hidingId === c.id" (click)="openHideModal($event, c); closeMenu()">
+                                <lucide-angular [img]="TrashIcon" [size]="14"></lucide-angular> הסר קמפיין
+                              </button>
+                            }
+                          }
+                        </div>
                       }
-                    }
+                    </div>
                   </div>
                 </div>
 
@@ -229,7 +227,7 @@
         @if (viewMode === 'list') {
           <div class="campaigns-list">
             @for (c of activeCampaigns; track c.id) {
-              <div class="list-item" [class.card--hidden]="c.isHidden">
+              <div class="list-item list-item--clickable" [class.card--hidden]="c.isHidden" (click)="manageCampaign(c.id)">
 
                 <div class="list-cover"
                   [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'">
@@ -255,42 +253,40 @@
                     </div>
                   </div>
                   <div class="card-meta">
-                    <span class="meta-item">📅 {{ daysRemaining(c.endDate) }}י׳</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'">📅 {{ daysRemaining(c.endDate) }}י׳</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'">🔁 מתמשך</span>
                     <span class="meta-item">↗ {{ c.supportersCount ?? 0 }}</span>
                   </div>
                 </div>
 
-                <div class="list-actions">
-                  <button class="btn-action" (click)="openReports(c.id)">📊 דוחות</button>
+                <div class="list-actions" (click)="$event.stopPropagation()">
+                  <button class="btn-manage" (click)="manageCampaign(c.id)">ניהול קמפיין</button>
                   @if (c.slug) {
                     <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
                   }
-                  <button class="btn-icon-action btn-edit-icon" (click)="editCampaign(c.id)" title="ערוך קמפיין">
-                    <lucide-angular [img]="EditIcon" [size]="15"></lucide-angular>
-                  </button>
-                  <button class="btn-icon-action btn-analyze"
-                          [disabled]="!!advisingId"
-                          (click)="analyzeCampaign($event, c)"
-                          title="נתח קמפיין עם בינה מלאכותית">
-                    @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
-                  </button>
-                  @if (!isAmbassador) {
-                    @if (c.isHidden) {
-                      <button class="btn-icon-action btn-unhide"
-                              [disabled]="hidingId === c.id"
-                              (click)="unhide($event, c)"
-                              title="הצג מחדש">
-                        <lucide-angular [img]="EyeIcon" [size]="15"></lucide-angular>
-                      </button>
-                    } @else {
-                      <button class="btn-icon-action btn-delete-campaign"
-                              [disabled]="hidingId === c.id"
-                              (click)="openHideModal($event, c)"
-                              title="הסר קמפיין">
-                        <lucide-angular [img]="TrashIcon" [size]="15"></lucide-angular>
-                      </button>
+                  <div class="card-menu-wrap">
+                    <button class="btn-icon-action btn-menu" (click)="toggleMenu($event, c.id)" title="עוד פעולות">⋯</button>
+                    @if (openMenuId === c.id) {
+                      <div class="card-menu-backdrop" (click)="closeMenu()"></div>
+                      <div class="card-menu">
+                        <button class="card-menu-item" (click)="editCampaign(c.id); closeMenu()">
+                          <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular> עריכת עיצוב
+                        </button>
+                        <button class="card-menu-item" (click)="openReports(c.id); closeMenu()">📊 דוחות</button>
+                        @if (!isAmbassador) {
+                          @if (c.isHidden) {
+                            <button class="card-menu-item" [disabled]="hidingId === c.id" (click)="unhide($event, c); closeMenu()">
+                              <lucide-angular [img]="EyeIcon" [size]="14"></lucide-angular> הצג מחדש
+                            </button>
+                          } @else {
+                            <button class="card-menu-item card-menu-item--danger" [disabled]="hidingId === c.id" (click)="openHideModal($event, c); closeMenu()">
+                              <lucide-angular [img]="TrashIcon" [size]="14"></lucide-angular> הסר קמפיין
+                            </button>
+                          }
+                        }
+                      </div>
                     }
-                  }
+                  </div>
                 </div>
 
               </div>

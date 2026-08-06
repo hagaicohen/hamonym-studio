@@ -722,6 +722,42 @@
 .btn-icon-action.btn-analyze:hover { color: #583cd6; background: #f0edfe; border-color: #d9d2fb; }
 .btn-icon-action.btn-edit-icon:hover { color: #334155; background: #f8fafc; border-color: #cbd5e1; }
 
+/* ------------------------------------------------------------------ */
+/* CARD GATEWAY — "ניהול קמפיין" primary + "⋯" secondary menu           */
+/* Card is a gateway into Campaign Dashboard, not a panel of actions.   */
+/* ------------------------------------------------------------------ */
+.campaign-card--clickable, .list-item--clickable { cursor: pointer; }
+
+.btn-manage {
+  background: #7c3aed; color: #fff; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+  flex: 1 1 auto; min-width: 0; white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-manage:hover { background: #6d28d9; }
+
+.card-menu-wrap { position: relative; }
+.btn-icon-action.btn-menu { font-size: 16px; font-weight: 900; line-height: 1; }
+
+.card-menu-backdrop { position: fixed; inset: 0; z-index: 30; }
+
+.card-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 31;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  min-width: 170px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
+.card-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  background: transparent; border: none; border-radius: 7px;
+  padding: 8px 10px; font-size: 13px; color: #334155; cursor: pointer;
+  text-align: right; white-space: nowrap;
+}
+.card-menu-item:hover { background: #f1f5f9; }
+.card-menu-item:disabled { opacity: 0.4; pointer-events: none; }
+.card-menu-item--danger { color: #ef4444; }
+.card-menu-item--danger:hover { background: #fef2f2; }
+
 .draft-actions .btn-analyze {
   width: 32px;
   height: 32px;

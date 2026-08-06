@@ -1,10 +1,13 @@
-<div class="amb-page">
+<div class="amb-shell">
+  <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+  <div class="amb-page">
 
   <!-- HERO -->
   <div class="amb-hero">
     <button class="back-btn" (click)="back()">
       <lucide-angular [img]="BackIcon" [size]="16" color="#6D5DF6"></lucide-angular>
-      חזרה לקמפיינים
+      חזרה לסקירה כללית
     </button>
     <h1 class="amb-title">שגרירים</h1>
     <p class="amb-subtitle" *ngIf="campaignTitle">{{ campaignTitle }}</p>
@@ -126,6 +129,7 @@
     </div>
   </div>
 
+  </div>
 </div>
 
 <!-- CONFIRM REMOVE / DEACTIVATE MODAL -->

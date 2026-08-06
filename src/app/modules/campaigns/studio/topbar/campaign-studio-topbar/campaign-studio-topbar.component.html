@@ -41,6 +41,11 @@
         }
       </button>
     }
+    @if (campaignState.draft.id) {
+      <button class="view-campaign-button" (click)="openDashboard()" title="ניהול שוטף של הקמפיין">
+        📊 Dashboard
+      </button>
+    }
     @if (campaignSlug) {
       <button class="view-campaign-button" (click)="viewCampaign()" title="צפה בדף הקמפיין">
         צפה בקמפיין

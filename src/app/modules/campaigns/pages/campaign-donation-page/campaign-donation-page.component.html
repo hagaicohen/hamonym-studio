@@ -1,0 +1,87 @@
+<div class="dp-shell">
+  <p class="dp-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
+
+    <div class="dp-main">
+      <button type="button" class="dp-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="dp-title">💳 טופס תרומה</h1>
+      <p class="dp-subtitle">{{ d.title }}</p>
+
+      <div class="dp-panel">
+        <div class="dp-section">
+          <div class="dp-section-title">סכומי תרומה מוצעים</div>
+          <div class="dp-toggle-row">
+            <span>הצג סכומים מוצעים</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.enableSuggestedAmounts"
+              (click)="patchDraft({ enableSuggestedAmounts: !d.enableSuggestedAmounts })">
+              {{ d.enableSuggestedAmounts ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+
+          <div class="dp-amounts" *ngIf="d.enableSuggestedAmounts">
+            <div class="dp-amount-chip" *ngFor="let a of d.suggestedAmounts; let i = index">
+              <span>₪</span>
+              <input type="number" [value]="a" min="1" (change)="updateAmount(i, +$any($event.target).value)">
+              <button type="button" *ngIf="d.suggestedAmounts.length > 1" (click)="removeAmount(i)">✕</button>
+            </div>
+            <button type="button" class="dp-amount-add" *ngIf="d.suggestedAmounts.length < 6" (click)="addAmount()">+ הוסף</button>
+          </div>
+
+          <div class="dp-toggle-row">
+            <span>אפשר סכום חופשי</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.allowCustomAmount"
+              (click)="patchDraft({ allowCustomAmount: !d.allowCustomAmount })">
+              {{ d.allowCustomAmount ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="dp-section">
+          <div class="dp-section-title">תרומה חודשית</div>
+          <div class="dp-toggle-row">
+            <span>אפשר תרומה חודשית</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.allowMonthlyDonation"
+              (click)="patchDraft({ allowMonthlyDonation: !d.allowMonthlyDonation })">
+              {{ d.allowMonthlyDonation ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+
+          <div class="dp-amounts" *ngIf="d.allowMonthlyDonation">
+            <div class="dp-amount-chip" *ngFor="let a of d.monthlyAmounts; let i = index">
+              <span>₪</span>
+              <input type="number" [value]="a" min="1" (change)="updateMonthlyAmount(i, +$any($event.target).value)">
+              <button type="button" *ngIf="d.monthlyAmounts.length > 1" (click)="removeMonthlyAmount(i)">✕</button>
+            </div>
+            <button type="button" class="dp-amount-add" *ngIf="d.monthlyAmounts.length < 6" (click)="addMonthlyAmount()">+ הוסף</button>
+          </div>
+        </div>
+
+        <div class="dp-section">
+          <div class="dp-section-title">שדות אופציונליים בטופס</div>
+          <p class="dp-section-desc">בחרו אילו שדות נוספים יוצגו לתורם (שם/אימייל/טלפון תמיד מופיעים):</p>
+
+          <div class="dp-toggle-row">
+            <span>כתובת מגורים</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showAddress" (click)="toggleDonorField('showAddress')">
+              {{ donorFields.showAddress ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+          <div class="dp-toggle-row">
+            <span>מיקוד</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showPostalCode" (click)="toggleDonorField('showPostalCode')">
+              {{ donorFields.showPostalCode ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+          <div class="dp-toggle-row">
+            <span>תעודת זהות (לצרכי מס, סעיף 46)</span>
+            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showIdNumber" (click)="toggleDonorField('showIdNumber')">
+              {{ donorFields.showIdNumber ? 'מופעל' : 'כבוי' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

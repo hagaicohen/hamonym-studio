@@ -1,0 +1,164 @@
+:host { display: block; }
+
+.cdu-panel {
+  padding: 18px 20px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: 14px; font-family: 'Heebo', sans-serif; direction: rtl;
+  display: flex; flex-direction: column; gap: 14px;
+  box-sizing: border-box;
+}
+.cdu-panel * { box-sizing: border-box; }
+
+.cdu-header { display: flex; align-items: center; justify-content: space-between; }
+.cdu-title { font-size: 15px; font-weight: 800; color: #0f172a; }
+.cdu-add-btn {
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;
+  background: linear-gradient(135deg, #7c3aed, #583cd6); border: none;
+  padding: 7px 14px; border-radius: 999px;
+}
+.cdu-add-btn:hover { filter: brightness(1.05); }
+
+.cdu-loading, .cdu-error { font-size: 13px; color: #94a3b8; text-align: center; padding: 12px 0; margin: 0; }
+.cdu-error { color: #dc2626; }
+
+/* ── Composer modal (2026-08-07) — was inline at the top of the panel,
+   moved into a modal opened via "+ הוסף עדכון חדש" / "עריכה". ── */
+.cdu-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  padding: 20px; backdrop-filter: blur(2px);
+}
+.cdu-modal-box {
+  background: #fff; border-radius: 16px; max-width: 560px; width: 100%;
+  max-height: 90vh; overflow-y: auto; position: relative;
+  padding: 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  display: flex; flex-direction: column; gap: 16px;
+  font-family: 'Heebo', sans-serif; direction: rtl; box-sizing: border-box;
+}
+.cdu-modal-box * { box-sizing: border-box; }
+.cdu-modal-close {
+  position: absolute; top: 14px; inset-inline-end: 14px; z-index: 1;
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: #f1f5f9; cursor: pointer; font-size: 14px;
+}
+.cdu-modal-heading { font-size: 17px; font-weight: 800; color: #0f172a; margin: 0; padding-inline-end: 30px; }
+
+.cdu-composer { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+/* Title reuses app-rich-text-editor too (2026-08-06) — compact toolbar
+   (font size/color/align only), visually distinguished (bolder) so it
+   still reads as "the headline field", not a second body. Explicit labels
+   above both editors (2026-08-06) — the placeholder text alone wasn't
+   enough for users to tell title and body apart at a glance. */
+.cdu-field-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; }
+.cdu-text-fields { display: flex; flex-direction: column; gap: 4px; }
+.cdu-title-editor { font-weight: 800; font-size: 16px; }
+.cdu-title-editor ::ng-deep .editor-content {
+  min-height: 40px !important; max-height: 56px; overflow-y: auto;
+  padding-top: 6px; padding-bottom: 6px;
+}
+
+.cdu-composer-preview { position: relative; width: fit-content; max-width: 100%; }
+.cdu-composer-preview img { max-width: 160px; max-height: 120px; border-radius: 10px; display: block; }
+.cdu-remove-image {
+  position: absolute; top: -8px; left: -8px; width: 22px; height: 22px;
+  border-radius: 50%; border: none; background: #0f172a; color: #fff;
+  cursor: pointer; font-size: 12px; line-height: 1;
+}
+
+.cdu-composer-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; width: 100%; }
+.cdu-photo-btn {
+  font-size: 13px; font-weight: 700; color: #475569; cursor: pointer;
+  padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
+  white-space: nowrap;
+}
+.cdu-photo-btn:hover { background: #f1f5f9; }
+
+.cdu-composer-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.cdu-cancel-btn, .cdu-draft-btn, .cdu-publish-btn {
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  padding: 8px 14px; border-radius: 8px; border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+.cdu-cancel-btn { background: #fff; color: #64748b; border-color: #e2e8f0; }
+.cdu-draft-btn { background: #fff; color: #475569; border-color: #cbd5e1; }
+.cdu-draft-btn:disabled, .cdu-publish-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cdu-publish-btn { background: linear-gradient(135deg, #7c3aed, #583cd6); color: #fff; }
+.cdu-publish-btn:hover:not(:disabled) { filter: brightness(1.05); }
+
+/* ── Live preview — same card markup as the feed, updates as you type. ── */
+.cdu-preview-section { display: flex; flex-direction: column; gap: 8px; }
+.cdu-preview-label { font-size: 12px; font-weight: 700; color: #7c3aed; }
+.cdu-card--preview { border: 1.5px dashed #ddd6fe; box-shadow: none; }
+
+/* ── Feed — compact horizontal cards: small image on the trailing side
+   (right in RTL), text on the leading side. Dashboard is a management
+   view — managers see their own full text, no truncation. Card height
+   grows naturally with content instead of being clamped. ── */
+.cdu-feed { display: flex; flex-direction: column; gap: 12px; }
+.cdu-card {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 14px 16px; border-radius: 12px; background: #fff;
+  border: 1px solid #e2e8f0;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.cdu-card--draft { background: #fafbfc; border-style: dashed; border-color: #cbd5e1; }
+.cdu-card--clickable { cursor: pointer; }
+.cdu-card--clickable:hover { box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); border-color: #ddd6fe; }
+.cdu-card-media { position: relative; width: 110px; height: 78px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+.cdu-card-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cdu-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.cdu-card-top { display: flex; align-items: center; gap: 8px; }
+.cdu-card-chevron { font-size: 9px; color: #cbd5e1; margin-inline-start: auto; }
+.cdu-badge {
+  font-size: 11px; font-weight: 700; color: #16a34a; background: #f0fdf4;
+  padding: 3px 10px; border-radius: 999px;
+}
+.cdu-badge--draft { color: #92400e; background: #fffbeb; }
+.cdu-badge--floating {
+  position: absolute; top: 6px; inset-inline-end: 6px;
+  font-size: 9px; padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(2px);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+.cdu-card-date { font-size: 11px; color: #b0b8c4; }
+
+.cdu-card-title { font-size: 15px; font-weight: 800; color: #583cd6; line-height: 1.3; margin: 0; }
+.cdu-card-title--clamp {
+  display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.cdu-card-title ::ng-deep :is(p, h1, h2, h3) { margin: 0; }
+.cdu-card-desc { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+.cdu-card-desc ::ng-deep :is(p, h1, h2, h3) { margin: 0 0 4px; }
+.cdu-card-desc ::ng-deep :last-child { margin-bottom: 0; }
+
+.cdu-card-actions { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.cdu-icon-btn {
+  font-size: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px;
+  padding: 3px 8px; cursor: pointer;
+}
+.cdu-icon-btn:hover { background: #f1f5f9; }
+.cdu-icon-btn--danger:hover { background: #fee2e2; border-color: #fecaca; }
+
+@media (max-width: 480px) {
+  .cdu-card-media { width: 80px; height: 60px; }
+  .cdu-card-title { font-size: 13px; }
+}
+
+.cdu-showmore-btn {
+  align-self: center; font-family: inherit; font-size: 13px; font-weight: 700; color: #7c3aed;
+  background: #faf5ff; border: 1.5px solid #ddd6fe; border-radius: 8px;
+  padding: 8px 18px; cursor: pointer; margin-top: 4px;
+}
+.cdu-showmore-btn:hover { background: #f3e8ff; }
+
+.cdu-empty { font-size: 13px; color: #94a3b8; text-align: center; padding: 20px 0; }
+
+@media (max-width: 480px) {
+  .cdu-panel { padding: 16px 14px; }
+  .cdu-composer-actions { flex-direction: column; align-items: stretch; }
+  .cdu-photo-btn { text-align: center; }
+  .cdu-composer-buttons { width: 100%; }
+  .cdu-composer-buttons button { flex: 1; }
+}

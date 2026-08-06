@@ -27,6 +27,76 @@ const CAMPAIGN_AMBASSADORS_ROUTE = {
     ),
 };
 
+// Campaign Management Dashboard — Sprint 1, shell only (see
+// docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md). Same route-declaration pattern
+// as CAMPAIGN_AMBASSADORS_ROUTE (flat, own guard, no AppLayout shell — this
+// page owns its own status bar instead).
+const CAMPAIGN_DASHBOARD_ROUTE = {
+  path: 'campaigns/:id/dashboard',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-dashboard-page/campaign-dashboard-page.component').then(
+      (m) => m.CampaignDashboardPageComponent,
+    ),
+};
+
+// Dedicated management pages (2026-08-06 architecture reset) — each
+// capability is its own page, not an accordion embedded in the Dashboard.
+// Same flat/own-guard pattern as CAMPAIGN_AMBASSADORS_ROUTE.
+const CAMPAIGN_REWARDS_ROUTE = {
+  path: 'campaigns/:id/rewards',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-rewards-page/campaign-rewards-page.component').then(
+      (m) => m.CampaignRewardsPageComponent,
+    ),
+};
+
+const CAMPAIGN_SPONSORS_ROUTE = {
+  path: 'campaigns/:id/sponsors',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-sponsors-page/campaign-sponsors-page.component').then(
+      (m) => m.CampaignSponsorsPageComponent,
+    ),
+};
+
+const CAMPAIGN_REGISTRATION_ROUTE = {
+  path: 'campaigns/:id/registration',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-registration-page/campaign-registration-page.component').then(
+      (m) => m.CampaignRegistrationPageComponent,
+    ),
+};
+
+const CAMPAIGN_DONATION_ROUTE = {
+  path: 'campaigns/:id/donation',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-donation-page/campaign-donation-page.component').then(
+      (m) => m.CampaignDonationPageComponent,
+    ),
+};
+
+const CAMPAIGN_SETTINGS_ROUTE = {
+  path: 'campaigns/:id/settings',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-settings-page/campaign-settings-page.component').then(
+      (m) => m.CampaignSettingsPageComponent,
+    ),
+};
+
+const CAMPAIGN_VISIBILITY_ROUTE = {
+  path: 'campaigns/:id/visibility',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/campaigns/pages/campaign-visibility-page/campaign-visibility-page.component').then(
+      (m) => m.CampaignVisibilityPageComponent,
+    ),
+};
+
 export const routes: Routes = [
 
   /* ========================================
@@ -245,6 +315,13 @@ export const routes: Routes = [
 
   AMBASSADOR_STUDIO_ROUTE,
   CAMPAIGN_AMBASSADORS_ROUTE,
+  CAMPAIGN_DASHBOARD_ROUTE,
+  CAMPAIGN_REWARDS_ROUTE,
+  CAMPAIGN_SPONSORS_ROUTE,
+  CAMPAIGN_REGISTRATION_ROUTE,
+  CAMPAIGN_DONATION_ROUTE,
+  CAMPAIGN_SETTINGS_ROUTE,
+  CAMPAIGN_VISIBILITY_ROUTE,
 
   {
     path: 'campaigns/:slug/:ambassadorSlug',

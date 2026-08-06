@@ -108,6 +108,10 @@
   transform: scale(1.08);
 }
 
+.stepper-item.disabled { cursor: not-allowed; }
+.stepper-item.disabled .step-dot { background: #cbd5e1; border-color: #cbd5e1; }
+.stepper-item.disabled .stepper-label { color: #cbd5e1; }
+
 .stepper-label.active-label {
   color: #7c3aed;
   font-weight: 700;

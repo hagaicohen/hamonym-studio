@@ -6,7 +6,7 @@
 <div class="pb-page" [class.pb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">
   <div class="pb-topbar">
     <div class="pb-title-group">
-      <button type="button" class="pb-back-button" *ngIf="s.fullscreen" (click)="toggleFullscreen()">
+      <button type="button" class="pb-back-button" *ngIf="s.fullscreen" (click)="ui.setFullscreen(!s.fullscreen)">
         <lucide-icon [img]="ArrowRight" [size]="16"></lucide-icon>
         חזרה לעריכה
       </button>
@@ -17,14 +17,14 @@
          campaign Studio's own topbar (campaign-studio-topbar.component),
          so both Builders look and behave identically. -->
     <div class="pb-device-switch">
-      <button type="button" class="pb-device-btn" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+      <button type="button" class="pb-device-btn" [class.active]="s.device === 'desktop'" (click)="ui.setDevice('desktop')" title="דסקטופ">
         <lucide-icon [img]="Monitor" [size]="16"></lucide-icon>
       </button>
-      <button type="button" class="pb-device-btn" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+      <button type="button" class="pb-device-btn" [class.active]="s.device === 'mobile'" (click)="ui.setDevice('mobile')" title="מובייל">
         <lucide-icon [img]="Smartphone" [size]="16"></lucide-icon>
       </button>
       <div class="pb-device-divider"></div>
-      <button type="button" class="pb-device-btn" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+      <button type="button" class="pb-device-btn" [class.active]="s.fullscreen" (click)="ui.setFullscreen(!s.fullscreen)" title="תצוגה מלאה">
         <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2" [size]="16"></lucide-icon>
       </button>
     </div>
@@ -82,11 +82,11 @@
     </div>
   </div>
 
-  <div class="pb-workspace" (window:mousemove)="onResizeMove($event)" (window:mouseup)="stopResize()">
-    <div class="pb-editor-card" [class.pb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : editorWidth">
+  <div class="pb-workspace" (window:mousemove)="ui.onResizeMove($event)" (window:mouseup)="ui.stopResize()">
+    <div class="pb-editor-card" [class.pb-editor-card--hidden]="s.fullscreen" [style.width.px]="s.fullscreen ? null : ui.editorWidth">
       <app-campaign-page-builder-step />
     </div>
-    <div class="pb-resizer" *ngIf="!s.fullscreen" (mousedown)="startResize($event)"></div>
+    <div class="pb-resizer" *ngIf="!s.fullscreen" (mousedown)="ui.startResize($event)"></div>
     <div class="pb-preview-card" [class.pb-preview-card--mobile]="s.device === 'mobile'">
       <app-campaign-preview />
     </div>

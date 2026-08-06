@@ -8,7 +8,7 @@ import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaig
 import { CampaignStudioStateService, createInitialPartnerDraft } from '../../../services/campaign-studio-state.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
-import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
+import { StudioUiService } from '../../services/studio-ui.service';
 
 // Phase 3 — Page Builder Owner Context. Minimal host page proving the SAME
 // Builder/Renderer (CampaignPageBuilderStepComponent / CampaignPreviewComponent)
@@ -97,31 +97,6 @@ export class PartnerBuilderPageComponent implements OnInit {
     this.campaignPartnersService.listForPartner(id).subscribe({
       next: res => { this.usingCampaigns = res.campaigns; },
     });
-  }
-
-  setDevice(mode: DeviceMode): void { this.ui.setDevice(mode); }
-  toggleFullscreen(): void { this.ui.setFullscreen(!this.ui.isFullscreen); }
-
-  // ── Draggable editor/preview split — the editor panel was a fixed 480px,
-  // no way for the user to trade space between it and the preview. Dragging
-  // the divider updates editorWidth directly; editor sits on the right (RTL:
-  // first DOM child), so its width is measured from the divider to the
-  // window's right edge, i.e. window.innerWidth - clientX. ──
-  editorWidth = 480;
-  private resizing = false;
-
-  startResize(event: MouseEvent): void {
-    this.resizing = true;
-    event.preventDefault();
-  }
-
-  onResizeMove(event: MouseEvent): void {
-    if (!this.resizing) return;
-    this.editorWidth = Math.min(900, Math.max(320, window.innerWidth - event.clientX));
-  }
-
-  stopResize(): void {
-    this.resizing = false;
   }
 
   save(): void {

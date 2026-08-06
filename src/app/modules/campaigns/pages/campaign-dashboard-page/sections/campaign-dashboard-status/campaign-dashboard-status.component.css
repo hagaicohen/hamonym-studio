@@ -1,0 +1,33 @@
+:host { display: block; }
+
+.cds-bar {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 20px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: 14px; font-family: 'Heebo', sans-serif; direction: rtl;
+}
+
+.cds-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cds-link {
+  font-size: 13px; font-weight: 700; color: #7c3aed; text-decoration: none;
+  padding: 7px 12px; border: 1.5px solid #ddd6fe; border-radius: 8px;
+  transition: background 0.15s;
+}
+.cds-link:hover { background: #faf5ff; }
+
+.cds-identity { display: flex; flex-direction: column; gap: 4px; }
+.cds-title-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cds-title { font-size: 22px; font-weight: 800; color: #0f172a; }
+.cds-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; color: #16a34a; background: #dcfce7;
+  padding: 3px 10px; border-radius: 999px;
+}
+.cds-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
+.cds-status--draft { color: #92400e; background: #fef3c7; }
+.cds-status--draft .cds-status-dot { background: #92400e; }
+
+.cds-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+
+@media (max-width: 480px) {
+  .cds-title { font-size: 18px; }
+}

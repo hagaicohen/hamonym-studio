@@ -1,0 +1,122 @@
+<div class="cdu-panel">
+  <div class="cdu-header">
+    <span class="cdu-title">📰 עדכונים</span>
+    <button type="button" class="cdu-add-btn" *ngIf="!loading && !loadError" (click)="openComposer()">+ הוסף עדכון חדש</button>
+  </div>
+
+  <p class="cdu-loading" *ngIf="loading">טוען עדכונים…</p>
+  <p class="cdu-error" *ngIf="loadError">{{ loadError }}</p>
+
+  <ng-container *ngIf="!loading && !loadError">
+    <!-- Reverse-chronological feed — collapsed by default (badge/date/title
+         only), click to open. Paged so a campaign with many updates stays
+         light. Adding/editing happens in the modal below, not inline. -->
+    <div class="cdu-feed">
+      <ng-container *ngFor="let u of visibleUpdates">
+        <ng-container *ngTemplateOutlet="cardTpl; context: { u: u, preview: false, expanded: isExpanded(u.id) }"></ng-container>
+      </ng-container>
+
+      <button type="button" class="cdu-showmore-btn" *ngIf="canShowMore" (click)="showMore()">
+        הצג עוד עדכונים
+      </button>
+
+      <p class="cdu-empty" *ngIf="!updates.length">אין עדיין שיתופים. לחצו על "+ הוסף עדכון חדש" כדי לספר לתורמים מה קורה בקמפיין.</p>
+    </div>
+
+    <!-- Composer modal — opened via "+ הוסף עדכון חדש" or "עריכה" on an
+         existing item. Was inline at the top of the panel; moved into a
+         modal (2026-08-07) so the panel's default state is just the feed. -->
+    <div class="cdu-modal-backdrop" *ngIf="showComposer" (click)="closeComposer()">
+      <div class="cdu-modal-box" (click)="$event.stopPropagation()">
+        <button type="button" class="cdu-modal-close" (click)="closeComposer()">✕</button>
+        <h3 class="cdu-modal-heading">{{ isEditing ? 'עריכת עדכון' : 'עדכון חדש' }}</h3>
+
+        <div class="cdu-composer">
+          <div class="cdu-text-fields">
+            <div class="cdu-title-editor">
+              <span class="cdu-field-label">כותרת</span>
+              <app-rich-text-editor
+                [(ngModel)]="composerTitle"
+                placeholder="מה קרה היום בקמפיין? (כותרת קצרה)"
+                [minHeight]="40"
+                [compact]="true">
+              </app-rich-text-editor>
+            </div>
+
+            <div class="cdu-body-editor">
+              <span class="cdu-field-label">תוכן העדכון</span>
+              <app-rich-text-editor
+                [(ngModel)]="composerBody"
+                placeholder="ספרו את הסיפור המלא… (אופציונלי)"
+                [minHeight]="100">
+              </app-rich-text-editor>
+            </div>
+          </div>
+
+          <div class="cdu-composer-preview" *ngIf="composerImageUrl">
+            <img [src]="composerImageUrl" alt="">
+            <button type="button" class="cdu-remove-image" (click)="removeComposerImage()">✕</button>
+          </div>
+
+          <div class="cdu-composer-actions">
+            <input id="cdu-image-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
+            <label for="cdu-image-input" class="cdu-photo-btn">{{ isUploadingImage ? '⏳ מעלה…' : '📷 הוסף תמונה' }}</label>
+
+            <div class="cdu-composer-buttons">
+              <button type="button" class="cdu-cancel-btn" (click)="cancelEdit()">ביטול</button>
+              <button type="button" class="cdu-draft-btn" [disabled]="!canSave || saving" (click)="saveDraft()">שמירה כטיוטה</button>
+              <button type="button" class="cdu-publish-btn" [disabled]="!canSave || saving" (click)="publish()">
+                {{ isEditing ? 'עדכון' : 'פרסום' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live preview — same card markup as the real feed, always
+             expanded and in sync with the composer while typing. -->
+        <div class="cdu-preview-section" *ngIf="hasPreviewContent">
+          <span class="cdu-preview-label">👁 תצוגה מקדימה</span>
+          <ng-container *ngTemplateOutlet="cardTpl; context: { u: previewUpdate, preview: true, expanded: true }"></ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared card template: collapsed = image thumbnail + badge/date/title
+         only (click anywhere to expand); expanded = full description +
+         actions too. The composer's own live preview is always expanded.
+         Used for both, so what you see while typing is exactly what gets
+         published. -->
+    <ng-template #cardTpl let-u="u" let-preview="preview" let-expanded="expanded">
+      <div class="cdu-card" [class.cdu-card--draft]="!preview && !isPublished(u)" [class.cdu-card--preview]="preview"
+        [class.cdu-card--clickable]="!preview" (click)="!preview && toggleExpand(u.id)">
+        <div class="cdu-card-media" *ngIf="u.mediaUrl">
+          <img class="cdu-card-image" [src]="u.mediaUrl" alt="">
+          <span class="cdu-badge cdu-badge--floating" *ngIf="!preview" [class.cdu-badge--draft]="!isPublished(u)">
+            {{ isPublished(u) ? '✔ פורסם' : '✎ טיוטה' }}
+          </span>
+        </div>
+        <div class="cdu-card-body">
+          <div class="cdu-card-top">
+            <span class="cdu-badge" *ngIf="!preview && !u.mediaUrl" [class.cdu-badge--draft]="!isPublished(u)">
+              {{ isPublished(u) ? '✔ פורסם' : '✎ טיוטה' }}
+            </span>
+            <span class="cdu-card-date">{{ formatDate(u.date) }}</span>
+            <span class="cdu-card-chevron" *ngIf="!preview">{{ expanded ? '▲' : '▼' }}</span>
+          </div>
+          <div class="cdu-card-title" [class.cdu-card-title--clamp]="!expanded" [innerHTML]="safeHtml(u.title)"></div>
+          <ng-container *ngIf="expanded">
+            <div class="cdu-card-desc" *ngIf="u.description" [innerHTML]="safeHtml(u.description)"></div>
+            <div class="cdu-card-actions" *ngIf="!preview" (click)="$event.stopPropagation()">
+              <button type="button" class="cdu-icon-btn" (click)="edit(u)" title="עריכה">✏️</button>
+              <button type="button" class="cdu-icon-btn" (click)="togglePublish(u)"
+                [title]="isPublished(u) ? 'הסתרה מחדש' : 'פרסום'">
+                {{ isPublished(u) ? '📥' : '📤' }}
+              </button>
+              <button type="button" class="cdu-icon-btn cdu-icon-btn--danger" (click)="delete(u.id)" title="מחיקה">🗑</button>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </ng-template>
+  </ng-container>
+</div>

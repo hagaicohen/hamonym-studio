@@ -1,0 +1,63 @@
+<div class="sp-shell">
+  <p class="sp-loading" *ngIf="loading">טוען…</p>
+
+  <ng-container *ngIf="!loading && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
+
+    <div class="sp-main">
+      <button type="button" class="sp-back" (click)="back()">→ חזרה לסקירה כללית</button>
+      <h1 class="sp-title">🤝 חסויות</h1>
+      <p class="sp-subtitle">{{ d.title }} · {{ d.sponsors.length }} חסויות</p>
+
+      <div class="sp-form-panel">
+        <h2 class="sp-form-title">{{ isEditing ? 'עריכת חסות' : 'חסות חדשה' }}</h2>
+
+        <div class="sf-field">
+          <label class="sf-label">לוגו</label>
+          <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
+          <div class="sf-logo-area" *ngIf="!form.logoUrl">
+            <label for="sp-logo-input" class="sf-upload-label">{{ isUploadingLogo ? 'מעלה…' : '☁️ לחץ להעלאת לוגו' }}</label>
+          </div>
+          <div class="sf-logo-preview" *ngIf="form.logoUrl">
+            <img [src]="form.logoUrl" alt="">
+            <button type="button" class="sf-link-btn" (click)="form.logoUrl = ''">הסר</button>
+          </div>
+        </div>
+
+        <div class="sf-field">
+          <label class="sf-label">שם נותן/ת החסות *</label>
+          <input class="sf-input" type="text" [(ngModel)]="form.name" placeholder="למשל: קרן רוטשילד">
+        </div>
+
+        <div class="sf-field">
+          <label class="sf-label">קישור לאתר (רשות)</label>
+          <input class="sf-input" type="url" [(ngModel)]="form.link" placeholder="https://...">
+        </div>
+
+        <div class="sf-actions">
+          <button type="button" class="sf-btn-clear" (click)="clearForm()">🗑 נקה</button>
+          <button type="button" class="sf-btn-save" [disabled]="!form.name.trim()" (click)="save()">
+            💾 {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="sp-list" *ngIf="d.sponsors.length">
+        <div class="sp-card" *ngFor="let s of d.sponsors">
+          <div class="sp-card-logo" *ngIf="s.logoUrl"><img [src]="s.logoUrl" alt=""></div>
+          <div class="sp-card-logo sp-card-logo--empty" *ngIf="!s.logoUrl">🏢</div>
+          <div class="sp-card-body">
+            <div class="sp-card-name">{{ s.name }}</div>
+            <div class="sp-card-link" *ngIf="s.link">{{ s.link }}</div>
+            <div class="sp-card-actions">
+              <button type="button" class="sp-icon-btn" (click)="editSponsor(s)">✏ עריכה</button>
+              <button type="button" class="sp-icon-btn sp-icon-btn--danger" (click)="deleteSponsor(s.id)">🗑 מחיקה</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="sp-empty" *ngIf="!d.sponsors.length">אין עדיין חסויות. חסויות הן רשות — ניתן לדלג.</p>
+    </div>
+  </ng-container>
+</div>

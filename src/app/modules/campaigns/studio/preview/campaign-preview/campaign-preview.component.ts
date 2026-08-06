@@ -40,6 +40,7 @@ import {
   CouponsBlockData,
   MapBlockData,
   OpeningHoursBlockData,
+  FUNDING_TYPE_LABELS,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
 import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
@@ -47,13 +48,6 @@ import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../se
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { CommentsService, CampaignComment } from '../../../services/comments.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
-
-const FUNDING_LABELS: Record<string, string> = {
-  'all-or-nothing': 'הכל או כלום',
-  'flexible':       'גיוס גמיש',
-  'recurring':      'מנוי חוזר',
-  'matching':       'תרומה מוכפלת',
-};
 
 @Component({
   selector: 'app-campaign-preview',
@@ -177,6 +171,14 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // Phase 5 (Sprint 5.1 donation-CTA fix, then the 2026-07-30 model refinement).
   isCampaign(draft: CampaignDraft): boolean {
     return (draft.ownerType ?? 'campaign') === 'campaign';
+  }
+
+  // An ongoing campaign has no meaningful end date (Doc §1) — draft.endDate
+  // still holds whatever createInitialDraft() seeded (never surfaced to the
+  // manager once campaignLifecycle is 'ongoing'), so every date/countdown
+  // display must check this before rendering it as if it were real.
+  isOngoing(draft: CampaignDraft): boolean {
+    return draft.campaignLifecycle === 'ongoing';
   }
 
   openJoinModal(): void {
@@ -535,7 +537,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
 
   fundingTypeLabel(type: string): string {
-    return FUNDING_LABELS[type] || type;
+    return FUNDING_TYPE_LABELS[type as keyof typeof FUNDING_TYPE_LABELS] || type;
   }
 
   categoryLabel(categoryId: string): string {
@@ -1404,18 +1406,37 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
   }
 
+  // Public page — never show a manager's draft update to a visitor. Status
+  // is optional (absent = 'published', the Builder's own updates step has
+  // no draft concept) — see CampaignUpdate.status doc comment.
+  publishedUpdates(draft: CampaignDraft): CampaignUpdate[] {
+    return (draft.updates ?? []).filter(u => (u.status ?? 'published') === 'published');
+  }
+
   // Sidebar placement only — the below-sidebar slider/list variants render
-  // draft.updates in full (no pagination needed at full section width).
+  // publishedUpdates(draft) in full (no pagination needed at full section width).
   private updatesShownCount = this.PAGE_SIZE;
   visibleUpdates(draft: CampaignDraft): CampaignUpdate[] {
-    return (draft.updates ?? []).slice(0, this.updatesShownCount);
+    return this.publishedUpdates(draft).slice(0, this.updatesShownCount);
   }
   canShowMoreUpdates(draft: CampaignDraft): boolean {
-    return this.updatesShownCount < (draft.updates?.length ?? 0);
+    return this.updatesShownCount < this.publishedUpdates(draft).length;
   }
   showMoreUpdates(draft: CampaignDraft): void {
-    this.updatesShownCount = Math.min(this.updatesShownCount + this.PAGE_SIZE, draft.updates?.length ?? 0);
+    this.updatesShownCount = Math.min(this.updatesShownCount + this.PAGE_SIZE, this.publishedUpdates(draft).length);
   }
+
+  // Cards are uniform height (title/description both line-clamped in CSS) —
+  // "קראו עוד" only appears when the text would actually be cut off, and
+  // opens the full update in a popup instead of growing the card.
+  private readonly READ_MORE_THRESHOLD = 130;
+  viewingUpdate: CampaignUpdate | null = null;
+  needsReadMore(u: CampaignUpdate): boolean {
+    const plain = (u.description || '').replace(/<[^>]*>/g, '').trim();
+    return plain.length > this.READ_MORE_THRESHOLD;
+  }
+  openUpdate(u: CampaignUpdate): void { this.viewingUpdate = u; }
+  closeUpdate(): void { this.viewingUpdate = null; }
 
   loadDonors(slug: string): void {
     this.donationService.getDonors(slug, this.donorPeriod).subscribe({

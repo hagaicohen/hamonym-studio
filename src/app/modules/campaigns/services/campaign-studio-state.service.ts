@@ -9,6 +9,19 @@ export type CampaignFundingType =
   | 'recurring'
   | 'matching';
 
+export type CampaignLifecycle = 'one-time' | 'ongoing';
+
+// Single source of truth for funding-type display text — was independently
+// duplicated in campaign-type-step, campaign-preview, campaigns-page and
+// campaign-publish-step, and had already drifted (campaign-preview showed
+// 'recurring' as "מנוי חוזר" while everywhere else said "הוראות קבע").
+export const FUNDING_TYPE_LABELS: Record<CampaignFundingType, string> = {
+  'all-or-nothing': 'הכל או כלום',
+  'flexible':       'גיוס גמיש',
+  'recurring':      'הוראות קבע',
+  'matching':       "מאצ'ינג",
+};
+
 // See CAMPAIGN_PRESETS_VISION.md §5 — a fixed, deliberately short list.
 // A new value is added only for a recurring workflow that configuring
 // 'general' can't already deliver, not per customer request.
@@ -409,6 +422,12 @@ export interface CampaignUpdate {
   mediaUrl:    string;
   linkUrl:     string;
   linkLabel:   string;
+  // Optional — added for the Campaign Management Dashboard's Updates area
+  // (docs/CAMPAIGN_UPDATES_UX_SPEC.md §5). Absent/undefined on any update
+  // created via the Builder's own updates step (which has no draft concept)
+  // — always treat a missing status as 'published' for backward
+  // compatibility, never as a reason to hide an existing real update.
+  status?: 'draft' | 'published';
 }
 
 // rewardsBg/rewardCardBorder/rewardCardBorderActive: legacy persisted keys
@@ -560,6 +579,12 @@ export interface CampaignDraft {
   title: string;
   slug: string;
   shortDescription: string;
+  // The first decision in Step 2 (per docs/המונים – עדכונים.pdf) — orthogonal
+  // to fundingType (which is HOW money is collected), this is WHEN/how-long
+  // the campaign runs. Kept as its own field rather than folded into
+  // fundingType so the two stay independently combinable (e.g. an ongoing
+  // campaign that's still 'flexible', not just 'recurring').
+  campaignLifecycle: CampaignLifecycle;
   fundingType: CampaignFundingType;
   category:    string;   // category id or free text
   managerName: string;   // shown on hero chip, editable
@@ -643,6 +668,7 @@ function createInitialDraft(): CampaignDraft {
     title: '',
     slug: '',
     shortDescription: '',
+    campaignLifecycle: 'one-time',
     fundingType: 'flexible',
     category:    '',
     managerName: '',
@@ -818,6 +844,7 @@ export function createInitialPartnerDraft(entityId: string, displayName: string)
     title: displayName,
     slug: '',
     shortDescription: '',
+    campaignLifecycle: 'one-time',
     fundingType: 'flexible',
     category: '',
     managerName: '',

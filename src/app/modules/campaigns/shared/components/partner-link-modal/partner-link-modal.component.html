@@ -23,7 +23,8 @@
           <div class="plm-result-name">{{ p.display_name }}</div>
           <button class="plm-select-btn" type="button" [disabled]="linking" (click)="selectExisting(p)">בחירה</button>
         </div>
-        <p class="plm-empty" *ngIf="searched && results.length === 0">לא נמצא שותף בשם הזה. אפשר ליצור שותף חדש בלשונית השנייה.</p>
+        <p class="plm-empty" *ngIf="searched && results.length === 0 && !query.trim()">עוד לא נוצרו עסקים/שותפים בעמותה שלכם. אפשר ליצור שותף חדש בלשונית השנייה.</p>
+        <p class="plm-empty" *ngIf="searched && results.length === 0 && query.trim()">לא נמצא שותף בשם הזה. אפשר ליצור שותף חדש בלשונית השנייה.</p>
       </div>
       <p class="plm-loading" *ngIf="searching">מחפש...</p>
     </ng-container>

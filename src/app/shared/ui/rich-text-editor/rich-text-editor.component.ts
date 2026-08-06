@@ -49,6 +49,11 @@
   export class RichTextEditorComponent implements AfterViewInit, OnDestroy, ControlValueAccessor {
     @Input() placeholder = 'ספר את הסיפור שלך...';
     @Input() minHeight = 160;
+    // Compact mode (2026-08-06) — for short fields like an update's title,
+    // not a full story body: only Font Size / Color / Align. No headings,
+    // no bold/italic/underline/strike, no lists, no link/blockquote — those
+    // read as "editing a document", not "styling a headline".
+    @Input() compact = false;
 
     @ViewChild('editorEl') editorElement!: ElementRef<HTMLDivElement>;
 

@@ -1,0 +1,19 @@
+<div class="cdp-shell">
+  <p class="cdp-loading" *ngIf="loading">טוען קמפיין…</p>
+  <p class="cdp-error" *ngIf="loadError">{{ loadError }}</p>
+
+  <ng-container *ngIf="!loading && !loadError && draft as d">
+    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+    <div class="cdp-main">
+      <app-campaign-dashboard-status [draft]="d" [campaignId]="campaignId" />
+      <app-campaign-dashboard-kpis [draft]="d" />
+      <div id="updates">
+        <app-campaign-dashboard-updates [campaignId]="campaignId" />
+      </div>
+      <app-campaign-dashboard-attention [draft]="d" [campaignId]="campaignId" />
+      <app-campaign-dashboard-management [draft]="d" [campaignId]="campaignId" />
+      <app-campaign-dashboard-finance />
+    </div>
+  </ng-container>
+</div>

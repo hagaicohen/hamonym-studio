@@ -1,0 +1,18 @@
+<div class="cds-bar">
+  <div class="cds-actions">
+    <a class="cds-link" routerLink="/dashboard">→ חזרה לדשבורד</a>
+    <a class="cds-link" *ngIf="canView" [routerLink]="['/campaigns', draft.slug, 'view']" target="_blank">👁 צפה בקמפיין</a>
+    <a class="cds-link" [routerLink]="['/campaigns', campaignId, 'edit']">✏️ עריכת עיצוב</a>
+  </div>
+
+  <div class="cds-identity">
+    <div class="cds-title-group">
+      <span class="cds-title">{{ draft.title || '(ללא כותרת)' }}</span>
+      <span class="cds-status" [class.cds-status--draft]="draft.status === 'draft'">
+        <span class="cds-status-dot"></span>{{ statusLabel }}
+      </span>
+    </div>
+    <p class="cds-subtitle" *ngIf="!isOngoing && draft.endDate">קמפיין עד {{ formatDate(draft.endDate) }}</p>
+    <p class="cds-subtitle" *ngIf="isOngoing">🔁 קמפיין מתמשך</p>
+  </div>
+</div>

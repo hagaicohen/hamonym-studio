@@ -17,9 +17,13 @@
 .tg-section-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .tg-section-desc  { font-size: 13px; color: #64748b; margin: 4px 0 0; }
 
-/* Type cards — compact 2×2 grid */
+/* Type cards — compact 2×2 grid (lifecycle picker, always 2 options) */
 .types-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+/* Funding-model grid — 3 options (one-time only, see selectLifecycle) — one row */
+.types-grid--3col {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 .type-card {
   display: flex; flex-direction: column; gap: 6px;
@@ -90,6 +94,35 @@
   border-radius: 10px; padding: 12px 16px; line-height: 1.5;
 }
 .tg-tip strong { color: #374151; }
+
+.tg-conflict {
+  background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px;
+  padding: 14px 18px;
+}
+.tg-conflict-title { font-size: 14px; font-weight: 800; color: #92400e; margin: 0; }
+.tg-conflict-desc  { font-size: 13px; color: #92400e; margin: 4px 0 10px; }
+.tg-conflict-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.tg-conflict-btn {
+  padding: 9px 14px; border-radius: 8px; border: 1.5px solid #d97706;
+  background: #fff; color: #92400e; font-family: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background 0.15s;
+}
+.tg-conflict-btn:hover { background: #fef3c7; }
+.tg-conflict-btn--primary { background: #d97706; color: #fff; }
+.tg-conflict-btn--primary:hover { background: #b45309; }
+
+/* Follow-up question (not a warning) — same layout as .tg-conflict, purple
+   instead of amber, matching this step's primary accent color. */
+.tg-followup {
+  background: #faf5ff; border: 1.5px solid #ddd6fe; border-radius: 12px;
+  padding: 14px 18px;
+}
+.tg-followup-title { font-size: 14px; font-weight: 800; color: #5b21b6; margin: 0 0 10px; }
+.tg-followup .tg-conflict-btn { border-color: #7c3aed; color: #5b21b6; }
+.tg-followup .tg-conflict-btn:hover { background: #ede9fe; }
+.tg-followup .tg-conflict-btn--primary { background: #7c3aed; color: #fff; }
+.tg-followup .tg-conflict-btn--primary:hover { background: #6d28d9; }
 
 @media (max-width: 768px) {
   .type-goals-step { padding: 10px; }

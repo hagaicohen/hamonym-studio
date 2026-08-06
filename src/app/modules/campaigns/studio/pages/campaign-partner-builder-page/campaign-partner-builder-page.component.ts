@@ -7,7 +7,7 @@ import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaig
 import { CampaignStudioStateService, createInitialCampaignPartnerDraft } from '../../../services/campaign-studio-state.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { CampaignApiService } from '../../../services/campaign-api.service';
-import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
+import { StudioUiService } from '../../services/studio-ui.service';
 
 // Phase 5 model refinement (2026-07-30) — "Campaign Participation" Builder.
 // Edits ONE campaign_partners row's own blocks/layout (Campaign Hero, offer/
@@ -110,29 +110,5 @@ export class CampaignPartnerBuilderPageComponent implements OnInit {
       next: () => { this.saving = false; this.saved = true; },
       error: () => { this.saving = false; },
     });
-  }
-
-  setDevice(mode: DeviceMode): void { this.ui.setDevice(mode); }
-  toggleFullscreen(): void { this.ui.setFullscreen(!this.ui.isFullscreen); }
-
-  // ── Draggable editor/preview split — see partner-builder-page.component.ts
-  // for the full reasoning (same pattern, duplicated rather than shared —
-  // consistent with how save/device/fullscreen are already duplicated
-  // between these two host pages). ──
-  editorWidth = 480;
-  private resizing = false;
-
-  startResize(event: MouseEvent): void {
-    this.resizing = true;
-    event.preventDefault();
-  }
-
-  onResizeMove(event: MouseEvent): void {
-    if (!this.resizing) return;
-    this.editorWidth = Math.min(900, Math.max(320, window.innerWidth - event.clientX));
-  }
-
-  stopResize(): void {
-    this.resizing = false;
   }
 }

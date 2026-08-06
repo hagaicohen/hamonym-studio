@@ -1,0 +1,37 @@
+<div class="cdmg-panel">
+  <div class="cdmg-header">
+    <span class="cdmg-title">🎨 תוכן הקמפיין</span>
+  </div>
+  <div class="cdmg-grid">
+    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'rewards']">
+      <span class="cdmg-icon">🎁</span>
+      <span class="cdmg-label">תשורות</span>
+      <span class="cdmg-count">{{ draft.offerings.length }} פעילות</span>
+      <span class="cdmg-cta">נהל תשורות ←</span>
+    </a>
+    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'ambassadors']">
+      <span class="cdmg-icon">🏃</span>
+      <span class="cdmg-label">שגרירים</span>
+      <span class="cdmg-count">{{ draft.ambassadors.length }} שגרירים</span>
+      <span class="cdmg-cta">נהל שגרירים ←</span>
+    </a>
+    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'sponsors']">
+      <span class="cdmg-icon">🤝</span>
+      <span class="cdmg-label">חסויות</span>
+      <span class="cdmg-count">{{ draft.sponsors.length }} חסויות</span>
+      <span class="cdmg-cta">נהל חסויות ←</span>
+    </a>
+    <a class="cdmg-card" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']">
+      <span class="cdmg-icon">📝</span>
+      <span class="cdmg-label">הרשמה</span>
+      <span class="cdmg-count">{{ draft.registrationOptions.length }} קטגוריות הרשמה</span>
+      <span class="cdmg-cta">נהל הרשמות ←</span>
+    </a>
+    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'donation']">
+      <span class="cdmg-icon">💳</span>
+      <span class="cdmg-label">טופס תרומה</span>
+      <span class="cdmg-count">{{ draft.suggestedAmounts.length }} סכומים</span>
+      <span class="cdmg-cta">ערוך טופס ←</span>
+    </a>
+  </div>
+</div>

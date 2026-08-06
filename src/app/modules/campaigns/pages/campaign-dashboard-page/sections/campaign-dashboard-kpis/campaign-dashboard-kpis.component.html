@@ -1,0 +1,43 @@
+<div class="ckp-card">
+  <div class="ckp-primary">
+    <span class="ckp-amount">{{ formatMoney(draft.currentAmount) }}</span>
+    <span class="ckp-of">מתוך {{ formatMoney(draft.targetAmount) }} יעד</span>
+    <div class="ckp-progress">
+      <div class="ckp-progress-fill" [style.width.%]="progressPct"></div>
+    </div>
+    <div class="ckp-progress-row">
+      <span class="ckp-pct">{{ progressPct }}%</span>
+      <span class="ckp-remaining" *ngIf="!isOngoing">נותרו {{ formatMoney(remaining) }}</span>
+    </div>
+  </div>
+
+  <div class="ckp-divider"></div>
+
+  <div class="ckp-stats">
+    <div class="ckp-stat">
+      <span class="ckp-stat-icon">👥</span>
+      <strong>{{ draft.supportersCount ?? 0 }}</strong>
+      <span>תורמים</span>
+    </div>
+    <div class="ckp-stat" *ngIf="!isOngoing">
+      <span class="ckp-stat-icon">📅</span>
+      <strong>{{ daysRemaining }}</strong>
+      <span>ימים נותרו</span>
+    </div>
+    <div class="ckp-stat" *ngIf="isOngoing">
+      <span class="ckp-stat-icon">🔁</span>
+      <strong>מתמשך</strong>
+      <span>&nbsp;</span>
+    </div>
+    <div class="ckp-stat">
+      <span class="ckp-stat-icon">🎁</span>
+      <strong>{{ draft.offerings.length }}</strong>
+      <span>תשורות פעילות</span>
+    </div>
+    <div class="ckp-stat">
+      <span class="ckp-stat-icon">📰</span>
+      <strong>{{ draft.updates.length }}</strong>
+      <span>עדכונים</span>
+    </div>
+  </div>
+</div>

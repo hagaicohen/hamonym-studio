@@ -1,0 +1,40 @@
+<nav class="cms-sidebar">
+  <span class="cms-workspace-label">Campaign Workspace</span>
+
+  <a class="cms-item cms-item--main" [routerLink]="['/campaigns', campaignId, 'dashboard']"
+    routerLinkActive="cms-item--active" [routerLinkActiveOptions]="{ exact: true }">
+    <span class="cms-icon">🏠</span> סקירה כללית
+  </a>
+
+  <div class="cms-section">
+    <span class="cms-section-label">תוכן הקמפיין</span>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'dashboard']" fragment="updates">
+      <span class="cms-icon">📰</span> עדכונים
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">🎁</span> תשורות
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'ambassadors']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">🏃</span> שגרירים
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">🤝</span> חסויות
+    </a>
+    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">📝</span> הרשמה
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donation']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">💳</span> טופס תרומה
+    </a>
+  </div>
+
+  <div class="cms-section">
+    <span class="cms-section-label">הגדרות</span>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'settings']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">⚙️</span> הגדרות קמפיין
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'visibility']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">👁</span> נראות לציבור
+    </a>
+  </div>
+</nav>
