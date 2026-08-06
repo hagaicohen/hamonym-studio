@@ -218,8 +218,11 @@ exports.transferCampaignOwnership = async (req, res) => {
 
 exports.setCampaignSlug = async (req, res) => {
   const slug = (req.body.slug || '').trim();
-  if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-    return res.status(400).json({ error: 'כתובת לא תקינה — אותיות לועזיות קטנות, מספרים ומקפים בלבד' });
+  // Hebrew allowed — matches the regular campaign editor's own slug field
+  // (campaign-basic-step.component.ts#onSlugChange, [a-z0-9א-ת-]), which
+  // this endpoint's validation had drifted from.
+  if (!slug || !/^[a-z0-9א-ת-]+$/.test(slug)) {
+    return res.status(400).json({ error: 'כתובת לא תקינה — אותיות (עברית/לועזית קטנות), מספרים ומקפים בלבד' });
   }
   if (!requireNotes(req, res)) return;
   try {

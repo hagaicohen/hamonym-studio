@@ -174,7 +174,18 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     campaign.cardcom_api_password_encrypted &&
     campaign.cardcom_connection_status === 'success'
   );
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || !hasVerifiedCardcom;
+  // Platform-level fallback: Hamonym's own Cardcom account (HAMONYM_CARDCOM_*
+  // in .env), used when the entity hasn't verified its own — explicit,
+  // deliberate choice (2026-08-04) so real donations can go live before every
+  // entity has its own merchant account configured, rather than sitting on
+  // Mock. Funds land in the platform's own account in that case, not the
+  // entity's — settlement to the entity is a separate, manual step for now.
+  const hasPlatformCardcom = !!(
+    process.env.HAMONYM_CARDCOM_TERMINAL &&
+    process.env.HAMONYM_CARDCOM_API_NAME &&
+    process.env.HAMONYM_CARDCOM_API_PASSWORD
+  );
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || (!hasVerifiedCardcom && !hasPlatformCardcom);
 
   // Validate participants' Registration Options before creating anything —
   // see loadRegistrationOptions above.
@@ -212,7 +223,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
 
-  // 3. Mock provider ג€” skip Cardcom, return mock payment URL
+  // 3. Mock provider — skip Cardcom, return mock payment URL
   if (isMock) {
     const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
     return {
@@ -226,10 +237,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const rewardsTotal = rewards.reduce((s, r) => s + (r.minimumAmount || 0), 0);
   const baseAmount   = round2(amount - rewardsTotal);
 
-  // Rewards first ג€” each with its own title and minimum amount
+  // Rewards first — each with its own title and minimum amount
   for (const r of rewards) {
     products.push({
-      Description: `׳×׳©׳•׳¨׳”: ${r.title}`,
+      Description: `תשורה: ${r.title}`,
       UnitCost: round2(r.minimumAmount || 0),
     });
   }
@@ -237,14 +248,14 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // Free / top-up amount
   if (baseAmount > 0) {
     const label = rewards.length > 0
-      ? `׳×׳¨׳•׳׳” ׳—׳•׳₪׳©׳™׳× ג€” ${campaign.title}`
-      : `׳×׳¨׳•׳׳” ג€” ${campaign.title}`;
+      ? `תרומה נוספת — ${campaign.title}`
+      : `תרומה — ${campaign.title}`;
     products.push({ Description: label, UnitCost: baseAmount });
   }
 
   // Fallback: no rewards, no base (shouldn't happen)
   if (products.length === 0) {
-    products.push({ Description: campaign.title || '׳×׳¨׳•׳׳”', UnitCost: round2(amount) });
+    products.push({ Description: campaign.title || 'תרומה', UnitCost: round2(amount) });
   }
 
   // 4. Cardcom payload
@@ -252,9 +263,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const frontBase  = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   const payload = {
-    TerminalNumber: campaign.cardcom_terminal_number,
-    ApiName:        campaign.cardcom_api_username,
-    ApiPassword:    campaign.cardcom_api_password_encrypted,
+    TerminalNumber: hasVerifiedCardcom ? campaign.cardcom_terminal_number : process.env.HAMONYM_CARDCOM_TERMINAL,
+    ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : process.env.HAMONYM_CARDCOM_API_NAME,
+    ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : process.env.HAMONYM_CARDCOM_API_PASSWORD,
     Amount:         round2(amount),
     Language:       'he',
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
