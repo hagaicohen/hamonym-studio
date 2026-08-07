@@ -20,5 +20,6 @@ router.get('/my', requireAuth, controller.getMyDonations);
 // Authenticated — entity manager
 router.get('/entity/:id',          requireAuth, requireEntityOwnership(), controller.getEntityDonations);
 router.get('/entity/:id/donors',   requireAuth, requireEntityOwnership(), controller.getEntityDonors);
+router.post('/entity/:id/manual',  requireAuth, requireEntityOwnership(), controller.createManualDonation);
 
 module.exports = router;

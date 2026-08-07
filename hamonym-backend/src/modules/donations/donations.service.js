@@ -716,10 +716,15 @@ const DONOR_SORT_COLUMNS = {
   last:  'last_donation_at',
 };
 
-exports.getEntityDonors = async (entityId, { search, sortBy, sortDir, page = 0, limit = 25 }) => {
+exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir, page = 0, limit = 25 }) => {
   const where  = ['d.entity_id = $1', `d.status = 'paid'`];
   const params = [entityId];
   let idx = 2;
+
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
 
   if (search) {
     where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
@@ -783,6 +788,58 @@ exports.getEntityDonors = async (entityId, { search, sortBy, sortDir, page = 0, 
     page,
     limit,
   };
+};
+
+/* ─────────────────────────────────────────
+   MANUAL DONATION ENTRY (authenticated, entity manager)
+   — logs an offline donation (bank transfer/check/cash/other) directly as
+   paid, bypassing Cardcom. Mirrors the campaign-totals update + receipt/
+   donor-linking side effects of the real payment flow (handleReturn above)
+   so a manual entry behaves identically to an online one everywhere else
+   in the app.
+───────────────────────────────────────── */
+const MANUAL_DONATION_SOURCES = ['bank_transfer', 'check', 'cash', 'other'];
+
+exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note }, enteredByUserId) => {
+  if (!campaignId) throw new Error('חסר מזהה קמפיין');
+  const amt = Number(amount);
+  if (!amt || amt <= 0) throw new Error('סכום לא תקין');
+  if (!MANUAL_DONATION_SOURCES.includes(source)) throw new Error('מקור תרומה לא תקין');
+  const count = Math.max(1, parseInt(supportersCount, 10) || 1);
+
+  // requireEntityOwnership already confirmed the acting user manages
+  // entityId — this closes the gap where campaignId in the body could
+  // belong to a DIFFERENT entity.
+  const campRes = await db.query(
+    `SELECT id FROM campaigns WHERE id = $1 AND entity_id = $2`,
+    [campaignId, entityId]
+  );
+  if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
+
+  const donationRes = await db.query(
+    `INSERT INTO donations (
+       campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
+       rewards, status, is_mock, source, supporters_count, entered_by, note,
+       completed_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
+     RETURNING id`,
+    [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
+  );
+  const donationId = donationRes.rows[0].id;
+
+  await db.query(
+    `UPDATE campaigns
+     SET current_amount   = current_amount   + $1,
+         supporters_count = supporters_count + $2,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [amt, count, campaignId]
+  );
+
+  require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+  await finalizePaidDonation(donationId);
+
+  return { donationId };
 };
 
 function round2(n) { return Math.round(n * 100) / 100; }

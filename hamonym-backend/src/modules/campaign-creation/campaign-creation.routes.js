@@ -13,6 +13,9 @@ const controller =
 const requireAuth =
   require('../../middleware/require-auth');
 
+const { requireAiAccessFromBody } =
+  require('../../middleware/ai-access.middleware');
+
 const ALLOWED_MIME_TYPES = new Set([
   'image/png', 'image/jpeg', 'image/webp', 'image/gif',
   'application/pdf',
@@ -34,6 +37,7 @@ const upload = multer({
 router.post(
   '/extract',
   requireAuth,
+  requireAiAccessFromBody(),
   controller.extractAndBuildBrief
 );
 
@@ -41,18 +45,21 @@ router.post(
   '/extract-documents',
   requireAuth,
   upload.array('files', 6),
+  requireAiAccessFromBody(),
   controller.extractFromDocuments
 );
 
 router.post(
   '/map-to-draft',
   requireAuth,
+  requireAiAccessFromBody(),
   controller.mapToDraft
 );
 
 router.post(
   '/refine-brief',
   requireAuth,
+  requireAiAccessFromBody(),
   controller.refineBrief
 );
 

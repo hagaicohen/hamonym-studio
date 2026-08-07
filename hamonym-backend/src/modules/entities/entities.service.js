@@ -308,7 +308,7 @@ exports.getMyEntities =
           e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
           e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
           e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
-          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
+          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at, e.ai_features_enabled,
           ue.role,
 
           CASE
@@ -995,7 +995,7 @@ exports.getEntityById =
           e.association_certificate_mime, e.tax_document_mime, e.logo_mime, e.campaign_types, e.monthly_goal,
           e.yearly_goal, e.billing_method, e.billing_masav_file_name, e.cardcom_terminal, e.cardcom_api_name,
           e.cardcom_api_password, e.ga_measurement_id, e.deleted_at, e.deleted_by, e.is_hidden,
-          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
+          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at, e.ai_features_enabled,
 
           CASE
 
