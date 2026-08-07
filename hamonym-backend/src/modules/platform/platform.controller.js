@@ -134,6 +134,13 @@ exports.reactivate = async (req, res) => {
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };
 
+exports.setAiAccess = async (req, res) => {
+  try {
+    const entity = await svc.setAiAccess(req.params.id, req.user.id, !!req.body.enabled, req.ip);
+    res.json({ entity });
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
 exports.hardDelete = async (req, res) => {
   if (!requireNotes(req, res)) return;
   try {

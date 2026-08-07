@@ -10,6 +10,9 @@ const controller =
 const requireAuth =
   require('../../middleware/require-auth');
 
+const { requireAiAccessForCampaign } =
+  require('../../middleware/ai-access.middleware');
+
 // Public — no auth
 router.get(
   '/public/:slug',
@@ -91,12 +94,14 @@ router.patch(
 router.post(
   '/:id/advise',
   requireAuth,
+  requireAiAccessForCampaign(),
   controller.adviseCampaign
 );
 
 router.post(
   '/:id/generate-metadata',
   requireAuth,
+  requireAiAccessForCampaign(),
   controller.generateCampaignMetadata
 );
 

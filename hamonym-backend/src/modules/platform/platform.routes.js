@@ -27,6 +27,7 @@ router.post('/organizations/:id/request-changes', requirePermission('organizatio
 router.post('/organizations/:id/suspend', requirePermission('organizations'), ctrl.suspend);
 router.post('/organizations/:id/reactivate', requirePermission('organizations'), ctrl.reactivate);
 router.post('/organizations/:id/hard-delete', requirePermission('organizations'), ctrl.hardDelete);
+router.post('/organizations/:id/ai-access', requirePermission('organizations'), ctrl.setAiAccess);
 router.post('/organizations/:id/analyze', requirePermission('organizations'), ctrl.analyzeOrganization);
 router.post('/organizations/:id/recommend', requirePermission('organizations'), ctrl.recommendOrganization);
 

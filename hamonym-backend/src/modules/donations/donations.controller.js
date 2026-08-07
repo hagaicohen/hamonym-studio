@@ -132,12 +132,28 @@ exports.getEntityDonors = async (req, res) => {
     const entityId = req.params.id;
     const page     = parseInt(req.query.page  || '0', 10);
     const limit    = parseInt(req.query.limit || '25', 10);
-    const { search, sortBy, sortDir } = req.query;
-    const result = await donationsService.getEntityDonors(entityId, { search, sortBy, sortDir, page, limit });
+    const { campaignId, search, sortBy, sortDir } = req.query;
+    const result = await donationsService.getEntityDonors(entityId, { campaignId, search, sortBy, sortDir, page, limit });
     res.json(result);
   } catch (err) {
     console.error('[getEntityDonors] error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createManualDonation = async (req, res) => {
+  try {
+    const entityId = req.params.id;
+    const { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note } = req.body;
+    const result = await donationsService.createManualDonation(
+      entityId,
+      { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note },
+      req.user.id
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('[createManualDonation] error:', err.message);
+    res.status(400).json({ error: err.message });
   }
 };
 

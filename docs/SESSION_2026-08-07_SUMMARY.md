@@ -112,9 +112,3 @@ this.campaignApiService.update(this.campaignId, this.campaignState.draft)
 - `src/app/modules/campaigns/pages/campaign-{rewards,sponsors,registration,donation,settings,visibility}-page/` — 6 הדפים הייעודיים.
 - `src/app/modules/campaigns/shared/components/partner-link-modal/` — **מכיל את הבאג הפתוח**.
 - `src/app/app.routes.ts` — כל ה-Routes החדשים (`CAMPAIGN_REWARDS_ROUTE` וכו').
-
----
-
-## הערה טכנית על המסמך הזה
-
-גילינו תוך כדי שיש **שתי תיקיות `docs/` נפרדות** בסביבת העבודה: `HamonymStudio/docs/` (מחוץ ל-git repo של hamonym-app) ו-`HamonymStudio/hamonym-app/docs/` (בתוך ה-repo, זו שנדחפת ב-`git push`). הן היו לא מסונכרנות. **הקובץ הזה הועתק בכוונה לתיקייה השנייה (הזו) כדי שיהיה ב-git ויעבור בפועל ב-push** — לא רק על הדיסק המקומי. אם ממשיכים לעבוד, כדאי לכתוב מסמכים חדשים ישירות לכאן (`hamonym-app/docs/`), לא לתיקיית ה-docs החיצונית.
