@@ -1,30 +1,68 @@
-<div class="cdf-row">
-  <div class="cdf-panel">
-    <div class="cdf-header">
-      <span class="cdf-title">💰 נתונים פיננסיים</span>
-      <span class="cdf-badge">בקרוב</span>
-    </div>
-    <div class="cdf-stats">
-      <div class="cdf-stat">
-        <span class="cdf-stat-icon">🕓</span>
-        <div><strong>₪500</strong><span>התרומה האחרונה</span></div>
-      </div>
-      <div class="cdf-stat">
-        <span class="cdf-stat-icon">💰</span>
-        <div><strong>324</strong><span>סה"כ תרומות</span></div>
-      </div>
-    </div>
-    <div class="cdf-actions">
-      <span class="cdf-action">📤 ייצא דוח</span>
-      <span class="cdf-action">➕ הזנת תרומה ידנית</span>
-    </div>
+<div class="cdf-panel">
+  <div class="cdf-header">
+    <span class="cdf-title">💰 הזנת תרומה ידנית</span>
   </div>
+  <p class="cdf-hint">קיבלתם תרומה מחוץ למערכת (העברה בנקאית, צ'ק, מזומן)? רשמו אותה כאן כדי שתיכלל בסכום שגויס ובמספר התורמים.</p>
+  <button type="button" class="cdf-open-btn" (click)="openModal()">➕ הזנת תרומה ידנית</button>
+</div>
 
-  <div class="cdf-panel cdf-panel--muted">
-    <div class="cdf-header">
-      <span class="cdf-title">📊 סקירה מהירה</span>
-      <span class="cdf-badge">בקרוב</span>
+<div class="cdf-modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
+  <div class="cdf-modal-box" (click)="$event.stopPropagation()">
+    <button type="button" class="cdf-modal-close" (click)="closeModal()">✕</button>
+    <h3 class="cdf-modal-heading">הזנת תרומה ידנית</h3>
+
+    <div class="cdf-form">
+      <label class="cdf-field">
+        <span>סכום *</span>
+        <input type="text" inputmode="numeric" [value]="amountInput"
+          (keydown)="allowDigitsOnly($event)" (input)="onAmountInput($event)" placeholder="לדוגמה: 1,000">
+      </label>
+
+      <label class="cdf-field">
+        <span>מקור התרומה *</span>
+        <select [(ngModel)]="form.source">
+          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
+        </select>
+      </label>
+
+      <label class="cdf-field">
+        <span>מספר תורמים שהתרומה מייצגת</span>
+        <input type="number" min="1" step="1" [(ngModel)]="form.supportersCount">
+      </label>
+
+      <label class="cdf-field">
+        <span>שם התורם (אופציונלי)</span>
+        <input type="text" [(ngModel)]="form.donorName">
+      </label>
+
+      <label class="cdf-field">
+        <span>אימייל התורם (אופציונלי — לשליחת קבלה)</span>
+        <input type="email" [(ngModel)]="form.donorEmail">
+      </label>
+
+      <label class="cdf-field">
+        <span>טלפון התורם (אופציונלי)</span>
+        <input type="tel" [(ngModel)]="form.donorPhone">
+      </label>
+
+      <label class="cdf-field">
+        <span>הערה (אופציונלי)</span>
+        <textarea rows="2" [(ngModel)]="form.note" placeholder="לדוגמה: מספר צ'ק, פרטי מעביר..."></textarea>
+      </label>
+
+      <label class="cdf-declare">
+        <input type="checkbox" [(ngModel)]="form.declared">
+        <span>אני מצהיר/ה שהכספים האלה אמיתיים וידוע לי שתיגבה עמלת פלטפורמה</span>
+      </label>
+
+      <p class="cdf-error" *ngIf="error">{{ error }}</p>
+
+      <div class="cdf-modal-actions">
+        <button type="button" class="cdf-cancel-btn" (click)="closeModal()">ביטול</button>
+        <button type="button" class="cdf-submit-btn" [disabled]="!canSubmit" (click)="submit()">
+          {{ saving ? 'שומר...' : 'שמירת התרומה' }}
+        </button>
+      </div>
     </div>
-    <p class="cdf-empty">נתוני מגמה יופיעו כאן כשמודול הכספים יתחבר לנתונים אמיתיים.</p>
   </div>
 </div>

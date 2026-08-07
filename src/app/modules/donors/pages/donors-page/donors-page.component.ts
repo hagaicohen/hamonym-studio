@@ -2,9 +2,12 @@ import { Component, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
+import { CampaignManagementSidebarComponent } from '../../../campaigns/shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 interface Kpi {
   donorCount:  number;
@@ -42,7 +45,7 @@ const COLUMNS_STORAGE_KEY = 'donors-hidden-columns';
 @Component({
   selector: 'app-donors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
   templateUrl: './donors-page.component.html',
   styleUrl: './donors-page.component.css',
 })
@@ -50,6 +53,20 @@ export class DonorsPageComponent implements OnInit {
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
   private loader        = inject(AppLoaderService);
+  private route         = inject(ActivatedRoute);
+  private router        = inject(Router);
+  private campaignApi   = inject(CampaignApiService);
+
+  // Two entry points: /campaigns/:id/donors (campaign-scoped — Workspace
+  // sidebar's own route, shows the Workspace shell below) and
+  // /donors?campaignId= (entity-wide, optionally pre-filtered). Either way,
+  // campaignTitle drives a visible "filtered by X" banner in the entity-wide
+  // case — there's no dropdown filter on this page (unlike Donations), so a
+  // silent, unclearable filter would look like the entity just has few donors.
+  campaignScoped = !!this.route.snapshot.paramMap.get('id');
+  campaignId = this.route.snapshot.paramMap.get('id') || this.route.snapshot.queryParamMap.get('campaignId') || '';
+  campaignTitle: string | null = null;
+  isOngoing = false;
 
   donors: DonorRow[] = [];
   kpi: Kpi = { donorCount: 0, totalRaised: 0, avgPerDonor: 0 };
@@ -76,6 +93,11 @@ export class DonorsPageComponent implements OnInit {
   private lastLoadedEntityId: string | null = null;
 
   constructor() {
+    // Same "two spinners" fix as campaign-ambassadors-page/registrations-page
+    // — forceHide() clears the global self-hiding loader immediately instead
+    // of waiting out hide()'s 600ms minimum-visible window.
+    if (this.campaignScoped) this.loader.forceHide();
+
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
       if (id === this.lastLoadedEntityId) return;
@@ -89,6 +111,23 @@ export class DonorsPageComponent implements OnInit {
       const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
       if (saved) this.hiddenColumns = new Set(JSON.parse(saved));
     } catch { /* ignore malformed storage */ }
+
+    if (this.campaignId) {
+      this.campaignApi.getById(this.campaignId).subscribe({
+        next: (draft) => { this.campaignTitle = draft.title; this.isOngoing = draft.campaignLifecycle === 'ongoing'; },
+        error: () => { this.campaignTitle = 'קמפיין זה'; },
+      });
+    }
+  }
+
+  back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
+
+  clearCampaignFilter(): void {
+    this.campaignId    = '';
+    this.campaignTitle = null;
+    this.page = 0;
+    this.load();
+    this.router.navigate(['/donors']); // reflect in the URL; component state is already reset above
   }
 
   isColVisible(key: ColumnKey): boolean {
@@ -146,6 +185,7 @@ export class DonorsPageComponent implements OnInit {
       .set('sortBy',  this.sortField)
       .set('sortDir', this.sortDir);
 
+    if (this.campaignId)         params = params.set('campaignId', this.campaignId);
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
     this.http.get<any>(`${environment.apiUrl}/api/donations/entity/${entity.id}/donors`, { headers, params })
@@ -183,6 +223,7 @@ export class DonorsPageComponent implements OnInit {
       .set('sortBy',  this.sortField)
       .set('sortDir', this.sortDir);
 
+    if (this.campaignId)         params = params.set('campaignId', this.campaignId);
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
     this.http.get<any>(`${environment.apiUrl}/api/donations/entity/${entity.id}/donors`, { headers, params })

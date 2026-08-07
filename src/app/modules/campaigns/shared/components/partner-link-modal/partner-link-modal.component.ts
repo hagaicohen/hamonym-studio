@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { EntitiesService } from '../../../../../core/services/entities.service';
+import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { CampaignPartnersService, CampaignPartner } from '../../../services/campaign-partners.service';
 import { CampaignApiService } from '../../../services/campaign-api.service';
 import { PartnerImportService, ExtractResult, ClassifyResult, ApplyPayload } from '../../../services/partner-import.service';
@@ -43,6 +44,14 @@ export class PartnerLinkModalComponent implements OnInit {
   @Output() closed = new EventEmitter<void>();
 
   private entitiesService = inject(EntitiesService);
+  private currentEntity = inject(CurrentEntityService);
+
+  // AI Visibility Gate — "import from website" is an AI capability, hidden
+  // unless a Platform Admin has granted this entity access (see
+  // entities.ai_features_enabled, migration 041).
+  get aiEnabled(): boolean {
+    return !!this.currentEntity.currentEntity()?.ai_features_enabled;
+  }
   private campaignPartnersService = inject(CampaignPartnersService);
   private campaignApiService = inject(CampaignApiService);
   private campaignState = inject(CampaignStudioStateService);
@@ -136,7 +145,8 @@ export class PartnerLinkModalComponent implements OnInit {
     if (!url) return;
     this.extracting = true;
     this.error = '';
-    this.partnerImportService.extract(url).subscribe({
+    const entityId = this.currentEntity.currentEntity()?.id ?? '';
+    this.partnerImportService.extract(url, entityId).subscribe({
       next: res => {
         this.extracting = false;
         this.extractResult = res;
@@ -150,7 +160,8 @@ export class PartnerLinkModalComponent implements OnInit {
     if (!this.extractResult) return;
     this.classifying = true;
     this.error = '';
-    this.partnerImportService.classify(this.extractResult.sessionId, {
+    const entityId = this.currentEntity.currentEntity()?.id ?? '';
+    this.partnerImportService.classify(this.extractResult.sessionId, entityId, {
       title: this.campaignTitle, shortDescription: this.campaignShortDescription,
     }).subscribe({
       next: res => {
@@ -218,7 +229,8 @@ export class PartnerLinkModalComponent implements OnInit {
       },
     };
 
-    this.partnerImportService.apply(payload).subscribe({
+    const entityId = this.currentEntity.currentEntity()?.id ?? '';
+    this.partnerImportService.apply(payload, entityId).subscribe({
       next: res => { this.linking = false; this.linked.emit(res.campaignPartner); },
       error: err => { this.linking = false; this.error = err?.error?.error || 'שגיאה ביצירה וחיבור השותף'; },
     });

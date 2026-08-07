@@ -335,6 +335,20 @@
 
 .plat-step:first-of-type { border-top: none; padding-top: 0; }
 
+.plat-ai-access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.plat-ai-access-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+.plat-ai-access-status--on { color: #0EA65A; }
+
 .plat-step-label {
   display: flex;
   align-items: center;

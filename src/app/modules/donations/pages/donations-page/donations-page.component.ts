@@ -2,9 +2,12 @@ import { Component, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
+import { CampaignManagementSidebarComponent } from '../../../campaigns/shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 interface Kpi {
   totalRaised:  number;
@@ -48,7 +51,7 @@ const COLUMNS_STORAGE_KEY = 'donations-hidden-columns';
 @Component({
   selector: 'app-donations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
   templateUrl: './donations-page.component.html',
   styleUrl: './donations-page.component.css',
 })
@@ -56,6 +59,16 @@ export class DonationsPageComponent implements OnInit {
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
   private loader        = inject(AppLoaderService);
+  private route         = inject(ActivatedRoute);
+  private router        = inject(Router);
+  private campaignApi   = inject(CampaignApiService);
+
+  // Two entry points: /campaigns/:id/donations (campaign-scoped — Workspace
+  // sidebar's own route) and /donations?campaignId= (entity-wide, optionally
+  // pre-filtered). See registrations-page.component.ts for the identical
+  // pattern this was copied from.
+  campaignScoped = !!this.route.snapshot.paramMap.get('id');
+  isOngoing = false;
 
   donations:  Donation[]  = [];
   campaigns:  Campaign[]  = [];
@@ -85,7 +98,27 @@ export class DonationsPageComponent implements OnInit {
   columnsMenuOpen = false;
   private lastLoadedEntityId: string | null = null;
 
+  campaignTitle: string | null = null;
+
   constructor() {
+    // Deep-linked from a campaign's Workspace sidebar — show that campaign's
+    // full history, not just "this month", since the point of the link is
+    // "this campaign's donations", not a fresh default view.
+    const campaignId = this.route.snapshot.paramMap.get('id') || this.route.snapshot.queryParamMap.get('campaignId');
+    if (campaignId) {
+      this.campaignFilter = campaignId;
+      this.period = 'all';
+      this.campaignApi.getById(campaignId).subscribe({
+        next: (draft) => { this.campaignTitle = draft.title; this.isOngoing = draft.campaignLifecycle === 'ongoing'; },
+        error: () => { this.campaignTitle = 'קמפיין זה'; },
+      });
+    }
+
+    // Same "two spinners" fix as campaign-ambassadors-page/registrations-page
+    // — forceHide() clears the global self-hiding loader immediately instead
+    // of waiting out hide()'s 600ms minimum-visible window.
+    if (this.campaignScoped) this.loader.forceHide();
+
     effect(() => {
       const id = this.currentEntity.currentEntity()?.id ?? null;
       if (id === this.lastLoadedEntityId) return;
@@ -100,6 +133,8 @@ export class DonationsPageComponent implements OnInit {
       if (saved) this.hiddenColumns = new Set(JSON.parse(saved));
     } catch { /* ignore malformed storage */ }
   }
+
+  back(): void { this.router.navigate(['/campaigns', this.campaignFilter, 'dashboard']); }
 
   isColVisible(key: ColumnKey): boolean {
     return !this.hiddenColumns.has(key);

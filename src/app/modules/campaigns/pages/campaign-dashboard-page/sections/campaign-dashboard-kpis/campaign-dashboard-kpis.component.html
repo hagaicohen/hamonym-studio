@@ -15,27 +15,27 @@
 
   <div class="ckp-stats">
     <div class="ckp-stat">
-      <span class="ckp-stat-icon">👥</span>
+      <svg class="ckp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/></svg>
       <strong>{{ draft.supportersCount ?? 0 }}</strong>
       <span>תורמים</span>
     </div>
     <div class="ckp-stat" *ngIf="!isOngoing">
-      <span class="ckp-stat-icon">📅</span>
+      <svg class="ckp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/></svg>
       <strong>{{ daysRemaining }}</strong>
       <span>ימים נותרו</span>
     </div>
     <div class="ckp-stat" *ngIf="isOngoing">
-      <span class="ckp-stat-icon">🔁</span>
+      <svg class="ckp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0113.6-5.7M20 12a8 8 0 01-13.6 5.7"/><path d="M17 3v4h-4M7 21v-4h4"/></svg>
       <strong>מתמשך</strong>
       <span>&nbsp;</span>
     </div>
     <div class="ckp-stat">
-      <span class="ckp-stat-icon">🎁</span>
+      <svg class="ckp-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8.5" width="16" height="11.5" rx="1.5"/><path d="M4 12.5h16M12 8.5v11.5"/><path d="M9 8.5c-1.4 0-2.5-1-2.5-2.3S7.6 4 9 4c1.7 0 3 2 3 4.5M15 8.5c1.4 0 2.5-1 2.5-2.3S16.4 4 15 4c-1.7 0-3 2-3 4.5"/></svg>
       <strong>{{ draft.offerings.length }}</strong>
       <span>תשורות פעילות</span>
     </div>
     <div class="ckp-stat">
-      <span class="ckp-stat-icon">📰</span>
+      <svg class="ckp-stat-icon ckp-stat-icon--lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a5 5 0 00-5 5v3l-1.5 3h13L17 11.5v-3a5 5 0 00-5-5z"/><path d="M10 18.5a2 2 0 004 0"/></svg>
       <strong>{{ draft.updates.length }}</strong>
       <span>עדכונים</span>
     </div>

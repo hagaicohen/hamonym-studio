@@ -1,13 +1,29 @@
-<div class="reg-page">
+<div class="reg-shell" [class.reg-shell--scoped]="campaignScoped">
+  <app-campaign-management-sidebar *ngIf="campaignScoped" [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+  <div class="reg-page">
 
   @if (error) {
     <div class="reg-error">{{ error }}</div>
   } @else {
 
+  <button type="button" class="reg-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
+
   <!-- ══ HEADER ══ -->
   <div class="reg-header">
-    <h1 class="reg-title">הרשמות</h1>
+    <h1 class="reg-title">הרשמות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
+    <div class="reg-header-actions" *ngIf="campaignId">
+      <button type="button" class="reg-header-btn" (click)="openImport()">📥 ייבוא מקובץ</button>
+      <button type="button" class="reg-header-btn reg-header-btn--primary" (click)="openAdd()">➕ הוספת משתתף</button>
+    </div>
   </div>
+
+  @if (campaignId && !campaignScoped) {
+    <div class="reg-campaign-filter-banner">
+      <span>מסונן לפי קמפיין: <strong>{{ campaignTitle || '...' }}</strong></span>
+      <button type="button" (click)="clearCampaignFilter()">הצג את כל ההרשמות ✕</button>
+    </div>
+  }
 
   <!-- ══ FILTERS ══ -->
   <div class="reg-filters">
@@ -73,4 +89,137 @@
   </div>
 
   }
+  </div>
+</div>
+
+<!-- ADD PARTICIPANT DRAWER -->
+<div class="reg-modal-backdrop" *ngIf="showDrawer" (click)="closeDrawer()">
+  <div class="reg-modal-box" (click)="$event.stopPropagation()">
+    <button type="button" class="reg-modal-close" (click)="closeDrawer()">✕</button>
+    <h3 class="reg-modal-heading">הוספת משתתף</h3>
+
+    <div class="reg-form" *ngIf="registrationOptions.length; else noOptions">
+      <label class="reg-field">
+        <span>שם המשתתף *</span>
+        <input type="text" [(ngModel)]="form.participantName" placeholder="ישראל ישראלי">
+      </label>
+
+      <label class="reg-field">
+        <span>קטגוריה *</span>
+        <select [(ngModel)]="form.registrationOptionId">
+          <option *ngFor="let o of registrationOptions" [value]="o.id">{{ o.title }} — ₪{{ o.price.toLocaleString('he-IL') }}</option>
+        </select>
+      </label>
+
+      <label class="reg-field">
+        <span>מידת חולצה</span>
+        <select [(ngModel)]="form.shirtSize">
+          <option value="">ללא</option>
+          <option *ngFor="let s of shirtSizes" [value]="s">{{ s }}</option>
+        </select>
+      </label>
+
+      <label class="reg-field">
+        <span>מקור התשלום *</span>
+        <select [(ngModel)]="form.source">
+          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
+        </select>
+      </label>
+
+      <p class="reg-field-hint">פרטי מי ששילם (לא חייב להיות המשתתף עצמו) — אופציונלי, ברירת מחדל: שם המשתתף</p>
+
+      <label class="reg-field">
+        <span>שם המשלם</span>
+        <input type="text" [(ngModel)]="form.payerName">
+      </label>
+      <label class="reg-field">
+        <span>אימייל המשלם</span>
+        <input type="email" [(ngModel)]="form.payerEmail">
+      </label>
+      <label class="reg-field">
+        <span>טלפון המשלם</span>
+        <input type="tel" [(ngModel)]="form.payerPhone">
+      </label>
+      <label class="reg-field">
+        <span>הערה (אופציונלי)</span>
+        <textarea rows="2" [(ngModel)]="form.note"></textarea>
+      </label>
+
+      <label class="reg-declare">
+        <input type="checkbox" [(ngModel)]="form.declared">
+        <span>אני מצהיר/ה שהכספים האלה אמיתיים וידוע לי שתיגבה עמלת פלטפורמה</span>
+      </label>
+
+      <p class="reg-error" *ngIf="saveError">{{ saveError }}</p>
+
+      <div class="reg-modal-actions">
+        <button type="button" class="reg-cancel-btn" (click)="closeDrawer()">ביטול</button>
+        <button type="button" class="reg-save-btn" [disabled]="!canSaveParticipant" (click)="saveParticipant()">
+          {{ saving ? 'שומר...' : 'הוספת משתתף' }}
+        </button>
+      </div>
+    </div>
+
+    <ng-template #noOptions>
+      <p class="reg-field-hint">לקמפיין הזה עדיין אין קטגוריות הרשמה מוגדרות. הגדירו אותן קודם בדף "הרשמה" של הקמפיין.</p>
+    </ng-template>
+  </div>
+</div>
+
+<!-- IMPORT FROM FILE MODAL -->
+<div class="reg-modal-backdrop" *ngIf="showImportModal" (click)="closeImport()">
+  <div class="reg-modal-box" (click)="$event.stopPropagation()">
+    <button type="button" class="reg-modal-close" (click)="closeImport()">✕</button>
+    <h3 class="reg-modal-heading">ייבוא משתתפים מקובץ</h3>
+
+    <ng-container *ngIf="!registrationOptions.length">
+      <p class="reg-field-hint">לקמפיין הזה עדיין אין קטגוריות הרשמה מוגדרות. הגדירו אותן קודם בדף "הרשמה" של הקמפיין.</p>
+    </ng-container>
+
+    <ng-container *ngIf="registrationOptions.length && !importRows.length">
+      <p class="reg-field-hint">
+        קובץ Excel (.xlsx) או CSV, עמודה ראשונה = שם משתתף, שנייה = קטגוריה (חייבת להתאים בדיוק לשם קטגוריה קיים), שלישית = מידת חולצה.
+        השורה הראשונה נחשבת כותרת ומדולגת.
+      </p>
+      <p class="reg-field-hint"><strong>קטגוריות זמינות:</strong> {{ availableCategoriesLabel }}</p>
+      <button type="button" class="reg-template-link" (click)="downloadTemplate()">⬇ הורדת קובץ לדוגמה</button>
+
+      <label class="reg-field">
+        <span>מקור התשלום עבור כל השורות *</span>
+        <select [(ngModel)]="importSource">
+          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
+        </select>
+      </label>
+
+      <label for="reg-import-input" class="reg-dropzone">
+        <span>📥 לחצו לבחירת קובץ (.xlsx / .csv)</span>
+      </label>
+      <input id="reg-import-input" type="file" accept=".csv,.xlsx,.xls" style="display:none" (change)="onImportFile($event)">
+    </ng-container>
+
+    <ng-container *ngIf="importRows.length">
+      <div class="reg-import-summary">
+        <span class="reg-import-ok">✔ {{ validImportCount }} תקינים</span>
+        <span class="reg-import-bad" *ngIf="invalidImportCount">✕ {{ invalidImportCount }} עם שגיאה</span>
+      </div>
+
+      <div class="reg-import-preview">
+        <div class="reg-import-row" *ngFor="let r of importRows" [class.reg-import-row--invalid]="!r.valid">
+          <span class="reg-import-name">{{ r.participantName || '—' }}</span>
+          <span class="reg-import-detail">{{ r.categoryTitle }}</span>
+          <span class="reg-import-status">
+            <ng-container *ngIf="r.valid">✔</ng-container>
+            <ng-container *ngIf="!r.valid">{{ r.error }}</ng-container>
+          </span>
+        </div>
+      </div>
+
+      <div class="reg-modal-actions">
+        <button class="reg-cancel-btn" (click)="closeImport()">ביטול</button>
+        <button class="reg-save-btn" [disabled]="!validImportCount || importing" (click)="confirmImport()">
+          {{ importing ? 'מייבא...' : 'ייבוא ' + validImportCount + ' משתתפים' }}
+        </button>
+      </div>
+    </ng-container>
+  </div>
 </div>

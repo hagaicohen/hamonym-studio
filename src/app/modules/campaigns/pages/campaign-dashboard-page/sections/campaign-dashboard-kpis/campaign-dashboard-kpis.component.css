@@ -11,7 +11,7 @@
 .ckp-amount { font-size: 32px; font-weight: 900; color: #583cd6; line-height: 1.1; }
 .ckp-of { font-size: 13px; color: #64748b; font-weight: 700; }
 
-.ckp-progress { width: 100%; height: 8px; border-radius: 999px; background: #ede9fe; overflow: hidden; margin-top: 4px; }
+.ckp-progress { width: 100%; height: 14px; border-radius: 999px; background: #ede9fe; overflow: hidden; margin-top: 4px; }
 .ckp-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #583cd6); }
 
 .ckp-progress-row { display: flex; align-items: center; gap: 10px; }
@@ -20,11 +20,15 @@
 
 .ckp-divider { width: 1px; align-self: stretch; background: #eef2f7; }
 
-.ckp-stats { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; flex: 1 1 auto; }
-.ckp-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; }
-.ckp-stat-icon { font-size: 15px; }
-.ckp-stat strong { font-size: 17px; font-weight: 800; color: #0f172a; }
-.ckp-stat span { font-size: 11px; color: #64748b; font-weight: 700; }
+/* margin-right:auto pins this group to the card's physical left edge —
+   the container is dir:rtl so ckp-primary/divider pack to the right by
+   default, leaving this as the only item that needs pushing. */
+.ckp-stats { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; margin-right: auto; }
+.ckp-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 76px; }
+.ckp-stat-icon { width: 26px; height: 26px; color: #583cd6; }
+.ckp-stat-icon--lg { width: 30px; height: 30px; }
+.ckp-stat strong { font-size: 22px; font-weight: 800; color: #0f172a; }
+.ckp-stat span { font-size: 12px; color: #64748b; font-weight: 700; }
 
 @media (max-width: 700px) {
   .ckp-card { flex-direction: column; align-items: stretch; }

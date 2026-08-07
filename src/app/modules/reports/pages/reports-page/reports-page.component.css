@@ -1,1 +1,29 @@
 :host { display: block; }
+
+/* Campaign-scoped mode (/campaigns/:id/reports) — Workspace sidebar
+   alongside the page, same shell shape as the other Workspace pages. */
+.don-shell--scoped {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  direction: rtl;
+}
+.don-shell--scoped .don-page {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+}
+.don-back {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #583cd6;
+  padding: 0;
+  margin-bottom: 14px;
+}

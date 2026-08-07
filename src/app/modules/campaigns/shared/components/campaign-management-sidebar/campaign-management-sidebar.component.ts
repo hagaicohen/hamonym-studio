@@ -10,10 +10,16 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 // connective tissue so users don't have to return to the Dashboard between
 // them (mirrors the reference mockup's persistent right-rail nav).
 //
-// "כספים" (donations/manual entry/export) and "שיתוף קמפיין" are
-// deliberately NOT links yet — those pages don't exist (Finance backend is
-// still Mock). Listing them as dead links would be worse than omitting
-// them; "צפה בקמפיין" in the page header already covers sharing.
+// "תרומות ונתונים" (Donations/Donors/Reports/Registrations) reuse the same
+// entity-wide page components but through dedicated campaign-scoped routes
+// (/campaigns/:id/donations etc., flat/no-AppLayout-shell, same pattern as
+// Rewards/Ambassadors) instead of the entity-wide routes' ?campaignId=
+// query param — landing on the generic /donations etc. shell (main app
+// sidebar, not this one) read as "kicked out of the campaign" even though
+// the data was correctly filtered. Each page component detects which
+// route it was reached through and renders this sidebar only in the
+// campaign-scoped case. "שיתוף קמפיין" is deliberately NOT a link — "צפה
+// בקמפיין" in the page header already covers sharing.
 @Component({
   selector: 'app-campaign-management-sidebar',
   standalone: true,

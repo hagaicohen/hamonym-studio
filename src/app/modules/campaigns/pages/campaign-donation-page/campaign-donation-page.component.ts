@@ -58,6 +58,27 @@ export class CampaignDonationPageComponent implements OnInit {
     this.persist();
   }
 
+  // Same pattern as campaign-rewards-page's amount field — blocks non-digit
+  // keys, and reformats with a thousands separator (so 4-digit amounts read
+  // as "1,500" instead of "1500") purely in the DOM on (input); the model
+  // only updates on (change)/blur, same as before, so autosave still fires
+  // once per edit rather than on every keystroke.
+  allowDigitsOnly(event: KeyboardEvent): void {
+    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+    if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
+    if (!/^[0-9]$/.test(event.key)) event.preventDefault();
+  }
+
+  reformatAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const raw = input.value.replace(/[^0-9]/g, '');
+    input.value = raw ? Number(raw).toLocaleString('he-IL') : '';
+  }
+
+  parsedAmount(input: HTMLInputElement): number {
+    return Number(input.value.replace(/[^0-9]/g, '')) || 0;
+  }
+
   updateAmount(index: number, value: number): void {
     if (!this.draft) return;
     const amounts = [...this.draft.suggestedAmounts];

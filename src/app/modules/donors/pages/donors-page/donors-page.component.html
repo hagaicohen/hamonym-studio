@@ -1,13 +1,25 @@
-<div class="don-page">
+<div class="don-shell" [class.don-shell--scoped]="campaignScoped">
+  <app-campaign-management-sidebar *ngIf="campaignScoped" [campaignId]="campaignId" [isOngoing]="isOngoing" />
+
+  <div class="don-page">
 
   @if (error) {
     <div class="don-error">{{ error }}</div>
   } @else {
 
+  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
+
   <!-- ══ HEADER ══ -->
   <div class="don-header">
-    <h1 class="don-title">תורמים</h1>
+    <h1 class="don-title">תורמים{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
   </div>
+
+  @if (campaignId && !campaignScoped) {
+    <div class="don-campaign-filter-banner">
+      <span>מסונן לפי קמפיין: <strong>{{ campaignTitle || '...' }}</strong></span>
+      <button type="button" (click)="clearCampaignFilter()">הצג את כל התורמים ✕</button>
+    </div>
+  }
 
   <!-- ══ KPI ROW ══ -->
   <div class="don-kpi-row">
@@ -123,6 +135,7 @@
   </div>
 
   }
+  </div>
 </div>
 
 <!-- ══ DRAWER ══ -->

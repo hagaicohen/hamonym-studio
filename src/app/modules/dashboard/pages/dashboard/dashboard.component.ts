@@ -231,11 +231,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   /* ── fake data for design preview ── */
   readonly mockAmbassadors = [
-    { id: '1', full_name: 'דוד לוי',        raised_total: 8200 },
-    { id: '2', full_name: 'רותם גבאי',      raised_total: 6700 },
-    { id: '3', full_name: 'מיכל כהן',       raised_total: 4300 },
-    { id: '4', full_name: 'ישראל ישראלי',   raised_total: 3900 },
-    { id: '5', full_name: 'יגל מרדכי',      raised_total: 2800 },
+    { id: '1', full_name: 'דוד לוי',        raised_total: 8200, goal_amount: 10000 },
+    { id: '2', full_name: 'רותם גבאי',      raised_total: 6700, goal_amount: 8000 },
+    { id: '3', full_name: 'מיכל כהן',       raised_total: 4300, goal_amount: 5000 },
+    { id: '4', full_name: 'ישראל ישראלי',   raised_total: 3900, goal_amount: 6000 },
+    { id: '5', full_name: 'יגל מרדכי',      raised_total: 2800, goal_amount: 5000 },
   ];
 
   readonly mockDonations = [
@@ -409,9 +409,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     document.getElementById('alerts-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  ambPct(amb: DashboardData['topAmbassadors'][0]): string {
+  ambPct(amb: { raised_total: number; goal_amount?: number }): string {
     if (!amb.goal_amount || amb.goal_amount === 0) return '';
-    return `${Math.round(amb.raised_total / amb.goal_amount * 100)}% מהיעד`;
+    return `${this.ambProgressPct(amb)}% מהיעד`;
+  }
+
+  ambProgressPct(amb: { raised_total: number; goal_amount?: number }): number {
+    if (!amb.goal_amount) return 0;
+    return Math.min(100, Math.round(amb.raised_total / amb.goal_amount * 100));
   }
 
   initials(name: string): string {

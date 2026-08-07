@@ -34,7 +34,9 @@
   <!-- RIGHT: view + save -->
   <div class="topbar-actions">
     @if (campaignState.draft.id) {
-      <button class="advisor-button" [disabled]="advising" (click)="getAdvice()" title="קבל המלצות לשיפור הקמפיין מבינה מלאכותית">
+      <button class="advisor-button" [disabled]="advising || !aiEnabled"
+        (click)="getAdvice()"
+        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : 'קבל המלצות לשיפור הקמפיין מבינה מלאכותית'">
         ✨ קבל המלצות לשיפור הקמפיין
         @if (advising) {
           <div class="btn-spinner"></div>

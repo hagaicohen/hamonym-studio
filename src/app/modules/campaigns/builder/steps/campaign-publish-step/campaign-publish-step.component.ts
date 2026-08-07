@@ -106,15 +106,21 @@ export class CampaignPublishStepComponent implements OnInit {
     return this.missingFields.length === 0;
   }
 
+  // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
+  // this entity access (see entities.ai_features_enabled, migration 041).
+  get aiEnabled(): boolean {
+    return !!this.currentEntity.currentEntity()?.ai_features_enabled;
+  }
+
   ngOnInit(): void {
     const d = this.draft;
-    if (d.id && (!d.title?.trim() || !d.shortDescription?.trim())) {
+    if (d.id && this.aiEnabled && (!d.title?.trim() || !d.shortDescription?.trim())) {
       this.generateSuggestion();
     }
   }
 
   generateSuggestion(): void {
-    if (!this.draft.id || this.isLoadingSuggestion) return;
+    if (!this.draft.id || this.isLoadingSuggestion || !this.aiEnabled) return;
     this.isLoadingSuggestion = true;
     this.campaignApi.generateMetadata(this.draft.id).subscribe({
       next: (res) => {

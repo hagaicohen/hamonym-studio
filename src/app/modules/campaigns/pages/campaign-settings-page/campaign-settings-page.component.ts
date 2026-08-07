@@ -32,6 +32,7 @@ export class CampaignSettingsPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
+  saved = false;
 
   get isOngoing(): boolean { return this.draft?.campaignLifecycle === 'ongoing'; }
 
@@ -74,8 +75,9 @@ export class CampaignSettingsPageComponent implements OnInit {
   private persist(): void {
     if (!this.draft) return;
     this.saving = true;
+    this.saved = false;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: () => { this.saving = false; },
+      next: () => { this.saving = false; this.saved = true; },
       error: () => { this.saving = false; },
     });
   }

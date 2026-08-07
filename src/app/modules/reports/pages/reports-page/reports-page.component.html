@@ -1,14 +1,19 @@
-<div class="don-page">
+<div class="don-shell" [class.don-shell--scoped]="campaignScoped">
+  <app-campaign-management-sidebar *ngIf="campaignScoped" [campaignId]="campaignId!" [isOngoing]="isOngoing" />
+
+  <div class="don-page">
+
+  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
 
   <div class="don-header">
-    <h1 class="don-title">דוחות</h1>
+    <h1 class="don-title">דוחות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
     <app-date-range-picker></app-date-range-picker>
   </div>
 
   <div class="rep-tabs">
     <button class="rep-tab" [class.active]="activeTab() === 'campaigns'" (click)="setTab('campaigns')">
       <lucide-angular [img]="ChartColumnIcon" [size]="17"></lucide-angular>
-      <span>ביצועי קמפיינים</span>
+      <span>{{ campaignId ? 'ביצועי קמפיין' : 'ביצועי קמפיינים' }}</span>
     </button>
     <button class="rep-tab" [class.active]="activeTab() === 'marketing'" (click)="setTab('marketing')">
       <lucide-angular [img]="MegaphoneIcon" [size]="17"></lucide-angular>
@@ -31,4 +36,5 @@
     @case ('failures')  { <app-failures-report /> }
   }
 
+  </div>
 </div>

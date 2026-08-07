@@ -8,7 +8,9 @@
   <div class="plm-tabs">
     <button class="plm-tab" [class.plm-tab--active]="mode === 'search'" type="button" (click)="mode = 'search'">חיפוש שותף קיים</button>
     <button class="plm-tab" [class.plm-tab--active]="mode === 'create'" type="button" (click)="mode = 'create'">יצירת שותף חדש</button>
-    <button class="plm-tab" [class.plm-tab--active]="mode === 'import'" type="button" (click)="mode = 'import'">ייבוא מאתר</button>
+    <button class="plm-tab" [class.plm-tab--active]="mode === 'import'" [class.plm-tab--disabled]="!aiEnabled"
+      type="button" [disabled]="!aiEnabled" [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+      (click)="mode = 'import'">ייבוא מאתר 🤖</button>
   </div>
 
   <div class="plm-body">

@@ -92,6 +92,11 @@
   .don-kpi-row--5 { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* Combined selector (2 classes) so this reliably wins over the base
+   .don-kpi-row's 4-column grid regardless of stylesheet load order —
+   otherwise 3 cards fill only 3 of 4 columns and read as "not full width". */
+.don-kpi-row.don-kpi-row--3 { grid-template-columns: repeat(3, 1fr); }
+
 .don-kpi-card {
   background: #fff;
   border: 1px solid #e8edf3;

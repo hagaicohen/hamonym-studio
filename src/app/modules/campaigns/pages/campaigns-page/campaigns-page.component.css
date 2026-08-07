@@ -105,6 +105,8 @@
 
 .btn-ai { background: #583cd6; }
 .btn-ai:hover { background: #4730b0; }
+.btn-ai--disabled { background: #cbd5e1; cursor: not-allowed; }
+.btn-ai--disabled:hover { background: #cbd5e1; }
 
 .btn-action {
   background: #f8fafc;

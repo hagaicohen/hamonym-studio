@@ -119,6 +119,12 @@ export class PlatformService {
     return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/analyze`, {}, { headers: authHeaders() });
   }
 
+  // AI Visibility Gate — every AI-labeled capability is hidden/greyed out
+  // for clients by default; only a Platform Admin can grant it, per entity.
+  setAiAccess(id: string, enabled: boolean): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/ai-access`, { enabled }, { headers: authHeaders() });
+  }
+
   recommendOrganization(id: string): Observable<any> {
     return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/recommend`, {}, { headers: authHeaders() });
   }

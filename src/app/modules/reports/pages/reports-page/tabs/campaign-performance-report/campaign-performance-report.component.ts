@@ -122,11 +122,6 @@ export class CampaignPerformanceReportComponent implements OnInit {
     this.load();
   }
 
-  clearFilter(): void {
-    this.campaignId = undefined;
-    this.load();
-  }
-
   onSearch(): void {
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.load(), 400);

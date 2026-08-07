@@ -6,8 +6,12 @@
 
     <div class="csp-main">
       <button type="button" class="csp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="csp-title">⚙️ הגדרות קמפיין</h1>
-      <p class="csp-subtitle">{{ d.title }}</p>
+      <div class="csp-title-row">
+        <h1 class="csp-title">⚙️ הגדרות קמפיין</h1>
+        <span class="csp-status" *ngIf="saving">שומר...</span>
+        <span class="csp-status csp-status--saved" *ngIf="saved && !saving">✓ נשמר</span>
+      </div>
+      <p class="csp-subtitle">{{ d.title }} · כל שינוי נשמר אוטומטית</p>
 
       <div class="csp-panel">
         <div class="csp-row">
@@ -50,6 +54,7 @@
             <label class="csp-label">כתובת (Slug)</label>
             <input class="csp-input csp-input--readonly" type="text" [value]="d.slug" readonly
               title="שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה כאן">
+            <p class="csp-note">🔒 לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
           </div>
         </div>
       </div>

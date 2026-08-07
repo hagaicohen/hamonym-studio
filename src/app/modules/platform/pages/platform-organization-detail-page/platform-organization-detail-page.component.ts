@@ -240,6 +240,17 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   suspend(): void { this.runAction('suspend'); }
   reactivate(): void { this.runAction('reactivate'); }
 
+  // ── AI Visibility Gate ──
+  aiAccessInProgress = false;
+  toggleAiAccess(): void {
+    if (this.aiAccessInProgress || !this.entity) return;
+    this.aiAccessInProgress = true;
+    this.platformService.setAiAccess(this.entityId, !this.entity.ai_features_enabled).subscribe({
+      next: () => { this.aiAccessInProgress = false; this.load(); },
+      error: (err) => { this.error = err.error?.error || 'הפעולה נכשלה'; this.aiAccessInProgress = false; },
+    });
+  }
+
   // ── HARD DELETE (permanent, platform admin only) ──
   hardDeleteConfirmOpen = false;
   hardDeleteConfirmText = '';

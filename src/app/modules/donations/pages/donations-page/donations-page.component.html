@@ -1,12 +1,17 @@
-<div class="don-page">
+<div class="don-shell" [class.don-shell--scoped]="campaignScoped">
+  <app-campaign-management-sidebar *ngIf="campaignScoped" [campaignId]="campaignFilter" [isOngoing]="isOngoing" />
+
+  <div class="don-page">
 
   @if (error) {
     <div class="don-error">{{ error }}</div>
   } @else {
 
+  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
+
   <!-- ══ HEADER ══ -->
   <div class="don-header">
-    <h1 class="don-title">תרומות</h1>
+    <h1 class="don-title">תרומות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
     <div class="period-tabs">
       <button [class.active]="period === 'month'"      (click)="setPeriod('month')">החודש</button>
       <button [class.active]="period === 'last_month'" (click)="setPeriod('last_month')">חודש שעבר</button>
@@ -45,7 +50,7 @@
       (input)="onSearch()"
     />
 
-    <select class="don-select don-select--campaign" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
+    <select class="don-select don-select--campaign" *ngIf="!campaignScoped" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
       <option value="">כל הקמפיינים</option>
       @for (c of campaigns; track c.id) {
         <option [value]="c.id">{{ c.title }}</option>
@@ -148,6 +153,7 @@
   </div>
 
   }
+  </div>
 </div>
 
 <!-- ══ DRAWER ══ -->

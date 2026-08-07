@@ -4,7 +4,7 @@
   <div class="don-card"><div class="don-loading"><div class="don-spinner"></div></div></div>
 } @else {
 
-  <div class="don-kpi-row don-kpi-row--5">
+  <div class="don-kpi-row" [class.don-kpi-row--5]="!campaignId" [class.don-kpi-row--3]="campaignId">
     <div class="don-kpi-card">
       <div class="kpi-label">גויס בתקופה</div>
       <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaisedInRange) }}</div>
@@ -17,37 +17,34 @@
       <div class="kpi-label">סה"כ גויס (כל הזמן)</div>
       <div class="kpi-value">{{ fmtMoney(kpi.totalRaised) }}</div>
     </div>
-    <div class="don-kpi-card">
-      <div class="kpi-label">קמפיינים פעילים</div>
-      <div class="kpi-value">{{ kpi.activeCampaigns | number }} / {{ kpi.totalCampaigns | number }}</div>
-    </div>
-    <div class="don-kpi-card">
-      <div class="kpi-label">התקדמות ממוצעת ליעד</div>
-      <div class="kpi-value">{{ kpi.avgProgressPct !== null ? kpi.avgProgressPct + '%' : '—' }}</div>
-    </div>
+    @if (!campaignId) {
+      <div class="don-kpi-card">
+        <div class="kpi-label">קמפיינים פעילים</div>
+        <div class="kpi-value">{{ kpi.activeCampaigns | number }} / {{ kpi.totalCampaigns | number }}</div>
+      </div>
+      <div class="don-kpi-card">
+        <div class="kpi-label">התקדמות ממוצעת ליעד</div>
+        <div class="kpi-value">{{ kpi.avgProgressPct !== null ? kpi.avgProgressPct + '%' : '—' }}</div>
+      </div>
+    }
   </div>
 
-  @if (campaignId) {
-    <div class="campaign-filter-banner">
-      <span>מציג נתונים עבור קמפיין אחד בלבד</span>
-      <button (click)="clearFilter()">הצג את כל הקמפיינים</button>
-    </div>
-  }
-
   <div class="don-filters">
-    <input
-      class="don-search"
-      type="search"
-      placeholder="חיפוש לפי שם קמפיין..."
-      [(ngModel)]="searchQuery"
-      (input)="onSearch()"
-    />
+    @if (!campaignId) {
+      <input
+        class="don-search"
+        type="search"
+        placeholder="חיפוש לפי שם קמפיין..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearch()"
+      />
 
-    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-      <option value="all">כל הסטטוסים</option>
-      <option value="published">פורסם</option>
-      <option value="pending_review">ממתין לאישור</option>
-    </select>
+      <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
+        <option value="all">כל הסטטוסים</option>
+        <option value="published">פורסם</option>
+        <option value="pending_review">ממתין לאישור</option>
+      </select>
+    }
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || campaigns.length === 0">
       {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
@@ -77,9 +74,11 @@
         <table class="don-table">
           <thead>
             <tr>
-              <th class="sortable" [class.active]="sortField === 'name'" (click)="sortBy('name')">
-                קמפיין<span class="sort-arrow">{{ sortField === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
-              </th>
+              @if (!campaignId) {
+                <th class="sortable" [class.active]="sortField === 'name'" (click)="sortBy('name')">
+                  קמפיין<span class="sort-arrow">{{ sortField === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                </th>
+              }
               @if (isColVisible('target')) {
                 <th class="sortable col-secondary" [class.active]="sortField === 'target'" (click)="sortBy('target')">
                   יעד<span class="sort-arrow">{{ sortField === 'target' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
@@ -111,17 +110,19 @@
           <tbody>
             @for (c of campaigns; track c.id) {
               <tr class="don-row">
-                <td class="don-name">
-                  <div class="campaign-name-cell">
-                    @if (c.cover_image_url) {
-                      <img class="campaign-thumb" [src]="c.cover_image_url" [alt]="c.title" />
-                    } @else {
-                      <div class="campaign-thumb campaign-thumb--placeholder">{{ c.title.charAt(0) }}</div>
-                    }
-                    <span>{{ c.title }}</span>
-                    <span class="status-badge status-{{ c.status }}">{{ c.status === 'published' ? 'פורסם' : 'ממתין' }}</span>
-                  </div>
-                </td>
+                @if (!campaignId) {
+                  <td class="don-name">
+                    <div class="campaign-name-cell">
+                      @if (c.cover_image_url) {
+                        <img class="campaign-thumb" [src]="c.cover_image_url" [alt]="c.title" />
+                      } @else {
+                        <div class="campaign-thumb campaign-thumb--placeholder">{{ c.title.charAt(0) }}</div>
+                      }
+                      <span>{{ c.title }}</span>
+                      <span class="status-badge status-{{ c.status }}">{{ c.status === 'published' ? 'פורסם' : 'ממתין' }}</span>
+                    </div>
+                  </td>
+                }
                 @if (isColVisible('target')) { <td class="col-secondary">{{ fmtMoney(c.target_amount) }}</td> }
                 <td class="don-amount">{{ fmtMoney(c.current_amount) }}</td>
                 <td class="don-amount">{{ fmtMoney(c.raised_in_range) }}</td>

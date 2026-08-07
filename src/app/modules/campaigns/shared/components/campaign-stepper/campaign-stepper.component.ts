@@ -28,6 +28,11 @@ export class CampaignStepperComponent {
   // than removed from the list, so the numbering/count never shifts.
   @Input() disabledSteps: number[] = [];
 
+  // Shown as a tooltip on any disabled step — generic on purpose (covers
+  // both "not applicable for this campaign" and "published, manage this
+  // from the Workspace instead" without the stepper needing to know why).
+  @Input() disabledHint = 'לא זמין כרגע — עריכה נוספת מתבצעת מדשבורד ניהול הקמפיין';
+
   get steps(): string[] {
     return CampaignStepperComponent.BASE_STEPS;
   }

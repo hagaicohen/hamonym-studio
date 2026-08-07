@@ -32,6 +32,15 @@
 
 .dp-amounts { display: flex; flex-wrap: wrap; gap: 8px; }
 .dp-amount-chip { display: flex; align-items: center; gap: 4px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; }
-.dp-amount-chip input { width: 60px; border: none; background: transparent; font-size: 13px; font-family: inherit; outline: none; }
+.dp-amount-chip input {
+  width: 68px; border: none; background: transparent; font-size: 13px; font-family: inherit;
+  outline: none; text-align: center; -moz-appearance: textfield;
+}
+/* Wide enough for "10,000" (was clipping 4-digit amounts). Native
+   number-input spin buttons also used to eat into the chip's tight width
+   in RTL, overlapping the digits — this is what made amounts unreadable;
+   fixed by switching to a plain text input with manual comma-formatting
+   (see reformatAmountInput/parsedAmount in the .ts) instead of type=number,
+   which can't render thousands separators at all. */
 .dp-amount-chip button { border: none; background: none; color: #94a3b8; cursor: pointer; font-size: 12px; }
 .dp-amount-add { font-size: 12px; font-weight: 700; color: #7c3aed; background: #faf5ff; border: 1.5px dashed #ddd6fe; border-radius: 8px; padding: 6px 12px; cursor: pointer; }

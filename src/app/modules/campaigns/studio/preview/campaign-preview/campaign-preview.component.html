@@ -1091,11 +1091,7 @@
     </div>
     <div class="hm-stat-grid">
       <div class="hm-stat-box">
-        <span class="hm-stat-icon">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-          </svg>
-        </span>
+        <span class="hm-stat-icon hm-stat-icon--shekel">₪</span>
         <strong>{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
         <span>נותר ליעד</span>
       </div>
@@ -1546,64 +1542,61 @@
         </div>
       </div>
 
-      <div class="hm-donors-layout">
-        <div class="hm-donors-main">
-          <!-- Period filter -->
-          <div class="hm-donors-period-tabs">
-            <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
-            <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
-            <button [class.active]="donorPeriod === 'today'" [style.background]="donorPeriod === 'today' ? primaryColor(draft) : ''" (click)="setDonorPeriod('today')">היום</button>
-          </div>
-
-          <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
-            <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
-              <div class="hm-donor-v2-left">
-                <div class="hm-donor-v2-avatar"
-                  [style.background]="draft.layout.theme.accentColor + '22'"
-                  [style.color]="draft.layout.theme.accentColor">
-                  {{ donorInitials(d.name) }}
-                </div>
-                <div class="hm-donor-v2-info">
-                  <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-                  <div class="hm-donor-v2-tags">
-                    <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
-                    <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
-                  </div>
-                  <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
-                </div>
-              </div>
-              <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
-                ₪{{ d.amount.toLocaleString('he-IL') }}
-              </div>
+      <div class="hm-donors-main">
+        <!-- Filters — period + sort, replaces the old separate "Top 10"
+             box: "הגדולות ביותר" reorders this same feed instead of
+             duplicating it in a second, mostly-redundant card. -->
+        <div class="hm-donors-filters">
+          <div class="hm-donors-filter-group">
+            <span class="hm-donors-filter-label">תקופה</span>
+            <div class="hm-donors-period-tabs">
+              <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
+              <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
+              <button [class.active]="donorPeriod === 'today'" [style.background]="donorPeriod === 'today' ? primaryColor(draft) : ''" (click)="setDonorPeriod('today')">היום</button>
             </div>
           </div>
-          <ng-template #donorsEmpty>
-            <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
-          </ng-template>
-
-          <div class="hm-donors-footer" *ngIf="canShowMore">
-            <button class="hm-donors-more-btn"
-              [style.borderColor]="draft.layout.theme.accentColor"
-              [style.color]="draft.layout.theme.accentColor"
-              (click)="showMoreDonors()">
-              הצג עוד תורמים
-            </button>
+          <div class="hm-donors-filter-group">
+            <span class="hm-donors-filter-label">מיון</span>
+            <div class="hm-donors-period-tabs">
+              <button [class.active]="donorSort === 'recent'" [style.background]="donorSort === 'recent' ? primaryColor(draft) : ''" (click)="setDonorSort('recent')">אחרונות</button>
+              <button [class.active]="donorSort === 'amount'" [style.background]="donorSort === 'amount' ? primaryColor(draft) : ''" (click)="setDonorSort('amount')">הגדולות ביותר</button>
+            </div>
           </div>
         </div>
 
-        <!-- Top 10 leaderboard — only shown once there are enough donors
-             (in this period) for "leaderboard" to mean anything. A "Top 10"
-             card with 1-2 names is just the main feed repeated, not a real
-             leaderboard — it read as clutter, not social proof. -->
-        <div class="hm-donors-top" *ngIf="activeTopDonors.length >= 3">
-          <h3 class="hm-donors-top-title">Top 10 תורמים</h3>
-          <div class="hm-donors-top-list">
-            <div class="hm-donors-top-row" *ngFor="let t of activeTopDonors; let i = index">
-              <span class="hm-donors-top-rank" [style.background]="primaryColor(draft)">{{ i + 1 }}</span>
-              <span class="hm-donors-top-name">{{ t.name }}</span>
-              <span class="hm-donors-top-total" [style.color]="draft.layout.theme.accentColor">₪{{ t.total.toLocaleString('he-IL') }}</span>
+        <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
+          <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+            <div class="hm-donor-v2-left">
+              <div class="hm-donor-v2-avatar"
+                [style.background]="draft.layout.theme.accentColor + '22'"
+                [style.color]="draft.layout.theme.accentColor">
+                {{ donorInitials(d.name) }}
+              </div>
+              <div class="hm-donor-v2-info">
+                <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
+                <div class="hm-donor-v2-tags">
+                  <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
+                  <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+                </div>
+                <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
+              </div>
+            </div>
+            <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
+              ₪{{ d.amount.toLocaleString('he-IL') }}
             </div>
           </div>
+        </div>
+        <ng-template #donorsEmpty>
+          <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
+        </ng-template>
+
+        <div class="hm-donors-footer" *ngIf="canShowMore">
+          <button class="hm-donors-more-btn"
+            [style.borderColor]="draft.layout.theme.accentColor"
+            [style.color]="draft.layout.theme.accentColor"
+            (click)="showMoreDonors()">
+            הצג עוד תורמים
+          </button>
         </div>
       </div>
     </ng-container>
@@ -1618,18 +1611,17 @@
       <h2 class="hm-amb-list-title" [style.color]="primaryColor(draft)">עדכונים</h2>
       <ng-container *ngIf="publishedUpdates(draft).length > 0; else updatesEmpty">
         <div class="hm-update-list-sidebar">
-          <article class="hm-update-list-sidebar-item" *ngFor="let u of visibleUpdates(draft)">
+          <article class="hm-update-list-sidebar-item" *ngFor="let u of visibleUpdates(draft)" (click)="openUpdate(u)">
             <span class="hm-update-date-badge">{{ formatDate(u.date) }}</span>
             <h3 class="hm-update-title" [style.color]="primaryColor(draft)" [innerHTML]="safeHtml(u.title)"></h3>
-            <div class="hm-update-desc" [innerHTML]="safeHtml(u.description)"></div>
-            <button type="button" class="hm-update-readmore" *ngIf="needsReadMore(u)" [style.color]="primaryColor(draft)" (click)="openUpdate(u)">קראו עוד</button>
-            <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+            <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank" (click)="$event.stopPropagation()">
               {{ u.linkLabel || 'קרא עוד' }} →
             </a>
           </article>
-          <button class="hm-donor-list-more" *ngIf="canShowMoreUpdates(draft)" (click)="showMoreUpdates(draft)">
-            הצג עוד עדכונים
-          </button>
+          <div class="hm-updates-pager" *ngIf="canGoPrevUpdates() || canGoNextUpdates(draft)">
+            <button type="button" class="hm-updates-pager-btn" [disabled]="!canGoPrevUpdates()" (click)="prevUpdatesPage()" aria-label="עדכונים קודמים">▲</button>
+            <button type="button" class="hm-updates-pager-btn" [disabled]="!canGoNextUpdates(draft)" (click)="nextUpdatesPage(draft)" aria-label="עדכונים הבאים">▼</button>
+          </div>
         </div>
       </ng-container>
     </ng-container>
@@ -1646,7 +1638,7 @@
           <button class="hm-amb-arrow" (click)="scrollSlider(updatesSlider, 'prev')">‹</button>
           <div class="hm-updates-slider" #updatesSlider>
             <div class="hm-updates-track">
-              <article class="hm-update-card" *ngFor="let u of publishedUpdates(draft)">
+              <article class="hm-update-card" *ngFor="let u of publishedUpdates(draft)" (click)="openUpdate(u)">
                 <div class="hm-update-media">
                   <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
                   <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
@@ -1654,9 +1646,7 @@
                 </div>
                 <div class="hm-update-content">
                   <h3 class="hm-update-title" [style.color]="primaryColor(draft)" [innerHTML]="safeHtml(u.title)"></h3>
-                  <div class="hm-update-desc" [innerHTML]="safeHtml(u.description)"></div>
-                  <button type="button" class="hm-update-readmore" *ngIf="needsReadMore(u)" [style.color]="primaryColor(draft)" (click)="openUpdate(u)">קראו עוד</button>
-                  <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+                  <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank" (click)="$event.stopPropagation()">
                     {{ u.linkLabel || 'קרא עוד' }} →
                   </a>
                 </div>
@@ -1672,7 +1662,7 @@
            long vertical scroll. -->
       <ng-container *ngIf="asUpdates(block.data).viewMode === 'list'">
         <div class="hm-updates-list-view">
-          <article class="hm-update-list-item" *ngFor="let u of visibleUpdates(draft)">
+          <article class="hm-update-list-item" *ngFor="let u of visibleUpdates(draft)" (click)="openUpdate(u)">
             <div class="hm-update-media hm-update-media--sm">
               <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
               <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
@@ -1680,16 +1670,15 @@
             </div>
             <div class="hm-update-content">
               <h3 class="hm-update-title" [style.color]="primaryColor(draft)" [innerHTML]="safeHtml(u.title)"></h3>
-              <div class="hm-update-desc" [innerHTML]="safeHtml(u.description)"></div>
-              <button type="button" class="hm-update-readmore" *ngIf="needsReadMore(u)" [style.color]="primaryColor(draft)" (click)="openUpdate(u)">קראו עוד</button>
-              <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank">
+              <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank" (click)="$event.stopPropagation()">
                 {{ u.linkLabel || 'קרא עוד' }} →
               </a>
             </div>
           </article>
-          <button class="hm-donor-list-more" *ngIf="canShowMoreUpdates(draft)" (click)="showMoreUpdates(draft)">
-            הצג עוד עדכונים
-          </button>
+          <div class="hm-updates-pager" *ngIf="canGoPrevUpdates() || canGoNextUpdates(draft)">
+            <button type="button" class="hm-updates-pager-btn" [disabled]="!canGoPrevUpdates()" (click)="prevUpdatesPage()" aria-label="עדכונים קודמים">▲</button>
+            <button type="button" class="hm-updates-pager-btn" [disabled]="!canGoNextUpdates(draft)" (click)="nextUpdatesPage(draft)" aria-label="עדכונים הבאים">▼</button>
+          </div>
         </div>
       </ng-container>
 

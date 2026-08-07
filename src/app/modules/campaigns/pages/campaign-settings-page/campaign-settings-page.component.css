@@ -9,8 +9,11 @@
 .csp-loading { text-align: center; padding: 60px 0; color: #94a3b8; width: 100%; }
 
 .csp-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
+.csp-title-row { display: flex; align-items: center; gap: 12px; }
 .csp-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
 .csp-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
+.csp-status { font-size: 12px; font-weight: 700; color: #94a3b8; }
+.csp-status--saved { color: #16a34a; }
 
 .csp-panel {
   padding: 20px 22px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);

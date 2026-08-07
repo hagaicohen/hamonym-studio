@@ -29,6 +29,22 @@
   </div>
 
   <div class="cms-section">
+    <span class="cms-section-label">תרומות ונתונים</span>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donations']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">💰</span> תרומות
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donors']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">🧑‍🤝‍🧑</span> תורמים
+    </a>
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'reports']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">📊</span> דוחות
+    </a>
+    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registrations']" routerLinkActive="cms-item--active">
+      <span class="cms-icon">🏁</span> משתתפים
+    </a>
+  </div>
+
+  <div class="cms-section">
     <span class="cms-section-label">הגדרות</span>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'settings']" routerLinkActive="cms-item--active">
       <span class="cms-icon">⚙️</span> הגדרות קמפיין

@@ -7,6 +7,7 @@ import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { aiFeatureGuard } from './core/guards/ai-feature.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -70,6 +71,20 @@ const CAMPAIGN_REGISTRATION_ROUTE = {
     ),
 };
 
+// Same flat/no-AppLayout-shell pattern as the other CAMPAIGN_*_ROUTE
+// entries — RegistrationsPageComponent renders the Workspace sidebar
+// itself when it detects it was reached via :id (this route) rather than
+// the entity-wide ?campaignId= query param (/registrations). See
+// registrations-page.component.ts's campaignScoped flag.
+const CAMPAIGN_REGISTRATIONS_ROUTE = {
+  path: 'campaigns/:id/registrations',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/registrations/pages/registrations-page/registrations-page.component').then(
+      (m) => m.RegistrationsPageComponent,
+    ),
+};
+
 const CAMPAIGN_DONATION_ROUTE = {
   path: 'campaigns/:id/donation',
   canActivate: [contextGuard],
@@ -94,6 +109,37 @@ const CAMPAIGN_VISIBILITY_ROUTE = {
   loadComponent: () =>
     import('./modules/campaigns/pages/campaign-visibility-page/campaign-visibility-page.component').then(
       (m) => m.CampaignVisibilityPageComponent,
+    ),
+};
+
+// Same flat/no-AppLayout-shell pattern as CAMPAIGN_REGISTRATIONS_ROUTE —
+// the three "תרומות ונתונים" pages (Donations/Donors/Reports) each detect
+// whether they were reached via :id (this route, Workspace shell/sidebar)
+// or the entity-wide ?campaignId= query param (plain /donations etc.).
+const CAMPAIGN_DONATIONS_ROUTE = {
+  path: 'campaigns/:id/donations',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/donations/pages/donations-page/donations-page.component').then(
+      (m) => m.DonationsPageComponent,
+    ),
+};
+
+const CAMPAIGN_DONORS_ROUTE = {
+  path: 'campaigns/:id/donors',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/donors/pages/donors-page/donors-page.component').then(
+      (m) => m.DonorsPageComponent,
+    ),
+};
+
+const CAMPAIGN_REPORTS_ROUTE = {
+  path: 'campaigns/:id/reports',
+  canActivate: [contextGuard],
+  loadComponent: () =>
+    import('./modules/reports/pages/reports-page/reports-page.component').then(
+      (m) => m.ReportsPageComponent,
     ),
 };
 
@@ -195,7 +241,7 @@ export const routes: Routes = [
 
   {
     path: 'campaigns/create/ai',
-    canActivate: [campaignEditorGuard],
+    canActivate: [campaignEditorGuard, aiFeatureGuard],
     loadComponent: () =>
       import(
         './modules/campaigns/pages/ai-campaign-creation-page/ai-campaign-creation-page.component'
@@ -209,6 +255,10 @@ export const routes: Routes = [
   // NO existing entity-manager role yet — campaignEditorGuard would block
   // exactly that person (see partners-list-page.component.ts's own
   // createPartner(), which has the same no-prerequisite requirement).
+  // No aiFeatureGuard here either, same reason — a brand-new user has no
+  // entity yet for the flag to live on; the backend's own
+  // requireAiAccessFromBody middleware allows this one specific case
+  // (missing entityId + zero existing entities) through instead.
   {
     path: 'partners/create/ai',
     canActivate: [authGuard],
@@ -319,9 +369,13 @@ export const routes: Routes = [
   CAMPAIGN_REWARDS_ROUTE,
   CAMPAIGN_SPONSORS_ROUTE,
   CAMPAIGN_REGISTRATION_ROUTE,
+  CAMPAIGN_REGISTRATIONS_ROUTE,
   CAMPAIGN_DONATION_ROUTE,
   CAMPAIGN_SETTINGS_ROUTE,
   CAMPAIGN_VISIBILITY_ROUTE,
+  CAMPAIGN_DONATIONS_ROUTE,
+  CAMPAIGN_DONORS_ROUTE,
+  CAMPAIGN_REPORTS_ROUTE,
 
   {
     path: 'campaigns/:slug/:ambassadorSlug',

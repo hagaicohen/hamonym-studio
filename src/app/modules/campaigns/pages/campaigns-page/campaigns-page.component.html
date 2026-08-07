@@ -69,7 +69,9 @@
       <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
     <div class="header-actions">
-      <button class="btn-new btn-ai" (click)="createCampaignWithAi()">✨ צור עם AI</button>
+      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
+        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+        (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   </div>
@@ -133,7 +135,9 @@
     <div class="campaigns-empty">
       <div class="empty-icon">📋</div>
       <p>אין קמפיינים עדיין</p>
-      <button class="btn-new btn-ai" (click)="createCampaignWithAi()">✨ צור עם AI</button>
+      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
+        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+        (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   } @else {

@@ -20,6 +20,8 @@
   cursor: pointer; font-size: 13px; font-weight: 700; color: #64748b;
 }
 .plm-tab--active { background: #583cd6; color: #fff; }
+.plm-tab--disabled { opacity: 0.45; cursor: not-allowed; }
+.plm-tab--disabled.plm-tab--active { background: #f1f5f9; color: #64748b; }
 
 .plm-body { padding: 16px 20px 20px; }
 

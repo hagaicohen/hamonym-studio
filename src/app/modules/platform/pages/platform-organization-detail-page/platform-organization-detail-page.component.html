@@ -181,6 +181,23 @@
             </div>
           </div>
 
+          <!-- AI Visibility Gate — separate from the approval workflow above:
+               a persistent per-entity toggle, not a one-time review action. -->
+          <div class="plat-step">
+            <div class="plat-step-label">🤖 גישה לתכונות AI</div>
+            <div class="plat-ai-access-row">
+              <span class="plat-ai-access-status" [class.plat-ai-access-status--on]="entity.ai_features_enabled">
+                {{ entity.ai_features_enabled ? 'מופעל ללקוח זה' : 'כבוי — ברירת המחדל' }}
+              </span>
+              <button type="button" class="btn"
+                [class.btn-approve]="!entity.ai_features_enabled"
+                [class.btn-suspend]="entity.ai_features_enabled"
+                [disabled]="aiAccessInProgress" (click)="toggleAiAccess()">
+                {{ aiAccessInProgress ? 'מעדכן...' : (entity.ai_features_enabled ? 'ביטול גישה' : 'הפעלת גישה') }}
+              </button>
+            </div>
+          </div>
+
           @if (recommendation) {
             <div class="plat-ai-recommendation">
               <div class="plat-ai-title">המלצת AI — רמת ביטחון {{ recommendation.confidence }}%</div>

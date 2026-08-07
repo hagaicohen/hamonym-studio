@@ -1,30 +1,71 @@
 :host { display: block; }
 
-.cdf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 700px) { .cdf-row { grid-template-columns: 1fr; } }
-
 .cdf-panel {
   padding: 18px 20px; background: #fffbeb; border: 1px solid #fde68a;
   border-radius: 14px; font-family: 'Heebo', sans-serif; direction: rtl;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
 }
-.cdf-panel--muted { background: #fafbfc; border-color: #eef2f7; }
 
-.cdf-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.cdf-header { display: flex; align-items: center; gap: 10px; }
 .cdf-title { font-size: 14px; font-weight: 800; color: #92400e; }
-.cdf-panel--muted .cdf-title { color: #475569; }
-.cdf-badge {
-  font-size: 11px; font-weight: 700; color: #92400e; background: #fef3c7;
-  padding: 2px 8px; border-radius: 999px;
+.cdf-hint { font-size: 12px; color: #92400e; margin: 0; flex: 1 1 260px; opacity: 0.85; }
+
+.cdf-open-btn {
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #ffffff;
+  background: #d97706; border: none; border-radius: 10px;
+  padding: 10px 18px; cursor: pointer; white-space: nowrap;
 }
-.cdf-panel--muted .cdf-badge { color: #94a3b8; background: #f1f5f9; }
+.cdf-open-btn:hover { background: #b45309; }
 
-.cdf-stats { display: flex; gap: 20px; margin-bottom: 14px; }
-.cdf-stat { display: flex; align-items: center; gap: 8px; }
-.cdf-stat-icon { font-size: 16px; }
-.cdf-stat strong { display: block; font-size: 16px; font-weight: 800; color: #78350f; }
-.cdf-stat span { font-size: 11px; color: #b45309; }
+/* ── Modal ── */
+.cdf-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  padding: 20px;
+}
+.cdf-modal-box {
+  background: #fff; border-radius: 16px; max-width: 440px; width: 100%;
+  max-height: 90vh; overflow-y: auto; position: relative; direction: rtl;
+  padding: 24px; font-family: 'Heebo', sans-serif;
+}
+.cdf-modal-close {
+  position: absolute; top: 12px; inset-inline-end: 12px;
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: #f1f5f9; cursor: pointer; font-size: 14px;
+}
+.cdf-modal-heading { font-size: 17px; font-weight: 800; color: #1e293b; margin: 0 0 18px; }
 
-.cdf-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.cdf-action { font-size: 12px; color: #92400e; background: #fffdf5; border: 1px solid #fde68a; padding: 6px 12px; border-radius: 8px; }
+.cdf-form { display: flex; flex-direction: column; gap: 14px; }
+.cdf-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; color: #475569; }
+.cdf-field input, .cdf-field select, .cdf-field textarea {
+  font-family: inherit; font-size: 14px; font-weight: 400; color: #1e293b;
+  border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px;
+  resize: vertical;
+}
+.cdf-field input:focus, .cdf-field select:focus, .cdf-field textarea:focus {
+  outline: none; border-color: #d97706;
+}
 
-.cdf-empty { font-size: 12px; color: #94a3b8; margin: 0; text-align: center; padding: 20px 0; }
+.cdf-declare {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: #475569; background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 8px; padding: 10px 12px;
+}
+.cdf-declare input[type="checkbox"] {
+  flex: 0 0 16px; width: 16px; height: 16px; margin: 0; accent-color: #d97706;
+}
+.cdf-declare span { flex: 1; }
+
+.cdf-error { font-size: 12px; color: #dc2626; margin: 0; }
+
+.cdf-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.cdf-cancel-btn {
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #475569;
+  background: #f1f5f9; border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+}
+.cdf-submit-btn {
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #ffffff;
+  background: #d97706; border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer;
+}
+.cdf-submit-btn:disabled { background: #fcd9a4; cursor: default; }

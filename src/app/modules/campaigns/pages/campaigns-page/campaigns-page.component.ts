@@ -6,6 +6,7 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/ambassador.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
 import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 
@@ -64,6 +65,13 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   private ambassadorSvc  = inject(AmbassadorService);
   private loader         = inject(AppLoaderService);
   private currentContext = inject(CurrentContextService);
+  private currentEntity  = inject(CurrentEntityService);
+
+  // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
+  // this entity access (see entities.ai_features_enabled, migration 041).
+  get aiEnabled(): boolean {
+    return !!this.currentEntity.currentEntity()?.ai_features_enabled;
+  }
 
   constructor() {
     // Re-load data whenever the active context changes (e.g. topbar entity/role switch)

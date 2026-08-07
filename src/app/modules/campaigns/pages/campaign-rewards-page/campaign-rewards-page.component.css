@@ -24,10 +24,9 @@
 .rw-form-panel * { box-sizing: border-box; }
 .rw-form-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0; }
 
-/* Single column, capped at a comfortable reading width — wide enough to
-   not look cramped, narrow enough that inputs stay a sane width even
-   though the panel itself spans the full (wider) page column. */
-.rw-form-grid { display: flex; flex-direction: column; gap: 16px; max-width: 640px; }
+/* Single column, stretched to the panel's full width (2026-08-07 — the
+   previous 640px cap left a large empty gap on wider screens). */
+.rw-form-grid { display: flex; flex-direction: column; gap: 16px; width: 100%; }
 
 .rf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .rf-label { font-size: 12px; font-weight: 700; color: #64748b; }

@@ -15,6 +15,18 @@ import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-pu
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
 const TOTAL_STEPS = 10;
 const REGISTRATION_STEP = 5;
+const PAGE_BUILDER_STEP = 9;
+
+// Every content-management step now has a real, working equivalent in the
+// Campaign Workspace (Settings/Donation/Rewards/Registration/Sponsors/
+// Ambassadors pages + the Overview's embedded Updates panel) — see
+// docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md "Publish shifts the system's
+// center of gravity". Once a campaign is published, editing here would
+// silently diverge from what the Workspace (and campaign managers) see, so
+// these are greyed out — Type/Lifecycle (2) has no Workspace equivalent
+// yet and stays open; Page Builder (9) and Publish (10) are Builder-only
+// by design, not migration candidates.
+const PUBLISHED_GATED_STEPS = [1, 3, 4, 5, 6, 7, 8];
 
 @Component({
   selector: 'app-campaign-editor',
@@ -59,9 +71,14 @@ export class CampaignEditorComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.initialStep && this.initialStep >= 1 && this.initialStep <= TOTAL_STEPS) {
-      this.currentStep = (this.initialStep === REGISTRATION_STEP && this.isOngoing)
-        ? REGISTRATION_STEP - 1
+      this.currentStep = this.disabledSteps.includes(this.initialStep)
+        ? this.nearestEnabledStep(this.initialStep, 1)
         : this.initialStep;
+    } else if (this.isPublished) {
+      // Step 1 (now disabled for published campaigns) is a bad landing
+      // spot — go straight to Page Builder, the thing the Builder is for
+      // once live.
+      this.currentStep = PAGE_BUILDER_STEP;
     }
   }
 
@@ -78,8 +95,26 @@ export class CampaignEditorComponent implements OnInit {
     return this.state.draft.campaignLifecycle === 'ongoing';
   }
 
+  // 'draft' is pre-publish; 'published'/'paused'/'ended' all mean the
+  // campaign went live at some point, so the Workspace is already the real
+  // source of truth for its content.
+  get isPublished(): boolean {
+    return this.state.draft.status !== 'draft';
+  }
+
   get disabledSteps(): number[] {
-    return this.isOngoing ? [REGISTRATION_STEP] : [];
+    const gated = new Set<number>();
+    if (this.isOngoing) gated.add(REGISTRATION_STEP);
+    if (this.isPublished) PUBLISHED_GATED_STEPS.forEach(s => gated.add(s));
+    return [...gated];
+  }
+
+  private nearestEnabledStep(from: number, direction: 1 | -1): number {
+    let step = from;
+    while (step >= 1 && step <= TOTAL_STEPS && this.disabledSteps.includes(step)) {
+      step += direction;
+    }
+    return Math.min(TOTAL_STEPS, Math.max(1, step));
   }
 
   nextStep(): void {
@@ -105,8 +140,8 @@ export class CampaignEditorComponent implements OnInit {
 
   private navigateToStep(target: number): void {
     if (target < 1 || target > TOTAL_STEPS) return;
-    if (target === REGISTRATION_STEP && this.isOngoing) {
-      target = target > this.currentStep ? REGISTRATION_STEP + 1 : REGISTRATION_STEP - 1;
+    if (this.disabledSteps.includes(target)) {
+      target = this.nearestEnabledStep(target, target >= this.currentStep ? 1 : -1);
     }
     if (target === this.currentStep) return;
     this.currentStep = target;

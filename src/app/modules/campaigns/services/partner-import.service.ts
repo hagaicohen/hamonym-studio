@@ -54,21 +54,22 @@ export class PartnerImportService {
     return { Authorization: `Bearer ${localStorage.getItem('token')}` };
   }
 
-  extract(url: string): Observable<ExtractResult> {
-    return this.http.post<ExtractResult>(`${this.apiUrl}/extract`, { url }, { headers: this.headers() });
+  extract(url: string, entityId: string): Observable<ExtractResult> {
+    return this.http.post<ExtractResult>(`${this.apiUrl}/extract`, { url, entityId }, { headers: this.headers() });
   }
 
-  classify(sessionId: string, campaign?: { title: string; shortDescription: string }): Observable<ClassifyResult> {
-    return this.http.post<ClassifyResult>(`${this.apiUrl}/classify`, { sessionId, campaign }, { headers: this.headers() });
+  classify(sessionId: string, entityId: string, campaign?: { title: string; shortDescription: string }): Observable<ClassifyResult> {
+    return this.http.post<ClassifyResult>(`${this.apiUrl}/classify`, { sessionId, campaign, entityId }, { headers: this.headers() });
   }
 
-  apply(payload: ApplyPayload): Observable<{ entity: any; campaignPartner: any }> {
-    return this.http.post<{ entity: any; campaignPartner: any }>(`${this.apiUrl}/apply`, payload, { headers: this.headers() });
+  apply(payload: ApplyPayload, entityId: string): Observable<{ entity: any; campaignPartner: any }> {
+    return this.http.post<{ entity: any; campaignPartner: any }>(`${this.apiUrl}/apply`, { ...payload, entityId }, { headers: this.headers() });
   }
 
-  // Deterministic Clone — no LLM, no review step. One call: extract, map,
-  // create entity + Profile draft (+ campaign_partners link if campaignId
-  // given). See partner-import.controller.js#clone.
+  // Deterministic Clone — no LLM, no review step, not an AI capability
+  // (not gated by ai_features_enabled). One call: extract, map, create
+  // entity + Profile draft (+ campaign_partners link if campaignId given).
+  // See partner-import.controller.js#clone.
   clone(url: string, displayName?: string, campaignId?: string): Observable<{ entity: any; campaignPartner: any }> {
     return this.http.post<{ entity: any; campaignPartner: any }>(`${this.apiUrl}/clone`, { url, displayName, campaignId }, { headers: this.headers() });
   }

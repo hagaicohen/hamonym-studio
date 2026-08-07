@@ -43,6 +43,12 @@ export class CampaignStudioTopbarComponent {
     return this.campaignState.draft.title?.trim() || 'קמפיין חדש';
   }
 
+  // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
+  // this entity access (see entities.ai_features_enabled, migration 041).
+  get aiEnabled(): boolean {
+    return !!this.entity.currentEntity()?.ai_features_enabled;
+  }
+
   get campaignSlug(): string { return this.campaignState.draft.slug?.trim() || ''; }
 
   closeStudio(): void { history.back(); }

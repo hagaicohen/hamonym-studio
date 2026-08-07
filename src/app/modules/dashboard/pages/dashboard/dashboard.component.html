@@ -228,18 +228,28 @@
       </div>
       <ul class="data-list">
         @for (amb of displayAmbassadors; track amb.id; let i = $index) {
-          <li>
-            <div class="list-right">
-              <span class="rank">{{ i + 1 }}</span>
-              <div class="amb-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
-                  <circle cx="12" cy="8" r="4"/>
-                  <path stroke-linecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                </svg>
+          <li class="amb-list-item">
+            <div class="amb-list-row">
+              <div class="list-right">
+                <span class="rank">{{ i + 1 }}</span>
+                <div class="amb-avatar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path stroke-linecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                </div>
+                <span class="ambassador-name">{{ amb.full_name }}</span>
               </div>
-              <span class="ambassador-name">{{ amb.full_name }}</span>
+              <strong class="amb-amount">{{ fmt(amb.raised_total) }}</strong>
             </div>
-            <strong class="amb-amount">{{ fmt(amb.raised_total) }}</strong>
+            @if (amb.goal_amount) {
+              <div class="amb-progress-row">
+                <div class="amb-progress-bar">
+                  <div class="amb-progress-fill" [style.width.%]="ambProgressPct(amb)"></div>
+                </div>
+                <span class="amb-progress-pct">{{ ambProgressPct(amb) }}%</span>
+              </div>
+            }
           </li>
         }
       </ul>

@@ -23,7 +23,9 @@
           <div class="dp-amounts" *ngIf="d.enableSuggestedAmounts">
             <div class="dp-amount-chip" *ngFor="let a of d.suggestedAmounts; let i = index">
               <span>₪</span>
-              <input type="number" [value]="a" min="1" (change)="updateAmount(i, +$any($event.target).value)">
+              <input type="text" inputmode="numeric" [value]="a.toLocaleString('he-IL')"
+                (keydown)="allowDigitsOnly($event)" (input)="reformatAmountInput($event)"
+                (change)="updateAmount(i, parsedAmount($any($event.target)))">
               <button type="button" *ngIf="d.suggestedAmounts.length > 1" (click)="removeAmount(i)">✕</button>
             </div>
             <button type="button" class="dp-amount-add" *ngIf="d.suggestedAmounts.length < 6" (click)="addAmount()">+ הוסף</button>
@@ -51,7 +53,9 @@
           <div class="dp-amounts" *ngIf="d.allowMonthlyDonation">
             <div class="dp-amount-chip" *ngFor="let a of d.monthlyAmounts; let i = index">
               <span>₪</span>
-              <input type="number" [value]="a" min="1" (change)="updateMonthlyAmount(i, +$any($event.target).value)">
+              <input type="text" inputmode="numeric" [value]="a.toLocaleString('he-IL')"
+                (keydown)="allowDigitsOnly($event)" (input)="reformatAmountInput($event)"
+                (change)="updateMonthlyAmount(i, parsedAmount($any($event.target)))">
               <button type="button" *ngIf="d.monthlyAmounts.length > 1" (click)="removeMonthlyAmount(i)">✕</button>
             </div>
             <button type="button" class="dp-amount-add" *ngIf="d.monthlyAmounts.length < 6" (click)="addMonthlyAmount()">+ הוסף</button>

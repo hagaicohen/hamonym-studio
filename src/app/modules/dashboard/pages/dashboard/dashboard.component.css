@@ -667,18 +667,47 @@
 
 .data-list li {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 0;
   border-bottom: 1px solid #f8fafc;
 }
 
 .data-list li:last-child { border-bottom: none; }
 
+.amb-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .list-right {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Indented to sit under the name, not the avatar — keeps it visually
+   grouped with "who", not floating under the whole row. */
+.amb-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-start: 66px;
+}
+.amb-progress-bar {
+  flex: 1; height: 5px; border-radius: 999px;
+  background: #f1edfe; overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(109, 93, 246, 0.1);
+}
+.amb-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #a78bfa, #6D5DF6);
+  transition: width 0.3s ease;
+}
+.amb-progress-pct {
+  font-size: 11px; font-weight: 800; color: #6D5DF6;
+  min-width: 28px; text-align: left; flex-shrink: 0;
 }
 
 .rank {

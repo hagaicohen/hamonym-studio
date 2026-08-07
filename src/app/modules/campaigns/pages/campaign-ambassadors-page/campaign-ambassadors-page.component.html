@@ -41,6 +41,16 @@
   <div class="table-card">
     <div class="table-header">
       <h2 class="table-title">רשימת שגרירים</h2>
+      <div class="table-header-actions">
+        <button type="button" class="header-btn" (click)="openImport()">
+          <lucide-angular [img]="UploadIcon" [size]="14" color="#6D5DF6"></lucide-angular>
+          ייבוא מקובץ
+        </button>
+        <button type="button" class="header-btn header-btn--primary" (click)="openAdd()">
+          <lucide-angular [img]="PlusIcon" [size]="14" color="white"></lucide-angular>
+          הוסף שגריר
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -52,14 +62,23 @@
     <div class="empty-state" *ngIf="!isLoading && ambassadors.length === 0">
       <lucide-angular [img]="UsersIcon" [size]="48" color="#c4b5fd"></lucide-angular>
       <p>אין שגרירים לקמפיין זה עדיין</p>
+      <div class="empty-state-actions">
+        <button type="button" class="header-btn" (click)="openImport()">
+          <lucide-angular [img]="UploadIcon" [size]="14" color="#6D5DF6"></lucide-angular>
+          ייבוא מקובץ
+        </button>
+        <button type="button" class="header-btn header-btn--primary" (click)="openAdd()">
+          <lucide-angular [img]="PlusIcon" [size]="14" color="white"></lucide-angular>
+          הוסף שגריר
+        </button>
+      </div>
     </div>
 
     <!-- Table -->
     <div class="amb-table" *ngIf="!isLoading && ambassadors.length > 0">
       <div class="amb-table-head">
         <span>שגריר</span>
-        <span>יעד אישי</span>
-        <span>גייס</span>
+        <span>התקדמות</span>
         <span>תורמים</span>
         <span>סטטוס</span>
         <span></span>
@@ -84,11 +103,19 @@
           </div>
         </div>
 
-        <!-- Goal -->
-        <div class="amb-cell">{{ a.goalAmount ? fmtMoney(a.goalAmount) : '—' }}</div>
-
-        <!-- Raised -->
-        <div class="amb-cell raised-cell">{{ fmtMoney(a.raisedTotal) }}</div>
+        <!-- Progress: raised / goal + bar (no goal → just the raised amount) -->
+        <div class="amb-cell amb-progress-cell">
+          <div class="amb-progress-amounts">
+            <span class="raised-cell">{{ fmtMoney(a.raisedTotal) }}</span>
+            <span class="amb-goal-text" *ngIf="a.goalAmount">מתוך {{ fmtMoney(a.goalAmount) }}</span>
+          </div>
+          <div class="amb-progress-row" *ngIf="a.goalAmount">
+            <div class="amb-progress-bar">
+              <div class="amb-progress-fill" [style.width.%]="progressPct(a)"></div>
+            </div>
+            <span class="amb-progress-pct">{{ progressPct(a) }}%</span>
+          </div>
+        </div>
 
         <!-- Donors -->
         <div class="amb-cell">{{ a.donorCount }}</div>
@@ -104,6 +131,13 @@
 
         <!-- Actions -->
         <div class="amb-actions">
+          <button
+            class="action-btn"
+            (click)="openEdit(a)"
+            title="עריכת שגריר"
+          >
+            <lucide-angular [img]="EditIcon" [size]="14" color="#6b7280"></lucide-angular>
+          </button>
           <button
             class="action-btn"
             (click)="toggleStatus(a)"
@@ -176,5 +210,100 @@
       </div>
     </ng-container>
 
+  </div>
+</div>
+
+<!-- ADD AMBASSADOR DRAWER -->
+<div class="modal-backdrop" *ngIf="showDrawer" (click)="closeDrawer()">
+  <div class="form-modal-box" (click)="$event.stopPropagation()">
+    <div class="form-modal-header">
+      <h2 class="modal-title">{{ editingId ? 'עריכת שגריר' : 'הוספת שגריר' }}</h2>
+      <button type="button" class="icon-close-btn" (click)="closeDrawer()">
+        <lucide-angular [img]="XIcon" [size]="16" color="#64748b"></lucide-angular>
+      </button>
+    </div>
+
+    <div class="form-grid">
+      <label class="form-field">
+        <span>שם מלא *</span>
+        <input type="text" [(ngModel)]="form.fullName" placeholder="ישראל ישראלי">
+      </label>
+      <label class="form-field">
+        <span>טלפון</span>
+        <input type="tel" [(ngModel)]="form.phone" dir="ltr">
+      </label>
+      <label class="form-field">
+        <span>אימייל</span>
+        <input type="email" [(ngModel)]="form.email" dir="ltr">
+      </label>
+      <label class="form-field">
+        <span>יעד אישי (₪)</span>
+        <input type="text" inputmode="numeric" [value]="goalDisplay" (input)="onGoalInput($event)" placeholder="5,000">
+      </label>
+      <label class="form-field">
+        <span>הודעה אישית (אופציונלי)</span>
+        <textarea rows="2" [(ngModel)]="form.personalMessage" placeholder="הצטרפו אליי במסע הזה..."></textarea>
+      </label>
+    </div>
+
+    <p class="form-error" *ngIf="saveError">{{ saveError }}</p>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" (click)="closeDrawer()">ביטול</button>
+      <button class="modal-btn-save" [disabled]="!canSaveAmbassador" (click)="saveAmbassador()">
+        {{ saving ? 'שומר...' : (editingId ? 'עדכון שגריר' : 'הוספת שגריר') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT FROM FILE MODAL -->
+<div class="modal-backdrop" *ngIf="showImportModal" (click)="closeImport()">
+  <div class="form-modal-box" (click)="$event.stopPropagation()">
+    <div class="form-modal-header">
+      <h2 class="modal-title">ייבוא שגרירים מקובץ</h2>
+      <button type="button" class="icon-close-btn" (click)="closeImport()">
+        <lucide-angular [img]="XIcon" [size]="16" color="#64748b"></lucide-angular>
+      </button>
+    </div>
+
+    <ng-container *ngIf="!importRows.length">
+      <p class="import-hint">
+        קובץ Excel (.xlsx) או CSV, עמודה ראשונה = שם מלא (חובה), אח"כ טלפון, אימייל, יעד אישי.
+        השורה הראשונה נחשבת כותרת ומדולגת.
+      </p>
+      <button type="button" class="template-link" (click)="downloadTemplate()">⬇ הורדת קובץ לדוגמה</button>
+
+      <label for="amb-import-input" class="import-dropzone">
+        <lucide-angular [img]="UploadIcon" [size]="28" color="#c4b5fd"></lucide-angular>
+        <span>לחצו לבחירת קובץ (.xlsx / .csv)</span>
+      </label>
+      <input id="amb-import-input" type="file" accept=".csv,.xlsx,.xls" style="display:none" (change)="onImportFile($event)">
+    </ng-container>
+
+    <ng-container *ngIf="importRows.length">
+      <div class="import-summary">
+        <span class="import-summary-ok">✔ {{ validImportCount }} תקינים</span>
+        <span class="import-summary-bad" *ngIf="invalidImportCount">✕ {{ invalidImportCount }} עם שגיאה</span>
+      </div>
+
+      <div class="import-preview">
+        <div class="import-row" *ngFor="let r of importRows" [class.import-row--invalid]="!r.valid">
+          <span class="import-row-name">{{ r.fullName || '—' }}</span>
+          <span class="import-row-detail">{{ r.phone || r.email || '' }}</span>
+          <span class="import-row-status">
+            <ng-container *ngIf="r.valid">✔</ng-container>
+            <ng-container *ngIf="!r.valid">{{ r.error }}</ng-container>
+          </span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" (click)="closeImport()">ביטול</button>
+        <button class="modal-btn-save" [disabled]="!validImportCount || importing" (click)="confirmImport()">
+          {{ importing ? 'מייבא...' : 'ייבוא ' + validImportCount + ' שגרירים' }}
+        </button>
+      </div>
+    </ng-container>
   </div>
 </div>

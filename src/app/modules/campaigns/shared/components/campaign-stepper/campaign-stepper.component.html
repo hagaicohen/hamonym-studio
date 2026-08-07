@@ -12,6 +12,7 @@
       <div class="stepper-item"
         [class.clickable]="!disabledSteps.includes($index + 1)"
         [class.disabled]="disabledSteps.includes($index + 1)"
+        [title]="disabledSteps.includes($index + 1) ? disabledHint : ''"
         (click)="selectStep($index)">
         <div class="step-dot" [class.active]="currentStep >= $index + 1" [class.current]="currentStep === $index + 1">
           {{ $index + 1 }}

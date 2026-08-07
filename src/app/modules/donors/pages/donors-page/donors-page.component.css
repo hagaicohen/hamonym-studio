@@ -8,6 +8,34 @@
   direction: rtl;
 }
 
+/* Campaign-scoped mode (/campaigns/:id/donors) — Workspace sidebar
+   alongside the page, same shell shape as the other Workspace pages. */
+.don-shell--scoped {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  direction: rtl;
+}
+.don-shell--scoped .don-page {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+}
+.don-back {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #583cd6;
+  padding: 0;
+  margin-bottom: 14px;
+}
+
 .don-error {
   padding: 48px;
   text-align: center;
@@ -31,6 +59,21 @@
   color: #1e293b;
   margin: 0;
 }
+
+/* ── Campaign filter banner (deep-linked from a campaign's Workspace) ── */
+.don-campaign-filter-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px;
+  padding: 10px 16px; margin-bottom: 20px;
+  font-size: 13px; color: #583cd6;
+}
+.don-campaign-filter-banner button {
+  font-family: inherit; font-size: 12px; font-weight: 700; color: #583cd6;
+  background: #ffffff; border: 1px solid #ddd6fe; border-radius: 8px;
+  padding: 5px 12px; cursor: pointer;
+}
+.don-campaign-filter-banner button:hover { background: #ede9fe; }
 
 /* ── KPI ── */
 .don-kpi-row {

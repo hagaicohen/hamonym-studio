@@ -43,7 +43,7 @@ import {
   FUNDING_TYPE_LABELS,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
-import { DonationService, Donor, TopDonor, DonorPeriod } from '../../../services/donation.service';
+import { DonationService, Donor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { CommentsService, CampaignComment } from '../../../services/comments.service';
@@ -1364,8 +1364,8 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   asComments(data: unknown)         { return data as CommentsBlockData; }
 
   donors: Donor[] = [];
-  topDonors: TopDonor[] = [];
   donorPeriod: DonorPeriod = 'all';
+  donorSort: 'recent' | 'amount' = 'recent';
   private loadedSlug = '';
   private loadedPartnersSlug = '';
   partnerByRewardId: Record<string, { id: string; displayName: string; logoUrl: string | null; website: string | null }> = {};
@@ -1393,17 +1393,25 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   get activeDonors(): Donor[] {
     return this.donors;
   }
-  get activeTopDonors(): TopDonor[] {
-    return this.topDonors;
+  // "הגדולות ביותר" replaces the old separate Top-10 leaderboard box —
+  // same list, just reordered client-side, instead of a second dataset in
+  // a second box that mostly duplicated the main feed.
+  get sortedDonors(): Donor[] {
+    return this.donorSort === 'amount'
+      ? [...this.activeDonors].sort((a, b) => b.amount - a.amount)
+      : this.activeDonors;
   }
   get visibleDonors(): Donor[] {
-    return this.activeDonors.slice(0, this.shownCount);
+    return this.sortedDonors.slice(0, this.shownCount);
   }
   get canShowMore(): boolean {
     return this.shownCount < this.activeDonors.length;
   }
   showMoreDonors(): void {
     this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
+  }
+  setDonorSort(sort: 'recent' | 'amount'): void {
+    this.donorSort = sort;
   }
 
   // Public page — never show a manager's draft update to a visitor. Status
@@ -1413,36 +1421,39 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     return (draft.updates ?? []).filter(u => (u.status ?? 'published') === 'published');
   }
 
-  // Sidebar placement only — the below-sidebar slider/list variants render
-  // publishedUpdates(draft) in full (no pagination needed at full section width).
-  private updatesShownCount = this.PAGE_SIZE;
+  // List/sidebar-list variants show a fixed window of updates at a time —
+  // ▲/▼ paging instead of an unbounded "show more" so a campaign with many
+  // updates never dumps them all on the page at once.
+  readonly UPDATES_PAGE_SIZE = 3;
+  private updatesPageIndex = 0;
   visibleUpdates(draft: CampaignDraft): CampaignUpdate[] {
-    return this.publishedUpdates(draft).slice(0, this.updatesShownCount);
+    const start = this.updatesPageIndex * this.UPDATES_PAGE_SIZE;
+    return this.publishedUpdates(draft).slice(start, start + this.UPDATES_PAGE_SIZE);
   }
-  canShowMoreUpdates(draft: CampaignDraft): boolean {
-    return this.updatesShownCount < this.publishedUpdates(draft).length;
+  canGoPrevUpdates(): boolean {
+    return this.updatesPageIndex > 0;
   }
-  showMoreUpdates(draft: CampaignDraft): void {
-    this.updatesShownCount = Math.min(this.updatesShownCount + this.PAGE_SIZE, this.publishedUpdates(draft).length);
+  canGoNextUpdates(draft: CampaignDraft): boolean {
+    return (this.updatesPageIndex + 1) * this.UPDATES_PAGE_SIZE < this.publishedUpdates(draft).length;
+  }
+  prevUpdatesPage(): void {
+    if (this.canGoPrevUpdates()) this.updatesPageIndex--;
+  }
+  nextUpdatesPage(draft: CampaignDraft): void {
+    if (this.canGoNextUpdates(draft)) this.updatesPageIndex++;
   }
 
-  // Cards are uniform height (title/description both line-clamped in CSS) —
-  // "קראו עוד" only appears when the text would actually be cut off, and
-  // opens the full update in a popup instead of growing the card.
-  private readonly READ_MORE_THRESHOLD = 130;
+  // Cards show only image + title — the title carries the hook, full
+  // description opens in a popup. Keeps every card the same height with
+  // no truncation heuristic to get wrong.
   viewingUpdate: CampaignUpdate | null = null;
-  needsReadMore(u: CampaignUpdate): boolean {
-    const plain = (u.description || '').replace(/<[^>]*>/g, '').trim();
-    return plain.length > this.READ_MORE_THRESHOLD;
-  }
   openUpdate(u: CampaignUpdate): void { this.viewingUpdate = u; }
   closeUpdate(): void { this.viewingUpdate = null; }
 
   loadDonors(slug: string): void {
     this.donationService.getDonors(slug, this.donorPeriod).subscribe({
-      next: ({ donors, topDonors }) => {
-        this.donors     = donors;
-        this.topDonors  = topDonors;
+      next: ({ donors }) => {
+        this.donors = donors;
       },
     });
   }

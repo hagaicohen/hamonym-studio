@@ -284,6 +284,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     if (this.enableWebResearch()) formData.append('enableWebResearch', 'true');
     if (this.hasGeneratedOnce()) formData.append('isRegeneration', 'true');
     if (this.isPartnerMode()) formData.append('targetType', 'partner');
+    formData.append('entityId', this.currentEntity.currentEntity()?.id ?? '');
 
     this.http
       .post<{ brief: Brief; facts: ExtractedFacts; generationId: string | null }>(`${environment.apiUrl}/api/campaign-creation/extract-documents`, formData, { headers })
@@ -343,6 +344,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
         enableWebResearch: this.enableWebResearch(),
         websiteUrl: this.websiteUrl().trim() || undefined,
         targetType: this.isPartnerMode() ? 'partner' : 'campaign',
+        entityId: this.currentEntity.currentEntity()?.id,
       }, { headers })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
@@ -562,7 +564,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
   private createCampaignUnder(entityId: string, brief: Brief): void {
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     this.http
-      .post<DraftPatches>(`${environment.apiUrl}/api/campaign-creation/map-to-draft`, { brief }, { headers })
+      .post<DraftPatches>(`${environment.apiUrl}/api/campaign-creation/map-to-draft`, { brief, entityId }, { headers })
       .pipe(timeout(REQUEST_TIMEOUT_MS))
       .subscribe({
         next: (patches) => {
