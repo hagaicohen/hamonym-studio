@@ -11,8 +11,7 @@ const cors =
 const app =
   express();
 
-const paymentRoutes =
-  require('./routes/payment.routes');
+const paymentRoutes = require('./modules/payment/payment.routes');
 /*
 |--------------------------------------------------------------------------
 | ROUTES
