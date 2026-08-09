@@ -1,5 +1,26 @@
 const axios = require('axios');
 
+exports.getLpResult =
+  async ({ terminalNumber, apiName, apiPassword, lowProfileId }) => {
+
+    const response =
+      await axios.post(
+
+        'https://secure.cardcom.solutions/api/v11/LowProfile/GetLpResult',
+
+        {
+          TerminalNumber: terminalNumber,
+          ApiName: apiName,
+          ApiPassword: apiPassword,
+          LowProfileId: lowProfileId,
+        },
+
+        { timeout: 15000 }
+      );
+
+    return response.data;
+  };
+
 exports.testConnection =
   async (config) => {
 

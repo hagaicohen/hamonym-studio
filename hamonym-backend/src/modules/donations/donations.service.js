@@ -313,46 +313,116 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE CARDCOM RETURN
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
+// Same per-entity-vs-Hamonym-fallback rule as createDonation's Cardcom
+// payload above, looked up independently for a donation that already exists
+// (the Cardcom webhook only gives us a donationId via ReturnValue, not the
+// campaign/entity context createDonation had at hand when it built the
+// LowProfile in the first place).
+async function resolveCardcomCredentials(donationId) {
+  const res = await db.query(
+    `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+            e.cardcom_connection_status
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities e ON e.id = c.entity_id
+     WHERE d.id = $1`,
+    [donationId]
+  );
+
+  const row = res.rows[0];
+  const hasVerifiedCardcom = !!(
+    row?.cardcom_terminal_number &&
+    row?.cardcom_api_username &&
+    row?.cardcom_api_password_encrypted &&
+    row?.cardcom_connection_status === 'success'
+  );
+
+  return hasVerifiedCardcom
+    ? {
+        terminalNumber: row.cardcom_terminal_number,
+        apiName: row.cardcom_api_username,
+        apiPassword: row.cardcom_api_password_encrypted,
+      }
+    : {
+        terminalNumber: process.env.HAMONYM_CARDCOM_TERMINAL,
+        apiName: process.env.HAMONYM_CARDCOM_API_NAME,
+        apiPassword: process.env.HAMONYM_CARDCOM_API_PASSWORD,
+      };
+}
+exports.resolveCardcomCredentials = resolveCardcomCredentials;
+
+// Closes out a donation exactly once — the shared step for both the Cardcom
+// Return Redirect (UX only, not authoritative — a donor can close the tab,
+// lose connection, or hit Back before it fires) and the Cardcom Webhook (the
+// actual source of truth, see docs/CARDCOM_INTEGRATION.md). Idempotent: a
+// donation already 'paid' is a no-op, so both call sites can safely fire for
+// the same donation without double-counting campaign totals.
+async function markDonationPaid(donationId, { providerReference } = {}) {
+  const updateRes = await db.query(
+    `UPDATE donations
+     SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+     WHERE id=$2 AND status != 'paid'
+     RETURNING amount, campaign_id, entity_id`,
+    [providerReference || null, donationId]
+  );
+
+  const row = updateRes.rows[0];
+  if (!row) return { updated: false };
+
+  await db.query(
+    `UPDATE campaigns
+     SET current_amount   = current_amount   + $1,
+         supporters_count = supporters_count + 1,
+         updated_at = NOW()
+     WHERE id = $2`,
+    [row.amount, row.campaign_id]
+  );
+
+  if (row.entity_id) require('../dashboard/dashboard.service').invalidateDashboard(row.entity_id);
+  await finalizePaidDonation(donationId);
+
+  return { updated: true, amount: row.amount, campaignId: row.campaign_id };
+}
+exports.markDonationPaid = markDonationPaid;
+
+async function markDonationFailed(donationId, { providerReference } = {}) {
+  await db.query(
+    `UPDATE donations
+     SET status='failed', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+     WHERE id=$2 AND status = 'pending'`,
+    [providerReference || null, donationId]
+  );
+}
+exports.markDonationFailed = markDonationFailed;
+
+// TODO (Phase 2, blocked on webhook verification — see
+// docs/CARDCOM_INTEGRATION.md's Entry Points gap): once POST /api/payment/webhook
+// is confirmed against real Cardcom traffic and the terminal's WebHookUrl is
+// pointed at it, remove the markDonationPaid/markDonationFailed calls below —
+// this should become UX-only (redirect the donor), with the webhook as the
+// sole caller of those functions. Not done yet: doing it before the webhook
+// is live would stop donations from ever completing.
 exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
 
-  const success   = status === 'success' || String(responseCode) === '0';
-  const newStatus = success ? 'paid' : 'failed';
+  const success = status === 'success' || String(responseCode) === '0';
 
-  // Fetch donation + campaign in one query
+  if (success) {
+    await markDonationPaid(donationId, { providerReference: lowprofilecode || null });
+  } else {
+    await markDonationFailed(donationId, { providerReference: lowprofilecode || null });
+  }
+
   const donRes = await db.query(
-    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
+    `SELECT d.amount, c.slug
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      WHERE d.id = $1`,
     [donationId]
   );
 
-  const row      = donRes.rows[0];
-  const slug     = row?.slug      || '';
-  const amount   = row?.amount    || 0;
-  const entityId = row?.entity_id || null;
-
-  // Update donation record
-  await db.query(
-    `UPDATE donations
-     SET status=$1, provider_reference=$2, completed_at=NOW(), updated_at=NOW()
-     WHERE id=$3`,
-    [newStatus, lowprofilecode || null, donationId]
-  );
-
-  // On success: bump campaign metrics + bust dashboard cache
-  if (success && row?.campaign_id) {
-    await db.query(
-      `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
-           supporters_count = supporters_count + 1,
-           updated_at = NOW()
-       WHERE id = $2`,
-      [amount, row.campaign_id]
-    );
-    if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
-    await finalizePaidDonation(donationId);
-  }
+  const row    = donRes.rows[0];
+  const slug   = row?.slug   || '';
+  const amount = row?.amount || 0;
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
 
