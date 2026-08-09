@@ -10,4 +10,9 @@ router.post(
   paymentController.testCardcomConnection
 );
 
+router.post(
+  '/webhook',
+  paymentController.handleWebhook
+);
+
 module.exports = router;
