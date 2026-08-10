@@ -270,6 +270,11 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     Language:       'he',
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
     FailedRedirectUrl:  `${returnBase}/api/donations/return?id=${donationId}&status=failed`,
+    // Per-request, not terminal-level (Cardcom's LowProfile API v11) — works
+    // the same whether this charge runs on Hamonym's platform terminal or an
+    // entity's own verified Cardcom account, unlike a webhook configured once
+    // in a specific terminal's admin panel. See docs/CARDCOM_INTEGRATION.md.
+    WebHookUrl: `${returnBase}/api/payment/webhook?secret=${process.env.CARDCOM_WEBHOOK_SECRET}`,
     ReturnValue: String(donationId),
     Document: {
       To:       donor.name,
