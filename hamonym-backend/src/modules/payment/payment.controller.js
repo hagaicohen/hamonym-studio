@@ -36,7 +36,8 @@ exports.handleWebhook =
     let eventId = null;
 
     try {
-
+console.log('Expected:', process.env.CARDCOM_WEBHOOK_SECRET);
+console.log('Received:', req.query.secret);
       if (!cardcomValidator.validateWebhookSecret(req.query.secret)) {
         return res.status(401).json({ error: 'Invalid secret' });
       }
