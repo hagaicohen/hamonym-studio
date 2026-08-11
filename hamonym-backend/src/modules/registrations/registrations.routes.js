@@ -8,6 +8,8 @@ const { requireEntityOwnership } = require('../../middleware/entity-permission.m
 // codebase does have a correct ownership-check precedent — entities/campaigns/
 // ambassadors all had it already; donations/dashboard/reports/registrations
 // were the actual gap. See docs/DECISIONS.md, 2026-07-15 entity-ownership audit.)
-router.get('/entity/:id', requireAuth, requireEntityOwnership(), controller.getEntityRegistrations);
+router.get('/entity/:id',         requireAuth, requireEntityOwnership(), controller.getEntityRegistrations);
+router.post('/entity/:id/manual', requireAuth, requireEntityOwnership(), controller.createManualRegistration);
+router.post('/entity/:id/import', requireAuth, requireEntityOwnership(), controller.importBulk);
 
 module.exports = router;

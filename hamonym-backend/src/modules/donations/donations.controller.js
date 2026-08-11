@@ -132,8 +132,8 @@ exports.getEntityDonors = async (req, res) => {
     const entityId = req.params.id;
     const page     = parseInt(req.query.page  || '0', 10);
     const limit    = parseInt(req.query.limit || '25', 10);
-    const { search, sortBy, sortDir } = req.query;
-    const result = await donationsService.getEntityDonors(entityId, { search, sortBy, sortDir, page, limit });
+    const { campaignId, search, sortBy, sortDir } = req.query;
+    const result = await donationsService.getEntityDonors(entityId, { campaignId, search, sortBy, sortDir, page, limit });
     res.json(result);
   } catch (err) {
     console.error('[getEntityDonors] error:', err.message);
@@ -141,21 +141,36 @@ exports.getEntityDonors = async (req, res) => {
   }
 };
 
+exports.createManualDonation = async (req, res) => {
+  try {
+    const entityId = req.params.id;
+    const { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note } = req.body;
+    const result = await donationsService.createManualDonation(
+      entityId,
+      { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note },
+      req.user.id
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('[createManualDonation] error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+};
+
 exports.handleReturn = async (req, res) => {
   try {
-    const { id, status, lowprofilecode, ResponseCode } = req.query;
+    const { id, status } = req.query;
 
     if (!id) {
       const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
       return res.redirect(`${frontBase}?payment=error`);
     }
 
-    const result = await donationsService.handleReturn({
-      donationId: id,
-      status,
-      lowprofilecode,
-      responseCode: ResponseCode,
-    });
+    const result = await donationsService.handleReturn({ donationId: id, status });
+
+    if (result.notFound) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
 
     res.redirect(result.redirectUrl);
   } catch (err) {

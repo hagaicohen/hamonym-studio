@@ -658,6 +658,37 @@ exports.suspend = (entityId, superAdminUserId, notes, reasonTags, ip) =>
 exports.reactivate = (entityId, superAdminUserId, notes, reasonTags, ip) =>
   setStatus(entityId, superAdminUserId, 'active', 'reactivate', notes, null, ip);
 
+// AI Visibility Gate — every AI-labeled capability (campaign creation via
+// AI, campaign advisor, publish-step suggestions, partner AI website
+// import) is hidden by default; only a Platform Admin can grant it,
+// per-entity. Simple boolean toggle, same audited-transaction shape as
+// setStatus above, just no flag-clearing side effect.
+exports.setAiAccess = async (entityId, superAdminUserId, enabled, ip) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE entities SET ai_features_enabled = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [enabled, entityId]
+    );
+    if (!result.rows[0]) throw new Error('Entity not found');
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, ip_address)
+       VALUES ($1, $2, $3, $4)`,
+      [superAdminUserId, entityId, enabled ? 'ai_access_grant' : 'ai_access_revoke', ip || null]
+    );
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 // Platform-admin-only permanent erasure — irreversible, unlike the entity
 // manager's own soft-delete (entities.service.js softDeleteEntity). Most FK
 // children (campaigns, donations, campaign_ambassadors, entity_billing,

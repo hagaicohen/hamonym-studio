@@ -221,7 +221,9 @@ exports.createCampaign =
             layout,
 
             registration_field_label,
-            registration_field_icon
+            registration_field_icon,
+
+            campaign_lifecycle
 
           )
 
@@ -253,7 +255,9 @@ exports.createCampaign =
 
             $38,$39,
 
-            $40,$41
+            $40,$41,
+
+            $42
 
           )
 
@@ -351,7 +355,9 @@ exports.createCampaign =
             ),
 
             data.registration_field_label || null,
-            data.registration_field_icon  || null
+            data.registration_field_icon  || null,
+
+            data.campaign_lifecycle || 'one-time'
 
           ]
 

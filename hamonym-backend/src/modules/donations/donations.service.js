@@ -270,6 +270,11 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     Language:       'he',
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
     FailedRedirectUrl:  `${returnBase}/api/donations/return?id=${donationId}&status=failed`,
+    // Per-request, not terminal-level (Cardcom's LowProfile API v11) — works
+    // the same whether this charge runs on Hamonym's platform terminal or an
+    // entity's own verified Cardcom account, unlike a webhook configured once
+    // in a specific terminal's admin panel. See docs/CARDCOM_INTEGRATION.md.
+    WebHookUrl: `${returnBase}/api/payment/webhook?secret=${process.env.CARDCOM_WEBHOOK_SECRET}`,
     ReturnValue: String(donationId),
     Document: {
       To:       donor.name,
@@ -279,6 +284,17 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       Products: products,
     },
   };
+
+  // TEMPORARY — confirming what actually goes out on the wire to Cardcom,
+  // specifically whether WebHookUrl is present and well-formed (secret
+  // masked so it doesn't land in plaintext in Render's logs). Remove once
+  // the "why is no webhook arriving" investigation is closed — see
+  // docs/CARDCOM_INTEGRATION.md.
+  console.log('[createDonation] Cardcom LowProfile/Create payload:', {
+    ...payload,
+    ApiPassword: '***',
+    WebHookUrl: payload.WebHookUrl?.replace(/secret=[^&]*/, 'secret=***'),
+  });
 
   // 5. Call Cardcom
   let cardcomData;
@@ -313,51 +329,117 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE CARDCOM RETURN
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
+// Same per-entity-vs-Hamonym-fallback rule as createDonation's Cardcom
+// payload above, looked up independently for a donation that already exists
+// (the Cardcom webhook only gives us a donationId via ReturnValue, not the
+// campaign/entity context createDonation had at hand when it built the
+// LowProfile in the first place).
+async function resolveCardcomCredentials(donationId) {
+  const res = await db.query(
+    `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+            e.cardcom_connection_status
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities e ON e.id = c.entity_id
+     WHERE d.id = $1`,
+    [donationId]
+  );
 
-  const success   = status === 'success' || String(responseCode) === '0';
-  const newStatus = success ? 'paid' : 'failed';
+  const row = res.rows[0];
+  const hasVerifiedCardcom = !!(
+    row?.cardcom_terminal_number &&
+    row?.cardcom_api_username &&
+    row?.cardcom_api_password_encrypted &&
+    row?.cardcom_connection_status === 'success'
+  );
 
-  // Fetch donation + campaign in one query
+  return hasVerifiedCardcom
+    ? {
+        terminalNumber: row.cardcom_terminal_number,
+        apiName: row.cardcom_api_username,
+        apiPassword: row.cardcom_api_password_encrypted,
+      }
+    : {
+        terminalNumber: process.env.HAMONYM_CARDCOM_TERMINAL,
+        apiName: process.env.HAMONYM_CARDCOM_API_NAME,
+        apiPassword: process.env.HAMONYM_CARDCOM_API_PASSWORD,
+      };
+}
+exports.resolveCardcomCredentials = resolveCardcomCredentials;
+
+// Closes out a donation exactly once — the shared step for both the Cardcom
+// Return Redirect (UX only, not authoritative — a donor can close the tab,
+// lose connection, or hit Back before it fires) and the Cardcom Webhook (the
+// actual source of truth, see docs/CARDCOM_INTEGRATION.md). Idempotent: a
+// donation already 'paid' is a no-op, so both call sites can safely fire for
+// the same donation without double-counting campaign totals.
+async function markDonationPaid(donationId, { providerReference } = {}) {
+  const updateRes = await db.query(
+    `UPDATE donations
+     SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+     WHERE id=$2 AND status != 'paid'
+     RETURNING amount, campaign_id, entity_id`,
+    [providerReference || null, donationId]
+  );
+
+  const row = updateRes.rows[0];
+  if (!row) return { updated: false };
+
+  await db.query(
+    `UPDATE campaigns
+     SET current_amount   = current_amount   + $1,
+         supporters_count = supporters_count + 1,
+         updated_at = NOW()
+     WHERE id = $2`,
+    [row.amount, row.campaign_id]
+  );
+
+  if (row.entity_id) require('../dashboard/dashboard.service').invalidateDashboard(row.entity_id);
+  await finalizePaidDonation(donationId);
+
+  return { updated: true, amount: row.amount, campaignId: row.campaign_id };
+}
+exports.markDonationPaid = markDonationPaid;
+
+async function markDonationFailed(donationId, { providerReference } = {}) {
+  await db.query(
+    `UPDATE donations
+     SET status='failed', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+     WHERE id=$2 AND status = 'pending'`,
+    [providerReference || null, donationId]
+  );
+}
+exports.markDonationFailed = markDonationFailed;
+
+// Phase 2 (2026-08-11) — UX only. The Webhook (payment.handler.js →
+// markDonationPaid) is the sole source of truth for donation state; this
+// function never decides paid/failed and never calls markDonationPaid or
+// markDonationFailed. `status` only picks which page the donor lands on —
+// it's the URL *we* chose (SuccessRedirectUrl vs FailedRedirectUrl), not a
+// signal from Cardcom, so it's safe to use for routing even though nothing
+// from Cardcom's query params is trusted for business state anymore (see
+// docs/CARDCOM_INTEGRATION.md's Architecture Change and the 2026-08-11 bug
+// this replaced — Cardcom's own ResponseCode was proven unreliable here).
+exports.handleReturn = async ({ donationId, status }) => {
+
   const donRes = await db.query(
-    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
+    `SELECT d.amount, c.slug
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      WHERE d.id = $1`,
     [donationId]
   );
 
-  const row      = donRes.rows[0];
-  const slug     = row?.slug      || '';
-  const amount   = row?.amount    || 0;
-  const entityId = row?.entity_id || null;
+  const row = donRes.rows[0];
+  if (!row) return { notFound: true };
 
-  // Update donation record
-  await db.query(
-    `UPDATE donations
-     SET status=$1, provider_reference=$2, completed_at=NOW(), updated_at=NOW()
-     WHERE id=$3`,
-    [newStatus, lowprofilecode || null, donationId]
-  );
-
-  // On success: bump campaign metrics + bust dashboard cache
-  if (success && row?.campaign_id) {
-    await db.query(
-      `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
-           supporters_count = supporters_count + 1,
-           updated_at = NOW()
-       WHERE id = $2`,
-      [amount, row.campaign_id]
-    );
-    if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
-    await finalizePaidDonation(donationId);
-  }
+  const slug   = row.slug   || '';
+  const amount = row.amount || 0;
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   return {
-    redirectUrl: success
+    redirectUrl: status === 'success'
       ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
       : `${frontBase}/campaigns/${slug}/view?payment=failed`,
   };
@@ -716,10 +798,15 @@ const DONOR_SORT_COLUMNS = {
   last:  'last_donation_at',
 };
 
-exports.getEntityDonors = async (entityId, { search, sortBy, sortDir, page = 0, limit = 25 }) => {
+exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir, page = 0, limit = 25 }) => {
   const where  = ['d.entity_id = $1', `d.status = 'paid'`];
   const params = [entityId];
   let idx = 2;
+
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
 
   if (search) {
     where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
@@ -783,6 +870,58 @@ exports.getEntityDonors = async (entityId, { search, sortBy, sortDir, page = 0, 
     page,
     limit,
   };
+};
+
+/* ─────────────────────────────────────────
+   MANUAL DONATION ENTRY (authenticated, entity manager)
+   — logs an offline donation (bank transfer/check/cash/other) directly as
+   paid, bypassing Cardcom. Mirrors the campaign-totals update + receipt/
+   donor-linking side effects of the real payment flow (handleReturn above)
+   so a manual entry behaves identically to an online one everywhere else
+   in the app.
+───────────────────────────────────────── */
+const MANUAL_DONATION_SOURCES = ['bank_transfer', 'check', 'cash', 'other'];
+
+exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note }, enteredByUserId) => {
+  if (!campaignId) throw new Error('חסר מזהה קמפיין');
+  const amt = Number(amount);
+  if (!amt || amt <= 0) throw new Error('סכום לא תקין');
+  if (!MANUAL_DONATION_SOURCES.includes(source)) throw new Error('מקור תרומה לא תקין');
+  const count = Math.max(1, parseInt(supportersCount, 10) || 1);
+
+  // requireEntityOwnership already confirmed the acting user manages
+  // entityId — this closes the gap where campaignId in the body could
+  // belong to a DIFFERENT entity.
+  const campRes = await db.query(
+    `SELECT id FROM campaigns WHERE id = $1 AND entity_id = $2`,
+    [campaignId, entityId]
+  );
+  if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
+
+  const donationRes = await db.query(
+    `INSERT INTO donations (
+       campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
+       rewards, status, is_mock, source, supporters_count, entered_by, note,
+       completed_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
+     RETURNING id`,
+    [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
+  );
+  const donationId = donationRes.rows[0].id;
+
+  await db.query(
+    `UPDATE campaigns
+     SET current_amount   = current_amount   + $1,
+         supporters_count = supporters_count + $2,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [amt, count, campaignId]
+  );
+
+  require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+  await finalizePaidDonation(donationId);
+
+  return { donationId };
 };
 
 function round2(n) { return Math.round(n * 100) / 100; }
