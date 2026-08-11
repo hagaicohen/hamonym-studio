@@ -159,19 +159,18 @@ exports.createManualDonation = async (req, res) => {
 
 exports.handleReturn = async (req, res) => {
   try {
-    const { id, status, lowprofilecode, ResponseCode } = req.query;
+    const { id, status } = req.query;
 
     if (!id) {
       const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
       return res.redirect(`${frontBase}?payment=error`);
     }
 
-    const result = await donationsService.handleReturn({
-      donationId: id,
-      status,
-      lowprofilecode,
-      responseCode: ResponseCode,
-    });
+    const result = await donationsService.handleReturn({ donationId: id, status });
+
+    if (result.notFound) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
 
     res.redirect(result.redirectUrl);
   } catch (err) {

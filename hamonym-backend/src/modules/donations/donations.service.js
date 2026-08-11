@@ -411,34 +411,16 @@ async function markDonationFailed(donationId, { providerReference } = {}) {
 }
 exports.markDonationFailed = markDonationFailed;
 
-// TODO (Phase 2, blocked on webhook verification — see
-// docs/CARDCOM_INTEGRATION.md's Entry Points gap): once POST /api/payment/webhook
-// is confirmed against real Cardcom traffic and the terminal's WebHookUrl is
-// pointed at it, remove the markDonationPaid/markDonationFailed calls below —
-// this should become UX-only (redirect the donor), with the webhook as the
-// sole caller of those functions. Not done yet: doing it before the webhook
-// is live would stop donations from ever completing.
-exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
-
-  // TEMPORARY, and deliberately not trusting `responseCode` — confirmed
-  // 2026-08-11 with a real declined transaction (Cardcom's own decline alert
-  // shown to the donor) that Cardcom's redirect can carry `status=failed`
-  // AND `ResponseCode=0` at the same time. The old `|| String(responseCode)
-  // === '0'` treated that as success and incorrectly marked a declined
-  // ₪5,001 charge as paid — real damage: donation, campaign totals, and a
-  // receipt (see docs/CARDCOM_INTEGRATION.md). Redirect is not a source of
-  // truth for ANY field Cardcom controls, including ResponseCode — only
-  // `status` is trustworthy here, because it's the URL *we* chose
-  // (SuccessRedirectUrl vs FailedRedirectUrl), not something Cardcom fills
-  // in. This whole function is UX-only once the Webhook is proven — see the
-  // Phase 2 TODO above.
-  const success = status === 'success';
-
-  if (success) {
-    await markDonationPaid(donationId, { providerReference: lowprofilecode || null });
-  } else {
-    await markDonationFailed(donationId, { providerReference: lowprofilecode || null });
-  }
+// Phase 2 (2026-08-11) — UX only. The Webhook (payment.handler.js →
+// markDonationPaid) is the sole source of truth for donation state; this
+// function never decides paid/failed and never calls markDonationPaid or
+// markDonationFailed. `status` only picks which page the donor lands on —
+// it's the URL *we* chose (SuccessRedirectUrl vs FailedRedirectUrl), not a
+// signal from Cardcom, so it's safe to use for routing even though nothing
+// from Cardcom's query params is trusted for business state anymore (see
+// docs/CARDCOM_INTEGRATION.md's Architecture Change and the 2026-08-11 bug
+// this replaced — Cardcom's own ResponseCode was proven unreliable here).
+exports.handleReturn = async ({ donationId, status }) => {
 
   const donRes = await db.query(
     `SELECT d.amount, c.slug
@@ -448,14 +430,16 @@ exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode
     [donationId]
   );
 
-  const row    = donRes.rows[0];
-  const slug   = row?.slug   || '';
-  const amount = row?.amount || 0;
+  const row = donRes.rows[0];
+  if (!row) return { notFound: true };
+
+  const slug   = row.slug   || '';
+  const amount = row.amount || 0;
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   return {
-    redirectUrl: success
+    redirectUrl: status === 'success'
       ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
       : `${frontBase}/campaigns/${slug}/view?payment=failed`,
   };
