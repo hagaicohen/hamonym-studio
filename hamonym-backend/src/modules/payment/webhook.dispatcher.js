@@ -8,22 +8,36 @@ const documentHandler = require('./handlers/document.handler');
 // split) so adding a future event type (Chargeback, Token Replacement) is a
 // one-line addition here, not a change to payment.controller.js/service.js.
 //
-// ASSUMPTION, not yet confirmed against a real Cardcom payload: the field
-// distinguishing event types is `payload.RecordType`, using the four
-// categories PAYMENTS_ARCHITECTURE_CONTEXT.md names (Payment / MasterRecurring
-// / DetailRecurring / Document). Confirm against an actual webhook sample
-// before relying on this in production.
+// CONFIRMED WRONG for real one-time Payment traffic (2026-08-10): a real
+// LowProfile transaction result carries no `RecordType` field at all — only
+// Cardcom's own "Test Webhook" button in the terminal sends one. See
+// docs/CARDCOM_INTEGRATION.md's Payload Contract findings. Do NOT add a
+// guessed discriminator here yet — that's deliberately deferred until real
+// success/failure/cancel samples define the actual contract. This function
+// only needs to stop failing *silently* in the meantime — see the `default`
+// case below.
 module.exports = async function dispatch(payload) {
   switch (payload.RecordType) {
     case 'Payment':
-      return paymentHandler.handle(payload);
+      await paymentHandler.handle(payload);
+      return { routed: true };
     case 'MasterRecurring':
-      return masterRecurringHandler.handle(payload); // no-op stub, see file
+      await masterRecurringHandler.handle(payload); // no-op stub, see file
+      return { routed: true };
     case 'DetailRecurring':
-      return detailRecurringHandler.handle(payload); // no-op stub, see file
+      await detailRecurringHandler.handle(payload); // no-op stub, see file
+      return { routed: true };
     case 'Document':
-      return documentHandler.handle(payload); // no-op stub, see file
+      await documentHandler.handle(payload); // no-op stub, see file
+      return { routed: true };
     default:
-      return null;
+      // Received, secret-validated, and already saved to cardcom_webhook_events
+      // by the time we get here — this is NOT a failure to handle the event,
+      // it's a failure to know which handler it belongs to. Distinct problem,
+      // distinct label (see payment.controller.js's use of this).
+      return {
+        routed: false,
+        reason: `No handler matched this payload (RecordType=${payload.RecordType ?? 'missing'})`,
+      };
   }
 };

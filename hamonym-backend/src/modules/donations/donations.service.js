@@ -285,6 +285,17 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     },
   };
 
+  // TEMPORARY — confirming what actually goes out on the wire to Cardcom,
+  // specifically whether WebHookUrl is present and well-formed (secret
+  // masked so it doesn't land in plaintext in Render's logs). Remove once
+  // the "why is no webhook arriving" investigation is closed — see
+  // docs/CARDCOM_INTEGRATION.md.
+  console.log('[createDonation] Cardcom LowProfile/Create payload:', {
+    ...payload,
+    ApiPassword: '***',
+    WebHookUrl: payload.WebHookUrl?.replace(/secret=[^&]*/, 'secret=***'),
+  });
+
   // 5. Call Cardcom
   let cardcomData;
   try {
@@ -409,7 +420,19 @@ exports.markDonationFailed = markDonationFailed;
 // is live would stop donations from ever completing.
 exports.handleReturn = async ({ donationId, status, lowprofilecode, responseCode }) => {
 
-  const success = status === 'success' || String(responseCode) === '0';
+  // TEMPORARY, and deliberately not trusting `responseCode` — confirmed
+  // 2026-08-11 with a real declined transaction (Cardcom's own decline alert
+  // shown to the donor) that Cardcom's redirect can carry `status=failed`
+  // AND `ResponseCode=0` at the same time. The old `|| String(responseCode)
+  // === '0'` treated that as success and incorrectly marked a declined
+  // ₪5,001 charge as paid — real damage: donation, campaign totals, and a
+  // receipt (see docs/CARDCOM_INTEGRATION.md). Redirect is not a source of
+  // truth for ANY field Cardcom controls, including ResponseCode — only
+  // `status` is trustworthy here, because it's the URL *we* chose
+  // (SuccessRedirectUrl vs FailedRedirectUrl), not something Cardcom fills
+  // in. This whole function is UX-only once the Webhook is proven — see the
+  // Phase 2 TODO above.
+  const success = status === 'success';
 
   if (success) {
     await markDonationPaid(donationId, { providerReference: lowprofilecode || null });

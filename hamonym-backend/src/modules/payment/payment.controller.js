@@ -1,8 +1,8 @@
 const paymentService =
   require('./payment.service');
 
-const webhookDispatcher =
-  require('./webhook.dispatcher');
+const paymentHandler =
+  require('./handlers/payment.handler');
 
 const cardcomValidator =
   require('./cardcom/cardcom.validator');
@@ -16,11 +16,10 @@ const auditService =
 const fs   = require('fs');
 const path = require('path');
 
-// TEMPORARY — capturing real Cardcom webhook payloads to confirm the actual
-// field names before webhook.dispatcher.js's RecordType switch is trusted in
-// production (see docs/CARDCOM_INTEGRATION.md). Delete captureWebhookPayload
-// and its call site below once a real 'Payment' payload has been captured
-// and the dispatcher is confirmed/adjusted against it.
+// TEMPORARY — capturing real Cardcom webhook payloads for the ongoing
+// LowProfile contract investigation (see docs/CARDCOM_INTEGRATION.md).
+// Delete captureWebhookPayload and its call site below once enough real
+// samples (success + failure, at least) have been captured.
 async function captureWebhookPayload(payload) {
   const dir = path.join(__dirname, '../../../logs');
   await fs.promises.mkdir(dir, { recursive: true });
@@ -36,8 +35,7 @@ exports.handleWebhook =
     let eventId = null;
 
     try {
-console.log('Expected:', process.env.CARDCOM_WEBHOOK_SECRET);
-console.log('Received:', req.query.secret);
+
       if (!cardcomValidator.validateWebhookSecret(req.query.secret)) {
         return res.status(401).json({ error: 'Invalid secret' });
       }
@@ -53,7 +51,14 @@ console.log('Received:', req.query.secret);
         return res.json({ success: true, duplicate: true });
       }
 
-      await webhookDispatcher(req.body);
+      // POST /api/payment/webhook IS the LowProfile webhook — Cardcom's own
+      // WebHookUrl mechanism, set per-request in createDonation's payload, is
+      // a separate channel from their Recurring/Document webhook systems
+      // (confirmed 2026-08-10: official Cardcom docs + a real captured
+      // payload both show no RecordType field here). No routing/dispatch
+      // needed — everything arriving on this route is a LowProfile result by
+      // definition. See docs/CARDCOM_INTEGRATION.md.
+      await paymentHandler.handle(req.body);
 
       await auditService.recordProcessed(eventId);
 
