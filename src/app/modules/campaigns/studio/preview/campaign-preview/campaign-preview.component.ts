@@ -325,6 +325,12 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   // Options (see startRegistration below). See DECISIONS.md (2026-07-15,
   // 2.4 Multi-Participant Registration; 2026-07-16, Registration Options).
   checkoutMode: 'donation' | 'registration' = 'donation';
+  // Opt-in per campaign — the toggle only ever shows when the manager has
+  // configured draft.monthlyAmounts (see campaign-donation-step). Purely a
+  // donation-flow choice, deliberately independent of campaignLifecycle
+  // ('ongoing' campaigns do not default to this — kept as two separate
+  // axes, see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md UI notes).
+  donationFrequency: 'one-time' | 'monthly' = 'one-time';
   selectedAmount: number | null = null;
   cartOfferingIds = new Set<string>();   // perk offerings in cart (donation flow only)
   customAmount: number | null = null;
@@ -1100,6 +1106,24 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this.amountDisplay  = '';
   }
 
+  // Presets shown for the currently-selected frequency — suggestedAmounts
+  // for one-time, monthlyAmounts for monthly. Empty monthlyAmounts is what
+  // hides the toggle in the template in the first place (see html), so this
+  // is never called with an empty array in the monthly branch in practice.
+  amountsFor(draft: CampaignDraft): number[] {
+    return this.donationFrequency === 'monthly' ? draft.monthlyAmounts : draft.suggestedAmounts;
+  }
+
+  selectFrequency(freq: 'one-time' | 'monthly'): void {
+    if (this.donationFrequency === freq) return;
+    this.donationFrequency = freq;
+    // Presets differ between the two lists — a carried-over selection could
+    // silently point at the wrong amount for the newly-chosen frequency.
+    this.selectedAmount = null;
+    this.customAmount   = null;
+    this.amountDisplay  = '';
+  }
+
   onCustomAmountInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     const raw   = input.value.replace(/[^\d]/g, '');
@@ -1115,7 +1139,7 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   getEffectiveAmount(draft: CampaignDraft): number {
     if (this.customAmount) return this.customAmount;
     if (this.selectedAmount !== null) return this.selectedAmount;
-    const amounts = draft.suggestedAmounts.slice(0, 5);
+    const amounts = this.amountsFor(draft).slice(0, 5);
     return amounts[this.middleAmountIndex(amounts)] ?? 0;
   }
 

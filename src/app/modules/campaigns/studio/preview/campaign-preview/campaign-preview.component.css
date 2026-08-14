@@ -932,6 +932,37 @@
   transform: translateY(-1px);
 }
 
+.hm-frequency-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  border: 1.5px solid #dbe3ea;
+  border-radius: 8px;
+  padding: 4px;
+}
+.hm-frequency-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-weight: 700; font-size: 14px;
+  color: #62728d;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.hm-frequency-btn.is-selected {
+  background: #0f2747;
+  color: #fff;
+}
+.hm-recurring-note {
+  font-size: 13px;
+  color: #62728d;
+  text-align: center;
+  margin: -6px 0 14px;
+}
+
 .hm-custom-amount-wrap {
   position: relative;
   margin-bottom: 16px;

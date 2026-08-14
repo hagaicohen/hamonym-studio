@@ -699,6 +699,7 @@
   [amount]="totalAmount(draft)"
   [cartOfferings]="cartOfferingList(draft)"
   [checkoutMode]="checkoutMode"
+  [recurring]="donationFrequency === 'monthly'"
   [pendingRegistration]="pendingRegistration"
   [entityLogoUrl]="entityLogoUrl"
   [entityName]="entityName"
@@ -1007,10 +1008,21 @@
     [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
     [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'">
     <h2>{{ draft.registrationOptions.length > 0 ? 'תרמו סכום חופשי לקמפיין' : 'בחרו סכום לתמיכה' }}</h2>
+
+    <!-- Monthly opt-in: only visible when the campaign manager configured
+         at least one monthlyAmounts preset. No monthlyAmounts = this whole
+         block is absent and the page behaves exactly as before. -->
+    <div class="hm-frequency-toggle" *ngIf="draft.monthlyAmounts.length > 0">
+      <button type="button" class="hm-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
+        (click)="selectFrequency('one-time')">חד-פעמית</button>
+      <button type="button" class="hm-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
+        (click)="selectFrequency('monthly')">חודשית</button>
+    </div>
+
     <div class="hm-amounts">
-      <button *ngFor="let a of draft.suggestedAmounts | slice:0:5; let i = index"
+      <button *ngFor="let a of amountsFor(draft) | slice:0:5; let i = index"
         class="hm-amount-preset" type="button"
-        [class.is-selected]="selectedAmount === a && customAmount === null || (selectedAmount === null && customAmount === null && i === middleAmountIndex(draft.suggestedAmounts))"
+        [class.is-selected]="selectedAmount === a && customAmount === null || (selectedAmount === null && customAmount === null && i === middleAmountIndex(amountsFor(draft)))"
         (click)="selectAmount($any(a))">
         ₪{{ $any(a).toLocaleString('he-IL') }}
       </button>
@@ -1024,6 +1036,9 @@
         [value]="amountDisplay"
         (input)="onCustomAmountInput($event)">
     </div>
+    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly'">
+      🔁 חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
+    </p>
 
     <!-- Total breakdown -->
     <div class="hm-total-section" *ngIf="cartCount > 0">
