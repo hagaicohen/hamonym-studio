@@ -56,7 +56,12 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
 * **ביטול:** יכול לקרות משני כיוונים, ושניהם **טעוני אימות**:
   * **CardCom-initiated / דיווח:** הופעת `MasterRecurring` עם Inactive. הסיבה (תורם ביטל מול CardCom? כרטיס פג תוקף? מדיניות CardCom?) לא מתועדת במלואה — פתוח כבר ב-Compass (Open Questions).
   * **Hamonym-initiated:** האם קיים API call ל-CardCom לביטול יזום (לדוגמה מתוך מסך ניהול תורם)? זו בדיוק השאלה שה-Compass כבר משאיר פתוחה תחת "Cancel Recurring". לא להניח שהיא קיימת עד שנמצא ב-CardCom API v11 docs ומאומת.
-* **השהיה (Pause/Resume):** **לא בהנחה שקיימת.** מופיעה כ-Open Question ב-Compass ולא נפתרה. עד לאימות מול CardCom (docs רשמי + payload/API call אמיתי) — אין להניח "Paused" כמצב נפרד מ-`inactive`. אם CardCom לא תומכת בזה כ-first-class capability, הפתרון (אם יידרש בעתיד) הוא Business Logic בצד Hamonym, לא state חדש שממציאים בצד CardCom.
+* **השהיה (Pause/Resume) — ✅ Verified מקצה לקצה (2026-08-14, ניסוי אמיתי על `RecurringId=44197`), לא עוד Open Question:**
+  * `Operation=update`+`IsActive=false` משבית את ההוראה בפועל — ה-scheduled job **לא** מחייב אותה גם כש-`NextDateToBill` הגיע ליומו.
+  * **`NextDateToBill` קופא** בזמן `IsActive=false` — לא מתקדם מעצמו. `NumOfPaymentsAlreadyCharged` גם הוא לא זז.
+  * **`MasterRecurring` webhook נשלח בפועל על שינוי `IsActive`** — סוגר gate שהיה פתוח (עד עכשיו נצפה רק על שינוי `NextDateToBill`).
+  * Resume: `Operation=update`+`IsActive=true`+`NextDateToBill` מפורש (לא מסתמכים על מה ש-CardCom כבר מחזיקה) — עובד, אומת: `IsActive=true`, `NextDateToBill` בדיוק כפי שנקבע, הסכום לא השתנה.
+  * **אין** state נפרד בצד CardCom ל-"Paused" מול "Cancelled" — `IsActive=false` בלבד, כפי שכבר שוער. ההבחנה בין "מושהה, מצפים ל-Resume" ל-"מבוטל" היא Business Logic של Hamonym בלבד (עקבי עם מה שכבר נכתב כאן לפני האימות).
 
 ### Recurring Charge (Detail) — "ניסיון גבייה בודד"
 
@@ -184,7 +189,7 @@ Secret=<configured recurring webhook secret>
 
 יורש ישירות מ-Compass (Open Questions › CardCom), עדיין לא נפתר:
 
-* Pause / Resume — קיים כ-capability אצל CardCom? אם לא — Business Logic בצד Hamonym, לא state של CardCom.
+* ~~Pause / Resume~~ — ✅ נסגר, ר' Lifecycle למעלה.
 * Cancel Recurring — יזום ע"י Hamonym: קיים API call? מה ה-response contract?
 * Token Replacement — כרטיס שפג תוקף/הוחלף, איך זה מתעדכן בהוראה קיימת.
 * Chargeback / Refund Flow עבור חיוב שכבר בוצע דרך הוראת קבע.

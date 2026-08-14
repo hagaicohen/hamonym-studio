@@ -171,9 +171,52 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 | פעולה | מנגנון | סטטוס |
 |---|---|---|
 | Skip חודש (דחיית חיוב) | `Operation=update` + `RecurringId` + `NextDateToBill` חדש | **Verified** — בדיוק המנגנון שהופעל בניסויים (גם אם לכיוון אחר, המנגנון זהה) |
-| Pause | `Operation=update` + `RecurringId` + `IsActive=false` | Documented-only (PHP רשמי) — **לא הורץ בפועל** |
-| Resume | אותו דבר, `IsActive=true` | Documented-only — **לא הורץ בפועל** |
-| Cancel | **אין מנגנון CardCom נפרד שנמצא.** | **Hamonym decision:** להתייחס כ-`IsActive=false` (זהה ל-Pause), עם דגל/פרשנות מקומית בלבד להבדיל "מושהה, מצפים לחידוש" מ-"בוטל, לא מצפים". CardCom לא יודעת את ההבדל — זו סמנטיקה של Hamonym בלבד. |
+| Pause | `Operation=update` + `RecurringId` + `IsActive=false` | **✅ Verified (2026-08-14, `RecurringId=44197`).** משבית בפועל — job לא מחייב גם כש-`NextDateToBill` הגיע. `MasterRecurring` webhook יורה על השינוי. |
+| בזמן Pause | — | **✅ Verified:** `NextDateToBill` קופא (לא מתקדם), `NumOfPaymentsAlreadyCharged` לא זז. |
+| Resume | `Operation=update` + `RecurringId` + `IsActive=true` + `NextDateToBill` מפורש (Hamonym קובעת את הערך, לא סומכת על מה ש-CardCom מחזיקה) | **✅ Verified.** מצב סופי אחרי הניסוי: `IsActive=true`, `NextDateToBill` בדיוק כפי שנקבע, סכום ללא שינוי. |
+| Cancel | **אין מנגנון CardCom נפרד שנמצא.** | **Hamonym decision, עדיין לא ננעלה, לא בהיקף Phase 5:** להתייחס כ-`IsActive=false` (זהה ל-Pause), עם דגל/פרשנות מקומית בלבד להבדיל "מושהה, מצפים לחידוש" מ-"בוטל, לא מצפים". CardCom לא יודעת את ההבדל — זו סמנטיקה של Hamonym בלבד. |
+
+---
+
+## 9.1 Phase 5 — תכנון מימוש (Pause/Resume), אחרי Contract Verified במלואו
+
+**היקף:** Pause + Resume בלבד. **לא** Cancel (סעיף 9 למעלה משאיר את זה כ-Hamonym decision נפרדת, לא ננעלה).
+
+**`recurring.client.js` — נדרשת פונקציה חדשה, לא קיימת היום:** הקובץ מכיל היום רק `createRecurring` (`Operation=NewAndUpdate`). Pause/Resume דורשים `updateRecurring({ terminalNumber, userName, apiPassword, recurringId, isActive, nextDateToBill? })` — `Operation=update` + `RecurringPayments.RecurringId=<קיים>` + השדה(ות) לשינוי, בדיוק לפי `DisableRecurringPayment.php`/`UpdateRecurringPayment.php` הרשמיים ולפי הניסוי שאומת. פונקציה אחת גנרית, לא שתיים נפרדות ל-Pause/Resume — ההבדל הוא רק בערכים שנשלחים.
+
+**Endpoint/Controller — כיוון, לא סופי:** קריאה יזומה ע"י Hamonym (admin action היום, Personal Area בעתיד — סעיף 10) → controller חדש/מורחב ב-`recurring.service.js` (יש כבר `createSignup`/`completeSignup` שם — מוסיפים `pauseRecurring(instructionId)`/`resumeRecurring(instructionId)`). **לא** webhook — זו פעולה יזומה, סינכרונית, לא event נכנס.
+
+**Pause — לוגיקה:**
+1. לקרוא את `recurring_instructions` הקיימת, לוודא `status` פעיל (idempotency: אם כבר `paused`, לא לקרוא ל-CardCom שוב).
+2. `updateRecurring({ recurringId, isActive: false })`.
+3. אם `ResponseCode=0` — לעדכן `status='paused'` מקומית (ר' סעיף 4 בתשובה הקודמת). אם נכשל — **לא** לעדכן מקומית, להחזיר שגיאה לקורא (סעיף 5, כבר הוסכם).
+4. **לא** נוגעים ב-`NextDateToBill` בקריאה הזו — מיותר, `IsActive=false` כבר מספיק (Verified).
+
+**Resume — לוגיקה:**
+1. לוודא `status='paused'` מקומית (idempotency דומה).
+2. לחשב `nextDateToBill` לפי הכלל שנקבע: יום-העוגן המקורי, המופע הקרוב הבא **בעתיד בלבד** — אין catch-up, אין חיוב מיידי, אין שינוי קבוע של יום החיוב. (מקור יום-העוגן: `billing_anchor_day` — ר' למטה.)
+3. `updateRecurring({ recurringId, isActive: true, nextDateToBill })`.
+4. אם `ResponseCode=0` — `status='active'` + `next_date_to_bill` מקומי מתעדכן לערך שנקבע. אם נכשל — לא לעדכן, שגיאה לקורא.
+5. `MasterRecurring` webhook (Verified שיורה על שינוי `IsActive`) יגיע בהמשך ויאשר/יסנכרן שוב — אין תלות בו לפני שמעדכנים מקומית (אותו pattern כמו Create ב-Phase 1: סומכים על ה-response הסינכרוני, ה-webhook הוא אישוש/סנכרון נוסף, לא gate).
+
+**`billing_anchor_day` — כן, נשאר בתכנון, migration לא מבוצע עדיין (לפי הנחיה מפורשת):**
+הניסוי הוכיח ש-`NextDateToBill` קופא בזמן Pause — טכנית זה מספיק היום כדי לגזור את יום העוגן מ-`next_date_to_bill` שנשמר לפני ה-Pause. אבל **זה לא משנה את ההמלצה** — יום העוגן הוא כלל עסקי של Hamonym (למשל: לתורם שנרשם ב-15 לחודש, "15" הוא ה-anchor), לא נגזרת של שדה תפעולי אצל ספק סליקה שיכול (עקרונית, בעתיד) להשתנות בלי אזהרה. `next_date_to_bill` נדרס בכל Update/webhook — עמודה עצמאית (`recurring_instructions.billing_anchor_day`, INT 1-31, נגזרת פעם אחת מ-`next_date_to_bill` **בזמן ה-Create המקורי**, לא בזמן Pause) נותנת עצמאות מלאה, בעלות זניחה (עמודה אחת nullable). **Migration בפועל — רק בהנחייה מפורשת נפרדת**, כפי שנקבע.
+
+**Idempotency/guards:** Pause על הוראה כבר `paused` → no-op (לא קורא ל-CardCom שוב). Resume על הוראה שכבר `active` → no-op. אין race condition חדש — פעולות יזומות, לא webhooks מקבילים.
+
+**✅ ממומש ואומת (2026-08-14), נגד `RecurringId=44197` האמיתי (Test):**
+- `migrations/046_recurring_billing_anchor_day.sql` — `recurring_instructions.billing_anchor_day` (SMALLINT, 1-31, nullable, `CHECK`). רץ בפועל. **אין backfill גורף** — לפי הנחיה מפורשת: קיים רק לחדשות (`completeSignup` נקבע כעת גם הוא) ולישנות בעת שימוש ראשון (lazy, בתוך `pauseRecurring`).
+- `recurring.client.js::updateRecurring` — `Operation=update`, שולח רק את השדות שהקורא ביקש לשנות (`IsActive`/`NextDateToBill`), לא את כולם כברירת מחדל.
+- `donations.service.js::resolveCardcomCredentialsForEntity` (חדש, מיצוי מ-`resolveCardcomCredentials` הקיים ל-helper משותף) — Pause/Resume פועלים על `recurring_instructions.entity_id` ישירות, אין donation ליהנות ממנו.
+- `recurring.service.js::pauseRecurring`/`resumeRecurring` — לוגיקה כפי שתוכננה למעלה, כולל `nextOccurrenceOfAnchorDay` (יום עוגן, מופע עתידי קרוב, clamp לחודשים קצרים).
+
+**נבדק אמפירית, נגד CardCom Test בפועל (לא רק unit) — entity/campaign זמניים, `RecurringId=44197` (Test) עצמו נגע בפועל, לא מדומה:**
+- Pause: הצליח (`ResponseCode=0`), `status→'paused'`, `billing_anchor_day` נשמר.
+- Pause שוב (redelivery): `{alreadyPaused:true}`, לא נשלחה קריאה נוספת ל-CardCom.
+- Resume: הצליח, **`nextOccurrenceOfAnchorDay(14)` חישב `14/09/2026` — תואם בדיוק את מה שהיוזר קבע ידנית בניסוי הקודם**, אימות עצמאי לכלל שנקבע. `status→'active'`.
+- Resume שוב: `{alreadyActive:true}`, לא נשלחה קריאה נוספת.
+- **כשל Update — נבדק עם `RecurringId` בדוי (`999999999`) על הוראה זמנית נפרדת:** CardCom החזירה שגיאה אמיתית ("Recurring Id not found") גם ל-Pause וגם ל-Resume — בשני המקרים הקוד **זרק** ו-**לא** עדכן `status` מקומית (אומת ישירות מה-DB אחרי).
+- מצב סופי של `RecurringId=44197` (Test) בסוף הריצה: `IsActive=true`, `NextDateToBill=14/09/2026` — זהה למצב שהיוזר השאיר בניסוי הידני, לא נדרס.
 
 ---
 
@@ -199,7 +242,7 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 | Master webhook handler | **אין gate — Verified (2026-08-14).** שם שדה ה-Secret (`Secret`, PascalCase) אומת מ-payload גולמי. |
 | Detail webhook handler — הצלחה | **אין gate — Verified.** |
 | Detail webhook handler — כשל | **אין gate מהותי — Verified ל-`ONHOLD` (2026-08-14), payload גולמי אמיתי מה-Webhook עצמו.** שאר הסטטוסים (`LOSTDEBT`/`DEBTAUTOBILLING`/`PAYBYOTHERE`/`PENDINGFORPROCESSING`/`OTHER`) עדיין fallback לא-מאומת — לא חוסם v1 כי ההחלטה (section 8.2) היא branch אחיד "לא-`SUCCESSFUL`", לא מיפוי ייחודי לכל סטטוס. |
-| Pause/Resume | לא חוסם קריטית — מנגנון `Operation=update` כבר מוכח לשדות אחרים. מומלץ להריץ בפועל לפני כתיבת הקוד הספציפי, לא הכרחי. |
+| Pause/Resume | **אין gate — Verified (2026-08-14).** |
 | Cancel | אין gate CardCom — Hamonym decision בלבד (סעיף 9). |
 | סיום טבעי (`TotalNumOfBills`) | לא דחוף — סביר של-Hamonym ישתמש ב-`TotalNumOfBills` גדול (כמו בניסוי, `99999`) לתרומות מתמשכות בפועל, לא מספר סופי. לדחות בלי דאגה. |
 | Create idempotency/retry | **לא לחכות לתשובת CardCom** — להגן בצד Hamonym (בדיקת existing Recurring Instruction לפני יצירה חדשה) בלי קשר למה ש-CardCom עושה. |
@@ -213,7 +256,7 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 2. **Master webhook endpoint + handler** — כמעט לא חסום (רק אימות שם שדה Secret).
 3. **Detail webhook handler — מסלול הצלחה** — אותו gate, ומחבר ל-`finalizePaidDonation` (עם התיקון מסעיף 7 — INSERT ישיר, לא UPDATE).
 4. **Detail webhook handler — מסלול כשל — ✅ מומש ונבדק (2026-08-14).** ר' סעיף 8.2.
-5. **Pause/Resume/Cancel + Personal Area UI** — אחרי בדיקה אמפירית קצרה של `IsActive` בפועל (מומלץ, לא חוסם).
+5. **🎉 Pause/Resume (Phase 5) — ממומש ואומת (2026-08-14).** ר' §9.1. Cancel + Personal Area UI נשארים מחוץ להיקף.
 6. **Reconciliation Job** — nice-to-have, אחרי שהזרימה הליבתית יציבה.
 
 **לא לממש עדיין — זהו תכנון, לא הוראה לפתוח PR.**
