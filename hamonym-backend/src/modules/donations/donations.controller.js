@@ -50,7 +50,7 @@ exports.getMyDonations = async (req, res) => {
 
 exports.createDonation = async (req, res) => {
   try {
-    const { campaignId, donor, amount, rewards, participants, utmParams } = req.body;
+    const { campaignId, donor, amount, rewards, participants, utmParams, recurring } = req.body;
 
     if (!campaignId || !donor || !amount) {
       return res.status(400).json({ error: 'campaignId, donor and amount are required' });
@@ -61,7 +61,7 @@ exports.createDonation = async (req, res) => {
 
     const result = await donationsService.createDonation({
       campaignId, donor, amount, rewards, participants,
-      utmParams, ipAddress, userAgent,
+      utmParams, ipAddress, userAgent, recurring,
     });
     res.json(result);
   } catch (err) {

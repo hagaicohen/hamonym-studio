@@ -133,7 +133,7 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring }) => {
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -191,6 +191,20 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // see loadRegistrationOptions above.
   const registrationOptionsById = await loadRegistrationOptions(campaignId, participants);
 
+  // Recurring signup — creates the Hamonym-internal instruction row before
+  // Cardcom knows anything about it (see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md
+  // §1/§2). The donation links to it from creation, not via a boolean flag.
+  const recurringInstructionId = recurring
+    ? await require('../donations/recurring.service').createSignup({
+        entityId: campaign.entity_id,
+        campaignId,
+        donorName: donor.name,
+        donorEmail: donor.email,
+        donorPhone: donor.phone,
+        amount,
+      })
+    : null;
+
   // 2. Save pending donation
   const donationRes = await db.query(
     `INSERT INTO donations (
@@ -198,8 +212,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
        rewards, status, is_mock,
-       utm_params, ip_address, user_agent
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15)
+       utm_params, ip_address, user_agent, recurring_instruction_id
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16)
      RETURNING id`,
     [
       campaignId,
@@ -217,6 +231,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       utmParams  ? JSON.stringify(utmParams) : null,
       ipAddress  || null,
       userAgent  || null,
+      recurringInstructionId,
     ]
   );
   const donationId = donationRes.rows[0].id;
@@ -268,6 +283,11 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : process.env.HAMONYM_CARDCOM_API_PASSWORD,
     Amount:         round2(amount),
     Language:       'he',
+    // ChargeAndCreateToken required for recurring signups — verified
+    // empirically that ChargeOnly (the default) produces a LowProfile deal
+    // with no token, which Recurring Create then rejects (ResponseCode=8500).
+    // One-time donations keep the existing default (Operation omitted).
+    ...(recurring ? { Operation: 'ChargeAndCreateToken' } : {}),
     SuccessRedirectUrl: `${returnBase}/api/donations/return?id=${donationId}&status=success`,
     FailedRedirectUrl:  `${returnBase}/api/donations/return?id=${donationId}&status=failed`,
     // Per-request, not terminal-level (Cardcom's LowProfile API v11) — works

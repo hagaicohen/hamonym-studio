@@ -27,4 +27,15 @@ exports.handle = async (payload) => {
   await donationsService.markDonationPaid(donationId, {
     providerReference: result?.TranzactionId || result?.LowProfileId || null,
   });
+
+  // Recurring signup completion — no-ops for ordinary donations (no
+  // recurring_instruction_id) and is itself idempotent (no-ops if a
+  // RecurringId was already created by a previous delivery of this same
+  // webhook). Never allowed to affect the donation above, which already
+  // succeeded — see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §5.
+  try {
+    await require('../../donations/recurring.service').completeSignup(donationId);
+  } catch (err) {
+    console.error('[payment.handler] completeSignup failed:', err.message);
+  }
 };
