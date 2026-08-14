@@ -174,7 +174,7 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 | Pause | `Operation=update` + `RecurringId` + `IsActive=false` | **✅ Verified (2026-08-14, `RecurringId=44197`).** משבית בפועל — job לא מחייב גם כש-`NextDateToBill` הגיע. `MasterRecurring` webhook יורה על השינוי. |
 | בזמן Pause | — | **✅ Verified:** `NextDateToBill` קופא (לא מתקדם), `NumOfPaymentsAlreadyCharged` לא זז. |
 | Resume | `Operation=update` + `RecurringId` + `IsActive=true` + `NextDateToBill` מפורש (Hamonym קובעת את הערך, לא סומכת על מה ש-CardCom מחזיקה) | **✅ Verified.** מצב סופי אחרי הניסוי: `IsActive=true`, `NextDateToBill` בדיוק כפי שנקבע, סכום ללא שינוי. |
-| Cancel | **אין מנגנון CardCom נפרד שנמצא.** | **Hamonym decision, עדיין לא ננעלה, לא בהיקף Phase 5:** להתייחס כ-`IsActive=false` (זהה ל-Pause), עם דגל/פרשנות מקומית בלבד להבדיל "מושהה, מצפים לחידוש" מ-"בוטל, לא מצפים". CardCom לא יודעת את ההבדל — זו סמנטיקה של Hamonym בלבד. |
+| Cancel | **✅ ננעל ומומש (2026-08-14, Phase 6).** אותו `Operation=update`+`IsActive=false` כמו Pause — **אין מנגנון CardCom נפרד**, אומת שוב שלא נמצא בשום מקור (SOAP WSDL/REST v11 swagger/PHP samples). | **Hamonym decision, ננעלה:** `status='cancelled'`+`cancelled_at`. סופי מבחינת Hamonym — **לא ניתן ל-Resume דרך הקוד** (guard מפורש). CardCom עצמה לא יודעת את ההבדל מ-Pause ולא הייתה מונעת `IsActive=true` מאוחר יותר — זו מדיניות Hamonym בלבד, לא מגבלת ספק. חזרה עתידית = signup חדש. |
 
 ---
 
@@ -220,6 +220,30 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 
 ---
 
+## 9.2 Phase 6 — תכנון+מימוש (Cancel), ללא ניסוי CardCom חדש
+
+**היקף:** Cancel בלבד — סיום קבוע מבחינת Hamonym.
+
+**Contract — לא נבדק כניסוי חדש, נגזר מ-Phase 5:** אין מנגנון CardCom ייעודי ל-ביטול הוראה (אומת שוב מול כל המקורות שכבר נסקרו — SOAP WSDL, REST v11 swagger, PHP samples רשמיים; ה-endpoint היחיד שנשמע קרוב, `ChangeStatusForHistoryRecurringToIrrevocable`, פועל על רשומת History בודדת, לא על ה-Order). Cancel משתמש **באותה קריאה בדיוק** כמו Pause — `Operation=update`+`IsActive=false` — שכבר Verified אמפירית ב-Phase 5. **חשוב:** מבחינה טכנית CardCom לא הייתה מונעת `IsActive=true` על הוראה "מבוטלת" מאוחר יותר — אין באמת נעילה בצד הספק. הסופיות היא **מדיניות מוצר של Hamonym בלבד**, לא מגבלה טכנית.
+
+**Hamonym decision (ננעלה 2026-08-14):**
+- `Pause` = זמני, ניתן Resume.
+- `Cancel` = סופי מבחינת Hamonym. `status='cancelled'`+`cancelled_at`. **לא ניתן ל-Resume דרך הקוד** — `resumeRecurring` זורק guard מפורש על `status==='cancelled'`. חזרה עתידית של תורם = signup חדש (donation+recurring_instruction חדשים), לא החייאת הישן — היסטוריה נקייה, אין עמימות לגבי איזו "הסכמה" בתוקף.
+
+**✅ ממומש ואומת (2026-08-14), נגד `RecurringId=44197` האמיתי (Test):**
+- `migrations/047_recurring_cancelled_at.sql` — `recurring_instructions.cancelled_at` (TIMESTAMPTZ, nullable). רץ בפועל.
+- `recurring.service.js::cancelRecurring` — אותה תבנית כמו `pauseRecurring`/`resumeRecurring`: guard על `cardcom_recurring_id` קיים, no-op אם כבר `cancelled`, `ResponseCode!=='0'`→ throw בלי לכתוב state מקומי, הצלחה→`status='cancelled'`+`cancelled_at=NOW()`. **אין** finalize/payment/receipt/aggregate — לא נוגע בכלל בתשלומים.
+- `resumeRecurring` עודכן עם guard חדש: `status==='cancelled'` → throw מיידי, **לפני** כל קריאה ל-CardCom (בדיקה מקומית טהורה).
+
+**נבדק אמפירית נגד CardCom Test בפועל:**
+- Cancel (`RecurringId=44197`) הצליח (`ResponseCode=0`), `status→'cancelled'`, `cancelled_at` נשמר.
+- Cancel שוב: `{alreadyCancelled:true}`, ללא קריאה נוספת ל-CardCom.
+- Resume על הוראה `cancelled`: נזרקה שגיאה **מקומית** מיד, `status` נשאר `cancelled` ללא שינוי.
+- כשל Update (`RecurringId` בדוי, הוראה נפרדת): CardCom החזירה "Recurring Id not found", הקוד זרק, `status` נשאר `active` ללא שינוי.
+- **`RecurringId=44197` שוחזר בסוף הבדיקה** (קריאה ישירה, לא דרך ה-guard של הקוד — ניקוי מכוון של fixture הבדיקה המשותף) בחזרה ל-`IsActive=true`, `NextDateToBill=14/09/2026` — אותו מצב ידוע-טוב כמו לפני הבדיקה.
+
+---
+
 ## 10. Personal Area של התורם — טרם נחקר, שרטוט בלבד
 
 **Hamonym decision מלאה, לא נחקר מול CardCom בכלל בשיחה הזו.** הצעת MVP: מציג את ה-snapshot המקומי (סעיף 2) — סכום, תדירות, `next_date_to_bill`, סטטוס. פעולות (Pause/Skip/Cancel) קוראות ל-backend של Hamonym, שקורא ל-CardCom Update — התורם לעולם לא קורא ל-CardCom ישירות. זה לא הרחבה מבוססת-ראיה כמו שאר המסמך — סעיף פתוח לתכנון UX נפרד.
@@ -256,7 +280,8 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 2. **Master webhook endpoint + handler** — כמעט לא חסום (רק אימות שם שדה Secret).
 3. **Detail webhook handler — מסלול הצלחה** — אותו gate, ומחבר ל-`finalizePaidDonation` (עם התיקון מסעיף 7 — INSERT ישיר, לא UPDATE).
 4. **Detail webhook handler — מסלול כשל — ✅ מומש ונבדק (2026-08-14).** ר' סעיף 8.2.
-5. **🎉 Pause/Resume (Phase 5) — ממומש ואומת (2026-08-14).** ר' §9.1. Cancel + Personal Area UI נשארים מחוץ להיקף.
-6. **Reconciliation Job** — nice-to-have, אחרי שהזרימה הליבתית יציבה.
+5. **🎉 Pause/Resume (Phase 5) — ממומש ואומת (2026-08-14).** ר' §9.1.
+6. **🎉 Cancel (Phase 6) — ממומש ואומת (2026-08-14).** ר' §9.2. Personal Area UI נשאר מחוץ להיקף — סעיף 10 למטה.
+7. **Reconciliation Job** — nice-to-have, אחרי שהזרימה הליבתית יציבה.
 
 **לא לממש עדיין — זהו תכנון, לא הוראה לפתוח PR.**

@@ -53,9 +53,9 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
 * **הקמה (`pending_confirmation`):** מקביל ל-`donations` שנוצרת ב-`pending` לפני שה-Webhook מגיע — אותו עיקרון בדיוק, לא המצאה חדשה. ההוראה נחשבת אמיתית רק אחרי אירוע `MasterRecurring` שמאשר אותה — לא לפני, ולא כתוצאה מ-Redirect. זה הלקח הישיר מ-Phase 2 של LowProfile: אם קיים Redirect ל-UX בתהליך ההרשמה להוראת קבע (ככל הנראה כן, כי CardCom מבוססת Redirect), הוא **UX בלבד מהיום הראשון** — לא כותב סטטוס, לא חוזר על הטעות שתוקנה ב-P1.
 * **חיוב חודשי:** CardCom מבצעת את הגבייה בעצמה, לפי הלוח הפנימי שלה — Hamonym לא "מפעילה" חיוב חודשי, לא Polling, לא Cron שמנסה לחייב. זה ישיר מעיקרון "External Systems Own Their Domain" ב-Compass: CardCom אחראית על הוראות קבע, לא Hamonym. כל מה שמגיע ל-Hamonym עבור חיוב הוא **דיווח בדיעבד** דרך `DetailRecurring`.
 * **כשל:** מדווח כאירוע `DetailRecurring` עם סטטוס שאינו `SUCCESSFUL` — ר' Recurring Charge למטה. זה לא משנה את סטטוס ה-`Recurring Instruction` עצמה (ה-Master) — כשל בחיוב בודד ≠ ההוראה הפכה Inactive. שני ה-lifecycle-ים נפרדים, כמו שה-Compass דורש ("must not be merged with another entity").
-* **ביטול:** יכול לקרות משני כיוונים, ושניהם **טעוני אימות**:
-  * **CardCom-initiated / דיווח:** הופעת `MasterRecurring` עם Inactive. הסיבה (תורם ביטל מול CardCom? כרטיס פג תוקף? מדיניות CardCom?) לא מתועדת במלואה — פתוח כבר ב-Compass (Open Questions).
-  * **Hamonym-initiated:** האם קיים API call ל-CardCom לביטול יזום (לדוגמה מתוך מסך ניהול תורם)? זו בדיוק השאלה שה-Compass כבר משאיר פתוחה תחת "Cancel Recurring". לא להניח שהיא קיימת עד שנמצא ב-CardCom API v11 docs ומאומת.
+* **ביטול (Cancel) — ✅ ננעל ומומש (2026-08-14, Phase 6), לא עוד Open Question:**
+  * **Hamonym-initiated — סגור:** אין API call ייעודי ב-CardCom לביטול. Cancel משתמש **באותה קריאה בדיוק** כמו Pause (`Operation=update`+`IsActive=false`), Verified כבר ב-Phase 5. הסופיות (`status='cancelled'`, `cancelled_at`, אין Resume דרך הקוד) היא **מדיניות מוצר של Hamonym בלבד** — CardCom לא מבדילה בין Pause ל-Cancel, ותיאורטית לא הייתה מונעת `IsActive=true` מאוחר יותר. חזרה עתידית של תורם = signup חדש.
+  * **CardCom-initiated / דיווח:** נשאר Open Question — הופעת `MasterRecurring` עם Inactive ביוזמת CardCom (תורם ביטל ישירות מולם? כרטיס פג תוקף? מדיניות CardCom?) עדיין לא מתועדת במלואה — לא קשור להחלטת ה-Cancel של Hamonym.
 * **השהיה (Pause/Resume) — ✅ Verified מקצה לקצה (2026-08-14, ניסוי אמיתי על `RecurringId=44197`), לא עוד Open Question:**
   * `Operation=update`+`IsActive=false` משבית את ההוראה בפועל — ה-scheduled job **לא** מחייב אותה גם כש-`NextDateToBill` הגיע ליומו.
   * **`NextDateToBill` קופא** בזמן `IsActive=false` — לא מתקדם מעצמו. `NumOfPaymentsAlreadyCharged` גם הוא לא זז.
@@ -190,7 +190,7 @@ Secret=<configured recurring webhook secret>
 יורש ישירות מ-Compass (Open Questions › CardCom), עדיין לא נפתר:
 
 * ~~Pause / Resume~~ — ✅ נסגר, ר' Lifecycle למעלה.
-* Cancel Recurring — יזום ע"י Hamonym: קיים API call? מה ה-response contract?
+* ~~Cancel Recurring (יזום ע"י Hamonym)~~ — ✅ נסגר, ר' Lifecycle למעלה.
 * Token Replacement — כרטיס שפג תוקף/הוחלף, איך זה מתעדכן בהוראה קיימת.
 * Chargeback / Refund Flow עבור חיוב שכבר בוצע דרך הוראת קבע.
 
