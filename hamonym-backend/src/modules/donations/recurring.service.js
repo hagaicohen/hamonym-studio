@@ -194,6 +194,12 @@ exports.resumeRecurring = async (instructionId) => {
   if (!instruction) throw new Error('Recurring instruction not found');
   if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
   if (instruction.status === 'active') return { alreadyActive: true };
+  // Cancelled is a permanent Hamonym decision (Phase 6) — a donor who wants
+  // to give again goes through a brand-new signup, not a resurrected
+  // instruction. Cardcom itself would technically allow IsActive=true again
+  // (same mechanism as Resume), so this guard is a Hamonym-side rule, not a
+  // Cardcom limitation.
+  if (instruction.status === 'cancelled') throw new Error('Cannot resume a cancelled recurring instruction — start a new signup instead');
 
   // Same lazy-backfill fallback as pauseRecurring, for a row that somehow
   // reached Resume without ever going through Pause under this code.
@@ -225,4 +231,43 @@ exports.resumeRecurring = async (instructionId) => {
   );
 
   return { resumed: true, nextDateToBill };
+};
+
+// Phase 6. Cancel is a Hamonym product decision, not a distinct Cardcom
+// mechanism — no dedicated cancel/delete op was ever found (SOAP WSDL, REST
+// v11 swagger, official Name-to-Value PHP samples). It reuses the exact
+// same Operation=update+IsActive=false already Verified in Phase 5 (Pause);
+// the only new thing is what Hamonym does with 'cancelled' afterwards
+// (never resumable — see the guard in resumeRecurring above). Same
+// synchronous-response trust pattern as Pause/Resume: local state is never
+// written on a Cardcom failure.
+exports.cancelRecurring = async (instructionId) => {
+  const instrRes = await db.query(
+    `SELECT id, entity_id, cardcom_recurring_id, status FROM recurring_instructions WHERE id = $1`,
+    [instructionId]
+  );
+  const instruction = instrRes.rows[0];
+  if (!instruction) throw new Error('Recurring instruction not found');
+  if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
+  if (instruction.status === 'cancelled') return { alreadyCancelled: true };
+
+  const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
+  const result = await recurringClient.updateRecurring({
+    terminalNumber: credentials.terminalNumber,
+    userName: credentials.apiName,
+    apiPassword: credentials.apiPassword,
+    recurringId: instruction.cardcom_recurring_id,
+    isActive: false,
+  });
+
+  if (result.ResponseCode !== '0') {
+    throw new Error(result.Description || `Cardcom update failed (ResponseCode ${result.ResponseCode})`);
+  }
+
+  await db.query(
+    `UPDATE recurring_instructions SET status='cancelled', cancelled_at=NOW(), updated_at=NOW() WHERE id=$1`,
+    [instructionId]
+  );
+
+  return { cancelled: true };
 };
