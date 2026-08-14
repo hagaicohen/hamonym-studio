@@ -4,6 +4,9 @@ const paymentService =
 const paymentHandler =
   require('./handlers/payment.handler');
 
+const webhookDispatcher =
+  require('./webhook.dispatcher');
+
 const cardcomValidator =
   require('./cardcom/cardcom.validator');
 
@@ -71,6 +74,52 @@ exports.handleWebhook =
       await auditService.recordProcessed(eventId, { error: err.message });
 
       res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  };
+
+// MasterRecurring/DetailRecurring — a separate Cardcom webhook family from
+// LowProfile's (confirmed 2026-08-10, see docs/CARDCOM_INTEGRATION.md's
+// Architecture Change), with its own transport quirks confirmed against a
+// real captured payload (2026-08-14): application/x-www-form-urlencoded, not
+// JSON (see payment.routes.js's body-parser wired only on this route), and
+// Secret delivered as a body field, not ?secret= in the URL. RecordType IS
+// reliable here (unlike on the LowProfile route), so this goes through
+// webhook.dispatcher.js instead of calling a handler directly — see
+// docs/CARDCOM_RECURRING_ARCHITECTURE.md's Webhooks section.
+//
+// Phase 2 scope: only MasterRecurring is implemented (master-recurring.handler.js).
+// DetailRecurring/Document still fall through to the dispatcher's no-op stubs.
+exports.handleRecurringWebhook =
+  async (req, res) => {
+
+    let eventId = null;
+
+    try {
+
+      if (!cardcomValidator.validateRecurringWebhookSecret(req.body)) {
+        return res.status(401).json({ error: 'Invalid secret' });
+      }
+
+      const claim = await idempotencyService.claim({ provider: 'cardcom', payload: req.body });
+      eventId = claim.eventId;
+
+      if (!claim.isNew) {
+        return res.json({ success: true, duplicate: true });
+      }
+
+      await webhookDispatcher(req.body);
+
+      await auditService.recordProcessed(eventId);
+
+      res.json({ success: true });
+
+    } catch (err) {
+
+      console.error(err);
+
+      await auditService.recordProcessed(eventId, { error: err.message });
+
+      res.status(500).json({ error: 'Recurring webhook processing failed' });
     }
   };
 
