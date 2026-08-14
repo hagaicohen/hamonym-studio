@@ -72,7 +72,41 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
 * **`IsActive` שרד כשל — Verified, לא רק הנחה.** נשאר `true` אחרי שני ניסיונות `ONHOLD` רצופים. מאשר את ההנחה שכבר הייתה במסמך ("כשל בחיוב בודד ≠ Inactive") — עכשיו עם ראיה.
 * **`NextDateToBill` מתקדם לחודש הבא גם אחרי כשל.** CardCom לא "מנסה שוב באותו מחזור" באופן גלוי — לפחות לא דרך שינוי גלוי ב-`NextDateToBill`. משמעות: אם קיים retry אוטומטי, הוא לא בהכרח קורה *לפני* שהמחזור הבא כבר תוזמן — מנגנון ה-retry/dunning בפועל **עדיין Unknown**.
 * **שתי רשומות `ONHOLD` בהפרש 8 דקות, כל אחת `BillingAttempts=1` בנפרד (לא `BillingAttempts=2` על אותה רשומה).** זה תומך בפרשנות ש-CardCom החזירה שני ניסיונות/מחזורים **נפרדים** (סביר: ה-job הופעל ידנית פעמיים) — **לא** הוכחה למנגנון retry-אוטומטי-פנימי של CardCom. לא להניח retry עד שיש הוכחה ברורה יותר.
-* **`DetailRecurring` webhook של הכשל הזה — עדיין לא נלכד** (בעיית webhook.site תפעולית, לא בעיית CardCom). **צורת ה-failure webhook נשארת Documented-only/משוער** — כל מה שלמעלה מגיע מ-`GetRecurringPaymentHistory` (REST v11), לא מה-Webhook עצמו. כבר הוכח פעמיים בסבב הזה (Master ReturnValue, Detail InternalDealNumber↔TranzactionId) שאסור להניח זהות מלאה בין Webhook ל-History — **הפער הזה נשאר פתוח במפורש, לא נסגר על סמך ה-History בלבד.**
+* **`DetailRecurring` webhook של הכשל הזה — נלכד בפועל (2026-08-14, ניסוי שני).** ה-Gate שהיה חסום נסגר. עד עכשיו כל הממצאים למעלה הגיעו מ-`GetRecurringPaymentHistory` בלבד — עכשיו יש גם payload גולמי אמיתי מה-Webhook עצמו, נגד אותה הוראה (`RecurringId=44197`).
+
+**עדכון 2026-08-14 (המשך) — `DetailRecurring` failure webhook נלכד, Verified מהמשטח עצמו לא רק מ-History:**
+
+Transport זהה למה שכבר תועד (form-urlencoded). Form values שנלכדו (מסומן ע"י המדווח כ"רלוונטיים" — לא בהכרח הרשימה המלאה, לכן לא להסיק היעדרות שדה שלא מופיע כאן):
+
+```text
+RecordType=DetailRecurring
+Status=ONHOLD
+ResposeCode=60000004
+ProcessID=-50
+RecurringId=44197
+RowID=387791
+InternalDealNumber=258752910
+PaymentNum=5
+Sum=6000.00
+BillingAttempts=1
+ActualBillingType=CreditCard
+AccountId=21479
+CreateDate / LastBillDate / OriginalNextDateToBill — פורמט DD/MM/YYYY hh/mm
+Secret=<configured recurring webhook secret>
++ שדות שלא נצפו קודם בכלל: DepartmentId, FinalDebitCoinId, InvoiceDescription,
+  IsIncludesVAT, IsInvoiceCreate, IsReNewOrder, Quantity
+```
+
+**מה זה סוגר, Verified:**
+* Contract בסיסי של `DetailRecurring` (RecordType/RecurringId/RowID/InternalDealNumber/PaymentNum/Sum) **זהה במבנה גם בכשל וגם בהצלחה** — אין שדות חובה שנעלמים.
+* **`InternalDealNumber` קיים גם בכשל**, לא רק בהצלחה — סוגר את ה"דורש אימות" שהיה פתוח סביב מפתח ה-idempotency (ר' `CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md` סעיף 6).
+* **שם שדה ה-Secret מאומת סופית: `Secret` (PascalCase)** — עד עכשיו היה ידוע רק "קיים בגוף ה-Form", לא השם המדויק.
+* `ONHOLD`+`ResposeCode=60000004`+`ProcessID=-50`+`BillingAttempts=1` — תואם ב-100% למה שכבר נראה ב-`GetRecurringPaymentHistory` באותו ניסוי. **זו הפעם הראשונה שיש אישוש ישיר Webhook↔History בכשל** (בהצלחה זה כבר הוכח קודם דרך `InternalDealNumber`↔`TranzactionId`).
+
+**מה נשאר לא הוכח, במכוון לא להסיק מעבר לזה:**
+* רק `ONHOLD` נצפה. `LOSTDEBT`/`DEBTAUTOBILLING`/`PAYBYOTHERE`/`PENDINGFORPROCESSING`/`OTHER` — עדיין לא payload אמיתי.
+* `ProcessID=-50` נצפה שוב, `BillingAttempts=1` — אין עדיין הוכחה לערכים אחרים או להתנהגות retry.
+* לא הוכח אם הרשימה שנלכדה היא כל השדות שה-Webhook שולח בכשל, או תת-קבוצה.
 
 ---
 
@@ -92,13 +126,13 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
 | ערוץ | Endpoint (כיוון, לא סגור) | RecordType אמין? | סטטוס |
 |---|---|---|---|
 | LowProfile (חד-פעמי) | `POST /api/payment/webhook` | **לא** — הוכח נעדר מ-payload אמיתי | ✅ קיים, מוכח בפרודקשן |
-| Recurring (הוראות קבע) | endpoint נפרד, למשל `POST /api/payment/recurring-webhook` (כבר מוזכר ככיוון עתידי ב-`CARDCOM_INTEGRATION.md`) | **כן — Verified (2026-08-14), לא רק Documented-only.** payload אמיתי התקבל גם ל-`MasterRecurring` וגם ל-`DetailRecurring`, מול הוראת קבע test אמיתית (`RecurringId=44197`). | 🩹 שלד בלבד (`master-recurring.handler.js`, `detail-recurring.handler.js`) — עדיין לא קוד, אבל ה-contract שהם יצטרכו לממש כבר לא ניחוש |
+| Recurring (הוראות קבע) | endpoint נפרד, למשל `POST /api/payment/recurring-webhook` (כבר מוזכר ככיוון עתידי ב-`CARDCOM_INTEGRATION.md`) | **כן — Verified (2026-08-14), לא רק Documented-only.** payload אמיתי התקבל ל-`MasterRecurring`, ל-`DetailRecurring` הצלחה (`SUCCESSFUL`), **וגם ל-`DetailRecurring` כשל (`ONHOLD`)** — מול הוראת קבע test אמיתית (`RecurringId=44197`). | 🩹 שלד בלבד (`master-recurring.handler.js`, `detail-recurring.handler.js`) — עדיין לא קוד, אבל ה-contract שהם יצטרכו לממש כבר לא ניחוש, כולל מסלול הכשל |
 | Documents | endpoint נפרד עתידי | לא נבדק | 🩹 שלד בלבד (`document.handler.js`) |
 
 **שני ממצאים חדשים, Verified, קריטיים לכל endpoint עתידי — שונים מהותית מ-LowProfile:**
 
 * **Transport: `application/x-www-form-urlencoded`, לא JSON.** ה-endpoint הקיים ל-LowProfile (`/api/payment/webhook`) מצפה ל-body JSON. Recurring webhook עתידי יצטרך body parsing שונה — לא ניתן להעתיק את ה-route הקיים כמו שהוא.
-* **`Secret` מגיע כשדה בתוך ה-Form Body, לא כ-`?secret=` ב-query string.** זה **שונה מ-LowProfile** (ששם ה-secret נוסע ב-URL, `WebHookUrl` שכולל `?secret=`). `cardcom.validator.js::validateWebhookSecret` הקיים בודק `req.query.secret` — תבנית הזו **לא** ניתנת להעתקה ישירה ל-Recurring; endpoint עתידי יצטרך לבדוק שדה בגוף הבקשה, לא query string. זה היה מתויג באותו קובץ קיים כ-"ASSUMPTION, not yet confirmed" — עכשיו יש תשובה אמפירית, לפחות ל-Recurring.
+* **`Secret` מגיע כשדה בתוך ה-Form Body, בשם המדויק `Secret` (PascalCase) — Verified**, לא כ-`?secret=` ב-query string. זה **שונה מ-LowProfile** (ששם ה-secret נוסע ב-URL, `WebHookUrl` שכולל `?secret=`). `cardcom.validator.js::validateWebhookSecret` הקיים בודק `req.query.secret` — תבנית הזו **לא** ניתנת להעתקה ישירה ל-Recurring; endpoint עתידי יצטרך לבדוק `body.Secret`, לא query string. זה היה מתויג באותו קובץ קיים כ-"ASSUMPTION, not yet confirmed" — עכשיו סגור עם תשובה אמפירית כולל השם המדויק (נלכד ב-`DetailRecurring` failure webhook, 2026-08-14).
 
 **נקודות חשובות:**
 
