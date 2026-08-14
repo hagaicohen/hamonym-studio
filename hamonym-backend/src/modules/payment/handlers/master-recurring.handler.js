@@ -19,19 +19,60 @@ function parseSlashedDate(str) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Cardcom reports exactly one signal for "not active" — IsActive=false —
+// whether the reason is Hamonym pausing it, Hamonym cancelling it, or
+// Cardcom itself exhausting TotalNumOfBills (Verified end-to-end,
+// 2026-08-14 — see docs/CARDCOM_RECURRING_ARCHITECTURE.md's Lifecycle
+// section). Hamonym still needs to tell these apart: paused/cancelled were
+// already decided locally at the moment Hamonym made the Update call
+// (pauseRecurring/cancelRecurring, Phase 5/6) — this webhook is only ever
+// a confirmation of something already known, so it must not overwrite
+// that decision. A transition Hamonym did NOT already know about is
+// either natural completion (deterministic: total_installments is set and
+// the count Cardcom reports has reached what Create asked for) or a
+// Cardcom-initiated deactivation Hamonym still can't explain (expired
+// card, Cardcom policy — see the Architecture doc's still-open
+// "CardCom-initiated" case) — falls back to the pre-existing generic
+// 'inactive' rather than guessing.
+function resolveInactiveStatus(current, payload) {
+  if (['paused', 'cancelled', 'completed'].includes(current.status)) return current.status;
+
+  const totalInstallments = current.total_installments;
+  const alreadyCharged = payload.NumOfPaymentsAlreadyCharged != null
+    ? Number(payload.NumOfPaymentsAlreadyCharged)
+    : null;
+
+  // total_installments is N (includes the LowProfile charge); Create sent
+  // TotalNumOfBills = N-1, which is what NumOfPaymentsAlreadyCharged counts
+  // against — see recurring.service.js::completeSignup.
+  if (totalInstallments != null && alreadyCharged != null && alreadyCharged >= totalInstallments - 1) {
+    return 'completed';
+  }
+
+  return 'inactive';
+}
+
 exports.handle = async (payload) => {
   const recurringId = payload.RecurringId;
   if (!recurringId) return;
 
-  // Reuses the existing 'active'/'creation_failed'/etc string column (no
-  // CHECK constraint — see migration 044) rather than adding a dedicated
-  // column for Cardcom's own IsActive, since Phase 2 must not require a new
-  // migration. Only ever reached for a row that's already 'active' (a
-  // Master webhook can't exist before our own Create succeeded), so this
-  // can't clobber the pending_payment/pending_creation/creation_failed
-  // signup states.
   const isActive = String(payload.IsActive).toLowerCase() === 'true';
   const nextDateToBill = parseSlashedDate(payload.NextDateToBill);
+
+  const current = await db.query(
+    `SELECT status, total_installments FROM recurring_instructions WHERE cardcom_recurring_id = $1`,
+    [recurringId]
+  );
+  const instruction = current.rows[0];
+  if (!instruction) return;
+
+  // Reuses the existing 'active'/'creation_failed'/etc string column (no
+  // CHECK constraint — see migration 044) rather than adding a dedicated
+  // column for Cardcom's own IsActive. Only ever reached for a row that's
+  // already past signup (a Master webhook can't exist before our own
+  // Create succeeded), so this can't clobber the
+  // pending_payment/pending_creation/creation_failed signup states.
+  const status = isActive ? 'active' : resolveInactiveStatus(instruction, payload);
 
   await db.query(
     `UPDATE recurring_instructions
@@ -39,6 +80,6 @@ exports.handle = async (payload) => {
          next_date_to_bill = COALESCE($2, next_date_to_bill),
          updated_at = NOW()
      WHERE cardcom_recurring_id = $3`,
-    [isActive ? 'active' : 'inactive', nextDateToBill, recurringId]
+    [status, nextDateToBill, recurringId]
   );
 };

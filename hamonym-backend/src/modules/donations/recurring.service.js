@@ -71,7 +71,9 @@ exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, don
 
 // Called from payment.handler.js after the first LowProfile payment is
 // confirmed paid. Idempotent — a re-delivered webhook that calls this again
-// finds cardcom_recurring_id already set and no-ops, so it never creates a
+// finds either cardcom_recurring_id already set (normal path) or status
+// already 'completed' (the N=1 short-circuit below, which never gets a
+// cardcom_recurring_id at all) and no-ops either way, so it never creates a
 // duplicate Master. Never throws — a Cardcom failure here must not affect a
 // donation that already succeeded; the failure is recorded on the
 // recurring_instructions row for later recovery instead (see the
@@ -79,9 +81,11 @@ exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, don
 exports.completeSignup = async (donationId) => {
   const donationRes = await db.query(
     `SELECT d.recurring_instruction_id, d.low_profile_id, d.donor_name,
-            ri.status, ri.cardcom_recurring_id, ri.amount, ri.time_interval_id
+            ri.status, ri.cardcom_recurring_id, ri.amount, ri.time_interval_id,
+            c.recurring_billing_mode, c.recurring_installments_count
      FROM donations d
      LEFT JOIN recurring_instructions ri ON ri.id = d.recurring_instruction_id
+     LEFT JOIN campaigns c ON c.id = ri.campaign_id
      WHERE d.id = $1`,
     [donationId]
   );
@@ -89,14 +93,45 @@ exports.completeSignup = async (donationId) => {
   const row = donationRes.rows[0];
   if (!row || !row.recurring_instruction_id) return; // ordinary one-time donation
 
-  if (row.cardcom_recurring_id) return; // already completed — idempotency guard
+  if (row.cardcom_recurring_id || row.status === 'completed') return; // idempotency guard — covers both the normal path and the N=1 short-circuit below
 
   const instructionId = row.recurring_instruction_id;
-  await db.query(`UPDATE recurring_instructions SET status='pending_creation', updated_at=NOW() WHERE id=$1`, [instructionId]);
+
+  // Snapshot the campaign's billing plan at signup time — independent of
+  // any later change to the campaign's own settings, same principle as
+  // billing_anchor_day (Phase 5). null = until cancelled (existing
+  // behavior, and also what a still-'pending_creation' idempotent retry
+  // would recompute identically). A number = total payments promised,
+  // including the LowProfile one already charged. See
+  // docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §9.3.
+  const totalInstallments = row.recurring_billing_mode === 'fixed_installments'
+    ? row.recurring_installments_count
+    : null;
+
+  // N=1: the single promised payment already happened via the LowProfile
+  // itself — Verified (2026-08-14): Cardcom never counts that charge
+  // against TotalNumOfBills, so a Recurring order here would be created
+  // only to sit there and never bill. Skip Create entirely.
+  if (totalInstallments === 1) {
+    await db.query(
+      `UPDATE recurring_instructions SET status='completed', total_installments=$1, updated_at=NOW() WHERE id=$2`,
+      [totalInstallments, instructionId]
+    );
+    return;
+  }
+
+  await db.query(
+    `UPDATE recurring_instructions SET status='pending_creation', total_installments=$1, updated_at=NOW() WHERE id=$2`,
+    [totalInstallments, instructionId]
+  );
 
   try {
     const credentials = await require('./donations.service').resolveCardcomCredentials(donationId);
     const nextDateToBill = formatDateSlashed(nextMonthDate());
+    // Verified end-to-end (2026-08-14, RecurringId=44215): the LowProfile's
+    // own charge isn't counted against TotalNumOfBills, so N total
+    // payments including it means N-1 further Cardcom-managed cycles.
+    const totalNumOfBills = totalInstallments == null ? 99999 : totalInstallments - 1;
 
     const result = await recurringClient.createRecurring({
       terminalNumber: credentials.terminalNumber,
@@ -109,7 +144,7 @@ exports.completeSignup = async (donationId) => {
       invoiceDescription: 'תרומה חודשית',
       internalDescription: `Hamonym recurring — ${instructionId}`,
       nextDateToBill,
-      totalNumOfBills: 99999, // ongoing until cancelled — product decision, not a Cardcom convention we found documented as a magic sentinel
+      totalNumOfBills,
       timeIntervalId: row.time_interval_id,
       returnValue: instructionId,
     });
