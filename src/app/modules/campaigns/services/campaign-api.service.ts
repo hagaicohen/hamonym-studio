@@ -90,6 +90,8 @@ export class CampaignApiService {
       allow_monthly_donation:   draft.allowMonthlyDonation,
       suggested_amounts:        draft.suggestedAmounts,
       monthly_amounts:          draft.monthlyAmounts,
+      recurring_billing_mode:        draft.recurringBillingMode        || 'until_cancelled',
+      recurring_installments_count:  draft.recurringInstallmentsCount  || 12,
       // Wire keys stay 'rewards'/'rewards_enabled' — already persisted under
       // those names for every existing campaign; only the frontend-facing
       // name changed (CampaignReward → Offering).
@@ -163,6 +165,8 @@ export class CampaignApiService {
       allowMonthlyDonation:    data.allow_monthly_donation  ?? true,
       suggestedAmounts:        data.suggested_amounts       ?? [],
       monthlyAmounts:          data.monthly_amounts         ?? [],
+      recurringBillingMode:        data.recurring_billing_mode       ?? 'until_cancelled',
+      recurringInstallmentsCount:  data.recurring_installments_count ?? 12,
       donorFields: {
         showAddress:    data.donor_fields?.show_address    ?? true,
         showPostalCode: data.donor_fields?.show_postal_code ?? false,

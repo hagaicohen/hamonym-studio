@@ -74,6 +74,28 @@
         <button class="amount-add-btn" *ngIf="draft.monthlyAmounts.length < 6"
           (click)="addMonthlyAmount()">+ הוסף</button>
       </div>
+
+      <p class="amounts-sub-label">מספר תשלומים</p>
+      <div class="billing-mode-grid">
+        <label class="billing-mode-option" [class.billing-mode-option--on]="draft.recurringBillingMode !== 'fixed_installments'">
+          <input type="radio" name="recurringBillingMode"
+            [checked]="draft.recurringBillingMode !== 'fixed_installments'"
+            (change)="patchDraft({ recurringBillingMode: 'until_cancelled' })">
+          <span>עד לביטול</span>
+        </label>
+        <label class="billing-mode-option" [class.billing-mode-option--on]="draft.recurringBillingMode === 'fixed_installments'">
+          <input type="radio" name="recurringBillingMode"
+            [checked]="draft.recurringBillingMode === 'fixed_installments'"
+            (change)="patchDraft({ recurringBillingMode: 'fixed_installments' })">
+          <span>מספר תשלומים קבוע</span>
+        </label>
+      </div>
+      <div class="installments-count-wrap" *ngIf="draft.recurringBillingMode === 'fixed_installments'">
+        <label class="installments-count-label">מספר תשלומים כולל (כולל התשלום הראשון)</label>
+        <input type="number" class="installments-count-input" min="1"
+          [value]="draft.recurringInstallmentsCount"
+          (change)="updateInstallmentsCount(+$any($event.target).value)">
+      </div>
     </div>
   </div>
 

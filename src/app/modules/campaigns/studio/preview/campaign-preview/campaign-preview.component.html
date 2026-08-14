@@ -1009,10 +1009,13 @@
     [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'">
     <h2>{{ draft.registrationOptions.length > 0 ? 'תרמו סכום חופשי לקמפיין' : 'בחרו סכום לתמיכה' }}</h2>
 
-    <!-- Monthly opt-in: only visible when the campaign manager configured
-         at least one monthlyAmounts preset. No monthlyAmounts = this whole
-         block is absent and the page behaves exactly as before. -->
-    <div class="hm-frequency-toggle" *ngIf="draft.monthlyAmounts.length > 0">
+    <!-- Monthly opt-in: only visible when the campaign manager both enabled
+         it (allowMonthlyDonation) AND configured at least one monthlyAmounts
+         preset. Neither on its own is enough — allowMonthlyDonation with no
+         amounts has nothing to show, and amounts left over from a disabled
+         toggle shouldn't resurrect the option. Off = this whole block is
+         absent and the page behaves exactly as before. -->
+    <div class="hm-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
       <button type="button" class="hm-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
         (click)="selectFrequency('one-time')">חד-פעמית</button>
       <button type="button" class="hm-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
@@ -1036,8 +1039,11 @@
         [value]="amountDisplay"
         (input)="onCustomAmountInput($event)">
     </div>
-    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly'">
+    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode !== 'fixed_installments'">
       🔁 חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
+    </p>
+    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode === 'fixed_installments'">
+      🔁 חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
     </p>
 
     <!-- Total breakdown -->
