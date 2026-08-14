@@ -19,7 +19,7 @@
 
 ## 0. תקציר המצב לפני שממשיכים
 
-מחקר ה-Contract כלל: Create (LowProfile→Recurring), Master webhook אמיתי, Detail webhook אמיתי (הצלחה **וכשל**, `ONHOLD` — נלכד 2026-08-14). **לא כלול עדיין:** Detail webhook על סטטוסים אחרים מ-`ONHOLD` (`LOSTDEBT`/`DEBTAUTOBILLING`/`PAYBYOTHERE`/`PENDINGFORPROCESSING`/`OTHER`), Pause/Resume בפועל (רק PHP רשמי), Cancel, סיום טבעי, Idempotency של Create עצמו. הרשימה המלאה עם raw findings נמצאת בזיכרון הפרויקט (`project_cardcom.md`) — המסמך הזה מתמצת רק את מה שרלוונטי להחלטות מימוש.
+מחקר ה-Contract כלל: Create (LowProfile→Recurring), Master webhook אמיתי, Detail webhook אמיתי (הצלחה **וכשל**, `ONHOLD` — נלכד 2026-08-14), Pause/Resume/Cancel (Verified E2E), **וסיום טבעי (`TotalNumOfBills`, Verified E2E — 2026-08-14)**. **לא כלול עדיין:** Detail webhook על סטטוסים אחרים מ-`ONHOLD` (`LOSTDEBT`/`DEBTAUTOBILLING`/`PAYBYOTHERE`/`PENDINGFORPROCESSING`/`OTHER`), Idempotency של Create עצמו. הרשימה המלאה עם raw findings נמצאת בזיכרון הפרויקט (`project_cardcom.md`) — המסמך הזה מתמצת רק את מה שרלוונטי להחלטות מימוש.
 
 ---
 
@@ -244,6 +244,37 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 
 ---
 
+## 9.3 מספר תשלומים מוגדר (`TotalNumOfBills`) — Contract Verified, תכנון לפני מימוש
+
+**היקף:** תמיכה בשני מצבי חיוב חודשי — "עד לביטול" (הקיים היום, `TotalNumOfBills=99999`) ו-"מספר תשלומים קבוע" (חדש).
+
+### Contract — Verified E2E (2026-08-14, `RecurringId=44215`, `TotalNumOfBills=2`)
+
+* **הוראה נעצרת אוטומטית ב-CardCom כשמגיעים למכסה** — `IsActive→false`, בלי פעולה מצד Hamonym. `NextDateToBill` קופא (לא מתקדם).
+* **`MasterRecurring` webhook נשלח בזמן אמת** על המעבר ל-Inactive — שנייה אחת אחרי ה-`DetailRecurring` האחרון. Hamonym **לא** תלויה ב-Reconciliation כדי לגלות שהוראה הסתיימה — זה מגיע ב-Webhook, אותו handler קיים (`master-recurring.handler.js`) בלי צורך בלוגיקה נפרדת ל"סיום" מול "Pause/Cancel" (שניהם אותו `IsActive=false`, ר' §9.1/§9.2 — ההבחנה, אם רוצים כזו, היא מקומית: `NumOfPaymentsAlreadyCharged >= total_installments` בזמן שמעבדים את ה-Master).
+* **`DetailRecurring` האחרון מגיע כרגיל, `Status=SUCCESSFUL`** — CardCom עצמה מתארת אותו כ-"תשלום 2 מתוך 2" (טקסט חופשי, לא שדה מובנה). שום שינוי נדרש ב-`detail-recurring.handler.js` — מסלול ה-SUCCESSFUL הקיים כבר מטפל בזה נכון.
+* **✅ הנוסחה ל-Create — Verified, לא עוד Strong Inference:** ה-LowProfile הראשון **אינו** נספר ב-`TotalNumOfBills`/`NumOfPaymentsAlreadyCharged` (Verified: המונה=0 מיד אחרי LowProfile; Verified: 2 חיובי Recurring הביאו את המונה בדיוק ל-2). **אם המוצר מבטיח N תשלומים בסה"כ כולל הראשון → `TotalNumOfBills` שנשלח ב-Create = N-1.**
+* **`IsReNewOrder`** — נצפה `False` ב-Master בזמן הסיום, סמנטיקה עדיין לא מוסברת — לא לבנות עליו התנהגות.
+* **⚠️ פתוח, לא חוסם:** `FlexItem.Price` השתנה (5→100) בין שתי קריאות `GetRecurringPayment` באמצע הניסוי, ללא הסבר. לא משפיע על מסקנת ה-N-1. טעון בירור נפרד לפני שנסמכים על ערכי `GetRecurringPayment` לצרכים אחרים.
+
+### מודל Hamonym — הצעה, טרם ננעלה
+
+**ברמת קמפיין (בילדר), Hamonym decision:** שדה מדיניות חדש — `recurringBillingMode: 'until_cancelled' | 'fixed_installments'` (ברירת מחדל `until_cancelled`, זהה ל-100% להיום — אין regression). כשנבחר `fixed_installments`: שדה `installmentsCount` (למשל 12).
+
+**ברמת `recurring_instructions` — קריטי:** Snapshot בזמן ה-signup (`completeSignup`), לא הפניה חיה לקמפיין — עמודה חדשה, למשל `total_installments` (nullable — `null`=עד לביטול). **אותו עיקרון בדיוק כמו `billing_anchor_day` (Phase 5):** אם המנהל ישנה את מדיניות הקמפיין אחר כך, הוראות קיימות לא מושפעות.
+
+**מה לשלוח ב-Recurring Create:** `total_installments IS NULL` → `TotalNumOfBills=99999` (ללא שינוי מהיום). אחרת → `TotalNumOfBills = total_installments - 1` (הנוסחה שאומתה למעלה).
+
+**זיהוי "סיום טבעי" ב-`master-recurring.handler.js` (כיוון, לא קוד):** כשמתקבל Master עם `IsActive=false`, אם `recurring_instructions.total_installments IS NOT NULL` וה-`NumOfPaymentsAlreadyCharged` שהתקבל `>= total_installments - 1` (או פשוט: לסמוך על `IsActive=false` + `total_installments` לא-null) → `status='completed'`, לא `'inactive'` גנרי — נותן ל-Hamonym להבדיל "נגמר בהצלחה" מ-"הושהה/בוטל" גם בלי המידע הזה מ-CardCom (ש-לא מבדילה, Verified).
+
+**תצוגה לתורם לפני תשלום (Hamonym decision, UX):**
+* `until_cancelled`: "100₪ לחודש עד לביטול" (כבר קיים מה-Phase שקדם ל-TotalNumOfBills).
+* `fixed_installments`: "100₪ × 12 תשלומים" — אופציונלי: גם "סה״כ 1,200₪" למטה.
+
+**תצוגה באזור האישי (לתכנון Personal Area, לא עכשיו):** "בוצעו X מתוך Y תשלומים" — **לא** מ-`NumOfPaymentsAlreadyCharged` (סופר ניסיונות/כשלים, Verified). המקור הנכון: `SELECT count(*) FROM donations WHERE recurring_instruction_id=X AND status='paid'`.
+
+---
+
 ## 10. Personal Area של התורם — טרם נחקר, שרטוט בלבד
 
 **Hamonym decision מלאה, לא נחקר מול CardCom בכלל בשיחה הזו.** הצעת MVP: מציג את ה-snapshot המקומי (סעיף 2) — סכום, תדירות, `next_date_to_bill`, סטטוס. פעולות (Pause/Skip/Cancel) קוראות ל-backend של Hamonym, שקורא ל-CardCom Update — התורם לעולם לא קורא ל-CardCom ישירות. זה לא הרחבה מבוססת-ראיה כמו שאר המסמך — סעיף פתוח לתכנון UX נפרד.
@@ -268,7 +299,7 @@ Detail Webhook לכל מחזור → donation חדשה + finalizePaidDonation (�
 | Detail webhook handler — כשל | **אין gate מהותי — Verified ל-`ONHOLD` (2026-08-14), payload גולמי אמיתי מה-Webhook עצמו.** שאר הסטטוסים (`LOSTDEBT`/`DEBTAUTOBILLING`/`PAYBYOTHERE`/`PENDINGFORPROCESSING`/`OTHER`) עדיין fallback לא-מאומת — לא חוסם v1 כי ההחלטה (section 8.2) היא branch אחיד "לא-`SUCCESSFUL`", לא מיפוי ייחודי לכל סטטוס. |
 | Pause/Resume | **אין gate — Verified (2026-08-14).** |
 | Cancel | אין gate CardCom — Hamonym decision בלבד (סעיף 9). |
-| סיום טבעי (`TotalNumOfBills`) | לא דחוף — סביר של-Hamonym ישתמש ב-`TotalNumOfBills` גדול (כמו בניסוי, `99999`) לתרומות מתמשכות בפועל, לא מספר סופי. לדחות בלי דאגה. |
+| סיום טבעי (`TotalNumOfBills`) | **✅ Verified E2E (2026-08-14)** — ר' §9.3. `IsActive→false` אוטומטי + `MasterRecurring` בזמן אמת. |
 | Create idempotency/retry | **לא לחכות לתשובת CardCom** — להגן בצד Hamonym (בדיקת existing Recurring Instruction לפני יצירה חדשה) בלי קשר למה ש-CardCom עושה. |
 | `ReturnValue` correlation | **מיותר במודל הזה** — `RecurringId` (Verified, סינכרוני מה-Create response) מספיק לקורלציה. לא נדרש עוד מחקר על `ReturnValue` כדי להתקדם. |
 

@@ -32,7 +32,7 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
 
 ### Recurring Instruction (Master) — "הוראת הקבע עצמה"
 
-**Provisional lifecycle — עדיין לא סגור, במכוון.** שלושת המצבים למטה (`pending_confirmation`/`active`/`inactive`) הם המודל הפנימי ההגיוני ביותר כרגע. **עדכון 2026-08-14:** התקבל Master payload אמיתי (מוקפא ע"י `Operation=Update` על `RecurringId` קיים, לא ע"י יצירה חדשה) — אישר ש-Webhook נשלח אכן על **כל** שינוי שדה (כאן: שינוי `NextDateToBill` בלבד, לא `IsActive`), בדיוק כפי שהמאמר הרשמי כבר קבע ("אסור לפרש כ-created event בלבד"). **עדיין לא נצפה** מעבר ל-Inactive בפועל, ולא סיום טבעי — לכן ה-enum עצמו **נשאר Provisional במכוון**, גם אחרי שהתקבל payload אמיתי. אל תתייחסו לשלושת המצבים כ-enum סגור בזמן המימוש — הם נקודת פתיחה, לא מפרט.
+**Provisional lifecycle — עדיין לא סגור, במכוון.** שלושת המצבים למטה (`pending_confirmation`/`active`/`inactive`) הם המודל הפנימי ההגיוני ביותר כרגע. **עדכון 2026-08-14:** התקבל Master payload אמיתי (מוקפא ע"י `Operation=Update` על `RecurringId` קיים, לא ע"י יצירה חדשה) — אישר ש-Webhook נשלח אכן על **כל** שינוי שדה, בדיוק כפי שהמאמר הרשמי כבר קבע. **עדכון נוסף 2026-08-14 (מאוחר יותר):** מעבר ל-Inactive **כן** נצפה בפועל — דרך סיום טבעי (`TotalNumOfBills` מוצה, ר' למטה), לא רק תיאורטית. ה-enum עצמו **עדיין נשאר Provisional במכוון** — לא נצפה עדיין ביטול-CardCom-יזום (כרטיס פג/מדיניות), רק Hamonym-יזום (Pause/Cancel) וסיום-טבעי. אל תתייחסו לשלושת המצבים כ-enum סגור בזמן המימוש — הם נקודת פתיחה, לא מפרט.
 
 ```text
                  תורם משלים Recurring Checkout מול CardCom
@@ -62,6 +62,13 @@ Design למודול חדש בתוך ה-**Charging Engine** (ר' Compass): גבי
   * **`MasterRecurring` webhook נשלח בפועל על שינוי `IsActive`** — סוגר gate שהיה פתוח (עד עכשיו נצפה רק על שינוי `NextDateToBill`).
   * Resume: `Operation=update`+`IsActive=true`+`NextDateToBill` מפורש (לא מסתמכים על מה ש-CardCom כבר מחזיקה) — עובד, אומת: `IsActive=true`, `NextDateToBill` בדיוק כפי שנקבע, הסכום לא השתנה.
   * **אין** state נפרד בצד CardCom ל-"Paused" מול "Cancelled" — `IsActive=false` בלבד, כפי שכבר שוער. ההבחנה בין "מושהה, מצפים ל-Resume" ל-"מבוטל" היא Business Logic של Hamonym בלבד (עקבי עם מה שכבר נכתב כאן לפני האימות).
+* **סיום טבעי (`TotalNumOfBills` מוצה) — ✅ Verified מקצה לקצה (2026-08-14, `RecurringId=44215`, `TotalNumOfBills=2`), לא עוד Unknown/דחוי:**
+  * **CardCom עוצרת את ההוראה בעצמה** ברגע שה-`DetailRecurring` האחרון מצליח — `IsActive→false` אוטומטית, בלי שום פעולה מצד Hamonym. `NextDateToBill` **קופא** (לא מתקדם — אין מחזור הבא לתזמן).
+  * **`MasterRecurring` webhook נשלח בזמן אמת על המעבר** — לא רק Reconciliation. נצפה בפועל שתי שניות (!) אחרי ה-`DetailRecurring` האחרון: `RecordType=MasterRecurring`, `IsActive=False`, `NumOfPaymentsAlreadyCharged=2`, `IsReNewOrder=False`. **המשמעות:** Hamonym יכולה לדעת בזמן אמת שהוראה הסתיימה — לא תלויה ב-Cron/Reconciliation לגילוי הראשוני (Reconciliation נשאר רשת ביטחון למקרה ש-Webhook אבד, לא המסלול הראשי).
+  * **הרצף המלא, Verified:** חיוב אחרון מצליח → `DetailRecurring SUCCESSFUL` (CardCom עצמה מתארת "תשלום 2 מתוך 2") → `NumOfPaymentsAlreadyCharged` מגיע ל-`TotalNumOfBills` → `IsActive→false` → `MasterRecurring` מדווח על השינוי. שני ה-webhooks מגיעים כשני POST-ים נפרדים בהפרש של שנייה אחת.
+  * **`IsReNewOrder` — עדיין לא מוסבר סמנטית**, אבל עכשיו יש לו payload אמיתי משני המשטחים (Master בסיום=`False`) — לא הוכרע אם השם מרמז ליכולת חידוש אוטומטי של CardCom (לא נבדק, לא להניח).
+  * **הנוסחה ל-"N תשלומים כולל הראשון" — Verified, לא עוד Strong Inference:** ה-LowProfile הראשון לא נספר (Verified קודם: `NumOfPaymentsAlreadyCharged=0` מיד אחריו). שני חיובי Recurring קרו, המונה הגיע בדיוק ל-2=`TotalNumOfBills`. **מסקנה ישירה:** אם רוצים N תשלומים בסה"כ (כולל ה-LowProfile הראשון) — `TotalNumOfBills` שנשלח ב-Create צריך להיות **N-1**.
+  * **⚠️ עדיין לא מוסבר, לא לשכוח:** `FlexItem.Price` ב-baseline (`GetRecurringPayment` מיד אחרי Create) הראה `5.0000` — תואם. אותה קריאה אחרי הסיום הראתה `100.0000` — שינוי לא-מוסבר באמצע הניסוי, לא משפיע על מסקנת ה-`N-1` אבל טעון בירור נפרד לפני שסוגרים את הנושא לגמרי.
 
 ### Recurring Charge (Detail) — "ניסיון גבייה בודד"
 
