@@ -354,18 +354,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 // (the Cardcom webhook only gives us a donationId via ReturnValue, not the
 // campaign/entity context createDonation had at hand when it built the
 // LowProfile in the first place).
-async function resolveCardcomCredentials(donationId) {
-  const res = await db.query(
-    `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
-            e.cardcom_connection_status
-     FROM donations d
-     JOIN campaigns c ON c.id = d.campaign_id
-     JOIN entities e ON e.id = c.entity_id
-     WHERE d.id = $1`,
-    [donationId]
-  );
-
-  const row = res.rows[0];
+function credentialsFromEntityRow(row) {
   const hasVerifiedCardcom = !!(
     row?.cardcom_terminal_number &&
     row?.cardcom_api_username &&
@@ -385,7 +374,34 @@ async function resolveCardcomCredentials(donationId) {
         apiPassword: process.env.HAMONYM_CARDCOM_API_PASSWORD,
       };
 }
+
+async function resolveCardcomCredentials(donationId) {
+  const res = await db.query(
+    `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
+            e.cardcom_connection_status
+     FROM donations d
+     JOIN campaigns c ON c.id = d.campaign_id
+     JOIN entities e ON e.id = c.entity_id
+     WHERE d.id = $1`,
+    [donationId]
+  );
+  return credentialsFromEntityRow(res.rows[0]);
+}
 exports.resolveCardcomCredentials = resolveCardcomCredentials;
+
+// Same resolution, keyed directly off entity_id — recurring_instructions
+// already carries entity_id itself, no donation to join through (Pause/
+// Resume act on the Master instruction, not any one charge).
+async function resolveCardcomCredentialsForEntity(entityId) {
+  const res = await db.query(
+    `SELECT cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
+            cardcom_connection_status
+     FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  return credentialsFromEntityRow(res.rows[0]);
+}
+exports.resolveCardcomCredentialsForEntity = resolveCardcomCredentialsForEntity;
 
 // Closes out a donation exactly once — the shared step for both the Cardcom
 // Return Redirect (UX only, not authoritative — a donor can close the tab,

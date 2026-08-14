@@ -49,3 +49,34 @@ exports.createRecurring = async ({
 
   return parseNameToValueResponse(response.data);
 };
+
+// Operation=update against an existing RecurringId — Pause/Resume/Skip all
+// go through this one call, they just differ in which fields they set.
+// Verified empirically (2026-08-14): IsActive=false pauses (job stops
+// billing, NextDateToBill freezes, MasterRecurring fires); IsActive=true +
+// an explicit NextDateToBill resumes cleanly. Only include the fields the
+// caller actually wants to change — Pause has no reason to also touch
+// NextDateToBill, and sending fields CardCom doesn't expect to change is
+// exactly the kind of unverified side effect this project has been bitten
+// by before.
+exports.updateRecurring = async ({
+  terminalNumber, userName, apiPassword, recurringId, isActive, nextDateToBill,
+}) => {
+  const params = new URLSearchParams({
+    TerminalNumber: terminalNumber,
+    UserName: userName,
+    ApiPassword: apiPassword || '',
+    codepage: '65001',
+    Operation: 'update',
+    'RecurringPayments.RecurringId': recurringId,
+  });
+  if (isActive !== undefined) params.set('RecurringPayments.IsActive', isActive ? 'true' : 'false');
+  if (nextDateToBill) params.set('RecurringPayments.NextDateToBill', nextDateToBill);
+
+  const response = await axios.post(RECURRING_URL, params.toString(), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout: 15000,
+  });
+
+  return parseNameToValueResponse(response.data);
+};

@@ -23,6 +23,36 @@ function nextMonthDate() {
   return d;
 }
 
+// Extracts a calendar day-of-month from a value that may be a JS Date
+// (as pg returns DATE columns, at UTC midnight) or an ISO string — always
+// via the UTC/ISO representation, never .getDate() on a DB-sourced value,
+// to avoid a local-timezone off-by-one on the day. Same caution as
+// CLAUDE.md's date-handling convention, applied to a single day-of-month
+// instead of a full DD/MM/YYYY string.
+function dayOfMonthFromDate(value) {
+  return Number(new Date(value).toISOString().slice(0, 10).split('-')[2]);
+}
+
+// Resume's product rule (locked 2026-08-14): keep the donor's original
+// monthly billing day, pick its next occurrence that is strictly in the
+// future. No catch-up for skipped months, no immediate/same-day charge, no
+// permanent shift of the billing day. Clamps to the last real day of a
+// shorter month (e.g. anchor=31 in February) rather than rolling into the
+// next month entirely.
+function clampedMonthDate(year, month, day) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, daysInMonth));
+}
+
+function nextOccurrenceOfAnchorDay(anchorDay) {
+  const now = new Date();
+  const candidate = clampedMonthDate(now.getFullYear(), now.getMonth(), anchorDay);
+  if (candidate <= now) {
+    return clampedMonthDate(now.getFullYear(), now.getMonth() + 1, anchorDay);
+  }
+  return candidate;
+}
+
 // Called from donations.service.js::createDonation, before the LowProfile is
 // built, when the donor chose a recurring donation. Creates the
 // Hamonym-internal signup record in 'pending_payment' — Cardcom knows
@@ -85,11 +115,13 @@ exports.completeSignup = async (donationId) => {
     });
 
     if (result.ResponseCode === '0') {
+      const scheduledDate = nextMonthDate();
       await db.query(
         `UPDATE recurring_instructions
-         SET status='active', cardcom_account_id=$1, cardcom_recurring_id=$2, next_date_to_bill=$3, updated_at=NOW()
-         WHERE id=$4`,
-        [result.AccountId, result['Recurring0.RecurringId'], nextMonthDate(), instructionId]
+         SET status='active', cardcom_account_id=$1, cardcom_recurring_id=$2, next_date_to_bill=$3,
+             billing_anchor_day=$4, updated_at=NOW()
+         WHERE id=$5`,
+        [result.AccountId, result['Recurring0.RecurringId'], scheduledDate, scheduledDate.getDate(), instructionId]
       );
     } else {
       await db.query(
@@ -103,4 +135,94 @@ exports.completeSignup = async (donationId) => {
       [err.message, instructionId]
     );
   }
+};
+
+// Phase 5 (docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §9.1). Both Pause
+// and Resume are Hamonym-initiated, synchronous calls — not webhook-driven
+// — so a Cardcom failure is surfaced to the caller immediately (thrown),
+// never written to local state as if it succeeded. The later
+// MasterRecurring webhook (verified to fire on an IsActive change) confirms/
+// re-syncs afterwards, same trust pattern as Create in Phase 1 — it is not
+// a gate before updating locally from the synchronous ResponseCode=0.
+exports.pauseRecurring = async (instructionId) => {
+  const instrRes = await db.query(
+    `SELECT id, entity_id, cardcom_recurring_id, status, next_date_to_bill, billing_anchor_day
+     FROM recurring_instructions WHERE id = $1`,
+    [instructionId]
+  );
+  const instruction = instrRes.rows[0];
+  if (!instruction) throw new Error('Recurring instruction not found');
+  if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
+  if (instruction.status === 'paused') return { alreadyPaused: true };
+
+  const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
+  const result = await recurringClient.updateRecurring({
+    terminalNumber: credentials.terminalNumber,
+    userName: credentials.apiName,
+    apiPassword: credentials.apiPassword,
+    recurringId: instruction.cardcom_recurring_id,
+    isActive: false,
+  });
+
+  if (result.ResponseCode !== '0') {
+    throw new Error(result.Description || `Cardcom update failed (ResponseCode ${result.ResponseCode})`);
+  }
+
+  // Lazy backfill: existing rows created before this column existed get
+  // billing_anchor_day set here, from whatever next_date_to_bill they
+  // currently hold — not a bulk migration backfill, by design (see §9.1).
+  const anchorDay = instruction.billing_anchor_day
+    || (instruction.next_date_to_bill ? dayOfMonthFromDate(instruction.next_date_to_bill) : null);
+
+  await db.query(
+    `UPDATE recurring_instructions
+     SET status='paused', billing_anchor_day=COALESCE(billing_anchor_day, $1), updated_at=NOW()
+     WHERE id=$2`,
+    [anchorDay, instructionId]
+  );
+
+  return { paused: true };
+};
+
+exports.resumeRecurring = async (instructionId) => {
+  const instrRes = await db.query(
+    `SELECT id, entity_id, cardcom_recurring_id, status, next_date_to_bill, billing_anchor_day
+     FROM recurring_instructions WHERE id = $1`,
+    [instructionId]
+  );
+  const instruction = instrRes.rows[0];
+  if (!instruction) throw new Error('Recurring instruction not found');
+  if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
+  if (instruction.status === 'active') return { alreadyActive: true };
+
+  // Same lazy-backfill fallback as pauseRecurring, for a row that somehow
+  // reached Resume without ever going through Pause under this code.
+  const anchorDay = instruction.billing_anchor_day
+    || (instruction.next_date_to_bill ? dayOfMonthFromDate(instruction.next_date_to_bill) : dayOfMonthFromDate(new Date()));
+
+  const nextDate = nextOccurrenceOfAnchorDay(anchorDay);
+  const nextDateToBill = formatDateSlashed(nextDate);
+
+  const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
+  const result = await recurringClient.updateRecurring({
+    terminalNumber: credentials.terminalNumber,
+    userName: credentials.apiName,
+    apiPassword: credentials.apiPassword,
+    recurringId: instruction.cardcom_recurring_id,
+    isActive: true,
+    nextDateToBill,
+  });
+
+  if (result.ResponseCode !== '0') {
+    throw new Error(result.Description || `Cardcom update failed (ResponseCode ${result.ResponseCode})`);
+  }
+
+  await db.query(
+    `UPDATE recurring_instructions
+     SET status='active', next_date_to_bill=$1, billing_anchor_day=COALESCE(billing_anchor_day, $2), updated_at=NOW()
+     WHERE id=$3`,
+    [nextDate, anchorDay, instructionId]
+  );
+
+  return { resumed: true, nextDateToBill };
 };
