@@ -102,3 +102,8 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
 };
 
 exports.list = () => Array.from(registry.keys());
+
+// Exposes the registered job object (name/schedule/timeoutMs/handler) — used
+// by scheduler.js to read each job's `schedule` field. Not needed by
+// anything before now; `.list()` alone was enough for Admin "Run now".
+exports.get = (jobName) => registry.get(jobName);

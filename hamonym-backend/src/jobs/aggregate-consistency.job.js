@@ -18,6 +18,18 @@
 // the failure mode it catches is display-only drift, not money at risk —
 // daily is proportionate. See reconciliation-findings.js for the dedup
 // upsert (recordFinding) this job uses instead of a raw INSERT.
+//
+// ⚠️ SCALE — explicit revisit trigger (Scale Review, 2026-08-16): unlike
+// the other three jobs, this query has no LIMIT/batching and no supporting
+// index can shrink it — it recomputes true totals from every 'paid'
+// donation for every campaign, every run, by design (it's the thing that
+// detects drift, so it can't rely on the very data it's checking).
+// Structurally O(total paid donations), not O(candidates). Revisit
+// (batching by campaign_id range, or tracking "possibly-dirty" campaigns
+// instead of rechecking all of them) at the FIRST of: donations crossing
+// ~500,000 rows, OR this job's own recorded duration_ms in `job_runs`
+// crossing 30 seconds. Don't wait for both — either one alone means this
+// job is no longer "cheap and daily is fine."
 const { recordFinding } = require('./reconciliation-findings');
 
 module.exports = {
