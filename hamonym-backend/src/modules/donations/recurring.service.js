@@ -23,14 +23,24 @@ function nextMonthDate() {
   return d;
 }
 
-// Extracts a calendar day-of-month from a value that may be a JS Date
-// (as pg returns DATE columns, at UTC midnight) or an ISO string — always
-// via the UTC/ISO representation, never .getDate() on a DB-sourced value,
-// to avoid a local-timezone off-by-one on the day. Same caution as
-// CLAUDE.md's date-handling convention, applied to a single day-of-month
-// instead of a full DD/MM/YYYY string.
+// Extracts a calendar day-of-month from a pg-sourced DATE value.
+//
+// ⚠️ Corrected 2026-08-16 (Personal Area date-bug investigation) — this
+// function's own previous version did the opposite of what's correct, and
+// the comment above it was wrong. PostgreSQL DATE is a calendar date, not
+// an instant — it has no timezone. `pg`'s parser (postgres-date) reflects
+// that deliberately: a DATE column comes back as a JS Date built at LOCAL
+// midnight for that calendar day ("Force YYYY-MM-DD dates to be parsed as
+// local time" — postgres-date's own source), not UTC midnight. Converting
+// through `.toISOString()` (always UTC) before reading the day therefore
+// shifts the result backward by one on any server whose local TZ is ahead
+// of UTC (Israel, confirmed empirically) — that was this function's actual
+// bug, silently affecting pauseRecurring/resumeRecurring's anchor-day
+// backfill. Reading the day via LOCAL getters (`.getDate()`) is what
+// correctly recovers the calendar date pg encoded — never round-trip a
+// DATE value through UTC to extract a calendar field from it.
 function dayOfMonthFromDate(value) {
-  return Number(new Date(value).toISOString().slice(0, 10).split('-')[2]);
+  return new Date(value).getDate();
 }
 
 // Resume's product rule (locked 2026-08-14): keep the donor's original
@@ -305,4 +315,108 @@ exports.cancelRecurring = async (instructionId) => {
   );
 
   return { cancelled: true };
+};
+
+/* ─────────────────────────────────────────
+   DONOR-FACING (Personal Area) — read-only
+   recurring_instructions has no donor_user_id column (only donor_name/
+   donor_email/donor_phone, snapshotted at signup) — every donor-facing
+   query here goes through donations.donor_user_id instead, the same
+   column getMyDonations already trusts. Deliberately not by donor_email:
+   that snapshot can go stale if the account's email ever changes, donor_user_id
+   can't.
+───────────────────────────────────────── */
+
+// ⚠️ Found empirically (2026-08-16, browser verification) — `pg`'s DATE
+// parser (postgres-date) deliberately builds `next_date_to_bill` as a JS
+// Date at LOCAL midnight, not UTC midnight ("Force YYYY-MM-DD dates to be
+// parsed as local time" — postgres-date/index.js). On a server whose local
+// TZ is ahead of UTC (Israel, UTC+2/+3 — confirmed here), naively sending
+// that Date through res.json() (which serializes via toISOString(), always
+// UTC) shifts the calendar day back by one — donors would be shown the
+// wrong billing date. Extracting via LOCAL getters (not toISOString/UTC
+// getters) recovers the date pg actually encoded, regardless of server TZ.
+// Same principle as dayOfMonthFromDate above (fixed the same day, same
+// root cause) — kept as a separate function because this one returns a
+// full YYYY-MM-DD string, not just a day number.
+function toDateOnlyIsoString(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Hard ownership gate — every donor-facing action/read on a specific
+// instruction (this file's history query, and Pause/Resume/Cancel once
+// they get routes) must call this first. Without it, a logged-in donor
+// could act on any recurring_instructions.id they happen to guess/enumerate,
+// since pauseRecurring/resumeRecurring/cancelRecurring themselves take no
+// donor context at all — that check has never existed anywhere until now
+// because nothing HTTP-reachable called them before.
+exports.verifyOwnership = async (instructionId, userId) => {
+  const res = await db.query(
+    `SELECT 1 FROM donations
+     WHERE recurring_instruction_id = $1 AND donor_user_id = $2
+     LIMIT 1`,
+    [instructionId, userId]
+  );
+  return res.rows.length > 0;
+};
+
+// One row per recurring instruction this donor has ever paid into (found
+// via the same donations.donor_user_id join as getMyDonations — a donor
+// only ever "has" an instruction because at least one donation under it is
+// theirs). paidCount is X in "X מתוך N" — counted from OUR OWN paid
+// donations, deliberately not Cardcom's NumOfPaymentsAlreadyCharged (that
+// excludes the first LowProfile charge; total_installments does not — see
+// completeSignup's N-1 comment). resumePreviewNextDateToBill is computed
+// with the exact same nextOccurrenceOfAnchorDay used by resumeRecurring
+// itself — one implementation, so the date a paused donor previews here is
+// guaranteed to match what an actual Resume would set.
+exports.getMyRecurringInstructions = async (userId) => {
+  const res = await db.query(
+    `SELECT ri.id, ri.status, ri.amount, ri.next_date_to_bill, ri.total_installments,
+            ri.billing_anchor_day, ri.cancelled_at, ri.created_at,
+            c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
+            e.display_name AS entity_name, e.logo_url AS entity_logo,
+            (SELECT COUNT(*)::int FROM donations dd
+              WHERE dd.recurring_instruction_id = ri.id AND dd.status = 'paid') AS paid_count
+     FROM recurring_instructions ri
+     JOIN campaigns c ON c.id = ri.campaign_id
+     JOIN entities  e ON e.id = ri.entity_id
+     WHERE ri.id IN (
+       SELECT DISTINCT recurring_instruction_id FROM donations
+       WHERE donor_user_id = $1 AND recurring_instruction_id IS NOT NULL
+     )
+     ORDER BY ri.created_at DESC`,
+    [userId]
+  );
+
+  return res.rows.map((row) => ({
+    ...row,
+    next_date_to_bill: toDateOnlyIsoString(row.next_date_to_bill),
+    resume_preview_next_date_to_bill:
+      row.status === 'paused' && row.billing_anchor_day
+        ? formatDateSlashed(nextOccurrenceOfAnchorDay(row.billing_anchor_day))
+        : null,
+  }));
+};
+
+// Charges under one instruction — ownership already verified by the caller
+// (controller calls verifyOwnership first; this function trusts it, same
+// pattern as every other *ById internal function in this codebase). Only
+// 'paid' rows, matching getMyDonations' own filter — a failed billing
+// attempt has no receipt and isn't part of what a donor reviews here.
+exports.getRecurringDonationHistory = async (instructionId) => {
+  const res = await db.query(
+    `SELECT d.id, d.amount, d.completed_at, r.id AS receipt_id
+     FROM donations d
+     LEFT JOIN receipts r ON r.donation_id = d.id
+     WHERE d.recurring_instruction_id = $1 AND d.status = 'paid'
+     ORDER BY d.completed_at DESC`,
+    [instructionId]
+  );
+  return res.rows;
 };

@@ -36,6 +36,9 @@ const mediaRoutes =
 const donationsRoutes =
   require('./modules/donations/donations.routes');
 
+const recurringRoutes =
+  require('./modules/donations/recurring.routes');
+
 const ambassadorsRoutes =
   require('./modules/ambassadors/ambassadors.routes');
 
@@ -124,6 +127,11 @@ app.use(
 app.use(
   '/api/donations',
   donationsRoutes
+);
+
+app.use(
+  '/api/recurring',
+  recurringRoutes
 );
 
 app.use(
