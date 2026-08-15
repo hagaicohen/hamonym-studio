@@ -56,4 +56,11 @@ router.post('/users/:id/impersonate', requireSuperAdmin, ctrl.impersonateUser);
 router.post('/users/:id/super-admin', requireSuperAdmin, ctrl.setUserSuperAdmin);
 router.post('/users/:id/permissions', requireSuperAdmin, ctrl.setUserPermissions);
 
+// Cardcom Operations — read-only observability + detect-only reconciliation
+// job triggers. Own sub-router because it's a self-contained module (see
+// docs/CARDCOM_OPERATIONAL_PROCESSES.md Part G), not because it needs
+// different top-level middleware — requireSuperAdmin is applied again
+// inside it, same as every other route group above.
+router.use('/cardcom-ops', require('./cardcom-ops/cardcom-ops.routes'));
+
 module.exports = router;

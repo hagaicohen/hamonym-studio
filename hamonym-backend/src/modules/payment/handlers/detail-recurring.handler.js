@@ -47,30 +47,43 @@ exports.handle = async (payload) => {
   const statusCode = payload.ResposeCode != null ? String(payload.ResposeCode) : null;
 
   if (payload.Status === 'SUCCESSFUL') {
-    const donationRes = await db.query(
-      `INSERT INTO donations (
-         campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
-         rewards, status, is_mock, recurring_instruction_id, provider_reference,
-         provider_row_id, provider_status_code, completed_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',false,$7,$8,$9,$10,NOW())
-       RETURNING id`,
-      [
-        instruction.campaign_id, instruction.entity_id, amount,
-        instruction.donor_name, instruction.donor_email, instruction.donor_phone,
-        instruction.id, String(internalDealNumber), rowId, statusCode,
-      ]
-    );
-    const donationId = donationRes.rows[0].id;
+    const donationsService = require('../../donations/donations.service');
+    let receipt = null;
 
-    await db.query(
-      `UPDATE campaigns
-       SET current_amount = current_amount + $1, supporters_count = supporters_count + 1, updated_at = NOW()
-       WHERE id = $2`,
-      [amount, instruction.campaign_id]
-    );
+    // Same atomicity as the LowProfile completion path (markDonationPaid):
+    // donation insert, campaign aggregate, and receipt are one transaction,
+    // email queued only after COMMIT — see donations.service.js's
+    // withTransaction/queueReceiptEmail for why (Operational Processes
+    // audit, 2026-08-15).
+    const donationId = await donationsService.withTransaction(async (client) => {
+      const donationRes = await client.query(
+        `INSERT INTO donations (
+           campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
+           rewards, status, is_mock, recurring_instruction_id, provider_reference,
+           provider_row_id, provider_status_code, completed_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',false,$7,$8,$9,$10,NOW())
+         RETURNING id`,
+        [
+          instruction.campaign_id, instruction.entity_id, amount,
+          instruction.donor_name, instruction.donor_email, instruction.donor_phone,
+          instruction.id, String(internalDealNumber), rowId, statusCode,
+        ]
+      );
+      const id = donationRes.rows[0].id;
+
+      await client.query(
+        `UPDATE campaigns
+         SET current_amount = current_amount + $1, supporters_count = supporters_count + 1, updated_at = NOW()
+         WHERE id = $2`,
+        [amount, instruction.campaign_id]
+      );
+
+      receipt = await donationsService.finalizePaidDonation(id, client);
+      return id;
+    });
 
     if (instruction.entity_id) require('../../dashboard/dashboard.service').invalidateDashboard(instruction.entity_id);
-    await require('../../donations/donations.service').finalizePaidDonation(donationId);
+    await donationsService.queueReceiptEmail(receipt, donationId);
     return;
   }
 
