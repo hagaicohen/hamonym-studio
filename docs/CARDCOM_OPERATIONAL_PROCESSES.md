@@ -156,6 +156,8 @@ Verified: CardCom **לא** מנסה שוב אוטומטית בתוך אותו מ
 |---|---|---|---|---|---|---|---|---|
 | Scheduled Job | **✅ מאושר: פעם ביום** | `donations` (מקור אמת פנימי, לא CardCom) | אין | Detect-only: `SUM(amount) WHERE status='paid'` מול `campaigns.current_amount` | — | — | ✅ קריטי | `Repair` — **פעולה כספית-פנימית, לא יוצרת חיוב, אבל דורשת אישור מפורש בכל הרצה (לא auto)** |
 
+**⚠️ Scale Review (2026-08-16) — trigger מפורש לבחינה מחדש, לא נגע בקוד:** בניגוד לשלושת ה-jobs האחרים, לשאילתה הזו **אין `LIMIT`/batching, ואין index שיכול לקצר אותה** — היא מחשבת מחדש totals אמיתיים מכל תרומה `paid` של כל קמפיין, בכל ריצה, כי זה בדיוק מה שהיא בודקת (לא יכולה להסתמך על הנתון שהיא בעצמה מאמתת). O(סך התרומות ה-paid), לא O(מועמדים) — לא ניתן לתקן את זה עם index בלבד. **לחזור לזה (batching לפי `campaign_id`, או מעקב "קמפיינים שאולי התלכלכו" במקום לבדוק את כולם) בראשון מבין:** `donations` עובר **500,000** שורות, **או** משך ריצה בפועל (`job_runs.duration_ms`) עובר **30 שניות** — המוקדם מביניהם, לא לחכות לשניהם.
+
 ### B12. Monitoring/Health
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
 |---|---|---|---|---|---|---|---|---|
@@ -292,7 +294,11 @@ job_runs
 - **Regression: 42/42** תרחישים עברו נגד ה-DB האמיתי (ישות/קמפיין סינתטיים, נוקו במלואם בסוף; `getLpResult`/`createRecurring` הוחלפו זמנית ב-stubs — בלי חיוב CardCom חדש). כיסוי: תרומה חד-פעמית, redelivery, receipt קיים מראש, rollback בשלוש נקודות שונות בטרנזקציה, email שנכשל אחרי COMMIT, concurrent execution, DetailRecurring success+redelivery, recurring signup+idempotency, stuck-instruction מול הוראה בריאה/עדיין-ב-checkout, וארבע הקטגוריות החדשות של webhook-recovery.
 - **לא נגעתי:** שני ממצאי ה-Data (4 ה-pending הישנות, drift ב-"קיץ כמו כולם") — נשארים בדיוק כפי שהיו, בכוונה.
 
-**עדיין לא מומש:** B1/B2 (Gate פורמט `GetRecurringPayment`), scheduler חיבור ל-`server.js` (החלטה נפרדת, מכוונת — מה רץ אוטומטית/באיזו תדירות/מה מנהל הפלטפורמה רואה, לפני שמחברים).
+**✅ Scheduler מומש (2026-08-16) — קוד קיים, `ENABLE_JOB_SCHEDULER` ברירת מחדל `false`, לא deploy.** `src/jobs/scheduler.js` חדש + `job-runner.js`'s `get(name)` + חיבור ל-`server.js` (עולה אחרי שהשרת מאזין, בלי `runOnInit`, `SIGTERM` עוצר scheduling חדש בלי לחכות לריצה בעיצומה). כל tick עובר דרך `jobRunner.run()` הקיים — אין locking/error-handling חדש, רק timer דק שקורא לתשתית שכבר נבדקה. **תלות חדשה: `node-cron@3.0.3`** (לא 4.x — דורש Node≥20, הסביבה על Node 18). `npm audit` מסמן `moderate` advisory דרך `uuid` טרנזיטיבי — לא רלוונטי לשימוש היחיד שלנו (`cron.schedule(expr, callback)`), אין תיקון בלי לקפוץ ל-4.x ולשבור Node 18. **החלטה מפורשת: נשארים על 3.0.3, נחזור לזה יחד עם שדרוג Node 20+ (נפרד, לא חלק מהעבודה הזו).**
+
+**✅ Migration 053 (partial indexes) רץ (2026-08-16), אומת עם `EXPLAIN` (גם טבעי — עדיין seq scan כי הטבלאות זעירות, וגם forced עם `enable_seqscan/bitmapscan=off` — מאשר `Index Scan` נקי בלי `Sort`/`Filter`, בדיוק כמו בבדיקה היבשה). Regression על 4 ה-jobs אחרי המיגרציה — תקין.**
+
+**עדיין לא מומש:** B1/B2 (Gate פורמט `GetRecurringPayment`), הפעלת ה-scheduler בפרודקשן בפועל (`ENABLE_JOB_SCHEDULER=true` + deploy — החלטה נפרדת, מכוונת, לא כלולה כאן).
 
 ---
 
@@ -351,4 +357,12 @@ job_runs
 
 Recurring charge-history reconciliation, B2 מול `GetRecurringPayment`, webhook canary, email retry, document reconciliation, automatic repair ל-lost payment, automatic retry של `createRecurring`, Personal Area, scheduler עצמו.
 
-**⚠️ Migration 052 מוכן, טרם רץ נגד ה-DB.** עד שירוץ — הקוד החדש (`recordFinding`) ייכשל בכל ניסיון לכתוב finding (ה-`ON CONFLICT` שלו מפנה ל-index שעוד לא קיים). זו הסיבה שהבדיקות הספציפיות ל-dedup לא רצו עדיין בסבב הזה.
+**✅ Migration 052 רץ (2026-08-15/16), עבר את כל הבדיקות (27/27).**
+
+### Scale Review (2026-08-16) — ר' גם B11 למעלה
+
+בדיקה מפורשת של ארבעת ה-jobs לפני חיבור scheduler: מה כל query מריץ, אילו indexes קיימים בפועל (`pg_indexes`), מה `EXPLAIN` מראה, איך זה מתנהג ב-100K/1M/10M שורות. **מסקנה: ה-4 jobs בטוחים מספיק היום (נפחי production אמיתיים: 4 קמפיינים, 15 תרומות) כדי לחבר scheduler — אין סיבה לעכב.** `aggregate-consistency` הוא הסיכון המבני האמיתי היחיד (ללא `LIMIT`, מחשב מחדש totals מכל תרומה בכל ריצה) — trigger מפורש לבחינה מחדש תועד ישירות ב-B11 למעלה ובקוד (`aggregate-consistency.job.js`), לא נפתר עכשיו.
+
+**Migration 053 (`053_reconciliation_partial_indexes.sql`) — מוכן, טרם רץ.** שני partial indexes, נבחרו אמפירית (לא ברירת מחדל) — 3 חלופות נבדקו בפועל בתוך טרנזקציות שבוטלו (`BEGIN`+`CREATE INDEX`+`EXPLAIN`+`ROLLBACK`, לא נגעו ב-DB):
+- עבור `stale-pending-donations`: index כללי על `donations.status` היה דורש `Sort` נפרד + `Filter` על `low_profile_id`, וגם מכיל רשומה לכל תרומה בכל סטטוס לנצח. **partial index על `created_at WHERE status='pending' AND low_profile_id IS NOT NULL`** נותן `Index Scan` ישיר בלי `Sort`/`Filter`, ונשאר קטן גם כש-`donations` יגדל למיליונים (כי רק ה-subset ש"pending כרגע" נכנס אליו — נשאר תמיד קטן, לא משנה כמה תרומות total).
+- עבור `webhook-recovery`: אותו עיקרון — **partial index על `received_at WHERE error IS NOT NULL`** (אומת עם `enable_bitmapscan=off` ש-`Index Scan` נקי אכן אפשרי structurally, לא רק Bitmap+Sort שנבחר בטעות בגלל גודל טבלה זעיר).
