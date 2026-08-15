@@ -39,6 +39,12 @@ const webhookDispatcher = require('../modules/payment/webhook.dispatcher');
 // actual exception.
 module.exports = {
   name: 'webhook-recovery',
+  // Approved production schedule (Operational Policy, 2026-08-16): every
+  // 15 minutes, automatic — the tightest of the four, since this is the
+  // direct safety net for the live payment path itself and Cardcom cost
+  // per run is near-zero in practice (only rows already flagged `error`).
+  // Not wired to a scheduler yet.
+  schedule: '*/15 * * * *',
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {
     const res = await db.query(

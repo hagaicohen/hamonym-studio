@@ -10,6 +10,54 @@ const jobRunner = require('../../../jobs');
 // not register a financial-action job there without updating this comment
 // and getting explicit product sign-off first.
 
+// Alerts are computed here, not stored/pushed anywhere — Operational Policy
+// (2026-08-16): no new notification system yet, the Platform Admin
+// dashboard reading this endpoint IS the alert surface for now. Three
+// conditions, each traceable to a real, already-seen failure mode rather
+// than invented for completeness: a job's last run failed outright; an
+// open `critical` finding exists; webhook-recovery's own last run ended
+// with unresolved `failed`/`notRouted` events (the two outcomes that were
+// specifically NOT folded into "recovered" when its metrics were fixed —
+// see webhook-recovery.job.js).
+function computeAlerts(jobRuns, criticalOpenCount) {
+  const alerts = [];
+
+  for (const job of jobRuns) {
+    if (job.status === 'failed') {
+      alerts.push({
+        type: 'job_failed',
+        severity: 'critical',
+        jobName: job.job_name,
+        message: `${job.job_name} נכשל בריצה האחרונה: ${job.error}`,
+      });
+    }
+    if (job.job_name === 'webhook-recovery' && job.result_summary) {
+      const { failed = 0, notRouted = 0 } = job.result_summary;
+      if (failed > 0 || notRouted > 0) {
+        alerts.push({
+          type: 'webhook_recovery_unresolved',
+          severity: 'warning',
+          jobName: job.job_name,
+          failed,
+          notRouted,
+          message: `webhook-recovery סיים עם ${failed} failed ו-${notRouted} not-routed שלא טופלו`,
+        });
+      }
+    }
+  }
+
+  if (criticalOpenCount > 0) {
+    alerts.push({
+      type: 'critical_findings_open',
+      severity: 'critical',
+      count: criticalOpenCount,
+      message: `${criticalOpenCount} findings פתוחים בחומרה critical`,
+    });
+  }
+
+  return alerts;
+}
+
 exports.getHealth = async (req, res) => {
   try {
     const lastWebhooks = await db.query(
@@ -18,13 +66,18 @@ exports.getHealth = async (req, res) => {
        GROUP BY COALESCE(record_type, 'LowProfile')`
     );
     const lastJobRuns = await db.query(
-      `SELECT DISTINCT ON (job_name) job_name, status, started_at, finished_at, duration_ms, error
+      `SELECT DISTINCT ON (job_name) job_name, status, started_at, finished_at, duration_ms, error, result_summary
        FROM job_runs ORDER BY job_name, started_at DESC`
     );
+    const criticalOpenRes = await db.query(
+      `SELECT count(*)::int AS count FROM reconciliation_findings WHERE resolved_at IS NULL AND severity = 'critical'`
+    );
+
     res.json({
       webhooks: lastWebhooks.rows,
       jobs: lastJobRuns.rows,
       knownJobs: jobRunner.list(),
+      alerts: computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count),
     });
   } catch (err) {
     console.error('[cardcom-ops.getHealth]', err.message);
@@ -69,10 +122,10 @@ exports.getFindings = async (req, res) => {
     const includeResolved = req.query.includeResolved === 'true';
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const findings = await db.query(
-      `SELECT id, job_name, finding_type, severity, subject_type, subject_id, details, found_at, resolved_at, resolved_by
+      `SELECT id, job_name, finding_type, severity, subject_type, subject_id, details, found_at, last_seen_at, resolved_at, resolved_by
        FROM reconciliation_findings
        ${includeResolved ? '' : 'WHERE resolved_at IS NULL'}
-       ORDER BY found_at DESC LIMIT $1`,
+       ORDER BY last_seen_at DESC LIMIT $1`,
       [limit]
     );
     res.json({ findings: findings.rows });

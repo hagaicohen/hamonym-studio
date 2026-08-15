@@ -11,11 +11,18 @@
 // stays a deliberate admin action (or a later, explicitly-approved phase).
 const cardcomClient = require('../modules/payment/cardcom/cardcom.client');
 const { resolveCardcomCredentials } = require('../modules/donations/donations.service');
+const { recordFinding } = require('./reconciliation-findings');
 
 const STALE_AFTER_HOURS = 2;
 
 module.exports = {
   name: 'stale-pending-donations',
+  // Approved production schedule (Operational Policy, 2026-08-16): hourly,
+  // automatic — real Cardcom cost (GetLpResult per row) rules out something
+  // tighter like every-15-min, but this is the "real money, undetected"
+  // finding of the four, so daily was judged too slow. Not wired to a
+  // scheduler yet.
+  schedule: '0 * * * *',
   timeoutMs: 3 * 60 * 1000,
   handler: async (db) => {
     const res = await db.query(
@@ -41,25 +48,43 @@ module.exports = {
 
         if (result?.ResponseCode === 0 && result?.TranzactionId) {
           // Cardcom says this succeeded — Hamonym never heard about it.
-          await db.query(
-            `INSERT INTO reconciliation_findings (job_name, finding_type, severity, subject_type, subject_id, details)
-             VALUES ('stale-pending-donations', 'lost_webhook_paid', 'critical', 'donation', $1, $2)`,
-            [row.id, JSON.stringify({ lowProfileId: row.low_profile_id, cardcomTranzactionId: result.TranzactionId, amount: row.amount })]
-          );
+          await recordFinding(db, {
+            jobName: 'stale-pending-donations',
+            findingType: 'lost_webhook_paid',
+            severity: 'critical',
+            subjectType: 'donation',
+            subjectId: row.id,
+            details: { lowProfileId: row.low_profile_id, cardcomTranzactionId: result.TranzactionId, amount: row.amount },
+          });
           lostWebhookFindings++;
         } else {
           stillPendingAtCardcom++;
         }
       } catch (err) {
         lookupFailed++;
-        await db.query(
-          `INSERT INTO reconciliation_findings (job_name, finding_type, severity, subject_type, subject_id, details)
-           VALUES ('stale-pending-donations', 'lookup_failed', 'warning', 'donation', $1, $2)`,
-          [row.id, JSON.stringify({ error: err.message })]
-        );
+        await recordFinding(db, {
+          jobName: 'stale-pending-donations',
+          findingType: 'lookup_failed',
+          severity: 'warning',
+          subjectType: 'donation',
+          subjectId: row.id,
+          details: { error: err.message },
+        });
       }
     }
 
-    return { checked, stillPendingAtCardcom, lostWebhookFindings, lookupFailed };
+    // Auto-resolve: a donation stops being a candidate for either finding
+    // type the moment it's no longer 'pending' (paid via webhook-recovery,
+    // marked failed, etc.) — rechecked directly per finding's own subject,
+    // not "missing from this run's LIMIT 50", so it's correct even when
+    // more than 50 rows are stale at once.
+    const resolvedRes = await db.query(
+      `UPDATE reconciliation_findings f
+       SET resolved_at = NOW(), resolved_by = 'system'
+       WHERE f.job_name = 'stale-pending-donations' AND f.resolved_at IS NULL
+         AND NOT EXISTS (SELECT 1 FROM donations d WHERE d.id = f.subject_id AND d.status = 'pending')`
+    );
+
+    return { checked, stillPendingAtCardcom, lostWebhookFindings, lookupFailed, autoResolved: resolvedRes.rowCount };
   },
 };

@@ -19,8 +19,16 @@
 // found) — so there is no deterministic way to verify "does one already
 // exist" before deciding to create another. Until either of those is
 // resolved, recovery here can only make things worse, never better.
+const { recordFinding } = require('./reconciliation-findings');
+
 module.exports = {
   name: 'stuck-recurring-signups',
+  // Approved production schedule (Operational Policy, 2026-08-16): hourly,
+  // automatic — raised from the original "daily until dedup exists" once
+  // migration 052's dedup landed. A donor who paid for a recurring gift
+  // that never actually started is judged important enough to not sit
+  // undetected for a full day. Not wired to a scheduler yet.
+  schedule: '0 * * * *',
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {
     const res = await db.query(
@@ -37,19 +45,39 @@ module.exports = {
     let stuckFindings = 0;
     for (const row of res.rows) {
       stuckFindings++;
-      await db.query(
-        `INSERT INTO reconciliation_findings (job_name, finding_type, severity, subject_type, subject_id, details)
-         VALUES ('stuck-recurring-signups', 'stuck_recurring_signup', 'critical', 'recurring_instruction', $1, $2)`,
-        [row.id, JSON.stringify({
+      await recordFinding(db, {
+        jobName: 'stuck-recurring-signups',
+        findingType: 'stuck_recurring_signup',
+        severity: 'critical',
+        subjectType: 'recurring_instruction',
+        subjectId: row.id,
+        details: {
           status: row.status,
           donorEmail: row.donor_email,
           instructionUpdatedAt: row.updated_at,
           paidDonationId: row.donation_id,
           donationCompletedAt: row.donation_completed_at,
-        })]
-      );
+        },
+      });
     }
 
-    return { checked: res.rows.length, stuckFindings };
+    // Auto-resolve: rechecks each currently-open finding's OWN instruction
+    // (by subject_id) against the live condition — not "missing from this
+    // run's LIMIT 50 result", which would be wrong if more than 50
+    // instructions were stuck at once. Resolves once the instruction moves
+    // out of pending_payment/pending_creation (activated, failed, etc.).
+    const resolvedRes = await db.query(
+      `UPDATE reconciliation_findings f
+       SET resolved_at = NOW(), resolved_by = 'system'
+       WHERE f.job_name = 'stuck-recurring-signups' AND f.finding_type = 'stuck_recurring_signup'
+         AND f.resolved_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM recurring_instructions ri
+           JOIN donations d ON d.recurring_instruction_id = ri.id AND d.status = 'paid'
+           WHERE ri.id = f.subject_id AND ri.status IN ('pending_payment', 'pending_creation')
+         )`
+    );
+
+    return { checked: res.rows.length, stuckFindings, autoResolved: resolvedRes.rowCount };
   },
 };
