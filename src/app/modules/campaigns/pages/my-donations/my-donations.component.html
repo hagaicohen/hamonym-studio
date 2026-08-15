@@ -31,6 +31,91 @@
       </div>
     </div>
 
+    @if (!recurringLoading && recurringInstructions.length > 0) {
+      <div class="md-section-title">התרומות החודשיות שלי</div>
+      <div class="md-recurring-list">
+        @for (ri of recurringInstructions; track ri.id) {
+          <div class="md-recurring-card">
+            <div class="md-recurring-header">
+              @if (ri.entity_logo) {
+                <img class="md-item-logo" [src]="ri.entity_logo" alt="" />
+              } @else {
+                <div class="md-item-logo-placeholder">{{ ri.entity_name.charAt(0) }}</div>
+              }
+              <div class="md-item-body">
+                <div class="md-item-campaign">{{ ri.campaign_title }}</div>
+                <div class="md-item-entity">{{ ri.entity_name }}</div>
+              </div>
+              <span class="md-status-badge" [class]="'md-status-' + ri.status">{{ statusLabel(ri.status) }}</span>
+            </div>
+
+            <div class="md-recurring-details">
+              <div class="md-recurring-detail">
+                <span class="md-detail-label">סכום חודשי</span>
+                <span class="md-detail-value">{{ fmtMoney(ri.amount) }}</span>
+              </div>
+
+              @if (ri.status === 'active' && ri.next_date_to_bill) {
+                <div class="md-recurring-detail">
+                  <span class="md-detail-label">החיוב הבא</span>
+                  <span class="md-detail-value">{{ fmtDate(ri.next_date_to_bill) }}</span>
+                </div>
+              }
+
+              @if (ri.status === 'paused' && ri.resume_preview_next_date_to_bill) {
+                <div class="md-recurring-detail">
+                  <span class="md-detail-label">אם תחדשו היום</span>
+                  <span class="md-detail-value">{{ ri.resume_preview_next_date_to_bill }}</span>
+                </div>
+              }
+
+              <div class="md-recurring-detail">
+                <span class="md-detail-label">תשלומים</span>
+                <span class="md-detail-value">
+                  @if (ri.total_installments) {
+                    {{ ri.paid_count }} מתוך {{ ri.total_installments }}
+                  } @else {
+                    חודשי עד לביטול
+                  }
+                </span>
+              </div>
+            </div>
+
+            @if (ri.status === 'creation_failed') {
+              <div class="md-recurring-alert">ההוראה לא הופעלה בהצלחה — יש לפנות לתמיכה</div>
+            }
+
+            <button type="button" class="md-recurring-history-toggle" (click)="toggleHistory(ri.id)">
+              {{ expandedInstructionId === ri.id ? 'הסתר היסטוריית חיובים ▲' : 'הצג היסטוריית חיובים ▾' }}
+            </button>
+
+            @if (expandedInstructionId === ri.id) {
+              <div class="md-recurring-history">
+                @if (!historyLoading[ri.id] && historyByInstruction[ri.id].length) {
+                  <div class="md-history-title">חיובים שבוצעו</div>
+                }
+                @if (historyLoading[ri.id]) {
+                  <div class="md-loading-small">טוען...</div>
+                } @else if (!historyByInstruction[ri.id] || historyByInstruction[ri.id].length === 0) {
+                  <div class="md-empty-small">אין עדיין חיובים</div>
+                } @else {
+                  @for (charge of historyByInstruction[ri.id]; track charge.id) {
+                    <div class="md-recurring-charge-row">
+                      <span class="md-charge-date">{{ fmtDate(charge.completed_at) }}</span>
+                      <span class="md-charge-amount">{{ fmtMoney(charge.amount) }}</span>
+                      @if (charge.receipt_id) {
+                        <a class="md-charge-receipt" [routerLink]="['/receipts', charge.receipt_id]">קבלה</a>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
     @if (donations.length === 0) {
       <div class="md-empty">
         <div class="md-empty-icon">💛</div>

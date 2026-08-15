@@ -181,3 +181,128 @@
   .md-item { flex-wrap: wrap; }
   .md-item-receipt { order: 4; margin-inline-start: 48px; }
 }
+
+/* RECURRING SECTION */
+.md-section-title {
+  max-width: 700px;
+  margin: 0 auto 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.md-recurring-list {
+  max-width: 700px;
+  margin: 0 auto 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.md-recurring-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.md-recurring-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.md-status-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.md-status-active   { background: #dcfce7; color: #16a34a; }
+.md-status-paused   { background: #fef3c7; color: #b45309; }
+.md-status-cancelled,
+.md-status-inactive,
+.md-status-creation_failed { background: #fee2e2; color: #dc2626; }
+.md-status-completed { background: #e0e7ff; color: #4338ca; }
+.md-status-pending_payment,
+.md-status-pending_creation { background: #f1f5f9; color: #64748b; }
+
+.md-recurring-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.md-recurring-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.md-detail-label { font-size: 11px; color: #94a3b8; }
+.md-detail-value { font-size: 13px; font-weight: 700; color: #1e293b; }
+
+.md-recurring-alert {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.md-recurring-history-toggle {
+  margin-top: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #583cd6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.md-recurring-history {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.md-history-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+.md-recurring-charge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.md-charge-date { color: #94a3b8; flex: 1; }
+.md-charge-amount { font-weight: 700; color: #1e293b; }
+.md-charge-receipt { color: #583cd6; font-weight: 600; text-decoration: none; }
+.md-charge-receipt:hover { text-decoration: underline; }
+
+.md-loading-small,
+.md-empty-small {
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 6px 0;
+}
