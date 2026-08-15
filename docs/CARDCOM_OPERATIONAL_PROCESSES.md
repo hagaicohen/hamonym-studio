@@ -112,7 +112,7 @@
 ### B3. Webhook Recovery (הגיע, processing נכשל)
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
 |---|---|---|---|---|---|---|---|---|
-| Scheduled Job + Admin | יומי | `cardcom_webhook_events.error IS NOT NULL` | אין קריאת CardCom נדרשת — המידע כבר אצלנו (raw_payload) | Re-run אותו handler על ה-`raw_payload` השמור | claim() כבר קיים, redelivery מלאכותי בטוח | ריצה חוזרת נכשלת → נשאר error, לא retry אינסופי (max attempts) | ✅ קריטי | `Retry processing` (מבוקר, לא מסה) |
+| Scheduled Job + Admin | **✅ מאושר: כל 15 דקות** | `cardcom_webhook_events.error IS NOT NULL` | אין קריאת CardCom נדרשת — המידע כבר אצלנו (raw_payload) | Re-run אותו handler על ה-`raw_payload` השמור | claim() כבר קיים, redelivery מלאכותי בטוח | ריצה חוזרת נכשלת → נשאר error, לא retry אינסופי (max attempts) | ✅ קריטי | `Retry processing` (מבוקר, לא מסה) |
 
 **✅ סמנטיקת מדדים תוקנה (2026-08-15).** `payment.handler.js::handle` היה "שקט" — `return` בלי לזרוק גם כשלא היה מה לתקן (payload בלי `ReturnValue`, או עסקה שעדיין לא הצליחה אצל CardCom) — אז "לא זרק" נספר כ-`recovered` גם כשבפועל שום דבר לא תוקן. `handle()` מחזיר עכשיו outcome object (`{outcome: 'paid'|'already_paid'|'not_paid_at_cardcom'|'no_donation_id'}`), שינוי חוזה תוסף בלבד — הקריאות הקיימות (`payment.controller.js`, `webhook.dispatcher.js`) ממשיכות ל-await ולהתעלם מהערך. הדוח של ה-job עצמו הוחלף מ-`{checked, recovered, stillFailing}` ל-`{examined, recovered, alreadyConsistent, processed, notRouted, failed}`:
 - `recovered` — donation שבאמת עבר `pending→paid` בריצה הזו (המסלול היחיד שבו יש מידע עשיר מספיק כדי לדעת).
@@ -126,12 +126,12 @@
 ### B5. Stale Pending Donations
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
 |---|---|---|---|---|---|---|---|---|
-| Scheduled Job | כל שעה (מוצע) | `donations.status='pending' AND created_at < NOW()-interval` | `GetLpResult` (אותו מנגנון כמו B1, אפשר לאחד) | Detect-only | לפי `low_profile_id` | — | ✅ | `Run now` |
+| Scheduled Job | **✅ מאושר: כל שעה** | `donations.status='pending' AND created_at < NOW()-interval` | `GetLpResult` (אותו מנגנון כמו B1, אפשר לאחד) | Detect-only | לפי `low_profile_id` | — | ✅ | `Run now` |
 
 ### B6. Stuck Recurring Signups — ✅ ממומש (2026-08-15), detect-only
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
 |---|---|---|---|---|---|---|---|---|
-| Scheduled Job (`stuck-recurring-signups`, טרם מחובר ל-scheduler) | מוצע: כל שעה | `recurring_instructions.status IN ('pending_payment','pending_creation') AND EXISTS donation.status='paid'` | אין קריאת CardCom — כל המידע כבר מקומי | כותב ל-`reconciliation_findings` (`finding_type='stuck_recurring_signup'`) בלבד — לא נוגע ב-`recurring_instructions`/`donations` | לא רלוונטי (detect-only, לא כותב state) | — | ✅ קריטי | ⚠️ **Open Decision** — ר' למטה |
+| Scheduled Job (`stuck-recurring-signups`, טרם מחובר ל-scheduler) | **✅ מאושר: כל שעה** (הועלה מ"יומי עד dedup" אחרי שה-dedup מומש — ר' חלק י') | `recurring_instructions.status IN ('pending_payment','pending_creation') AND EXISTS donation.status='paid'` | אין קריאת CardCom — כל המידע כבר מקומי | כותב ל-`reconciliation_findings` (`finding_type='stuck_recurring_signup'`) בלבד — לא נוגע ב-`recurring_instructions`/`donations` | לא רלוונטי (detect-only, לא כותב state) | — | ✅ קריטי | ⚠️ **Open Decision** — ר' למטה |
 
 **עודכן מה-B6 המקורי (2026-08-15):** התנאי המקורי (`pending_creation AND updated_at < NOW()-interval`) היה מפספס את התרחיש הגרוע יותר — קריסה *לפני* `completeSignup`'s הכתיבה הראשונה משאירה `status='pending_payment'`, לא מגיעה אפילו ל-`pending_creation`. התנאי החדש תופס את שני התתי-מקרים גם יחד, ומבחין "מה שעדיין עובר checkout" (`pending_payment` בלי donation `paid`) מ"תשלום הצליח אבל ההוראה לא נסגרה" (התנאי המלא) — נבדק ב-regression מול שלושה מצבים (תקוע/בריא/עדיין-ב-checkout), התוצאה נכונה בכל השלושה.
 
@@ -154,7 +154,7 @@ Verified: CardCom **לא** מנסה שוב אוטומטית בתוך אותו מ
 ### B11. Data Consistency (Aggregate Repair)
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
 |---|---|---|---|---|---|---|---|---|
-| Scheduled Job | יומי | `donations` (מקור אמת פנימי, לא CardCom) | אין | Detect-only: `SUM(amount) WHERE status='paid'` מול `campaigns.current_amount` | — | — | ✅ קריטי | `Repair` — **פעולה כספית-פנימית, לא יוצרת חיוב, אבל דורשת אישור מפורש בכל הרצה (לא auto)** |
+| Scheduled Job | **✅ מאושר: פעם ביום** | `donations` (מקור אמת פנימי, לא CardCom) | אין | Detect-only: `SUM(amount) WHERE status='paid'` מול `campaigns.current_amount` | — | — | ✅ קריטי | `Repair` — **פעולה כספית-פנימית, לא יוצרת חיוב, אבל דורשת אישור מפורש בכל הרצה (לא auto)** |
 
 ### B12. Monitoring/Health
 | Trigger | Frequency | SoT | Read API | DB impact | Idempotency | Failure handling | Admin visibility | Admin action |
@@ -293,3 +293,62 @@ job_runs
 - **לא נגעתי:** שני ממצאי ה-Data (4 ה-pending הישנות, drift ב-"קיץ כמו כולם") — נשארים בדיוק כפי שהיו, בכוונה.
 
 **עדיין לא מומש:** B1/B2 (Gate פורמט `GetRecurringPayment`), scheduler חיבור ל-`server.js` (החלטה נפרדת, מכוונת — מה רץ אוטומטית/באיזו תדירות/מה מנהל הפלטפורמה רואה, לפני שמחברים).
+
+---
+
+## חלק י' — Operational Policy (2026-08-16): Dedup, Schedule, Admin API, Alerts
+
+**החלטה:** לפני חיבור scheduler — קודם dedup ל-`reconciliation_findings`, כדי לא להפעיל מנגנון שכבר ידוע שייצר findings כפולים על כל ריצה.
+
+### Dedup — סמנטיקה + migration (`052_reconciliation_findings_dedup.sql`, **מוכן, טרם רץ**)
+
+- `last_seen_at` (חדש) — מתעדכן בכל ריצה שעדיין רואה את אותה בעיה. `found_at` נשאר בלי שינוי — "מתי התגלה לראשונה" נשאר אמין לכל אורך חיי finding פתוח אחד.
+- **"פתוח" = `resolved_at IS NULL`.** Partial UNIQUE INDEX על `(job_name, finding_type, subject_type, subject_id) WHERE resolved_at IS NULL` — DB-level, לא רק application logic, כך ששני runs שרצים כמעט-בו-זמנית (scheduler tick + admin "Run now") לא יכולים ליצור שני findings פתוחים לאותו subject; ה-`ON CONFLICT` של Postgres פותר את זה אטומית.
+- **UPSERT משותף** — `src/jobs/reconciliation-findings.js::recordFinding` — שלושת ה-jobs שכותבים findings (`aggregate-consistency`, `stale-pending-donations`, `stuck-recurring-signups`) עברו אליו במקום `INSERT` גולמי. `webhook-recovery` לא משתמש ב-`reconciliation_findings` בכלל — הוא כבר self-resolving דרך `cardcom_webhook_events.error`.
+- **Auto-resolve** — כל אחד מהשלושה מריץ בסוף הריצה שלו `UPDATE ... SET resolved_at=NOW(), resolved_by='system' WHERE ... resolved_at IS NULL AND NOT EXISTS (<תנאי הבעיה עדיין קיים ל-subject הזה>)`. בכוונה **לא** "חסר מרשימת הריצה הזו" (שתי מתוך שלושה עובדות עם `LIMIT 50` — diff מול תוצאה חתוכה היה שקרי אם יש יותר מ-50 findings בבת אחת) — במקום זה, בדיקה ישירה של ה-subject הספציפי מול התנאי החי. נכון גם אם יש הרבה יותר מ-50 findings.
+- **מדיניות הישנות (recurrence), נבחרה במפורש:** אם finding נפתר (auto או admin) והבעיה חוזרת אחר כך — **finding חדש**, לא reopen. הסיבה: `found_at`/`resolved_at` על השורה הישנה נשארים תיעוד אמין של "מתי האירוע הספציפי הזה היה פתוח" — reopen היה מטשטש את זה. ה-partial index מגן רק על שורות פתוחות, אז שורה שנפתרה לא חוסמת INSERT חדש — המנגנון הזה בעצם "בא בחינם" מבחירת ה-partial index, לא נדרש קוד נוסף.
+  - **הסתייגות ידועה, לא נפתרת עכשיו:** אם admin סוגר finding ידנית בזמן שהבעיה עדיין קיימת בפועל (למשל ה-4 pending הישנות — לעולם לא "יפתרו" אוטומטית כי `status` שלהן נשאר `pending` לצמיתות, ולא כתקלה), הריצה הבאה תיצור finding **חדש** לאותו subject, לא תישאר שקטה. זו לא באג — זו תוצאה ישירה של המדיניות שנבחרה — אבל אם רוצים "acknowledge בלי שיחזור" לתרחיש כמו הפנדינג הישנות, זה ידרוש state שלישי (מוצע: `acknowledged`, נפרד מ-`resolved`) שלא נבנה כרגע. מסומן לתשומת לב עתידית, לא נפתר.
+
+### תדירות מאושרת (production schedule)
+
+| Job | תדירות מאושרת | הערה |
+|---|---|---|
+| `webhook-recovery` | כל 15 דקות | ר' B3 למעלה |
+| `stale-pending-donations` | כל שעה | ר' B5 למעלה |
+| `stuck-recurring-signups` | כל שעה (הועלה מ"יומי עד dedup") | ר' B6 למעלה |
+| `aggregate-consistency` | פעם ביום | ר' B11 למעלה |
+
+מתועד כשדה `schedule` (cron expression) על אובייקט ה-export של כל job — **מידע תיעודי בלבד, לא מחובר לשום מנגנון הרצה בפועל.** `job-runner.js`'s `register()` כבר עושה spread על כל שדה, אז זה עובר בשקט בלי שינוי התנהגות.
+
+### Admin API — הושלם (רובו כבר היה קיים מהסבב הקודם)
+
+`src/modules/platform/cardcom-ops/` — כל מה שנדרש להצגה כבר קיים:
+
+| נדרש | Endpoint | הערה |
+|---|---|---|
+| מצב 4 ה-jobs | `GET /health` | `jobs[]`, `knownJobs[]` |
+| last run/duration/result | `GET /jobs/runs?jobName=` | כולל `result_summary` |
+| findings פתוחים | `GET /findings` | ברירת מחדל `resolved_at IS NULL` |
+| severity | `GET /findings` | עמודה קיימת |
+| first seen / last seen | `GET /findings` | **חדש הסבב הזה:** `last_seen_at` נוסף ל-SELECT, המיון עבר מ-`found_at DESC` ל-`last_seen_at DESC` (findings פעילים למעלה) |
+| subject | `GET /findings` | `subject_type`+`subject_id`+`details` |
+| `Run now` | `POST /jobs/:name/run` | כבר קיים, דרך אותו `job-runner.run()` שה-scheduler ישתמש בו — `triggered_by='admin:<id>'` |
+| סימון resolved | `POST /findings/:id/resolve` | כבר קיים — `resolved_by='admin:<id>'`, שונה מ-`'system'` (auto-resolve) |
+
+**גבול Observe→Repair→Financial נשמר** — שום endpoint חדש לא נוגע ב-`donations`/`campaigns`/`recurring_instructions`. הכל תחת `requireSuperAdmin`, ללא שינוי.
+
+### Alerts — מחושב ב-API, לא מערכת התראות חדשה
+
+`GET /health` מחזיר עכשיו `alerts[]`, מחושב מנתונים שכבר נשלפים באותה קריאה (לא query נוסף, לא external service):
+
+1. `job_failed` — הריצה האחרונה של job כלשהו הסתיימה ב-`status='failed'`.
+2. `webhook_recovery_unresolved` — `webhook-recovery`'s `result_summary` האחרון מכיל `failed>0` או `notRouted>0` — בדיוק שתי התוצאות שבמכוון **לא** נספרות כ-`recovered` (ר' חלק ב'/B3).
+3. `critical_findings_open` — יש `reconciliation_findings` פתוח בחומרה `critical`.
+
+**בשלב הזה — Dashboard של Platform Admin (טרם נבנה) הוא מקום ההתראה היחיד**, לא Slack/email/push. תואם את ההחלטה לא לבנות מערכת התראות חדשה.
+
+### מה לא מומש בכוונה (לפי ההנחיה)
+
+Recurring charge-history reconciliation, B2 מול `GetRecurringPayment`, webhook canary, email retry, document reconciliation, automatic repair ל-lost payment, automatic retry של `createRecurring`, Personal Area, scheduler עצמו.
+
+**⚠️ Migration 052 מוכן, טרם רץ נגד ה-DB.** עד שירוץ — הקוד החדש (`recordFinding`) ייכשל בכל ניסיון לכתוב finding (ה-`ON CONFLICT` שלו מפנה ל-index שעוד לא קיים). זו הסיבה שהבדיקות הספציפיות ל-dedup לא רצו עדיין בסבב הזה.
