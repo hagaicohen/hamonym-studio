@@ -19,16 +19,21 @@
 // a timer wired to already-proven infrastructure, not a new subsystem:
 // deploy/restart behavior, multi-instance safety, and the advisory lock
 // itself are all explained there, not re-derived here.
-// node-cron pinned at 3.0.3, not the current 4.x — 4.x requires Node >=20,
-// this project runs Node 18. `npm audit` flags 3.0.3 as `moderate` via a
-// transitive `uuid` dependency ("missing buffer bounds check when a buffer
-// is explicitly provided") — not reachable through this file's only usage
-// (`cron.schedule(expression, callback)` never passes a buffer anywhere
-// near uuid). No fix exists within the 3.x line; the only `npm audit`
-// remedy is the 4.x major bump, which breaks Node 18 compatibility.
-// Explicit decision (Operational Policy, 2026-08-16): stay on 3.0.3 now,
-// revisit alongside a Node 20+ upgrade (tracked separately, not part of
-// this work) — not deferred by accident.
+// node-cron@4.6.0 — revised 2026-08-16. Originally pinned at 3.0.3 to avoid
+// a Node 20 requirement, but that traded a real problem (this project's
+// only native dependency at the time, bcrypt, was fine either way — the
+// only actual reason to stay on 3.x was avoiding the version bump itself)
+// for a permanent one: 3.x carries a `moderate` npm audit advisory (a
+// transitive `uuid` dependency) with no fix released within that major
+// line. Investigated before switching: bcrypt (the only native/compiled
+// dependency in this project) declares `engines: {"node": ">=18"}` — no
+// upper bound, ships for current LTS lines — so it isn't a blocker either
+// way. `package.json`'s own `engines` field now requires Node >=20 to
+// match. See docs/CARDCOM_OPERATIONAL_PROCESSES.md Part י' for what this
+// does and doesn't establish about Render's actual configured runtime —
+// this repo has no .nvmrc/render.yaml/Dockerfile, so `engines` is the only
+// repo-level signal there is; whether Render's build actually picks it up
+// isn't confirmed by anything short of a real deploy.
 require('./index'); // side effect: populates the job registry
 const cron = require('node-cron');
 const jobRunner = require('./job-runner');
