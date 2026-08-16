@@ -1,0 +1,172 @@
+<div class="plat-page">
+
+  @if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else if (loading) {
+    <div class="plat-loading">טוען...</div>
+  } @else if (health) {
+
+    <div class="plat-header">
+      <h1 class="plat-title">תפעול CardCom</h1>
+    </div>
+
+    @if (actionError) {
+      <div class="ops-action-error">{{ actionError }}</div>
+    }
+
+    <!-- ALERTS -->
+    @if (health.alerts.length > 0) {
+      <div class="ops-alerts">
+        @for (alert of health.alerts; track alert.type + (alert.jobName || '') + (alert.count || 0)) {
+          <div class="ops-alert" [class.ops-alert-warning]="alert.severity === 'warning'">
+            {{ alert.message }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- JOBS -->
+    <div class="plat-card">
+      <h3 class="plat-section-title">Jobs</h3>
+      <div class="ops-job-list">
+        @for (jobName of health.knownJobs; track jobName) {
+          <div class="ops-job-card">
+            <div class="ops-job-header">
+              <div class="ops-job-name-block">
+                <span class="ops-job-name">{{ jobLabel(jobName) }}</span>
+                <span class="ops-job-freq">{{ jobFrequency(jobName) }}</span>
+              </div>
+
+              @if (lastRunFor(jobName); as lastRun) {
+                <span class="ops-status-badge" [class]="'ops-status-' + lastRun.status">
+                  {{ lastRun.status === 'success' ? 'הצליח' : lastRun.status === 'failed' ? 'נכשל' : lastRun.status === 'skipped_locked' ? 'דולג (נעילה)' : lastRun.status }}
+                </span>
+              } @else {
+                <span class="ops-status-badge ops-status-none">טרם רץ</span>
+              }
+            </div>
+
+            @if (lastRunFor(jobName); as lastRun) {
+              <div class="ops-job-details">
+                <span>ריצה אחרונה: {{ fmtDateTime(lastRun.started_at) }}</span>
+                <span>משך: {{ fmtDuration(lastRun.duration_ms) }}</span>
+              </div>
+              @if (lastRun.status === 'failed' && lastRun.error) {
+                <div class="ops-job-error">{{ lastRun.error }}</div>
+              }
+            }
+
+            <div class="ops-job-actions">
+              <button
+                type="button"
+                class="ops-btn ops-btn-secondary"
+                (click)="toggleRuns(jobName)"
+              >
+                {{ expandedJob === jobName ? 'הסתר ריצות ▲' : 'הצג ריצות אחרונות ▾' }}
+              </button>
+              <button
+                type="button"
+                class="ops-btn ops-btn-primary"
+                [disabled]="runningJob === jobName"
+                (click)="runNow(jobName)"
+              >
+                {{ runningJob === jobName ? 'מריץ...' : 'Run Now' }}
+              </button>
+            </div>
+
+            @if (expandedJob === jobName) {
+              <div class="ops-runs-table">
+                @if (!runsByJob[jobName]) {
+                  <div class="ops-empty-small">טוען...</div>
+                } @else if (runsByJob[jobName].length === 0) {
+                  <div class="ops-empty-small">אין ריצות קודמות</div>
+                } @else {
+                  @for (run of runsByJob[jobName]; track run.id) {
+                    <div class="ops-run-row">
+                      <span class="ops-status-badge ops-status-badge-sm" [class]="'ops-status-' + run.status">
+                        {{ run.status === 'success' ? 'הצליח' : run.status === 'failed' ? 'נכשל' : run.status === 'skipped_locked' ? 'דולג' : run.status }}
+                      </span>
+                      <span class="ops-run-time">{{ fmtDateTime(run.started_at) }}</span>
+                      <span class="ops-run-duration">{{ fmtDuration(run.duration_ms) }}</span>
+                      <span class="ops-run-trigger">{{ run.triggered_by }}</span>
+                    </div>
+                    @if (run.error) {
+                      <div class="ops-job-error ops-run-error">{{ run.error }}</div>
+                    }
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- FINDINGS -->
+    <div class="plat-card ops-findings-card">
+      <div class="ops-findings-header">
+        <h3 class="plat-section-title">Findings</h3>
+        <button type="button" class="ops-toggle-link" (click)="toggleResolved()">
+          {{ showResolved ? 'הצג פתוחים בלבד' : 'הצג גם פתורים' }}
+        </button>
+      </div>
+
+      @if (findings.length === 0) {
+        <div class="ops-empty-small">אין findings {{ showResolved ? '' : 'פתוחים' }} 🎉</div>
+      } @else {
+        <div class="ops-findings-list">
+          @for (finding of findings; track finding.id) {
+            <div class="ops-finding-row" [class.ops-finding-resolved]="finding.resolved_at">
+              <span class="ops-severity-dot" [class]="'ops-severity-' + finding.severity"></span>
+              <div class="ops-finding-body">
+                <div class="ops-finding-top">
+                  <span class="ops-finding-type">{{ findingTypeLabel(finding.finding_type) }}</span>
+                  <span class="ops-finding-job">{{ jobLabel(finding.job_name) }}</span>
+                </div>
+                <div class="ops-finding-meta">
+                  <span>subject: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
+                  <span>זוהה לראשונה: {{ fmtDateTime(finding.found_at) }}</span>
+                  <span>נראה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</span>
+                  @if (finding.resolved_at) {
+                    <span>נפתר: {{ fmtDateTime(finding.resolved_at) }} ({{ finding.resolved_by }})</span>
+                  }
+                </div>
+                <pre class="ops-finding-details">{{ finding.details | json }}</pre>
+              </div>
+              @if (!finding.resolved_at) {
+                <button
+                  type="button"
+                  class="ops-btn ops-btn-secondary ops-btn-sm"
+                  [disabled]="resolvingFindingId === finding.id"
+                  (click)="resolveFinding(finding)"
+                >
+                  {{ resolvingFindingId === finding.id ? 'מסמן...' : 'Resolve' }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- WEBHOOKS -->
+    <div class="plat-card">
+      <h3 class="plat-section-title">Webhooks</h3>
+      @if (health.webhooks.length === 0) {
+        <div class="ops-empty-small">אין נתוני webhooks עדיין</div>
+      } @else {
+        <div class="ops-webhook-list">
+          @for (wh of health.webhooks; track wh.type) {
+            <div class="ops-webhook-row">
+              <span class="ops-webhook-type">{{ webhookTypeLabel(wh.type) }}</span>
+              <span>אחרון: {{ fmtDateTime(wh.last_received_at) }}</span>
+              <span>ב-24 שעות: {{ wh.count_24h }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  }
+
+</div>

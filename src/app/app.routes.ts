@@ -561,6 +561,17 @@ export const routes: Routes = [
             (m) => m.PlatformUsersPageComponent,
           ),
       },
+      {
+        // Full super admin only, matching the backend route
+        // (requireSuperAdmin, not a scoped platform permission) — see
+        // cardcom-ops.routes.js's own comment on why.
+        path: 'platform/cardcom-ops',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-cardcom-ops-page/platform-cardcom-ops-page.component').then(
+            (m) => m.PlatformCardcomOpsPageComponent,
+          ),
+      },
     ],
   },
 
