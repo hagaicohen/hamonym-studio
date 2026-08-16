@@ -50,6 +50,10 @@ export interface DonationPayload {
   // (2026-07-15, 2026-07-16).
   participants?: Array<{ name: string; registrationOptionId?: string; shirtSize?: string }>;
   utmParams?: Record<string, string>;
+  // Monthly donation intent — signals the backend to create a Cardcom
+  // recurring instruction alongside this first charge. Absent/false = the
+  // existing one-time flow, unchanged.
+  recurring?: boolean;
 }
 
 export interface DonationResult {

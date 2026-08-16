@@ -65,6 +65,21 @@ export class RegisterComponent implements OnInit {
     if (name) this.form.patchValue({ fullName: name });
   }
 
+  // Carries the donor through to Login with the same context they arrived
+  // with here — returnUrl (so Login still lands them back on /my-donations,
+  // not its own default) and whatever email they typed (login.component.ts
+  // already reads ?email= and prefills it — see its ngOnInit). Read from
+  // this.form.value.email rather than the original query param, so it
+  // reflects what they actually typed if they edited it before hitting the
+  // "email already exists" error.
+  get loginQueryParams(): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (this.returnUrl) params['returnUrl'] = this.returnUrl;
+    const email = this.form.get('email')?.value;
+    if (email) params['email'] = email;
+    return params;
+  }
+
   togglePassword(): void {
     this.showPassword = !this.showPassword;
   }
@@ -112,7 +127,16 @@ export class RegisterComponent implements OnInit {
         error: (error) => {
           this.loading = false;
 
-          this.errorMessage = error?.error?.error || 'שגיאה ביצירת החשבון';
+          const backendError = error?.error?.error;
+
+          // Matches login.component.ts's own translation of this same
+          // backend error string, and points the donor at the "להתחברות"
+          // link below (now carrying returnUrl+email — see loginQueryParams)
+          // instead of leaving them stuck on a form they can't submit.
+          this.errorMessage =
+            backendError === 'Email already exists'
+              ? 'האימייל הזה כבר רשום במערכת — אפשר להתחבר עם החשבון הקיים'
+              : backendError || 'שגיאה ביצירת החשבון';
         },
       });
   }

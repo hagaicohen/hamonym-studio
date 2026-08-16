@@ -69,4 +69,10 @@ export class CampaignDonationStepComponent {
     const last = this.draft.monthlyAmounts.at(-1) ?? 50;
     this.state.patch({ monthlyAmounts: [...this.draft.monthlyAmounts, last * 2] });
   }
+
+  // ── Recurring billing mode (docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §9.3) ──
+
+  updateInstallmentsCount(value: number): void {
+    this.state.patch({ recurringInstallmentsCount: value > 0 ? value : 1 });
+  }
 }

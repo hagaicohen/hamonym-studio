@@ -618,6 +618,13 @@ export interface CampaignDraft {
   allowMonthlyDonation: boolean;
   suggestedAmounts: number[];
   monthlyAmounts: number[];
+  // Cardcom TotalNumOfBills contract, Verified 2026-08-14 (docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md
+  // §9.3): 'until_cancelled' is the existing behavior (unlimited). A
+  // manager opts into 'fixed_installments' + a count — snapshotted onto the
+  // recurring_instructions row at signup, not read live from the campaign,
+  // so editing this later never changes an already-active donor's plan.
+  recurringBillingMode: 'until_cancelled' | 'fixed_installments';
+  recurringInstallmentsCount: number;
 
   // Step 2 — Offerings (Page Builder block type/theme keys below stay
   // literally 'rewards' — they're persisted as-is in existing campaigns'
@@ -696,6 +703,8 @@ function createInitialDraft(): CampaignDraft {
     allowMonthlyDonation: true,
     suggestedAmounts: [50, 100, 180, 360, 500, 1000],
     monthlyAmounts: [18, 36, 54, 100],
+    recurringBillingMode: 'until_cancelled',
+    recurringInstallmentsCount: 12,
     donorFields: { showAddress: true, showPostalCode: false, showIdNumber: false },
     offeringsEnabled: true,
     offerings: [],
@@ -872,6 +881,8 @@ export function createInitialPartnerDraft(entityId: string, displayName: string)
     allowMonthlyDonation: false,
     suggestedAmounts: [],
     monthlyAmounts: [],
+    recurringBillingMode: 'until_cancelled',
+    recurringInstallmentsCount: 12,
     donorFields: { showAddress: false, showPostalCode: false, showIdNumber: false },
     offeringsEnabled: false,
     offerings: [],

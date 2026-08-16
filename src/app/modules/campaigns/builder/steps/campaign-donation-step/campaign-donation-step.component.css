@@ -115,6 +115,31 @@
   margin: 12px 0 0;
 }
 
+/* Recurring billing mode */
+.billing-mode-grid {
+  display: flex; gap: 8px; margin-top: 10px;
+}
+.billing-mode-option {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; background: #fff;
+  cursor: pointer; font-size: 13px; font-weight: 600; color: #334155;
+  transition: border-color 0.2s, background 0.2s;
+}
+.billing-mode-option--on {
+  border-color: #7c3aed; background: #f5f3ff; color: #0f172a;
+}
+.installments-count-wrap {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px;
+}
+.installments-count-label { font-size: 13px; color: #334155; }
+.installments-count-input {
+  width: 70px; padding: 6px 10px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 14px; font-weight: 600; color: #0f172a; font-family: inherit;
+}
+
 /* Info note */
 .info-note {
   display: flex; align-items: flex-start; gap: 10px;

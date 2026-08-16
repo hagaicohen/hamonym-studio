@@ -42,6 +42,9 @@ export class CheckoutModalComponent implements OnInit {
   @Input() amount = 0;
   @Input() cartOfferings: Offering[] = [];
   @Input() checkoutMode: 'donation' | 'registration' = 'donation';
+  // Set by campaign-preview when the visitor picked the "חודשית" tab —
+  // forwarded to POST /api/donations as-is, no logic here.
+  @Input() recurring = false;
   @Input() initialOptionId: string | null = null;
   @Input() entityLogoUrl: string | null = null;
   @Input() entityName = '';
@@ -309,6 +312,7 @@ export class CheckoutModalComponent implements OnInit {
       rewards,
       participants,
       utmParams: this.captureUtmParams(),
+      recurring: this.recurring || undefined,
     }).subscribe({
       next: (res) => {
         document.body.style.overflow = '';
