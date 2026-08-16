@@ -25,8 +25,6 @@ export class MyDonationsComponent implements OnInit {
   loading = true;
   error: string | null = null;
 
-  // Recurring instructions — Personal Area, read-only phase (Pause/Resume/
-  // Cancel land in a later phase, deliberately not here yet).
   recurringInstructions: MyRecurringInstruction[] = [];
   recurringLoading = true;
   recurringError: string | null = null;
@@ -34,6 +32,16 @@ export class MyDonationsComponent implements OnInit {
   expandedInstructionId: string | null = null;
   historyByInstruction: Record<string, RecurringCharge[]> = {};
   historyLoading: Record<string, boolean> = {};
+
+  // Pause/Resume/Cancel confirmation — one dialog, content driven by
+  // `pendingAction`. Deliberately does NOT touch recurringInstructions on
+  // submit; only a successful response (re-fetched from the server, never
+  // guessed locally) is allowed to change what a donor sees as the current
+  // status — see confirmAction() below.
+  pendingAction: 'pause' | 'resume' | 'cancel' | null = null;
+  actionTarget: MyRecurringInstruction | null = null;
+  actionInFlight = false;
+  actionError: string | null = null;
 
   get totalDonated(): number {
     return this.donations.reduce((sum, d) => sum + Number(d.amount), 0);
@@ -59,14 +67,18 @@ export class MyDonationsComponent implements OnInit {
       },
     });
 
+    this.loadRecurring();
+  }
+
+  private loadRecurring(): void {
     this.recurringService.getMyRecurring().subscribe({
       next: (instructions) => {
         this.recurringInstructions = instructions;
         this.recurringLoading = false;
       },
       error: (err) => {
-        // A 401 here is already handled by the donations call above (same
-        // token, same redirect) — no need to duplicate that logic.
+        // A 401 here is already handled by the donations call in ngOnInit
+        // (same token, same redirect) — no need to duplicate that logic.
         this.recurringError = err.status === 401 ? null : 'שגיאה בטעינת הוראות הקבע';
         this.recurringLoading = false;
       },
@@ -97,6 +109,53 @@ export class MyDonationsComponent implements OnInit {
         // empty result here reads as "no charges yet", not as a crash.
         this.historyByInstruction[instructionId] = [];
         this.historyLoading[instructionId] = false;
+      },
+    });
+  }
+
+  openAction(action: 'pause' | 'resume' | 'cancel', instruction: MyRecurringInstruction): void {
+    this.pendingAction = action;
+    this.actionTarget = instruction;
+    this.actionError = null;
+  }
+
+  closeAction(): void {
+    if (this.actionInFlight) return; // don't let a stray click abandon an in-flight request
+    this.pendingAction = null;
+    this.actionTarget = null;
+    this.actionError = null;
+  }
+
+  confirmAction(): void {
+    if (!this.pendingAction || !this.actionTarget) return;
+    const action = this.pendingAction;
+    const instructionId = this.actionTarget.id;
+
+    this.actionInFlight = true;
+    this.actionError = null;
+
+    const call$ =
+      action === 'pause'  ? this.recurringService.pause(instructionId)
+      : action === 'resume' ? this.recurringService.resume(instructionId)
+      : this.recurringService.cancel(instructionId);
+
+    call$.subscribe({
+      next: () => {
+        this.actionInFlight = false;
+        this.pendingAction = null;
+        this.actionTarget = null;
+        // Re-fetch from the server rather than mutating recurringInstructions
+        // locally — the new status is only ever what the server actually
+        // wrote (after a real Cardcom success), never assumed from the
+        // action that was requested.
+        this.loadRecurring();
+      },
+      error: (err) => {
+        this.actionInFlight = false;
+        // Deliberately leave pendingAction/actionTarget/recurringInstructions
+        // untouched — the dialog stays open showing the error, and the card
+        // behind it still shows whatever status it had before this attempt.
+        this.actionError = err?.error?.error || 'הפעולה נכשלה, נסו שוב';
       },
     });
   }

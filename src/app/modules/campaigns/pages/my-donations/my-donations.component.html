@@ -85,6 +85,18 @@
               <div class="md-recurring-alert">ההוראה לא הופעלה בהצלחה — יש לפנות לתמיכה</div>
             }
 
+            @if (ri.status === 'active' || ri.status === 'paused') {
+              <div class="md-recurring-actions">
+                @if (ri.status === 'active') {
+                  <button type="button" class="md-action-btn md-action-pause" (click)="openAction('pause', ri)">השהה</button>
+                }
+                @if (ri.status === 'paused') {
+                  <button type="button" class="md-action-btn md-action-resume" (click)="openAction('resume', ri)">חדש תרומה</button>
+                }
+                <button type="button" class="md-action-btn md-action-cancel" (click)="openAction('cancel', ri)">בטל</button>
+              </div>
+            }
+
             <button type="button" class="md-recurring-history-toggle" (click)="toggleHistory(ri.id)">
               {{ expandedInstructionId === ri.id ? 'הסתר היסטוריית חיובים ▲' : 'הצג היסטוריית חיובים ▾' }}
             </button>
@@ -143,6 +155,65 @@
         }
       </div>
     }
+  }
+
+  @if (pendingAction && actionTarget) {
+    <div class="md-modal-overlay" (click)="closeAction()">
+      <div class="md-modal" (click)="$event.stopPropagation()">
+        @switch (pendingAction) {
+          @case ('pause') {
+            <h2 class="md-modal-title">השהיית תרומה חודשית</h2>
+            <p class="md-modal-body">
+              התרומה החודשית שלכם ל<strong>{{ actionTarget.campaign_title }}</strong> תושהה זמנית —
+              לא יבוצע חיוב עד שתחדשו אותה. ניתן לחדש בכל עת מהאזור האישי.
+            </p>
+          }
+          @case ('resume') {
+            <h2 class="md-modal-title">חידוש תרומה חודשית</h2>
+            <p class="md-modal-body">
+              התרומה תחודש בסכום <strong>{{ fmtMoney(actionTarget.amount) }}</strong> לחודש.
+              @if (actionTarget.resume_preview_next_date_to_bill) {
+                החיוב הבא יתבצע ב-<strong>{{ actionTarget.resume_preview_next_date_to_bill }}</strong>.
+              }
+            </p>
+          }
+          @case ('cancel') {
+            <h2 class="md-modal-title">ביטול תרומה חודשית</h2>
+            <p class="md-modal-body md-modal-body-warning">
+              פעולה זו <strong>סופית</strong>. ההוראה ל<strong>{{ actionTarget.campaign_title }}</strong> תבוטל
+              לצמיתות ולא ניתן יהיה לחדש אותה — כדי לתרום שוב בעתיד תצטרכו להקים הוראת קבע חדשה.
+            </p>
+          }
+        }
+
+        @if (actionError) {
+          <div class="md-modal-error">{{ actionError }}</div>
+        }
+
+        <div class="md-modal-buttons">
+          <button type="button" class="md-modal-btn-secondary" (click)="closeAction()" [disabled]="actionInFlight">
+            ביטול
+          </button>
+          <button
+            type="button"
+            class="md-modal-btn-primary"
+            [class.md-modal-btn-danger]="pendingAction === 'cancel'"
+            (click)="confirmAction()"
+            [disabled]="actionInFlight"
+          >
+            @if (actionInFlight) {
+              מבצע...
+            } @else if (pendingAction === 'pause') {
+              השהה תרומה
+            } @else if (pendingAction === 'resume') {
+              חדש תרומה
+            } @else {
+              בטל תרומה לצמיתות
+            }
+          </button>
+        </div>
+      </div>
+    </div>
   }
 
 </div>

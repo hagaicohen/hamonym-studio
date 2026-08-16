@@ -306,3 +306,127 @@
   color: #94a3b8;
   padding: 6px 0;
 }
+
+/* RECURRING ACTIONS */
+.md-recurring-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.md-action-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.md-action-pause {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+.md-action-pause:hover { border-color: #cbd5e1; }
+
+.md-action-resume {
+  background: #583cd6;
+  color: #fff;
+}
+.md-action-resume:hover { background: #4a30bd; }
+
+.md-action-cancel {
+  background: #fff;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+.md-action-cancel:hover { background: #fef2f2; }
+
+/* CONFIRMATION MODAL */
+.md-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.md-modal {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 420px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.md-modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 10px;
+}
+
+.md-modal-body {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.md-modal-body-warning { color: #7f1d1d; }
+
+.md-modal-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.md-modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.md-modal-btn-secondary,
+.md-modal-btn-primary {
+  flex: 1;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.md-modal-btn-secondary {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+.md-modal-btn-secondary:hover { border-color: #cbd5e1; }
+
+.md-modal-btn-primary {
+  background: #583cd6;
+  color: #fff;
+}
+.md-modal-btn-primary:hover { background: #4a30bd; }
+
+.md-modal-btn-primary.md-modal-btn-danger {
+  background: #dc2626;
+}
+.md-modal-btn-primary.md-modal-btn-danger:hover { background: #b91c1c; }
+
+.md-modal-btn-secondary:disabled,
+.md-modal-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

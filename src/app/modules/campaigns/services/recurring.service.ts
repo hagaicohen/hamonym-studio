@@ -70,4 +70,21 @@ export class RecurringService {
     return this.http.get<{ history: RecurringCharge[] }>(`${this.apiUrl}/${instructionId}/history`, { headers: this.authHeaders() })
       .pipe(map(r => r.history ?? []));
   }
+
+  // Pause/Resume/Cancel — the caller must re-fetch getMyRecurring() after a
+  // successful response rather than guessing the new status locally: the
+  // backend only writes local state after a real Cardcom ResponseCode='0'
+  // (see recurring.service.js), so the server's own state after the call is
+  // the only thing worth trusting, not an optimistic local mutation.
+  pause(instructionId: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${instructionId}/pause`, {}, { headers: this.authHeaders() });
+  }
+
+  resume(instructionId: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${instructionId}/resume`, {}, { headers: this.authHeaders() });
+  }
+
+  cancel(instructionId: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${instructionId}/cancel`, {}, { headers: this.authHeaders() });
+  }
 }
