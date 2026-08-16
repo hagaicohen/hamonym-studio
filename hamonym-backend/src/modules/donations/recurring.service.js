@@ -199,6 +199,14 @@ exports.pauseRecurring = async (instructionId) => {
   if (!instruction) throw new Error('Recurring instruction not found');
   if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
   if (instruction.status === 'paused') return { alreadyPaused: true };
+  // ⚠️ Gap closed 2026-08-16 (same review as resumeRecurring's fix below) —
+  // only 'active' should be pausable. Without this, pausing a 'cancelled'
+  // or 'completed' instruction would silently overwrite that status with
+  // 'paused', destroying the distinction between "donor cancelled" /
+  // "plan finished on schedule" and "temporarily paused".
+  if (instruction.status !== 'active') {
+    throw new Error(`Cannot pause a recurring instruction with status '${instruction.status}'`);
+  }
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
   const result = await recurringClient.updateRecurring({
@@ -245,6 +253,15 @@ exports.resumeRecurring = async (instructionId) => {
   // (same mechanism as Resume), so this guard is a Hamonym-side rule, not a
   // Cardcom limitation.
   if (instruction.status === 'cancelled') throw new Error('Cannot resume a cancelled recurring instruction — start a new signup instead');
+  // ⚠️ Gap closed 2026-08-16 (Personal Area action-endpoint review, before
+  // any route called this) — 'active'/'cancelled' were the only statuses
+  // checked, so 'completed' (Phase 7 — TotalNumOfBills exhausted) and every
+  // other non-paused status (inactive/creation_failed/pending_*) fell
+  // through and would have gone ahead and called Cardcom. Only a genuinely
+  // 'paused' instruction should ever be resumable.
+  if (instruction.status !== 'paused') {
+    throw new Error(`Cannot resume a recurring instruction with status '${instruction.status}'`);
+  }
 
   // Same lazy-backfill fallback as pauseRecurring, for a row that somehow
   // reached Resume without ever going through Pause under this code.
@@ -295,6 +312,14 @@ exports.cancelRecurring = async (instructionId) => {
   if (!instruction) throw new Error('Recurring instruction not found');
   if (!instruction.cardcom_recurring_id) throw new Error('Recurring instruction has no Cardcom recurring id yet');
   if (instruction.status === 'cancelled') return { alreadyCancelled: true };
+  // ⚠️ Gap closed 2026-08-16 (same review as pauseRecurring/resumeRecurring's
+  // fixes above) — active and paused are both legitimate states to cancel
+  // from (cancelling a currently-paused gift is a normal donor action).
+  // Everything else (completed/inactive/creation_failed/pending_*) has
+  // nothing meaningful to cancel and must not be overwritten to 'cancelled'.
+  if (!['active', 'paused'].includes(instruction.status)) {
+    throw new Error(`Cannot cancel a recurring instruction with status '${instruction.status}'`);
+  }
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
   const result = await recurringClient.updateRecurring({
