@@ -14,6 +14,22 @@ exports.validateWebhookSecret =
     return !!expected && secret === expected;
   };
 
+// Recurring webhooks (MasterRecurring/DetailRecurring) carry the secret as a
+// form field in the body, NOT as ?secret= in the URL like the LowProfile
+// webhook above — verified against a real captured payload (2026-08-14).
+// ASSUMPTION, not yet confirmed against the raw capture: the field name is
+// `Secret` (PascalCase), matching every other Cardcom field name seen across
+// this whole integration (RecurringId, AccountId, IsActive, ...). Revisit if
+// a real delivery to the live endpoint fails validation unexpectedly.
+exports.validateRecurringWebhookSecret =
+  (body) => {
+
+    const expected =
+      process.env.CARDCOM_WEBHOOK_SECRET;
+
+    return !!expected && body?.Secret === expected;
+  };
+
 exports.validateConnectionResponse =
   (response) => {
 
