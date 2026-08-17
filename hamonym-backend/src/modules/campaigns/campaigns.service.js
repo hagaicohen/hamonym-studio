@@ -832,7 +832,7 @@ exports.discoverCampaigns = async ({ search, category, sortBy, page = 0, limit =
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
-         c.id, c.title, c.slug, c.short_description, c.category, c.cover_image_url,
+         c.id, c.title, c.slug, c.short_description, c.category, c.cover_image_url, c.video_url,
          c.current_amount, c.target_amount, c.supporters_count, c.end_date, c.created_at,
          e.display_name AS entity_name, e.logo_url AS entity_logo
        FROM campaigns c
