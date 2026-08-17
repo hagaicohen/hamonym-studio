@@ -6,11 +6,21 @@ const emailService = require('../email/email.service');
 // ever get one receipt, enforced by the UNIQUE(donation_id) constraint) and
 // opportunistically links the donation to an existing user account by email,
 // so it shows up in that donor's "my donations" list immediately, without
-// waiting for them to log in again. Shared by both the mock and Cardcom
-// completion paths so receipts/linking behave identically regardless of
-// payment provider.
-async function finalizePaidDonation(donationId) {
-  await db.query(
+// waiting for them to log in again. Shared by every completion path
+// (Cardcom webhook, mock, manual entry, recurring charge) so receipts/
+// linking behave identically regardless of payment provider.
+//
+// Takes an optional `client` (a checked-out, transaction-scoped pg client)
+// so it can run as part of the same atomic transaction as the donation
+// status update and campaign aggregate update that precede it — see
+// withTransaction below. Defaults to the pool for any caller that hasn't
+// been wrapped in a transaction, but every call site in this file now is.
+// Deliberately does NOT send the email itself: email is queued by the
+// caller only after COMMIT succeeds (see queueReceiptEmail), so a rollback
+// (receipt insert failed, connection dropped, etc.) can never leave a
+// donor with a receipt email for a receipt that doesn't actually exist.
+async function finalizePaidDonation(donationId, client = db) {
+  await client.query(
     `UPDATE donations d
      SET donor_user_id = u.id
      FROM users u
@@ -18,7 +28,7 @@ async function finalizePaidDonation(donationId) {
     [donationId]
   );
 
-  const insertRes = await db.query(
+  const insertRes = await client.query(
     `INSERT INTO receipts (donation_id, entity_id, campaign_id, amount, donor_name, donor_email)
      SELECT id, entity_id, campaign_id, amount, donor_name, donor_email
      FROM donations
@@ -30,36 +40,78 @@ async function finalizePaidDonation(donationId) {
 
   // No row back means either the donation isn't (yet) paid, or a receipt
   // already existed for it (e.g. a duplicate Cardcom return redirect) — in
-  // both cases the email was already sent (or never should be), so skip it.
+  // both cases the email was already sent (or never should be), so the
+  // caller has nothing to queue.
   const receipt = insertRes.rows[0];
-  if (!receipt || !receipt.donor_email) return;
-
-  const detailsRes = await db.query(
-    `SELECT c.title AS campaign_title, e.display_name AS entity_name
-     FROM campaigns c JOIN entities e ON e.id = c.entity_id
-     WHERE c.id = $1`,
-    [receipt.campaign_id]
-  );
-  const details = detailsRes.rows[0] || {};
-  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-
-  emailService.queue({
-    template: 'receipt',
-    to: receipt.donor_email,
-    data: {
-      donorName: receipt.donor_name,
-      receiptNumber: receipt.receipt_number,
-      amount: receipt.amount,
-      campaignTitle: details.campaign_title,
-      entityName: details.entity_name,
-      receiptUrl: `${frontBase}/receipts/${receipt.id}`,
-    },
-    entityId: receipt.entity_id,
-    campaignId: receipt.campaign_id,
-    donationId,
-  });
+  if (!receipt || !receipt.donor_email) return null;
+  return receipt;
 }
 exports.finalizePaidDonation = finalizePaidDonation;
+
+// Runs `fn(client)` inside BEGIN/COMMIT on one dedicated client, ROLLBACK on
+// any thrown error — same pattern already proven for processRegistrationDonation
+// below and for job-runner.js's advisory lock. Used to make donation→campaign
+// aggregate→receipt one atomic unit across every completion path.
+async function withTransaction(fn) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Second half of receipt finalization — the part that must run AFTER the
+// transaction that created the receipt has committed, never before: sending
+// (or even just queuing) an email for a receipt that a rollback might still
+// erase would tell a donor they were charged/thanked for a donation that,
+// from the DB's point of view, never happened.
+//
+// Never throws — the payment/finalization it's called after already
+// committed successfully by this point, so a failure here (the campaign/
+// entity lookup below, not the send itself — emailService.queue is already
+// fire-and-forget and swallows its own errors, see email.service.js) must
+// not surface as if the payment had failed. Logged, not raised.
+async function queueReceiptEmail(receipt, donationId) {
+  if (!receipt) return;
+
+  try {
+    const detailsRes = await db.query(
+      `SELECT c.title AS campaign_title, e.display_name AS entity_name
+       FROM campaigns c JOIN entities e ON e.id = c.entity_id
+       WHERE c.id = $1`,
+      [receipt.campaign_id]
+    );
+    const details = detailsRes.rows[0] || {};
+    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+    emailService.queue({
+      template: 'receipt',
+      to: receipt.donor_email,
+      data: {
+        donorName: receipt.donor_name,
+        receiptNumber: receipt.receipt_number,
+        amount: receipt.amount,
+        campaignTitle: details.campaign_title,
+        entityName: details.entity_name,
+        receiptUrl: `${frontBase}/receipts/${receipt.id}`,
+      },
+      entityId: receipt.entity_id,
+      campaignId: receipt.campaign_id,
+      donationId,
+    });
+  } catch (err) {
+    console.error('[queueReceiptEmail] failed to queue receipt email:', err.message);
+  }
+}
+exports.queueReceiptEmail = queueReceiptEmail;
+exports.withTransaction = withTransaction;
 
 // Looks up every registrationOptionId a participant references, scoped to
 // this campaign and active — and rejects the whole request if any of them
@@ -409,31 +461,56 @@ exports.resolveCardcomCredentialsForEntity = resolveCardcomCredentialsForEntity;
 // actual source of truth, see docs/CARDCOM_INTEGRATION.md). Idempotent: a
 // donation already 'paid' is a no-op, so both call sites can safely fire for
 // the same donation without double-counting campaign totals.
+//
+// donation UPDATE → campaign aggregate UPDATE → receipt INSERT run inside
+// one transaction (Operational Processes audit, 2026-08-15): before this,
+// a crash between any two of those writes left a donation marked 'paid'
+// with no matching campaign total and/or no receipt, silently and
+// permanently — the `status != 'paid'` guard above would then block any
+// later redelivery from ever repairing it, since as far as the guard is
+// concerned this donation is already done. Now `status='paid'` and "fully
+// finalized" are the same fact by construction: either all three writes
+// land, or none do and the row rolls back to its pre-call state, so a
+// retry (webhook redelivery, this function called again) sees a
+// non-'paid' donation and finalizes it properly instead of skipping it.
+// The guard itself doesn't need to change — it's exactly what makes this
+// safe to call twice — only the atomicity behind it did. Rows already
+// marked 'paid' from before this fix are not retroactively covered by
+// this change; the aggregate-consistency job is the safety net for those.
 async function markDonationPaid(donationId, { providerReference } = {}) {
-  const updateRes = await db.query(
-    `UPDATE donations
-     SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
-     WHERE id=$2 AND status != 'paid'
-     RETURNING amount, campaign_id, entity_id`,
-    [providerReference || null, donationId]
-  );
+  let receipt = null;
+  const outcome = await withTransaction(async (client) => {
+    const updateRes = await client.query(
+      `UPDATE donations
+       SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+       WHERE id=$2 AND status != 'paid'
+       RETURNING amount, campaign_id, entity_id`,
+      [providerReference || null, donationId]
+    );
 
-  const row = updateRes.rows[0];
-  if (!row) return { updated: false };
+    const row = updateRes.rows[0];
+    if (!row) return { updated: false };
 
-  await db.query(
-    `UPDATE campaigns
-     SET current_amount   = current_amount   + $1,
-         supporters_count = supporters_count + 1,
-         updated_at = NOW()
-     WHERE id = $2`,
-    [row.amount, row.campaign_id]
-  );
+    await client.query(
+      `UPDATE campaigns
+       SET current_amount   = current_amount   + $1,
+           supporters_count = supporters_count + 1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [row.amount, row.campaign_id]
+    );
 
-  if (row.entity_id) require('../dashboard/dashboard.service').invalidateDashboard(row.entity_id);
-  await finalizePaidDonation(donationId);
+    receipt = await finalizePaidDonation(donationId, client);
 
-  return { updated: true, amount: row.amount, campaignId: row.campaign_id };
+    return { updated: true, amount: row.amount, campaignId: row.campaign_id, entityId: row.entity_id };
+  });
+
+  if (outcome.updated) {
+    if (outcome.entityId) require('../dashboard/dashboard.service').invalidateDashboard(outcome.entityId);
+    await queueReceiptEmail(receipt, donationId);
+  }
+
+  return outcome;
 }
 exports.markDonationPaid = markDonationPaid;
 
@@ -652,26 +729,42 @@ exports.handleMockComplete = async ({ donationId, status, failureReason, complet
   const amount   = row?.amount    || 0;
   const entityId = row?.entity_id || null;
 
-  await db.query(
-    `UPDATE donations
-     SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
-     WHERE id=$4`,
-    [newStatus, failureReason || null, resolvedAt, donationId]
-  );
+  let receipt = null;
 
   if (success && row?.campaign_id) {
+    // Same atomicity as markDonationPaid — status update, campaign
+    // aggregate, and receipt are one transaction, email queued only after
+    // COMMIT (see withTransaction/queueReceiptEmail above).
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE donations
+         SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
+         WHERE id=$4`,
+        [newStatus, failureReason || null, resolvedAt, donationId]
+      );
+
+      await client.query(
+        `UPDATE campaigns
+         SET current_amount   = current_amount   + $1,
+             supporters_count = supporters_count + 1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [amount, row.campaign_id]
+      );
+
+      receipt = await finalizePaidDonation(donationId, client);
+    });
+  } else {
     await db.query(
-      `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
-           supporters_count = supporters_count + 1,
-           updated_at = NOW()
-       WHERE id = $2`,
-      [amount, row.campaign_id]
+      `UPDATE donations
+       SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
+       WHERE id=$4`,
+      [newStatus, failureReason || null, resolvedAt, donationId]
     );
-    await finalizePaidDonation(donationId);
   }
 
   if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+  if (success) await queueReceiptEmail(receipt, donationId);
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
   return {
@@ -934,28 +1027,37 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
   );
   if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
 
-  const donationRes = await db.query(
-    `INSERT INTO donations (
-       campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
-       rewards, status, is_mock, source, supporters_count, entered_by, note,
-       completed_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
-     RETURNING id`,
-    [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
-  );
-  const donationId = donationRes.rows[0].id;
+  // Same atomicity as markDonationPaid: donation insert, campaign
+  // aggregate, and receipt are one transaction; email queued only after
+  // COMMIT.
+  let receipt = null;
+  const donationId = await withTransaction(async (client) => {
+    const donationRes = await client.query(
+      `INSERT INTO donations (
+         campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
+         rewards, status, is_mock, source, supporters_count, entered_by, note,
+         completed_at
+       ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
+       RETURNING id`,
+      [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
+    );
+    const id = donationRes.rows[0].id;
 
-  await db.query(
-    `UPDATE campaigns
-     SET current_amount   = current_amount   + $1,
-         supporters_count = supporters_count + $2,
-         updated_at = NOW()
-     WHERE id = $3`,
-    [amt, count, campaignId]
-  );
+    await client.query(
+      `UPDATE campaigns
+       SET current_amount   = current_amount   + $1,
+           supporters_count = supporters_count + $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [amt, count, campaignId]
+    );
+
+    receipt = await finalizePaidDonation(id, client);
+    return id;
+  });
 
   require('../dashboard/dashboard.service').invalidateDashboard(entityId);
-  await finalizePaidDonation(donationId);
+  await queueReceiptEmail(receipt, donationId);
 
   return { donationId };
 };

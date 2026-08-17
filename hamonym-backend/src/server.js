@@ -36,6 +36,9 @@ const mediaRoutes =
 const donationsRoutes =
   require('./modules/donations/donations.routes');
 
+const recurringRoutes =
+  require('./modules/donations/recurring.routes');
+
 const ambassadorsRoutes =
   require('./modules/ambassadors/ambassadors.routes');
 
@@ -124,6 +127,11 @@ app.use(
 app.use(
   '/api/donations',
   donationsRoutes
+);
+
+app.use(
+  '/api/recurring',
+  recurringRoutes
 );
 
 app.use(
@@ -235,7 +243,7 @@ app.use(
 const PORT =
   process.env.PORT || 3000;
 
-app.listen(
+const server = app.listen(
 
   PORT,
 
@@ -245,6 +253,25 @@ app.listen(
       `Server running on port ${PORT}`
     );
 
+    // Off by default — see docs/CARDCOM_OPERATIONAL_PROCESSES.md Part י'.
+    // No runOnInit: jobs wait for their own next scheduled tick rather than
+    // firing on every server start/deploy.
+    if (process.env.ENABLE_JOB_SCHEDULER === 'true') {
+      require('./jobs/scheduler').start();
+    }
+
   }
 
 );
+
+// Render sends SIGTERM before killing a dyno on deploy/restart/scale-down.
+// Stops scheduling new job ticks so nothing new starts mid-shutdown — does
+// not forcibly interrupt a run already in flight (see scheduler.js's own
+// comment for why that's safe to leave alone).
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  if (process.env.ENABLE_JOB_SCHEDULER === 'true') {
+    require('./jobs/scheduler').stop();
+  }
+  server.close(() => process.exit(0));
+});

@@ -209,6 +209,8 @@ exports.createCampaign =
 
             suggested_amounts,
             monthly_amounts,
+            recurring_billing_mode,
+            recurring_installments_count,
 
             rewards_enabled,
 
@@ -249,15 +251,17 @@ exports.createCampaign =
 
             $31,$32,
 
-            $33,
+            $33,$34,
 
-            $34,$35,$36,$37,
+            $35,
 
-            $38,$39,
+            $36,$37,$38,$39,
 
             $40,$41,
 
-            $42
+            $42,$43,
+
+            $44
 
           )
 
@@ -327,6 +331,9 @@ exports.createCampaign =
               54,
               100
             ],
+
+            data.recurring_billing_mode || 'until_cancelled',
+            data.recurring_installments_count || 12,
 
             data.rewards_enabled ?? true,
 

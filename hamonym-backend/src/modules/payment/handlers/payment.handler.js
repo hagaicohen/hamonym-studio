@@ -11,9 +11,17 @@ const donationsService = require('../../donations/donations.service');
 // (MasterRecurring/DetailRecurring) and Document events belong in their own
 // handler + their own future endpoint (/api/payment/recurring-webhook etc.,
 // see docs/CARDCOM_INTEGRATION.md's Architecture Change) — not here.
+// Returns a small outcome object rather than nothing — added 2026-08-15 so
+// callers that re-run this handler outside the live webhook path (currently
+// only webhook-recovery.job.js) can tell "not throwing" apart from "actually
+// did something". Before this, "ran without throwing" was the only signal
+// available, which made e.g. a ReturnValue-less payload or a still-pending
+// Cardcom result look identical to a real recovery. Not used by the live
+// webhook path itself (payment.controller.js/webhook.dispatcher.js still
+// just await it) — this is additive, not a behavior change for them.
 exports.handle = async (payload) => {
   const donationId = payload.ReturnValue;
-  if (!donationId) return;
+  if (!donationId) return { outcome: 'no_donation_id' };
 
   const credentials = await donationsService.resolveCardcomCredentials(donationId);
 
@@ -22,9 +30,9 @@ exports.handle = async (payload) => {
     lowProfileId: payload.LowProfileId,
   });
 
-  if (result?.ResponseCode !== 0) return;
+  if (result?.ResponseCode !== 0) return { outcome: 'not_paid_at_cardcom', donationId, responseCode: result?.ResponseCode };
 
-  await donationsService.markDonationPaid(donationId, {
+  const markResult = await donationsService.markDonationPaid(donationId, {
     providerReference: result?.TranzactionId || result?.LowProfileId || null,
   });
 
@@ -38,4 +46,6 @@ exports.handle = async (payload) => {
   } catch (err) {
     console.error('[payment.handler] completeSignup failed:', err.message);
   }
+
+  return { outcome: markResult.updated ? 'paid' : 'already_paid', donationId };
 };
