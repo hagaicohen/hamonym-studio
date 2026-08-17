@@ -165,7 +165,13 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     // navigation by itself.
     this.title.setTitle(data.title ? `${data.title} — המונים` : 'המונים');
     this.snapshotTakenAt = new Date();
-    this.lastSeenAt      = this.snapshotTakenAt;
+    // lastSeenAt gates which polled donations become toasts — sinceParm
+    // (passed from the donation-success page's "back to campaign" link,
+    // looking 10 minutes back) lets the donor's own just-completed
+    // donation still surface as a toast even though it finished before
+    // this page load. snapshotTakenAt (above) still gates the running
+    // total separately, so that donation isn't double-counted.
+    this.lastSeenAt = sinceParm ? new Date(sinceParm) : this.snapshotTakenAt;
     this.state.loadDraft(data);
     this.loader.hide();
     this.isLoading = false;

@@ -832,11 +832,16 @@
 
 .hm-stat-grid {
   display: grid;
-  /* minmax(0, 1fr), not plain 1fr — a grid track never shrinks below its
-     content's min-content width by default, so a wide number (e.g.
-     ₪250,000) would otherwise steal space from the other columns and
-     throw off the equal spacing between icons. */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* auto-flow: column + auto-columns (not a fixed repeat(4, ...)) — the
+     number of visible boxes varies per campaign (1 fixed "נותר ליעד" +
+     0-5 configurable KPIs from the Builder's "סדר וחשיפה" editor), so a
+     hardcoded 4-column template left a visibly empty trailing cell
+     whenever fewer than 4 were enabled. minmax(0, 1fr): a grid track
+     never shrinks below its content's min-content width by default, so a
+     wide number (e.g. ₪250,000) would otherwise steal space from the
+     other columns and throw off the equal spacing between icons. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   border-top: 1px solid var(--line, #e2e8f0);
   margin-top: auto;
   direction: ltr
@@ -1543,8 +1548,10 @@
 .campaign-page--mobile .hm-ring-svg    { width: 80px; height: 80px; }
 .campaign-page--mobile .hm-ring-text strong { font-size: 16px; }
 .campaign-page--mobile .hm-raised-amount { font-size: 22px; }
-/* 2-column stat grid on mobile */
+/* 2-column stat grid on mobile — back to row-major wrapping (base grid
+   is column-flow so it can size to however many boxes are visible). */
 .campaign-page--mobile .hm-stat-grid {
+  grid-auto-flow: row;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .campaign-page--mobile .hm-stat-box { padding: 10px 4px 0; }
@@ -1580,8 +1587,8 @@
 .container-child .hm-ring-svg    { width: 80px; height: 80px; }
 .container-child .hm-ring-text strong { font-size: 16px; }
 .container-child .hm-raised-amount   { font-size: 22px; }
-/* 2-column stat grid inside any container */
-.container-child .hm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 2-column stat grid inside any container — row-major wrapping */
+.container-child .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .container-child .hm-stat-box { padding: 12px 6px 0; }
 .container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
 .container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
@@ -3392,7 +3399,7 @@
   .hm-ring-svg    { width: 80px; height: 80px; }
   .hm-ring-text strong { font-size: 16px; }
   .hm-raised-amount { font-size: 22px; }
-  .hm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-stat-box  { padding: 10px 4px 0; }
   .hm-stat-box:nth-child(2n+1) { border-left: none; }
   .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
