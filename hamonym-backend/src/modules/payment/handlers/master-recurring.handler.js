@@ -12,9 +12,14 @@ const db = require('../../../db/db');
 // NextDateToBill arrives dd/MM/yyyy — verified against a real captured
 // payload, same format Update sends, different from every other Cardcom
 // date surface touched so far (see recurring.service.js's own caution).
+// The at-creation Master webhook (never captured before 2026-08-17, since
+// every earlier capture came from a manual Update call in Test) appends a
+// time-of-day using '/' as its separator too, e.g. "17/09/2026 00/00" —
+// takes the date portion up to the first space and ignores the rest, since
+// the destination column is a plain DATE, not a timestamp.
 function parseSlashedDate(str) {
   if (!str) return null;
-  const [dd, mm, yyyy] = str.split('/');
+  const [dd, mm, yyyy] = str.split(' ')[0].split('/');
   if (!dd || !mm || !yyyy) return null;
   return `${yyyy}-${mm}-${dd}`;
 }
