@@ -8,6 +8,7 @@ import {
   RecurringCharge,
   recurringStatusLabel,
 } from '../../services/recurring.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-my-donations',
@@ -20,6 +21,12 @@ export class MyDonationsComponent implements OnInit {
   private donationService = inject(DonationService);
   private recurringService = inject(RecurringService);
   private router = inject(Router);
+  private auth = inject(AuthService);
+
+  get greetingFirstName(): string | null {
+    const fullName = this.auth.currentUser()?.full_name?.trim();
+    return fullName ? fullName.split(' ')[0] : null;
+  }
 
   donations: MyDonation[] = [];
   loading = true;

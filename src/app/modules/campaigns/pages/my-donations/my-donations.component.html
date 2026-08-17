@@ -6,7 +6,11 @@
   </div>
 
   <div class="md-hero">
-    <h1 class="md-title">💛 הפרופיל שלי</h1>
+    @if (greetingFirstName) {
+      <h1 class="md-title">שלום {{ greetingFirstName }} 💛</h1>
+    } @else {
+      <h1 class="md-title">הפרופיל שלי 💛</h1>
+    }
     <p class="md-subtitle">כל התרומות שלך במקום אחד</p>
   </div>
 
