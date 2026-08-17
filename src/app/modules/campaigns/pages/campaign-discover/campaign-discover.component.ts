@@ -121,4 +121,17 @@ export class CampaignDiscoverComponent implements OnInit {
   fmtMoney(n: string | number): string {
     return '₪' + Math.round(Number(n) || 0).toLocaleString('he-IL');
   }
+
+  // Video-hero campaigns have no cover_image_url — fall back to the YouTube
+  // thumbnail so the card isn't blank (mirrors campaigns-page.component.ts).
+  cardCoverUrl(c: DiscoverCampaign): string | null {
+    if (c.cover_image_url) return c.cover_image_url;
+    if (!c.video_url) return null;
+    const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
+    for (const p of patterns) {
+      const m = c.video_url.match(p);
+      if (m) return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+    }
+    return null;
+  }
 }

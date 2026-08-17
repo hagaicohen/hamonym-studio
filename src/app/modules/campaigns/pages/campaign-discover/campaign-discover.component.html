@@ -38,8 +38,8 @@
       @for (c of campaigns; track c.id) {
         <div class="disc-card" (click)="openCampaign(c)">
           <div class="disc-card-cover">
-            @if (c.cover_image_url) {
-              <img [src]="c.cover_image_url" alt="" />
+            @if (cardCoverUrl(c); as cover) {
+              <img [src]="cover" alt="" />
             } @else {
               <div class="disc-card-cover-placeholder"></div>
             }
