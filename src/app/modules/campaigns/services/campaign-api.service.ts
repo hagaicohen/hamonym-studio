@@ -11,6 +11,7 @@ export interface DiscoverCampaign {
   short_description: string | null;
   category: string | null;
   cover_image_url: string | null;
+  video_url: string | null;
   current_amount: string | number;
   target_amount: string | number;
   supporters_count: number;
