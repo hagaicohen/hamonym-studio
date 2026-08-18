@@ -19,6 +19,8 @@ import { CurrentContextService } from '../../../../core/services/current-context
 
 import { AmbassadorService } from '../../../campaigns/services/ambassador.service';
 
+import { DonationService } from '../../../campaigns/services/donation.service';
+
 import {
   FormBuilder,
   FormGroup,
@@ -87,6 +89,8 @@ export class LoginComponent implements OnInit {
 
   private ambassadorService = inject(AmbassadorService);
 
+  private donationService = inject(DonationService);
+
   ngOnInit(): void {
     this._initGoogle();
 
@@ -148,8 +152,9 @@ export class LoginComponent implements OnInit {
           forkJoin({
             entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
+            donations: this.donationService.getMyDonations().pipe(catchError(() => of([]))),
           }).subscribe({
-            next: ({ entitiesRes, ambassadorCampaigns }) => {
+            next: ({ entitiesRes, ambassadorCampaigns, donations }) => {
               const entities = entitiesRes.entities || [];
 
               if (entities.length > 0) {
@@ -174,7 +179,7 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
-              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
 
               // =========================
               // NAVIGATION FLOW
@@ -242,8 +247,9 @@ export class LoginComponent implements OnInit {
           forkJoin({
             entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
+            donations: this.donationService.getMyDonations().pipe(catchError(() => of([]))),
           }).subscribe({
-            next: ({ entitiesRes, ambassadorCampaigns }) => {
+            next: ({ entitiesRes, ambassadorCampaigns, donations }) => {
               const entities = entitiesRes.entities || [];
 
               if (entities.length > 0) {
@@ -268,7 +274,7 @@ export class LoginComponent implements OnInit {
                 this.currentEntityService.currentRole.set(entity.role);
               }
 
-              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
 
               // =========================
               // NAVIGATION FLOW

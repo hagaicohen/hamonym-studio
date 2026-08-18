@@ -51,6 +51,12 @@ export class TopbarComponent {
         this.router.navigate(['/campaigns']);
       }
     }
+
+    if (role === 'donor') {
+      if (this.router.url !== '/my-donations') {
+        this.router.navigate(['/my-donations']);
+      }
+    }
   }
 
   navigateTo(path: string, event: MouseEvent): void {
