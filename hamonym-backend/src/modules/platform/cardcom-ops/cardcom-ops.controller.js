@@ -1,5 +1,6 @@
 const db = require('../../../db/db');
 const jobRunner = require('../../../jobs');
+const { checkStaleness } = require('../../../jobs/schedule-window');
 
 // Read-only + "repair local state" actions only — see
 // docs/CARDCOM_OPERATIONAL_PROCESSES.md Part G. Every job reachable through
@@ -58,6 +59,39 @@ function computeAlerts(jobRuns, criticalOpenCount) {
   return alerts;
 }
 
+// Separate from computeAlerts (which only reads the already-fetched
+// lastJobRuns rows) — staleness needs its own per-job query via
+// schedule-window.checkStaleness(): "how long since this job last actually
+// succeeded", not "did its last recorded run fail" (a job that simply never
+// got triggered has no failed run to catch it, no critical finding either —
+// exactly the 2026-08-18 gap). 2x the job's own schedule interval before
+// alarming — one missed cycle is within normal trigger jitter, two in a row
+// means the trigger itself likely isn't firing.
+async function computeStaleAlerts(now) {
+  const alerts = [];
+
+  for (const name of jobRunner.list()) {
+    const job = jobRunner.get(name);
+    if (!job?.schedule) continue;
+
+    const { stale, msSinceLastSuccess } = await checkStaleness(db, job, now);
+    if (!stale) continue;
+
+    const message = msSinceLastSuccess == null
+      ? `${name} מעולם לא הצליח לרוץ`
+      : `${name} לא רץ בהצלחה ${Math.round(msSinceLastSuccess / 60_000)} דקות`;
+    alerts.push({
+      type: 'job_stale',
+      severity: 'critical',
+      jobName: name,
+      minutesSinceLastSuccess: msSinceLastSuccess == null ? null : Math.round(msSinceLastSuccess / 60_000),
+      message,
+    });
+  }
+
+  return alerts;
+}
+
 exports.getHealth = async (req, res) => {
   try {
     const lastWebhooks = await db.query(
@@ -72,12 +106,13 @@ exports.getHealth = async (req, res) => {
     const criticalOpenRes = await db.query(
       `SELECT count(*)::int AS count FROM reconciliation_findings WHERE resolved_at IS NULL AND severity = 'critical'`
     );
+    const staleAlerts = await computeStaleAlerts(new Date());
 
     res.json({
       webhooks: lastWebhooks.rows,
       jobs: lastJobRuns.rows,
       knownJobs: jobRunner.list(),
-      alerts: computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count),
+      alerts: [...computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count), ...staleAlerts],
     });
   } catch (err) {
     console.error('[cardcom-ops.getHealth]', err.message);
