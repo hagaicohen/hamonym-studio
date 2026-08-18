@@ -398,6 +398,7 @@
 
 .md-modal-btn-secondary,
 .md-modal-btn-primary {
+  position: relative;
   flex: 1;
   padding: 11px 16px;
   border-radius: 10px;
@@ -429,4 +430,23 @@
 .md-modal-btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.md-modal-btn-text--hidden { opacity: 0; }
+
+.md-modal-btn-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: md-modal-spin 0.7s linear infinite;
+}
+
+@keyframes md-modal-spin {
+  to { transform: rotate(360deg); }
 }
