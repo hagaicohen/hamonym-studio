@@ -205,14 +205,17 @@
             (click)="confirmAction()"
             [disabled]="actionInFlight"
           >
+            <span [class.md-modal-btn-text--hidden]="actionInFlight">
+              @if (pendingAction === 'pause') {
+                השהה תרומה
+              } @else if (pendingAction === 'resume') {
+                חדש תרומה
+              } @else {
+                בטל תרומה לצמיתות
+              }
+            </span>
             @if (actionInFlight) {
-              מבצע...
-            } @else if (pendingAction === 'pause') {
-              השהה תרומה
-            } @else if (pendingAction === 'resume') {
-              חדש תרומה
-            } @else {
-              בטל תרומה לצמיתות
+              <span class="md-modal-btn-spinner"></span>
             }
           </button>
         </div>
