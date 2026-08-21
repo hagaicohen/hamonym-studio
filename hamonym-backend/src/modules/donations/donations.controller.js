@@ -5,6 +5,12 @@
 // (e.g. "Entity not approved"), which is both untranslated and leaks an
 // internal admin-approval detail no donor needs to know about.
 function getDonationErrorMessage(error) {
+  // Stable code, not a message-string match — see donations.service.js's
+  // isMock fix (2026-08-21): this is a business condition an admin/alert
+  // may need to key off later, not just donor-facing copy.
+  if (error.code === 'PAYMENT_NOT_CONFIGURED') {
+    return 'לא ניתן לתרום לקמפיין זה כרגע — אמצעי התשלום של הקמפיין אינו מוגדר.';
+  }
   switch (error.message) {
     case 'Entity not approved':
       return 'לא ניתן לתרום לקמפיין זה כרגע — העמותה המפעילה אותו ממתינה לאישור.';

@@ -216,10 +216,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   // Per-entity provider switch: an entity only goes live on Cardcom once it has
   // full credentials AND an admin has verified them via "בדוק חיבור" in Settings
-  // (cardcom_connection_status = 'success') — otherwise it stays on Mock so a
-  // half-filled-in payment section never silently breaks real donations.
-  // PAYMENT_PROVIDER=mock is a global dev-environment override that forces Mock
-  // for every entity regardless of their Cardcom setup.
+  // (cardcom_connection_status = 'success').
   const hasVerifiedCardcom = !!(
     campaign.cardcom_terminal_number &&
     campaign.cardcom_api_username &&
@@ -229,15 +226,32 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // Platform-level fallback: Hamonym's own Cardcom account (HAMONYM_CARDCOM_*
   // in .env), used when the entity hasn't verified its own — explicit,
   // deliberate choice (2026-08-04) so real donations can go live before every
-  // entity has its own merchant account configured, rather than sitting on
-  // Mock. Funds land in the platform's own account in that case, not the
-  // entity's — settlement to the entity is a separate, manual step for now.
+  // entity has its own merchant account configured. Funds land in the
+  // platform's own account in that case, not the entity's — settlement to
+  // the entity is a separate, manual step for now.
   const hasPlatformCardcom = !!(
     process.env.HAMONYM_CARDCOM_TERMINAL &&
     process.env.HAMONYM_CARDCOM_API_NAME &&
     process.env.HAMONYM_CARDCOM_API_PASSWORD
   );
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || (!hasVerifiedCardcom && !hasPlatformCardcom);
+  // is_mock means ONLY "PAYMENT_PROVIDER=mock was explicitly set" — a
+  // deliberate dev/test override, never an inferred fallback (2026-08-21
+  // fix). Missing a real provider is a configuration error, not Mock: it
+  // used to silently redirect real donors into the Mock checkout screen
+  // (`hasVerifiedCardcom`/`hasPlatformCardcom` both false), which is not
+  // just semantically wrong but was also a dead end — `mockComplete`'s own
+  // guard only ever accepted `PAYMENT_PROVIDER==='mock'`, so those
+  // donations could never actually be completed and were stuck 'pending'
+  // forever (confirmed against two real production rows). See
+  // docs/PAYMENTS_ARCHITECTURE_CONTEXT.md and the 2026-08-21 audit.
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
+
+  if (!isMock && !hasVerifiedCardcom && !hasPlatformCardcom) {
+    const err = new Error('Payment not configured for this campaign');
+    err.status = 400;
+    err.code = 'PAYMENT_NOT_CONFIGURED';
+    throw err;
+  }
 
   // Validate participants' Registration Options before creating anything —
   // see loadRegistrationOptions above.
