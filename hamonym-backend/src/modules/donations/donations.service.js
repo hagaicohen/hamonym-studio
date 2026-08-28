@@ -441,6 +441,19 @@ function credentialsFromEntityRow(row) {
       };
 }
 
+// Gate v1 (2026-08-28) — the minimal donation fields the verification gate
+// cross-checks a GetLpResult against. Deliberately separate from
+// resolveCardcomCredentials (which several other callers already depend on
+// for its exact shape) rather than folding these columns into that query.
+async function getDonationForVerification(donationId) {
+  const res = await db.query(
+    `SELECT id, amount, status, low_profile_id FROM donations WHERE id = $1`,
+    [donationId]
+  );
+  return res.rows[0] || null;
+}
+exports.getDonationForVerification = getDonationForVerification;
+
 async function resolveCardcomCredentials(donationId) {
   const res = await db.query(
     `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
