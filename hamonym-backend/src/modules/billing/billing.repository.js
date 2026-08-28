@@ -139,6 +139,26 @@ exports.create =
   };
 
 /* =========================================
+   GET ENTITY ID BY BILLING RECORD ID
+========================================= */
+
+exports.getEntityIdById =
+  async (id) => {
+
+    const result =
+      await pool.query(
+
+        `SELECT entity_id FROM entity_billing WHERE id = $1`,
+
+        [id]
+
+      );
+
+    return result.rows[0]?.entity_id || null;
+
+  };
+
+/* =========================================
    REMOVE BILLING
 ========================================= */
 
