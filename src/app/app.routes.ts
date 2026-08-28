@@ -572,6 +572,19 @@ export const routes: Routes = [
             (m) => m.PlatformCardcomOpsPageComponent,
           ),
       },
+      {
+        // Full super admin only, matching the backend route
+        // (requireSuperAdmin, not requirePermission('organizations')) --
+        // billing-provisioning.routes.js's own comment on why: setting
+        // Hamonym's own fee_rate/vat_rate is a commercial decision, not an
+        // entity-management action.
+        path: 'platform/billing-accounts',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-billing-accounts-page/platform-billing-accounts-page.component').then(
+            (m) => m.PlatformBillingAccountsPageComponent,
+          ),
+      },
     ],
   },
 

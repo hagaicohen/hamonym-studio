@@ -1,0 +1,86 @@
+<div class="plat-page">
+  <div class="plat-header">
+    <h1 class="plat-title">חשבונות חיוב — ישויות ללא שיוך</h1>
+  </div>
+
+  @if (loading) {
+    <div class="plat-loading">טוען...</div>
+  } @else if (error) {
+    <div class="plat-error">{{ error }}</div>
+  } @else {
+    <div class="plat-card">
+      <div class="ba-intro">
+        ישויות פעילות עם תרומות ששולמו בפועל, שאין להן עדיין חשבון חיוב (`billing_accounts`) —
+        ולכן אינן נגבות כלל ב-Billing. קביעת שיעור עמלה/מע״מ ואמצעי גבייה כאן היא החלטה מסחרית,
+        ולכן דורשת אישור מפורש לכל ישות בנפרד. 3% / 18% הם ערכים מוצעים בלבד בטופס — לא ברירת מחדל בשרת.
+      </div>
+
+      @if (entities.length === 0) {
+        <div class="ops-empty-small">אין ישויות ללא חשבון חיוב כרגע.</div>
+      } @else {
+        <div class="ba-list">
+          @for (entity of entities; track entity.id) {
+            <div class="ba-row">
+              <div class="ba-row-main">
+                <div class="ba-entity-name">{{ entity.display_name }}</div>
+                <div class="ba-entity-meta">
+                  <span>{{ entity.paid_donation_count }} תרומות ששולמו</span>
+                  <span>סה״כ ₪{{ entity.paid_gross_total }}</span>
+                  <span>{{ billingMethodLabel(entity.declared_billing_method) }}</span>
+                </div>
+              </div>
+
+              @if (openEntityId !== entity.id) {
+                <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="openProvision(entity)">
+                  הגדרת חיוב
+                </button>
+              }
+            </div>
+
+            @if (openEntityId === entity.id) {
+              <div class="ba-form">
+                <div class="ba-form-fields">
+                  <label class="ba-field">
+                    <span>שיעור עמלה (%)</span>
+                    <input type="number" step="0.01" min="0" max="100" [(ngModel)]="feeRatePercent" />
+                  </label>
+
+                  <label class="ba-field">
+                    <span>שיעור מע״מ (%)</span>
+                    <input type="number" step="0.01" min="0" max="100" [(ngModel)]="vatRatePercent" />
+                  </label>
+
+                  <label class="ba-field">
+                    <span>אמצעי גבייה מועדף</span>
+                    <select [(ngModel)]="collectionMethod">
+                      <option value="card">כרטיס אשראי</option>
+                      <option value="masav">מס״ב</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label class="ba-field ba-field-notes">
+                  <span>הערה (לתיעוד ה-audit log, לא חובה)</span>
+                  <input type="text" [(ngModel)]="notes" placeholder="למשל: הסכם סטנדרטי" />
+                </label>
+
+                @if (submitError) {
+                  <div class="ops-action-error">{{ submitError }}</div>
+                }
+
+                <div class="ba-form-actions">
+                  <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelProvision()" [disabled]="submitting">
+                    ביטול
+                  </button>
+                  <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="confirmProvision(entity)" [disabled]="submitting">
+                    {{ submitting ? 'שומר...' : 'אישור מפורש ויצירת חשבון' }}
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
