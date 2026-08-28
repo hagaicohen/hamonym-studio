@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { environment } from '../../../../environments/environment';
 
@@ -10,11 +10,19 @@ import { environment } from '../../../../environments/environment';
 export class BillingService {
   private http = inject(HttpClient);
 
+  private authHeaders(): HttpHeaders {
+    return new HttpHeaders({
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    });
+  }
+
   createEntityBilling(payload: any) {
     return this.http.post(
       `${environment.apiUrl}/api/billing`,
 
       payload,
+
+      { headers: this.authHeaders() },
     );
   }
 
@@ -27,12 +35,16 @@ export class BillingService {
       `${environment.apiUrl}/api/billing/create-low-profile`,
 
       payload,
+
+      { headers: this.authHeaders() },
     );
   }
 
   getLowProfileResult(lowProfileId: string) {
     return this.http.get(
       `${environment.apiUrl}/api/billing/low-profile-result/${lowProfileId}`,
+
+      { headers: this.authHeaders() },
     );
   }
 }

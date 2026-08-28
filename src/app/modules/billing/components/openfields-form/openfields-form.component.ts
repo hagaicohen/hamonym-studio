@@ -1,6 +1,6 @@
 // openfields-form.component.ts
 
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
@@ -22,6 +22,14 @@ import { OrganizationRegistrationStateService } from '../../../organization-regi
   styleUrls: ['./openfields-form.component.css'],
 })
 export class OpenfieldsFormComponent implements OnInit, OnDestroy {
+  // Optional -- used in two contexts: Settings (entity always exists, real
+  // id) and the organization-registration wizard's billing step (the draft
+  // entity may not have been created yet when this step first renders).
+  // /api/billing/init-openfields now requires an entityId it can verify
+  // ownership of (2026-08-28 security fix), so without one we skip
+  // initializing rather than sending a request that's guaranteed to 400.
+  @Input() entityId?: string;
+
   private billingApi = inject(BillingApiService);
 
   private billingService = inject(BillingService);
@@ -50,7 +58,13 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
   private boundMessageHandler = this.onMessage.bind(this);
 
   async ngOnInit(): Promise<void> {
-    const config: any = await this.billingApi.initOpenFields().toPromise();
+    if (!this.entityId) {
+      console.error('OPENFIELDS: no entityId provided, skipping init');
+
+      return;
+    }
+
+    const config: any = await this.billingApi.initOpenFields(this.entityId).toPromise();
 
     console.log('OPENFIELDS CONFIG', config);
 
@@ -302,11 +316,9 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
             result?.InternalDealNumber || result?.TranzactionId || null;
 
           if (window.location.pathname.includes('/settings/entities/')) {
-            const entityId = window.location.pathname.split('/').pop();
-
             this.billingService
               .createEntityBilling({
-                entityId,
+                entityId: this.entityId,
 
                 provider: 'cardcom',
 
