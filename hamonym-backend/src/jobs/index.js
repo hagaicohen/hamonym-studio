@@ -11,5 +11,6 @@ jobRunner.register(require('./stale-pending-donations.job'));
 jobRunner.register(require('./aggregate-consistency.job'));
 jobRunner.register(require('./stuck-recurring-signups.job'));
 jobRunner.register(require('./billing-approval-consistency.job'));
+jobRunner.register(require('./billing-provisioning-gap.job'));
 
 module.exports = jobRunner;
