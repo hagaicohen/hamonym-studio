@@ -10,5 +10,6 @@ jobRunner.register(require('./webhook-recovery.job'));
 jobRunner.register(require('./stale-pending-donations.job'));
 jobRunner.register(require('./aggregate-consistency.job'));
 jobRunner.register(require('./stuck-recurring-signups.job'));
+jobRunner.register(require('./billing-approval-consistency.job'));
 
 module.exports = jobRunner;
