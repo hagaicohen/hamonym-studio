@@ -1024,13 +1024,44 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
    in the app.
 ───────────────────────────────────────── */
 const MANUAL_DONATION_SOURCES = ['bank_transfer', 'check', 'cash', 'other'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note }, enteredByUserId) => {
+// A retry of the same submission intent must come back to exactly the
+// donation that intent already created — never a second one. Only
+// campaignId/amount/source are compared: those are the financial payload an
+// idempotency key is supposed to identify (F4.1 audit, 2026-08-23); donor
+// contact fields are operational metadata, not part of "what was paid for".
+// A mismatch means the SAME key was reused for a DIFFERENT financial
+// intent — that must fail loudly, not be silently treated as "already
+// done", or a client bug could silently attribute one donor's money to
+// another campaign/amount.
+function assertIdempotentMatch(existingRow, { campaignId, amt, source }) {
+  const matches = existingRow.campaign_id === campaignId
+    && Number(existingRow.amount) === amt
+    && existingRow.source === source;
+  if (!matches) {
+    const err = new Error('Idempotency key already used with a different campaign/amount/source');
+    err.status = 409;
+    err.code = 'IDEMPOTENCY_KEY_MISMATCH';
+    throw err;
+  }
+  return { donationId: existingRow.id, idempotent: true };
+}
+
+exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note, clientSubmissionKey }, enteredByUserId) => {
   if (!campaignId) throw new Error('חסר מזהה קמפיין');
   const amt = Number(amount);
   if (!amt || amt <= 0) throw new Error('סכום לא תקין');
   if (!MANUAL_DONATION_SOURCES.includes(source)) throw new Error('מקור תרומה לא תקין');
   const count = Math.max(1, parseInt(supportersCount, 10) || 1);
+
+  // Optional — omitting it reproduces the exact pre-F4.1 behavior (no
+  // idempotency protection), so any caller that hasn't adopted the new
+  // frontend field yet is unaffected. Format-validated here for a clean
+  // 400 instead of a raw DB type-cast error; the UUID column itself is the
+  // real backstop.
+  const key = clientSubmissionKey || null;
+  if (key && !UUID_RE.test(key)) throw new Error('מזהה בקשה לא תקין');
 
   // requireEntityOwnership already confirmed the acting user manages
   // entityId — this closes the gap where campaignId in the body could
@@ -1041,34 +1072,64 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
   );
   if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
 
+  // Fast path — a sequential retry of an already-committed intent. Not
+  // sufficient alone for correctness (a concurrent request could still race
+  // past this SELECT before either commits) — the UNIQUE constraint caught
+  // below is the actual guarantee; this just avoids opening a transaction
+  // for the common case.
+  if (key) {
+    const existing = await db.query(
+      `SELECT id, campaign_id, amount, source FROM donations WHERE entity_id=$1 AND client_submission_key=$2`,
+      [entityId, key]
+    );
+    if (existing.rows[0]) return assertIdempotentMatch(existing.rows[0], { campaignId, amt, source });
+  }
+
   // Same atomicity as markDonationPaid: donation insert, campaign
   // aggregate, and receipt are one transaction; email queued only after
   // COMMIT.
   let receipt = null;
-  const donationId = await withTransaction(async (client) => {
-    const donationRes = await client.query(
-      `INSERT INTO donations (
-         campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
-         rewards, status, is_mock, source, supporters_count, entered_by, note,
-         completed_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
-       RETURNING id`,
-      [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
-    );
-    const id = donationRes.rows[0].id;
+  let donationId;
+  try {
+    donationId = await withTransaction(async (client) => {
+      const donationRes = await client.query(
+        `INSERT INTO donations (
+           campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
+           rewards, status, is_mock, source, supporters_count, entered_by, note,
+           completed_at, client_submission_key
+         ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW(),$11)
+         RETURNING id`,
+        [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null, key]
+      );
+      const id = donationRes.rows[0].id;
 
-    await client.query(
-      `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
-           supporters_count = supporters_count + $2,
-           updated_at = NOW()
-       WHERE id = $3`,
-      [amt, count, campaignId]
-    );
+      await client.query(
+        `UPDATE campaigns
+         SET current_amount   = current_amount   + $1,
+             supporters_count = supporters_count + $2,
+             updated_at = NOW()
+         WHERE id = $3`,
+        [amt, count, campaignId]
+      );
 
-    receipt = await finalizePaidDonation(id, client);
-    return id;
-  });
+      receipt = await finalizePaidDonation(id, client);
+      return id;
+    });
+  } catch (err) {
+    // Real concurrency case: two requests carrying the same key raced past
+    // the fast-path SELECT above; one committed first, this one hit the
+    // UNIQUE constraint (23505) instead. Only treat THIS specific
+    // constraint as an idempotency race — any other unique violation is a
+    // genuine error and must propagate.
+    if (key && err.code === '23505' && err.constraint === 'uq_donations_entity_client_submission_key') {
+      const existing = await db.query(
+        `SELECT id, campaign_id, amount, source FROM donations WHERE entity_id=$1 AND client_submission_key=$2`,
+        [entityId, key]
+      );
+      if (existing.rows[0]) return assertIdempotentMatch(existing.rows[0], { campaignId, amt, source });
+    }
+    throw err;
+  }
 
   require('../dashboard/dashboard.service').invalidateDashboard(entityId);
   await queueReceiptEmail(receipt, donationId);
