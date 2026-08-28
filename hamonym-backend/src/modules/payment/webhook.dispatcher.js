@@ -22,10 +22,10 @@ module.exports = async function dispatch(payload) {
       await paymentHandler.handle(payload);
       return { routed: true };
     case 'MasterRecurring':
-      await masterRecurringHandler.handle(payload); // no-op stub, see file
+      await masterRecurringHandler.handle(payload);
       return { routed: true };
     case 'DetailRecurring':
-      await detailRecurringHandler.handle(payload); // no-op stub, see file
+      await detailRecurringHandler.handle(payload); // fully implemented, see file
       return { routed: true };
     case 'Document':
       await documentHandler.handle(payload); // no-op stub, see file
