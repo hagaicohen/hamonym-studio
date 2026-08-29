@@ -6,7 +6,9 @@
 -- explicitly deferred it (unverified document/numbering requirements), and
 -- nothing in this migration or the code built on it depends on it existing.
 --
--- NOT RUN YET — presented for review only.
+-- RUN (see scripts/migrate-059.js) — verified live against production
+-- 2026-08-29 (information_schema read-only check, tables + triggers present
+-- and match this file).
 
 -- ─────────────────────────────────────────────────────────
 -- collection_attempts — one row per actual attempt to collect a Statement's
