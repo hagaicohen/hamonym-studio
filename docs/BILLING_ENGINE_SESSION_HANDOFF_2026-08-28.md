@@ -2,6 +2,68 @@
 
 Point-in-time snapshot for picking up in a **new chat**. Not a frozen design doc — see `HAMONYM_BILLING_ENGINE_TECHNICAL_DESIGN.md` for that. This file just says: what exists, what was decided, what's still open, what's next.
 
+## MILESTONE (2026-08-30) — CardCom Collection Adapter: protocol proven, deployment unverified
+
+> **CardCom Collection protocol + adapter: IMPLEMENTED / MOCK-TESTED.**
+> **Live CardCom integration: BLOCKED by 603 + Hamonym terminal no-CVV-provisioning verification.**
+
+Read this exactly as two separate claims, not one:
+- **CardCom protocol — PASS.** The `Transactions/Transaction` request/response contract, the CVV2-not-required-for-token-charges rule, and the `ExternalUniqTranId`/608/`GetTransactionByExternalUniqTran` idempotency mechanism are all verified against CardCom's own official documentation (not inferred from code, not guessed).
+- **Hamonym terminal configuration — NOT YET VERIFIED.** CVV2-not-required is conditional on `HAMONYM_CARDCOM_TERMINAL` actually being provisioned by CardCom as a token/no-CVV-model terminal. That has not been checked — checking it needs account access currently blocked by the open 603 error. Do not let this collapse into "CVV resolved" in a future summary; the two facts have different confidence levels and the second one gates real money.
+
+**The end-to-end flow now implemented (code) but not yet exercised (live):**
+
+```text
+Approved Statement
+       │
+       ▼
+Collection Attempt
+       │
+       ├── entity_billing
+       │      └── Hamonym CardCom Token
+       │
+       ▼
+CardCom v11 /Transactions/Transaction
+       │
+       ├── SUCCESS
+       │      ↓
+       │    Payment
+       │      ↓
+       │   Statement paid
+       │
+       ├── DECLINED
+       │      ↓
+       │   retry policy (later, undecided business call)
+       │
+       └── TIMEOUT / 608 / AMBIGUOUS
+              │
+              ▼
+ GetTransactionByExternalUniqTran
+              │
+              ├── success  → Payment
+              ├── declined → resolve attempt
+              └── unknown/technical → remain ambiguous
+```
+
+**The central financial invariant — call this out explicitly whenever this system is described, don't bury it:**
+
+> **`collection_attempts.id` is the `ExternalUniqTranId` sent to CardCom on every charge and every lookup for that attempt.**
+
+This is what makes the following crash scenario recoverable without a manual DB fix and, critically, **without ever risking a second real charge**: CardCom charges the association's card → the HTTP response is lost (network drop, Hamonym process crash, anything) → Hamonym never creates the `payments` row. Recovery: look up the same `collection_attempts.id` via `GetTransactionByExternalUniqTran`, find the transaction CardCom actually completed, and finalize locally from that answer — never by resubmitting the charge with a new id.
+
+**Caution — this exact recovery path is implemented as a *function* (`adapter.reconcile()`), verified in this session's unit tests, but nothing in the running system calls it automatically yet.** No scheduled job collects stuck `ambiguous` attempts and drives them through reconciliation to `payments`/`statement paid` on its own. Until that orchestration exists and is verified, "the system recovers from this crash" is a code-level capability, not yet a proven operational property. **Confirmed next step (per user, 2026-08-30): audit — before 603 is even resolved — whether that orchestration actually exists end-to-end (attempt goes ambiguous → gets picked up later → reconciled → payment/paid), not just whether `reconcile()` exists as a callable function.** Not done yet as of this snapshot.
+
+**Explicitly decided (2026-08-30): pause further Collection development for now.** The real next steps depend on CardCom access, not more code:
+1. Resolve 603.
+2. Confirm `HAMONYM_CARDCOM_TERMINAL` is provisioned token/no-CVV.
+3. Create one real token on the Hamonym terminal.
+4. Run one small, controlled real test charge.
+5. Inspect the real `TransactionInfo` response against what this session assumed.
+6. Look it up via `GetTransactionByExternalUniqTran` and confirm it returns the same transaction.
+7. Only then: declare CardCom Collection **E2E VERIFIED**.
+
+`billing_receipts` also stays explicitly not started until one real transaction has gone through the full path — no reason to build the layer above an unproven path.
+
 ## Where we are, in one line
 
 `Donation → Verification (Gate v1) → Billing Effective Time → Calculation (draft Statement) → Approval (financial commit)` is **built, tested, committed**. Collection is **not started** — the last thing done this session was a read-only audit of the existing `entity_billing` module to inform how Collection should eventually connect to it.
@@ -85,7 +147,7 @@ Found **three separate, currently-unlinked** representations of "how does Hamony
 
 Continuation of the same effort, run autonomously while the user was away, under an explicit rule: known/approved design → proceed and commit without stopping for approval; a genuinely new architectural/business decision → stop that branch only, keep working on everything independent of it. Nothing was pushed. All work is local commits on `main`.
 
-**Result: the one open architectural question from the prior session (CVV2 for token charges) is closed.** Full evidence trail in `docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md` part C — short version: CardCom's own "Do Transaction" API doc states a token-charging terminal "must not require CVV from credit companies" and marks `CVV2` as optional (not mandatory) on that endpoint specifically, while `CardExpirationMMYY` is marked mandatory despite being `nullable` in the OpenAPI schema (nullable ≠ optional, exactly the trap the prior session flagged). `entity_billing` never storing CVV is therefore the correct, documented model, not a gap.
+**Result, precisely stated (2026-08-30 correction — do not collapse this back into a bare "CVV resolved"): CardCom protocol — PASS. Hamonym terminal configuration — NOT YET VERIFIED.** The protocol-level question from the prior session (does CardCom's token-charge contract require CVV2 at all) is closed on documentation evidence: CardCom's own "Do Transaction" API doc states a token-charging terminal "must not require CVV from credit companies" and marks `CVV2` as optional (not mandatory) on that endpoint specifically, while `CardExpirationMMYY` is marked mandatory despite being `nullable` in the OpenAPI schema (nullable ≠ optional, exactly the trap the prior session flagged). `entity_billing` never storing CVV is therefore the correct, documented model, not a gap. **But that guarantee only holds if `HAMONYM_CARDCOM_TERMINAL` is itself provisioned by CardCom as a token/no-CVV-model terminal — and that has not been checked**, because checking it requires account access currently blocked by 603. Full evidence trail in `docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md` part C. Do not report this as "CVV resolved" without the terminal-configuration caveat — the protocol finding and the Hamonym-specific deployment fact are two different claims with two different confidence levels.
 
 **Implemented and committed:**
 - `src/modules/payment/cardcom/cardcom.client.js` — added `chargeToken` (`POST /api/v11/Transactions/Transaction`) and `getTransactionByExternalUniqTran`, matching the verified `TransactionReq`/`GetExternalUniqTranIdStatusReq` contract exactly (no `ApiPassword` at top level — schema has `additionalProperties:false` and `ApiPassword` only exists nested under `Advanced`, required only for refunds; no `CVV2`).
