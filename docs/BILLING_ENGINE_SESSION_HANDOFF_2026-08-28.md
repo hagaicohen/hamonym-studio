@@ -2,14 +2,32 @@
 
 Point-in-time snapshot for picking up in a **new chat**. Not a frozen design doc — see `HAMONYM_BILLING_ENGINE_TECHNICAL_DESIGN.md` for that. This file just says: what exists, what was decided, what's still open, what's next.
 
-## MILESTONE (2026-08-30) — CardCom Collection Adapter: protocol proven, deployment unverified
+## MILESTONE (2026-08-30) — 603 RESOLVED. CardCom authentication PASS. Terminal no-CVV provisioning still unverified.
 
-> **CardCom Collection protocol + adapter: IMPLEMENTED / MOCK-TESTED.**
-> **Live CardCom integration: BLOCKED by 603 + Hamonym terminal no-CVV-provisioning verification.**
+> **603 root cause: IDENTIFIED — CardCom had rotated the API credentials for terminal 1000; Render's environment still had the old ones.**
+> **603 status: 🟢 RESOLVED. User updated the credentials in Render's dashboard (2026-08-30).**
+> **CardCom authentication from the live Render deployment: 🟢 VERIFIED**, via a purpose-built, temporary, super-admin-only diagnostic endpoint (`GET /api/platform/cardcom-ops/diagnostics/hamonym-terminal-auth`, commit `64b870f`) that calls the exact `LowProfile/GetLpResult` path that used to fail, with a deliberately non-existent `LowProfileId` (no charge, no card, no token involved). Real result from production, super-admin-authenticated, sanitized:
+> ```json
+> {"success":true,"authenticationLikelySucceeded":true,"terminalNumber":"1000","httpStatus":200,"cardcomResponseCode":5096,"cardcomDescription":"עסקה ממתינה או לא נמצאה"}
+> ```
+> `5096` ("transaction pending or not found") is a **business-level** answer, not an auth error — CardCom only gets to that answer after accepting `TerminalNumber`+`ApiName`+`ApiPassword`. This is the proof, not an inference.
 
-Read this exactly as two separate claims, not one:
+**CardCom Collection protocol + adapter: IMPLEMENTED / MOCK-TESTED. CardCom account authentication: LIVE-VERIFIED. Token charge itself: NOT YET ATTEMPTED (needs a real TEST token first — see Phase 2 below).**
+
+Precision reminder, still standing (see [[feedback_precision_of_verified_claims]]): resolving 603 proves the *credentials* work. It does **not** by itself prove `HAMONYM_CARDCOM_TERMINAL` (terminal `1000`) is provisioned by CardCom as a token/no-CVV-model terminal — that is a separate, still-open fact, now the next thing to establish (Phase 2 below), not something 603's resolution silently answers.
+
 - **CardCom protocol — PASS.** The `Transactions/Transaction` request/response contract, the CVV2-not-required-for-token-charges rule, and the `ExternalUniqTranId`/608/`GetTransactionByExternalUniqTran` idempotency mechanism are all verified against CardCom's own official documentation (not inferred from code, not guessed).
-- **Hamonym terminal configuration — NOT YET VERIFIED.** CVV2-not-required is conditional on `HAMONYM_CARDCOM_TERMINAL` actually being provisioned by CardCom as a token/no-CVV-model terminal. That has not been checked — checking it needs account access currently blocked by the open 603 error. Do not let this collapse into "CVV resolved" in a future summary; the two facts have different confidence levels and the second one gates real money.
+- **Hamonym terminal no-CVV provisioning — NOT YET VERIFIED.** Separate fact from authentication. Existing project memory (2026-08-12/13 research) already flagged, as a **strong hypothesis, not proof**, that terminal `1000` is CardCom's shared public demo/test terminal number — it's the exact number used across every official CardCom API example, not something private to Hamonym. The just-confirmed `terminalNumber:"1000"` in the diagnostic result is consistent with that hypothesis but does not newly prove it.
+
+### Phase 2 findings (2026-08-30, read-only code trace) — OpenFields tokenization requires an interactive step, stopped there
+
+Traced the real `entity_billing` tokenization path end-to-end (frontend → backend → CardCom → persistence), to determine what's needed to create one genuine CardCom TEST token under terminal `1000`. No code changed — this section is findings only.
+
+- **Not a redirect-to-hosted-page flow.** `OpenfieldsFormComponent` (`hamonym-app/src/app/modules/billing/components/openfields-form/openfields-form.component.ts`) embeds CardCom's **OpenFields iframe** (`#CardComMasterFrame`) directly in Hamonym's own Settings page and drives it via `postMessage` (`action:'init'` then `action:'doTransaction'`). Card number and CVV are typed inside that CardCom-controlled iframe (PCI scope stays with CardCom); expiration month/year are two plain `<input>` fields on Hamonym's own page (`#expirationMonth`/`#expirationYear` — not sensitive, not PCI scope). On `HandleSubmit`, if the page path includes `/settings/entities/`, it calls `billingService.createEntityBilling(...)` → `POST /api/billing` → `billing.service.js#createBilling` → the token-extraction code fixed earlier this session.
+- **Exact path to trigger it:** log in as a real entity owner (or via Super Admin impersonation, if that flow is set up — `require-auth.js` already decodes `impersonatedBy`/`impersonatorName` from the JWT, so the capability exists) → navigate to `/settings/entities/:entityId` → the "אמצעי חיוב" (billing instrument) section → click "חיבור כרטיס" (Connect Card, shown when `entity_billing` has no active row yet, which is every entity today — 0 rows) → the OpenFields iframe loads automatically (`ngOnInit`) → type a card number + CVV into CardCom's iframe fields, a future MM/YY into Hamonym's two plain inputs → click Save, which calls `tokenize()`.
+- **This is an irreducibly interactive, human, browser action** — there is no API shortcut and no browser-automation tool available in this session to do it instead. Stopping here exactly as instructed.
+- **Do not invent a card number.** CardCom's own official API documentation (the same "Do Transaction" support article already cited for the CVV2 finding, plus this codebase's own pre-existing `cardcom.client.js#testConnection`/`cardcom.service.js` test-connection helpers) already uses `4580000000000000` as its published example/test card number, consistently, across every example. That is the number to type — it is CardCom's own published test value, not something invented for this session. CVV: any 3 digits (their own examples use `123`); the token/no-CVV terminal model means CardCom is documented not to actually check it. Expiration: any real future MM/YY.
+- **Confirms terminal `1000` context, but only as corroboration, not new proof:** if that published test card number is accepted by terminal `1000` and produces a real token, that's consistent with `1000` being CardCom's demo/sandbox-behaving terminal (a real production terminal would be expected to reject an obviously-fake card number). Still not definitive on its own — see the precision note above.
 
 **The end-to-end flow now implemented (code) but not yet exercised (live):**
 
