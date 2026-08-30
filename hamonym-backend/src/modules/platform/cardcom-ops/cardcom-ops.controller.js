@@ -1,6 +1,7 @@
 const db = require('../../../db/db');
 const jobRunner = require('../../../jobs');
 const { checkStaleness } = require('../../../jobs/schedule-window');
+const billingService = require('../../billing/billing.service');
 
 // Read-only + "repair local state" actions only — see
 // docs/CARDCOM_OPERATIONAL_PROCESSES.md Part G. Every job reachable through
@@ -91,6 +92,73 @@ async function computeStaleAlerts(now) {
 
   return alerts;
 }
+
+// One-off diagnostic (2026-08-30) to answer a single question: do the
+// Render-updated HAMONYM_CARDCOM_* credentials clear the 603 "invalid
+// username/password" error that has been blocking Collection integration
+// testing? Reuses billing.service.js#getLowProfileResult UNCHANGED -- the
+// exact call shape that originally produced 603 (see
+// docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md part א,
+// finding #6) -- with a deliberately non-existent LowProfileId, so there is
+// nothing real to look up and nothing to charge: GetLpResult is a read-only
+// lookup regardless of the id given, and per the official schema it never
+// even accepts a Token/CardNumber/Amount to charge in the first place.
+//
+// Security: never returns or logs ApiName/ApiPassword/Token or any request
+// body -- only fields CardCom's own response carries, which never contain
+// our credentials. TerminalNumber is included deliberately: it's a plain
+// account/merchant id, not a secret (same as other places in this codebase
+// that already reference it in the open).
+const NON_EXISTENT_LOW_PROFILE_ID = '00000000-0000-0000-0000-000000000000';
+
+exports.diagnoseHamonymTerminalAuth = async (req, res) => {
+  const testPerformed =
+    'LowProfile/GetLpResult with a deliberately non-existent LowProfileId -- no charge, no card, no token involved';
+  const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL || null;
+
+  try {
+    const data = await billingService.getLowProfileResult(NON_EXISTENT_LOW_PROFILE_ID);
+    // HTTP 200 means CardCom accepted TerminalNumber/ApiName/ApiPassword and
+    // processed the request. A non-zero ResponseCode here is EXPECTED (the
+    // LowProfileId doesn't exist) and is itself the proof authentication
+    // passed -- CardCom's own docs say an auth failure comes back as HTTP
+    // 401, not a 200 with an unrelated ResponseCode.
+    return res.json({
+      success: true,
+      authenticationLikelySucceeded: true,
+      testPerformed,
+      terminalNumber,
+      httpStatus: 200,
+      cardcomResponseCode: data?.ResponseCode ?? null,
+      cardcomDescription: data?.Description ?? null,
+    });
+  } catch (err) {
+    if (err.response) {
+      const { status, data } = err.response;
+      const authFailed = status === 401 || data?.ResponseCode === 603;
+      return res.json({
+        success: false,
+        authenticationLikelySucceeded: !authFailed,
+        testPerformed,
+        terminalNumber,
+        httpStatus: status,
+        cardcomResponseCode: data?.ResponseCode ?? null,
+        cardcomDescription: data?.Description ?? null,
+      });
+    }
+    // No HTTP response at all -- transport error (timeout/DNS/network), not
+    // an authentication answer either way. err.message is plain text (e.g.
+    // "timeout of 15000ms exceeded") and never contains the request body.
+    return res.status(502).json({
+      success: false,
+      authenticationLikelySucceeded: null,
+      testPerformed,
+      terminalNumber,
+      error: 'transport_error',
+      message: err.message,
+    });
+  }
+};
 
 exports.getHealth = async (req, res) => {
   try {
