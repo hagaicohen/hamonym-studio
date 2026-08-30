@@ -14,6 +14,12 @@ router.use(requireSuperAdmin);
 // credential question is settled and this has served its purpose.
 router.get('/diagnostics/hamonym-terminal-auth', ctrl.diagnoseHamonymTerminalAuth);
 
+// PHASE 4 diagnostic (2026-08-30) -- performs ONE real TEST charge. POST
+// only, scoped to a single hardcoded entity_id inside the controller. See
+// the controller's own comment before touching this. Remove once the real
+// CardCom integration has been proven and this has served its purpose.
+router.post('/diagnostics/hamonym-token-charge', ctrl.diagnoseHamonymTokenCharge);
+
 router.get('/health', ctrl.getHealth);
 router.get('/jobs/runs', ctrl.getJobRuns);
 router.post('/jobs/:name/run', ctrl.runJob);
