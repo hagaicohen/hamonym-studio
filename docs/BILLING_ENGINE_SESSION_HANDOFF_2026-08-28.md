@@ -12,7 +12,53 @@ Point-in-time snapshot for picking up in a **new chat**. Not a frozen design doc
 > ```
 > `5096` ("transaction pending or not found") is a **business-level** answer, not an auth error — CardCom only gets to that answer after accepting `TerminalNumber`+`ApiName`+`ApiPassword`. This is the proof, not an inference.
 
-**CardCom Collection protocol + adapter: IMPLEMENTED / MOCK-TESTED. CardCom account authentication: LIVE-VERIFIED. Token charge itself: NOT YET ATTEMPTED (needs a real TEST token first — see Phase 2 below).**
+## MILESTONE UPDATE (2026-08-30, later same day) — CardCom Collection E2E VERIFIED against the real API
+
+**CardCom Collection protocol + adapter: IMPLEMENTED / LIVE-VERIFIED (not just mock-tested anymore). Recovery orchestration for stuck/ambiguous attempts: IMPLEMENTED, mock-tested (real-DB testing of the success path is unsafe by design — see below).**
+
+Real token created via OpenFields (manual, human, browser action — see Phase 2 below), then ONE real controlled test charge (₪1) executed against production via a temporary diagnostic, calling the actual `cardcom-token-charge.adapter.js` directly (not a copy, not a simulation):
+
+```json
+{
+  "testEntityId": "ea4c49a4-9f82-48be-a239-a816710f82dd",
+  "amount": 1,
+  "externalUniqTranId": "91a053f1-ae81-4323-b101-d8a9b62f9002",
+  "chargeResult": {
+    "outcome": "succeeded",
+    "providerReference": "260726786",
+    "providerRawStatus": "0:העסקה בוצעה בהצלחה"
+  },
+  "reconcileResult": {
+    "outcome": "succeeded",
+    "providerReference": "260726786",
+    "providerRawStatus": "0:העסקה בוצעה בהצלחה"
+  }
+}
+```
+
+**Why this result matters, precisely:** `chargeResult.providerReference` and `reconcileResult.providerReference` are **the same value** (`260726786`) — `GetTransactionByExternalUniqTran`, called with the exact `externalUniqTranId` from the charge, found the *same* transaction, not merely *a* transaction. This is the central recovery invariant (below) proven live, not just asserted.
+
+**What this empirically closes out (live evidence, not inference):**
+- Hamonym CardCom terminal (`1000`) authentication — PASS (already established earlier the same day).
+- OpenFields tokenization → a real, usable `entity_billing` token — PASS (Phase 2/3 below).
+- CardCom v11 `Transactions/Transaction` token charge — PASS.
+- Token charge **without sending CVV2** actually works against terminal `1000` — PASS. This is the first real (not documentation-only) evidence for the no-CVV token model on *this specific* terminal, not just CardCom's general docs.
+- `ExternalUniqTranId` as the reconciliation key, and `GetTransactionByExternalUniqTran` resolving to the identical transaction — PASS.
+- No `collection_attempts`/`payments`/`statements` row was created by this test (the diagnostic calls the adapter directly, bypassing the DB pipeline entirely) — confirmed, no financial DB fact was created.
+
+**Still not proven, and not the same claim as the above:** that terminal `1000` is specifically CardCom's *shared public demo* terminal (vs. a real Hamonym-dedicated terminal that simply happens to also not require CVV) — a real charge succeeding doesn't distinguish those two possibilities. Immaterial to whether Collection works; relevant only to a separate future accounting/architecture question already flagged elsewhere as out of scope for Collection.
+
+### Recovery orchestration — implemented (2026-08-30)
+
+The gap flagged earlier the same day ("`reconcile()` exists as a function, but nothing calls it automatically") is closed: `src/jobs/collection-attempt-reconciliation.job.js` was extended from detect-only to detect-and-resolve. For every `collection_attempts` row that is `ambiguous` (checked every run — an ambiguous outcome is already a completed, if inconclusive, answer, not something that could still be in flight) or `pending` past `STUCK_AFTER_HOURS=2` (unchanged threshold from the original detect-only version; exists to avoid racing a genuinely in-flight `charge()` call, not a retry/write-off business policy), it calls `adapter.reconcile()` with the exact same `attemptId`/`ExternalUniqTranId`, then feeds a definitive result into the *same* `resolveAttempt()` the live Router itself uses. `not_found` is left completely untouched (never treated as declined, never triggers a recharge). Concurrent finalization races (this job vs. a live in-flight charge, or two reconciliation runs) are caught via the `payments(provider, provider_reference)` UNIQUE constraint — the losing side's whole transaction rolls back cleanly (Postgres `23505`), handled as an expected outcome, not an error.
+
+**Not scheduled to run automatically** — same status as every other job in this codebase (registered in `src/jobs/index.js`, no cron trigger wired). Nothing in this change turns it on by itself.
+
+**Testing note, important:** tested with 8 mocked unit tests (`scripts/test-collection-attempt-recovery.js`) against a fake `db`/injected `getAdapter`/`resolveAttemptFn` — **not against a real DB**, deliberately. `payments` is append-only-forever by trigger (migration 059) — a real committed test `payments` row from exercising the success path against production could never be deleted afterward, which is exactly the irreversible test fact this whole session has avoided creating. The underlying primitives this job composes (`adapter.reconcile()`'s classification, `resolveAttempt()`'s atomicity) were each already proven independently — this job's own tests verify the *wiring/decision logic* between them, which is what was actually new.
+
+### Temporary diagnostic endpoints — removed after use
+
+Both temporary super-admin diagnostics built earlier the same day to reach this milestone (`GET .../diagnostics/hamonym-terminal-auth`, commit `64b870f`; `POST .../diagnostics/hamonym-token-charge`, commit `c5bcd1a`) have been removed now that they've served their purpose — a standing endpoint capable of making a real CardCom charge has no reason to stay in production. Their evidence is preserved above and in `docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md`. The underlying reusable code they exercised (`billing.service.js#getLowProfileResult`, the adapter itself) was not touched.
 
 Precision reminder, still standing (see [[feedback_precision_of_verified_claims]]): resolving 603 proves the *credentials* work. It does **not** by itself prove `HAMONYM_CARDCOM_TERMINAL` (terminal `1000`) is provisioned by CardCom as a token/no-CVV-model terminal — that is a separate, still-open fact, now the next thing to establish (Phase 2 below), not something 603's resolution silently answers.
 
@@ -69,22 +115,22 @@ CardCom v11 /Transactions/Transaction
 
 This is what makes the following crash scenario recoverable without a manual DB fix and, critically, **without ever risking a second real charge**: CardCom charges the association's card → the HTTP response is lost (network drop, Hamonym process crash, anything) → Hamonym never creates the `payments` row. Recovery: look up the same `collection_attempts.id` via `GetTransactionByExternalUniqTran`, find the transaction CardCom actually completed, and finalize locally from that answer — never by resubmitting the charge with a new id.
 
-**Caution — this exact recovery path is implemented as a *function* (`adapter.reconcile()`), verified in this session's unit tests, but nothing in the running system calls it automatically yet.** No scheduled job collects stuck `ambiguous` attempts and drives them through reconciliation to `payments`/`statement paid` on its own. Until that orchestration exists and is verified, "the system recovers from this crash" is a code-level capability, not yet a proven operational property. **Confirmed next step (per user, 2026-08-30): audit — before 603 is even resolved — whether that orchestration actually exists end-to-end (attempt goes ambiguous → gets picked up later → reconciled → payment/paid), not just whether `reconcile()` exists as a callable function.** Not done yet as of this snapshot.
+**Update: this recovery path is now wired, not just callable.** `src/jobs/collection-attempt-reconciliation.job.js` (see "Recovery orchestration" above) drives stuck/ambiguous attempts through `reconcile()` → `resolveAttempt()` automatically whenever it runs — it just isn't scheduled to run automatically yet (no different from every other job in this codebase). "The system recovers from this crash" is now a tested orchestration, not only a code-level capability — with the one caveat that the success path itself is mock-tested, not real-DB-tested, for the append-only-`payments` reason explained above.
 
-**Explicitly decided (2026-08-30): pause further Collection development for now.** The real next steps depend on CardCom access, not more code:
-1. Resolve 603.
-2. Confirm `HAMONYM_CARDCOM_TERMINAL` is provisioned token/no-CVV.
-3. Create one real token on the Hamonym terminal.
-4. Run one small, controlled real test charge.
-5. Inspect the real `TransactionInfo` response against what this session assumed.
-6. Look it up via `GetTransactionByExternalUniqTran` and confirm it returns the same transaction.
-7. Only then: declare CardCom Collection **E2E VERIFIED**.
+**Status of the original step-by-step plan — all done:**
+1. ✅ Resolve 603 — done, root cause identified (CardCom rotated credentials), Render updated, live-verified.
+2. ⚠️ Confirm `HAMONYM_CARDCOM_TERMINAL` is provisioned token/no-CVV — not formally confirmed via CardCom support, but **empirically proven** by item 4 succeeding without CVV2 being sent at all.
+3. ✅ Create one real token on the Hamonym terminal — done (Phase 2/3 below).
+4. ✅ Run one small, controlled real test charge — done, ₪1, succeeded.
+5. ✅ Inspect the real `TransactionInfo` response — `ResponseCode:0`, `TranzactionId:260726786`, `Description:"העסקה בוצעה בהצלחה"` — matches what this session's adapter code already expected.
+6. ✅ Look it up via `GetTransactionByExternalUniqTran` — same `TranzactionId` returned.
+7. ✅ **CardCom Collection: E2E VERIFIED** (protocol + adapter + real charge + reconciliation). Recovery orchestration additionally implemented same day.
 
-`billing_receipts` also stays explicitly not started until one real transaction has gone through the full path — no reason to build the layer above an unproven path.
+`billing_receipts` still stays explicitly not started — that was about needing one real transaction through the full path, which now exists, but building a receipt-issuance layer is a separate, un-scoped piece of work, not unblocked by this milestone alone.
 
 ## Where we are, in one line
 
-`Donation → Verification (Gate v1) → Billing Effective Time → Calculation (draft Statement) → Approval (financial commit)` is **built, tested, committed**. Collection is **not started** — the last thing done this session was a read-only audit of the existing `entity_billing` module to inform how Collection should eventually connect to it.
+**(Original 2026-08-28 framing below — superseded by the MILESTONE banners at the top of this file. Kept as history, not current status.)** `Donation → Verification (Gate v1) → Billing Effective Time → Calculation (draft Statement) → Approval (financial commit)` is **built, tested, committed**. Collection is **not started** — the last thing done this session was a read-only audit of the existing `entity_billing` module to inform how Collection should eventually connect to it.
 
 ## The process this whole effort followed
 

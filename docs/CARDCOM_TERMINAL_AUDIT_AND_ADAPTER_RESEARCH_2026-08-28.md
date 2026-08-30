@@ -140,6 +140,16 @@ Entity payment card → token owned by Hamonym CardCom terminal → Hamonym term
 
 `cardcom.service.js#createOpenFieldsLowProfile`: השדה `Operation: 'CreateToken'` **אינו ערך חוקי** ב-enum הרשמי (`ChargeOnly | ChargeAndCreateToken | CreateTokenOnly | SuspendedDeal | Do3DSAndSubmit`). תוקן ל-`CreateTokenOnly` (התואם את הכוונה: `Amount:1` + `CreateToken:true`, בלי חיוב אמיתי). **לא אומת אם התקלה הזו הייתה גורמת בפועל לכשל אצל CardCom** — entity_billing עדיין 0 שורות, ו-603 חוסם כל בדיקה אמיתית ממילא — אבל זו תקלה מוכחת מול הסכימה, לא ניחוש, ותוקנה כתיקון מכני.
 
-### מסקנה סופית
+### מסקנה סופית (2026-08-28)
 
 **אין חסם ארכיטקטוני נוסף.** CVV2 אינו נדרש לחיוב Token והמודל הקיים (entity_billing בלי CVV) תקין ומתאים. שגיאת 603 נותרת חוסם תפעולי יחיד — וכעת יש לה תוספת קונקרטית לבדוק כשהגישה תתאפשר: לוודא ש-HAMONYM_CARDCOM_TERMINAL מוגדר כמסוף "מודל טוקן / ללא CVV" אצל CardCom. **האדפטר מומש** (`src/modules/collection-engine/adapters/cardcom-token-charge.adapter.js`) עם בדיקות מוקיות (mocked HTTP, `scripts/test-cardcom-token-charge-adapter.js`) — לא בוצעה ולא נדרשה שום קריאה אמיתית ל-CardCom.
+
+---
+
+## חלק ד' — אימות אמפירי חי מול CardCom האמיתית (2026-08-30)
+
+כל מה שחלק ג' ניבא מהתיעוד — **אומת בפועל**, לא רק בתיעוד: 603 נפתר (רוטציית credentials אצל CardCom), token אמיתי נוצר דרך OpenFields (פעולה ידנית, לא ניתנת לאוטומציה), וחיוב Token אמיתי של ₪1 בוצע מול טרמינל `1000` **בלי לשלוח CVV2 בכלל** — הצליח (`ResponseCode:0`, `TranzactionId:260726786`). `GetTransactionByExternalUniqTran` עם אותו `ExternalUniqTranId` (`91a053f1-ae81-4323-b101-d8a9b62f9002`) החזיר **את אותו `TranzactionId` בדיוק**. פרטים מלאים ב-`docs/BILLING_ENGINE_SESSION_HANDOFF_2026-08-28.md`, סעיף MILESTONE UPDATE.
+
+**מה שזה סוגר אמפירית (לא רק תיעודית):** מודל "מסוף מודל-טוקן לא דורש CVV" — נכון **בפועל על הטרמינל הספציפי הזה** (`1000`), לא רק לפי תיעוד CardCom הכללי. **מה שזה לא סוגר:** האם `1000` הוא מסוף הדמו הציבורי של CardCom או מסוף Hamonym ייעודי — הצלחת חיוב לא מבחינה בין השניים; זו שאלה נפרדת (חשבונאית/ארכיטקטונית), לא רלוונטית לתפקוד ה-Collection עצמו.
+
+**האדפטר עודכן מ-mock-tested ל-live-verified.** בנוסף, מנגנון Recovery Orchestration (`src/jobs/collection-attempt-reconciliation.job.js`) מומש כדי ש-`adapter.reconcile()` לא יישאר פונקציה קריאה בלבד — ר' handoff לפרטים.
