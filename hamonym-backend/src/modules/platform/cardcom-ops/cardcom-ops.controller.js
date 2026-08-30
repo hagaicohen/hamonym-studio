@@ -1,22 +1,22 @@
 const db = require('../../../db/db');
 const jobRunner = require('../../../jobs');
 const { checkStaleness } = require('../../../jobs/schedule-window');
-const billingService = require('../../billing/billing.service');
 
 // Read-only + "repair local state" actions only — see
 // docs/CARDCOM_OPERATIONAL_PROCESSES.md Part G. Every job reachable through
 // run() here is detect-only or re-processes Hamonym's own already-received
 // data (webhook-recovery); none of them call a Cardcom endpoint that
-// creates or changes a charge. EXCEPTION: diagnoseHamonymTokenCharge below
-// (2026-08-30) deliberately does perform one real charge -- it is not a job,
-// not reachable via run(), and exists only as a temporary, explicitly
-// user-approved, scoped-to-one-entity diagnostic to prove the
-// cardcom-token-charge adapter against the real API. Do not treat it as
-// precedent for adding a financial-action job here without the same kind of
-// explicit, one-off sign-off. That boundary is enforced by what's
+// creates or changes a charge. That boundary is enforced by what's
 // registered in src/jobs/index.js, not by a check in this controller — do
 // not register a financial-action job there without updating this comment
 // and getting explicit product sign-off first.
+//
+// Two temporary diagnostics lived here 2026-08-30 (hamonym-terminal-auth,
+// hamonym-token-charge) to prove the 603 fix and the CardCom adapter
+// against the real API -- both removed after use, once they'd served their
+// purpose (a standing endpoint capable of a real charge has no reason to
+// stay in production). Evidence preserved in
+// docs/BILLING_ENGINE_SESSION_HANDOFF_2026-08-28.md's MILESTONE sections.
 
 // Alerts are computed here, not stored/pushed anywhere — Operational Policy
 // (2026-08-16): no new notification system yet, the Platform Admin
@@ -98,149 +98,6 @@ async function computeStaleAlerts(now) {
 
   return alerts;
 }
-
-// One-off diagnostic (2026-08-30) to answer a single question: do the
-// Render-updated HAMONYM_CARDCOM_* credentials clear the 603 "invalid
-// username/password" error that has been blocking Collection integration
-// testing? Reuses billing.service.js#getLowProfileResult UNCHANGED -- the
-// exact call shape that originally produced 603 (see
-// docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md part א,
-// finding #6) -- with a deliberately non-existent LowProfileId, so there is
-// nothing real to look up and nothing to charge: GetLpResult is a read-only
-// lookup regardless of the id given, and per the official schema it never
-// even accepts a Token/CardNumber/Amount to charge in the first place.
-//
-// Security: never returns or logs ApiName/ApiPassword/Token or any request
-// body -- only fields CardCom's own response carries, which never contain
-// our credentials. TerminalNumber is included deliberately: it's a plain
-// account/merchant id, not a secret (same as other places in this codebase
-// that already reference it in the open).
-const NON_EXISTENT_LOW_PROFILE_ID = '00000000-0000-0000-0000-000000000000';
-
-exports.diagnoseHamonymTerminalAuth = async (req, res) => {
-  const testPerformed =
-    'LowProfile/GetLpResult with a deliberately non-existent LowProfileId -- no charge, no card, no token involved';
-  const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL || null;
-
-  try {
-    const data = await billingService.getLowProfileResult(NON_EXISTENT_LOW_PROFILE_ID);
-    // HTTP 200 means CardCom accepted TerminalNumber/ApiName/ApiPassword and
-    // processed the request. A non-zero ResponseCode here is EXPECTED (the
-    // LowProfileId doesn't exist) and is itself the proof authentication
-    // passed -- CardCom's own docs say an auth failure comes back as HTTP
-    // 401, not a 200 with an unrelated ResponseCode.
-    return res.json({
-      success: true,
-      authenticationLikelySucceeded: true,
-      testPerformed,
-      terminalNumber,
-      httpStatus: 200,
-      cardcomResponseCode: data?.ResponseCode ?? null,
-      cardcomDescription: data?.Description ?? null,
-    });
-  } catch (err) {
-    if (err.response) {
-      const { status, data } = err.response;
-      const authFailed = status === 401 || data?.ResponseCode === 603;
-      return res.json({
-        success: false,
-        authenticationLikelySucceeded: !authFailed,
-        testPerformed,
-        terminalNumber,
-        httpStatus: status,
-        cardcomResponseCode: data?.ResponseCode ?? null,
-        cardcomDescription: data?.Description ?? null,
-      });
-    }
-    // No HTTP response at all -- transport error (timeout/DNS/network), not
-    // an authentication answer either way. err.message is plain text (e.g.
-    // "timeout of 15000ms exceeded") and never contains the request body.
-    return res.status(502).json({
-      success: false,
-      authenticationLikelySucceeded: null,
-      testPerformed,
-      terminalNumber,
-      error: 'transport_error',
-      message: err.message,
-    });
-  }
-};
-
-// PHASE 4 diagnostic (2026-08-30) -- ONE controlled real TEST charge
-// against CardCom terminal 1000, to prove the already-implemented,
-// already-mock-tested cardcom-token-charge adapter (src/modules/
-// collection-engine/adapters/cardcom-token-charge.adapter.js) against the
-// real API, now that 603 is resolved and one real entity_billing token
-// exists (read-only verified this session).
-//
-// Deliberately scoped to a single, hardcoded, explicitly-approved
-// entity_id -- NOT parameterized by request input -- so this cannot be
-// misused to charge an arbitrary entity's card. POST, not GET, so it can
-// never fire from simply visiting a URL.
-//
-// Calls the adapter directly, bypassing the Collection Router/DB pipeline
-// entirely: no billing_accounts/statements/collection_attempts/payments
-// row is read or written. There is no approved Statement for this entity
-// to collect against yet -- inventing one would mean creating a fake
-// financial fact in the production DB, which is exactly what this
-// diagnostic must not do. This proves the CardCom protocol layer only;
-// the DB-side pipeline was already proven separately via mocked tests.
-//
-// Never logs or returns the token, ApiName, or ApiPassword -- only the
-// adapter's own sanitized outcome shape.
-const APPROVED_TEST_ENTITY_ID = 'ea4c49a4-9f82-48be-a239-a816710f82dd';
-const TEST_CHARGE_AMOUNT = 1; // ILS -- smallest sensible real-money test amount
-
-exports.diagnoseHamonymTokenCharge = async (req, res) => {
-  try {
-    const billingRepository = require('../../billing/billing.repository');
-    const cardAdapter = require('../../collection-engine/adapters/cardcom-token-charge.adapter');
-    const crypto = require('crypto');
-
-    const paymentInstrument = await billingRepository.getActiveDefaultByEntityId(APPROVED_TEST_ENTITY_ID);
-    if (!paymentInstrument) {
-      return res.status(404).json({
-        success: false,
-        error: 'no_active_payment_instrument_for_test_entity',
-      });
-    }
-
-    // Diagnostic-only id, deliberately NOT a real collection_attempts.id --
-    // no such row exists or is created. Still the correct ExternalUniqTranId
-    // semantics (stable per attempt, reused unchanged for the lookup below).
-    const attemptId = crypto.randomUUID();
-
-    const chargeResult = await cardAdapter.charge({
-      attemptId,
-      amount: TEST_CHARGE_AMOUNT,
-      paymentInstrument,
-    });
-
-    let reconcileResult = null;
-    let reconcileSkippedReason = null;
-    if (chargeResult.outcome === 'succeeded') {
-      try {
-        reconcileResult = await cardAdapter.reconcile({ attemptId });
-      } catch (err) {
-        reconcileResult = { outcome: 'reconcile_call_threw', message: err.message };
-      }
-    } else {
-      reconcileSkippedReason = `charge outcome was '${chargeResult.outcome}', not 'succeeded' -- reconcile is only meaningful after a successful charge`;
-    }
-
-    return res.json({
-      testEntityId: APPROVED_TEST_ENTITY_ID,
-      amount: TEST_CHARGE_AMOUNT,
-      externalUniqTranId: attemptId,
-      chargeResult,
-      reconcileResult,
-      reconcileSkippedReason,
-      note: 'No collection_attempts/payments/statements row was created for this test -- calls the adapter directly to avoid any production financial DB fact.',
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: 'diagnostic_failed', message: err.message });
-  }
-};
 
 exports.getHealth = async (req, res) => {
   try {
