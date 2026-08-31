@@ -2,6 +2,12 @@
 
 Point-in-time snapshot for picking up in a **new chat**. Not a frozen design doc — see `HAMONYM_BILLING_ENGINE_TECHNICAL_DESIGN.md` for that. This file just says: what exists, what was decided, what's still open, what's next.
 
+## PAUSE + RESUME (2026-08-31) — Donation Engine audit + closure, now done
+
+Between the CardCom milestone below and continuing Billing's operational lifecycle, the user deliberately paused Billing work to fully audit and close the **Donation Engine** first (Billing sits on top of donation facts — no point finishing what's above an unverified foundation). See **`docs/DONATION_ENGINE_CLOSURE_2026-08-31.md`** for the complete audit findings, what was fixed (server-side amount/reward validation, recurring-payment reconciliation for lost webhooks, atomic+idempotent manual registration, several security cleanups) and the final verdict: **DONATION ENGINE: CLOSED**. Read that file before touching donation/recurring/registration code — this file stays Billing-Engine-scoped.
+
+Resuming point for Billing: the "Operational Billing Lifecycle" gap audit from 2026-08-30 (billing_periods/calculation/approval/collection have no automated or admin-triggered entry point at all — see that session's findings) is still exactly where it was left. Nothing below this line was touched during the Donation Engine detour.
+
 ## MILESTONE (2026-08-30) — 603 RESOLVED. CardCom authentication PASS. Terminal no-CVV provisioning still unverified.
 
 > **603 root cause: IDENTIFIED — CardCom had rotated the API credentials for terminal 1000; Render's environment still had the old ones.**
