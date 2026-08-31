@@ -189,7 +189,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
-    `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at,
+    `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at, c.rewards,
             e.status AS entity_status, e.is_hidden AS entity_hidden,
             e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
             e.cardcom_connection_status
@@ -204,6 +204,93 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   if (campaign.entity_status !== 'active') {
     throw new Error('Entity not approved');
+  }
+
+  // Server-side donation amount validation (2026-08-31, Donation Engine
+  // closure WP1) — the donor choosing an amount is legitimate; the server
+  // never validated it was even a positive number before. Cardcom itself
+  // would likely reject a garbage Amount, but that's their business logic,
+  // not ours — an invalid amount must never reach donation creation/DB at
+  // all, not merely fail downstream.
+  const donationAmount = Number(amount);
+  if (!Number.isFinite(donationAmount) || donationAmount <= 0) {
+    const err = new Error('Invalid donation amount');
+    err.status = 400;
+    err.code = 'INVALID_AMOUNT';
+    throw err;
+  }
+
+  // Server-side reward validation (2026-08-31, Donation Engine closure WP1)
+  // — closes the audit finding that reward existence/ownership/minimum-
+  // amount/inventory were entirely client-trusted. Every claimed reward
+  // must resolve to a real entry in THIS campaign's own reward catalog;
+  // title/minimumAmount are then taken ONLY from that catalog entry, never
+  // from the client, even if the client sent matching-looking values.
+  // `stock: null` means unlimited (matches the existing campaign-editor
+  // convention — see campaigns.rewards JSONB shape). This is a
+  // check-then-insert count against already-paid donations, not a hard
+  // atomic reservation — acceptable for closing the "not validated at all"
+  // gap; a stricter concurrent-inventory guarantee is a separate,
+  // not-yet-requested hardening step.
+  const campaignRewardCatalog = Array.isArray(campaign.rewards) ? campaign.rewards : [];
+  const catalogById = new Map(campaignRewardCatalog.map((r) => [String(r.id), r]));
+
+  const requestedCountsById = new Map();
+  for (const requested of rewards) {
+    const rewardId = requested?.id != null ? String(requested.id) : null;
+    if (!rewardId || !catalogById.has(rewardId)) {
+      const err = new Error('Invalid reward selection');
+      err.status = 400;
+      err.code = 'INVALID_REWARD';
+      throw err;
+    }
+    requestedCountsById.set(rewardId, (requestedCountsById.get(rewardId) || 0) + 1);
+  }
+
+  if (requestedCountsById.size > 0) {
+    const claimedRes = await db.query(
+      `SELECT elem->>'id' AS reward_id, COUNT(*)::int AS claimed
+       FROM donations d
+       CROSS JOIN LATERAL jsonb_array_elements(d.rewards) AS elem
+       WHERE d.campaign_id = $1 AND d.status = 'paid' AND elem->>'id' = ANY($2::text[])
+       GROUP BY elem->>'id'`,
+      [campaignId, Array.from(requestedCountsById.keys())]
+    );
+    const claimedById = new Map(claimedRes.rows.map((r) => [r.reward_id, r.claimed]));
+
+    for (const [rewardId, requestedCount] of requestedCountsById) {
+      const catalogReward = catalogById.get(rewardId);
+      const stock = catalogReward.stock;
+      if (stock != null) {
+        const alreadyClaimed = claimedById.get(rewardId) || 0;
+        if (alreadyClaimed + requestedCount > stock) {
+          const err = new Error('Reward is no longer available in the requested quantity');
+          err.status = 400;
+          err.code = 'REWARD_OUT_OF_STOCK';
+          throw err;
+        }
+      }
+    }
+  }
+
+  // Authoritative reward list for CardCom line items, DB storage, and the
+  // total-vs-amount check below — server values only, client's title/
+  // minimumAmount for a matched reward are discarded, not merged.
+  const authoritativeRewards = rewards.map((requested) => {
+    const catalogReward = catalogById.get(String(requested.id));
+    return {
+      id: catalogReward.id,
+      title: catalogReward.title,
+      minimumAmount: Number(catalogReward.minimumAmount) || 0,
+    };
+  });
+
+  const authoritativeRewardsTotal = authoritativeRewards.reduce((s, r) => s + r.minimumAmount, 0);
+  if (authoritativeRewardsTotal > donationAmount) {
+    const err = new Error('Donation amount is less than the total minimum for the selected rewards');
+    err.status = 400;
+    err.code = 'AMOUNT_BELOW_REWARDS_MINIMUM';
+    throw err;
   }
 
   // Deliberately not checking campaign.status here (e.g. 'draft') — the
@@ -267,7 +354,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
         donorName: donor.name,
         donorEmail: donor.email,
         donorPhone: donor.phone,
-        amount,
+        amount: donationAmount,
       })
     : null;
 
@@ -284,7 +371,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     [
       campaignId,
       campaign.entity_id,
-      amount,
+      donationAmount,
       donor.name,
       donor.email,
       donor.phone,
@@ -292,7 +379,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       donor.address     || null,
       donor.postalCode  || null,
       donor.isAnonymous || false,
-      JSON.stringify(rewards),
+      JSON.stringify(authoritativeRewards),
       isMock,
       utmParams  ? JSON.stringify(utmParams) : null,
       ipAddress  || null,
@@ -308,27 +395,28 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   if (isMock) {
     const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
     return {
-      url: `${frontBase}/mock-payment?id=${donationId}&amount=${amount}&slug=${campaign.slug}&title=${encodeURIComponent(campaign.title)}`,
+      url: `${frontBase}/mock-payment?id=${donationId}&amount=${donationAmount}&slug=${campaign.slug}&title=${encodeURIComponent(campaign.title)}`,
       donationId,
     };
   }
 
-  // 3. Build Cardcom products list
+  // 3. Build Cardcom products list — from authoritativeRewards (server-
+  // validated) and authoritativeRewardsTotal (computed above), never from
+  // the client's raw `rewards`/`amount`.
   const products = [];
-  const rewardsTotal = rewards.reduce((s, r) => s + (r.minimumAmount || 0), 0);
-  const baseAmount   = round2(amount - rewardsTotal);
+  const baseAmount = round2(donationAmount - authoritativeRewardsTotal);
 
   // Rewards first — each with its own title and minimum amount
-  for (const r of rewards) {
+  for (const r of authoritativeRewards) {
     products.push({
       Description: `תשורה: ${r.title}`,
-      UnitCost: round2(r.minimumAmount || 0),
+      UnitCost: round2(r.minimumAmount),
     });
   }
 
   // Free / top-up amount
   if (baseAmount > 0) {
-    const label = rewards.length > 0
+    const label = authoritativeRewards.length > 0
       ? `תרומה נוספת — ${campaign.title}`
       : `תרומה — ${campaign.title}`;
     products.push({ Description: label, UnitCost: baseAmount });
@@ -336,7 +424,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   // Fallback: no rewards, no base (shouldn't happen)
   if (products.length === 0) {
-    products.push({ Description: campaign.title || 'תרומה', UnitCost: round2(amount) });
+    products.push({ Description: campaign.title || 'תרומה', UnitCost: round2(donationAmount) });
   }
 
   // 4. Cardcom payload
@@ -347,7 +435,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     TerminalNumber: hasVerifiedCardcom ? campaign.cardcom_terminal_number : process.env.HAMONYM_CARDCOM_TERMINAL,
     ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : process.env.HAMONYM_CARDCOM_API_NAME,
     ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : process.env.HAMONYM_CARDCOM_API_PASSWORD,
-    Amount:         round2(amount),
+    Amount:         round2(donationAmount),
     Language:       'he',
     // ChargeAndCreateToken required for recurring signups — verified
     // empirically that ChargeOnly (the default) produces a LowProfile deal
@@ -376,8 +464,15 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // masked so it doesn't land in plaintext in Render's logs). Remove once
   // the "why is no webhook arriving" investigation is closed — see
   // docs/CARDCOM_INTEGRATION.md.
+  //
+  // ApiName redacted too (2026-08-31, Donation Engine closure WP6) — it was
+  // previously logged in plaintext. CardCom's own v11 docs describe ApiName
+  // as "Api Name for authentication", i.e. a credential, not a public
+  // identifier — the prior redaction of only ApiPassword left half the
+  // credential pair exposed in every LowProfile/Create log line.
   console.log('[createDonation] Cardcom LowProfile/Create payload:', {
     ...payload,
+    ApiName: '***',
     ApiPassword: '***',
     WebHookUrl: payload.WebHookUrl?.replace(/secret=[^&]*/, 'secret=***'),
   });
