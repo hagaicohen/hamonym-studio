@@ -87,6 +87,46 @@ exports.getTransactionByExternalUniqTran =
     return response.data;
   };
 
+// Recurring reconciliation (Donation Engine closure WP2, 2026-08-31) —
+// GetRecurringPaymentHistory (REST v11) is the authoritative,
+// webhook-independent source for "what did CardCom actually charge on this
+// recurring instruction". Verified against the official v11 swagger:
+// query is by AccountId (CardCom's account/customer number --
+// recurring_instructions.cardcom_account_id -- NOT the same field as
+// RecurringId, they are separate properties on both the request and the
+// response items) plus a FromDate/ToDate window in DDMMYYYY. Response items
+// carry TranzactionId/RowID/PaymentNum/CreateDate/SumToBill/Status per
+// instruction (filter the response by RecurringId client-side -- the API
+// itself doesn't take RecurringId as a filter for History, only for the
+// separate, non-history GetRecurringPayment endpoint). This is a GET with a
+// JSON request body per the official spec (unusual, but that's what
+// CardCom's own swagger declares) -- axios needs `data` set explicitly on a
+// GET call for that.
+// Note: RecurringPaymentHistoryQuery has no TerminalNumber field at all
+// (verified against the schema, additionalProperties:false) -- scoping is
+// by AccountId + the credential pair alone, unlike every other call in this
+// file. Do not add one.
+exports.getRecurringPaymentHistory =
+  async ({ apiName, apiPassword, accountId, fromDate, toDate }) => {
+
+    const response =
+      await axios({
+        method: 'get',
+        url: 'https://secure.cardcom.solutions/api/v11/RecuringPayments/GetRecurringPaymentHistory',
+        data: {
+          apiUserName: apiName,
+          apiPassword,
+          AccountId: accountId,
+          FromDate: fromDate,
+          ToDate: toDate,
+        },
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000,
+      });
+
+    return response.data;
+  };
+
 exports.testConnection =
   async (config) => {
 

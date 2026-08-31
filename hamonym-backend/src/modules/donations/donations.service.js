@@ -113,6 +113,59 @@ async function queueReceiptEmail(receipt, donationId) {
 exports.queueReceiptEmail = queueReceiptEmail;
 exports.withTransaction = withTransaction;
 
+// Shared primitive (2026-08-31, Donation Engine closure WP2/WP4) for
+// "a recurring instruction was successfully charged, record it as a paid
+// donation" — factored out of detail-recurring.handler.js so the live
+// DetailRecurring webhook path and the recurring-payment-reconciliation job
+// (which discovers a successful charge CardCom's own history shows but no
+// webhook ever delivered) produce byte-identical donation/campaign/receipt
+// state through the exact same atomic transaction, rather than two
+// independently-maintained copies of this logic that could drift.
+//
+// providerReference: webhook-sourced calls pass Cardcom's InternalDealNumber
+// (the existing convention, matches uq_donations_recurring_provider_ref).
+// Reconciliation-sourced calls have no InternalDealNumber available (the
+// GetRecurringPaymentHistory API doesn't return it) and pass the
+// TranzactionId instead, which is a real, still-useful Cardcom identifier
+// for support/reconciliation purposes even though it's a different field
+// than what the webhook path stores there — this asymmetry is inherent to
+// what each Cardcom API actually exposes, not an oversight; see the
+// reconciliation job's own comment for the resulting dedup implications.
+async function finalizeSuccessfulRecurringCharge(instruction, { amount, providerReference, rowId = null, statusCode = null }) {
+  let receipt = null;
+  const donationId = await withTransaction(async (client) => {
+    const donationRes = await client.query(
+      `INSERT INTO donations (
+         campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
+         rewards, status, is_mock, recurring_instruction_id, provider_reference,
+         provider_row_id, provider_status_code, completed_at
+       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',false,$7,$8,$9,$10,NOW())
+       RETURNING id`,
+      [
+        instruction.campaign_id, instruction.entity_id, amount,
+        instruction.donor_name, instruction.donor_email, instruction.donor_phone,
+        instruction.id, providerReference, rowId, statusCode,
+      ]
+    );
+    const id = donationRes.rows[0].id;
+
+    await client.query(
+      `UPDATE campaigns
+       SET current_amount = current_amount + $1, supporters_count = supporters_count + 1, updated_at = NOW()
+       WHERE id = $2`,
+      [amount, instruction.campaign_id]
+    );
+
+    receipt = await finalizePaidDonation(id, client);
+    return id;
+  });
+
+  if (instruction.entity_id) require('../dashboard/dashboard.service').invalidateDashboard(instruction.entity_id);
+  await queueReceiptEmail(receipt, donationId);
+  return donationId;
+}
+exports.finalizeSuccessfulRecurringCharge = finalizeSuccessfulRecurringCharge;
+
 // Looks up every registrationOptionId a participant references, scoped to
 // this campaign and active — and rejects the whole request if any of them
 // don't resolve. Called BEFORE the donation row is created, so a bad/foreign
