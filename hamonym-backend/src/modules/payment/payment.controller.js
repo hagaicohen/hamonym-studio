@@ -16,21 +16,15 @@ const idempotencyService =
 const auditService =
   require('./audit/audit.service');
 
-const fs   = require('fs');
-const path = require('path');
-
-// TEMPORARY — capturing real Cardcom webhook payloads for the ongoing
-// LowProfile contract investigation (see docs/CARDCOM_INTEGRATION.md).
-// Delete captureWebhookPayload and its call site below once enough real
-// samples (success + failure, at least) have been captured.
-async function captureWebhookPayload(payload) {
-  const dir = path.join(__dirname, '../../../logs');
-  await fs.promises.mkdir(dir, { recursive: true });
-  await fs.promises.appendFile(
-    path.join(dir, 'cardcom-webhook-capture.jsonl'),
-    JSON.stringify({ receivedAt: new Date().toISOString(), payload }) + '\n'
-  );
-}
+// 2026-08-31 (Donation Engine closure WP6): removed captureWebhookPayload,
+// which wrote every raw webhook body unredacted to logs/cardcom-webhook-
+// capture.jsonl indefinitely. It existed to gather real samples for the
+// LowProfile contract investigation, marked "delete once enough samples
+// have been captured" -- that investigation closed long ago (this whole
+// codebase's webhook handling has since been verified against many real
+// captures, see docs/CARDCOM_INTEGRATION.md history). A file nobody was
+// ever going to delete, growing forever, unredacted, on the server's own
+// disk had no remaining justification.
 
 exports.handleWebhook =
   async (req, res) => {
@@ -42,8 +36,6 @@ exports.handleWebhook =
       if (!cardcomValidator.validateWebhookSecret(req.query.secret)) {
         return res.status(401).json({ error: 'Invalid secret' });
       }
-
-      await captureWebhookPayload(req.body); // TEMPORARY, see comment above
 
       const claim = await idempotencyService.claim({ provider: 'cardcom', payload: req.body });
       eventId = claim.eventId;
@@ -101,14 +93,25 @@ exports.handleRecurringWebhook =
         return res.status(401).json({ error: 'Invalid secret' });
       }
 
-      const claim = await idempotencyService.claim({ provider: 'cardcom', payload: req.body });
+      // 2026-08-31 (Donation Engine closure WP6): Secret is validated above
+      // using the real req.body, then stripped before it's ever hashed for
+      // idempotency or persisted to cardcom_webhook_events.raw_payload --
+      // that column had no TTL/retention, so the shared secret was being
+      // kept in plaintext in the DB forever for every recurring webhook.
+      // It's a constant across every delivery, not a per-event value, so
+      // removing it doesn't change idempotency-hash uniqueness. Never
+      // needed again downstream (webhookDispatcher/its handlers only use
+      // business fields).
+      const { Secret, ...sanitizedPayload } = req.body;
+
+      const claim = await idempotencyService.claim({ provider: 'cardcom', payload: sanitizedPayload });
       eventId = claim.eventId;
 
       if (!claim.isNew) {
         return res.json({ success: true, duplicate: true });
       }
 
-      await webhookDispatcher(req.body);
+      await webhookDispatcher(sanitizedPayload);
 
       await auditService.recordProcessed(eventId);
 
