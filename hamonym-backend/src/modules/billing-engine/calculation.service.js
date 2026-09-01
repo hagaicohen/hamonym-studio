@@ -12,6 +12,7 @@
 // `entity_billing`), flagged as a naming collision in the E2E audit. Not
 // touched here.
 const pool = require('../../db/db');
+const notifications = require('./billing-setup-notification.service');
 
 const EFFECTIVE_STATEMENT_STATUSES = ['approved', 'open', 'paid', 'cancelled', 'written_off'];
 
@@ -117,6 +118,25 @@ async function calculateAccountStatement(client, account, { billingRunId, period
 // stays 'draft' throughout — Calculation never approves anything), one
 // dedicated transaction per billing_account so one account's failure never
 // rolls back another's already-committed draft Statement.
+//
+// Billing-readiness correction (2026-09-02): a missing/suspended
+// billing_account must never make real donation activity disappear from
+// Billing — see the audit that triggered this (13 real paid August
+// donations, 2 real active entities, 0 billing_accounts, previously 0
+// accountsEvaluated and thus invisible). The engine now runs three stages:
+//   A) discover every active entity with real, eligible donation activity
+//      in this period, independent of billing_accounts entirely;
+//   B) the existing per-account loop below is unchanged — it is still the
+//      only thing that ever creates a Statement (Stage C);
+//   C) any discovered entity NOT covered by an active billing_account is
+//      reported (never a financial mutation) and the entity administrator
+//      notified, deduplicated per (entity, period, reason) — see
+//      billing-setup-notification.service.js / migration 062.
+// Stage A's eligibility predicate is intentionally identical to
+// calculateAccountStatement's own (paid, non-mock, in-window,
+// effective_statement_id IS NULL) — discovery must never see activity that
+// Stage C itself would not also consider eligible, and discovery alone
+// never writes effective_statement_id (only Approval does — unchanged).
 async function runProductionCalculation(billingPeriodId, asOf) {
   const periodRes = await pool.query(
     `SELECT period_start, period_end FROM billing_periods WHERE id = $1`,
@@ -137,13 +157,41 @@ async function runProductionCalculation(billingPeriodId, asOf) {
   );
   const billingRunId = runRes.rows[0].id;
 
+  // ---- Stage A: activity discovery ------------------------------------
+  const activityRes = await pool.query(
+    `SELECT d.entity_id, e.display_name,
+            COUNT(*)::int AS donation_count, SUM(d.amount) AS gross_amount
+     FROM donations d
+     JOIN entities e ON e.id = d.entity_id AND e.status = 'active'
+     WHERE d.status = 'paid' AND d.is_mock = false
+       AND d.billing_effective_at >= $1 AND d.billing_effective_at < $2
+       AND d.effective_statement_id IS NULL
+     GROUP BY d.entity_id, e.display_name`,
+    [period.period_start, period.period_end]
+  );
+
+  const summary = {
+    accountsEvaluated: 0,
+    statementsCreated: 0,
+    zeroActivityAccountIds: [],
+    errors: [],
+    activityDiscovered: {
+      entitiesWithActivity: activityRes.rows.length,
+      totalDonations: activityRes.rows.reduce((sum, r) => sum + r.donation_count, 0),
+      totalGross: activityRes.rows.reduce((sum, r) => sum + Number(r.gross_amount), 0),
+    },
+    blockedEntities: [],
+  };
+
+  // ---- Stage B/C: unchanged financial path for entities that already
+  // have an active billing_account -----------------------------------
   const accountsRes = await pool.query(
     `SELECT id, entity_id, fee_rate, vat_rate FROM billing_accounts WHERE enforcement_status = 'active'`
   );
 
-  const summary = { accountsEvaluated: 0, statementsCreated: 0, zeroActivityAccountIds: [], errors: [] };
-
+  const coveredEntityIds = new Set();
   for (const account of accountsRes.rows) {
+    coveredEntityIds.add(account.entity_id);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -159,6 +207,49 @@ async function runProductionCalculation(billingPeriodId, asOf) {
       summary.errors.push({ accountId: account.id, message: err.message });
     } finally {
       client.release();
+    }
+  }
+
+  // ---- Stage B (readiness) for entities with real activity but no
+  // active billing_account: report + notify, never a Statement, never a
+  // donation write of any kind. This loop is the actual fix — previously
+  // these entities were simply absent from every field above.
+  const uncoveredEntities = activityRes.rows.filter((r) => !coveredEntityIds.has(r.entity_id));
+  if (uncoveredEntities.length > 0) {
+    const uncoveredIds = uncoveredEntities.map((r) => r.entity_id);
+    const existingAccountsRes = await pool.query(
+      `SELECT entity_id, enforcement_status FROM billing_accounts WHERE entity_id = ANY($1::uuid[])`,
+      [uncoveredIds]
+    );
+    const statusByEntity = new Map(existingAccountsRes.rows.map((r) => [r.entity_id, r.enforcement_status]));
+
+    for (const row of uncoveredEntities) {
+      // Only two reasons are possible today: fee_rate/vat_rate are NOT NULL
+      // with no default (migration 054) — there is no "account exists but
+      // partially configured" state in the current schema. 'suspended' is
+      // the only non-active enforcement_status value (same CHECK).
+      const reason = statusByEntity.has(row.entity_id) ? 'account_suspended' : 'no_billing_account';
+      const blockedEntity = {
+        entityId: row.entity_id,
+        displayName: row.display_name,
+        donationCount: row.donation_count,
+        grossAmount: row.gross_amount,
+        reason,
+      };
+      summary.blockedEntities.push(blockedEntity);
+
+      try {
+        blockedEntity.notification = await notifications.notifyBillingSetupRequired({
+          entityId: row.entity_id,
+          entityName: row.display_name,
+          billingPeriodId,
+          blockingReason: reason,
+          donationCount: row.donation_count,
+          grossAmount: row.gross_amount,
+        });
+      } catch (err) {
+        blockedEntity.notification = { sent: false, reason: 'error', message: err.message };
+      }
     }
   }
 

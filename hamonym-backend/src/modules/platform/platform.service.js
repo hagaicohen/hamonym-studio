@@ -436,7 +436,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
            COUNT(*)::int AS campaigns_count,
            COALESCE(SUM(c.current_amount), 0) AS total_raised
          FROM campaigns c
-         WHERE c.entity_id = e.id
+         WHERE c.entity_id = e.id AND c.deleted_at IS NULL
        ) camp ON true
        ${whereStr}
        ${noCampaignsClause}
@@ -448,7 +448,7 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
       `SELECT COUNT(*)::int AS total
        FROM entities e
        LEFT JOIN LATERAL (
-         SELECT COUNT(*)::int AS campaigns_count FROM campaigns c WHERE c.entity_id = e.id
+         SELECT COUNT(*)::int AS campaigns_count FROM campaigns c WHERE c.entity_id = e.id AND c.deleted_at IS NULL
        ) camp ON true
        ${whereStr}
        ${noCampaignsClause}`,
