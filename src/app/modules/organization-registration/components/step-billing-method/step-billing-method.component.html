@@ -92,7 +92,10 @@
 
         <!-- OPENFIELDS -->
 
-        <app-openfields-form> </app-openfields-form>
+        <app-openfields-form
+          [entityId]="stateService.state().entityId ?? undefined"
+        >
+        </app-openfields-form>
 
         @if (stateService.state().cardcomInternalDealNumber) {
           <div class="token-success">✓ אמצעי החיוב נשמר בהצלחה</div>

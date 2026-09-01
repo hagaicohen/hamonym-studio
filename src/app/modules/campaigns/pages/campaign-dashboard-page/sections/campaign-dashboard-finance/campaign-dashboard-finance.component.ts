@@ -51,6 +51,15 @@ export class CampaignDashboardFinanceComponent {
   };
   amountInput = '';
 
+  // One UUID per submission *intent* (F4.1, 2026-08-23) — generated once
+  // when the modal opens, reused as-is across retries of that same intent
+  // (timeout, network error, clicking save again) so the backend can tell
+  // "still the same donation" from "a genuinely new one". Only regenerated
+  // by opening the modal again — a fresh intent. Lives in memory only: a
+  // full page refresh loses it, same as it loses `saving`/`form` — that
+  // gap is known and explicitly not solved by this change (F4.1 audit).
+  private clientSubmissionKey = '';
+
   get canSubmit(): boolean {
     return !!this.form.amount && this.form.amount > 0 && this.form.supportersCount >= 1 && this.form.declared && !this.saving;
   }
@@ -59,6 +68,7 @@ export class CampaignDashboardFinanceComponent {
     this.form = { amount: null, source: 'bank_transfer', supportersCount: 1, donorName: '', donorEmail: '', donorPhone: '', note: '', declared: false };
     this.amountInput = '';
     this.error = null;
+    this.clientSubmissionKey = crypto.randomUUID();
     this.modalOpen = true;
   }
 
@@ -91,14 +101,15 @@ export class CampaignDashboardFinanceComponent {
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     const body = {
-      campaignId:       this.campaignId,
-      amount:           this.form.amount,
-      source:           this.form.source,
-      supportersCount:  this.form.supportersCount,
-      donorName:        this.form.donorName.trim() || null,
-      donorEmail:       this.form.donorEmail.trim() || null,
-      donorPhone:       this.form.donorPhone.trim() || null,
-      note:             this.form.note.trim() || null,
+      campaignId:          this.campaignId,
+      amount:              this.form.amount,
+      source:              this.form.source,
+      supportersCount:     this.form.supportersCount,
+      donorName:           this.form.donorName.trim() || null,
+      donorEmail:          this.form.donorEmail.trim() || null,
+      donorPhone:          this.form.donorPhone.trim() || null,
+      note:                this.form.note.trim() || null,
+      clientSubmissionKey: this.clientSubmissionKey,
     };
 
     this.http.post<{ donationId: string }>(
@@ -111,7 +122,9 @@ export class CampaignDashboardFinanceComponent {
         this.modalOpen = false;
       },
       error: (err) => {
-        this.error = err.error?.error || 'שגיאה בשמירת התרומה';
+        this.error = err.error?.code === 'IDEMPOTENCY_KEY_MISMATCH'
+          ? 'אירעה שגיאה פנימית — נא לסגור את החלון ולפתוח אותו מחדש כדי לנסות שוב'
+          : (err.error?.error || 'שגיאה בשמירת התרומה');
         this.saving = false;
       },
     });

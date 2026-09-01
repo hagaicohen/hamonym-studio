@@ -33,6 +33,13 @@ interface ImportRow {
   shirtSize: string;
   valid: boolean;
   error?: string;
+  // Idempotency key (Donation Engine closure WP5, 2026-08-31) — generated
+  // once per row when the file is parsed, not per submit attempt, so a
+  // retried/duplicate-clicked import resends the SAME key per row and the
+  // backend's client_submission_key uniqueness (same mechanism as manual
+  // donations, migration 056) can tell "same row, retried" apart from
+  // "a genuinely new row" without relying on name/category matching.
+  clientSubmissionKey: string;
 }
 
 const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -246,6 +253,14 @@ export class RegistrationsPageComponent {
     payerName: '', payerEmail: '', payerPhone: '',
     source: 'bank_transfer' as ManualSource, note: '', declared: false,
   };
+  // Idempotency key (Donation Engine closure WP5, 2026-08-31) — same pattern
+  // as campaign-dashboard-finance.component.ts's manual-donation
+  // clientSubmissionKey (F4.1): one UUID per drawer-open, sent with the
+  // submit, regenerated only after a successful save. A double-click or a
+  // retried request after a dropped response resends the SAME key, and the
+  // backend can tell it's the same attempt instead of creating a second
+  // paid registration.
+  private clientSubmissionKey = '';
 
   openAdd(): void {
     this.form = {
@@ -253,6 +268,7 @@ export class RegistrationsPageComponent {
       payerName: '', payerEmail: '', payerPhone: '',
       source: 'bank_transfer', note: '', declared: false,
     };
+    this.clientSubmissionKey = crypto.randomUUID();
     this.saveError = null;
     this.showDrawer = true;
   }
@@ -284,6 +300,7 @@ export class RegistrationsPageComponent {
       payerPhone:             this.form.payerPhone.trim() || null,
       source:                 this.form.source,
       note:                   this.form.note.trim() || null,
+      clientSubmissionKey:    this.clientSubmissionKey,
     };
 
     this.http.post(`${environment.apiUrl}/api/registrations/entity/${entity.id}/manual`, body, { headers }).subscribe({
@@ -337,12 +354,17 @@ export class RegistrationsPageComponent {
   }
 
   private validateRow(participantName: string, categoryTitle: string, shirtSize: string): ImportRow {
+    // clientSubmissionKey generated once here, at parse time, not at
+    // confirmImport() time — so re-clicking "Import" after a dropped
+    // response resends the SAME per-row keys instead of minting new ones
+    // that would look like N brand-new registrations to the backend.
+    const clientSubmissionKey = crypto.randomUUID();
     const validTitles = new Set(this.registrationOptions.map(o => o.title.trim().toLowerCase()));
-    if (!participantName) return { participantName, categoryTitle, shirtSize, valid: false, error: 'שם חסר' };
+    if (!participantName) return { participantName, categoryTitle, shirtSize, valid: false, error: 'שם חסר', clientSubmissionKey };
     if (!validTitles.has(categoryTitle.trim().toLowerCase())) {
-      return { participantName, categoryTitle, shirtSize, valid: false, error: `קטגוריה לא נמצאה: "${categoryTitle}"` };
+      return { participantName, categoryTitle, shirtSize, valid: false, error: `קטגוריה לא נמצאה: "${categoryTitle}"`, clientSubmissionKey };
     }
-    return { participantName, categoryTitle, shirtSize, valid: true };
+    return { participantName, categoryTitle, shirtSize, valid: true, clientSubmissionKey };
   }
 
   onImportFile(event: Event): void {
