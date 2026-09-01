@@ -251,6 +251,42 @@
 .bo-stat span { font-size: 11px; color: #64748b; }
 .bo-stat b { font-size: 16px; color: #1e293b; }
 
+.bo-result-detail {
+  font-size: 12px;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.bo-result-warning {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.bo-recalc-confirm {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+
+.bo-recalc-confirm > span {
+  display: block;
+  font-size: 12px;
+  color: #78350f;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.bo-recalc-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .bo-current-actions {
   display: flex;
   align-items: center;

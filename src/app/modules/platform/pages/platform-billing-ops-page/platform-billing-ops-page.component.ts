@@ -68,6 +68,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   periodActionError: string | null = null;
   showCreateForm = false;
   showAdvanced = false;
+  confirmingRecalcPeriodId: string | null = null;
 
   runs: BillingRun[] = [];
   runsLoading = false;
@@ -230,12 +231,66 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return sum.toFixed(2);
   }
 
-  periodStatusLabel(period: BillingPeriod): string {
+  // "מה המצב?" -- one clear phase, derived only from actual existing state
+  // (run history + real draft-statement rows), never invented.
+  periodPhaseLabel(period: BillingPeriod): string {
     const runs = this.runsForPeriod(period.id);
-    if (runs.length === 0) return 'טרם בוצע חישוב';
+    if (runs.length === 0) return 'טרם חושב';
     const latest = runs[0];
     if (!latest.result_summary) return 'מריץ חישוב...';
-    return `חושב — ${latest.result_summary.statementsCreated} Statements`;
+    const draftCount = this.statements.filter(
+      (s) => s.billing_period_id === period.id && s.status === 'draft',
+    ).length;
+    if (draftCount > 0) return 'חשבונות ממתינים לאישור';
+    if (latest.result_summary.statementsCreated === 0) return 'החישוב הסתיים — ללא חשבונות לחיוב';
+    return 'החישוב הסתיים';
+  }
+
+  // "מה יצא?" -- built only from fields the calculation API actually
+  // returns (accountsEvaluated/statementsCreated/zeroActivityAccountIds/
+  // errors, see calculation.service.js#runProductionCalculation). Never
+  // guesses a reason the response doesn't support.
+  periodResultDetail(period: BillingPeriod): { text: string; isWarning: boolean } | null {
+    const runs = this.runsForPeriod(period.id);
+    if (runs.length === 0) return null;
+    const s = runs[0].result_summary;
+    if (!s) return null;
+    if (s.errors.length > 0) {
+      return { text: `${s.errors.length} חשבונות נכשלו בחישוב — יש לבדוק בלוגים`, isWarning: true };
+    }
+    if (s.accountsEvaluated === 0) {
+      return { text: 'לא נמצאו חשבונות חיוב פעילים לבדיקה בתקופה זו', isWarning: false };
+    }
+    if (s.statementsCreated === 0) {
+      return {
+        text: `נבדקו ${s.accountsEvaluated} חשבונות חיוב, ולא נמצאה עבור אף אחד מהם פעילות (תרומות) בתקופה זו`,
+        isWarning: false,
+      };
+    }
+    return {
+      text: `${s.statementsCreated} חשבונות לחיוב נוצרו מתוך ${s.accountsEvaluated} חשבונות שנבדקו`,
+      isWarning: false,
+    };
+  }
+
+  // Recalculating a period that already has draft (unapproved) Statements
+  // can double-cover the same donations: eligibility is
+  // effective_statement_id IS NULL, cleared only on approval, not on
+  // calculation (see calculation.service.js's own header comment) -- so a
+  // rerun before approving is not a safe no-op. Require an explicit,
+  // separate confirmation rather than letting "הרץ חישוב מחדש" behave like
+  // an ordinary primary action.
+  onCalculateClick(period: BillingPeriod): void {
+    if (period.run_count > 0 && this.confirmingRecalcPeriodId !== period.id) {
+      this.confirmingRecalcPeriodId = period.id;
+      return;
+    }
+    this.confirmingRecalcPeriodId = null;
+    this.calculatePeriod(period);
+  }
+
+  cancelRecalcConfirm(): void {
+    this.confirmingRecalcPeriodId = null;
   }
 
   // Only claims a calendar-month label when period_start genuinely falls

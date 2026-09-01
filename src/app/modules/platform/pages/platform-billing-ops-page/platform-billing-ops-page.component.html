@@ -31,28 +31,44 @@
           </div>
 
           <div class="bo-current-stats">
-            <div class="bo-stat"><span>סטטוס</span><b>{{ periodStatusLabel(period) }}</b></div>
+            <div class="bo-stat"><span>מה המצב</span><b>{{ periodPhaseLabel(period) }}</b></div>
             <div class="bo-stat"><span>הרצות</span><b>{{ period.run_count }}</b></div>
-            <div class="bo-stat"><span>Statements</span><b>{{ periodStatementCount(period.id) }}</b></div>
+            <div class="bo-stat"><span>חשבונות לחיוב (Statements)</span><b>{{ periodStatementCount(period.id) }}</b></div>
             <div class="bo-stat"><span>סכום כולל</span><b>₪{{ periodTotalDue(period.id) }}</b></div>
           </div>
+
+          @if (periodResultDetail(period); as detail) {
+            <div class="bo-result-detail" [class.bo-result-warning]="detail.isWarning">{{ detail.text }}</div>
+          }
 
           @if (periodActionError) {
             <div class="ops-action-error">{{ periodActionError }}</div>
           }
 
-          <div class="bo-current-actions">
-            <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="calculatePeriod(period)">
-              {{ calculatingPeriodId === period.id ? 'מריץ...' : (period.run_count > 0 ? 'הרץ חישוב מחדש' : 'הרץ חישוב') }}
-            </button>
-            <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
-              אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
-            </button>
-          </div>
+          @if (confirmingRecalcPeriodId === period.id) {
+            <div class="bo-recalc-confirm">
+              <span>זו הרצת Production Calculation נוספת על תקופה שכבר חושבה. אם יש חשבונות בטיוטה שטרם אושרו, ריצה חוזרת עלולה ליצור עבורם כפילות על אותה פעילות — מומלץ לאשר חשבונות קיימים לפני שמריצים שוב.</span>
+              <div class="bo-recalc-confirm-actions">
+                <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
+                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                  {{ calculatingPeriodId === period.id ? 'מריץ...' : 'כן, הרץ מחדש' }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="bo-current-actions">
+              <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                {{ calculatingPeriodId === period.id ? 'מריץ...' : (period.run_count > 0 ? 'הרץ חישוב מחדש' : 'הרץ חישוב') }}
+              </button>
+              <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+                אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
+              </button>
+            </div>
+          }
 
           @if (showAdvanced) {
             <label class="ba-field bo-asof">
-              <span>asOf לחישוב — לצורך בדיקה/סימולציה של תאריך בלבד. במצב רגיל יש להשאיר ריק (ברירת המחדל היא עכשיו).</span>
+              <span>asOf — לשימוש בבדיקות או חישוב נכון לנקודת זמן מסוימת. בדרך כלל יש להשאיר ריק.</span>
               <div class="bo-datetime">
                 <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
                 <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
@@ -106,9 +122,12 @@
             </label>
             <label class="ba-field ba-field-btn">
               <span>&nbsp;</span>
-              <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
-                {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
-              </button>
+              <div class="bo-datetime">
+                <button class="ops-btn ops-btn-secondary" [disabled]="creatingPeriod" (click)="showCreateForm = false">ביטול</button>
+                <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
+                  {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
+                </button>
+              </div>
             </label>
           </div>
         </div>
@@ -124,8 +143,8 @@
               <thead>
                 <tr>
                   <th>תקופה</th>
-                  <th>סטטוס</th>
-                  <th>Statements</th>
+                  <th>מה המצב</th>
+                  <th>חשבונות לחיוב</th>
                   <th>סכום כולל</th>
                   <th></th>
                 </tr>
@@ -134,13 +153,20 @@
                 @for (period of previousPeriods; track period.id) {
                   <tr>
                     <td>{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</td>
-                    <td>{{ periodStatusLabel(period) }}</td>
+                    <td>{{ periodPhaseLabel(period) }}</td>
                     <td>{{ periodStatementCount(period.id) }}</td>
                     <td>₪{{ periodTotalDue(period.id) }}</td>
                     <td>
-                      <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="calculatePeriod(period)">
-                        {{ calculatingPeriodId === period.id ? 'מריץ...' : 'הרץ חישוב' }}
-                      </button>
+                      @if (confirmingRecalcPeriodId === period.id) {
+                        <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
+                        <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                          {{ calculatingPeriodId === period.id ? 'מריץ...' : 'כן, הרץ מחדש' }}
+                        </button>
+                      } @else {
+                        <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                          {{ calculatingPeriodId === period.id ? 'מריץ...' : 'הרץ חישוב' }}
+                        </button>
+                      }
                     </td>
                   </tr>
                 }
