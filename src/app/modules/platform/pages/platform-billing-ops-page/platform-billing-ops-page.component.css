@@ -107,6 +107,8 @@
 
 .ba-field input,
 .ba-field select {
+  height: 36px;
+  box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid #dbe2ea;
   border-radius: 8px;
@@ -115,6 +117,11 @@
 
 .ba-field-btn > span {
   visibility: hidden;
+}
+
+.ba-field-btn .ops-btn {
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .bo-datetime {
