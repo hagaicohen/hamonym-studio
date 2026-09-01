@@ -32,6 +32,7 @@ const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     labe
 const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
 const PLATFORM_CARDCOM_OPS:   NavItem = { route: '/platform/cardcom-ops',   label: 'תפעול CardCom',   icon: 'settings' };
 const PLATFORM_BILLING_ACCOUNTS: NavItem = { route: '/platform/billing-accounts', label: 'חשבונות חיוב', icon: 'settings' };
+const PLATFORM_BILLING_OPS:      NavItem = { route: '/platform/billing-ops',      label: 'תפעול חיוב',   icon: 'settings' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
@@ -73,7 +74,7 @@ export class SidebarComponent {
     const items = [PLATFORM_DASHBOARD];
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_CARDCOM_OPS, PLATFORM_BILLING_ACCOUNTS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_CARDCOM_OPS, PLATFORM_BILLING_ACCOUNTS, PLATFORM_BILLING_OPS);
     return items;
   });
 
