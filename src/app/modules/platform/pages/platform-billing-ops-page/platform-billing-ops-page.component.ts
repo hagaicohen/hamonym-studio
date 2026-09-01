@@ -37,6 +37,11 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   masav_not_authorized: 'לא אושרה הרשאה',
 };
 
+const HE_MONTH_NAMES = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
@@ -61,6 +66,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   newPeriodEndTime = '00:00';
   creatingPeriod = false;
   periodActionError: string | null = null;
+  showCreateForm = false;
+  showAdvanced = false;
 
   runs: BillingRun[] = [];
   runsLoading = false;
@@ -165,6 +172,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.newPeriodStartTime = '00:00';
         this.newPeriodEndDate = '';
         this.newPeriodEndTime = '00:00';
+        this.showCreateForm = false;
         this.loadPeriods();
       },
       error: (err) => {
@@ -193,6 +201,65 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   runsForPeriod(periodId: string): BillingRun[] {
     return this.runs.filter((r) => r.billing_period_id === periodId);
+  }
+
+  // ---- operational periods view ----------------------------------------
+  // "Current period" = the latest non-retired period. Retired periods
+  // (test/harness residue, see billing_periods.retired) never show up as
+  // the operator's current period or clutter the previous-periods list --
+  // they're invisible here without being touched at the data layer.
+
+  get currentPeriod(): BillingPeriod | null {
+    const active = this.periods.filter((p) => !p.retired);
+    return active.length ? active[0] : null;
+  }
+
+  get previousPeriods(): BillingPeriod[] {
+    const active = this.periods.filter((p) => !p.retired);
+    return active.slice(1);
+  }
+
+  periodStatementCount(periodId: string): number {
+    return this.statements.filter((s) => s.billing_period_id === periodId).length;
+  }
+
+  periodTotalDue(periodId: string): string {
+    const sum = this.statements
+      .filter((s) => s.billing_period_id === periodId)
+      .reduce((acc, s) => acc + Number(s.total_due), 0);
+    return sum.toFixed(2);
+  }
+
+  periodStatusLabel(period: BillingPeriod): string {
+    const runs = this.runsForPeriod(period.id);
+    if (runs.length === 0) return 'טרם בוצע חישוב';
+    const latest = runs[0];
+    if (!latest.result_summary) return 'מריץ חישוב...';
+    return `חושב — ${latest.result_summary.statementsCreated} Statements`;
+  }
+
+  // Only claims a calendar-month label when period_start genuinely falls
+  // on the 1st -- never mislabels a custom/partial range as "אוגוסט 2026".
+  periodMonthLabel(period: BillingPeriod): string | null {
+    const d = new Date(period.period_start);
+    if (d.getDate() !== 1) return null;
+    return `${HE_MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  fmtDate(iso: string | null): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${d.getFullYear()}`;
+  }
+
+  // period_end is an exclusive boundary ([start, end)) -- stepping back
+  // 1ms always lands on the real last covered instant, so the displayed
+  // "end date" reads as the last day of the period, not the day after it.
+  fmtInclusiveEndDate(iso: string | null): string {
+    if (!iso) return '—';
+    return this.fmtDate(new Date(new Date(iso).getTime() - 1).toISOString());
   }
 
   // ---- statements -----------------------------------------------------

@@ -11,96 +11,145 @@
 
   <!-- ============ PERIODS & CALCULATION ============ -->
   @if (tab === 'periods') {
-    <div class="plat-card">
-      <div class="bo-intro">
-        זרימת העבודה: יצירת תקופת חיוב → הרצת חישוב (Production Calculation) → Statements בטיוטה נוצרים אוטומטית
-        לכל חשבון חיוב פעיל עם פעילות בתקופה. עיון ואישור מתבצעים בלשונית Statements.
-      </div>
+    @if (periodsLoading) {
+      <div class="plat-card"><div class="plat-loading">טוען...</div></div>
+    } @else if (periodsError) {
+      <div class="plat-card"><div class="plat-error">{{ periodsError }}</div></div>
+    } @else {
 
-      <div class="bo-form-row">
-        <label class="ba-field">
-          <span>תחילת תקופה</span>
-          <div class="bo-datetime">
-            <input type="date" [(ngModel)]="newPeriodStartDate" (ngModelChange)="updateNewPeriodStart()" />
-            <input type="time" [(ngModel)]="newPeriodStartTime" (ngModelChange)="updateNewPeriodStart()" />
-          </div>
-        </label>
-        <label class="ba-field">
-          <span>סוף תקופה</span>
-          <div class="bo-datetime">
-            <input type="date" [(ngModel)]="newPeriodEndDate" (ngModelChange)="updateNewPeriodEnd()" />
-            <input type="time" [(ngModel)]="newPeriodEndTime" (ngModelChange)="updateNewPeriodEnd()" />
-          </div>
-        </label>
-        <label class="ba-field ba-field-btn">
-          <span>&nbsp;</span>
-          <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
-            {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
-          </button>
-        </label>
-      </div>
-      <label class="ba-field bo-asof">
-        <span>asOf לחישוב (ברירת מחדל: עכשיו) — לצורך בדיקה/סימולציה של תאריך</span>
-        <div class="bo-datetime">
-          <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
-          <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
-        </div>
-      </label>
-
-      @if (periodActionError) {
-        <div class="ops-action-error">{{ periodActionError }}</div>
-      }
-
-      @if (periodsLoading) {
-        <div class="plat-loading">טוען...</div>
-      } @else if (periodsError) {
-        <div class="plat-error">{{ periodsError }}</div>
-      } @else if (periods.length === 0) {
-        <div class="ops-empty-small">אין תקופות חיוב עדיין.</div>
-      } @else {
-        <div class="bo-table-wrap">
-          <table class="bo-table">
-            <thead>
-              <tr>
-                <th>תחילה</th>
-                <th>סיום</th>
-                <th>הרצות</th>
-                <th>סטטוס הרצות</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (period of periods; track period.id) {
-                <tr>
-                  <td>{{ fmtDateTime(period.period_start) }}</td>
-                  <td>{{ fmtDateTime(period.period_end) }}</td>
-                  <td>{{ period.run_count }}</td>
-                  <td>
-                    @for (run of runsForPeriod(period.id); track run.id) {
-                      <div class="bo-run-chip">
-                        {{ fmtDateTime(run.created_at) }} —
-                        @if (run.result_summary) {
-                          {{ run.result_summary.statementsCreated }} Statements
-                          ({{ run.result_summary.accountsEvaluated }} חשבונות,
-                          {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
-                        } @else {
-                          רץ...
-                        }
-                      </div>
-                    }
-                  </td>
-                  <td>
-                    <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="calculatePeriod(period)">
-                      {{ calculatingPeriodId === period.id ? 'מריץ...' : 'הרץ חישוב' }}
-                    </button>
-                  </td>
-                </tr>
+      @if (currentPeriod; as period) {
+        <div class="plat-card bo-current-period">
+          <div class="bo-current-header">
+            <div>
+              <div class="bo-current-label">תקופת חיוב נוכחית</div>
+              @if (periodMonthLabel(period); as monthLabel) {
+                <div class="bo-current-title">{{ monthLabel }}</div>
               }
-            </tbody>
-          </table>
+              <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+            </div>
+            <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
+          </div>
+
+          <div class="bo-current-stats">
+            <div class="bo-stat"><span>סטטוס</span><b>{{ periodStatusLabel(period) }}</b></div>
+            <div class="bo-stat"><span>הרצות</span><b>{{ period.run_count }}</b></div>
+            <div class="bo-stat"><span>Statements</span><b>{{ periodStatementCount(period.id) }}</b></div>
+            <div class="bo-stat"><span>סכום כולל</span><b>₪{{ periodTotalDue(period.id) }}</b></div>
+          </div>
+
+          @if (periodActionError) {
+            <div class="ops-action-error">{{ periodActionError }}</div>
+          }
+
+          <div class="bo-current-actions">
+            <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="calculatePeriod(period)">
+              {{ calculatingPeriodId === period.id ? 'מריץ...' : (period.run_count > 0 ? 'הרץ חישוב מחדש' : 'הרץ חישוב') }}
+            </button>
+            <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+              אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
+            </button>
+          </div>
+
+          @if (showAdvanced) {
+            <label class="ba-field bo-asof">
+              <span>asOf לחישוב — לצורך בדיקה/סימולציה של תאריך בלבד. במצב רגיל יש להשאיר ריק (ברירת המחדל היא עכשיו).</span>
+              <div class="bo-datetime">
+                <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
+                <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
+              </div>
+            </label>
+          }
+
+          @if (period.run_count > 0) {
+            <div class="bo-runs-history">
+              @for (run of runsForPeriod(period.id); track run.id) {
+                <div class="bo-run-chip">
+                  {{ fmtDateTime(run.created_at) }} —
+                  @if (run.result_summary) {
+                    {{ run.result_summary.statementsCreated }} Statements
+                    ({{ run.result_summary.accountsEvaluated }} חשבונות,
+                    {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
+                  } @else {
+                    רץ...
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="plat-card">
+          <div class="ops-empty-small">אין תקופת חיוב פעילה כרגע.</div>
+          <div class="bo-form-row">
+            <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
+          </div>
         </div>
       }
-    </div>
+
+      @if (showCreateForm) {
+        <div class="plat-card">
+          <div class="bo-card-title">תקופת חיוב חדשה</div>
+          <div class="bo-form-row">
+            <label class="ba-field">
+              <span>תחילת תקופה</span>
+              <div class="bo-datetime">
+                <input type="date" [(ngModel)]="newPeriodStartDate" (ngModelChange)="updateNewPeriodStart()" />
+                <input type="time" [(ngModel)]="newPeriodStartTime" (ngModelChange)="updateNewPeriodStart()" />
+              </div>
+            </label>
+            <label class="ba-field">
+              <span>סוף תקופה</span>
+              <div class="bo-datetime">
+                <input type="date" [(ngModel)]="newPeriodEndDate" (ngModelChange)="updateNewPeriodEnd()" />
+                <input type="time" [(ngModel)]="newPeriodEndTime" (ngModelChange)="updateNewPeriodEnd()" />
+              </div>
+            </label>
+            <label class="ba-field ba-field-btn">
+              <span>&nbsp;</span>
+              <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
+                {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
+              </button>
+            </label>
+          </div>
+        </div>
+      }
+
+      <div class="plat-card">
+        <div class="bo-card-title">תקופות קודמות</div>
+        @if (previousPeriods.length === 0) {
+          <div class="ops-empty-small">אין תקופות קודמות.</div>
+        } @else {
+          <div class="bo-table-wrap">
+            <table class="bo-table">
+              <thead>
+                <tr>
+                  <th>תקופה</th>
+                  <th>סטטוס</th>
+                  <th>Statements</th>
+                  <th>סכום כולל</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (period of previousPeriods; track period.id) {
+                  <tr>
+                    <td>{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</td>
+                    <td>{{ periodStatusLabel(period) }}</td>
+                    <td>{{ periodStatementCount(period.id) }}</td>
+                    <td>₪{{ periodTotalDue(period.id) }}</td>
+                    <td>
+                      <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="calculatePeriod(period)">
+                        {{ calculatingPeriodId === period.id ? 'מריץ...' : 'הרץ חישוב' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
   }
 
   <!-- ============ STATEMENTS ============ -->

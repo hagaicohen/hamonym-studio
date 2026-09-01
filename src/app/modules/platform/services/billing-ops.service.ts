@@ -12,6 +12,7 @@ export interface BillingPeriod {
   period_start: string;
   period_end: string;
   created_at: string;
+  retired: boolean;
   run_count: number;
 }
 
