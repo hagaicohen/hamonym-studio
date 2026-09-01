@@ -16,6 +16,30 @@ export interface BillingPeriod {
   run_count: number;
 }
 
+export type BillingSetupBlockingReason = 'no_billing_account' | 'account_suspended';
+
+export interface BillingSetupNotificationResult {
+  sent: boolean;
+  reason?: 'already_notified' | 'no_admin_found' | 'error';
+  adminCount?: number;
+  message?: string;
+}
+
+export interface BlockedBillingEntity {
+  entityId: string;
+  displayName: string;
+  donationCount: number;
+  grossAmount: string;
+  reason: BillingSetupBlockingReason;
+  notification?: BillingSetupNotificationResult;
+}
+
+export interface BillingActivityDiscovered {
+  entitiesWithActivity: number;
+  totalDonations: number;
+  totalGross: number;
+}
+
 export interface BillingRun {
   id: string;
   billing_period_id: string;
@@ -27,6 +51,10 @@ export interface BillingRun {
     statementsCreated: number;
     zeroActivityAccountIds: string[];
     errors: { accountId: string; message: string }[];
+    // Absent on runs executed before the Billing readiness correction
+    // (2026-09-02) -- callers must not assume these are present.
+    activityDiscovered?: BillingActivityDiscovered;
+    blockedEntities?: BlockedBillingEntity[];
   } | null;
   created_at: string;
   completed_at: string | null;

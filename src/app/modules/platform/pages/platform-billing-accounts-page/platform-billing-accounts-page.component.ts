@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import {
   BillingProvisioningService,
   UnprovisionedEntity,
@@ -21,6 +22,7 @@ const SUGGESTED_VAT_RATE = 0.18;
 })
 export class PlatformBillingAccountsPageComponent implements OnInit {
   private service = inject(BillingProvisioningService);
+  private route = inject(ActivatedRoute);
 
   loading = true;
   error: string | null = null;
@@ -36,7 +38,16 @@ export class PlatformBillingAccountsPageComponent implements OnInit {
   submitError: string | null = null;
   justProvisionedId: string | null = null;
 
+  // Deep-link from Billing Ops' "הגדר חשבון חיוב" action (a blocked entity
+  // with real donation activity but no billing_account) -- pre-opens this
+  // exact entity's provisioning form so the operator doesn't have to find
+  // it again in the list. Purely a UX convenience: never auto-submits, and
+  // has no effect if the entity isn't (or is no longer) in the
+  // unprovisioned list.
+  private highlightEntityId: string | null = null;
+
   ngOnInit(): void {
+    this.highlightEntityId = this.route.snapshot.queryParamMap.get('entityId');
     this.load();
   }
 
@@ -47,6 +58,11 @@ export class PlatformBillingAccountsPageComponent implements OnInit {
       next: (res) => {
         this.entities = res.entities;
         this.loading = false;
+        if (this.highlightEntityId) {
+          const match = this.entities.find((e) => e.id === this.highlightEntityId);
+          if (match) this.openProvision(match);
+          this.highlightEntityId = null;
+        }
       },
       error: () => {
         this.error = 'שגיאה בטעינת רשימת הישויות';
