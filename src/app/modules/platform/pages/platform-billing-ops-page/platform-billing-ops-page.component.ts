@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import {
   BillingOpsService,
   BillingPeriod,
@@ -59,8 +59,15 @@ const HE_MONTH_NAMES = [
 })
 export class PlatformBillingOpsPageComponent implements OnInit {
   private service = inject(BillingOpsService);
+  private route = inject(ActivatedRoute);
 
   tab: Tab = 'periods';
+
+  // "Return to the workflow" -- set when arriving back from the focused
+  // Billing setup screen (platform-billing-setup-page) right after it
+  // created a billing_account, so the operator sees the confirmation here
+  // instead of having to go find the entity again.
+  justSetupEntityName: string | null = null;
 
   // ---- periods & calculation -------------------------------------------
   periods: BillingPeriod[] = [];
@@ -116,6 +123,13 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   exportError: string | null = null;
 
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const requestedTab = qp.get('tab') as Tab | null;
+    if (requestedTab === 'periods' || requestedTab === 'statements' || requestedTab === 'masav') {
+      this.tab = requestedTab;
+    }
+    this.justSetupEntityName = qp.get('justSetupName') || (qp.get('justSetupEntity') ? 'העמותה' : null);
+
     this.loadPeriods();
     this.loadStatements();
     this.loadMasav();
@@ -123,6 +137,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   setTab(tab: Tab): void {
     this.tab = tab;
+  }
+
+  dismissJustSetupBanner(): void {
+    this.justSetupEntityName = null;
   }
 
   // ---- periods & calculation -------------------------------------------
@@ -270,6 +288,30 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   periodActivityDiscovered(period: BillingPeriod): BillingActivityDiscovered | null {
     return this.latestRunSummary(period)?.activityDiscovered ?? null;
+  }
+
+  // "מה הפעולה הבאה?" -- the one thing the operator should do next for this
+  // period, derived purely from already-loaded state (never a new call).
+  // setup -> calculate/recalculate -> review drafts -> collection, in that
+  // order, matching the real Statement lifecycle.
+  periodNextActionLabel(period: BillingPeriod): string {
+    const runs = this.runsForPeriod(period.id);
+    if (runs.length === 0) return 'הרצת חישוב, כדי לראות מה מוכן לחיוב בתקופה זו';
+
+    const blocked = this.periodBlockedEntities(period);
+    if (blocked.length > 0) return 'השלמת הגדרות חיוב לעמותות המסומנות למטה';
+
+    const draftCount = this.statements.filter(
+      (s) => s.billing_period_id === period.id && s.status === 'draft',
+    ).length;
+    if (draftCount > 0) return `בדיקה ואישור ${draftCount} חשבונות לחיוב בלשונית Statements`;
+
+    const approvedCount = this.statements.filter(
+      (s) => s.billing_period_id === period.id && s.status === 'approved',
+    ).length;
+    if (approvedCount > 0) return 'הפעלת גבייה על החשבונות המאושרים בלשונית Statements';
+
+    return 'אין פעולה נדרשת כרגע בתקופה זו';
   }
 
   blockingReasonLabel(reason: string): string {

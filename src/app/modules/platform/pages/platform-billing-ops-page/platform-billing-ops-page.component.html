@@ -3,6 +3,13 @@
     <h1 class="plat-title">תפעול חיוב (Billing)</h1>
   </div>
 
+  @if (justSetupEntityName) {
+    <div class="plat-card bo-just-setup-banner">
+      <span>הוגדר חשבון חיוב עבור <b>{{ justSetupEntityName }}</b>. אם יש לה פעילות בתקופה הנוכחית, הריצו חישוב מחדש כדי לכלול אותה.</span>
+      <button class="bo-just-setup-dismiss" (click)="dismissJustSetupBanner()">✕</button>
+    </div>
+  }
+
   <div class="bo-tabs">
     <button class="bo-tab" [class.bo-tab-active]="tab === 'periods'" (click)="setTab('periods')">תקופות וחישוב</button>
     <button class="bo-tab" [class.bo-tab-active]="tab === 'statements'" (click)="setTab('statements')">Statements</button>
@@ -26,6 +33,7 @@
                 <div class="bo-current-title">{{ monthLabel }}</div>
               }
               <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+              <div class="bo-next-action">הפעולה הבאה: {{ periodNextActionLabel(period) }}</div>
             </div>
             <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
           </div>
@@ -62,9 +70,9 @@
                   }
                   @if (item.reason === 'no_billing_account') {
                     <a class="ops-btn ops-btn-secondary ops-btn-sm"
-                       [routerLink]="['/platform/billing-accounts']"
-                       [queryParams]="{ entityId: item.entityId }">
-                      הגדר חשבון חיוב
+                       [routerLink]="['/platform/billing-setup', item.entityId]"
+                       [queryParams]="{ displayName: item.displayName, donationCount: item.donationCount, grossAmount: item.grossAmount }">
+                      השלם הגדרות חיוב
                     </a>
                   } @else {
                     <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>

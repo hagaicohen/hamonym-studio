@@ -1,0 +1,125 @@
+<div class="plat-page">
+  <a class="bs-back" [routerLink]="['/platform/billing-ops']">→ חזרה לתפעול חיוב</a>
+
+  <div class="plat-header">
+    <h1 class="plat-title">הגדרות חיוב — {{ displayName || 'עמותה' }}</h1>
+  </div>
+
+  @if (loading) {
+    <div class="plat-card"><div class="plat-loading">טוען...</div></div>
+  } @else if (error) {
+    <div class="plat-card"><div class="plat-error">{{ error }}</div></div>
+  } @else {
+
+    <div class="plat-card bs-status-card" [class.bs-status-ok]="isBillable" [class.bs-status-bad]="!isBillable">
+      <div class="bs-status-label">סטטוס חיוב</div>
+      @if (isBillable) {
+        <div class="bs-status-value bs-status-ok-text">✔ ניתן לחייב את העמותה</div>
+      } @else if (isSuspended) {
+        <div class="bs-status-value bs-status-bad-text">⚠ חשבון החיוב מושהה — נדרש טיפול ידני</div>
+      } @else {
+        <div class="bs-status-value bs-status-bad-text">✖ לא ניתן לחייב — אין חשבון חיוב מוגדר לעמותה</div>
+      }
+      @if (donationCount !== null) {
+        <div class="bs-activity-note">{{ donationCount }} תרומות ששולמו בתקופה הנוכחית | סה״כ ₪{{ grossAmount }}</div>
+      }
+    </div>
+
+    @if (justCreated) {
+
+      <div class="plat-card bs-success-card">
+        <div class="bs-success-title">חשבון החיוב נוצר בהצלחה</div>
+        <div class="bs-success-text">
+          העמותה זמינה כעת לחיוב. אם יש לה פעילות בתקופה הנוכחית, יהיה צורך להריץ חישוב מחדש בתפעול החיוב כדי להפיק לה חשבון לחיוב (Statement) על אותה פעילות.
+        </div>
+        <button class="ops-btn ops-btn-primary" (click)="returnToBillingOps()">חזרה לתפעול החיוב</button>
+      </div>
+
+    } @else {
+
+      <div class="plat-card">
+        <div class="bs-section-title">הגדרות חיוב מסחריות</div>
+        <div class="bs-section-sub">שיעור העמלה והמע״מ שגובה Hamonym, ואמצעי הגבייה המועדף לעמותה זו — החלטה מסחרית של Hamonym.</div>
+
+        @if (billingAccount; as account) {
+          <div class="bs-readonly-grid">
+            <div><span>שיעור עמלה</span><b>{{ feePercentOf(account) }}%</b></div>
+            <div><span>שיעור מע״מ</span><b>{{ vatPercentOf(account) }}%</b></div>
+            <div><span>אמצעי גבייה מועדף</span><b>{{ account.preferred_collection_method === 'masav' ? 'מס״ב' : 'כרטיס אשראי' }}</b></div>
+            <div><span>סטטוס אכיפה</span><b>{{ account.enforcement_status === 'active' ? 'פעיל' : 'מושהה' }}</b></div>
+          </div>
+          @if (isSuspended) {
+            <div class="bs-manual-note">חשבון החיוב קיים אך מושהה. הפעלה מחדש דורשת טיפול ידני, מחוץ למסך זה.</div>
+          }
+        } @else {
+          <div class="ba-form-fields">
+            <label class="ba-field">
+              <span>שיעור עמלה (%)</span>
+              <input type="number" step="0.01" min="0" max="100" [(ngModel)]="feeRatePercent" />
+            </label>
+            <label class="ba-field">
+              <span>שיעור מע״מ (%)</span>
+              <input type="number" step="0.01" min="0" max="100" [(ngModel)]="vatRatePercent" />
+            </label>
+            <label class="ba-field">
+              <span>אמצעי גבייה מועדף</span>
+              <select [(ngModel)]="collectionMethod">
+                <option value="card">כרטיס אשראי</option>
+                <option value="masav">מס״ב</option>
+              </select>
+            </label>
+          </div>
+          <label class="ba-field ba-field-notes">
+            <span>הערה (לתיעוד ה-audit log, לא חובה)</span>
+            <input type="text" [(ngModel)]="notes" placeholder="למשל: הסכם סטנדרטי" />
+          </label>
+        }
+      </div>
+
+      <div class="plat-card bs-instrument-card">
+        <div class="bs-section-title">מכשיר גבייה (אמצעי הגבייה בפועל)</div>
+        <div class="bs-section-sub">נפרד מהגדרות החיוב המסחריות — האם קיים אמצעי טכני לגביית הכסף בפועל מהתורמים לעמותה זו.</div>
+
+        @if (collectionMethod === 'masav') {
+          @if (masavConfig; as config) {
+            <div class="bs-readonly-grid">
+              <div><span>פרטי בנק</span><b>בנק {{ config.bank_code }} · סניף {{ config.branch_code }} · חשבון {{ config.account_number }}</b></div>
+              <div><span>הרשאה</span><b>{{ config.authorized ? 'מאושרת' : 'לא מאושרת' }}</b></div>
+            </div>
+            @if (!config.authorized) {
+              <div class="bs-manual-note">יש לאשר את ההרשאה בלשונית מס״ב לפני שניתן יהיה לגבות דרך מס״ב.</div>
+            }
+          } @else {
+            <div class="bs-manual-note">טרם הוגדרו פרטי בנק למס״ב עבור עמותה זו.</div>
+          }
+          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="goToMasavTab()">מעבר ללשונית מס״ב</button>
+        } @else {
+          <div class="bs-manual-note">
+            באמצעי גבייה בכרטיס אשראי — העמותה מזינה את פרטי הכרטיס בעצמה, דרך מסך התשלומים שלה. אין פעולת הגדרה נדרשת כאן מצד מנהל הפלטפורמה.
+          </div>
+        }
+      </div>
+
+      <div class="plat-card bs-explain-card">
+        <div class="bs-section-title">מה יקרה אחרי השמירה?</div>
+        <div class="bs-section-sub">
+          לאחר יצירת חשבון החיוב, העמותה תיכלל בהרצות חישוב חיוב הבאות. אם יש לה כבר פעילות תרומות בתקופה הנוכחית, יש להריץ חישוב מחדש בתפעול החיוב כדי להפיק עבורה חשבון לחיוב (Statement) על אותה פעילות — זה לא קורה אוטומטית.
+        </div>
+      </div>
+
+      @if (!billingAccount) {
+        @if (submitError) { <div class="ops-action-error">{{ submitError }}</div> }
+        <div class="bs-primary-action">
+          <button class="ops-btn ops-btn-primary" [disabled]="submitting" (click)="submit()">
+            {{ submitting ? 'שומר...' : 'יצירת חשבון חיוב והפעלת חיוב לעמותה' }}
+          </button>
+        </div>
+      } @else {
+        <div class="bs-primary-action">
+          <button class="ops-btn ops-btn-primary" (click)="returnToBillingOps()">חזרה לתפעול החיוב</button>
+        </div>
+      }
+
+    }
+  }
+</div>
