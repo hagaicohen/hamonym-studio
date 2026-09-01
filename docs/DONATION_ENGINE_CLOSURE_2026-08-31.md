@@ -30,13 +30,21 @@ Four parallel read-only research agents traced: (A) the one-time CardCom donatio
 
 **The correlation problem was real, not assumed away.** The History API doesn't return `InternalDealNumber` (what the live webhook stores as `provider_reference`), and empirically **none** of the 3 real production recurring donations have `provider_row_id` populated, even though `RowID` does appear in one captured raw payload. There is no single confirmed-reliable shared identifier between the two Cardcom APIs. "Already represented locally" is therefore decided by the strongest available signal — `provider_row_id` match if both sides have it, else an existing **`paid`** donation on the same instruction/day/amount (deliberately not matching against `failed` attempts, since a real successful retry after a failed one is still a genuinely missing charge). Every recovery is also written to `reconciliation_findings` for visibility. Not a cryptographic guarantee — the best available correlation given what CardCom's real APIs actually expose, stated as such in the code and here, not overclaimed.
 
-**Not scheduled to run automatically** — same status as every other job in this codebase (`stale-pending-donations`, `collection-attempt-reconciliation`, etc. — none have a live cron trigger wired yet; that's a separate, already-tracked ops decision, not something this closure introduces or blocks on).
+**Correction (2026-09-01, pre-push safety check):** the line above was wrong. A Render Cron Job (`cron-entry.js`, every 15 min) has been live in production since 2026-08-18 (`docs/CARDCOM_OPERATIONAL_PROCESSES.md` Part י"א) and automatically picks up every job in `src/jobs/index.js` that carries a `schedule` field — `stale-pending-donations` included, which predates this closure and was already in that rotation. This job would have entered the same rotation automatically on deploy, with no separate opt-in, and started auto-finalizing real donations from a day+amount heuristic on the next `03:00` window. Its `schedule` field was removed before shipping — see the Post-Launch Hardening Backlog below.
+
+## Post-Launch Donation Hardening Backlog
+
+Not release blockers — Donation Engine v1 ships without these. Listed here so they aren't rediscovered from scratch:
+
+1. **Recurring reconciliation (WP2) stays dormant.** `recurring-payment-reconciliation.job.js` is fully implemented and tested (9 passing tests) but ships with no `schedule` field, so the live Render Cron (`cron-entry.js`) skips it — confirmed at the trigger-mechanism level (`cron-entry.js`/`scheduler.js` both `continue` before ever reaching `schedule-window.js` for a job with no `schedule`). Reason: its fallback match (when neither side has `provider_row_id`) is a day+amount heuristic against CardCom history, not an authoritative per-charge identifier — unlike WP3's repair path, which only finalizes after CardCom's own `GetLpResult` confirms success. Re-enable by restoring the `schedule` field once the correlation is strengthened (e.g. validating whether `TranzactionId` can reliably stand in for `provider_reference`/`InternalDealNumber` — see the conflicting claims between this doc and `CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md`/`CARDCOM_OPERATIONAL_PROCESSES.md` about whether that's already proven). Until then, run manually via `job-runner.run('recurring-payment-reconciliation')` or Admin "Run now", not automatically.
+2. **DetailRecurring webhook forgeability** — accepted residual risk (see findings table above), no per-webhook CardCom verification call added.
+3. **Terminal-provenance column** — no field distinguishes entity-owned vs. Hamonym-fallback CardCom terminal on a donation (accounting follow-up for Billing).
+4. **`pending → failed` policy** — deliberately undecided business rule; stale `pending` donations that CardCom never actually charged stay `pending` forever today.
+5. **Reward inventory** is check-then-insert, not a hard atomic reservation (WP1) — fine for current volume, not safe under real concurrent contention.
 
 ## Commits
 
-All local on `main`, not pushed as of this writing.
-
-**hamonym-backend / outer repo:**
+**hamonym-backend / outer repo — pushed to `main` 2026-09-01:**
 ```
 7cb35d2  WP1: server-side validation of donation amount and reward claims
 062ab77  WP2: recurring payment reconciliation -- recover charges whose webhook was lost
@@ -46,11 +54,14 @@ All local on `main`, not pushed as of this writing.
                  mistake bundled them together; functionally correct, just not
                  split as cleanly as the commit message implies)
 d8d39f7  Add regression tests for detail-recurring.handler.js after WP2/WP4 refactor
+25c18be  Record Donation Engine full audit + closure (2026-08-31)
+94ef9e6  Keep recurring-payment-reconciliation dormant pending correlation validation
 ```
 
-**hamonym-app:**
+**hamonym-app — pushed to `main` 2026-09-01:**
 ```
 efb5c1b  WP5: idempotency keys for manual registration + bulk import
+cb77819  Merge remote-tracking branch 'origin/main'
 ```
 
 ## Tests
@@ -59,6 +70,6 @@ efb5c1b  WP5: idempotency keys for manual registration + bulk import
 
 ## Final verdict
 
-**DONATION ENGINE: CLOSED**, for the technical/financial-integrity scope this audit covered. Remaining items are explicitly accepted residual risk (recurring webhook forgeability, mitigated not eliminated) or explicitly deferred business decisions (pending→failed policy) or explicitly out-of-scope follow-ups (terminal-provenance column, MASAV, receipts/invoices to entities, job scheduling) — none are blockers to this closure per the instructions this work was scoped against.
+**DONATION ENGINE v1: SHIPPED (2026-09-01).** Remaining items are explicitly accepted residual risk (recurring webhook forgeability, mitigated not eliminated), explicitly deferred business decisions (pending→failed policy), explicitly out-of-scope follow-ups (terminal-provenance column, MASAV, receipts/invoices to entities), or explicitly deferred pending validation (WP2 recurring reconciliation, shipped dormant) — see Post-Launch Donation Hardening Backlog above. None are blockers per the instructions this work was scoped against.
 
 Next: resume Billing Engine operational-lifecycle work (see `docs/BILLING_ENGINE_SESSION_HANDOFF_2026-08-28.md`'s MILESTONE sections) — the audit that motivated pausing it is now closed.
