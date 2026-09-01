@@ -10,6 +10,7 @@
 const pool = require('../../db/db');
 const billingRepository = require('../billing/billing.repository');
 const defaultGetAdapter = require('./adapters/get-adapter');
+const routing = require('./routing');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
 
 const ACTIONABLE_STATEMENT_STATUSES = ['approved', 'open'];
@@ -54,7 +55,28 @@ async function openAttempt(statementId, resolveAdapter) {
       return { skipped: true, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
     }
 
-    const method = statement.preferred_collection_method;
+    // Dynamic per-Statement routing (Billing v1 Bundle 1/2 correction) --
+    // billing_accounts.preferred_collection_method is read above only as
+    // display/reference context; it is no longer the routing decision. See
+    // routing.js and docs/HAMONYM_BILLING_ENGINE_SPEC.md's routing table.
+    const routed = await routing.resolveCollectionMethod(client, statement);
+    if (routed.blocked) {
+      // total_due is above the card threshold and MASAV isn't configured/
+      // authorized yet -- never silently fall back to card. Same
+      // "record a finding, attempt nothing" shape as not_implemented below.
+      await recordFinding(client, {
+        jobName: 'collection-router',
+        findingType: 'masav_blocked_pending_authorization',
+        severity: 'warning',
+        subjectType: 'statement',
+        subjectId: statementId,
+        details: { reason: routed.reason, entityId: statement.entity_id, totalDue: statement.total_due },
+      });
+      await client.query('COMMIT');
+      return { skipped: true, reason: routed.reason };
+    }
+
+    const method = routed.method;
     const adapter = resolveAdapter(method);
 
     if (adapter.NOT_IMPLEMENTED) {

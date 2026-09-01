@@ -67,4 +67,8 @@ router.use('/cardcom-ops', require('./cardcom-ops/cardcom-ops.routes'));
 // this is requireSuperAdmin rather than requirePermission('organizations').
 router.use('/billing-accounts', require('./billing-provisioning/billing-provisioning.routes'));
 
+// Billing Operations (Billing v1) — period/calculation/approval/collection
+// wiring + MASAV manual flow. See billing-ops.routes.js.
+router.use('/billing-ops', require('./billing-ops/billing-ops.routes'));
+
 module.exports = router;
