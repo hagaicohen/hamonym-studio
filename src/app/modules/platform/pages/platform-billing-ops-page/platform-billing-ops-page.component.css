@@ -113,6 +113,25 @@
   font-size: 13px;
 }
 
+.ba-field-btn > span {
+  visibility: hidden;
+}
+
+.bo-datetime {
+  display: flex;
+  gap: 6px;
+}
+
+.bo-datetime input[type="date"] {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.bo-datetime input[type="time"] {
+  flex: 0 0 100px;
+  min-width: 0;
+}
+
 .ba-form {
   margin: 6px 0;
   padding: 14px;

@@ -20,19 +20,31 @@
       <div class="bo-form-row">
         <label class="ba-field">
           <span>תחילת תקופה</span>
-          <input type="datetime-local" [(ngModel)]="newPeriodStart" />
+          <div class="bo-datetime">
+            <input type="date" [(ngModel)]="newPeriodStartDate" (ngModelChange)="updateNewPeriodStart()" />
+            <input type="time" [(ngModel)]="newPeriodStartTime" (ngModelChange)="updateNewPeriodStart()" />
+          </div>
         </label>
         <label class="ba-field">
           <span>סוף תקופה</span>
-          <input type="datetime-local" [(ngModel)]="newPeriodEnd" />
+          <div class="bo-datetime">
+            <input type="date" [(ngModel)]="newPeriodEndDate" (ngModelChange)="updateNewPeriodEnd()" />
+            <input type="time" [(ngModel)]="newPeriodEndTime" (ngModelChange)="updateNewPeriodEnd()" />
+          </div>
         </label>
-        <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
-          {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
-        </button>
+        <label class="ba-field ba-field-btn">
+          <span>&nbsp;</span>
+          <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
+            {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
+          </button>
+        </label>
       </div>
       <label class="ba-field bo-asof">
         <span>asOf לחישוב (ברירת מחדל: עכשיו) — לצורך בדיקה/סימולציה של תאריך</span>
-        <input type="datetime-local" [(ngModel)]="calcAsOf" />
+        <div class="bo-datetime">
+          <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
+          <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
+        </div>
       </label>
 
       @if (periodActionError) {

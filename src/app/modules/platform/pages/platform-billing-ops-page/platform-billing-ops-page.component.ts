@@ -55,6 +55,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   periodsError: string | null = null;
   newPeriodStart = '';
   newPeriodEnd = '';
+  newPeriodStartDate = '';
+  newPeriodStartTime = '00:00';
+  newPeriodEndDate = '';
+  newPeriodEndTime = '00:00';
   creatingPeriod = false;
   periodActionError: string | null = null;
 
@@ -62,6 +66,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   runsLoading = false;
   calculatingPeriodId: string | null = null;
   calcAsOf = '';
+  calcAsOfDate = '';
+  calcAsOfTime = '';
 
   // ---- statements ---------------------------------------------------
   statements: StatementListItem[] = [];
@@ -129,6 +135,23 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
+  private combineDateTime(date: string, time: string): string {
+    if (!date) return '';
+    return `${date}T${time || '00:00'}`;
+  }
+
+  updateNewPeriodStart(): void {
+    this.newPeriodStart = this.combineDateTime(this.newPeriodStartDate, this.newPeriodStartTime);
+  }
+
+  updateNewPeriodEnd(): void {
+    this.newPeriodEnd = this.combineDateTime(this.newPeriodEndDate, this.newPeriodEndTime);
+  }
+
+  updateCalcAsOf(): void {
+    this.calcAsOf = this.combineDateTime(this.calcAsOfDate, this.calcAsOfTime);
+  }
+
   createPeriod(): void {
     if (this.creatingPeriod || !this.newPeriodStart || !this.newPeriodEnd) return;
     this.creatingPeriod = true;
@@ -138,6 +161,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.creatingPeriod = false;
         this.newPeriodStart = '';
         this.newPeriodEnd = '';
+        this.newPeriodStartDate = '';
+        this.newPeriodStartTime = '00:00';
+        this.newPeriodEndDate = '';
+        this.newPeriodEndTime = '00:00';
         this.loadPeriods();
       },
       error: (err) => {
