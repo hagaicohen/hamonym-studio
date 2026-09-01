@@ -1,0 +1,229 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+
+function authHeaders(): HttpHeaders {
+  return new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+}
+
+export interface BillingPeriod {
+  id: string;
+  period_start: string;
+  period_end: string;
+  created_at: string;
+  run_count: number;
+}
+
+export interface BillingRun {
+  id: string;
+  billing_period_id: string;
+  mode: 'dry_run' | 'production';
+  as_of: string;
+  status: string;
+  result_summary: {
+    accountsEvaluated: number;
+    statementsCreated: number;
+    zeroActivityAccountIds: string[];
+    errors: { accountId: string; message: string }[];
+  } | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export type RoutedMethod = 'card' | 'masav' | 'blocked';
+
+export interface StatementListItem {
+  id: string;
+  billing_account_id: string;
+  billing_period_id: string;
+  billing_run_id: string;
+  gross_raised: string;
+  fee_amount: string;
+  vat_amount: string;
+  total_due: string;
+  status: string;
+  created_at: string;
+  entity_id: string;
+  entity_name: string;
+  routed_method: RoutedMethod;
+  latest_attempt_status: string | null;
+  payment_count: number;
+}
+
+export interface CollectionAttempt {
+  id: string;
+  statement_id: string;
+  collection_method: 'card' | 'masav';
+  attempt_number: number;
+  status: string;
+  provider: string;
+  provider_reference: string | null;
+  provider_raw_status: string | null;
+  failure_reason: string | null;
+  requested_amount: string;
+  initiated_at: string;
+  resolved_at: string | null;
+}
+
+export interface Payment {
+  id: string;
+  statement_id: string;
+  collection_attempt_id: string;
+  amount: string;
+  provider: string;
+  provider_reference: string;
+  received_at: string;
+}
+
+export interface StatementDetail extends StatementListItem {
+  attempts: CollectionAttempt[];
+  payments: Payment[];
+  componentCount: number;
+  account_declared_method: 'card' | 'masav';
+}
+
+export interface MasavConfig {
+  id: string;
+  entity_id: string;
+  bank_code: string;
+  branch_code: string;
+  account_number: string;
+  account_holder_name: string | null;
+  authorized: boolean;
+  authorized_by: string | null;
+  authorized_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlockedMasavStatement {
+  statement_id: string;
+  total_due: string;
+  status: string;
+  created_at: string;
+  entity_id: string;
+  entity_name: string;
+  bank_code: string | null;
+  branch_code: string | null;
+  account_number: string | null;
+  authorized: boolean | null;
+  reason: 'masav_not_configured' | 'masav_incomplete' | 'masav_not_authorized';
+}
+
+export interface ActionableMasavStatement {
+  statement_id: string;
+  total_due: string;
+  status: string;
+  created_at: string;
+  entity_id: string;
+  entity_name: string;
+  bank_code: string;
+  branch_code: string;
+  account_number: string;
+  attempt_id: string | null;
+  attempt_status: string | null;
+  attempt_number: number | null;
+}
+
+@Injectable({ providedIn: 'root' })
+export class BillingOpsService {
+  private http = inject(HttpClient);
+  private base = `${environment.apiUrl}/api/platform/billing-ops`;
+
+  listPeriods(): Observable<{ periods: BillingPeriod[] }> {
+    return this.http.get<{ periods: BillingPeriod[] }>(`${this.base}/periods`, { headers: authHeaders() });
+  }
+
+  createPeriod(periodStart: string, periodEnd: string): Observable<{ period: BillingPeriod }> {
+    return this.http.post<{ period: BillingPeriod }>(
+      `${this.base}/periods`,
+      { periodStart, periodEnd },
+      { headers: authHeaders() },
+    );
+  }
+
+  calculatePeriod(periodId: string, asOf?: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(
+      `${this.base}/periods/${periodId}/calculate`,
+      { asOf },
+      { headers: authHeaders() },
+    );
+  }
+
+  listRuns(periodId?: string): Observable<{ runs: BillingRun[] }> {
+    const url = periodId ? `${this.base}/runs?periodId=${periodId}` : `${this.base}/runs`;
+    return this.http.get<{ runs: BillingRun[] }>(url, { headers: authHeaders() });
+  }
+
+  listStatements(filters: { periodId?: string; runId?: string; status?: string }): Observable<{ statements: StatementListItem[] }> {
+    const params = new URLSearchParams();
+    if (filters.periodId) params.set('periodId', filters.periodId);
+    if (filters.runId) params.set('runId', filters.runId);
+    if (filters.status) params.set('status', filters.status);
+    const qs = params.toString();
+    return this.http.get<{ statements: StatementListItem[] }>(
+      `${this.base}/statements${qs ? '?' + qs : ''}`,
+      { headers: authHeaders() },
+    );
+  }
+
+  getStatement(id: string): Observable<{ statement: StatementDetail }> {
+    return this.http.get<{ statement: StatementDetail }>(`${this.base}/statements/${id}`, { headers: authHeaders() });
+  }
+
+  approveStatement(id: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/statements/${id}/approve`, {}, { headers: authHeaders() });
+  }
+
+  abandonStatement(id: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/statements/${id}/abandon`, {}, { headers: authHeaders() });
+  }
+
+  triggerCollection(id: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {}, { headers: authHeaders() });
+  }
+
+  // ---- MASAV (Bundle 2) ----------------------------------------------
+
+  getMasavConfig(entityId: string): Observable<{ config: MasavConfig | null }> {
+    return this.http.get<{ config: MasavConfig | null }>(`${this.base}/masav/${entityId}`, { headers: authHeaders() });
+  }
+
+  upsertMasavConfig(
+    entityId: string,
+    payload: { bankCode: string; branchCode: string; accountNumber: string; accountHolderName?: string },
+  ): Observable<{ config: MasavConfig }> {
+    return this.http.put<{ config: MasavConfig }>(`${this.base}/masav/${entityId}`, payload, { headers: authHeaders() });
+  }
+
+  authorizeMasav(entityId: string, notes?: string): Observable<{ config: MasavConfig }> {
+    return this.http.post<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/authorize`, { notes }, { headers: authHeaders() });
+  }
+
+  revokeMasav(entityId: string, notes?: string): Observable<{ config: MasavConfig }> {
+    return this.http.post<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/revoke`, { notes }, { headers: authHeaders() });
+  }
+
+  listBlockedMasavStatements(): Observable<{ statements: BlockedMasavStatement[] }> {
+    return this.http.get<{ statements: BlockedMasavStatement[] }>(`${this.base}/masav/blocked-statements`, { headers: authHeaders() });
+  }
+
+  listActionableMasavStatements(): Observable<{ statements: ActionableMasavStatement[] }> {
+    return this.http.get<{ statements: ActionableMasavStatement[] }>(`${this.base}/masav/actionable-statements`, { headers: authHeaders() });
+  }
+
+  openMasavAttempt(statementId: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/masav/statements/${statementId}/open-attempt`, {}, { headers: authHeaders() });
+  }
+
+  // v1 stops at the Excel file -- there is no endpoint (and so no service
+  // method) for recording a MASAV result. See masav-ops.controller.js /
+  // billing-ops.routes.js on the backend.
+  exportMasavExcel(statementIds: string[]): Observable<Blob> {
+    return this.http.get(`${this.base}/masav/export?statementIds=${statementIds.join(',')}`, {
+      headers: authHeaders(),
+      responseType: 'blob',
+    });
+  }
+}

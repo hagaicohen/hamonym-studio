@@ -585,6 +585,17 @@ export const routes: Routes = [
             (m) => m.PlatformBillingAccountsPageComponent,
           ),
       },
+      {
+        // Full super admin only, same bar as billing-accounts above --
+        // period/calculation/approval/collection triggers and MASAV
+        // authorization are all financial operator actions.
+        path: 'platform/billing-ops',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-billing-ops-page/platform-billing-ops-page.component').then(
+            (m) => m.PlatformBillingOpsPageComponent,
+          ),
+      },
     ],
   },
 
