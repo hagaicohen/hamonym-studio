@@ -5,6 +5,12 @@
 // (e.g. "Entity not approved"), which is both untranslated and leaks an
 // internal admin-approval detail no donor needs to know about.
 function getDonationErrorMessage(error) {
+  // Stable code, not a message-string match — see donations.service.js's
+  // isMock fix (2026-08-21): this is a business condition an admin/alert
+  // may need to key off later, not just donor-facing copy.
+  if (error.code === 'PAYMENT_NOT_CONFIGURED') {
+    return 'לא ניתן לתרום לקמפיין זה כרגע — אמצעי התשלום של הקמפיין אינו מוגדר.';
+  }
   switch (error.message) {
     case 'Entity not approved':
       return 'לא ניתן לתרום לקמפיין זה כרגע — העמותה המפעילה אותו ממתינה לאישור.';
@@ -144,16 +150,20 @@ exports.getEntityDonors = async (req, res) => {
 exports.createManualDonation = async (req, res) => {
   try {
     const entityId = req.params.id;
-    const { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note } = req.body;
+    const { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note, clientSubmissionKey } = req.body;
     const result = await donationsService.createManualDonation(
       entityId,
-      { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note },
+      { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note, clientSubmissionKey },
       req.user.id
     );
     res.json(result);
   } catch (err) {
     console.error('[createManualDonation] error:', err.message);
-    res.status(400).json({ error: err.message });
+    // Stable code, not message-matching — same convention as
+    // PAYMENT_NOT_CONFIGURED (2026-08-21). A payload mismatch on a reused
+    // idempotency key is a real conflict, not a generic validation error.
+    const status = err.code === 'IDEMPOTENCY_KEY_MISMATCH' ? 409 : (err.status || 400);
+    res.status(status).json({ error: err.message, code: err.code });
   }
 };
 

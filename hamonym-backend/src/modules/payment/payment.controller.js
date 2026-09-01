@@ -87,8 +87,9 @@ exports.handleWebhook =
 // webhook.dispatcher.js instead of calling a handler directly — see
 // docs/CARDCOM_RECURRING_ARCHITECTURE.md's Webhooks section.
 //
-// Phase 2 scope: only MasterRecurring is implemented (master-recurring.handler.js).
-// DetailRecurring/Document still fall through to the dispatcher's no-op stubs.
+// MasterRecurring and DetailRecurring are both implemented
+// (master-recurring.handler.js, detail-recurring.handler.js). Document
+// still falls through to the dispatcher's no-op stub.
 exports.handleRecurringWebhook =
   async (req, res) => {
 

@@ -216,10 +216,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   // Per-entity provider switch: an entity only goes live on Cardcom once it has
   // full credentials AND an admin has verified them via "בדוק חיבור" in Settings
-  // (cardcom_connection_status = 'success') — otherwise it stays on Mock so a
-  // half-filled-in payment section never silently breaks real donations.
-  // PAYMENT_PROVIDER=mock is a global dev-environment override that forces Mock
-  // for every entity regardless of their Cardcom setup.
+  // (cardcom_connection_status = 'success').
   const hasVerifiedCardcom = !!(
     campaign.cardcom_terminal_number &&
     campaign.cardcom_api_username &&
@@ -229,15 +226,32 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // Platform-level fallback: Hamonym's own Cardcom account (HAMONYM_CARDCOM_*
   // in .env), used when the entity hasn't verified its own — explicit,
   // deliberate choice (2026-08-04) so real donations can go live before every
-  // entity has its own merchant account configured, rather than sitting on
-  // Mock. Funds land in the platform's own account in that case, not the
-  // entity's — settlement to the entity is a separate, manual step for now.
+  // entity has its own merchant account configured. Funds land in the
+  // platform's own account in that case, not the entity's — settlement to
+  // the entity is a separate, manual step for now.
   const hasPlatformCardcom = !!(
     process.env.HAMONYM_CARDCOM_TERMINAL &&
     process.env.HAMONYM_CARDCOM_API_NAME &&
     process.env.HAMONYM_CARDCOM_API_PASSWORD
   );
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock' || (!hasVerifiedCardcom && !hasPlatformCardcom);
+  // is_mock means ONLY "PAYMENT_PROVIDER=mock was explicitly set" — a
+  // deliberate dev/test override, never an inferred fallback (2026-08-21
+  // fix). Missing a real provider is a configuration error, not Mock: it
+  // used to silently redirect real donors into the Mock checkout screen
+  // (`hasVerifiedCardcom`/`hasPlatformCardcom` both false), which is not
+  // just semantically wrong but was also a dead end — `mockComplete`'s own
+  // guard only ever accepted `PAYMENT_PROVIDER==='mock'`, so those
+  // donations could never actually be completed and were stuck 'pending'
+  // forever (confirmed against two real production rows). See
+  // docs/PAYMENTS_ARCHITECTURE_CONTEXT.md and the 2026-08-21 audit.
+  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
+
+  if (!isMock && !hasVerifiedCardcom && !hasPlatformCardcom) {
+    const err = new Error('Payment not configured for this campaign');
+    err.status = 400;
+    err.code = 'PAYMENT_NOT_CONFIGURED';
+    throw err;
+  }
 
   // Validate participants' Registration Options before creating anything —
   // see loadRegistrationOptions above.
@@ -426,6 +440,19 @@ function credentialsFromEntityRow(row) {
         apiPassword: process.env.HAMONYM_CARDCOM_API_PASSWORD,
       };
 }
+
+// Gate v1 (2026-08-28) — the minimal donation fields the verification gate
+// cross-checks a GetLpResult against. Deliberately separate from
+// resolveCardcomCredentials (which several other callers already depend on
+// for its exact shape) rather than folding these columns into that query.
+async function getDonationForVerification(donationId) {
+  const res = await db.query(
+    `SELECT id, amount, status, low_profile_id FROM donations WHERE id = $1`,
+    [donationId]
+  );
+  return res.rows[0] || null;
+}
+exports.getDonationForVerification = getDonationForVerification;
 
 async function resolveCardcomCredentials(donationId) {
   const res = await db.query(
@@ -1010,13 +1037,44 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
    in the app.
 ───────────────────────────────────────── */
 const MANUAL_DONATION_SOURCES = ['bank_transfer', 'check', 'cash', 'other'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note }, enteredByUserId) => {
+// A retry of the same submission intent must come back to exactly the
+// donation that intent already created — never a second one. Only
+// campaignId/amount/source are compared: those are the financial payload an
+// idempotency key is supposed to identify (F4.1 audit, 2026-08-23); donor
+// contact fields are operational metadata, not part of "what was paid for".
+// A mismatch means the SAME key was reused for a DIFFERENT financial
+// intent — that must fail loudly, not be silently treated as "already
+// done", or a client bug could silently attribute one donor's money to
+// another campaign/amount.
+function assertIdempotentMatch(existingRow, { campaignId, amt, source }) {
+  const matches = existingRow.campaign_id === campaignId
+    && Number(existingRow.amount) === amt
+    && existingRow.source === source;
+  if (!matches) {
+    const err = new Error('Idempotency key already used with a different campaign/amount/source');
+    err.status = 409;
+    err.code = 'IDEMPOTENCY_KEY_MISMATCH';
+    throw err;
+  }
+  return { donationId: existingRow.id, idempotent: true };
+}
+
+exports.createManualDonation = async (entityId, { campaignId, amount, source, supportersCount, donorName, donorEmail, donorPhone, note, clientSubmissionKey }, enteredByUserId) => {
   if (!campaignId) throw new Error('חסר מזהה קמפיין');
   const amt = Number(amount);
   if (!amt || amt <= 0) throw new Error('סכום לא תקין');
   if (!MANUAL_DONATION_SOURCES.includes(source)) throw new Error('מקור תרומה לא תקין');
   const count = Math.max(1, parseInt(supportersCount, 10) || 1);
+
+  // Optional — omitting it reproduces the exact pre-F4.1 behavior (no
+  // idempotency protection), so any caller that hasn't adopted the new
+  // frontend field yet is unaffected. Format-validated here for a clean
+  // 400 instead of a raw DB type-cast error; the UUID column itself is the
+  // real backstop.
+  const key = clientSubmissionKey || null;
+  if (key && !UUID_RE.test(key)) throw new Error('מזהה בקשה לא תקין');
 
   // requireEntityOwnership already confirmed the acting user manages
   // entityId — this closes the gap where campaignId in the body could
@@ -1027,34 +1085,64 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
   );
   if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
 
+  // Fast path — a sequential retry of an already-committed intent. Not
+  // sufficient alone for correctness (a concurrent request could still race
+  // past this SELECT before either commits) — the UNIQUE constraint caught
+  // below is the actual guarantee; this just avoids opening a transaction
+  // for the common case.
+  if (key) {
+    const existing = await db.query(
+      `SELECT id, campaign_id, amount, source FROM donations WHERE entity_id=$1 AND client_submission_key=$2`,
+      [entityId, key]
+    );
+    if (existing.rows[0]) return assertIdempotentMatch(existing.rows[0], { campaignId, amt, source });
+  }
+
   // Same atomicity as markDonationPaid: donation insert, campaign
   // aggregate, and receipt are one transaction; email queued only after
   // COMMIT.
   let receipt = null;
-  const donationId = await withTransaction(async (client) => {
-    const donationRes = await client.query(
-      `INSERT INTO donations (
-         campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
-         rewards, status, is_mock, source, supporters_count, entered_by, note,
-         completed_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW())
-       RETURNING id`,
-      [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null]
-    );
-    const id = donationRes.rows[0].id;
+  let donationId;
+  try {
+    donationId = await withTransaction(async (client) => {
+      const donationRes = await client.query(
+        `INSERT INTO donations (
+           campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
+           rewards, status, is_mock, source, supporters_count, entered_by, note,
+           completed_at, client_submission_key
+         ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW(),$11)
+         RETURNING id`,
+        [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null, key]
+      );
+      const id = donationRes.rows[0].id;
 
-    await client.query(
-      `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
-           supporters_count = supporters_count + $2,
-           updated_at = NOW()
-       WHERE id = $3`,
-      [amt, count, campaignId]
-    );
+      await client.query(
+        `UPDATE campaigns
+         SET current_amount   = current_amount   + $1,
+             supporters_count = supporters_count + $2,
+             updated_at = NOW()
+         WHERE id = $3`,
+        [amt, count, campaignId]
+      );
 
-    receipt = await finalizePaidDonation(id, client);
-    return id;
-  });
+      receipt = await finalizePaidDonation(id, client);
+      return id;
+    });
+  } catch (err) {
+    // Real concurrency case: two requests carrying the same key raced past
+    // the fast-path SELECT above; one committed first, this one hit the
+    // UNIQUE constraint (23505) instead. Only treat THIS specific
+    // constraint as an idempotency race — any other unique violation is a
+    // genuine error and must propagate.
+    if (key && err.code === '23505' && err.constraint === 'uq_donations_entity_client_submission_key') {
+      const existing = await db.query(
+        `SELECT id, campaign_id, amount, source FROM donations WHERE entity_id=$1 AND client_submission_key=$2`,
+        [entityId, key]
+      );
+      if (existing.rows[0]) return assertIdempotentMatch(existing.rows[0], { campaignId, amt, source });
+    }
+    throw err;
+  }
 
   require('../dashboard/dashboard.service').invalidateDashboard(entityId);
   await queueReceiptEmail(receipt, donationId);

@@ -106,24 +106,22 @@ exports.createBilling =
        EXTRACT DATA
     ========================= */
 
+    // Per the official CardCom v11 schema (LowProfileResult), the token only
+    // ever appears at TokenInfo.Token (populated for CreateTokenOnly/
+    // ChargeAndCreateToken) or TranzactionInfo.Token (populated for
+    // ChargeAndCreateToken). A bare top-level `Token`/`CardToken` is not part
+    // of the documented response shape (LowProfileResult declares
+    // additionalProperties: false) -- verified 2026-08-29 against the live
+    // swagger, not guessed.
     const token =
 
       result?.TokenInfo
         ?.Token ||
 
-      result?.Token ||
-
-      result?.CardToken ||
-
       result?.TranzactionInfo
         ?.Token ||
 
       null;
-
-    console.log(
-      'EXTRACTED TOKEN',
-      token
-    );
 
     const last4 =
 

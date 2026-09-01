@@ -10,6 +10,13 @@ const { checkStaleness } = require('../../../jobs/schedule-window');
 // registered in src/jobs/index.js, not by a check in this controller — do
 // not register a financial-action job there without updating this comment
 // and getting explicit product sign-off first.
+//
+// Two temporary diagnostics lived here 2026-08-30 (hamonym-terminal-auth,
+// hamonym-token-charge) to prove the 603 fix and the CardCom adapter
+// against the real API -- both removed after use, once they'd served their
+// purpose (a standing endpoint capable of a real charge has no reason to
+// stay in production). Evidence preserved in
+// docs/BILLING_ENGINE_SESSION_HANDOFF_2026-08-28.md's MILESTONE sections.
 
 // Alerts are computed here, not stored/pushed anywhere — Operational Policy
 // (2026-08-16): no new notification system yet, the Platform Admin

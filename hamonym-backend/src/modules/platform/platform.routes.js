@@ -63,4 +63,8 @@ router.post('/users/:id/permissions', requireSuperAdmin, ctrl.setUserPermissions
 // inside it, same as every other route group above.
 router.use('/cardcom-ops', require('./cardcom-ops/cardcom-ops.routes'));
 
+// Billing Account Provisioning — see billing-provisioning.routes.js for why
+// this is requireSuperAdmin rather than requirePermission('organizations').
+router.use('/billing-accounts', require('./billing-provisioning/billing-provisioning.routes'));
+
 module.exports = router;

@@ -139,6 +139,55 @@ exports.create =
   };
 
 /* =========================================
+   GET ACTIVE DEFAULT PAYMENT INSTRUMENT
+   (Collection Engine — resolved at charge time, never cached)
+========================================= */
+
+exports.getActiveDefaultByEntityId =
+  async (entityId) => {
+
+    const result =
+      await pool.query(
+
+        `SELECT id, provider, token, last4, exp_month, exp_year, card_holder_name
+
+         FROM entity_billing
+
+         WHERE entity_id = $1
+           AND is_default = true
+           AND status = 'active'
+
+         LIMIT 1`,
+
+        [entityId]
+
+      );
+
+    return result.rows[0] || null;
+
+  };
+
+/* =========================================
+   GET ENTITY ID BY BILLING RECORD ID
+========================================= */
+
+exports.getEntityIdById =
+  async (id) => {
+
+    const result =
+      await pool.query(
+
+        `SELECT entity_id FROM entity_billing WHERE id = $1`,
+
+        [id]
+
+      );
+
+    return result.rows[0]?.entity_id || null;
+
+  };
+
+/* =========================================
    REMOVE BILLING
 ========================================= */
 

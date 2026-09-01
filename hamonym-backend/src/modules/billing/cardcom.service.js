@@ -17,8 +17,13 @@ exports.createOpenFieldsLowProfile =
       ApiPassword:
         process.env.HAMONYM_CARDCOM_API_PASSWORD,
 
+      // CardCom's Operation enum (verified 2026-08-29 against the live v11
+      // swagger) is exactly: ChargeOnly, ChargeAndCreateToken,
+      // CreateTokenOnly, SuspendedDeal, Do3DSAndSubmit. 'CreateToken' is not
+      // a valid member -- this was silently wrong. CreateTokenOnly matches
+      // the intent here (Amount:1 + CreateToken:true, no real charge).
       Operation:
-        'CreateToken',
+        'CreateTokenOnly',
 
       Amount: 1,
 
