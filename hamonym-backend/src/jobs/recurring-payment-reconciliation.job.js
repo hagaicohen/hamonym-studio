@@ -205,9 +205,16 @@ async function reconcileAllActiveInstructions(db, deps = {}) {
   return { instructionsChecked: instructionsRes.rows.length, successfulChargesChecked: totalChecked, recovered: totalRecovered };
 }
 
+// POST-LAUNCH HARDENING: recurring reconciliation exists but automatic
+// scheduling is intentionally disabled pending validation of authoritative
+// CardCom correlation, especially any fallback based on date+amount. See
+// alreadyRepresented() above -- until a stronger confirmed identifier (e.g.
+// provider_reference/TranzactionId matching) is validated, this job must
+// only be run manually (job-runner.run('recurring-payment-reconciliation'))
+// or via the Admin "Run now" action, never on an automatic cron tick. Do
+// not re-add a `schedule` field here without that validation.
 module.exports = {
   name: 'recurring-payment-reconciliation',
-  schedule: '0 3 * * *', // once daily -- this hits a real CardCom API per active instruction, not a cheap local check
   timeoutMs: 5 * 60 * 1000,
   handler: (db) => reconcileAllActiveInstructions(db),
   // exported for scripts/test-recurring-payment-reconciliation.js
