@@ -112,7 +112,13 @@ const PROFILE_COMPLETION_SQL = `
 // missing here, which let a Partner clone show up as "עמותות עם פרטים
 // חסרים" while the list it links to (correctly Partner-excluding) showed
 // nothing behind the count.
-const INCOMPLETE_DRAFT_SQL = `(status = 'draft' AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = entities.id AND er.role = 'partner'))`;
+// Takes the caller's own correlation name for `entities` (bare table name
+// when unaliased, or its alias e.g. 'e') -- callers are NOT consistent
+// about aliasing this table, and hardcoding one form broke the other
+// (Postgres: "invalid reference to FROM-clause entry for table entities"
+// inside getKpis(), which aliases it 'e').
+const incompleteDraftSql = (entitiesRef) =>
+  `(status = 'draft' AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = ${entitiesRef}.id AND er.role = 'partner'))`;
 
 // Lightweight — powers the notification bell, which polls far more often
 // than the dashboard is loaded. Same query getAlerts() already runs for the
@@ -121,7 +127,7 @@ exports.getNotificationsCount = async () => {
   const result = await db.query(
     `SELECT
        COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
-       COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts,
+       COUNT(*) FILTER (WHERE ${incompleteDraftSql('entities')})::int AS incomplete_drafts,
        COUNT(*) FILTER (WHERE status = 'active' AND flagged_for_review)::int AS flagged_for_review
      FROM entities`
   );
@@ -152,7 +158,7 @@ async function getKpis() {
          COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
          COUNT(*) FILTER (WHERE status = 'pending_review')::int AS pending_review,
-         COUNT(*) FILTER (WHERE ${INCOMPLETE_DRAFT_SQL})::int AS incomplete_drafts
+         COUNT(*) FILTER (WHERE ${incompleteDraftSql('e')})::int AS incomplete_drafts
        FROM entities e
        WHERE e.status != 'deleted'
          AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')`
@@ -195,7 +201,7 @@ async function getKpis() {
 async function getAlerts() {
   const [pendingRes, incompleteDraftsRes, missingDocsRes, flaggedRes, cardcomRes, overdueRes] = await Promise.all([
     db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE status = 'pending_review'`),
-    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${INCOMPLETE_DRAFT_SQL}`),
+    db.query(`SELECT COUNT(*)::int AS c FROM entities WHERE ${incompleteDraftSql('entities')}`),
     db.query(
       `SELECT COUNT(*)::int AS c FROM entities e
        WHERE e.association_certificate_name IS NULL
