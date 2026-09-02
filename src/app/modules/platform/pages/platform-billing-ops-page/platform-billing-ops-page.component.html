@@ -65,9 +65,7 @@
                     <span>{{ item.donationCount }} תרומות | ₪{{ item.grossAmount }}</span>
                   </div>
                   <div class="bo-blocked-reason">{{ blockingReasonLabel(item.reason) }}</div>
-                  @if (notificationStatusLabel(item); as notifLabel) {
-                    <div class="bo-blocked-notify">{{ notifLabel }}</div>
-                  }
+                  <div class="bo-blocked-notify">{{ notificationStatusLabel(item) }}</div>
                   @if (item.reason === 'no_billing_account') {
                     <a class="ops-btn ops-btn-secondary ops-btn-sm"
                        [routerLink]="['/platform/billing-setup', item.entityId]"
