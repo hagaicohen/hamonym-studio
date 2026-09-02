@@ -106,7 +106,13 @@ const PROFILE_COMPLETION_SQL = `
 // up the platform admin immediately, same as a pending_review one. No time
 // buffer: flagged the moment it exists, even mid-wizard. See
 // DECISIONS.md (2026-07-20).
-const INCOMPLETE_DRAFT_SQL = `(status = 'draft')`;
+// Excludes Partner-role entities: they're created via /partner-import and
+// stay 'draft' by design (no organization wizard, no "finish registration"
+// step) -- same exclusion getKpis()/getOrganizations() already apply, just
+// missing here, which let a Partner clone show up as "עמותות עם פרטים
+// חסרים" while the list it links to (correctly Partner-excluding) showed
+// nothing behind the count.
+const INCOMPLETE_DRAFT_SQL = `(status = 'draft' AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = entities.id AND er.role = 'partner'))`;
 
 // Lightweight — powers the notification bell, which polls far more often
 // than the dashboard is loaded. Same query getAlerts() already runs for the
