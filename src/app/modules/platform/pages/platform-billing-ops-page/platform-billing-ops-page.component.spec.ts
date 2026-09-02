@@ -143,6 +143,174 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
   });
 });
 
+// Period-summary KPI tiles regression (2026-09-02): the top KPI row
+// ("13 תרומות | ₪215.00 מחזור | 2 עמותות") must represent the period's total
+// historical activity and stay stable across the whole Statement lifecycle
+// (draft -> approved -> collection -> paid), not just "activity still
+// eligible for a future Calculation run" -- which is what
+// billing_runs.result_summary.activityDiscovered actually measures (it's
+// computed with `effective_statement_id IS NULL` and correctly drops to 0
+// once every donation in the period has been claimed by an approved
+// Statement). Real production case that surfaced this: the real August
+// period had activityDiscovered 13/₪215/2 right after Calculation: the
+// operator then bulk-approved both real Statements, a later Calculation run
+// on the same period (its own concern, not what this test proves) found 0
+// remaining eligible activity for those two now-fully-claimed entities, and
+// because the KPI blindly read the *latest* run's activityDiscovered, the
+// tiles went to 0/0/0 while the Statement table directly below still showed
+// 13/₪215/2 correctly.
+describe('PlatformBillingOpsPageComponent - period-summary KPI tiles', () => {
+  const period = {
+    id: 'period-aug-2026',
+    period_start: '2026-08-01T00:00:00.000Z',
+    period_end: '2026-09-01T00:00:00.000Z',
+    created_at: '2026-08-01T00:00:00.000Z',
+    retired: false,
+    run_count: 1,
+  };
+
+  function stmt(id: string, entityId: string, donationCount: number, gross: string, status = 'draft'): StatementListItem {
+    return {
+      id,
+      billing_account_id: `acct-${entityId}`,
+      billing_period_id: period.id,
+      billing_run_id: 'run-1',
+      gross_raised: gross,
+      fee_amount: '0.00',
+      vat_amount: '0.00',
+      total_due: '0.00',
+      status,
+      created_at: period.period_start,
+      entity_id: entityId,
+      entity_name: `עמותה ${entityId}`,
+      component_count: donationCount,
+      routed_method: 'card',
+      latest_attempt_status: null,
+      payment_count: 0,
+    };
+  }
+
+  function runWith(resultSummary: any) {
+    return {
+      id: 'run-1', billing_period_id: period.id, mode: 'production' as const,
+      as_of: period.period_start, status: 'completed',
+      result_summary: resultSummary,
+      created_at: period.period_start, completed_at: period.period_start,
+    };
+  }
+
+  async function setup(statements: StatementListItem[], run: any) {
+    const service = {
+      listPeriods: () => of({ periods: [period] }),
+      listRuns: () => of({ runs: [run] }),
+      listStatements: () => of({ statements }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('before approval: draft Statements + a run whose activityDiscovered is still unclaimed reads 13 / ₪215 / 2', async () => {
+    const statements = [
+      stmt('stmt-a', 'entity-gedolim', 8, '207.00', 'draft'),
+      stmt('stmt-b', 'entity-israels', 5, '8.00', 'draft'),
+    ];
+    const run = runWith({
+      accountsEvaluated: 2, statementsCreated: 2, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 2, totalDonations: 13, totalGross: 215 },
+      blockedEntities: [],
+    });
+    const component = await setup(statements, run);
+
+    expect(component.periodDonationsCount(period)).toBe(13);
+    expect(component.periodGrossAmount(period)).toBe(215);
+    expect(component.periodEntitiesCount(period)).toBe(2);
+  });
+
+  it('after approval, same underlying activity, no new calculation: still reads 13 / ₪215 / 2 -- not 0', async () => {
+    const statements = [
+      stmt('stmt-a', 'entity-gedolim', 8, '207.00', 'approved'),
+      stmt('stmt-b', 'entity-israels', 5, '8.00', 'approved'),
+    ];
+    // Same run as before approval -- its frozen result_summary never changes
+    // just because the Statements it produced got approved.
+    const run = runWith({
+      accountsEvaluated: 2, statementsCreated: 2, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 2, totalDonations: 13, totalGross: 215 },
+      blockedEntities: [],
+    });
+    const component = await setup(statements, run);
+
+    expect(component.periodDonationsCount(period)).toBe(13);
+    expect(component.periodGrossAmount(period)).toBe(215);
+    expect(component.periodEntitiesCount(period)).toBe(2);
+  });
+
+  it('after approval AND a later recalculation finds 0 remaining eligible activity for the now-fully-claimed entities: still reads 13 / ₪215 / 2, not 0', async () => {
+    const statements = [
+      stmt('stmt-a', 'entity-gedolim', 8, '207.00', 'approved'),
+      stmt('stmt-b', 'entity-israels', 5, '8.00', 'approved'),
+    ];
+    // Mirrors the real production run 524da916: a recalculation on the same
+    // period after both Statements were approved correctly finds 0 activity
+    // still eligible for a *new* Statement (every donation is already
+    // claimed) -- this run becoming "latest" must not zero the KPI tiles.
+    const run = runWith({
+      accountsEvaluated: 2, statementsCreated: 0, zeroActivityAccountIds: ['acct-entity-gedolim', 'acct-entity-israels'], errors: [],
+      activityDiscovered: { entitiesWithActivity: 0, totalDonations: 0, totalGross: 0 },
+      blockedEntities: [],
+    });
+    const component = await setup(statements, run);
+
+    expect(component.periodDonationsCount(period)).toBe(13);
+    expect(component.periodGrossAmount(period)).toBe(215);
+    expect(component.periodEntitiesCount(period)).toBe(2);
+  });
+
+  it('mixed state: one entity already fully captured by an approved Statement + one entity with real activity not yet captured by any Statement -- sums both without double-counting', async () => {
+    // entity-captured's 8 donations / ₪207 are already a real (approved)
+    // Statement. entity-new has 5 donations / ₪8 of real eligible activity
+    // that Calculation could not turn into a Statement (no billing_account
+    // yet) -- it only shows up in blockedEntities, never in `statements`.
+    const statements = [stmt('stmt-a', 'entity-captured', 8, '207.00', 'approved')];
+    const run = runWith({
+      accountsEvaluated: 1, statementsCreated: 0, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 1, totalDonations: 5, totalGross: 8 },
+      blockedEntities: [
+        { entityId: 'entity-new', displayName: 'עמותה חדשה', donationCount: 5, grossAmount: '8.00', reason: 'no_billing_account' },
+      ],
+    });
+    const component = await setup(statements, run);
+
+    expect(component.periodDonationsCount(period)).toBe(13); // 8 (captured) + 5 (uncaptured)
+    expect(component.periodGrossAmount(period)).toBe(215); // 207 + 8
+    expect(component.periodEntitiesCount(period)).toBe(2); // entity-captured + entity-new, never double-counted
+  });
+
+  it('never double-counts an entity that appears in both a real Statement AND the latest run\'s blockedEntities (e.g. re-blocked after a later account suspension)', async () => {
+    const statements = [stmt('stmt-a', 'entity-gedolim', 8, '207.00', 'approved')];
+    const run = runWith({
+      accountsEvaluated: 0, statementsCreated: 0, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 1, totalDonations: 8, totalGross: 207 },
+      // Same entity id as the existing Statement -- must not be added again.
+      blockedEntities: [
+        { entityId: 'entity-gedolim', displayName: 'גדולים מהחיים', donationCount: 8, grossAmount: '207.00', reason: 'account_suspended' },
+      ],
+    });
+    const component = await setup(statements, run);
+
+    expect(component.periodDonationsCount(period)).toBe(8);
+    expect(component.periodGrossAmount(period)).toBe(207);
+    expect(component.periodEntitiesCount(period)).toBe(1);
+  });
+});
+
 // Bulk-approval workflow (current-period table): select-all/individual
 // checkboxes are only offered on eligible ('draft') Statements, the primary
 // action calls the new orchestration endpoint once with every selected id
