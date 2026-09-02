@@ -37,7 +37,7 @@ interface Organization {
 type SortField = 'name' | 'status' | 'created_at' | 'campaigns' | 'raised';
 type SortDir = 'asc' | 'desc';
 
-type ChipKey = 'all' | 'pending_review' | 'active' | 'suspended' | 'missing_docs' | 'flagged_for_review' | 'no_campaigns' | 'new_week';
+type ChipKey = 'all' | 'pending_review' | 'active' | 'suspended' | 'draft' | 'missing_docs' | 'flagged_for_review' | 'no_campaigns' | 'new_week';
 
 // Split into two conceptually different groups, styled differently (see
 // .html/.css) — an organization has exactly one STATUS (a tab-like,
@@ -48,6 +48,12 @@ const STATUS_CHIPS: { key: ChipKey; label: string; dot: string }[] = [
   { key: 'pending_review', label: 'ממתינות', dot: 'red' },
   { key: 'active',         label: 'פעילות',   dot: 'green' },
   { key: 'suspended',      label: 'מושעות',   dot: 'gray' },
+  // 'draft' — a registration never finished/submitted. The notification bell's
+  // "עמותות עם פרטים חסרים" links here with ?status=draft; before this entry
+  // existed, ngOnInit's whitelist check (below) silently rejected 'draft' and
+  // fell back to the default 'active' chip, so the bell dumped the admin onto
+  // the unrelated active-entities list instead of the actual draft ones.
+  { key: 'draft',          label: 'השלמת פרטים', dot: 'orange' },
 ];
 
 const FILTER_CHIPS: { key: ChipKey; label: string; dot: string }[] = [
@@ -155,6 +161,7 @@ export class PlatformOrganizationsPageComponent implements OnInit {
       case 'pending_review':     return { status: 'pending_review' };
       case 'active':             return { status: 'active' };
       case 'suspended':          return { status: 'suspended' };
+      case 'draft':              return { status: 'draft' };
       case 'missing_docs':       return { missingDocs: true };
       case 'flagged_for_review': return { flaggedForReview: true };
       case 'no_campaigns':       return { noCampaigns: true };
