@@ -257,6 +257,52 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return sum.toFixed(2);
   }
 
+  periodStatements(periodId: string): StatementListItem[] {
+    return this.statements.filter((s) => s.billing_period_id === periodId);
+  }
+
+  // Aggregates already-authoritative per-Statement values (same pattern as
+  // periodTotalDue above) -- never re-derives fee/VAT/total, only sums them.
+  periodStatementTotals(periodId: string): { donations: number; gross: number; fee: number; vat: number; due: number } {
+    return this.periodStatements(periodId).reduce(
+      (acc, s) => ({
+        donations: acc.donations + (s.component_count ?? 0),
+        gross: acc.gross + Number(s.gross_raised),
+        fee: acc.fee + Number(s.fee_amount),
+        vat: acc.vat + Number(s.vat_amount),
+        due: acc.due + Number(s.total_due),
+      }),
+      { donations: 0, gross: 0, fee: 0, vat: 0, due: 0 },
+    );
+  }
+
+  // Primary-summary numbers prefer the calculation's own activityDiscovered
+  // figures (the authoritative source); for legacy runs predating that field,
+  // fall back to aggregating the resulting Statements themselves.
+  periodDonationsCount(period: BillingPeriod): number {
+    const activity = this.periodActivityDiscovered(period);
+    return activity ? activity.totalDonations : this.periodStatementTotals(period.id).donations;
+  }
+
+  periodGrossAmount(period: BillingPeriod): number {
+    const activity = this.periodActivityDiscovered(period);
+    return activity ? activity.totalGross : this.periodStatementTotals(period.id).gross;
+  }
+
+  periodEntitiesCount(period: BillingPeriod): number {
+    const activity = this.periodActivityDiscovered(period);
+    return activity ? activity.entitiesWithActivity : this.periodStatementCount(period.id);
+  }
+
+  // Friendlier operator-facing status just for the current-period financial
+  // table -- every row there is either awaiting review or already handled;
+  // the raw internal status vocabulary (used on the Statements tab) doesn't
+  // need to leak into this simplified view.
+  periodStatementStatusLabel(status: string): string {
+    if (status === 'draft') return 'ממתין לאישור';
+    return this.statementStatusLabel(status);
+  }
+
   // "מה המצב?" -- one clear phase, derived only from actual existing state
   // (run history + real draft-statement rows), never invented.
   periodPhaseLabel(period: BillingPeriod): string {
@@ -288,30 +334,6 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   periodActivityDiscovered(period: BillingPeriod): BillingActivityDiscovered | null {
     return this.latestRunSummary(period)?.activityDiscovered ?? null;
-  }
-
-  // "מה הפעולה הבאה?" -- the one thing the operator should do next for this
-  // period, derived purely from already-loaded state (never a new call).
-  // setup -> calculate/recalculate -> review drafts -> collection, in that
-  // order, matching the real Statement lifecycle.
-  periodNextActionLabel(period: BillingPeriod): string {
-    const runs = this.runsForPeriod(period.id);
-    if (runs.length === 0) return 'הרצת חישוב, כדי לראות מה מוכן לחיוב בתקופה זו';
-
-    const blocked = this.periodBlockedEntities(period);
-    if (blocked.length > 0) return 'השלמת הגדרות חיוב לעמותות המסומנות למטה';
-
-    const draftCount = this.statements.filter(
-      (s) => s.billing_period_id === period.id && s.status === 'draft',
-    ).length;
-    if (draftCount > 0) return `בדיקה ואישור ${draftCount} חשבונות לחיוב בלשונית Statements`;
-
-    const approvedCount = this.statements.filter(
-      (s) => s.billing_period_id === period.id && s.status === 'approved',
-    ).length;
-    if (approvedCount > 0) return 'הפעלת גבייה על החשבונות המאושרים בלשונית Statements';
-
-    return 'אין פעולה נדרשת כרגע בתקופה זו';
   }
 
   blockingReasonLabel(reason: string): string {
@@ -434,7 +456,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.statementsLoading = false;
       },
       error: () => {
-        this.statementsError = 'שגיאה בטעינת Statements';
+        this.statementsError = 'שגיאה בטעינת חשבונות לחיוב';
         this.statementsLoading = false;
       },
     });
@@ -451,7 +473,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       },
       error: () => {
         this.statementDetailLoading = false;
-        this.statementActionError = 'שגיאה בטעינת פרטי ה-Statement';
+        this.statementActionError = 'שגיאה בטעינת פרטי חשבון לחיוב';
       },
     });
   }

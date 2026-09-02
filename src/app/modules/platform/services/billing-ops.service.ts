@@ -75,6 +75,7 @@ export interface StatementListItem {
   created_at: string;
   entity_id: string;
   entity_name: string;
+  component_count?: number;
   routed_method: RoutedMethod;
   latest_attempt_status: string | null;
   payment_count: number;
