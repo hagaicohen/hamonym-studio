@@ -3,7 +3,7 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
-import { BillingOpsService, BlockedBillingEntity, StatementListItem } from '../../services/billing-ops.service';
+import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail } from '../../services/billing-ops.service';
 
 // Regression test for the exact acceptance-criterion workflow: a Super
 // Admin looking at the current Billing period sees "גדולים מהחיים —
@@ -427,6 +427,131 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
 
     expect(service.bulkApproveStatements).toHaveBeenCalledTimes(1);
     expect(service.bulkApproveStatements).toHaveBeenCalledWith(['stmt-a', 'stmt-b']);
+  });
+
+  // Direct regression for the Billing Collection UX truthfulness fix
+  // (2026-09-02): the drawer's collection state must always be derived from
+  // the backend's own readiness (never a frontend-invented default), and an
+  // enabled collect action may only ever appear alongside a truthful
+  // "ready" state -- see PlatformBillingOpsPageComponent#collectionState.
+  // This is exactly the real-world case that was broken: an approved,
+  // card-routed, total_due <= threshold Statement previously rendered
+  // "מסלול מחושב: חסום" (getStatementDetail never selected routed_method)
+  // while the button underneath it could still reach a real CardCom charge.
+  describe('Collection readiness UX (Billing Collection truthfulness fix)', () => {
+    function baseStatement(overrides: Partial<StatementDetail>): StatementDetail {
+      return {
+        id: 'stmt-1', billing_account_id: 'ba-1', billing_period_id: period.id, billing_run_id: 'run-1',
+        gross_raised: '100.00', fee_amount: '0.00', vat_amount: '0.00', total_due: '0.28',
+        status: 'approved', created_at: period.period_start, entity_id: 'entity-1', entity_name: 'ישראלס',
+        component_count: 1, routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+        attempts: [], payments: [], componentCount: 1, account_declared_method: 'card',
+        readiness: { route: 'card', ready: true, reason: null },
+        ...overrides,
+      } as StatementDetail;
+    }
+
+    function stubService(statement: StatementDetail) {
+      return {
+        listPeriods: () => of({ periods: [] }),
+        listRuns: () => of({ runs: [] }),
+        listStatements: () => of({ statements: [] }),
+        listBlockedMasavStatements: () => of({ statements: [] }),
+        listActionableMasavStatements: () => of({ statements: [] }),
+        getStatement: jasmine.createSpy('getStatement').and.returnValue(of({ statement })),
+        triggerCollection: jasmine.createSpy('triggerCollection').and.returnValue(of({ result: { skipped: false, outcome: 'succeeded' } })),
+      };
+    }
+
+    async function openDrawer(statement: StatementDetail) {
+      const service = stubService(statement);
+      await TestBed.configureTestingModule({
+        imports: [PlatformBillingOpsPageComponent],
+        providers: [provideRouter([]), { provide: BillingOpsService, useValue: service }],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      component.openStatement({ id: statement.id } as any);
+      fixture.detectChanges();
+      return { fixture, component, service };
+    }
+
+    it('CARD-ready: shows "מוכן לגבייה בכרטיס" + the amount + an enabled גבה button, never "חסום"', async () => {
+      const statement = baseStatement({ total_due: '0.28', readiness: { route: 'card', ready: true, reason: null } });
+      const { fixture } = await openDrawer(statement);
+
+      const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
+      expect(stateEl.nativeElement.textContent).toContain('מוכן לגבייה בכרטיס');
+      expect(stateEl.nativeElement.textContent).toContain('0.28');
+      expect(stateEl.nativeElement.textContent).not.toContain('חסום');
+
+      const button = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(button).toBeTruthy();
+      expect(button.nativeElement.disabled).toBe(false);
+      expect(button.nativeElement.textContent).toContain('גבה');
+    });
+
+    it('CARD-missing-instrument: shows "דורש טיפול" + "לא הוגדר אמצעי גבייה בכרטיס", exposes NO enabled collection action', async () => {
+      const statement = baseStatement({
+        total_due: '7.33',
+        readiness: { route: 'card', ready: false, reason: 'no_active_payment_instrument' },
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
+      expect(stateEl.nativeElement.textContent).toContain('דורש טיפול');
+      expect(stateEl.nativeElement.textContent).toContain('לא הוגדר אמצעי גבייה בכרטיס');
+
+      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+    });
+
+    it('MASAV-ready: shows "מוכן למס״ב", no generic collect action (MASAV is driven from the מס״ב tab)', async () => {
+      const statement = baseStatement({
+        total_due: '5000.00',
+        readiness: { route: 'masav', ready: true, reason: null },
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
+      expect(stateEl.nativeElement.textContent).toContain('מוכן למס״ב');
+      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+    });
+
+    it('MASAV-not-ready: shows "דורש טיפול" + "חסרים פרטי מס״ב / הרשאת מס״ב", no enabled action', async () => {
+      const statement = baseStatement({
+        total_due: '5000.00',
+        readiness: { route: 'masav', ready: false, reason: 'masav_not_authorized' },
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
+      expect(stateEl.nativeElement.textContent).toContain('דורש טיפול');
+      expect(stateEl.nativeElement.textContent).toContain('חסרים פרטי מס״ב / הרשאת מס״ב');
+      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+    });
+
+    it('clicking the collect action calls triggerCollection -- wiring proof for the ready state only', async () => {
+      const statement = baseStatement({ total_due: '0.28', readiness: { route: 'card', ready: true, reason: null } });
+      const { fixture, service } = await openDrawer(statement);
+
+      fixture.debugElement.query(By.css('.bo-drawer-actions button')).nativeElement.click();
+      fixture.detectChanges();
+
+      expect(service.triggerCollection).toHaveBeenCalledWith('stmt-1');
+    });
+
+    it('triggerCollection() itself refuses to call the backend when canCollect is false, even if invoked directly -- defense against a stale/bypassed disabled button', async () => {
+      const statement = baseStatement({
+        total_due: '7.33',
+        readiness: { route: 'card', ready: false, reason: 'no_active_payment_instrument' },
+      });
+      const { component, service } = await openDrawer(statement);
+
+      component.triggerCollection();
+
+      expect(service.triggerCollection).not.toHaveBeenCalled();
+    });
   });
 
   it('shows the compact mixed-result summary -- "1 חשבון אושר" and "1 חשבון דורש טיפול" -- when one of two fails', async () => {

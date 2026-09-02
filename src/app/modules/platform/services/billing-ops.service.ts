@@ -62,6 +62,20 @@ export interface BillingRun {
 
 export type RoutedMethod = 'card' | 'masav' | 'blocked';
 
+// Truthful collection-readiness projection computed server-side (Billing
+// Collection UX truthfulness fix, 2026-09-02) -- mirrors, never
+// re-derives, the exact same rule collection.service.js#openAttempt
+// applies authoritatively at collection time (routing.js's threshold+MASAV-
+// authorization rule, then -- for the card route -- entity_billing's active
+// default instrument). Only present on StatementDetail (the single-Statement
+// drawer); StatementListItem's own routed_method (from listStatements)
+// stays a simpler display-only projection of the routing decision alone.
+export interface CollectionReadiness {
+  route: 'card' | 'masav';
+  ready: boolean;
+  reason: 'no_active_payment_instrument' | 'masav_not_configured' | 'masav_incomplete' | 'masav_not_authorized' | null;
+}
+
 export interface StatementListItem {
   id: string;
   billing_account_id: string;
@@ -125,6 +139,7 @@ export interface StatementDetail extends StatementListItem {
   payments: Payment[];
   componentCount: number;
   account_declared_method: 'card' | 'masav';
+  readiness: CollectionReadiness;
 }
 
 export interface MasavConfig {

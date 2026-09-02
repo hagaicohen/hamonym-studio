@@ -524,7 +524,6 @@
             <div><span>עמלה</span><b>₪{{ selectedStatement.fee_amount }}</b></div>
             <div><span>מע״מ</span><b>₪{{ selectedStatement.vat_amount }}</b></div>
             <div><span>לחיוב</span><b>₪{{ selectedStatement.total_due }}</b></div>
-            <div><span>מסלול מחושב</span><b>{{ routedMethodLabel(selectedStatement.routed_method) }}</b></div>
             <div><span>מס׳ תרומות בסיס</span><b>{{ selectedStatement.componentCount }}</b></div>
             <div><span>אמצעי מוצהר בחשבון</span><b>{{ selectedStatement.account_declared_method === 'masav' ? 'מס״ב' : 'כרטיס אשראי' }}</b></div>
           </div>
@@ -533,17 +532,31 @@
             <div class="ops-action-error">{{ statementActionError }}</div>
           }
 
-          <div class="bo-drawer-actions">
-            @if (selectedStatement.status === 'draft') {
+          @if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
+            @if (collectionState(selectedStatement); as state) {
+              <div class="bo-collection-state" [class.bo-collection-state-ready]="state.canCollect" [class.bo-collection-state-blocked]="!state.canCollect">
+                <div class="bo-collection-state-label">{{ state.label }}</div>
+                @if (state.sublabel) {
+                  <div class="bo-collection-state-sublabel">{{ state.sublabel }}</div>
+                }
+              </div>
+
+              <div class="bo-drawer-actions">
+                @if (state.canCollect) {
+                  <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
+                    {{ statementActionBusy ? 'גובה...' : 'גבה ₪' + selectedStatement.total_due }}
+                  </button>
+                }
+              </div>
+            }
+          }
+
+          @if (selectedStatement.status === 'draft') {
+            <div class="bo-drawer-actions">
               <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="approveStatement()">אישור</button>
               <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="statementActionBusy" (click)="abandonStatement()">ביטול טיוטה</button>
-            }
-            @if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
-              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
-                הפעלת גבייה (למסלול כרטיס בלבד — מס״ב מנוהל בלשונית מס״ב)
-              </button>
-            }
-          </div>
+            </div>
+          }
 
           <h3 class="bo-subtitle">ניסיונות גבייה</h3>
           @if (selectedStatement.attempts.length === 0) {
