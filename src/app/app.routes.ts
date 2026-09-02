@@ -596,6 +596,18 @@ export const routes: Routes = [
             (m) => m.PlatformBillingOpsPageComponent,
           ),
       },
+      {
+        // Focused, single-entity Billing setup (UX consolidation, 2026-09-02)
+        // -- entered from a blocked entity in Billing Ops. Same super-admin
+        // bar as billing-accounts/billing-ops: reuses their provisioning API,
+        // just presented per-entity instead of as a generic list.
+        path: 'platform/billing-setup/:entityId',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-billing-setup-page/platform-billing-setup-page.component').then(
+            (m) => m.PlatformBillingSetupPageComponent,
+          ),
+      },
     ],
   },
 

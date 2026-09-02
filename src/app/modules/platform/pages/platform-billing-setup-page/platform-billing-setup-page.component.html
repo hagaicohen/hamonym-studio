@@ -1,0 +1,88 @@
+<div class="plat-page">
+  <a class="bs-back" [routerLink]="['/platform/billing-ops']">→ חזרה לתפעול חיוב</a>
+
+  <div class="plat-header">
+    <h1 class="plat-title">הגדרות חיוב — {{ displayName || 'עמותה' }}</h1>
+  </div>
+
+  @if (loading) {
+    <div class="plat-card"><div class="plat-loading">טוען...</div></div>
+  } @else if (error) {
+    <div class="plat-card"><div class="plat-error">{{ error }}</div></div>
+  } @else if (justCreated) {
+
+    <div class="plat-card bs-success-card">
+      <div class="bs-success-title">✓ חשבון החיוב הופעל</div>
+      <button class="ops-btn ops-btn-primary" (click)="returnToBillingOps()">חזרה לתפעול החיוב</button>
+    </div>
+
+  } @else {
+
+    <div class="plat-card">
+      <div class="bs-badge" [class.bs-badge-ok]="isBillable" [class.bs-badge-bad]="isSuspended" [class.bs-badge-pending]="!billingAccount">
+        @if (isBillable) {
+          🟢 חשבון חיוב פעיל
+        } @else if (isSuspended) {
+          🔴 חשבון חיוב מושהה — נדרש טיפול ידני
+        } @else {
+          🟠 טרם הופעל חשבון חיוב
+        }
+      </div>
+      @if (donationCount !== null) {
+        <div class="bs-activity-note">{{ donationCount }} תרומות · ₪{{ grossAmount }} בתקופה הנוכחית</div>
+      }
+    </div>
+
+    <div class="plat-card">
+      <div class="bs-section-title">תנאי חיוב</div>
+      @if (billingAccount; as account) {
+        <div class="bs-row"><span>עמלת Hamonym</span><b>{{ feePercentOf(account) }}%</b></div>
+        <div class="bs-row"><span>מע״מ</span><b>{{ vatPercentOf(account) }}%</b></div>
+      } @else {
+        <div class="bs-row">
+          <span>עמלת Hamonym</span>
+          <label class="bs-input"><input type="number" step="0.01" min="0" max="100" [(ngModel)]="feeRatePercent" />%</label>
+        </div>
+        <div class="bs-row">
+          <span>מע״מ</span>
+          <label class="bs-input"><input type="number" step="0.01" min="0" max="100" [(ngModel)]="vatRatePercent" />%</label>
+        </div>
+      }
+    </div>
+
+    <div class="plat-card">
+      <div class="bs-section-title">גבייה</div>
+      <div class="bs-routing-note">מסלול: אוטומטי — עד ₪3,540 כרטיס · מעל ₪3,540 מס״ב</div>
+
+      <div class="bs-row">
+        <span>כרטיס אשראי</span>
+        <b>{{ cardReady.icon }} {{ cardReady.label }}</b>
+      </div>
+      <div class="bs-row">
+        <span>מס״ב</span>
+        <b>{{ masavReady.icon }} {{ masavReady.label }}</b>
+        @if (masavReady.icon === '⚠') {
+          <button type="button" class="bs-inline-link" (click)="goToMasavTab()">הגדרה →</button>
+        }
+      </div>
+    </div>
+
+    @if (!billingAccount) {
+      <label class="bs-confirm">
+        <input type="checkbox" [(ngModel)]="confirmed" />
+        אני מאשר את תנאי החיוב לעמותה
+      </label>
+
+      @if (submitError) { <div class="ops-action-error">{{ submitError }}</div> }
+
+      <div class="bs-primary-action">
+        <button class="ops-btn ops-btn-primary" [disabled]="submitting || !confirmed" (click)="submit()">
+          {{ submitting ? 'שומר...' : 'שמור והפעל' }}
+        </button>
+      </div>
+
+      <div class="bs-no-charge-note">הפעולה אינה מבצעת חיוב כעת.</div>
+    }
+
+  }
+</div>

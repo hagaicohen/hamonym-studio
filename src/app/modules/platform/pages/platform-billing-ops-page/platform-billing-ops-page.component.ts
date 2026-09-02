@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import {
   BillingOpsService,
   BillingPeriod,
@@ -9,6 +10,8 @@ import {
   StatementDetail,
   BlockedMasavStatement,
   ActionableMasavStatement,
+  BlockedBillingEntity,
+  BillingActivityDiscovered,
 } from '../../services/billing-ops.service';
 
 type Tab = 'periods' | 'statements' | 'masav';
@@ -37,6 +40,11 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   masav_not_authorized: 'לא אושרה הרשאה',
 };
 
+const BILLING_SETUP_REASON_LABELS: Record<string, string> = {
+  no_billing_account: 'אין חשבון חיוב מוגדר לעמותה',
+  account_suspended: 'חשבון החיוב מושהה',
+};
+
 const HE_MONTH_NAMES = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
   'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
@@ -45,14 +53,21 @@ const HE_MONTH_NAMES = [
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './platform-billing-ops-page.component.html',
   styleUrl: './platform-billing-ops-page.component.css',
 })
 export class PlatformBillingOpsPageComponent implements OnInit {
   private service = inject(BillingOpsService);
+  private route = inject(ActivatedRoute);
 
   tab: Tab = 'periods';
+
+  // "Return to the workflow" -- set when arriving back from the focused
+  // Billing setup screen (platform-billing-setup-page) right after it
+  // created a billing_account, so the operator sees the confirmation here
+  // instead of having to go find the entity again.
+  justSetupEntityName: string | null = null;
 
   // ---- periods & calculation -------------------------------------------
   periods: BillingPeriod[] = [];
@@ -108,6 +123,13 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   exportError: string | null = null;
 
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const requestedTab = qp.get('tab') as Tab | null;
+    if (requestedTab === 'periods' || requestedTab === 'statements' || requestedTab === 'masav') {
+      this.tab = requestedTab;
+    }
+    this.justSetupEntityName = qp.get('justSetupName') || (qp.get('justSetupEntity') ? 'העמותה' : null);
+
     this.loadPeriods();
     this.loadStatements();
     this.loadMasav();
@@ -115,6 +137,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   setTab(tab: Tab): void {
     this.tab = tab;
+  }
+
+  dismissJustSetupBanner(): void {
+    this.justSetupEntityName = null;
   }
 
   // ---- periods & calculation -------------------------------------------
@@ -242,14 +268,71 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       (s) => s.billing_period_id === period.id && s.status === 'draft',
     ).length;
     if (draftCount > 0) return 'חשבונות ממתינים לאישור';
+    const blocked = latest.result_summary.blockedEntities;
+    if (blocked && blocked.length > 0) return 'החישוב הסתיים — יש עמותות שדורשות השלמת הגדרות חיוב';
     if (latest.result_summary.statementsCreated === 0) return 'החישוב הסתיים — ללא חשבונות לחיוב';
     return 'החישוב הסתיים';
   }
 
-  // "מה יצא?" -- built only from fields the calculation API actually
-  // returns (accountsEvaluated/statementsCreated/zeroActivityAccountIds/
-  // errors, see calculation.service.js#runProductionCalculation). Never
-  // guesses a reason the response doesn't support.
+  latestRunSummary(period: BillingPeriod): BillingRun['result_summary'] | null {
+    const runs = this.runsForPeriod(period.id);
+    return runs.length ? runs[0].result_summary : null;
+  }
+
+  // Only present on runs executed after the Billing readiness correction
+  // (2026-09-02) -- older runs in run history simply have no blocked
+  // entities to show, not an error.
+  periodBlockedEntities(period: BillingPeriod): BlockedBillingEntity[] {
+    return this.latestRunSummary(period)?.blockedEntities ?? [];
+  }
+
+  periodActivityDiscovered(period: BillingPeriod): BillingActivityDiscovered | null {
+    return this.latestRunSummary(period)?.activityDiscovered ?? null;
+  }
+
+  // "מה הפעולה הבאה?" -- the one thing the operator should do next for this
+  // period, derived purely from already-loaded state (never a new call).
+  // setup -> calculate/recalculate -> review drafts -> collection, in that
+  // order, matching the real Statement lifecycle.
+  periodNextActionLabel(period: BillingPeriod): string {
+    const runs = this.runsForPeriod(period.id);
+    if (runs.length === 0) return 'הרצת חישוב, כדי לראות מה מוכן לחיוב בתקופה זו';
+
+    const blocked = this.periodBlockedEntities(period);
+    if (blocked.length > 0) return 'השלמת הגדרות חיוב לעמותות המסומנות למטה';
+
+    const draftCount = this.statements.filter(
+      (s) => s.billing_period_id === period.id && s.status === 'draft',
+    ).length;
+    if (draftCount > 0) return `בדיקה ואישור ${draftCount} חשבונות לחיוב בלשונית Statements`;
+
+    const approvedCount = this.statements.filter(
+      (s) => s.billing_period_id === period.id && s.status === 'approved',
+    ).length;
+    if (approvedCount > 0) return 'הפעלת גבייה על החשבונות המאושרים בלשונית Statements';
+
+    return 'אין פעולה נדרשת כרגע בתקופה זו';
+  }
+
+  blockingReasonLabel(reason: string): string {
+    return BILLING_SETUP_REASON_LABELS[reason] ?? reason;
+  }
+
+  notificationStatusLabel(entity: BlockedBillingEntity): string {
+    const n = entity.notification;
+    if (!n) return '';
+    if (n.sent) return 'נשלחה התראה למנהל העמותה';
+    if (n.reason === 'already_notified') return 'התראה נשלחה בעבר עבור תקופה זו';
+    if (n.reason === 'no_admin_found') return 'לא נמצא מנהל עמותה לשליחת התראה';
+    return '';
+  }
+
+  // "מה יצא?" -- a single narrative that first states the real, known fact
+  // (donation activity discovered this period, independent of any
+  // billing_account) and only then explains how much of it produced a
+  // financial Statement -- so "0 Statements" never reads as "0 activity"
+  // when real donations exist. Falls back to the pre-correction wording for
+  // any run executed before activityDiscovered existed on result_summary.
   periodResultDetail(period: BillingPeriod): { text: string; isWarning: boolean } | null {
     const runs = this.runsForPeriod(period.id);
     if (runs.length === 0) return null;
@@ -258,19 +341,42 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     if (s.errors.length > 0) {
       return { text: `${s.errors.length} חשבונות נכשלו בחישוב — יש לבדוק בלוגים`, isWarning: true };
     }
-    if (s.accountsEvaluated === 0) {
-      return { text: 'לא נמצאו חשבונות חיוב פעילים לבדיקה בתקופה זו', isWarning: false };
-    }
-    if (s.statementsCreated === 0) {
+
+    const activity = s.activityDiscovered;
+    if (!activity) {
+      // legacy result_summary shape (run predates this correction)
+      if (s.accountsEvaluated === 0) {
+        return { text: 'לא נמצאו חשבונות חיוב פעילים לבדיקה בתקופה זו', isWarning: false };
+      }
+      if (s.statementsCreated === 0) {
+        return {
+          text: `נבדקו ${s.accountsEvaluated} חשבונות חיוב, ולא נמצאה עבור אף אחד מהם פעילות (תרומות) בתקופה זו`,
+          isWarning: false,
+        };
+      }
       return {
-        text: `נבדקו ${s.accountsEvaluated} חשבונות חיוב, ולא נמצאה עבור אף אחד מהם פעילות (תרומות) בתקופה זו`,
+        text: `${s.statementsCreated} חשבונות לחיוב נוצרו מתוך ${s.accountsEvaluated} חשבונות שנבדקו`,
         isWarning: false,
       };
     }
-    return {
-      text: `${s.statementsCreated} חשבונות לחיוב נוצרו מתוך ${s.accountsEvaluated} חשבונות שנבדקו`,
-      isWarning: false,
-    };
+
+    if (activity.entitiesWithActivity === 0) {
+      return { text: 'לא נמצאה פעילות תרומות (בתשלום) בתקופה זו', isWarning: false };
+    }
+
+    const blocked = s.blockedEntities ?? [];
+    const base = `חישוב התקופה הושלם — ${activity.totalDonations} תרומות | ₪${activity.totalGross.toFixed(2)} | ${activity.entitiesWithActivity} עמותות עם פעילות`;
+
+    if (blocked.length > 0) {
+      return {
+        text: `${base} — ${blocked.length} מהן דורשות השלמת הגדרות חיוב ולא הופק להן חשבון לחיוב (${s.statementsCreated} חשבונות לחיוב הופקו)`,
+        isWarning: true,
+      };
+    }
+    if (s.statementsCreated === 0) {
+      return { text: `${base} — לא הופקו חשבונות לחיוב`, isWarning: false };
+    }
+    return { text: `${base} — ${s.statementsCreated} חשבונות לחיוב הופקו`, isWarning: false };
   }
 
   // Recalculating a period that already has draft (unapproved) Statements

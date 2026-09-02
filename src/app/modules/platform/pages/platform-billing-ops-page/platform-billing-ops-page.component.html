@@ -3,6 +3,13 @@
     <h1 class="plat-title">תפעול חיוב (Billing)</h1>
   </div>
 
+  @if (justSetupEntityName) {
+    <div class="plat-card bo-just-setup-banner">
+      <span>הוגדר חשבון חיוב עבור <b>{{ justSetupEntityName }}</b>. אם יש לה פעילות בתקופה הנוכחית, הריצו חישוב מחדש כדי לכלול אותה.</span>
+      <button class="bo-just-setup-dismiss" (click)="dismissJustSetupBanner()">✕</button>
+    </div>
+  }
+
   <div class="bo-tabs">
     <button class="bo-tab" [class.bo-tab-active]="tab === 'periods'" (click)="setTab('periods')">תקופות וחישוב</button>
     <button class="bo-tab" [class.bo-tab-active]="tab === 'statements'" (click)="setTab('statements')">Statements</button>
@@ -26,6 +33,7 @@
                 <div class="bo-current-title">{{ monthLabel }}</div>
               }
               <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+              <div class="bo-next-action">הפעולה הבאה: {{ periodNextActionLabel(period) }}</div>
             </div>
             <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
           </div>
@@ -33,12 +41,45 @@
           <div class="bo-current-stats">
             <div class="bo-stat"><span>מה המצב</span><b>{{ periodPhaseLabel(period) }}</b></div>
             <div class="bo-stat"><span>הרצות</span><b>{{ period.run_count }}</b></div>
+            @if (periodActivityDiscovered(period); as activity) {
+              <div class="bo-stat"><span>עמותות עם פעילות</span><b>{{ activity.entitiesWithActivity }}</b></div>
+            }
             <div class="bo-stat"><span>חשבונות לחיוב (Statements)</span><b>{{ periodStatementCount(period.id) }}</b></div>
+            @if (periodBlockedEntities(period).length > 0) {
+              <div class="bo-stat bo-stat-warning"><span>דורשות הגדרת חיוב</span><b>{{ periodBlockedEntities(period).length }}</b></div>
+            }
             <div class="bo-stat"><span>סכום כולל</span><b>₪{{ periodTotalDue(period.id) }}</b></div>
           </div>
 
           @if (periodResultDetail(period); as detail) {
             <div class="bo-result-detail" [class.bo-result-warning]="detail.isWarning">{{ detail.text }}</div>
+          }
+
+          @if (periodBlockedEntities(period).length > 0) {
+            <div class="bo-blocked-list">
+              <div class="bo-blocked-title">עמותות הדורשות השלמת הגדרות חיוב</div>
+              @for (item of periodBlockedEntities(period); track item.entityId) {
+                <div class="bo-blocked-item">
+                  <div class="bo-blocked-main">
+                    <b>{{ item.displayName }}</b>
+                    <span>{{ item.donationCount }} תרומות | ₪{{ item.grossAmount }}</span>
+                  </div>
+                  <div class="bo-blocked-reason">{{ blockingReasonLabel(item.reason) }}</div>
+                  @if (notificationStatusLabel(item); as notifLabel) {
+                    <div class="bo-blocked-notify">{{ notifLabel }}</div>
+                  }
+                  @if (item.reason === 'no_billing_account') {
+                    <a class="ops-btn ops-btn-secondary ops-btn-sm"
+                       [routerLink]="['/platform/billing-setup', item.entityId]"
+                       [queryParams]="{ displayName: item.displayName, donationCount: item.donationCount, grossAmount: item.grossAmount }">
+                      השלם הגדרות חיוב
+                    </a>
+                  } @else {
+                    <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>
+                  }
+                </div>
+              }
+            </div>
           }
 
           @if (periodActionError) {
@@ -84,7 +125,7 @@
                   @if (run.result_summary) {
                     {{ run.result_summary.statementsCreated }} Statements
                     ({{ run.result_summary.accountsEvaluated }} חשבונות,
-                    {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
+                    {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.blockedEntities?.length ? ', ' + run.result_summary.blockedEntities!.length + ' דורשות הגדרת חיוב' : '' }}{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
                   } @else {
                     רץ...
                   }
