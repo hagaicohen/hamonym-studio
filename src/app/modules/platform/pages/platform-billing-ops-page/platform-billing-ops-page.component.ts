@@ -12,12 +12,13 @@ import {
   ActionableMasavStatement,
   BlockedBillingEntity,
   BillingActivityDiscovered,
+  BulkApproveResult,
 } from '../../services/billing-ops.service';
 
 type Tab = 'periods' | 'statements' | 'masav';
 
 const STATEMENT_STATUS_LABELS: Record<string, string> = {
-  draft: 'טיוטה',
+  draft: 'ממתין לאישור',
   approved: 'מאושר',
   abandoned: 'בוטל (טיוטה)',
   open: 'בגבייה',
@@ -103,6 +104,15 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   statementDetailLoading = false;
   statementActionBusy = false;
   statementActionError: string | null = null;
+
+  // ---- bulk approval (current-period table) ---------------------------
+  // Normal operator workflow: Calculation -> review table -> bulk approve.
+  // The drawer above (openStatement/approveStatement) stays the path for
+  // exceptional/manual single-Statement inspection -- untouched by this.
+  selectedApprovalStatementIds = new Set<string>();
+  bulkApprovalBusy = false;
+  bulkApprovalError: string | null = null;
+  bulkApprovalResult: { approvedText: string | null; failedText: string | null } | null = null;
 
   // ---- masav ----------------------------------------------------------
   blockedStatements: BlockedMasavStatement[] = [];
@@ -294,12 +304,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return activity ? activity.entitiesWithActivity : this.periodStatementCount(period.id);
   }
 
-  // Friendlier operator-facing status just for the current-period financial
-  // table -- every row there is either awaiting review or already handled;
-  // the raw internal status vocabulary (used on the Statements tab) doesn't
-  // need to leak into this simplified view.
   periodStatementStatusLabel(status: string): string {
-    if (status === 'draft') return 'ממתין לאישור';
     return this.statementStatusLabel(status);
   }
 
@@ -454,6 +459,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       next: (res) => {
         this.statements = res.statements;
         this.statementsLoading = false;
+        this.pruneApprovalSelection();
       },
       error: () => {
         this.statementsError = 'שגיאה בטעינת חשבונות לחיוב';
@@ -487,6 +493,78 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     const id = this.selectedStatement.id;
     this.service.getStatement(id).subscribe({ next: (res) => { this.selectedStatement = res.statement; } });
     this.loadStatements();
+  }
+
+  // Only draft Statements are eligible for bulk approval -- anything else
+  // (approved/open/paid/abandoned/...) is either already handled or belongs
+  // to the individual drawer for exceptional inspection.
+  eligibleForBulkApproval(periodId: string): StatementListItem[] {
+    return this.periodStatements(periodId).filter((s) => s.status === 'draft');
+  }
+
+  isSelectedForApproval(statementId: string): boolean {
+    return this.selectedApprovalStatementIds.has(statementId);
+  }
+
+  toggleApprovalSelection(statementId: string): void {
+    if (this.selectedApprovalStatementIds.has(statementId)) this.selectedApprovalStatementIds.delete(statementId);
+    else this.selectedApprovalStatementIds.add(statementId);
+    this.bulkApprovalResult = null;
+  }
+
+  isAllEligibleSelected(periodId: string): boolean {
+    const eligible = this.eligibleForBulkApproval(periodId);
+    return eligible.length > 0 && eligible.every((s) => this.selectedApprovalStatementIds.has(s.id));
+  }
+
+  toggleSelectAllEligible(periodId: string): void {
+    const eligible = this.eligibleForBulkApproval(periodId);
+    if (this.isAllEligibleSelected(periodId)) {
+      eligible.forEach((s) => this.selectedApprovalStatementIds.delete(s.id));
+    } else {
+      eligible.forEach((s) => this.selectedApprovalStatementIds.add(s.id));
+    }
+    this.bulkApprovalResult = null;
+  }
+
+  // Drops any selected id that no longer refers to an eligible draft
+  // Statement after a reload (approved elsewhere, abandoned, etc.) -- keeps
+  // the button's count and the actual request in sync with what's on screen.
+  private pruneApprovalSelection(): void {
+    const draftIds = new Set(this.statements.filter((s) => s.status === 'draft').map((s) => s.id));
+    for (const id of [...this.selectedApprovalStatementIds]) {
+      if (!draftIds.has(id)) this.selectedApprovalStatementIds.delete(id);
+    }
+  }
+
+  bulkApproveSelected(): void {
+    const statementIds = [...this.selectedApprovalStatementIds];
+    if (statementIds.length === 0 || this.bulkApprovalBusy) return;
+    this.bulkApprovalBusy = true;
+    this.bulkApprovalError = null;
+    this.bulkApprovalResult = null;
+    this.service.bulkApproveStatements(statementIds).subscribe({
+      next: (res) => {
+        this.bulkApprovalBusy = false;
+        this.bulkApprovalResult = this.summarizeBulkApproval(res.result);
+        this.selectedApprovalStatementIds.clear();
+        this.loadStatements();
+      },
+      error: (err) => {
+        this.bulkApprovalBusy = false;
+        this.bulkApprovalError = err?.error?.error || 'אישור מרוכז נכשל';
+      },
+    });
+  }
+
+  private summarizeBulkApproval(result: BulkApproveResult): { approvedText: string | null; failedText: string | null } {
+    const approvedText = result.approvedCount === 0 ? null
+      : result.approvedCount === 1 ? '1 חשבון אושר'
+      : `${result.approvedCount} חשבונות אושרו`;
+    const failedText = result.failedCount === 0 ? null
+      : result.failedCount === 1 ? '1 חשבון דורש טיפול'
+      : `${result.failedCount} חשבונות דורשים טיפול`;
+    return { approvedText, failedText };
   }
 
   approveStatement(): void {

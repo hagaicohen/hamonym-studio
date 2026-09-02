@@ -89,10 +89,45 @@
 
             @if (periodStatements(period.id).length > 0) {
               <div class="bo-card-title">חשבונות לחיוב</div>
+
+              <div class="bo-bulk-approval-bar">
+                <span class="bo-bulk-approval-count">
+                  {{ selectedApprovalStatementIds.size > 0 ? selectedApprovalStatementIds.size + ' נבחרו' : '' }}
+                </span>
+                <button
+                  class="ops-btn ops-btn-primary ops-btn-sm"
+                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
+                  (click)="bulkApproveSelected()">
+                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
+                </button>
+              </div>
+
+              @if (bulkApprovalResult) {
+                <div class="bo-bulk-approval-result">
+                  @if (bulkApprovalResult.approvedText) {
+                    <span class="bo-bulk-approval-success">{{ bulkApprovalResult.approvedText }}</span>
+                  }
+                  @if (bulkApprovalResult.failedText) {
+                    <span class="bo-bulk-approval-warning">{{ bulkApprovalResult.failedText }}</span>
+                  }
+                </div>
+              }
+              @if (bulkApprovalError) {
+                <div class="ops-action-error">{{ bulkApprovalError }}</div>
+              }
+
               <div class="bo-table-wrap">
                 <table class="bo-table">
                   <thead>
                     <tr>
+                      <th class="bo-checkbox-col">
+                        @if (eligibleForBulkApproval(period.id).length > 0) {
+                          <input type="checkbox"
+                                 [checked]="isAllEligibleSelected(period.id)"
+                                 (change)="toggleSelectAllEligible(period.id)"
+                                 aria-label="בחר את כל החשבונות הממתינים לאישור" />
+                        }
+                      </th>
                       <th>עמותה</th>
                       <th>תרומות</th>
                       <th>מחזור</th>
@@ -106,6 +141,14 @@
                   <tbody>
                     @for (statement of periodStatements(period.id); track statement.id) {
                       <tr>
+                        <td class="bo-checkbox-col">
+                          @if (statement.status === 'draft') {
+                            <input type="checkbox"
+                                   [checked]="isSelectedForApproval(statement.id)"
+                                   (change)="toggleApprovalSelection(statement.id)"
+                                   [attr.aria-label]="'בחר את ' + statement.entity_name" />
+                          }
+                        </td>
                         <td>{{ statement.entity_name }}</td>
                         <td>{{ statement.component_count ?? '—' }}</td>
                         <td>₪{{ statement.gross_raised }}</td>
@@ -124,6 +167,7 @@
                   <tfoot>
                     @if (periodStatementTotals(period.id); as totals) {
                       <tr class="bo-table-total">
+                        <td></td>
                         <td>סה״כ</td>
                         <td>{{ totals.donations }}</td>
                         <td>₪{{ totals.gross.toFixed(2) }}</td>
@@ -136,6 +180,15 @@
                     }
                   </tfoot>
                 </table>
+              </div>
+
+              <div class="bo-bulk-approval-bar bo-bulk-approval-bar-bottom">
+                <button
+                  class="ops-btn ops-btn-primary ops-btn-sm"
+                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
+                  (click)="bulkApproveSelected()">
+                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
+                </button>
               </div>
             }
 
