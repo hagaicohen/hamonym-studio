@@ -16,6 +16,33 @@ const calculation = require('../../billing-engine/calculation.service');
 const approval = require('../../billing-engine/approval.service');
 const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
+const billingRepository = require('../../billing/billing.repository');
+
+// Read-only collection-readiness projection (Billing Collection UX
+// truthfulness fix, 2026-09-02) -- mirrors, never re-implements, the exact
+// same checks collection.service.js#openAttempt applies authoritatively
+// inside its own row-locked transaction: routing.js's threshold+MASAV-
+// authorization rule, then -- for the card route only -- entity_billing's
+// active default instrument. Used to (a) give the operator drawer a
+// truthful state instead of the old always-selects-nothing routed_method
+// bug, and (b) as triggerCollection's defense-in-depth pre-check below.
+// The real, race-safe gate stays inside openAttempt's own transaction --
+// this is a fast-fail preview of the same rule, not a replacement for it.
+async function evaluateCollectionReadiness(statement) {
+  const routed = await routing.resolveCollectionMethod(pool, statement);
+  if (routed.blocked) {
+    return { route: 'masav', ready: false, reason: routed.reason };
+  }
+  if (routed.method === 'card') {
+    const instrument = await billingRepository.getActiveDefaultByEntityId(statement.entity_id);
+    return instrument
+      ? { route: 'card', ready: true, reason: null }
+      : { route: 'card', ready: false, reason: 'no_active_payment_instrument' };
+  }
+  // routed.method === 'masav' -- routing.js only returns this once MASAV is
+  // configured, complete, AND authorized, so this is already ready.
+  return { route: 'masav', ready: true, reason: null };
+}
 
 async function auditLog(client, { superAdminUserId, entityId, action, notes, ip }) {
   await client.query(
@@ -132,14 +159,22 @@ exports.getStatementDetail = async (statementId) => {
   const statement = stmtRes.rows[0];
   if (!statement) return null;
 
-  const [attempts, payments, componentCount] = await Promise.all([
+  const [attempts, payments, componentCount, readiness] = await Promise.all([
     pool.query(`SELECT * FROM collection_attempts WHERE statement_id = $1 ORDER BY attempt_number`, [statementId]),
     pool.query(`SELECT * FROM payments WHERE statement_id = $1 ORDER BY received_at`, [statementId]),
     pool.query(`SELECT count(*)::int AS n FROM statement_components WHERE statement_id = $1`, [statementId]),
+    evaluateCollectionReadiness(statement),
   ]);
 
   return {
     ...statement,
+    // Root-cause fix: this query never selected routed_method before (that
+    // CASE only existed in listStatements), so the frontend's
+    // routedMethodLabel(undefined) silently fell through to a hardcoded
+    // 'חסום' default regardless of the real route. readiness is now the
+    // single source of truth the drawer renders from.
+    routed_method: readiness.route,
+    readiness,
     attempts: attempts.rows,
     payments: payments.rows,
     componentCount: componentCount.rows[0].n,
@@ -206,11 +241,45 @@ exports.abandonStatement = async ({ statementId, superAdminUserId, ip }) => {
 };
 
 // The only entry point that can trigger a real CardCom charge for a
-// Statement (requirement 7/10 of Bundle 1). For a masav-routed or blocked
-// Statement this naturally resolves to a self-describing skip (see
-// collection.service.js#openAttempt) -- it never fakes success and never
-// falls back to a different rail.
+// Statement (requirement 7/10 of Bundle 1). A masav-routed or otherwise
+// blocked Statement is rejected up front (NOT_COLLECTION_READY, see
+// evaluateCollectionReadiness above) before this ever calls into the
+// collection engine; a card-routed Statement missing a payment instrument
+// is caught the same way. It never fakes success and never falls back to a
+// different rail.
 exports.triggerCollection = async ({ statementId, superAdminUserId, ip }) => {
+  const stmtRes = await pool.query(
+    `SELECT s.total_due, ba.entity_id
+     FROM statements s JOIN billing_accounts ba ON ba.id = s.billing_account_id
+     WHERE s.id = $1`,
+    [statementId]
+  );
+  const statement = stmtRes.rows[0];
+  if (!statement) {
+    const err = new Error('Statement not found');
+    err.code = 'STATEMENT_NOT_FOUND';
+    throw err;
+  }
+
+  // Defense-in-depth (Billing Collection UX truthfulness fix, 2026-09-02):
+  // reject a non-ready Statement here, before ever calling into the
+  // collection engine, instead of relying solely on openAttempt's own
+  // guard further downstream. Never looser than that guard -- same rule,
+  // same source (evaluateCollectionReadiness above) -- only earlier and
+  // with an explicit typed rejection instead of a silent 200 skip. This is
+  // additive: openAttempt's transaction-locked check is untouched and
+  // still runs (and remains the actual race-safe gate) for every request
+  // that passes this pre-check.
+  const readiness = await evaluateCollectionReadiness(statement);
+  if (readiness.route !== 'card' || !readiness.ready) {
+    const err = new Error(
+      `Statement is not collection-ready via this endpoint (route=${readiness.route}, ready=${readiness.ready}, reason=${readiness.reason || 'masav_routed_not_actionable_here'})`
+    );
+    err.code = 'NOT_COLLECTION_READY';
+    err.details = { route: readiness.route, ready: readiness.ready, reason: readiness.reason };
+    throw err;
+  }
+
   const result = await collection.runCollectionForStatement(statementId);
   await pool.query(
     `INSERT INTO platform_audit_log (super_admin_user_id, action, notes, ip_address)
