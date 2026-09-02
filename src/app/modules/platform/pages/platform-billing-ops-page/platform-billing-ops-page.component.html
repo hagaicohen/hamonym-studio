@@ -182,14 +182,6 @@
                 </table>
               </div>
 
-              <div class="bo-bulk-approval-bar bo-bulk-approval-bar-bottom">
-                <button
-                  class="ops-btn ops-btn-primary ops-btn-sm"
-                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
-                  (click)="bulkApproveSelected()">
-                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
-                </button>
-              </div>
             }
 
             @if (confirmingRecalcPeriodId === period.id) {
@@ -204,7 +196,15 @@
               </div>
             } @else {
               <div class="bo-current-actions">
-                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                @if (periodStatements(period.id).length > 0) {
+                  <button
+                    class="ops-btn ops-btn-primary ops-btn-sm"
+                    [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
+                    (click)="bulkApproveSelected()">
+                    {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
+                  </button>
+                }
+                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
                   {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב מחדש' }}
                 </button>
                 <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
