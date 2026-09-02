@@ -95,6 +95,7 @@ exports.listStatements = async ({ periodId, runId, status }) => {
     `SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
             s.gross_raised, s.fee_amount, s.vat_amount, s.total_due, s.status, s.created_at,
             ba.entity_id, e.display_name AS entity_name,
+            (SELECT count(*)::int FROM statement_components sc WHERE sc.statement_id = s.id) AS component_count,
             CASE
               WHEN s.total_due <= $4 THEN 'card'
               WHEN emd.entity_id IS NOT NULL AND emd.authorized
@@ -153,6 +154,45 @@ exports.approveStatement = async ({ statementId, superAdminUserId, ip }) => {
     [superAdminUserId, `statementId=${statementId}`, ip || null]
   );
   return result;
+};
+
+// Orchestration only -- never a mass SQL status update. Each id goes
+// through approval.approveStatement() exactly as the single-statement path
+// does (own BEGIN/COMMIT/ROLLBACK, row locks, revalidation, claim checks),
+// called sequentially and independently so a failure on one statement can
+// never roll back or block another. One platform_audit_log row per
+// successfully approved statement -- same 'billing_statement_approve'
+// action as the single-approve path, not one row for "bulk action X" -- so
+// the audit trail reads identically either way. A statement that fails is
+// never logged as approved.
+exports.bulkApproveStatements = async ({ statementIds, superAdminUserId, ip }) => {
+  if (!Array.isArray(statementIds) || statementIds.length === 0) {
+    const err = new Error('statementIds must be a non-empty array of statement ids');
+    err.code = 'MISSING_STATEMENT_IDS';
+    throw err;
+  }
+
+  const results = [];
+  for (const statementId of statementIds) {
+    try {
+      const result = await approval.approveStatement(statementId);
+      await pool.query(
+        `INSERT INTO platform_audit_log (super_admin_user_id, action, notes, ip_address)
+         VALUES ($1, 'billing_statement_approve', $2, $3)`,
+        [superAdminUserId, `statementId=${statementId} bulk=true`, ip || null]
+      );
+      results.push({ id: statementId, success: true, result });
+    } catch (err) {
+      results.push({
+        id: statementId,
+        success: false,
+        error: { code: err.code || 'APPROVAL_FAILED', message: err.message, details: err.details || {} },
+      });
+    }
+  }
+
+  const approvedCount = results.filter((r) => r.success).length;
+  return { total: results.length, approvedCount, failedCount: results.length - approvedCount, results };
 };
 
 exports.abandonStatement = async ({ statementId, superAdminUserId, ip }) => {
