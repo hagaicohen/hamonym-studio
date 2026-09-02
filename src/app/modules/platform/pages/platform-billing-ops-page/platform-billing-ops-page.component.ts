@@ -41,6 +41,18 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   masav_not_authorized: 'לא אושרה הרשאה',
 };
 
+// Statement-drawer collection state (Billing Collection UX truthfulness
+// fix, 2026-09-02) -- derived only from the backend's own readiness
+// computation (StatementDetail.readiness), never re-decided in the UI, so
+// this can never again show a state ("חסום") that contradicts what an
+// actual click on the action button would do. See
+// PlatformBillingOpsPageComponent#collectionState.
+interface CollectionState {
+  label: string;
+  sublabel: string | null;
+  canCollect: boolean;
+}
+
 const BILLING_SETUP_REASON_LABELS: Record<string, string> = {
   no_billing_account: 'אין חשבון חיוב מוגדר לעמותה',
   account_suspended: 'חשבון החיוב מושהה',
@@ -633,8 +645,34 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
+  // Truthful collection state for the drawer (Billing Collection UX
+  // truthfulness fix, 2026-09-02) -- reads only StatementDetail.readiness,
+  // the same rule the backend independently re-checks before ever calling
+  // the collection engine (billing-ops.service.js#triggerCollection). The
+  // action button below is only ever shown when canCollect is true, so the
+  // UI can never again expose an enabled action while describing the
+  // Statement as blocked/not ready.
+  collectionState(statement: StatementDetail): CollectionState {
+    const readiness = statement.readiness;
+    if (!readiness) return { label: '—', sublabel: null, canCollect: false };
+
+    if (readiness.route === 'card') {
+      if (readiness.ready) {
+        return { label: 'מוכן לגבייה בכרטיס', sublabel: `₪${statement.total_due}`, canCollect: true };
+      }
+      return { label: 'דורש טיפול', sublabel: 'לא הוגדר אמצעי גבייה בכרטיס', canCollect: false };
+    }
+
+    // route === 'masav' -- actual MASAV collection is driven from the מס״ב
+    // tab (export/authorize flow), never from this generic button.
+    if (readiness.ready) {
+      return { label: 'מוכן למס״ב', sublabel: null, canCollect: false };
+    }
+    return { label: 'דורש טיפול', sublabel: 'חסרים פרטי מס״ב / הרשאת מס״ב', canCollect: false };
+  }
+
   triggerCollection(): void {
-    if (!this.selectedStatement || this.statementActionBusy) return;
+    if (!this.selectedStatement || this.statementActionBusy || !this.collectionState(this.selectedStatement).canCollect) return;
     this.statementActionBusy = true;
     this.statementActionError = null;
     this.service.triggerCollection(this.selectedStatement.id).subscribe({
@@ -645,7 +683,13 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         }
         this.refreshSelectedStatement();
       },
-      error: (err) => { this.statementActionBusy = false; this.statementActionError = err?.error?.error || 'הפעלת הגבייה נכשלה'; },
+      error: (err) => {
+        this.statementActionBusy = false;
+        this.statementActionError = err?.error?.code === 'NOT_COLLECTION_READY'
+          ? 'החשבון אינו מוכן לגבייה כרגע — רעננו את המסך ונסו שוב'
+          : (err?.error?.error || 'הפעלת הגבייה נכשלה');
+        this.refreshSelectedStatement();
+      },
     });
   }
 

@@ -542,6 +542,30 @@
 .bo-detail-grid span { font-size: 11px; color: #64748b; }
 .bo-detail-grid b { font-size: 14px; color: #1e293b; }
 
+.bo-collection-state {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.bo-collection-state-ready {
+  background: #dcfce7;
+}
+.bo-collection-state-ready .bo-collection-state-label { color: #166534; }
+.bo-collection-state-ready .bo-collection-state-sublabel { color: #166534; font-weight: 700; }
+
+.bo-collection-state-blocked {
+  background: #fee2e2;
+}
+.bo-collection-state-blocked .bo-collection-state-label,
+.bo-collection-state-blocked .bo-collection-state-sublabel { color: #991b1b; }
+
+.bo-collection-state-label { font-size: 13px; font-weight: 700; }
+.bo-collection-state-sublabel { font-size: 13px; }
+
 .bo-drawer-actions {
   display: flex;
   gap: 8px;
