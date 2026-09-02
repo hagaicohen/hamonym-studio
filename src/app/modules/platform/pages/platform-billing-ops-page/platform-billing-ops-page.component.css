@@ -253,35 +253,37 @@
   margin-top: 2px;
 }
 
-.bo-next-action {
-  font-size: 12px;
-  font-weight: 700;
-  color: #4a30bd;
-  margin-top: 8px;
+.bo-empty-calc {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 4px;
 }
 
-.bo-current-stats {
+.bo-empty-calc .ops-empty-small { padding: 0; }
+
+.bo-kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
 
-.bo-stat {
+.bo-kpi {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: #f8fafc;
   border-radius: 8px;
 }
 
-.bo-stat span { font-size: 11px; color: #64748b; }
-.bo-stat b { font-size: 16px; color: #1e293b; }
+.bo-kpi span { font-size: 11px; color: #64748b; }
+.bo-kpi b { font-size: 20px; color: #1e293b; }
 
-.bo-stat-warning { background: #fef9c3; }
-.bo-stat-warning span { color: #854d0e; }
-.bo-stat-warning b { color: #854d0e; }
+.bo-kpi-primary { background: #ede9fe; }
+.bo-kpi-primary span { color: #5b21b6; }
+.bo-kpi-primary b { color: #4a30bd; }
 
 .bo-blocked-list {
   margin-bottom: 14px;
@@ -394,6 +396,20 @@
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid #f1f5f9;
+}
+
+.bo-runs-history-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.bo-table-total td {
+  font-weight: 700;
+  color: #1e293b;
+  border-bottom: none;
+  border-top: 2px solid #e2e8f0;
 }
 
 .bo-table-wrap { overflow-x: auto; }

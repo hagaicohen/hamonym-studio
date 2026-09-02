@@ -1,6 +1,6 @@
 <div class="plat-page">
   <div class="plat-header">
-    <h1 class="plat-title">תפעול חיוב (Billing)</h1>
+    <h1 class="plat-title">תפעול חיוב</h1>
   </div>
 
   @if (justSetupEntityName) {
@@ -12,7 +12,7 @@
 
   <div class="bo-tabs">
     <button class="bo-tab" [class.bo-tab-active]="tab === 'periods'" (click)="setTab('periods')">תקופות וחישוב</button>
-    <button class="bo-tab" [class.bo-tab-active]="tab === 'statements'" (click)="setTab('statements')">Statements</button>
+    <button class="bo-tab" [class.bo-tab-active]="tab === 'statements'" (click)="setTab('statements')">חשבונות לחיוב</button>
     <button class="bo-tab" [class.bo-tab-active]="tab === 'masav'" (click)="setTab('masav')">מס״ב</button>
   </div>
 
@@ -33,103 +33,158 @@
                 <div class="bo-current-title">{{ monthLabel }}</div>
               }
               <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
-              <div class="bo-next-action">הפעולה הבאה: {{ periodNextActionLabel(period) }}</div>
             </div>
             <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
           </div>
-
-          <div class="bo-current-stats">
-            <div class="bo-stat"><span>מה המצב</span><b>{{ periodPhaseLabel(period) }}</b></div>
-            <div class="bo-stat"><span>הרצות</span><b>{{ period.run_count }}</b></div>
-            @if (periodActivityDiscovered(period); as activity) {
-              <div class="bo-stat"><span>עמותות עם פעילות</span><b>{{ activity.entitiesWithActivity }}</b></div>
-            }
-            <div class="bo-stat"><span>חשבונות לחיוב (Statements)</span><b>{{ periodStatementCount(period.id) }}</b></div>
-            @if (periodBlockedEntities(period).length > 0) {
-              <div class="bo-stat bo-stat-warning"><span>דורשות הגדרת חיוב</span><b>{{ periodBlockedEntities(period).length }}</b></div>
-            }
-            <div class="bo-stat"><span>סכום כולל</span><b>₪{{ periodTotalDue(period.id) }}</b></div>
-          </div>
-
-          @if (periodResultDetail(period); as detail) {
-            <div class="bo-result-detail" [class.bo-result-warning]="detail.isWarning">{{ detail.text }}</div>
-          }
-
-          @if (periodBlockedEntities(period).length > 0) {
-            <div class="bo-blocked-list">
-              <div class="bo-blocked-title">עמותות הדורשות השלמת הגדרות חיוב</div>
-              @for (item of periodBlockedEntities(period); track item.entityId) {
-                <div class="bo-blocked-item">
-                  <div class="bo-blocked-main">
-                    <b>{{ item.displayName }}</b>
-                    <span>{{ item.donationCount }} תרומות | ₪{{ item.grossAmount }}</span>
-                  </div>
-                  <div class="bo-blocked-reason">{{ blockingReasonLabel(item.reason) }}</div>
-                  <div class="bo-blocked-notify">{{ notificationStatusLabel(item) }}</div>
-                  @if (item.reason === 'no_billing_account') {
-                    <a class="ops-btn ops-btn-secondary ops-btn-sm"
-                       [routerLink]="['/platform/billing-setup', item.entityId]"
-                       [queryParams]="{ displayName: item.displayName, donationCount: item.donationCount, grossAmount: item.grossAmount }">
-                      השלם הגדרות חיוב
-                    </a>
-                  } @else {
-                    <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>
-                  }
-                </div>
-              }
-            </div>
-          }
 
           @if (periodActionError) {
             <div class="ops-action-error">{{ periodActionError }}</div>
           }
 
-          @if (confirmingRecalcPeriodId === period.id) {
-            <div class="bo-recalc-confirm">
-              <span>זו הרצת Production Calculation נוספת על תקופה שכבר חושבה. אם יש חשבונות בטיוטה שטרם אושרו, ריצה חוזרת עלולה ליצור עבורם כפילות על אותה פעילות — מומלץ לאשר חשבונות קיימים לפני שמריצים שוב.</span>
-              <div class="bo-recalc-confirm-actions">
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
-                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                  {{ calculatingPeriodId === period.id ? 'מריץ...' : 'כן, הרץ מחדש' }}
-                </button>
-              </div>
+          @if (runsForPeriod(period.id).length === 0) {
+            <div class="bo-empty-calc">
+              <div class="ops-empty-small">טרם בוצע חישוב חיובים לתקופה זו.</div>
+              <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב חיובים' }}
+              </button>
             </div>
           } @else {
-            <div class="bo-current-actions">
-              <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                {{ calculatingPeriodId === period.id ? 'מריץ...' : (period.run_count > 0 ? 'הרץ חישוב מחדש' : 'הרץ חישוב') }}
-              </button>
-              <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
-                אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
-              </button>
+            <div class="bo-kpi-row">
+              <div class="bo-kpi"><b>{{ periodDonationsCount(period) }}</b><span>תרומות</span></div>
+              <div class="bo-kpi"><b>₪{{ periodGrossAmount(period).toFixed(2) }}</b><span>מחזור</span></div>
+              <div class="bo-kpi"><b>{{ periodEntitiesCount(period) }}</b><span>עמותות</span></div>
+              <div class="bo-kpi bo-kpi-primary"><b>₪{{ periodTotalDue(period.id) }}</b><span>לחיוב</span></div>
             </div>
-          }
 
-          @if (showAdvanced) {
-            <label class="ba-field bo-asof">
-              <span>asOf — לשימוש בבדיקות או חישוב נכון לנקודת זמן מסוימת. בדרך כלל יש להשאיר ריק.</span>
-              <div class="bo-datetime">
-                <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
-                <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
-              </div>
-            </label>
-          }
-
-          @if (period.run_count > 0) {
-            <div class="bo-runs-history">
-              @for (run of runsForPeriod(period.id); track run.id) {
-                <div class="bo-run-chip">
-                  {{ fmtDateTime(run.created_at) }} —
-                  @if (run.result_summary) {
-                    {{ run.result_summary.statementsCreated }} Statements
-                    ({{ run.result_summary.accountsEvaluated }} חשבונות,
-                    {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.blockedEntities?.length ? ', ' + run.result_summary.blockedEntities!.length + ' דורשות הגדרת חיוב' : '' }}{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
-                  } @else {
-                    רץ...
-                  }
-                </div>
+            @if (periodResultDetail(period); as detail) {
+              @if (detail.isWarning && periodBlockedEntities(period).length === 0) {
+                <div class="bo-result-detail bo-result-warning">{{ detail.text }}</div>
               }
-            </div>
+            }
+
+            @if (periodBlockedEntities(period).length > 0) {
+              <div class="bo-blocked-list">
+                <div class="bo-blocked-title">עמותות הדורשות השלמת הגדרות חיוב</div>
+                @for (item of periodBlockedEntities(period); track item.entityId) {
+                  <div class="bo-blocked-item">
+                    <div class="bo-blocked-main">
+                      <b>{{ item.displayName }}</b>
+                      <span>{{ item.donationCount }} תרומות | ₪{{ item.grossAmount }}</span>
+                    </div>
+                    <div class="bo-blocked-reason">{{ blockingReasonLabel(item.reason) }}</div>
+                    <div class="bo-blocked-notify">{{ notificationStatusLabel(item) }}</div>
+                    @if (item.reason === 'no_billing_account') {
+                      <a class="ops-btn ops-btn-secondary ops-btn-sm"
+                         [routerLink]="['/platform/billing-setup', item.entityId]"
+                         [queryParams]="{ displayName: item.displayName, donationCount: item.donationCount, grossAmount: item.grossAmount }">
+                        השלם הגדרות חיוב
+                      </a>
+                    } @else {
+                      <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (periodStatements(period.id).length > 0) {
+              <div class="bo-card-title">חשבונות לחיוב</div>
+              <div class="bo-table-wrap">
+                <table class="bo-table">
+                  <thead>
+                    <tr>
+                      <th>עמותה</th>
+                      <th>תרומות</th>
+                      <th>מחזור</th>
+                      <th>עמלה</th>
+                      <th>מע״מ</th>
+                      <th>לחיוב</th>
+                      <th>סטטוס</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (statement of periodStatements(period.id); track statement.id) {
+                      <tr>
+                        <td>{{ statement.entity_name }}</td>
+                        <td>{{ statement.component_count ?? '—' }}</td>
+                        <td>₪{{ statement.gross_raised }}</td>
+                        <td>₪{{ statement.fee_amount }}</td>
+                        <td>₪{{ statement.vat_amount }}</td>
+                        <td>₪{{ statement.total_due }}</td>
+                        <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ periodStatementStatusLabel(statement.status) }}</span></td>
+                        <td>
+                          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openStatement(statement)">
+                            {{ statement.status === 'draft' ? 'בדוק ואשר' : 'פרטים' }}
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    @if (periodStatementTotals(period.id); as totals) {
+                      <tr class="bo-table-total">
+                        <td>סה״כ</td>
+                        <td>{{ totals.donations }}</td>
+                        <td>₪{{ totals.gross.toFixed(2) }}</td>
+                        <td>₪{{ totals.fee.toFixed(2) }}</td>
+                        <td>₪{{ totals.vat.toFixed(2) }}</td>
+                        <td>₪{{ totals.due.toFixed(2) }}</td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                    }
+                  </tfoot>
+                </table>
+              </div>
+            }
+
+            @if (confirmingRecalcPeriodId === period.id) {
+              <div class="bo-recalc-confirm">
+                <span>זהו חישוב חיובים נוסף על תקופה שכבר חושבה. אם יש חשבונות לחיוב בטיוטה שטרם אושרו, חישוב חוזר עלול ליצור עבורם כפילות על אותה פעילות — מומלץ לאשר את החשבונות הקיימים לפני שמחשבים שוב.</span>
+                <div class="bo-recalc-confirm-actions">
+                  <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
+                  <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                    {{ calculatingPeriodId === period.id ? 'מחשב...' : 'כן, חשב מחדש' }}
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div class="bo-current-actions">
+                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+                  {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב מחדש' }}
+                </button>
+                <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+                  אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
+                </button>
+              </div>
+            }
+
+            @if (showAdvanced) {
+              <label class="ba-field bo-asof">
+                <span>asOf — לשימוש בבדיקות או חישוב נכון לנקודת זמן מסוימת. בדרך כלל יש להשאיר ריק.</span>
+                <div class="bo-datetime">
+                  <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
+                  <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
+                </div>
+              </label>
+
+              <div class="bo-runs-history">
+                <div class="bo-runs-history-title">היסטוריית הרצות ({{ period.run_count }})</div>
+                @for (run of runsForPeriod(period.id); track run.id) {
+                  <div class="bo-run-chip">
+                    {{ fmtDateTime(run.created_at) }} —
+                    @if (run.result_summary) {
+                      {{ run.result_summary.statementsCreated }} חשבונות לחיוב
+                      ({{ run.result_summary.accountsEvaluated }} חשבונות,
+                      {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.blockedEntities?.length ? ', ' + run.result_summary.blockedEntities!.length + ' דורשות הגדרת חיוב' : '' }}{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
+                    } @else {
+                      רץ...
+                    }
+                  </div>
+                }
+              </div>
+            }
           }
         </div>
       } @else {
@@ -199,11 +254,11 @@
                       @if (confirmingRecalcPeriodId === period.id) {
                         <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
                         <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                          {{ calculatingPeriodId === period.id ? 'מריץ...' : 'כן, הרץ מחדש' }}
+                          {{ calculatingPeriodId === period.id ? 'מחשב...' : 'כן, חשב מחדש' }}
                         </button>
                       } @else {
                         <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                          {{ calculatingPeriodId === period.id ? 'מריץ...' : 'הרץ חישוב' }}
+                          {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב חיובים' }}
                         </button>
                       }
                     </td>
@@ -250,7 +305,7 @@
       } @else if (statementsError) {
         <div class="plat-error">{{ statementsError }}</div>
       } @else if (statements.length === 0) {
-        <div class="ops-empty-small">אין Statements תואמים.</div>
+        <div class="ops-empty-small">אין חשבונות לחיוב תואמים.</div>
       } @else {
         <div class="bo-table-wrap">
           <table class="bo-table">
@@ -284,88 +339,6 @@
         </div>
       }
     </div>
-
-    @if (selectedStatement || statementDetailLoading) {
-      <div class="bo-drawer-backdrop" (click)="closeStatement()">
-        <div class="bo-drawer" (click)="$event.stopPropagation()">
-          @if (statementDetailLoading) {
-            <div class="plat-loading">טוען...</div>
-          } @else if (selectedStatement) {
-            <div class="bo-drawer-header">
-              <h2>{{ selectedStatement.entity_name }}</h2>
-              <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeStatement()">סגור</button>
-            </div>
-
-            <div class="bo-detail-grid">
-              <div><span>סטטוס</span><b>{{ statementStatusLabel(selectedStatement.status) }}</b></div>
-              <div><span>גיוס ברוטו</span><b>₪{{ selectedStatement.gross_raised }}</b></div>
-              <div><span>עמלה</span><b>₪{{ selectedStatement.fee_amount }}</b></div>
-              <div><span>מע״מ</span><b>₪{{ selectedStatement.vat_amount }}</b></div>
-              <div><span>לחיוב</span><b>₪{{ selectedStatement.total_due }}</b></div>
-              <div><span>מסלול מחושב</span><b>{{ routedMethodLabel(selectedStatement.routed_method) }}</b></div>
-              <div><span>מס׳ תרומות בסיס</span><b>{{ selectedStatement.componentCount }}</b></div>
-              <div><span>אמצעי מוצהר בחשבון</span><b>{{ selectedStatement.account_declared_method === 'masav' ? 'מס״ב' : 'כרטיס אשראי' }}</b></div>
-            </div>
-
-            @if (statementActionError) {
-              <div class="ops-action-error">{{ statementActionError }}</div>
-            }
-
-            <div class="bo-drawer-actions">
-              @if (selectedStatement.status === 'draft') {
-                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="approveStatement()">אישור</button>
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="statementActionBusy" (click)="abandonStatement()">ביטול טיוטה</button>
-              }
-              @if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
-                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
-                  הפעלת גבייה (למסלול כרטיס בלבד — מס״ב מנוהל בלשונית מס״ב)
-                </button>
-              }
-            </div>
-
-            <h3 class="bo-subtitle">ניסיונות גבייה</h3>
-            @if (selectedStatement.attempts.length === 0) {
-              <div class="ops-empty-small">אין עדיין ניסיונות גבייה.</div>
-            } @else {
-              <table class="bo-table">
-                <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th></tr></thead>
-                <tbody>
-                  @for (attempt of selectedStatement.attempts; track attempt.id) {
-                    <tr>
-                      <td>{{ attempt.attempt_number }}</td>
-                      <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
-                      <td>{{ attemptStatusLabel(attempt.status) }}</td>
-                      <td>{{ attempt.provider }}</td>
-                      <td>{{ attempt.provider_reference || '—' }}</td>
-                      <td>{{ attempt.failure_reason || '—' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            }
-
-            <h3 class="bo-subtitle">תשלומים</h3>
-            @if (selectedStatement.payments.length === 0) {
-              <div class="ops-empty-small">אין עדיין תשלומים.</div>
-            } @else {
-              <table class="bo-table">
-                <thead><tr><th>סכום</th><th>ספק</th><th>אסמכתא</th><th>התקבל</th></tr></thead>
-                <tbody>
-                  @for (payment of selectedStatement.payments; track payment.id) {
-                    <tr>
-                      <td>₪{{ payment.amount }}</td>
-                      <td>{{ payment.provider }}</td>
-                      <td>{{ payment.provider_reference }}</td>
-                      <td>{{ fmtDateTime(payment.received_at) }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            }
-          }
-        </div>
-      </div>
-    }
   }
 
   <!-- ============ MASAV ============ -->
@@ -375,16 +348,16 @@
     }
 
     <div class="plat-card">
-      <div class="bo-card-title">Statements חסומים (מעל ₪3,540, ללא מס״ב מאושר)</div>
+      <div class="bo-card-title">חשבונות לחיוב חסומים (מעל ₪3,540, ללא מס״ב מאושר)</div>
       <div class="bo-intro">
-        ייצוג ה"השהיה" — Statement שגובר על סף הכרטיס אך אין לו הרשאת מס״ב תקפה נשאר כאן ולא נגבה כלל,
+        ייצוג ה"השהיה" — חשבון לחיוב שגובר על סף הכרטיס אך אין לו הרשאת מס״ב תקפה נשאר כאן ולא נגבה כלל,
         עד שהאדמין יגדיר פרטי בנק ויאשר במפורש.
       </div>
 
       @if (masavLoading) {
         <div class="plat-loading">טוען...</div>
       } @else if (blockedStatements.length === 0) {
-        <div class="ops-empty-small">אין Statements חסומים כרגע.</div>
+        <div class="ops-empty-small">אין חשבונות לחיוב חסומים כרגע.</div>
       } @else {
         <div class="bo-table-wrap">
           <table class="bo-table">
@@ -428,10 +401,10 @@
     </div>
 
     <div class="plat-card">
-      <div class="bo-card-title">Statements פעילים במס״ב (מאושרים, מוכנים לגבייה/ייצוא)</div>
+      <div class="bo-card-title">חשבונות לחיוב פעילים במס״ב (מאושרים, מוכנים לגבייה/ייצוא)</div>
 
       @if (actionableStatements.length === 0) {
-        <div class="ops-empty-small">אין Statements פעילים במס״ב כרגע.</div>
+        <div class="ops-empty-small">אין חשבונות לחיוב פעילים במס״ב כרגע.</div>
       } @else {
         <div class="bo-form-row">
           <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="exporting || selectedExportStatementIds.size === 0" (click)="exportSelected()">
@@ -469,11 +442,96 @@
 
     <div class="plat-card">
       <div class="bo-card-title">ביטול הרשאת מס״ב קיימת</div>
-      <div class="bo-intro">לביטול הרשאה לעמותה שכבר אושרה — הזן את מזהה העמותה (ניתן להעתיק מרשימות הסטייטמנטים).</div>
+      <div class="bo-intro">לביטול הרשאה לעמותה שכבר אושרה — הזן את מזהה העמותה (ניתן להעתיק מרשימות חשבונות לחיוב).</div>
       <div class="bo-form-row">
         <label class="ba-field"><span>מזהה עמותה</span><input type="text" #revokeEntityInput placeholder="entity id" /></label>
         <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="revokeEntity(revokeEntityInput.value)">ביטול הרשאה</button>
         <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="authorizeEntity(revokeEntityInput.value)">אישור מפורש</button>
+      </div>
+    </div>
+  }
+
+  <!-- Statement review/approval drawer -- shared by the current-period
+       financial table ("בדוק ואשר") and the חשבונות לחיוב tab, so it renders
+       regardless of which tab is active. -->
+  @if (selectedStatement || statementDetailLoading) {
+    <div class="bo-drawer-backdrop" (click)="closeStatement()">
+      <div class="bo-drawer" (click)="$event.stopPropagation()">
+        @if (statementDetailLoading) {
+          <div class="plat-loading">טוען...</div>
+        } @else if (selectedStatement) {
+          <div class="bo-drawer-header">
+            <h2>{{ selectedStatement.entity_name }}</h2>
+            <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeStatement()">סגור</button>
+          </div>
+
+          <div class="bo-detail-grid">
+            <div><span>סטטוס</span><b>{{ statementStatusLabel(selectedStatement.status) }}</b></div>
+            <div><span>גיוס ברוטו</span><b>₪{{ selectedStatement.gross_raised }}</b></div>
+            <div><span>עמלה</span><b>₪{{ selectedStatement.fee_amount }}</b></div>
+            <div><span>מע״מ</span><b>₪{{ selectedStatement.vat_amount }}</b></div>
+            <div><span>לחיוב</span><b>₪{{ selectedStatement.total_due }}</b></div>
+            <div><span>מסלול מחושב</span><b>{{ routedMethodLabel(selectedStatement.routed_method) }}</b></div>
+            <div><span>מס׳ תרומות בסיס</span><b>{{ selectedStatement.componentCount }}</b></div>
+            <div><span>אמצעי מוצהר בחשבון</span><b>{{ selectedStatement.account_declared_method === 'masav' ? 'מס״ב' : 'כרטיס אשראי' }}</b></div>
+          </div>
+
+          @if (statementActionError) {
+            <div class="ops-action-error">{{ statementActionError }}</div>
+          }
+
+          <div class="bo-drawer-actions">
+            @if (selectedStatement.status === 'draft') {
+              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="approveStatement()">אישור</button>
+              <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="statementActionBusy" (click)="abandonStatement()">ביטול טיוטה</button>
+            }
+            @if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
+              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
+                הפעלת גבייה (למסלול כרטיס בלבד — מס״ב מנוהל בלשונית מס״ב)
+              </button>
+            }
+          </div>
+
+          <h3 class="bo-subtitle">ניסיונות גבייה</h3>
+          @if (selectedStatement.attempts.length === 0) {
+            <div class="ops-empty-small">אין עדיין ניסיונות גבייה.</div>
+          } @else {
+            <table class="bo-table">
+              <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th></tr></thead>
+              <tbody>
+                @for (attempt of selectedStatement.attempts; track attempt.id) {
+                  <tr>
+                    <td>{{ attempt.attempt_number }}</td>
+                    <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
+                    <td>{{ attemptStatusLabel(attempt.status) }}</td>
+                    <td>{{ attempt.provider }}</td>
+                    <td>{{ attempt.provider_reference || '—' }}</td>
+                    <td>{{ attempt.failure_reason || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          <h3 class="bo-subtitle">תשלומים</h3>
+          @if (selectedStatement.payments.length === 0) {
+            <div class="ops-empty-small">אין עדיין תשלומים.</div>
+          } @else {
+            <table class="bo-table">
+              <thead><tr><th>סכום</th><th>ספק</th><th>אסמכתא</th><th>התקבל</th></tr></thead>
+              <tbody>
+                @for (payment of selectedStatement.payments; track payment.id) {
+                  <tr>
+                    <td>₪{{ payment.amount }}</td>
+                    <td>{{ payment.provider }}</td>
+                    <td>{{ payment.provider_reference }}</td>
+                    <td>{{ fmtDateTime(payment.received_at) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
       </div>
     </div>
   }
