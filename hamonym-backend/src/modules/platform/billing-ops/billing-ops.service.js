@@ -95,6 +95,7 @@ exports.listStatements = async ({ periodId, runId, status }) => {
     `SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
             s.gross_raised, s.fee_amount, s.vat_amount, s.total_due, s.status, s.created_at,
             ba.entity_id, e.display_name AS entity_name,
+            (SELECT count(*)::int FROM statement_components sc WHERE sc.statement_id = s.id) AS component_count,
             CASE
               WHEN s.total_due <= $4 THEN 'card'
               WHEN emd.entity_id IS NOT NULL AND emd.authorized
