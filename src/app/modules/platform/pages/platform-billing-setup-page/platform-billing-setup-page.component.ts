@@ -42,8 +42,13 @@ export class PlatformBillingSetupPageComponent implements OnInit {
 
   feeRatePercent = SUGGESTED_FEE_RATE * 100;
   vatRatePercent = SUGGESTED_VAT_RATE * 100;
-  collectionMethod: 'card' | 'masav' = 'card';
-  notes = '';
+
+  // Required, unchecked-by-default confirmation gate (Billing-provisioning
+  // readiness correction, 2026-09-02) -- clicking the primary action must
+  // never itself count as confirming the commercial terms. See the incident
+  // this closes: two real billing_accounts rows created off pre-filled
+  // suggested values with zero explicit confirmation step.
+  confirmed = false;
 
   submitting = false;
   submitError: string | null = null;
@@ -74,7 +79,6 @@ export class PlatformBillingSetupPageComponent implements OnInit {
     this.provisioningService.getByEntityId(this.entityId).subscribe({
       next: (res) => {
         this.billingAccount = res.account;
-        if (this.billingAccount) this.collectionMethod = this.billingAccount.preferred_collection_method;
         this.loadMasav();
         if (this.displayName) {
           this.loading = false;
@@ -131,8 +135,20 @@ export class PlatformBillingSetupPageComponent implements OnInit {
     return Number(account.vat_rate) * 100;
   }
 
+  // CARD needs no admin-side setup at all -- the donor/entity enters card
+  // details directly on their own payment screen, so it is always ready
+  // from the platform operator's point of view. Card token status itself is
+  // deliberately not shown on this screen (see Part 2's copy rules).
+  readonly cardReady = { icon: '✓', label: 'זמין' };
+
+  get masavReady(): { icon: string; label: string } {
+    if (!this.masavConfig) return { icon: '⚠', label: 'טרם הוגדר' };
+    if (!this.masavConfig.authorized) return { icon: '⚠', label: 'ממתין לאישור' };
+    return { icon: '✓', label: 'מאושר' };
+  }
+
   submit(): void {
-    if (this.submitting || this.billingAccount) return;
+    if (this.submitting || this.billingAccount || !this.confirmed) return;
     this.submitting = true;
     this.submitError = null;
     this.provisioningService
@@ -140,8 +156,10 @@ export class PlatformBillingSetupPageComponent implements OnInit {
         entityId: this.entityId,
         feeRate: this.feeRatePercent / 100,
         vatRate: this.vatRatePercent / 100,
-        preferredCollectionMethod: this.collectionMethod,
-        notes: this.notes || undefined,
+        // Not exposed as an operator choice -- v1 routing is automatic per
+        // Statement total_due (routing.js), preferred_collection_method is
+        // never read by it. Sending the DB's own default value.
+        preferredCollectionMethod: 'card',
       })
       .subscribe({
         next: (res) => {

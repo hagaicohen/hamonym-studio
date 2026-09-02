@@ -137,12 +137,18 @@ describe('PlatformBillingSetupPageComponent - entity resolution', () => {
     const fixture = TestBed.createComponent(PlatformBillingSetupPageComponent);
     fixture.detectChanges();
 
+    // Explicit operator confirmation is the actual gate -- submit() is a
+    // no-op without it, mirroring the disabled primary button in the
+    // template. See the Billing-provisioning readiness correction
+    // (2026-09-02) this behavior exists to close.
+    fixture.componentInstance.confirmed = true;
     fixture.componentInstance.submit();
     fixture.detectChanges();
 
     expect(provisioningStub.create).toHaveBeenCalledTimes(1);
     const payload = provisioningStub.create.calls.mostRecent().args[0];
     expect(payload.entityId).toBe('entity-gedolim-mehachaim');
+    expect(payload.preferredCollectionMethod).toBe('card');
 
     expect(fixture.componentInstance.justCreated).toBe(true);
     expect(fixture.componentInstance.isBillable).toBe(true);
@@ -153,5 +159,41 @@ describe('PlatformBillingSetupPageComponent - entity resolution', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/platform/billing-ops'], {
       queryParams: { justSetupEntity: 'entity-gedolim-mehachaim', justSetupName: 'גדולים מהחיים' },
     });
+  });
+
+  it('does not create a billing account when the operator has not confirmed the commercial terms', async () => {
+    const provisioningStub = {
+      getByEntityId: jasmine.createSpy('getByEntityId').and.returnValue(of({ account: null })),
+      getUnprovisioned: jasmine.createSpy('getUnprovisioned'),
+      create: jasmine.createSpy('create'),
+    };
+    const opsStub = { getMasavConfig: () => of({ config: null }) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingSetupPageComponent],
+      providers: [
+        provideRouter([]),
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingOpsService, useValue: opsStub },
+        {
+          provide: ActivatedRoute,
+          useValue: activatedRouteFor('entity-gedolim-mehachaim', { displayName: 'גדולים מהחיים' }),
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PlatformBillingSetupPageComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.confirmed).toBe(false);
+
+    const button = fixture.debugElement.query(By.css('.ops-btn-primary'));
+    expect(button.nativeElement.disabled).toBe(true);
+
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+
+    expect(provisioningStub.create).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.justCreated).toBe(false);
   });
 });
