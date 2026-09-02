@@ -106,6 +106,20 @@ export interface Payment {
   received_at: string;
 }
 
+export interface BulkApproveResultItem {
+  id: string;
+  success: boolean;
+  result?: any;
+  error?: { code: string; message: string; details?: any };
+}
+
+export interface BulkApproveResult {
+  total: number;
+  approvedCount: number;
+  failedCount: number;
+  results: BulkApproveResultItem[];
+}
+
 export interface StatementDetail extends StatementListItem {
   attempts: CollectionAttempt[];
   payments: Payment[];
@@ -204,6 +218,18 @@ export class BillingOpsService {
 
   approveStatement(id: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/approve`, {}, { headers: authHeaders() });
+  }
+
+  // Orchestration only, mirroring approveStatement() per id server-side --
+  // see billing-ops.service.js#bulkApproveStatements. Never a bulk SQL
+  // status update; the individual drawer's approveStatement() above
+  // remains the path for exceptional/manual single-Statement inspection.
+  bulkApproveStatements(statementIds: string[]): Observable<{ result: BulkApproveResult }> {
+    return this.http.post<{ result: BulkApproveResult }>(
+      `${this.base}/statements/bulk-approve`,
+      { statementIds },
+      { headers: authHeaders() },
+    );
   }
 
   abandonStatement(id: string): Observable<{ result: any }> {

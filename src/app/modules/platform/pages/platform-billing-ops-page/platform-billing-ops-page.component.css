@@ -468,6 +468,34 @@
 .bo-badge-route-masav { background: #ffedd5; color: #9a3412; }
 .bo-badge-route-blocked { background: #fee2e2; color: #991b1b; }
 
+.bo-checkbox-col { width: 32px; text-align: center !important; }
+.bo-checkbox-col input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+.bo-bulk-approval-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bo-bulk-approval-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.bo-bulk-approval-result {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bo-bulk-approval-success { color: #166534; }
+.bo-bulk-approval-warning { color: #9a3412; }
+
 .bo-drawer-backdrop {
   position: fixed;
   inset: 0;

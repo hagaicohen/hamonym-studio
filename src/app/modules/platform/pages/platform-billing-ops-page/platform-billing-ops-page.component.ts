@@ -12,12 +12,13 @@ import {
   ActionableMasavStatement,
   BlockedBillingEntity,
   BillingActivityDiscovered,
+  BulkApproveResult,
 } from '../../services/billing-ops.service';
 
 type Tab = 'periods' | 'statements' | 'masav';
 
 const STATEMENT_STATUS_LABELS: Record<string, string> = {
-  draft: 'טיוטה',
+  draft: 'ממתין לאישור',
   approved: 'מאושר',
   abandoned: 'בוטל (טיוטה)',
   open: 'בגבייה',
@@ -103,6 +104,15 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   statementDetailLoading = false;
   statementActionBusy = false;
   statementActionError: string | null = null;
+
+  // ---- bulk approval (current-period table) ---------------------------
+  // Normal operator workflow: Calculation -> review table -> bulk approve.
+  // The drawer above (openStatement/approveStatement) stays the path for
+  // exceptional/manual single-Statement inspection -- untouched by this.
+  selectedApprovalStatementIds = new Set<string>();
+  bulkApprovalBusy = false;
+  bulkApprovalError: string | null = null;
+  bulkApprovalResult: { approvedText: string | null; failedText: string | null } | null = null;
 
   // ---- masav ----------------------------------------------------------
   blockedStatements: BlockedMasavStatement[] = [];
@@ -276,30 +286,71 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     );
   }
 
-  // Primary-summary numbers prefer the calculation's own activityDiscovered
-  // figures (the authoritative source); for legacy runs predating that field,
-  // fall back to aggregating the resulting Statements themselves.
+  // Primary-summary numbers must represent the period's total historical
+  // activity, stable across draft -> approved -> collection -> paid --
+  // NOT "activity still eligible for a future Calculation run".
+  //
+  // The old implementation read the latest run's activityDiscovered
+  // (calculation.service.js Stage A) directly. That figure is computed with
+  // `effective_statement_id IS NULL` at calculation time and then FROZEN
+  // into billing_runs.result_summary -- so it does not itself change after
+  // Approval. But it goes stale the moment a *later* Calculation run
+  // executes on the same period: by then, every donation Approval already
+  // claimed is (correctly) no longer "eligible", so a fresh Stage A query
+  // finds 0 remaining activity for those entities -- and since the KPI blindly
+  // took runs[0] (ORDER BY created_at DESC), a recalculation after approval
+  // made the tiles read 0/0/0 even though the period's real Statements (and
+  // real money, ₪7.61 total_due) were completely unaffected. Confirmed
+  // against the real August period's billing_runs: run c391453b
+  // (2026-09-02T05:51) recorded activityDiscovered 13/₪215/2 and created the
+  // two real Statements; a later run 524da916 (07:32) found 0 remaining
+  // activity for the same two entities (now correctly claimed) and became
+  // runs[0], zeroing the tiles.
+  //
+  // Fix: combine two non-overlapping sources so nothing is ever double
+  // counted --
+  //   (a) authoritative, frozen totals from every Statement that already
+  //       exists for this period, any lifecycle status (periodStatementTotals
+  //       / periodStatements, backed by statements.gross_raised and
+  //       statement_components -- immutable once Calculation writes them,
+  //       untouched by Approval); plus
+  //   (b) real activity the latest Calculation run discovered but that has
+  //       NOT been captured by any Statement in this period at all -- i.e.
+  //       latestRunSummary(period).blockedEntities, entities Stage C
+  //       explicitly skipped creating a Statement for (no/suspended
+  //       billing_account). A donation can only ever be in bucket (a) (it
+  //       requires a real statement_components row) or bucket (b) (Stage C
+  //       only lists entities that got no Statement) -- never both -- so
+  //       filtering blockedEntities down to entity ids NOT already present
+  //       among this period's Statements is enough to guarantee no overlap.
+  private periodCapturedActivity(period: BillingPeriod): { donations: number; gross: number; entities: number } {
+    const captured = this.periodStatementTotals(period.id);
+    const capturedEntityIds = new Set(this.periodStatements(period.id).map((s) => s.entity_id));
+
+    const uncaptured = this.periodBlockedEntities(period).filter((b) => !capturedEntityIds.has(b.entityId));
+    const uncapturedDonations = uncaptured.reduce((sum, b) => sum + b.donationCount, 0);
+    const uncapturedGross = uncaptured.reduce((sum, b) => sum + Number(b.grossAmount), 0);
+
+    return {
+      donations: captured.donations + uncapturedDonations,
+      gross: captured.gross + uncapturedGross,
+      entities: capturedEntityIds.size + uncaptured.length,
+    };
+  }
+
   periodDonationsCount(period: BillingPeriod): number {
-    const activity = this.periodActivityDiscovered(period);
-    return activity ? activity.totalDonations : this.periodStatementTotals(period.id).donations;
+    return this.periodCapturedActivity(period).donations;
   }
 
   periodGrossAmount(period: BillingPeriod): number {
-    const activity = this.periodActivityDiscovered(period);
-    return activity ? activity.totalGross : this.periodStatementTotals(period.id).gross;
+    return this.periodCapturedActivity(period).gross;
   }
 
   periodEntitiesCount(period: BillingPeriod): number {
-    const activity = this.periodActivityDiscovered(period);
-    return activity ? activity.entitiesWithActivity : this.periodStatementCount(period.id);
+    return this.periodCapturedActivity(period).entities;
   }
 
-  // Friendlier operator-facing status just for the current-period financial
-  // table -- every row there is either awaiting review or already handled;
-  // the raw internal status vocabulary (used on the Statements tab) doesn't
-  // need to leak into this simplified view.
   periodStatementStatusLabel(status: string): string {
-    if (status === 'draft') return 'ממתין לאישור';
     return this.statementStatusLabel(status);
   }
 
@@ -454,6 +505,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       next: (res) => {
         this.statements = res.statements;
         this.statementsLoading = false;
+        this.pruneApprovalSelection();
       },
       error: () => {
         this.statementsError = 'שגיאה בטעינת חשבונות לחיוב';
@@ -487,6 +539,78 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     const id = this.selectedStatement.id;
     this.service.getStatement(id).subscribe({ next: (res) => { this.selectedStatement = res.statement; } });
     this.loadStatements();
+  }
+
+  // Only draft Statements are eligible for bulk approval -- anything else
+  // (approved/open/paid/abandoned/...) is either already handled or belongs
+  // to the individual drawer for exceptional inspection.
+  eligibleForBulkApproval(periodId: string): StatementListItem[] {
+    return this.periodStatements(periodId).filter((s) => s.status === 'draft');
+  }
+
+  isSelectedForApproval(statementId: string): boolean {
+    return this.selectedApprovalStatementIds.has(statementId);
+  }
+
+  toggleApprovalSelection(statementId: string): void {
+    if (this.selectedApprovalStatementIds.has(statementId)) this.selectedApprovalStatementIds.delete(statementId);
+    else this.selectedApprovalStatementIds.add(statementId);
+    this.bulkApprovalResult = null;
+  }
+
+  isAllEligibleSelected(periodId: string): boolean {
+    const eligible = this.eligibleForBulkApproval(periodId);
+    return eligible.length > 0 && eligible.every((s) => this.selectedApprovalStatementIds.has(s.id));
+  }
+
+  toggleSelectAllEligible(periodId: string): void {
+    const eligible = this.eligibleForBulkApproval(periodId);
+    if (this.isAllEligibleSelected(periodId)) {
+      eligible.forEach((s) => this.selectedApprovalStatementIds.delete(s.id));
+    } else {
+      eligible.forEach((s) => this.selectedApprovalStatementIds.add(s.id));
+    }
+    this.bulkApprovalResult = null;
+  }
+
+  // Drops any selected id that no longer refers to an eligible draft
+  // Statement after a reload (approved elsewhere, abandoned, etc.) -- keeps
+  // the button's count and the actual request in sync with what's on screen.
+  private pruneApprovalSelection(): void {
+    const draftIds = new Set(this.statements.filter((s) => s.status === 'draft').map((s) => s.id));
+    for (const id of [...this.selectedApprovalStatementIds]) {
+      if (!draftIds.has(id)) this.selectedApprovalStatementIds.delete(id);
+    }
+  }
+
+  bulkApproveSelected(): void {
+    const statementIds = [...this.selectedApprovalStatementIds];
+    if (statementIds.length === 0 || this.bulkApprovalBusy) return;
+    this.bulkApprovalBusy = true;
+    this.bulkApprovalError = null;
+    this.bulkApprovalResult = null;
+    this.service.bulkApproveStatements(statementIds).subscribe({
+      next: (res) => {
+        this.bulkApprovalBusy = false;
+        this.bulkApprovalResult = this.summarizeBulkApproval(res.result);
+        this.selectedApprovalStatementIds.clear();
+        this.loadStatements();
+      },
+      error: (err) => {
+        this.bulkApprovalBusy = false;
+        this.bulkApprovalError = err?.error?.error || 'אישור מרוכז נכשל';
+      },
+    });
+  }
+
+  private summarizeBulkApproval(result: BulkApproveResult): { approvedText: string | null; failedText: string | null } {
+    const approvedText = result.approvedCount === 0 ? null
+      : result.approvedCount === 1 ? '1 חשבון אושר'
+      : `${result.approvedCount} חשבונות אושרו`;
+    const failedText = result.failedCount === 0 ? null
+      : result.failedCount === 1 ? '1 חשבון דורש טיפול'
+      : `${result.failedCount} חשבונות דורשים טיפול`;
+    return { approvedText, failedText };
   }
 
   approveStatement(): void {
