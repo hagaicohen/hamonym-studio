@@ -30,6 +30,7 @@ const STATUS_BY_CODE = {
   ATTEMPT_NOT_ACTIVE: 409,
   NOT_AUTHORIZED: 409,
   NO_OPEN_ATTEMPT: 409,
+  NOT_COLLECTION_READY: 409,
 };
 
 function statusFor(err) {
