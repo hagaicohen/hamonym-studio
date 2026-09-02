@@ -20,6 +20,7 @@ router.get('/runs', ctrl.listRuns);
 router.get('/statements', ctrl.listStatements);
 router.get('/statements/:id', ctrl.getStatement);
 router.post('/statements/:id/approve', ctrl.approveStatement);
+router.post('/statements/bulk-approve', ctrl.bulkApproveStatements);
 router.post('/statements/:id/abandon', ctrl.abandonStatement);
 router.post('/statements/:id/collect', ctrl.triggerCollection);
 

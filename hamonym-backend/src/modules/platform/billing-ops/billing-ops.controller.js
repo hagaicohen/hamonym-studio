@@ -85,6 +85,17 @@ exports.approveStatement = async (req, res) => {
   }
 };
 
+exports.bulkApproveStatements = async (req, res) => {
+  try {
+    const result = await service.bulkApproveStatements({
+      statementIds: req.body.statementIds, superAdminUserId: req.user.id, ip: req.ip,
+    });
+    res.json({ result });
+  } catch (err) {
+    handle(res, 'bulkApproveStatements', err);
+  }
+};
+
 exports.abandonStatement = async (req, res) => {
   try {
     const result = await service.abandonStatement({
