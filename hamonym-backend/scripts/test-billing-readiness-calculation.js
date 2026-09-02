@@ -494,6 +494,45 @@ async function main() {
     assert.strictEqual(fakeEmail.calls.length, 0);
   });
 
+  // ---- Notification dedup after provisioning (Billing-provisioning
+  // readiness correction, 2026-09-02): once an entity is provisioned with
+  // an active billing_account, a later Production Calculation run must not
+  // re-send the "billing setup required" notification, and must not even
+  // attempt a duplicate billing_setup_notifications insert for it. Proves
+  // this is guaranteed at the *discovery* stage (the entity simply never
+  // reaches uncoveredEntities/blockedEntities again, so
+  // notifyBillingSetupRequired is never called a second time) rather than
+  // relying only on the notification service's own ON CONFLICT DO NOTHING.
+  await check('notification dedup: an entity that becomes provisioned is never re-notified and never re-attempts an insert', async () => {
+    const { state, calculation, fakeEmail } = newFixture();
+    addEntity(state, 'entity-a', 'עמותה א');
+    addDonation(state, 'don-1', 'entity-a', 100, '2030-01-05T00:00:00.000Z');
+    addOwner(state, 1, 'entity-a', 'owner-a@example.invalid');
+
+    // Run 1: no billing_account yet -- blocked, notified exactly once.
+    const run1 = await calculation.runProductionCalculation(PERIOD_ID, PERIOD_START);
+    assert.strictEqual(run1.blockedEntities.length, 1);
+    assert.strictEqual(run1.blockedEntities[0].notification.sent, true);
+    assert.strictEqual(fakeEmail.calls.length, 1);
+    assert.strictEqual(state.setupNotifications.size, 1);
+
+    // Operator now provisions the account through platform-billing-setup-page.
+    addAccount(state, 'acct-a', 'entity-a', { feeRate: 0.03, vatRate: 0.18, enforcementStatus: 'active' });
+
+    // Same donation is still unconsumed (effective_statement_id null), so
+    // it is still discovered by Stage A -- but the entity is now covered.
+    const run2 = await calculation.runProductionCalculation(PERIOD_ID, PERIOD_START);
+    assert.strictEqual(run2.blockedEntities.length, 0, 'entity with an active billing_account must never appear in blockedEntities again');
+    assert.strictEqual(run2.accountsEvaluated, 1);
+    assert.strictEqual(run2.statementsCreated, 1);
+
+    // No second email, and no second attempt at inserting a
+    // billing_setup_notifications row -- notifyBillingSetupRequired was
+    // simply never called for this entity on run2.
+    assert.strictEqual(fakeEmail.calls.length, 1, 'must still be exactly the one email from run1');
+    assert.strictEqual(state.setupNotifications.size, 1, 'must still be exactly the one notification row from run1 -- no duplicate insert attempted');
+  });
+
   await check('fully configured entity: no blocked-setup notification', async () => {
     const { state, calculation, fakeEmail } = newFixture();
     addEntity(state, 'entity-c', 'עמותה ג');
