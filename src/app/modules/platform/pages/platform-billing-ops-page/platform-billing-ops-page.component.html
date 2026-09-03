@@ -422,30 +422,9 @@
                   <td>₪{{ item.total_due }}</td>
                   <td>{{ blockedReasonLabel(item.reason) }}</td>
                   <td>
-                    <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openConfigureForm(item.entity_id)">הגדרת מס״ב</button>
+                    <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openConfigureForm(item.entity_id, item.entity_name)">הגדרת מס״ב</button>
                   </td>
                 </tr>
-                @if (configuringEntityId === item.entity_id) {
-                  <tr>
-                    <td colspan="4">
-                      <div class="ba-form">
-                        <div class="ba-form-fields">
-                          <label class="ba-field"><span>קוד בנק</span><input type="text" [(ngModel)]="masavBankCode" /></label>
-                          <label class="ba-field"><span>קוד סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
-                          <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
-                          <label class="ba-field"><span>שם בעל החשבון (לא חובה)</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
-                        </div>
-                        @if (masavFormError) { <div class="ops-action-error">{{ masavFormError }}</div> }
-                        <div class="ba-form-actions">
-                          <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavFormBusy" (click)="cancelConfigureForm()">ביטול</button>
-                          <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
-                            {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי בנק' }}
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                }
               }
             </tbody>
           </table>
@@ -500,6 +479,115 @@
         <label class="ba-field"><span>מזהה עמותה</span><input type="text" #revokeEntityInput placeholder="entity id" /></label>
         <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="revokeEntity(revokeEntityInput.value)">ביטול הרשאה</button>
         <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="authorizeEntity(revokeEntityInput.value)">אישור מפורש</button>
+      </div>
+    </div>
+  }
+
+  <!-- MASAV setup drawer -- guided onboarding for configuring an
+       association's MASAV collection instrument: what to do at the bank,
+       what to tell them, the account fields, the signed-document upload,
+       and save -- in that order. The bank-instructions help box is
+       collapsed by default (masavShowHelp) so an operator who already has
+       the signed authorization can go straight to the fields/upload. -->
+  @if (configuringEntityId) {
+    <div class="bo-drawer-backdrop" (click)="cancelConfigureForm()">
+      <div class="bo-drawer" (click)="$event.stopPropagation()">
+        <div class="bo-drawer-header">
+          <h2>הגדרת הרשאה לחיוב באמצעות מס״ב</h2>
+          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelConfigureForm()">סגור</button>
+        </div>
+
+        <div class="bo-masav-setup-entity">{{ configuringEntityName }}</div>
+
+        <p class="bo-masav-setup-intro">
+          כדי שנוכל לגבות את דמי השירות באמצעות מס"ב, יש להקים בבנק הרשאה לחיוב חשבון לטובת המונים ולהעלות כאן את האישור החתום מהבנק.
+        </p>
+
+        <button type="button" class="bo-help-toggle" (click)="toggleMasavHelp()">
+          {{ masavShowHelp ? 'הסתרת ההסבר ▲' : 'לא יודעים איך להפיק אישור מס״ב? ▼' }}
+        </button>
+
+        @if (masavShowHelp) {
+          <div class="bo-help-box">
+            <div class="bo-help-box-title">איך מפיקים את האישור?</div>
+            <p class="bo-help-box-text">פנו לבנק ובקשו להקים הרשאה לחיוב חשבון באמצעות מס"ב עבור המונים.</p>
+
+            <ul class="bo-help-box-list">
+              <li>קוד מוסד: <b>{{ masavInstitutionCode }}</b></li>
+              <li>ללא הגבלת סכום</li>
+              <li>ללא הגבלת תוקף / משך זמן</li>
+            </ul>
+
+            <div class="bo-help-note">
+              <b>* למה ללא הגבלת סכום?</b>
+              <p>דמי השירות של המונים מחושבים כאחוז מהפעילות בעמותה, ולכן סכום החיוב עשוי להשתנות מחודש לחודש. ההרשאה אינה קובעת את סכום החיוב בפועל — המונים תחייב בכל תקופה רק בסכום דמי השירות שנצבר בפועל בהתאם לתנאי ההתקשרות.</p>
+            </div>
+            <div class="bo-help-note">
+              <b>* למה ללא הגבלת תוקף?</b>
+              <p>ההרשאה מוגדרת ללא הגבלת תוקף כדי שלא יהיה צורך לחדש אותה בכל תקופה. היא משמשת כל עוד ההתקשרות ואמצעי הגבייה בתוקף.</p>
+            </div>
+
+            <p class="bo-help-box-footer">לאחר שהבנק מאשר את ההרשאה, סרקו או צלמו את האישור החתום והעלו אותו כאן.</p>
+          </div>
+        }
+
+        @if (masavConfigLoading) {
+          <div class="plat-loading">טוען...</div>
+        } @else {
+          <div class="bo-subtitle">פרטי החשבון</div>
+          <div class="ba-form">
+            <div class="ba-form-fields">
+              <label class="ba-field"><span>שם בעל החשבון / שם הלקוח</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
+              <label class="ba-field"><span>בנק</span><input type="text" [(ngModel)]="masavBankCode" /></label>
+              <label class="ba-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
+              <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
+            </div>
+            @if (masavFormError) { <div class="ops-action-error">{{ masavFormError }}</div> }
+            <div class="ba-form-actions">
+              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
+                {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי חשבון' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="bo-subtitle">אישור מס״ב חתום מהבנק</div>
+          <div class="bo-upload-field">
+            <div class="bo-upload-helper">PDF או צילום/סריקה ברורים של האישור החתום.</div>
+
+            @if (masavConfig?.has_authorization_document) {
+              <div class="bo-upload-current">
+                <span>הועלה: {{ masavConfig?.authorization_document_name }} ({{ fmtDateTime(masavConfig?.authorization_document_uploaded_at || null) }})</span>
+                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavDocDownloading" (click)="downloadMasavDoc()">
+                  {{ masavDocDownloading ? 'מוריד...' : 'הצגת האישור שהועלה' }}
+                </button>
+              </div>
+            }
+
+            @if (!masavConfig) {
+              <div class="bo-upload-note">יש לשמור פרטי חשבון לפני העלאת האישור.</div>
+            } @else {
+              <input type="file" accept=".pdf,image/*" (change)="onMasavDocSelected($event)" />
+              @if (masavDocUploadError) { <div class="ops-action-error">{{ masavDocUploadError }}</div> }
+              <div class="ba-form-actions">
+                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="!masavDocFile || masavDocUploading" (click)="uploadMasavDoc()">
+                  {{ masavDocUploading ? 'מעלה...' : 'העלאת האישור' }}
+                </button>
+              </div>
+            }
+          </div>
+
+          <div class="bo-subtitle">סטטוס הרשאה</div>
+          <div class="bo-collection-state" [class.bo-collection-state-ready]="masavConfig?.authorized" [class.bo-collection-state-blocked]="!masavConfig?.authorized">
+            <span class="bo-collection-state-label">
+              {{ masavConfig?.authorized ? 'ההרשאה אושרה' : 'טרם אושרה הרשאה' }}
+            </span>
+            <span class="bo-collection-state-sublabel">
+              {{ masavConfig?.authorized
+                ? 'ההרשאה אומתה ואושרה במפורש על ידי מנהל הפלטפורמה.'
+                : 'העלאת האישור אינה מאשרת את ההרשאה באופן אוטומטי — מנהל הפלטפורמה יבדוק את האישור שהועלה ויאשר אותו בנפרד (בכרטיס "ביטול הרשאת מס״ב קיימת" למטה בעמוד).' }}
+            </span>
+          </div>
+        }
       </div>
     </div>
   }

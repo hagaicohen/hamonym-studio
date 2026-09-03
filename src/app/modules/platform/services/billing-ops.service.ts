@@ -152,6 +152,12 @@ export interface MasavConfig {
   authorized: boolean;
   authorized_by: string | null;
   authorized_at: string | null;
+  // Signed bank-authorization document ("אישור הרשאה לחיוב באמצעות מס״ב") --
+  // metadata only, never the bytes. Uploading this never sets `authorized`;
+  // see masav-config.service.js#uploadAuthorizationDocument.
+  authorization_document_name: string | null;
+  authorization_document_uploaded_at: string | null;
+  has_authorization_document: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -274,6 +280,25 @@ export class BillingOpsService {
 
   revokeMasav(entityId: string, notes?: string): Observable<{ config: MasavConfig }> {
     return this.http.post<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/revoke`, { notes }, { headers: authHeaders() });
+  }
+
+  // Signed bank-authorization document upload -- private storage (bytea on
+  // entity_masav_details, no public URL), same pattern as entities.routes.js's
+  // association-document/tax-document uploads. Content-Type is left for the
+  // browser to set (multipart boundary) -- only the auth header is added.
+  uploadMasavAuthorizationDocument(entityId: string, file: File): Observable<{ config: MasavConfig }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.put<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/authorization-document`, formData, {
+      headers: authHeaders(),
+    });
+  }
+
+  downloadMasavAuthorizationDocument(entityId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/masav/${entityId}/authorization-document`, {
+      headers: authHeaders(),
+      responseType: 'blob',
+    });
   }
 
   listBlockedMasavStatements(): Observable<{ statements: BlockedMasavStatement[] }> {
