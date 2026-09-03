@@ -56,6 +56,37 @@ exports.revoke = async (req, res) => {
   }
 };
 
+// Signed bank-authorization document ("אישור הרשאה לחיוב באמצעות מס״ב") --
+// evidence only, never itself sets `authorized` (see masav-config.service.
+// js#uploadAuthorizationDocument header comment).
+exports.uploadAuthorizationDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded', code: 'NO_FILE' });
+    }
+    const config = await masavConfig.uploadAuthorizationDocument({
+      entityId: req.params.entityId, file: req.file, superAdminUserId: req.user.id, ip: req.ip,
+    });
+    res.json({ config });
+  } catch (err) {
+    handle(res, 'uploadAuthorizationDocument', err);
+  }
+};
+
+exports.downloadAuthorizationDocument = async (req, res) => {
+  try {
+    const file = await masavConfig.getAuthorizationDocumentFile(req.params.entityId);
+    if (!file) {
+      return res.status(404).json({ error: 'No authorization document uploaded for this entity', code: 'NOT_FOUND' });
+    }
+    res.setHeader('Content-Type', file.mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name || 'masav-authorization')}"`);
+    res.send(file.data);
+  } catch (err) {
+    handle(res, 'downloadAuthorizationDocument', err);
+  }
+};
+
 exports.listBlocked = async (req, res) => {
   try {
     res.json({ statements: await masavCollection.listBlockedStatements() });
