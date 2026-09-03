@@ -4,10 +4,13 @@
 // and configuring MASAV banking details are all financial/commercial
 // operator actions, held to the same bar as billing account provisioning.
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const ctrl = require('./billing-ops.controller');
 const masavCtrl = require('./masav-ops.controller');
 const requireSuperAdmin = require('../../../middleware/require-super-admin');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(requireSuperAdmin);
 
@@ -35,6 +38,8 @@ router.get('/masav/:entityId', masavCtrl.getConfig);
 router.put('/masav/:entityId', masavCtrl.upsertConfig);
 router.post('/masav/:entityId/authorize', masavCtrl.authorize);
 router.post('/masav/:entityId/revoke', masavCtrl.revoke);
+router.put('/masav/:entityId/authorization-document', upload.single('file'), masavCtrl.uploadAuthorizationDocument);
+router.get('/masav/:entityId/authorization-document', masavCtrl.downloadAuthorizationDocument);
 router.post('/masav/statements/:id/open-attempt', masavCtrl.openAttempt);
 
 module.exports = router;

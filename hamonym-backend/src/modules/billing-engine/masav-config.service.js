@@ -9,8 +9,26 @@
 // never as a side effect of upsertBankDetails().
 const pool = require('../../db/db');
 
+// Columns returned to callers -- deliberately excludes authorization_
+// document_data (bytea, can be multi-MB). Same rationale as entities.
+// service.js's BLOB_COLUMNS/stripBlobs: every ordinary config read (the
+// MASAV tab opening, blocked/actionable statement lists) only needs to know
+// *whether* a document was uploaded and its name, never the bytes -- those
+// are fetched separately by the dedicated download route below.
+const CONFIG_COLUMNS = `
+  id, entity_id, bank_code, branch_code, account_number, account_holder_name,
+  authorized, authorized_by, authorized_at,
+  authorization_document_name, authorization_document_mime,
+  authorization_document_uploaded_at, authorization_document_uploaded_by,
+  (authorization_document_data IS NOT NULL) AS has_authorization_document,
+  created_at, updated_at
+`;
+
 exports.getByEntityId = async (entityId) => {
-  const { rows } = await pool.query(`SELECT * FROM entity_masav_details WHERE entity_id = $1`, [entityId]);
+  const { rows } = await pool.query(
+    `SELECT ${CONFIG_COLUMNS} FROM entity_masav_details WHERE entity_id = $1`,
+    [entityId]
+  );
   return rows[0] || null;
 };
 
@@ -47,7 +65,7 @@ exports.upsertBankDetails = async ({ entityId, bankCode, branchCode, accountNumb
          account_holder_name = EXCLUDED.account_holder_name,
          authorized = false, authorized_by = NULL, authorized_at = NULL,
          updated_at = NOW()
-       RETURNING *`,
+       RETURNING ${CONFIG_COLUMNS}`,
       [entityId, bankCode, branchCode, accountNumber, accountHolderName || null]
     );
 
@@ -73,7 +91,7 @@ exports.authorize = async ({ entityId, superAdminUserId, notes, ip }) => {
     await client.query('BEGIN');
 
     const configRes = await client.query(
-      `SELECT * FROM entity_masav_details WHERE entity_id = $1 FOR UPDATE`,
+      `SELECT bank_code, branch_code, account_number FROM entity_masav_details WHERE entity_id = $1 FOR UPDATE`,
       [entityId]
     );
     const config = configRes.rows[0];
@@ -92,7 +110,7 @@ exports.authorize = async ({ entityId, superAdminUserId, notes, ip }) => {
       `UPDATE entity_masav_details
        SET authorized = true, authorized_by = $2, authorized_at = NOW(), updated_at = NOW()
        WHERE entity_id = $1
-       RETURNING *`,
+       RETURNING ${CONFIG_COLUMNS}`,
       [entityId, superAdminUserId]
     );
 
@@ -128,7 +146,7 @@ exports.revoke = async ({ entityId, superAdminUserId, notes, ip }) => {
       `UPDATE entity_masav_details
        SET authorized = false, authorized_by = NULL, authorized_at = NULL, updated_at = NOW()
        WHERE entity_id = $1
-       RETURNING *`,
+       RETURNING ${CONFIG_COLUMNS}`,
       [entityId]
     );
 
@@ -146,4 +164,84 @@ exports.revoke = async ({ entityId, superAdminUserId, notes, ip }) => {
   } finally {
     client.release();
   }
+};
+
+// multer/busboy decode multipart filenames as latin1 even when the browser
+// sent UTF-8 bytes (e.g. Hebrew filenames) -- same fix as entities.service.
+// js#fixFilenameEncoding, duplicated locally rather than cross-importing
+// between the entities and billing-engine modules for one helper.
+function fixFilenameEncoding(name) {
+  return Buffer.from(name, 'latin1').toString('utf8');
+}
+
+// The signed bank-authorization scan/PDF the association uploads during
+// MASAV setup -- evidence a Super Admin can review before deciding whether
+// to authorize(), never itself an authorization event. Deliberately never
+// touches authorized/authorized_by/authorized_at (see migration 060/063
+// header comments and authorize()/revoke() above, which remain the only
+// writers of that boolean).
+//
+// Requires bank details to already be configured (entity_masav_details row
+// must exist -- created by upsertBankDetails) -- matches the setup screen's
+// own order: bank fields first, then the signed document upload.
+exports.uploadAuthorizationDocument = async ({ entityId, file, superAdminUserId, ip }) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const configRes = await client.query(
+      `SELECT id FROM entity_masav_details WHERE entity_id = $1 FOR UPDATE`,
+      [entityId]
+    );
+    if (!configRes.rows[0]) {
+      const err = new Error('Entity has no MASAV bank details configured yet -- save bank details before uploading the authorization document');
+      err.code = 'MASAV_NOT_CONFIGURED';
+      throw err;
+    }
+
+    const { rows } = await client.query(
+      `UPDATE entity_masav_details
+       SET authorization_document_name = $2,
+           authorization_document_mime = $3,
+           authorization_document_data = $4,
+           authorization_document_uploaded_at = NOW(),
+           authorization_document_uploaded_by = $5,
+           updated_at = NOW()
+       WHERE entity_id = $1
+       RETURNING ${CONFIG_COLUMNS}`,
+      [entityId, fixFilenameEncoding(file.originalname), file.mimetype, file.buffer, superAdminUserId]
+    );
+
+    await client.query(
+      `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
+       VALUES ($1, $2, 'masav_authorization_document_upload', $3, $4)`,
+      [superAdminUserId, entityId, file.originalname, ip || null]
+    );
+
+    await client.query('COMMIT');
+    return rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+// Full bytes, for the authenticated (requireSuperAdmin) download route only
+// -- never for the ordinary config read above (getByEntityId/CONFIG_COLUMNS
+// deliberately excludes authorization_document_data).
+exports.getAuthorizationDocumentFile = async (entityId) => {
+  const { rows } = await pool.query(
+    `SELECT authorization_document_name, authorization_document_mime, authorization_document_data
+     FROM entity_masav_details WHERE entity_id = $1`,
+    [entityId]
+  );
+  const row = rows[0];
+  if (!row || !row.authorization_document_data) return null;
+  return {
+    name: row.authorization_document_name,
+    mime: row.authorization_document_mime,
+    data: row.authorization_document_data,
+  };
 };
