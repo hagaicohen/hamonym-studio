@@ -180,9 +180,35 @@ exports.reconcile = async ({ attemptId }) => {
     if (err.response) {
       // CardCom answered synchronously with a non-2xx (e.g. the live 400 on
       // GetTransactionByExternalUniqTran) -- same sanitized extraction as
-      // charge(), still resolved as ambiguous since a failed lookup proves
-      // nothing about the original charge either way.
+      // charge(), resolved as ambiguous by default since a failed lookup
+      // usually proves nothing about the original charge either way.
       const { status, detail } = extractSanitizedProviderError(err);
+
+      // Narrow, documented exception (2026-09-07, verified live against
+      // Statement 5ae9f0cf-2f4b-4c28-9b03-4eb54c88a329 / attempt
+      // ea308db9-9548-4bfb-bec5-4ef4dd2d99ff): CardCom's ResponseCode 9998
+      // on THIS specific endpoint is its own authoritative "there is not
+      // successful transaction for this ExternalUniqTranId" answer, not
+      // genuine uncertainty. Matched on the sanitized ResponseCode field
+      // alone -- never on HTTP status alone (other 400s mean other things)
+      // and never on Description text (CardCom does not document that as a
+      // stable contract) -- so this stays scoped to exactly this one
+      // documented code. Every other non-2xx reconcile response (missing
+      // ResponseCode, any other code, or a transport error below) is still
+      // 'ambiguous', unchanged. Deliberately a distinct outcome from the
+      // 'not_found' branch below (and from adapter.contract.js's documented
+      // "may just not be indexed yet" caveat for that branch) -- see
+      // migration 064 for why reusing that name would have been wrong here.
+      if (err.response.data && err.response.data.ResponseCode === 9998) {
+        return {
+          outcome: 'not_found_confirmed',
+          providerRawStatus: detail ? `http_${status} (${detail})` : `http_${status}`,
+          failureReason: detail
+            ? `cardcom_lookup_http_${status} (${detail})`
+            : `cardcom_lookup_http_${status}`,
+        };
+      }
+
       return {
         outcome: 'ambiguous',
         failureReason: detail

@@ -32,18 +32,66 @@ function check(name, fn) {
     .catch((err) => { failures++; console.log(`FAIL  ${name}`); console.log('      ', err.stack || err.message); });
 }
 
-function createFakeState({ statement, attempt, payments } = {}) {
+function createFakeState({ statement, attempt, payments, entityBilling } = {}) {
   const state = {
     statements: new Map(statement ? [[statement.id, { ...statement }]] : []),
     collectionAttempts: new Map(attempt ? [[attempt.id, { ...attempt }]] : []),
     payments: new Map((payments || []).map((p) => [p.id, { ...p }])),
+    entityBilling: entityBilling || null,
     auditLogs: [],
   };
+  let newAttemptSeq = 1;
 
   async function query(sqlRaw, params = []) {
     const sql = sqlRaw.replace(/\s+/g, ' ').trim();
 
     if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };
+
+    // collection.service.js#openAttempt's own statement lookup (FOR UPDATE)
+    // -- needed by the "fresh attempt not blocked" proof below, which calls
+    // openAttempt directly after a reconcile resolution.
+    if (sql.includes('FROM statements s') && sql.includes('JOIN billing_accounts ba') && sql.includes('FOR UPDATE OF s')) {
+      const st = state.statements.get(params[0]);
+      return { rows: st ? [{ ...st }] : [] };
+    }
+
+    // openAttempt's ACTIVE_ATTEMPT_STATUSES guard -- the exact predicate
+    // this fix must not leave 'not_found_confirmed' rows blocked by.
+    if (sql.startsWith('SELECT id FROM collection_attempts WHERE statement_id = $1 AND status = ANY')) {
+      const rows = [...state.collectionAttempts.values()].filter(
+        (a) => a.statement_id === params[0] && params[1].includes(a.status)
+      );
+      return { rows: rows.map((a) => ({ id: a.id })) };
+    }
+
+    if (sql.startsWith('SELECT COALESCE(MAX(attempt_number), 0) + 1 AS next')) {
+      const existing = [...state.collectionAttempts.values()].filter((a) => a.statement_id === params[0]);
+      const next = existing.length ? Math.max(...existing.map((a) => a.attempt_number)) + 1 : 1;
+      return { rows: [{ next }] };
+    }
+
+    if (sql.startsWith('INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount) VALUES')) {
+      const id = `attempt-new-${newAttemptSeq++}`;
+      const row = {
+        id, statement_id: params[0], collection_method: params[1], attempt_number: params[2],
+        requested_amount: params[3], status: 'pending', provider: 'cardcom',
+        provider_reference: null, provider_raw_status: null, failure_reason: null, resolved_at: null,
+      };
+      state.collectionAttempts.set(id, row);
+      return { rows: [{ id, attempt_number: row.attempt_number }] };
+    }
+
+    if (sql.startsWith("UPDATE statements SET status = 'open' WHERE id = $1")) {
+      const st = state.statements.get(params[0]);
+      if (st) st.status = 'open';
+      return { rows: [] };
+    }
+
+    // billingRepository.getActiveDefaultByEntityId -- openAttempt's card
+    // payment-instrument lookup.
+    if (sql.includes('FROM entity_billing')) {
+      return { rows: state.entityBilling ? [{ ...state.entityBilling }] : [] };
+    }
 
     // reconcileCollectionAttempt's own initial attempt lookup
     if (sql.startsWith('SELECT id, statement_id, collection_method, status FROM collection_attempts WHERE id = $1')) {
@@ -145,6 +193,8 @@ function freshModules(fakePool, fakeCardAdapter) {
 
   [
     '../src/modules/collection-engine/collection.service',
+    '../src/modules/collection-engine/routing',
+    '../src/modules/billing/billing.repository',
     '../src/modules/platform/billing-ops/billing-ops.service',
     '../src/modules/platform/billing-ops/error-status',
   ].forEach((p) => { delete require.cache[require.resolve(p)]; });
@@ -152,6 +202,7 @@ function freshModules(fakePool, fakeCardAdapter) {
   return {
     billingOpsService: require('../src/modules/platform/billing-ops/billing-ops.service'),
     errorStatus: require('../src/modules/platform/billing-ops/error-status'),
+    collectionService: require('../src/modules/collection-engine/collection.service'),
   };
 }
 
@@ -190,6 +241,66 @@ async function run() {
     assert.strictEqual(state.payments.size, 0);
     assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'technical_failure', 'the underlying row itself must be untouched');
     assert.strictEqual(state.auditLogs.length, 1, 'the check itself is still audit-logged even though nothing changed');
+  });
+
+  // ---- 1b. not_found_confirmed (2026-09-07 reconcile classification fix) --
+
+  await check('technical_failure attempt, provider now returns not_found_confirmed (CardCom ResponseCode 9998) -> attempt IS updated to not_found_confirmed (unlike plain not_found), Statement stays open, zero Payments', async () => {
+    const { fakePool, state } = createFakeState({ statement: baseStatement(), attempt: baseAttempt() });
+    const fakeCardAdapter = {
+      reconcile: async ({ attemptId }) => {
+        assert.strictEqual(attemptId, 'attempt-1', 'must reconcile using the SAME attemptId, never a new one');
+        return {
+          outcome: 'not_found_confirmed',
+          providerRawStatus: 'http_400 (ResponseCode=9998, Description=ExternalUniqTranId not found - there is not successful transaction for this ExternalUniqTranId)',
+          failureReason: 'cardcom_lookup_http_400 (ResponseCode=9998, Description=ExternalUniqTranId not found - there is not successful transaction for this ExternalUniqTranId)',
+        };
+      },
+    };
+    const { billingOpsService } = freshModules(fakePool, fakeCardAdapter);
+    const result = await billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' });
+
+    assert.strictEqual(result.outcome, 'not_found_confirmed');
+    assert.strictEqual(result.attemptStatus, 'not_found_confirmed', 'unlike plain not_found, this outcome IS persisted as the row status');
+    assert.strictEqual(result.statementStatus, 'open', 'Statement must never be marked paid for this outcome');
+    assert.strictEqual(state.statements.get('stmt-1').status, 'open');
+    assert.strictEqual(state.payments.size, 0, 'no Payment must ever be created for this outcome');
+    assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'not_found_confirmed');
+    assert.strictEqual(state.auditLogs.length, 1);
+  });
+
+  await check('after a not_found_confirmed resolution, a fresh openAttempt() call for the SAME Statement is NOT blocked -- opens a brand-new attempt with a new id (proves ACTIVE_ATTEMPT_STATUSES does not include the new status)', async () => {
+    const { fakePool, state } = createFakeState({
+      statement: baseStatement(),
+      attempt: baseAttempt(),
+      entityBilling: { id: 'eb-1', provider: 'cardcom', token: 'tok', last4: '1234', exp_month: 9, exp_year: 2027 },
+    });
+    const fakeCardAdapter = {
+      reconcile: async () => ({ outcome: 'not_found_confirmed', providerRawStatus: 'http_400 (ResponseCode=9998)' }),
+    };
+    const { billingOpsService, collectionService } = freshModules(fakePool, fakeCardAdapter);
+
+    const reconcileResult = await billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' });
+    assert.strictEqual(reconcileResult.attemptStatus, 'not_found_confirmed');
+    assert.strictEqual(state.collectionAttempts.size, 1, 'sanity: still exactly one attempt before the fresh call');
+
+    // Concretely exercise collection.service.js#openAttempt (the real
+    // ACTIVE_ATTEMPT_STATUSES guard, not just asserting the string isn't in
+    // the array) for the SAME Statement, using a bare fake adapter (only
+    // NOT_IMPLEMENTED is read by openAttempt itself -- charge() is never
+    // called here, no real collection is attempted).
+    const fakeCardAdapterForNewAttempt = { NOT_IMPLEMENTED: false };
+    const opened = await collectionService.openAttempt('stmt-1', (method) => {
+      assert.strictEqual(method, 'card');
+      return fakeCardAdapterForNewAttempt;
+    });
+
+    assert.strictEqual(opened.skipped, false, `a fresh attempt must open, got skipped: ${opened.reason}`);
+    assert.notStrictEqual(opened.attemptId, 'attempt-1', 'must be a brand-new attempt id, never the old resolved one');
+    assert.strictEqual(opened.attemptNumber, 2);
+    assert.strictEqual(state.collectionAttempts.size, 2, 'the old not_found_confirmed row and the new pending row must both exist');
+    assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'not_found_confirmed', 'the old attempt is left exactly as reconcile resolved it');
+    assert.strictEqual(state.collectionAttempts.get(opened.attemptId).status, 'pending');
   });
 
   // ---- 2. succeeded (CardCom recovery case) --------------------------
