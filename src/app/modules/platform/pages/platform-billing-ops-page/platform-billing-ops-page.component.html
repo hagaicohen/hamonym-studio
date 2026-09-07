@@ -656,32 +656,34 @@
           @if (selectedStatement.attempts.length === 0) {
             <div class="ops-empty-small">אין עדיין ניסיונות גבייה.</div>
           } @else {
-            <table class="bo-table">
-              <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th><th></th></tr></thead>
-              <tbody>
-                @for (attempt of selectedStatement.attempts; track attempt.id) {
-                  <tr>
-                    <td>{{ attempt.attempt_number }}</td>
-                    <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
-                    <td>{{ attemptStatusLabel(attempt.status) }}</td>
-                    <td>{{ attempt.provider }}</td>
-                    <td>{{ attempt.provider_reference || '—' }}</td>
-                    <td>{{ attempt.failure_reason || '—' }}</td>
-                    <td>
-                      @if (canReconcileAttempt(attempt)) {
-                        <button
-                          class="ops-btn ops-btn-secondary ops-btn-sm"
-                          [disabled]="!!reconcilingAttemptId"
-                          (click)="reconcileAttempt(attempt)"
-                        >
-                          {{ reconcilingAttemptId === attempt.id ? 'בודק...' : 'בדוק מול הספק' }}
-                        </button>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+            <div class="bo-table-wrap">
+              <table class="bo-table bo-table-attempts">
+                <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th><th></th></tr></thead>
+                <tbody>
+                  @for (attempt of selectedStatement.attempts; track attempt.id) {
+                    <tr>
+                      <td>{{ attempt.attempt_number }}</td>
+                      <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
+                      <td>{{ attemptStatusLabel(attempt.status) }}</td>
+                      <td>{{ attempt.provider }}</td>
+                      <td>{{ attempt.provider_reference || '—' }}</td>
+                      <td class="bo-reason-cell" [title]="attempt.failure_reason || ''">{{ attempt.failure_reason || '—' }}</td>
+                      <td class="bo-table-action-col">
+                        @if (canReconcileAttempt(attempt)) {
+                          <button
+                            class="ops-btn ops-btn-secondary ops-btn-sm"
+                            [disabled]="!!reconcilingAttemptId"
+                            (click)="reconcileAttempt(attempt)"
+                          >
+                            {{ reconcilingAttemptId === attempt.id ? 'בודק...' : 'בדוק מול הספק' }}
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           }
 
           <h3 class="bo-subtitle">תשלומים</h3>

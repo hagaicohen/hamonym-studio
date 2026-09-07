@@ -450,6 +450,29 @@
 .bo-row-clickable { cursor: pointer; }
 .bo-row-clickable:hover { background: #f8fafc; }
 
+/* Attempts table (Statement drawer, "בדוק מול הספק") -- failure_reason can
+   now hold a full CardCom Description (up to ~500 chars, e.g. the live
+   ResponseCode=9998 text), which under .bo-table td's default
+   white-space: nowrap blew the whole table out past the 680px drawer width
+   with no scroll container to contain it. .bo-table-wrap (added around this
+   table) restores the horizontal-scroll fallback every other table on this
+   page already has; this cell additionally wraps/clamps the long text
+   itself instead of relying on scrolling alone, with the full string still
+   available via the native title tooltip. */
+.bo-reason-cell {
+  white-space: normal;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.bo-table-action-col { white-space: nowrap; }
+
 .bo-run-chip {
   font-size: 11px;
   color: #475569;

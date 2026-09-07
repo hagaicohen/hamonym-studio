@@ -44,6 +44,11 @@ const ATTEMPT_STATUS_LABELS: Record<string, string> = {
   declined: 'נדחה',
   technical_failure: 'תקלה טכנית',
   ambiguous: 'לא ודאי',
+  // Distinct from 'ambiguous' on purpose (backend fix 2026-09-07): CardCom
+  // gave a documented, authoritative "no successful transaction" answer
+  // (ResponseCode 9998) for this attempt, not genuine uncertainty -- must
+  // never read "לא ודאי" again.
+  not_found_confirmed: 'לא נמצאה עסקה מוצלחת',
 };
 
 // Copy for the "בדוק מול הספק" (reconcile) button's result -- one line per
@@ -52,6 +57,7 @@ const ATTEMPT_STATUS_LABELS: Record<string, string> = {
 const RECONCILE_OUTCOME_MESSAGES: Record<string, string> = {
   succeeded: 'הספק מצא עסקה מוצלחת — נרשם תשלום',
   not_found: 'הספק מאשר: העסקה לא נמצאה',
+  not_found_confirmed: 'הספק מאשר: לא נמצאה עסקה מוצלחת עבור ניסיון זה',
   declined: 'הספק מדווח: העסקה נדחתה',
   technical_failure: 'הספק מדווח: תקלה טכנית בעסקה',
   ambiguous: 'הבדיקה מול הספק נכשלה',
