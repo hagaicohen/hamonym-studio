@@ -115,10 +115,13 @@ export interface CollectionAttempt {
 // distinct outcome (the provider has no successful transaction on file
 // under this attempt's id) -- it deliberately leaves attemptStatus/
 // statementStatus unchanged, it is not folded into 'ambiguous'.
+// 'not_found_confirmed' (2026-09-07) is a SEPARATE, genuinely terminal
+// outcome -- CardCom's own documented ResponseCode=9998 answer -- and DOES
+// update attemptStatus to 'not_found_confirmed' (see adapter.contract.js).
 export interface ReconcileAttemptResult {
   attemptId: string;
   statementId: string;
-  outcome: 'succeeded' | 'declined' | 'technical_failure' | 'ambiguous' | 'not_found';
+  outcome: 'succeeded' | 'declined' | 'technical_failure' | 'ambiguous' | 'not_found' | 'not_found_confirmed';
   attemptStatus: string | null;
   statementStatus: string | null;
   providerReference: string | null;
