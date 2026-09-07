@@ -81,6 +81,31 @@ function classifyChargeResponse(data) {
   };
 }
 
+// Extracts a strict allowlist of CardCom's own documented error-body fields
+// (ResponseCode/Description -- same two fields classifyChargeResponse()
+// already trusts on the success path) from a synchronous non-2xx response,
+// so charge()/reconcile() catch blocks can enrich providerRawStatus/
+// failureReason beyond a bare HTTP status without ever touching the rest of
+// the body (ApiName/ApiPassword/token/card data never flow through here).
+function extractSanitizedProviderError(err) {
+  const status = err.response.status;
+  const data = err.response.data;
+
+  if (!data || typeof data !== 'object') {
+    return { status, detail: null };
+  }
+
+  const parts = [];
+  if (data.ResponseCode !== undefined && data.ResponseCode !== null) {
+    parts.push(`ResponseCode=${String(data.ResponseCode)}`);
+  }
+  if (typeof data.Description === 'string' && data.Description.length > 0) {
+    parts.push(`Description=${data.Description.slice(0, 500)}`);
+  }
+
+  return { status, detail: parts.length > 0 ? parts.join(', ') : null };
+}
+
 exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
   const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
@@ -113,10 +138,11 @@ exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
       // rejected before any card network activity. Never guessed as
       // ambiguous: this class of failure is documented as pre-charge
       // validation, so there is nothing to reconcile.
+      const { status, detail } = extractSanitizedProviderError(err);
       return {
         outcome: 'technical_failure',
-        providerRawStatus: `http_${err.response.status}`,
-        failureReason: `cardcom_http_${err.response.status}`,
+        providerRawStatus: detail ? `http_${status} (${detail})` : `http_${status}`,
+        failureReason: detail ? `cardcom_http_${status} (${detail})` : `cardcom_http_${status}`,
       };
     }
 
@@ -151,6 +177,20 @@ exports.reconcile = async ({ attemptId }) => {
     // The lookup call itself failed technically -- this tells us nothing
     // about the original charge. Stay ambiguous rather than concluding
     // anything from a failed lookup.
+    if (err.response) {
+      // CardCom answered synchronously with a non-2xx (e.g. the live 400 on
+      // GetTransactionByExternalUniqTran) -- same sanitized extraction as
+      // charge(), still resolved as ambiguous since a failed lookup proves
+      // nothing about the original charge either way.
+      const { status, detail } = extractSanitizedProviderError(err);
+      return {
+        outcome: 'ambiguous',
+        failureReason: detail
+          ? `cardcom_lookup_http_${status} (${detail})`
+          : `cardcom_lookup_http_${status}`,
+      };
+    }
+
     return {
       outcome: 'ambiguous',
       failureReason: `cardcom_lookup_transport_error: ${err.message}`,
