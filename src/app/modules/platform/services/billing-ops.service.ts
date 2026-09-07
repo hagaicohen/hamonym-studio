@@ -110,6 +110,22 @@ export interface CollectionAttempt {
   resolved_at: string | null;
 }
 
+// Return shape of POST .../collection-attempts/:attemptId/reconcile -- see
+// billing-ops.service.js#reconcileCollectionAttempt. 'not_found' is a real,
+// distinct outcome (the provider has no successful transaction on file
+// under this attempt's id) -- it deliberately leaves attemptStatus/
+// statementStatus unchanged, it is not folded into 'ambiguous'.
+export interface ReconcileAttemptResult {
+  attemptId: string;
+  statementId: string;
+  outcome: 'succeeded' | 'declined' | 'technical_failure' | 'ambiguous' | 'not_found';
+  attemptStatus: string | null;
+  statementStatus: string | null;
+  providerReference: string | null;
+  providerRawStatus: string | null;
+  failureReason: string | null;
+}
+
 export interface Payment {
   id: string;
   statement_id: string;
@@ -259,6 +275,17 @@ export class BillingOpsService {
 
   triggerCollection(id: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {}, { headers: authHeaders() });
+  }
+
+  // Manual "check with provider" for one past Collection Attempt -- read-only
+  // on the provider's side, never a new charge. See
+  // billing-ops.service.js#reconcileCollectionAttempt.
+  reconcileCollectionAttempt(attemptId: string): Observable<{ result: ReconcileAttemptResult }> {
+    return this.http.post<{ result: ReconcileAttemptResult }>(
+      `${this.base}/collection-attempts/${attemptId}/reconcile`,
+      {},
+      { headers: authHeaders() },
+    );
   }
 
   // ---- MASAV (Bundle 2) ----------------------------------------------

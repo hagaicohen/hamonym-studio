@@ -647,11 +647,17 @@
           }
 
           <h3 class="bo-subtitle">ניסיונות גבייה</h3>
+          @if (reconcileError) {
+            <div class="ops-action-error">{{ reconcileError }}</div>
+          }
+          @if (reconcileMessage) {
+            <div class="ops-action-success">{{ reconcileMessage }}</div>
+          }
           @if (selectedStatement.attempts.length === 0) {
             <div class="ops-empty-small">אין עדיין ניסיונות גבייה.</div>
           } @else {
             <table class="bo-table">
-              <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th></tr></thead>
+              <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th><th></th></tr></thead>
               <tbody>
                 @for (attempt of selectedStatement.attempts; track attempt.id) {
                   <tr>
@@ -661,6 +667,17 @@
                     <td>{{ attempt.provider }}</td>
                     <td>{{ attempt.provider_reference || '—' }}</td>
                     <td>{{ attempt.failure_reason || '—' }}</td>
+                    <td>
+                      @if (canReconcileAttempt(attempt)) {
+                        <button
+                          class="ops-btn ops-btn-secondary ops-btn-sm"
+                          [disabled]="!!reconcilingAttemptId"
+                          (click)="reconcileAttempt(attempt)"
+                        >
+                          {{ reconcilingAttemptId === attempt.id ? 'בודק...' : 'בדוק מול הספק' }}
+                        </button>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>

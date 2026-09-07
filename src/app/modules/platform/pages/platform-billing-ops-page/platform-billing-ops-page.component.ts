@@ -14,6 +14,8 @@ import {
   BillingActivityDiscovered,
   BulkApproveResult,
   MasavConfig,
+  CollectionAttempt,
+  ReconcileAttemptResult,
 } from '../../services/billing-ops.service';
 
 // Display-only default for the MASAV setup help box's "קוד מוסד" instruction
@@ -42,6 +44,17 @@ const ATTEMPT_STATUS_LABELS: Record<string, string> = {
   declined: 'נדחה',
   technical_failure: 'תקלה טכנית',
   ambiguous: 'לא ודאי',
+};
+
+// Copy for the "בדוק מול הספק" (reconcile) button's result -- one line per
+// possible ReconcileAttemptResult.outcome. failureReason (when present) is
+// appended by reconcileOutcomeMessage() below, never baked in here.
+const RECONCILE_OUTCOME_MESSAGES: Record<string, string> = {
+  succeeded: 'הספק מצא עסקה מוצלחת — נרשם תשלום',
+  not_found: 'הספק מאשר: העסקה לא נמצאה',
+  declined: 'הספק מדווח: העסקה נדחתה',
+  technical_failure: 'הספק מדווח: תקלה טכנית בעסקה',
+  ambiguous: 'הבדיקה מול הספק נכשלה',
 };
 
 const BLOCKED_REASON_LABELS: Record<string, string> = {
@@ -125,6 +138,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   statementDetailLoading = false;
   statementActionBusy = false;
   statementActionError: string | null = null;
+
+  // ---- collection attempt reconcile ("בדוק מול הספק") -------------------
+  reconcilingAttemptId: string | null = null;
+  reconcileMessage: string | null = null;
+  reconcileError: string | null = null;
 
   // ---- bulk approval (current-period table) ---------------------------
   // Normal operator workflow: Calculation -> review table -> bulk approve.
@@ -554,6 +572,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   openStatement(statement: StatementListItem): void {
     this.statementDetailLoading = true;
     this.statementActionError = null;
+    this.reconcileMessage = null;
+    this.reconcileError = null;
     this.selectedStatement = null;
     this.service.getStatement(statement.id).subscribe({
       next: (res) => {
@@ -716,6 +736,40 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.refreshSelectedStatement();
       },
     });
+  }
+
+  // Only technical_failure/ambiguous attempts get the button: 'pending' is
+  // actively in flight (the scheduled reconciliation job's intended scope,
+  // not this manual action), 'succeeded'/'declined' are already definitive.
+  // resolveAttempt being idempotent means reconciling those wouldn't be
+  // unsafe, just pointless -- gated out here to keep the UI honest about
+  // when this action means something. masav attempts never show it either
+  // (no reconcile capability at all -- see billing-ops.service.js).
+  canReconcileAttempt(attempt: CollectionAttempt): boolean {
+    return attempt.collection_method === 'card' && (attempt.status === 'technical_failure' || attempt.status === 'ambiguous');
+  }
+
+  reconcileAttempt(attempt: CollectionAttempt): void {
+    if (this.reconcilingAttemptId) return;
+    this.reconcilingAttemptId = attempt.id;
+    this.reconcileMessage = null;
+    this.reconcileError = null;
+    this.service.reconcileCollectionAttempt(attempt.id).subscribe({
+      next: (res) => {
+        this.reconcilingAttemptId = null;
+        this.reconcileMessage = this.reconcileOutcomeMessage(res.result);
+        this.refreshSelectedStatement();
+      },
+      error: (err) => {
+        this.reconcilingAttemptId = null;
+        this.reconcileError = err?.error?.error || 'הבדיקה מול הספק נכשלה';
+      },
+    });
+  }
+
+  private reconcileOutcomeMessage(result: ReconcileAttemptResult): string {
+    const base = RECONCILE_OUTCOME_MESSAGES[result.outcome] ?? `תוצאה מהספק: ${result.outcome}`;
+    return result.failureReason ? `${base}: ${result.failureReason}` : base;
   }
 
   statementStatusLabel(status: string): string {
