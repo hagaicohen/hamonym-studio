@@ -23,6 +23,7 @@ const JOB_LABELS: Record<string, string> = {
   'billing-approval-consistency': 'בדיקת אישורי חיוב',
   'billing-provisioning-gap': 'בדיקת הגדרת גבייה לעמותות',
   'collection-attempt-reconciliation': 'בדיקת ניסיונות גבייה',
+  'billing-monthly-cycle': 'מחזור חיוב חודשי אוטומטי',
   'recurring-payment-reconciliation': 'התאמת חיובי הוראות קבע',
   'masav-collection': 'גביית מס"ב',
   'collection-router': 'ניתוב גבייה',
@@ -48,6 +49,7 @@ const JOB_FREQUENCY_LABELS: Record<string, string> = {
   'billing-approval-consistency': 'כל שעה',
   'billing-provisioning-gap': 'כל שעה',
   'collection-attempt-reconciliation': 'כל שעה',
+  'billing-monthly-cycle': 'פעם בחודש (ה-1 לחודש)',
 };
 
 const DORMANT_JOB_NOTE: Record<string, string> = {
@@ -107,6 +109,7 @@ const JOB_AREA: Record<string, 'donations' | 'commission'> = {
   'billing-approval-consistency': 'commission',
   'billing-provisioning-gap': 'commission',
   'collection-attempt-reconciliation': 'commission',
+  'billing-monthly-cycle': 'commission',
   'masav-collection': 'commission',
   'collection-router': 'commission',
 };
@@ -268,6 +271,14 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
           title: `${this.jobLabel(alert.jobName)} — לא רץ בהצלחה בזמן הצפוי`,
           subtitle: this.fmtStaleness(alert.minutesSinceLastSuccess ?? null),
           jobName: alert.jobName,
+        });
+      } else if (alert.type === 'scheduler_not_running') {
+        items.push({
+          id: 'alert-scheduler-not-running',
+          area: 'jobs',
+          severity: 'critical',
+          title: 'לוח ההרצה האוטומטי (Render Cron) לא פעיל',
+          subtitle: this.fmtStaleness(alert.minutesSinceLastHeartbeat ?? null),
         });
       } else if (alert.type === 'webhook_recovery_unresolved') {
         items.push({
