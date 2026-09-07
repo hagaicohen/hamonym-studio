@@ -393,12 +393,66 @@ async function run() {
     assert.strictEqual(company, 'עמותת א, ב וג');
     assert.strictEqual(contact, 'ישראל ישראלי');
     assert.strictEqual(email, 'israel@example.org');
+    assert.strictEqual(rows[1][9], 'עמלת Hamonym 01/08/2026-28/08/2026', 'pdesc must be built from real ISO date strings');
 
     // The core v1 boundary assertion: generating/downloading the Excel is a
     // pure read -- it must never create a payments row or flip the
     // Statement to 'paid'.
     assert.strictEqual(state.payments.size, 0, 'exporting must never create a Payment');
     assert.strictEqual(state.statements.get('stmt-a').status, 'open', 'exporting must never mark the Statement paid');
+  });
+
+  // Regression for the real bug this suite's mocked pool could never catch:
+  // `pg` deserializes timestamptz columns (period_start/period_end) into
+  // native Date objects, not strings -- confirmed live against the real DB
+  // (SELECT NOW() -> instanceof Date). The old ddmmyyyy() did
+  // String(dateObject).slice(0, 10).split('-'), which has no '-' in its
+  // first 10 chars for a Date's default toString(), so destructuring
+  // produced undefined/undefined/... in the exported pdesc cell. This test
+  // passes real Date instances -- not ISO strings -- to reproduce that
+  // exact path and prove the fix handles it.
+  await check('generateExportExcel: real JS Date objects for period_start/period_end (the actual pg deserialization shape) produce a correctly formatted pdesc, not undefined/undefined/...', async () => {
+    const { fakePool, state } = createFakeState({
+      statement: baseStatement({ id: 'stmt-date', total_due: '5000.00', status: 'open' }),
+    });
+    state.exportRows = {
+      'stmt-date': {
+        statement_id: 'stmt-date', total_due: '5000.00', entity_id: 'entity-date', entity_name: 'עמותת דייט',
+        contact_full_name: 'דנה כהן', contact_email: 'dana@example.org',
+        bank_code: '12', branch_code: '345', account_number: '000123456', authorized: true, attempt_id: 'attempt-date',
+        period_start: new Date('2099-06-01T00:00:00.000Z'),
+        period_end: new Date('2099-06-02T00:00:00.000Z'),
+      },
+    };
+    const { masavCollectionService } = freshModules(fakePool);
+    const buffer = await masavCollectionService.generateExportExcel(['stmt-date']);
+
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    assert.strictEqual(rows[1][9], 'עמלת Hamonym 01/06/2099-02/06/2099', 'pdesc must be correctly formatted from real Date objects, never undefined/undefined/...');
+    assert.ok(!String(rows[1][9]).includes('undefined'), 'pdesc must never contain the literal word undefined');
+  });
+
+  await check('ddmmyyyy: an unparseable date value throws a clear error instead of silently producing undefined/undefined/...', async () => {
+    const { fakePool, state } = createFakeState({
+      statement: baseStatement({ id: 'stmt-bad-date', total_due: '5000.00', status: 'open' }),
+    });
+    state.exportRows = {
+      'stmt-bad-date': {
+        statement_id: 'stmt-bad-date', total_due: '5000.00', entity_id: 'entity-bad-date', entity_name: 'x',
+        contact_full_name: null, contact_email: null,
+        bank_code: '12', branch_code: '345', account_number: '000123456', authorized: true, attempt_id: 'attempt-bad-date',
+        period_start: new Date('not-a-real-date'),
+        period_end: new Date('2099-06-02T00:00:00.000Z'),
+      },
+    };
+    const { masavCollectionService } = freshModules(fakePool);
+    await assert.rejects(
+      () => masavCollectionService.generateExportExcel(['stmt-bad-date']),
+      (err) => /cannot normalize date value/.test(err.message)
+    );
   });
 
   await check('generateExportExcel: refuses a statement with no open masav attempt (NO_OPEN_ATTEMPT) -- blocked/unopened MASAV never silently exports', async () => {

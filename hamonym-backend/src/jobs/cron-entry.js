@@ -28,6 +28,23 @@ const { checkWindow } = require('./schedule-window');
 async function main() {
   const now = new Date();
 
+  // Heartbeat -- proves the Render Cron Job process itself executed this
+  // script just now, independent of whether any registered job happened to
+  // be due this tick. Written unconditionally, before the per-job loop, and
+  // NOT through job-runner.js's registry/advisory-lock machinery (this is
+  // not a "job": no handler, nothing to lock, and registering it would make
+  // it appear as a runnable job in the Admin "Run now" UI). See
+  // cardcom-ops.controller.js's schedulerHeartbeat -- added 2026-09-08 to
+  // distinguish "the trigger itself isn't firing at all" from "a specific
+  // job's own logic is stale/failing", which per-job staleness alone cannot
+  // tell apart (10 days of total silence, 2026-08-28 to 2026-09-07, showed
+  // up only as 8 separate job_stale alerts with no single signal pointing
+  // at the actual root cause).
+  await db.query(
+    `INSERT INTO job_runs (job_name, status, finished_at, triggered_by, result_summary)
+     VALUES ('scheduler-heartbeat', 'success', NOW(), 'render-cron', '{}')`
+  );
+
   for (const name of jobRunner.list()) {
     const job = jobRunner.get(name);
     if (!job?.schedule) continue;

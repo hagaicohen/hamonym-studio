@@ -99,11 +99,43 @@ async function computeStaleAlerts(now) {
   return alerts;
 }
 
+// Scheduler heartbeat (2026-09-08) — distinct from computeStaleAlerts'
+// per-job staleness. A job going stale only proves ITS OWN last success is
+// old; it says nothing about whether the trigger process (the Render Cron
+// Job hitting cron-entry.js every 15 minutes) is running at all. The real
+// 2026-08-28..2026-09-07 outage this was built to detect showed up as 8
+// separate job_stale alerts with no single fact anyone could point at —
+// this reads cron-entry.js's own unconditional heartbeat row instead, so
+// "is the trigger itself alive" is one direct answer, not an inference from
+// several jobs all going quiet together. 30 minutes = 2x the 15-minute tick
+// interval, same "one miss is jitter, two in a row means it stopped"
+// tolerance as checkStaleness.
+const HEARTBEAT_TOLERANCE_MS = 30 * 60 * 1000;
+
+// Takes db explicitly (same injectable convention as schedule-window.js's
+// checkStaleness(db, job, now)) so scripts/test-billing-monthly-cycle.js can
+// exercise this against a fake db instead of racing real production
+// job_runs rows (a real MAX(started_at) in a shared table can't be held
+// still for a "not healthy" assertion once the real scheduler is running).
+async function getSchedulerHeartbeat(db, now) {
+  const { rows } = await db.query(
+    `SELECT MAX(started_at) AS last_heartbeat_at FROM job_runs WHERE job_name = 'scheduler-heartbeat'`
+  );
+  const lastHeartbeatAt = rows[0].last_heartbeat_at;
+  const ageMs = lastHeartbeatAt ? now.getTime() - new Date(lastHeartbeatAt).getTime() : null;
+  return {
+    lastHeartbeatAt,
+    minutesSinceLastHeartbeat: ageMs == null ? null : Math.round(ageMs / 60_000),
+    healthy: ageMs != null && ageMs <= HEARTBEAT_TOLERANCE_MS,
+  };
+}
+
 // Exported for scripts/test-cardcom-ops-cadence-classification.js only —
-// both functions are pure (given their already-fetched rows/db), no route
-// depends on this export existing.
+// all three functions are pure (given their already-fetched rows/db), no
+// route depends on these exports existing.
 exports.computeAlerts = computeAlerts;
 exports.computeStaleAlerts = computeStaleAlerts;
+exports.getSchedulerHeartbeat = getSchedulerHeartbeat;
 
 exports.getHealth = async (req, res) => {
   try {
@@ -120,12 +152,22 @@ exports.getHealth = async (req, res) => {
       `SELECT count(*)::int AS count FROM reconciliation_findings WHERE resolved_at IS NULL AND severity = 'critical'`
     );
     const staleAlerts = await computeStaleAlerts(new Date());
+    const schedulerHeartbeat = await getSchedulerHeartbeat(db, new Date());
+    const schedulerAlerts = schedulerHeartbeat.healthy ? [] : [{
+      type: 'scheduler_not_running',
+      severity: 'critical',
+      minutesSinceLastHeartbeat: schedulerHeartbeat.minutesSinceLastHeartbeat,
+      message: schedulerHeartbeat.minutesSinceLastHeartbeat == null
+        ? 'ה-Scheduler (Render Cron) מעולם לא דיווח על ריצה'
+        : `ה-Scheduler (Render Cron) לא דיווח על ריצה כבר ${schedulerHeartbeat.minutesSinceLastHeartbeat} דקות`,
+    }];
 
     res.json({
       webhooks: lastWebhooks.rows,
       jobs: lastJobRuns.rows,
       knownJobs: jobRunner.list(),
-      alerts: [...computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count), ...staleAlerts],
+      schedulerHeartbeat,
+      alerts: [...schedulerAlerts, ...computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count), ...staleAlerts],
     });
   } catch (err) {
     console.error('[cardcom-ops.getHealth]', err.message);
