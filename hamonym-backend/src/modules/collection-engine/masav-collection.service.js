@@ -178,8 +178,31 @@ async function listActionableMasavStatements() {
   return rows;
 }
 
-function ddmmyyyy(iso) {
-  const [y, m, d] = String(iso).slice(0, 10).split('-');
+// Accepts either a real JS Date (what `pg` actually hands back for a
+// timestamptz column -- confirmed live: SELECT NOW() deserializes to a
+// Date instance, not a string) or an ISO-format date string (what the
+// mocked test pool -- and any future non-DB caller -- passes directly).
+// A Date is normalized to its UTC calendar date via .toISOString() before
+// the same slice/split used for strings, so both paths produce the exact
+// same result for the same instant: this matches the app-wide date-display
+// convention (`iso.slice(0, 10).split('-')`, see CLAUDE.md "Dates"), which
+// is timezone-naive by construction because .toISOString() is always UTC.
+// Never silently returns a garbled "undefined/undefined/..." string --
+// anything that doesn't resolve to a real calendar date throws instead.
+function ddmmyyyy(input) {
+  let iso;
+  if (input instanceof Date) {
+    if (Number.isNaN(input.getTime())) {
+      throw new Error(`ddmmyyyy: cannot normalize date value: ${input}`);
+    }
+    iso = input.toISOString();
+  } else {
+    iso = String(input);
+  }
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  if (!y || !m || !d) {
+    throw new Error(`ddmmyyyy: cannot normalize date value: ${input}`);
+  }
   return `${d}/${m}/${y}`;
 }
 
