@@ -14,5 +14,6 @@ jobRunner.register(require('./billing-approval-consistency.job'));
 jobRunner.register(require('./billing-provisioning-gap.job'));
 jobRunner.register(require('./collection-attempt-reconciliation.job'));
 jobRunner.register(require('./recurring-payment-reconciliation.job'));
+jobRunner.register(require('./billing-monthly-cycle.job'));
 
 module.exports = jobRunner;

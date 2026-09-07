@@ -33,9 +33,16 @@ exports.cronMatches = cronMatches;
 
 // Latest minute at-or-before `now` (UTC) that matches the schedule — the
 // "current window" a due-check evaluates against. Steps backward minute by
-// minute; bounded lookback (3 days) comfortably covers the daily job with
-// margin without risking an unbounded loop on a malformed expression.
-const MAX_LOOKBACK_MINUTES = 3 * 24 * 60;
+// minute; bounded lookback (40 days, raised 2026-09-08 from the original 3
+// days to support billing-monthly-cycle.job.js's monthly cadence -- a
+// "day-of-month=1" schedule's most recent match is always within the
+// current month, at most 31 days back, so 40 days leaves comfortable margin
+// while still catching a malformed expression that matches nothing) without
+// risking an unbounded loop. The loop body is pure in-memory date
+// arithmetic (no I/O), so even a full 40-day/57,600-iteration scan costs
+// low-single-digit milliseconds -- negligible next to the 15-minute tick
+// interval this runs on.
+const MAX_LOOKBACK_MINUTES = 40 * 24 * 60;
 
 function mostRecentWindowStart(schedule, now) {
   const d = new Date(now);
