@@ -217,6 +217,37 @@ async function run() {
     assert.strictEqual(result.failureReason, 'cardcom_lookup_http_400 (ResponseCode=4, Description=Invalid TerminalNumber)');
   });
 
+  await check('reconcile(): HTTP 400 with ResponseCode=9998 (the live, real CardCom "no successful transaction" answer -- Statement 5ae9f0cf-2f4b-4c28-9b03-4eb54c88a329 / attempt ea308db9-9548-4bfb-bec5-4ef4dd2d99ff) -> not_found_confirmed, NOT ambiguous', async () => {
+    mockPost(async () => {
+      const e = new Error('Request failed with status code 400');
+      e.response = { status: 400, data: { ResponseCode: 9998, Description: 'ExternalUniqTranId not found - there is not successful transaction for this ExternalUniqTranId' } };
+      throw e;
+    });
+    const adapter = require('../src/modules/collection-engine/adapters/cardcom-token-charge.adapter');
+    const result = await adapter.reconcile({ attemptId: 'attempt-20' });
+    assert.strictEqual(result.outcome, 'not_found_confirmed');
+    assert.strictEqual(
+      result.failureReason,
+      'cardcom_lookup_http_400 (ResponseCode=9998, Description=ExternalUniqTranId not found - there is not successful transaction for this ExternalUniqTranId)'
+    );
+    assert.strictEqual(
+      result.providerRawStatus,
+      'http_400 (ResponseCode=9998, Description=ExternalUniqTranId not found - there is not successful transaction for this ExternalUniqTranId)'
+    );
+  });
+
+  await check('reconcile(): HTTP 400 with a DIFFERENT ResponseCode (not 9998) -> still ambiguous, fix must not broaden beyond the one documented code', async () => {
+    mockPost(async () => {
+      const e = new Error('Request failed with status code 400');
+      e.response = { status: 400, data: { ResponseCode: 1234, Description: 'Some other error' } };
+      throw e;
+    });
+    const adapter = require('../src/modules/collection-engine/adapters/cardcom-token-charge.adapter');
+    const result = await adapter.reconcile({ attemptId: 'attempt-21' });
+    assert.strictEqual(result.outcome, 'ambiguous');
+    assert.strictEqual(result.failureReason, 'cardcom_lookup_http_400 (ResponseCode=1234, Description=Some other error)');
+  });
+
   await check('reconcile(): HTTP 400 with no recognizable body -> falls back to exactly today\'s status-only behavior, no crash', async () => {
     mockPost(async () => { const e = new Error('Request failed with status code 400'); e.response = { status: 400, data: null }; throw e; });
     const adapter = require('../src/modules/collection-engine/adapters/cardcom-token-charge.adapter');

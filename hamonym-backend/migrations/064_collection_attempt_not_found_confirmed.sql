@@ -1,0 +1,41 @@
+-- collection_attempts.status -- add 'not_found_confirmed' (Billing v1
+-- post-launch hardening, reconcile() classification fix, 2026-09-07).
+--
+-- Real Statement 5ae9f0cf-2f4b-4c28-9b03-4eb54c88a329 / Collection Attempt
+-- ea308db9-9548-4bfb-bec5-4ef4dd2d99ff: a manual "בדוק מול הספק" reconcile
+-- against CardCom's real GetTransactionByExternalUniqTran returned
+-- `HTTP 400, ResponseCode=9998, Description=ExternalUniqTranId not found -
+-- there is not successful transaction for this ExternalUniqTranId` -- a
+-- documented, authoritative CardCom answer, not genuine ambiguity. Before
+-- this migration, reconcile()'s only non-2xx classification was 'ambiguous'
+-- (see cardcom-token-charge.adapter.js), which the UI then rendered as
+-- "לא ודאי" even though CardCom had definitively answered.
+--
+-- Option A chosen over mapping to the existing 'declined' status: a real,
+-- distinct value keeps "CardCom found nothing under this id" from ever
+-- being confused with "CardCom looked at an actual card/token and rejected
+-- it" (declined's real meaning per classifyChargeResponse's own comment) --
+-- same "don't overload, add a real value when the concept is genuinely
+-- new" precedent as billing_periods.retired (061) and
+-- entity_masav_details.authorized (060).
+--
+-- Deliberately a NEW, distinct value from the adapter's existing 'not_found'
+-- outcome (the 2xx-with-nonzero-ResponseCode branch already in reconcile(),
+-- which billing-ops.service.js#reconcileCollectionAttempt and
+-- collection-attempt-reconciliation.job.js both already special-case to
+-- "leave the row completely untouched -- CardCom may simply not have
+-- indexed it yet", per adapter.contract.js's own documented caveat). That
+-- existing caution is still correct and untouched by this migration.
+-- Reusing that same 'not_found' string for the 9998 case would have
+-- silently routed it through the exact "leave row untouched, stay
+-- ambiguous forever" path this fix exists to correct -- so
+-- not_found_confirmed is intentionally its own value, not a broadening of
+-- the old one.
+--
+-- Not added to collection.service.js's ACTIVE_ATTEMPT_STATUSES
+-- (['pending', 'ambiguous']) -- it is a terminal state, so a fresh
+-- openAttempt()/triggerCollection() call for the same Statement is never
+-- blocked by it, unlike leaving the row as 'ambiguous' would have.
+ALTER TABLE collection_attempts DROP CONSTRAINT IF EXISTS collection_attempts_status_check;
+ALTER TABLE collection_attempts ADD CONSTRAINT collection_attempts_status_check
+  CHECK (status IN ('pending', 'succeeded', 'declined', 'technical_failure', 'ambiguous', 'not_found_confirmed'));

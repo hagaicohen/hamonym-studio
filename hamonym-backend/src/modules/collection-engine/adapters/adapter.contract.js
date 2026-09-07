@@ -26,7 +26,7 @@
 //
 //   async reconcile({ attemptId }) [optional -- only cardcom-token-charge
 //     implements it so far]
-//     -> { outcome: 'succeeded' | 'declined' | 'technical_failure' | 'not_found',
+//     -> { outcome: 'succeeded' | 'declined' | 'technical_failure' | 'not_found' | 'not_found_confirmed',
 //          providerReference?: string, providerRawStatus?: string,
 //          failureReason?: string }
 //     Resolves an 'ambiguous' attempt by asking the provider directly, using
@@ -46,4 +46,19 @@
 //     collection_attempts.status and must never be passed to resolveAttempt
 //     as-is; a caller must decide what to do with 'not_found' (per the
 //     undecided policy above) before touching that row.
+//
+//     'not_found_confirmed' (added 2026-09-07, migration 064) is a SEPARATE,
+//     genuinely terminal outcome -- do not conflate it with 'not_found'
+//     above. It is returned only for CardCom's own documented
+//     ResponseCode=9998 on GetTransactionByExternalUniqTran ("there is not
+//     successful transaction for this ExternalUniqTranId"), verified live
+//     against a real attempt -- an authoritative negative answer, not an
+//     indexing-lag guess. It IS a valid collection_attempts.status (see
+//     migration 064's CHECK constraint) and IS safe to feed straight into
+//     resolveAttempt() exactly like 'succeeded'/'declined'/
+//     'technical_failure' -- resolveAttempt's generic (non-'succeeded')
+//     branch persists it, creates no Payment, and leaves the Statement
+//     'open'. It is deliberately absent from
+//     collection.service.js's ACTIVE_ATTEMPT_STATUSES, so once persisted a
+//     fresh collection attempt on the same Statement is never blocked by it.
 module.exports = {};

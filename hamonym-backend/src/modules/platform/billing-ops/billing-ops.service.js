@@ -314,6 +314,14 @@ exports.triggerCollection = async ({ statementId, superAdminUserId, ip }) => {
 // untouched for a future re-check). This function does the same: a
 // not_found lookup result changes nothing about the attempt/Statement, it
 // only gets reported back to the caller and audit-logged.
+//
+// 'not_found_confirmed' (migration 064) is intentionally a DIFFERENT string
+// and falls through the `!== 'not_found'` check below like any other
+// resolved outcome -- it IS handed to resolveAttempt and persisted as a
+// real terminal status (see adapter.contract.js). That's deliberate: it is
+// CardCom's own documented, authoritative "no successful transaction"
+// answer (ResponseCode 9998), not the same provisional/might-not-be-
+// indexed-yet situation 'not_found' represents.
 const RECONCILE_UNIQUE_VIOLATION = '23505';
 
 exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip }) => {

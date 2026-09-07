@@ -90,7 +90,11 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
 
     if (outcome.outcome === 'not_found') {
       // Preserve ambiguity -- never treated as declined or as license to
-      // charge again.
+      // charge again. NOTE: 'not_found_confirmed' (migration 064,
+      // CardCom's own documented ResponseCode=9998 answer) is a DIFFERENT,
+      // genuinely terminal outcome and deliberately does NOT match this
+      // branch -- it falls through to the normal resolveAttemptFn() call
+      // below like 'succeeded'/'declined'/'technical_failure'.
       stillUnresolved++;
       stuckForFinding.push(row);
       continue;
