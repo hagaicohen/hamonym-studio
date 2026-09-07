@@ -31,6 +31,7 @@ export interface HealthAlert {
   count?: number;
   failed?: number;
   notRouted?: number;
+  minutesSinceLastSuccess?: number | null;
 }
 
 export interface HealthResponse {
