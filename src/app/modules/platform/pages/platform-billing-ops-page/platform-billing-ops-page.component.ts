@@ -13,7 +13,18 @@ import {
   BlockedBillingEntity,
   BillingActivityDiscovered,
   BulkApproveResult,
+  MasavConfig,
+  CollectionAttempt,
+  ReconcileAttemptResult,
 } from '../../services/billing-ops.service';
+
+// Display-only default for the MASAV setup help box's "קוד מוסד" instruction
+// -- not wired into any backend business logic or validation. Update this
+// constant if Hamonym's actual מוסד code changes; it exists here (not
+// hardcoded inline in the template) so it stays a single, easy-to-find edit
+// point per this task's "treat as configurable/display configuration, not a
+// magic hardcoded permanent business value" instruction.
+const MASAV_INSTITUTION_CODE = '12345';
 
 type Tab = 'periods' | 'statements' | 'masav';
 
@@ -33,6 +44,17 @@ const ATTEMPT_STATUS_LABELS: Record<string, string> = {
   declined: 'נדחה',
   technical_failure: 'תקלה טכנית',
   ambiguous: 'לא ודאי',
+};
+
+// Copy for the "בדוק מול הספק" (reconcile) button's result -- one line per
+// possible ReconcileAttemptResult.outcome. failureReason (when present) is
+// appended by reconcileOutcomeMessage() below, never baked in here.
+const RECONCILE_OUTCOME_MESSAGES: Record<string, string> = {
+  succeeded: 'הספק מצא עסקה מוצלחת — נרשם תשלום',
+  not_found: 'הספק מאשר: העסקה לא נמצאה',
+  declined: 'הספק מדווח: העסקה נדחתה',
+  technical_failure: 'הספק מדווח: תקלה טכנית בעסקה',
+  ambiguous: 'הבדיקה מול הספק נכשלה',
 };
 
 const BLOCKED_REASON_LABELS: Record<string, string> = {
@@ -117,6 +139,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   statementActionBusy = false;
   statementActionError: string | null = null;
 
+  // ---- collection attempt reconcile ("בדוק מול הספק") -------------------
+  reconcilingAttemptId: string | null = null;
+  reconcileMessage: string | null = null;
+  reconcileError: string | null = null;
+
   // ---- bulk approval (current-period table) ---------------------------
   // Normal operator workflow: Calculation -> review table -> bulk approve.
   // The drawer above (openStatement/approveStatement) stays the path for
@@ -133,12 +160,28 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   masavError: string | null = null;
 
   configuringEntityId: string | null = null;
+  configuringEntityName = '';
   masavBankCode = '';
   masavBranchCode = '';
   masavAccountNumber = '';
   masavAccountHolderName = '';
   masavFormBusy = false;
   masavFormError: string | null = null;
+  masavInstitutionCode = MASAV_INSTITUTION_CODE;
+
+  // Setup-screen additions (MASAV setup UX, 2026-09-03) -- the collapsible
+  // "how do I get this document" explanation, the loaded config (to show
+  // current authorized/document state read-only in the drawer), and the
+  // signed-document upload, which is deliberately separate from the bank
+  // fields above: uploading evidence never flips `authorized` on its own,
+  // see billing-ops.service.ts#MasavConfig / masav-config.service.js.
+  masavShowHelp = false;
+  masavConfig: MasavConfig | null = null;
+  masavConfigLoading = false;
+  masavDocFile: File | null = null;
+  masavDocUploading = false;
+  masavDocUploadError: string | null = null;
+  masavDocDownloading = false;
 
   selectedExportStatementIds = new Set<string>();
   exporting = false;
@@ -529,6 +572,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   openStatement(statement: StatementListItem): void {
     this.statementDetailLoading = true;
     this.statementActionError = null;
+    this.reconcileMessage = null;
+    this.reconcileError = null;
     this.selectedStatement = null;
     this.service.getStatement(statement.id).subscribe({
       next: (res) => {
@@ -693,6 +738,40 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
+  // Only technical_failure/ambiguous attempts get the button: 'pending' is
+  // actively in flight (the scheduled reconciliation job's intended scope,
+  // not this manual action), 'succeeded'/'declined' are already definitive.
+  // resolveAttempt being idempotent means reconciling those wouldn't be
+  // unsafe, just pointless -- gated out here to keep the UI honest about
+  // when this action means something. masav attempts never show it either
+  // (no reconcile capability at all -- see billing-ops.service.js).
+  canReconcileAttempt(attempt: CollectionAttempt): boolean {
+    return attempt.collection_method === 'card' && (attempt.status === 'technical_failure' || attempt.status === 'ambiguous');
+  }
+
+  reconcileAttempt(attempt: CollectionAttempt): void {
+    if (this.reconcilingAttemptId) return;
+    this.reconcilingAttemptId = attempt.id;
+    this.reconcileMessage = null;
+    this.reconcileError = null;
+    this.service.reconcileCollectionAttempt(attempt.id).subscribe({
+      next: (res) => {
+        this.reconcilingAttemptId = null;
+        this.reconcileMessage = this.reconcileOutcomeMessage(res.result);
+        this.refreshSelectedStatement();
+      },
+      error: (err) => {
+        this.reconcilingAttemptId = null;
+        this.reconcileError = err?.error?.error || 'הבדיקה מול הספק נכשלה';
+      },
+    });
+  }
+
+  private reconcileOutcomeMessage(result: ReconcileAttemptResult): string {
+    const base = RECONCILE_OUTCOME_MESSAGES[result.outcome] ?? `תוצאה מהספק: ${result.outcome}`;
+    return result.failureReason ? `${base}: ${result.failureReason}` : base;
+  }
+
   statementStatusLabel(status: string): string {
     return STATEMENT_STATUS_LABELS[status] ?? status;
   }
@@ -727,23 +806,55 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return BLOCKED_REASON_LABELS[reason] ?? reason;
   }
 
-  openConfigureForm(entityId: string): void {
+  // Opens the setup drawer and loads whatever is already configured for
+  // this entity (if the operator is revisiting a partially-completed
+  // setup) so the bank fields and document/authorization status are never
+  // shown blank when real data already exists.
+  openConfigureForm(entityId: string, entityName: string): void {
     this.configuringEntityId = entityId;
+    this.configuringEntityName = entityName;
     this.masavBankCode = '';
     this.masavBranchCode = '';
     this.masavAccountNumber = '';
     this.masavAccountHolderName = '';
     this.masavFormError = null;
+    this.masavShowHelp = false;
+    this.masavDocFile = null;
+    this.masavDocUploadError = null;
+    this.masavConfig = null;
+    this.masavConfigLoading = true;
+    this.service.getMasavConfig(entityId).subscribe({
+      next: (res) => {
+        this.masavConfigLoading = false;
+        this.masavConfig = res.config;
+        if (res.config) {
+          this.masavBankCode = res.config.bank_code;
+          this.masavBranchCode = res.config.branch_code;
+          this.masavAccountNumber = res.config.account_number;
+          this.masavAccountHolderName = res.config.account_holder_name || '';
+        }
+      },
+      error: () => { this.masavConfigLoading = false; },
+    });
   }
 
   cancelConfigureForm(): void {
     this.configuringEntityId = null;
+    this.loadMasav();
   }
 
+  toggleMasavHelp(): void {
+    this.masavShowHelp = !this.masavShowHelp;
+  }
+
+  // Saves bank details only -- deliberately does not close the drawer or
+  // touch `authorized` (upsertBankDetails always clears it server-side on
+  // any change, per masav-config.service.js). Stays open so the operator
+  // can continue straight to uploading the signed document.
   submitMasavConfig(): void {
     if (!this.configuringEntityId || this.masavFormBusy) return;
-    if (!this.masavBankCode || !this.masavBranchCode || !this.masavAccountNumber) {
-      this.masavFormError = 'יש למלא בנק, סניף ומספר חשבון';
+    if (!this.masavAccountHolderName || !this.masavBankCode || !this.masavBranchCode || !this.masavAccountNumber) {
+      this.masavFormError = 'יש למלא שם בעל חשבון, בנק, סניף ומספר חשבון';
       return;
     }
     this.masavFormBusy = true;
@@ -756,16 +867,58 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         accountHolderName: this.masavAccountHolderName || undefined,
       })
       .subscribe({
-        next: () => {
+        next: (res) => {
           this.masavFormBusy = false;
-          this.configuringEntityId = null;
-          this.loadMasav();
+          this.masavConfig = res.config;
         },
         error: (err) => {
           this.masavFormBusy = false;
           this.masavFormError = err?.error?.error || 'שמירת פרטי הבנק נכשלה';
         },
       });
+  }
+
+  onMasavDocSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.masavDocFile = input.files?.[0] || null;
+    this.masavDocUploadError = null;
+  }
+
+  // Uploads the signed bank authorization as evidence only -- never sets
+  // `authorized`. Requires bank details to already be saved (same order the
+  // drawer enforces visually: fields first, then the document).
+  uploadMasavDoc(): void {
+    if (!this.configuringEntityId || !this.masavDocFile || this.masavDocUploading) return;
+    this.masavDocUploading = true;
+    this.masavDocUploadError = null;
+    this.service.uploadMasavAuthorizationDocument(this.configuringEntityId, this.masavDocFile).subscribe({
+      next: (res) => {
+        this.masavDocUploading = false;
+        this.masavConfig = res.config;
+        this.masavDocFile = null;
+      },
+      error: (err) => {
+        this.masavDocUploading = false;
+        this.masavDocUploadError = err?.error?.error || 'העלאת האישור נכשלה — ודאו שפרטי הבנק נשמרו קודם';
+      },
+    });
+  }
+
+  downloadMasavDoc(): void {
+    if (!this.configuringEntityId || this.masavDocDownloading || !this.masavConfig?.has_authorization_document) return;
+    this.masavDocDownloading = true;
+    this.service.downloadMasavAuthorizationDocument(this.configuringEntityId).subscribe({
+      next: (blob) => {
+        this.masavDocDownloading = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.masavConfig?.authorization_document_name || 'masav-authorization';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => { this.masavDocDownloading = false; },
+    });
   }
 
   authorizeEntity(entityId: string): void {

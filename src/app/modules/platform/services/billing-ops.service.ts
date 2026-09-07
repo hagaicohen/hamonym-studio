@@ -110,6 +110,22 @@ export interface CollectionAttempt {
   resolved_at: string | null;
 }
 
+// Return shape of POST .../collection-attempts/:attemptId/reconcile -- see
+// billing-ops.service.js#reconcileCollectionAttempt. 'not_found' is a real,
+// distinct outcome (the provider has no successful transaction on file
+// under this attempt's id) -- it deliberately leaves attemptStatus/
+// statementStatus unchanged, it is not folded into 'ambiguous'.
+export interface ReconcileAttemptResult {
+  attemptId: string;
+  statementId: string;
+  outcome: 'succeeded' | 'declined' | 'technical_failure' | 'ambiguous' | 'not_found';
+  attemptStatus: string | null;
+  statementStatus: string | null;
+  providerReference: string | null;
+  providerRawStatus: string | null;
+  failureReason: string | null;
+}
+
 export interface Payment {
   id: string;
   statement_id: string;
@@ -152,6 +168,12 @@ export interface MasavConfig {
   authorized: boolean;
   authorized_by: string | null;
   authorized_at: string | null;
+  // Signed bank-authorization document ("אישור הרשאה לחיוב באמצעות מס״ב") --
+  // metadata only, never the bytes. Uploading this never sets `authorized`;
+  // see masav-config.service.js#uploadAuthorizationDocument.
+  authorization_document_name: string | null;
+  authorization_document_uploaded_at: string | null;
+  has_authorization_document: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -255,6 +277,17 @@ export class BillingOpsService {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {}, { headers: authHeaders() });
   }
 
+  // Manual "check with provider" for one past Collection Attempt -- read-only
+  // on the provider's side, never a new charge. See
+  // billing-ops.service.js#reconcileCollectionAttempt.
+  reconcileCollectionAttempt(attemptId: string): Observable<{ result: ReconcileAttemptResult }> {
+    return this.http.post<{ result: ReconcileAttemptResult }>(
+      `${this.base}/collection-attempts/${attemptId}/reconcile`,
+      {},
+      { headers: authHeaders() },
+    );
+  }
+
   // ---- MASAV (Bundle 2) ----------------------------------------------
 
   getMasavConfig(entityId: string): Observable<{ config: MasavConfig | null }> {
@@ -274,6 +307,25 @@ export class BillingOpsService {
 
   revokeMasav(entityId: string, notes?: string): Observable<{ config: MasavConfig }> {
     return this.http.post<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/revoke`, { notes }, { headers: authHeaders() });
+  }
+
+  // Signed bank-authorization document upload -- private storage (bytea on
+  // entity_masav_details, no public URL), same pattern as entities.routes.js's
+  // association-document/tax-document uploads. Content-Type is left for the
+  // browser to set (multipart boundary) -- only the auth header is added.
+  uploadMasavAuthorizationDocument(entityId: string, file: File): Observable<{ config: MasavConfig }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.put<{ config: MasavConfig }>(`${this.base}/masav/${entityId}/authorization-document`, formData, {
+      headers: authHeaders(),
+    });
+  }
+
+  downloadMasavAuthorizationDocument(entityId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/masav/${entityId}/authorization-document`, {
+      headers: authHeaders(),
+      responseType: 'blob',
+    });
   }
 
   listBlockedMasavStatements(): Observable<{ statements: BlockedMasavStatement[] }> {
