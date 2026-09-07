@@ -99,6 +99,12 @@ async function computeStaleAlerts(now) {
   return alerts;
 }
 
+// Exported for scripts/test-cardcom-ops-cadence-classification.js only —
+// both functions are pure (given their already-fetched rows/db), no route
+// depends on this export existing.
+exports.computeAlerts = computeAlerts;
+exports.computeStaleAlerts = computeStaleAlerts;
+
 exports.getHealth = async (req, res) => {
   try {
     const lastWebhooks = await db.query(
