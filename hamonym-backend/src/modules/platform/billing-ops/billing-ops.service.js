@@ -17,6 +17,7 @@ const approval = require('../../billing-engine/approval.service');
 const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
 const billingRepository = require('../../billing/billing.repository');
+const getAdapter = require('../../collection-engine/adapters/get-adapter');
 
 // Read-only collection-readiness projection (Billing Collection UX
 // truthfulness fix, 2026-09-02) -- mirrors, never re-implements, the exact
@@ -287,4 +288,110 @@ exports.triggerCollection = async ({ statementId, superAdminUserId, ip }) => {
     [superAdminUserId, `statementId=${statementId} result=${JSON.stringify(result)}`, ip || null]
   );
   return result;
+};
+
+// Manual "check with provider" for one past Collection Attempt (Billing v1
+// post-launch hardening, 2026-09-07) -- lets a Super Admin safely ask
+// CardCom what it has on file for a SPECIFIC past attempt, without ever
+// creating a new charge or minting a new ExternalUniqTranId. Reuses two
+// already-proven primitives verbatim, never reimplementing either:
+//   - adapters/cardcom-token-charge.adapter.js#reconcile({attemptId}) --
+//     read-only GetTransactionByExternalUniqTran lookup keyed on the SAME
+//     attemptId originally submitted to charge(); mints nothing new.
+//   - collection.service.js#resolveAttempt -- the exact function the live
+//     Router and collection-attempt-reconciliation.job.js both already use
+//     to finalize an attempt/Statement/Payment from an outcome. Calling it
+//     again on an already-resolved attempt is safe (no precondition on
+//     current status; payments.collection_attempt_id / (provider,
+//     provider_reference) UNIQUE make a duplicate 'succeeded' outcome a
+//     harmless no-op the second time, not a double Payment).
+//
+// One outcome value is deliberately NOT handed to resolveAttempt as-is:
+// 'not_found' is not a valid collection_attempts.status (see migration
+// 059's CHECK constraint and adapters/adapter.contract.js's own warning) --
+// collection-attempt-reconciliation.job.js already follows this same rule
+// (it skips resolveAttempt entirely for not_found, leaving the row
+// untouched for a future re-check). This function does the same: a
+// not_found lookup result changes nothing about the attempt/Statement, it
+// only gets reported back to the caller and audit-logged.
+const RECONCILE_UNIQUE_VIOLATION = '23505';
+
+exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip }) => {
+  const attemptRes = await pool.query(
+    `SELECT id, statement_id, collection_method, status FROM collection_attempts WHERE id = $1`,
+    [attemptId]
+  );
+  const attempt = attemptRes.rows[0];
+  if (!attempt) {
+    const err = new Error('Collection attempt not found');
+    err.code = 'ATTEMPT_NOT_FOUND';
+    throw err;
+  }
+
+  if (attempt.collection_method !== 'card') {
+    // masav has no reconcile capability at all today (adapters/masav.adapter.js
+    // is NOT_IMPLEMENTED) -- rejected here, before ever touching getAdapter,
+    // so this never risks invoking a stub's non-existent reconcile().
+    const err = new Error(`Reconcile with provider is not supported for collection_method=${attempt.collection_method}`);
+    err.code = 'RECONCILE_NOT_SUPPORTED_FOR_METHOD';
+    throw err;
+  }
+
+  // Same defensive shape as collection.service.js#runCollectionForStatement's
+  // own adapter.charge() try/catch -- never let the adapter's own thrown
+  // exception (as opposed to a returned {outcome:'ambiguous', ...}) surface
+  // as an unhandled error; treat it identically to an ambiguous lookup.
+  let outcome;
+  try {
+    outcome = await getAdapter('card').reconcile({ attemptId });
+  } catch (err) {
+    outcome = { outcome: 'ambiguous', failureReason: err.message };
+  }
+
+  if (outcome.outcome !== 'not_found') {
+    try {
+      await collection.resolveAttempt(attemptId, attempt.statement_id, outcome);
+    } catch (err) {
+      if (err.code !== RECONCILE_UNIQUE_VIOLATION) throw err;
+      // Same idempotency guarantee collection-attempt-reconciliation.job.js
+      // already relies on for exactly this scenario: payments.
+      // collection_attempt_id / (provider, provider_reference) UNIQUE means
+      // a repeat 'succeeded' outcome for an attempt already resolved (by an
+      // earlier call to this same function, the live Router, or the
+      // scheduled job) hits the DB constraint instead of inserting a second
+      // Payment -- resolveAttempt's whole transaction rolls back, the
+      // attempt/Statement are left exactly as the earlier resolution left
+      // them, and this is that expected losing side, not an error to
+      // surface to the operator.
+    }
+  }
+
+  const [attemptAfterRes, statementAfterRes] = await Promise.all([
+    pool.query(
+      `SELECT status, provider_reference, provider_raw_status, failure_reason FROM collection_attempts WHERE id = $1`,
+      [attemptId]
+    ),
+    pool.query(`SELECT status FROM statements WHERE id = $1`, [attempt.statement_id]),
+  ]);
+
+  await pool.query(
+    `INSERT INTO platform_audit_log (super_admin_user_id, action, notes, ip_address)
+     VALUES ($1, 'billing_collection_attempt_reconcile', $2, $3)`,
+    [
+      superAdminUserId,
+      `attemptId=${attemptId} statementId=${attempt.statement_id} outcome=${outcome.outcome} providerRawStatus=${outcome.providerRawStatus || ''} providerReference=${outcome.providerReference || ''}`,
+      ip || null,
+    ]
+  );
+
+  return {
+    attemptId,
+    statementId: attempt.statement_id,
+    outcome: outcome.outcome,
+    attemptStatus: attemptAfterRes.rows[0]?.status || null,
+    statementStatus: statementAfterRes.rows[0]?.status || null,
+    providerReference: outcome.providerReference || null,
+    providerRawStatus: outcome.providerRawStatus || null,
+    failureReason: outcome.failureReason || null,
+  };
 };

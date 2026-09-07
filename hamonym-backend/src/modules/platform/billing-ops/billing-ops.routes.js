@@ -27,6 +27,11 @@ router.post('/statements/bulk-approve', ctrl.bulkApproveStatements);
 router.post('/statements/:id/abandon', ctrl.abandonStatement);
 router.post('/statements/:id/collect', ctrl.triggerCollection);
 
+// Manual "check with provider" for one past Collection Attempt (Billing v1
+// post-launch hardening) -- read-only reconcile lookup, never a new charge.
+// See billing-ops.service.js#reconcileCollectionAttempt.
+router.post('/collection-attempts/:attemptId/reconcile', ctrl.reconcileCollectionAttempt);
+
 // MASAV (Bundle 2, corrected 2026-09-01) -- structured bank config,
 // explicit authorization, and the Excel export flow. v1 stops at export:
 // there is deliberately no route to manually record a MASAV result -- see

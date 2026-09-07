@@ -117,3 +117,14 @@ exports.triggerCollection = async (req, res) => {
     handle(res, 'triggerCollection', err);
   }
 };
+
+exports.reconcileCollectionAttempt = async (req, res) => {
+  try {
+    const result = await service.reconcileCollectionAttempt({
+      attemptId: req.params.attemptId, superAdminUserId: req.user.id, ip: req.ip,
+    });
+    res.json({ result });
+  } catch (err) {
+    handle(res, 'reconcileCollectionAttempt', err);
+  }
+};
