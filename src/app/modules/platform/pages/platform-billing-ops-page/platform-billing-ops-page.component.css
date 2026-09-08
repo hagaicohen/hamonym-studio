@@ -622,6 +622,34 @@
   margin: 0 0 12px;
 }
 
+.bo-masav-code-callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--primary-color, #583cd6);
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.bo-masav-code-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.bo-masav-code-value {
+  font-size: 18px;
+  letter-spacing: 1px;
+  margin-inline-end: auto;
+}
+
+.bo-masav-code-callout .ops-btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 .bo-help-toggle {
   background: none;
   border: none;

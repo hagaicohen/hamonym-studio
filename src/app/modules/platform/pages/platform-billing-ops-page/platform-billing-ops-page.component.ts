@@ -18,13 +18,17 @@ import {
   ReconcileAttemptResult,
 } from '../../services/billing-ops.service';
 
-// Display-only default for the MASAV setup help box's "קוד מוסד" instruction
-// -- not wired into any backend business logic or validation. Update this
-// constant if Hamonym's actual מוסד code changes; it exists here (not
+// Display-only default for the MASAV setup screen's "קוד מוסד" instruction
+// -- not wired into any backend business logic or validation (nothing in
+// hamonym-backend references this value at all -- it never flows into the
+// MASAV export file itself, see masav-collection.service.js's `company`
+// column, which is the entity's own display name, not this code). Update
+// this constant if Hamonym's actual מוסד code changes; it exists here (not
 // hardcoded inline in the template) so it stays a single, easy-to-find edit
-// point per this task's "treat as configurable/display configuration, not a
-// magic hardcoded permanent business value" instruction.
-const MASAV_INSTITUTION_CODE = '12345';
+// point. Corrected 2026-09-08 from a placeholder '12345' to Hamonym's real
+// registered code, confirmed against the bank-signed authorization form on
+// file (institution code 25788).
+const MASAV_INSTITUTION_CODE = '25788';
 
 type Tab = 'periods' | 'statements' | 'masav';
 
@@ -174,6 +178,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   masavFormBusy = false;
   masavFormError: string | null = null;
   masavInstitutionCode = MASAV_INSTITUTION_CODE;
+  masavCodeCopied = false;
 
   // Setup-screen additions (MASAV setup UX, 2026-09-03) -- the collapsible
   // "how do I get this document" explanation, the loaded config (to show
@@ -851,6 +856,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   toggleMasavHelp(): void {
     this.masavShowHelp = !this.masavShowHelp;
+  }
+
+  // Clipboard write is inherently best-effort (permissions, insecure
+  // context, older browsers) -- falls back to silently doing nothing rather
+  // than throwing, since the code is already displayed in plain text right
+  // next to the button either way.
+  copyMasavInstitutionCode(): void {
+    navigator.clipboard?.writeText(this.masavInstitutionCode).then(() => {
+      this.masavCodeCopied = true;
+      setTimeout(() => { this.masavCodeCopied = false; }, 2000);
+    }).catch(() => {});
   }
 
   // Saves bank details only -- deliberately does not close the drawer or

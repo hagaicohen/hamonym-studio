@@ -32,12 +32,24 @@ export interface HealthAlert {
   failed?: number;
   notRouted?: number;
   minutesSinceLastSuccess?: number | null;
+  minutesSinceLastHeartbeat?: number | null;
+}
+
+// Distinct from a single job's own staleness (JobHealth/job_stale alert) --
+// this is whether the Render Cron trigger process itself is executing at
+// all, independent of any specific job being due. See cardcom-ops.
+// controller.js#getSchedulerHeartbeat.
+export interface SchedulerHeartbeat {
+  lastHeartbeatAt: string | null;
+  minutesSinceLastHeartbeat: number | null;
+  healthy: boolean;
 }
 
 export interface HealthResponse {
   webhooks: WebhookHealth[];
   jobs: JobHealth[];
   knownJobs: string[];
+  schedulerHeartbeat: SchedulerHeartbeat;
   alerts: HealthAlert[];
 }
 

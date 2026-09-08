@@ -503,6 +503,14 @@
           כדי שנוכל לגבות את דמי השירות באמצעות מס"ב, יש להקים בבנק הרשאה לחיוב חשבון לטובת המונים ולהעלות כאן את האישור החתום מהבנק.
         </p>
 
+        <div class="bo-masav-code-callout">
+          <span class="bo-masav-code-label">קוד מוסד מס"ב של המונים</span>
+          <b class="bo-masav-code-value">{{ masavInstitutionCode }}</b>
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="copyMasavInstitutionCode()">
+            {{ masavCodeCopied ? 'הועתק ✓' : 'העתק' }}
+          </button>
+        </div>
+
         <button type="button" class="bo-help-toggle" (click)="toggleMasavHelp()">
           {{ masavShowHelp ? 'הסתרת ההסבר ▲' : 'לא יודעים איך להפיק אישור מס״ב? ▼' }}
         </button>
