@@ -36,6 +36,16 @@ function mockCardcomSuccess() {
 }
 
 async function run() {
+  // Explicit, self-contained donation-fallback credentials (2026-09-09
+  // separation) -- this campaign has no verified CardCom of its own, so
+  // createDonation falls through to HAMONYM_DONATIONS_CARDCOM_*. Set here
+  // rather than relying on whatever a developer's local .env happens to
+  // contain, since axios.post is monkey-patched below anyway -- the values
+  // themselves are never sent anywhere real.
+  process.env.HAMONYM_DONATIONS_CARDCOM_TERMINAL = 'test-donations-terminal';
+  process.env.HAMONYM_DONATIONS_CARDCOM_API_NAME = 'test-donations-api-name';
+  process.env.HAMONYM_DONATIONS_CARDCOM_API_PASSWORD = 'test-donations-api-password';
+
   const anyUserRes = await db.query('SELECT id FROM users LIMIT 1');
   if (!anyUserRes.rows[0]) throw new Error('No user row exists to satisfy entities.created_by_user_id FK -- cannot build test fixture');
   const anyUserId = anyUserRes.rows[0].id;

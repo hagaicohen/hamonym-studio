@@ -363,17 +363,17 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     campaign.cardcom_api_password_encrypted &&
     campaign.cardcom_connection_status === 'success'
   );
-  // Platform-level fallback: Hamonym's own Cardcom account (HAMONYM_CARDCOM_*
-  // in .env), used when the entity hasn't verified its own — explicit,
-  // deliberate choice (2026-08-04) so real donations can go live before every
-  // entity has its own merchant account configured. Funds land in the
-  // platform's own account in that case, not the entity's — settlement to
-  // the entity is a separate, manual step for now.
-  const hasPlatformCardcom = !!(
-    process.env.HAMONYM_CARDCOM_TERMINAL &&
-    process.env.HAMONYM_CARDCOM_API_NAME &&
-    process.env.HAMONYM_CARDCOM_API_PASSWORD
-  );
+  // Platform-level fallback: Hamonym's own donation-facing Cardcom account
+  // (HAMONYM_DONATIONS_CARDCOM_* -- see resolveDonationFallbackCredentials
+  // below, a dedicated credential set separate from the Billing/Collection
+  // Engine's HAMONYM_CARDCOM_*), used when the entity hasn't verified its
+  // own — explicit, deliberate choice (2026-08-04, credentials separated
+  // 2026-09-09) so real donations can go live before every entity has its
+  // own merchant account configured. Funds land in the platform's own
+  // account in that case, not the entity's — settlement to the entity is a
+  // separate, manual step for now.
+  const donationFallbackCredentials = resolveDonationFallbackCredentials();
+  const hasPlatformCardcom = !!donationFallbackCredentials;
   // is_mock means ONLY "PAYMENT_PROVIDER=mock was explicitly set" — a
   // deliberate dev/test override, never an inferred fallback (2026-08-21
   // fix). Missing a real provider is a configuration error, not Mock: it
@@ -485,9 +485,12 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const frontBase  = process.env.FRONTEND_URL || 'http://localhost:4200';
 
   const payload = {
-    TerminalNumber: hasVerifiedCardcom ? campaign.cardcom_terminal_number : process.env.HAMONYM_CARDCOM_TERMINAL,
-    ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : process.env.HAMONYM_CARDCOM_API_NAME,
-    ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : process.env.HAMONYM_CARDCOM_API_PASSWORD,
+    // donationFallbackCredentials is guaranteed non-null here when
+    // !hasVerifiedCardcom -- the PAYMENT_NOT_CONFIGURED check above already
+    // required hasVerifiedCardcom || hasPlatformCardcom before this point.
+    TerminalNumber: hasVerifiedCardcom ? campaign.cardcom_terminal_number : donationFallbackCredentials.terminalNumber,
+    ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : donationFallbackCredentials.apiName,
+    ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : donationFallbackCredentials.apiPassword,
     Amount:         round2(donationAmount),
     Language:       'he',
     // ChargeAndCreateToken required for recurring signups — verified
@@ -563,11 +566,41 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE CARDCOM RETURN
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
+// Donation CardCom fallback (2026-09-09) -- Hamonym's donation-facing
+// platform credentials, used ONLY when an entity has no verified CardCom
+// account of its own. Deliberately a separate credential set from
+// HAMONYM_CARDCOM_* (the Billing/Collection Engine's own terminal --
+// cardcom-token-charge.adapter.js -- proven live for real token charges).
+// The two were never actually interchangeable: investigation on 2026-09-08/
+// 09 found that fixing HAMONYM_CARDCOM_* on 2026-09-02 for Billing broke
+// GetLpResult for this fallback, which had worked fine on whatever value it
+// held before -- CardCom apparently requires the terminal itself to be
+// provisioned per capability (token/no-CVV charging vs. LowProfile
+// checkout), so one terminal cannot be assumed to do both. Rather than
+// reconstruct the old value, this is being configured as a fresh,
+// independent integration.
+// Returns null (never throws) if any of the three are missing -- callers
+// decide whether that's a hard failure or just "not configured yet".
+function resolveDonationFallbackCredentials() {
+  const terminalNumber = process.env.HAMONYM_DONATIONS_CARDCOM_TERMINAL;
+  const apiName = process.env.HAMONYM_DONATIONS_CARDCOM_API_NAME;
+  const apiPassword = process.env.HAMONYM_DONATIONS_CARDCOM_API_PASSWORD;
+  if (!terminalNumber || !apiName || !apiPassword) return null;
+  return { terminalNumber, apiName, apiPassword };
+}
+exports.resolveDonationFallbackCredentials = resolveDonationFallbackCredentials; // exported for scripts/test-donation-cardcom-separation.js only
+
 // Same per-entity-vs-Hamonym-fallback rule as createDonation's Cardcom
 // payload above, looked up independently for a donation that already exists
 // (the Cardcom webhook only gives us a donationId via ReturnValue, not the
 // campaign/entity context createDonation had at hand when it built the
-// LowProfile in the first place).
+// LowProfile in the first place). Throws clearly rather than silently
+// falling back to the Billing terminal's credentials if the dedicated
+// donation fallback isn't configured -- a wrong-but-present credential set
+// fails as an ordinary CardCom 401 (recorded as a finding, exactly what
+// this whole separation was built to stop happening silently); a MISSING
+// one must fail immediately and loudly instead of quietly reusing the
+// wrong rail's credentials.
 function credentialsFromEntityRow(row) {
   const hasVerifiedCardcom = !!(
     row?.cardcom_terminal_number &&
@@ -576,17 +609,23 @@ function credentialsFromEntityRow(row) {
     row?.cardcom_connection_status === 'success'
   );
 
-  return hasVerifiedCardcom
-    ? {
-        terminalNumber: row.cardcom_terminal_number,
-        apiName: row.cardcom_api_username,
-        apiPassword: row.cardcom_api_password_encrypted,
-      }
-    : {
-        terminalNumber: process.env.HAMONYM_CARDCOM_TERMINAL,
-        apiName: process.env.HAMONYM_CARDCOM_API_NAME,
-        apiPassword: process.env.HAMONYM_CARDCOM_API_PASSWORD,
-      };
+  if (hasVerifiedCardcom) {
+    return {
+      terminalNumber: row.cardcom_terminal_number,
+      apiName: row.cardcom_api_username,
+      apiPassword: row.cardcom_api_password_encrypted,
+    };
+  }
+
+  const fallback = resolveDonationFallbackCredentials();
+  if (!fallback) {
+    const err = new Error(
+      'Donation CardCom fallback is not configured (HAMONYM_DONATIONS_CARDCOM_TERMINAL/API_NAME/API_PASSWORD) -- refusing to fall back to the Billing terminal credentials'
+    );
+    err.code = 'DONATION_CARDCOM_FALLBACK_NOT_CONFIGURED';
+    throw err;
+  }
+  return fallback;
 }
 
 // Gate v1 (2026-08-28) — the minimal donation fields the verification gate
