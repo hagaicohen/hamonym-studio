@@ -1112,6 +1112,18 @@ async function checkOwnership(userId, entityId) {
   if (!(await isEntityMember(userId, entityId))) throw new Error('Unauthorized');
 }
 
+// platform_audit_log is a general-purpose Super Admin audit trail shared by
+// many unrelated actions (billing account provisioning, MASAV bank-detail
+// edits, etc, each writing their own internal notes) -- only these five
+// action values are actual approval-lifecycle decisions
+// (platform.service.js#approve/reject/requestChanges/suspend/reactivate).
+// Without this filter, the single most-recent audit row for the entity --
+// whatever it happened to be -- got surfaced verbatim as the association-
+// facing approval comment, once literally leaking an internal note like
+// "fee_rate=0.03 vat_rate=0.18 preferred_collection_method=card" onto the
+// entity's own Settings page.
+const APPROVAL_DECISION_ACTIONS = ['approve', 'reject', 'request_changes', 'suspend', 'reactivate'];
+
 exports.getApprovalStatus = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 
@@ -1121,10 +1133,10 @@ exports.getApprovalStatus = async (entityId, userId) => {
       `SELECT a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS actor_name
        FROM platform_audit_log a
        JOIN users u ON u.id = a.super_admin_user_id
-       WHERE a.entity_id = $1
+       WHERE a.entity_id = $1 AND a.action = ANY($2)
        ORDER BY a.created_at DESC
        LIMIT 1`,
-      [entityId]
+      [entityId, APPROVAL_DECISION_ACTIONS]
     ),
   ]);
 
