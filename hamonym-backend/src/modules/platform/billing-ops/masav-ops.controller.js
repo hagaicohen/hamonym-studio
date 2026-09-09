@@ -25,7 +25,7 @@ exports.upsertConfig = async (req, res) => {
       branchCode: req.body.branchCode,
       accountNumber: req.body.accountNumber,
       accountHolderName: req.body.accountHolderName,
-      superAdminUserId: req.user.id,
+      actorUserId: req.user.id,
       ip: req.ip,
     });
     res.json({ config });
@@ -65,7 +65,7 @@ exports.uploadAuthorizationDocument = async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded', code: 'NO_FILE' });
     }
     const config = await masavConfig.uploadAuthorizationDocument({
-      entityId: req.params.entityId, file: req.file, superAdminUserId: req.user.id, ip: req.ip,
+      entityId: req.params.entityId, file: req.file, actorUserId: req.user.id, ip: req.ip,
     });
     res.json({ config });
   } catch (err) {

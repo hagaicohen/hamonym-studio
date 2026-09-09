@@ -130,7 +130,7 @@ async function main() {
         branchCode: '345',
         accountNumber: '000123456',
         accountHolderName: FIXTURE_TAG,
-        superAdminUserId: SUPER_ADMIN_USER_ID,
+        actorUserId: SUPER_ADMIN_USER_ID,
         ip: '127.0.0.1',
       });
       assert.strictEqual(config.authorized, false);

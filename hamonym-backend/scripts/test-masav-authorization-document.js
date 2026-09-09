@@ -78,7 +78,7 @@ async function main() {
         () => masavConfig.uploadAuthorizationDocument({
           entityId: ids.entityId,
           file: { originalname: 'auth.pdf', mimetype: 'application/pdf', buffer: Buffer.from('pdf-bytes') },
-          superAdminUserId: ids.superAdmin,
+          actorUserId: ids.superAdmin,
         }),
         (err) => err.code === 'MASAV_NOT_CONFIGURED'
       );
@@ -87,7 +87,7 @@ async function main() {
     await check('upsertBankDetails: saving bank fields does not create a document and does not authorize', async () => {
       const config = await masavConfig.upsertBankDetails({
         entityId: ids.entityId, bankCode: '12', branchCode: '345', accountNumber: '6789012',
-        accountHolderName: 'ZZZ Test Account Holder', superAdminUserId: ids.superAdmin,
+        accountHolderName: 'ZZZ Test Account Holder', actorUserId: ids.superAdmin,
       });
       assert.strictEqual(config.authorized, false);
       assert.strictEqual(config.has_authorization_document, false);
@@ -103,7 +103,7 @@ async function main() {
       const config = await masavConfig.uploadAuthorizationDocument({
         entityId: ids.entityId,
         file: { originalname: mangledName, mimetype: 'application/pdf', buffer: Buffer.from('%PDF-fake-bytes') },
-        superAdminUserId: ids.superAdmin,
+        actorUserId: ids.superAdmin,
       });
       assert.strictEqual(config.has_authorization_document, true);
       assert.strictEqual(config.authorization_document_name, 'הרשאה-חתומה.pdf');
@@ -154,7 +154,7 @@ async function main() {
       const config = await masavConfig.uploadAuthorizationDocument({
         entityId: ids.entityId,
         file: { originalname: 'v2.pdf', mimetype: 'application/pdf', buffer: Buffer.from('second-version') },
-        superAdminUserId: ids.superAdmin,
+        actorUserId: ids.superAdmin,
       });
       assert.strictEqual(config.authorization_document_name, 'v2.pdf');
       assert.strictEqual(config.authorized, true, 'uploading a replacement document must not revoke an existing authorization either');

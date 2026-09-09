@@ -1,8 +1,14 @@
 const express =
   require('express');
 
+const multer =
+  require('multer');
+
 const controller =
   require('./billing.controller');
+
+const masavSelfServiceController =
+  require('./masav-self-service.controller');
 
 const cardcomRoutes =
   require('./cardcom.routes');
@@ -21,6 +27,9 @@ const {
 
 const router =
   express.Router();
+
+const masavUpload =
+  multer({ storage: multer.memoryStorage() });
 
 // entity_billing rows don't carry the caller's identity in the URL or body
 // (DELETE only has the billing record's own :id) — resolve the owning
@@ -91,6 +100,52 @@ router.delete(
   requireAuth,
   requireBillingRecordOwnership,
   controller.deleteBilling
+);
+
+/* =========================================
+   MASAV SELF-SERVICE
+   Same entity_masav_details model + service the Super Admin Billing Ops
+   MASAV drawer uses (masav-config.service.js) -- one MASAV data model, two
+   entry points. Deliberately no authorize/revoke here: that stays a
+   Super-Admin-only action (see masav-ops.controller.js under
+   platform/billing-ops).
+========================================= */
+
+router.get(
+
+  '/masav/:entityId',
+
+  requireAuth,
+  requireEntityOwnership('entityId'),
+  masavSelfServiceController.getConfig
+);
+
+router.put(
+
+  '/masav/:entityId',
+
+  requireAuth,
+  requireEntityOwnership('entityId'),
+  masavSelfServiceController.upsertConfig
+);
+
+router.put(
+
+  '/masav/:entityId/authorization-document',
+
+  requireAuth,
+  requireEntityOwnership('entityId'),
+  masavUpload.single('file'),
+  masavSelfServiceController.uploadAuthorizationDocument
+);
+
+router.get(
+
+  '/masav/:entityId/authorization-document',
+
+  requireAuth,
+  requireEntityOwnership('entityId'),
+  masavSelfServiceController.downloadAuthorizationDocument
 );
 
 /* =========================================

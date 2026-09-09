@@ -37,7 +37,13 @@ exports.getByEntityId = async (entityId) => {
 // number; changing the account must never leave a stale authorization
 // silently applying to the new one. The DB CHECK (migration 060) also
 // enforces authorized/authorized_by/authorized_at moving together.
-exports.upsertBankDetails = async ({ entityId, bankCode, branchCode, accountNumber, accountHolderName, superAdminUserId, ip }) => {
+// actorUserId is whichever authenticated user performed the write -- a
+// Super Admin via the Billing Ops MASAV drawer, or the association's own
+// user via its self-service Settings page (masav-self-service.controller.js)
+// -- both are valid callers of this function; platform_audit_log's column is
+// still named super_admin_user_id (its FK just targets users(id), so any
+// real user id satisfies it) but records whoever actually acted here.
+exports.upsertBankDetails = async ({ entityId, bankCode, branchCode, accountNumber, accountHolderName, actorUserId, ip }) => {
   if (!bankCode || !branchCode || !accountNumber) {
     const err = new Error('bankCode, branchCode and accountNumber are all required');
     err.code = 'MISSING_BANK_DETAILS';
@@ -72,7 +78,7 @@ exports.upsertBankDetails = async ({ entityId, bankCode, branchCode, accountNumb
     await client.query(
       `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
        VALUES ($1, $2, 'masav_bank_details_upsert', $3, $4)`,
-      [superAdminUserId, entityId, `bank=${bankCode} branch=${branchCode} account=${accountNumber}`, ip || null]
+      [actorUserId, entityId, `bank=${bankCode} branch=${branchCode} account=${accountNumber}`, ip || null]
     );
 
     await client.query('COMMIT');
@@ -184,7 +190,7 @@ function fixFilenameEncoding(name) {
 // Requires bank details to already be configured (entity_masav_details row
 // must exist -- created by upsertBankDetails) -- matches the setup screen's
 // own order: bank fields first, then the signed document upload.
-exports.uploadAuthorizationDocument = async ({ entityId, file, superAdminUserId, ip }) => {
+exports.uploadAuthorizationDocument = async ({ entityId, file, actorUserId, ip }) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -209,13 +215,13 @@ exports.uploadAuthorizationDocument = async ({ entityId, file, superAdminUserId,
            updated_at = NOW()
        WHERE entity_id = $1
        RETURNING ${CONFIG_COLUMNS}`,
-      [entityId, fixFilenameEncoding(file.originalname), file.mimetype, file.buffer, superAdminUserId]
+      [entityId, fixFilenameEncoding(file.originalname), file.mimetype, file.buffer, actorUserId]
     );
 
     await client.query(
       `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
        VALUES ($1, $2, 'masav_authorization_document_upload', $3, $4)`,
-      [superAdminUserId, entityId, file.originalname, ip || null]
+      [actorUserId, entityId, file.originalname, ip || null]
     );
 
     await client.query('COMMIT');
