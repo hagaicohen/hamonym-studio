@@ -44,6 +44,8 @@ import { EntityBillingSectionEditComponent } from '../edit/entity-billing-sectio
 
 import { EntitiesService } from '../../../../core/services/entities.service';
 
+import { BillingService } from '../../../organization-registration/services/billing.service';
+
 import { ApprovalStatusCardComponent } from '../approval-status-card/approval-status-card.component';
 
 import { SectionSaveState } from '../../models/section-save-state.model';
@@ -91,6 +93,8 @@ export class EntitySettingsComponent implements OnInit {
 
   private entitiesService = inject(EntitiesService);
 
+  private billingService = inject(BillingService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -124,6 +128,12 @@ export class EntitySettingsComponent implements OnInit {
 
   draftEntity: any = null;
 
+  // Real entity_masav_details row for this entity (or null) -- fetched once
+  // so the read-only billing card shows accurate MASAV status from first
+  // paint, not just while the edit drawer is open. Kept current afterwards
+  // by entity-billing-section-edit's masavConfigChange output.
+  masavConfig: any = null;
+
   campaignTypes = CAMPAIGN_TYPES;
 
   ENTITY_CONFIGS = ENTITY_CONFIGS;
@@ -135,9 +145,19 @@ export class EntitySettingsComponent implements OnInit {
 
     this.draftEntity = structuredClone(this.entity);
 
+    this.loadMasavConfig();
+
     if (this.route.snapshot.queryParamMap.get('edit') === 'true') {
       this.startEdit();
     }
+  }
+
+  private loadMasavConfig(): void {
+    if (!this.entity?.id) return;
+    this.billingService.getMasavConfig(this.entity.id).subscribe({
+      next: (res: any) => { this.masavConfig = res.config; },
+      error: () => {},
+    });
   }
 
   onEntityChange(partial: any): void {
@@ -304,9 +324,6 @@ export class EntitySettingsComponent implements OnInit {
 
     if (this.editingSection === 'billing') {
       optimisticEntity.billing_method = this.draftEntity.billing_method;
-
-      optimisticEntity.billing_masav_file_name =
-        this.draftEntity.billing_masav_file_name;
     }
 
     this.entity = optimisticEntity;
@@ -378,8 +395,6 @@ export class EntitySettingsComponent implements OnInit {
             ...updatedEntity,
 
             billing_method: this.draftEntity?.billing_method,
-
-            billing_masav_file_name: this.draftEntity?.billing_masav_file_name,
           };
 
           this.entity = structuredClone(mergedEntity);

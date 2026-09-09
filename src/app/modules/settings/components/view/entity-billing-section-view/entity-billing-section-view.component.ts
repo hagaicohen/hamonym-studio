@@ -19,6 +19,14 @@ export class EntityBillingSectionViewComponent {
   @Input()
   entity: any;
 
+  // Real entity_masav_details row (or null) -- same model the Super Admin
+  // Billing Ops MASAV drawer reads/writes. Passed down by entity-settings.
+  // component so this read-only card reflects real MASAV setup status
+  // instead of the legacy billing_masav_file_name column, which nothing
+  // writes to any more.
+  @Input()
+  masavConfig: any = null;
+
   @Input()
   hasUnsavedChanges = false;
 
@@ -51,7 +59,7 @@ export class EntityBillingSectionViewComponent {
     */
 
     if (this.entity?.billing_method === 'masav') {
-      return !!this.entity?.billing_masav_file_name;
+      return !!this.masavConfig;
     }
 
     /*
@@ -61,5 +69,11 @@ export class EntityBillingSectionViewComponent {
     */
 
     return !!this.entity?.billing_last4;
+  }
+
+  get masavStatusLabel(): string {
+    if (this.masavConfig?.authorized) return 'ההרשאה אושרה';
+    if (this.masavConfig?.has_authorization_document) return 'ממתין לאישור מנהל הפלטפורמה';
+    return 'פרטי בנק נשמרו — טרם הועלה אישור מהבנק';
   }
 }

@@ -47,4 +47,50 @@ export class BillingService {
       { headers: this.authHeaders() },
     );
   }
+
+  // MASAV self-service (association's own Settings page) -- same
+  // entity_masav_details model the Super Admin Billing Ops MASAV drawer
+  // uses, exposed here through an entity-ownership-checked route instead of
+  // the superAdminGuard one. See billing.routes.js#/masav/:entityId.
+  getMasavConfig(entityId: string) {
+    return this.http.get<{ config: any }>(
+      `${environment.apiUrl}/api/billing/masav/${entityId}`,
+
+      { headers: this.authHeaders() },
+    );
+  }
+
+  upsertMasavConfig(
+    entityId: string,
+    payload: { bankCode: string; branchCode: string; accountNumber: string; accountHolderName?: string },
+  ) {
+    return this.http.put<{ config: any }>(
+      `${environment.apiUrl}/api/billing/masav/${entityId}`,
+
+      payload,
+
+      { headers: this.authHeaders() },
+    );
+  }
+
+  uploadMasavAuthorizationDocument(entityId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.put<{ config: any }>(
+      `${environment.apiUrl}/api/billing/masav/${entityId}/authorization-document`,
+
+      formData,
+
+      { headers: this.authHeaders() },
+    );
+  }
+
+  downloadMasavAuthorizationDocument(entityId: string) {
+    return this.http.get(
+      `${environment.apiUrl}/api/billing/masav/${entityId}/authorization-document`,
+
+      { headers: this.authHeaders(), responseType: 'blob' },
+    );
+  }
 }

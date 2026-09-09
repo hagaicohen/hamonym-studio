@@ -252,6 +252,7 @@
       <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('billing')">
         <app-entity-billing-section-view
           [entity]="draftEntity"
+          [masavConfig]="masavConfig"
           [hasUnsavedChanges]="dirtySections.has('billing')"
           (edit)="startEdit('billing')"
           (save)="saveAll()"
@@ -263,6 +264,8 @@
       <app-entity-billing-section-edit
         [entity]="draftEntity"
         [saveState]="saveState"
+        [masavConfig]="masavConfig"
+        (masavConfigChange)="masavConfig = $event"
         (entityChange)="onEntityChange($event)"
         (save)="saveAll()"
         (cancel)="cancelEdit()"

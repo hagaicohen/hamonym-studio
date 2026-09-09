@@ -27,7 +27,7 @@
         type="button"
         [class.success]="saveState.saveCompleted"
         [class.error]="saveState.saveFailed"
-        [disabled]="saveState.isSaving || (isMasav && !canSaveMasav)"
+        [disabled]="saveState.isSaving"
         (click)="save.emit()"
       >
         @if (
@@ -201,46 +201,111 @@
 
   @if (isMasav) {
     <div class="billing-section">
-      <div class="masav-box">
-        <div class="masav-title">הוראת קבע בנקאית</div>
+      <p class="masav-intro">
+        כדי שנוכל לגבות את דמי השירות באמצעות מס"ב, יש להקים בבנק הרשאה לחיוב חשבון לטובת המונים ולהעלות כאן את האישור החתום מהבנק.
+      </p>
 
-        <div class="masav-description">
-          יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת
-        </div>
+      <div class="masav-code-callout">
+        <span class="masav-code-label">קוד מוסד מס"ב של המונים</span>
+        <b class="masav-code-value">{{ masavInstitutionCode }}</b>
+        <button type="button" class="masav-copy-btn" (click)="copyMasavInstitutionCode()">
+          {{ masavCodeCopied ? 'הועתק ✓' : 'העתק' }}
+        </button>
       </div>
 
-      <a href="/files/masav-form.pdf" download class="download-btn">
-        הורדת טופס מס״ב
-      </a>
+      <div class="masav-code-callout">
+        <span class="masav-code-label">שם המוטב בהרשאה</span>
+        <b class="masav-code-value">{{ masavBeneficiaryName }}</b>
+      </div>
 
-      @if (entity?.billing_masav_file_name) {
-        <div class="upload-box">
-          <div class="upload-success">
-            ✓ {{ entity?.billing_masav_file_name }}
+      <button type="button" class="masav-help-toggle" (click)="toggleMasavHelp()">
+        {{ masavShowHelp ? 'הסתרת ההסבר ▲' : 'לא יודעים איך להקים הרשאה במס״ב? ▼' }}
+      </button>
+
+      @if (masavShowHelp) {
+        <div class="masav-help-box">
+          <div class="masav-help-box-title">איך מקימים את ההרשאה?</div>
+          <p class="masav-help-box-text">פנו לבנק ובקשו להקים הרשאה לחיוב חשבון באמצעות מס"ב עבור המונים.</p>
+
+          <ul class="masav-help-box-list">
+            <li>קוד מוסד: <b>{{ masavInstitutionCode }}</b></li>
+            <li>ללא הגבלת סכום</li>
+            <li>ללא הגבלת תוקף / משך זמן</li>
+          </ul>
+
+          <div class="masav-help-note">
+            <b>* למה ללא הגבלת סכום?</b>
+            <p>דמי השירות של המונים מחושבים כאחוז מהפעילות בעמותה, ולכן סכום החיוב עשוי להשתנות מחודש לחודש. ההרשאה אינה קובעת את סכום החיוב בפועל — המונים תחייב בכל תקופה רק בסכום דמי השירות שנצבר בפועל בהתאם לתנאי ההתקשרות.</p>
+          </div>
+          <div class="masav-help-note">
+            <b>* למה ללא הגבלת תוקף?</b>
+            <p>ההרשאה מוגדרת ללא הגבלת תוקף כדי שלא יהיה צורך לחדש אותה בכל תקופה. היא משמשת כל עוד ההתקשרות ואמצעי הגבייה בתוקף.</p>
           </div>
 
-          <button
-            type="button"
-            class="remove-file-button"
-            (click)="removeMasavFile()"
-          >
-            הסר קובץ
-          </button>
+          <p class="masav-help-box-footer">לאחר שהבנק מאשר את ההרשאה, סרקו או צלמו את האישור החתום והעלו אותו כאן.</p>
         </div>
       }
 
-      @if (!entity?.billing_masav_file_name) {
-        <label class="upload-btn">
-          העלאת טופס חתום
+      <div class="masav-subtitle">פרטי החשבון</div>
+      <div class="masav-fields">
+        <label class="masav-field"><span>שם בעל החשבון / שם הלקוח</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
+        <label class="masav-field"><span>בנק</span><input type="text" [(ngModel)]="masavBankCode" /></label>
+        <label class="masav-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
+        <label class="masav-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
+      </div>
+      @if (masavFormError) { <div class="masav-form-error">{{ masavFormError }}</div> }
+      <button type="button" class="masav-save-btn" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
+        {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי חשבון' }}
+      </button>
 
-          <input
-            type="file"
-            hidden
-            accept=".pdf,.jpg,.jpeg,.png"
-            (change)="onMasavFileSelected($event)"
-          />
-        </label>
-      }
+      <label class="masav-ack">
+        <input type="checkbox" [(ngModel)]="masavAckChecked" />
+        <span>{{ masavAckText }}</span>
+      </label>
+
+      <div class="masav-subtitle">העלאת אישור הרשאה מהבנק</div>
+      <div class="masav-upload-field">
+        <div class="masav-upload-helper">PDF או צילום/סריקה ברורים של האישור החתום.</div>
+
+        @if (masavConfig?.has_authorization_document) {
+          <div class="upload-box">
+            <div class="upload-success">
+              ✓ {{ masavConfig?.authorization_document_name }}
+            </div>
+
+            <button type="button" class="masav-secondary-btn" [disabled]="masavDocDownloading" (click)="downloadMasavDoc()">
+              {{ masavDocDownloading ? 'מוריד...' : 'הצגת האישור' }}
+            </button>
+          </div>
+        }
+
+        @if (!masavConfig) {
+          <div class="masav-upload-note">יש לשמור פרטי חשבון לפני העלאת האישור.</div>
+        } @else if (!masavAckChecked) {
+          <div class="masav-upload-note">יש לאשר את ההבנה לעיל לפני העלאת האישור.</div>
+        } @else {
+          <label class="upload-btn">
+            {{ masavDocFile ? masavDocFile.name : 'בחירת קובץ' }}
+            <input type="file" hidden accept=".pdf,image/*" (change)="onMasavDocSelected($event)" />
+          </label>
+          @if (masavDocUploadError) { <div class="masav-form-error">{{ masavDocUploadError }}</div> }
+          <button type="button" class="masav-save-btn" [disabled]="!masavDocFile || masavDocUploading" (click)="uploadMasavDoc()">
+            {{ masavDocUploading ? 'מעלה...' : 'העלאת האישור' }}
+          </button>
+        }
+      </div>
+
+      <div class="masav-subtitle">סטטוס הרשאה</div>
+      <div class="masav-status" [class.masav-status-ready]="masavConfig?.authorized" [class.masav-status-blocked]="!masavConfig?.authorized">
+        <span class="masav-status-label">
+          {{ masavConfig?.authorized ? 'ההרשאה אושרה' : 'טרם אושרה הרשאה' }}
+        </span>
+        <span class="masav-status-sublabel">
+          {{ masavConfig?.authorized
+            ? 'ההרשאה אומתה ואושרה במפורש על ידי מנהל הפלטפורמה.'
+            : 'העלאת האישור אינה מאשרת את ההרשאה באופן אוטומטי — מנהל הפלטפורמה יבדוק את האישור שהועלה ויאשר אותו בנפרד.' }}
+        </span>
+      </div>
     </div>
   }
 </div>

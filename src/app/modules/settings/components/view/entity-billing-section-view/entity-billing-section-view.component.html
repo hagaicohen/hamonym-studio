@@ -97,19 +97,25 @@
 
     <!-- MASAV -->
 
-    @if (isMasav && entity?.billing_masav_file_name) {
+    @if (isMasav && masavConfig) {
       <div class="info-row">
-        <div class="info-label">טופס מס״ב</div>
+        <div class="info-label">בנק / סניף / חשבון</div>
 
         <div class="info-value">
-          {{ entity?.billing_masav_file_name }}
+          {{ masavConfig.bank_code }}/{{ masavConfig.branch_code }}/{{ masavConfig.account_number }}
         </div>
       </div>
 
       <div class="info-row">
         <div class="info-label">סטטוס</div>
 
-        <div class="billing-status success">טופס מס״ב הוגדר</div>
+        <div
+          class="billing-status"
+          [class.success]="masavConfig.authorized"
+          [class.pending]="!masavConfig.authorized"
+        >
+          {{ masavStatusLabel }}
+        </div>
       </div>
     }
   }
