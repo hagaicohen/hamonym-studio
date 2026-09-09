@@ -118,7 +118,7 @@ Real-DB throwaway-fixture E2E (`scripts/test-masav-e2e-live-fixture.js`) proved 
 
 **Not yet exercised with a real entity in production** — `entity_masav_details` has 0 rows live as of this writing. No real MASAV collection has ever actually run.
 
-**Known regression, explicitly the next task (§8)**: the MASAV onboarding UI currently does not show the structured fields/explanation already designed. Investigate + fix in the next chat — do not touch MASAV collection/export logic itself while doing so.
+**MASAV onboarding UI: CLOSED 2026-09-09 — see §9 correction.** The line originally here ("the MASAV onboarding UI currently does not show the structured fields/explanation already designed") was investigated in the next chat and found **factually wrong** — nothing had regressed. §9 below has the full corrected account and what was actually built.
 
 ---
 
@@ -159,30 +159,26 @@ No schema changes were made this session (2026-09-08/09) — the monthly-cycle j
 
 ---
 
-## 9. NEXT TASK — MASAV ONBOARDING UI
+## 9. MASAV ONBOARDING UI — CLOSED 2026-09-09 (corrects this section's original premise)
 
-**This is the first task for the next chat. Do not start it in this one.**
+**This section originally opened as a "next task" claiming the structured MASAV setup fields had disappeared from the UI and needed investigation.** That premise was checked against the actual code (not assumed) and was **wrong**: `platform-billing-ops-page.component.{ts,html}`'s MASAV drawer already had the 4 structured bank fields, the institution-code callout with copy button, and the plain-Hebrew unlimited-amount/duration explanation — built commit `f39e8c1` (2026-09-03) and refined `1b933bc` (2026-09-08, this session, institution code corrected to 25788). Nothing had regressed there.
 
-The current MASAV onboarding UI (`hamonym-app/src/app/modules/platform/pages/platform-billing-ops-page/`) is incomplete/regressed relative to what was already designed — it does not currently show all the structured setup fields and explanation. **Investigate why the previously-implemented structured fields disappeared before implementing the fix** — do not assume; check git history / prior component versions.
+**What the investigation found instead — the real problem**: there were (and until this fix, still would be) **three independently-built MASAV data-entry surfaces against two disconnected data models**, not one duplicate pair:
 
-### Required in the fix
+| # | Surface | Reachable by | Wrote to (before this fix) |
+|---|---|---|---|
+| 1 | Settings → "אמצעי חיוב" (`settings/components/edit/entity-billing-section-edit`) | any entity user, `/settings/entities/:id` | `entities.billing_method` / `billing_masav_file_name` (legacy columns; the upload didn't even send file bytes anywhere — just stashed a filename string) |
+| 2 | Platform Billing Ops MASAV drawer (`platform/pages/platform-billing-ops-page`) | Super Admin only | `entity_masav_details` (the real table — the only one `collection-engine/routing.js` actually reads) |
+| 3 | Organization registration wizard, billing-method step | any new entity during signup | **nothing** — `OrganizationRegistrationStateService.buildPayload()` silently drops the MASAV selection/upload from the save payload entirely |
 
-- Restore structured bank fields: account/customer name, bank code, branch code, account number.
-- Beneficiary name: **פלנוויז בע"מ**.
-- Institution code: **25788** — already implemented prominently with a copy button (commit `1b933bc`, `MASAV_INSTITUTION_CODE` in `platform-billing-ops-page.component.ts`) — verify it's still present/correct as part of this investigation, don't re-do it if it's fine.
-- Explain clearly: the bank authorization must be established **without an amount limit and without a duration/time limit**, because Hamonym's charges are percentage-based and depend on actual platform activity/donations plus the agreed commercial fee — so the debit amount is inherently variable, not a fixed predetermined sum.
-- Explicitly clarify: unrestricted bank authorization does **not** mean arbitrary charges — actual billing always remains governed by the agreed fee terms and real platform activity.
-- Require an **unchecked** acknowledgement checkbox, exact text:
-  > קראתי והבנתי כי החיוב באמצעות מס"ב מתבצע בהתאם להיקף הפעילות בפלטפורמה ולשיעור העמלה שנקבע בהתקשרות, ולכן ההרשאה הבנקאית נדרשת ללא הגבלת סכום וללא הגבלת משך זמן.
-- The upload step must be labeled **"העלאת אישור הרשאה מהבנק"** (not merely "a signed form").
-- Uploading the document and checking the acknowledgement must **NOT** set `authorized=true`. Super Admin explicit `authorize()`/`revoke()` remains the only writer of that boolean — unchanged, do not weaken this.
-- Reuse the existing `entity_masav_details` table and existing secure authorization-document storage (`authorization_document_data`/`_name`/`_mime`, migration 063) — **do not create a second MASAV data model.**
-- Do **not** change MASAV collection/export behavior (`masav-collection.service.js`, `generateExportExcel`) — this task is onboarding UI only.
+An association filling in surface #1 or #3 would see a "success" UI while `entity_masav_details` — the only table Collection ever reads — stayed completely empty. This was a real functional gap, not cosmetic duplication.
 
-### Intended UX flow
+**Fix implemented (user-directed: "Option A — connect the self-service screen to the real model", not hide/remove it):**
+- Backend: new entity-scoped MASAV routes (`hamonym-backend/src/modules/billing/billing.routes.js` — `GET/PUT /api/billing/masav/:entityId`, `PUT/GET /api/billing/masav/:entityId/authorization-document`), guarded by `requireAuth` + `requireEntityOwnership('entityId')` (the same pre-existing, previously-audited ownership middleware used everywhere else, not new logic). New controller `masav-self-service.controller.js` calls the exact same `masav-config.service.js` (`upsertBankDetails`/`uploadAuthorizationDocument`/`getByEntityId`/`getAuthorizationDocumentFile`) the Super Admin drawer already used — **one MASAV data model, two entry points**. Deliberately exposes no `authorize`/`revoke` — flipping `entity_masav_details.authorized` stays exclusively a Super Admin action via `masav-ops.controller.js`, unchanged. `masav-config.service.js`'s shared write functions had their actor param renamed `superAdminUserId` → `actorUserId` (it now legitimately receives either a Super Admin or an association's own user id; `authorize`/`revoke` keep `superAdminUserId`, untouched).
+- New real-DB test `scripts/test-masav-self-service-ownership.js` (8/8 pass) proves the actual security boundary the user asked to be tested carefully: one association's user is 403'd by the real `requireEntityOwnership` middleware against another association's entityId; a self-service save lands only on the caller's own `entity_masav_details` row and is correctly attributed in `platform_audit_log`; the self-service controller exposes no `authorize`/`revoke`. Existing `test-masav-authorization-document.js` (8/8) and `test-masav-e2e-live-fixture.js` (9/9) re-run clean after the rename.
+- Frontend: `entity-billing-section-edit.component.{ts,html,css}` (Settings, surface #1) rebuilt to the same structured-fields + institution-code + beneficiary-name + explanation + acknowledgement-checkbox + real-upload pattern as the admin drawer, now calling the real self-service API instead of faking a filename. `entity-billing-section-view.component.{ts,html}` (the read-only summary) now reflects real `entity_masav_details` status instead of the dead `billing_masav_file_name` field. `entity-settings.component.{ts,html}` fetches the entity's real MASAV config once and passes it to both. New shared constants file `hamonym-app/src/app/shared/constants/masav.constants.ts` (`MASAV_INSTITUTION_CODE`, `MASAV_BENEFICIARY_NAME` = פלנוויז בע"מ, `MASAV_ACK_TEXT`) is now the single source both the admin drawer and Settings import from, so the two surfaces cannot drift apart again the way #1/#2/#3 did.
+- Surface #3 (registration wizard) was **not** touched — it was flagged but out of scope for this fix (it's a separate, smaller bug: the wizard's MASAV step is decorative and its state is silently dropped on submit). **Backlogged, not fixed.**
+- Uploading the document and checking the acknowledgement still never set `authorized=true` anywhere — verified directly in `masav-config.service.js`'s `uploadAuthorizationDocument` and in the new ownership test, not assumed.
+- Did not touch MASAV collection/export logic (`masav-collection.service.js`, `generateExportExcel`) or the `authorized` DB CHECK constraint (migration 060).
 
-```
-פרטי חשבון בנק → הקמת הרשאה בבנק (25788) → הסבר ואישור → העלאת אישור הרשאה מהבנק → המתנה לאישור מנהל Hamonym
-```
-
-Relevant existing files to start from: `masav-config.service.js` (backend, `upsertBankDetails`/`authorize`/`revoke`/`uploadAuthorizationDocument`/`getAuthorizationDocumentFile`), `platform-billing-ops-page.component.{ts,html,css}` (frontend MASAV tab/drawer), migration `060_masav_configuration.sql` + `063_masav_authorization_document.sql` for the exact schema.
+**Backlog surfaced by this fix, not addressed**: registration-wizard MASAV step (surface #3 above) still silently loses its selection/upload on submit — a real association could believe they configured MASAV during signup and nothing would be saved. Worth its own task; do not conflate with this closure.
