@@ -22,7 +22,14 @@ import {
   MASAV_INSTITUTION_CODE,
   MASAV_BENEFICIARY_NAME,
   MASAV_ACK_TEXT,
+  MASAV_WHY_UNLIMITED_TITLE,
+  MASAV_WHY_UNLIMITED_TEXT,
+  MASAV_UPLOAD_HELPER_TEXT,
+  MASAV_PENDING_STATUS_LABEL,
+  MASAV_PENDING_STATUS_SUBLABEL,
 } from '../../../../shared/constants/masav.constants';
+
+import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
 
 type Tab = 'periods' | 'statements' | 'masav';
 
@@ -175,6 +182,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   masavCodeCopied = false;
   masavBeneficiaryName = MASAV_BENEFICIARY_NAME;
   masavAckText = MASAV_ACK_TEXT;
+  masavWhyUnlimitedTitle = MASAV_WHY_UNLIMITED_TITLE;
+  masavWhyUnlimitedText = MASAV_WHY_UNLIMITED_TEXT;
+  masavUploadHelperText = MASAV_UPLOAD_HELPER_TEXT;
+  masavPendingStatusLabel = MASAV_PENDING_STATUS_LABEL;
+  masavPendingStatusSublabel = MASAV_PENDING_STATUS_SUBLABEL;
+  readonly israeliBanks: IsraeliBank[] = ISRAELI_BANKS;
   masavAckChecked = false;
 
   // Setup-screen additions (MASAV setup UX, 2026-09-03) -- the collapsible

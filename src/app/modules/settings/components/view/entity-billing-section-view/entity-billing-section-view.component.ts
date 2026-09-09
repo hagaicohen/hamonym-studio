@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 
 import { LucideAngularModule, CreditCard, Pencil, TriangleAlert } from 'lucide-angular';
 
+import { ISRAELI_BANKS } from '../../../../../shared/constants/israeli-banks.constants';
+
 @Component({
   selector: 'app-entity-billing-section-view',
 
@@ -75,5 +77,13 @@ export class EntityBillingSectionViewComponent {
     if (this.masavConfig?.authorized) return 'ההרשאה אושרה';
     if (this.masavConfig?.has_authorization_document) return 'ממתין לאישור מנהל הפלטפורמה';
     return 'פרטי בנק נשמרו — טרם הועלה אישור מהבנק';
+  }
+
+  // Bank was historically free-text before the dropdown (2026-09-09); an
+  // unrecognized code (only possible for data saved before the dropdown
+  // existed) falls back to showing the raw code rather than hiding it.
+  get masavBankName(): string {
+    const bank = ISRAELI_BANKS.find((b) => b.code === this.masavConfig?.bank_code);
+    return bank?.name || this.masavConfig?.bank_code || '—';
   }
 }

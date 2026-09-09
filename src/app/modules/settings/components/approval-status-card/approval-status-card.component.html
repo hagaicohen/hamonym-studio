@@ -1,4 +1,4 @@
-<div class="approval-card" *ngIf="!loading && data">
+<div class="approval-card" *ngIf="!loading && data && needsAttention">
 
   <div class="approval-header">
     <span class="approval-icon">{{ meta(data.status).icon }}</span>

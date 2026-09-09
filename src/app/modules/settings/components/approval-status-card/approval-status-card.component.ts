@@ -73,6 +73,18 @@ export class ApprovalStatusCardComponent implements OnChanges {
     return STATUS_META[status] ?? { label: status, icon: '⚪', level: 'neutral' as const };
   }
 
+  // The entity-settings hero row already shows registration number + status
+  // (active/pending/draft) -- this card should only render on top of that
+  // when the entity actually needs the association's attention, not repeat
+  // the same "active"/"approved" signal in different words. Also the only
+  // real backstop against a future non-approval audit note (billing,
+  // MASAV, etc) rendering as if it were "issues to complete" -- the real
+  // fix for that is the backend's action filter (entities.service.js#
+  // getApprovalStatus), this is defense in depth, not a substitute for it.
+  get needsAttention(): boolean {
+    return !!this.data && ['changes_requested', 'rejected', 'suspended'].includes(this.data.status);
+  }
+
   reasonLabel(tag: string): string {
     return approvalReasonLabel(tag);
   }

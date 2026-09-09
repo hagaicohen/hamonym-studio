@@ -24,25 +24,42 @@
       } @else {
         <button type="button" class="edit-btn" (click)="edit.emit()">
           <lucide-icon [img]="PencilIcon" [size]="13" [strokeWidth]="1.75"></lucide-icon>
-          עריכה
+          {{ hasBillingMethod ? 'עריכה' : 'הגדרת אמצעי חיוב' }}
         </button>
       }
     </div>
   </div>
 
-  <div class="info-strip">החיוב מתבצע בהתאם לפעילות הישות במערכת</div>
+  <div class="info-strip">אמצעי החיוב משמש לתשלום דמי השירות של Hamonym בהתאם לתנאי ההתקשרות ולפעילות העמותה במערכת.</div>
 
   <!-- EMPTY -->
 
   @if (!hasBillingMethod) {
     <div class="empty-state">
-      <div class="empty-icon">💳</div>
-
       <div class="empty-title">טרם הוגדר אמצעי חיוב</div>
 
       <div class="empty-description">
-        ניתן לחבר כרטיס אשראי בצורה מאובטחת באמצעות CardCom
+        לצורך תשלום דמי השירות של Hamonym יש להגדיר אמצעי חיוב לעמותה. ניתן לבחור באחת משתי אפשרויות:
       </div>
+
+      <div class="empty-options">
+        <div class="empty-option">
+          <span class="empty-option-icon">💳</span>
+          <div>
+            <div class="empty-option-title">כרטיס אשראי</div>
+            <div class="empty-option-description">שמירת כרטיס מאובטחת באמצעות CardCom.</div>
+          </div>
+        </div>
+        <div class="empty-option">
+          <span class="empty-option-icon">🏦</span>
+          <div>
+            <div class="empty-option-title">הוראת קבע בנקאית (מס״ב)</div>
+            <div class="empty-option-description">הקמת הרשאה לחיוב חשבון הבנק של העמותה.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-description">ניתן לבחור את אמצעי החיוב באמצעות כפתור "הגדרת אמצעי חיוב".</div>
     </div>
   } @else {
     <!-- METHOD -->
@@ -99,10 +116,16 @@
 
     @if (isMasav && masavConfig) {
       <div class="info-row">
-        <div class="info-label">בנק / סניף / חשבון</div>
+        <div class="info-label">בנק</div>
+
+        <div class="info-value">{{ masavBankName }}</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">סניף / חשבון</div>
 
         <div class="info-value">
-          {{ masavConfig.bank_code }}/{{ masavConfig.branch_code }}/{{ masavConfig.account_number }}
+          {{ masavConfig.branch_code }}/{{ masavConfig.account_number }}
         </div>
       </div>
 

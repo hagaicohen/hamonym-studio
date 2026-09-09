@@ -492,29 +492,25 @@
   margin: 0 0 10px;
 }
 
-.masav-help-box-list {
-  margin: 0 0 14px;
-  padding-inline-start: 20px;
-  font-size: 13px;
-  color: #1e293b;
-  line-height: 1.9;
-}
-
-.masav-help-note {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
-
-.masav-help-note b { color: #475569; }
-.masav-help-note p { margin: 2px 0 0; }
-
 .masav-help-box-footer {
   font-size: 13px;
   font-weight: 600;
   color: #1e293b;
   margin: 12px 0 0;
+}
+
+.masav-why-box {
+  border-inline-start: 3px solid #6D5DF6;
+  background: #faf9ff;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.masav-why-box p {
+  margin: 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.8;
 }
 
 .masav-subtitle {
@@ -538,7 +534,8 @@
   color: #374151;
 }
 
-.masav-field input {
+.masav-field input,
+.masav-field select {
   height: 48px;
   padding: 0 14px;
   border: 1px solid #d1d5db;
@@ -549,20 +546,22 @@
   box-sizing: border-box;
   outline: none;
   transition: 0.2s;
+  width: 100%;
 }
 
-.masav-field input:focus {
+.masav-field input:focus,
+.masav-field select:focus {
   border-color: #6D5DF6;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
-.masav-form-error {
+.masav-header-error {
+  margin-top: 12px;
   font-size: 13px;
   font-weight: 600;
   color: #dc2626;
 }
 
-.masav-save-btn,
 .masav-secondary-btn {
   align-self: flex-start;
   height: 44px;
@@ -571,20 +570,6 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.masav-save-btn {
-  border: none;
-  background: #6D5DF6;
-  color: #ffffff;
-}
-
-.masav-save-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.masav-secondary-btn {
   border: 1px solid #d1d5db;
   background: #ffffff;
   color: #374151;

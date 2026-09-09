@@ -16,6 +16,8 @@ import { CommonModule } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 
+import { firstValueFrom } from 'rxjs';
+
 import { ActivatedRoute } from '@angular/router';
 
 import { LucideAngularModule, CreditCard } from 'lucide-angular';
@@ -34,7 +36,14 @@ import {
   MASAV_INSTITUTION_CODE,
   MASAV_BENEFICIARY_NAME,
   MASAV_ACK_TEXT,
+  MASAV_WHY_UNLIMITED_TITLE,
+  MASAV_WHY_UNLIMITED_TEXT,
+  MASAV_UPLOAD_HELPER_TEXT,
+  MASAV_PENDING_STATUS_LABEL,
+  MASAV_PENDING_STATUS_SUBLABEL,
 } from '../../../../../shared/constants/masav.constants';
+
+import { ISRAELI_BANKS, IsraeliBank } from '../../../../../shared/constants/israeli-banks.constants';
 
 type BillingMethod = 'credit-card' | 'masav';
 
@@ -126,22 +135,35 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
   readonly masavInstitutionCode = MASAV_INSTITUTION_CODE;
   readonly masavBeneficiaryName = MASAV_BENEFICIARY_NAME;
   readonly masavAckText = MASAV_ACK_TEXT;
+  readonly masavWhyUnlimitedTitle = MASAV_WHY_UNLIMITED_TITLE;
+  readonly masavWhyUnlimitedText = MASAV_WHY_UNLIMITED_TEXT;
+  readonly masavUploadHelperText = MASAV_UPLOAD_HELPER_TEXT;
+  readonly masavPendingStatusLabel = MASAV_PENDING_STATUS_LABEL;
+  readonly masavPendingStatusSublabel = MASAV_PENDING_STATUS_SUBLABEL;
 
   masavCodeCopied = false;
   masavShowHelp = false;
   masavAckChecked = false;
 
+  readonly israeliBanks: IsraeliBank[] = ISRAELI_BANKS;
+
   masavBankCode = '';
   masavBranchCode = '';
   masavAccountNumber = '';
   masavAccountHolderName = '';
-  masavFormBusy = false;
-  masavFormError: string | null = null;
 
   masavDocFile: File | null = null;
-  masavDocUploading = false;
-  masavDocUploadError: string | null = null;
   masavDocDownloading = false;
+
+  // Unified submit: one association-facing action saves the bank details
+  // and (if a file was chosen) uploads the authorization document right
+  // after, in sequence -- there is no longer a separate "save bank details"
+  // step the association has to complete before they're even allowed to
+  // pick a file. This also removes the "stale unsaved details" upload risk
+  // structurally, not by tracking dirtiness: every upload is immediately
+  // preceded by a fresh save of the exact fields on screen, every time.
+  masavSubmitBusy = false;
+  masavFormError: string | null = null;
 
   ngOnInit(): void {
     this.entitiesService
@@ -235,60 +257,102 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
     }).catch(() => {});
   }
 
-  // Saves bank details only, independent of the outer "שמירה"/"ביטול" card
-  // buttons -- same real entity_masav_details model + upsertMasavConfig
-  // endpoint the Super Admin drawer uses, just through the entity-ownership-
-  // checked route instead of the superAdminGuard one.
-  submitMasavConfig(): void {
-    if (!this.entity?.id || this.masavFormBusy) return;
-    if (!this.masavAccountHolderName || !this.masavBankCode || !this.masavBranchCode || !this.masavAccountNumber) {
-      this.masavFormError = 'יש למלא שם בעל חשבון, בנק, סניף ומספר חשבון';
-      return;
-    }
-    this.masavFormBusy = true;
-    this.masavFormError = null;
-    this.billingService
-      .upsertMasavConfig(this.entity.id, {
-        bankCode: this.masavBankCode,
-        branchCode: this.masavBranchCode,
-        accountNumber: this.masavAccountNumber,
-        accountHolderName: this.masavAccountHolderName || undefined,
-      })
-      .subscribe({
-        next: (res: any) => {
-          this.masavFormBusy = false;
-          this.masavConfig = res.config;
-          this.masavConfigChange.emit(this.masavConfig);
-        },
-        error: (err: any) => {
-          this.masavFormBusy = false;
-          this.masavFormError = err?.error?.error || 'שמירת פרטי הבנק נכשלה';
-        },
-      });
-  }
-
   onMasavDocSelected(event: Event): void {
+    // File-selection only -- does NOT upload. The file rides along as part
+    // of the single "שמירת אמצעי החיוב" action (onSaveClick below), exactly
+    // like every other section's file inputs already work in this same
+    // settings page (tax document, association certificate, logo -- see
+    // entity-settings.component.ts#saveAll, which uploads those only when
+    // the outer save button is actually pressed).
     const input = event.target as HTMLInputElement;
     this.masavDocFile = input.files?.[0] || null;
-    this.masavDocUploadError = null;
+    this.masavFormError = null;
   }
 
-  uploadMasavDoc(): void {
-    if (!this.entity?.id || !this.masavDocFile || this.masavDocUploading) return;
-    this.masavDocUploading = true;
-    this.masavDocUploadError = null;
-    this.billingService.uploadMasavAuthorizationDocument(this.entity.id, this.masavDocFile).subscribe({
-      next: (res: any) => {
-        this.masavDocUploading = false;
-        this.masavConfig = res.config;
-        this.masavConfigChange.emit(this.masavConfig);
-        this.masavDocFile = null;
-      },
-      error: (err: any) => {
-        this.masavDocUploading = false;
-        this.masavDocUploadError = err?.error?.error || 'העלאת האישור נכשלה — ודאו שפרטי הבנק נשמרו קודם';
-      },
-    });
+  // Called by the single card-level "שמירת אמצעי החיוב" button (see
+  // onSaveClick) -- never rendered as its own button. Validates, then saves
+  // bank details and (only if a new file was chosen) uploads the
+  // authorization document, in sequence. Two real API calls under the
+  // hood (upsertMasavConfig + uploadMasavAuthorizationDocument),
+  // orchestrated from here rather than merged into a second data model.
+  // Never touches `authorized` -- that stays Super-Admin-only.
+  private async saveMasavIfNeeded(): Promise<{ ok: boolean; error?: string }> {
+    if (!this.isMasav) return { ok: true };
+    if (!this.entity?.id) return { ok: false, error: 'לא ניתן לשמור — עמותה לא נמצאה' };
+
+    if (!this.masavAckChecked) {
+      return { ok: false, error: 'יש לאשר את ההצהרה על תנאי ההרשאה כדי לשמור' };
+    }
+    if (!this.masavAccountHolderName || !this.masavBankCode || !this.masavBranchCode || !this.masavAccountNumber) {
+      return { ok: false, error: 'יש למלא את כל פרטי חשבון הבנק (בנק, סניף, מספר חשבון, שם בעל החשבון)' };
+    }
+
+    try {
+      const res: any = await firstValueFrom(
+        this.billingService.upsertMasavConfig(this.entity.id, {
+          bankCode: this.masavBankCode,
+          branchCode: this.masavBranchCode,
+          accountNumber: this.masavAccountNumber,
+          accountHolderName: this.masavAccountHolderName || undefined,
+        }),
+      );
+      this.masavConfig = res.config;
+      this.masavConfigChange.emit(this.masavConfig);
+    } catch (err: any) {
+      return { ok: false, error: err?.error?.error || 'שמירת פרטי הבנק נכשלה' };
+    }
+
+    // No new file chosen -- an existing uploaded document (if any) is left
+    // exactly as-is, never re-uploaded unnecessarily.
+    if (!this.masavDocFile) return { ok: true };
+
+    try {
+      const res: any = await firstValueFrom(
+        this.billingService.uploadMasavAuthorizationDocument(this.entity.id, this.masavDocFile),
+      );
+      this.masavConfig = res.config;
+      this.masavConfigChange.emit(this.masavConfig);
+      this.masavDocFile = null;
+      return { ok: true };
+    } catch (err: any) {
+      // Bank details already saved above -- only the document upload
+      // failed. Say so precisely; do not report a full failure, and never
+      // lose the already-selected file or typed data.
+      return {
+        ok: false,
+        error:
+          'פרטי החשבון נשמרו בהצלחה, אך העלאת האישור נכשלה' +
+          (err?.error?.error ? ` (${err.error.error})` : '') +
+          '. ניתן ללחוץ שוב על "שמירת אמצעי החיוב" כדי לנסות להעלות את הקובץ מחדש, מבלי להזין דבר מחדש.',
+      };
+    }
+  }
+
+  // The single "שמירת אמצעי החיוב" button in the card header calls this
+  // instead of emitting `save` directly. For credit-card mode, behavior is
+  // unchanged (immediate emit -- entity-settings.component.ts#saveAll
+  // already handles card tokenization). For MASAV, the bank-details-save +
+  // document-upload sequence runs first as ONE user-facing action; only on
+  // success does the generic entity save (billing_method etc.) proceed --
+  // a MASAV failure must never look like the card silently saved anyway.
+  async onSaveClick(): Promise<void> {
+    if (this.saveState.isSaving || this.masavSubmitBusy) return;
+
+    if (this.isMasav) {
+      this.masavSubmitBusy = true;
+      this.masavFormError = null;
+
+      const result = await this.saveMasavIfNeeded();
+
+      this.masavSubmitBusy = false;
+
+      if (!result.ok) {
+        this.masavFormError = result.error || 'שמירת אמצעי החיוב נכשלה';
+        return;
+      }
+    }
+
+    this.save.emit();
   }
 
   downloadMasavDoc(): void {
