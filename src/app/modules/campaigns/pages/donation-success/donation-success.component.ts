@@ -13,8 +13,7 @@ interface DonationResult {
   created_at:     string;
   status:         string;
   donor_name:     string | null;
-  donor_email:    string | null;
-  donor_user_id:  string | null;
+  has_account:    boolean;
   campaign_id:    string;
   campaign_title: string;
   campaign_slug:  string;
@@ -110,14 +109,22 @@ export class DonationSuccessComponent implements OnInit {
 
   // Don't pitch account creation if the donor is already logged in, or this
   // donation is already linked to an account (e.g. they were logged in when
-  // they donated, or a matching account already existed).
+  // they donated, or a matching account already existed). has_account is a
+  // boolean the backend computes from donor_user_id -- this public,
+  // unauthenticated endpoint must never return the internal id itself
+  // (2026-09-10, Launch Closure).
   get showCreateAccountPrompt(): boolean {
-    return !localStorage.getItem('token') && !this.donation?.donor_user_id;
+    return !localStorage.getItem('token') && !this.donation?.has_account;
   }
 
+  // Email is deliberately NOT pre-filled here (2026-09-10, Launch Closure)
+  // -- doing so would require the public success response to expose the
+  // donor's email indefinitely to anyone holding the URL, not just the
+  // donor themselves right after paying. The donor types it once on the
+  // registration form instead; donor_name alone isn't sensitive the same
+  // way and is already shown in plaintext elsewhere on this same page.
   get createAccountQueryParams(): Record<string, string> {
     const params: Record<string, string> = { returnUrl: '/my-donations' };
-    if (this.donation?.donor_email) params['email'] = this.donation.donor_email;
     if (this.donation?.donor_name) params['name'] = this.donation.donor_name;
     return params;
   }
