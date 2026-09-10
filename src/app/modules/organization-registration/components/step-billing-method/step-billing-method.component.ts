@@ -41,10 +41,6 @@ export class StepBillingMethodComponent {
 
   paymentMethod: PaymentMethod = 'credit-card';
 
-  masavUploaded = false;
-
-  masavFileName = '';
-
   continueLater = false;
 
   isSaving = false;
@@ -56,20 +52,12 @@ export class StepBillingMethodComponent {
 
     this.paymentMethod = state.paymentMethod as PaymentMethod;
 
-    this.masavUploaded = state.masavUploaded;
-
-    this.masavFileName = state.masavFileName;
-
     this.continueLater = state.continueLater;
   }
 
   private syncState(): void {
     this.stateService.updateState({
       paymentMethod: this.paymentMethod,
-
-      masavUploaded: this.masavUploaded,
-
-      masavFileName: this.masavFileName,
 
       continueLater: this.continueLater,
     });
@@ -83,20 +71,15 @@ export class StepBillingMethodComponent {
     return this.paymentMethod === 'masav';
   }
 
+  // MASAV bank authorization is completed in Association Settings after
+  // registration (see entity-billing-section-edit.component.ts -- the one
+  // real, persisted MASAV implementation) -- there is nothing left to
+  // require at this step once MASAV is selected. 2026-09-10: this step
+  // used to require a local file "upload" first, but that file was never
+  // actually sent to the backend -- it only set local component state, so
+  // the step claimed a save that never happened.
   get canContinue(): boolean {
-    if (this.continueLater) {
-      return true;
-    }
-
-    if (this.isCreditCard) {
-      return true;
-    }
-
-    if (this.isMasav) {
-      return this.masavUploaded;
-    }
-
-    return false;
+    return true;
   }
 
   get submitButtonText(): string {
@@ -147,31 +130,5 @@ export class StepBillingMethodComponent {
 
   resetState(): void {
     this.saveCompleted = false;
-  }
-
-  onMasavFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    if (!input.files?.length) {
-      return;
-    }
-
-    const file = input.files[0];
-
-    this.masavUploaded = true;
-
-    this.masavFileName = file.name;
-
-    this.syncState();
-
-    this.resetState();
-  }
-
-  removeMasavFile(): void {
-    this.masavUploaded = false;
-
-    this.masavFileName = '';
-
-    this.syncState();
   }
 }

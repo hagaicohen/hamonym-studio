@@ -183,14 +183,6 @@ export class StepReviewComponent {
     return this.state().paymentMethod;
   }
 
-  get masavUploaded(): boolean {
-    return this.state().masavUploaded;
-  }
-
-  get masavFileName(): string {
-    return this.state().masavFileName;
-  }
-
   get continueLater(): boolean {
     return this.state().continueLater;
   }

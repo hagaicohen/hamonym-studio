@@ -542,45 +542,25 @@
 
         @if (paymentMethod === "masav") {
           <div class="summary-item full-width">
-            <div class="summary-label">טופס מס"ב</div>
+            <div class="summary-label">הרשאת בנק (מס"ב)</div>
 
-            @if (masavUploaded) {
-              <div class="document-status success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
+            <div class="document-status warning">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
 
-                  <path d="m9 12 2 2 4-4"></path>
-                </svg>
+                <path d="M12 8v4"></path>
 
-                <span>
-                  {{ masavFileName }}
-                </span>
-              </div>
-            } @else {
-              <div class="document-status warning">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16h.01"></path>
+              </svg>
 
-                  <path d="M12 8v4"></path>
-
-                  <path d="M12 16h.01"></path>
-                </svg>
-
-                <span> טרם הועלה טופס מס"ב חתום </span>
-              </div>
-            }
+              <span> יש להשלים בהגדרות העמותה לאחר ההרשמה </span>
+            </div>
           </div>
         }
       </div>
