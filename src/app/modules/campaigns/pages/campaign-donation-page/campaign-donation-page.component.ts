@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
-import { CampaignDraft, DonorFieldsConfig, DEFAULT_DONOR_FIELDS } from '../../services/campaign-studio-state.service';
+import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
@@ -30,10 +30,6 @@ export class CampaignDonationPageComponent implements OnInit {
   saving = false;
   saveError: string | null = null;
 
-  get donorFields(): DonorFieldsConfig {
-    return { ...DEFAULT_DONOR_FIELDS, ...(this.draft?.donorFields ?? {}) };
-  }
-
   ngOnInit(): void {
     this.loader.hide();
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -49,13 +45,6 @@ export class CampaignDonationPageComponent implements OnInit {
   patchDraft(partial: Partial<CampaignDraft>): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, ...partial };
-    this.persist();
-  }
-
-  toggleDonorField(field: keyof DonorFieldsConfig): void {
-    if (!this.draft) return;
-    const current = this.donorFields;
-    this.draft = { ...this.draft, donorFields: { ...current, [field]: !current[field] } };
     this.persist();
   }
 
