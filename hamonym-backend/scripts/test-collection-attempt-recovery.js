@@ -29,14 +29,20 @@ function check(name, fn) {
     .catch((err) => { failures++; console.log(`FAIL  ${name}`); console.log('      ', err.stack || err.message); });
 }
 
-// candidateRows: what the main SELECT should return this run.
+// candidateRows: what the main SELECT should return this run -- filtered
+// the same way the real SQL filters (collection_method != 'masav') so a
+// masav row passed in here behaves exactly like it would against the real
+// query, without needing a real DB for this file's other mocked cases.
 function fakeDb(candidateRows) {
   const calls = { findingInserts: [] };
   const db = {
     calls,
     query: async (sql, params) => {
       if (sql.includes('FROM collection_attempts') && sql.includes("status = 'ambiguous'")) {
-        return { rows: candidateRows };
+        const rows = sql.includes("collection_method != 'masav'")
+          ? candidateRows.filter((r) => r.collection_method !== 'masav')
+          : candidateRows;
+        return { rows };
       }
       if (sql.includes('INSERT INTO reconciliation_findings')) {
         calls.findingInserts.push({ jobName: params[0], findingType: params[1], subjectId: params[4] });
@@ -116,13 +122,24 @@ async function run() {
     await assert.rejects(() => reconcileStuckAttempts(db, { getAdapter, resolveAttemptFn }), /unexpected DB error/);
   });
 
-  await check('unsupported/unimplemented adapter (e.g. masav) -> skipped safely, recorded as stuck, no crash', async () => {
+  await check('masav attempts are excluded from the candidate query entirely -- pending-forever-after-export is the intended v1 terminal state, not a stuck condition', async () => {
     const row = { id: 'attempt-6', statement_id: 'stmt-6', status: 'ambiguous', collection_method: 'masav' };
     const db = fakeDb([row]);
-    const getAdapter = () => null; // masav has no reconcile() today
+    const getAdapter = () => { throw new Error('should never be consulted for a filtered-out row'); };
     const result = await reconcileStuckAttempts(db, { getAdapter, resolveAttemptFn: async () => { throw new Error('should not be called'); } });
+    assert.strictEqual(result.checked, 0, 'the masav row must never even reach the candidate set');
+    assert.strictEqual(result.stuckFound, 0, 'must not generate a critical finding for intended-permanent-pending MASAV state');
+    assert.strictEqual(db.calls.findingInserts.length, 0);
+  });
+
+  await check('a genuinely stuck CARD attempt is still detected and flagged when its adapter is unavailable -- the masav exclusion does not weaken CARD monitoring', async () => {
+    const row = { id: 'attempt-6b', statement_id: 'stmt-6b', status: 'ambiguous', collection_method: 'card' };
+    const db = fakeDb([row]);
+    const getAdapter = () => null; // simulates an adapter lookup failure, unrelated to the masav exclusion
+    const result = await reconcileStuckAttempts(db, { getAdapter, resolveAttemptFn: async () => { throw new Error('should not be called'); } });
+    assert.strictEqual(result.checked, 1);
     assert.strictEqual(result.stuckFound, 1);
-    assert.strictEqual(result.reconciled, 0);
+    assert.strictEqual(db.calls.findingInserts[0].findingType, 'collection_attempt_stuck');
   });
 
   await check('repeated run after successful resolution is a clean no-op (idempotent by construction: resolved rows no longer match the candidate query)', async () => {

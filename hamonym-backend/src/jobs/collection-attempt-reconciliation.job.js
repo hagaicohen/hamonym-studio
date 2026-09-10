@@ -57,11 +57,22 @@ function defaultGetAdapter(collectionMethod) {
 // (which cannot be deleted afterward -- see migration 059's append-only
 // trigger -- making real-DB testing of the success path unsafe).
 async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, resolveAttemptFn = defaultResolveAttempt } = {}) {
+  // collection_method != 'masav': a MASAV attempt has no in-app-reachable
+  // transition out of 'pending' by design (masav-collection.service.js's
+  // "STATE AFTER EXPORT" comment -- submission/result handling is manual,
+  // outside Hamonym, for the life of v1). Without this filter every MASAV
+  // attempt would eventually match the 'pending' branch below, hit
+  // getAdapter('masav') === null, and generate a permanent hourly critical
+  // finding for a state that is not stuck -- it's the intended terminal
+  // state. CARD's own stuck/ambiguous detection is completely unaffected.
   const candidatesRes = await db.query(
     `SELECT id, statement_id, status, collection_method
      FROM collection_attempts
-     WHERE status = 'ambiguous'
-        OR (status = 'pending' AND initiated_at < NOW() - INTERVAL '${STUCK_AFTER_HOURS} hours')
+     WHERE collection_method != 'masav'
+       AND (
+         status = 'ambiguous'
+         OR (status = 'pending' AND initiated_at < NOW() - INTERVAL '${STUCK_AFTER_HOURS} hours')
+       )
      ORDER BY initiated_at ASC
      LIMIT 50`
   );
