@@ -44,6 +44,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
   campaignId = '';
   draft: CampaignDraft | null = null;
   loading = true;
+  saveError: string | null = null;
 
   get isOngoing(): boolean { return this.draft?.campaignLifecycle === 'ongoing'; }
 
@@ -61,14 +62,16 @@ export class CampaignVisibilityPageComponent implements OnInit {
 
   toggleHidden(): void {
     if (!this.draft) return;
+    const previous = this.draft;
     this.draft = { ...this.draft, isHidden: !this.draft.isHidden };
-    this.persist();
+    this.persist(previous);
   }
 
   toggleOfferings(): void {
     if (!this.draft) return;
+    const previous = this.draft;
     this.draft = { ...this.draft, offeringsEnabled: !this.draft.offeringsEnabled };
-    this.persist();
+    this.persist(previous);
   }
 
   private findBlock(type: ContentBlockType | 'stats'): CampaignBlock | undefined {
@@ -82,11 +85,12 @@ export class CampaignVisibilityPageComponent implements OnInit {
 
   toggleBlockVisible(type: ContentBlockType): void {
     if (!this.draft) return;
+    const previous = this.draft;
     const block = this.findBlock(type);
     if (!block) return;
     const blocks = this.draft.blocks.map(b => b.id === block.id ? { ...b, visible: !b.visible } : b);
     this.draft = { ...this.draft, blocks };
-    this.persist();
+    this.persist(previous);
   }
 
   get statsBlock(): CampaignBlock | undefined {
@@ -101,17 +105,28 @@ export class CampaignVisibilityPageComponent implements OnInit {
 
   toggleStatItem(key: StatKey): void {
     if (!this.draft) return;
+    const previous = this.draft;
     const block = this.statsBlock;
     if (!block) return;
     const data = block.data as StatsBlockData;
     const items = data.items.map(i => i.key === key ? { ...i, visible: !i.visible } : i);
     const blocks = this.draft.blocks.map(b => b.id === block.id ? { ...b, data: { ...data, items } } : b);
     this.draft = { ...this.draft, blocks };
-    this.persist();
+    this.persist(previous);
   }
 
-  private persist(): void {
+  private persist(previous: CampaignDraft): void {
     if (!this.draft) return;
-    this.campaignApi.update(this.campaignId, this.draft).subscribe();
+    const attempted = this.draft;
+    this.saveError = null;
+    this.campaignApi.update(this.campaignId, attempted).subscribe({
+      error: (err) => {
+        // Revert the optimistic toggle so the UI doesn't show an unsaved
+        // state as if it had actually saved -- previously this failed
+        // silently (bare .subscribe(), no handler at all).
+        if (this.draft === attempted) this.draft = previous;
+        this.saveError = err?.error?.error || 'שמירת השינוי נכשלה, נסו שוב';
+      },
+    });
   }
 }

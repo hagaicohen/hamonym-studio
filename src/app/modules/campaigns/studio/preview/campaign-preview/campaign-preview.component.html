@@ -473,17 +473,17 @@
         <div class="hm-bottom-divider"></div>
       </ng-container>
       <div class="hm-bottom-stat">
-        <strong [style.color]="primaryColor(draft)">0%</strong>
+        <strong [style.color]="primaryColor(draft)">{{ raisedPct(draft) }}%</strong>
         <span>מהיעד</span>
       </div>
       <div class="hm-bottom-divider"></div>
       <div class="hm-bottom-stat">
-        <strong [style.color]="primaryColor(draft)">₪0</strong>
+        <strong [style.color]="primaryColor(draft)">{{ formatAmount(draft.currentAmount ?? 0) }}</strong>
         <span>סך גיוס</span>
       </div>
       <div class="hm-bottom-divider"></div>
       <div class="hm-bottom-stat">
-        <strong [style.color]="primaryColor(draft)">0</strong>
+        <strong [style.color]="primaryColor(draft)">{{ draft.supportersCount ?? 0 }}</strong>
         <span>תומכים</span>
       </div>
     </div>

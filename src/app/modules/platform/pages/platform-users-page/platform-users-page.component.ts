@@ -374,7 +374,7 @@ export class PlatformUsersPageComponent implements OnInit {
             status: entity.status,
           }));
           this.currentEntityService.currentEntity.set(entity);
-          this.currentEntityService.currentRole.set(entity.role);
+          this.currentEntityService.setRole(entity.role);
           localStorage.setItem('hasEntities', 'true');
         }
 

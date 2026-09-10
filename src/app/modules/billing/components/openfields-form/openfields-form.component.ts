@@ -66,15 +66,11 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
 
     const config: any = await this.billingApi.initOpenFields(this.entityId).toPromise();
 
-    console.log('OPENFIELDS CONFIG', config);
-
     this.lowProfileId = config.lowProfileId;
 
     this.terminalNumber = config.terminalNumber;
 
     this.apiName = config.apiName;
-
-    console.log('LOW PROFILE CREATED', this.lowProfileId);
 
     window.addEventListener(
       'message',
@@ -221,8 +217,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
         lowProfileCode: this.lowProfileId,
       };
 
-      console.log('INIT OPENFIELDS', iframeMessage);
-
       masterFrame.contentWindow.postMessage(
         iframeMessage,
 
@@ -241,8 +235,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
 
         this.cvvIframeReady = true;
       }, 350);
-
-      console.log('OPENFIELDS READY');
     }, 500);
   }
 
@@ -254,8 +246,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
     }
 
     if (this.transactionStarted) {
-      console.log('TRANSACTION ALREADY STARTED');
-
       return false;
     }
 
@@ -297,8 +287,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
 
         const msg = event.data;
 
-        console.log('CARDCOM MESSAGE', msg);
-
         if (msg?.action === 'HandleSubmit') {
           clearTimeout(timeout);
 
@@ -307,10 +295,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
           window.removeEventListener('message', listener);
 
           const result = msg.data;
-
-          console.log('CURRENT PATHNAME', window.location.pathname);
-
-          console.log('HANDLE SUBMIT FULL', JSON.stringify(result, null, 2));
 
           const internalDealNumber =
             result?.InternalDealNumber || result?.TranzactionId || null;
@@ -394,8 +378,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
         numberOfPayments: '1',
       };
 
-      console.log('SEND TO CARDCOM', payload);
-
       this.transactionStarted = true;
 
       masterFrame.contentWindow.postMessage(
@@ -411,14 +393,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const data = event.data;
-
-    /*
-    console.log(
-      'CARDCOM EVENT',
-      data
-    );
-    */
   }
 
   ngOnDestroy(): void {

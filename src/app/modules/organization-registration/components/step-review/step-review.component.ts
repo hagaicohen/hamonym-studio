@@ -26,6 +26,8 @@ import { LoadingOverlayComponent } from '../../../../shared/components/loading-o
 
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+
 @Component({
   selector: 'app-step-review',
   standalone: true,
@@ -37,6 +39,8 @@ export class StepReviewComponent {
   private router = inject(Router);
 
   private currentEntityService = inject(CurrentEntityService);
+
+  private currentContextService = inject(CurrentContextService);
 
   @Output()
   back = new EventEmitter<void>();
@@ -256,13 +260,18 @@ export class StepReviewComponent {
 
     this.currentEntityService.currentEntity.set(entity);
 
-    this.currentEntityService.currentRole.set('owner');
+    this.currentEntityService.setRole('owner');
+
+    // Same bootstrap login.component.ts runs after a normal login --
+    // without it, the sidebar/topbar/dashboard (all driven by
+    // CurrentContextService.active()) have no context to show, and a
+    // freshly-registered owner lands on an empty shell until they log out
+    // and back in.
+    this.currentContextService.initFromLogin({ entities: [entity] });
 
     this.loading = false;
 
     this.success = true;
-
-    console.log('FINISH');
 
     setTimeout(() => {
       this.router.navigate(['/campaigns']);

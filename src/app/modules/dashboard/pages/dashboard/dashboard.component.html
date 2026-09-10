@@ -251,6 +251,8 @@
               </div>
             }
           </li>
+        } @empty {
+          <li class="empty-state-row">אין עדיין שגרירים</li>
         }
       </ul>
     </div>
@@ -284,6 +286,8 @@
               <td>{{ f.campaign_title }}</td>
               <td class="td-muted">{{ fmtDate(f.updated_at) }}</td>
             </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-state-row">אין תשלומים שנכשלו</td></tr>
           }
         </tbody>
       </table>
@@ -307,6 +311,8 @@
               <td>{{ d.donor_name }}</td>
               <td class="td-muted">{{ timeAgo(d.completed_at) }}</td>
             </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-state-row">אין עדיין תרומות</td></tr>
           }
         </tbody>
       </table>
