@@ -114,6 +114,32 @@ exports.listRuns = async ({ periodId }) => {
   return rows;
 };
 
+// "מה עושים עכשיו" -- one human-readable next action per Statement
+// (Billing v1 simplicity decision, 2026-09-10). Pure presentation: every
+// input here (readiness, status, latest_attempt_status) is already decided
+// by existing authoritative logic (evaluateCollectionReadiness, itself a
+// thin wrapper over routing.js -- see its own comment) or already selected
+// by listStatements' own query. No new DB state, no new business rule --
+// this function only chooses which existing fact to show as text. Kept
+// server-side deliberately so the frontend never has to re-derive any of
+// this from raw readiness/attempt data.
+function nextActionLabel(statement, readiness, latestAttemptStatus) {
+  if (statement.status === 'paid') return 'שולם';
+  if (statement.status === 'draft') return 'ממתין לאישור';
+  // approved / open from here on.
+  if (readiness.route === 'card') {
+    if (!readiness.ready) return 'חסר כרטיס אשראי';
+    if (latestAttemptStatus === 'declined' || latestAttemptStatus === 'technical_failure' || latestAttemptStatus === 'not_found_confirmed') {
+      return 'הגבייה נכשלה — נסה שוב';
+    }
+    return 'מוכן לגבייה';
+  }
+  // route === 'masav'
+  if (!readiness.ready) return 'ממתין לאישור מס״ב';
+  return 'ייצוא מס״ב';
+}
+exports.nextActionLabel = nextActionLabel; // exported for direct unit testing (pure function, no DB)
+
 // routed_method here is a read-only DISPLAY projection of the same
 // threshold+authorization rule routing.js applies authoritatively at
 // collection time -- never used to decide anything, only to show the
@@ -144,6 +170,23 @@ exports.listStatements = async ({ periodId, runId, status }) => {
      ORDER BY s.created_at DESC`,
     [periodId || null, runId || null, status || null, routing.CARD_MASAV_THRESHOLD]
   );
+
+  // next_action ("מה עושים עכשיו") only needs a real readiness check for
+  // approved/open statements -- draft/paid are answered by status alone
+  // (see nextActionLabel), so this never queries entity_masav_details/
+  // entity_billing for a statement that doesn't need it. At today's row
+  // counts this per-row check is simplicity over premature batching; see
+  // routing.js's own comment on the (unconsolidated, frozen) duplicate
+  // routed_method CASE above for the same tradeoff already accepted there.
+  await Promise.all(rows.map(async (row) => {
+    if (row.status !== 'approved' && row.status !== 'open') {
+      row.next_action = nextActionLabel(row, null, null);
+      return;
+    }
+    const readiness = await evaluateCollectionReadiness(row);
+    row.next_action = nextActionLabel(row, readiness, row.latest_attempt_status);
+  }));
+
   return rows;
 };
 
