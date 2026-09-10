@@ -121,7 +121,17 @@ export class RegisterComponent implements OnInit {
             this.authService.saveToken(response.token);
           }
 
-          this.router.navigateByUrl(this.returnUrl || '/onboarding');
+          if (response.user) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+            this.authService.currentUser.set(response.user);
+          }
+
+          // '/onboarding' is behind contextGuard, which always redirects a
+          // fresh account (no entity/admin context yet) to '/welcome' --
+          // navigating there directly avoids the extra redirect hop and
+          // matches login.component.ts's own fallback destination for a
+          // new user with no entities/ambassador campaigns.
+          this.router.navigateByUrl(this.returnUrl || '/welcome');
         },
 
         error: (error) => {
