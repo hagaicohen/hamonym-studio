@@ -10,6 +10,7 @@
         <h1 class="csp-title">⚙️ הגדרות קמפיין</h1>
         <span class="csp-status" *ngIf="saving">שומר...</span>
         <span class="csp-status csp-status--saved" *ngIf="saved && !saving">✓ נשמר</span>
+        <span class="csp-status csp-status--error" *ngIf="saveError && !saving">{{ saveError }}</span>
       </div>
       <p class="csp-subtitle">{{ d.title }} · כל שינוי נשמר אוטומטית</p>
 

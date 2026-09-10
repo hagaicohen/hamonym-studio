@@ -403,6 +403,7 @@ export class RegistrationsPageComponent {
     if (!entity?.id || !this.validImportCount || this.importing) return;
 
     this.importing = true;
+    this.saveError = null;
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     const body = {
       campaignId: this.campaignId,
@@ -420,7 +421,7 @@ export class RegistrationsPageComponent {
         this.page = 0;
         this.load();
       },
-      error: () => { this.importing = false; },
+      error: (err) => { this.importing = false; this.saveError = err?.error?.error || 'ייבוא המשתתפים נכשל, נסו שוב'; },
     });
   }
 }

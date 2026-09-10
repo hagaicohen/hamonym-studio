@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
-import { CampaignDraft, DonorFieldsConfig, DEFAULT_DONOR_FIELDS } from '../../services/campaign-studio-state.service';
+import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
@@ -28,10 +28,7 @@ export class CampaignDonationPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
-
-  get donorFields(): DonorFieldsConfig {
-    return { ...DEFAULT_DONOR_FIELDS, ...(this.draft?.donorFields ?? {}) };
-  }
+  saveError: string | null = null;
 
   ngOnInit(): void {
     this.loader.hide();
@@ -48,13 +45,6 @@ export class CampaignDonationPageComponent implements OnInit {
   patchDraft(partial: Partial<CampaignDraft>): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, ...partial };
-    this.persist();
-  }
-
-  toggleDonorField(field: keyof DonorFieldsConfig): void {
-    if (!this.draft) return;
-    const current = this.donorFields;
-    this.draft = { ...this.draft, donorFields: { ...current, [field]: !current[field] } };
     this.persist();
   }
 
@@ -118,9 +108,10 @@ export class CampaignDonationPageComponent implements OnInit {
   private persist(): void {
     if (!this.draft) return;
     this.saving = true;
+    this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
       next: () => { this.saving = false; },
-      error: () => { this.saving = false; },
+      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת הגדרות התרומה נכשלה, נסו שוב'; },
     });
   }
 }

@@ -8,6 +8,7 @@
       <button type="button" class="dp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="dp-title">💳 טופס תרומה</h1>
       <p class="dp-subtitle">{{ d.title }}</p>
+      <p class="dp-save-error" *ngIf="saveError">{{ saveError }}</p>
 
       <div class="dp-panel">
         <div class="dp-section">
@@ -62,29 +63,11 @@
           </div>
         </div>
 
-        <div class="dp-section">
-          <div class="dp-section-title">שדות אופציונליים בטופס</div>
-          <p class="dp-section-desc">בחרו אילו שדות נוספים יוצגו לתורם (שם/אימייל/טלפון תמיד מופיעים):</p>
-
-          <div class="dp-toggle-row">
-            <span>כתובת מגורים</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showAddress" (click)="toggleDonorField('showAddress')">
-              {{ donorFields.showAddress ? 'מופעל' : 'כבוי' }}
-            </button>
-          </div>
-          <div class="dp-toggle-row">
-            <span>מיקוד</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showPostalCode" (click)="toggleDonorField('showPostalCode')">
-              {{ donorFields.showPostalCode ? 'מופעל' : 'כבוי' }}
-            </button>
-          </div>
-          <div class="dp-toggle-row">
-            <span>תעודת זהות (לצרכי מס, סעיף 46)</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="donorFields.showIdNumber" (click)="toggleDonorField('showIdNumber')">
-              {{ donorFields.showIdNumber ? 'מופעל' : 'כבוי' }}
-            </button>
-          </div>
-        </div>
+        <!-- Optional donor fields (address/postal code/ID number) are
+             intentionally NOT configurable here for v1 -- see
+             campaign-donation-step.component.html for why: nothing in the
+             save path ever persists a toggle here, so this control looked
+             real but silently did nothing. -->
       </div>
     </div>
   </ng-container>

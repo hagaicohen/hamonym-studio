@@ -8,6 +8,7 @@
       <button type="button" class="rw-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="rw-title">🎁 תשורות</h1>
       <p class="rw-subtitle">{{ d.title }} · {{ d.offerings.length }} תשורות</p>
+      <p class="rw-save-error" *ngIf="saveError">{{ saveError }}</p>
 
       <div class="rw-form-panel">
         <h2 class="rw-form-title">{{ isEditing ? 'עריכת תשורה' : 'תשורה חדשה' }}</h2>

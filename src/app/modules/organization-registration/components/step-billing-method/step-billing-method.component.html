@@ -110,7 +110,10 @@
         <div class="masav-alert">
           <div class="masav-title">הוראת קבע - מס״ב</div>
 
-          <p>יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת.</p>
+          <p>
+            את הרשאת הבנק להוראת הקבע ניתן להוריד, לחתום ולהעלות בהגדרות
+            העמותה, בסיום תהליך ההרשמה.
+          </p>
 
           <div class="plan-id">קוד מוסד פלנויד: 25788</div>
 
@@ -118,33 +121,6 @@
             הורד טופס הוראת קבע
           </a>
         </div>
-
-        @if (masavUploaded) {
-          <div class="upload-box">
-            <div class="upload-success">✓ {{ masavFileName }}</div>
-
-            <button
-              type="button"
-              class="remove-file-button"
-              (click)="removeMasavFile()"
-            >
-              הסר קובץ
-            </button>
-          </div>
-        }
-
-        @if (!masavUploaded) {
-          <label class="upload-button">
-            העלה טופס חתום
-
-            <input
-              type="file"
-              hidden
-              accept=".pdf,.jpg,.jpeg,.png"
-              (change)="onMasavFileSelected($event)"
-            />
-          </label>
-        }
       </div>
     }
 

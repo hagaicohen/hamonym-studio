@@ -122,49 +122,13 @@
     </div>
   </div>
 
-  <!-- ── OPTIONAL FIELDS ── -->
-  <div class="section-card">
-    <div class="section-title">שדות אופציונליים</div>
-    <p class="section-desc">בחרו אילו שדות נוספים יוצגו לתורם:</p>
-    <div class="fields-list">
-
-      <label class="field-toggle" [class.field-toggle--on]="donorFields.showAddress">
-        <div class="field-toggle-info">
-          <span class="field-toggle-name">כתובת מגורים</span>
-          <span class="field-toggle-desc">רחוב, מספר בית, עיר</span>
-        </div>
-        <div class="toggle-switch" (click)="toggle('showAddress')">
-          <div class="toggle-thumb"></div>
-        </div>
-      </label>
-
-      <label class="field-toggle" [class.field-toggle--on]="donorFields.showPostalCode">
-        <div class="field-toggle-info">
-          <span class="field-toggle-name">מיקוד</span>
-          <span class="field-toggle-desc">קוד מיקוד של התורם</span>
-        </div>
-        <div class="toggle-switch" (click)="toggle('showPostalCode')">
-          <div class="toggle-thumb"></div>
-        </div>
-      </label>
-
-      <label class="field-toggle" [class.field-toggle--on]="donorFields.showIdNumber">
-        <div class="field-toggle-info">
-          <span class="field-toggle-name">תעודת זהות</span>
-          <span class="field-toggle-desc">נדרש לקבלה לצרכי מס (סעיף 46)</span>
-        </div>
-        <div class="toggle-switch" (click)="toggle('showIdNumber')">
-          <div class="toggle-thumb"></div>
-        </div>
-      </label>
-
-    </div>
-  </div>
-
-  <!-- Info note -->
-  <div class="info-note">
-    <span class="info-icon">💡</span>
-    <span>שדות מופעלים יוצגו בטופס התשלום של כל תורם. מומלץ לאפשר ת.ז אם נדרש זיהוי תורמים — לצורך קבלה, מימון פוליטי, או קבלה לצרכי מס (סעיף 46).</span>
-  </div>
+  <!-- Optional donor fields (address/postal code/ID number) are
+       intentionally NOT configurable here for v1 -- donorFields is read by
+       the checkout modal, but nothing in the Builder/Workspace save path
+       ever persists a manager's toggle here (campaign-api.service.ts's
+       toSnake() never sends donor_fields, and no such column exists on
+       campaigns), so this control looked real but silently did nothing.
+       Remove this comment and re-add the toggle UI once donor_fields is
+       actually wired through create/update and the DB schema. -->
 
 </div>

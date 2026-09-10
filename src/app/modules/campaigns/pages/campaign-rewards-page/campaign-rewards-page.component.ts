@@ -38,6 +38,7 @@ export class CampaignRewardsPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
+  saveError: string | null = null;
 
   campaignPartners: CampaignPartner[] = [];
   linkModalRewardId: string | null = null;
@@ -110,6 +111,7 @@ export class CampaignRewardsPageComponent implements OnInit {
   unlinkPartner(cp: CampaignPartner): void {
     this.partnersService.remove(cp.id).subscribe({
       next: () => { this.campaignPartners = this.campaignPartners.filter(x => x.id !== cp.id); },
+      error: (err) => { this.saveError = err?.error?.error || 'הסרת השיוך לעסק נכשלה, נסו שוב'; },
     });
   }
 
@@ -211,9 +213,10 @@ export class CampaignRewardsPageComponent implements OnInit {
   private persist(): void {
     if (!this.draft) return;
     this.saving = true;
+    this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
       next: () => { this.saving = false; },
-      error: () => { this.saving = false; },
+      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת התשורה נכשלה, נסו שוב'; },
     });
   }
 }

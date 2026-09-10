@@ -6,6 +6,7 @@ import { CampaignApiService } from '../../../../services/campaign-api.service';
 import { CampaignDraft, CampaignUpdate } from '../../../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../../../core/services/upload.service';
 import { RichTextEditorComponent } from '../../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
+import { sanitizeRichHtml } from '../../../../../../shared/utils/sanitize-rich-html';
 
 // Sprint 2.2 (2026-08-05) — wired to real data, see docs/CAMPAIGN_UPDATES_UX_SPEC.md
 // and the Migration Plan in docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md.
@@ -231,7 +232,7 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   }
 
   safeHtml(html: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(html || '');
+    return this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(html || ''));
   }
 
   private persist(onSuccess?: () => void): void {

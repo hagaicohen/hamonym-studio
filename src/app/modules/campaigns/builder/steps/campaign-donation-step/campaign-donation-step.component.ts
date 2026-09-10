@@ -2,8 +2,6 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   CampaignStudioStateService,
-  DonorFieldsConfig,
-  DEFAULT_DONOR_FIELDS,
   CampaignDraft,
 } from '../../../services/campaign-studio-state.service';
 
@@ -19,17 +17,8 @@ export class CampaignDonationStepComponent {
 
   get draft() { return this.state.draft; }
 
-  get donorFields(): DonorFieldsConfig {
-    return { ...DEFAULT_DONOR_FIELDS, ...(this.draft.donorFields ?? {}) };
-  }
-
   patchDraft(partial: Partial<CampaignDraft>): void {
     this.state.patch(partial);
-  }
-
-  toggle(field: keyof DonorFieldsConfig): void {
-    const current = this.donorFields;
-    this.state.patch({ donorFields: { ...current, [field]: !current[field] } });
   }
 
   // ── Suggested amounts ──

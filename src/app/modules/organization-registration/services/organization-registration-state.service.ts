@@ -90,10 +90,6 @@ export interface OrganizationRegistrationState {
 
   cvv: string;
 
-  masavUploaded: boolean;
-
-  masavFileName: string;
-
   continueLater: boolean;
 
   cardcomLowProfileId?: string;
@@ -181,10 +177,6 @@ export const initialState: OrganizationRegistrationState = {
   expiry: '',
 
   cvv: '',
-
-  masavUploaded: false,
-
-  masavFileName: '',
 
   continueLater: false,
 

@@ -32,6 +32,7 @@ export class CampaignSettingsPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
+  saveError: string | null = null;
   saved = false;
 
   get isOngoing(): boolean { return this.draft?.campaignLifecycle === 'ongoing'; }
@@ -76,9 +77,10 @@ export class CampaignSettingsPageComponent implements OnInit {
     if (!this.draft) return;
     this.saving = true;
     this.saved = false;
+    this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
       next: () => { this.saving = false; this.saved = true; },
-      error: () => { this.saving = false; },
+      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת ההגדרות נכשלה, נסו שוב'; },
     });
   }
 }
