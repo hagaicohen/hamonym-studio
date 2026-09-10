@@ -20,7 +20,7 @@ export type BillingSetupBlockingReason = 'no_billing_account' | 'account_suspend
 
 export interface BillingSetupNotificationResult {
   sent: boolean;
-  reason?: 'already_notified' | 'no_admin_found' | 'error';
+  reason?: 'already_notified' | 'no_admin_found' | 'attempted_not_delivered' | 'error';
   adminCount?: number;
   message?: string;
 }
@@ -93,6 +93,10 @@ export interface StatementListItem {
   routed_method: RoutedMethod;
   latest_attempt_status: string | null;
   payment_count: number;
+  // "מה עושים עכשיו" -- server-derived, presentation-only (Billing v1
+  // simplicity decision, 2026-09-10). See billing-ops.service.js#
+  // nextActionLabel -- never re-derive this from raw readiness data here.
+  next_action: string;
 }
 
 export interface CollectionAttempt {

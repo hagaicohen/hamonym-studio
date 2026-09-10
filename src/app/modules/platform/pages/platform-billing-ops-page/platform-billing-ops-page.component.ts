@@ -107,7 +107,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   private service = inject(BillingOpsService);
   private route = inject(ActivatedRoute);
 
-  tab: Tab = 'periods';
+  // Statements (debts owed) is the operator's primary mental model in
+  // Billing v1 -- "מה עושים עכשיו" per statement -- not engine internals.
+  // Periods & Calculation stays available as a secondary/diagnostic tab.
+  tab: Tab = 'statements';
 
   // "Return to the workflow" -- set when arriving back from the focused
   // Billing setup screen (platform-billing-setup-page) right after it
@@ -473,6 +476,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     if (n.sent) return 'נשלחה התראה למנהל העמותה';
     if (n.reason === 'already_notified') return 'התראה נשלחה בעבר עבור תקופה זו';
     if (n.reason === 'no_admin_found') return 'לא נמצא מנהל עמותה לשליחת התראה';
+    if (n.reason === 'attempted_not_delivered') return 'ניסיון שליחת ההתראה נכשל';
     return '';
   }
 
@@ -554,6 +558,16 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     const d = new Date(period.period_start);
     if (d.getDate() !== 1) return null;
     return `${HE_MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  // "חודש" column for the Statements list -- pure lookup + reuse of the
+  // existing periodMonthLabel formatter (Billing v1 simplicity decision,
+  // 2026-09-10), no new data fetch: `periods` is already loaded for the
+  // period filter dropdown above this table.
+  statementPeriodLabel(statement: StatementListItem): string {
+    const period = this.periods.find((p) => p.id === statement.billing_period_id);
+    if (!period) return '—';
+    return this.periodMonthLabel(period) || `${this.fmtDate(period.period_start)}–${this.fmtInclusiveEndDate(period.period_end)}`;
   }
 
   fmtDate(iso: string | null): string {
