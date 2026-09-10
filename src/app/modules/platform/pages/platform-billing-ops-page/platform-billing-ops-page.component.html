@@ -365,11 +365,12 @@
             <thead>
               <tr>
                 <th>עמותה</th>
+                <th>חודש</th>
                 <th>גיוס ברוטו</th>
                 <th>לחיוב</th>
                 <th>סטטוס</th>
                 <th>מסלול</th>
-                <th>ניסיון אחרון</th>
+                <th>מה עושים עכשיו</th>
                 <th>תשלומים</th>
                 <th></th>
               </tr>
@@ -378,11 +379,12 @@
               @for (statement of statements; track statement.id) {
                 <tr class="bo-row-clickable" (click)="openStatement(statement)">
                   <td>{{ statement.entity_name }}</td>
+                  <td>{{ statementPeriodLabel(statement) }}</td>
                   <td>₪{{ statement.gross_raised }}</td>
                   <td>₪{{ statement.total_due }}</td>
                   <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ statementStatusLabel(statement.status) }}</span></td>
                   <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
-                  <td>{{ attemptStatusLabel(statement.latest_attempt_status) }}</td>
+                  <td><span class="bo-next-action">{{ statement.next_action }}</span></td>
                   <td>{{ statement.payment_count }}</td>
                   <td><button class="ops-btn ops-btn-secondary ops-btn-sm">פרטים</button></td>
                 </tr>

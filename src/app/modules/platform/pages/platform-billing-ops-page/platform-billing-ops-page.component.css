@@ -501,6 +501,12 @@
 .bo-badge-route-masav { background: #ffedd5; color: #9a3412; }
 .bo-badge-route-blocked { background: #fee2e2; color: #991b1b; }
 
+.bo-next-action {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 .bo-checkbox-col { width: 32px; text-align: center !important; }
 .bo-checkbox-col input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 
