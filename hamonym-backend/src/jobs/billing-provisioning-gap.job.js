@@ -12,9 +12,17 @@ const { recordFinding } = require('./reconciliation-findings');
 
 module.exports = {
   name: 'billing-provisioning-gap',
-  // Not wired to any scheduler yet, same as every other job in this file --
-  // see docs/CARDCOM_OPERATIONAL_PROCESSES.md Part F.
-  schedule: '0 * * * *',
+  // FROZEN 2026-09-10 (Billing v1 simplicity decision) -- schedule set to
+  // null so cron-entry.js's loop skips it (`if (!job?.schedule) continue`),
+  // while staying registered and runnable on demand via the Admin "Run now"
+  // action. Confirmed safe to freeze: this job only ever writes to
+  // reconciliation_findings (recordFinding), never to any money-moving
+  // table. The gap it watches for is also now surfaced directly to the
+  // operator by billing-monthly-cycle.job.js's own blocked-entity list on
+  // every real calculation run, so this hourly duplicate scan is not the
+  // only signal anymore either. Re-enable by restoring a real cron
+  // expression here if that changes.
+  schedule: null,
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {
     const gapRows = await db.query(

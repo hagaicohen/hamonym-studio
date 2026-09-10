@@ -28,6 +28,13 @@ module.exports = {
   // migration 052's dedup landed. A donor who paid for a recurring gift
   // that never actually started is judged important enough to not sit
   // undetected for a full day. Not wired to a scheduler yet.
+  //
+  // NOT frozen by the 2026-09-10 Billing v1 simplicity initiative --
+  // deliberately kept live. This is a donor recurring-signup safeguard, not
+  // Billing Engine fee-collection observer complexity. The simplicity
+  // initiative applies to Billing v1's own observer jobs (billing-
+  // approval-consistency, billing-provisioning-gap) -- it must never
+  // weaken an already-proven Donation Engine safeguard.
   schedule: '0 * * * *',
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {

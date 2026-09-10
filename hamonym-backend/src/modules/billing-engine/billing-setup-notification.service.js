@@ -1,18 +1,29 @@
-// Billing Setup Notification (2026-09-02) — the entity-admin-facing half of
-// the Billing readiness correction: when Production Calculation finds real,
-// eligible donation activity for an entity whose billing_account is missing
-// or not active, the entity administrator must be told — exactly once per
-// (entity, billing period, blocking reason). See migration 062.
+// Billing Setup Notification (2026-09-02, simplified 2026-09-10) — the
+// entity-admin-facing half of the Billing readiness correction: when
+// Production Calculation finds real, eligible donation activity for an
+// entity whose billing_account is missing or not active, the entity
+// administrator must be told — once per (entity, billing period, blocking
+// reason). See migration 062.
 //
-// Reuses the existing email module (src/modules/email/email.service.js) —
-// same template-driven, EMAIL_ENABLED-gated, email_logs-recorded,
-// fire-and-forget .queue() pattern already used for
-// entity-flagged-for-review / invite-admin / invite-partner-editor
-// (entities.service.js / platform.service.js). No new provider, no parallel
-// notification system — see the E2E audit this task was scoped against:
-// dashboard.service.js's "alerts" are a purely computed, on-request SQL
-// view with no backing table and no email hook, so there was nothing there
-// to reuse.
+// Deliberately NOT retried. A same-day attempt at automatic retry-until-
+// delivered (row locking, a reuse branch, a `delivered` gate) was built,
+// tested, and then rolled back before ever being committed -- Billing v1's
+// stated priority is simplicity/understandability over automation, and the
+// channel that retry would have been retrying has never once delivered in
+// production (EMAIL_ENABLED has never been true here). Automatic retry of
+// a channel that doesn't exist yet is pure complexity with no payoff. If
+// this needs revisiting, do it as a manual "שלח שוב" operator action once
+// Billing Ops actually surfaces blocked statements -- not as background
+// automation.
+//
+// What's kept from that attempt: `delivered` (migration 065, additive,
+// already applied) now honestly records whether THIS ONE attempt actually
+// went out, instead of the original version's `notified_admin_count`
+// always claiming success regardless of outcome. And email.service.js's
+// dispatch() now returns {status}, so this caller can know the real result
+// -- awaited via exports.send, not the fire-and-forget exports.queue used
+// elsewhere (entities.service.js / platform.service.js), because this is
+// the one call site that actually needs to know.
 //
 // Entity admin resolution: user_entities.role = 'owner' is the only role
 // value that exists in production data today (manager/finance_manager/
@@ -37,10 +48,12 @@ async function resolveEntityAdmins(entityId) {
 // gross paid amount) are ever passed to the template. The dedup
 // INSERT ... ON CONFLICT DO NOTHING is the actual guarantee (atomic even
 // under two calculation runs racing each other) — not a prior SELECT.
+//
 // Returns:
-//   { sent: true, adminCount }                          — new notification, queued
-//   { sent: false, reason: 'already_notified' }          — same (entity, period, reason) seen before
-//   { sent: false, reason: 'no_admin_found' }             — nobody to notify (still recorded, won't retry)
+//   { sent: true, adminCount }                        — attempted this run, at least one admin actually delivered
+//   { sent: false, reason: 'already_notified' }        — same (entity, period, reason) already attempted before (regardless of outcome — no retry)
+//   { sent: false, reason: 'no_admin_found' }           — nobody to notify (still recorded, won't retry)
+//   { sent: false, reason: 'attempted_not_delivered' }  — attempted this run, every admin's send failed/was disabled (still recorded, won't retry)
 async function notifyBillingSetupRequired({
   entityId, entityName, billingPeriodId, blockingReason, donationCount, grossAmount,
 }) {
@@ -62,8 +75,11 @@ async function notifyBillingSetupRequired({
   }
 
   const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+  let deliveredCount = 0;
   for (const admin of admins) {
-    emailService.queue({
+    // Awaited (exports.send), not queue()'d -- this caller records the
+    // real outcome in `delivered` rather than assuming success.
+    const result = await emailService.send({
       template: 'billing-setup-required',
       to: admin.email,
       data: {
@@ -75,14 +91,18 @@ async function notifyBillingSetupRequired({
       entityId,
       userId: admin.id,
     });
+    if (result.status === 'sent' || result.status === 'stub') deliveredCount++;
   }
 
+  const delivered = deliveredCount > 0;
   await pool.query(
-    `UPDATE billing_setup_notifications SET notified_admin_count = $2 WHERE id = $1`,
-    [insertRes.rows[0].id, admins.length]
+    `UPDATE billing_setup_notifications SET notified_admin_count = $2, delivered = $3 WHERE id = $1`,
+    [insertRes.rows[0].id, deliveredCount, delivered]
   );
 
-  return { sent: true, adminCount: admins.length };
+  return delivered
+    ? { sent: true, adminCount: deliveredCount }
+    : { sent: false, reason: 'attempted_not_delivered' };
 }
 
 module.exports = { resolveEntityAdmins, notifyBillingSetupRequired };
