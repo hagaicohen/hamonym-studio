@@ -243,3 +243,50 @@ Statement → amount → collection route → current status → next action
 **This is what "Billing Ops" means going forward.** `billing_runs`, the findings/reconciliation-findings mechanism, reconciliation-job internals, and job names are implementation detail — **not operator-facing concepts**, and no future work should require an operator to understand any of them to answer: מי חייב לנו כסף? כמה? איך אמורים לגבות? האם ניסינו? האם הצליח? אם לא — מה בדיוק אני צריך לעשות? If a future feature can only be explained in terms of runs/findings/job names, that's a signal to find the simpler presentation, not to document the internals better.
 
 **BILLING v1 SIMPLIFICATION: CLOSED for this round.** Do not open a further audit or implementation package against this without new evidence of an actual problem — the explicit next step, per the user, is to use the live Statements screen as an operator and judge it directly, not to keep searching for more to simplify or complete.
+
+## 11. PRODUCTION LAUNCH READINESS + LAUNCH CLOSURE — 2026-09-10
+
+Scope: the rest of the product (registration → campaign builder → public page → donation → post-publish management), explicitly **excluding** Billing/Donation/CardCom/MASAV architecture (§1–10 above, untouched here). Two packages, same day: a broad read-only audit (5 parallel deep-dive traces, each evidence-first against real code/DB, no docs-inference) followed by fixes, then one final, deliberately small closure package for the 4 items the first pass correctly identified but didn't finish.
+
+**HAMONYM CORE V1: LAUNCH READY.** No true launch blocker remains as of this section. Real association journey (register → approve → publish campaign → real CardCom donation → manage) traced end-to-end against live code, not inferred.
+
+### 11.1 What was fixed — Launch Readiness pass (commits `b69eecf`..`c227b1e`)
+
+- **Any campaign owner could PATCH any column** on their own campaign (`current_amount`, `is_locked`, `is_hidden`, `deleted_at`, etc.) — no whitelist existed. Publish also only checked title server-side. Both closed; `published_at` now actually gets set. `9645805`
+- **Public donor-toast feed and public campaign endpoint leaked data for/about unpublished campaigns** and internal-only fields respectively. `b69eecf`, `3650da4`
+- **Two ownership gaps in the AI campaign-creation pipeline**: cross-entity AI-quota abuse, and unauthenticated generation→campaign link tampering. `c227b1e`
+- **New association owners landed on an empty sidebar/topbar** after registration (context never initialized) and `currentRole` was never actually persisted anywhere in the app (registration, both login branches, admin impersonation all bypassed `CurrentEntityService.setRole()`). `75c6e89`
+- **Every new association's dashboard showed fabricated donor/ambassador/failed-payment data** as real whenever the real data was empty. `0e4562e`
+- Public campaign page's bottom stats banner hardcoded to `0%`/`₪0`/`0`. `1671424`
+- Dead `/onboarding` redirect, missing user profile after registration, duplicate-registration-number error swallowed by a JSON key mismatch, debug `console.log`s, 6 pages silently swallowing save/import errors. `c6c9821`, `e6b244f`, `3947f69`, `402a530`, `87d8f01`
+
+Full DB reality check (read-only, `scripts/audit-db-reality-check.js`): 0 orphan campaigns/donations, 0 aggregate mismatches, 0 stale drafts, 0 duplicate slugs. The production dataset was clean going in.
+
+### 11.2 What was fixed — Launch Closure pass (commits `16e00a8`..`115e61c`)
+
+The Readiness pass surfaced 4 items and initially mis-classified 2 of them as "policy decisions to leave open" rather than launch blockers. Corrected: all 4 are real product defects, not architecture decisions, and all 4 are now fixed.
+
+1. **Registration wizard's MASAV step visually claimed a file was saved when it was only local component state** — no upload call existed, and the step didn't even collect bank details. Rather than build a second MASAV persistence implementation, removed the fake upload UI; the wizard now tells the user bank authorization is completed in **Association Settings** after registration (the one real, already-tested implementation, `entity-billing-section-edit.component.ts`). `16e00a8`
+2. **`donorFields` (address/postal code/ID number toggles) were exposed in the Builder and Workspace but never persisted** — hidden for v1 rather than wiring through a schema change. `120c887`
+3. **The public, unauthenticated donation-success endpoint returned `donor_email` and `donor_user_id` indefinitely** to anyone holding the donation URL. Both removed from `getDonationPublic`; the one real use of `donor_user_id` (deciding whether to show the "create an account" prompt) is served by a `has_account` boolean instead. The prompt's email pre-fill shortcut was removed rather than preserved via a workaround. `54fc3f2`, `3bc362d`
+4. **Stored-XSS path**: association-authored rich text (campaign story, campaign updates) reached the public page via `sanitizer.bypassSecurityTrustHtml()` with zero sanitization. Angular's own default sanitizer would have silently stripped the `style` attribute the rich-text editor (Tiptap) uses for color/font-size/text-align on every existing published campaign, so a real sanitizer (DOMPurify, new dependency) was used instead, through one small shared wrapper (`src/app/shared/utils/sanitize-rich-html.ts`) allowlisting exactly what Tiptap can produce. `115e61c`
+
+### 11.3 REMOVE LATER (marked, not deleted, per explicit decision — no cleanup refactor before launch)
+
+- 4 Builder step components never wired into any route: `campaign-goals-step`, `campaign-content-step`, `campaign-defenitions-step`, `campaign-donations-step` (under `hamonym-app/src/app/modules/campaigns/builder/steps/`).
+- 2 unused `BillingService` methods: `createLowProfile`, `getLowProfileResult`.
+
+### 11.4 Disclosed production test residue (harmless, left in place per explicit instruction — do not delete/bypass)
+
+While writing a regression test for item 3 above, `status='paid'` donations were created directly before realizing paid donations are permanently un-deletable by DB trigger (migration 055, financial integrity — working as designed). Relabeled to match the existing `ZZZ_TEST_DATA_DO_NOT_USE` convention (see the 3 pre-existing rows from the 2026-08-28 session) so nobody mistakes ₪100 for real activity:
+- Entity `79340528-c111-49d6-81e9-856f7d613142` — `ZZZ_TEST_DATA_DO_NOT_USE — live-donations publish-gate test residue, 2 paid donations undeletable by design (migration 055), see 2026-09-10 Launch Readiness handoff`
+- Campaigns `21a1e95e-8604-48a9-89ce-3c20539ac9fa`, `9135fd11-aef7-420d-8852-739fd121de04`
+- Donations `f40c38ba-6534-49b3-91d0-ff9a20159fc0`, `e47d5f5b-7545-4475-b5e6-f1e5da6cb9c8` (₪50 each, `status='paid'`)
+
+Every other test written in both passes uses either non-`paid` statuses or a `BEGIN...ROLLBACK` transaction specifically to avoid repeating this.
+
+### 11.5 Explicitly not touched (per decision)
+
+Billing/Donation/CardCom/MASAV architecture (§1–10, closed and standing); routing-rule consolidation (documented technical debt, §10.1); the 2 REMOVE LATER items above; any new "nice to have" work not tied to a real defect found by evidence.
+
+**LAUNCH READINESS + CLOSURE: CLOSED.** Do not open a further audit or implementation package against the general product without new evidence of an actual problem — the explicit next step is to use the product, not continue auditing it. Bugs surfaced by real use are the next legitimate source of work, not another audit.
