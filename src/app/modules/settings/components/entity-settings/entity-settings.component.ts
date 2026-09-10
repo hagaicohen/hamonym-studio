@@ -212,8 +212,6 @@ export class EntitySettingsComponent implements OnInit {
   }
 
   async saveAll(): Promise<void> {
-    console.log('SAVE ALL STARTED');
-
     this.saveError = '';
 
     this.showInlineError = false;
