@@ -775,9 +775,18 @@ exports.handleReturn = async ({ donationId, status }) => {
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    PUBLIC DONATION RESULT (for success page)
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
+// 2026-09-10 fix (Launch Closure): this is a public, unauthenticated
+// endpoint keyed only by the donation's UUID -- previously returned
+// donor_email and donor_user_id to anyone holding the URL, indefinitely,
+// not just the donor themselves right after paying. Neither field is
+// safe to expose here. donor_user_id's one real use (the success page's
+// "create an account" prompt needs to know whether this donation is
+// already linked to an account) is served by the has_account boolean
+// below instead -- it answers the same question without exposing the id.
 exports.getDonationPublic = async (donationId) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name, d.donor_email, d.donor_user_id,
+    `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name,
+            (d.donor_user_id IS NOT NULL) AS has_account,
             c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
             c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo,
             e.ga_measurement_id AS entity_ga_measurement_id,
