@@ -34,6 +34,16 @@ const { recordFinding } = require('./reconciliation-findings');
 
 module.exports = {
   name: 'aggregate-consistency',
+  // NOT frozen by the 2026-09-10 Billing v1 simplicity initiative --
+  // deliberately kept live. This is a donation/campaign-display integrity
+  // job (campaigns.current_amount/supporters_count drift), not Billing
+  // Engine fee-collection observer complexity, and it carries an explicitly
+  // Approved production schedule (Operational Policy, 2026-08-16) set
+  // specifically because a real silent-drift incident already happened
+  // once (Phase 1 cleanup, 2026-08-14) before this job existed. The
+  // simplicity initiative applies to Billing v1's own observer jobs
+  // (billing-approval-consistency, billing-provisioning-gap) -- it must
+  // never weaken an already-proven Donation Engine safeguard.
   schedule: '0 3 * * *', // daily at 03:00 — not wired to a scheduler yet
   timeoutMs: 3 * 60 * 1000,
   handler: async (db) => {

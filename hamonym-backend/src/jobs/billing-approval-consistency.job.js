@@ -15,12 +15,17 @@ const EFFECTIVE_STATEMENT_STATUSES = ['approved', 'open', 'paid', 'cancelled', '
 
 module.exports = {
   name: 'billing-approval-consistency',
-  // Not wired to any scheduler yet, same as every other job in this file --
-  // see docs/CARDCOM_OPERATIONAL_PROCESSES.md Part F. Hourly is a
-  // reasonable starting cadence once it is wired: Approval is not a
-  // high-frequency action, and every check here is a plain indexed query
-  // over billing_engine's own (currently tiny) tables.
-  schedule: '0 * * * *',
+  // FROZEN 2026-09-10 (Billing v1 simplicity decision) -- schedule set to
+  // null so cron-entry.js's loop skips it (`if (!job?.schedule) continue`),
+  // while staying registered and runnable on demand via the Admin "Run now"
+  // action. Confirmed safe to freeze: every write this job makes goes only
+  // to reconciliation_findings (recordFinding), never to any money-moving
+  // table -- it duplicates in application SQL what approval.service.js's
+  // own transactional invariants (and the DB triggers behind them) already
+  // make structurally impossible, and it has produced zero findings across
+  // 39 real production runs. Re-enable by restoring a real cron expression
+  // here if that ever changes.
+  schedule: null,
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {
     let effectiveNotFullyClaimed = 0;
