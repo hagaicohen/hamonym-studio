@@ -799,6 +799,13 @@ exports.getCampaignBySlugPublic = async (slug) => {
   );
   const campaign = result.rows[0] || null;
   if (campaign) {
+    // internal-only fields -- SELECT c.* pulls the whole row for the
+    // legitimate reason that the public detail page renders most of it,
+    // but these few are never meant to leave the server
+    delete campaign.is_locked;
+    delete campaign.is_featured;
+    delete campaign.deleted_by;
+    delete campaign.hidden_by_entity_cascade;
     campaign.registration_options = await getRegistrationOptions(campaign.id);
   }
   return campaign;
