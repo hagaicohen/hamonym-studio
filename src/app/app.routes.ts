@@ -210,7 +210,17 @@ export const routes: Routes = [
           ),
       },
       {
+        // Every real entry point to this wizard (topbar, /welcome,
+        // Platform Admin quick action, Settings "add entity",
+        // no-organization-state) is already reached only while logged in --
+        // the backend's own POST /api/entities requires an authenticated
+        // user (entities.created_by_user_id). Without this guard an
+        // anonymous visitor to the bare URL could fill the entire 6-step
+        // wizard only to hit a raw, untranslated "Unauthorized" on final
+        // submit, with no explanation and no way back. 2026-09-10, Launch
+        // Closure live-walkthrough -- this is exactly how it was found.
         path: 'organization-registration',
+        canActivate: [authGuard],
         loadComponent: () =>
           import(
             './modules/organization-registration/pages/organization-registration/organization-registration.component'
