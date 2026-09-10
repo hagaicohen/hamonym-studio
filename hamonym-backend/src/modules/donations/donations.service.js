@@ -839,6 +839,7 @@ exports.getLiveDonations = async (slug, since) => {
      WHERE c.slug = $1
        AND d.status = 'paid'
        AND d.completed_at > $2
+       AND c.status = 'published' AND e.status = 'active'
        AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      ORDER BY d.completed_at ASC
      LIMIT 10`,
