@@ -48,6 +48,7 @@ import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../se
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { CommentsService, CampaignComment } from '../../../services/comments.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
+import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 
 @Component({
   selector: 'app-campaign-preview',
@@ -1048,8 +1049,11 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   }
 
   // ── Utilities ──
+  // Sanitize FIRST, then forceLinksNewTab (which itself briefly parses the
+  // string into a detached <div> to rewrite <a> attributes) -- by the time
+  // any HTML reaches that step, dangerous content is already stripped.
   safeHtml(html: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(this.forceLinksNewTab(html || ''));
+    return this.sanitizer.bypassSecurityTrustHtml(this.forceLinksNewTab(sanitizeRichHtml(html || '')));
   }
 
   // Forces target="_blank" on every link inside rich-text content,
