@@ -1,4 +1,5 @@
 const db = require('../db/db');
+const { isEntityMember } = require('./entity-permission.middleware');
 
 // AI Visibility Gate — every AI-labeled capability is hidden/greyed out on
 // the frontend for clients by default; only a Platform Admin can grant it,
@@ -6,8 +7,10 @@ const db = require('../db/db');
 // middleware is the server-side half — the frontend gate is UX, not
 // security, so a direct API call must be blocked the same way.
 //
-// Mount AFTER requireAuth (and, where applicable, requireEntityOwnership —
-// this only checks the AI flag, not entity membership).
+// Mount AFTER requireAuth. requireAiAccessForCampaign has no ownership gap
+// (the entity is resolved from the campaign row, never trusted from the
+// request); requireAiAccessFromBody below also checks entity membership
+// directly, since its entityId is read from the client-supplied body.
 async function hasAiAccess(entityId) {
   if (!entityId) return false;
   const { rows } = await db.query(
@@ -50,6 +53,11 @@ exports.requireAiAccessFromBody = (field = 'entityId') => async (req, res, next)
   try {
     const entityId = req.body?.[field];
     if (entityId) {
+      // 2026-09-10 fix: entityId comes straight from the request body --
+      // without this, any authenticated user could supply a DIFFERENT
+      // entity's id here and run (cost-incurring) AI calls under that
+      // entity's granted access, regardless of their own membership.
+      if (!(await isEntityMember(req.user?.id, entityId))) return res.status(403).json({ error: 'Unauthorized' });
       if (!(await hasAiAccess(entityId))) return res.status(403).json(DENIED);
       return next();
     }

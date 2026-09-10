@@ -8,6 +8,7 @@
 // controller doesn't await-and-throw, or wraps in try/catch).
 
 const db = require('../../db/db');
+const { isEntityMember } = require('../../middleware/entity-permission.middleware');
 
 // @param {{ userId: number|null, promptVersion: string, model: string, brief: object, webSearchUsed: boolean, webSources: Array, generationTimeMs: number, generationReason: 'initial'|'regenerated'|'refined' }} params
 // @returns {Promise<string|null>} the new row's id, or null if logging failed (never throws)
@@ -29,9 +30,18 @@ exports.logGeneration = async ({ userId, promptVersion, model, brief, webSearchU
 
 // @param {string} generationId
 // @param {string} campaignId
+// @param {number|string} userId — caller must be a member of campaignId's
+//   owning entity (2026-09-10 fix: previously anyone authenticated could
+//   link ANY generation row to ANY campaign, corrupting another entity's
+//   AI-generation audit trail — no data leak, but a real integrity gap)
 // @returns {Promise<void>} never throws — linking is best-effort, same as logGeneration
-exports.linkCampaign = async (generationId, campaignId) => {
+exports.linkCampaign = async (generationId, campaignId, userId) => {
   try {
+    const { rows } = await db.query(`SELECT entity_id FROM campaigns WHERE id = $1`, [campaignId]);
+    if (!rows[0] || !(await isEntityMember(userId, rows[0].entity_id))) {
+      console.error('linkCampaign failed (non-fatal): caller does not own campaign', campaignId);
+      return;
+    }
     await db.query(`UPDATE campaign_ai_generations SET campaign_id = $1 WHERE id = $2`, [campaignId, generationId]);
   } catch (err) {
     console.error('linkCampaign failed (non-fatal):', err.message);

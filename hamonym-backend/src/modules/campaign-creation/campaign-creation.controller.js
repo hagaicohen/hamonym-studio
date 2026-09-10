@@ -225,7 +225,7 @@ exports.linkGenerationToCampaign = async (req, res) => {
     if (!campaignId) {
       throw new Error('campaignId is required');
     }
-    await generationLog.linkCampaign(req.params.id, campaignId);
+    await generationLog.linkCampaign(req.params.id, campaignId, req.user?.id);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
