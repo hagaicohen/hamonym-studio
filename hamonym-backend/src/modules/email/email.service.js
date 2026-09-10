@@ -25,6 +25,13 @@ async function logEmail({ to, template, subject, status, provider, providerMessa
   );
 }
 
+// Returns { status } -- 'disabled' | 'sent' | 'stub' | 'failed' | 'unknown_template'
+// -- so a caller that actually needs to know the outcome (e.g. billing-
+// setup-notification.service.js, which must not treat a non-delivery as a
+// permanently consumed notification) can use the awaited exports.send
+// variant below instead of the fire-and-forget exports.queue. Every
+// existing queue() call site is unaffected -- it already ignored dispatch's
+// return value.
 async function dispatch(payload) {
   const { template, to, data = {}, entityId, campaignId, donationId, userId } = payload;
   const providerName = process.env.EMAIL_PROVIDER || 'stub';
@@ -32,7 +39,7 @@ async function dispatch(payload) {
   const templateFn = templates[template];
   if (!templateFn) {
     console.error(`[EmailService] unknown template: ${template}`);
-    return;
+    return { status: 'unknown_template' };
   }
 
   const { subject, html, text } = templateFn(data);
@@ -40,7 +47,7 @@ async function dispatch(payload) {
 
   if (!enabled) {
     await logEmail({ to, template, subject, status: 'disabled', provider: providerName, entityId, campaignId, donationId, userId });
-    return;
+    return { status: 'disabled' };
   }
 
   try {
@@ -50,16 +57,19 @@ async function dispatch(payload) {
       from: process.env.EMAIL_FROM,
       replyTo: process.env.EMAIL_REPLY_TO,
     });
+    const status = result.stub ? 'stub' : 'sent';
     await logEmail({
       to, template, subject,
-      status: result.stub ? 'stub' : 'sent',
+      status,
       provider: providerName,
       providerMessageId: result.providerMessageId,
       entityId, campaignId, donationId, userId,
       sent: true,
     });
+    return { status, providerMessageId: result.providerMessageId };
   } catch (err) {
     await logEmail({ to, template, subject, status: 'failed', provider: providerName, error: err.message, entityId, campaignId, donationId, userId });
+    return { status: 'failed', error: err.message };
   }
 }
 

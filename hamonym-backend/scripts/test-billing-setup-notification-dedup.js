@@ -16,8 +16,11 @@
 // the undeletable-once-paid donations row (migration 055) that would make
 // cleanup impossible.
 //
-// emailService.queue is mocked (require.cache override) so this test never
-// attempts a real send regardless of EMAIL_ENABLED/EMAIL_PROVIDER.
+// emailService.send is mocked (require.cache override) so this test never
+// attempts a real send regardless of EMAIL_ENABLED/EMAIL_PROVIDER --
+// notifyBillingSetupRequired awaits exports.send (not the fire-and-forget
+// exports.queue) so it can record the real outcome in `delivered`
+// (migration 065) instead of assuming success.
 //
 // Run: node scripts/test-billing-setup-notification-dedup.js
 
@@ -36,7 +39,10 @@ function check(name, fn) {
 }
 
 const emailPath = require.resolve('../src/modules/email/email.service');
-const fakeEmail = { calls: [], queue: (payload) => { fakeEmail.calls.push(payload); } };
+const fakeEmail = {
+  calls: [],
+  send: async (payload) => { fakeEmail.calls.push(payload); return { status: 'sent' }; },
+};
 require.cache[emailPath] = { id: emailPath, filename: emailPath, loaded: true, exports: fakeEmail };
 const notifications = require('../src/modules/billing-engine/billing-setup-notification.service');
 
