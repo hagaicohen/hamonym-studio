@@ -70,8 +70,14 @@ export class StepGoalsComponent {
   // VALIDATION
   // =========================
 
+  // Neither label carries a "*" required marker, and both inputs show only
+  // an example placeholder ("50,000"/"600,000") that never becomes a real
+  // value unless the user actually types -- requiring both here silently
+  // blocked continue with zero visible indication why. 2026-09-10, Launch
+  // Closure live-walkthrough: same bug shape as step-profile's logo check,
+  // fixed the same way (match the code to what the UI already promises).
   get canContinue(): boolean {
-    return !!(this.monthlyGoal && this.yearlyGoal);
+    return true;
   }
 
   cleanNumber(value: string): string {

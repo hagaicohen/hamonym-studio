@@ -101,12 +101,17 @@ export class StepProfileComponent {
     });
   }
 
+  // Logo is deliberately NOT required here -- the field's own copy says
+  // "מומלץ" (recommended), no "*" marker exists on its label, and the
+  // continue button gave zero indication of why it stayed disabled when
+  // logoPreview was included in this check. 2026-09-10, Launch Closure
+  // live-walkthrough: this silently blocked every registration that
+  // skipped the logo, contradicting the field's own visible copy.
   get canContinue(): boolean {
     return !!(
       this.selectedCampaignTypes.length &&
       this.displayName.trim().length > 1 &&
-      this.organizationDescription.trim().length > 10 &&
-      this.logoPreview
+      this.organizationDescription.trim().length > 10
     );
   }
 
