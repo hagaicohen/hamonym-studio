@@ -176,7 +176,7 @@ export class LoginComponent implements OnInit {
 
                 this.currentEntityService.currentEntity.set(entity);
 
-                this.currentEntityService.currentRole.set(entity.role);
+                this.currentEntityService.setRole(entity.role);
               }
 
               this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
@@ -271,7 +271,7 @@ export class LoginComponent implements OnInit {
 
                 this.currentEntityService.currentEntity.set(entity);
 
-                this.currentEntityService.currentRole.set(entity.role);
+                this.currentEntityService.setRole(entity.role);
               }
 
               this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
