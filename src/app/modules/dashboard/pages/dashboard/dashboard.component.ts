@@ -229,37 +229,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /* ── fake data for design preview ── */
-  readonly mockAmbassadors = [
-    { id: '1', full_name: 'דוד לוי',        raised_total: 8200, goal_amount: 10000 },
-    { id: '2', full_name: 'רותם גבאי',      raised_total: 6700, goal_amount: 8000 },
-    { id: '3', full_name: 'מיכל כהן',       raised_total: 4300, goal_amount: 5000 },
-    { id: '4', full_name: 'ישראל ישראלי',   raised_total: 3900, goal_amount: 6000 },
-    { id: '5', full_name: 'יגל מרדכי',      raised_total: 2800, goal_amount: 5000 },
-  ];
-
-  readonly mockDonations = [
-    { id: '1', amount: 180,   donor_name: 'ישראל ישראלי', campaign_title: 'מלגות תשפ"ה',        completed_at: new Date(Date.now() - 5   * 60000).toISOString() },
-    { id: '2', amount: 500,   donor_name: 'רותם כהן',     campaign_title: 'סלי מזון למשפחות',  completed_at: new Date(Date.now() - 18  * 60000).toISOString() },
-    { id: '3', amount: 250,   donor_name: 'אנונימי',       campaign_title: 'בית חם לנוער',       completed_at: new Date(Date.now() - 60  * 60000).toISOString() },
-    { id: '4', amount: 1000,  donor_name: 'דוד לוי',       campaign_title: 'מלגות תשפ"ה',        completed_at: new Date(Date.now() - 2   * 3600000).toISOString() },
-    { id: '5', amount: 120,   donor_name: 'מיכל שטרית',   campaign_title: 'סלי מזון למשפחות',  completed_at: new Date(Date.now() - 3   * 3600000).toISOString() },
-  ];
-
-  readonly mockFailedPayments = [
-    { id: '1', amount: 180,  campaign_title: 'מלגות תשפ"ה',       updated_at: '2025-05-12T10:00:00Z', reason: 'כרטיס פג תוקף' },
-    { id: '2', amount: 500,  campaign_title: 'בית חם לנוער',       updated_at: '2025-05-11T10:00:00Z', reason: 'סורב ע"י חברת אשראי' },
-    { id: '3', amount: 120,  campaign_title: 'סלי מזון למשפחות',  updated_at: '2025-05-11T10:00:00Z', reason: 'שגיאת סליקה' },
-    { id: '4', amount: 1360, campaign_title: 'מלגות תשפ"ה',       updated_at: '2025-05-10T10:00:00Z', reason: 'כרטיס פג תוקף' },
-  ];
-
-  get displayAmbassadors()     { return this.data?.topAmbassadors?.length  ? this.data.topAmbassadors  : this.mockAmbassadors; }
-  get displayDonations()       { return this.data?.recentDonations?.length  ? this.data.recentDonations  : this.mockDonations; }
-  get displayFailedPayments()  { return this.data?.failedPayments?.length   ? this.data.failedPayments   : this.mockFailedPayments; }
+  get displayAmbassadors()     { return this.data?.topAmbassadors ?? []; }
+  get displayDonations()       { return this.data?.recentDonations ?? []; }
+  get displayFailedPayments()  { return this.data?.failedPayments ?? []; }
   get displayFailedTotal(): number {
-    return this.data?.failedPayments?.length
-      ? this.data.kpi.failedPayments.totalLost
-      : this.mockFailedPayments.reduce((s, f) => s + f.amount, 0);
+    return this.data?.kpi?.failedPayments?.totalLost ?? 0;
   }
 
   failureReason(f: any): string { return f.reason ?? 'כרטיס סירב'; }

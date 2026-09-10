@@ -649,6 +649,8 @@
 
 .td-muted { color: #94a3b8 !important; font-size: 12px !important; }
 
+.empty-state-row { text-align: center; color: #94a3b8; font-size: 13px; padding: 24px 8px !important; }
+
 .td-amount {
   font-weight: 700;
   color: #0f172a !important;
