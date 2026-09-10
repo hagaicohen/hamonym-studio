@@ -128,7 +128,18 @@ export class CampaignTypeStepComponent implements OnInit {
 
   // ── Goals fields ──
   targetAmountDisplay = '';
-  targetTouched = false;
+  // Starts true (not false) -- this field already had a real "*" required
+  // marker and a working "יש להזין יעד גיוס" error, but only ever showed on
+  // blur. The Builder's step navigation is deliberately free (no
+  // canContinue gate here, see navigateToStep()'s own comment) -- so a user
+  // who never clicks into this field (its placeholder, "100,000", reads
+  // like a real pre-filled default) could sail through the rest of the
+  // wizard and only discover the goal was never set at the final Publish
+  // step. 2026-09-10, Launch Closure live-walkthrough -- same
+  // placeholder-vs-value confusion as the registration wizard's goal
+  // fields, fixed differently here since this one genuinely is required
+  // (enforced server-side at publish) rather than removed.
+  targetTouched = true;
 
   ngOnInit(): void {
     if (this.draft.targetAmount > 0)
