@@ -28,6 +28,10 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+
+import { sanitizeRichHtml } from '../../../../shared/utils/sanitize-rich-html';
+
 @Component({
   selector: 'app-step-review',
   standalone: true,
@@ -37,6 +41,8 @@ import { CurrentContextService } from '../../../../core/services/current-context
 })
 export class StepReviewComponent {
   private router = inject(Router);
+
+  private sanitizer = inject(DomSanitizer);
 
   private currentEntityService = inject(CurrentEntityService);
 
@@ -125,6 +131,14 @@ export class StepReviewComponent {
 
   get displayName(): string {
     return this.state().displayName;
+  }
+
+  // The description is rich-text HTML from the step-profile editor -- was
+  // rendered via plain {{ }} interpolation on the review summary, which
+  // shows raw <p> tags as literal text instead of the actual description.
+  // 2026-09-10, Launch Closure live-walkthrough.
+  get organizationDescriptionHtml(): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(this.state().organizationDescription));
   }
 
   get organizationDescription(): string {

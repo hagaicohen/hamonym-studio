@@ -240,9 +240,7 @@
       <div class="summary-item full-width">
         <div class="summary-label">תיאור {{ entityConfig.labels.entity }}</div>
 
-        <div class="summary-description">
-          {{ organizationDescription }}
-        </div>
+        <div class="summary-description" [innerHTML]="organizationDescriptionHtml"></div>
       </div>
 
       <div class="summary-item full-width">
