@@ -71,14 +71,6 @@ router.patch(
 
    '/:id/association-document',
 
-  (req, res, next) => {
-
-    console.log('UPLOAD HIT');
-
-    next();
-
-  },
-
   requireAuth,
 
   requireEntityOwnership(),

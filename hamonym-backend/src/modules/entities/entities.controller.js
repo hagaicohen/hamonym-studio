@@ -45,7 +45,7 @@ exports.createEntity =
 
               success: false,
 
-              message:
+              error:
                 'מספר רישום כבר קיים במערכת'
 
             });
@@ -447,6 +447,11 @@ exports.updateEntity =
     } catch (err) {
 
       console.error(err);
+
+      if (err.code === '23505') {
+        res.status(409).json({ error: 'מספר רישום כבר קיים במערכת' });
+        return;
+      }
 
       const status = err.message === 'Unauthorized' ? 403 : 500;
       res.status(status).json({

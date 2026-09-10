@@ -25,18 +25,40 @@ async function validateOwnership(
 
 }
 
+// Exactly the columns campaign-api.service.ts#toSnake() actually sends
+// (Production Launch Readiness pass, 2026-09-10). Before this whitelist,
+// buildUpdateQuery() SET a column for every key present in the raw request
+// body with no restriction beyond the 5 fields sanitizeUpdateData stripped
+// -- any authenticated owner of the target entity could PATCH current_amount,
+// supporters_count, is_locked, is_featured, is_hidden, deleted_at/deleted_by,
+// hidden_by_entity_cascade, etc. directly, bypassing every dedicated
+// endpoint (setCampaignVisibility, Super Admin lock, aggregate totals) that
+// exists specifically to guard those fields.
+const UPDATABLE_CAMPAIGN_COLUMNS = new Set([
+  'status', 'slug', 'title', 'short_description', 'campaign_lifecycle',
+  'funding_type', 'category', 'manager_name', 'target_amount', 'start_date',
+  'end_date', 'logo_placement', 'logo_strip_align', 'logo_strip_bg',
+  'show_entity_name', 'show_logo', 'campaign_logo_url', 'hero_logo_position',
+  'show_hero_title', 'show_hero_subtitle', 'hero_type', 'hero_layout',
+  'hero_text_style', 'hero_cta_config', 'hero_custom_html', 'cover_image_url',
+  'video_url', 'enable_suggested_amounts', 'allow_custom_amount',
+  'allow_monthly_donation', 'suggested_amounts', 'monthly_amounts',
+  'recurring_billing_mode', 'recurring_installments_count', 'rewards_enabled',
+  'rewards', 'registration_field_label', 'registration_field_icon',
+  'sponsors', 'ambassadors', 'updates', 'blocks', 'layout',
+]);
+
 function sanitizeUpdateData(
   data
 ) {
 
-  const clone =
-    { ...data };
+  const clone = {};
 
-  delete clone.id;
-  delete clone.entity_id;
-  delete clone.created_at;
-  delete clone.updated_at;
-  delete clone.published_at;
+  for (const key of Object.keys(data)) {
+    if (UPDATABLE_CAMPAIGN_COLUMNS.has(key)) {
+      clone[key] = data[key];
+    }
+  }
 
   return clone;
 
@@ -597,7 +619,8 @@ exports.updateCampaign =
       await db.query(
 
         `
-        SELECT entity_id, is_locked, title
+        SELECT entity_id, is_locked, title, slug, cover_image_url, video_url,
+               hero_type, target_amount, start_date, end_date, campaign_lifecycle
         FROM campaigns
         WHERE id = $1
         LIMIT 1
@@ -617,18 +640,42 @@ exports.updateCampaign =
 
     }
 
-    // A campaign can't be published nameless — this PATCH-based publish
-    // call (campaign-api.service.ts#publish) only ever sends
-    // {status:'published'}, never the whole draft, so the title to check is
-    // whichever one is already saved (data.title, if this same call also
-    // updates it) or the one already in the DB row fetched above. The
-    // frontend's own missingFields check (campaign-publish-step.component.ts)
-    // already blocks this in the UI — this is the server-side backstop for
-    // anyone calling the API directly. See DECISIONS.md (2026-08-02).
+    // Server-side mirror of the frontend's own publish gate
+    // (campaign-publish-step.component.ts#missingFields) — that check only
+    // ever ran client-side, so a direct PATCH {status:'published'} could
+    // publish a campaign missing a slug/hero/goal or with an invalid date
+    // range. This PATCH-based publish call (campaign-api.service.ts#publish)
+    // only ever sends {status:'published'}, never the whole draft, so each
+    // field checked here falls back to whichever value is already saved in
+    // the DB row fetched above. See DECISIONS.md (2026-08-02) for the
+    // original title-only version of this backstop.
     if (data.status === 'published') {
-      const effectiveTitle = (data.title ?? campaignResult.rows[0].title ?? '').trim();
+      const row = campaignResult.rows[0];
+      const effectiveTitle = (data.title ?? row.title ?? '').trim();
       if (!effectiveTitle) {
         throw new Error('Campaign title is required to publish');
+      }
+      const effectiveSlug = (data.slug ?? row.slug ?? '').trim();
+      if (!effectiveSlug) {
+        throw new Error('Campaign slug is required to publish');
+      }
+      const effectiveHeroType = data.hero_type ?? row.hero_type ?? 'image';
+      const effectiveCoverImageUrl = data.cover_image_url ?? row.cover_image_url;
+      const effectiveVideoUrl = data.video_url ?? row.video_url;
+      const hasHero = effectiveHeroType === 'image' ? !!effectiveCoverImageUrl : !!effectiveVideoUrl;
+      if (!hasHero) {
+        throw new Error('A hero image or video is required to publish');
+      }
+      const effectiveTargetAmount = data.target_amount ?? row.target_amount;
+      if (!effectiveTargetAmount || Number(effectiveTargetAmount) <= 0) {
+        throw new Error('A fundraising goal is required to publish');
+      }
+      const effectiveLifecycle = data.campaign_lifecycle ?? row.campaign_lifecycle ?? 'one-time';
+      const effectiveStartDate = data.start_date ?? row.start_date;
+      const effectiveEndDate = data.end_date ?? row.end_date;
+      if (effectiveLifecycle !== 'ongoing' && effectiveStartDate && effectiveEndDate
+          && new Date(effectiveEndDate) < new Date(effectiveStartDate)) {
+        throw new Error('End date must be on or after the start date to publish');
       }
     }
 
@@ -690,6 +737,7 @@ exports.updateCampaign =
           SET
 
             ${updates},
+            ${data.status === 'published' ? 'published_at = COALESCE(published_at, NOW()),' : ''}
 
             updated_at = NOW()
 
@@ -799,6 +847,13 @@ exports.getCampaignBySlugPublic = async (slug) => {
   );
   const campaign = result.rows[0] || null;
   if (campaign) {
+    // internal-only fields -- SELECT c.* pulls the whole row for the
+    // legitimate reason that the public detail page renders most of it,
+    // but these few are never meant to leave the server
+    delete campaign.is_locked;
+    delete campaign.is_featured;
+    delete campaign.deleted_by;
+    delete campaign.hidden_by_entity_cascade;
     campaign.registration_options = await getRegistrationOptions(campaign.id);
   }
   return campaign;

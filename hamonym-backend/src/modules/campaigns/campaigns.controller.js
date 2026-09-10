@@ -20,6 +20,10 @@ function getStatusCode(
     case 'Entity ID is required':
     case 'No fields supplied':
     case 'Campaign title is required to publish':
+    case 'Campaign slug is required to publish':
+    case 'A hero image or video is required to publish':
+    case 'A fundraising goal is required to publish':
+    case 'End date must be on or after the start date to publish':
       return 400;
 
     case 'Campaign slug already exists':
@@ -64,6 +68,18 @@ function getErrorMessage(
 
     case 'Campaign title is required to publish':
       return 'לא ניתן לפרסם קמפיין בלי שם';
+
+    case 'Campaign slug is required to publish':
+      return 'לא ניתן לפרסם קמפיין בלי כתובת';
+
+    case 'A hero image or video is required to publish':
+      return 'לא ניתן לפרסם קמפיין בלי תמונה או וידאו ראשי';
+
+    case 'A fundraising goal is required to publish':
+      return 'לא ניתן לפרסם קמפיין בלי יעד גיוס';
+
+    case 'End date must be on or after the start date to publish':
+      return 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';
