@@ -28,6 +28,7 @@ export class CampaignDonationPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
+  saveError: string | null = null;
 
   get donorFields(): DonorFieldsConfig {
     return { ...DEFAULT_DONOR_FIELDS, ...(this.draft?.donorFields ?? {}) };
@@ -118,9 +119,10 @@ export class CampaignDonationPageComponent implements OnInit {
   private persist(): void {
     if (!this.draft) return;
     this.saving = true;
+    this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
       next: () => { this.saving = false; },
-      error: () => { this.saving = false; },
+      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת הגדרות התרומה נכשלה, נסו שוב'; },
     });
   }
 }

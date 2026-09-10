@@ -8,6 +8,7 @@
       <button type="button" class="sp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="sp-title">🤝 חסויות</h1>
       <p class="sp-subtitle">{{ d.title }} · {{ d.sponsors.length }} חסויות</p>
+      <p class="sp-save-error" *ngIf="saveError">{{ saveError }}</p>
 
       <div class="sp-form-panel">
         <h2 class="sp-form-title">{{ isEditing ? 'עריכת חסות' : 'חסות חדשה' }}</h2>

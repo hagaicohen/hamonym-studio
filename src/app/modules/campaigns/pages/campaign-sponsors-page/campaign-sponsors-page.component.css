@@ -11,6 +11,7 @@
 .sp-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
 .sp-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
 .sp-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
+.sp-save-error { font-size: 13px; color: #dc2626; margin: -12px 0 16px; }
 
 .sp-form-panel {
   padding: 20px 22px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);

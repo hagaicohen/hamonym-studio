@@ -214,6 +214,8 @@
         </div>
       </div>
 
+      <p class="reg-error" *ngIf="saveError">{{ saveError }}</p>
+
       <div class="reg-modal-actions">
         <button class="reg-cancel-btn" (click)="closeImport()">ביטול</button>
         <button class="reg-save-btn" [disabled]="!validImportCount || importing" (click)="confirmImport()">
