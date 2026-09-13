@@ -114,8 +114,6 @@
   margin-bottom: 16px;
 }
 
-.bo-asof { max-width: 320px; margin-bottom: 16px; }
-
 .ba-field {
   display: flex;
   flex-direction: column;
@@ -143,21 +141,6 @@
 .ba-field-btn .ops-btn {
   height: 36px;
   box-sizing: border-box;
-}
-
-.bo-datetime {
-  display: flex;
-  gap: 6px;
-}
-
-.bo-datetime input[type="date"] {
-  flex: 1 1 140px;
-  min-width: 0;
-}
-
-.bo-datetime input[type="time"] {
-  flex: 0 0 100px;
-  min-width: 0;
 }
 
 .ba-form {
@@ -362,25 +345,22 @@
   color: #854d0e;
 }
 
-.bo-recalc-confirm {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 4px;
+.bo-month-select .bo-form-row {
+  align-items: center;
+  gap: 10px;
 }
 
-.bo-recalc-confirm > span {
-  display: block;
+.bo-month-select input[type="month"] {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.bo-already-calculated {
   font-size: 12px;
-  color: #78350f;
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
-
-.bo-recalc-confirm-actions {
-  display: flex;
-  gap: 8px;
+  font-weight: 600;
+  color: #16a34a;
 }
 
 .bo-current-actions {
