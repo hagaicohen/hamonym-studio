@@ -18,6 +18,7 @@ const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
 const billingRepository = require('../../billing/billing.repository');
 const getAdapter = require('../../collection-engine/adapters/get-adapter');
+const { computeCalendarMonthUtcBoundary, ensurePeriod } = require('../../billing-engine/billing-period.util');
 
 // Read-only collection-readiness projection (Billing Collection UX
 // truthfulness fix, 2026-09-02) -- mirrors, never re-implements, the exact
@@ -63,39 +64,66 @@ exports.listPeriods = async () => {
   return rows;
 };
 
-exports.createPeriod = async ({ periodStart, periodEnd, superAdminUserId, ip }) => {
-  if (!periodStart || !periodEnd) {
-    const err = new Error('periodStart and periodEnd are required');
+// "בחר חודש" -- the Platform Admin's manual-control entry point (Billing
+// Ops operator-control hardening, 2026-09-13). Replaces free-typed
+// period_start/period_end with a plain calendar month/year, and is
+// idempotent by construction: computeCalendarMonthUtcBoundary + ensurePeriod
+// are the exact same functions billing-monthly-cycle.job.js uses for "the
+// previous calendar month" -- selecting "August 2026" here always resolves
+// to the identical billing_periods row the automatic job would find/create
+// for August, never a duplicate (enforced at the DB level too, by the
+// billing_periods_no_overlap EXCLUDE constraint ensurePeriod already
+// handles). Only writes an audit-log entry when a period is actually
+// created -- finding an existing one is not an admin action with an effect.
+exports.createPeriodForMonth = async ({ year, month, superAdminUserId, ip }) => {
+  const y = Number(year);
+  const m = Number(month);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || m < 1 || m > 12) {
+    const err = new Error('year and month (1-12) are required');
     err.code = 'MISSING_PERIOD_BOUNDS';
     throw err;
   }
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows } = await client.query(
-      `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING *`,
-      [periodStart, periodEnd]
-    );
-    await auditLog(client, {
-      superAdminUserId, action: 'billing_period_create',
-      notes: `period_start=${periodStart} period_end=${periodEnd}`, ip,
+
+  const { periodStart, periodEnd } = computeCalendarMonthUtcBoundary(y, m);
+  const { periodId, periodCreated } = await ensurePeriod(pool, periodStart, periodEnd);
+
+  if (periodCreated) {
+    await auditLog(pool, {
+      superAdminUserId,
+      action: 'billing_period_create',
+      notes: `period_start=${periodStart.toISOString()} period_end=${periodEnd.toISOString()} (month selector: ${y}-${String(m).padStart(2, '0')})`,
+      ip,
     });
-    await client.query('COMMIT');
-    return rows[0];
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
-    if (err.code === '23P01') {
-      const overlap = new Error('This period overlaps an existing billing period');
-      overlap.code = 'PERIOD_OVERLAP';
-      throw overlap;
-    }
-    throw err;
-  } finally {
-    client.release();
   }
+
+  const { rows } = await pool.query(`SELECT * FROM billing_periods WHERE id = $1`, [periodId]);
+  return { period: rows[0], created: periodCreated };
 };
 
 exports.calculatePeriod = async ({ periodId, asOf, superAdminUserId, ip }) => {
+  const existingRun = await pool.query(
+    `SELECT id FROM billing_runs WHERE billing_period_id = $1 LIMIT 1`,
+    [periodId]
+  );
+  if (existingRun.rows[0]) {
+    // Mirrors billing-monthly-cycle.job.js's own guard exactly (skip
+    // calculation entirely once ANY billing_run exists for this period,
+    // whether created by the job or a human) -- 2026-09-13 hardening. Before
+    // this, the normal operator UI could re-invoke runProductionCalculation
+    // on an already-calculated period behind a warning/confirm dialog; a
+    // donation still eligible after an earlier, still-unapproved draft
+    // Statement (eligibility is effective_statement_id IS NULL, not "not
+    // already in some statement_components row") would be pulled into a
+    // SECOND draft Statement, double-listing it. runProductionCalculation
+    // itself has no such guard (by design -- it's a pure calculation
+    // engine, not a policy layer), so every caller must enforce this; the
+    // automatic job already did, this closes the same gap for the manual
+    // path structurally, not just by hiding a button in the UI.
+    const err = new Error('This billing period has already been calculated');
+    err.code = 'PERIOD_ALREADY_CALCULATED';
+    throw err;
+  }
+
   const effectiveAsOf = asOf || new Date().toISOString();
   const result = await calculation.runProductionCalculation(periodId, effectiveAsOf);
   await pool.query(

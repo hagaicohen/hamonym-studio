@@ -15,17 +15,17 @@ exports.listPeriods = async (req, res) => {
   }
 };
 
-exports.createPeriod = async (req, res) => {
+exports.createPeriodForMonth = async (req, res) => {
   try {
-    const period = await service.createPeriod({
-      periodStart: req.body.periodStart,
-      periodEnd: req.body.periodEnd,
+    const { period, created } = await service.createPeriodForMonth({
+      year: req.body.year,
+      month: req.body.month,
       superAdminUserId: req.user.id,
       ip: req.ip,
     });
-    res.status(201).json({ period });
+    res.status(created ? 201 : 200).json({ period, created });
   } catch (err) {
-    handle(res, 'createPeriod', err);
+    handle(res, 'createPeriodForMonth', err);
   }
 };
 
