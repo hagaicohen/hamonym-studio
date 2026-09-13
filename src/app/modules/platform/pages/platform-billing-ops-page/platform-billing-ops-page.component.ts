@@ -122,24 +122,24 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   periods: BillingPeriod[] = [];
   periodsLoading = true;
   periodsError: string | null = null;
-  newPeriodStart = '';
-  newPeriodEnd = '';
-  newPeriodStartDate = '';
-  newPeriodStartTime = '00:00';
-  newPeriodEndDate = '';
-  newPeriodEndTime = '00:00';
+  // "בחר חודש" -- bound to a native <input type="month">, giving "YYYY-MM"
+  // directly; Hamonym derives the exact calendar boundaries itself
+  // (billing-period.util.js#computeCalendarMonthUtcBoundary, the same
+  // function the automatic monthly job uses) -- the operator never types a
+  // raw start/end timestamp. 2026-09-13, Billing Ops operator-control
+  // hardening.
+  selectedMonth = '';
   creatingPeriod = false;
   periodActionError: string | null = null;
-  showCreateForm = false;
   showAdvanced = false;
-  confirmingRecalcPeriodId: string | null = null;
 
   runs: BillingRun[] = [];
   runsLoading = false;
   calculatingPeriodId: string | null = null;
+  // Not settable from the UI anymore (2026-09-13, kept out of the normal
+  // operator workflow per that decision) -- calculatePeriod() below still
+  // accepts it, so the backend capability (diagnostics/tests) is untouched.
   calcAsOf = '';
-  calcAsOfDate = '';
-  calcAsOfTime = '';
 
   // ---- statements ---------------------------------------------------
   statements: StatementListItem[] = [];
@@ -258,42 +258,29 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
-  private combineDateTime(date: string, time: string): string {
-    if (!date) return '';
-    return `${date}T${time || '00:00'}`;
-  }
+  // "בחר חודש" -> "חשב חיובים". selectedMonth is the native <input
+  // type="month"> value, "YYYY-MM" -- parsed here, boundaries derived
+  // server-side (createPeriodForMonth) via the exact same function the
+  // automatic job uses, so picking "2026-08" always resolves to the one
+  // real August 2026 billing_period, never a duplicate.
+  createPeriodForMonth(): void {
+    if (this.creatingPeriod || !this.selectedMonth) return;
+    const [yearStr, monthStr] = this.selectedMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!year || !month) return;
 
-  updateNewPeriodStart(): void {
-    this.newPeriodStart = this.combineDateTime(this.newPeriodStartDate, this.newPeriodStartTime);
-  }
-
-  updateNewPeriodEnd(): void {
-    this.newPeriodEnd = this.combineDateTime(this.newPeriodEndDate, this.newPeriodEndTime);
-  }
-
-  updateCalcAsOf(): void {
-    this.calcAsOf = this.combineDateTime(this.calcAsOfDate, this.calcAsOfTime);
-  }
-
-  createPeriod(): void {
-    if (this.creatingPeriod || !this.newPeriodStart || !this.newPeriodEnd) return;
     this.creatingPeriod = true;
     this.periodActionError = null;
-    this.service.createPeriod(this.newPeriodStart, this.newPeriodEnd).subscribe({
+    this.service.createPeriodForMonth(year, month).subscribe({
       next: () => {
         this.creatingPeriod = false;
-        this.newPeriodStart = '';
-        this.newPeriodEnd = '';
-        this.newPeriodStartDate = '';
-        this.newPeriodStartTime = '00:00';
-        this.newPeriodEndDate = '';
-        this.newPeriodEndTime = '00:00';
-        this.showCreateForm = false;
+        this.selectedMonth = '';
         this.loadPeriods();
       },
       error: (err) => {
         this.creatingPeriod = false;
-        this.periodActionError = err?.error?.error || 'יצירת התקופה נכשלה';
+        this.periodActionError = err?.error?.error || 'בחירת חודש החיוב נכשלה';
       },
     });
   }
@@ -532,24 +519,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return { text: `${base} — ${s.statementsCreated} חשבונות לחיוב הופקו`, isWarning: false };
   }
 
-  // Recalculating a period that already has draft (unapproved) Statements
-  // can double-cover the same donations: eligibility is
+  // 2026-09-13: recalculating a period that already has draft (unapproved)
+  // Statements can double-cover the same donations -- eligibility is
   // effective_statement_id IS NULL, cleared only on approval, not on
-  // calculation (see calculation.service.js's own header comment) -- so a
-  // rerun before approving is not a safe no-op. Require an explicit,
-  // separate confirmation rather than letting "הרץ חישוב מחדש" behave like
-  // an ordinary primary action.
+  // calculation (see calculation.service.js's own header comment). Rather
+  // than let the operator click through a warning to do that anyway (the
+  // old "חשב מחדש" confirm-dialog), the template now simply never renders a
+  // calculate action once period.run_count > 0 -- see "החיובים לחודש זה כבר
+  // חושבו" in the template -- and the backend (billing-ops.service.js
+  // #calculatePeriod) refuses a second run structurally either way.
   onCalculateClick(period: BillingPeriod): void {
-    if (period.run_count > 0 && this.confirmingRecalcPeriodId !== period.id) {
-      this.confirmingRecalcPeriodId = period.id;
-      return;
-    }
-    this.confirmingRecalcPeriodId = null;
     this.calculatePeriod(period);
-  }
-
-  cancelRecalcConfirm(): void {
-    this.confirmingRecalcPeriodId = null;
   }
 
   // Only claims a calendar-month label when period_start genuinely falls

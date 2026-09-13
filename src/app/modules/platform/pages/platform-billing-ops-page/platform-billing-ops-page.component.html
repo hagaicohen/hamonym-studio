@@ -5,7 +5,7 @@
 
   @if (justSetupEntityName) {
     <div class="plat-card bo-just-setup-banner">
-      <span>הוגדר חשבון חיוב עבור <b>{{ justSetupEntityName }}</b>. אם יש לה פעילות בתקופה הנוכחית, הריצו חישוב מחדש כדי לכלול אותה.</span>
+      <span>הוגדר חשבון חיוב עבור <b>{{ justSetupEntityName }}</b>. אם התקופה הנוכחית טרם חושבה, פעילותה תיכלל בחישוב; אם היא כבר חושבה, פעילותה תיכלל בחישוב של התקופה הבאה.</span>
       <button class="bo-just-setup-dismiss" (click)="dismissJustSetupBanner()">✕</button>
     </div>
   }
@@ -24,6 +24,24 @@
       <div class="plat-card"><div class="plat-error">{{ periodsError }}</div></div>
     } @else {
 
+      <!-- "בחר חודש" -- always visible, single entry point. Hamonym derives
+           the exact calendar-month boundaries itself; the operator never
+           types a raw start/end timestamp. Selecting a month that's already
+           been created/calculated is a safe no-op (createPeriodForMonth is
+           idempotent) -- it just loads that period below. -->
+      <div class="plat-card bo-month-select">
+        <div class="bo-card-title">בחר חודש חיוב</div>
+        <div class="bo-form-row">
+          <input type="month" class="ba-field" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
+          <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
+            {{ creatingPeriod ? 'טוען...' : 'בחר חודש' }}
+          </button>
+        </div>
+        @if (periodActionError) {
+          <div class="ops-action-error">{{ periodActionError }}</div>
+        }
+      </div>
+
       @if (currentPeriod; as period) {
         <div class="plat-card bo-current-period">
           <div class="bo-current-header">
@@ -34,12 +52,7 @@
               }
               <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
             </div>
-            <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
           </div>
-
-          @if (periodActionError) {
-            <div class="ops-action-error">{{ periodActionError }}</div>
-          }
 
           @if (runsForPeriod(period.id).length === 0) {
             <div class="bo-empty-calc">
@@ -184,44 +197,22 @@
 
             }
 
-            @if (confirmingRecalcPeriodId === period.id) {
-              <div class="bo-recalc-confirm">
-                <span>זהו חישוב חיובים נוסף על תקופה שכבר חושבה. אם יש חשבונות לחיוב בטיוטה שטרם אושרו, חישוב חוזר עלול ליצור עבורם כפילות על אותה פעילות — מומלץ לאשר את החשבונות הקיימים לפני שמחשבים שוב.</span>
-                <div class="bo-recalc-confirm-actions">
-                  <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
-                  <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                    {{ calculatingPeriodId === period.id ? 'מחשב...' : 'כן, חשב מחדש' }}
-                  </button>
-                </div>
-              </div>
-            } @else {
-              <div class="bo-current-actions">
-                @if (periodStatements(period.id).length > 0) {
-                  <button
-                    class="ops-btn ops-btn-primary ops-btn-sm"
-                    [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
-                    (click)="bulkApproveSelected()">
-                    {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
-                  </button>
-                }
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                  {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב מחדש' }}
+            <div class="bo-current-actions">
+              @if (periodStatements(period.id).length > 0) {
+                <button
+                  class="ops-btn ops-btn-primary ops-btn-sm"
+                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
+                  (click)="bulkApproveSelected()">
+                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
                 </button>
-                <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
-                  אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
-                </button>
-              </div>
-            }
+              }
+              <span class="bo-already-calculated">החיובים לחודש זה כבר חושבו</span>
+              <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+                אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
+              </button>
+            </div>
 
             @if (showAdvanced) {
-              <label class="ba-field bo-asof">
-                <span>asOf — לשימוש בבדיקות או חישוב נכון לנקודת זמן מסוימת. בדרך כלל יש להשאיר ריק.</span>
-                <div class="bo-datetime">
-                  <input type="date" [(ngModel)]="calcAsOfDate" (ngModelChange)="updateCalcAsOf()" />
-                  <input type="time" [(ngModel)]="calcAsOfTime" (ngModelChange)="updateCalcAsOf()" />
-                </div>
-              </label>
-
               <div class="bo-runs-history">
                 <div class="bo-runs-history-title">היסטוריית הרצות ({{ period.run_count }})</div>
                 @for (run of runsForPeriod(period.id); track run.id) {
@@ -242,41 +233,7 @@
         </div>
       } @else {
         <div class="plat-card">
-          <div class="ops-empty-small">אין תקופת חיוב פעילה כרגע.</div>
-          <div class="bo-form-row">
-            <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="showCreateForm = !showCreateForm">+ תקופת חיוב חדשה</button>
-          </div>
-        </div>
-      }
-
-      @if (showCreateForm) {
-        <div class="plat-card">
-          <div class="bo-card-title">תקופת חיוב חדשה</div>
-          <div class="bo-form-row">
-            <label class="ba-field">
-              <span>תחילת תקופה</span>
-              <div class="bo-datetime">
-                <input type="date" [(ngModel)]="newPeriodStartDate" (ngModelChange)="updateNewPeriodStart()" />
-                <input type="time" [(ngModel)]="newPeriodStartTime" (ngModelChange)="updateNewPeriodStart()" />
-              </div>
-            </label>
-            <label class="ba-field">
-              <span>סוף תקופה</span>
-              <div class="bo-datetime">
-                <input type="date" [(ngModel)]="newPeriodEndDate" (ngModelChange)="updateNewPeriodEnd()" />
-                <input type="time" [(ngModel)]="newPeriodEndTime" (ngModelChange)="updateNewPeriodEnd()" />
-              </div>
-            </label>
-            <label class="ba-field ba-field-btn">
-              <span>&nbsp;</span>
-              <div class="bo-datetime">
-                <button class="ops-btn ops-btn-secondary" [disabled]="creatingPeriod" (click)="showCreateForm = false">ביטול</button>
-                <button class="ops-btn ops-btn-primary" [disabled]="creatingPeriod || !newPeriodStart || !newPeriodEnd" (click)="createPeriod()">
-                  {{ creatingPeriod ? 'יוצר...' : 'צור תקופת חיוב' }}
-                </button>
-              </div>
-            </label>
-          </div>
+          <div class="ops-empty-small">אין תקופת חיוב פעילה כרגע. בחרו חודש למעלה כדי להתחיל.</div>
         </div>
       }
 
@@ -304,15 +261,12 @@
                     <td>{{ periodStatementCount(period.id) }}</td>
                     <td>₪{{ periodTotalDue(period.id) }}</td>
                     <td>
-                      @if (confirmingRecalcPeriodId === period.id) {
-                        <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelRecalcConfirm()">ביטול</button>
-                        <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                          {{ calculatingPeriodId === period.id ? 'מחשב...' : 'כן, חשב מחדש' }}
-                        </button>
-                      } @else {
+                      @if (runsForPeriod(period.id).length === 0) {
                         <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
                           {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב חיובים' }}
                         </button>
+                      } @else {
+                        <span class="bo-already-calculated">החיובים לחודש זה כבר חושבו</span>
                       }
                     </td>
                   </tr>
@@ -449,11 +403,11 @@
 
         <div class="bo-table-wrap">
           <table class="bo-table">
-            <thead><tr><th></th><th>עמותה</th><th>לחיוב</th><th>סטטוס ניסיון</th><th></th></tr></thead>
+            <thead><tr><th class="bo-checkbox-col"></th><th>עמותה</th><th>לחיוב</th><th>סטטוס ניסיון</th><th></th></tr></thead>
             <tbody>
               @for (item of actionableStatements; track item.statement_id) {
                 <tr>
-                  <td>
+                  <td class="bo-checkbox-col">
                     @if (item.attempt_id && item.attempt_status === 'pending') {
                       <input type="checkbox" [checked]="isSelectedForExport(item.statement_id)" (change)="toggleExportSelection(item.statement_id)" />
                     }

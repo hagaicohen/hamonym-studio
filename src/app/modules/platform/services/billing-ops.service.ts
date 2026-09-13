@@ -223,10 +223,14 @@ export class BillingOpsService {
     return this.http.get<{ periods: BillingPeriod[] }>(`${this.base}/periods`, { headers: authHeaders() });
   }
 
-  createPeriod(periodStart: string, periodEnd: string): Observable<{ period: BillingPeriod }> {
-    return this.http.post<{ period: BillingPeriod }>(
-      `${this.base}/periods`,
-      { periodStart, periodEnd },
+  // "בחר חודש" -- Hamonym derives the exact calendar boundaries server-side
+  // (the same function the automatic monthly job uses); the operator only
+  // ever picks a month/year. 2026-09-13, Billing Ops operator-control
+  // hardening.
+  createPeriodForMonth(year: number, month: number): Observable<{ period: BillingPeriod; created: boolean }> {
+    return this.http.post<{ period: BillingPeriod; created: boolean }>(
+      `${this.base}/periods/for-month`,
+      { year, month },
       { headers: authHeaders() },
     );
   }
