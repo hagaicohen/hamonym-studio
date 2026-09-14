@@ -923,6 +923,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return 'חסום';
   }
 
+  // "כל החיובים" UX refinement, 2026-09-14c: the server's own next_action
+  // (billing-ops.service.js#nextActionLabel) returns 'שולם' for a paid
+  // Statement -- correct as a fact, but redundant next to the "מצב" column
+  // which already says the same word. This is presentation-only
+  // deduplication for one already-known case, not a new rule: a paid
+  // Statement genuinely has no further operator action, which next_action
+  // already establishes -- this just avoids repeating it verbatim.
+  nextActionDisplay(statement: StatementListItem): string {
+    return statement.status === 'paid' ? '—' : statement.next_action;
+  }
+
   // ---- הגדרות עמותות (billing-account provisioning + readiness) --------
 
   loadReadiness(): void {

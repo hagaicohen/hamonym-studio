@@ -380,9 +380,12 @@
     }
   }
 
-  <!-- ============ STATEMENTS ============ -->
+  <!-- ============ כל החיובים ============ -->
   @if (tab === 'statements') {
     <div class="plat-card">
+      <div class="bo-card-title">כל החיובים</div>
+      <div class="bo-intro">היסטוריית החיובים של העמותות, כולל מצב הגבייה והפעולה הנדרשת.</div>
+
       <div class="bo-form-row">
         <label class="ba-field">
           <span>חודש</span>
@@ -420,13 +423,12 @@
             <thead>
               <tr>
                 <th>עמותה</th>
-                <th>חודש</th>
-                <th>גיוס ברוטו</th>
-                <th>לחיוב</th>
-                <th>סטטוס</th>
-                <th>מסלול</th>
+                <th>חודש חיוב</th>
+                <th>מחזור תרומות</th>
+                <th>סכום לחיוב</th>
+                <th>אמצעי גבייה</th>
+                <th>מצב</th>
                 <th>מה עושים עכשיו</th>
-                <th>תשלומים</th>
                 <th></th>
               </tr>
             </thead>
@@ -437,10 +439,9 @@
                   <td>{{ statementPeriodLabel(statement) }}</td>
                   <td>₪{{ statement.gross_raised }}</td>
                   <td>₪{{ statement.total_due }}</td>
-                  <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ statementStatusLabel(statement.status) }}</span></td>
                   <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
-                  <td><span class="bo-next-action">{{ statement.next_action }}</span></td>
-                  <td>{{ statement.payment_count }}</td>
+                  <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ statementStatusLabel(statement.status) }}</span></td>
+                  <td><span class="bo-next-action">{{ nextActionDisplay(statement) }}</span></td>
                   <td><button class="ops-btn ops-btn-secondary ops-btn-sm">פרטים</button></td>
                 </tr>
               }
