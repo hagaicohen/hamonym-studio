@@ -35,9 +35,9 @@
                on through this single control instead. -->
           <div class="bo-current-header">
             @if (periodMonthLabel(period); as monthLabel) {
-              <div class="bo-current-title">חיובי {{ monthLabel }}</div>
+              <div class="bo-current-title">חיוב {{ monthLabel }}</div>
             } @else {
-              <div class="bo-current-title">חיובי {{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+              <div class="bo-current-title">חיוב {{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
             }
             <div class="bo-month-switch">
               <input type="month" class="bo-month-switch-input" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />

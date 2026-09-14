@@ -228,34 +228,39 @@
 
 /* Compact inline month control -- replaces the old separate "בחר חודש
    חיוב" card (2026-09-14 "החודש" refinement). Grouped tightly right next
-   to the "חיובי {month}" heading (polish pass, 2026-09-14b) -- previously
+   to the "חיוב {month}" heading (polish pass, 2026-09-14b/f) -- previously
    pushed to the opposite end of the card via space-between, reading as an
    unrelated control instead of part of the heading's own context. */
 .bo-month-switch {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-inline-start: 10px;
+  gap: 8px;
+  padding-inline-start: 14px;
   border-inline-start: 1px solid #e2e8f0;
 }
 
 .bo-month-switch-input {
-  padding: 6px 10px;
-  border: 1px solid #e2e8f0;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
+  background: #f8fafc;
   font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
 }
+
+.bo-month-switch-input:hover:not(:disabled) { border-color: #cbd5e1; background: #f1f5f9; }
+.bo-month-switch-input:focus { outline: none; border-color: #583cd6; background: #fff; }
+
+.bo-month-switch .ops-btn { height: 34px; box-sizing: border-box; }
 
 .bo-current-title {
   font-size: 22px;
   font-weight: 700;
   color: #1e293b;
-}
-
-.bo-current-range {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 2px;
 }
 
 .bo-empty-calc {
