@@ -55,7 +55,7 @@
               @if (visibleColumns.has('permissions')) { <th>הרשאות פלטפורמה</th> }
               @if (visibleColumns.has('last_login_at')) { <th class="sortable" (click)="sortBy('last_login_at')">כניסה אחרונה</th> }
               @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">נרשם</th> }
-              <th>פעולות</th>
+              <th class="actions-col">פעולות</th>
             </tr>
           </thead>
           <tbody>
@@ -88,7 +88,7 @@
                 }
                 @if (visibleColumns.has('last_login_at')) { <td data-label="כניסה אחרונה">{{ relativeTime(u.last_login_at) }}</td> }
                 @if (visibleColumns.has('created_at')) { <td data-label="נרשם">{{ fmtDate(u.created_at) }}</td> }
-                <td data-label="פעולות">
+                <td data-label="פעולות" class="actions-col">
                   <div class="user-actions">
                     @if (u.deleted_at) {
                       <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(u)">שחזור</button>
@@ -100,21 +100,37 @@
                         (click)="toggleActive(u)"
                       >{{ u.is_active ? 'פעיל' : 'הפעל' }}</button>
 
-                      <button class="btn-secondary" [disabled]="actionInProgress" (click)="generateResetLink(u)">קישור לאיפוס סיסמה</button>
+                      <div class="user-menu-wrap">
+                        <button
+                          type="button"
+                          class="user-menu-trigger"
+                          [class.active]="openMenuUserId === u.id"
+                          [disabled]="actionInProgress"
+                          (click)="toggleActionsMenu(u.id, $event)"
+                          aria-label="פעולות נוספות"
+                        >⋮</button>
 
-                      @if (!u.is_super_admin) {
-                        <button class="btn-secondary" [disabled]="actionInProgress || isSelf(u)" (click)="requestImpersonate(u)">התחבר כמשתמש</button>
-                        <button class="btn-secondary" [disabled]="actionInProgress || isSelf(u)" (click)="requestPermissionsEdit(u)">הרשאות</button>
-                      }
+                        @if (openMenuUserId === u.id) {
+                          <div class="user-menu" (click)="$event.stopPropagation()">
+                            <button class="user-menu-item" [disabled]="actionInProgress" (click)="closeActionsMenu(); generateResetLink(u)">קישור לאיפוס סיסמה</button>
 
-                      <button
-                        class="toggle-chip"
-                        [class.active]="u.is_super_admin"
-                        [disabled]="actionInProgress || isSelf(u)"
-                        (click)="toggleSuperAdmin(u)"
-                      >{{ u.is_super_admin ? 'סופר אדמין' : 'הפוך לסופר אדמין' }}</button>
+                            @if (!u.is_super_admin) {
+                              <button class="user-menu-item" [disabled]="actionInProgress || isSelf(u)" (click)="closeActionsMenu(); requestImpersonate(u)">התחבר כמשתמש</button>
+                              <button class="user-menu-item" [disabled]="actionInProgress || isSelf(u)" (click)="closeActionsMenu(); requestPermissionsEdit(u)">הרשאות</button>
+                            }
 
-                      <button class="btn-delete" [disabled]="actionInProgress || isSelf(u)" (click)="requestDelete(u)">מחיקה</button>
+                            <button
+                              class="user-menu-item"
+                              [disabled]="actionInProgress || isSelf(u)"
+                              (click)="closeActionsMenu(); toggleSuperAdmin(u)"
+                            >{{ u.is_super_admin ? 'הסרת סופר אדמין' : 'הפוך לסופר אדמין' }}</button>
+
+                            <div class="user-menu-divider"></div>
+
+                            <button class="user-menu-item user-menu-item-danger" [disabled]="actionInProgress || isSelf(u)" (click)="closeActionsMenu(); requestDelete(u)">מחיקה</button>
+                          </div>
+                        }
+                      </div>
                     }
                   </div>
                 </td>

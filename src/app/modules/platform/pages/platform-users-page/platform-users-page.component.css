@@ -165,7 +165,17 @@
   overflow-x: auto;
   opacity: 1;
   transition: opacity 0.15s;
+  /* Always-visible (not overlay/invisible) scrollbar -- makes it obvious
+     there's more table to the side instead of a column silently running
+     off the edge with no visual cue that scrolling would reveal it. */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+.plat-table-wrap::-webkit-scrollbar { height: 8px; }
+.plat-table-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+.plat-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.plat-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .plat-table-wrap.refreshing { opacity: 0.5; pointer-events: none; }
 
@@ -182,7 +192,7 @@
 }
 
 .plat-table th {
-  padding: 12px 18px;
+  padding: 12px 14px;
   text-align: right;
   font-weight: 600;
   font-size: 12px;
@@ -196,10 +206,20 @@
 .plat-table th.sortable:hover { color: #583cd6; }
 
 .plat-table td {
-  padding: 12px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   white-space: nowrap;
+}
+
+/* Free-text columns of unbounded length -- capped so a very long name or
+   email can't single-handedly push the whole table wider than the
+   viewport (same reasoning as the organizations/campaigns tables). */
+.plat-table td[data-label="שם"],
+.plat-table td[data-label="אימייל"] {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .plat-row { transition: background 0.1s; }
@@ -224,14 +244,88 @@
 .status-deleted      { background: #fef2f2; color: #991b1b; }
 .status-super-admin  { background: #ede9fe; color: #583cd6; }
 
-/* ROW ACTIONS */
+/* ROW ACTIONS -- only the status toggle + a single "⋮" menu trigger now
+   (see openMenuUserId in the component), so this never needs to wrap. */
 .user-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
-  white-space: normal;
+  white-space: nowrap;
 }
+
+/* Pinned to the leading edge of the horizontal scroll area (physical
+   left, regardless of RTL) so "פעולות" is always reachable without
+   scrolling the table sideways -- the button on the loudest surface. */
+.actions-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 1px 0 0 #e8edf3;
+}
+
+thead .actions-col { background: #f8fafc; z-index: 2; }
+.plat-row:hover .actions-col { background: #f8fafc; }
+
+.user-menu-wrap { position: relative; }
+
+.user-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.user-menu-trigger:hover:not(:disabled) { background: #f1f5f9; }
+.user-menu-trigger.active { border-color: #583cd6; color: #583cd6; background: #f5f3ff; }
+.user-menu-trigger:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .12);
+  padding: 6px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.user-menu-item:hover:not(:disabled) { background: #f1f5f9; }
+.user-menu-item:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.user-menu-item-danger { color: #ef4444; }
+.user-menu-item-danger:hover:not(:disabled) { background: #fef2f2; }
+
+.user-menu-divider { height: 1px; background: #f1f5f9; margin: 4px 2px; }
 
 .toggle-chip {
   display: inline-flex;

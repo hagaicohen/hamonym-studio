@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -127,6 +127,27 @@ export class PlatformUsersPageComponent implements OnInit {
   createAdminInProgress = false;
 
   private searchTimer: any;
+
+  // "פעולות" column redesign (2026-09-14) -- a row used to render up to 6
+  // buttons inline (status toggle, reset link, impersonate, permissions,
+  // super-admin toggle, delete), which wrapped onto a second line at normal
+  // table widths and read as visual clutter. Only the status toggle stays
+  // inline now; everything else lives behind a single "⋮" menu, open for
+  // at most one row at a time.
+  openMenuUserId: string | null = null;
+
+  toggleActionsMenu(userId: string, event: Event): void {
+    event.stopPropagation();
+    this.openMenuUserId = this.openMenuUserId === userId ? null : userId;
+  }
+
+  // Closes the menu on any click outside it -- the menu's own buttons stop
+  // propagation on their own click handlers (see template), so this only
+  // ever fires for a genuine outside click.
+  @HostListener('document:click')
+  closeActionsMenu(): void {
+    this.openMenuUserId = null;
+  }
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 

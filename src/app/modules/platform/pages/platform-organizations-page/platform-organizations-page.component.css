@@ -181,7 +181,17 @@
   overflow-x: auto;
   opacity: 1;
   transition: opacity 0.15s;
+  /* Always-visible (not overlay/invisible) scrollbar -- makes it obvious
+     there's more table to the side instead of a column silently running
+     off the edge with no visual cue that scrolling would reveal it. */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+.plat-table-wrap::-webkit-scrollbar { height: 8px; }
+.plat-table-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+.plat-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.plat-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .plat-table-wrap.refreshing { opacity: 0.5; pointer-events: none; }
 
@@ -198,7 +208,7 @@
 }
 
 .plat-table th {
-  padding: 12px 18px;
+  padding: 12px 14px;
   text-align: right;
   font-weight: 600;
   font-size: 12px;
@@ -212,10 +222,21 @@
 .plat-table th.sortable:hover { color: #583cd6; }
 
 .plat-table td {
-  padding: 12px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   white-space: nowrap;
+}
+
+/* Free-text columns of unbounded length -- capped so one very long
+   organization/owner name can't single-handedly push the whole table
+   wider than the viewport and force every other column into a
+   horizontal scroll it wouldn't otherwise need. */
+.plat-table td[data-label="שם העמותה"],
+.plat-table td[data-label="מנהל"] {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .plat-row { cursor: pointer; transition: background 0.1s; }
