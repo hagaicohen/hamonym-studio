@@ -63,7 +63,7 @@
             <div class="bo-summary-narrative">
               <b>{{ periodDonationsCount(period) }} תרומות בסך ₪{{ periodGrossAmount(period).toFixed(2) }}</b>
               <span class="bo-summary-arrow">→</span>
-              <b class="bo-summary-highlight">עמלות Hamonym לחיוב: ₪{{ periodTotalDue(period.id) }}</b>
+              <b class="bo-summary-highlight">סה״כ לחיוב: ₪{{ periodTotalDue(period.id) }}</b>
             </div>
             @if (periodStatusBreakdown(period.id); as breakdown) {
               <div class="bo-summary-secondary">
@@ -101,17 +101,17 @@
                   <div class="bo-stage bo-stage-active">● הגבייה בתהליך</div>
                 }
               </div>
-              @if (periodStage(period) === 3 && !periodCollectionComplete(period.id)) {
+              <!-- Only MASAV gets a breakdown line -- card collection is
+                   already fully explained by the table's "אמצעי גבייה" +
+                   "מה עושים עכשיו" columns (polish pass, 2026-09-14b), but
+                   MASAV needs a real navigation cue since its own action
+                   lives on a different tab. -->
+              @if (periodStage(period) === 3 && !periodCollectionComplete(period.id) && periodMasavCount(period.id) > 0) {
                 <div class="bo-stage3-breakdown">
-                  @if (periodCardCount(period.id) > 0) {
-                    <span class="bo-stage3-route">💳 {{ periodCardCount(period.id) }} בכרטיס אשראי — גבייה מתוך הטבלה למטה</span>
-                  }
-                  @if (periodMasavCount(period.id) > 0) {
-                    <span class="bo-stage3-route">
-                      🏦 {{ periodMasavCount(period.id) }} במס"ב —
-                      <button type="button" class="bo-inline-link" (click)="setTab('masav')">מעבר ללשונית מס״ב</button>
-                    </span>
-                  }
+                  <span class="bo-stage3-route">
+                    🏦 {{ periodMasavCount(period.id) }} במס"ב —
+                    <button type="button" class="bo-inline-link" (click)="setTab('masav')">מעבר ללשונית מס״ב</button>
+                  </span>
                 </div>
               }
             }
@@ -150,17 +150,19 @@
             @if (periodStatements(period.id).length > 0) {
               <div class="bo-card-title">חיובי החודש</div>
 
-              <div class="bo-bulk-approval-bar">
-                <span class="bo-bulk-approval-count">
-                  {{ selectedApprovalStatementIds.size > 0 ? selectedApprovalStatementIds.size + ' נבחרו' : '' }}
-                </span>
-                <button
-                  class="ops-btn ops-btn-primary ops-btn-sm"
-                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
-                  (click)="bulkApproveSelected()">
-                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
-                </button>
-              </div>
+              @if (eligibleForBulkApproval(period.id).length > 0) {
+                <div class="bo-bulk-approval-bar">
+                  <span class="bo-bulk-approval-count">
+                    {{ selectedApprovalStatementIds.size > 0 ? selectedApprovalStatementIds.size + ' נבחרו' : '' }}
+                  </span>
+                  <button
+                    class="ops-btn ops-btn-primary ops-btn-sm"
+                    [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
+                    (click)="bulkApproveSelected()">
+                    {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
+                  </button>
+                </div>
+              }
 
               @if (bulkApprovalResult) {
                 <div class="bo-bulk-approval-result">
@@ -248,13 +250,18 @@
                 </table>
               </div>
 
+              <!-- Renamed from "אפשרויות מתקדמות" (polish pass, 2026-09-14b)
+                   -- this is a per-month calculation audit log, not a
+                   parallel "advanced" area to the system-wide "מידע טכני /
+                   מתקדם" section below; the old shared "advanced" wording
+                   made the two easy to confuse. -->
               <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
-                אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
+                היסטוריית חישובים לחודש זה {{ showAdvanced ? '▲' : '▼' }}
               </button>
 
               @if (showAdvanced) {
                 <div class="bo-runs-history">
-                  <div class="bo-runs-history-title">היסטוריית הרצות ({{ period.run_count }})</div>
+                  <div class="bo-runs-history-title">{{ period.run_count }} חישובים</div>
                   @for (run of runsForPeriod(period.id); track run.id) {
                     <div class="bo-run-chip">
                       {{ fmtDateTime(run.created_at) }} —
@@ -316,7 +323,7 @@
            page. -->
       <div class="plat-card">
         <button type="button" class="bo-advanced-toggle" (click)="toggleTechnicalJobs()">
-          מידע טכני / מתקדם {{ showTechnicalJobs ? '▲' : '▾' }}
+          משימות מערכת (טכני) {{ showTechnicalJobs ? '▲' : '▾' }}
         </button>
         @if (showTechnicalJobs) {
           @if (jobActionError) {

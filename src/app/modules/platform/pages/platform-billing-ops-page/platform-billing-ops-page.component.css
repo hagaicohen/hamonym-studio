@@ -220,19 +220,23 @@
 .bo-current-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 16px;
 }
 
 /* Compact inline month control -- replaces the old separate "בחר חודש
-   חיוב" card (2026-09-14 "החודש" refinement). Sits beside the month
-   heading instead of taking its own full-width card above it. */
+   חיוב" card (2026-09-14 "החודש" refinement). Grouped tightly right next
+   to the "חיובי {month}" heading (polish pass, 2026-09-14b) -- previously
+   pushed to the opposite end of the card via space-between, reading as an
+   unrelated control instead of part of the heading's own context. */
 .bo-month-switch {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid #e2e8f0;
 }
 
 .bo-month-switch-input {
@@ -463,10 +467,16 @@
 .bo-badge-route-masav { background: #ffedd5; color: #9a3412; }
 .bo-badge-route-blocked { background: #fee2e2; color: #991b1b; }
 
+/* Most important operational column -- given real visual weight (polish
+   pass, 2026-09-14b), not just bold black text like any other cell. */
 .bo-next-action {
+  display: inline-block;
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: #4a30bd;
+  background: #f5f3ff;
+  padding: 3px 10px;
+  border-radius: 6px;
 }
 
 .bo-checkbox-col { width: 32px; text-align: center !important; }

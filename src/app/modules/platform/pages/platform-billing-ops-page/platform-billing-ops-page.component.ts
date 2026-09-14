@@ -434,13 +434,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // per-Statement CardCom charge vs. a batch MASAV Excel export), and the
   // operator needs to know which of the two applies to which of this
   // month's billings.
-  // Counts statements still needing their route's collection action (not
-  // yet paid/abandoned/etc.) -- "how many are left to do", not "how many
-  // were ever routed here", so stage 3's breakdown reflects remaining work.
-  periodCardCount(periodId: string): number {
-    return this.periodStatements(periodId).filter((s) => s.routed_method === 'card' && (s.status === 'approved' || s.status === 'open')).length;
-  }
-
+  // Counts statements still needing MASAV export -- "how many are left to
+  // do", not "how many were ever routed here", so this reflects remaining
+  // work. Card no longer gets an equivalent count (polish pass,
+  // 2026-09-14b): the table's own "אמצעי גבייה"/"מה עושים עכשיו" columns
+  // already say everything a card breakdown line here would repeat.
   periodMasavCount(periodId: string): number {
     return this.periodStatements(periodId).filter((s) => s.routed_method === 'masav' && (s.status === 'approved' || s.status === 'open')).length;
   }
