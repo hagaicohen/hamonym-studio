@@ -187,7 +187,11 @@ describe('PlatformBillingSetupPageComponent - entity resolution', () => {
 
     expect(fixture.componentInstance.confirmed).toBe(false);
 
-    const button = fixture.debugElement.query(By.css('.ops-btn-primary'));
+    // Scoped to .bs-primary-action -- the page now also has a MASAV
+    // "שמירת פרטי חשבון" primary button (2026-09-14e UX separation), an
+    // unrelated action gated only by its own busy flag, not by `confirmed`.
+    // A bare '.ops-btn-primary' query would match that one first instead.
+    const button = fixture.debugElement.query(By.css('.bs-primary-action .ops-btn-primary'));
     expect(button.nativeElement.disabled).toBe(true);
 
     fixture.componentInstance.submit();

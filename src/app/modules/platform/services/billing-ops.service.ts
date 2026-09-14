@@ -192,6 +192,8 @@ export interface BlockedMasavStatement {
   created_at: string;
   entity_id: string;
   entity_name: string;
+  period_start: string;
+  period_end: string;
   bank_code: string | null;
   branch_code: string | null;
   account_number: string | null;

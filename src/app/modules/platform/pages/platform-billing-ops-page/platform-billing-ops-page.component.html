@@ -570,35 +570,42 @@
     </div>
   }
 
-  <!-- ============ MASAV ============ -->
+  <!-- ============ מס״ב ============
+       Scoped to actual monthly MASAV collection only (2026-09-14e UX
+       separation) -- association-level MASAV setup/authorization moved to
+       platform-billing-setup-page. This tab never shows an entity merely
+       because it has entity_masav_details; both sections below are
+       Statement-scoped and threshold-gated, same as before. -->
   @if (tab === 'masav') {
     @if (masavError) {
       <div class="ops-action-error bo-masav-error">{{ masavError }}</div>
     }
 
     <div class="plat-card">
-      <div class="bo-card-title">חשבונות לחיוב חסומים (מעל ₪3,540, ללא מס״ב מאושר)</div>
-      <div class="bo-intro">
-        ייצוג ה"השהיה" — חשבון לחיוב שגובר על סף הכרטיס אך אין לו הרשאת מס״ב תקפה נשאר כאן ולא נגבה כלל,
-        עד שהאדמין יגדיר פרטי בנק ויאשר במפורש.
-      </div>
+      <div class="bo-card-title">דורשים טיפול</div>
+      <div class="bo-intro">חיובים חודשיים מעל ₪3,540 שלא ניתן עדיין להפיק עבורם קובץ מס"ב.</div>
 
       @if (masavLoading) {
         <div class="plat-loading">טוען...</div>
       } @else if (blockedStatements.length === 0) {
-        <div class="ops-empty-small">אין חשבונות לחיוב חסומים כרגע.</div>
+        <div class="ops-empty-small">אין חיובים הדורשים מס״ב כרגע.</div>
       } @else {
         <div class="bo-table-wrap">
           <table class="bo-table">
-            <thead><tr><th>עמותה</th><th>לחיוב</th><th>סיבה</th><th></th></tr></thead>
+            <thead><tr><th>עמותה</th><th>חודש חיוב</th><th>סכום לחיוב</th><th>מה חסר</th><th></th></tr></thead>
             <tbody>
               @for (item of blockedStatements; track item.statement_id) {
                 <tr>
                   <td>{{ item.entity_name }}</td>
+                  <td>{{ blockedStatementPeriodLabel(item) }}</td>
                   <td>₪{{ item.total_due }}</td>
                   <td>{{ blockedReasonLabel(item.reason) }}</td>
                   <td>
-                    <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openConfigureForm(item.entity_id, item.entity_name)">הגדרת מס״ב</button>
+                    <a class="ops-btn ops-btn-secondary ops-btn-sm"
+                       [routerLink]="['/platform/billing-setup', item.entity_id]"
+                       [queryParams]="{ displayName: item.entity_name }">
+                      להגדרות מס״ב
+                    </a>
                   </td>
                 </tr>
               }
@@ -609,10 +616,10 @@
     </div>
 
     <div class="plat-card">
-      <div class="bo-card-title">חשבונות לחיוב פעילים במס״ב (מאושרים, מוכנים לגבייה/ייצוא)</div>
+      <div class="bo-card-title">מוכנים להפקת קובץ מס״ב</div>
 
       @if (actionableStatements.length === 0) {
-        <div class="ops-empty-small">אין חשבונות לחיוב פעילים במס״ב כרגע.</div>
+        <div class="ops-empty-small">אין חיובים הדורשים מס״ב כרגע.</div>
       } @else {
         <div class="bo-form-row">
           <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="exporting || selectedExportStatementIds.size === 0" (click)="exportSelected()">
@@ -623,7 +630,7 @@
 
         <div class="bo-table-wrap">
           <table class="bo-table">
-            <thead><tr><th class="bo-checkbox-col"></th><th>עמותה</th><th>לחיוב</th><th>סטטוס ניסיון</th><th></th></tr></thead>
+            <thead><tr><th class="bo-checkbox-col"></th><th>עמותה</th><th>סכום לחיוב</th><th>סטטוס ניסיון</th><th></th></tr></thead>
             <tbody>
               @for (item of actionableStatements; track item.statement_id) {
                 <tr>
@@ -646,165 +653,6 @@
           </table>
         </div>
       }
-    </div>
-
-    <div class="plat-card">
-      <div class="bo-card-title">ביטול הרשאת מס״ב קיימת</div>
-      <div class="bo-intro">בחרו עמותה עם מס״ב מוגדר כדי לבטל או לאשר מחדש את ההרשאה שלה.</div>
-      <div class="bo-form-row">
-        <label class="ba-field">
-          <span>עמותה</span>
-          <select [(ngModel)]="revokeEntityId">
-            <option value="" disabled>בחרו עמותה</option>
-            @for (entity of masavConfiguredEntities; track entity.id) {
-              <option [value]="entity.id">{{ entity.display_name }} {{ entity.masav_authorized ? '(מאושר)' : '(ממתין)' }}</option>
-            }
-          </select>
-        </label>
-        <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="!revokeEntityId" (click)="revokeEntity(revokeEntityId)">ביטול הרשאה</button>
-        <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="!revokeEntityId" (click)="authorizeEntity(revokeEntityId)">אישור מפורש</button>
-      </div>
-    </div>
-  }
-
-  <!-- MASAV setup drawer -- guided onboarding for configuring an
-       association's MASAV collection instrument: what to do at the bank,
-       what to tell them, the account fields, the signed-document upload,
-       and save -- in that order. The bank-instructions help box is
-       collapsed by default (masavShowHelp) so an operator who already has
-       the signed authorization can go straight to the fields/upload. -->
-  @if (configuringEntityId) {
-    <div class="bo-drawer-backdrop" (click)="cancelConfigureForm()">
-      <div class="bo-drawer" (click)="$event.stopPropagation()">
-        <div class="bo-drawer-header">
-          <h2>הגדרת הרשאה לחיוב באמצעות מס״ב</h2>
-          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelConfigureForm()">סגור</button>
-        </div>
-
-        <div class="bo-masav-setup-entity">{{ configuringEntityName }}</div>
-
-        <!-- 1. פרטי ההרשאה -->
-        <div class="bo-subtitle">פרטי ההרשאה</div>
-        <div class="bo-masav-code-callout">
-          <span class="bo-masav-code-label">שם המוטב בהרשאה</span>
-          <b class="bo-masav-code-value">{{ masavBeneficiaryName }}</b>
-        </div>
-        <div class="bo-masav-code-callout">
-          <span class="bo-masav-code-label">קוד מוסד מס"ב של המונים</span>
-          <b class="bo-masav-code-value">{{ masavInstitutionCode }}</b>
-          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="copyMasavInstitutionCode()">
-            {{ masavCodeCopied ? 'הועתק ✓' : 'העתק' }}
-          </button>
-        </div>
-
-        <button type="button" class="bo-help-toggle" (click)="toggleMasavHelp()">
-          {{ masavShowHelp ? 'הסתרת ההסבר ▲' : 'לא יודעים איך להקים הרשאה במס״ב? ▼' }}
-        </button>
-
-        @if (masavShowHelp) {
-          <div class="bo-help-box">
-            <div class="bo-help-box-title">איך מקימים את ההרשאה?</div>
-            <p class="bo-help-box-text">
-              ניתן להנחות את העמותה לפנות לבנק בסניף או דרך אתר/אפליקציית הבנק ולבקש להקים הרשאה לחיוב חשבון (הרשאת מס"ב) לטובת המונים, לפי הפרטים שלמעלה — שם המוטב וקוד המוסד.
-            </p>
-            <p class="bo-help-box-footer">לאחר שהבנק מאשר את ההרשאה, יש לסרוק/לצלם את האישור ולהעלות אותו בהמשך.</p>
-          </div>
-        }
-
-        @if (masavConfigLoading) {
-          <div class="plat-loading">טוען...</div>
-        } @else {
-          <!-- 2. פרטי חשבון הבנק -->
-          <div class="bo-subtitle">פרטי חשבון הבנק</div>
-          <div class="ba-form">
-            <div class="ba-form-fields">
-              <label class="ba-field">
-                <span>בנק</span>
-                <select [(ngModel)]="masavBankCode">
-                  <option value="" disabled>בחרו בנק</option>
-                  @for (bank of israeliBanks; track bank.code) {
-                    <option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</option>
-                  }
-                </select>
-              </label>
-              <label class="ba-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
-              <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
-              <label class="ba-field"><span>שם בעל החשבון</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
-            </div>
-            @if (masavFormError) { <div class="ops-action-error">{{ masavFormError }}</div> }
-            <div class="ba-form-actions">
-              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
-                {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי חשבון' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- 3. למה נדרשת הרשאה ללא הגבלה -->
-          <div class="bo-subtitle">{{ masavWhyUnlimitedTitle }}</div>
-          <div class="bo-why-box">
-            <p>{{ masavWhyUnlimitedText }}</p>
-          </div>
-
-          <!-- 4. אישור העמותה -->
-          <div class="bo-subtitle">אישור העמותה</div>
-          <label class="bo-masav-ack">
-            <input type="checkbox" [(ngModel)]="masavAckChecked" />
-            <span><b>קראתי והבנתי.</b> {{ masavAckText }}</span>
-          </label>
-
-          <!-- 5. העלאת אישור הרשאה מהבנק -->
-          <div class="bo-subtitle">העלאת אישור הרשאה מהבנק</div>
-          <div class="bo-upload-field">
-            <div class="bo-upload-helper">{{ masavUploadHelperText }}</div>
-
-            @if (masavConfig?.has_authorization_document) {
-              <div class="bo-upload-current">
-                <span>הועלה: {{ masavConfig?.authorization_document_name }} ({{ fmtDateTime(masavConfig?.authorization_document_uploaded_at || null) }})</span>
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavDocDownloading" (click)="downloadMasavDoc()">
-                  {{ masavDocDownloading ? 'מוריד...' : 'הצגת האישור שהועלה' }}
-                </button>
-              </div>
-            }
-
-            @if (!masavConfig) {
-              <div class="bo-upload-note">יש לשמור פרטי חשבון (שלב 2 למעלה) כדי להעלות את אישור הבנק.</div>
-            } @else if (!masavAckChecked) {
-              <div class="bo-upload-note">יש לאשר תחילה את ההצהרה שלעיל כדי להעלות את אישור הבנק.</div>
-            }
-
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              [disabled]="!masavConfig || !masavAckChecked"
-              [class.bo-upload-disabled]="!masavConfig || !masavAckChecked"
-              (change)="onMasavDocSelected($event)"
-            />
-            @if (masavDocUploadError) { <div class="ops-action-error">{{ masavDocUploadError }}</div> }
-            <div class="ba-form-actions">
-              <button
-                class="ops-btn ops-btn-primary ops-btn-sm"
-                [disabled]="!masavConfig || !masavAckChecked || !masavDocFile || masavDocUploading"
-                (click)="uploadMasavDoc()"
-              >
-                {{ masavDocUploading ? 'מעלה...' : 'העלאת האישור' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- 6. סטטוס הרשאה -->
-          <div class="bo-subtitle">סטטוס ההרשאה</div>
-          <div class="bo-collection-state" [class.bo-collection-state-ready]="masavConfig?.authorized" [class.bo-collection-state-blocked]="!masavConfig?.authorized">
-            <span class="bo-collection-state-label">
-              {{ masavConfig?.authorized ? '🟢 ההרשאה אושרה' : '🟡 ' + masavPendingStatusLabel }}
-            </span>
-            <span class="bo-collection-state-sublabel">
-              {{ masavConfig?.authorized
-                ? 'ההרשאה אומתה ואושרה במפורש על ידי מנהל הפלטפורמה.'
-                : masavPendingStatusSublabel + ' (לאישור/ביטול — בכרטיס "ביטול הרשאת מס״ב קיימת" למטה בעמוד).' }}
-            </span>
-          </div>
-        }
-      </div>
     </div>
   }
 

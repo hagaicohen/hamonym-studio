@@ -13,23 +13,10 @@ import {
   BlockedBillingEntity,
   BillingActivityDiscovered,
   BulkApproveResult,
-  MasavConfig,
   CollectionAttempt,
   ReconcileAttemptResult,
 } from '../../services/billing-ops.service';
 
-import {
-  MASAV_INSTITUTION_CODE,
-  MASAV_BENEFICIARY_NAME,
-  MASAV_ACK_TEXT,
-  MASAV_WHY_UNLIMITED_TITLE,
-  MASAV_WHY_UNLIMITED_TEXT,
-  MASAV_UPLOAD_HELPER_TEXT,
-  MASAV_PENDING_STATUS_LABEL,
-  MASAV_PENDING_STATUS_SUBLABEL,
-} from '../../../../shared/constants/masav.constants';
-
-import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
 import { CardcomOpsService, ReconciliationFinding, HealthResponse, JobRun, JobHealth } from '../../services/cardcom-ops.service';
 import {
@@ -197,53 +184,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   bulkApprovalError: string | null = null;
   bulkApprovalResult: { approvedText: string | null; failedText: string | null } | null = null;
 
-  // ---- masav ----------------------------------------------------------
+  // ---- מס״ב (monthly MASAV collection only -- association-level setup
+  // moved to platform-billing-setup-page, 2026-09-14e UX separation) -----
   blockedStatements: BlockedMasavStatement[] = [];
   actionableStatements: ActionableMasavStatement[] = [];
   masavLoading = true;
   masavError: string | null = null;
-
-  configuringEntityId: string | null = null;
-  configuringEntityName = '';
-  masavBankCode = '';
-  masavBranchCode = '';
-  masavAccountNumber = '';
-  masavAccountHolderName = '';
-  masavFormBusy = false;
-  masavFormError: string | null = null;
-  masavInstitutionCode = MASAV_INSTITUTION_CODE;
-  masavCodeCopied = false;
-  masavBeneficiaryName = MASAV_BENEFICIARY_NAME;
-  masavAckText = MASAV_ACK_TEXT;
-  masavWhyUnlimitedTitle = MASAV_WHY_UNLIMITED_TITLE;
-  masavWhyUnlimitedText = MASAV_WHY_UNLIMITED_TEXT;
-  masavUploadHelperText = MASAV_UPLOAD_HELPER_TEXT;
-  masavPendingStatusLabel = MASAV_PENDING_STATUS_LABEL;
-  masavPendingStatusSublabel = MASAV_PENDING_STATUS_SUBLABEL;
-  readonly israeliBanks: IsraeliBank[] = ISRAELI_BANKS;
-  masavAckChecked = false;
-
-  // Setup-screen additions (MASAV setup UX, 2026-09-03) -- the collapsible
-  // "how do I get this document" explanation, the loaded config (to show
-  // current authorized/document state read-only in the drawer), and the
-  // signed-document upload, which is deliberately separate from the bank
-  // fields above: uploading evidence never flips `authorized` on its own,
-  // see billing-ops.service.ts#MasavConfig / masav-config.service.js.
-  masavShowHelp = false;
-  masavConfig: MasavConfig | null = null;
-  masavConfigLoading = false;
-  masavDocFile: File | null = null;
-  masavDocUploading = false;
-  masavDocUploadError: string | null = null;
-  masavDocDownloading = false;
-
-  // Replaces the raw "type an entity UUID" input for MASAV authorization
-  // revocation (UX simplification pass, 2026-09-14) -- reuses the same
-  // readiness list "הגדרות עמותות" loads, filtered to entities that
-  // actually have MASAV configured (only those can meaningfully be
-  // revoked). Never touches MASAV business logic -- still calls the exact
-  // same revokeMasav(entityId) the old free-text field called.
-  revokeEntityId = '';
 
   // ---- הגדרות עמותות (billing-account provisioning, merged in 2026-09-14
   // from the old standalone /platform/billing-accounts page) --------------
@@ -656,9 +602,22 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // Only claims a calendar-month label when period_start genuinely falls
   // on the 1st -- never mislabels a custom/partial range as "אוגוסט 2026".
   periodMonthLabel(period: BillingPeriod): string | null {
-    const d = new Date(period.period_start);
+    return this.monthLabelFromRange(period.period_start, period.period_end);
+  }
+
+  // Same calendar-month-label logic as periodMonthLabel, but over a raw
+  // period_start/period_end pair instead of a full BillingPeriod -- used by
+  // the MASAV "דורשים טיפול" list, which carries its Statement's period
+  // dates directly rather than a billing_period_id to look up.
+  private monthLabelFromRange(periodStart: string, periodEnd: string): string | null {
+    const d = new Date(periodStart);
     if (d.getDate() !== 1) return null;
     return `${HE_MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  blockedStatementPeriodLabel(item: BlockedMasavStatement): string {
+    return this.monthLabelFromRange(item.period_start, item.period_end)
+      || `${this.fmtDate(item.period_start)}–${this.fmtInclusiveEndDate(item.period_end)}`;
   }
 
   // "חודש" column for the Statements list -- pure lookup + reuse of the
@@ -945,22 +904,34 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
-  // Entities with MASAV configured are the only meaningful candidates for
-  // the "ביטול הרשאת מס״ב" picker below -- an entity with no MASAV details
-  // at all has nothing to revoke.
-  get masavConfiguredEntities(): BillingReadinessEntity[] {
-    return this.readinessEntities.filter((e) => e.masav_configured);
-  }
-
-  // "מוכנה לחיוב" needs a billing_account AND (card is always available, so
-  // only MASAV can actually block readiness) either no MASAV activity yet
-  // OR an authorized MASAV instrument. An entity routed entirely through
-  // card collection is ready the moment its billing_account exists.
+  // "מוכנה לחיוב" reflects whether THIS entity's actual current billing can
+  // proceed -- not "is MASAV fully set up" in the abstract (2026-09-14e fix:
+  // an entity with a valid card instrument and no current statement that
+  // actually needs MASAV is genuinely ready, even if its optional MASAV
+  // authorization happens to still be pending; see hasEntityMasavBlocker
+  // below for why this is a display fix, not a new financial rule -- it
+  // reuses the same server-computed routed_method every other MASAV/CARD
+  // decision on this page already reads).
   entityReadiness(entity: BillingReadinessEntity): { ready: boolean; label: string } {
     if (!entity.billing_account_id) return { ready: false, label: 'טרם הוגדר חיוב' };
     if (entity.enforcement_status === 'suspended') return { ready: false, label: 'חשבון החיוב מושהה' };
-    if (entity.masav_configured && !entity.masav_authorized) return { ready: false, label: 'ממתין לאישור מס״ב' };
+    if (this.hasEntityMasavBlocker(entity)) return { ready: false, label: 'ממתין לאישור מס״ב' };
     return { ready: true, label: 'מוכנה לחיוב' };
+  }
+
+  // True only when this entity actually has a live Statement (approved/
+  // open) that the server itself already routed to masav or blocked it
+  // pending masav authorization -- i.e. MASAV is genuinely in the way of
+  // billing THIS entity right now, not merely "not yet authorized" as an
+  // abstract fact. `this.statements` is already loaded for the other tabs
+  // (loadStatements(), called from the same ngOnInit) -- no new fetch.
+  private hasEntityMasavBlocker(entity: BillingReadinessEntity): boolean {
+    if (!entity.masav_configured || entity.masav_authorized) return false;
+    return this.statements.some(
+      (s) => s.entity_id === entity.id
+        && (s.status === 'approved' || s.status === 'open')
+        && (s.routed_method === 'masav' || s.routed_method === 'blocked'),
+    );
   }
 
   feePercentOf(entity: BillingReadinessEntity): number {
@@ -1147,152 +1118,6 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   blockedReasonLabel(reason: string): string {
     return BLOCKED_REASON_LABELS[reason] ?? reason;
-  }
-
-  // Opens the setup drawer and loads whatever is already configured for
-  // this entity (if the operator is revisiting a partially-completed
-  // setup) so the bank fields and document/authorization status are never
-  // shown blank when real data already exists.
-  openConfigureForm(entityId: string, entityName: string): void {
-    this.configuringEntityId = entityId;
-    this.configuringEntityName = entityName;
-    this.masavBankCode = '';
-    this.masavBranchCode = '';
-    this.masavAccountNumber = '';
-    this.masavAccountHolderName = '';
-    this.masavFormError = null;
-    this.masavShowHelp = false;
-    this.masavDocFile = null;
-    this.masavDocUploadError = null;
-    this.masavAckChecked = false;
-    this.masavConfig = null;
-    this.masavConfigLoading = true;
-    this.service.getMasavConfig(entityId).subscribe({
-      next: (res) => {
-        this.masavConfigLoading = false;
-        this.masavConfig = res.config;
-        if (res.config) {
-          this.masavBankCode = res.config.bank_code;
-          this.masavBranchCode = res.config.branch_code;
-          this.masavAccountNumber = res.config.account_number;
-          this.masavAccountHolderName = res.config.account_holder_name || '';
-        }
-      },
-      error: () => { this.masavConfigLoading = false; },
-    });
-  }
-
-  cancelConfigureForm(): void {
-    this.configuringEntityId = null;
-    this.loadMasav();
-    this.loadReadiness();
-  }
-
-  toggleMasavHelp(): void {
-    this.masavShowHelp = !this.masavShowHelp;
-  }
-
-  // Clipboard write is inherently best-effort (permissions, insecure
-  // context, older browsers) -- falls back to silently doing nothing rather
-  // than throwing, since the code is already displayed in plain text right
-  // next to the button either way.
-  copyMasavInstitutionCode(): void {
-    navigator.clipboard?.writeText(this.masavInstitutionCode).then(() => {
-      this.masavCodeCopied = true;
-      setTimeout(() => { this.masavCodeCopied = false; }, 2000);
-    }).catch(() => {});
-  }
-
-  // Saves bank details only -- deliberately does not close the drawer or
-  // touch `authorized` (upsertBankDetails always clears it server-side on
-  // any change, per masav-config.service.js). Stays open so the operator
-  // can continue straight to uploading the signed document.
-  submitMasavConfig(): void {
-    if (!this.configuringEntityId || this.masavFormBusy) return;
-    if (!this.masavAccountHolderName || !this.masavBankCode || !this.masavBranchCode || !this.masavAccountNumber) {
-      this.masavFormError = 'יש למלא שם בעל חשבון, בנק, סניף ומספר חשבון';
-      return;
-    }
-    this.masavFormBusy = true;
-    this.masavFormError = null;
-    this.service
-      .upsertMasavConfig(this.configuringEntityId, {
-        bankCode: this.masavBankCode,
-        branchCode: this.masavBranchCode,
-        accountNumber: this.masavAccountNumber,
-        accountHolderName: this.masavAccountHolderName || undefined,
-      })
-      .subscribe({
-        next: (res) => {
-          this.masavFormBusy = false;
-          this.masavConfig = res.config;
-        },
-        error: (err) => {
-          this.masavFormBusy = false;
-          this.masavFormError = err?.error?.error || 'שמירת פרטי הבנק נכשלה';
-        },
-      });
-  }
-
-  onMasavDocSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.masavDocFile = input.files?.[0] || null;
-    this.masavDocUploadError = null;
-  }
-
-  // Uploads the signed bank authorization as evidence only -- never sets
-  // `authorized`. Requires bank details to already be saved (same order the
-  // drawer enforces visually: fields first, then the document).
-  uploadMasavDoc(): void {
-    if (!this.configuringEntityId || !this.masavDocFile || this.masavDocUploading) return;
-    this.masavDocUploading = true;
-    this.masavDocUploadError = null;
-    this.service.uploadMasavAuthorizationDocument(this.configuringEntityId, this.masavDocFile).subscribe({
-      next: (res) => {
-        this.masavDocUploading = false;
-        this.masavConfig = res.config;
-        this.masavDocFile = null;
-      },
-      error: (err) => {
-        this.masavDocUploading = false;
-        this.masavDocUploadError = err?.error?.error || 'העלאת האישור נכשלה — ודאו שפרטי הבנק נשמרו קודם';
-      },
-    });
-  }
-
-  downloadMasavDoc(): void {
-    if (!this.configuringEntityId || this.masavDocDownloading || !this.masavConfig?.has_authorization_document) return;
-    this.masavDocDownloading = true;
-    this.service.downloadMasavAuthorizationDocument(this.configuringEntityId).subscribe({
-      next: (blob) => {
-        this.masavDocDownloading = false;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = this.masavConfig?.authorization_document_name || 'masav-authorization';
-        a.click();
-        URL.revokeObjectURL(url);
-      },
-      error: () => { this.masavDocDownloading = false; },
-    });
-  }
-
-  authorizeEntity(entityId: string): void {
-    this.masavFormBusy = true;
-    this.masavFormError = null;
-    this.service.authorizeMasav(entityId).subscribe({
-      next: () => { this.masavFormBusy = false; this.loadMasav(); this.loadReadiness(); },
-      error: (err) => { this.masavFormBusy = false; this.masavError = err?.error?.error || 'אישור ההרשאה נכשל'; },
-    });
-  }
-
-  revokeEntity(entityId: string): void {
-    this.masavFormBusy = true;
-    this.masavError = null;
-    this.service.revokeMasav(entityId).subscribe({
-      next: () => { this.masavFormBusy = false; this.loadMasav(); this.loadReadiness(); },
-      error: (err) => { this.masavFormBusy = false; this.masavError = err?.error?.error || 'ביטול ההרשאה נכשל'; },
-    });
   }
 
   openMasavAttempt(statementId: string): void {
