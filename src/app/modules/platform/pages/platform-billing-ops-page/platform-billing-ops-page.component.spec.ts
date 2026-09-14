@@ -631,6 +631,107 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
   });
 });
 
+// Regression coverage for making "מה עושים עכשיו" actionable on "החודש"
+// (2026-09-14m): a Statement whose next_action is 'חסר כרטיס אשראי' (or
+// 'ממתין לאישור מס״ב') should let the operator act on it directly -- both
+// conditions are resolved in the same existing billing-setup drawer
+// (CARD readiness + MASAV authorization both live there), so clicking
+// opens it for that exact entity without navigating away from "החודש".
+// Any other next_action (already-fine states, or ones with no existing
+// destination) must stay a plain, non-clickable label.
+describe('PlatformBillingOpsPageComponent - clickable "מה עושים עכשיו" (החודש)', () => {
+  const period = {
+    id: 'period-aug-2026',
+    period_start: '2026-08-01T00:00:00.000Z',
+    period_end: '2026-09-01T00:00:00.000Z',
+    created_at: '2026-08-01T00:00:00.000Z',
+    retired: false,
+    run_count: 1,
+  };
+  const run = {
+    id: 'run-1', billing_period_id: period.id, mode: 'production' as const,
+    as_of: period.period_start, status: 'completed',
+    result_summary: {
+      accountsEvaluated: 2, statementsCreated: 2, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 2, totalDonations: 2, totalGross: 100 },
+      blockedEntities: [],
+    },
+    created_at: period.period_start, completed_at: period.period_start,
+  };
+
+  function stmt(id: string, entityId: string, entityName: string, nextAction: string): StatementListItem {
+    return {
+      id, billing_account_id: `acct-${entityId}`, billing_period_id: period.id, billing_run_id: run.id,
+      gross_raised: '50.00', fee_amount: '1.50', vat_amount: '0.27', total_due: '1.77',
+      status: 'approved', created_at: period.period_start,
+      entity_id: entityId, entity_name: entityName, component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+      next_action: nextAction,
+    };
+  }
+
+  async function setup(statements: StatementListItem[]) {
+    const service = {
+      listPeriods: () => of({ periods: [period] }),
+      listRuns: () => of({ runs: [run] }),
+      listStatements: () => of({ statements }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('periods');
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('גדולים מהחיים → "חסר כרטיס אשראי" → click → the billing-setup drawer opens for גדולים מהחיים, still on "החודש"', async () => {
+    const { fixture } = await setup([
+      stmt('stmt-1', 'entity-gedolim-mehachaim', 'גדולים מהחיים', 'חסר כרטיס אשראי'),
+    ]);
+
+    const btn = fixture.debugElement.query(By.css('.bo-next-action-clickable'));
+    expect(btn).toBeTruthy();
+    expect(btn.nativeElement.textContent).toContain('חסר כרטיס אשראי');
+
+    btn.nativeElement.click();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.tab).toBe('periods'); // stayed on "החודש", drawer is an overlay
+    expect(component.billingSetupEntityId).toBe('entity-gedolim-mehachaim');
+    expect(component.billingSetupEntityName).toBe('גדולים מהחיים');
+    expect(fixture.debugElement.query(By.css('app-billing-entity-setup'))).toBeTruthy();
+  });
+
+  it('"ממתין לאישור מס״ב" is also actionable, opening the same drawer for its entity', async () => {
+    const { fixture } = await setup([
+      stmt('stmt-2', 'entity-other', 'עמותה אחרת', 'ממתין לאישור מס״ב'),
+    ]);
+
+    const btn = fixture.debugElement.query(By.css('.bo-next-action-clickable'));
+    btn.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.billingSetupEntityId).toBe('entity-other');
+  });
+
+  it('a non-actionable next_action (e.g. "מוכן לגבייה") stays a plain label, not a button', async () => {
+    const { fixture } = await setup([
+      stmt('stmt-3', 'entity-ready', 'עמותה מוכנה', 'מוכן לגבייה'),
+    ]);
+
+    expect(fixture.debugElement.query(By.css('.bo-next-action-clickable'))).toBeFalsy();
+    const label = fixture.debugElement.query(By.css('.bo-next-action'));
+    expect(label.nativeElement.tagName.toLowerCase()).toBe('span');
+    expect(label.nativeElement.textContent).toContain('מוכן לגבייה');
+  });
+});
+
 // Regression coverage for the VAT globalization pass (2026-09-14i, editor
 // relocated 2026-09-14j to Platform Admin -> הגדרות כלליות -> חיוב ומיסוי):
 // "הגדרות עמותות" must show the current system VAT rate read-only in the

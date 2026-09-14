@@ -999,6 +999,35 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return statement.status === 'paid' ? '—' : statement.next_action;
   }
 
+  // "מה עושים עכשיו" -> actually doing it, for "החודש" (2026-09-14m). The
+  // backend's nextActionLabel (billing-ops.service.js) exposes only the
+  // rendered Hebrew text, not a separate machine-readable status/action
+  // code -- checked before writing this, per this file's own next_action
+  // interface comment ("never re-derive this from raw readiness data
+  // here"), there's also no readiness.ready boolean exposed per-row to
+  // recompute the condition any other way. Both strings below are drawn
+  // from that function's own small, closed set of literal return values
+  // (never interpolated/dynamic), so this is an exact-equality check
+  // against one authoritative constant, not fuzzy parsing of free text --
+  // but it IS a real coupling to that literal string, flagged here and in
+  // the commit/report rather than silently treated as more robust than it
+  // is. Both target the exact same destination (this entity's billing-setup
+  // drawer) because CARD readiness and MASAV authorization are both shown
+  // and actioned there (2026-09-14e/h) -- no new destination invented.
+  private static readonly ACTIONABLE_NEXT_ACTIONS = new Set([
+    'חסר כרטיס אשראי',
+    'ממתין לאישור מס״ב',
+  ]);
+
+  isActionableNextAction(statement: StatementListItem): boolean {
+    return PlatformBillingOpsPageComponent.ACTIONABLE_NEXT_ACTIONS.has(statement.next_action);
+  }
+
+  onNextActionClick(statement: StatementListItem): void {
+    if (!this.isActionableNextAction(statement)) return;
+    this.openBillingSetup(statement.entity_id, statement.entity_name);
+  }
+
   // ---- הגדרות עמותות (billing-account provisioning + readiness) --------
 
   loadReadiness(): void {

@@ -636,6 +636,20 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
   border-radius: 6px;
 }
 
+/* "מה עושים עכשיו" that actually has somewhere to go (2026-09-14m) -- same
+   pill, but a real button: pointer cursor + a visible hover state so it
+   doesn't read as just another status label. */
+.bo-next-action-clickable {
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.bo-next-action-clickable:hover {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  text-decoration: underline;
+}
+
 .bo-checkbox-col { width: 32px; text-align: center !important; }
 .bo-checkbox-col input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 

@@ -249,7 +249,15 @@
                         <td>₪{{ statement.total_due }}</td>
                         <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
                         <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ periodStatementStatusLabel(statement.status) }}</span></td>
-                        <td><span class="bo-next-action">{{ statement.next_action }}</span></td>
+                        <td>
+                          @if (isActionableNextAction(statement)) {
+                            <button type="button" class="bo-next-action bo-next-action-clickable" (click)="onNextActionClick(statement)">
+                              {{ statement.next_action }}
+                            </button>
+                          } @else {
+                            <span class="bo-next-action">{{ statement.next_action }}</span>
+                          }
+                        </td>
                         <td>
                           <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openStatement(statement)">
                             {{ statement.status === 'draft' ? 'בדוק ואשר' : 'פרטים' }}
