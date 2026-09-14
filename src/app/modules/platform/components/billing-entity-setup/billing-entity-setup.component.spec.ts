@@ -145,16 +145,16 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
     expect(banner).toBeTruthy();
   });
 
-  it('shows the current system VAT rate read-only (2026-09-14i) and never renders a VAT input field, before or after account creation', async () => {
+  it('shows the current system VAT rate read-only, labeled as a system setting (2026-09-14j), and never renders a VAT input field, before or after account creation', async () => {
     const { fixture } = await createComponent({ displayNameHint: 'גדולים מהחיים' });
     fixture.detectChanges();
 
     expect(fixture.componentInstance.systemVatRatePercent).toBe(18);
     // Exactly one editable rate input pre-creation -- fee rate. VAT is
-    // display-only text (the "מע״מ נוכחי במערכת" row), never a second input.
+    // display-only text ("מע״מ ... 18% (הגדרת מערכת)"), never a second input.
     const numberInputs = fixture.debugElement.queryAll(By.css('.bes-row input[type="number"]'));
     expect(numberInputs.length).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('מע״מ נוכחי במערכת');
+    expect(fixture.nativeElement.textContent).toContain('הגדרת מערכת');
     expect(fixture.nativeElement.textContent).toContain('18%');
   });
 

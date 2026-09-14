@@ -613,6 +613,19 @@ export const routes: Routes = [
             (m) => m.PlatformBillingSetupPageComponent,
           ),
       },
+      {
+        // Platform-wide settings that aren't about any one association or
+        // billing operation (currently: the system VAT rate, 2026-09-14j --
+        // moved out of "חיובי עמותות" since VAT is a Hamonym setting, not an
+        // association-billing one). Same super-admin bar as the other
+        // financial-adjacent platform routes.
+        path: 'platform/settings',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-general-settings-page/platform-general-settings-page.component').then(
+            (m) => m.PlatformGeneralSettingsPageComponent,
+          ),
+      },
     ],
   },
 

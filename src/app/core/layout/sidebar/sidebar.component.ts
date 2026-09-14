@@ -38,6 +38,9 @@ const PLATFORM_USERS:         NavItem = { route: '/platform/users',         labe
 // used to be two separate entries ("חשבונות חיוב" + "תפעול חיוב").
 const PLATFORM_DONATIONS:    NavItem = { route: '/platform/donations',   label: 'תרומות',       icon: 'donations' };
 const PLATFORM_BILLING_OPS:  NavItem = { route: '/platform/billing-ops', label: 'חיובי עמותות', icon: 'settings' };
+// "הגדרות כלליות" (2026-09-14j) -- platform-wide settings that aren't about
+// any one association or billing operation (currently: system VAT rate).
+const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'הגדרות כלליות', icon: 'settings' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
@@ -79,7 +82,7 @@ export class SidebarComponent {
     const items = [PLATFORM_DASHBOARD];
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_BILLING_OPS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_BILLING_OPS, PLATFORM_GENERAL_SETTINGS);
     return items;
   });
 

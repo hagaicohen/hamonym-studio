@@ -36,13 +36,13 @@
       </div>
     }
 
-    <!-- מע״מ הוא כעת הגדרה מערכתית אחת (2026-09-14i) -- לקריאה בלבד כאן,
-         בין אם יש כבר חשבון חיוב ובין אם לא. -->
+    <!-- מע״מ הוא הגדרת מערכת של Hamonym, לא הגדרת עמותה (2026-09-14j) --
+         מידע לקריאה בלבד כאן, בין אם יש כבר חשבון חיוב ובין אם לא. עריכה
+         נמצאת אך ורק ב-Platform Admin -> הגדרות כלליות -> חיוב ומיסוי. -->
     <div class="bes-row">
-      <span>מע״מ נוכחי במערכת</span>
-      <b>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</b>
+      <span>מע״מ</span>
+      <b>{{ systemVatRatePercent !== null ? systemVatRatePercent + '% (הגדרת מערכת)' : '—' }}</b>
     </div>
-    <div class="bes-vat-hint">שינוי שיעור המע״מ מתבצע בהגדרות הפלטפורמה</div>
 
     @if (!billingAccount) {
       <label class="bes-confirm">

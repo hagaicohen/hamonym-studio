@@ -1,0 +1,41 @@
+<div class="plat-page">
+  <div class="plat-header">
+    <h1 class="plat-title">הגדרות כלליות</h1>
+  </div>
+
+  <div class="gs-section-title">חיוב ומיסוי</div>
+
+  <div class="plat-card">
+    <div class="gs-card-title">שיעור מע״מ נוכחי</div>
+    @if (vatSettingLoading) {
+      <div class="plat-loading">טוען...</div>
+    } @else if (vatSettingError) {
+      <div class="plat-error">{{ vatSettingError }}</div>
+    } @else if (!vatEditOpen) {
+      <div class="gs-vat-display">
+        <div class="gs-vat-rate">{{ systemVatRatePercent }}%</div>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openVatEdit()">שינוי</button>
+      </div>
+      <p class="gs-vat-note">השיעור משמש לחישובי חיוב חדשים. שינוי השיעור אינו משפיע על חיובים שכבר חושבו.</p>
+    } @else {
+      <div class="ba-form">
+        <div class="ba-form-fields">
+          <label class="ba-field">
+            <span>שיעור מע״מ (%)</span>
+            <input type="number" step="0.01" min="0" max="99" [(ngModel)]="vatEditPercent" />
+          </label>
+        </div>
+        <p class="gs-vat-note">השיעור משמש לחישובי חיוב חדשים. שינוי השיעור אינו משפיע על חיובים שכבר חושבו.</p>
+        @if (vatSaveError) {
+          <div class="ops-action-error">{{ vatSaveError }}</div>
+        }
+        <div class="ba-form-actions">
+          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelVatEdit()" [disabled]="vatSaveBusy">ביטול</button>
+          <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="saveVatSetting()" [disabled]="vatSaveBusy">
+            {{ vatSaveBusy ? 'שומר...' : 'שמור' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

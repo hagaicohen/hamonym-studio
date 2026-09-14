@@ -202,19 +202,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   readinessLoading = true;
   readinessError: string | null = null;
 
-  // One system-wide VAT rate, managed here in exactly one place (2026-09-14i)
-  // -- replaces both the old per-account VAT input on the (now-removed)
-  // inline quick-provision form below and the VAT input that used to be on
-  // billing-entity-setup's creation form. "הגדרת חיוב"/"הגדרות חיוב" both
-  // now open the same drawer (openBillingSetup) -- see its own note there
-  // for why the separate inline form was removed rather than patched.
+  // System-wide VAT rate -- display-only here (2026-09-14j: the editor
+  // moved to Platform Admin -> הגדרות כלליות -> חיוב ומיסוי, since VAT is a
+  // Hamonym setting, not an association-billing one). Still loaded so the
+  // readiness table's מע״מ column shows the real current rate instead of a
+  // stale per-account value. Also replaces the old per-account VAT input on
+  // the (now-removed) inline quick-provision form below and the VAT input
+  // that used to be on billing-entity-setup's creation form -- "הגדרת
+  // חיוב"/"הגדרות חיוב" both now open the same drawer (openBillingSetup),
+  // see its own note there for why that separate inline form was removed
+  // rather than patched.
   systemVatRatePercent: number | null = null;
-  vatSettingLoading = true;
-  vatSettingError: string | null = null;
-  vatEditOpen = false;
-  vatEditPercent = 18;
-  vatSaveBusy = false;
-  vatSaveError: string | null = null;
 
   // "הגדרות חיוב" now opens as a drawer instead of navigating to
   // /platform/billing-setup/:entityId (2026-09-14h drawer redesign) -- the
@@ -1046,46 +1044,14 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return entity.fee_rate ? Number(entity.fee_rate) * 100 : 0;
   }
 
-  // ---- מע״מ מערכתי (2026-09-14i) -----------------------------------------
+  // ---- מע״מ מערכתי -- תצוגה בלבד (2026-09-14j: העריכה עברה ל-Platform
+  // Admin -> הגדרות כלליות -> חיוב ומיסוי) ---------------------------------
   loadVatSetting(): void {
-    this.vatSettingLoading = true;
-    this.vatSettingError = null;
     this.billingSettingsService.get().subscribe({
       next: (res) => {
-        this.vatSettingLoading = false;
         if (res.setting) this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
       },
-      error: () => {
-        this.vatSettingLoading = false;
-        this.vatSettingError = 'שגיאה בטעינת שיעור המע״מ';
-      },
-    });
-  }
-
-  openVatEdit(): void {
-    this.vatEditPercent = this.systemVatRatePercent ?? 18;
-    this.vatSaveError = null;
-    this.vatEditOpen = true;
-  }
-
-  cancelVatEdit(): void {
-    this.vatEditOpen = false;
-  }
-
-  saveVatSetting(): void {
-    if (this.vatSaveBusy) return;
-    this.vatSaveBusy = true;
-    this.vatSaveError = null;
-    this.billingSettingsService.update(this.vatEditPercent / 100).subscribe({
-      next: (res) => {
-        this.vatSaveBusy = false;
-        this.vatEditOpen = false;
-        this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
-      },
-      error: (err) => {
-        this.vatSaveBusy = false;
-        this.vatSaveError = err?.error?.error || 'שמירת שיעור המע״מ נכשלה';
-      },
+      error: () => { /* non-critical for this table -- readiness/fee still show */ },
     });
   }
 

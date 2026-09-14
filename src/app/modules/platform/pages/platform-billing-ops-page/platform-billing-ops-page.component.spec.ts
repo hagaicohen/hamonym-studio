@@ -631,11 +631,15 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
   });
 });
 
-// Regression coverage for the VAT globalization pass (2026-09-14i): the
-// "הגדרות עמותות" tab must show exactly one system-wide VAT rate (editable
-// in exactly this one place), and the per-entity readiness table must never
-// offer a VAT input of its own -- both the "no billing_account yet" and
-// "already provisioned" rows route through the same billing-setup drawer.
+// Regression coverage for the VAT globalization pass (2026-09-14i, editor
+// relocated 2026-09-14j to Platform Admin -> הגדרות כלליות -> חיוב ומיסוי):
+// "הגדרות עמותות" must show the current system VAT rate read-only in the
+// table (real information, not a stale per-account value) but must NOT
+// offer any way to change it -- see platform-general-settings-page.
+// component.spec.ts for the paired proof that it CAN be changed there. The
+// per-entity readiness table must also never offer a VAT input of its own
+// -- both the "no billing_account yet" and "already provisioned" rows
+// route through the same billing-setup drawer.
 describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרות עמותות)', () => {
   const readinessEntities: BillingReadinessEntity[] = [
     {
@@ -672,7 +676,7 @@ describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרו�
     };
     const settingsStub = {
       get: jasmine.createSpy('get').and.returnValue(of({ setting: { vat_rate: vatRate, updated_at: '', updated_by: null } })),
-      update: jasmine.createSpy('update').and.returnValue(of({ setting: { vat_rate: '0.19', updated_at: '', updated_by: 17 } })),
+      update: jasmine.createSpy('update'), // must never be called from this page anymore -- see the test below
     };
 
     await TestBed.configureTestingModule({
@@ -692,21 +696,19 @@ describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרו�
     return { fixture, settingsStub };
   }
 
-  it('shows the current system VAT rate and lets Platform Admin change it in this one place', async () => {
+  it('shows the current system VAT rate as read-only information in the table, with no editor/save action anywhere on this tab (2026-09-14j: moved to הגדרות כלליות)', async () => {
     const { fixture, settingsStub } = await setup('0.18');
 
-    expect(fixture.debugElement.query(By.css('.bo-vat-rate')).nativeElement.textContent).toContain('18');
+    // The table cell shows the real current rate, not a placeholder.
+    const vatCells = fixture.debugElement.queryAll(By.css('.bo-table tbody td'));
+    const cellText = vatCells.map((c) => c.nativeElement.textContent).join(' | ');
+    expect(cellText).toContain('18%');
 
-    fixture.debugElement.query(By.css('.bo-vat-display button')).nativeElement.click();
-    fixture.detectChanges();
-
-    fixture.componentInstance.vatEditPercent = 19;
-    fixture.debugElement.query(By.css('.ba-form-actions .ops-btn-primary')).nativeElement.click();
-    fixture.detectChanges();
-
-    expect(settingsStub.update).toHaveBeenCalledWith(0.19);
-    expect(fixture.componentInstance.vatEditOpen).toBe(false);
-    expect(fixture.componentInstance.systemVatRatePercent).toBe(19);
+    // No VAT card, no "שינוי" control, no save action -- this page can no
+    // longer write the setting at all.
+    expect(fixture.debugElement.query(By.css('.gs-vat-display'))).toBeFalsy();
+    expect(fixture.nativeElement.textContent).not.toContain('שיעור מע״מ נוכחי');
+    expect(settingsStub.update).not.toHaveBeenCalled();
   });
 
   it('the readiness table never renders a VAT input -- both provisioned and unprovisioned rows only get a button opening the shared billing-setup drawer', async () => {
