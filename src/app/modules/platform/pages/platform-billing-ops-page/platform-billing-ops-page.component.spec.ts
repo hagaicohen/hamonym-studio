@@ -732,6 +732,100 @@ describe('PlatformBillingOpsPageComponent - clickable "מה עושים עכשי�
   });
 });
 
+// Regression coverage for "מצב" as an operational collection state rather
+// than the raw Statement lifecycle status (2026-09-14n, "החודש" only): an
+// approved-but-not-yet-collected Statement must never read as "מאושר"
+// (sounds done/successful to an operator) -- it should read "ממתין לגבייה".
+// Derived from status/routed_method/latest_attempt_status, the exact same
+// fields nextActionLabel itself already uses server-side -- no new backend
+// state. Also verifies the CARD-only failure gating: a MASAV Statement
+// legitimately waiting for export must never show as "הגבייה נכשלה".
+describe('PlatformBillingOpsPageComponent - "מצב" as operational collection state (החודש)', () => {
+  const period = {
+    id: 'period-aug-2026',
+    period_start: '2026-08-01T00:00:00.000Z',
+    period_end: '2026-09-01T00:00:00.000Z',
+    created_at: '2026-08-01T00:00:00.000Z',
+    retired: false,
+    run_count: 1,
+  };
+  const run = {
+    id: 'run-1', billing_period_id: period.id, mode: 'production' as const,
+    as_of: period.period_start, status: 'completed',
+    result_summary: {
+      accountsEvaluated: 1, statementsCreated: 1, zeroActivityAccountIds: [], errors: [],
+      activityDiscovered: { entitiesWithActivity: 1, totalDonations: 1, totalGross: 50 },
+      blockedEntities: [],
+    },
+    created_at: period.period_start, completed_at: period.period_start,
+  };
+
+  function stmt(overrides: Partial<StatementListItem>): StatementListItem {
+    return {
+      id: 'stmt-1', billing_account_id: 'acct-1', billing_period_id: period.id, billing_run_id: run.id,
+      gross_raised: '50.00', fee_amount: '1.50', vat_amount: '0.27', total_due: '1.77',
+      status: 'approved', created_at: period.period_start,
+      entity_id: 'entity-gedolim-mehachaim', entity_name: 'גדולים מהחיים', component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+      next_action: 'חסר כרטיס אשראי',
+      ...overrides,
+    };
+  }
+
+  async function setup(statement: StatementListItem) {
+    const service = {
+      listPeriods: () => of({ periods: [period] }),
+      listRuns: () => of({ runs: [run] }),
+      listStatements: () => of({ statements: [statement] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('periods');
+    fixture.detectChanges();
+    // Row order is אמצעי גבייה (routed-method badge) then מצב (status
+    // badge) -- both use .bo-badge, so pick the second one specifically.
+    const badges = fixture.debugElement.queryAll(By.css('.bo-table tbody .bo-badge'));
+    const cell = badges[1];
+    return { fixture, cell };
+  }
+
+  it('approved, CARD route, no failed attempt -> "ממתין לגבייה", not "מאושר" (the exact case reported: גדולים מהחיים)', async () => {
+    const { cell } = await setup(stmt({ status: 'approved', routed_method: 'card', latest_attempt_status: null }));
+    expect(cell.nativeElement.textContent.trim()).toBe('ממתין לגבייה');
+    expect(cell.nativeElement.classList).toContain('bo-badge-open');
+  });
+
+  it('open, CARD route, latest attempt declined -> "הגבייה נכשלה"', async () => {
+    const { cell } = await setup(stmt({ status: 'open', routed_method: 'card', latest_attempt_status: 'declined' }));
+    expect(cell.nativeElement.textContent.trim()).toBe('הגבייה נכשלה');
+    expect(cell.nativeElement.classList).toContain('bo-badge-collection-failed');
+  });
+
+  it('approved, MASAV route, legitimately waiting for export -> "ממתין לגבייה", never "הגבייה נכשלה" even with unrelated attempt history', async () => {
+    // latest_attempt_status set to a "failed" value on purpose -- proves the
+    // CARD-only gate, not just that masav statements happen to have none.
+    const { cell } = await setup(stmt({ status: 'approved', routed_method: 'masav', latest_attempt_status: 'declined' }));
+    expect(cell.nativeElement.textContent.trim()).toBe('ממתין לגבייה');
+    expect(cell.nativeElement.classList).toContain('bo-badge-open');
+  });
+
+  it('draft -> "ממתין לאישור"', async () => {
+    const { cell } = await setup(stmt({ status: 'draft', latest_attempt_status: null }));
+    expect(cell.nativeElement.textContent.trim()).toBe('ממתין לאישור');
+  });
+
+  it('paid -> "שולם"', async () => {
+    const { cell } = await setup(stmt({ status: 'paid', latest_attempt_status: null }));
+    expect(cell.nativeElement.textContent.trim()).toBe('שולם');
+  });
+});
+
 // Regression coverage for the VAT globalization pass (2026-09-14i, editor
 // relocated 2026-09-14j to Platform Admin -> הגדרות כלליות -> חיוב ומיסוי):
 // "הגדרות עמותות" must show the current system VAT rate read-only in the

@@ -248,7 +248,7 @@
                         <td>₪{{ statement.vat_amount }}</td>
                         <td>₪{{ statement.total_due }}</td>
                         <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
-                        <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ periodStatementStatusLabel(statement.status) }}</span></td>
+                        <td><span class="bo-badge" [class]="operationalStateBadgeClass(statement)">{{ operationalStateLabel(statement) }}</span></td>
                         <td>
                           @if (isActionableNextAction(statement)) {
                             <button type="button" class="bo-next-action bo-next-action-clickable" (click)="onNextActionClick(statement)">

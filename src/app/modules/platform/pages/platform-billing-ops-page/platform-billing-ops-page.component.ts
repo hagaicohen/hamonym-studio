@@ -606,10 +606,6 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return this.periodCapturedActivity(period).entities;
   }
 
-  periodStatementStatusLabel(status: string): string {
-    return this.statementStatusLabel(status);
-  }
-
   latestRunSummary(period: BillingPeriod): BillingRun['result_summary'] | null {
     const runs = this.runsForPeriod(period.id);
     return runs.length ? runs[0].result_summary : null;
@@ -986,6 +982,46 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     if (method === 'card') return 'כרטיס אשראי';
     if (method === 'masav') return 'מס״ב';
     return 'חסום';
+  }
+
+  // "מצב" as an operational collection state, not the raw Statement
+  // lifecycle status (2026-09-14n, "החודש" only). 'מאושר' is technically
+  // correct but reads as "done" to an operator -- an approved Statement
+  // hasn't actually been collected yet. Derived entirely from fields
+  // already on StatementListItem (status/routed_method/latest_attempt_
+  // status), the exact same fields billing-ops.service.js#nextActionLabel
+  // itself reads -- no new backend state, no invented data.
+  //
+  // isCollectionFailed mirrors nextActionLabel's own card-only gating
+  // exactly: latest_attempt_status only means "failed" for the CARD route
+  // there (masav's branch never looks at it at all) -- a MASAV Statement
+  // still legitimately waiting for its export/processing must never show
+  // as "הגבייה נכשלה" just because some unrelated card-route attempt
+  // history happens to exist on the row.
+  private isCollectionFailed(statement: StatementListItem): boolean {
+    return statement.routed_method === 'card' && (
+      statement.latest_attempt_status === 'declined'
+      || statement.latest_attempt_status === 'technical_failure'
+      || statement.latest_attempt_status === 'not_found_confirmed'
+    );
+  }
+
+  operationalStateLabel(statement: StatementListItem): string {
+    if (statement.status === 'paid') return 'שולם';
+    if (statement.status === 'draft') return 'ממתין לאישור';
+    if (statement.status === 'approved' || statement.status === 'open') {
+      return this.isCollectionFailed(statement) ? 'הגבייה נכשלה' : 'ממתין לגבייה';
+    }
+    return this.statementStatusLabel(statement.status); // abandoned/cancelled/written_off -- unchanged, rare terminal states outside the 4 requested here
+  }
+
+  operationalStateBadgeClass(statement: StatementListItem): string {
+    if (statement.status === 'paid') return 'bo-badge-paid';
+    if (statement.status === 'draft') return 'bo-badge-draft';
+    if (statement.status === 'approved' || statement.status === 'open') {
+      return this.isCollectionFailed(statement) ? 'bo-badge-collection-failed' : 'bo-badge-open';
+    }
+    return 'bo-badge-' + statement.status;
   }
 
   // "כל החיובים" UX refinement, 2026-09-14c: the server's own next_action

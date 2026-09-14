@@ -620,6 +620,12 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
 .bo-badge-cancelled,
 .bo-badge-written_off { background: #fee2e2; color: #991b1b; }
 
+/* "מצב" as an operational collection state ("החודש" only, 2026-09-14n) --
+   a real red, distinct from the terminal abandoned/cancelled/written_off
+   states above, for an approved/open Statement whose latest CARD attempt
+   actually failed. */
+.bo-badge-collection-failed { background: #fee2e2; color: #b91c1c; }
+
 .bo-badge-route-card { background: #e0e7ff; color: #3730a3; }
 .bo-badge-route-masav { background: #ffedd5; color: #9a3412; }
 .bo-badge-route-blocked { background: #fee2e2; color: #991b1b; }
