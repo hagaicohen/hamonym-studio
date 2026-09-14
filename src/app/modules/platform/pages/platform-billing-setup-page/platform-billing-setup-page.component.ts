@@ -5,17 +5,18 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { BillingProvisioningService, BillingAccount } from '../../services/billing-provisioning.service';
 import { BillingOpsService, MasavConfig } from '../../services/billing-ops.service';
 
-// Pre-filled only -- same as platform-billing-accounts-page: the backend never
-// substitutes these itself (billing_accounts.fee_rate/vat_rate are NOT NULL
-// with no DEFAULT on purpose).
+// Pre-filled only -- the backend never substitutes these itself
+// (billing_accounts.fee_rate/vat_rate are NOT NULL with no DEFAULT on
+// purpose).
 const SUGGESTED_FEE_RATE = 0.03;
 const SUGGESTED_VAT_RATE = 0.18;
 
-// Focused, single-entity Billing setup screen (UX consolidation, 2026-09-02).
-// Reuses the exact same provisioning API/business logic as
-// platform-billing-accounts-page -- this is not a parallel implementation,
-// just a workflow-focused presentation of it, entered from a specific
-// blocked entity in Billing Ops instead of a generic list.
+// Focused, single-entity Billing setup screen (UX consolidation, 2026-09-02;
+// entry points widened 2026-09-14 to include the "הגדרות עמותות" tab, which
+// absorbed the old standalone /platform/billing-accounts list page). Reuses
+// the exact same provisioning API/business logic either entry point would
+// have used -- this is not a parallel implementation, just a
+// workflow-focused presentation of it.
 @Component({
   selector: 'app-platform-billing-setup-page',
   standalone: true,

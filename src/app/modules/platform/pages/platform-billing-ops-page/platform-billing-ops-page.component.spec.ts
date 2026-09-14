@@ -1,9 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
 import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail } from '../../services/billing-ops.service';
+
+// The component now also injects BillingProvisioningService (for "הגדרות
+// עמותות") and CardcomOpsService (for the "דורש טיפול" section) -- neither
+// is under test here, so real HttpClient + HttpClientTesting is provided
+// just so those two construct cleanly; their requests are simply never
+// flushed (no HttpTestingController.expectOne calls), which is harmless for
+// every assertion in this file.
 
 // Regression test for the exact acceptance-criterion workflow: a Super
 // Admin looking at the current Billing period sees "גדולים מהחיים —
@@ -76,10 +85,12 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
   it('resolves the no_billing_account setup action to /platform/billing-setup/<entityId> for that exact entity, carrying its display data along', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
-      providers: [provideRouter([]), { provide: BillingOpsService, useValue: stubService() }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: stubService() }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('periods'); // blocked-entities list lives on the periods tab, not the default 'statements' tab
     fixture.detectChanges();
 
     const links = fixture.debugElement.queryAll(By.css('.bo-blocked-item a.ops-btn'));
@@ -101,10 +112,12 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
   it('does not offer a setup link for an account_suspended entity -- that path stays a manual note, unchanged', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
-      providers: [provideRouter([]), { provide: BillingOpsService, useValue: stubService() }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: stubService() }],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('periods'); // blocked-entities list lives on the periods tab, not the default 'statements' tab
     fixture.detectChanges();
 
     const manualNotes = fixture.debugElement.queryAll(By.css('.bo-blocked-manual-note'));
@@ -128,7 +141,7 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: BillingOpsService, useValue: stubService() },
         { provide: ActivatedRoute, useValue: activatedRouteStub },
       ],
@@ -187,6 +200,7 @@ describe('PlatformBillingOpsPageComponent - period-summary KPI tiles', () => {
       routed_method: 'card',
       latest_attempt_status: null,
       payment_count: 0,
+      next_action: '—',
     };
   }
 
@@ -209,7 +223,7 @@ describe('PlatformBillingOpsPageComponent - period-summary KPI tiles', () => {
     };
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
-      providers: [provideRouter([]), { provide: BillingOpsService, useValue: service }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
     }).compileComponents();
     const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
     fixture.detectChanges();
@@ -346,6 +360,7 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
       routed_method: 'card',
       latest_attempt_status: null,
       payment_count: 0,
+      next_action: '—',
     };
   }
 
@@ -380,9 +395,15 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
     const service = stubService(overrides);
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
-      providers: [provideRouter([]), { provide: BillingOpsService, useValue: service }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
     }).compileComponents();
     const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    // The bulk-approval table this whole suite exercises lives on the
+    // "periods" tab -- 'statements' became the default tab in a later,
+    // separate change (Billing v1 simplicity decision, 2026-09-10) that
+    // predates this fix and was never reflected here.
+    fixture.componentInstance.setTab('periods');
     fixture.detectChanges();
     return { fixture, service };
   }
@@ -467,7 +488,7 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
       const service = stubService(statement);
       await TestBed.configureTestingModule({
         imports: [PlatformBillingOpsPageComponent],
-        providers: [provideRouter([]), { provide: BillingOpsService, useValue: service }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
       }).compileComponents();
       const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
       const component = fixture.componentInstance;

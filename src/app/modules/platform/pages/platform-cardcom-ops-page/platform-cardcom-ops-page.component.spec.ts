@@ -51,11 +51,19 @@ describe('PlatformCardcomOpsPageComponent - IA redesign', () => {
     'gate_v1_mismatch',
   ];
 
+  // Added when scheduler-heartbeat monitoring shipped (2026-09-08) -- these
+  // mocks predate that field and are backfilled with a healthy heartbeat so
+  // they keep type-checking against the real HealthResponse shape without
+  // affecting any of this suite's actual assertions (none of them exercise
+  // scheduler_not_running).
+  const HEALTHY_HEARTBEAT = { lastHeartbeatAt: '2026-09-14T00:00:00Z', minutesSinceLastHeartbeat: 1, healthy: true };
+
   function stubService(overrides: { health?: HealthResponse; findings?: ReconciliationFinding[] } = {}) {
     const health: HealthResponse = overrides.health ?? {
       webhooks: [],
       jobs: [],
       knownJobs: REAL_JOB_NAMES.filter((n) => n !== 'masav-collection' && n !== 'collection-router' && n !== 'payment_verification_gate'),
+      schedulerHeartbeat: HEALTHY_HEARTBEAT,
       alerts: [],
     };
     return {
@@ -107,6 +115,7 @@ describe('PlatformCardcomOpsPageComponent - IA redesign', () => {
       webhooks: [],
       jobs: [{ job_name: 'recurring-payment-reconciliation', status: 'success', started_at: '2026-08-01T00:00:00Z', finished_at: null, duration_ms: 1000, error: null }],
       knownJobs: ['recurring-payment-reconciliation'],
+      schedulerHeartbeat: HEALTHY_HEARTBEAT,
       alerts: [], // no job_stale for this job -- it has no schedule, so the server never evaluates its staleness
     };
     const component = await createComponent(stubService({ health }));
@@ -120,6 +129,7 @@ describe('PlatformCardcomOpsPageComponent - IA redesign', () => {
       webhooks: [],
       jobs: [],
       knownJobs: ['aggregate-consistency'],
+      schedulerHeartbeat: HEALTHY_HEARTBEAT,
       alerts: [
         {
           type: 'job_stale',

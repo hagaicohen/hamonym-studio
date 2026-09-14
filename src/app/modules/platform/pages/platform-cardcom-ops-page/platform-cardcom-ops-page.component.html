@@ -7,7 +7,7 @@
   } @else if (health) {
 
     <div class="plat-header">
-      <h1 class="plat-title">תפעול CardCom</h1>
+      <h1 class="plat-title">תרומות</h1>
     </div>
 
     @if (actionError) {
@@ -85,9 +85,10 @@
         <div class="ops-tech-body">
 
           <!-- JOBS -->
-          <h3 class="plat-section-title">Jobs</h3>
+          <h3 class="plat-section-title">משימות מערכת</h3>
           <div class="ops-job-list">
             @for (jobName of health.knownJobs; track jobName) {
+              @if (jobArea(jobName) === 'donations') {
               <div class="ops-job-card" [id]="'tech-job-' + jobName">
                 <div class="ops-job-header">
                   <div class="ops-job-name-block">
@@ -128,7 +129,7 @@
                     [disabled]="runningJob === jobName"
                     (click)="runNow(jobName)"
                   >
-                    {{ runningJob === jobName ? 'מריץ...' : 'Run Now' }}
+                    {{ runningJob === jobName ? 'מריץ...' : 'הרץ עכשיו' }}
                   </button>
                 </div>
 
@@ -156,12 +157,13 @@
                   </div>
                 }
               </div>
+              }
             }
           </div>
 
           <!-- FINDINGS -->
           <div class="ops-findings-header">
-            <h3 class="plat-section-title">Findings</h3>
+            <h3 class="plat-section-title">בעיות הדורשות טיפול</h3>
             <button type="button" class="ops-toggle-link" (click)="toggleResolved()">
               {{ showResolved ? 'הצג פתוחים בלבד' : 'הצג גם פתורים' }}
             </button>
@@ -172,6 +174,7 @@
           } @else {
             <div class="ops-findings-list">
               @for (finding of findings; track finding.id) {
+                @if (findingArea(finding) === 'cardcom' || findingArea(finding) === 'donations') {
                 <div class="ops-finding-row" [id]="'tech-finding-' + finding.id" [class.ops-finding-resolved]="finding.resolved_at">
                   <span class="ops-severity-dot" [class]="'ops-severity-' + finding.severity"></span>
                   <div class="ops-finding-body">
@@ -180,7 +183,7 @@
                       <span class="ops-finding-job">{{ jobLabel(finding.job_name) }}</span>
                     </div>
                     <div class="ops-finding-meta">
-                      <span>subject: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
+                      <span>מזהה: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
                       <span>זוהה לראשונה: {{ fmtDateTime(finding.found_at) }}</span>
                       <span>נראה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</span>
                       @if (finding.resolved_at) {
@@ -196,18 +199,19 @@
                       [disabled]="resolvingFindingId === finding.id"
                       (click)="resolveFinding(finding)"
                     >
-                      {{ resolvingFindingId === finding.id ? 'מסמן...' : 'Resolve' }}
+                      {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כטופל' }}
                     </button>
                   }
                 </div>
+                }
               }
             </div>
           }
 
           <!-- WEBHOOKS -->
-          <h3 class="plat-section-title">Webhooks</h3>
+          <h3 class="plat-section-title">אירועי סליקה</h3>
           @if (health.webhooks.length === 0) {
-            <div class="ops-empty-small">אין נתוני webhooks עדיין</div>
+            <div class="ops-empty-small">אין אירועי סליקה עדיין</div>
           } @else {
             <div class="ops-webhook-list">
               @for (wh of health.webhooks; track wh.type) {

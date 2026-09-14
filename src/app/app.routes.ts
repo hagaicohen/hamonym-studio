@@ -574,8 +574,12 @@ export const routes: Routes = [
       {
         // Full super admin only, matching the backend route
         // (requireSuperAdmin, not a scoped platform permission) — see
-        // cardcom-ops.routes.js's own comment on why.
-        path: 'platform/cardcom-ops',
+        // cardcom-ops.routes.js's own comment on why. Route renamed from
+        // /platform/cardcom-ops (UX simplification pass, 2026-09-14) --
+        // this is the operator-facing "תרומות" world; the component file/
+        // class name is unchanged internal naming, see the component's own
+        // header comment.
+        path: 'platform/donations',
         canActivate: [superAdminGuard],
         loadComponent: () =>
           import('./modules/platform/pages/platform-cardcom-ops-page/platform-cardcom-ops-page.component').then(
@@ -583,22 +587,13 @@ export const routes: Routes = [
           ),
       },
       {
-        // Full super admin only, matching the backend route
-        // (requireSuperAdmin, not requirePermission('organizations')) --
-        // billing-provisioning.routes.js's own comment on why: setting
-        // Hamonym's own fee_rate/vat_rate is a commercial decision, not an
-        // entity-management action.
-        path: 'platform/billing-accounts',
-        canActivate: [superAdminGuard],
-        loadComponent: () =>
-          import('./modules/platform/pages/platform-billing-accounts-page/platform-billing-accounts-page.component').then(
-            (m) => m.PlatformBillingAccountsPageComponent,
-          ),
-      },
-      {
-        // Full super admin only, same bar as billing-accounts above --
-        // period/calculation/approval/collection triggers and MASAV
-        // authorization are all financial operator actions.
+        // Full super admin only -- period/calculation/approval/collection
+        // triggers, billing-readiness provisioning, and MASAV authorization
+        // are all financial operator actions. "חיובי עמותות" (UX
+        // simplification pass, 2026-09-14) -- absorbs what used to be a
+        // separate /platform/billing-accounts route/page (provisioning is
+        // now the "הגדרות עמותות" tab here); the underlying provisioning
+        // API is unchanged, just reached from one merged screen.
         path: 'platform/billing-ops',
         canActivate: [superAdminGuard],
         loadComponent: () =>
@@ -608,9 +603,9 @@ export const routes: Routes = [
       },
       {
         // Focused, single-entity Billing setup (UX consolidation, 2026-09-02)
-        // -- entered from a blocked entity in Billing Ops. Same super-admin
-        // bar as billing-accounts/billing-ops: reuses their provisioning API,
-        // just presented per-entity instead of as a generic list.
+        // -- entered from "הגדרות עמותות" or a blocked entity in "החודש".
+        // Same super-admin bar as billing-ops: reuses the same provisioning
+        // API, just presented per-entity instead of as a generic list.
         path: 'platform/billing-setup/:entityId',
         canActivate: [superAdminGuard],
         loadComponent: () =>

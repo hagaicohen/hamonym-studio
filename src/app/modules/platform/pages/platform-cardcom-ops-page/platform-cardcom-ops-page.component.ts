@@ -6,120 +6,28 @@ import {
   JobRun,
   ReconciliationFinding,
 } from '../../services/cardcom-ops.service';
+import {
+  jobLabel as sharedJobLabel,
+  jobFrequency as sharedJobFrequency,
+  findingTypeLabel as sharedFindingTypeLabel,
+  webhookTypeLabel as sharedWebhookTypeLabel,
+  jobArea as sharedJobArea,
+  PROVIDER_FINDING_TYPES,
+} from '../../utils/ops-labels';
 
-// Human names for every job that has ever written to `job_runs` or
-// `reconciliation_findings` -- both the 8 registered in src/jobs/index.js
-// (shown in the "Jobs" technical list) and the 3 live-request-path sources
-// that only ever write findings (masav-collection, collection-router,
-// payment_verification_gate -- see collection.service.js/masav-collection.
-// service.js/payment.handler.js) and therefore never appear as a job card.
-// Mapping given verbatim where the redesign brief specified an exact
-// phrase; the rest follow the same "בדיקת X" / plain-description style.
-const JOB_LABELS: Record<string, string> = {
-  'webhook-recovery': 'שחזור Webhooks',
-  'stale-pending-donations': 'תרומות שממתינות זמן רב',
-  'aggregate-consistency': 'בדיקת עקביות תרומות',
-  'stuck-recurring-signups': 'הרשמות לחיוב קבוע שנתקעו',
-  'billing-approval-consistency': 'בדיקת אישורי חיוב',
-  'billing-provisioning-gap': 'בדיקת הגדרת גבייה לעמותות',
-  'collection-attempt-reconciliation': 'בדיקת ניסיונות גבייה',
-  'billing-monthly-cycle': 'מחזור חיוב חודשי אוטומטי',
-  'recurring-payment-reconciliation': 'התאמת חיובי הוראות קבע',
-  'masav-collection': 'גביית מס"ב',
-  'collection-router': 'ניתוב גבייה',
-  'payment_verification_gate': 'שער אימות תשלום',
-};
-
-// Approved production schedule (docs/CARDCOM_OPERATIONAL_PROCESSES.md Part
-// י') — display-only, not read from the API (health/jobs endpoints don't
-// expose the cron expression). Purely informational context next to each
-// job's status; the scheduler itself stays off until ENABLE_JOB_SCHEDULER
-// is flipped in a real deploy, unrelated to this page.
-//
-// recurring-payment-reconciliation deliberately has NO entry here: it has
-// no `schedule` field in its own job definition (removed 2026-09-01,
-// "Keep recurring-payment-reconciliation dormant pending correlation
-// validation") -- there is no approved cadence to display, and inventing
-// one would misrepresent it as automatically monitored when it is not.
-const JOB_FREQUENCY_LABELS: Record<string, string> = {
-  'webhook-recovery': 'כל 15 דקות',
-  'stale-pending-donations': 'כל שעה',
-  'stuck-recurring-signups': 'כל שעה',
-  'aggregate-consistency': 'פעם ביום',
-  'billing-approval-consistency': 'כל שעה',
-  'billing-provisioning-gap': 'כל שעה',
-  'collection-attempt-reconciliation': 'כל שעה',
-  'billing-monthly-cycle': 'פעם בחודש (ה-1 לחודש)',
-};
-
-const DORMANT_JOB_NOTE: Record<string, string> = {
-  'recurring-payment-reconciliation': 'לא מתוזמן אוטומטית — הרצה ידנית בלבד',
-};
-
-// One label per finding_type actually produced anywhere in the backend
-// (grepped across src/jobs/*.job.js, collection.service.js, masav-
-// collection.service.js, payment.handler.js — 2026-09-07 audit). Kept in
-// sync manually since these are recorded as free-text strings, not an enum.
-const FINDING_TYPE_LABELS: Record<string, string> = {
-  lost_webhook_recovered: 'תרומה שהושלמה אוטומטית אחרי איחור ב-Webhook',
-  lookup_failed: 'בדיקה מול CardCom נכשלה',
-  pending_donation_missing_low_profile_id: 'תרומה ממתינה בלי מזהה לבדיקה מול CardCom',
-  campaign_aggregate_mismatch: 'אי-התאמה בנתוני קמפיין',
-  stuck_recurring_signup: 'הרשמה לחיוב קבוע שנתקעה',
-  collection_attempt_stuck: 'ניסיון גבייה תקוע',
-  statement_payments_exceed_total_due: 'תשלומים שחרגו מסכום החיוב בדוח',
-  active_entity_missing_billing_account: 'עמותה פעילה ללא חשבון גבייה מוגדר',
-  statement_components_not_fully_claimed: 'רכיבי דוח שלא שויכו במלואם',
-  donation_claimed_by_ineffective_statement: 'תרומה משויכת לדוח לא תקף',
-  claimed_donation_missing_from_components: 'תרומה משויכת חסרה ברכיבי הדוח',
-  statement_gross_raised_mismatch: 'אי-התאמה בסכום שגויס בדוח',
-  history_lookup_failed: 'בדיקת היסטוריית חיובים מול CardCom נכשלה',
-  recurring_charge_recovered_from_history: 'חיוב הוראת קבע שהושלם מהיסטוריית CardCom',
-  masav_blocked_pending_authorization: 'גבייה חסומה — ממתינה לאישור מס"ב',
-  collection_method_not_implemented: 'אמצעי גבייה שאינו נתמך עדיין',
-  no_active_payment_instrument: 'אין אמצעי תשלום פעיל לגבייה',
-  gate_v1_mismatch: 'תרומה עוכבה לבדיקה (אי-התאמה באימות תשלום)',
-};
-
-const WEBHOOK_TYPE_LABELS: Record<string, string> = {
-  LowProfile: 'תרומה חד-פעמית',
-  // Seen directly via this page's real data: one row from 2026-08-10 with
-  // RecordType='Payment' — Cardcom's own "Test Webhook" button in the
-  // terminal admin panel, not a real donation event. Labeled so it doesn't
-  // show as a raw unlabeled string, not because it's expected traffic.
-  Payment: 'בדיקת Webhook (CardCom)',
-  MasterRecurring: 'הוראת קבע (סטטוס)',
-  DetailRecurring: 'הוראת קבע (חיוב)',
-  Document: 'מסמך',
-};
-
-// Which of the 4 operator-facing health areas a job/finding-source belongs
-// to. Not a job/schedule property — a purely presentational grouping for
-// this page, decided from what each job actually does (see each job's own
-// header comment): donation delivery/consistency vs. commission billing &
-// collection. Jobs/sources not listed here fall back to 'donations' in
-// jobArea() below (there are none today; kept as a safe default).
-const JOB_AREA: Record<string, 'donations' | 'commission'> = {
-  'webhook-recovery': 'donations',
-  'stale-pending-donations': 'donations',
-  'aggregate-consistency': 'donations',
-  'stuck-recurring-signups': 'donations',
-  'recurring-payment-reconciliation': 'donations',
-  'payment_verification_gate': 'donations',
-  'billing-approval-consistency': 'commission',
-  'billing-provisioning-gap': 'commission',
-  'collection-attempt-reconciliation': 'commission',
-  'billing-monthly-cycle': 'commission',
-  'masav-collection': 'commission',
-  'collection-router': 'commission',
-};
-
-// Finding types that specifically mean "a call to CardCom itself failed or
-// couldn't be completed" (as opposed to a data-consistency problem on
-// Hamonym's own side). This is the CardCom health tile's signal -- see the
-// component doc comment above for why this is a derived proxy, not an
-// existing dedicated CardCom-connectivity check.
-const CARDCOM_FINDING_TYPES = new Set(['lookup_failed', 'history_lookup_failed']);
+// This page is the operator-facing "תרומות" (donations) health view (UX
+// simplification pass, 2026-09-14) -- it used to be "תפעול CardCom", a
+// single page covering both donation delivery AND commission-billing
+// health. The label/area-classification tables now live in
+// ../../utils/ops-labels.ts (shared with platform-billing-ops-page's own
+// "דורש טיפול" section, which surfaces the SAME underlying data filtered
+// to the 'commission' area instead) -- this component still fetches and
+// classifies all 4 areas internally (cardcom/donations/commission/jobs),
+// unchanged from before, but the TEMPLATE only ever renders the areas
+// relevant to donations (see areaOrder below); commission-area items are
+// still computed here (and covered by this file's own spec) but are
+// surfaced to the operator on the Billing Ops page instead.
+const CARDCOM_FINDING_TYPES = PROVIDER_FINDING_TYPES;
 
 export type AreaKey = 'cardcom' | 'donations' | 'commission' | 'jobs';
 export type AreaStatus = 'ok' | 'warning' | 'critical';
@@ -132,13 +40,21 @@ interface AreaMeta {
 }
 
 const AREA_META: Record<AreaKey, AreaMeta> = {
-  cardcom: { title: 'CardCom', ok: 'תקין', warning: 'אזהרה', critical: 'תקלה' },
+  cardcom: { title: 'חברת הסליקה', ok: 'תקין', warning: 'אזהרה', critical: 'תקלה' },
   donations: { title: 'תרומות', ok: 'תקין', warning: 'אזהרה', critical: 'דורש טיפול' },
   commission: { title: 'גביית עמלות', ok: 'תקין', warning: 'אזהרה', critical: 'דורש טיפול' },
   jobs: { title: 'משימות רקע', ok: 'תקינות', warning: 'אזהרה', critical: 'דורשות טיפול' },
 };
 
+// Full classification order (used internally for sorting actionableItems --
+// commission/jobs items are still computed here, just surfaced on the
+// Billing Ops page's own "דורש טיפול" section instead of this page's UI).
 const AREA_ORDER: AreaKey[] = ['cardcom', 'donations', 'commission', 'jobs'];
+
+// What THIS page actually renders as tiles/actionable groups -- donations
+// world only, per the 2026-09-14 IA simplification (commission-area health
+// moved to the "חיובי עמותות" page, see platform-billing-ops-page.component.ts).
+const VISIBLE_AREA_ORDER: AreaKey[] = ['cardcom', 'donations'];
 
 export interface ActionableItem {
   id: string;
@@ -160,7 +76,10 @@ export interface ActionableItem {
 export class PlatformCardcomOpsPageComponent implements OnInit {
   private cardcomOps = inject(CardcomOpsService);
 
-  readonly areaOrder = AREA_ORDER;
+  // Template-facing tile/list order (donations world only). Internal
+  // classification (actionableItems' sort, itemsForArea for any area
+  // including 'commission'/'jobs') is untouched -- see AREA_ORDER above.
+  readonly areaOrder = VISIBLE_AREA_ORDER;
 
   loading = true;
   error: string | null = null;
@@ -215,23 +134,30 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   }
 
   jobLabel(name: string): string {
-    return JOB_LABELS[name] ?? name;
+    return sharedJobLabel(name);
   }
 
   jobFrequency(name: string): string {
-    return JOB_FREQUENCY_LABELS[name] ?? DORMANT_JOB_NOTE[name] ?? '';
+    return sharedJobFrequency(name);
   }
 
   findingTypeLabel(type: string): string {
-    return FINDING_TYPE_LABELS[type] ?? type;
+    return sharedFindingTypeLabel(type);
   }
 
   webhookTypeLabel(type: string): string {
-    return WEBHOOK_TYPE_LABELS[type] ?? type;
+    return sharedWebhookTypeLabel(type);
   }
 
   jobArea(jobName: string): 'donations' | 'commission' {
-    return JOB_AREA[jobName] ?? 'donations';
+    return sharedJobArea(jobName);
+  }
+
+  // Same area rule actionableItems already applies inline -- exposed as a
+  // method so the "מידע טכני" Findings list can filter to this page's
+  // world (cardcom + donations) without duplicating the rule.
+  findingArea(finding: ReconciliationFinding): AreaKey {
+    return CARDCOM_FINDING_TYPES.has(finding.finding_type) ? 'cardcom' : this.jobArea(finding.job_name);
   }
 
   lastRunFor(jobName: string) {
@@ -341,12 +267,19 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return this.areaOrder.every((a) => this.areaStatus(a) === 'ok');
   }
 
+  // Scoped to the areas this page actually renders (areaOrder) -- a
+  // commission-area problem must not turn the donations hero red when it
+  // isn't even listed below; it surfaces on the Billing Ops page instead.
+  private get visibleActionableItems(): ActionableItem[] {
+    return this.actionableItems.filter((i) => (this.areaOrder as AreaKey[]).includes(i.area));
+  }
+
   get overallCriticalCount(): number {
-    return this.actionableItems.filter((i) => i.severity === 'critical').length;
+    return this.visibleActionableItems.filter((i) => i.severity === 'critical').length;
   }
 
   get overallWarningCount(): number {
-    return this.actionableItems.filter((i) => i.severity === 'warning').length;
+    return this.visibleActionableItems.filter((i) => i.severity === 'warning').length;
   }
 
   private findingSubtitle(finding: ReconciliationFinding): string {

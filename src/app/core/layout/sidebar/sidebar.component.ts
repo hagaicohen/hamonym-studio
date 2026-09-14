@@ -30,9 +30,14 @@ const PLATFORM_ORGANIZATIONS: NavItem = { route: '/platform/organizations', labe
 const PLATFORM_PARTNERS:      NavItem = { route: '/platform/partners',      label: 'שותפים',          icon: 'partners' };
 const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     label: 'קמפיינים',        icon: 'campaigns' };
 const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
-const PLATFORM_CARDCOM_OPS:   NavItem = { route: '/platform/cardcom-ops',   label: 'תפעול CardCom',   icon: 'settings' };
-const PLATFORM_BILLING_ACCOUNTS: NavItem = { route: '/platform/billing-accounts', label: 'חשבונות חיוב', icon: 'settings' };
-const PLATFORM_BILLING_OPS:      NavItem = { route: '/platform/billing-ops',      label: 'תפעול חיוב',   icon: 'settings' };
+// UX simplification pass, 2026-09-14: "תפעול CardCom" is gone as a primary
+// operator concept -- CardCom is the payment provider underneath the
+// donation flow, not something the operator "operates". Replaced with two
+// business-facing worlds: תרומות (donor -> provider -> עמותה) and חיובי
+// עמותות (עמותה -> provider/מס"ב -> Hamonym), the latter absorbing what
+// used to be two separate entries ("חשבונות חיוב" + "תפעול חיוב").
+const PLATFORM_DONATIONS:    NavItem = { route: '/platform/donations',   label: 'תרומות',       icon: 'donations' };
+const PLATFORM_BILLING_OPS:  NavItem = { route: '/platform/billing-ops', label: 'חיובי עמותות', icon: 'settings' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
@@ -74,7 +79,7 @@ export class SidebarComponent {
     const items = [PLATFORM_DASHBOARD];
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_CARDCOM_OPS, PLATFORM_BILLING_ACCOUNTS, PLATFORM_BILLING_OPS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_BILLING_OPS);
     return items;
   });
 

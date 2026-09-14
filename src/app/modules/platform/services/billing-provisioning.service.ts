@@ -35,6 +35,24 @@ export interface CreateBillingAccountPayload {
   notes?: string;
 }
 
+// One combined billing-readiness row per active entity, whether or not it
+// has a billing_account yet -- backs the "הגדרות עמותות" tab (UX
+// simplification pass, 2026-09-14). See provisioning.service.js#
+// listBillingReadiness for the exact projection.
+export interface BillingReadinessEntity {
+  id: string;
+  display_name: string;
+  billing_account_id: string | null;
+  fee_rate: string | null;
+  vat_rate: string | null;
+  enforcement_status: 'active' | 'suspended' | null;
+  preferred_collection_method: 'card' | 'masav' | null;
+  masav_authorized: boolean | null;
+  masav_configured: boolean;
+  paid_donation_count: number;
+  paid_gross_total: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BillingProvisioningService {
   private http = inject(HttpClient);
@@ -42,6 +60,12 @@ export class BillingProvisioningService {
 
   getUnprovisioned(): Observable<{ entities: UnprovisionedEntity[] }> {
     return this.http.get<{ entities: UnprovisionedEntity[] }>(`${this.base}/unprovisioned`, {
+      headers: authHeaders(),
+    });
+  }
+
+  getReadiness(): Observable<{ entities: BillingReadinessEntity[] }> {
+    return this.http.get<{ entities: BillingReadinessEntity[] }>(`${this.base}/readiness`, {
       headers: authHeaders(),
     });
   }

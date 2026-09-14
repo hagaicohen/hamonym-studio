@@ -30,8 +30,35 @@ import {
 } from '../../../../shared/constants/masav.constants';
 
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
+import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
+import { CardcomOpsService, ReconciliationFinding, HealthResponse, JobRun, JobHealth } from '../../services/cardcom-ops.service';
+import {
+  jobLabel as sharedJobLabel,
+  jobFrequency as sharedJobFrequency,
+  findingTypeLabel as sharedFindingTypeLabel,
+  jobArea as sharedJobArea,
+  PROVIDER_FINDING_TYPES,
+} from '../../utils/ops-labels';
 
-type Tab = 'periods' | 'statements' | 'masav';
+// Internal tab keys unchanged from before this pass ('entities' is the only
+// new one, for "הגדרות עמותות") -- only the operator-facing LABELS change
+// (see the template): "periods" reads "החודש", "statements" reads "כל
+// החיובים". Kept as-is internally so existing tests/deep-links (?tab=...)
+// stay valid.
+type Tab = 'periods' | 'statements' | 'entities' | 'masav';
+
+// One line in the "דורש טיפול" section of the "החודש" tab -- reuses
+// CardcomOpsService (same data "תרומות" reads) filtered to the commission
+// area only, per the 2026-09-14 UX simplification's explicit instruction
+// not to build a new cross-page aggregation architecture: this page just
+// asks the same existing endpoint for the same existing data and keeps the
+// slice relevant to billing/collection.
+interface CommissionIssue {
+  id: string;
+  title: string;
+  subtitle: string;
+  severity: 'critical' | 'warning';
+}
 
 const STATEMENT_STATUS_LABELS: Record<string, string> = {
   draft: 'ממתין לאישור',
@@ -106,11 +133,14 @@ const HE_MONTH_NAMES = [
 export class PlatformBillingOpsPageComponent implements OnInit {
   private service = inject(BillingOpsService);
   private route = inject(ActivatedRoute);
+  private provisioningService = inject(BillingProvisioningService);
+  private cardcomOps = inject(CardcomOpsService);
 
-  // Statements (debts owed) is the operator's primary mental model in
-  // Billing v1 -- "מה עושים עכשיו" per statement -- not engine internals.
-  // Periods & Calculation stays available as a secondary/diagnostic tab.
-  tab: Tab = 'statements';
+  // "החודש" is the default entry point (UX simplification pass,
+  // 2026-09-14) -- the month-by-month workflow (חשב חיובים -> בדוק ואשר ->
+  // בצע גבייה) is now the operator's primary mental model; "כל החיובים"
+  // stays available as the cross-period history/search tab.
+  tab: Tab = 'periods';
 
   // "Return to the workflow" -- set when arriving back from the focused
   // Billing setup screen (platform-billing-setup-page) right after it
@@ -207,6 +237,33 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   masavDocUploadError: string | null = null;
   masavDocDownloading = false;
 
+  // Replaces the raw "type an entity UUID" input for MASAV authorization
+  // revocation (UX simplification pass, 2026-09-14) -- reuses the same
+  // readiness list "הגדרות עמותות" loads, filtered to entities that
+  // actually have MASAV configured (only those can meaningfully be
+  // revoked). Never touches MASAV business logic -- still calls the exact
+  // same revokeMasav(entityId) the old free-text field called.
+  revokeEntityId = '';
+
+  // ---- הגדרות עמותות (billing-account provisioning, merged in 2026-09-14
+  // from the old standalone /platform/billing-accounts page) --------------
+  readinessEntities: BillingReadinessEntity[] = [];
+  readinessLoading = true;
+  readinessError: string | null = null;
+
+  provisionEntityId: string | null = null;
+  provisionFeeRatePercent = 3;
+  provisionVatRatePercent = 18;
+  provisionCollectionMethod: 'card' | 'masav' = 'card';
+  provisionNotes = '';
+  provisionBusy = false;
+  provisionError: string | null = null;
+
+  // ---- "דורש טיפול" (commission-area issues, reused from the same data
+  // "תרומות" shows, filtered here to billing/collection concerns only --
+  // see this class's header note and ../../utils/ops-labels.ts) ----------
+  commissionIssues: CommissionIssue[] = [];
+
   selectedExportStatementIds = new Set<string>();
   exporting = false;
   exportError: string | null = null;
@@ -214,7 +271,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   ngOnInit(): void {
     const qp = this.route.snapshot.queryParamMap;
     const requestedTab = qp.get('tab') as Tab | null;
-    if (requestedTab === 'periods' || requestedTab === 'statements' || requestedTab === 'masav') {
+    if (requestedTab === 'periods' || requestedTab === 'statements' || requestedTab === 'entities' || requestedTab === 'masav') {
       this.tab = requestedTab;
     }
     this.justSetupEntityName = qp.get('justSetupName') || (qp.get('justSetupEntity') ? 'העמותה' : null);
@@ -222,6 +279,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.loadPeriods();
     this.loadStatements();
     this.loadMasav();
+    this.loadReadiness();
+    this.loadCommissionIssues();
   }
 
   setTab(tab: Tab): void {
@@ -335,6 +394,34 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   periodStatements(periodId: string): StatementListItem[] {
     return this.statements.filter((s) => s.billing_period_id === periodId);
+  }
+
+  // ---- "החודש" 3-stage operator flow (① חשב חיובים -> ② בדוק ואשר -> ③
+  // בצע גבייה), 2026-09-14 UX simplification -- purely derived from data
+  // that already exists (runsForPeriod / periodStatements), never a new
+  // status field. Stage 3 deliberately never collapses card and MASAV into
+  // one "גבה" action: they are two different real-world processes (a
+  // per-Statement CardCom charge vs. a batch MASAV Excel export), and the
+  // operator needs to know which of the two applies to which of this
+  // month's billings.
+  periodCardCount(periodId: string): number {
+    return this.periodStatements(periodId).filter((s) => s.routed_method === 'card').length;
+  }
+
+  periodMasavCount(periodId: string): number {
+    return this.periodStatements(periodId).filter((s) => s.routed_method === 'masav').length;
+  }
+
+  // 1 = not yet calculated, 2 = calculated but at least one Statement still
+  // awaiting approval, 3 = every Statement approved or beyond (open/paid/
+  // etc.) -- ready for collection. A period with zero Statements (no real
+  // activity found) never reaches stage 2/3; periodResultDetail() already
+  // explains that case separately.
+  periodStage(period: BillingPeriod): 1 | 2 | 3 {
+    if (this.runsForPeriod(period.id).length === 0) return 1;
+    const statements = this.periodStatements(period.id);
+    if (statements.length > 0 && statements.some((s) => s.status === 'draft')) return 2;
+    return 3;
   }
 
   // Aggregates already-authoritative per-Statement values (same pattern as
@@ -802,6 +889,202 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return 'חסום';
   }
 
+  // ---- הגדרות עמותות (billing-account provisioning + readiness) --------
+
+  loadReadiness(): void {
+    this.readinessLoading = true;
+    this.readinessError = null;
+    this.provisioningService.getReadiness().subscribe({
+      next: (res) => { this.readinessEntities = res.entities; this.readinessLoading = false; },
+      error: () => { this.readinessError = 'שגיאה בטעינת מוכנות החיוב של העמותות'; this.readinessLoading = false; },
+    });
+  }
+
+  // Entities with MASAV configured are the only meaningful candidates for
+  // the "ביטול הרשאת מס״ב" picker below -- an entity with no MASAV details
+  // at all has nothing to revoke.
+  get masavConfiguredEntities(): BillingReadinessEntity[] {
+    return this.readinessEntities.filter((e) => e.masav_configured);
+  }
+
+  // "מוכנה לחיוב" needs a billing_account AND (card is always available, so
+  // only MASAV can actually block readiness) either no MASAV activity yet
+  // OR an authorized MASAV instrument. An entity routed entirely through
+  // card collection is ready the moment its billing_account exists.
+  entityReadiness(entity: BillingReadinessEntity): { ready: boolean; label: string } {
+    if (!entity.billing_account_id) return { ready: false, label: 'טרם הוגדר חיוב' };
+    if (entity.enforcement_status === 'suspended') return { ready: false, label: 'חשבון החיוב מושהה' };
+    if (entity.masav_configured && !entity.masav_authorized) return { ready: false, label: 'ממתין לאישור מס״ב' };
+    return { ready: true, label: 'מוכנה לחיוב' };
+  }
+
+  feePercentOf(entity: BillingReadinessEntity): number {
+    return entity.fee_rate ? Number(entity.fee_rate) * 100 : 0;
+  }
+
+  vatPercentOf(entity: BillingReadinessEntity): number {
+    return entity.vat_rate ? Number(entity.vat_rate) * 100 : 0;
+  }
+
+  openProvisionForm(entity: BillingReadinessEntity): void {
+    this.provisionEntityId = entity.id;
+    this.provisionFeeRatePercent = 3;
+    this.provisionVatRatePercent = 18;
+    this.provisionCollectionMethod = 'card';
+    this.provisionNotes = '';
+    this.provisionError = null;
+  }
+
+  cancelProvisionForm(): void {
+    this.provisionEntityId = null;
+  }
+
+  confirmProvision(entity: BillingReadinessEntity): void {
+    if (this.provisionBusy) return;
+    this.provisionBusy = true;
+    this.provisionError = null;
+    this.provisioningService
+      .create({
+        entityId: entity.id,
+        feeRate: this.provisionFeeRatePercent / 100,
+        vatRate: this.provisionVatRatePercent / 100,
+        preferredCollectionMethod: this.provisionCollectionMethod,
+        notes: this.provisionNotes || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.provisionBusy = false;
+          this.provisionEntityId = null;
+          this.loadReadiness();
+        },
+        error: (err) => {
+          this.provisionBusy = false;
+          this.provisionError = err?.error?.error || 'יצירת הגדרות החיוב נכשלה';
+        },
+      });
+  }
+
+  // ---- טכני / מתקדם: commission-area background jobs ---------------------
+  // The old unified "תפעול CardCom" page let the operator manually
+  // "Run Now" any job, including the commission/billing ones (billing-
+  // monthly-cycle, masav-collection, collection-router, billing-approval-
+  // consistency, billing-provisioning-gap, collection-attempt-
+  // reconciliation). Splitting that page by area (2026-09-14) must not
+  // silently drop that capability for the commission half -- it moves here,
+  // collapsed under "מידע טכני" same as the donations page, reusing the
+  // exact same CardcomOpsService endpoints (getJobRuns/runJob), never a new
+  // backend surface.
+  showTechnicalJobs = false;
+  health: HealthResponse | null = null;
+  runsByJob: Record<string, JobRun[]> = {};
+  expandedJob: string | null = null;
+  runningJob: string | null = null;
+  jobActionError: string | null = null;
+
+  toggleTechnicalJobs(): void {
+    this.showTechnicalJobs = !this.showTechnicalJobs;
+  }
+
+  get commissionJobs(): string[] {
+    return (this.health?.knownJobs ?? []).filter((name) => sharedJobArea(name) === 'commission');
+  }
+
+  jobLabel(name: string): string {
+    return sharedJobLabel(name);
+  }
+
+  jobFrequency(name: string): string {
+    return sharedJobFrequency(name);
+  }
+
+  lastRunFor(jobName: string): JobHealth | null {
+    return this.health?.jobs.find((j) => j.job_name === jobName) ?? null;
+  }
+
+  toggleRuns(jobName: string): void {
+    if (this.expandedJob === jobName) {
+      this.expandedJob = null;
+      return;
+    }
+    this.expandedJob = jobName;
+    if (this.runsByJob[jobName]) return;
+    this.cardcomOps.getJobRuns(jobName).subscribe({
+      next: (res) => { this.runsByJob[jobName] = res.runs; },
+      error: () => { this.runsByJob[jobName] = []; },
+    });
+  }
+
+  runJobNow(jobName: string): void {
+    this.runningJob = jobName;
+    this.jobActionError = null;
+    this.cardcomOps.runJob(jobName).subscribe({
+      next: () => {
+        this.runningJob = null;
+        delete this.runsByJob[jobName];
+        this.loadCommissionIssues(); // re-fetch health -- never guess the new status locally
+      },
+      error: (err) => {
+        this.runningJob = null;
+        this.jobActionError = err?.error?.error || 'הרצת המשימה נכשלה';
+      },
+    });
+  }
+
+  fmtDuration(ms: number | null): string {
+    if (ms == null) return '—';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+
+  // ---- "דורש טיפול" (commission-area issues) -----------------------------
+  // Reuses CardcomOpsService (the exact same data "תרומות" reads) filtered
+  // to the commission area via the shared ops-labels classification -- see
+  // this file's CommissionIssue comment. No new endpoint, no new
+  // aggregation layer, per the 2026-09-14 UX simplification's explicit
+  // instruction.
+
+  loadCommissionIssues(): void {
+    this.cardcomOps.getHealth().subscribe({
+      next: (health) => {
+        this.health = health;
+        const items: CommissionIssue[] = [];
+        for (const alert of health.alerts) {
+          if ((alert.type === 'job_failed' || alert.type === 'job_stale') && alert.jobName && sharedJobArea(alert.jobName) === 'commission') {
+            items.push({
+              id: `alert-${alert.type}-${alert.jobName}`,
+              title: `${sharedJobLabel(alert.jobName)} — ${alert.type === 'job_failed' ? 'נכשל בריצה האחרונה' : 'לא רץ בהצלחה בזמן הצפוי'}`,
+              subtitle: '',
+              severity: 'critical',
+            });
+          }
+        }
+        this.commissionIssues = items;
+        this.loadCommissionFindings();
+      },
+      error: () => { /* the periods/statements/masav loads already surface the main error states */ },
+    });
+  }
+
+  private loadCommissionFindings(): void {
+    this.cardcomOps.getFindings(false).subscribe({
+      next: (res) => {
+        const commissionFindings = res.findings.filter(
+          (f: ReconciliationFinding) => !PROVIDER_FINDING_TYPES.has(f.finding_type) && sharedJobArea(f.job_name) === 'commission',
+        );
+        this.commissionIssues = [
+          ...this.commissionIssues,
+          ...commissionFindings.map((f) => ({
+            id: `finding-${f.id}`,
+            title: sharedFindingTypeLabel(f.finding_type),
+            subtitle: (f.details as Record<string, unknown> | null)?.['displayName'] as string || '',
+            severity: (f.severity === 'critical' ? 'critical' : 'warning') as 'critical' | 'warning',
+          })),
+        ];
+      },
+      error: () => {},
+    });
+  }
+
   // ---- masav ------------------------------------------------------------
 
   loadMasav(): void {
@@ -857,6 +1140,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   cancelConfigureForm(): void {
     this.configuringEntityId = null;
     this.loadMasav();
+    this.loadReadiness();
   }
 
   toggleMasavHelp(): void {
@@ -952,7 +1236,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.masavFormBusy = true;
     this.masavFormError = null;
     this.service.authorizeMasav(entityId).subscribe({
-      next: () => { this.masavFormBusy = false; this.loadMasav(); },
+      next: () => { this.masavFormBusy = false; this.loadMasav(); this.loadReadiness(); },
       error: (err) => { this.masavFormBusy = false; this.masavError = err?.error?.error || 'אישור ההרשאה נכשל'; },
     });
   }
@@ -961,7 +1245,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.masavFormBusy = true;
     this.masavError = null;
     this.service.revokeMasav(entityId).subscribe({
-      next: () => { this.masavFormBusy = false; this.loadMasav(); },
+      next: () => { this.masavFormBusy = false; this.loadMasav(); this.loadReadiness(); },
       error: (err) => { this.masavFormBusy = false; this.masavError = err?.error?.error || 'ביטול ההרשאה נכשל'; },
     });
   }

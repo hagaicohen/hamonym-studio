@@ -759,3 +759,116 @@
   font-size: 12px;
   color: #9a3412;
 }
+
+/* ---- 3-stage operator flow ("החודש" tab), 2026-09-14 ------------------ */
+.bo-stage-tracker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+}
+
+.bo-stage {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bo-stage-done { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+.bo-stage-active { background: #f5f3ff; border-color: #583cd6; color: #583cd6; }
+
+.bo-stage-arrow { color: #cbd5e1; font-size: 14px; }
+
+.bo-stage3-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.bo-stage3-route { display: flex; align-items: center; gap: 4px; }
+
+.bo-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #583cd6;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---- "דורש טיפול" (commission issues) ---------------------------------- */
+.bo-issues-card { border-color: #fecaca; }
+
+.bo-issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.bo-issue-row:last-child { border-bottom: none; }
+
+.bo-issue-body { display: flex; flex-direction: column; gap: 2px; }
+.bo-issue-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+.bo-issue-subtitle { font-size: 12px; color: #64748b; }
+
+.ops-severity-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.ops-severity-critical { background: #dc2626; }
+.ops-severity-warning { background: #f59e0b; }
+
+/* ---- "הגדרות עמותות" readiness badges ---------------------------------- */
+.bo-badge-ready { background: #dcfce7; color: #166534; }
+.bo-badge-warning { background: #fffbeb; color: #b45309; }
+
+/* ---- מידע טכני / מתקדם -- commission-area job cards -------------------- */
+.ops-status-success { background: #dcfce7; color: #16a34a; }
+.ops-status-failed { background: #fee2e2; color: #dc2626; }
+.ops-status-skipped_locked { background: #f1f5f9; color: #64748b; }
+.ops-status-none { background: #f1f5f9; color: #94a3b8; }
+
+.bo-job-card {
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.bo-job-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bo-job-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+.bo-job-freq { font-size: 11px; color: #94a3b8; margin-inline-start: 8px; }
+
+.bo-job-details {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.bo-job-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
