@@ -41,13 +41,30 @@ const MONTH = 8; // August -- far-future, reserved for this script only
 
 let periodId = null;
 
+// Deterministic audit-log cleanup fix (2026-09-14k). The old version
+// matched by text (LIKE '%2099-08%' for billing_period_create, LIKE
+// '%<this run's periodId>%' for billing_calculation_trigger) -- the second
+// pattern only ever matches the CURRENT run's own periodId, so a prior
+// run's billing_calculation_trigger row (a different periodId each time,
+// since createPeriodForMonth always gets a fresh UUID after the previous
+// run's billing_periods row was deleted) was silently left behind forever.
+// That's exactly how two orphaned rows from 2026-09-13 accumulated (found
+// via a read-only audit, confirmed to reference billing_period ids that no
+// longer exist, then deleted once by hand -- see the commit this comment
+// ships in). Fixed by bookmarking platform_audit_log's max id before this
+// run does anything, then deleting only rows with a HIGHER id AND one of
+// this script's own two action values -- an id-range bookmark, not text
+// matching, so it can only ever catch what THIS run itself created and
+// cannot touch unrelated audit data (including a concurrent run, if one
+// somehow started later and got a higher id -- this run's bookmark predates it).
+let startAuditId = 0;
+let billingRunId = null;
+
 async function cleanup() {
   await pool.query(
-    `DELETE FROM platform_audit_log WHERE action = 'billing_period_create' AND notes LIKE '%2099-08%'`
-  );
-  await pool.query(
-    `DELETE FROM platform_audit_log WHERE action = 'billing_calculation_trigger' AND notes LIKE '%' || $1 || '%'`,
-    [periodId || '__none__']
+    `DELETE FROM platform_audit_log
+     WHERE id > $1 AND action IN ('billing_period_create', 'billing_calculation_trigger')`,
+    [startAuditId]
   );
   if (!periodId) return;
   await pool.query(`DELETE FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
@@ -55,6 +72,9 @@ async function cleanup() {
 }
 
 async function main() {
+  const bookmark = await pool.query(`SELECT COALESCE(MAX(id), 0) AS max_id FROM platform_audit_log`);
+  startAuditId = Number(bookmark.rows[0].max_id);
+
   try {
     await check('1. computeCalendarMonthUtcBoundary(2099, 8) matches what the automatic job would compute if "now" were September 2099', async () => {
       const manual = computeCalendarMonthUtcBoundary(YEAR, MONTH);
@@ -89,7 +109,8 @@ async function main() {
 
     await check('4. an audit-log entry was written only once (for the actual creation, not the idempotent second call)', async () => {
       const { rows } = await pool.query(
-        `SELECT count(*) FROM platform_audit_log WHERE action = 'billing_period_create' AND notes LIKE '%2099-08%'`
+        `SELECT count(*) FROM platform_audit_log WHERE id > $1 AND action = 'billing_period_create'`,
+        [startAuditId]
       );
       assert.strictEqual(Number(rows[0].count), 1);
     });
@@ -99,6 +120,7 @@ async function main() {
         periodId, asOf: '2099-08-15T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
       });
       assert.ok(result.billingRunId);
+      billingRunId = result.billingRunId;
 
       const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
       assert.strictEqual(Number(rows[0].count), 1);
@@ -133,9 +155,33 @@ async function main() {
     await cleanup();
   }
 
-  await check('cleanup verification: zero residue -- the fixture period is gone', async () => {
-    const { rows } = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = '2099-08-01T00:00:00.000Z'`);
-    assert.strictEqual(Number(rows[0].count), 0);
+  await check('cleanup verification: zero residue -- billing period, billing run, statements/components, and every audit row this run created are all gone', async () => {
+    const period = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = '2099-08-01T00:00:00.000Z'`);
+    assert.strictEqual(Number(period.rows[0].count), 0, 'billing_periods residue');
+
+    assert.ok(periodId, 'sanity: the period must have been created earlier in this run for the checks below to mean anything');
+    const run = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
+    assert.strictEqual(Number(run.rows[0].count), 0, 'billing_runs residue');
+
+    // No real donation was ever eligible in the far-future 2099-08 window
+    // (see this file's own header comment), so calculateAccountStatement's
+    // zero-activity path never wrote either table for this run's
+    // billing_run_id -- re-affirms the invariant directly rather than only
+    // inferring it from statementsCreated=0 in check 5's return value.
+    assert.ok(billingRunId, 'sanity: calculatePeriod must have returned a billingRunId earlier in this run');
+    const stmts = await pool.query(`SELECT count(*) FROM statements WHERE billing_run_id = $1`, [billingRunId]);
+    assert.strictEqual(Number(stmts.rows[0].count), 0, 'statements residue');
+    const comps = await pool.query(
+      `SELECT count(*) FROM statement_components sc JOIN statements s ON s.id = sc.statement_id WHERE s.billing_run_id = $1`,
+      [billingRunId]
+    );
+    assert.strictEqual(Number(comps.rows[0].count), 0, 'statement_components residue');
+
+    const auditResidue = await pool.query(
+      `SELECT count(*) FROM platform_audit_log WHERE id > $1 AND action IN ('billing_period_create', 'billing_calculation_trigger')`,
+      [startAuditId]
+    );
+    assert.strictEqual(Number(auditResidue.rows[0].count), 0, 'platform_audit_log residue for this run');
   });
 
   console.log(`\n${passed} passed, ${failures} failed`);
