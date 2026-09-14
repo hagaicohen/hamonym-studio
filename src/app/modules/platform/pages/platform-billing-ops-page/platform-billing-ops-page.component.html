@@ -40,10 +40,39 @@
               <div class="bo-current-title">חיוב {{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
             }
             <div class="bo-month-switch">
-              <input type="month" class="bo-month-switch-input" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
-              <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
-                {{ creatingPeriod ? 'טוען...' : 'מעבר' }}
-              </button>
+              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(-1)" aria-label="חודש קודם">←</button>
+              <div class="bo-month-picker-wrap">
+                <button
+                  type="button"
+                  class="bo-month-picker-trigger"
+                  [class.bo-month-picker-trigger-open]="monthPickerOpen"
+                  [disabled]="creatingPeriod"
+                  (click)="toggleMonthPicker($event)"
+                >
+                  <span class="bo-month-picker-icon">📅</span>
+                  {{ creatingPeriod ? 'טוען...' : selectedMonthLabel }}
+                </button>
+                @if (monthPickerOpen) {
+                  <div class="bo-month-picker-popover" (click)="$event.stopPropagation()">
+                    <div class="bo-month-picker-year-row">
+                      <button type="button" class="bo-month-picker-year-btn" (click)="pickerPrevYear()" aria-label="שנה קודמת">←</button>
+                      <span class="bo-month-picker-year-label">{{ monthPickerYear }}</span>
+                      <button type="button" class="bo-month-picker-year-btn" (click)="pickerNextYear()" aria-label="שנה הבאה">→</button>
+                    </div>
+                    <div class="bo-month-picker-grid">
+                      @for (name of heMonthNames; track name; let i = $index) {
+                        <button
+                          type="button"
+                          class="bo-month-picker-cell"
+                          [class.bo-month-picker-cell-selected]="isSelectedMonth(i)"
+                          (click)="pickMonth(i)"
+                        >{{ name }}</button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(1)" aria-label="חודש הבא">→</button>
             </div>
           </div>
           @if (periodActionError) {
@@ -254,10 +283,14 @@
                    -- this is a per-month calculation audit log, not a
                    parallel "advanced" area to the system-wide "מידע טכני /
                    מתקדם" section below; the old shared "advanced" wording
-                   made the two easy to confuse. -->
-              <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
-                היסטוריית חישובים לחודש זה {{ showAdvanced ? '▲' : '▼' }}
-              </button>
+                   made the two easy to confuse. Given its own bordered strip
+                   (2026-09-14g) so it reads as a distinct, clearly-labeled
+                   section instead of trailing directly off the table above. -->
+              <div class="bo-calc-history-toggle-row">
+                <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
+                  היסטוריית חישובים לחודש זה {{ showAdvanced ? '▲' : '▼' }}
+                </button>
+              </div>
 
               @if (showAdvanced) {
                 <div class="bo-runs-history">
@@ -284,10 +317,37 @@
           <div class="bo-current-header">
             <div class="bo-current-title">בחרו חודש חיוב</div>
             <div class="bo-month-switch">
-              <input type="month" class="bo-month-switch-input" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
-              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
-                {{ creatingPeriod ? 'טוען...' : 'בחר חודש' }}
-              </button>
+              <div class="bo-month-picker-wrap">
+                <button
+                  type="button"
+                  class="bo-month-picker-trigger"
+                  [class.bo-month-picker-trigger-open]="monthPickerOpen"
+                  [disabled]="creatingPeriod"
+                  (click)="toggleMonthPicker($event)"
+                >
+                  <span class="bo-month-picker-icon">📅</span>
+                  {{ creatingPeriod ? 'טוען...' : selectedMonthLabel }}
+                </button>
+                @if (monthPickerOpen) {
+                  <div class="bo-month-picker-popover" (click)="$event.stopPropagation()">
+                    <div class="bo-month-picker-year-row">
+                      <button type="button" class="bo-month-picker-year-btn" (click)="pickerPrevYear()" aria-label="שנה קודמת">←</button>
+                      <span class="bo-month-picker-year-label">{{ monthPickerYear }}</span>
+                      <button type="button" class="bo-month-picker-year-btn" (click)="pickerNextYear()" aria-label="שנה הבאה">→</button>
+                    </div>
+                    <div class="bo-month-picker-grid">
+                      @for (name of heMonthNames; track name; let i = $index) {
+                        <button
+                          type="button"
+                          class="bo-month-picker-cell"
+                          [class.bo-month-picker-cell-selected]="isSelectedMonth(i)"
+                          (click)="pickMonth(i)"
+                        >{{ name }}</button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
           </div>
           @if (periodActionError) {

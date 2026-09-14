@@ -234,12 +234,45 @@
 .bo-month-switch {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding-inline-start: 14px;
   border-inline-start: 1px solid #e2e8f0;
 }
 
-.bo-month-switch-input {
+/* "←"/"→" one-month-at-a-time steppers -- the most common real action
+   (check last month, peek at next month) shouldn't require opening the
+   picker at all. Same round-icon-button shape as the footer pager
+   elsewhere in this app, for a familiar, unsurprising control. */
+.bo-month-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bo-month-nav-btn:hover:not(:disabled) { border-color: #583cd6; color: #583cd6; }
+.bo-month-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bo-month-picker-wrap { position: relative; }
+
+/* The main "📅 אוגוסט 2026" pill -- replaces the raw native
+   <input type="month"> (2026-09-14g "friendlier date control" request):
+   always renders in Hebrew regardless of browser/OS locale, and its own
+   popover (below) is fully styleable instead of relying on each browser's
+   native, inconsistent month picker. */
+.bo-month-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 34px;
   box-sizing: border-box;
   padding: 0 12px;
@@ -247,15 +280,81 @@
   border-radius: 8px;
   background: #f8fafc;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bo-month-picker-trigger:hover:not(:disabled) { border-color: #cbd5e1; background: #f1f5f9; }
+.bo-month-picker-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
+.bo-month-picker-trigger-open { border-color: #583cd6; background: #fff; color: #583cd6; }
+
+.bo-month-picker-icon { font-size: 13px; }
+
+.bo-month-picker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 240px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .15);
+  padding: 12px;
+}
+
+.bo-month-picker-year-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bo-month-picker-year-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #64748b;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.bo-month-switch-input:hover:not(:disabled) { border-color: #cbd5e1; background: #f1f5f9; }
-.bo-month-switch-input:focus { outline: none; border-color: #583cd6; background: #fff; }
+.bo-month-picker-year-btn:hover { background: #f1f5f9; color: #1e293b; }
 
-.bo-month-switch .ops-btn { height: 34px; box-sizing: border-box; }
+.bo-month-picker-year-label { font-size: 14px; font-weight: 700; color: #1e293b; }
+
+.bo-month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.bo-month-picker-cell {
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.bo-month-picker-cell:hover { background: #ede9fe; color: #4a30bd; }
+
+.bo-month-picker-cell-selected {
+  background: #583cd6;
+  border-color: #583cd6;
+  color: #fff;
+}
 
 .bo-current-title {
   font-size: 22px;
@@ -372,6 +471,22 @@
 }
 
 .bo-advanced-toggle:hover { color: #1e293b; }
+
+/* Separates "היסטוריית חישובים לחודש זה" from the table above it as its
+   own clearly-bounded strip (2026-09-14g), instead of reading as a
+   trailing afterthought right under the table's last row. */
+.bo-calc-history-toggle-row {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-top: 1px solid #e8edf3;
+  background: #f8fafc;
+  border-radius: 0 0 8px 8px;
+}
+
+.bo-calc-history-toggle-row .bo-advanced-toggle {
+  width: 100%;
+  text-align: right;
+}
 
 .bo-runs-history {
   margin-top: 16px;

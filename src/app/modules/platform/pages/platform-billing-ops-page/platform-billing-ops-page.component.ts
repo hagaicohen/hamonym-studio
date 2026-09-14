@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -122,6 +122,8 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private provisioningService = inject(BillingProvisioningService);
   private cardcomOps = inject(CardcomOpsService);
+
+  readonly heMonthNames = HE_MONTH_NAMES;
 
   // "החודש" is the default entry point (UX simplification pass,
   // 2026-09-14) -- the month-by-month workflow (חשב חיובים -> בדוק ואשר ->
@@ -269,6 +271,72 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   monthInputValue(period: BillingPeriod): string {
     const d = new Date(period.period_start);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  // ---- custom month picker (replaces the raw native <input type="month">,
+  // 2026-09-14g "friendlier date control" request) -- a plain Hebrew
+  // "‹ חודש שנה ›" stepper plus a small popover for jumping to any month/
+  // year directly. Still just produces the same "YYYY-MM" selectedMonth
+  // value createPeriodForMonth() already consumed -- no new navigation
+  // concept, only a nicer control for the exact same one.
+  monthPickerOpen = false;
+  monthPickerYear = new Date().getFullYear();
+
+  get selectedMonthLabel(): string {
+    if (!this.selectedMonth) return 'בחרו חודש';
+    const [yearStr, monthStr] = this.selectedMonth.split('-');
+    const monthIdx = Number(monthStr) - 1;
+    if (monthIdx < 0 || monthIdx > 11) return this.selectedMonth;
+    return `${HE_MONTH_NAMES[monthIdx]} ${yearStr}`;
+  }
+
+  toggleMonthPicker(event: Event): void {
+    event.stopPropagation();
+    this.monthPickerOpen = !this.monthPickerOpen;
+    if (this.monthPickerOpen) {
+      const [yearStr] = (this.selectedMonth || '').split('-');
+      this.monthPickerYear = Number(yearStr) || new Date().getFullYear();
+    }
+  }
+
+  // Closes on any click outside the popover -- the popover itself stops
+  // propagation on its own click handler (see template), so this only ever
+  // fires for a genuine outside click. Same pattern as the users-page "⋮"
+  // menu.
+  @HostListener('document:click')
+  closeMonthPicker(): void {
+    this.monthPickerOpen = false;
+  }
+
+  pickerPrevYear(): void {
+    this.monthPickerYear--;
+  }
+
+  pickerNextYear(): void {
+    this.monthPickerYear++;
+  }
+
+  isSelectedMonth(monthIndex: number): boolean {
+    if (!this.selectedMonth) return false;
+    const [yearStr, monthStr] = this.selectedMonth.split('-');
+    return Number(yearStr) === this.monthPickerYear && Number(monthStr) === monthIndex + 1;
+  }
+
+  pickMonth(monthIndex: number): void {
+    this.selectedMonth = `${this.monthPickerYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+    this.monthPickerOpen = false;
+    this.createPeriodForMonth();
+  }
+
+  // "‹ / ›" step exactly one calendar month from whatever is currently
+  // selected -- the most common real action (checking last month, jumping
+  // ahead to prep next month) shouldn't require opening the picker at all.
+  stepMonth(delta: -1 | 1): void {
+    if (!this.selectedMonth) return;
+    const [yearStr, monthStr] = this.selectedMonth.split('-');
+    const d = new Date(Number(yearStr), Number(monthStr) - 1 + delta, 1);
+    this.selectedMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    this.createPeriodForMonth();
   }
 
   private loadRuns(): void {
