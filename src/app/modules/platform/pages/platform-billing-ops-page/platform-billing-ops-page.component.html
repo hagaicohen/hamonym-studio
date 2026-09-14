@@ -473,19 +473,19 @@
           <table class="bo-table">
             <thead>
               <tr>
-                <th>עמותה</th>
+                <th class="bo-entity-col">עמותה</th>
                 <th>עמלה</th>
                 <th>מע״מ</th>
                 <th>כרטיס אשראי</th>
                 <th>מס״ב</th>
                 <th>מוכנות לחיוב</th>
-                <th></th>
+                <th class="bo-actions-col"></th>
               </tr>
             </thead>
             <tbody>
               @for (entity of readinessEntities; track entity.id) {
                 <tr>
-                  <td>{{ entity.display_name }}</td>
+                  <td class="bo-entity-col">{{ entity.display_name }}</td>
                   @if (entity.billing_account_id) {
                     <td>{{ feePercentOf(entity) }}%</td>
                     <td>{{ vatPercentOf(entity) }}%</td>
@@ -510,7 +510,7 @@
                       <span class="bo-badge bo-badge-warning">⚠ {{ entityReadiness(entity).label }}</span>
                     }
                   </td>
-                  <td>
+                  <td class="bo-actions-col">
                     @if (!entity.billing_account_id) {
                       @if (provisionEntityId !== entity.id) {
                         <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="openProvisionForm(entity)">הגדרת חיוב</button>

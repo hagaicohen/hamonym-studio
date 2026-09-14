@@ -388,7 +388,20 @@
   border-top: 2px solid #e2e8f0;
 }
 
-.bo-table-wrap { overflow-x: auto; }
+/* Always-visible (not overlay/invisible) scrollbar -- makes it obvious
+   there's more table to the side instead of a trailing column silently
+   running past the card edge with no visual cue that scrolling would
+   reveal it. */
+.bo-table-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.bo-table-wrap::-webkit-scrollbar { height: 8px; }
+.bo-table-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+.bo-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.bo-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .bo-table {
   width: 100%;
@@ -412,6 +425,30 @@
   color: #334155;
   white-space: nowrap;
 }
+
+/* "הגדרות עמותות" table (2026-09-14d layout fix) -- the entity-name
+   column is unbounded free text (some real names are long), which could
+   single-handedly push the whole table wider than the card; capped with
+   ellipsis so it can't. The trailing action column ("הגדרות חיוב") is
+   pinned to the leading edge of the scroll area (physical left,
+   regardless of RTL) so the button itself is never clipped at the card
+   boundary -- it's always reachable without scrolling at all, not just
+   scrollable in principle. */
+.bo-entity-col {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bo-actions-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 1px 0 0 #e8edf3;
+}
+
+thead .bo-actions-col { background: #fff; z-index: 2; }
 
 .bo-row-clickable { cursor: pointer; }
 .bo-row-clickable:hover { background: #f8fafc; }
