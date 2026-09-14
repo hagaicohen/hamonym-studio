@@ -219,19 +219,27 @@
 
 .bo-current-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
 }
 
-.bo-current-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #7c6de0;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  margin-bottom: 4px;
+/* Compact inline month control -- replaces the old separate "בחר חודש
+   חיוב" card (2026-09-14 "החודש" refinement). Sits beside the month
+   heading instead of taking its own full-width card above it. */
+.bo-month-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bo-month-switch-input {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .bo-current-title {
@@ -255,28 +263,6 @@
 
 .bo-empty-calc .ops-empty-small { padding: 0; }
 
-.bo-kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.bo-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.bo-kpi span { font-size: 11px; color: #64748b; }
-.bo-kpi b { font-size: 20px; color: #1e293b; }
-
-.bo-kpi-primary { background: #ede9fe; }
-.bo-kpi-primary span { color: #5b21b6; }
-.bo-kpi-primary b { color: #4a30bd; }
 
 .bo-blocked-list {
   margin-bottom: 14px;
@@ -345,29 +331,25 @@
   color: #854d0e;
 }
 
-.bo-month-select .bo-form-row {
-  align-items: center;
-  gap: 10px;
+/* Monthly summary narrative (2026-09-14 "החודש" refinement) -- one
+   readable sentence instead of disconnected KPI tiles. */
+.bo-summary-narrative {
+  font-size: 16px;
+  color: #1e293b;
+  margin-bottom: 6px;
 }
 
-.bo-month-select input[type="month"] {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-}
+.bo-summary-arrow { color: #94a3b8; margin: 0 6px; }
 
-.bo-already-calculated {
-  font-size: 12px;
-  font-weight: 600;
-  color: #16a34a;
-}
+.bo-summary-highlight { color: #4a30bd; }
 
-.bo-current-actions {
+.bo-summary-secondary {
   display: flex;
-  align-items: center;
-  gap: 14px;
   flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 14px;
 }
 
 .bo-advanced-toggle {

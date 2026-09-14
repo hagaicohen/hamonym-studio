@@ -17,7 +17,7 @@
     <button class="bo-tab" [class.bo-tab-active]="tab === 'masav'" (click)="setTab('masav')">מס״ב</button>
   </div>
 
-  <!-- ============ PERIODS & CALCULATION ============ -->
+  <!-- ============ החודש ============ -->
   @if (tab === 'periods') {
     @if (periodsLoading) {
       <div class="plat-card"><div class="plat-loading">טוען...</div></div>
@@ -25,118 +25,30 @@
       <div class="plat-card"><div class="plat-error">{{ periodsError }}</div></div>
     } @else {
 
-      <!-- "בחר חודש" -- always visible, single entry point. Hamonym derives
-           the exact calendar-month boundaries itself; the operator never
-           types a raw start/end timestamp. Selecting a month that's already
-           been created/calculated is a safe no-op (createPeriodForMonth is
-           idempotent) -- it just loads that period below. -->
-      <div class="plat-card bo-month-select">
-        <div class="bo-card-title">בחר חודש חיוב</div>
-        <div class="bo-form-row">
-          <input type="month" class="ba-field" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
-          <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
-            {{ creatingPeriod ? 'טוען...' : 'בחר חודש' }}
-          </button>
-        </div>
-        @if (periodActionError) {
-          <div class="ops-action-error">{{ periodActionError }}</div>
-        }
-      </div>
-
-      <!-- "דורש טיפול" -- commission-area issues only (the same underlying
-           data "תרומות" shows, filtered here to billing/collection). See
-           loadCommissionIssues() -- no new architecture, just a filtered
-           read of the existing health/findings endpoints. -->
-      @if (commissionIssues.length > 0) {
-        <div class="plat-card bo-issues-card">
-          <div class="bo-card-title">🔴 {{ commissionIssues.length }} {{ commissionIssues.length === 1 ? 'דבר דורש' : 'דברים דורשים' }} טיפול</div>
-          @for (issue of commissionIssues; track issue.id) {
-            <div class="bo-issue-row">
-              <span class="ops-severity-dot" [class]="'ops-severity-' + issue.severity"></span>
-              <div class="bo-issue-body">
-                <span class="bo-issue-title">{{ issue.title }}</span>
-                @if (issue.subtitle) { <span class="bo-issue-subtitle">{{ issue.subtitle }}</span> }
-              </div>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- מידע טכני -- commission-area background jobs (billing-monthly-
-           cycle, masav-collection, collection-router, and the 3 consistency
-           checks). Collapsed by default; moved here from the old unified
-           "תפעול CardCom" page (2026-09-14) so the manual "הרץ עכשיו"
-           capability is never lost, just relocated with the rest of the
-           commission world. -->
-      <div class="plat-card">
-        <button type="button" class="bo-advanced-toggle" (click)="toggleTechnicalJobs()">
-          מידע טכני / מתקדם {{ showTechnicalJobs ? '▲' : '▾' }}
-        </button>
-        @if (showTechnicalJobs) {
-          @if (jobActionError) {
-            <div class="ops-action-error">{{ jobActionError }}</div>
-          }
-          @for (jobName of commissionJobs; track jobName) {
-            <div class="bo-job-card">
-              <div class="bo-job-header">
-                <div>
-                  <span class="bo-job-name">{{ jobLabel(jobName) }}</span>
-                  <span class="bo-job-freq">{{ jobFrequency(jobName) }}</span>
-                </div>
-                @if (lastRunFor(jobName); as lastRun) {
-                  <span class="bo-badge" [class]="'ops-status-' + lastRun.status">
-                    {{ lastRun.status === 'success' ? 'הצליח' : lastRun.status === 'failed' ? 'נכשל' : lastRun.status === 'skipped_locked' ? 'דולג (נעילה)' : lastRun.status }}
-                  </span>
-                } @else {
-                  <span class="bo-badge">טרם רץ</span>
-                }
-              </div>
-              @if (lastRunFor(jobName); as lastRun) {
-                <div class="bo-job-details">
-                  <span>ריצה אחרונה: {{ fmtDateTime(lastRun.started_at) }}</span>
-                  <span>משך: {{ fmtDuration(lastRun.duration_ms) }}</span>
-                </div>
-              }
-              <div class="bo-job-actions">
-                <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="toggleRuns(jobName)">
-                  {{ expandedJob === jobName ? 'הסתר ריצות ▲' : 'הצג ריצות אחרונות ▾' }}
-                </button>
-                <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="runningJob === jobName" (click)="runJobNow(jobName)">
-                  {{ runningJob === jobName ? 'מריץ...' : 'הרץ עכשיו' }}
-                </button>
-              </div>
-              @if (expandedJob === jobName) {
-                <div class="bo-runs-history">
-                  @if (!runsByJob[jobName]) {
-                    <div class="ops-empty-small">טוען...</div>
-                  } @else if (runsByJob[jobName].length === 0) {
-                    <div class="ops-empty-small">אין ריצות קודמות</div>
-                  } @else {
-                    @for (run of runsByJob[jobName]; track run.id) {
-                      <div class="bo-run-chip">
-                        {{ fmtDateTime(run.started_at) }} — {{ run.status === 'success' ? 'הצליח' : run.status === 'failed' ? 'נכשל' : run.status }}
-                      </div>
-                    }
-                  }
-                </div>
-              }
-            </div>
-          }
-        }
-      </div>
-
-      @if (currentPeriod; as period) {
+      @if (displayedPeriod; as period) {
         <div class="plat-card bo-current-period">
+          <!-- Compact header: title + inline month control, replacing the
+               old separate "בחר חודש חיוב" card (2026-09-14 refinement).
+               Typing any month here -- past or future -- still reaches it,
+               which is what lets the now-removed "חודשים קודמים" table's
+               one unique capability (calculating a non-latest month) live
+               on through this single control instead. -->
           <div class="bo-current-header">
-            <div>
-              @if (periodMonthLabel(period); as monthLabel) {
-                <div class="bo-current-title">חיובי {{ monthLabel }}</div>
-              } @else {
-                <div class="bo-current-title">חיובי התקופה הנוכחית</div>
-              }
-              <div class="bo-current-range">{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+            @if (periodMonthLabel(period); as monthLabel) {
+              <div class="bo-current-title">חיובי {{ monthLabel }}</div>
+            } @else {
+              <div class="bo-current-title">חיובי {{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
+            }
+            <div class="bo-month-switch">
+              <input type="month" class="bo-month-switch-input" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
+              <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
+                {{ creatingPeriod ? 'טוען...' : 'מעבר' }}
+              </button>
             </div>
           </div>
+          @if (periodActionError) {
+            <div class="ops-action-error">{{ periodActionError }}</div>
+          }
 
           @if (runsForPeriod(period.id).length === 0) {
             <div class="bo-empty-calc">
@@ -146,24 +58,50 @@
               </button>
             </div>
           } @else {
-            <div class="bo-kpi-row">
-              <div class="bo-kpi"><b>{{ periodDonationsCount(period) }}</b><span>תרומות</span></div>
-              <div class="bo-kpi"><b>₪{{ periodGrossAmount(period).toFixed(2) }}</b><span>מחזור</span></div>
-              <div class="bo-kpi"><b>{{ periodEntitiesCount(period) }}</b><span>עמותות</span></div>
-              <div class="bo-kpi bo-kpi-primary"><b>₪{{ periodTotalDue(period.id) }}</b><span>לחיוב</span></div>
+            <!-- Monthly summary as one story: what came in -> what Hamonym
+                 is owed -> where things stand -- not disconnected KPI tiles. -->
+            <div class="bo-summary-narrative">
+              <b>{{ periodDonationsCount(period) }} תרומות בסך ₪{{ periodGrossAmount(period).toFixed(2) }}</b>
+              <span class="bo-summary-arrow">→</span>
+              <b class="bo-summary-highlight">עמלות Hamonym לחיוב: ₪{{ periodTotalDue(period.id) }}</b>
             </div>
+            @if (periodStatusBreakdown(period.id); as breakdown) {
+              <div class="bo-summary-secondary">
+                <span>{{ periodEntitiesCount(period) }} עמותות</span>
+                @if (breakdown.paid > 0) {
+                  <span>| {{ breakdown.paid }} {{ breakdown.paid === 1 ? 'שולמה' : 'שולמו' }}</span>
+                }
+                @if (breakdown.pendingCollection > 0) {
+                  <span>| {{ breakdown.pendingCollection }} {{ breakdown.pendingCollection === 1 ? 'ממתינה' : 'ממתינות' }} לגבייה</span>
+                }
+                @if (breakdown.awaitingApproval > 0) {
+                  <span>| {{ breakdown.awaitingApproval }} {{ breakdown.awaitingApproval === 1 ? 'ממתינה' : 'ממתינות' }} לאישור</span>
+                }
+              </div>
+            }
 
-            <!-- 3-stage operator flow -- stage 3 always shows both routes
-                 separately, never one collapsed "גבה" action (card ≠ MASAV). -->
+            <!-- Status stepper -- reflects real derived state, not 3 equal
+                 buttons. Stage 3 always keeps card/MASAV distinct; a route
+                 with nothing left to do just doesn't render. -->
             @if (periodStatements(period.id).length > 0) {
               <div class="bo-stage-tracker">
-                <div class="bo-stage bo-stage-done">① חשב חיובים</div>
+                <div class="bo-stage bo-stage-done">✓ החיובים חושבו</div>
                 <span class="bo-stage-arrow">→</span>
-                <div class="bo-stage" [class.bo-stage-done]="periodStage(period) === 3" [class.bo-stage-active]="periodStage(period) === 2">② בדוק ואשר</div>
+                @if (periodStage(period) === 2) {
+                  <div class="bo-stage bo-stage-active">○ ממתין לאישור</div>
+                } @else {
+                  <div class="bo-stage bo-stage-done">✓ החיובים אושרו</div>
+                }
                 <span class="bo-stage-arrow">→</span>
-                <div class="bo-stage" [class.bo-stage-active]="periodStage(period) === 3">③ בצע גבייה</div>
+                @if (periodStage(period) < 3) {
+                  <div class="bo-stage">③ בצע גבייה</div>
+                } @else if (periodCollectionComplete(period.id)) {
+                  <div class="bo-stage bo-stage-done">✓ הגבייה הושלמה</div>
+                } @else {
+                  <div class="bo-stage bo-stage-active">● הגבייה בתהליך</div>
+                }
               </div>
-              @if (periodStage(period) === 3) {
+              @if (periodStage(period) === 3 && !periodCollectionComplete(period.id)) {
                 <div class="bo-stage3-breakdown">
                   @if (periodCardCount(period.id) > 0) {
                     <span class="bo-stage3-route">💳 {{ periodCardCount(period.id) }} בכרטיס אשראי — גבייה מתוך הטבלה למטה</span>
@@ -256,7 +194,9 @@
                       <th>עמלה</th>
                       <th>מע״מ</th>
                       <th>לחיוב</th>
-                      <th>סטטוס</th>
+                      <th>אמצעי גבייה</th>
+                      <th>מצב</th>
+                      <th>מה עושים עכשיו</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -277,7 +217,9 @@
                         <td>₪{{ statement.fee_amount }}</td>
                         <td>₪{{ statement.vat_amount }}</td>
                         <td>₪{{ statement.total_due }}</td>
+                        <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
                         <td><span class="bo-badge" [class]="'bo-badge-' + statement.status">{{ periodStatementStatusLabel(statement.status) }}</span></td>
+                        <td><span class="bo-next-action">{{ statement.next_action }}</span></td>
                         <td>
                           <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openStatement(statement)">
                             {{ statement.status === 'draft' ? 'בדוק ואשר' : 'פרטים' }}
@@ -298,91 +240,134 @@
                         <td>₪{{ totals.due.toFixed(2) }}</td>
                         <td></td>
                         <td></td>
+                        <td></td>
+                        <td></td>
                       </tr>
                     }
                   </tfoot>
                 </table>
               </div>
 
-            }
-
-            <div class="bo-current-actions">
-              @if (periodStatements(period.id).length > 0) {
-                <button
-                  class="ops-btn ops-btn-primary ops-btn-sm"
-                  [disabled]="selectedApprovalStatementIds.size === 0 || bulkApprovalBusy"
-                  (click)="bulkApproveSelected()">
-                  {{ bulkApprovalBusy ? 'מאשר...' : 'אשר ' + selectedApprovalStatementIds.size + ' חשבונות' }}
-                </button>
-              }
-              <span class="bo-already-calculated">החיובים לחודש זה כבר חושבו</span>
               <button class="bo-advanced-toggle" (click)="showAdvanced = !showAdvanced">
                 אפשרויות מתקדמות {{ showAdvanced ? '▲' : '▼' }}
               </button>
-            </div>
 
-            @if (showAdvanced) {
-              <div class="bo-runs-history">
-                <div class="bo-runs-history-title">היסטוריית הרצות ({{ period.run_count }})</div>
-                @for (run of runsForPeriod(period.id); track run.id) {
-                  <div class="bo-run-chip">
-                    {{ fmtDateTime(run.created_at) }} —
-                    @if (run.result_summary) {
-                      {{ run.result_summary.statementsCreated }} חשבונות לחיוב
-                      ({{ run.result_summary.accountsEvaluated }} חשבונות,
-                      {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.blockedEntities?.length ? ', ' + run.result_summary.blockedEntities!.length + ' דורשות הגדרת חיוב' : '' }}{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
-                    } @else {
-                      רץ...
-                    }
-                  </div>
-                }
-              </div>
+              @if (showAdvanced) {
+                <div class="bo-runs-history">
+                  <div class="bo-runs-history-title">היסטוריית הרצות ({{ period.run_count }})</div>
+                  @for (run of runsForPeriod(period.id); track run.id) {
+                    <div class="bo-run-chip">
+                      {{ fmtDateTime(run.created_at) }} —
+                      @if (run.result_summary) {
+                        {{ run.result_summary.statementsCreated }} חשבונות לחיוב
+                        ({{ run.result_summary.accountsEvaluated }} חשבונות,
+                        {{ run.result_summary.zeroActivityAccountIds.length }} ללא פעילות{{ run.result_summary.blockedEntities?.length ? ', ' + run.result_summary.blockedEntities!.length + ' דורשות הגדרת חיוב' : '' }}{{ run.result_summary.errors.length ? ', ' + run.result_summary.errors.length + ' שגיאות' : '' }})
+                      } @else {
+                        רץ...
+                      }
+                    </div>
+                  }
+                </div>
+              }
             }
           }
         </div>
       } @else {
         <div class="plat-card">
-          <div class="ops-empty-small">אין חודש חיוב פעיל כרגע. בחרו חודש למעלה כדי להתחיל.</div>
+          <div class="bo-current-header">
+            <div class="bo-current-title">בחרו חודש חיוב</div>
+            <div class="bo-month-switch">
+              <input type="month" class="bo-month-switch-input" [(ngModel)]="selectedMonth" [disabled]="creatingPeriod" />
+              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="creatingPeriod || !selectedMonth" (click)="createPeriodForMonth()">
+                {{ creatingPeriod ? 'טוען...' : 'בחר חודש' }}
+              </button>
+            </div>
+          </div>
+          @if (periodActionError) {
+            <div class="ops-action-error">{{ periodActionError }}</div>
+          }
         </div>
       }
 
+      <!-- "דורש טיפול" -- commission-area issues only (the same underlying
+           data "תרומות" shows, filtered here to billing/collection). See
+           loadCommissionIssues() -- no new architecture, just a filtered
+           read of the existing health/findings endpoints. -->
+      @if (commissionIssues.length > 0) {
+        <div class="plat-card bo-issues-card">
+          <div class="bo-card-title">🔴 {{ commissionIssues.length }} {{ commissionIssues.length === 1 ? 'דבר דורש' : 'דברים דורשים' }} טיפול</div>
+          @for (issue of commissionIssues; track issue.id) {
+            <div class="bo-issue-row">
+              <span class="ops-severity-dot" [class]="'ops-severity-' + issue.severity"></span>
+              <div class="bo-issue-body">
+                <span class="bo-issue-title">{{ issue.title }}</span>
+                @if (issue.subtitle) { <span class="bo-issue-subtitle">{{ issue.subtitle }}</span> }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- מידע טכני -- commission-area background jobs (billing-monthly-
+           cycle, masav-collection, collection-router, and the 3 consistency
+           checks). Collapsed by default, moved to the bottom of the tab
+           (2026-09-14 "החודש" refinement) -- pure visual hierarchy, still
+           fully reachable; nothing here changed except its position on the
+           page. -->
       <div class="plat-card">
-        <div class="bo-card-title">חודשים קודמים</div>
-        @if (previousPeriods.length === 0) {
-          <div class="ops-empty-small">אין חודשים קודמים.</div>
-        } @else {
-          <div class="bo-table-wrap">
-            <table class="bo-table">
-              <thead>
-                <tr>
-                  <th>חודש</th>
-                  <th>מה המצב</th>
-                  <th>חיובים</th>
-                  <th>סכום כולל</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (period of previousPeriods; track period.id) {
-                  <tr>
-                    <td>{{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</td>
-                    <td>{{ periodPhaseLabel(period) }}</td>
-                    <td>{{ periodStatementCount(period.id) }}</td>
-                    <td>₪{{ periodTotalDue(period.id) }}</td>
-                    <td>
-                      @if (runsForPeriod(period.id).length === 0) {
-                        <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
-                          {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב חיובים' }}
-                        </button>
-                      } @else {
-                        <span class="bo-already-calculated">החיובים לחודש זה כבר חושבו</span>
-                      }
-                    </td>
-                  </tr>
+        <button type="button" class="bo-advanced-toggle" (click)="toggleTechnicalJobs()">
+          מידע טכני / מתקדם {{ showTechnicalJobs ? '▲' : '▾' }}
+        </button>
+        @if (showTechnicalJobs) {
+          @if (jobActionError) {
+            <div class="ops-action-error">{{ jobActionError }}</div>
+          }
+          @for (jobName of commissionJobs; track jobName) {
+            <div class="bo-job-card">
+              <div class="bo-job-header">
+                <div>
+                  <span class="bo-job-name">{{ jobLabel(jobName) }}</span>
+                  <span class="bo-job-freq">{{ jobFrequency(jobName) }}</span>
+                </div>
+                @if (lastRunFor(jobName); as lastRun) {
+                  <span class="bo-badge" [class]="'ops-status-' + lastRun.status">
+                    {{ lastRun.status === 'success' ? 'הצליח' : lastRun.status === 'failed' ? 'נכשל' : lastRun.status === 'skipped_locked' ? 'דולג (נעילה)' : lastRun.status }}
+                  </span>
+                } @else {
+                  <span class="bo-badge">טרם רץ</span>
                 }
-              </tbody>
-            </table>
-          </div>
+              </div>
+              @if (lastRunFor(jobName); as lastRun) {
+                <div class="bo-job-details">
+                  <span>ריצה אחרונה: {{ fmtDateTime(lastRun.started_at) }}</span>
+                  <span>משך: {{ fmtDuration(lastRun.duration_ms) }}</span>
+                </div>
+              }
+              <div class="bo-job-actions">
+                <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="toggleRuns(jobName)">
+                  {{ expandedJob === jobName ? 'הסתר ריצות ▲' : 'הצג ריצות אחרונות ▾' }}
+                </button>
+                <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="runningJob === jobName" (click)="runJobNow(jobName)">
+                  {{ runningJob === jobName ? 'מריץ...' : 'הרץ עכשיו' }}
+                </button>
+              </div>
+              @if (expandedJob === jobName) {
+                <div class="bo-runs-history">
+                  @if (!runsByJob[jobName]) {
+                    <div class="ops-empty-small">טוען...</div>
+                  } @else if (runsByJob[jobName].length === 0) {
+                    <div class="ops-empty-small">אין ריצות קודמות</div>
+                  } @else {
+                    @for (run of runsByJob[jobName]; track run.id) {
+                      <div class="bo-run-chip">
+                        {{ fmtDateTime(run.started_at) }} — {{ run.status === 'success' ? 'הצליח' : run.status === 'failed' ? 'נכשל' : run.status }}
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
         }
       </div>
     }

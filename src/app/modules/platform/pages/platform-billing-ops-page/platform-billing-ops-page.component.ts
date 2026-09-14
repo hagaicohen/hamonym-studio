@@ -300,6 +300,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       next: (res) => {
         this.periods = res.periods;
         this.periodsLoading = false;
+        this.syncSelectedMonthToDisplayedPeriod();
       },
       error: () => {
         this.periodsError = 'שגיאה בטעינת תקופות חיוב';
@@ -309,6 +310,21 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.loadRuns();
   }
 
+  // Keeps the compact month control showing "what you're looking at" by
+  // default (2026-09-14 "החודש" refinement) -- a one-time sync on load/
+  // navigation, not a live two-way binding to the getter, so the operator
+  // can still freely type a different month without fighting it.
+  private syncSelectedMonthToDisplayedPeriod(): void {
+    if (this.selectedMonth) return; // operator is mid-typing a different month -- never overwrite
+    const period = this.displayedPeriod;
+    if (period) this.selectedMonth = this.monthInputValue(period);
+  }
+
+  monthInputValue(period: BillingPeriod): string {
+    const d = new Date(period.period_start);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   private loadRuns(): void {
     this.runsLoading = true;
     this.service.listRuns().subscribe({
@@ -316,6 +332,14 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       error: () => { this.runsLoading = false; },
     });
   }
+
+  // "החודש" always displays a specific period -- the one the operator
+  // navigated to via the compact month control, or (by default, on first
+  // load) the latest one. Kept as its own concept (2026-09-14 "החודש"
+  // refinement) specifically so removing the old "חודשים קודמים" table
+  // never loses the ability to open/calculate a NON-latest month: typing
+  // any month here still reaches it, exactly as that table used to.
+  focusedPeriodId: string | null = null;
 
   // "בחר חודש" -> "חשב חיובים". selectedMonth is the native <input
   // type="month"> value, "YYYY-MM" -- parsed here, boundaries derived
@@ -332,9 +356,9 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.creatingPeriod = true;
     this.periodActionError = null;
     this.service.createPeriodForMonth(year, month).subscribe({
-      next: () => {
+      next: (res) => {
         this.creatingPeriod = false;
-        this.selectedMonth = '';
+        this.focusedPeriodId = res.period.id;
         this.loadPeriods();
       },
       error: (err) => {
@@ -376,13 +400,19 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return active.length ? active[0] : null;
   }
 
-  get previousPeriods(): BillingPeriod[] {
-    const active = this.periods.filter((p) => !p.retired);
-    return active.slice(1);
-  }
-
-  periodStatementCount(periodId: string): number {
-    return this.statements.filter((s) => s.billing_period_id === periodId).length;
+  // The period "החודש" actually shows -- the operator's explicit selection
+  // (focusedPeriodId, set by the compact month control) when it still
+  // resolves to a real period, otherwise the latest one. This is what lets
+  // the compact selector alone reach any month, including a non-latest one
+  // to calculate -- the exact capability the old "חודשים קודמים" table
+  // used to be the only way to reach (removed 2026-09-14; see that
+  // decision's note in the template).
+  get displayedPeriod(): BillingPeriod | null {
+    if (this.focusedPeriodId) {
+      const focused = this.periods.find((p) => p.id === this.focusedPeriodId && !p.retired);
+      if (focused) return focused;
+    }
+    return this.currentPeriod;
   }
 
   periodTotalDue(periodId: string): string {
@@ -404,12 +434,15 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // per-Statement CardCom charge vs. a batch MASAV Excel export), and the
   // operator needs to know which of the two applies to which of this
   // month's billings.
+  // Counts statements still needing their route's collection action (not
+  // yet paid/abandoned/etc.) -- "how many are left to do", not "how many
+  // were ever routed here", so stage 3's breakdown reflects remaining work.
   periodCardCount(periodId: string): number {
-    return this.periodStatements(periodId).filter((s) => s.routed_method === 'card').length;
+    return this.periodStatements(periodId).filter((s) => s.routed_method === 'card' && (s.status === 'approved' || s.status === 'open')).length;
   }
 
   periodMasavCount(periodId: string): number {
-    return this.periodStatements(periodId).filter((s) => s.routed_method === 'masav').length;
+    return this.periodStatements(periodId).filter((s) => s.routed_method === 'masav' && (s.status === 'approved' || s.status === 'open')).length;
   }
 
   // 1 = not yet calculated, 2 = calculated but at least one Statement still
@@ -422,6 +455,26 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     const statements = this.periodStatements(period.id);
     if (statements.length > 0 && statements.some((s) => s.status === 'draft')) return 2;
     return 3;
+  }
+
+  // Stage 3 is "done" (✓ הגבייה הושלמה) once nothing is left in an
+  // active collection state (approved/open) -- paid/abandoned/cancelled/
+  // written_off are all real, final outcomes, not "still in progress".
+  periodCollectionComplete(periodId: string): boolean {
+    const statements = this.periodStatements(periodId);
+    return statements.length > 0 && statements.every((s) => s.status !== 'approved' && s.status !== 'open' && s.status !== 'draft');
+  }
+
+  // Monthly summary secondary line ("2 עמותות | 1 שולמה | 1 ממתינה לגבייה")
+  // -- pure counts over already-loaded Statement data, same source
+  // periodStatementTotals/periodBlockedEntities already read.
+  periodStatusBreakdown(periodId: string): { paid: number; pendingCollection: number; awaitingApproval: number } {
+    const statements = this.periodStatements(periodId);
+    return {
+      paid: statements.filter((s) => s.status === 'paid').length,
+      pendingCollection: statements.filter((s) => s.status === 'approved' || s.status === 'open').length,
+      awaitingApproval: statements.filter((s) => s.status === 'draft').length,
+    };
   }
 
   // Aggregates already-authoritative per-Statement values (same pattern as
@@ -505,23 +558,6 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   periodStatementStatusLabel(status: string): string {
     return this.statementStatusLabel(status);
-  }
-
-  // "מה המצב?" -- one clear phase, derived only from actual existing state
-  // (run history + real draft-statement rows), never invented.
-  periodPhaseLabel(period: BillingPeriod): string {
-    const runs = this.runsForPeriod(period.id);
-    if (runs.length === 0) return 'טרם חושב';
-    const latest = runs[0];
-    if (!latest.result_summary) return 'מריץ חישוב...';
-    const draftCount = this.statements.filter(
-      (s) => s.billing_period_id === period.id && s.status === 'draft',
-    ).length;
-    if (draftCount > 0) return 'חשבונות ממתינים לאישור';
-    const blocked = latest.result_summary.blockedEntities;
-    if (blocked && blocked.length > 0) return 'החישוב הסתיים — יש עמותות שדורשות השלמת הגדרות חיוב';
-    if (latest.result_summary.statementsCreated === 0) return 'החישוב הסתיים — ללא חשבונות לחיוב';
-    return 'החישוב הסתיים';
   }
 
   latestRunSummary(period: BillingPeriod): BillingRun['result_summary'] | null {
