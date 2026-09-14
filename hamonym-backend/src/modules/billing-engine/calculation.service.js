@@ -13,6 +13,7 @@
 // touched here.
 const pool = require('../../db/db');
 const notifications = require('./billing-setup-notification.service');
+const platformBillingSettings = require('./platform-billing-settings.service');
 
 const EFFECTIVE_STATEMENT_STATUSES = ['approved', 'open', 'paid', 'cancelled', 'written_off'];
 
@@ -58,6 +59,15 @@ async function computeAmounts(client, donationIds, feeRate, vatRate) {
 // Returns { zeroActivity: true } without writing anything if there are no
 // eligible donations — a zero-value Statement is never created; the caller
 // records the skip in the run's own result_summary instead.
+//
+// vat_rate is read fresh from platform_billing_settings on every call
+// (2026-09-14i — VAT globalized, migration 066), not from `account` —
+// account.fee_rate is still the per-association term, but account.vat_rate
+// is no longer read here at all. This is the one intentional financial
+// behavior change of that pass: future calculations pick up whatever VAT
+// rate is current at calculation time; a Statement's vat_rate/vat_amount
+// are then frozen exactly as before by trg_statements_enforce_immutability
+// once its status leaves 'draft'.
 async function calculateAccountStatement(client, account, { billingRunId, periodStart, periodEnd }) {
   const donationsRes = await client.query(
     `SELECT id, amount, billing_effective_at, completed_at, recurring_instruction_id, source
@@ -75,7 +85,8 @@ async function calculateAccountStatement(client, account, { billingRunId, period
   }
 
   const donationIds = donationsRes.rows.map((d) => d.id);
-  const amounts = await computeAmounts(client, donationIds, account.fee_rate, account.vat_rate);
+  const vatRate = await platformBillingSettings.getCurrentVatRate(client);
+  const amounts = await computeAmounts(client, donationIds, account.fee_rate, vatRate);
 
   const stmtRes = await client.query(
     `INSERT INTO statements (
@@ -84,7 +95,7 @@ async function calculateAccountStatement(client, account, { billingRunId, period
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft')
      RETURNING id`,
     [
-      account.id, billingRunId, amounts.gross_raised, account.fee_rate, account.vat_rate,
+      account.id, billingRunId, amounts.gross_raised, account.fee_rate, vatRate,
       amounts.fee_amount, amounts.vat_amount, amounts.total_due,
     ]
   );
