@@ -82,7 +82,7 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     };
   }
 
-  it('resolves the no_billing_account setup action to /platform/billing-setup/<entityId> for that exact entity, carrying its display data along', async () => {
+  it('opens the billing-setup drawer for the no_billing_account entity, carrying its display data along (2026-09-14h drawer redesign -- was a routerLink to /platform/billing-setup/<entityId>)', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformBillingOpsPageComponent],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: stubService() }],
@@ -93,20 +93,23 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     fixture.componentInstance.setTab('periods'); // blocked-entities list lives on the periods tab, not the default 'statements' tab
     fixture.detectChanges();
 
-    const links = fixture.debugElement.queryAll(By.css('.bo-blocked-item a.ops-btn'));
-    expect(links.length).toBe(1); // only the no_billing_account entity gets an action link
+    const buttons = fixture.debugElement.queryAll(By.css('.bo-blocked-item button.ops-btn'));
+    expect(buttons.length).toBe(1); // only the no_billing_account entity gets an action button
 
-    const href = links[0].nativeElement.getAttribute('href') as string;
+    buttons[0].nativeElement.click();
+    fixture.detectChanges();
 
-    expect(href).toContain('/platform/billing-setup/entity-gedolim-mehachaim');
-    expect(href).not.toContain('/platform/billing-accounts');
-    expect(href).not.toContain('/platform/organizations');
+    // The drawer must receive enough context to render immediately without
+    // a second lookup -- this is what lets the operator land on "הגדרות
+    // חיוב — גדולים מהחיים" instead of a bare entity id, and it must stay
+    // on this exact tab/list behind the drawer (no navigation away).
+    const component = fixture.componentInstance;
+    expect(component.billingSetupEntityId).toBe('entity-gedolim-mehachaim');
+    expect(component.billingSetupEntityName).toBe('גדולים מהחיים');
+    expect(component.billingSetupDonationCount).toBe(8);
 
-    // The focused setup screen must receive enough context to render
-    // immediately without a second lookup -- this is what lets the operator
-    // land on "הגדרות חיוב — גדולים מהחיים" instead of a bare entity id.
-    expect(href).toContain(encodeURIComponent('גדולים מהחיים'));
-    expect(href).toContain('donationCount=8');
+    const drawer = fixture.debugElement.query(By.css('app-billing-entity-setup'));
+    expect(drawer).toBeTruthy();
   });
 
   it('does not offer a setup link for an account_suspended entity -- that path stays a manual note, unchanged', async () => {
@@ -124,8 +127,11 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     expect(manualNotes.length).toBe(1);
     expect(manualNotes[0].nativeElement.textContent).toContain('טיפול ידני');
 
-    const links = fixture.debugElement.queryAll(By.css('.bo-blocked-item a.ops-btn'));
-    expect(links.some((l) => (l.nativeElement.getAttribute('href') as string).includes('entity-suspended'))).toBe(false);
+    // Only the no_billing_account entity gets an actionable button at all --
+    // the suspended one has no button to click, buttons.length already
+    // proved that in the previous test; this confirms it here too.
+    const buttons = fixture.debugElement.queryAll(By.css('.bo-blocked-item button.ops-btn'));
+    expect(buttons.length).toBe(1);
   });
 
   it('shows a return-to-workflow confirmation banner when arriving back from a completed setup, without the operator searching for the entity again', async () => {

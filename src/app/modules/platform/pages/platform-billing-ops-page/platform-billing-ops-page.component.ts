@@ -19,6 +19,7 @@ import {
 
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
 import { CardcomOpsService, ReconciliationFinding, HealthResponse, JobRun, JobHealth } from '../../services/cardcom-ops.service';
+import { BillingEntitySetupComponent } from '../../components/billing-entity-setup/billing-entity-setup.component';
 import {
   jobLabel as sharedJobLabel,
   jobFrequency as sharedJobFrequency,
@@ -113,7 +114,7 @@ const HE_MONTH_NAMES = [
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent],
   templateUrl: './platform-billing-ops-page.component.html',
   styleUrl: './platform-billing-ops-page.component.css',
 })
@@ -206,6 +207,36 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   provisionNotes = '';
   provisionBusy = false;
   provisionError: string | null = null;
+
+  // "הגדרות חיוב" now opens as a drawer instead of navigating to
+  // /platform/billing-setup/:entityId (2026-09-14h drawer redesign) -- the
+  // operator stays on whichever list they clicked from (הגדרות עמותות /
+  // החודש's blocked-entities list / מס״ב's blocked-statements list all
+  // open the same drawer). Hosts BillingEntitySetupComponent, the exact
+  // same component the standalone page (kept for deep-link compatibility)
+  // hosts -- no business logic duplicated between the two.
+  billingSetupEntityId: string | null = null;
+  billingSetupEntityName = '';
+  billingSetupDonationCount: number | null = null;
+  billingSetupGrossAmount: string | null = null;
+
+  openBillingSetup(entityId: string, entityName: string, donationCount?: number | null, grossAmount?: string | null): void {
+    this.billingSetupEntityId = entityId;
+    this.billingSetupEntityName = entityName;
+    this.billingSetupDonationCount = donationCount ?? null;
+    this.billingSetupGrossAmount = grossAmount ?? null;
+  }
+
+  // Closing the drawer returns naturally to whichever list/tab was already
+  // showing behind it -- refresh readiness (and the MASAV/period lists, in
+  // case a MASAV authorization changed what's blocked/actionable there) so
+  // the row the operator just edited reflects the new state immediately.
+  closeBillingSetup(): void {
+    this.billingSetupEntityId = null;
+    this.loadReadiness();
+    this.loadMasav();
+    this.loadPeriods();
+  }
 
   // ---- "דורש טיפול" (commission-area issues, reused from the same data
   // "תרומות" shows, filtered here to billing/collection concerns only --

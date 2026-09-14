@@ -163,11 +163,10 @@
                     <div class="bo-blocked-reason">{{ blockingReasonLabel(item.reason) }}</div>
                     <div class="bo-blocked-notify">{{ notificationStatusLabel(item) }}</div>
                     @if (item.reason === 'no_billing_account') {
-                      <a class="ops-btn ops-btn-secondary ops-btn-sm"
-                         [routerLink]="['/platform/billing-setup', item.entityId]"
-                         [queryParams]="{ displayName: item.displayName, donationCount: item.donationCount, grossAmount: item.grossAmount }">
+                      <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm"
+                         (click)="openBillingSetup(item.entityId, item.displayName, item.donationCount, item.grossAmount)">
                         השלם הגדרות חיוב
-                      </a>
+                      </button>
                     } @else {
                       <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>
                     }
@@ -576,11 +575,9 @@
                         <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="openProvisionForm(entity)">הגדרת חיוב</button>
                       }
                     } @else {
-                      <a class="ops-btn ops-btn-secondary ops-btn-sm"
-                         [routerLink]="['/platform/billing-setup', entity.id]"
-                         [queryParams]="{ displayName: entity.display_name }">
+                      <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openBillingSetup(entity.id, entity.display_name)">
                         הגדרות חיוב
-                      </a>
+                      </button>
                     }
                   </td>
                 </tr>
@@ -661,11 +658,9 @@
                   <td>₪{{ item.total_due }}</td>
                   <td>{{ blockedReasonLabel(item.reason) }}</td>
                   <td>
-                    <a class="ops-btn ops-btn-secondary ops-btn-sm"
-                       [routerLink]="['/platform/billing-setup', item.entity_id]"
-                       [queryParams]="{ displayName: item.entity_name }">
+                    <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openBillingSetup(item.entity_id, item.entity_name)">
                       להגדרות מס״ב
-                    </a>
+                    </button>
                   </td>
                 </tr>
               }
@@ -829,6 +824,33 @@
             </table>
           }
         }
+      </div>
+    </div>
+  }
+
+  <!-- "הגדרות חיוב" drawer (2026-09-14h) -- opened from "הגדרות עמותות" /
+       "החודש"'s blocked-entities list / "מס״ב"'s blocked-statements list,
+       all via openBillingSetup(). Hosts BillingEntitySetupComponent, the
+       same component the standalone /platform/billing-setup/:entityId page
+       hosts -- no logic duplicated, just a different container. -->
+  @if (billingSetupEntityId) {
+    <div class="bo-drawer-backdrop" (click)="closeBillingSetup()">
+      <div class="bo-drawer" (click)="$event.stopPropagation()">
+        <div class="bo-drawer-header">
+          <div>
+            <h2>הגדרות חיוב</h2>
+            <div class="bo-drawer-subtitle">{{ billingSetupEntityName }}</div>
+          </div>
+          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeBillingSetup()">סגור</button>
+        </div>
+        <app-billing-entity-setup
+          [entityId]="billingSetupEntityId"
+          [displayNameHint]="billingSetupEntityName"
+          [donationCountHint]="billingSetupDonationCount"
+          [grossAmountHint]="billingSetupGrossAmount"
+          (billingAccountCreated)="loadReadiness()"
+          (masavChanged)="loadReadiness()"
+        ></app-billing-entity-setup>
       </div>
     </div>
   }

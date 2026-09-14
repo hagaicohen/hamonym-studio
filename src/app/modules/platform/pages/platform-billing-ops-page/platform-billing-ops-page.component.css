@@ -690,6 +690,7 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
 }
 
 .bo-drawer-header h2 { font-size: 18px; margin: 0; color: #1e293b; }
+.bo-drawer-subtitle { font-size: 13px; color: #64748b; margin-top: 2px; }
 
 .bo-detail-grid {
   display: grid;
