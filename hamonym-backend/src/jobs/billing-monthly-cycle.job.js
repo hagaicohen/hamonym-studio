@@ -43,8 +43,7 @@
 //     Payment -- structurally impossible, since this job never calls any of
 //     those services.
 const calculation = require('../modules/billing-engine/calculation.service');
-
-const PERIOD_OVERLAP = '23P01';
+const { computeCalendarMonthUtcBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
 
 // UTC calendar-month boundaries, matching the exact convention already used
 // by every real billing_period in production (period_start/period_end sit
@@ -56,52 +55,20 @@ const PERIOD_OVERLAP = '23P01';
 // which schedule-window.js's 40-day catch-up lookback (raised alongside
 // this job) comfortably covers for any realistic Render Cron outage.
 //
-// Date's own month-rollover handles the January -> December-of-prior-year
-// case natively (month=-1 normalizes correctly) -- no special-casing needed
-// for the year boundary.
+// 2026-09-13: date math itself (computeCalendarMonthUtcBoundary) and the
+// find-or-create (ensurePeriod) moved to billing-period.util.js, shared
+// verbatim with the new manual "בחר חודש" Platform Admin action
+// (billing-ops.service.js#createPeriodForMonth) -- so both paths compute
+// the exact same boundaries for the same calendar month and structurally
+// cannot create two different billing_periods for it. Confirmed
+// byte-identical to the pre-move implementation for every boundary case
+// including the January -> December-of-prior-year rollover (passing
+// month - 1 = 0 straight through to Date.UTC, which normalizes it
+// natively -- no special-casing needed) before this refactor.
 function computePreviousMonthUtcBoundary(now) {
   const year = now.getUTCFullYear();
-  const month = now.getUTCMonth(); // 0-11, the month `now` falls in
-  const periodStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const periodEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-  return { periodStart, periodEnd };
-}
-
-async function ensurePeriod(db, periodStart, periodEnd) {
-  const existing = await db.query(
-    `SELECT id FROM billing_periods WHERE period_start = $1 AND period_end = $2 AND retired = false`,
-    [periodStart, periodEnd]
-  );
-  if (existing.rows[0]) {
-    return { periodId: existing.rows[0].id, periodCreated: false };
-  }
-
-  try {
-    const inserted = await db.query(
-      `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
-      [periodStart, periodEnd]
-    );
-    return { periodId: inserted.rows[0].id, periodCreated: true };
-  } catch (err) {
-    if (err.code !== PERIOD_OVERLAP) throw err;
-    // A human (or a concurrent run this advisory lock didn't cover, e.g. a
-    // period created directly via the UI between our SELECT and INSERT)
-    // already holds an overlapping period. Re-select for an exact match
-    // rather than guess; if the overlap is with a period that has different
-    // bounds, surface that loudly instead of silently adopting the wrong
-    // period or creating a second, conflicting one.
-    const retry = await db.query(
-      `SELECT id FROM billing_periods WHERE period_start = $1 AND period_end = $2 AND retired = false`,
-      [periodStart, periodEnd]
-    );
-    if (retry.rows[0]) return { periodId: retry.rows[0].id, periodCreated: false };
-    const mismatch = new Error(
-      `billing-monthly-cycle: an overlapping billing_period with different bounds already exists for ` +
-      `${periodStart.toISOString()}..${periodEnd.toISOString()} -- refusing to guess, needs manual review`
-    );
-    mismatch.code = 'PERIOD_OVERLAP_MISMATCH';
-    throw mismatch;
-  }
+  const currentMonth1to12 = now.getUTCMonth() + 1;
+  return computeCalendarMonthUtcBoundary(year, currentMonth1to12 - 1);
 }
 
 // `now` is injectable (defaults to the real clock) so

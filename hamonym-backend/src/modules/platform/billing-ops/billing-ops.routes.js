@@ -15,7 +15,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.use(requireSuperAdmin);
 
 router.get('/periods', ctrl.listPeriods);
-router.post('/periods', ctrl.createPeriod);
+router.post('/periods/for-month', ctrl.createPeriodForMonth);
 router.post('/periods/:periodId/calculate', ctrl.calculatePeriod);
 
 router.get('/runs', ctrl.listRuns);

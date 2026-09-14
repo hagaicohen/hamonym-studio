@@ -206,6 +206,28 @@ function ddmmyyyy(input) {
   return `${d}/${m}/${y}`;
 }
 
+// Same normalization as ddmmyyyy, but MM/YYYY -- used for pdesc, which
+// identifies the billing period itself ("עמלת 08/2026"), not a date range.
+// Always derived from the Statement's billing_period (period_start), never
+// from the current date -- a Statement calculated late must still describe
+// the month it actually covers.
+function mmyyyy(input) {
+  let iso;
+  if (input instanceof Date) {
+    if (Number.isNaN(input.getTime())) {
+      throw new Error(`mmyyyy: cannot normalize date value: ${input}`);
+    }
+    iso = input.toISOString();
+  } else {
+    iso = String(input);
+  }
+  const [y, m] = iso.slice(0, 10).split('-');
+  if (!y || !m) {
+    throw new Error(`mmyyyy: cannot normalize date value: ${input}`);
+  }
+  return `${m}/${y}`;
+}
+
 // Builds the manual MASAV batch export as an Excel (.xlsx) workbook -- v1's
 // required output format, not CSV (see this module's header comment).
 // Amount always comes straight from statements.total_due (the frozen
@@ -260,7 +282,11 @@ async function generateExportExcel(statementIds) {
   }
 
   const header = ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks'];
-  const data = [header, ...rows.map((row) => [
+  // Hebrew explanatory row shown above the technical header, matching the
+  // real operational MASAV Excel the operator already works with -- purely
+  // presentational, same column positions as `header` below it.
+  const hebrewHeader = ['מספר בנק', 'מספר סניף', 'מספר חשבון בסניף', 'סכום', 'ברירת מחדל', 'מטבע - 1 = ש"ח', 'חברה', 'איש קשר', 'מייל', 'תיאור מוצר', 'הערות'];
+  const data = [hebrewHeader, header, ...rows.map((row) => [
     row.bank_code,
     row.branch_code,
     row.account_number,
@@ -270,14 +296,36 @@ async function generateExportExcel(statementIds) {
     row.entity_name,
     row.contact_full_name || '',
     row.contact_email || '',
-    `עמלת Hamonym ${ddmmyyyy(row.period_start)}-${ddmmyyyy(row.period_end)}`,
-    row.statement_id,
+    `עמלת ${mmyyyy(row.period_start)}`,
+    '',
   ])];
 
   const worksheet = XLSX.utils.aoa_to_sheet(data);
+  // bank/branch/account must stay exact text -- forcing t:'s' + a text
+  // number format (z:'@') so Excel never reinterprets a long digit string
+  // as a number and renders it in scientific notation (the exact defect
+  // visible in the real operational reference file this format is matching).
+  const TEXT_COLUMNS = [0, 1, 2]; // bank, branch, account
+  for (let r = 2; r < data.length; r++) {
+    for (const c of TEXT_COLUMNS) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      const cell = worksheet[ref];
+      if (cell) {
+        cell.t = 's';
+        cell.z = '@';
+        cell.v = String(cell.v);
+      }
+    }
+  }
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'MASAV');
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  // cellStyles:true is required for the z:'@' (text) number format set above
+  // to actually be written into the .xlsx -- without it, xlsx silently drops
+  // custom cell formats on write even though t:'s' (already sufficient on
+  // its own to keep Excel from ever rendering these as scientific notation)
+  // is preserved either way.
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true });
 }
 
 module.exports = {

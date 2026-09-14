@@ -382,8 +382,9 @@ async function run() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    assert.deepStrictEqual(rows[0], ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks']);
-    const [bank, branch, account, sum, tranmode, currency, company, contact, email] = rows[1];
+    assert.deepStrictEqual(rows[0], ['מספר בנק', 'מספר סניף', 'מספר חשבון בסניף', 'סכום', 'ברירת מחדל', 'מטבע - 1 = ש"ח', 'חברה', 'איש קשר', 'מייל', 'תיאור מוצר', 'הערות']);
+    assert.deepStrictEqual(rows[1], ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks']);
+    const [bank, branch, account, sum, tranmode, currency, company, contact, email] = rows[2];
     assert.strictEqual(bank, '12');
     assert.strictEqual(branch, '345');
     assert.strictEqual(account, '6789');
@@ -393,7 +394,8 @@ async function run() {
     assert.strictEqual(company, 'עמותת א, ב וג');
     assert.strictEqual(contact, 'ישראל ישראלי');
     assert.strictEqual(email, 'israel@example.org');
-    assert.strictEqual(rows[1][9], 'עמלת Hamonym 01/08/2026-28/08/2026', 'pdesc must be built from real ISO date strings');
+    assert.strictEqual(rows[2][9], 'עמלת 08/2026', 'pdesc must identify the billing period (MM/YYYY), derived from period_start, never a date range or the current date');
+    assert.strictEqual(rows[2][10], '', 'remarks must never expose the internal statement UUID');
 
     // The core v1 boundary assertion: generating/downloading the Excel is a
     // pure read -- it must never create a payments row or flip the
@@ -431,11 +433,11 @@ async function run() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    assert.strictEqual(rows[1][9], 'עמלת Hamonym 01/06/2099-02/06/2099', 'pdesc must be correctly formatted from real Date objects, never undefined/undefined/...');
-    assert.ok(!String(rows[1][9]).includes('undefined'), 'pdesc must never contain the literal word undefined');
+    assert.strictEqual(rows[2][9], 'עמלת 06/2099', 'pdesc must be correctly formatted from real Date objects, never undefined/undefined/...');
+    assert.ok(!String(rows[2][9]).includes('undefined'), 'pdesc must never contain the literal word undefined');
   });
 
-  await check('ddmmyyyy: an unparseable date value throws a clear error instead of silently producing undefined/undefined/...', async () => {
+  await check('mmyyyy (pdesc): an unparseable period_start value throws a clear error instead of silently producing undefined/...', async () => {
     const { fakePool, state } = createFakeState({
       statement: baseStatement({ id: 'stmt-bad-date', total_due: '5000.00', status: 'open' }),
     });
