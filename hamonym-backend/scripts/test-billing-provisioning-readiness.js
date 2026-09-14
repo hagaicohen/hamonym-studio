@@ -57,11 +57,12 @@ async function main() {
       assert.strictEqual(row.masav_configured, false);
     });
 
-    await check('2. after provisioning a billing_account, the same entity reflects fee/vat/enforcement_status', async () => {
+    await check('2. after provisioning a billing_account, the same entity reflects fee/vat(system)/enforcement_status', async () => {
+      // vatRate is no longer a caller input (2026-09-14i, migration 066) --
+      // it's auto-populated from platform_billing_settings, currently 0.18.
       const account = await provisioningService.createBillingAccount({
         entityId,
         feeRate: 0.03,
-        vatRate: 0.18,
         preferredCollectionMethod: 'card',
         superAdminUserId: SUPER_ADMIN_USER_ID,
         notes: 'test-billing-provisioning-readiness fixture',

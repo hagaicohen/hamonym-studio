@@ -1,12 +1,19 @@
 // Billing Account Provisioning (2026-08-28) — the one place a
 // billing_accounts row is allowed to come into existence. Deliberately a
 // standalone Super Admin action, never triggered implicitly by Calculation,
-// donation flows, or entity approval: fee_rate/vat_rate are a commercial
-// term Hamonym sets, not something the entity declares or the system should
-// infer. See migration 054's comment on billing_accounts — fee_rate/vat_rate
-// are NOT NULL with no DEFAULT specifically so nothing can silently
+// donation flows, or entity approval: fee_rate is a commercial term Hamonym
+// sets per association, not something the entity declares or the system
+// should infer. See migration 054's comment on billing_accounts — fee_rate
+// is NOT NULL with no DEFAULT specifically so nothing can silently
 // substitute a value here.
+//
+// vat_rate is no longer an operator-supplied input (2026-09-14i — VAT
+// globalized to one Platform-level setting, migration 066). The column is
+// kept for compatibility (still NOT NULL) but is auto-populated here from
+// platform_billing_settings at creation time; calculation.service.js never
+// reads it back off this row.
 const pool = require('../../db/db');
+const platformBillingSettings = require('./platform-billing-settings.service');
 
 // entities.billing_method predates billing_accounts and has no FK/sync to
 // it (see the entity_billing/billing_accounts audit, 2026-08-28) — surfaced
@@ -73,13 +80,14 @@ exports.getBillingAccountByEntityId = async (entityId) => {
   return rows[0] || null;
 };
 
-// Creation must receive fee_rate/vat_rate/preferred_collection_method
-// explicitly from the caller (the Super Admin route) — this function never
-// substitutes a default itself, matching the DB constraint one level up.
+// Creation must receive fee_rate/preferred_collection_method explicitly
+// from the caller (the Super Admin route) — this function never substitutes
+// a default for fee_rate itself, matching the DB constraint one level up.
+// vat_rate is not a caller input (see file header) — it's read from the
+// current platform setting inside the same transaction.
 exports.createBillingAccount = async ({
   entityId,
   feeRate,
-  vatRate,
   preferredCollectionMethod,
   enforcementStatus,
   masavCeiling,
@@ -90,11 +98,6 @@ exports.createBillingAccount = async ({
   if (feeRate === undefined || feeRate === null) {
     const err = new Error('feeRate is required');
     err.code = 'MISSING_FEE_RATE';
-    throw err;
-  }
-  if (vatRate === undefined || vatRate === null) {
-    const err = new Error('vatRate is required');
-    err.code = 'MISSING_VAT_RATE';
     throw err;
   }
   if (!preferredCollectionMethod) {
@@ -117,6 +120,8 @@ exports.createBillingAccount = async ({
       throw err;
     }
 
+    const vatRate = await platformBillingSettings.getCurrentVatRate(client);
+
     const insertRes = await client.query(
       `INSERT INTO billing_accounts (
          entity_id, fee_rate, vat_rate, preferred_collection_method,
@@ -135,7 +140,7 @@ exports.createBillingAccount = async ({
       [
         superAdminUserId,
         entityId,
-        notes || `fee_rate=${feeRate} vat_rate=${vatRate} preferred_collection_method=${preferredCollectionMethod}`,
+        notes || `fee_rate=${feeRate} vat_rate=${vatRate} (system) preferred_collection_method=${preferredCollectionMethod}`,
         ip || null,
       ]
     );

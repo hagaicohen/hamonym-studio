@@ -47,6 +47,10 @@ function createFakeState() {
     userEntities: [],
     users: new Map(),
     seq: { run: 1, statement: 1, component: 1, notification: 1 },
+    // VAT is now a single platform-wide setting (2026-09-14i, migration
+    // 066), read fresh by calculateAccountStatement instead of account.vat_rate
+    // -- see the 'SELECT vat_rate FROM platform_billing_settings' handler below.
+    settings: { vatRate: 0.18 },
   };
 }
 
@@ -85,6 +89,10 @@ function buildFakePool(state) {
         donation_count: r.donation_count, gross_amount: r.grossNum.toFixed(2),
       }));
       return { rows };
+    }
+
+    if (sql.startsWith('SELECT vat_rate FROM platform_billing_settings')) {
+      return { rows: [{ vat_rate: state.settings.vatRate }] };
     }
 
     if (sql.startsWith('SELECT id, entity_id, fee_rate, vat_rate FROM billing_accounts')) {
@@ -268,6 +276,10 @@ function addDonation(state, id, entityId, amount, billingEffectiveAt) {
     recurring_instruction_id: null, source: null,
     status: 'paid', is_mock: false, effective_statement_id: null,
   });
+}
+
+function setSystemVatRate(state, rate) {
+  state.settings.vatRate = rate;
 }
 
 function addOwner(state, userId, entityId, email) {
@@ -544,6 +556,73 @@ async function main() {
 
     assert.strictEqual(result.blockedEntities.length, 0);
     assert.strictEqual(fakeEmail.calls.length, 0);
+  });
+
+  // ---- VAT globalization (2026-09-14i, migration 066): calculation now
+  // sources vat_rate from platform_billing_settings, not from the
+  // billing_account row -- these prove the sourcing actually changed
+  // (not just that the old 0.18-everywhere default still happens to match).
+  // Real-DB integration coverage (the settings table itself, the update
+  // endpoint, and the immutability trigger against a real Statement) lives
+  // in scripts/test-billing-platform-vat-setting.js -- this file stays the
+  // right place for calculateAccountStatement's own sourcing logic because,
+  // per this file's header comment, a real paid donation can never be
+  // cleaned up afterward (migration 055's trg_donations_block_paid_delete).
+  await check('13. Statement uses the platform system VAT rate, not a differing stale value on the billing_account row', async () => {
+    const { state, calculation } = newFixture();
+    addEntity(state, 'entity-c', 'עמותה ג');
+    // account.vat_rate deliberately set to a stale/different value -- if
+    // calculation still read it, vat_amount would be 20.00 (10% of 200),
+    // not 36.00 (18% of 200). The account object is still passed through
+    // to calculateAccountStatement (its fee_rate is still used), so this
+    // also proves the field is simply never read, not merely overridden.
+    addAccount(state, 'acct-c', 'entity-c', { feeRate: 0.03, vatRate: 0.10, enforcementStatus: 'active' });
+    addDonation(state, 'don-4', 'entity-c', 200, '2030-01-05T00:00:00.000Z');
+
+    const result = await calculation.runProductionCalculation(PERIOD_ID, PERIOD_START);
+
+    assert.strictEqual(result.statementsCreated, 1);
+    const stmt = [...state.statements.values()][0];
+    assert.strictEqual(stmt.fee_amount, '6.00');
+    assert.strictEqual(stmt.vat_amount, '1.08'); // 18% of fee_amount 6.00 -- the system rate, not account's stale 0.10
+    assert.strictEqual(stmt.total_due, '7.08');
+  });
+
+  await check('14. changing the system VAT rate affects only Statements calculated afterward -- an already-created Statement keeps its own snapshot', async () => {
+    const { state, calculation, approval } = newFixture();
+    addEntity(state, 'entity-c', 'עמותה ג');
+    addAccount(state, 'acct-c', 'entity-c', { feeRate: 0.03, enforcementStatus: 'active' });
+    addDonation(state, 'don-1', 'entity-c', 200, '2030-01-05T00:00:00.000Z');
+
+    await calculation.runProductionCalculation(PERIOD_ID, PERIOD_START);
+    const [firstStmt] = [...state.statements.values()];
+    assert.strictEqual(firstStmt.vat_rate, 0.18);
+    assert.strictEqual(firstStmt.vat_amount, '1.08');
+
+    // Approve it (consumes don-1 via effective_statement_id, same as a real
+    // operator would before the next month's calculation) so the second run
+    // below only sees the new donation -- calculation itself never marks
+    // consumption (see this file's own test 7), so without this the second
+    // run would just re-see don-1 too and this test would prove nothing
+    // about which VAT rate applies to which Statement.
+    await approval.approveStatement(firstStmt.id);
+
+    // Platform Admin raises the system rate to 19% between two calculations.
+    setSystemVatRate(state, 0.19);
+    addDonation(state, 'don-2', 'entity-c', 100, '2030-01-06T00:00:00.000Z');
+    await calculation.runProductionCalculation(PERIOD_ID, PERIOD_START);
+
+    assert.strictEqual(state.statements.size, 2);
+    const secondStmt = [...state.statements.values()].find((s) => s.id !== firstStmt.id);
+    assert.strictEqual(secondStmt.vat_rate, 0.19);
+    assert.strictEqual(secondStmt.fee_amount, '3.00');
+    assert.strictEqual(secondStmt.vat_amount, '0.57'); // 19% of 3.00
+
+    // The first Statement's own row is untouched -- calculation never
+    // revisits or rewrites a Statement it already created.
+    const firstStmtAfter = state.statements.get(firstStmt.id);
+    assert.strictEqual(firstStmtAfter.vat_rate, 0.18);
+    assert.strictEqual(firstStmtAfter.vat_amount, '1.08');
   });
 
   console.log(`\n${passed} passed, ${failures} failed`);

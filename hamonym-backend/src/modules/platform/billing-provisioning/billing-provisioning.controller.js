@@ -5,7 +5,6 @@ function statusFor(err) {
     case 'ENTITY_NOT_FOUND': return 404;
     case 'BILLING_ACCOUNT_ALREADY_EXISTS': return 409;
     case 'MISSING_FEE_RATE':
-    case 'MISSING_VAT_RATE':
     case 'MISSING_COLLECTION_METHOD':
       return 400;
     default: return 500;
@@ -47,7 +46,6 @@ exports.create = async (req, res) => {
     const account = await service.createBillingAccount({
       entityId: req.body.entityId,
       feeRate: req.body.feeRate,
-      vatRate: req.body.vatRate,
       preferredCollectionMethod: req.body.preferredCollectionMethod,
       enforcementStatus: req.body.enforcementStatus,
       masavCeiling: req.body.masavCeiling,
