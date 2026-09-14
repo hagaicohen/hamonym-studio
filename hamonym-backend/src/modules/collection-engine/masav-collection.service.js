@@ -133,6 +133,7 @@ async function listBlockedStatements() {
   const { rows } = await pool.query(
     `SELECT s.id AS statement_id, s.total_due, s.status, s.created_at,
             ba.entity_id, e.display_name AS entity_name,
+            bp.period_start, bp.period_end,
             emd.bank_code, emd.branch_code, emd.account_number, emd.authorized,
             CASE
               WHEN emd.entity_id IS NULL THEN 'masav_not_configured'
@@ -142,6 +143,7 @@ async function listBlockedStatements() {
      FROM statements s
      JOIN billing_accounts ba ON ba.id = s.billing_account_id
      JOIN entities e ON e.id = ba.entity_id
+     JOIN billing_periods bp ON bp.id = s.billing_period_id
      LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
      WHERE s.status = ANY($1::text[])
        AND s.total_due > $2
