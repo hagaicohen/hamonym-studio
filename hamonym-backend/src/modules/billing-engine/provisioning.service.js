@@ -31,6 +31,40 @@ exports.listUnprovisionedActiveEntities = async () => {
   return rows;
 };
 
+// One combined billing-readiness list for the Platform Admin "הגדרות
+// עמותות" tab (UX simplification pass, 2026-09-14) -- merges what used to
+// be two separate screens (the unprovisioned list above, and per-entity
+// fee/VAT/MASAV lookups on platform-billing-setup-page) into a single
+// read-only projection: every active entity, whether or not it has a
+// billing_account yet, with enough of its MASAV state to answer "is this
+// entity ready to be billed" without a second round-trip per row. Never
+// used to create/modify anything -- creation still goes through
+// createBillingAccount above, one entity at a time, with its own explicit
+// confirmation step.
+exports.listBillingReadiness = async () => {
+  const { rows } = await pool.query(
+    `SELECT e.id, e.display_name,
+            ba.id AS billing_account_id, ba.fee_rate, ba.vat_rate,
+            ba.enforcement_status, ba.preferred_collection_method,
+            emd.authorized AS masav_authorized,
+            (emd.entity_id IS NOT NULL) AS masav_configured,
+            COALESCE(paid.donation_count, 0)::int AS paid_donation_count,
+            COALESCE(paid.gross_total, 0) AS paid_gross_total
+     FROM entities e
+     LEFT JOIN billing_accounts ba ON ba.entity_id = e.id
+     LEFT JOIN entity_masav_details emd ON emd.entity_id = e.id
+     LEFT JOIN (
+       SELECT entity_id, COUNT(*) AS donation_count, SUM(amount) AS gross_total
+       FROM donations
+       WHERE status = 'paid' AND is_mock = false
+       GROUP BY entity_id
+     ) paid ON paid.entity_id = e.id
+     WHERE e.status = 'active'
+     ORDER BY (ba.id IS NULL) DESC, COALESCE(paid.gross_total, 0) DESC, e.display_name`
+  );
+  return rows;
+};
+
 exports.getBillingAccountByEntityId = async (entityId) => {
   const { rows } = await pool.query(
     `SELECT * FROM billing_accounts WHERE entity_id = $1`,

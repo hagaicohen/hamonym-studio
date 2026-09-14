@@ -13,6 +13,7 @@ const requireSuperAdmin = require('../../../middleware/require-super-admin');
 router.use(requireSuperAdmin);
 
 router.get('/unprovisioned', ctrl.listUnprovisioned);
+router.get('/readiness', ctrl.listReadiness);
 router.get('/:entityId', ctrl.getByEntityId);
 router.post('/', ctrl.create);
 

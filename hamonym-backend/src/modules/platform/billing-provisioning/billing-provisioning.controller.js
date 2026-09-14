@@ -22,6 +22,16 @@ exports.listUnprovisioned = async (req, res) => {
   }
 };
 
+exports.listReadiness = async (req, res) => {
+  try {
+    const entities = await service.listBillingReadiness();
+    res.json({ entities });
+  } catch (err) {
+    console.error('[billing-provisioning] listReadiness error:', err.message);
+    res.status(500).json({ error: 'Failed to list billing readiness' });
+  }
+};
+
 exports.getByEntityId = async (req, res) => {
   try {
     const account = await service.getBillingAccountByEntityId(req.params.entityId);
