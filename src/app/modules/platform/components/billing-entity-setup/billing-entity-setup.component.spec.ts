@@ -173,3 +173,110 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
     expect(fixture.componentInstance.justCreatedBanner).toBe(false);
   });
 });
+
+// Regression coverage for the "עריכת פרטי מס״ב" expanded-state simplification
+// (2026-09-14l): when bank details and the authorization document already
+// exist, opening the section must show compact summaries -- not the raw
+// editable form and file picker -- so "אישור מס״ב" reads as the one clear
+// primary action. Editing/replacing is available but only on request.
+describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/expand', () => {
+  const existingMasavConfig = {
+    id: 'masav-1',
+    entity_id: 'entity-gedolim-mehachaim',
+    bank_code: '12',
+    branch_code: '345',
+    account_number: '000123456',
+    account_holder_name: 'עמותת גדולים מהחיים',
+    authorized: false,
+    authorized_by: null,
+    authorized_at: null,
+    authorization_document_name: 'ishur-masav.pdf',
+    authorization_document_uploaded_at: '2026-09-01T10:00:00.000Z',
+    has_authorization_document: true,
+  };
+
+  async function createComponent(masavConfig: any) {
+    const provisioningStub = {
+      getByEntityId: jasmine.createSpy('getByEntityId').and.returnValue(
+        of({ account: { id: 'ba-1', entity_id: 'entity-x', fee_rate: '0.03', vat_rate: '0.18', preferred_collection_method: 'card', enforcement_status: 'active', masav_ceiling: null, created_at: '', updated_at: '' } }),
+      ),
+      getUnprovisioned: jasmine.createSpy('getUnprovisioned'),
+      create: jasmine.createSpy('create'),
+    };
+    const opsStub = { getMasavConfig: () => of({ config: masavConfig }) };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
+
+    await TestBed.configureTestingModule({
+      imports: [BillingEntitySetupComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(BillingEntitySetupComponent);
+    fixture.componentInstance.entityId = 'entity-gedolim-mehachaim';
+    fixture.componentInstance.displayNameHint = 'גדולים מהחיים';
+    fixture.detectChanges();
+    // loadMasav() already auto-opens showMasavEdit when there's no config
+    // yet (nothing to summarize) -- only toggle it open here if it isn't
+    // already, so this helper works for both fixtures below.
+    if (!fixture.componentInstance.showMasavEdit) {
+      fixture.componentInstance.toggleMasavEdit();
+      fixture.detectChanges();
+    }
+    return { fixture };
+  }
+
+  it('with existing bank details + document: shows compact summaries, no editable bank fields, no file picker -- אישור מס״ב is the only primary action', async () => {
+    const { fixture } = await createComponent(existingMasavConfig);
+
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(false);
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
+
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeFalsy(); // no editable bank form
+    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeFalsy(); // no file picker
+    expect(fixture.nativeElement.textContent).toContain('✓ מסמך הרשאה הועלה');
+    expect(fixture.nativeElement.textContent).toContain('ishur-masav.pdf');
+
+    const authorizeBtn = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
+    expect(authorizeBtn.nativeElement.textContent).toContain('אישור מס״ב');
+    expect(authorizeBtn.nativeElement.disabled).toBe(false);
+  });
+
+  it('"עריכת פרטי חשבון" reveals the editable bank form on request', async () => {
+    const { fixture } = await createComponent(existingMasavConfig);
+
+    const editBtn = [...fixture.debugElement.queryAll(By.css('button'))]
+      .find((b) => b.nativeElement.textContent.trim() === 'עריכת פרטי חשבון');
+    editBtn!.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(true);
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
+  });
+
+  it('"החלפת מסמך" reveals the acknowledgement + file picker on request', async () => {
+    const { fixture } = await createComponent(existingMasavConfig);
+
+    const replaceBtn = [...fixture.debugElement.queryAll(By.css('button'))]
+      .find((b) => b.nativeElement.textContent.trim() === 'החלפת מסמך');
+    replaceBtn!.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(true);
+    expect(fixture.debugElement.query(By.css('.bo-masav-ack'))).toBeTruthy();
+    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
+  });
+
+  it('with no bank details/document yet: preserves the direct editable form and upload flow, no compact summary shown', async () => {
+    const { fixture } = await createComponent(null);
+
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
+    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
+    expect(fixture.nativeElement.textContent).not.toContain('✓ מסמך הרשאה הועלה');
+  });
+});

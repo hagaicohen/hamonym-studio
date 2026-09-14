@@ -321,18 +321,16 @@
   color: #64748b;
 }
 
-.bo-upload-current {
+/* Compact "already configured" summaries inside עריכת פרטי מס״ב
+   (2026-09-14l) -- secondary actions ("עריכת פרטי חשבון" / "הצגת האישור" /
+   "החלפת מסמך") stay visually light so אישור מס״ב, above, remains the one
+   button that reads as the primary action once everything is ready. */
+.bes-secondary-action { margin-top: 4px; }
+
+.bes-doc-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  font-weight: 600;
-  color: #166534;
-  background: #f0fdf4;
-  border-radius: 8px;
-  padding: 8px 10px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .bo-upload-note {

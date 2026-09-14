@@ -118,6 +118,17 @@ export class BillingEntitySetupComponent implements OnInit {
   showMasavEdit = false;
   showMasavInfo = false;
 
+  // Nested disclosure inside showMasavEdit (2026-09-14l): once bank
+  // details/the authorization document already exist, default to a
+  // compact summary instead of the full editable form/upload picker --
+  // "עריכת פרטי חשבון" / "החלפת מסמך" reveal them on request. When there's
+  // nothing to summarize yet (masavConfig null / no document), the
+  // corresponding @else branch in the template always renders the
+  // editable form directly regardless of these flags, so they only matter
+  // once something already exists to summarize.
+  showMasavBankEdit = false;
+  showMasavDocReplace = false;
+
   ngOnInit(): void {
     this.displayName = this.displayNameHint;
     this.donationCount = this.donationCountHint;
@@ -269,6 +280,18 @@ export class BillingEntitySetupComponent implements OnInit {
     this.showMasavEdit = !this.showMasavEdit;
   }
 
+  toggleMasavBankEdit(): void {
+    this.showMasavBankEdit = !this.showMasavBankEdit;
+  }
+
+  toggleMasavDocReplace(): void {
+    this.showMasavDocReplace = !this.showMasavDocReplace;
+  }
+
+  bankNameOf(code: string): string {
+    return this.israeliBanks.find((b) => b.code === code)?.name || code;
+  }
+
   toggleMasavInfo(): void {
     this.showMasavInfo = !this.showMasavInfo;
   }
@@ -309,6 +332,7 @@ export class BillingEntitySetupComponent implements OnInit {
         next: (res) => {
           this.masavFormBusy = false;
           this.masavConfig = res.config;
+          this.showMasavBankEdit = false; // collapse back to the compact summary now that it's saved
           this.masavChanged.emit();
         },
         error: (err) => {
@@ -333,6 +357,7 @@ export class BillingEntitySetupComponent implements OnInit {
         this.masavDocUploading = false;
         this.masavConfig = res.config;
         this.masavDocFile = null;
+        this.showMasavDocReplace = false; // collapse back to the ✓ summary now that it's uploaded
         this.masavChanged.emit();
       },
       error: (err) => {
