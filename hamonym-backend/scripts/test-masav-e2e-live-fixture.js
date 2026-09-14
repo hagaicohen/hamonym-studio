@@ -191,10 +191,11 @@ async function main() {
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       firstExportData = data;
 
-      assert.deepStrictEqual(data[0], ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks']);
-      assert.strictEqual(data.length, 2);
+      assert.deepStrictEqual(data[0], ['מספר בנק', 'מספר סניף', 'מספר חשבון בסניף', 'סכום', 'ברירת מחדל', 'מטבע - 1 = ש"ח', 'חברה', 'איש קשר', 'מייל', 'תיאור מוצר', 'הערות']);
+      assert.deepStrictEqual(data[1], ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks']);
+      assert.strictEqual(data.length, 3);
 
-      const row = data[1];
+      const row = data[2];
       assert.strictEqual(row[0], '12'); // bank
       assert.strictEqual(row[1], '345'); // branch
       assert.strictEqual(row[2], '000123456'); // account
@@ -202,8 +203,8 @@ async function main() {
       assert.strictEqual(row[4], 'T'); // tranmode
       assert.strictEqual(row[5], '1'); // currency
       assert.strictEqual(row[6], FIXTURE_TAG); // company (entity display_name)
-      assert.strictEqual(row[9], `עמלת Hamonym 01/06/2099-02/06/2099`); // pdesc
-      assert.strictEqual(row[10], fixture.statementId); // remarks
+      assert.strictEqual(row[9], `עמלת 06/2099`); // pdesc -- derived from billing_period start, not a date range
+      assert.strictEqual(row[10], ''); // remarks -- left blank, no internal statement UUID exposed
     });
 
     // ---- 8. boundary: no payments, statement still open, recordMasavResult absent ----
