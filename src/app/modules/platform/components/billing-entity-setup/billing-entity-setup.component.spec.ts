@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { BillingEntitySetupComponent } from './billing-entity-setup.component';
 import { BillingProvisioningService } from '../../services/billing-provisioning.service';
 import { BillingOpsService } from '../../services/billing-ops.service';
+import { BillingSettingsService } from '../../services/billing-settings.service';
 
 // Migrated from platform-billing-setup-page.component.spec.ts (2026-09-14h
 // drawer redesign) -- all of this component's actual business logic used
@@ -15,6 +18,7 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
   async function createComponent(overrides: {
     provisioning?: Record<string, any>;
     ops?: Record<string, any>;
+    settings?: Record<string, any>;
     entityId?: string;
     displayNameHint?: string | null;
     donationCountHint?: number | null;
@@ -27,12 +31,19 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
       ...overrides.provisioning,
     };
     const opsStub = { getMasavConfig: () => of({ config: null }), ...overrides.ops };
+    const settingsStub = {
+      get: jasmine.createSpy('get').and.returnValue(of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } })),
+      ...overrides.settings,
+    };
 
     await TestBed.configureTestingModule({
       imports: [BillingEntitySetupComponent],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: BillingProvisioningService, useValue: provisioningStub },
         { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
       ],
     }).compileComponents();
 
@@ -132,6 +143,19 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
 
     const banner = fixture.debugElement.query(By.css('.bes-success-banner'));
     expect(banner).toBeTruthy();
+  });
+
+  it('shows the current system VAT rate read-only (2026-09-14i) and never renders a VAT input field, before or after account creation', async () => {
+    const { fixture } = await createComponent({ displayNameHint: 'גדולים מהחיים' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.systemVatRatePercent).toBe(18);
+    // Exactly one editable rate input pre-creation -- fee rate. VAT is
+    // display-only text (the "מע״מ נוכחי במערכת" row), never a second input.
+    const numberInputs = fixture.debugElement.queryAll(By.css('.bes-row input[type="number"]'));
+    expect(numberInputs.length).toBe(1);
+    expect(fixture.nativeElement.textContent).toContain('מע״מ נוכחי במערכת');
+    expect(fixture.nativeElement.textContent).toContain('18%');
   });
 
   it('does not create a billing account when the operator has not confirmed the commercial terms', async () => {

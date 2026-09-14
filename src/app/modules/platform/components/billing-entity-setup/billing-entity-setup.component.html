@@ -29,17 +29,22 @@
     <div class="bes-section-title">תנאי החיוב</div>
     @if (billingAccount; as account) {
       <div class="bes-row"><span>עמלת Hamonym</span><b>{{ feePercentOf(account) }}%</b></div>
-      <div class="bes-row"><span>מע״מ</span><b>{{ vatPercentOf(account) }}%</b></div>
     } @else {
       <div class="bes-row">
         <span>עמלת Hamonym</span>
         <label class="bes-input"><input type="number" step="0.01" min="0" max="100" [(ngModel)]="feeRatePercent" />%</label>
       </div>
-      <div class="bes-row">
-        <span>מע״מ</span>
-        <label class="bes-input"><input type="number" step="0.01" min="0" max="100" [(ngModel)]="vatRatePercent" />%</label>
-      </div>
+    }
 
+    <!-- מע״מ הוא כעת הגדרה מערכתית אחת (2026-09-14i) -- לקריאה בלבד כאן,
+         בין אם יש כבר חשבון חיוב ובין אם לא. -->
+    <div class="bes-row">
+      <span>מע״מ נוכחי במערכת</span>
+      <b>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</b>
+    </div>
+    <div class="bes-vat-hint">שינוי שיעור המע״מ מתבצע בהגדרות הפלטפורמה</div>
+
+    @if (!billingAccount) {
       <label class="bes-confirm">
         <input type="checkbox" [(ngModel)]="confirmed" />
         אני מאשר את תנאי החיוב לעמותה

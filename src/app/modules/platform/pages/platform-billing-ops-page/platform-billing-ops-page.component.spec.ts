@@ -6,6 +6,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
 import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail } from '../../services/billing-ops.service';
+import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
+import { BillingSettingsService } from '../../services/billing-settings.service';
 
 // The component now also injects BillingProvisioningService (for "הגדרות
 // עמותות") and CardcomOpsService (for the "דורש טיפול" section) -- neither
@@ -626,5 +628,100 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
     fixture.detectChanges();
 
     expect((service as any).getStatement).toHaveBeenCalledWith('stmt-a');
+  });
+});
+
+// Regression coverage for the VAT globalization pass (2026-09-14i): the
+// "הגדרות עמותות" tab must show exactly one system-wide VAT rate (editable
+// in exactly this one place), and the per-entity readiness table must never
+// offer a VAT input of its own -- both the "no billing_account yet" and
+// "already provisioned" rows route through the same billing-setup drawer.
+describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרות עמותות)', () => {
+  const readinessEntities: BillingReadinessEntity[] = [
+    {
+      id: 'entity-a', display_name: 'עמותה עם חשבון חיוב', billing_account_id: 'ba-1',
+      fee_rate: '0.03', vat_rate: '0.18', enforcement_status: 'active', preferred_collection_method: 'card',
+      masav_authorized: null, masav_configured: false, paid_donation_count: 5, paid_gross_total: '100.00',
+    },
+    {
+      id: 'entity-b', display_name: 'עמותה בלי חשבון חיוב', billing_account_id: null,
+      fee_rate: null, vat_rate: null, enforcement_status: null, preferred_collection_method: null,
+      masav_authorized: null, masav_configured: false, paid_donation_count: 2, paid_gross_total: '40.00',
+    },
+  ];
+
+  function opsStub() {
+    return {
+      listPeriods: () => of({ periods: [] }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      getMasavConfig: () => of({ config: null }), // used by BillingEntitySetupComponent once the drawer opens
+    };
+  }
+
+  async function setup(vatRate = '0.18') {
+    // Also used by BillingEntitySetupComponent once the drawer opens (same
+    // injected service) -- getByEntityId/getUnprovisioned must be stubbed
+    // too, not just getReadiness.
+    const provisioningStub = {
+      getReadiness: () => of({ entities: readinessEntities }),
+      getByEntityId: () => of({ account: null }),
+      getUnprovisioned: () => of({ entities: [] }),
+    };
+    const settingsStub = {
+      get: jasmine.createSpy('get').and.returnValue(of({ setting: { vat_rate: vatRate, updated_at: '', updated_by: null } })),
+      update: jasmine.createSpy('update').and.returnValue(of({ setting: { vat_rate: '0.19', updated_at: '', updated_by: 17 } })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: BillingOpsService, useValue: opsStub() },
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('entities');
+    fixture.detectChanges();
+    return { fixture, settingsStub };
+  }
+
+  it('shows the current system VAT rate and lets Platform Admin change it in this one place', async () => {
+    const { fixture, settingsStub } = await setup('0.18');
+
+    expect(fixture.debugElement.query(By.css('.bo-vat-rate')).nativeElement.textContent).toContain('18');
+
+    fixture.debugElement.query(By.css('.bo-vat-display button')).nativeElement.click();
+    fixture.detectChanges();
+
+    fixture.componentInstance.vatEditPercent = 19;
+    fixture.debugElement.query(By.css('.ba-form-actions .ops-btn-primary')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(settingsStub.update).toHaveBeenCalledWith(0.19);
+    expect(fixture.componentInstance.vatEditOpen).toBe(false);
+    expect(fixture.componentInstance.systemVatRatePercent).toBe(19);
+  });
+
+  it('the readiness table never renders a VAT input -- both provisioned and unprovisioned rows only get a button opening the shared billing-setup drawer', async () => {
+    const { fixture } = await setup();
+
+    const vatInputs = fixture.debugElement.queryAll(By.css('.bo-table input'));
+    expect(vatInputs.length).toBe(0);
+
+    const rowButtons = fixture.debugElement.queryAll(By.css('.bo-table tbody button.ops-btn'));
+    expect(rowButtons.length).toBe(2); // one per entity, provisioned or not
+
+    rowButtons[1].nativeElement.click(); // entity-b: no billing_account_id yet
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.billingSetupEntityId).toBe('entity-b');
+    expect(fixture.debugElement.query(By.css('app-billing-entity-setup'))).toBeTruthy();
   });
 });

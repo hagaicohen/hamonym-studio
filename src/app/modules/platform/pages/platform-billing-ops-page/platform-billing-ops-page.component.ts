@@ -18,6 +18,7 @@ import {
 } from '../../services/billing-ops.service';
 
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
+import { BillingSettingsService } from '../../services/billing-settings.service';
 import { CardcomOpsService, ReconciliationFinding, HealthResponse, JobRun, JobHealth } from '../../services/cardcom-ops.service';
 import { BillingEntitySetupComponent } from '../../components/billing-entity-setup/billing-entity-setup.component';
 import {
@@ -123,6 +124,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private provisioningService = inject(BillingProvisioningService);
   private cardcomOps = inject(CardcomOpsService);
+  private billingSettingsService = inject(BillingSettingsService);
 
   readonly heMonthNames = HE_MONTH_NAMES;
 
@@ -200,13 +202,19 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   readinessLoading = true;
   readinessError: string | null = null;
 
-  provisionEntityId: string | null = null;
-  provisionFeeRatePercent = 3;
-  provisionVatRatePercent = 18;
-  provisionCollectionMethod: 'card' | 'masav' = 'card';
-  provisionNotes = '';
-  provisionBusy = false;
-  provisionError: string | null = null;
+  // One system-wide VAT rate, managed here in exactly one place (2026-09-14i)
+  // -- replaces both the old per-account VAT input on the (now-removed)
+  // inline quick-provision form below and the VAT input that used to be on
+  // billing-entity-setup's creation form. "הגדרת חיוב"/"הגדרות חיוב" both
+  // now open the same drawer (openBillingSetup) -- see its own note there
+  // for why the separate inline form was removed rather than patched.
+  systemVatRatePercent: number | null = null;
+  vatSettingLoading = true;
+  vatSettingError: string | null = null;
+  vatEditOpen = false;
+  vatEditPercent = 18;
+  vatSaveBusy = false;
+  vatSaveError: string | null = null;
 
   // "הגדרות חיוב" now opens as a drawer instead of navigating to
   // /platform/billing-setup/:entityId (2026-09-14h drawer redesign) -- the
@@ -260,6 +268,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.loadMasav();
     this.loadReadiness();
     this.loadCommissionIssues();
+    this.loadVatSetting();
   }
 
   setTab(tab: Tab): void {
@@ -1037,46 +1046,47 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return entity.fee_rate ? Number(entity.fee_rate) * 100 : 0;
   }
 
-  vatPercentOf(entity: BillingReadinessEntity): number {
-    return entity.vat_rate ? Number(entity.vat_rate) * 100 : 0;
+  // ---- מע״מ מערכתי (2026-09-14i) -----------------------------------------
+  loadVatSetting(): void {
+    this.vatSettingLoading = true;
+    this.vatSettingError = null;
+    this.billingSettingsService.get().subscribe({
+      next: (res) => {
+        this.vatSettingLoading = false;
+        if (res.setting) this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
+      },
+      error: () => {
+        this.vatSettingLoading = false;
+        this.vatSettingError = 'שגיאה בטעינת שיעור המע״מ';
+      },
+    });
   }
 
-  openProvisionForm(entity: BillingReadinessEntity): void {
-    this.provisionEntityId = entity.id;
-    this.provisionFeeRatePercent = 3;
-    this.provisionVatRatePercent = 18;
-    this.provisionCollectionMethod = 'card';
-    this.provisionNotes = '';
-    this.provisionError = null;
+  openVatEdit(): void {
+    this.vatEditPercent = this.systemVatRatePercent ?? 18;
+    this.vatSaveError = null;
+    this.vatEditOpen = true;
   }
 
-  cancelProvisionForm(): void {
-    this.provisionEntityId = null;
+  cancelVatEdit(): void {
+    this.vatEditOpen = false;
   }
 
-  confirmProvision(entity: BillingReadinessEntity): void {
-    if (this.provisionBusy) return;
-    this.provisionBusy = true;
-    this.provisionError = null;
-    this.provisioningService
-      .create({
-        entityId: entity.id,
-        feeRate: this.provisionFeeRatePercent / 100,
-        vatRate: this.provisionVatRatePercent / 100,
-        preferredCollectionMethod: this.provisionCollectionMethod,
-        notes: this.provisionNotes || undefined,
-      })
-      .subscribe({
-        next: () => {
-          this.provisionBusy = false;
-          this.provisionEntityId = null;
-          this.loadReadiness();
-        },
-        error: (err) => {
-          this.provisionBusy = false;
-          this.provisionError = err?.error?.error || 'יצירת הגדרות החיוב נכשלה';
-        },
-      });
+  saveVatSetting(): void {
+    if (this.vatSaveBusy) return;
+    this.vatSaveBusy = true;
+    this.vatSaveError = null;
+    this.billingSettingsService.update(this.vatEditPercent / 100).subscribe({
+      next: (res) => {
+        this.vatSaveBusy = false;
+        this.vatEditOpen = false;
+        this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
+      },
+      error: (err) => {
+        this.vatSaveBusy = false;
+        this.vatSaveError = err?.error?.error || 'שמירת שיעור המע״מ נכשלה';
+      },
+    });
   }
 
   // ---- טכני / מתקדם: commission-area background jobs ---------------------

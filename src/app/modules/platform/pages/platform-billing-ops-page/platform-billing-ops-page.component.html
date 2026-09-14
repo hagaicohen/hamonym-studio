@@ -515,9 +515,45 @@
        readiness, 2026-09-14 -- replaces the old standalone
        /platform/billing-accounts page) ============ -->
   @if (tab === 'entities') {
+    <!-- מע״מ מערכתי -- הגדרה אחת לכל הפלטפורמה (2026-09-14i). היחיד
+         שהמפעיל יכול לשנות; לא ניתן עוד לערוך מע״מ בכל עמותה בנפרד. -->
+    <div class="plat-card bo-vat-card">
+      <div class="bo-card-title">שיעור מע״מ</div>
+      @if (vatSettingLoading) {
+        <div class="plat-loading">טוען...</div>
+      } @else if (vatSettingError) {
+        <div class="plat-error">{{ vatSettingError }}</div>
+      } @else if (!vatEditOpen) {
+        <div class="bo-vat-display">
+          <div class="bo-vat-rate">{{ systemVatRatePercent }}%</div>
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openVatEdit()">שינוי</button>
+        </div>
+        <p class="bo-intro bo-vat-note">השיעור ישמש לחיובים שיחושבו מעתה ואילך. חיובים שכבר חושבו לא ישתנו.</p>
+      } @else {
+        <div class="ba-form">
+          <div class="ba-form-fields">
+            <label class="ba-field">
+              <span>שיעור מע״מ (%)</span>
+              <input type="number" step="0.01" min="0" max="99" [(ngModel)]="vatEditPercent" />
+            </label>
+          </div>
+          <p class="bo-intro bo-vat-note">השיעור ישמש לחיובים שיחושבו מעתה ואילך. חיובים שכבר חושבו לא ישתנו.</p>
+          @if (vatSaveError) {
+            <div class="ops-action-error">{{ vatSaveError }}</div>
+          }
+          <div class="ba-form-actions">
+            <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelVatEdit()" [disabled]="vatSaveBusy">ביטול</button>
+            <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="saveVatSetting()" [disabled]="vatSaveBusy">
+              {{ vatSaveBusy ? 'שומר...' : 'שמור' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
     <div class="plat-card">
       <div class="bo-intro">
-        לכל עמותה פעילה: תנאי החיוב (עמלה/מע״מ) ומוכנות אמצעי הגבייה. עמותה בלי חשבון חיוב עדיין
+        לכל עמותה פעילה: תנאי החיוב (עמלה, ומע״מ מערכתי אחיד) ומוכנות אמצעי הגבייה. עמותה בלי חשבון חיוב עדיין
         מופיעה כאן, מסומנת "טרם הוגדר חיוב" -- הגדירו לה תנאים כדי שתיכלל בחישוב הבא.
       </div>
 
@@ -547,11 +583,10 @@
                   <td class="bo-entity-col">{{ entity.display_name }}</td>
                   @if (entity.billing_account_id) {
                     <td>{{ feePercentOf(entity) }}%</td>
-                    <td>{{ vatPercentOf(entity) }}%</td>
                   } @else {
                     <td>—</td>
-                    <td>—</td>
                   }
+                  <td>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</td>
                   <td>✓ זמין</td>
                   <td>
                     @if (!entity.masav_configured) {
@@ -571,9 +606,9 @@
                   </td>
                   <td class="bo-actions-col">
                     @if (!entity.billing_account_id) {
-                      @if (provisionEntityId !== entity.id) {
-                        <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="openProvisionForm(entity)">הגדרת חיוב</button>
-                      }
+                      <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" (click)="openBillingSetup(entity.id, entity.display_name, entity.paid_donation_count, entity.paid_gross_total)">
+                        הגדרת חיוב
+                      </button>
                     } @else {
                       <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openBillingSetup(entity.id, entity.display_name)">
                         הגדרות חיוב
@@ -581,44 +616,6 @@
                     }
                   </td>
                 </tr>
-                @if (provisionEntityId === entity.id) {
-                  <tr>
-                    <td colspan="7">
-                      <div class="ba-form">
-                        <div class="ba-form-fields">
-                          <label class="ba-field">
-                            <span>שיעור עמלה (%)</span>
-                            <input type="number" step="0.01" min="0" max="100" [(ngModel)]="provisionFeeRatePercent" />
-                          </label>
-                          <label class="ba-field">
-                            <span>שיעור מע״מ (%)</span>
-                            <input type="number" step="0.01" min="0" max="100" [(ngModel)]="provisionVatRatePercent" />
-                          </label>
-                          <label class="ba-field">
-                            <span>אמצעי גבייה מועדף</span>
-                            <select [(ngModel)]="provisionCollectionMethod">
-                              <option value="card">כרטיס אשראי</option>
-                              <option value="masav">מס״ב</option>
-                            </select>
-                          </label>
-                        </div>
-                        <label class="ba-field ba-field-notes">
-                          <span>הערה (לתיעוד ה-audit log, לא חובה)</span>
-                          <input type="text" [(ngModel)]="provisionNotes" placeholder="למשל: הסכם סטנדרטי" />
-                        </label>
-                        @if (provisionError) {
-                          <div class="ops-action-error">{{ provisionError }}</div>
-                        }
-                        <div class="ba-form-actions">
-                          <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="cancelProvisionForm()" [disabled]="provisionBusy">ביטול</button>
-                          <button class="ops-btn ops-btn-primary ops-btn-sm" (click)="confirmProvision(entity)" [disabled]="provisionBusy">
-                            {{ provisionBusy ? 'שומר...' : 'אישור מפורש ויצירת הגדרות חיוב' }}
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                }
               }
             </tbody>
           </table>

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BillingProvisioningService, BillingAccount } from '../../services/billing-provisioning.service';
 import { BillingOpsService, MasavConfig } from '../../services/billing-ops.service';
+import { BillingSettingsService } from '../../services/billing-settings.service';
 import {
   MASAV_INSTITUTION_CODE,
   MASAV_BENEFICIARY_NAME,
@@ -16,7 +17,6 @@ import {
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
 
 const SUGGESTED_FEE_RATE = 0.03;
-const SUGGESTED_VAT_RATE = 0.18;
 
 // Single-entity billing setup: fee/VAT terms, CARD readiness, MASAV setup/
 // authorization -- the full content of what used to be the standalone
@@ -43,6 +43,7 @@ const SUGGESTED_VAT_RATE = 0.18;
 export class BillingEntitySetupComponent implements OnInit {
   private provisioningService = inject(BillingProvisioningService);
   private opsService = inject(BillingOpsService);
+  private settingsService = inject(BillingSettingsService);
 
   @Input({ required: true }) entityId!: string;
   @Input() displayNameHint: string | null = null;
@@ -66,7 +67,10 @@ export class BillingEntitySetupComponent implements OnInit {
   masavConfig: MasavConfig | null = null;
 
   feeRatePercent = SUGGESTED_FEE_RATE * 100;
-  vatRatePercent = SUGGESTED_VAT_RATE * 100;
+  // Read-only, always the current platform-wide rate (2026-09-14i) -- shown
+  // regardless of whether a billing_account exists yet, since VAT is no
+  // longer something set per-association at all. null until loaded.
+  systemVatRatePercent: number | null = null;
 
   // Required, unchecked-by-default confirmation gate (Billing-provisioning
   // readiness correction, 2026-09-02) -- clicking the primary action must
@@ -126,6 +130,16 @@ export class BillingEntitySetupComponent implements OnInit {
     }
 
     this.load();
+    this.loadSystemVatRate();
+  }
+
+  private loadSystemVatRate(): void {
+    this.settingsService.get().subscribe({
+      next: (res) => {
+        if (res.setting) this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
+      },
+      error: () => { /* non-critical for this screen -- fee/MASAV still work without it */ },
+    });
   }
 
   private load(): void {
@@ -207,10 +221,6 @@ export class BillingEntitySetupComponent implements OnInit {
     return Number(account.fee_rate) * 100;
   }
 
-  vatPercentOf(account: BillingAccount): number {
-    return Number(account.vat_rate) * 100;
-  }
-
   // CARD needs no admin-side setup at all -- the donor/entity enters card
   // details directly on their own payment screen, so it is always ready
   // from the platform operator's point of view.
@@ -230,7 +240,8 @@ export class BillingEntitySetupComponent implements OnInit {
       .create({
         entityId: this.entityId,
         feeRate: this.feeRatePercent / 100,
-        vatRate: this.vatRatePercent / 100,
+        // vatRate is not sent -- the backend auto-populates it from the
+        // current platform-wide setting (2026-09-14i).
         // Not exposed as an operator choice -- v1 routing is automatic per
         // Statement total_due (routing.js), preferred_collection_method is
         // never read by it. Sending the DB's own default value.

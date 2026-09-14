@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { PlatformBillingSetupPageComponent } from './platform-billing-setup-page.component';
 import { BillingProvisioningService } from '../../services/billing-provisioning.service';
 import { BillingOpsService } from '../../services/billing-ops.service';
+import { BillingSettingsService } from '../../services/billing-settings.service';
 
 // This page is now just a thin route wrapper around BillingEntitySetupComponent
 // (2026-09-14h drawer redesign) -- kept only for deep-link compatibility.
@@ -29,13 +32,17 @@ describe('PlatformBillingSetupPageComponent - route wrapper', () => {
       create: jasmine.createSpy('create'),
     };
     const opsStub = { getMasavConfig: () => of({ config: null }) };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
 
     await TestBed.configureTestingModule({
       imports: [PlatformBillingSetupPageComponent],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: BillingProvisioningService, useValue: provisioningStub },
         { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
         {
           provide: ActivatedRoute,
           useValue: activatedRouteFor('entity-gedolim-mehachaim', {

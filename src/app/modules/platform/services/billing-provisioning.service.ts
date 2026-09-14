@@ -19,6 +19,11 @@ export interface BillingAccount {
   id: string;
   entity_id: string;
   fee_rate: string;
+  // Kept for compatibility (still a real, NOT NULL column) -- no longer an
+  // operator input and no longer read by calculation. See
+  // platform-billing-settings.service.js on the backend (2026-09-14i): VAT
+  // is now one system-wide setting, auto-populated onto this field at
+  // creation time only.
   vat_rate: string;
   preferred_collection_method: 'card' | 'masav';
   enforcement_status: 'active' | 'suspended';
@@ -30,7 +35,6 @@ export interface BillingAccount {
 export interface CreateBillingAccountPayload {
   entityId: string;
   feeRate: number;
-  vatRate: number;
   preferredCollectionMethod: 'card' | 'masav';
   notes?: string;
 }

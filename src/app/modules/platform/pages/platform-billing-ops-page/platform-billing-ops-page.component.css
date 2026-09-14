@@ -99,6 +99,27 @@
   margin-bottom: 10px;
 }
 
+.bo-vat-card {
+  margin-bottom: 16px;
+}
+
+.bo-vat-display {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bo-vat-rate {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bo-vat-note {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
 .bo-subtitle {
   font-size: 13px;
   font-weight: 700;
