@@ -71,6 +71,11 @@
         <option value="pending">ממתין</option>
         <option value="failed">נכשל</option>
       </select>
+      <app-column-picker
+        [columns]="donationsColumns"
+        storageKey="platformColumns_donations"
+        (visibleChange)="onVisibleDonationsColumnsChange($event)"
+      ></app-column-picker>
     </div>
 
     @if (donationsError) {
@@ -84,29 +89,41 @@
         <table class="ops-donations-table">
           <thead>
             <tr>
-              <th>תאריך</th>
-              <th>תורם</th>
-              <th>עמותה</th>
-              <th>קמפיין</th>
-              <th>סכום</th>
-              <th>סוג</th>
-              <th>סטטוס</th>
+              <th class="sortable" (click)="sortDonationsBy('date')">תאריך{{ donationsSortIndicator('date') }}</th>
+              @if (visibleDonationsColumns.has('donor')) { <th class="sortable" (click)="sortDonationsBy('donor')">תורם{{ donationsSortIndicator('donor') }}</th> }
+              @if (visibleDonationsColumns.has('entity')) { <th class="sortable" (click)="sortDonationsBy('entity')">עמותה{{ donationsSortIndicator('entity') }}</th> }
+              @if (visibleDonationsColumns.has('campaign')) { <th class="sortable" (click)="sortDonationsBy('campaign')">קמפיין{{ donationsSortIndicator('campaign') }}</th> }
+              @if (visibleDonationsColumns.has('amount')) { <th class="sortable" (click)="sortDonationsBy('amount')">סכום{{ donationsSortIndicator('amount') }}</th> }
+              @if (visibleDonationsColumns.has('type')) { <th class="sortable" (click)="sortDonationsBy('type')">סוג{{ donationsSortIndicator('type') }}</th> }
+              @if (visibleDonationsColumns.has('status')) { <th class="sortable" (click)="sortDonationsBy('status')">סטטוס{{ donationsSortIndicator('status') }}</th> }
             </tr>
           </thead>
           <tbody>
             @for (donation of donations; track donation.id) {
               <tr>
                 <td>{{ fmtDateTime(donation.created_at) }}</td>
-                <td class="ops-td-truncate">{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || '—') }}</td>
-                <td class="ops-td-truncate" [title]="donation.entity_name">{{ donation.entity_name }}</td>
-                <td class="ops-td-truncate" [title]="donation.campaign_title">{{ donation.campaign_title }}</td>
-                <td>₪{{ donation.amount }}</td>
-                <td>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</td>
-                <td>
-                  <span class="ops-donation-status" [class]="'ops-donation-status-' + donation.status">
-                    {{ donationStatusLabel(donation.status) }}
-                  </span>
-                </td>
+                @if (visibleDonationsColumns.has('donor')) {
+                  <td class="ops-td-truncate">{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || '—') }}</td>
+                }
+                @if (visibleDonationsColumns.has('entity')) {
+                  <td class="ops-td-truncate" [title]="donation.entity_name">{{ donation.entity_name }}</td>
+                }
+                @if (visibleDonationsColumns.has('campaign')) {
+                  <td class="ops-td-truncate" [title]="donation.campaign_title">{{ donation.campaign_title }}</td>
+                }
+                @if (visibleDonationsColumns.has('amount')) {
+                  <td>₪{{ donation.amount }}</td>
+                }
+                @if (visibleDonationsColumns.has('type')) {
+                  <td>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</td>
+                }
+                @if (visibleDonationsColumns.has('status')) {
+                  <td>
+                    <span class="ops-donation-status" [class]="'ops-donation-status-' + donation.status">
+                      {{ donationStatusLabel(donation.status) }}
+                    </span>
+                  </td>
+                }
               </tr>
             }
           </tbody>

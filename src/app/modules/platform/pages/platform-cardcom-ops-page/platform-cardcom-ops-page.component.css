@@ -490,6 +490,9 @@
   white-space: nowrap;
 }
 
+.ops-donations-table th.sortable { cursor: pointer; user-select: none; }
+.ops-donations-table th.sortable:hover { color: #583cd6; }
+
 .ops-donations-table td {
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;

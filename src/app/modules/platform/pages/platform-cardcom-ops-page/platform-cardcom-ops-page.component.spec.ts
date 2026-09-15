@@ -571,7 +571,10 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     fixture.detectChanges();
     listSpy.calls.reset();
 
-    const buttons = fixture.debugElement.queryAll(By.css('.ops-donations-toolbar button'));
+    // Direct children only -- excludes app-column-picker's own internal
+    // toggle button (a real, intentional control), scoped to just what
+    // would-be a standalone search button would have been.
+    const buttons = fixture.debugElement.queryAll(By.css('.ops-donations-toolbar > button'));
     expect(buttons.length).toBe(0);
 
     const input: HTMLInputElement = fixture.debugElement.query(By.css('.ops-search-input')).nativeElement;
@@ -618,6 +621,72 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     fixture.componentInstance.prevDonationsPage();
     fixture.detectChanges();
     expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ page: 0 }));
+  });
+
+  // 2026-09-16: sortable columns + a column-visibility picker, matching
+  // platform-organizations-page's own convention (same app-column-picker
+  // component, same toggle-direction-on-repeat-click sortBy()).
+  it('clicking a sortable header sorts by that column; clicking it again flips direction', async () => {
+    const listSpy = jasmine.createSpy('listDonations').and.returnValue(of({ donations: [donation()], total: 1, page: 0, limit: 25 }));
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: listSpy,
+    });
+    listSpy.calls.reset();
+
+    const amountHeader = fixture.debugElement.queryAll(By.css('.ops-donations-table th.sortable'))
+      .find((h) => h.nativeElement.textContent.includes('סכום'))!;
+    amountHeader.nativeElement.click();
+    fixture.detectChanges();
+    expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ sortBy: 'amount', sortDir: 'asc', page: 0 }));
+
+    listSpy.calls.reset();
+    amountHeader.nativeElement.click();
+    fixture.detectChanges();
+    expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ sortBy: 'amount', sortDir: 'desc', page: 0 }));
+  });
+
+  it('shows a sort direction indicator only on the active sorted column', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
+    });
+
+    fixture.componentInstance.sortDonationsBy('donor');
+    fixture.detectChanges();
+
+    const headers = fixture.debugElement.queryAll(By.css('.ops-donations-table th.sortable'));
+    const donorHeader = headers.find((h) => h.nativeElement.textContent.includes('תורם'))!;
+    const dateHeader = headers.find((h) => h.nativeElement.textContent.includes('תאריך'))!;
+    expect(donorHeader.nativeElement.textContent).toContain('▲');
+    expect(dateHeader.nativeElement.textContent).not.toContain('▲');
+    expect(dateHeader.nativeElement.textContent).not.toContain('▼');
+  });
+
+  it('column picker hides a column from both the header and every row, and defaults to all columns visible', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
+    });
+
+    // Default: all columns visible.
+    let row = fixture.debugElement.query(By.css('.ops-donations-table tbody tr'));
+    expect(row.nativeElement.textContent).toContain('עמותת הדוגמה');
+
+    fixture.componentInstance.onVisibleDonationsColumnsChange(
+      new Set(fixture.componentInstance.donationsColumns.map((c) => c.key).filter((k) => k !== 'entity')),
+    );
+    fixture.detectChanges();
+
+    const headerText = fixture.debugElement.query(By.css('.ops-donations-table thead')).nativeElement.textContent;
+    expect(headerText).not.toContain('עמותה');
+    row = fixture.debugElement.query(By.css('.ops-donations-table tbody tr'));
+    expect(row.nativeElement.textContent).not.toContain('עמותת הדוגמה');
+    // תאריך is the always-visible anchor column, never hidden by the picker.
+    expect(headerText).toContain('תאריך');
   });
 
   // Regression for the 2026-09-16 "אם לחיצה לא נותנת מידע משמעותי, שלא

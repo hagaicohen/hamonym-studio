@@ -16,6 +16,21 @@ import {
   PROVIDER_FINDING_TYPES,
 } from '../../utils/ops-labels';
 import { environment } from '../../../../../environments/environment';
+import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+
+// תאריך is the anchor column (always shown, not in this list) -- same
+// convention as platform-organizations-page's own COLUMNS (שם העמותה is
+// the one always-visible identifying column there too).
+const DONATIONS_COLUMNS: ColumnDef[] = [
+  { key: 'donor',    label: 'תורם' },
+  { key: 'entity',   label: 'עמותה' },
+  { key: 'campaign', label: 'קמפיין' },
+  { key: 'amount',   label: 'סכום' },
+  { key: 'type',     label: 'סוג' },
+  { key: 'status',   label: 'סטטוס' },
+];
+
+type DonationsSortField = 'date' | 'donor' | 'entity' | 'campaign' | 'amount' | 'type' | 'status';
 
 // "תרومות" (2026-09-15 product decision, built from two same-day read-only
 // audits): the normal operator screen is now primarily a cross-entity
@@ -169,7 +184,7 @@ const DONATION_STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })
@@ -201,6 +216,11 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   donationsSearch = '';
   donationsStatus = '';
   private donationsSearchTimer: ReturnType<typeof setTimeout> | undefined;
+
+  readonly donationsColumns = DONATIONS_COLUMNS;
+  visibleDonationsColumns = new Set(DONATIONS_COLUMNS.map((c) => c.key));
+  donationsSortField: DonationsSortField = 'date';
+  donationsSortDir: 'asc' | 'desc' = 'desc';
 
   get donationsTotalPages(): number {
     return Math.max(1, Math.ceil(this.donationsTotal / this.donationsLimit));
@@ -247,6 +267,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       .listDonations({
         search: this.donationsSearch || undefined,
         status: this.donationsStatus || undefined,
+        sortBy: this.donationsSortField,
+        sortDir: this.donationsSortDir,
         page: this.donationsPage,
         limit: this.donationsLimit,
       })
@@ -286,6 +308,23 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     this.loadDonations();
   }
 
+  onVisibleDonationsColumnsChange(visible: Set<string>): void {
+    this.visibleDonationsColumns = visible;
+  }
+
+  // Same toggle-direction-on-repeat-click convention as
+  // platform-organizations-page's own sortBy().
+  sortDonationsBy(field: DonationsSortField): void {
+    if (this.donationsSortField === field) {
+      this.donationsSortDir = this.donationsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.donationsSortField = field;
+      this.donationsSortDir = 'asc';
+    }
+    this.donationsPage = 0;
+    this.loadDonations();
+  }
+
   prevDonationsPage(): void {
     if (this.donationsPage > 0) { this.donationsPage--; this.loadDonations(); }
   }
@@ -296,6 +335,11 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   donationStatusLabel(status: string): string {
     return DONATION_STATUS_LABELS[status] ?? status;
+  }
+
+  donationsSortIndicator(field: DonationsSortField): string {
+    if (this.donationsSortField !== field) return '';
+    return this.donationsSortDir === 'asc' ? ' ▲' : ' ▼';
   }
 
   jobLabel(name: string): string {
