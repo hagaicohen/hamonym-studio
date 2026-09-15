@@ -54,7 +54,14 @@ exports.listBillingReadiness = async () => {
             ba.id AS billing_account_id, ba.fee_rate, ba.vat_rate,
             ba.enforcement_status, ba.preferred_collection_method,
             emd.authorized AS masav_authorized,
-            (emd.entity_id IS NOT NULL) AS masav_configured,
+            -- Real bank details filled in, not merely "a row exists" --
+            -- 2026-09-16, once uploadAuthorizationDocument() started
+            -- allowing the authorization document to be uploaded before
+            -- bank details are saved (an entity_masav_details row can now
+            -- exist with bank_code/branch_code/account_number still ''),
+            -- row-existence alone would show a misleading "הוגדר" here for
+            -- an entity that only has a document on file.
+            (emd.bank_code IS NOT NULL AND emd.bank_code <> '' AND emd.branch_code <> '' AND emd.account_number <> '') AS masav_configured,
             COALESCE(paid.donation_count, 0)::int AS paid_donation_count,
             COALESCE(paid.gross_total, 0) AS paid_gross_total
      FROM entities e

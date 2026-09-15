@@ -14,6 +14,18 @@
 // ever reachable through the dedicated getAuthorizationDocumentFile used by
 // the authenticated download route.
 //
+// 2026-09-16: uploadAuthorizationDocument() was changed from a hard UPDATE
+// (which required an entity_masav_details row to already exist -- i.e. bank
+// details saved first) to an UPSERT, so the two MASAV setup pieces (bank
+// details, authorization document) can now be completed in either order --
+// per the Billing Setup drawer redesign's "checklist, not a wizard"
+// principle. This file's first test used to assert the OLD refusal
+// (MASAV_NOT_CONFIGURED); it now asserts the opposite (upload succeeds,
+// creating a row with '' bank placeholders), plus new tests proving that
+// path is still safe: authorize() keeps rejecting incomplete bank details
+// regardless of which order the two pieces were filled in, and filling in
+// real bank details afterward doesn't wipe the already-uploaded document.
+//
 // Everything created here is throwaway and fully deleted at the end
 // (verified by re-querying): one entity, one entity_masav_details row, one
 // platform_audit_log row per action, one super-admin user.
@@ -73,28 +85,44 @@ async function verifyZeroResidue() {
 async function main() {
   await setup();
   try {
-    await check('uploadAuthorizationDocument: refuses when no bank details configured yet (MASAV_NOT_CONFIGURED)', async () => {
+    await check('uploadAuthorizationDocument: now succeeds with NO bank details configured yet -- creates a row with \'\' placeholders, never NULL (NOT NULL columns)', async () => {
+      const config = await masavConfig.uploadAuthorizationDocument({
+        entityId: ids.entityId,
+        file: { originalname: 'early-upload.pdf', mimetype: 'application/pdf', buffer: Buffer.from('early-bytes') },
+        actorUserId: ids.superAdmin,
+      });
+      assert.strictEqual(config.has_authorization_document, true);
+      assert.strictEqual(config.authorization_document_name, 'early-upload.pdf');
+      assert.strictEqual(config.bank_code, '');
+      assert.strictEqual(config.branch_code, '');
+      assert.strictEqual(config.account_number, '');
+      assert.strictEqual(config.authorized, false);
+    });
+
+    await check('authorize() still refuses -- bank details remain incomplete even though a document is on file (partial setup stays not-ready)', async () => {
       await assert.rejects(
-        () => masavConfig.uploadAuthorizationDocument({
-          entityId: ids.entityId,
-          file: { originalname: 'auth.pdf', mimetype: 'application/pdf', buffer: Buffer.from('pdf-bytes') },
-          actorUserId: ids.superAdmin,
-        }),
-        (err) => err.code === 'MASAV_NOT_CONFIGURED'
+        () => masavConfig.authorize({ entityId: ids.entityId, superAdminUserId: ids.superAdmin }),
+        (err) => err.code === 'MASAV_INCOMPLETE'
       );
     });
 
-    await check('upsertBankDetails: saving bank fields does not create a document and does not authorize', async () => {
+    await check('upsertBankDetails: filling in real bank details afterward does not wipe the already-uploaded document', async () => {
       const config = await masavConfig.upsertBankDetails({
         entityId: ids.entityId, bankCode: '12', branchCode: '345', accountNumber: '6789012',
         accountHolderName: 'ZZZ Test Account Holder', actorUserId: ids.superAdmin,
       });
       assert.strictEqual(config.authorized, false);
-      assert.strictEqual(config.has_authorization_document, false);
-      assert.strictEqual(config.authorization_document_name, null);
+      assert.strictEqual(config.bank_code, '12');
+      assert.strictEqual(config.has_authorization_document, true, 'document uploaded before bank details must survive upsertBankDetails');
+      assert.strictEqual(config.authorization_document_name, 'early-upload.pdf');
+
+      // Clean slate for the rest of this file's original (unchanged)
+      // scenario: bank details first, then a fresh document overwrite.
+      await masavConfig.authorize({ entityId: ids.entityId, superAdminUserId: ids.superAdmin });
+      await masavConfig.revoke({ entityId: ids.entityId, superAdminUserId: ids.superAdmin });
     });
 
-    await check('uploadAuthorizationDocument: succeeds once bank details exist, never touches authorized', async () => {
+    await check('uploadAuthorizationDocument: still works the original way too -- bank details already exist, upload just updates document fields', async () => {
       // multer/busboy hand originalname to the app already mis-decoded as
       // latin1 for a UTF-8-encoded filename -- simulate that exact mangling
       // here (same as entities.service.js's own upload tests would need to)

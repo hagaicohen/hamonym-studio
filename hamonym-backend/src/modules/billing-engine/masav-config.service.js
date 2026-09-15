@@ -187,33 +187,48 @@ function fixFilenameEncoding(name) {
 // header comments and authorize()/revoke() above, which remain the only
 // writers of that boolean).
 //
-// Requires bank details to already be configured (entity_masav_details row
-// must exist -- created by upsertBankDetails) -- matches the setup screen's
-// own order: bank fields first, then the signed document upload.
+// Upserts rather than requiring bank details first (2026-09-16 UX fix --
+// was a hard UPDATE that failed with MASAV_NOT_CONFIGURED if no row
+// existed yet, forcing bank details to be saved before the document could
+// be uploaded, purely because entity_masav_details.bank_code/branch_code/
+// account_number are NOT NULL (migration 060) and a row must exist to
+// attach a document to). '' (empty string, not NULL) satisfies that
+// constraint and is what upsertBankDetails's own ON CONFLICT overwrites
+// once real bank details are saved -- no migration needed. This is safe:
+// every real authorization-gate downstream already treats an empty
+// bank_code/branch_code/account_number as incomplete regardless of row
+// existence -- authorize() itself (below) rejects empty fields,
+// routing.js#resolveCollectionMethod's `!config.bank_code` check is
+// false-y for '', and billing-ops.service.js#listStatements's routed_method
+// CASE already required non-null bank fields AND authorized=true before
+// ever routing to masav. A document-only row can never reach 'authorized'
+// until upsertBankDetails fills in real values.
 exports.uploadAuthorizationDocument = async ({ entityId, file, actorUserId, ip }) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const configRes = await client.query(
-      `SELECT id FROM entity_masav_details WHERE entity_id = $1 FOR UPDATE`,
-      [entityId]
-    );
-    if (!configRes.rows[0]) {
-      const err = new Error('Entity has no MASAV bank details configured yet -- save bank details before uploading the authorization document');
-      err.code = 'MASAV_NOT_CONFIGURED';
+    const entityRes = await client.query(`SELECT id FROM entities WHERE id = $1`, [entityId]);
+    if (!entityRes.rows[0]) {
+      const err = new Error('Entity not found');
+      err.code = 'ENTITY_NOT_FOUND';
       throw err;
     }
 
     const { rows } = await client.query(
-      `UPDATE entity_masav_details
-       SET authorization_document_name = $2,
-           authorization_document_mime = $3,
-           authorization_document_data = $4,
-           authorization_document_uploaded_at = NOW(),
-           authorization_document_uploaded_by = $5,
-           updated_at = NOW()
-       WHERE entity_id = $1
+      `INSERT INTO entity_masav_details (
+         entity_id, bank_code, branch_code, account_number,
+         authorization_document_name, authorization_document_mime, authorization_document_data,
+         authorization_document_uploaded_at, authorization_document_uploaded_by
+       )
+       VALUES ($1, '', '', '', $2, $3, $4, NOW(), $5)
+       ON CONFLICT (entity_id) DO UPDATE SET
+         authorization_document_name = EXCLUDED.authorization_document_name,
+         authorization_document_mime = EXCLUDED.authorization_document_mime,
+         authorization_document_data = EXCLUDED.authorization_document_data,
+         authorization_document_uploaded_at = EXCLUDED.authorization_document_uploaded_at,
+         authorization_document_uploaded_by = EXCLUDED.authorization_document_uploaded_by,
+         updated_at = NOW()
        RETURNING ${CONFIG_COLUMNS}`,
       [entityId, fixFilenameEncoding(file.originalname), file.mimetype, file.buffer, actorUserId]
     );

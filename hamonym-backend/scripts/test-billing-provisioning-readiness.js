@@ -99,6 +99,39 @@ async function main() {
       assert.strictEqual(row.masav_authorized, false);
     });
 
+    // 2026-09-16: uploadAuthorizationDocument() now upserts a row with ''
+    // bank placeholders when none exists yet (Billing Setup drawer
+    // redesign -- the two MASAV setup pieces can be completed in either
+    // order). masav_configured must reflect REAL bank details, not merely
+    // "a row exists" -- otherwise this exact scenario would misreport
+    // "הוגדר" for an entity that only has a document on file, with no
+    // actual bank account behind it.
+    await check('3b. a document-only entity_masav_details row (bank fields still \'\') must NOT read masav_configured -- guards against the old row-existence check', async () => {
+      const docOnlyTag = `${FIXTURE_TAG}_DOC_ONLY`;
+      const docOnlyEntity = await pool.query(
+        `INSERT INTO entities (display_name, created_by_user_id, status, entity_type)
+         VALUES ($1, $2, 'active', 'association') RETURNING id`,
+        [docOnlyTag, SUPER_ADMIN_USER_ID]
+      );
+      const docOnlyEntityId = docOnlyEntity.rows[0].id;
+      try {
+        await masavConfigService.uploadAuthorizationDocument({
+          entityId: docOnlyEntityId,
+          file: { originalname: 'doc-only.pdf', mimetype: 'application/pdf', buffer: Buffer.from('bytes') },
+          actorUserId: SUPER_ADMIN_USER_ID,
+        });
+
+        const rows = await provisioningService.listBillingReadiness();
+        const row = rows.find((r) => r.id === docOnlyEntityId);
+        assert.ok(row, 'the document-only fixture entity must appear in the readiness list');
+        assert.strictEqual(row.masav_configured, false, 'a document alone, with empty bank fields, must not read as "configured"');
+      } finally {
+        await pool.query(`DELETE FROM platform_audit_log WHERE entity_id = $1`, [docOnlyEntityId]);
+        await pool.query(`DELETE FROM entity_masav_details WHERE entity_id = $1`, [docOnlyEntityId]);
+        await pool.query(`DELETE FROM entities WHERE id = $1`, [docOnlyEntityId]);
+      }
+    });
+
     await check('4. after explicit MASAV authorization, masav_authorized is true', async () => {
       await masavConfigService.authorize({
         entityId,
