@@ -65,35 +65,66 @@ async function main() {
     );
     fixture.donationIds.push(mockDonation.rows[0].id);
 
-    await check('finds the real donation by entityId filter, excludes the mock one on the same entity', async () => {
+    // A second real donation, smaller amount -- lets sort-by-amount assert
+    // a real order instead of a single-row list (2026-09-16, column
+    // sorting added to the Platform Admin donations browser table).
+    const smallerDonation = await pool.query(
+      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, is_mock, created_at)
+       VALUES ($1, $2, 33.00, $3, 'pending', false, NOW()) RETURNING id`,
+      [fixture.campaignId, fixture.entityId, `${FIXTURE_TAG} donor 2`]
+    );
+    fixture.donationIds.push(smallerDonation.rows[0].id);
+
+    await check('finds the real donations by entityId filter, excludes the mock one on the same entity', async () => {
       const res = await donationsService.getPlatformDonations({ entityId: fixture.entityId, page: 0, limit: 25 });
-      assert.strictEqual(res.total, 1, 'is_mock=true donation must never be counted, even scoped to its own entity');
-      assert.strictEqual(res.donations[0].id, realDonation.rows[0].id);
-      assert.strictEqual(res.donations[0].entity_name, FIXTURE_TAG);
-      assert.strictEqual(res.donations[0].campaign_title, FIXTURE_TAG);
-      assert.strictEqual(Number(res.donations[0].amount), 77);
-      assert.strictEqual(res.donations[0].is_recurring, false);
+      assert.strictEqual(res.total, 2, 'is_mock=true donation must never be counted, even scoped to its own entity');
+      const found = res.donations.find((d) => d.id === realDonation.rows[0].id);
+      assert.ok(found, 'the real 77.00 donation must be present');
+      assert.strictEqual(found.entity_name, FIXTURE_TAG);
+      assert.strictEqual(found.campaign_title, FIXTURE_TAG);
+      assert.strictEqual(Number(found.amount), 77);
+      assert.strictEqual(found.is_recurring, false);
     });
 
-    await check('search matches donor name', async () => {
-      const res = await donationsService.getPlatformDonations({ search: `${FIXTURE_TAG} donor`, page: 0, limit: 25 });
-      assert.strictEqual(res.total, 1);
-      assert.strictEqual(res.donations[0].id, realDonation.rows[0].id);
+    await check('search matches donor name, and distinguishes donor 1 from donor 2', async () => {
+      const both = await donationsService.getPlatformDonations({ search: `${FIXTURE_TAG} donor`, entityId: fixture.entityId, page: 0, limit: 25 });
+      assert.strictEqual(both.total, 2, 'both donor names share the fixture-tag prefix');
+      const donor1Only = await donationsService.getPlatformDonations({ search: `${FIXTURE_TAG} donor 2`, entityId: fixture.entityId, page: 0, limit: 25 });
+      assert.strictEqual(donor1Only.total, 1);
+      assert.strictEqual(donor1Only.donations[0].id, smallerDonation.rows[0].id);
+    });
+
+    await check('sortBy=amount orders donations correctly (asc then desc)', async () => {
+      const asc = await donationsService.getPlatformDonations({ entityId: fixture.entityId, sortBy: 'amount', sortDir: 'asc', page: 0, limit: 25 });
+      assert.strictEqual(asc.donations.length, 2);
+      assert.strictEqual(Number(asc.donations[0].amount), 33, 'ascending sort must put the smaller amount first');
+      assert.strictEqual(Number(asc.donations[1].amount), 77);
+
+      const desc = await donationsService.getPlatformDonations({ entityId: fixture.entityId, sortBy: 'amount', sortDir: 'desc', page: 0, limit: 25 });
+      assert.strictEqual(Number(desc.donations[0].amount), 77, 'descending sort must put the larger amount first');
+      assert.strictEqual(Number(desc.donations[1].amount), 33);
+    });
+
+    await check('sortBy=entity/type resolve to valid columns without SQL errors (new columns added for the donations table sort feature)', async () => {
+      const byEntity = await donationsService.getPlatformDonations({ entityId: fixture.entityId, sortBy: 'entity', sortDir: 'asc', page: 0, limit: 25 });
+      assert.strictEqual(byEntity.total, 2);
+      const byType = await donationsService.getPlatformDonations({ entityId: fixture.entityId, sortBy: 'type', sortDir: 'asc', page: 0, limit: 25 });
+      assert.strictEqual(byType.total, 2);
     });
 
     await check('search matches campaign title', async () => {
       const res = await donationsService.getPlatformDonations({ search: FIXTURE_TAG, campaignId: fixture.campaignId, page: 0, limit: 25 });
-      assert.strictEqual(res.total, 1);
+      assert.strictEqual(res.total, 2); // both real donations' donor names also carry the fixture tag
     });
 
     await check('search matches association (entity) display name', async () => {
       const res = await donationsService.getPlatformDonations({ search: FIXTURE_TAG, entityId: fixture.entityId, page: 0, limit: 25 });
-      assert.strictEqual(res.total, 1);
+      assert.strictEqual(res.total, 2);
     });
 
-    await check('status filter scopes correctly (pending finds it, paid does not)', async () => {
+    await check('status filter scopes correctly (pending finds both, paid finds none)', async () => {
       const pendingRes = await donationsService.getPlatformDonations({ entityId: fixture.entityId, status: 'pending', page: 0, limit: 25 });
-      assert.strictEqual(pendingRes.total, 1);
+      assert.strictEqual(pendingRes.total, 2);
       const paidRes = await donationsService.getPlatformDonations({ entityId: fixture.entityId, status: 'paid', page: 0, limit: 25 });
       assert.strictEqual(paidRes.total, 0);
     });

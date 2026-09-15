@@ -1008,6 +1008,12 @@ const SORT_COLUMNS = {
   amount:   'd.amount',
   date:     'd.created_at',
   status:   'd.status',
+  // entity/type -- getPlatformDonations only (joins entities e; is_recurring
+  // is a derived expression, not a real column). getEntityDonations never
+  // passes these as sortBy since its own UI has no entity column and no
+  // type column to sort by.
+  entity:   'e.display_name',
+  type:     '(d.recurring_instruction_id IS NOT NULL)',
 };
 
 exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
