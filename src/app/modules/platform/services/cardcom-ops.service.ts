@@ -79,10 +79,63 @@ export interface ReconciliationFinding {
   resolved_by: string | null;
 }
 
+// Cross-entity, read-only donations browser row (2026-09-15 product
+// decision) — deliberately excludes donor_email/donor_phone/provider data,
+// see donations.service.js#getPlatformDonations's own comment on why.
+export interface PlatformDonation {
+  id: string;
+  amount: number;
+  donor_name: string | null;
+  status: string;
+  completed_at: string | null;
+  created_at: string;
+  is_anonymous: boolean;
+  failure_reason: string | null;
+  is_recurring: boolean;
+  campaign_id: string;
+  campaign_title: string;
+  campaign_slug: string;
+  entity_id: string;
+  entity_name: string;
+}
+
+export interface PlatformDonationsResponse {
+  donations: PlatformDonation[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface PlatformDonationsQuery {
+  status?: string;
+  entityId?: string;
+  campaignId?: string;
+  period?: string;
+  search?: string;
+  sortBy?: string;
+  sortDir?: string;
+  page?: number;
+  limit?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CardcomOpsService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/api/platform/cardcom-ops`;
+
+  listDonations(query: PlatformDonationsQuery = {}): Observable<PlatformDonationsResponse> {
+    const params = new URLSearchParams();
+    if (query.status) params.set('status', query.status);
+    if (query.entityId) params.set('entityId', query.entityId);
+    if (query.campaignId) params.set('campaignId', query.campaignId);
+    if (query.period) params.set('period', query.period);
+    if (query.search) params.set('search', query.search);
+    if (query.sortBy) params.set('sortBy', query.sortBy);
+    if (query.sortDir) params.set('sortDir', query.sortDir);
+    params.set('page', String(query.page ?? 0));
+    params.set('limit', String(query.limit ?? 25));
+    return this.http.get<PlatformDonationsResponse>(`${this.base}/donations?${params.toString()}`, { headers: authHeaders() });
+  }
 
   getHealth(): Observable<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.base}/health`, { headers: authHeaders() });
