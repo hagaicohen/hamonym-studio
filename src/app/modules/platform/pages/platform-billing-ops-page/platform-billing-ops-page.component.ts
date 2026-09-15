@@ -21,6 +21,7 @@ import { BillingProvisioningService, BillingReadinessEntity } from '../../servic
 import { BillingSettingsService } from '../../services/billing-settings.service';
 import { CardcomOpsService, ReconciliationFinding, HealthResponse, JobRun, JobHealth } from '../../services/cardcom-ops.service';
 import { BillingEntitySetupComponent } from '../../components/billing-entity-setup/billing-entity-setup.component';
+import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
 import {
   jobLabel as sharedJobLabel,
   jobFrequency as sharedJobFrequency,
@@ -35,6 +36,47 @@ import {
 // החיובים". Kept as-is internally so existing tests/deep-links (?tab=...)
 // stay valid.
 type Tab = 'periods' | 'statements' | 'entities' | 'masav';
+
+// Column sorting + visibility (2026-09-16) -- added only to the 3
+// substantial, one-row-per-entity/statement operational tables (החודש, כל
+// החיובים, הגדרות עמותות); the smaller/nested tables on this page (MASAV
+// blocked list, bulk-approval sub-table, per-attempt/per-payment history)
+// were deliberately left alone per explicit product guidance: don't add
+// controls to small tables just because they're <table>s. All 3 tables
+// here are rendered from an already-fully-loaded local array (no backend
+// pagination), so sorting is plain client-side Array.sort -- no API change
+// needed, unlike the donations browser's server-driven sort. עמותה is the
+// anchor column everywhere (always visible), same role as שם העמותה on
+// platform-organizations-page and תאריך on the donations table.
+type MonthSortField = 'donations' | 'gross' | 'fee' | 'vat' | 'due' | 'route' | 'state';
+type AllStatementsSortField = 'period' | 'gross' | 'due' | 'route' | 'state';
+type ReadinessSortField = 'fee' | 'vat' | 'card' | 'masav' | 'ready';
+
+const MONTH_TABLE_COLUMNS: ColumnDef[] = [
+  { key: 'donations', label: 'תרומות' },
+  { key: 'gross',      label: 'מחזור' },
+  { key: 'fee',        label: 'עמלה' },
+  { key: 'vat',        label: 'מע״מ' },
+  { key: 'due',        label: 'לחיוב' },
+  { key: 'route',      label: 'אמצעי גבייה' },
+  { key: 'state',      label: 'מצב' },
+];
+
+const ALL_STATEMENTS_COLUMNS: ColumnDef[] = [
+  { key: 'period', label: 'חודש חיוב' },
+  { key: 'gross',  label: 'מחזור תרומות' },
+  { key: 'due',    label: 'סכום לחיוב' },
+  { key: 'route',  label: 'אמצעי גבייה' },
+  { key: 'state',  label: 'מצב' },
+];
+
+const READINESS_COLUMNS: ColumnDef[] = [
+  { key: 'fee',   label: 'עמלה' },
+  { key: 'vat',   label: 'מע״מ' },
+  { key: 'card',  label: 'כרטיס אשראי' },
+  { key: 'masav', label: 'מס״ב' },
+  { key: 'ready', label: 'מוכנות לחיוב' },
+];
 
 // One line in the "דורש טיפול" section of the "החודש" tab -- reuses
 // CardcomOpsService (same data "תרומות" reads) filtered to the commission
@@ -115,7 +157,7 @@ const HE_MONTH_NAMES = [
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent],
+  imports: [CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent, ColumnPickerComponent],
   templateUrl: './platform-billing-ops-page.component.html',
   styleUrl: './platform-billing-ops-page.component.css',
 })
@@ -170,6 +212,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   filterPeriodId = '';
   filterStatus = '';
 
+  // ---- column sorting + visibility (2026-09-16, החודש / כל החיובים) ----
+  readonly monthTableColumns = MONTH_TABLE_COLUMNS;
+  visibleMonthColumns = new Set(MONTH_TABLE_COLUMNS.map((c) => c.key));
+  monthSortField: MonthSortField | null = null;
+  monthSortDir: 'asc' | 'desc' = 'asc';
+
+  readonly allStatementsColumns = ALL_STATEMENTS_COLUMNS;
+  visibleAllStatementsColumns = new Set(ALL_STATEMENTS_COLUMNS.map((c) => c.key));
+  allStatementsSortField: AllStatementsSortField | null = null;
+  allStatementsSortDir: 'asc' | 'desc' = 'asc';
+
   selectedStatement: StatementDetail | null = null;
   statementDetailLoading = false;
   statementActionBusy = false;
@@ -201,6 +254,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   readinessEntities: BillingReadinessEntity[] = [];
   readinessLoading = true;
   readinessError: string | null = null;
+
+  readonly readinessColumns = READINESS_COLUMNS;
+  visibleReadinessColumns = new Set(READINESS_COLUMNS.map((c) => c.key));
+  readinessSortField: ReadinessSortField | null = null;
+  readinessSortDir: 'asc' | 'desc' = 'asc';
 
   // System-wide VAT rate -- display-only here (2026-09-14j: the editor
   // moved to Platform Admin -> הגדרות כלליות -> חיוב ומיסוי, since VAT is a
@@ -476,6 +534,59 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   periodStatements(periodId: string): StatementListItem[] {
     return this.statements.filter((s) => s.billing_period_id === periodId);
+  }
+
+  // Sorted view for the table only -- periodStatements() itself stays
+  // unsorted since it also backs totals/counts/eligibility logic elsewhere
+  // on this page, where row order must never matter.
+  sortedPeriodStatements(periodId: string): StatementListItem[] {
+    const rows = this.periodStatements(periodId);
+    if (!this.monthSortField) return rows;
+    const field = this.monthSortField;
+    return this.sortRows(rows, this.monthSortDir, (s) => {
+      switch (field) {
+        case 'donations': return s.component_count ?? 0;
+        case 'gross':      return Number(s.gross_raised);
+        case 'fee':        return Number(s.fee_amount);
+        case 'vat':        return Number(s.vat_amount);
+        case 'due':        return Number(s.total_due);
+        case 'route':      return this.routedMethodLabel(s.routed_method);
+        case 'state':      return this.operationalStateLabel(s);
+      }
+    });
+  }
+
+  sortMonthBy(field: MonthSortField): void {
+    if (this.monthSortField === field) {
+      this.monthSortDir = this.monthSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.monthSortField = field;
+      this.monthSortDir = 'asc';
+    }
+  }
+
+  onVisibleMonthColumnsChange(visible: Set<string>): void {
+    this.visibleMonthColumns = visible;
+  }
+
+  // Shared by all 3 sortable tables on this page -- plain client-side sort
+  // (every row is already loaded locally, no backend pagination for any of
+  // these lists), numeric compare when both values are numbers, otherwise
+  // Hebrew-aware string compare.
+  // Shared by all 3 sortable tables' templates.
+  sortIndicator(activeField: string | null, field: string, dir: 'asc' | 'desc'): string {
+    if (activeField !== field) return '';
+    return dir === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  private sortRows<T>(rows: T[], dir: 'asc' | 'desc', valueOf: (row: T) => number | string): T[] {
+    const sorted = [...rows].sort((a, b) => {
+      const av = valueOf(a);
+      const bv = valueOf(b);
+      if (typeof av === 'number' && typeof bv === 'number') return av - bv;
+      return String(av).localeCompare(String(bv), 'he');
+    });
+    return dir === 'asc' ? sorted : sorted.reverse();
   }
 
   // ---- "החודש" 3-stage operator flow (① חשב חיובים -> ② בדוק ואשר -> ③
@@ -764,6 +875,34 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.statementsLoading = false;
       },
     });
+  }
+
+  get sortedStatements(): StatementListItem[] {
+    if (!this.allStatementsSortField) return this.statements;
+    const field = this.allStatementsSortField;
+    return this.sortRows(this.statements, this.allStatementsSortDir, (s) => {
+      switch (field) {
+        // Real chronological order (period_start), not the display string.
+        case 'period': return this.periods.find((p) => p.id === s.billing_period_id)?.period_start ?? '';
+        case 'gross':   return Number(s.gross_raised);
+        case 'due':     return Number(s.total_due);
+        case 'route':   return this.routedMethodLabel(s.routed_method);
+        case 'state':   return this.operationalStateLabel(s);
+      }
+    });
+  }
+
+  sortAllStatementsBy(field: AllStatementsSortField): void {
+    if (this.allStatementsSortField === field) {
+      this.allStatementsSortDir = this.allStatementsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.allStatementsSortField = field;
+      this.allStatementsSortDir = 'asc';
+    }
+  }
+
+  onVisibleAllStatementsColumnsChange(visible: Set<string>): void {
+    this.visibleAllStatementsColumns = visible;
   }
 
   openStatement(statement: StatementListItem): void {
@@ -1124,6 +1263,33 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     if (entity.masav_authorized) return { icon: '✓', label: 'מאושר' };
     if (this.hasEntityMasavBlocker(entity)) return { icon: '⚠', label: 'ממתין לאישור' };
     return { icon: '', label: 'הוגדר · טרם אושר' };
+  }
+
+  get sortedReadinessEntities(): BillingReadinessEntity[] {
+    if (!this.readinessSortField) return this.readinessEntities;
+    const field = this.readinessSortField;
+    return this.sortRows(this.readinessEntities, this.readinessSortDir, (e) => {
+      switch (field) {
+        case 'fee':   return this.feePercentOf(e);
+        case 'vat':   return this.systemVatRatePercent ?? 0;
+        case 'card':  return 1; // every row currently shows "✓ זמין" -- no real per-row value to sort by yet
+        case 'masav': return this.masavDisplayState(e).label;
+        case 'ready': return this.entityReadiness(e).label;
+      }
+    });
+  }
+
+  sortReadinessBy(field: ReadinessSortField): void {
+    if (this.readinessSortField === field) {
+      this.readinessSortDir = this.readinessSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.readinessSortField = field;
+      this.readinessSortDir = 'asc';
+    }
+  }
+
+  onVisibleReadinessColumnsChange(visible: Set<string>): void {
+    this.visibleReadinessColumns = visible;
   }
 
   // ---- מע״מ מערכתי -- תצוגה בלבד (2026-09-14j: העריכה עברה ל-Platform

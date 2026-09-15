@@ -99,6 +99,14 @@
   margin-bottom: 10px;
 }
 
+.bo-month-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bo-month-table-header .bo-card-title { margin-bottom: 0; }
+
 .bo-subtitle {
   font-size: 13px;
   font-weight: 700;
@@ -538,6 +546,9 @@
   border-bottom: 1px solid #e8edf3;
   white-space: nowrap;
 }
+
+.bo-table th.sortable { cursor: pointer; user-select: none; }
+.bo-table th.sortable:hover { color: #583cd6; }
 
 .bo-table td {
   padding: 9px 10px;

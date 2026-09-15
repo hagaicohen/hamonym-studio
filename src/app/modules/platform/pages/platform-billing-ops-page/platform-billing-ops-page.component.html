@@ -176,7 +176,14 @@
             }
 
             @if (periodStatements(period.id).length > 0) {
-              <div class="bo-card-title">חיובי החודש</div>
+              <div class="bo-month-table-header">
+                <div class="bo-card-title">חיובי החודש</div>
+                <app-column-picker
+                  [columns]="monthTableColumns"
+                  storageKey="platformColumns_billingMonth"
+                  (visibleChange)="onVisibleMonthColumnsChange($event)"
+                ></app-column-picker>
+              </div>
 
               @if (eligibleForBulkApproval(period.id).length > 0) {
                 <div class="bo-bulk-approval-bar">
@@ -219,19 +226,19 @@
                         }
                       </th>
                       <th>עמותה</th>
-                      <th>תרומות</th>
-                      <th>מחזור</th>
-                      <th>עמלה</th>
-                      <th>מע״מ</th>
-                      <th>לחיוב</th>
-                      <th>אמצעי גבייה</th>
-                      <th>מצב</th>
+                      @if (visibleMonthColumns.has('donations')) { <th class="sortable" (click)="sortMonthBy('donations')">תרומות{{ sortIndicator(monthSortField, 'donations', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('gross')) { <th class="sortable" (click)="sortMonthBy('gross')">מחזור{{ sortIndicator(monthSortField, 'gross', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('fee')) { <th class="sortable" (click)="sortMonthBy('fee')">עמלה{{ sortIndicator(monthSortField, 'fee', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('vat')) { <th class="sortable" (click)="sortMonthBy('vat')">מע״מ{{ sortIndicator(monthSortField, 'vat', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('due')) { <th class="sortable" (click)="sortMonthBy('due')">לחיוב{{ sortIndicator(monthSortField, 'due', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('route')) { <th class="sortable" (click)="sortMonthBy('route')">אמצעי גבייה{{ sortIndicator(monthSortField, 'route', monthSortDir) }}</th> }
+                      @if (visibleMonthColumns.has('state')) { <th class="sortable" (click)="sortMonthBy('state')">מצב{{ sortIndicator(monthSortField, 'state', monthSortDir) }}</th> }
                       <th>מה עושים עכשיו</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (statement of periodStatements(period.id); track statement.id) {
+                    @for (statement of sortedPeriodStatements(period.id); track statement.id) {
                       <tr>
                         <td class="bo-checkbox-col">
                           @if (statement.status === 'draft') {
@@ -242,13 +249,13 @@
                           }
                         </td>
                         <td>{{ statement.entity_name }}</td>
-                        <td>{{ statement.component_count ?? '—' }}</td>
-                        <td>₪{{ statement.gross_raised }}</td>
-                        <td>₪{{ statement.fee_amount }}</td>
-                        <td>₪{{ statement.vat_amount }}</td>
-                        <td>₪{{ statement.total_due }}</td>
-                        <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
-                        <td><span class="bo-badge" [class]="operationalStateBadgeClass(statement)">{{ operationalStateLabel(statement) }}</span></td>
+                        @if (visibleMonthColumns.has('donations')) { <td>{{ statement.component_count ?? '—' }}</td> }
+                        @if (visibleMonthColumns.has('gross')) { <td>₪{{ statement.gross_raised }}</td> }
+                        @if (visibleMonthColumns.has('fee')) { <td>₪{{ statement.fee_amount }}</td> }
+                        @if (visibleMonthColumns.has('vat')) { <td>₪{{ statement.vat_amount }}</td> }
+                        @if (visibleMonthColumns.has('due')) { <td>₪{{ statement.total_due }}</td> }
+                        @if (visibleMonthColumns.has('route')) { <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td> }
+                        @if (visibleMonthColumns.has('state')) { <td><span class="bo-badge" [class]="operationalStateBadgeClass(statement)">{{ operationalStateLabel(statement) }}</span></td> }
                         <td>
                           @if (isActionableNextAction(statement)) {
                             <button type="button" class="bo-next-action bo-next-action-clickable" (click)="onNextActionClick(statement)">
@@ -271,13 +278,13 @@
                       <tr class="bo-table-total">
                         <td></td>
                         <td>סה״כ</td>
-                        <td>{{ totals.donations }}</td>
-                        <td>₪{{ totals.gross.toFixed(2) }}</td>
-                        <td>₪{{ totals.fee.toFixed(2) }}</td>
-                        <td>₪{{ totals.vat.toFixed(2) }}</td>
-                        <td>₪{{ totals.due.toFixed(2) }}</td>
-                        <td></td>
-                        <td></td>
+                        @if (visibleMonthColumns.has('donations')) { <td>{{ totals.donations }}</td> }
+                        @if (visibleMonthColumns.has('gross')) { <td>₪{{ totals.gross.toFixed(2) }}</td> }
+                        @if (visibleMonthColumns.has('fee')) { <td>₪{{ totals.fee.toFixed(2) }}</td> }
+                        @if (visibleMonthColumns.has('vat')) { <td>₪{{ totals.vat.toFixed(2) }}</td> }
+                        @if (visibleMonthColumns.has('due')) { <td>₪{{ totals.due.toFixed(2) }}</td> }
+                        @if (visibleMonthColumns.has('route')) { <td></td> }
+                        @if (visibleMonthColumns.has('state')) { <td></td> }
                         <td></td>
                         <td></td>
                       </tr>
@@ -476,6 +483,11 @@
             <option value="written_off">נמחק כחוב אבוד</option>
           </select>
         </label>
+        <app-column-picker
+          [columns]="allStatementsColumns"
+          storageKey="platformColumns_billingAllStatements"
+          (visibleChange)="onVisibleAllStatementsColumnsChange($event)"
+        ></app-column-picker>
       </div>
 
       @if (statementsLoading) {
@@ -490,24 +502,24 @@
             <thead>
               <tr>
                 <th>עמותה</th>
-                <th>חודש חיוב</th>
-                <th>מחזור תרומות</th>
-                <th>סכום לחיוב</th>
-                <th>אמצעי גבייה</th>
-                <th>מצב</th>
+                @if (visibleAllStatementsColumns.has('period')) { <th class="sortable" (click)="sortAllStatementsBy('period')">חודש חיוב{{ sortIndicator(allStatementsSortField, 'period', allStatementsSortDir) }}</th> }
+                @if (visibleAllStatementsColumns.has('gross')) { <th class="sortable" (click)="sortAllStatementsBy('gross')">מחזור תרומות{{ sortIndicator(allStatementsSortField, 'gross', allStatementsSortDir) }}</th> }
+                @if (visibleAllStatementsColumns.has('due')) { <th class="sortable" (click)="sortAllStatementsBy('due')">סכום לחיוב{{ sortIndicator(allStatementsSortField, 'due', allStatementsSortDir) }}</th> }
+                @if (visibleAllStatementsColumns.has('route')) { <th class="sortable" (click)="sortAllStatementsBy('route')">אמצעי גבייה{{ sortIndicator(allStatementsSortField, 'route', allStatementsSortDir) }}</th> }
+                @if (visibleAllStatementsColumns.has('state')) { <th class="sortable" (click)="sortAllStatementsBy('state')">מצב{{ sortIndicator(allStatementsSortField, 'state', allStatementsSortDir) }}</th> }
                 <th>מה עושים עכשיו</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              @for (statement of statements; track statement.id) {
+              @for (statement of sortedStatements; track statement.id) {
                 <tr class="bo-row-clickable" (click)="openStatement(statement)">
                   <td>{{ statement.entity_name }}</td>
-                  <td>{{ statementPeriodLabel(statement) }}</td>
-                  <td>₪{{ statement.gross_raised }}</td>
-                  <td>₪{{ statement.total_due }}</td>
-                  <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td>
-                  <td><span class="bo-badge" [class]="operationalStateBadgeClass(statement)">{{ operationalStateLabel(statement) }}</span></td>
+                  @if (visibleAllStatementsColumns.has('period')) { <td>{{ statementPeriodLabel(statement) }}</td> }
+                  @if (visibleAllStatementsColumns.has('gross')) { <td>₪{{ statement.gross_raised }}</td> }
+                  @if (visibleAllStatementsColumns.has('due')) { <td>₪{{ statement.total_due }}</td> }
+                  @if (visibleAllStatementsColumns.has('route')) { <td><span class="bo-badge bo-badge-route-{{ statement.routed_method }}">{{ routedMethodLabel(statement.routed_method) }}</span></td> }
+                  @if (visibleAllStatementsColumns.has('state')) { <td><span class="bo-badge" [class]="operationalStateBadgeClass(statement)">{{ operationalStateLabel(statement) }}</span></td> }
                   <td>
                     @if (isActionableNextAction(statement)) {
                       <button type="button" class="bo-next-action bo-next-action-clickable" (click)="onNextActionClick(statement); $event.stopPropagation()">
@@ -545,44 +557,58 @@
       } @else if (readinessEntities.length === 0) {
         <div class="ops-empty-small">אין עמותות פעילות כרגע.</div>
       } @else {
+        <div class="bo-month-table-header">
+          <span></span>
+          <app-column-picker
+            [columns]="readinessColumns"
+            storageKey="platformColumns_billingReadiness"
+            (visibleChange)="onVisibleReadinessColumnsChange($event)"
+          ></app-column-picker>
+        </div>
         <div class="bo-table-wrap">
           <table class="bo-table">
             <thead>
               <tr>
                 <th class="bo-entity-col">עמותה</th>
-                <th>עמלה</th>
-                <th>מע״מ</th>
-                <th>כרטיס אשראי</th>
-                <th>מס״ב</th>
-                <th>מוכנות לחיוב</th>
+                @if (visibleReadinessColumns.has('fee')) { <th class="sortable" (click)="sortReadinessBy('fee')">עמלה{{ sortIndicator(readinessSortField, 'fee', readinessSortDir) }}</th> }
+                @if (visibleReadinessColumns.has('vat')) { <th class="sortable" (click)="sortReadinessBy('vat')">מע״מ{{ sortIndicator(readinessSortField, 'vat', readinessSortDir) }}</th> }
+                @if (visibleReadinessColumns.has('card')) { <th class="sortable" (click)="sortReadinessBy('card')">כרטיס אשראי{{ sortIndicator(readinessSortField, 'card', readinessSortDir) }}</th> }
+                @if (visibleReadinessColumns.has('masav')) { <th class="sortable" (click)="sortReadinessBy('masav')">מס״ב{{ sortIndicator(readinessSortField, 'masav', readinessSortDir) }}</th> }
+                @if (visibleReadinessColumns.has('ready')) { <th class="sortable" (click)="sortReadinessBy('ready')">מוכנות לחיוב{{ sortIndicator(readinessSortField, 'ready', readinessSortDir) }}</th> }
                 <th class="bo-actions-col"></th>
               </tr>
             </thead>
             <tbody>
-              @for (entity of readinessEntities; track entity.id) {
+              @for (entity of sortedReadinessEntities; track entity.id) {
                 <tr>
                   <td class="bo-entity-col">{{ entity.display_name }}</td>
-                  @if (entity.billing_account_id) {
-                    <td>{{ feePercentOf(entity) }}%</td>
-                  } @else {
-                    <td>—</td>
+                  @if (visibleReadinessColumns.has('fee')) {
+                    @if (entity.billing_account_id) {
+                      <td>{{ feePercentOf(entity) }}%</td>
+                    } @else {
+                      <td>—</td>
+                    }
                   }
-                  <td>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</td>
-                  <td>✓ זמין</td>
-                  <td>
-                    @if (masavDisplayState(entity).icon) {
-                      {{ masavDisplayState(entity).icon }} {{ masavDisplayState(entity).label }}
-                    } @else {
-                      {{ masavDisplayState(entity).label }}
-                    }
-                  </td>
-                  <td>
-                    @if (entityReadiness(entity).ready) {
-                      <span class="bo-badge bo-badge-ready">✓ {{ entityReadiness(entity).label }}</span>
-                    } @else {
-                      <span class="bo-badge bo-badge-warning">⚠ {{ entityReadiness(entity).label }}</span>
-                    }
-                  </td>
+                  @if (visibleReadinessColumns.has('vat')) { <td>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</td> }
+                  @if (visibleReadinessColumns.has('card')) { <td>✓ זמין</td> }
+                  @if (visibleReadinessColumns.has('masav')) {
+                    <td>
+                      @if (masavDisplayState(entity).icon) {
+                        {{ masavDisplayState(entity).icon }} {{ masavDisplayState(entity).label }}
+                      } @else {
+                        {{ masavDisplayState(entity).label }}
+                      }
+                    </td>
+                  }
+                  @if (visibleReadinessColumns.has('ready')) {
+                    <td>
+                      @if (entityReadiness(entity).ready) {
+                        <span class="bo-badge bo-badge-ready">✓ {{ entityReadiness(entity).label }}</span>
+                      } @else {
+                        <span class="bo-badge bo-badge-warning">⚠ {{ entityReadiness(entity).label }}</span>
+                      }
+                    </td>
+                  }
                   <td class="bo-actions-col">
                     @if (!entity.billing_account_id) {
                       <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" (click)="openBillingSetup(entity.id, entity.display_name, entity.paid_donation_count, entity.paid_gross_total)">

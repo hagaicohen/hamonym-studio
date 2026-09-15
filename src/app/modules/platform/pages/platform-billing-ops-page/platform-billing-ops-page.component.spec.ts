@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
-import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail } from '../../services/billing-ops.service';
+import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail, BillingPeriod } from '../../services/billing-ops.service';
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
 import { BillingSettingsService } from '../../services/billing-settings.service';
 
@@ -1079,5 +1079,159 @@ describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרו�
 
     expect(fixture.componentInstance.billingSetupEntityId).toBe('entity-b');
     expect(fixture.debugElement.query(By.css('app-billing-entity-setup'))).toBeTruthy();
+  });
+});
+
+// Column sorting + visibility (2026-09-16), rolled out only to the 3
+// substantial one-row-per-entity/statement tables on this page (per
+// explicit "meaningful tables only" product guidance) -- reuses
+// app-column-picker and the same toggle-direction-on-repeat-click
+// convention already proven on platform-organizations-page and the
+// donations browser. All 3 tables sort a fully-loaded local array
+// client-side; no backend call is involved in sorting here.
+describe('PlatformBillingOpsPageComponent - column sorting + visibility', () => {
+  function stmt(overrides: Partial<StatementListItem>): StatementListItem {
+    return {
+      id: 'stmt-1', billing_account_id: 'acct-1', billing_period_id: 'period-1', billing_run_id: 'run-1',
+      gross_raised: '50.00', fee_amount: '1.50', vat_amount: '0.27', total_due: '1.77',
+      status: 'approved', created_at: '2026-08-05T00:00:00.000Z',
+      entity_id: 'entity-a', entity_name: 'עמותת א', component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+      next_action: 'מוכן לגבייה',
+      ...overrides,
+    };
+  }
+
+  const period: BillingPeriod = { id: 'period-1', period_start: '2026-08-01T00:00:00.000Z', period_end: '2026-08-31T23:59:59.999Z', created_at: '2026-08-01T00:00:00.000Z', retired: false, run_count: 1 };
+
+  // "החודש" only renders its statements table once a calculation run
+  // exists for the period (runsForPeriod().length > 0) -- otherwise it
+  // shows "טרם בוצע חישוב חיובים לחודש זה." regardless of statements data.
+  const run = {
+    id: 'run-1', billing_period_id: 'period-1', mode: 'production' as const, as_of: '2026-08-05T00:00:00.000Z',
+    status: 'completed', result_summary: { accountsEvaluated: 1, statementsCreated: 1, zeroActivityAccountIds: [], errors: [] },
+    created_at: '2026-08-05T00:00:00.000Z', completed_at: '2026-08-05T00:00:01.000Z',
+  };
+
+  async function setup(statements: StatementListItem[]) {
+    const service = {
+      listPeriods: () => of({ periods: [period] }),
+      listRuns: () => of({ runs: [run] }),
+      listStatements: () => of({ statements }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('"החודש": clicking a sortable header reorders rows by that column; clicking again reverses', async () => {
+    const fixture = await setup([
+      stmt({ id: 's-low', entity_id: 'e-low', entity_name: 'עמותה נמוכה', total_due: '10.00' }),
+      stmt({ id: 's-high', entity_id: 'e-high', entity_name: 'עמותה גבוהה', total_due: '90.00' }),
+    ]);
+    fixture.componentInstance.setTab('periods');
+    fixture.detectChanges();
+
+    const dueHeader = fixture.debugElement.queryAll(By.css('.bo-table th.sortable')).find((h) => h.nativeElement.textContent.includes('לחיוב'))!;
+    dueHeader.nativeElement.click();
+    fixture.detectChanges();
+
+    let names = fixture.debugElement.queryAll(By.css('.bo-table tbody tr td:nth-child(2)')).map((td) => td.nativeElement.textContent.trim());
+    expect(names).toEqual(['עמותה נמוכה', 'עמותה גבוהה']); // ascending: 10 before 90
+
+    dueHeader.nativeElement.click();
+    fixture.detectChanges();
+    names = fixture.debugElement.queryAll(By.css('.bo-table tbody tr td:nth-child(2)')).map((td) => td.nativeElement.textContent.trim());
+    expect(names).toEqual(['עמותה גבוהה', 'עמותה נמוכה']); // descending
+  });
+
+  it('"החודש": column picker hides a column from header, body and the totals row together', async () => {
+    const fixture = await setup([stmt({})]);
+    fixture.componentInstance.setTab('periods');
+    fixture.detectChanges();
+
+    let headerText = fixture.debugElement.query(By.css('.bo-table thead')).nativeElement.textContent;
+    expect(headerText).toContain('מע״מ');
+
+    fixture.componentInstance.onVisibleMonthColumnsChange(
+      new Set(fixture.componentInstance.monthTableColumns.map((c) => c.key).filter((k) => k !== 'vat')),
+    );
+    fixture.detectChanges();
+
+    headerText = fixture.debugElement.query(By.css('.bo-table thead')).nativeElement.textContent;
+    expect(headerText).not.toContain('מע״מ');
+    // עמותה is the always-visible anchor column, never hidden by the picker.
+    expect(headerText).toContain('עמותה');
+  });
+
+  it('"כל החיובים": clicking a sortable header reorders rows by that column', async () => {
+    const fixture = await setup([
+      stmt({ id: 's-low', entity_id: 'e-low', entity_name: 'עמותה נמוכה', total_due: '10.00' }),
+      stmt({ id: 's-high', entity_id: 'e-high', entity_name: 'עמותה גבוהה', total_due: '90.00' }),
+    ]);
+    fixture.componentInstance.setTab('statements');
+    fixture.detectChanges();
+
+    const dueHeader = fixture.debugElement.queryAll(By.css('.bo-table th.sortable')).find((h) => h.nativeElement.textContent.includes('סכום לחיוב'))!;
+    dueHeader.nativeElement.click();
+    fixture.detectChanges();
+
+    const names = fixture.debugElement.queryAll(By.css('.bo-table tbody tr td:first-child')).map((td) => td.nativeElement.textContent.trim());
+    expect(names).toEqual(['עמותה נמוכה', 'עמותה גבוהה']); // ascending
+  });
+
+  it('"הגדרות עמותות": clicking a sortable header reorders rows by עמלה; column picker hides a column', async () => {
+    const entities: BillingReadinessEntity[] = [
+      { id: 'e-hi', display_name: 'עמותה עמלה גבוהה', billing_account_id: 'ba-1', fee_rate: '0.05', vat_rate: '0.18', enforcement_status: 'active', preferred_collection_method: 'card', masav_authorized: true, masav_configured: true, paid_donation_count: 1, paid_gross_total: '10.00' },
+      { id: 'e-lo', display_name: 'עמותה עמלה נמוכה', billing_account_id: 'ba-2', fee_rate: '0.02', vat_rate: '0.18', enforcement_status: 'active', preferred_collection_method: 'card', masav_authorized: true, masav_configured: true, paid_donation_count: 1, paid_gross_total: '10.00' },
+    ];
+    const provisioningStub = {
+      getReadiness: () => of({ entities }),
+      getByEntityId: () => of({ account: null }),
+      getUnprovisioned: () => of({ entities: [] }),
+    };
+    const opsStub = {
+      listPeriods: () => of({ periods: [] }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      getMasavConfig: () => of({ config: null }),
+    };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('entities');
+    fixture.detectChanges();
+
+    const feeHeader = fixture.debugElement.queryAll(By.css('.bo-table th.sortable')).find((h) => h.nativeElement.textContent.includes('עמלה'))!;
+    feeHeader.nativeElement.click();
+    fixture.detectChanges();
+
+    let names = fixture.debugElement.queryAll(By.css('.bo-table tbody tr td:first-child')).map((td) => td.nativeElement.textContent.trim());
+    expect(names).toEqual(['עמותה עמלה נמוכה', 'עמותה עמלה גבוהה']); // ascending: 2% before 5%
+
+    fixture.componentInstance.onVisibleReadinessColumnsChange(
+      new Set(fixture.componentInstance.readinessColumns.map((c) => c.key).filter((k) => k !== 'card')),
+    );
+    fixture.detectChanges();
+    const headerText = fixture.debugElement.query(By.css('.bo-table thead')).nativeElement.textContent;
+    expect(headerText).not.toContain('כרטיס אשראי');
   });
 });
