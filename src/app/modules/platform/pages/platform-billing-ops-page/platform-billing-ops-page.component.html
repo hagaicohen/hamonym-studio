@@ -40,7 +40,7 @@
               <div class="bo-current-title">חיוב {{ fmtDate(period.period_start) }} – {{ fmtInclusiveEndDate(period.period_end) }}</div>
             }
             <div class="bo-month-switch">
-              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(-1)" aria-label="חודש קודם">←</button>
+              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(-1)" aria-label="חודש קודם" title="חודש קודם">→</button>
               <div class="bo-month-picker-wrap">
                 <button
                   type="button"
@@ -72,7 +72,7 @@
                   </div>
                 }
               </div>
-              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(1)" aria-label="חודש הבא">→</button>
+              <button type="button" class="bo-month-nav-btn" [disabled]="creatingPeriod || !selectedMonth" (click)="stepMonth(1)" aria-label="חודש הבא" title="חודש הבא">←</button>
             </div>
           </div>
           @if (periodActionError) {
@@ -91,7 +91,7 @@
                  is owed -> where things stand -- not disconnected KPI tiles. -->
             <div class="bo-summary-narrative">
               <b>{{ periodDonationsCount(period) }} תרומות בסך ₪{{ periodGrossAmount(period).toFixed(2) }}</b>
-              <span class="bo-summary-arrow">→</span>
+              <span class="bo-summary-arrow">←</span>
               <b class="bo-summary-highlight">סה״כ לחיוב: ₪{{ periodTotalDue(period.id) }}</b>
             </div>
             @if (periodStatusBreakdown(period.id); as breakdown) {
@@ -115,13 +115,13 @@
             @if (periodStatements(period.id).length > 0) {
               <div class="bo-stage-tracker">
                 <div class="bo-stage bo-stage-done">✓ החיובים חושבו</div>
-                <span class="bo-stage-arrow">→</span>
+                <span class="bo-stage-arrow">←</span>
                 @if (periodStage(period) === 2) {
                   <div class="bo-stage bo-stage-active">○ ממתין לאישור</div>
                 } @else {
                   <div class="bo-stage bo-stage-done">✓ החיובים אושרו</div>
                 }
-                <span class="bo-stage-arrow">→</span>
+                <span class="bo-stage-arrow">←</span>
                 @if (periodStage(period) < 3) {
                   <div class="bo-stage">③ בצע גבייה</div>
                 } @else if (periodCollectionComplete(period.id)) {
