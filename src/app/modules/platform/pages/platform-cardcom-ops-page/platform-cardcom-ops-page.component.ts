@@ -1,67 +1,79 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import {
   CardcomOpsService,
   HealthResponse,
-  JobRun,
   ReconciliationFinding,
+  PlatformDonation,
 } from '../../services/cardcom-ops.service';
 import { PlatformService } from '../../services/platform.service';
 import {
   jobLabel as sharedJobLabel,
-  jobFrequency as sharedJobFrequency,
   findingTypeLabel as sharedFindingTypeLabel,
-  webhookTypeLabel as sharedWebhookTypeLabel,
   jobArea as sharedJobArea,
   PROVIDER_FINDING_TYPES,
 } from '../../utils/ops-labels';
 import { environment } from '../../../../../environments/environment';
 
-// This page is the operator-facing "תרומות" (donations) health view (UX
-// simplification pass, 2026-09-14) -- it used to be "תפעול CardCom", a
-// single page covering both donation delivery AND commission-billing
-// health. The label/area-classification tables now live in
-// ../../utils/ops-labels.ts (shared with platform-billing-ops-page's own
-// "דורש טיפול" section, which surfaces the SAME underlying data filtered
-// to the 'commission' area instead) -- this component still fetches and
-// classifies all 4 areas internally (cardcom/donations/commission/jobs),
-// unchanged from before, but the TEMPLATE only ever renders the areas
-// relevant to donations (see areaOrder below); commission-area items are
-// still computed here (and covered by this file's own spec) but are
-// surfaced to the operator on the Billing Ops page instead.
+// "תרومות" (2026-09-15 product decision, built from two same-day read-only
+// audits): the normal operator screen is now primarily a cross-entity
+// donations browser -- an operator finds/identifies a real donation here,
+// the way they browse עמותות/קמפיינים/משתמשים. System anomalies (jobs/
+// findings) are demoted to one compact, honestly-labeled secondary
+// indicator: the audit established that NONE of the four known finding
+// types currently has an operator-executable resolution step through
+// Hamonym (no manual mark-paid workflow exists anywhere in the product --
+// see donations.service.js, markDonationPaid is never routed to a human).
+// "דורש טיפול"/"סמן כנבדק" implied an operator workflow that doesn't
+// exist; removed from the normal view for that reason, not because the
+// underlying detection/resolve capability was judged unnecessary -- see
+// this file's own header history for the fuller "כלים טכניים" version
+// this replaces (git blame), and cardcom-ops.controller.js/routes.js for
+// the unchanged backend endpoints those controls used to call.
 const CARDCOM_FINDING_TYPES = PROVIDER_FINDING_TYPES;
 
 export type AreaKey = 'cardcom' | 'donations' | 'commission' | 'jobs';
 export type AreaStatus = 'ok' | 'warning' | 'critical';
 
-// Operator-facing grouping for "דורש טיפול" (2026-09-14q simplification,
-// built directly from the read-only audit this same day). Findings are
-// grouped by finding_type for DISPLAY only -- recordFinding's own dedup key
-// is (job_name, finding_type, subject_type, subject_id), so every open
-// finding genuinely IS a distinct donation/campaign; grouping must never
-// hide that a group of "4" really is 4 separate subjects, each still
-// reachable individually in the group's drawer.
-//
-// `tone: 'neutral'` exists for exactly one documented case so far
-// (campaign_aggregate_mismatch): its underlying `severity` is 'critical' in
-// the data (a genuine data-integrity bug worth fixing) but the job's own
-// comment establishes it as "display-only drift, not money at risk" --
-// tone only softens the VISUAL treatment (dot color), it never touches
-// finding.severity itself or which findings count as open/actionable.
+// Honest classification replacing "דורש טיפול" (2026-09-15s) -- each value
+// is a factual claim about what happens next, established directly by the
+// read-only workflow audit, never implying a resolution the operator can
+// actually perform today:
+//   auto-retry   -- the underlying job itself retries on its own schedule;
+//                    normally nothing for a human to do.
+//   engineering  -- resolving requires DB/code-level investigation with no
+//                    UI path today (recompute, manual CardCom lookup by an
+//                    engineer, etc.).
+//   needs-review -- financially meaningful and a human SHOULD look at it,
+//                    but Hamonym has no safe resolution workflow yet either
+//                    -- still honestly labeled, not hidden.
+export type ResolutionKind = 'auto-retry' | 'engineering' | 'needs-review';
+
+export const RESOLUTION_LABELS: Record<ResolutionKind, string> = {
+  'auto-retry': 'המערכת מנסה שוב אוטומטית',
+  engineering: 'דורש בדיקה טכנית',
+  'needs-review': 'אי-התאמה הדורשת בדיקה',
+};
+
+// Findings are grouped by finding_type for DISPLAY only -- recordFinding's
+// own dedup key is (job_name, finding_type, subject_type, subject_id), so
+// every open finding genuinely IS a distinct donation/campaign; grouping
+// must never hide that a group of "4" really is 4 separate subjects, each
+// still individually shown (read-only) in the group's drawer.
 export interface FindingGroupMeta {
   title: string;
   explanation: string;
   // Singular, shown under each individual item in the drawer -- distinct
   // from `explanation` (plural, shown once at the drawer header) because
   // Hebrew grammar doesn't let one string serve both without sounding
-  // wrong (2026-09-14r). Wording deliberately never implies the donation
-  // itself failed -- lookup_failed only means Hamonym could not verify its
-  // state with the provider, not that the charge failed.
+  // wrong. Wording deliberately never implies the donation itself failed --
+  // lookup_failed only means Hamonym could not verify its state with the
+  // provider, not that the charge failed.
   itemExplanation: string;
-  actionLabel: string;
   pluralSubjectLabel: string;
-  tone: 'urgent' | 'neutral';
+  resolutionKind: ResolutionKind;
 }
 
 export interface FindingGroup {
@@ -70,64 +82,58 @@ export interface FindingGroup {
   items: ReconciliationFinding[];
 }
 
-// Only the finding types actually confirmed by the audit to belong to the
-// "תרומות" world (cardcom + donations areas) get bespoke copy. Anything
+// Only the finding types actually confirmed by the two audits to belong to
+// the "תרומות" world (cardcom + donations areas) get bespoke copy. Anything
 // else falls back to defaultGroupMeta() below -- never silently dropped,
-// just less polished until it's actually seen in production and given its
-// own entry here.
+// just less polished until it's actually seen in production.
 const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
   lookup_failed: {
     title: 'בדיקה מול חברת הסליקה',
     explanation: 'לא ניתן היה לוודא עדיין את מצב התשלום של תרומות אלה.',
     itemExplanation: 'לא הצלחנו לוודא את מצב התשלום מול חברת הסליקה.',
-    actionLabel: 'הצג תרומות',
     pluralSubjectLabel: 'תרומות',
-    tone: 'urgent',
+    resolutionKind: 'auto-retry',
   },
   pending_donation_missing_low_profile_id: {
-    title: 'נדרשת בדיקה ידנית',
+    title: 'תרומות ללא מזהה לבדיקה',
     explanation: 'לא ניתן לבדוק אוטומטית את מצב התשלום של תרומות אלה.',
-    itemExplanation: 'נדרשת בדיקה ידנית — לא ניתן לבדוק אוטומטית את מצב התשלום של התרומה הזו.',
-    actionLabel: 'הצג תרומות',
+    itemExplanation: 'לא ניתן לבדוק אוטומטית את מצב התשלום של התרומה הזו.',
     pluralSubjectLabel: 'תרומות',
-    tone: 'urgent',
+    resolutionKind: 'engineering',
   },
   campaign_aggregate_mismatch: {
     title: 'נתוני קמפיינים אינם מעודכנים',
     explanation: 'התרומות עצמן תקינות; נתוני התצוגה בקמפיין אינם תואמים לנתוני התרומות.',
     itemExplanation: 'התרומות בקמפיין הזה תקינות; נתוני התצוגה (סכום/תומכים) אינם מעודכנים.',
-    actionLabel: 'הצג קמפיינים',
     pluralSubjectLabel: 'קמפיינים',
-    tone: 'neutral',
+    resolutionKind: 'engineering',
   },
   gate_v1_mismatch: {
     title: 'תרומות שעוכבו לבדיקת אימות',
-    explanation: 'התשלום נעצר לבדיקה ידנית בעקבות אי-התאמה מול תשובת חברת הסליקה.',
-    itemExplanation: 'התשלום נעצר לבדיקה ידנית בעקבות אי-התאמה מול תשובת חברת הסליקה.',
-    actionLabel: 'הצג תרומות',
+    explanation: 'התשלום נעצר לבדיקה בעקבות אי-התאמה מול תשובת חברת הסליקה.',
+    itemExplanation: 'התשלום נעצר לבדיקה בעקבות אי-התאמה מול תשובת חברת הסליקה.',
     pluralSubjectLabel: 'תרומות',
-    tone: 'urgent',
+    resolutionKind: 'needs-review',
   },
 };
 
 function defaultGroupMeta(findingType: string, subjectType: string): FindingGroupMeta {
   return {
     title: sharedFindingTypeLabel(findingType),
-    explanation: 'ממצא הדורש בדיקה.',
-    itemExplanation: 'ממצא הדורש בדיקה.',
-    actionLabel: 'הצג פרטים',
+    explanation: 'ממצא מערכתי הדורש בדיקה.',
+    itemExplanation: 'ממצא מערכתי הדורש בדיקה.',
     pluralSubjectLabel: subjectType === 'donation' ? 'תרומות' : subjectType === 'campaign' ? 'קמפיינים' : subjectType,
-    tone: 'urgent',
+    resolutionKind: 'engineering',
   };
 }
 
 // Human context for a donation-subject finding, fetched from the existing
-// public donation-confirmation endpoint (2026-09-14r) -- no new backend
-// code. Deliberately excludes donor_name even though the endpoint returns
-// it: it's a public, unauthenticated route (not part of Platform Admin's
-// own authenticated data flow), so showing a donor's name here would be
-// more exposure than this pass should introduce; amount/campaign/
-// association/date are enough for an operator to identify the case.
+// public donation-confirmation endpoint -- no new backend code for this.
+// Deliberately excludes donor_name even though the endpoint returns it:
+// it's a public, unauthenticated route, not part of Platform Admin's own
+// authenticated flow, so this stays out of scope here. Separate from (and
+// unrelated to) the new donations-browser endpoint below, which DOES show
+// donor_name because it's a genuinely authenticated, requireSuperAdmin flow.
 interface DonationContext {
   amount: number | string;
   created_at: string;
@@ -135,23 +141,14 @@ interface DonationContext {
   entity_name: string;
 }
 
-// Human context for a campaign-subject finding -- reuses
-// PlatformService.getCampaign(), the same endpoint the campaign detail
-// page already calls.
 interface CampaignContext {
   title: string;
   entity_name: string;
 }
 
-// Full classification order (used internally for sorting actionableItems --
-// commission/jobs items are still computed here, just surfaced on the
-// Billing Ops page's own "דורש טיפול" section instead of this page's UI).
 const AREA_ORDER: AreaKey[] = ['cardcom', 'donations', 'commission', 'jobs'];
-
-// What THIS page actually renders as tiles/actionable groups -- donations
-// world only, per the 2026-09-14 IA simplification (commission-area health
-// moved to the "חיובי עמותות" page, see platform-billing-ops-page.component.ts).
 const VISIBLE_AREA_ORDER: AreaKey[] = ['cardcom', 'donations'];
+const RESOLUTION_ORDER: ResolutionKind[] = ['needs-review', 'engineering', 'auto-retry'];
 
 export interface ActionableItem {
   id: string;
@@ -163,10 +160,16 @@ export interface ActionableItem {
   findingId?: number;
 }
 
+const DONATION_STATUS_LABELS: Record<string, string> = {
+  paid: 'שולם',
+  pending: 'ממתין',
+  failed: 'נכשל',
+};
+
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })
@@ -175,46 +178,41 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   private http = inject(HttpClient);
   private platformService = inject(PlatformService);
 
-  // Keyed by subject_id (donation or campaign uuid), fetched lazily the
-  // first time a group drawer containing that subject is opened, cached
-  // for the component's lifetime. 'loading'/'error' are explicit states so
-  // the template never has to guess why a value is missing.
   private donationContextCache = new Map<string, DonationContext | 'loading' | 'error'>();
   private campaignContextCache = new Map<string, CampaignContext | 'loading' | 'error'>();
 
-  // Template-facing tile/list order (donations world only). Internal
-  // classification (actionableItems' sort, itemsForArea for any area
-  // including 'commission'/'jobs') is untouched -- see AREA_ORDER above.
   readonly areaOrder = VISIBLE_AREA_ORDER;
+  readonly resolutionLabels = RESOLUTION_LABELS;
 
   loading = true;
   error: string | null = null;
+  actionError: string | null = null;
 
   health: HealthResponse | null = null;
   findings: ReconciliationFinding[] = [];
-  showResolved = false;
-  // Renamed from showTechnical (2026-09-14q) -- scope narrowed to jobs +
-  // webhooks + the raw findings log only. Findings that need operator
-  // action no longer live in this shared toggle at all; they're grouped
-  // in "דורש טיפול" and drilled into via a focused per-group drawer instead.
-  showTechnicalTools = false;
 
-  // Which finding-group's drawer is open, keyed by finding_type -- at most
-  // one at a time, same pattern as the billing-setup drawer elsewhere in
-  // Platform Admin.
+  // ---- Donations browser (2026-09-15s) -----------------------------------
+  donations: PlatformDonation[] = [];
+  donationsLoading = true;
+  donationsError: string | null = null;
+  donationsTotal = 0;
+  donationsPage = 0;
+  donationsLimit = 25;
+  donationsSearch = '';
+  donationsStatus = '';
+  selectedDonation: PlatformDonation | null = null;
+
+  get donationsTotalPages(): number {
+    return Math.max(1, Math.ceil(this.donationsTotal / this.donationsLimit));
+  }
+
+  // System anomalies -- collapsed by default, revealed only on request.
+  showAnomalies = false;
   groupDrawerFindingType: string | null = null;
-  // Per-finding "פרטים טכניים" disclosure inside the open drawer (raw
-  // ids/JSON/provider error) -- collapsed by default, one at a time.
-  expandedFindingTechnicalId: number | null = null;
-
-  runsByJob: Record<string, JobRun[]> = {};
-  expandedJob: string | null = null;
-  runningJob: string | null = null;
-  resolvingFindingId: number | null = null;
-  actionError: string | null = null;
 
   ngOnInit(): void {
     this.loadAll();
+    this.loadDonations();
   }
 
   private loadAll(): void {
@@ -236,44 +234,77 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   }
 
   private loadFindings(): void {
-    this.cardcomOps.getFindings(this.showResolved).subscribe({
+    this.cardcomOps.getFindings(false).subscribe({
       next: (res) => { this.findings = res.findings; },
-      error: () => { /* health already surfaces the main error state; findings failing quietly is acceptable here */ },
+      error: () => { /* the compact anomaly indicator failing quietly is acceptable -- the donations browser is the primary content */ },
     });
   }
 
-  toggleResolved(): void {
-    this.showResolved = !this.showResolved;
-    this.loadFindings();
+  loadDonations(): void {
+    this.donationsLoading = true;
+    this.donationsError = null;
+    this.cardcomOps
+      .listDonations({
+        search: this.donationsSearch || undefined,
+        status: this.donationsStatus || undefined,
+        page: this.donationsPage,
+        limit: this.donationsLimit,
+      })
+      .subscribe({
+        next: (res) => {
+          this.donations = res.donations;
+          this.donationsTotal = res.total;
+          this.donationsLoading = false;
+        },
+        error: () => {
+          this.donationsError = 'שגיאה בטעינת התרומות';
+          this.donationsLoading = false;
+        },
+      });
   }
 
-  toggleTechnicalTools(): void {
-    this.showTechnicalTools = !this.showTechnicalTools;
+  onDonationsSearch(): void {
+    this.donationsPage = 0;
+    this.loadDonations();
+  }
+
+  onDonationsStatusChange(): void {
+    this.donationsPage = 0;
+    this.loadDonations();
+  }
+
+  prevDonationsPage(): void {
+    if (this.donationsPage > 0) { this.donationsPage--; this.loadDonations(); }
+  }
+
+  nextDonationsPage(): void {
+    if (this.donationsPage < this.donationsTotalPages - 1) { this.donationsPage++; this.loadDonations(); }
+  }
+
+  donationStatusLabel(status: string): string {
+    return DONATION_STATUS_LABELS[status] ?? status;
+  }
+
+  openDonationDetail(donation: PlatformDonation): void {
+    this.selectedDonation = donation;
+  }
+
+  closeDonationDetail(): void {
+    this.selectedDonation = null;
   }
 
   jobLabel(name: string): string {
     return sharedJobLabel(name);
   }
 
-  jobFrequency(name: string): string {
-    return sharedJobFrequency(name);
-  }
-
   findingTypeLabel(type: string): string {
     return sharedFindingTypeLabel(type);
-  }
-
-  webhookTypeLabel(type: string): string {
-    return sharedWebhookTypeLabel(type);
   }
 
   jobArea(jobName: string): 'donations' | 'commission' {
     return sharedJobArea(jobName);
   }
 
-  // Same area rule actionableItems already applies inline -- exposed as a
-  // method so the "מידע טכני" Findings list can filter to this page's
-  // world (cardcom + donations) without duplicating the rule.
   findingArea(finding: ReconciliationFinding): AreaKey {
     return CARDCOM_FINDING_TYPES.has(finding.finding_type) ? 'cardcom' : this.jobArea(finding.job_name);
   }
@@ -282,16 +313,14 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return this.health?.jobs.find((j) => j.job_name === jobName) ?? null;
   }
 
-  // ---- Operator-facing health summary -----------------------------------
-  //
-  // Built entirely from data the backend already returns (health.alerts +
-  // findings) -- no backend classification change. computeStaleAlerts on
-  // the server already only evaluates jobs that declare a `schedule`
-  // (src/jobs/schedule-window.js), so a dormant/manual-only job like
-  // recurring-payment-reconciliation can never produce a job_stale alert in
-  // the first place; this page does not need to (and must not) re-decide
-  // that here. This layer's only job is to translate what the server
-  // already correctly decided into human language and 4 simple buckets.
+  // ---- Underlying classification engine (unchanged logic, 2026-09-07/14) --
+  // Kept exactly as-is: still the single source of truth for "what's open
+  // and how severe", still covers all 4 areas (commission/jobs items are
+  // computed but never rendered by THIS page's template -- commission
+  // surfaces on the Billing Ops page instead, jobs never had a template
+  // presence even before this pass). Only the TEMPLATE built on top of this
+  // changed in the 2026-09-15s pass; every getter below is still directly
+  // covered by this file's own original IA-redesign spec.
   get actionableItems(): ActionableItem[] {
     if (!this.health) return [];
     const items: ActionableItem[] = [];
@@ -334,10 +363,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
           jobName: 'webhook-recovery',
         });
       }
-      // 'critical_findings_open' (a raw count) is deliberately not rendered
-      // here -- the itemized findings below already describe exactly which
-      // entities/donations are affected, which is what an operator can
-      // actually act on; a bare count adds nothing.
     }
 
     for (const finding of this.findings) {
@@ -377,9 +402,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return this.areaOrder.every((a) => this.areaStatus(a) === 'ok');
   }
 
-  // Scoped to the areas this page actually renders (areaOrder) -- a
-  // commission-area problem must not turn the donations hero red when it
-  // isn't even listed below; it surfaces on the Billing Ops page instead.
   private get visibleActionableItems(): ActionableItem[] {
     return this.actionableItems.filter((i) => (this.areaOrder as AreaKey[]).includes(i.area));
   }
@@ -392,15 +414,9 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return this.visibleActionableItems.filter((i) => i.severity === 'warning').length;
   }
 
-  // ---- "דורש טיפול" grouping (2026-09-14q) -------------------------------
-  //
-  // Splits visibleActionableItems (unchanged) into the two shapes the new
-  // template actually renders: finding-backed items become grouped cards
-  // (one card per finding_type, opening a drawer with every individual
-  // subject); everything else (today: only webhook_recovery_unresolved --
-  // job_failed/job_stale/scheduler_not_running were never in areaOrder to
-  // begin with, unchanged from before this pass) stays a single small card
-  // pointing at כלים טכניים, exactly like revealTechnical already did.
+  // ---- System anomalies (2026-09-15s: demoted to a secondary, honestly-
+  // labeled indicator -- replaces the 2026-09-14q/r "דורש טיפול" grouping
+  // presentation with the SAME grouping mechanism underneath) -------------
   get findingGroups(): FindingGroup[] {
     const byType = new Map<string, ReconciliationFinding[]>();
     for (const item of this.visibleActionableItems) {
@@ -417,13 +433,22 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       groups.push({ findingType, meta, items });
     }
     return groups.sort((a, b) => {
-      if (a.meta.tone !== b.meta.tone) return a.meta.tone === 'urgent' ? -1 : 1;
+      const kindDiff = RESOLUTION_ORDER.indexOf(a.meta.resolutionKind) - RESOLUTION_ORDER.indexOf(b.meta.resolutionKind);
+      if (kindDiff !== 0) return kindDiff;
       return b.items.length - a.items.length;
     });
   }
 
   get alertActionableItems(): ActionableItem[] {
     return this.visibleActionableItems.filter((i) => i.findingId == null);
+  }
+
+  get totalAnomalyCount(): number {
+    return this.findingGroups.reduce((sum, g) => sum + g.items.length, 0) + this.alertActionableItems.length;
+  }
+
+  toggleAnomalies(): void {
+    this.showAnomalies = !this.showAnomalies;
   }
 
   get openGroup(): FindingGroup | null {
@@ -433,10 +458,13 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   openGroupDrawer(findingType: string): void {
     this.groupDrawerFindingType = findingType;
-    this.expandedFindingTechnicalId = null;
     const group = this.findingGroups.find((g) => g.findingType === findingType);
     if (!group) return;
     for (const finding of group.items) this.loadSubjectContext(finding);
+  }
+
+  closeGroupDrawer(): void {
+    this.groupDrawerFindingType = null;
   }
 
   private loadSubjectContext(finding: ReconciliationFinding): void {
@@ -475,28 +503,10 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return this.campaignContextCache.get(finding.subject_id) === 'loading';
   }
 
-  closeGroupDrawer(): void {
-    this.groupDrawerFindingType = null;
-    this.expandedFindingTechnicalId = null;
-  }
-
-  toggleFindingTechnical(findingId: number): void {
-    this.expandedFindingTechnicalId = this.expandedFindingTechnicalId === findingId ? null : findingId;
-  }
-
-  groupDotClass(group: FindingGroup): string {
-    if (group.meta.tone === 'neutral') return 'ops-severity-info';
-    return group.items.some((f) => f.severity === 'critical') ? 'ops-severity-critical' : 'ops-severity-warning';
-  }
-
   // Best-effort human context from details already returned by the
-  // existing API -- never invents a value; returns null (rendered as
-  // nothing) when the underlying job never recorded that field. Today only
-  // campaign_aggregate_mismatch's own details (currentAmount/actualAmount)
-  // carry anything usable here -- lookup_failed/pending_donation_missing_
-  // low_profile_id/gate_v1_mismatch only ever record an error string/notes/
-  // reasons, no donor or campaign name (checked directly against every
-  // recordFinding() call in src/jobs/ during the audit).
+  // existing API -- never invents a value. Today only campaign_aggregate_
+  // mismatch's own details (currentAmount/actualAmount) carry anything
+  // usable here.
   findingContextLine(finding: ReconciliationFinding): string | null {
     if (finding.finding_type === 'campaign_aggregate_mismatch') {
       const details = finding.details as Record<string, unknown>;
@@ -514,84 +524,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return displayName ? `${displayName} — נראה לאחרונה: ${lastSeen}` : `נראה לאחרונה: ${lastSeen}`;
   }
 
-  // ---- Actions (unchanged capabilities, now reachable from both the
-  // actionable list and the technical/advanced section) -------------------
-
-  toggleRuns(jobName: string): void {
-    if (this.expandedJob === jobName) {
-      this.expandedJob = null;
-      return;
-    }
-    this.expandedJob = jobName;
-    if (this.runsByJob[jobName]) return;
-
-    this.cardcomOps.getJobRuns(jobName).subscribe({
-      next: (res) => { this.runsByJob[jobName] = res.runs; },
-      error: () => { this.runsByJob[jobName] = []; },
-    });
-  }
-
-  runNow(jobName: string): void {
-    this.runningJob = jobName;
-    this.actionError = null;
-    this.cardcomOps.runJob(jobName).subscribe({
-      next: () => {
-        this.runningJob = null;
-        delete this.runsByJob[jobName]; // force a fresh fetch next expand
-        this.loadAll(); // re-fetch from the server — never guess the new status locally
-      },
-      error: (err) => {
-        this.runningJob = null;
-        this.actionError = err?.error?.error || 'הרצת ה-job נכשלה';
-      },
-    });
-  }
-
-  resolveFinding(finding: ReconciliationFinding): void {
-    this.resolvingFindingId = finding.id;
-    this.actionError = null;
-    this.cardcomOps.resolveFinding(finding.id).subscribe({
-      next: () => {
-        this.resolvingFindingId = null;
-        this.loadFindings();
-      },
-      error: (err) => {
-        this.resolvingFindingId = null;
-        this.actionError = err?.error?.error || 'סימון ה-finding ככשלון נכשל';
-      },
-    });
-  }
-
-  // Jumps from an alert-backed "דורש טיפול" card into כלים טכניים and
-  // expands the relevant job's run history (2026-09-14q: narrowed to jobs
-  // only -- finding-backed items now open their own group drawer instead
-  // of scrolling into a shared technical section; the finding-jump branch
-  // this method used to have has no caller left, since findings no longer
-  // render inside כלים טכניים at all).
-  revealTechnical(item: ActionableItem): void {
-    this.showTechnicalTools = true;
-    if (!item.jobName || !this.health?.knownJobs.includes(item.jobName)) return;
-    this.expandedJob = item.jobName;
-    if (!this.runsByJob[item.jobName]) {
-      // Fetch directly rather than via toggleRuns() -- expandedJob is
-      // already set to this job above, so calling toggleRuns() here would
-      // see expandedJob === jobName and collapse it instead of expanding.
-      this.cardcomOps.getJobRuns(item.jobName).subscribe({
-        next: (res) => { this.runsByJob[item.jobName!] = res.runs; },
-        error: () => { this.runsByJob[item.jobName!] = []; },
-      });
-    }
-    const elId = `tech-job-${item.jobName}`;
-    if (typeof document === 'undefined') return;
-    setTimeout(() => document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-  }
-
-  // These fields (started_at/finished_at/found_at/last_seen_at) are all
-  // TIMESTAMPTZ, a real instant — not the DATE-column ambiguity found and
-  // fixed elsewhere this session (docs/CARDCOM_OPERATIONAL_PROCESSES.md).
-  // Local getters throughout (date AND time) so the two halves come from
-  // the same clock — mixing a UTC-sliced date with local-time hours would
-  // reintroduce exactly that class of bug.
   fmtDateTime(iso: string | null): string {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -603,8 +535,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return `${day}/${month}/${year} ${hh}:${mm}`;
   }
 
-  // Date-only half of fmtDateTime above, same clock/derivation — the app's
-  // established DD/MM/YYYY convention, not a new format.
   fmtDate(iso: string | null): string {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -614,17 +544,9 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return `${day}/${month}/${year}`;
   }
 
-  fmtDuration(ms: number | null): string {
-    if (ms == null) return '—';
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
-  }
-
-  // Human elapsed-time phrasing for a job_stale alert, replacing the raw
-  // "28344 דקות" the backend's own alert.message used to be read verbatim
-  // in this component before the redesign — same underlying number
-  // (alert.minutesSinceLastSuccess), just converted to the coarsest unit
-  // that stays meaningful to a non-technical operator.
+  // Human elapsed-time phrasing for a job_stale alert -- still used inside
+  // actionableItems() even though job cards no longer render anywhere;
+  // the alert item itself remains part of the underlying classification.
   fmtStaleness(minutes: number | null): string {
     if (minutes == null) return 'מעולם לא רץ בהצלחה';
     const days = Math.floor(minutes / (60 * 24));

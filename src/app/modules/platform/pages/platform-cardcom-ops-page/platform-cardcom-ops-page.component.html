@@ -1,329 +1,216 @@
 <div class="plat-page">
 
-  @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else if (loading) {
-    <div class="plat-loading">טוען...</div>
-  } @else if (health) {
+  <div class="plat-header">
+    <h1 class="plat-title">תרומות</h1>
+  </div>
 
-    <div class="plat-header">
-      <h1 class="plat-title">תרומות</h1>
-    </div>
+  @if (actionError) {
+    <div class="ops-action-error">{{ actionError }}</div>
+  }
 
-    @if (actionError) {
-      <div class="ops-action-error">{{ actionError }}</div>
-    }
+  <!-- Compact system-anomalies indicator (2026-09-15s) -- shown only when
+       there's something to say, never a permanent "health" fixture. Tapping
+       it reveals the same underlying classification as before, now with
+       honest resolutionKind labels instead of an implied action. -->
+  @if (!loading && totalAnomalyCount > 0) {
+    <button type="button" class="ops-anomaly-bar" (click)="toggleAnomalies()">
+      <span>⚠ קיימות {{ totalAnomalyCount }} {{ totalAnomalyCount === 1 ? 'חריגה מערכתית' : 'חריגות מערכתיות' }} בתרומות</span>
+      <span class="ops-anomaly-bar-toggle">{{ showAnomalies ? 'הסתר' : 'הצג חריגות' }}</span>
+    </button>
+  }
 
-    <!-- HERO: "האם המערכת תקינה?" answered in one line -->
-    @if (overallOk) {
-      <div class="ops-hero ops-hero-ok">
-        <span class="ops-hero-icon">🟢</span>
-        <span>מערכת התרומות תקינה</span>
-      </div>
-    } @else {
-      <div class="ops-hero" [class.ops-hero-critical]="overallCriticalCount > 0" [class.ops-hero-warning]="overallCriticalCount === 0">
-        <span class="ops-hero-icon">{{ overallCriticalCount > 0 ? '🔴' : '🟠' }}</span>
-        <span>
-          @if (overallCriticalCount > 0) {
-            {{ overallCriticalCount }} {{ overallCriticalCount === 1 ? 'נושא דורש' : 'נושאים דורשים' }} טיפול
-            @if (overallWarningCount > 0) { , ועוד {{ overallWarningCount }} באזהרה }
-          } @else {
-            {{ overallWarningCount }} {{ overallWarningCount === 1 ? 'נושא באזהרה' : 'נושאים באזהרה' }} — לא דחוף
-          }
-        </span>
-      </div>
-    }
-
-    <!-- דורש טיפול: grouped by underlying issue, plain Hebrew, no IDs/JSON.
-         Each group card opens a focused drawer listing its individual
-         donations/campaigns -- grouping is visual only, nothing here is
-         ever merged away (2026-09-14q simplification). -->
-    <div class="plat-card">
-      <h3 class="plat-section-title">דורש טיפול</h3>
-
-      @if (findingGroups.length === 0 && alertActionableItems.length === 0) {
-        <div class="ops-empty-small">אין נושאים פתוחים 🎉</div>
-      } @else {
-        <div class="ops-group-list">
-          @for (group of findingGroups; track group.findingType) {
-            <div class="ops-group-card" [class.ops-group-neutral]="group.meta.tone === 'neutral'">
-              <span class="ops-severity-dot" [class]="groupDotClass(group)"></span>
-              <div class="ops-group-body">
-                <span class="ops-group-title">{{ group.meta.title }} — {{ group.items.length }}</span>
-                <span class="ops-group-explanation">{{ group.meta.explanation }}</span>
-              </div>
-              <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openGroupDrawer(group.findingType)">
-                {{ group.meta.actionLabel }}
-              </button>
+  @if (showAnomalies && totalAnomalyCount > 0) {
+    <div class="plat-card ops-anomaly-panel">
+      <div class="ops-group-list">
+        @for (group of findingGroups; track group.findingType) {
+          <div class="ops-group-card">
+            <span class="ops-severity-dot" [class]="'ops-severity-' + group.meta.resolutionKind"></span>
+            <div class="ops-group-body">
+              <span class="ops-group-title">{{ group.meta.title }} — {{ group.items.length }}</span>
+              <span class="ops-group-explanation">{{ group.meta.explanation }}</span>
+              <span class="ops-resolution-badge" [class]="'ops-resolution-' + group.meta.resolutionKind">{{ resolutionLabels[group.meta.resolutionKind] }}</span>
             </div>
-          }
-          @for (item of alertActionableItems; track item.id) {
-            <div class="ops-group-card">
-              <span class="ops-severity-dot" [class]="'ops-severity-' + item.severity"></span>
-              <div class="ops-group-body">
-                <span class="ops-group-title">{{ item.title }}</span>
-                <span class="ops-group-explanation">{{ item.subtitle }}</span>
-              </div>
-              <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="revealTechnical(item)">
-                פתח בכלים טכניים
-              </button>
-            </div>
-          }
-        </div>
-      }
-    </div>
-
-    <!-- כלים טכניים (collapsed by default) -- jobs, webhooks, and the full
-         raw findings log (all severities, resolved included) live here now.
-         Not part of the normal operator flow; still fully reachable. -->
-    <div class="plat-card">
-      <button type="button" class="ops-tech-toggle" (click)="toggleTechnicalTools()">
-        <span>כלים טכניים</span>
-        <span>{{ showTechnicalTools ? '▲' : '▾' }}</span>
-      </button>
-
-      @if (showTechnicalTools) {
-        <div class="ops-tech-body">
-
-          <!-- JOBS -->
-          <h3 class="plat-section-title">משימות מערכת</h3>
-          <div class="ops-job-list">
-            @for (jobName of health.knownJobs; track jobName) {
-              @if (jobArea(jobName) === 'donations') {
-              <div class="ops-job-card" [id]="'tech-job-' + jobName">
-                <div class="ops-job-header">
-                  <div class="ops-job-name-block">
-                    <span class="ops-job-name">{{ jobLabel(jobName) }}</span>
-                    <span class="ops-job-freq">{{ jobFrequency(jobName) }}</span>
-                  </div>
-
-                  @if (lastRunFor(jobName); as lastRun) {
-                    <span class="ops-status-badge" [class]="'ops-status-' + lastRun.status">
-                      {{ lastRun.status === 'success' ? 'הצליח' : lastRun.status === 'failed' ? 'נכשל' : lastRun.status === 'skipped_locked' ? 'דולג (נעילה)' : lastRun.status }}
-                    </span>
-                  } @else {
-                    <span class="ops-status-badge ops-status-none">טרם רץ</span>
-                  }
-                </div>
-
-                @if (lastRunFor(jobName); as lastRun) {
-                  <div class="ops-job-details">
-                    <span>ריצה אחרונה: {{ fmtDateTime(lastRun.started_at) }}</span>
-                    <span>משך: {{ fmtDuration(lastRun.duration_ms) }}</span>
-                  </div>
-                  @if (lastRun.status === 'failed' && lastRun.error) {
-                    <div class="ops-job-error">{{ lastRun.error }}</div>
-                  }
-                }
-
-                <div class="ops-job-actions">
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn-secondary"
-                    (click)="toggleRuns(jobName)"
-                  >
-                    {{ expandedJob === jobName ? 'הסתר ריצות ▲' : 'הצג ריצות אחרונות ▾' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn-primary"
-                    [disabled]="runningJob === jobName"
-                    (click)="runNow(jobName)"
-                  >
-                    {{ runningJob === jobName ? 'מריץ...' : 'הרץ עכשיו' }}
-                  </button>
-                </div>
-
-                @if (expandedJob === jobName) {
-                  <div class="ops-runs-table">
-                    @if (!runsByJob[jobName]) {
-                      <div class="ops-empty-small">טוען...</div>
-                    } @else if (runsByJob[jobName].length === 0) {
-                      <div class="ops-empty-small">אין ריצות קודמות</div>
-                    } @else {
-                      @for (run of runsByJob[jobName]; track run.id) {
-                        <div class="ops-run-row">
-                          <span class="ops-status-badge ops-status-badge-sm" [class]="'ops-status-' + run.status">
-                            {{ run.status === 'success' ? 'הצליח' : run.status === 'failed' ? 'נכשל' : run.status === 'skipped_locked' ? 'דולג' : run.status }}
-                          </span>
-                          <span class="ops-run-time">{{ fmtDateTime(run.started_at) }}</span>
-                          <span class="ops-run-duration">{{ fmtDuration(run.duration_ms) }}</span>
-                          <span class="ops-run-trigger">{{ run.triggered_by }}</span>
-                        </div>
-                        @if (run.error) {
-                          <div class="ops-job-error ops-run-error">{{ run.error }}</div>
-                        }
-                      }
-                    }
-                  </div>
-                }
-              </div>
-              }
-            }
-          </div>
-
-          <!-- WEBHOOKS -->
-          <h3 class="plat-section-title">אירועי סליקה</h3>
-          @if (health.webhooks.length === 0) {
-            <div class="ops-empty-small">אין אירועי סליקה עדיין</div>
-          } @else {
-            <div class="ops-webhook-list">
-              @for (wh of health.webhooks; track wh.type) {
-                <div class="ops-webhook-row">
-                  <span class="ops-webhook-type">{{ webhookTypeLabel(wh.type) }}</span>
-                  <span>אחרון: {{ fmtDateTime(wh.last_received_at) }}</span>
-                  <span>ב-24 שעות: {{ wh.count_24h }}</span>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- FULL FINDINGS LOG -- moved here from the primary view
-               (2026-09-14q): raw audit trail (every severity, resolved
-               included), not the normal operator workflow. -->
-          <div class="ops-findings-header">
-            <h3 class="plat-section-title">יומן ממצאים (טכני)</h3>
-            <button type="button" class="ops-toggle-link" (click)="toggleResolved()">
-              {{ showResolved ? 'הצג פתוחים בלבד' : 'הצג גם פתורים' }}
+            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openGroupDrawer(group.findingType)">
+              הצג פרטים
             </button>
           </div>
-
-          @if (findings.length === 0) {
-            <div class="ops-empty-small">אין findings {{ showResolved ? '' : 'פתוחים' }} 🎉</div>
-          } @else {
-            <div class="ops-findings-list">
-              @for (finding of findings; track finding.id) {
-                @if (findingArea(finding) === 'cardcom' || findingArea(finding) === 'donations') {
-                <div class="ops-finding-row" [class.ops-finding-resolved]="finding.resolved_at">
-                  <span class="ops-severity-dot" [class]="'ops-severity-' + finding.severity"></span>
-                  <div class="ops-finding-body">
-                    <div class="ops-finding-top">
-                      <span class="ops-finding-type">{{ findingTypeLabel(finding.finding_type) }}</span>
-                      <span class="ops-finding-job">{{ jobLabel(finding.job_name) }}</span>
-                    </div>
-                    <div class="ops-finding-meta">
-                      <span>מזהה: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
-                      <span>זוהה לראשונה: {{ fmtDateTime(finding.found_at) }}</span>
-                      <span>נראה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</span>
-                      @if (finding.resolved_at) {
-                        <span>נפתר: {{ fmtDateTime(finding.resolved_at) }} ({{ finding.resolved_by }})</span>
-                      }
-                    </div>
-                    <pre class="ops-finding-details">{{ finding.details | json }}</pre>
-                  </div>
-                  @if (!finding.resolved_at) {
-                    <button
-                      type="button"
-                      class="ops-btn ops-btn-secondary ops-btn-sm"
-                      [disabled]="resolvingFindingId === finding.id"
-                      (click)="resolveFinding(finding)"
-                    >
-                      {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כנבדק' }}
-                    </button>
-                  }
-                </div>
-                }
-              }
+        }
+        @for (item of alertActionableItems; track item.id) {
+          <div class="ops-group-card">
+            <span class="ops-severity-dot" [class]="'ops-severity-' + item.severity"></span>
+            <div class="ops-group-body">
+              <span class="ops-group-title">{{ item.title }}</span>
+              <span class="ops-group-explanation">{{ item.subtitle }}</span>
+              <span class="ops-resolution-badge ops-resolution-engineering">{{ resolutionLabels['engineering'] }}</span>
             </div>
-          }
+          </div>
+        }
+      </div>
+    </div>
+  }
 
-        </div>
-      }
+  <!-- Primary content: cross-entity donations browser -->
+  <div class="plat-card">
+    <div class="ops-donations-toolbar">
+      <input
+        type="text"
+        class="ops-search-input"
+        placeholder="חיפוש לפי תורם, עמותה או קמפיין..."
+        [(ngModel)]="donationsSearch"
+        (keyup.enter)="onDonationsSearch()"
+      />
+      <select class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+        <option value="">כל הסטטוסים</option>
+        <option value="paid">שולם</option>
+        <option value="pending">ממתין</option>
+        <option value="failed">נכשל</option>
+      </select>
+      <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" (click)="onDonationsSearch()">חיפוש</button>
     </div>
 
-    <!-- Focused per-group drawer -- opened from "דורש טיפול" above. Every
-         individual donation/campaign behind a grouped card stays reachable
-         and actionable here; "פרטים טכניים" per item is the only place raw
-         ids/JSON/provider errors show up. -->
-    @if (openGroup; as group) {
-      <div class="ops-drawer-backdrop" (click)="closeGroupDrawer()">
-        <div class="ops-drawer" (click)="$event.stopPropagation()">
-          <div class="ops-drawer-header">
-            <div>
-              <h2>{{ group.meta.title }}</h2>
-              <div class="ops-drawer-subtitle">{{ group.items.length }} {{ group.meta.pluralSubjectLabel }} דורשים בדיקה</div>
-            </div>
-            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeGroupDrawer()">סגור</button>
-          </div>
-
-          <p class="ops-drawer-explanation">{{ group.meta.explanation }}</p>
-
-          @if (actionError) {
-            <div class="ops-action-error">{{ actionError }}</div>
-          }
-
-          <div class="ops-drawer-list">
-            @for (finding of group.items; track finding.id) {
-              <div class="ops-drawer-item">
-                <div class="ops-drawer-item-main">
-                  <div class="ops-drawer-item-text">
-                    @if (finding.subject_type === 'donation') {
-                      @if (donationContextFor(finding); as ctx) {
-                        <span class="ops-drawer-item-subject">תרומה של ₪{{ ctx.amount }}</span>
-                        <span class="ops-drawer-item-detail">קמפיין: {{ ctx.campaign_title }}</span>
-                        <span class="ops-drawer-item-detail">עמותה: {{ ctx.entity_name }}</span>
-                        <span class="ops-drawer-item-meta">{{ fmtDateTime(ctx.created_at) }}</span>
-                      } @else if (donationContextLoading(finding)) {
-                        <span class="ops-drawer-item-subject">טוען פרטי תרומה...</span>
-                      } @else {
-                        <span class="ops-drawer-item-subject">תרומה</span>
-                        <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
-                      }
-                    } @else if (finding.subject_type === 'campaign') {
-                      @if (campaignContextFor(finding); as cctx) {
-                        <span class="ops-drawer-item-subject">קמפיין: {{ cctx.title }}</span>
-                        <span class="ops-drawer-item-detail">עמותה: {{ cctx.entity_name }}</span>
-                      } @else if (campaignContextLoading(finding)) {
-                        <span class="ops-drawer-item-subject">טוען פרטי קמפיין...</span>
-                      } @else {
-                        <span class="ops-drawer-item-subject">קמפיין</span>
-                      }
-                      <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
-                    } @else {
-                      <span class="ops-drawer-item-subject">{{ finding.subject_type }}</span>
-                      <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
-                    }
-                    <span class="ops-drawer-item-explanation">{{ group.meta.itemExplanation }}</span>
-                    @if (findingContextLine(finding); as ctx) {
-                      <span class="ops-drawer-item-context">{{ ctx }}</span>
-                    }
-                  </div>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn-secondary ops-btn-sm"
-                    [disabled]="resolvingFindingId === finding.id"
-                    (click)="resolveFinding(finding)"
-                  >
-                    {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כנבדק' }}
-                  </button>
-                </div>
-
-                <button type="button" class="ops-drawer-tech-toggle" (click)="toggleFindingTechnical(finding.id)">
-                  <span>פרטים טכניים</span>
-                  <span>{{ expandedFindingTechnicalId === finding.id ? '▲' : '▾' }}</span>
-                </button>
-
-                @if (expandedFindingTechnicalId === finding.id) {
-                  <div class="ops-drawer-item-tech">
-                    <div class="ops-finding-meta">
-                      <span>מזהה: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
-                      <span>job: {{ jobLabel(finding.job_name) }}</span>
-                      <span>נראה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</span>
-                    </div>
-                    <pre class="ops-finding-details">{{ finding.details | json }}</pre>
-                  </div>
-                }
-              </div>
+    @if (donationsError) {
+      <div class="ops-action-error">{{ donationsError }}</div>
+    } @else if (donationsLoading) {
+      <div class="ops-empty-small">טוען תרומות...</div>
+    } @else if (donations.length === 0) {
+      <div class="ops-empty-small">לא נמצאו תרומות</div>
+    } @else {
+      <div class="ops-donations-table-wrap">
+        <table class="ops-donations-table">
+          <thead>
+            <tr>
+              <th>תאריך</th>
+              <th>עמותה</th>
+              <th>קמפיין</th>
+              <th>סכום</th>
+              <th>סוג</th>
+              <th>סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (donation of donations; track donation.id) {
+              <tr (click)="openDonationDetail(donation)">
+                <td>{{ fmtDateTime(donation.created_at) }}</td>
+                <td>{{ donation.entity_name }}</td>
+                <td>{{ donation.campaign_title }}</td>
+                <td>₪{{ donation.amount }}</td>
+                <td>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</td>
+                <td>
+                  <span class="ops-donation-status" [class]="'ops-donation-status-' + donation.status">
+                    {{ donationStatusLabel(donation.status) }}
+                  </span>
+                </td>
+              </tr>
             }
-          </div>
+          </tbody>
+        </table>
+      </div>
 
-          <div class="ops-drawer-note">
-            "סמן כנבדק" מסיר את הפריט מרשימת הטיפול הפעילה בלבד — הוא אינו משנה את מצב התרומה/הקמפיין עצמו.
-          </div>
-        </div>
+      <div class="ops-pager">
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage === 0" (click)="prevDonationsPage()">הקודם</button>
+        <span class="ops-pager-info">עמוד {{ donationsPage + 1 }} מתוך {{ donationsTotalPages }} · סה"כ {{ donationsTotal }}</span>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage >= donationsTotalPages - 1" (click)="nextDonationsPage()">הבא</button>
       </div>
     }
+  </div>
 
+  <!-- Read-only donation detail drawer -- built entirely from the row
+       already fetched for the table, no extra endpoint. No mark-paid/
+       refund/retry/override controls -- this pass is explicitly read-only. -->
+  @if (selectedDonation; as donation) {
+    <div class="ops-drawer-backdrop" (click)="closeDonationDetail()">
+      <div class="ops-drawer" (click)="$event.stopPropagation()">
+        <div class="ops-drawer-header">
+          <div>
+            <h2>תרומה — ₪{{ donation.amount }}</h2>
+            <div class="ops-drawer-subtitle">{{ fmtDateTime(donation.created_at) }}</div>
+          </div>
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeDonationDetail()">סגור</button>
+        </div>
+
+        <div class="ops-detail-list">
+          <div class="ops-detail-row"><span>עמותה</span><span>{{ donation.entity_name }}</span></div>
+          <div class="ops-detail-row"><span>קמפיין</span><span>{{ donation.campaign_title }}</span></div>
+          <div class="ops-detail-row"><span>סוג</span><span>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</span></div>
+          <div class="ops-detail-row">
+            <span>סטטוס</span>
+            <span class="ops-donation-status" [class]="'ops-donation-status-' + donation.status">{{ donationStatusLabel(donation.status) }}</span>
+          </div>
+          @if (donation.completed_at) {
+            <div class="ops-detail-row"><span>הושלם</span><span>{{ fmtDateTime(donation.completed_at) }}</span></div>
+          }
+          @if (donation.donor_name && !donation.is_anonymous) {
+            <div class="ops-detail-row"><span>תורם</span><span>{{ donation.donor_name }}</span></div>
+          }
+          @if (donation.is_anonymous) {
+            <div class="ops-detail-row"><span>תורם</span><span>אנונימי</span></div>
+          }
+          @if (donation.failure_reason) {
+            <div class="ops-detail-row"><span>סיבת כשל</span><span>{{ donation.failure_reason }}</span></div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Focused per-group anomaly drawer -- opened from the anomaly panel
+       above. No "סמן כנבדק" here (2026-09-15s): the earlier audit found no
+       operator-executable resolution exists for any of these finding types,
+       so the button implied a workflow the product doesn't have. The
+       backend resolve endpoint is unchanged and unused from this page. -->
+  @if (openGroup; as group) {
+    <div class="ops-drawer-backdrop" (click)="closeGroupDrawer()">
+      <div class="ops-drawer" (click)="$event.stopPropagation()">
+        <div class="ops-drawer-header">
+          <div>
+            <h2>{{ group.meta.title }}</h2>
+            <div class="ops-drawer-subtitle">{{ group.items.length }} {{ group.meta.pluralSubjectLabel }} · {{ resolutionLabels[group.meta.resolutionKind] }}</div>
+          </div>
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeGroupDrawer()">סגור</button>
+        </div>
+
+        <p class="ops-drawer-explanation">{{ group.meta.explanation }}</p>
+
+        <div class="ops-drawer-list">
+          @for (finding of group.items; track finding.id) {
+            <div class="ops-drawer-item">
+              <div class="ops-drawer-item-text">
+                @if (finding.subject_type === 'donation') {
+                  @if (donationContextFor(finding); as ctx) {
+                    <span class="ops-drawer-item-subject">תרומה של ₪{{ ctx.amount }}</span>
+                    <span class="ops-drawer-item-detail">קמפיין: {{ ctx.campaign_title }}</span>
+                    <span class="ops-drawer-item-detail">עמותה: {{ ctx.entity_name }}</span>
+                    <span class="ops-drawer-item-meta">{{ fmtDateTime(ctx.created_at) }}</span>
+                  } @else if (donationContextLoading(finding)) {
+                    <span class="ops-drawer-item-subject">טוען פרטי תרומה...</span>
+                  } @else {
+                    <span class="ops-drawer-item-subject">תרומה</span>
+                    <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                  }
+                } @else if (finding.subject_type === 'campaign') {
+                  @if (campaignContextFor(finding); as cctx) {
+                    <span class="ops-drawer-item-subject">קמפיין: {{ cctx.title }}</span>
+                    <span class="ops-drawer-item-detail">עמותה: {{ cctx.entity_name }}</span>
+                  } @else if (campaignContextLoading(finding)) {
+                    <span class="ops-drawer-item-subject">טוען פרטי קמפיין...</span>
+                  } @else {
+                    <span class="ops-drawer-item-subject">קמפיין</span>
+                  }
+                  <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                } @else {
+                  <span class="ops-drawer-item-subject">{{ finding.subject_type }}</span>
+                  <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                }
+                <span class="ops-drawer-item-explanation">{{ group.meta.itemExplanation }}</span>
+                @if (findingContextLine(finding); as ctx) {
+                  <span class="ops-drawer-item-context">{{ ctx }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
   }
 
 </div>
