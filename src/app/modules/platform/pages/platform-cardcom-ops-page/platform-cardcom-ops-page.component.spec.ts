@@ -493,19 +493,34 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     return fixture;
   }
 
-  it('renders the table with date/עמותה/קמפיין/סכום/סוג/סטטוס columns for each donation', async () => {
+  it('renders the table with date/תורם/עמותה/קמפיין/סכום/סוג/סטטוס columns for each donation', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
       listDonations: () => of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
     });
 
+    const headerText = fixture.debugElement.query(By.css('.ops-donations-table thead')).nativeElement.textContent;
+    expect(headerText).toContain('תורם');
+
     const row = fixture.debugElement.query(By.css('.ops-donations-table tbody tr'));
+    expect(row.nativeElement.textContent).toContain('ישראל ישראלי'); // donor name
     expect(row.nativeElement.textContent).toContain('עמותת הדוגמה');
     expect(row.nativeElement.textContent).toContain('קמפיין הדוגמה');
     expect(row.nativeElement.textContent).toContain('120');
     expect(row.nativeElement.textContent).toContain('חד פעמית');
     expect(row.nativeElement.textContent).toContain('שולם');
+  });
+
+  it('anonymous donations show "אנונימי" in the תורם column, never the real donor_name', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of({ donations: [donation({ is_anonymous: true, donor_name: 'שם אמיתי' })], total: 1, page: 0, limit: 25 }),
+    });
+    const row = fixture.debugElement.query(By.css('.ops-donations-table tbody tr'));
+    expect(row.nativeElement.textContent).toContain('אנונימי');
+    expect(row.nativeElement.textContent).not.toContain('שם אמיתי');
   });
 
   it('never shows donor email/phone/provider data in the primary table row', async () => {
@@ -605,38 +620,28 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ page: 0 }));
   });
 
-  it('clicking a row opens a read-only detail drawer with no mark-paid/refund/retry controls', async () => {
+  // Regression for the 2026-09-16 "אם לחיצה לא נותנת מידע משמעותי, שלא
+  // תהיה לחיצה" simplification: the drawer only ever surfaced donor_name
+  // beyond what the table already showed, so donor_name became a real
+  // column instead and the drawer (and its row-click affordance) was
+  // removed outright -- not left as unused dead code reachable some other
+  // way.
+  it('rows are not clickable -- no detail drawer exists for the normal donations table', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
       listDonations: () => of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
     });
 
+    expect((fixture.componentInstance as any).selectedDonation).toBeUndefined();
+    expect((fixture.componentInstance as any).openDonationDetail).toBeUndefined();
+
     fixture.debugElement.query(By.css('.ops-donations-table tbody tr')).nativeElement.click();
     fixture.detectChanges();
 
-    const drawer = fixture.debugElement.query(By.css('.ops-drawer'));
-    expect(drawer).toBeTruthy();
-    const text = drawer.nativeElement.textContent;
-    expect(text).toContain('עמותת הדוגמה');
-    expect(text).toContain('קמפיין הדוגמה');
-    expect(text).not.toContain('סמן כשולם');
-    expect(text).not.toContain('החזר');
-    expect(text).not.toContain('נסה שוב');
-    expect(fixture.debugElement.query(By.css('.ops-drawer button[disabled]'))).toBeFalsy();
-  });
-
-  it('anonymous donations show "אנונימי" instead of a name, and never show donor_name when is_anonymous is true', async () => {
-    const fixture = await createFixture({
-      getHealth: () => of(healthWith()),
-      getFindings: () => of({ findings: [] }),
-      listDonations: () => of({ donations: [donation({ is_anonymous: true, donor_name: 'שם אמיתי' })], total: 1, page: 0, limit: 25 }),
-    });
-    fixture.debugElement.query(By.css('.ops-donations-table tbody tr')).nativeElement.click();
-    fixture.detectChanges();
-    const text = fixture.debugElement.query(By.css('.ops-drawer')).nativeElement.textContent;
-    expect(text).toContain('אנונימי');
-    expect(text).not.toContain('שם אמיתי');
+    // No donation-specific drawer opened -- only the (unrelated) anomaly
+    // group drawer uses .ops-drawer, and no anomaly group is open here.
+    expect(fixture.debugElement.query(By.css('.ops-drawer'))).toBeFalsy();
   });
 
   it('the page explains itself: title, subtitle, and a "כל התרומות" section heading above the table', async () => {
@@ -753,7 +758,7 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     expect(style.appearance === 'none' || (style as any).webkitAppearance === 'none').toBeTrue();
   });
 
-  it('long entity/campaign names are truncated so תאריך/סכום/סוג/סטטוס stay on-screen instead of being pushed off by an unbounded column', async () => {
+  it('long donor/entity/campaign names are truncated so תאריך/סכום/סוג/סטטוס stay on-screen instead of being pushed off by an unbounded column', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
@@ -766,7 +771,7 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
       }),
     });
     const truncatedCells = fixture.debugElement.queryAll(By.css('.ops-td-truncate'));
-    expect(truncatedCells.length).toBe(2); // עמותה + קמפיין only
+    expect(truncatedCells.length).toBe(3); // תורם + עמותה + קמפיין
     for (const cell of truncatedCells) {
       const style = getComputedStyle(cell.nativeElement);
       expect(style.textOverflow).toBe('ellipsis');

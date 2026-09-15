@@ -85,6 +85,7 @@
           <thead>
             <tr>
               <th>תאריך</th>
+              <th>תורם</th>
               <th>עמותה</th>
               <th>קמפיין</th>
               <th>סכום</th>
@@ -94,8 +95,9 @@
           </thead>
           <tbody>
             @for (donation of donations; track donation.id) {
-              <tr (click)="openDonationDetail(donation)" title="לחצו לפרטי התרומה">
+              <tr>
                 <td>{{ fmtDateTime(donation.created_at) }}</td>
+                <td class="ops-td-truncate">{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || '—') }}</td>
                 <td class="ops-td-truncate" [title]="donation.entity_name">{{ donation.entity_name }}</td>
                 <td class="ops-td-truncate" [title]="donation.campaign_title">{{ donation.campaign_title }}</td>
                 <td>₪{{ donation.amount }}</td>
@@ -118,45 +120,6 @@
       </div>
     }
   </div>
-
-  <!-- Read-only donation detail drawer -- built entirely from the row
-       already fetched for the table, no extra endpoint. No mark-paid/
-       refund/retry/override controls -- this pass is explicitly read-only. -->
-  @if (selectedDonation; as donation) {
-    <div class="ops-drawer-backdrop" (click)="closeDonationDetail()">
-      <div class="ops-drawer" (click)="$event.stopPropagation()">
-        <div class="ops-drawer-header">
-          <div>
-            <h2>תרומה — ₪{{ donation.amount }}</h2>
-            <div class="ops-drawer-subtitle">{{ fmtDateTime(donation.created_at) }}</div>
-          </div>
-          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeDonationDetail()">סגור</button>
-        </div>
-
-        <div class="ops-detail-list">
-          <div class="ops-detail-row"><span>עמותה</span><span>{{ donation.entity_name }}</span></div>
-          <div class="ops-detail-row"><span>קמפיין</span><span>{{ donation.campaign_title }}</span></div>
-          <div class="ops-detail-row"><span>סוג</span><span>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</span></div>
-          <div class="ops-detail-row">
-            <span>סטטוס</span>
-            <span class="ops-donation-status" [class]="'ops-donation-status-' + donation.status">{{ donationStatusLabel(donation.status) }}</span>
-          </div>
-          @if (donation.completed_at) {
-            <div class="ops-detail-row"><span>הושלם</span><span>{{ fmtDateTime(donation.completed_at) }}</span></div>
-          }
-          @if (donation.donor_name && !donation.is_anonymous) {
-            <div class="ops-detail-row"><span>תורם</span><span>{{ donation.donor_name }}</span></div>
-          }
-          @if (donation.is_anonymous) {
-            <div class="ops-detail-row"><span>תורם</span><span>אנונימי</span></div>
-          }
-          @if (donation.failure_reason) {
-            <div class="ops-detail-row"><span>סיבת כשל</span><span>{{ donation.failure_reason }}</span></div>
-          }
-        </div>
-      </div>
-    </div>
-  }
 
   <!-- Focused per-group anomaly drawer -- opened from the anomaly panel
        above. No "סמן כנבדק" here (2026-09-15s): the earlier audit found no

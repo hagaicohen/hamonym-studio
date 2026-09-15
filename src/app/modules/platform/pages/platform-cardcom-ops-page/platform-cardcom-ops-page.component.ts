@@ -200,7 +200,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   donationsLimit = 25;
   donationsSearch = '';
   donationsStatus = '';
-  selectedDonation: PlatformDonation | null = null;
   private donationsSearchTimer: ReturnType<typeof setTimeout> | undefined;
 
   get donationsTotalPages(): number {
@@ -297,14 +296,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   donationStatusLabel(status: string): string {
     return DONATION_STATUS_LABELS[status] ?? status;
-  }
-
-  openDonationDetail(donation: PlatformDonation): void {
-    this.selectedDonation = donation;
-  }
-
-  closeDonationDetail(): void {
-    this.selectedDonation = null;
   }
 
   jobLabel(name: string): string {
