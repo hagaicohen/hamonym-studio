@@ -18,70 +18,71 @@
     @if (overallOk) {
       <div class="ops-hero ops-hero-ok">
         <span class="ops-hero-icon">🟢</span>
-        <span>המערכת תקינה — אין נושאים שדורשים טיפול כרגע</span>
+        <span>מערכת התרומות תקינה</span>
       </div>
     } @else {
       <div class="ops-hero" [class.ops-hero-critical]="overallCriticalCount > 0" [class.ops-hero-warning]="overallCriticalCount === 0">
         <span class="ops-hero-icon">{{ overallCriticalCount > 0 ? '🔴' : '🟠' }}</span>
         <span>
           @if (overallCriticalCount > 0) {
-            יש {{ overallCriticalCount }} {{ overallCriticalCount === 1 ? 'נושא שדורש' : 'נושאים שדורשים' }} טיפול
+            {{ overallCriticalCount }} {{ overallCriticalCount === 1 ? 'נושא דורש' : 'נושאים דורשים' }} טיפול
             @if (overallWarningCount > 0) { , ועוד {{ overallWarningCount }} באזהרה }
           } @else {
-            יש {{ overallWarningCount }} {{ overallWarningCount === 1 ? 'נושא באזהרה' : 'נושאים באזהרה' }} — לא דחוף
+            {{ overallWarningCount }} {{ overallWarningCount === 1 ? 'נושא באזהרה' : 'נושאים באזהרה' }} — לא דחוף
           }
         </span>
       </div>
     }
 
-    <!-- 4 health areas -->
-    <div class="ops-areas">
-      @for (area of areaOrder; track area) {
-        <div class="ops-area-tile" [class]="'ops-area-' + areaStatus(area)">
-          <span class="ops-area-dot"></span>
-          <div class="ops-area-text">
-            <span class="ops-area-title">{{ areaTitle(area) }}</span>
-            <span class="ops-area-status">{{ areaStatusLabel(area) }}</span>
-          </div>
+    <!-- דורש טיפול: grouped by underlying issue, plain Hebrew, no IDs/JSON.
+         Each group card opens a focused drawer listing its individual
+         donations/campaigns -- grouping is visual only, nothing here is
+         ever merged away (2026-09-14q simplification). -->
+    <div class="plat-card">
+      <h3 class="plat-section-title">דורש טיפול</h3>
+
+      @if (findingGroups.length === 0 && alertActionableItems.length === 0) {
+        <div class="ops-empty-small">אין נושאים פתוחים 🎉</div>
+      } @else {
+        <div class="ops-group-list">
+          @for (group of findingGroups; track group.findingType) {
+            <div class="ops-group-card" [class.ops-group-neutral]="group.meta.tone === 'neutral'">
+              <span class="ops-severity-dot" [class]="groupDotClass(group)"></span>
+              <div class="ops-group-body">
+                <span class="ops-group-title">{{ group.meta.title }} — {{ group.items.length }}</span>
+                <span class="ops-group-explanation">{{ group.meta.explanation }}</span>
+              </div>
+              <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openGroupDrawer(group.findingType)">
+                {{ group.meta.actionLabel }}
+              </button>
+            </div>
+          }
+          @for (item of alertActionableItems; track item.id) {
+            <div class="ops-group-card">
+              <span class="ops-severity-dot" [class]="'ops-severity-' + item.severity"></span>
+              <div class="ops-group-body">
+                <span class="ops-group-title">{{ item.title }}</span>
+                <span class="ops-group-explanation">{{ item.subtitle }}</span>
+              </div>
+              <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="revealTechnical(item)">
+                פתח בכלים טכניים
+              </button>
+            </div>
+          }
         </div>
       }
     </div>
 
-    <!-- דורש טיפול: actionable problems only, human names, no internal IDs -->
+    <!-- כלים טכניים (collapsed by default) -- jobs, webhooks, and the full
+         raw findings log (all severities, resolved included) live here now.
+         Not part of the normal operator flow; still fully reachable. -->
     <div class="plat-card">
-      <h3 class="plat-section-title">דורש טיפול</h3>
-
-      @if (actionableItems.length === 0) {
-        <div class="ops-empty-small">אין נושאים פתוחים 🎉</div>
-      } @else {
-        @for (area of areaOrder; track area) {
-          @if (itemsForArea(area).length > 0) {
-            <div class="ops-todo-group">
-              <div class="ops-todo-group-title">{{ areaTitle(area) }}</div>
-              @for (item of itemsForArea(area); track item.id) {
-                <div class="ops-todo-row">
-                  <span class="ops-severity-dot" [class]="'ops-severity-' + item.severity"></span>
-                  <div class="ops-todo-body">
-                    <span class="ops-todo-title">{{ item.title }}</span>
-                    <span class="ops-todo-subtitle">{{ item.subtitle }}</span>
-                  </div>
-                  <button type="button" class="ops-todo-link" (click)="revealTechnical(item)">פרטים טכניים ←</button>
-                </div>
-              }
-            </div>
-          }
-        }
-      }
-    </div>
-
-    <!-- TECHNICAL / ADVANCED (collapsed by default) -->
-    <div class="plat-card">
-      <button type="button" class="ops-tech-toggle" (click)="toggleTechnical()">
-        <span>פרטים טכניים / מתקדם</span>
-        <span>{{ showTechnical ? '▲' : '▾' }}</span>
+      <button type="button" class="ops-tech-toggle" (click)="toggleTechnicalTools()">
+        <span>כלים טכניים</span>
+        <span>{{ showTechnicalTools ? '▲' : '▾' }}</span>
       </button>
 
-      @if (showTechnical) {
+      @if (showTechnicalTools) {
         <div class="ops-tech-body">
 
           <!-- JOBS -->
@@ -161,9 +162,27 @@
             }
           </div>
 
-          <!-- FINDINGS -->
+          <!-- WEBHOOKS -->
+          <h3 class="plat-section-title">אירועי סליקה</h3>
+          @if (health.webhooks.length === 0) {
+            <div class="ops-empty-small">אין אירועי סליקה עדיין</div>
+          } @else {
+            <div class="ops-webhook-list">
+              @for (wh of health.webhooks; track wh.type) {
+                <div class="ops-webhook-row">
+                  <span class="ops-webhook-type">{{ webhookTypeLabel(wh.type) }}</span>
+                  <span>אחרון: {{ fmtDateTime(wh.last_received_at) }}</span>
+                  <span>ב-24 שעות: {{ wh.count_24h }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- FULL FINDINGS LOG -- moved here from the primary view
+               (2026-09-14q): raw audit trail (every severity, resolved
+               included), not the normal operator workflow. -->
           <div class="ops-findings-header">
-            <h3 class="plat-section-title">בעיות הדורשות טיפול</h3>
+            <h3 class="plat-section-title">יומן ממצאים (טכני)</h3>
             <button type="button" class="ops-toggle-link" (click)="toggleResolved()">
               {{ showResolved ? 'הצג פתוחים בלבד' : 'הצג גם פתורים' }}
             </button>
@@ -175,7 +194,7 @@
             <div class="ops-findings-list">
               @for (finding of findings; track finding.id) {
                 @if (findingArea(finding) === 'cardcom' || findingArea(finding) === 'donations') {
-                <div class="ops-finding-row" [id]="'tech-finding-' + finding.id" [class.ops-finding-resolved]="finding.resolved_at">
+                <div class="ops-finding-row" [class.ops-finding-resolved]="finding.resolved_at">
                   <span class="ops-severity-dot" [class]="'ops-severity-' + finding.severity"></span>
                   <div class="ops-finding-body">
                     <div class="ops-finding-top">
@@ -199,7 +218,7 @@
                       [disabled]="resolvingFindingId === finding.id"
                       (click)="resolveFinding(finding)"
                     >
-                      {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כטופל' }}
+                      {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כנבדק' }}
                     </button>
                   }
                 </div>
@@ -208,25 +227,77 @@
             </div>
           }
 
-          <!-- WEBHOOKS -->
-          <h3 class="plat-section-title">אירועי סליקה</h3>
-          @if (health.webhooks.length === 0) {
-            <div class="ops-empty-small">אין אירועי סליקה עדיין</div>
-          } @else {
-            <div class="ops-webhook-list">
-              @for (wh of health.webhooks; track wh.type) {
-                <div class="ops-webhook-row">
-                  <span class="ops-webhook-type">{{ webhookTypeLabel(wh.type) }}</span>
-                  <span>אחרון: {{ fmtDateTime(wh.last_received_at) }}</span>
-                  <span>ב-24 שעות: {{ wh.count_24h }}</span>
-                </div>
-              }
-            </div>
-          }
-
         </div>
       }
     </div>
+
+    <!-- Focused per-group drawer -- opened from "דורש טיפול" above. Every
+         individual donation/campaign behind a grouped card stays reachable
+         and actionable here; "פרטים טכניים" per item is the only place raw
+         ids/JSON/provider errors show up. -->
+    @if (openGroup; as group) {
+      <div class="ops-drawer-backdrop" (click)="closeGroupDrawer()">
+        <div class="ops-drawer" (click)="$event.stopPropagation()">
+          <div class="ops-drawer-header">
+            <div>
+              <h2>{{ group.meta.title }}</h2>
+              <div class="ops-drawer-subtitle">{{ group.items.length }} {{ group.meta.pluralSubjectLabel }} דורשים בדיקה</div>
+            </div>
+            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeGroupDrawer()">סגור</button>
+          </div>
+
+          <p class="ops-drawer-explanation">{{ group.meta.explanation }}</p>
+
+          @if (actionError) {
+            <div class="ops-action-error">{{ actionError }}</div>
+          }
+
+          <div class="ops-drawer-list">
+            @for (finding of group.items; track finding.id) {
+              <div class="ops-drawer-item">
+                <div class="ops-drawer-item-main">
+                  <div class="ops-drawer-item-text">
+                    <span class="ops-drawer-item-subject">{{ finding.subject_type === 'donation' ? 'תרומה' : finding.subject_type === 'campaign' ? 'קמפיין' : finding.subject_type }}</span>
+                    <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                    @if (findingContextLine(finding); as ctx) {
+                      <span class="ops-drawer-item-context">{{ ctx }}</span>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn-secondary ops-btn-sm"
+                    [disabled]="resolvingFindingId === finding.id"
+                    (click)="resolveFinding(finding)"
+                  >
+                    {{ resolvingFindingId === finding.id ? 'מסמן...' : 'סמן כנבדק' }}
+                  </button>
+                </div>
+
+                <button type="button" class="ops-drawer-tech-toggle" (click)="toggleFindingTechnical(finding.id)">
+                  <span>פרטים טכניים</span>
+                  <span>{{ expandedFindingTechnicalId === finding.id ? '▲' : '▾' }}</span>
+                </button>
+
+                @if (expandedFindingTechnicalId === finding.id) {
+                  <div class="ops-drawer-item-tech">
+                    <div class="ops-finding-meta">
+                      <span>מזהה: {{ finding.subject_type }}/{{ finding.subject_id }}</span>
+                      <span>job: {{ jobLabel(finding.job_name) }}</span>
+                      <span>נראה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</span>
+                    </div>
+                    <pre class="ops-finding-details">{{ finding.details | json }}</pre>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="ops-drawer-note">
+            "סמן כנבדק" מסיר את הפריט מרשימת הטיפול הפעילה בלבד — הוא אינו משנה את מצב התרומה/הקמפיין עצמו.
+          </div>
+        </div>
+      </div>
+    }
 
   }
 

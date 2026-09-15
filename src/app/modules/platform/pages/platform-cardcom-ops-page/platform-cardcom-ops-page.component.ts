@@ -32,19 +32,79 @@ const CARDCOM_FINDING_TYPES = PROVIDER_FINDING_TYPES;
 export type AreaKey = 'cardcom' | 'donations' | 'commission' | 'jobs';
 export type AreaStatus = 'ok' | 'warning' | 'critical';
 
-interface AreaMeta {
+// Operator-facing grouping for "דורש טיפול" (2026-09-14q simplification,
+// built directly from the read-only audit this same day). Findings are
+// grouped by finding_type for DISPLAY only -- recordFinding's own dedup key
+// is (job_name, finding_type, subject_type, subject_id), so every open
+// finding genuinely IS a distinct donation/campaign; grouping must never
+// hide that a group of "4" really is 4 separate subjects, each still
+// reachable individually in the group's drawer.
+//
+// `tone: 'neutral'` exists for exactly one documented case so far
+// (campaign_aggregate_mismatch): its underlying `severity` is 'critical' in
+// the data (a genuine data-integrity bug worth fixing) but the job's own
+// comment establishes it as "display-only drift, not money at risk" --
+// tone only softens the VISUAL treatment (dot color), it never touches
+// finding.severity itself or which findings count as open/actionable.
+export interface FindingGroupMeta {
   title: string;
-  ok: string;
-  warning: string;
-  critical: string;
+  explanation: string;
+  actionLabel: string;
+  pluralSubjectLabel: string;
+  tone: 'urgent' | 'neutral';
 }
 
-const AREA_META: Record<AreaKey, AreaMeta> = {
-  cardcom: { title: 'חברת הסליקה', ok: 'תקין', warning: 'אזהרה', critical: 'תקלה' },
-  donations: { title: 'תרומות', ok: 'תקין', warning: 'אזהרה', critical: 'דורש טיפול' },
-  commission: { title: 'גביית עמלות', ok: 'תקין', warning: 'אזהרה', critical: 'דורש טיפול' },
-  jobs: { title: 'משימות רקע', ok: 'תקינות', warning: 'אזהרה', critical: 'דורשות טיפול' },
+export interface FindingGroup {
+  findingType: string;
+  meta: FindingGroupMeta;
+  items: ReconciliationFinding[];
+}
+
+// Only the finding types actually confirmed by the audit to belong to the
+// "תרומות" world (cardcom + donations areas) get bespoke copy. Anything
+// else falls back to defaultGroupMeta() below -- never silently dropped,
+// just less polished until it's actually seen in production and given its
+// own entry here.
+const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
+  lookup_failed: {
+    title: 'בדיקה מול חברת הסליקה',
+    explanation: 'לא ניתן היה לוודא עדיין את מצב התשלום של תרומות אלה.',
+    actionLabel: 'הצג תרומות',
+    pluralSubjectLabel: 'תרומות',
+    tone: 'urgent',
+  },
+  pending_donation_missing_low_profile_id: {
+    title: 'נדרשת בדיקה ידנית',
+    explanation: 'לא ניתן לבדוק אוטומטית את מצב התשלום של תרומות אלה.',
+    actionLabel: 'הצג תרומות',
+    pluralSubjectLabel: 'תרומות',
+    tone: 'urgent',
+  },
+  campaign_aggregate_mismatch: {
+    title: 'נתוני קמפיינים אינם מעודכנים',
+    explanation: 'התרומות עצמן תקינות; נתוני התצוגה בקמפיין אינם תואמים לנתוני התרומות.',
+    actionLabel: 'הצג קמפיינים',
+    pluralSubjectLabel: 'קמפיינים',
+    tone: 'neutral',
+  },
+  gate_v1_mismatch: {
+    title: 'תרומות שעוכבו לבדיקת אימות',
+    explanation: 'התשלום נעצר לבדיקה ידנית בעקבות אי-התאמה מול תשובת חברת הסליקה.',
+    actionLabel: 'הצג תרומות',
+    pluralSubjectLabel: 'תרומות',
+    tone: 'urgent',
+  },
 };
+
+function defaultGroupMeta(findingType: string, subjectType: string): FindingGroupMeta {
+  return {
+    title: sharedFindingTypeLabel(findingType),
+    explanation: 'ממצא הדורש בדיקה.',
+    actionLabel: 'הצג פרטים',
+    pluralSubjectLabel: subjectType === 'donation' ? 'תרומות' : subjectType === 'campaign' ? 'קמפיינים' : subjectType,
+    tone: 'urgent',
+  };
+}
 
 // Full classification order (used internally for sorting actionableItems --
 // commission/jobs items are still computed here, just surfaced on the
@@ -87,7 +147,19 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   health: HealthResponse | null = null;
   findings: ReconciliationFinding[] = [];
   showResolved = false;
-  showTechnical = false;
+  // Renamed from showTechnical (2026-09-14q) -- scope narrowed to jobs +
+  // webhooks + the raw findings log only. Findings that need operator
+  // action no longer live in this shared toggle at all; they're grouped
+  // in "דורש טיפול" and drilled into via a focused per-group drawer instead.
+  showTechnicalTools = false;
+
+  // Which finding-group's drawer is open, keyed by finding_type -- at most
+  // one at a time, same pattern as the billing-setup drawer elsewhere in
+  // Platform Admin.
+  groupDrawerFindingType: string | null = null;
+  // Per-finding "פרטים טכניים" disclosure inside the open drawer (raw
+  // ids/JSON/provider error) -- collapsed by default, one at a time.
+  expandedFindingTechnicalId: number | null = null;
 
   runsByJob: Record<string, JobRun[]> = {};
   expandedJob: string | null = null;
@@ -129,8 +201,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     this.loadFindings();
   }
 
-  toggleTechnical(): void {
-    this.showTechnical = !this.showTechnical;
+  toggleTechnicalTools(): void {
+    this.showTechnicalTools = !this.showTechnicalTools;
   }
 
   jobLabel(name: string): string {
@@ -255,14 +327,6 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return 'ok';
   }
 
-  areaTitle(area: AreaKey): string {
-    return AREA_META[area].title;
-  }
-
-  areaStatusLabel(area: AreaKey): string {
-    return AREA_META[area][this.areaStatus(area)];
-  }
-
   get overallOk(): boolean {
     return this.areaOrder.every((a) => this.areaStatus(a) === 'ok');
   }
@@ -280,6 +344,82 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   get overallWarningCount(): number {
     return this.visibleActionableItems.filter((i) => i.severity === 'warning').length;
+  }
+
+  // ---- "דורש טיפול" grouping (2026-09-14q) -------------------------------
+  //
+  // Splits visibleActionableItems (unchanged) into the two shapes the new
+  // template actually renders: finding-backed items become grouped cards
+  // (one card per finding_type, opening a drawer with every individual
+  // subject); everything else (today: only webhook_recovery_unresolved --
+  // job_failed/job_stale/scheduler_not_running were never in areaOrder to
+  // begin with, unchanged from before this pass) stays a single small card
+  // pointing at כלים טכניים, exactly like revealTechnical already did.
+  get findingGroups(): FindingGroup[] {
+    const byType = new Map<string, ReconciliationFinding[]>();
+    for (const item of this.visibleActionableItems) {
+      if (item.findingId == null) continue;
+      const finding = this.findings.find((f) => f.id === item.findingId);
+      if (!finding) continue;
+      const list = byType.get(finding.finding_type) ?? [];
+      list.push(finding);
+      byType.set(finding.finding_type, list);
+    }
+    const groups: FindingGroup[] = [];
+    for (const [findingType, items] of byType) {
+      const meta = FINDING_GROUP_META[findingType] ?? defaultGroupMeta(findingType, items[0].subject_type);
+      groups.push({ findingType, meta, items });
+    }
+    return groups.sort((a, b) => {
+      if (a.meta.tone !== b.meta.tone) return a.meta.tone === 'urgent' ? -1 : 1;
+      return b.items.length - a.items.length;
+    });
+  }
+
+  get alertActionableItems(): ActionableItem[] {
+    return this.visibleActionableItems.filter((i) => i.findingId == null);
+  }
+
+  get openGroup(): FindingGroup | null {
+    if (!this.groupDrawerFindingType) return null;
+    return this.findingGroups.find((g) => g.findingType === this.groupDrawerFindingType) ?? null;
+  }
+
+  openGroupDrawer(findingType: string): void {
+    this.groupDrawerFindingType = findingType;
+    this.expandedFindingTechnicalId = null;
+  }
+
+  closeGroupDrawer(): void {
+    this.groupDrawerFindingType = null;
+    this.expandedFindingTechnicalId = null;
+  }
+
+  toggleFindingTechnical(findingId: number): void {
+    this.expandedFindingTechnicalId = this.expandedFindingTechnicalId === findingId ? null : findingId;
+  }
+
+  groupDotClass(group: FindingGroup): string {
+    if (group.meta.tone === 'neutral') return 'ops-severity-info';
+    return group.items.some((f) => f.severity === 'critical') ? 'ops-severity-critical' : 'ops-severity-warning';
+  }
+
+  // Best-effort human context from details already returned by the
+  // existing API -- never invents a value; returns null (rendered as
+  // nothing) when the underlying job never recorded that field. Today only
+  // campaign_aggregate_mismatch's own details (currentAmount/actualAmount)
+  // carry anything usable here -- lookup_failed/pending_donation_missing_
+  // low_profile_id/gate_v1_mismatch only ever record an error string/notes/
+  // reasons, no donor or campaign name (checked directly against every
+  // recordFinding() call in src/jobs/ during the audit).
+  findingContextLine(finding: ReconciliationFinding): string | null {
+    if (finding.finding_type === 'campaign_aggregate_mismatch') {
+      const details = finding.details as Record<string, unknown>;
+      const current = details['currentAmount'];
+      const actual = details['actualAmount'];
+      if (current != null && actual != null) return `מוצג: ₪${current} · בפועל: ₪${actual}`;
+    }
+    return null;
   }
 
   private findingSubtitle(finding: ReconciliationFinding): string {
@@ -337,26 +477,27 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     });
   }
 
-  // Jumps from a "דורש טיפול" item into the technical/advanced section
-  // instead of repeating its full detail up here — avoids showing the same
-  // failure twice (a compact summary above, the full job card/finding row
-  // below), per the redesign's single most important rule.
+  // Jumps from an alert-backed "דורש טיפול" card into כלים טכניים and
+  // expands the relevant job's run history (2026-09-14q: narrowed to jobs
+  // only -- finding-backed items now open their own group drawer instead
+  // of scrolling into a shared technical section; the finding-jump branch
+  // this method used to have has no caller left, since findings no longer
+  // render inside כלים טכניים at all).
   revealTechnical(item: ActionableItem): void {
-    this.showTechnical = true;
-    if (item.jobName && this.health?.knownJobs.includes(item.jobName)) {
-      this.expandedJob = item.jobName;
-      if (!this.runsByJob[item.jobName]) {
-        // Fetch directly rather than via toggleRuns() -- expandedJob is
-        // already set to this job above, so calling toggleRuns() here would
-        // see expandedJob === jobName and collapse it instead of expanding.
-        this.cardcomOps.getJobRuns(item.jobName).subscribe({
-          next: (res) => { this.runsByJob[item.jobName!] = res.runs; },
-          error: () => { this.runsByJob[item.jobName!] = []; },
-        });
-      }
+    this.showTechnicalTools = true;
+    if (!item.jobName || !this.health?.knownJobs.includes(item.jobName)) return;
+    this.expandedJob = item.jobName;
+    if (!this.runsByJob[item.jobName]) {
+      // Fetch directly rather than via toggleRuns() -- expandedJob is
+      // already set to this job above, so calling toggleRuns() here would
+      // see expandedJob === jobName and collapse it instead of expanding.
+      this.cardcomOps.getJobRuns(item.jobName).subscribe({
+        next: (res) => { this.runsByJob[item.jobName!] = res.runs; },
+        error: () => { this.runsByJob[item.jobName!] = []; },
+      });
     }
-    const elId = item.findingId != null ? `tech-finding-${item.findingId}` : item.jobName ? `tech-job-${item.jobName}` : null;
-    if (!elId || typeof document === 'undefined') return;
+    const elId = `tech-job-${item.jobName}`;
+    if (typeof document === 'undefined') return;
     setTimeout(() => document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 

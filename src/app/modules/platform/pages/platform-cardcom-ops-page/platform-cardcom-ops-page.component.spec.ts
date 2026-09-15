@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { PlatformCardcomOpsPageComponent } from './platform-cardcom-ops-page.component';
 import { CardcomOpsService, HealthResponse, ReconciliationFinding } from '../../services/cardcom-ops.service';
@@ -229,5 +230,191 @@ describe('PlatformCardcomOpsPageComponent - IA redesign', () => {
     const component = await createComponent(stubService({ findings: [resolved] }));
     expect(component.actionableItems.length).toBe(0);
     expect(component.overallOk).toBe(true);
+  });
+});
+
+// Regression coverage for the "דורש טיפול" grouping + focused-drawer
+// simplification (2026-09-14q, built from the same-day read-only audit).
+// Core invariant throughout: grouping by finding_type is DISPLAY only --
+// recordFinding's own dedup key is (job_name, finding_type, subject_type,
+// subject_id), so 4 open findings of the same type are 4 real, distinct
+// donations/campaigns, and every one of them must stay individually
+// reachable from its group's drawer, never silently merged away.
+describe('PlatformCardcomOpsPageComponent - grouped "דורש טיפול" + focused drawer', () => {
+  const HEALTHY_HEARTBEAT = { lastHeartbeatAt: '2026-09-14T00:00:00Z', minutesSinceLastHeartbeat: 1, healthy: true };
+
+  function healthWith(overrides: Partial<HealthResponse> = {}): HealthResponse {
+    return {
+      webhooks: [],
+      jobs: [],
+      knownJobs: ['stale-pending-donations', 'aggregate-consistency', 'webhook-recovery'],
+      schedulerHeartbeat: HEALTHY_HEARTBEAT,
+      alerts: [],
+      ...overrides,
+    };
+  }
+
+  function lookupFailedFinding(id: number, donationId: string): ReconciliationFinding {
+    return {
+      id, job_name: 'stale-pending-donations', finding_type: 'lookup_failed', severity: 'warning',
+      subject_type: 'donation', subject_id: donationId, details: { error: 'ETIMEDOUT' },
+      found_at: '2026-09-10T00:00:00Z', last_seen_at: '2026-09-14T00:00:00Z',
+      resolved_at: null, resolved_by: null,
+    };
+  }
+
+  function campaignMismatchFinding(id: number, campaignId: string): ReconciliationFinding {
+    return {
+      id, job_name: 'aggregate-consistency', finding_type: 'campaign_aggregate_mismatch', severity: 'critical',
+      subject_type: 'campaign', subject_id: campaignId,
+      details: { currentAmount: '500.00', actualAmount: '480.00', currentSupporters: 12, actualSupporters: 11 },
+      found_at: '2026-09-10T00:00:00Z', last_seen_at: '2026-09-14T00:00:00Z',
+      resolved_at: null, resolved_by: null,
+    };
+  }
+
+  async function createFixture(service: Partial<CardcomOpsService>) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [PlatformCardcomOpsPageComponent],
+      providers: [{ provide: CardcomOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformCardcomOpsPageComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('4 lookup_failed findings for 4 different donations become ONE group card labeled "4", not 4 near-duplicate cards', async () => {
+    const findings = [
+      lookupFailedFinding(1, 'donation-a'), lookupFailedFinding(2, 'donation-b'),
+      lookupFailedFinding(3, 'donation-c'), lookupFailedFinding(4, 'donation-d'),
+    ];
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings }),
+    });
+
+    const groupCards = fixture.debugElement.queryAll(By.css('.ops-group-card'));
+    expect(groupCards.length).toBe(1); // one card, not one per donation
+    expect(groupCards[0].nativeElement.textContent).toContain('בדיקה מול חברת הסליקה');
+    expect(groupCards[0].nativeElement.textContent).toContain('4');
+    // No raw donation ids, no JSON, no English error text in the primary view.
+    expect(fixture.nativeElement.textContent).not.toContain('donation-a');
+    expect(fixture.nativeElement.textContent).not.toContain('ETIMEDOUT');
+  });
+
+  it('opening the group drawer shows all 4 underlying donations individually, each independently reachable and actionable', async () => {
+    const findings = [
+      lookupFailedFinding(1, 'donation-a'), lookupFailedFinding(2, 'donation-b'),
+      lookupFailedFinding(3, 'donation-c'), lookupFailedFinding(4, 'donation-d'),
+    ];
+    const resolveSpy = jasmine.createSpy('resolveFinding').and.returnValue(of({}));
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings }),
+      resolveFinding: resolveSpy,
+    });
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    const items = fixture.debugElement.queryAll(By.css('.ops-drawer-item'));
+    expect(items.length).toBe(4); // all 4 real donations present, none merged away
+
+    // Each item has its own independent "סמן כנבדק" action (scoped to
+    // .ops-drawer-item-main -- each item also has a separate "פרטים
+    // טכניים" toggle button, not counted here).
+    const buttons = fixture.debugElement.queryAll(By.css('.ops-drawer-item-main button'));
+    expect(buttons.length).toBe(4);
+    buttons[0].nativeElement.click();
+    fixture.detectChanges();
+    expect(resolveSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('raw ids/JSON/provider error stay hidden until "פרטים טכניים" is opened for that specific item', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [lookupFailedFinding(1, 'donation-a')] }),
+    });
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('donation-a');
+    expect(fixture.nativeElement.textContent).not.toContain('ETIMEDOUT');
+
+    fixture.debugElement.query(By.css('.ops-drawer-tech-toggle')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('donation-a');
+    expect(fixture.nativeElement.textContent).toContain('ETIMEDOUT');
+  });
+
+  it('campaign_aggregate_mismatch renders with a neutral tone (not a scary red critical dot) and its "not money at risk" explanation, even though its real severity is critical', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [campaignMismatchFinding(5, 'campaign-x')] }),
+    });
+
+    const card = fixture.debugElement.query(By.css('.ops-group-card'));
+    expect(card.nativeElement.classList).toContain('ops-group-neutral');
+    const dot = card.query(By.css('.ops-severity-dot'));
+    expect(dot.nativeElement.classList).toContain('ops-severity-info'); // not ops-severity-critical
+    expect(card.nativeElement.textContent).toContain('התרומות עצמן תקינות');
+
+    // But it's still a real, genuine open finding -- not silently dropped
+    // from the underlying data the finding still exists and is still
+    // resolvable from its drawer.
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.debugElement.queryAll(By.css('.ops-drawer-item')).length).toBe(1);
+    // Real, available context (currentAmount/actualAmount) shown without opening טכני.
+    expect(fixture.nativeElement.textContent).toContain('480');
+  });
+
+  it('"סמן כנבדק" (not "סמן כטופל"/"פתור") appears in the drawer, and the drawer explains it only dismisses the finding, not the underlying problem', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [lookupFailedFinding(1, 'donation-a')] }),
+    });
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('סמן כנבדק');
+    expect(fixture.nativeElement.textContent).not.toContain('סמן כטופל');
+    expect(fixture.nativeElement.textContent).not.toContain('פתור');
+    expect(fixture.nativeElement.textContent).toContain('אינו משנה את מצב התרומה');
+  });
+
+  it('כלים טכניים (collapsed by default) still reaches jobs (עם הרץ עכשיו) and webhooks -- and the full raw findings log, all previously-reachable capabilities preserved', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith({
+        jobs: [{ job_name: 'stale-pending-donations', status: 'success', started_at: '2026-09-14T00:00:00Z', finished_at: null, duration_ms: 500, error: null }],
+        webhooks: [{ type: 'LowProfile', last_received_at: '2026-09-14T00:00:00Z', count_24h: 3 }],
+      })),
+      getFindings: () => of({ findings: [lookupFailedFinding(1, 'donation-a')] }),
+    });
+
+    // Collapsed by default -- the primary view stays simple.
+    expect(fixture.debugElement.query(By.css('.ops-job-list'))).toBeFalsy();
+
+    fixture.debugElement.query(By.css('.ops-tech-toggle')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('תרומות שממתינות זמן רב'); // job label
+    expect(fixture.nativeElement.textContent).toContain('הרץ עכשיו');
+    expect(fixture.nativeElement.textContent).toContain('תרומה חד-פעמית'); // webhook type label (LowProfile)
+    // The raw findings log (technical, with ids/JSON) is also still reachable here.
+    expect(fixture.nativeElement.textContent).toContain('donation-a');
+  });
+
+  it('the old 4-area tile row is gone from the primary view -- hero + grouped cards communicate the same state', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+    });
+    expect(fixture.debugElement.query(By.css('.ops-area-tile'))).toBeFalsy();
+    expect(fixture.nativeElement.textContent).toContain('מערכת התרומות תקינה');
   });
 });
