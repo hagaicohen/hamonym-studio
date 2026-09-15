@@ -1,8 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { PlatformCardcomOpsPageComponent } from './platform-cardcom-ops-page.component';
 import { CardcomOpsService, HealthResponse, ReconciliationFinding } from '../../services/cardcom-ops.service';
+import { PlatformService } from '../../services/platform.service';
+import { environment } from '../../../../../environments/environment';
+
+// PlatformCardcomOpsPageComponent now also injects HttpClient directly
+// (donation-context enrichment, 2026-09-14r -- GET /api/donations/public/:id,
+// the same existing public endpoint donation-success.component.ts already
+// calls) and PlatformService (campaign-context enrichment, reuses its
+// existing getCampaign()). Neither is under test in most of the suites
+// below, so real HttpClient + HttpClientTesting is provided just so the
+// component constructs cleanly; unflushed requests are harmless for
+// assertions that don't open a drawer with donation/campaign items.
 
 // Regression coverage for this page's IA redesign (2026-09-07):
 // (1) every job/finding-source name and finding_type actually produced by
@@ -80,7 +93,7 @@ describe('PlatformCardcomOpsPageComponent - IA redesign', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [PlatformCardcomOpsPageComponent],
-      providers: [{ provide: CardcomOpsService, useValue: service }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: CardcomOpsService, useValue: service }],
     }).compileComponents();
     const fixture = TestBed.createComponent(PlatformCardcomOpsPageComponent);
     fixture.detectChanges();
@@ -277,7 +290,7 @@ describe('PlatformCardcomOpsPageComponent - grouped "דורש טיפול" + focu
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [PlatformCardcomOpsPageComponent],
-      providers: [{ provide: CardcomOpsService, useValue: service }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: CardcomOpsService, useValue: service }],
     }).compileComponents();
     const fixture = TestBed.createComponent(PlatformCardcomOpsPageComponent);
     fixture.detectChanges();
@@ -416,5 +429,123 @@ describe('PlatformCardcomOpsPageComponent - grouped "דורש טיפול" + focu
     });
     expect(fixture.debugElement.query(By.css('.ops-area-tile'))).toBeFalsy();
     expect(fixture.nativeElement.textContent).toContain('מערכת התרומות תקינה');
+  });
+});
+
+// Regression coverage for the drawer's human-readable donation/campaign
+// context (2026-09-14r) -- fetched lazily from the existing public
+// donation-confirmation endpoint (GET /api/donations/public/:id, already
+// called by donation-success.component.ts) and PlatformService.getCampaign
+// (already called by the campaign detail page) -- no new backend code.
+describe('PlatformCardcomOpsPageComponent - drawer donation/campaign context', () => {
+  const HEALTHY_HEARTBEAT = { lastHeartbeatAt: '2026-09-14T00:00:00Z', minutesSinceLastHeartbeat: 1, healthy: true };
+
+  function healthWith(overrides: Partial<HealthResponse> = {}): HealthResponse {
+    return {
+      webhooks: [], jobs: [], knownJobs: ['stale-pending-donations'],
+      schedulerHeartbeat: HEALTHY_HEARTBEAT, alerts: [], ...overrides,
+    };
+  }
+
+  function lookupFailedFinding(id: number, donationId: string): ReconciliationFinding {
+    return {
+      id, job_name: 'stale-pending-donations', finding_type: 'lookup_failed', severity: 'warning',
+      subject_type: 'donation', subject_id: donationId, details: { error: 'ETIMEDOUT' },
+      found_at: '2026-09-08T00:00:00Z', last_seen_at: '2026-09-14T00:00:00Z',
+      resolved_at: null, resolved_by: null,
+    };
+  }
+
+  function campaignMismatchFinding(id: number, campaignId: string): ReconciliationFinding {
+    return {
+      id, job_name: 'aggregate-consistency', finding_type: 'campaign_aggregate_mismatch', severity: 'critical',
+      subject_type: 'campaign', subject_id: campaignId,
+      details: { currentAmount: '500.00', actualAmount: '480.00' },
+      found_at: '2026-09-08T00:00:00Z', last_seen_at: '2026-09-14T00:00:00Z',
+      resolved_at: null, resolved_by: null,
+    };
+  }
+
+  async function createFixture(service: Partial<CardcomOpsService>) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [PlatformCardcomOpsPageComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: CardcomOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformCardcomOpsPageComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('shows amount/campaign/association/date once the existing public donation endpoint responds, and NEVER shows the donor name it also returns', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [lookupFailedFinding(1, 'donation-a')] }),
+    });
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('טוען פרטי תרומה');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/donations/public/donation-a`);
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      amount: 50, created_at: '2026-09-08T23:15:00.000Z',
+      campaign_title: 'קמפיין הדוגמה', entity_name: 'עמותת הדוגמה',
+      donor_name: 'ישראל ישראלי', status: 'pending',
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('תרומה של ₪50');
+    expect(text).toContain('קמפיין הדוגמה');
+    expect(text).toContain('עמותת הדוגמה');
+    expect(text).toContain('לא הצלחנו לוודא את מצב התשלום מול חברת הסליקה');
+    expect(text).not.toContain('ישראל ישראלי'); // donor name returned by the endpoint, never shown
+    httpMock.verify();
+  });
+
+  it('shows campaign title/association once PlatformService.getCampaign (the existing campaign-detail endpoint) responds', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [campaignMismatchFinding(5, 'campaign-x')] }),
+    });
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/platform/campaigns/campaign-x`);
+    req.flush({ title: 'קמפיין מבחן', entity_name: 'עמותת מבחן', current_amount: '500.00' });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('קמפיין: קמפיין מבחן');
+    expect(text).toContain('עמותת מבחן');
+    expect(text).toContain('התרומות עצמן תקינות'); // per-item explanation, still present
+    httpMock.verify();
+  });
+
+  it('falls back to a generic identifiable label (never stuck on "טוען...") if the donation endpoint fails -- e.g. a donation that was since deleted/not found', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [lookupFailedFinding(1, 'donation-missing')] }),
+    });
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    fixture.debugElement.query(By.css('.ops-group-card button')).nativeElement.click();
+    fixture.detectChanges();
+
+    httpMock.expectOne(`${environment.apiUrl}/api/donations/public/donation-missing`).flush(
+      { error: 'Not found' }, { status: 404, statusText: 'Not Found' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('טוען פרטי תרומה');
+    const subject = fixture.debugElement.query(By.css('.ops-drawer-item-subject'));
+    expect(subject.nativeElement.textContent.trim()).toBe('תרומה'); // generic fallback, not invented data
+    httpMock.verify();
   });
 });

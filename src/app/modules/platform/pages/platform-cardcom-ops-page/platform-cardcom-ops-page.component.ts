@@ -1,11 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import {
   CardcomOpsService,
   HealthResponse,
   JobRun,
   ReconciliationFinding,
 } from '../../services/cardcom-ops.service';
+import { PlatformService } from '../../services/platform.service';
 import {
   jobLabel as sharedJobLabel,
   jobFrequency as sharedJobFrequency,
@@ -14,6 +16,7 @@ import {
   jobArea as sharedJobArea,
   PROVIDER_FINDING_TYPES,
 } from '../../utils/ops-labels';
+import { environment } from '../../../../../environments/environment';
 
 // This page is the operator-facing "תרומות" (donations) health view (UX
 // simplification pass, 2026-09-14) -- it used to be "תפעול CardCom", a
@@ -49,6 +52,13 @@ export type AreaStatus = 'ok' | 'warning' | 'critical';
 export interface FindingGroupMeta {
   title: string;
   explanation: string;
+  // Singular, shown under each individual item in the drawer -- distinct
+  // from `explanation` (plural, shown once at the drawer header) because
+  // Hebrew grammar doesn't let one string serve both without sounding
+  // wrong (2026-09-14r). Wording deliberately never implies the donation
+  // itself failed -- lookup_failed only means Hamonym could not verify its
+  // state with the provider, not that the charge failed.
+  itemExplanation: string;
   actionLabel: string;
   pluralSubjectLabel: string;
   tone: 'urgent' | 'neutral';
@@ -69,6 +79,7 @@ const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
   lookup_failed: {
     title: 'בדיקה מול חברת הסליקה',
     explanation: 'לא ניתן היה לוודא עדיין את מצב התשלום של תרומות אלה.',
+    itemExplanation: 'לא הצלחנו לוודא את מצב התשלום מול חברת הסליקה.',
     actionLabel: 'הצג תרומות',
     pluralSubjectLabel: 'תרומות',
     tone: 'urgent',
@@ -76,6 +87,7 @@ const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
   pending_donation_missing_low_profile_id: {
     title: 'נדרשת בדיקה ידנית',
     explanation: 'לא ניתן לבדוק אוטומטית את מצב התשלום של תרומות אלה.',
+    itemExplanation: 'נדרשת בדיקה ידנית — לא ניתן לבדוק אוטומטית את מצב התשלום של התרומה הזו.',
     actionLabel: 'הצג תרומות',
     pluralSubjectLabel: 'תרומות',
     tone: 'urgent',
@@ -83,6 +95,7 @@ const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
   campaign_aggregate_mismatch: {
     title: 'נתוני קמפיינים אינם מעודכנים',
     explanation: 'התרומות עצמן תקינות; נתוני התצוגה בקמפיין אינם תואמים לנתוני התרומות.',
+    itemExplanation: 'התרומות בקמפיין הזה תקינות; נתוני התצוגה (סכום/תומכים) אינם מעודכנים.',
     actionLabel: 'הצג קמפיינים',
     pluralSubjectLabel: 'קמפיינים',
     tone: 'neutral',
@@ -90,6 +103,7 @@ const FINDING_GROUP_META: Record<string, FindingGroupMeta> = {
   gate_v1_mismatch: {
     title: 'תרומות שעוכבו לבדיקת אימות',
     explanation: 'התשלום נעצר לבדיקה ידנית בעקבות אי-התאמה מול תשובת חברת הסליקה.',
+    itemExplanation: 'התשלום נעצר לבדיקה ידנית בעקבות אי-התאמה מול תשובת חברת הסליקה.',
     actionLabel: 'הצג תרומות',
     pluralSubjectLabel: 'תרומות',
     tone: 'urgent',
@@ -100,10 +114,33 @@ function defaultGroupMeta(findingType: string, subjectType: string): FindingGrou
   return {
     title: sharedFindingTypeLabel(findingType),
     explanation: 'ממצא הדורש בדיקה.',
+    itemExplanation: 'ממצא הדורש בדיקה.',
     actionLabel: 'הצג פרטים',
     pluralSubjectLabel: subjectType === 'donation' ? 'תרומות' : subjectType === 'campaign' ? 'קמפיינים' : subjectType,
     tone: 'urgent',
   };
+}
+
+// Human context for a donation-subject finding, fetched from the existing
+// public donation-confirmation endpoint (2026-09-14r) -- no new backend
+// code. Deliberately excludes donor_name even though the endpoint returns
+// it: it's a public, unauthenticated route (not part of Platform Admin's
+// own authenticated data flow), so showing a donor's name here would be
+// more exposure than this pass should introduce; amount/campaign/
+// association/date are enough for an operator to identify the case.
+interface DonationContext {
+  amount: number | string;
+  created_at: string;
+  campaign_title: string;
+  entity_name: string;
+}
+
+// Human context for a campaign-subject finding -- reuses
+// PlatformService.getCampaign(), the same endpoint the campaign detail
+// page already calls.
+interface CampaignContext {
+  title: string;
+  entity_name: string;
 }
 
 // Full classification order (used internally for sorting actionableItems --
@@ -135,6 +172,15 @@ export interface ActionableItem {
 })
 export class PlatformCardcomOpsPageComponent implements OnInit {
   private cardcomOps = inject(CardcomOpsService);
+  private http = inject(HttpClient);
+  private platformService = inject(PlatformService);
+
+  // Keyed by subject_id (donation or campaign uuid), fetched lazily the
+  // first time a group drawer containing that subject is opened, cached
+  // for the component's lifetime. 'loading'/'error' are explicit states so
+  // the template never has to guess why a value is missing.
+  private donationContextCache = new Map<string, DonationContext | 'loading' | 'error'>();
+  private campaignContextCache = new Map<string, CampaignContext | 'loading' | 'error'>();
 
   // Template-facing tile/list order (donations world only). Internal
   // classification (actionableItems' sort, itemsForArea for any area
@@ -388,6 +434,45 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   openGroupDrawer(findingType: string): void {
     this.groupDrawerFindingType = findingType;
     this.expandedFindingTechnicalId = null;
+    const group = this.findingGroups.find((g) => g.findingType === findingType);
+    if (!group) return;
+    for (const finding of group.items) this.loadSubjectContext(finding);
+  }
+
+  private loadSubjectContext(finding: ReconciliationFinding): void {
+    if (finding.subject_type === 'donation') {
+      if (this.donationContextCache.has(finding.subject_id)) return;
+      this.donationContextCache.set(finding.subject_id, 'loading');
+      this.http.get<DonationContext>(`${environment.apiUrl}/api/donations/public/${finding.subject_id}`).subscribe({
+        next: (d) => this.donationContextCache.set(finding.subject_id, d),
+        error: () => this.donationContextCache.set(finding.subject_id, 'error'),
+      });
+    } else if (finding.subject_type === 'campaign') {
+      if (this.campaignContextCache.has(finding.subject_id)) return;
+      this.campaignContextCache.set(finding.subject_id, 'loading');
+      this.platformService.getCampaign(finding.subject_id).subscribe({
+        next: (c) => this.campaignContextCache.set(finding.subject_id, { title: c.title, entity_name: c.entity_name }),
+        error: () => this.campaignContextCache.set(finding.subject_id, 'error'),
+      });
+    }
+  }
+
+  donationContextFor(finding: ReconciliationFinding): DonationContext | null {
+    const v = this.donationContextCache.get(finding.subject_id);
+    return v && v !== 'loading' && v !== 'error' ? v : null;
+  }
+
+  donationContextLoading(finding: ReconciliationFinding): boolean {
+    return this.donationContextCache.get(finding.subject_id) === 'loading';
+  }
+
+  campaignContextFor(finding: ReconciliationFinding): CampaignContext | null {
+    const v = this.campaignContextCache.get(finding.subject_id);
+    return v && v !== 'loading' && v !== 'error' ? v : null;
+  }
+
+  campaignContextLoading(finding: ReconciliationFinding): boolean {
+    return this.campaignContextCache.get(finding.subject_id) === 'loading';
   }
 
   closeGroupDrawer(): void {

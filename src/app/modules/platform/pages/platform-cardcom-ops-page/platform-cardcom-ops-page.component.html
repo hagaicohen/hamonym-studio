@@ -257,8 +257,33 @@
               <div class="ops-drawer-item">
                 <div class="ops-drawer-item-main">
                   <div class="ops-drawer-item-text">
-                    <span class="ops-drawer-item-subject">{{ finding.subject_type === 'donation' ? 'תרומה' : finding.subject_type === 'campaign' ? 'קמפיין' : finding.subject_type }}</span>
-                    <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                    @if (finding.subject_type === 'donation') {
+                      @if (donationContextFor(finding); as ctx) {
+                        <span class="ops-drawer-item-subject">תרומה של ₪{{ ctx.amount }}</span>
+                        <span class="ops-drawer-item-detail">קמפיין: {{ ctx.campaign_title }}</span>
+                        <span class="ops-drawer-item-detail">עמותה: {{ ctx.entity_name }}</span>
+                        <span class="ops-drawer-item-meta">{{ fmtDateTime(ctx.created_at) }}</span>
+                      } @else if (donationContextLoading(finding)) {
+                        <span class="ops-drawer-item-subject">טוען פרטי תרומה...</span>
+                      } @else {
+                        <span class="ops-drawer-item-subject">תרומה</span>
+                        <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                      }
+                    } @else if (finding.subject_type === 'campaign') {
+                      @if (campaignContextFor(finding); as cctx) {
+                        <span class="ops-drawer-item-subject">קמפיין: {{ cctx.title }}</span>
+                        <span class="ops-drawer-item-detail">עמותה: {{ cctx.entity_name }}</span>
+                      } @else if (campaignContextLoading(finding)) {
+                        <span class="ops-drawer-item-subject">טוען פרטי קמפיין...</span>
+                      } @else {
+                        <span class="ops-drawer-item-subject">קמפיין</span>
+                      }
+                      <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                    } @else {
+                      <span class="ops-drawer-item-subject">{{ finding.subject_type }}</span>
+                      <span class="ops-drawer-item-meta">זוהה: {{ fmtDate(finding.found_at) }}</span>
+                    }
+                    <span class="ops-drawer-item-explanation">{{ group.meta.itemExplanation }}</span>
                     @if (findingContextLine(finding); as ctx) {
                       <span class="ops-drawer-item-context">{{ ctx }}</span>
                     }
