@@ -110,8 +110,8 @@
                           aria-label="פעולות נוספות"
                         >⋮</button>
 
-                        @if (openMenuUserId === u.id) {
-                          <div class="user-menu" (click)="$event.stopPropagation()">
+                        @if (openMenuUserId === u.id && menuPosition) {
+                          <div class="user-menu" [style.top.px]="menuPosition.top" [style.right.px]="menuPosition.right" (click)="$event.stopPropagation()">
                             <button class="user-menu-item" [disabled]="actionInProgress" (click)="closeActionsMenu(); generateResetLink(u)">קישור לאיפוס סיסמה</button>
 
                             @if (!u.is_super_admin) {

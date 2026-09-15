@@ -135,18 +135,45 @@ export class PlatformUsersPageComponent implements OnInit {
   // inline now; everything else lives behind a single "⋮" menu, open for
   // at most one row at a time.
   openMenuUserId: string | null = null;
+  // Computed on open from the trigger button's own real position (2026-09-16
+  // fix -- the menu used to be `position: absolute` inside .plat-table-wrap,
+  // which sets `overflow-x: auto` (and, per spec, an `overflow-x`/`overflow-y`
+  // pair where neither is `visible` computes both to `auto`) -- so the
+  // dropdown was silently clipped/mispositioned by that scroll container,
+  // rendering as an overlapping mess instead of a clean popover. `position:
+  // fixed` with a JS-computed viewport position escapes that ancestor
+  // entirely, the same fix pattern used for any dropdown inside a scrollable
+  // table.
+  menuPosition: { top: number; right: number } | null = null;
 
   toggleActionsMenu(userId: string, event: Event): void {
     event.stopPropagation();
-    this.openMenuUserId = this.openMenuUserId === userId ? null : userId;
+    if (this.openMenuUserId === userId) {
+      this.openMenuUserId = null;
+      this.menuPosition = null;
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    // Menu opens toward the reading-appropriate side in RTL: its right edge
+    // aligns with the trigger button's own right edge (same visual anchor
+    // the old absolute-positioned `left: 0` produced relative to the
+    // button-sized wrapper).
+    this.menuPosition = { top: rect.bottom + 4, right: window.innerWidth - rect.right };
+    this.openMenuUserId = userId;
   }
 
   // Closes the menu on any click outside it -- the menu's own buttons stop
   // propagation on their own click handlers (see template), so this only
-  // ever fires for a genuine outside click.
+  // ever fires for a genuine outside click. Also closes on scroll (page or
+  // the table's own horizontal scrollbar) -- a `position: fixed` menu
+  // doesn't track its trigger across a scroll, so keeping it open would
+  // show it detached from the row it belongs to; closing is simpler and
+  // safer than recomputing position on every scroll event.
   @HostListener('document:click')
+  @HostListener('window:scroll')
   closeActionsMenu(): void {
     this.openMenuUserId = null;
+    this.menuPosition = null;
   }
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
