@@ -68,12 +68,125 @@
     <p class="bes-note">עד ₪3,540 החיוב נגבה בכרטיס אשראי.</p>
   </div>
 
-  <!-- מס״ב -->
+  <!-- מס״ב -- 3 independent checklist items (2026-09-16 redesign): פרטי
+       חשבון בנק and מסמך הרשאת מס״ב can each be completed in either order
+       (masav-config.service.js#uploadAuthorizationDocument now upserts
+       instead of requiring bank details first); אישור מס״ב is the one
+       action that genuinely requires both, enforced by the backend
+       (authorize()) regardless of what this UI allows clicking. -->
   <div class="bes-section">
     <div class="bes-section-title">מס״ב</div>
-    <div class="bes-row"><span>פרטי בנק</span><b>{{ masavConfig ? '✓ הוגדרו' : '— טרם הוגדרו' }}</b></div>
-    <div class="bes-row"><span>מסמך הרשאה</span><b>{{ masavConfig?.has_authorization_document ? '✓ הועלה' : '— טרם הועלה' }}</b></div>
-    <div class="bes-row"><span>אישור מס״ב</span><b>{{ masavConfig?.authorized ? '✓ מאושר' : '⚠ ממתין לאישור' }}</b></div>
+
+    @if (masavSetupSummary) {
+      <div class="bes-masav-summary">{{ masavSetupSummary }}</div>
+    }
+
+    <!-- פרטי חשבון בנק -->
+    <div class="bes-row">
+      <span>פרטי חשבון בנק</span>
+      <b>{{ masavBankConfigured ? '✓ הוגדר' : 'טרם הוגדר' }}</b>
+    </div>
+
+    <!-- כבר קיימים פרטי בנק -- תצוגה קומפקטית, לא טופס עריכה שחוזר ומופיע
+         בכל פתיחה (2026-09-14l). "עריכת פרטים" חושף את אותו טופס עריכה
+         בדיוק, רק על-פי בחירה מפורשת. -->
+    @if (masavBankConfigured && !showMasavBankEdit) {
+      <div class="bes-compact-summary">
+        <span>{{ bankNameOf(masavConfig!.bank_code) }} · סניף {{ masavConfig!.branch_code }} · חש׳ {{ masavConfig!.account_number }}</span>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm bes-secondary-action" (click)="toggleMasavBankEdit()">
+          עריכת פרטים
+        </button>
+      </div>
+    } @else {
+      <div class="ba-form">
+        <div class="ba-form-fields">
+          <label class="ba-field">
+            <span>בנק</span>
+            <select [(ngModel)]="masavBankCode">
+              <option value="" disabled>בחרו בנק</option>
+              @for (bank of israeliBanks; track bank.code) {
+                <option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</option>
+              }
+            </select>
+          </label>
+          <label class="ba-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
+          <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
+          <label class="ba-field"><span>שם בעל החשבון</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
+        </div>
+        @if (masavFormError) { <div class="ops-action-error">{{ masavFormError }}</div> }
+        <div class="ba-form-actions">
+          @if (masavBankConfigured) {
+            <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavFormBusy" (click)="toggleMasavBankEdit()">ביטול</button>
+          }
+          <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
+            {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי חשבון' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- מסמך הרשאת מס״ב -- זמינה תמיד, בלי תלות בפרטי החשבון (2026-09-16). -->
+    <div class="bes-row">
+      <span>מסמך הרשאת מס״ב</span>
+      <b>{{ masavDocumentUploaded ? '✓ הועלה' : 'טרם הועלה' }}</b>
+    </div>
+
+    <!-- כבר קיים מסמך -- תצוגת ✓ קומפקטית, לא file picker ריק שחוזר ומופיע.
+         "החלפת מסמך" חושף את אותה זרימת העלאה בדיוק (כולל ההצהרה) רק
+         על-פי בחירה מפורשת. -->
+    @if (masavDocumentUploaded && !showMasavDocReplace) {
+      <div class="bes-compact-summary">
+        <span>{{ masavConfig?.authorization_document_name }} · {{ fmtDateTime(masavConfig?.authorization_document_uploaded_at) }}</span>
+        <div class="bes-doc-actions">
+          <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavDocDownloading" (click)="downloadMasavDoc()">
+            {{ masavDocDownloading ? 'מוריד...' : 'צפייה' }}
+          </button>
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm bes-secondary-action" (click)="toggleMasavDocReplace()">
+            החלפת מסמך
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="bo-upload-field">
+        <label class="bo-masav-ack">
+          <input type="checkbox" [(ngModel)]="masavAckChecked" />
+          <span><b>קראתי והבנתי.</b> {{ masavAckText }}</span>
+        </label>
+
+        <div class="bo-upload-helper">{{ masavUploadHelperText }}</div>
+
+        @if (!masavAckChecked) {
+          <div class="bo-upload-note">יש לאשר תחילה את ההצהרה שלמעלה כדי להעלות את אישור הבנק.</div>
+        }
+
+        <input
+          type="file"
+          accept=".pdf,image/*"
+          [disabled]="!masavAckChecked"
+          [class.bo-upload-disabled]="!masavAckChecked"
+          (change)="onMasavDocSelected($event)"
+        />
+        @if (masavDocUploadError) { <div class="ops-action-error">{{ masavDocUploadError }}</div> }
+        <div class="ba-form-actions">
+          @if (masavDocumentUploaded) {
+            <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="toggleMasavDocReplace()">ביטול</button>
+          }
+          <button
+            class="ops-btn ops-btn-primary ops-btn-sm"
+            [disabled]="!masavAckChecked || !masavDocFile || masavDocUploading"
+            (click)="uploadMasavDoc()"
+          >
+            {{ masavDocUploading ? 'מעלה...' : 'העלאת האישור' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- אישור מס״ב -->
+    <div class="bes-row">
+      <span>אישור מס״ב</span>
+      <b>{{ masavConfig?.authorized ? '✓ מאושר' : 'ממתין לאישור' }}</b>
+    </div>
     <p class="bes-note">מעל ₪3,540 החיוב מנותב למס״ב, ורק לאחר אישור מפורש.</p>
 
     @if (masavActionError) { <div class="ops-action-error">{{ masavActionError }}</div> }
@@ -84,119 +197,13 @@
           {{ masavActionBusy ? 'מבטל...' : 'ביטול הרשאת מס״ב' }}
         </button>
       } @else {
-        <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavActionBusy || !masavConfig" (click)="authorizeMasav()">
+        <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavActionBusy || !masavBankConfigured || !masavDocumentUploaded" (click)="authorizeMasav()">
           {{ masavActionBusy ? 'מאשר...' : 'אישור מס״ב' }}
         </button>
       }
     </div>
-
-    <!-- עריכת פרטי מס״ב -- מקופל כברירת מחדל, כדי שהמצב הרגיל של המגירה
-         יישאר קצר (2026-09-14h). נפתח אוטומטית אם עדיין אין שום הגדרה. -->
-    <button type="button" class="bes-toggle" (click)="toggleMasavEdit()">
-      עריכת פרטי מס״ב {{ showMasavEdit ? '▲' : '▼' }}
-    </button>
-
-    @if (showMasavEdit) {
-      <div class="bes-toggle-body">
-        <div class="bes-subtitle">פרטי חשבון הבנק</div>
-
-        <!-- כבר קיימים פרטי בנק -- תצוגה קומפקטית, לא טופס עריכה שחוזר
-             ומופיע בכל פתיחה (2026-09-14l). "עריכת פרטי חשבון" חושף את
-             אותו טופס עריכה בדיוק, רק על-פי בחירה מפורשת. -->
-        @if (masavConfig && !showMasavBankEdit) {
-          <div class="bes-row"><span>בנק</span><b>{{ bankNameOf(masavConfig.bank_code) }}</b></div>
-          <div class="bes-row"><span>סניף</span><b>{{ masavConfig.branch_code }}</b></div>
-          <div class="bes-row"><span>מספר חשבון</span><b>{{ masavConfig.account_number }}</b></div>
-          <div class="bes-row"><span>שם בעל החשבון</span><b>{{ masavConfig.account_holder_name || '—' }}</b></div>
-          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm bes-secondary-action" (click)="toggleMasavBankEdit()">
-            עריכת פרטי חשבון
-          </button>
-        } @else {
-          <div class="ba-form">
-            <div class="ba-form-fields">
-              <label class="ba-field">
-                <span>בנק</span>
-                <select [(ngModel)]="masavBankCode">
-                  <option value="" disabled>בחרו בנק</option>
-                  @for (bank of israeliBanks; track bank.code) {
-                    <option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</option>
-                  }
-                </select>
-              </label>
-              <label class="ba-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
-              <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
-              <label class="ba-field"><span>שם בעל החשבון</span><input type="text" [(ngModel)]="masavAccountHolderName" /></label>
-            </div>
-            @if (masavFormError) { <div class="ops-action-error">{{ masavFormError }}</div> }
-            <div class="ba-form-actions">
-              @if (masavConfig) {
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavFormBusy" (click)="toggleMasavBankEdit()">ביטול</button>
-              }
-              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="masavFormBusy" (click)="submitMasavConfig()">
-                {{ masavFormBusy ? 'שומר...' : 'שמירת פרטי חשבון' }}
-              </button>
-            </div>
-          </div>
-        }
-
-        <div class="bes-subtitle">מסמך הרשאה</div>
-
-        <!-- כבר קיים מסמך -- תצוגת ✓ קומפקטית, לא file picker ריק שחוזר
-             ומופיע. "החלפת מסמך" חושף את אותה זרימת העלאה בדיוק (כולל
-             ההצהרה, שממשיכה לחסום את השדה בדיוק כמו קודם) רק על-פי בחירה
-             מפורשת -- זה גם מה שהופך "אישור מס״ב" למעלה לפעולה היחידה
-             שבולטת כשהכול כבר מוכן. -->
-        @if (masavConfig?.has_authorization_document && !showMasavDocReplace) {
-          <div class="bes-row">
-            <span>✓ מסמך הרשאה הועלה</span>
-            <b>{{ masavConfig?.authorization_document_name }} · {{ fmtDateTime(masavConfig?.authorization_document_uploaded_at) }}</b>
-          </div>
-          <div class="bes-doc-actions">
-            <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="masavDocDownloading" (click)="downloadMasavDoc()">
-              {{ masavDocDownloading ? 'מוריד...' : 'הצגת האישור' }}
-            </button>
-            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm bes-secondary-action" (click)="toggleMasavDocReplace()">
-              החלפת מסמך
-            </button>
-          </div>
-        } @else {
-          <div class="bo-upload-field">
-            <label class="bo-masav-ack">
-              <input type="checkbox" [(ngModel)]="masavAckChecked" />
-              <span><b>קראתי והבנתי.</b> {{ masavAckText }}</span>
-            </label>
-
-            <div class="bo-upload-helper">{{ masavUploadHelperText }}</div>
-
-            @if (!masavConfig) {
-              <div class="bo-upload-note">יש לשמור פרטי חשבון למעלה כדי להעלות את אישור הבנק.</div>
-            } @else if (!masavAckChecked) {
-              <div class="bo-upload-note">יש לאשר תחילה את ההצהרה שלמעלה כדי להעלות את אישור הבנק.</div>
-            }
-
-            <input
-              type="file"
-              accept=".pdf,image/*"
-              [disabled]="!masavConfig || !masavAckChecked"
-              [class.bo-upload-disabled]="!masavConfig || !masavAckChecked"
-              (change)="onMasavDocSelected($event)"
-            />
-            @if (masavDocUploadError) { <div class="ops-action-error">{{ masavDocUploadError }}</div> }
-            <div class="ba-form-actions">
-              @if (masavConfig?.has_authorization_document) {
-                <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="toggleMasavDocReplace()">ביטול</button>
-              }
-              <button
-                class="ops-btn ops-btn-primary ops-btn-sm"
-                [disabled]="!masavConfig || !masavAckChecked || !masavDocFile || masavDocUploading"
-                (click)="uploadMasavDoc()"
-              >
-                {{ masavDocUploading ? 'מעלה...' : 'העלאת האישור' }}
-              </button>
-            </div>
-          </div>
-        }
-      </div>
+    @if (!masavConfig?.authorized && masavAuthorizationBlockedReason) {
+      <div class="bes-note">{{ masavAuthorizationBlockedReason }}</div>
     }
 
     <!-- מידע נוסף על הרשאת מס״ב -- הטקסטים ההסברתיים הארוכים, מקופלים

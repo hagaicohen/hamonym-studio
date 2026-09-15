@@ -174,13 +174,16 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
   });
 });
 
-// Regression coverage for the "עריכת פרטי מס״ב" expanded-state simplification
-// (2026-09-14l): when bank details and the authorization document already
-// exist, opening the section must show compact summaries -- not the raw
-// editable form and file picker -- so "אישור מס״ב" reads as the one clear
-// primary action. Editing/replacing is available but only on request.
-describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/expand', () => {
-  const existingMasavConfig = {
+// Regression coverage for the 2026-09-16 Billing Setup drawer redesign:
+// bank details and the authorization document are two INDEPENDENT
+// checklist items (each with its own compact-summary/expand toggle,
+// showMasavBankEdit / showMasavDocReplace), completable in either order --
+// masav-config.service.js#uploadAuthorizationDocument no longer requires
+// bank details to already exist. אישור מס״ב remains the one action that
+// genuinely needs both, enforced by the backend regardless of what the UI
+// allows clicking.
+describe('BillingEntitySetupComponent - מס״ב checklist (bank details + document, either order)', () => {
+  const fullyConfigured = {
     id: 'masav-1',
     entity_id: 'entity-gedolim-mehachaim',
     bank_code: '12',
@@ -191,6 +194,25 @@ describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/exp
     authorized_by: null,
     authorized_at: null,
     authorization_document_name: 'ishur-masav.pdf',
+    authorization_document_uploaded_at: '2026-09-01T10:00:00.000Z',
+    has_authorization_document: true,
+  };
+
+  // A document was uploaded before bank details were ever saved -- exactly
+  // the scenario the ordering-dependency fix enables. bank_code/branch_code/
+  // account_number are '' (not null -- see the NOT NULL columns, migration
+  // 060), never treated as "configured".
+  const documentOnlyConfig = {
+    id: 'masav-2',
+    entity_id: 'entity-gedolim-mehachaim',
+    bank_code: '',
+    branch_code: '',
+    account_number: '',
+    account_holder_name: null,
+    authorized: false,
+    authorized_by: null,
+    authorized_at: null,
+    authorization_document_name: 'early-upload.pdf',
     authorization_document_uploaded_at: '2026-09-01T10:00:00.000Z',
     has_authorization_document: true,
   };
@@ -221,25 +243,18 @@ describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/exp
     fixture.componentInstance.entityId = 'entity-gedolim-mehachaim';
     fixture.componentInstance.displayNameHint = 'גדולים מהחיים';
     fixture.detectChanges();
-    // loadMasav() already auto-opens showMasavEdit when there's no config
-    // yet (nothing to summarize) -- only toggle it open here if it isn't
-    // already, so this helper works for both fixtures below.
-    if (!fixture.componentInstance.showMasavEdit) {
-      fixture.componentInstance.toggleMasavEdit();
-      fixture.detectChanges();
-    }
     return { fixture };
   }
 
   it('with existing bank details + document: shows compact summaries, no editable bank fields, no file picker -- אישור מס״ב is the only primary action', async () => {
-    const { fixture } = await createComponent(existingMasavConfig);
+    const { fixture } = await createComponent(fullyConfigured);
 
     expect(fixture.componentInstance.showMasavBankEdit).toBe(false);
     expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
+    expect(fixture.componentInstance.masavSetupSummary).toBeNull(); // both done -- no summary banner
 
     expect(fixture.debugElement.query(By.css('.ba-form'))).toBeFalsy(); // no editable bank form
     expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeFalsy(); // no file picker
-    expect(fixture.nativeElement.textContent).toContain('✓ מסמך הרשאה הועלה');
     expect(fixture.nativeElement.textContent).toContain('ishur-masav.pdf');
 
     const authorizeBtn = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
@@ -247,20 +262,21 @@ describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/exp
     expect(authorizeBtn.nativeElement.disabled).toBe(false);
   });
 
-  it('"עריכת פרטי חשבון" reveals the editable bank form on request', async () => {
-    const { fixture } = await createComponent(existingMasavConfig);
+  it('"עריכת פרטים" (bank) reveals the editable bank form on request, independently of the document section', async () => {
+    const { fixture } = await createComponent(fullyConfigured);
 
     const editBtn = [...fixture.debugElement.queryAll(By.css('button'))]
-      .find((b) => b.nativeElement.textContent.trim() === 'עריכת פרטי חשבון');
+      .find((b) => b.nativeElement.textContent.trim() === 'עריכת פרטים');
     editBtn!.nativeElement.click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.showMasavBankEdit).toBe(true);
     expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(false); // untouched
   });
 
   it('"החלפת מסמך" reveals the acknowledgement + file picker on request', async () => {
-    const { fixture } = await createComponent(existingMasavConfig);
+    const { fixture } = await createComponent(fullyConfigured);
 
     const replaceBtn = [...fixture.debugElement.queryAll(By.css('button'))]
       .find((b) => b.nativeElement.textContent.trim() === 'החלפת מסמך');
@@ -272,11 +288,73 @@ describe('BillingEntitySetupComponent - עריכת פרטי מס״ב compact/exp
     expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
   });
 
-  it('with no bank details/document yet: preserves the direct editable form and upload flow, no compact summary shown', async () => {
+  it('with nothing configured yet: both pieces auto-expand to their direct form/picker, no compact summary shown', async () => {
     const { fixture } = await createComponent(null);
 
     expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
     expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
-    expect(fixture.nativeElement.textContent).not.toContain('✓ מסמך הרשאה הועלה');
+    expect(fixture.nativeElement.textContent).toContain('הגדרת מס״ב לא הושלמה');
+    expect(fixture.nativeElement.textContent).toContain('פרטי חשבון');
+    expect(fixture.nativeElement.textContent).toContain('מסמך הרשאה');
+  });
+
+  // The exact scenario the ordering-dependency fix exists for.
+  it('document uploaded before bank details: document reads ✓ הועלה while bank details read טרם הוגדר -- and the file picker was never gated on bank details existing', async () => {
+    const { fixture } = await createComponent(documentOnlyConfig);
+
+    expect(fixture.componentInstance.masavBankConfigured).toBe(false);
+    expect(fixture.componentInstance.masavDocumentUploaded).toBe(true);
+
+    // Document section: collapsed compact summary (already uploaded).
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('early-upload.pdf');
+
+    // Bank section: auto-expanded (nothing to summarize yet).
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(true);
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
+
+    // The overall summary names only the genuinely missing piece.
+    expect(fixture.componentInstance.masavSetupSummary).toContain('פרטי חשבון');
+    expect(fixture.componentInstance.masavSetupSummary).not.toContain('מסמך הרשאה');
+
+    // אישור מס״ב stays disabled with an explanation naming what's missing.
+    const authorizeBtn = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
+    expect(authorizeBtn.nativeElement.disabled).toBe(true);
+    expect(fixture.componentInstance.masavAuthorizationBlockedReason).toContain('פרטי חשבון');
+  });
+
+  it('bank details saved before any document: bank details read ✓ הוגדר while the document section stays open on its own upload picker', async () => {
+    const { fixture } = await createComponent({
+      id: 'masav-3', entity_id: 'entity-gedolim-mehachaim',
+      bank_code: '12', branch_code: '345', account_number: '000123456', account_holder_name: 'שם',
+      authorized: false, authorized_by: null, authorized_at: null,
+      authorization_document_name: null, authorization_document_uploaded_at: null, has_authorization_document: false,
+    });
+
+    expect(fixture.componentInstance.masavBankConfigured).toBe(true);
+    expect(fixture.componentInstance.masavDocumentUploaded).toBe(false);
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(false); // compact summary
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(true); // auto-expanded picker
+
+    // The file input must be enabled purely on the ack checkbox -- no
+    // dependency on bank details being configured.
+    const fileInput: HTMLInputElement = fixture.debugElement.query(By.css('input[type="file"]')).nativeElement;
+    expect(fileInput.disabled).toBe(true); // ack not yet checked
+    fixture.componentInstance.masavAckChecked = true;
+    fixture.detectChanges();
+    expect(fileInput.disabled).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('לשמור פרטי חשבון'); // the old blocking note is gone
+  });
+
+  it('authorizeMasav() itself (not just the button) refuses when either prerequisite is missing, matching the disabled state', async () => {
+    const { fixture } = await createComponent(documentOnlyConfig);
+
+    fixture.componentInstance.authorizeMasav();
+    fixture.detectChanges();
+
+    // Guarded before any network call: masavActionBusy would flip to true
+    // immediately upon a real call proceeding.
+    expect(fixture.componentInstance.masavActionBusy).toBe(false);
+    expect(fixture.componentInstance.masavActionError).toBeNull();
   });
 });

@@ -111,23 +111,61 @@ export class BillingEntitySetupComponent implements OnInit {
   masavActionBusy = false;
   masavActionError: string | null = null;
 
-  // Progressive disclosure toggles (2026-09-14h) -- collapsed by default
-  // once MASAV is already configured (nothing urgent to fix), expanded
-  // automatically the first time there's genuinely nothing to summarize
-  // yet (see loadMasav()).
-  showMasavEdit = false;
   showMasavInfo = false;
 
-  // Nested disclosure inside showMasavEdit (2026-09-14l): once bank
-  // details/the authorization document already exist, default to a
-  // compact summary instead of the full editable form/upload picker --
-  // "עריכת פרטי חשבון" / "החלפת מסמך" reveal them on request. When there's
-  // nothing to summarize yet (masavConfig null / no document), the
-  // corresponding @else branch in the template always renders the
-  // editable form directly regardless of these flags, so they only matter
-  // once something already exists to summarize.
+  // Independent progressive-disclosure toggles for the two independent
+  // MASAV setup pieces (2026-09-16 drawer redesign -- replaces the single
+  // "עריכת פרטי מס״ב" toggle that used to wrap both together, which made
+  // the document upload flow read as nested inside/dependent on the bank
+  // form even after the backend ordering dependency was removed). Each
+  // defaults to collapsed once its own piece already exists (compact
+  // summary + "עריכת פרטים"/"החלפת מסמך"), and auto-expands to the direct
+  // form/picker the first time there's genuinely nothing to summarize yet
+  // (see loadMasav()) -- same progressive-disclosure principle as before,
+  // just decoupled per-piece instead of one flag for both.
   showMasavBankEdit = false;
   showMasavDocReplace = false;
+
+  // Real bank details filled in -- NOT "a masavConfig row exists". A row
+  // can now exist with bank_code/branch_code/account_number still '' (the
+  // document was uploaded before bank details were ever saved -- see
+  // masav-config.service.js#uploadAuthorizationDocument's 2026-09-16
+  // upsert). Treating row-existence as "configured" would misreport a
+  // document-only entity as having bank details on file.
+  get masavBankConfigured(): boolean {
+    return !!this.masavConfig?.bank_code;
+  }
+
+  get masavDocumentUploaded(): boolean {
+    return !!this.masavConfig?.has_authorization_document;
+  }
+
+  // Overall state line at the top of the מס״ב section -- derived entirely
+  // from the same two booleans the checklist rows below already show, never
+  // a new/separate readiness concept. null (nothing rendered) once both
+  // pieces are done, since the checklist rows + the אישור מס״ב row already
+  // say that with no need to repeat it in a summary line too.
+  get masavMissingPieces(): string[] {
+    const missing: string[] = [];
+    if (!this.masavBankConfigured) missing.push('פרטי חשבון');
+    if (!this.masavDocumentUploaded) missing.push('מסמך הרשאה');
+    return missing;
+  }
+
+  get masavSetupSummary(): string | null {
+    const missing = this.masavMissingPieces;
+    if (missing.length === 0) return null;
+    return `הגדרת מס״ב לא הושלמה — חסרים: ${missing.join(' · ')}`;
+  }
+
+  // What to tell the operator when אישור מס״ב is disabled -- names only the
+  // pieces actually missing (never the generic "יש להשלים הכל" when only
+  // one of the two is missing).
+  get masavAuthorizationBlockedReason(): string | null {
+    const missing = this.masavMissingPieces;
+    if (missing.length === 0) return null;
+    return `כדי לאשר מס״ב יש ${missing.length === 2 ? 'להשלים פרטי חשבון ולהעלות מסמך הרשאה' : missing[0] === 'פרטי חשבון' ? 'להשלים פרטי חשבון' : 'להעלות מסמך הרשאה'}.`;
+  }
 
   ngOnInit(): void {
     this.displayName = this.displayNameHint;
@@ -182,11 +220,15 @@ export class BillingEntitySetupComponent implements OnInit {
           this.masavBranchCode = res.config.branch_code;
           this.masavAccountNumber = res.config.account_number;
           this.masavAccountHolderName = res.config.account_holder_name || '';
-        } else {
-          // Nothing to summarize yet -- go straight to the form instead of
-          // making the operator open a toggle to find it.
-          this.showMasavEdit = true;
         }
+        // Nothing to summarize yet for a given piece -- go straight to its
+        // form/picker instead of making the operator open a toggle to find
+        // it. Independent per piece: a document-only entity (bank details
+        // still '') auto-expands the bank form but keeps the document
+        // section collapsed on its own already-uploaded summary, and vice
+        // versa.
+        this.showMasavBankEdit = !this.masavBankConfigured;
+        this.showMasavDocReplace = !this.masavDocumentUploaded;
       },
       error: () => { /* non-critical for this screen */ },
     });
@@ -274,10 +316,6 @@ export class BillingEntitySetupComponent implements OnInit {
 
   dismissJustCreatedBanner(): void {
     this.justCreatedBanner = false;
-  }
-
-  toggleMasavEdit(): void {
-    this.showMasavEdit = !this.showMasavEdit;
   }
 
   toggleMasavBankEdit(): void {
@@ -384,11 +422,14 @@ export class BillingEntitySetupComponent implements OnInit {
     });
   }
 
-  // Never offered when already false -- see the template's [disabled]
-  // guard. Both reuse the exact same BillingOpsService calls the old
-  // billing-ops MASAV-tab drawer used.
+  // Never offered when already false, or when either prerequisite is
+  // genuinely missing -- see the template's [disabled] guard (mirrors this
+  // exactly). Both reuse the exact same BillingOpsService calls the old
+  // billing-ops MASAV-tab drawer used; the backend (authorize(), see
+  // masav-config.service.js) independently enforces the same completeness
+  // check regardless of what the UI allows clicking.
   authorizeMasav(): void {
-    if (this.masavActionBusy || this.masavConfig?.authorized) return;
+    if (this.masavActionBusy || this.masavConfig?.authorized || !this.masavBankConfigured || !this.masavDocumentUploaded) return;
     this.masavActionBusy = true;
     this.masavActionError = null;
     this.opsService.authorizeMasav(this.entityId).subscribe({
