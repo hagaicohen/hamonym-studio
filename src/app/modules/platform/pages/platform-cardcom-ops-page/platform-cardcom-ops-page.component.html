@@ -1,7 +1,10 @@
 <div class="plat-page">
 
   <div class="plat-header">
-    <h1 class="plat-title">תרומות</h1>
+    <div>
+      <h1 class="plat-title">תרומות</h1>
+      <p class="plat-subtitle">כל התרומות שבוצעו בפלטפורמה. ניתן לחפש תרומה ולבדוק את מצבה.</p>
+    </div>
   </div>
 
   @if (actionError) {
@@ -51,21 +54,26 @@
 
   <!-- Primary content: cross-entity donations browser -->
   <div class="plat-card">
+    <h3 class="plat-section-title">כל התרומות</h3>
+
     <div class="ops-donations-toolbar">
       <input
         type="text"
         class="ops-search-input"
-        placeholder="חיפוש לפי תורם, עמותה או קמפיין..."
+        placeholder="חיפוש לפי שם תורם, עמותה או קמפיין..."
         [(ngModel)]="donationsSearch"
         (keyup.enter)="onDonationsSearch()"
       />
-      <select class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
-        <option value="">כל הסטטוסים</option>
-        <option value="paid">שולם</option>
-        <option value="pending">ממתין</option>
-        <option value="failed">נכשל</option>
-      </select>
-      <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" (click)="onDonationsSearch()">חיפוש</button>
+      <div class="ops-status-filter">
+        <label for="donationsStatusFilter" class="ops-filter-label">סטטוס</label>
+        <select id="donationsStatusFilter" class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+          <option value="">כל הסטטוסים</option>
+          <option value="paid">שולם</option>
+          <option value="pending">ממתין</option>
+          <option value="failed">נכשל</option>
+        </select>
+      </div>
+      <button type="button" class="ops-btn ops-btn-primary ops-search-btn" (click)="onDonationsSearch()">חיפוש</button>
     </div>
 
     @if (donationsError) {
@@ -89,10 +97,10 @@
           </thead>
           <tbody>
             @for (donation of donations; track donation.id) {
-              <tr (click)="openDonationDetail(donation)">
+              <tr (click)="openDonationDetail(donation)" title="לחצו לפרטי התרומה">
                 <td>{{ fmtDateTime(donation.created_at) }}</td>
-                <td>{{ donation.entity_name }}</td>
-                <td>{{ donation.campaign_title }}</td>
+                <td class="ops-td-truncate" [title]="donation.entity_name">{{ donation.entity_name }}</td>
+                <td class="ops-td-truncate" [title]="donation.campaign_title">{{ donation.campaign_title }}</td>
                 <td>₪{{ donation.amount }}</td>
                 <td>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</td>
                 <td>

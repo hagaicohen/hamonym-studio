@@ -603,6 +603,76 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     expect(text).toContain('אנונימי');
     expect(text).not.toContain('שם אמיתי');
   });
+
+  it('the page explains itself: title, subtitle, and a "כל התרומות" section heading above the table', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
+    });
+    expect(fixture.nativeElement.textContent).toContain('כל התרומות שבוצעו בפלטפורמה');
+    expect(fixture.debugElement.query(By.css('.plat-section-title')).nativeElement.textContent).toContain('כל התרומות');
+  });
+
+  // Regression for the 2026-09-15t bug: the status <select> is a flex
+  // sibling of .ops-search-input's `flex: 1`, which claims all free space
+  // first -- with no flex-basis of its own the select collapsed to a
+  // sliver too narrow to show "כל הסטטוסים", rendering as an unlabeled
+  // empty square next to a search box that (confusingly) still showed
+  // whatever the operator had typed. `flex: none` on .ops-status-select
+  // is the actual fix; this test locks in the visible symptom (readable
+  // width + a "סטטוס" label identifying the control) rather than the CSS
+  // property, so it still catches a regression introduced a different way.
+  it('the status filter never collapses to an unreadable sliver next to a wide search input, and is labeled "סטטוס"', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of(emptyDonationsResponse()),
+    });
+
+    const label = fixture.debugElement.query(By.css('.ops-filter-label'));
+    expect(label.nativeElement.textContent.trim()).toBe('סטטוס');
+
+    const select: HTMLSelectElement = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement;
+    expect(select.getBoundingClientRect().width).toBeGreaterThan(80);
+  });
+
+  // Regression for the other half of the same bug: styles.scss defines a
+  // global `select { background-image: url(<chevron>) }` for the dropdown
+  // arrow; a `background: #fff` SHORTHAND on .ops-status-select resets
+  // background-image to `none` as part of the same declaration (shorthand
+  // vs. longhand doesn't matter to the cascade once specificity is equal
+  // or higher), silently deleting the arrow. Must use `background-color`.
+  it('the status select keeps its dropdown chevron -- uses background-color, not a `background` shorthand that would erase it', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of(emptyDonationsResponse()),
+    });
+    const select: HTMLSelectElement = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement;
+    expect(getComputedStyle(select).backgroundImage).not.toBe('none');
+  });
+
+  it('long entity/campaign names are truncated so תאריך/סכום/סוג/סטטוס stay on-screen instead of being pushed off by an unbounded column', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of({
+        donations: [donation({
+          entity_name: 'ישראלס - העמותה לחקר האי.אל.אס. בישראל ומחלותיה הנלוות',
+          campaign_title: 'גדולים מהחיים - קמפיין גיוס שנתי 2026 לתמיכה במשפחות',
+        })],
+        total: 1, page: 0, limit: 25,
+      }),
+    });
+    const truncatedCells = fixture.debugElement.queryAll(By.css('.ops-td-truncate'));
+    expect(truncatedCells.length).toBe(2); // עמותה + קמפיין only
+    for (const cell of truncatedCells) {
+      const style = getComputedStyle(cell.nativeElement);
+      expect(style.textOverflow).toBe('ellipsis');
+      expect(style.overflow).toBe('hidden');
+    }
+  });
 });
 
 // Regression coverage for the drawer's human-readable donation/campaign
