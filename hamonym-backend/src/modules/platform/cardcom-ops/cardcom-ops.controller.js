@@ -1,6 +1,7 @@
 const db = require('../../../db/db');
 const jobRunner = require('../../../jobs');
 const { checkStaleness } = require('../../../jobs/schedule-window');
+const donationsService = require('../../donations/donations.service');
 
 // Read-only + "repair local state" actions only — see
 // docs/CARDCOM_OPERATIONAL_PROCESSES.md Part G. Every job reachable through
@@ -221,6 +222,24 @@ exports.getFindings = async (req, res) => {
     res.json({ findings: findings.rows });
   } catch (err) {
     console.error('[cardcom-ops.getFindings]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Cross-entity, read-only donations browser (2026-09-15 product decision --
+// "תרومות" should primarily let an operator find/identify a real donation).
+// requireSuperAdmin only (mounted at router level, same as every other
+// route in this file) -- deliberately not requireEntityOwnership(), since
+// the whole point is browsing across every entity at once.
+exports.listDonations = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page || '0', 10);
+    const limit = parseInt(req.query.limit || '25', 10);
+    const { status, entityId, campaignId, period, search, sortBy, sortDir } = req.query;
+    const result = await donationsService.getPlatformDonations({ status, entityId, campaignId, period, search, sortBy, sortDir, page, limit });
+    res.json(result);
+  } catch (err) {
+    console.error('[cardcom-ops.listDonations]', err.message);
     res.status(500).json({ error: err.message });
   }
 };

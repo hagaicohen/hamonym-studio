@@ -14,5 +14,6 @@ router.get('/jobs/runs', ctrl.getJobRuns);
 router.post('/jobs/:name/run', ctrl.runJob);
 router.get('/findings', ctrl.getFindings);
 router.post('/findings/:id/resolve', ctrl.resolveFinding);
+router.get('/donations', ctrl.listDonations);
 
 module.exports = router;
