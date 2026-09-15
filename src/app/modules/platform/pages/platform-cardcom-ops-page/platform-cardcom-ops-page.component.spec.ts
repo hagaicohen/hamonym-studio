@@ -672,6 +672,32 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     expect(select.getBoundingClientRect().width).toBeGreaterThan(80);
   });
 
+  // Regression for the 2026-09-16 "הקומבו של סטטוס גולש החוצה" report:
+  // .plat-card has no overflow:hidden, so a flex row wider than the card
+  // spilled visibly past its rounded border instead of just looking
+  // cramped. `flex-wrap` on .ops-donations-toolbar is the fix -- this
+  // locks in that the toolbar's own box never exceeds its parent card's
+  // content width, which is what "not spilling outside" actually means
+  // (a pixel-width assertion on the select alone can't catch this: the
+  // select can be a perfectly readable width while the row containing it
+  // still overflows its container).
+  it('the toolbar never spills past its card -- wraps instead of overflowing horizontally', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of(emptyDonationsResponse()),
+    });
+
+    const toolbar = fixture.debugElement.query(By.css('.ops-donations-toolbar')).nativeElement;
+    expect(getComputedStyle(toolbar).flexWrap).toBe('wrap');
+
+    const card = fixture.debugElement.query(By.css('.plat-card')).nativeElement;
+    const cardRect = card.getBoundingClientRect();
+    const toolbarRect = toolbar.getBoundingClientRect();
+    expect(toolbarRect.right).toBeLessThanOrEqual(cardRect.right + 1); // +1: sub-pixel rounding
+    expect(toolbarRect.left).toBeGreaterThanOrEqual(cardRect.left - 1);
+  });
+
   // Regression for the other half of the same bug: styles.scss defines a
   // global `select { background-image: url(<chevron>) }` for the dropdown
   // arrow; a `background: #fff` SHORTHAND on .ops-status-select resets

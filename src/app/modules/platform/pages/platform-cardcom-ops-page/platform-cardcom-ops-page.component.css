@@ -403,8 +403,16 @@
 .ops-severity-needs-review { background: #dc2626; }
 
 /* DONATIONS BROWSER TABLE */
+/* `.plat-card` doesn't clip its content (no overflow:hidden -- the anomaly
+   drawer and other cards rely on that), so a flex row that doesn't fit
+   spills visibly past the card's own rounded border instead of just
+   looking cramped. `flex-wrap` is the actual fix (2026-09-16 report,
+   "הקומבו של סטטוס גולש החוצה") -- the status filter drops to its own line
+   below the search input on any viewport narrower than both controls'
+   combined minimum width, instead of forcing a horizontal overflow. */
 .ops-donations-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 18px;
