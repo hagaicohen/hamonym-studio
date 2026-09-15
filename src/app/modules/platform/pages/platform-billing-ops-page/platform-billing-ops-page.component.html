@@ -570,12 +570,10 @@
                   <td>{{ systemVatRatePercent !== null ? systemVatRatePercent + '%' : '—' }}</td>
                   <td>✓ זמין</td>
                   <td>
-                    @if (!entity.masav_configured) {
-                      —
-                    } @else if (entity.masav_authorized) {
-                      ✓ מאושר
+                    @if (masavDisplayState(entity).icon) {
+                      {{ masavDisplayState(entity).icon }} {{ masavDisplayState(entity).label }}
                     } @else {
-                      ⚠ ממתין לאישור
+                      {{ masavDisplayState(entity).label }}
                     }
                   </td>
                   <td>

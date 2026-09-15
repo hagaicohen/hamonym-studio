@@ -911,6 +911,89 @@ describe('PlatformBillingOpsPageComponent - "כל החיובים" consistency wi
   });
 });
 
+// Regression coverage for separating "MASAV configured but not yet
+// authorized" (neutral configuration fact) from "MASAV authorization is
+// an active blocker right now" (2026-09-14p, הגדרות עמותות). The exact
+// reported case: גדולים מהחיים has bank details configured, not yet
+// authorized, but its one live Statement (₪7.33) already routes to CARD
+// -- MASAV isn't blocking anything today, so the cell must read "הוגדר ·
+// טרם אושר" with no ⚠, even though "מוכנות לחיוב" already (correctly)
+// says ready. hasEntityMasavBlocker is reused as-is, not reimplemented.
+describe('PlatformBillingOpsPageComponent - מס״ב configuration vs. active blocker (הגדרות עמותות)', () => {
+  const entity: BillingReadinessEntity = {
+    id: 'entity-gedolim-mehachaim', display_name: 'גדולים מהחיים', billing_account_id: 'ba-1',
+    fee_rate: '0.03', vat_rate: '0.18', enforcement_status: 'active', preferred_collection_method: 'card',
+    masav_authorized: false, masav_configured: true, paid_donation_count: 8, paid_gross_total: '207.00',
+  };
+
+  async function setup(statements: StatementListItem[]) {
+    const provisioningStub = {
+      getReadiness: () => of({ entities: [entity] }),
+      getByEntityId: () => of({ account: null }),
+      getUnprovisioned: () => of({ entities: [] }),
+    };
+    const opsStub = {
+      listPeriods: () => of({ periods: [] }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      getMasavConfig: () => of({ config: null }),
+    };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('entities');
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('configured, not authorized, but its live Statement already routes to card (₪7.33, not blocked) -> "הוגדר · טרם אושר", no ⚠ -- and readiness still says מוכנה לחיוב', async () => {
+    const { fixture } = await setup([{
+      id: 'stmt-1', billing_account_id: 'ba-1', billing_period_id: 'p-1', billing_run_id: 'r-1',
+      gross_raised: '244.33', fee_amount: '7.33', vat_amount: '0.00', total_due: '7.33',
+      status: 'approved', created_at: '2026-08-01T00:00:00.000Z',
+      entity_id: 'entity-gedolim-mehachaim', entity_name: 'גדולים מהחיים', component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0, next_action: 'מוכן לגבייה',
+    }]);
+
+    const state = fixture.componentInstance.masavDisplayState(entity);
+    expect(state.label).toBe('הוגדר · טרם אושר');
+    expect(state.icon).toBe('');
+    expect(fixture.nativeElement.textContent).not.toContain('ממתין לאישור מס״ב');
+
+    expect(fixture.componentInstance.entityReadiness(entity).ready).toBe(true);
+    expect(fixture.componentInstance.entityReadiness(entity).label).toBe('מוכנה לחיוב');
+  });
+
+  it('configured, not authorized, and a live Statement genuinely routed to masav/blocked for lack of authorization -> "⚠ ממתין לאישור" is preserved', async () => {
+    const { fixture } = await setup([{
+      id: 'stmt-2', billing_account_id: 'ba-1', billing_period_id: 'p-1', billing_run_id: 'r-1',
+      gross_raised: '150000.00', fee_amount: '4500.00', vat_amount: '810.00', total_due: '5310.00',
+      status: 'approved', created_at: '2026-08-01T00:00:00.000Z',
+      entity_id: 'entity-gedolim-mehachaim', entity_name: 'גדולים מהחיים', component_count: 1,
+      routed_method: 'blocked', latest_attempt_status: null, payment_count: 0, next_action: 'ממתין לאישור מס״ב',
+    }]);
+
+    const state = fixture.componentInstance.masavDisplayState(entity);
+    expect(state.label).toBe('ממתין לאישור');
+    expect(state.icon).toBe('⚠');
+
+    expect(fixture.componentInstance.entityReadiness(entity).ready).toBe(false);
+  });
+});
+
 describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרות עמותות)', () => {
   const readinessEntities: BillingReadinessEntity[] = [
     {

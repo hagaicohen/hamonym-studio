@@ -1109,6 +1109,23 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return entity.fee_rate ? Number(entity.fee_rate) * 100 : 0;
   }
 
+  // Separates "MASAV configured but not yet authorized" (a neutral
+  // configuration fact) from "MASAV authorization is an active blocker
+  // right now" (2026-09-14p) -- entityReadiness() already makes this exact
+  // distinction correctly for the "מוכנות לחיוב" column via
+  // hasEntityMasavBlocker(); this reuses the identical check so the same
+  // entity can't read as ready in one column while its מס״ב cell still
+  // shows a warning icon implying an unresolved problem. גדולים מהחיים is
+  // the real case this fixes: configured + not authorized + its one live
+  // Statement (₪7.33) already routes to card, so MASAV isn't blocking
+  // anything today -- "הוגדר · טרם אושר", no ⚠.
+  masavDisplayState(entity: BillingReadinessEntity): { icon: string; label: string } {
+    if (!entity.masav_configured) return { icon: '', label: '—' };
+    if (entity.masav_authorized) return { icon: '✓', label: 'מאושר' };
+    if (this.hasEntityMasavBlocker(entity)) return { icon: '⚠', label: 'ממתין לאישור' };
+    return { icon: '', label: 'הוגדר · טרם אושר' };
+  }
+
   // ---- מע״מ מערכתי -- תצוגה בלבד (2026-09-14j: העריכה עברה ל-Platform
   // Admin -> הגדרות כלליות -> חיוב ומיסוי) ---------------------------------
   loadVatSetting(): void {
