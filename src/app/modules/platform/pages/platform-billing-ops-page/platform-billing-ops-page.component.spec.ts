@@ -835,6 +835,82 @@ describe('PlatformBillingOpsPageComponent - "מצב" as operational collection s
 // per-entity readiness table must also never offer a VAT input of its own
 // -- both the "no billing_account yet" and "already provisioned" rows
 // route through the same billing-setup drawer.
+// Regression coverage for unifying "כל החיובים" with "החודש"'s already-
+// approved operator semantics (2026-09-14o): the exact same Statement must
+// never show "מאושר" on one tab and "ממתין לגבייה" on the other, and the
+// same clickable "מה עושים עכשיו" action must be reachable here too --
+// reusing the identical component methods (operationalStateLabel/
+// operationalStateBadgeClass/isActionableNextAction/onNextActionClick),
+// not a second implementation.
+describe('PlatformBillingOpsPageComponent - "כל החיובים" consistency with "החודש"', () => {
+  function stmt(overrides: Partial<StatementListItem>): StatementListItem {
+    return {
+      id: 'stmt-1', billing_account_id: 'acct-1', billing_period_id: 'period-1', billing_run_id: 'run-1',
+      gross_raised: '50.00', fee_amount: '1.50', vat_amount: '0.27', total_due: '1.77',
+      status: 'approved', created_at: '2026-08-05T00:00:00.000Z',
+      entity_id: 'entity-gedolim-mehachaim', entity_name: 'גדולים מהחיים', component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+      next_action: 'חסר כרטיס אשראי',
+      ...overrides,
+    };
+  }
+
+  async function setup(statement: StatementListItem) {
+    const getStatementSpy = jasmine.createSpy('getStatement').and.returnValue(of({ statement: { ...statement, attempts: [], payments: [], account_declared_method: 'card' } }));
+    const service = {
+      listPeriods: () => of({ periods: [] }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [statement] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      getStatement: getStatementSpy,
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('statements');
+    fixture.detectChanges();
+    return { fixture, getStatementSpy };
+  }
+
+  it('גדולים מהחיים, approved + missing card instrument: "מצב" reads "ממתין לגבייה" here too (not "מאושר"), matching "החודש"', async () => {
+    const { fixture } = await setup(stmt({ status: 'approved', routed_method: 'card', latest_attempt_status: null }));
+
+    const badges = fixture.debugElement.queryAll(By.css('.bo-table tbody .bo-badge'));
+    const statusBadge = badges[1]; // route badge is first, status badge second -- same row layout as החודש
+    expect(statusBadge.nativeElement.textContent.trim()).toBe('ממתין לגבייה');
+    expect(statusBadge.nativeElement.classList).toContain('bo-badge-open');
+  });
+
+  it('"חסר כרטיס אשראי" is clickable here too, opens the billing-setup drawer, and does not also trigger the row\'s own "open statement detail" click', async () => {
+    const { fixture, getStatementSpy } = await setup(stmt({ next_action: 'חסר כרטיס אשראי' }));
+
+    const btn = fixture.debugElement.query(By.css('.bo-next-action-clickable'));
+    expect(btn).toBeTruthy();
+    expect(btn.nativeElement.textContent).toContain('חסר כרטיס אשראי');
+
+    btn.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.billingSetupEntityId).toBe('entity-gedolim-mehachaim');
+    expect(getStatementSpy).not.toHaveBeenCalled(); // the row's own click handler must not also fire
+  });
+
+  it('a paid Statement keeps the existing "—" dedup in "מה עושים עכשיו" (unchanged) and shows "שולם" in "מצב"', async () => {
+    const { fixture } = await setup(stmt({ status: 'paid', next_action: 'שולם', latest_attempt_status: null }));
+
+    expect(fixture.debugElement.query(By.css('.bo-next-action-clickable'))).toBeFalsy();
+    const nextActionCell = fixture.debugElement.query(By.css('.bo-next-action'));
+    expect(nextActionCell.nativeElement.textContent.trim()).toBe('—');
+
+    const badges = fixture.debugElement.queryAll(By.css('.bo-table tbody .bo-badge'));
+    expect(badges[1].nativeElement.textContent.trim()).toBe('שולם');
+  });
+});
+
 describe('PlatformBillingOpsPageComponent - system-wide VAT setting (הגדרות עמותות)', () => {
   const readinessEntities: BillingReadinessEntity[] = [
     {
