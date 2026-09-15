@@ -1093,6 +1093,92 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
   };
 };
 
+/* ─────────────────────────────────────────
+   PLATFORM ADMIN DONATIONS BROWSER (2026-09-15)
+───────────────────────────────────────── */
+// Cross-entity read-only browser for Platform Admin -- see the product
+// decision this implements: "תרومות" should primarily let an operator find
+// and identify a real donation, not just show engine health. Deliberately
+// NOT getEntityDonations reused via a nullable entityId (that function is
+// wired to requireEntityOwnership() at the route level -- this is a
+// genuinely separate, requireSuperAdmin-gated query) but the same shape/
+// conventions: same SORT_COLUMNS, same status/period semantics, same
+// {rows,total,page,limit} envelope every other Platform Admin list uses.
+//
+// is_mock is always excluded -- same convention as every other financial
+// aggregate in this codebase (aggregate-consistency.job.js, billing
+// calculation): a dev/testing-only donation must never look like real
+// platform activity to an operator browsing "what donations happened".
+//
+// Privacy: donor_email/donor_phone are deliberately NOT selected here, even
+// though getEntityDonations (a different, entity-owner-scoped endpoint)
+// does return them for that entity's own manager. A cross-platform browser
+// exposing every donor's contact info platform-wide is a materially
+// different privacy posture than one entity seeing its own donors -- out of
+// scope for this pass; donor_name is enough to identify a case.
+exports.getPlatformDonations = async ({ status, entityId, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
+  const where  = ['d.is_mock = false'];
+  const params = [];
+  let idx = 1;
+
+  const sortCol = SORT_COLUMNS[sortBy] || 'd.created_at';
+  const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  if (period === 'month') {
+    where.push(`d.created_at >= date_trunc('month', NOW())`);
+  } else if (period === 'last_month') {
+    where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
+    where.push(`d.created_at <  date_trunc('month', NOW())`);
+  } else if (period === 'quarter') {
+    where.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
+  }
+
+  if (status && status !== 'all') {
+    where.push(`d.status = $${idx++}`);
+    params.push(status);
+  }
+  if (entityId) {
+    where.push(`d.entity_id = $${idx++}`);
+    params.push(entityId);
+  }
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
+  if (search) {
+    where.push(`(d.donor_name ILIKE $${idx} OR c.title ILIKE $${idx} OR e.display_name ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+
+  const whereStr = where.join(' AND ');
+
+  const [listRes, totalRes] = await Promise.all([
+    db.query(
+      `SELECT d.id, d.amount::float, d.donor_name, d.status, d.completed_at, d.created_at,
+              d.is_anonymous, d.failure_reason,
+              (d.recurring_instruction_id IS NOT NULL) AS is_recurring,
+              c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
+              e.id AS entity_id, e.display_name AS entity_name
+       FROM donations d
+       JOIN campaigns c ON c.id = d.campaign_id
+       JOIN entities  e ON e.id = d.entity_id
+       WHERE ${whereStr}
+       ORDER BY ${sortCol} ${sortOrd}
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, page * limit]
+    ),
+    db.query(`SELECT count(*)::int AS total FROM donations d JOIN campaigns c ON c.id = d.campaign_id JOIN entities e ON e.id = d.entity_id WHERE ${whereStr}`, params),
+  ]);
+
+  return {
+    donations: listRes.rows,
+    total: totalRes.rows[0].total,
+    page,
+    limit,
+  };
+};
+
 // Just the donation list + aggregate KPIs (donorCount folded into the same
 // aggregate scan) — none of getEntityDonations' campaign-dropdown sub-query,
 // for callers (like the platform org detail page) that don't render a filter.
