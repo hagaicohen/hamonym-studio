@@ -65,15 +65,12 @@
         (input)="onDonationsSearchInput()"
         (keyup.enter)="onDonationsSearch()"
       />
-      <div class="ops-status-filter">
-        <label for="donationsStatusFilter" class="ops-filter-label">סטטוס</label>
-        <select id="donationsStatusFilter" class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
-          <option value="">כל הסטטוסים</option>
-          <option value="paid">שולם</option>
-          <option value="pending">ממתין</option>
-          <option value="failed">נכשל</option>
-        </select>
-      </div>
+      <select class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+        <option value="">כל הסטטוסים</option>
+        <option value="paid">שולם</option>
+        <option value="pending">ממתין</option>
+        <option value="failed">נכשל</option>
+      </select>
     </div>
 
     @if (donationsError) {

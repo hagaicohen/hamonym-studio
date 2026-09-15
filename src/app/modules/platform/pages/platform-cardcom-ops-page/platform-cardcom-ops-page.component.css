@@ -403,13 +403,26 @@
 .ops-severity-needs-review { background: #dc2626; }
 
 /* DONATIONS BROWSER TABLE */
-/* `.plat-card` doesn't clip its content (no overflow:hidden -- the anomaly
-   drawer and other cards rely on that), so a flex row that doesn't fit
-   spills visibly past the card's own rounded border instead of just
-   looking cramped. `flex-wrap` is the actual fix (2026-09-16 report,
-   "הקומבו של סטטוס גולש החוצה") -- the status filter drops to its own line
-   below the search input on any viewport narrower than both controls'
-   combined minimum width, instead of forcing a horizontal overflow. */
+/* Two plain, separate controls (2026-09-16 -- a joined/segmented "one bar"
+   treatment was tried and reverted: sharing one border and giving the
+   select a transparent background made it lose its own visible box, so it
+   read as plain text rather than a dropdown -- worse than the problem it
+   tried to solve). This is a conventional toolbar: each control keeps its
+   own border, radius and background; only spacing (`gap`) separates them.
+   `flex-wrap` is a narrow-viewport safety net only -- .plat-card has no
+   overflow:hidden, so without it an overflow would spill past the card's
+   rounded corner instead of wrapping to a second line.
+
+   The real root cause of every earlier "detached/overflowing" symptom this
+   round: src/styles/onboarding.css (global, imported by styles.scss for
+   the entity-onboarding wizard's own inputs) defines an unscoped
+   `input, select { width: 100% }`. Neither control here ever set its own
+   `width`, only `min-width` -- so that global 100% was the ONLY
+   declaration for that property and simply won, no specificity contest
+   involved. With `flex-basis: auto`, an explicit `width` is used AS the
+   basis, so both controls demanded 100% of the row and wrapped onto
+   separate lines. `width: auto` on both is the actual fix -- everything
+   built on top of it (flex:1/none, min-width, gap) was already correct. */
 .ops-donations-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -420,34 +433,19 @@
 
 .ops-search-input {
   flex: 1;
+  width: auto;
   min-width: 160px;
   padding: 9px 14px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   font-size: 13px;
   direction: rtl;
+  background: #fff;
 }
 .ops-search-input:focus { outline: none; border-color: #583cd6; }
 
-/* Status filter -- a labeled group, not a bare <select>, so it's
-   identifiable as a filter even before the control itself is read
-   (2026-09-15t clarity pass). */
-.ops-status-filter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-}
-
-.ops-filter-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-/* `flex: none` is the actual fix for the "empty square" bug (2026-09-15t):
-   with no flex-basis of its own, this <select> was a flex sibling of
+/* `flex: none` is the actual fix for an earlier bug (2026-09-15t): with no
+   flex-basis of its own, this <select> was a flex sibling of
    .ops-search-input's `flex: 1`, which computes its basis as 0 and claims
    all free space first -- the browser then collapsed the select to a
    sliver too narrow to show its own selected-option text. `flex: none`
@@ -457,10 +455,13 @@
    the global `select` rule in styles.scss draws a custom dropdown chevron
    via `background-image`; a `background: #fff` shorthand here would reset
    that image to `none` as part of the same declaration and silently
-   delete the arrow -- this was the second half of the same bug. */
+   delete the arrow -- this was the second half of that bug. The selected
+   value itself ("כל הסטטוסים") is the label -- no separate "סטטוס:" text,
+   per the 2026-09-16 simplification. */
 .ops-status-select {
   flex: none;
-  min-width: 130px;
+  width: auto;
+  min-width: 160px;
   padding: 9px 34px 9px 14px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;

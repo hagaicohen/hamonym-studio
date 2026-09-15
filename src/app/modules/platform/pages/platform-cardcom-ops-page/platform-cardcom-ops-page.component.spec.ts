@@ -652,66 +652,105 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
   // Regression for the 2026-09-15t bug: the status <select> is a flex
   // sibling of .ops-search-input's `flex: 1`, which claims all free space
   // first -- with no flex-basis of its own the select collapsed to a
-  // sliver too narrow to show "כל הסטטוסים", rendering as an unlabeled
-  // empty square next to a search box that (confusingly) still showed
-  // whatever the operator had typed. `flex: none` on .ops-status-select
-  // is the actual fix; this test locks in the visible symptom (readable
-  // width + a "סטטוס" label identifying the control) rather than the CSS
-  // property, so it still catches a regression introduced a different way.
-  it('the status filter never collapses to an unreadable sliver next to a wide search input, and is labeled "סטטוס"', async () => {
+  // sliver too narrow to show "כל הסטטוסים". `flex: none` + min-width on
+  // .ops-status-select is the fix; this test locks in the visible symptom
+  // (a readable width) rather than the CSS property, so it still catches
+  // a regression introduced a different way.
+  it('the status select never collapses to an unreadable sliver next to a wide search input', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
       listDonations: () => of(emptyDonationsResponse()),
     });
-
-    const label = fixture.debugElement.query(By.css('.ops-filter-label'));
-    expect(label.nativeElement.textContent.trim()).toBe('סטטוס');
-
     const select: HTMLSelectElement = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement;
     expect(select.getBoundingClientRect().width).toBeGreaterThan(80);
   });
 
-  // Regression for the 2026-09-16 "הקומבו של סטטוס גולש החוצה" report:
-  // .plat-card has no overflow:hidden, so a flex row wider than the card
-  // spilled visibly past its rounded border instead of just looking
-  // cramped. `flex-wrap` on .ops-donations-toolbar is the fix -- this
-  // locks in that the toolbar's own box never exceeds its parent card's
-  // content width, which is what "not spilling outside" actually means
-  // (a pixel-width assertion on the select alone can't catch this: the
-  // select can be a perfectly readable width while the row containing it
-  // still overflows its container).
-  it('the toolbar never spills past its card -- wraps instead of overflowing horizontally', async () => {
+  // Regression for the 2026-09-16 report that a joined/segmented "one bar"
+  // treatment (tried and reverted) made the select lose its own visible
+  // box and look like plain text. This is a conventional toolbar: each
+  // control keeps its OWN border/radius/background -- there is no shared
+  // wrapper, no "סטטוס:" label, and the two must never visually merge.
+  it('search and status are two separate, normally-bordered controls -- no shared border, no label', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
       listDonations: () => of(emptyDonationsResponse()),
     });
 
-    const toolbar = fixture.debugElement.query(By.css('.ops-donations-toolbar')).nativeElement;
-    expect(getComputedStyle(toolbar).flexWrap).toBe('wrap');
+    expect(fixture.debugElement.query(By.css('.ops-filter-label'))).toBeFalsy();
+    expect(fixture.nativeElement.textContent).not.toContain('סטטוס:');
 
-    const card = fixture.debugElement.query(By.css('.plat-card')).nativeElement;
-    const cardRect = card.getBoundingClientRect();
-    const toolbarRect = toolbar.getBoundingClientRect();
-    expect(toolbarRect.right).toBeLessThanOrEqual(cardRect.right + 1); // +1: sub-pixel rounding
-    expect(toolbarRect.left).toBeGreaterThanOrEqual(cardRect.left - 1);
+    const input = fixture.debugElement.query(By.css('.ops-search-input')).nativeElement;
+    const select = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement;
+    const inputStyle = getComputedStyle(input);
+    const selectStyle = getComputedStyle(select);
+    expect(inputStyle.borderStyle).toBe('solid');
+    expect(selectStyle.borderStyle).toBe('solid');
+    expect(inputStyle.borderRadius).not.toBe('0px');
+    expect(selectStyle.borderRadius).not.toBe('0px');
   });
 
-  // Regression for the other half of the same bug: styles.scss defines a
-  // global `select { background-image: url(<chevron>) }` for the dropdown
-  // arrow; a `background: #fff` SHORTHAND on .ops-status-select resets
-  // background-image to `none` as part of the same declaration (shorthand
-  // vs. longhand doesn't matter to the cascade once specificity is equal
-  // or higher), silently deleting the arrow. Must use `background-color`.
-  it('the status select keeps its dropdown chevron -- uses background-color, not a `background` shorthand that would erase it', async () => {
+  // Regression for the underlying 2026-09-16 "detached" report -- verified
+  // by real relative position, not just "technically inside the card"
+  // (a bounding-box-vs-card check alone passed even when the layout still
+  // looked visibly wrong, per that report). At desktop width: same row,
+  // status immediately adjacent to the search field with a normal gap,
+  // both fully inside the card padding, search consumes the remaining
+  // width, and RTL order is right (search) then left (status).
+  it('status sits immediately adjacent to the search field, on the same row, fully inside the card, in correct RTL order', async () => {
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: () => of(emptyDonationsResponse()),
+    });
+
+    const card = fixture.debugElement.query(By.css('.plat-card')).nativeElement.getBoundingClientRect();
+    const toolbar = fixture.debugElement.query(By.css('.ops-donations-toolbar')).nativeElement;
+    const input = fixture.debugElement.query(By.css('.ops-search-input')).nativeElement.getBoundingClientRect();
+    const select = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement.getBoundingClientRect();
+
+    expect(getComputedStyle(toolbar).flexWrap).toBe('wrap'); // narrow-viewport safety net only
+    // Same row: both controls share a vertical position (desktop width, no wrap needed).
+    expect(Math.abs(input.top - select.top)).toBeLessThan(2);
+
+    // RTL order: search (DOM-first) sits physically to the RIGHT of status
+    // (DOM-second) -- i.e. search's own left edge is status's right edge.
+    expect(input.left).toBeGreaterThan(select.right);
+
+    // Immediately adjacent: a normal small gap, not a wide empty span and
+    // not touching with zero gap.
+    const gap = input.left - select.right;
+    expect(gap).toBeGreaterThan(4);
+    expect(gap).toBeLessThan(20);
+
+    // Both fully inside the card's own bounds.
+    expect(input.right).toBeLessThanOrEqual(card.right + 1);
+    expect(select.left).toBeGreaterThanOrEqual(card.left - 1);
+
+    // Search consumes the remaining width -- it must be the wider control.
+    expect(input.width).toBeGreaterThan(select.width);
+  });
+
+  // Regression for the other half of the same original bug: styles.scss
+  // defines a global `select { background-image: url(<chevron>) }` for
+  // the dropdown arrow; a `background: #fff` SHORTHAND on
+  // .ops-status-select resets background-image to `none` as part of the
+  // same declaration (shorthand vs. longhand doesn't matter to the
+  // cascade once specificity is equal or higher), silently deleting the
+  // arrow. Must use `background-color`. Also verifies the chevron is a
+  // real visible icon (non-zero background-size), not just "not none".
+  it('the status select shows a real, visibly-sized dropdown chevron -- uses background-color, not a `background` shorthand that would erase it', async () => {
     const fixture = await createFixture({
       getHealth: () => of(healthWith()),
       getFindings: () => of({ findings: [] }),
       listDonations: () => of(emptyDonationsResponse()),
     });
     const select: HTMLSelectElement = fixture.debugElement.query(By.css('.ops-status-select')).nativeElement;
-    expect(getComputedStyle(select).backgroundImage).not.toBe('none');
+    const style = getComputedStyle(select);
+    expect(style.backgroundImage).not.toBe('none');
+    expect(style.backgroundSize).not.toBe('0px 0px');
+    expect(style.appearance === 'none' || (style as any).webkitAppearance === 'none').toBeTrue();
   });
 
   it('long entity/campaign names are truncated so תאריך/סכום/סוג/סטטוס stay on-screen instead of being pushed off by an unbounded column', async () => {
