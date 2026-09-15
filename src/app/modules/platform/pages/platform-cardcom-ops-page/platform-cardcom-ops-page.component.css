@@ -461,12 +461,6 @@
   color: #1e293b;
 }
 
-.ops-search-btn {
-  padding: 9px 20px;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
 .ops-donations-table-wrap {
   overflow-x: auto;
 }

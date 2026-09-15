@@ -201,6 +201,7 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   donationsSearch = '';
   donationsStatus = '';
   selectedDonation: PlatformDonation | null = null;
+  private donationsSearchTimer: ReturnType<typeof setTimeout> | undefined;
 
   get donationsTotalPages(): number {
     return Math.max(1, Math.ceil(this.donationsTotal / this.donationsLimit));
@@ -263,7 +264,20 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       });
   }
 
+  // Live, debounced search -- the same interaction language as every other
+  // Platform Admin list (platform-organizations-page's own onSearch()):
+  // an input with no separate "search" button. A standalone button here
+  // read as an orphaned control (2026-09-16 report) since it wasn't
+  // adjacent to anything and every sibling screen already searches as you
+  // type -- removing it, rather than repositioning it, is what actually
+  // makes the page match the rest of Platform Admin.
+  onDonationsSearchInput(): void {
+    clearTimeout(this.donationsSearchTimer);
+    this.donationsSearchTimer = setTimeout(() => this.onDonationsSearch(), 400);
+  }
+
   onDonationsSearch(): void {
+    clearTimeout(this.donationsSearchTimer);
     this.donationsPage = 0;
     this.loadDonations();
   }

@@ -58,10 +58,11 @@
 
     <div class="ops-donations-toolbar">
       <input
-        type="text"
+        type="search"
         class="ops-search-input"
         placeholder="חיפוש לפי שם תורם, עמותה או קמפיין..."
         [(ngModel)]="donationsSearch"
+        (input)="onDonationsSearchInput()"
         (keyup.enter)="onDonationsSearch()"
       />
       <div class="ops-status-filter">
@@ -73,7 +74,6 @@
           <option value="failed">נכשל</option>
         </select>
       </div>
-      <button type="button" class="ops-btn ops-btn-primary ops-search-btn" (click)="onDonationsSearch()">חיפוש</button>
     </div>
 
     @if (donationsError) {

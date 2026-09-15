@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
@@ -533,6 +533,41 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
 
     expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'ישראל ישראלי', page: 0 }));
   });
+
+  // Regression for the 2026-09-16 report: a standalone "חיפוש" button sat
+  // apart from the search input (separated by the status filter in the
+  // flex row) and read as an orphaned control. Every other Platform Admin
+  // list (platform-organizations-page's own search box) searches live as
+  // you type, with no button at all -- matching that established
+  // convention, rather than inventing a page-specific one, is the actual
+  // fix. This locks in both halves: no button in the DOM, and typing alone
+  // (no click, no Enter) triggers a debounced reload.
+  it('has no standalone search button -- typing alone (debounced) triggers the search, matching every other Platform Admin list page', fakeAsync(() => {
+    const listSpy = jasmine.createSpy('listDonations').and.returnValue(of(emptyDonationsResponse()));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PlatformCardcomOpsPageComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: CardcomOpsService, useValue: { getHealth: () => of(healthWith()), getFindings: () => of({ findings: [] }), listDonations: listSpy } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformCardcomOpsPageComponent);
+    fixture.detectChanges();
+    listSpy.calls.reset();
+
+    const buttons = fixture.debugElement.queryAll(By.css('.ops-donations-toolbar button'));
+    expect(buttons.length).toBe(0);
+
+    const input: HTMLInputElement = fixture.debugElement.query(By.css('.ops-search-input')).nativeElement;
+    input.value = 'עמותת הדוגמה';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(listSpy).not.toHaveBeenCalled(); // debounced, not yet
+
+    tick(400);
+    expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'עמותת הדוגמה', page: 0 }));
+  }));
 
   it('status filter change reloads with the selected status and resets to page 0', async () => {
     const listSpy = jasmine.createSpy('listDonations').and.returnValue(of(emptyDonationsResponse()));
