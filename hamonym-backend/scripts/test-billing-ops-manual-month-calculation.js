@@ -12,9 +12,20 @@
 //    guard by design; the guard lives in the caller, same layer the
 //    automatic job's own guard has always lived in).
 //
-// Uses a far-future, uniquely-tagged month (2099-08) so this can never
+// Uses a far-future, uniquely-tagged month (2098-08) so this can never
 // collide with a real production billing_period or with the other
 // live-fixture scripts' own reserved far-future windows (2099-06, 2099-07).
+//
+// Moved from 2099-08 to 2098-08 on 2026-09-17: an explicitly authorized
+// real Donation-Engine-to-Billing-calculation E2E test permanently
+// occupies 2099-08 now (one real, is_mock=false donation -> real
+// calculation -> a genuine Statement/statement_component -- deliberately
+// left in place forever, tagged ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17;
+// see that conversation's own report for the full permanent chain and
+// why none of it can be deleted). This script's OWN period/run/audit-log
+// rows were always meant to be transient (see cleanup() below) -- moving
+// the reserved month is the correct fix, not touching the now-permanent
+// E2E data.
 //
 // Run: node scripts/test-billing-ops-manual-month-calculation.js
 
@@ -36,13 +47,13 @@ function check(name, fn) {
 }
 
 const SUPER_ADMIN_USER_ID = 17; // test-scoped-admin@example.com -- same fixture actor other live-fixture scripts use
-const YEAR = 2099;
+const YEAR = 2098;
 const MONTH = 8; // August -- far-future, reserved for this script only
 
 let periodId = null;
 
 // Deterministic audit-log cleanup fix (2026-09-14k). The old version
-// matched by text (LIKE '%2099-08%' for billing_period_create, LIKE
+// matched by text (LIKE '%2098-08%' for billing_period_create, LIKE
 // '%<this run's periodId>%' for billing_calculation_trigger) -- the second
 // pattern only ever matches the CURRENT run's own periodId, so a prior
 // run's billing_calculation_trigger row (a different periodId each time,
@@ -76,25 +87,25 @@ async function main() {
   startAuditId = Number(bookmark.rows[0].max_id);
 
   try {
-    await check('1. computeCalendarMonthUtcBoundary(2099, 8) matches what the automatic job would compute if "now" were September 2099', async () => {
+    await check('1. computeCalendarMonthUtcBoundary(2098, 8) matches what the automatic job would compute if "now" were September 2098', async () => {
       const manual = computeCalendarMonthUtcBoundary(YEAR, MONTH);
-      const automatic = monthlyCycleJob.computePreviousMonthUtcBoundary(new Date(Date.UTC(2099, 8, 15))); // September 2099
+      const automatic = monthlyCycleJob.computePreviousMonthUtcBoundary(new Date(Date.UTC(2098, 8, 15))); // September 2098
       assert.strictEqual(manual.periodStart.getTime(), automatic.periodStart.getTime());
       assert.strictEqual(manual.periodEnd.getTime(), automatic.periodEnd.getTime());
-      assert.strictEqual(manual.periodStart.toISOString(), '2099-08-01T00:00:00.000Z');
-      assert.strictEqual(manual.periodEnd.toISOString(), '2099-09-01T00:00:00.000Z');
+      assert.strictEqual(manual.periodStart.toISOString(), '2098-08-01T00:00:00.000Z');
+      assert.strictEqual(manual.periodEnd.toISOString(), '2098-09-01T00:00:00.000Z');
     });
 
-    await check('2. createPeriodForMonth(2099, 8) creates a new period', async () => {
+    await check('2. createPeriodForMonth(2098, 8) creates a new period', async () => {
       const { period, created } = await billingOpsService.createPeriodForMonth({
         year: YEAR, month: MONTH, superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
       });
       assert.strictEqual(created, true);
       periodId = period.id;
-      assert.strictEqual(new Date(period.period_start).toISOString(), '2099-08-01T00:00:00.000Z');
+      assert.strictEqual(new Date(period.period_start).toISOString(), '2098-08-01T00:00:00.000Z');
     });
 
-    await check('3. createPeriodForMonth(2099, 8) called again returns the SAME period, does not create a duplicate', async () => {
+    await check('3. createPeriodForMonth(2098, 8) called again returns the SAME period, does not create a duplicate', async () => {
       const { period, created } = await billingOpsService.createPeriodForMonth({
         year: YEAR, month: MONTH, superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
       });
@@ -102,9 +113,9 @@ async function main() {
       assert.strictEqual(period.id, periodId);
 
       const { rows } = await pool.query(
-        `SELECT count(*) FROM billing_periods WHERE period_start = '2099-08-01T00:00:00.000Z'`
+        `SELECT count(*) FROM billing_periods WHERE period_start = '2098-08-01T00:00:00.000Z'`
       );
-      assert.strictEqual(Number(rows[0].count), 1, 'exactly one billing_periods row must exist for August 2099');
+      assert.strictEqual(Number(rows[0].count), 1, 'exactly one billing_periods row must exist for August 2098');
     });
 
     await check('4. an audit-log entry was written only once (for the actual creation, not the idempotent second call)', async () => {
@@ -117,7 +128,7 @@ async function main() {
 
     await check('5. calculatePeriod runs successfully the first time (creates a billing_run via the real production engine)', async () => {
       const result = await billingOpsService.calculatePeriod({
-        periodId, asOf: '2099-08-15T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
+        periodId, asOf: '2098-08-15T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
       });
       assert.ok(result.billingRunId);
       billingRunId = result.billingRunId;
@@ -130,7 +141,7 @@ async function main() {
       let threw = null;
       try {
         await billingOpsService.calculatePeriod({
-          periodId, asOf: '2099-08-20T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
+          periodId, asOf: '2098-08-20T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
         });
       } catch (err) {
         threw = err;
@@ -143,7 +154,7 @@ async function main() {
     });
 
     await check('7. the automatic job itself also refuses to recalculate the same period (its own pre-existing guard, unaffected by this change)', async () => {
-      const result = await monthlyCycleJob.handler(pool, { now: new Date(Date.UTC(2099, 8, 15)) }); // targets August 2099, same period
+      const result = await monthlyCycleJob.handler(pool, { now: new Date(Date.UTC(2098, 8, 15)) }); // targets August 2098, same period
       assert.strictEqual(result.periodId, periodId, 'the job must resolve to the SAME period the manual selector created');
       assert.strictEqual(result.calculationRan, false);
       assert.strictEqual(result.reason, 'already_calculated');
@@ -156,14 +167,14 @@ async function main() {
   }
 
   await check('cleanup verification: zero residue -- billing period, billing run, statements/components, and every audit row this run created are all gone', async () => {
-    const period = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = '2099-08-01T00:00:00.000Z'`);
+    const period = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = '2098-08-01T00:00:00.000Z'`);
     assert.strictEqual(Number(period.rows[0].count), 0, 'billing_periods residue');
 
     assert.ok(periodId, 'sanity: the period must have been created earlier in this run for the checks below to mean anything');
     const run = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
     assert.strictEqual(Number(run.rows[0].count), 0, 'billing_runs residue');
 
-    // No real donation was ever eligible in the far-future 2099-08 window
+    // No real donation was ever eligible in the far-future 2098-08 window
     // (see this file's own header comment), so calculateAccountStatement's
     // zero-activity path never wrote either table for this run's
     // billing_run_id -- re-affirms the invariant directly rather than only
