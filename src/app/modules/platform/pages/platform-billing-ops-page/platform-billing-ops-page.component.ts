@@ -132,6 +132,16 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   masav_not_authorized: 'לא אושרה הרשאה',
 };
 
+// Extends the same labels for ensureMasavAttempts()'s skip reasons
+// (2026-09-16 export-time auto-attempt) -- 'attempt_already_active' is
+// deliberately absent, since that outcome means the Statement IS included
+// (an existing attempt was reused), never excluded.
+const MASAV_EXPORT_SKIP_REASON_LABELS: Record<string, string> = {
+  ...BLOCKED_REASON_LABELS,
+  not_actionable: 'הסטטוס של החיוב השתנה',
+  not_masav_routed: 'החיוב אינו מנותב יותר למס״ב',
+};
+
 // Statement-drawer collection state (Billing Collection UX truthfulness
 // fix, 2026-09-02) -- derived only from the backend's own readiness
 // computation (StatementDetail.readiness), never re-decided in the UI, so
@@ -334,6 +344,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   selectedExportStatementIds = new Set<string>();
   exporting = false;
   exportError: string | null = null;
+  // Only set when the export actually excluded something (2026-09-16 --
+  // see exportSelected()). null on a clean export, matching today's silent-
+  // success behavior; never silently drops a Statement without surfacing
+  // this.
+  masavExportResult: { successText: string; excludedText: string } | null = null;
 
   ngOnInit(): void {
     const qp = this.route.snapshot.queryParamMap;
@@ -1494,14 +1509,6 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return BLOCKED_REASON_LABELS[reason] ?? reason;
   }
 
-  openMasavAttempt(statementId: string): void {
-    this.masavError = null;
-    this.service.openMasavAttempt(statementId).subscribe({
-      next: () => this.loadMasav(),
-      error: (err) => { this.masavError = err?.error?.error || 'פתיחת ניסיון הגבייה נכשלה'; },
-    });
-  }
-
   toggleExportSelection(statementId: string): void {
     if (this.selectedExportStatementIds.has(statementId)) this.selectedExportStatementIds.delete(statementId);
     else this.selectedExportStatementIds.add(statementId);
@@ -1511,20 +1518,71 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     return this.selectedExportStatementIds.has(statementId);
   }
 
+  // 2026-09-16 UX simplification: the operator no longer opens a
+  // "collection attempt" as a separate step (see the workflow investigation
+  // this closes -- the attempt has no financial meaning, it only exists so
+  // generateExportExcel() has something to reference). This now does that
+  // step itself, once per selected Statement, reusing ensureMasavAttempts()
+  // -> openMasavAttempt() completely unchanged: an existing pending attempt
+  // is reused, a missing one is created, and the same routing/readiness
+  // checks decide -- never re-decided here. A Statement that can no longer
+  // be included (e.g. its readiness changed after the page loaded) is never
+  // silently dropped: it's excluded from the export and named, with its
+  // reason, in masavExportResult.
   exportSelected(): void {
     if (this.exporting || this.selectedExportStatementIds.size === 0) return;
+    const requestedIds = [...this.selectedExportStatementIds];
     this.exporting = true;
     this.exportError = null;
-    this.service.exportMasavExcel([...this.selectedExportStatementIds]).subscribe({
-      next: (blob) => {
-        this.exporting = false;
-        this.downloadExcel(blob);
+    this.masavExportResult = null;
+
+    this.service.ensureMasavAttempts(requestedIds).subscribe({
+      next: (res) => {
+        const ready: string[] = [];
+        const excluded: { statementId: string; reason: string }[] = [];
+        for (const r of res.results) {
+          if (!r.skipped || r.reason === 'attempt_already_active') ready.push(r.statementId);
+          else excluded.push({ statementId: r.statementId, reason: r.reason || 'unknown' });
+        }
+
+        if (ready.length === 0) {
+          this.exporting = false;
+          this.exportError = `אף אחד מהחיובים שנבחרו כבר לא זמין לייצוא מס״ב — ${this.describeExcludedMasavStatements(excluded)}`;
+          this.loadMasav();
+          return;
+        }
+
+        this.service.exportMasavExcel(ready).subscribe({
+          next: (blob) => {
+            this.exporting = false;
+            this.downloadExcel(blob);
+            this.masavExportResult = excluded.length === 0 ? null : {
+              successText: ready.length === 1 ? '1 חיוב נכלל בקובץ' : `${ready.length} חיובים נכללו בקובץ`,
+              excludedText: `לא נכללו: ${this.describeExcludedMasavStatements(excluded)}`,
+            };
+            this.selectedExportStatementIds.clear();
+            this.loadMasav();
+          },
+          error: (err) => {
+            this.exporting = false;
+            this.exportError = err?.error?.error || 'הפקת קובץ הייצוא נכשלה';
+          },
+        });
       },
       error: (err) => {
         this.exporting = false;
-        this.exportError = err?.error?.error || 'הפקת קובץ הייצוא נכשלה';
+        this.exportError = err?.error?.error || 'הכנת החיובים לייצוא נכשלה';
       },
     });
+  }
+
+  private describeExcludedMasavStatements(excluded: { statementId: string; reason: string }[]): string {
+    return excluded
+      .map((e) => {
+        const name = this.actionableStatements.find((s) => s.statement_id === e.statementId)?.entity_name || e.statementId;
+        return `${name} (${MASAV_EXPORT_SKIP_REASON_LABELS[e.reason] ?? e.reason})`;
+      })
+      .join(', ');
   }
 
   // v1 stops here: once the operator downloads this file, submission to

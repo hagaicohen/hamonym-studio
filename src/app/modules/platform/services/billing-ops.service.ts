@@ -216,6 +216,22 @@ export interface ActionableMasavStatement {
   attempt_number: number | null;
 }
 
+// Result of ensuring one Statement has the pending MASAV attempt export
+// requires (2026-09-16 UX simplification) -- the exact same shape
+// openMasavAttempt() already returned per-statement, batched. `skipped:
+// false` means an attempt was just created; `skipped: true` with
+// reason: 'attempt_already_active' means an existing one was reused (both
+// count as "ready to export"); any other reason means this Statement could
+// not be included.
+export interface EnsureMasavAttemptResult {
+  statementId: string;
+  skipped: boolean;
+  reason?: string;
+  attemptId?: string;
+  attemptNumber?: number;
+  status?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BillingOpsService {
   private http = inject(HttpClient);
@@ -351,6 +367,14 @@ export class BillingOpsService {
 
   openMasavAttempt(statementId: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/masav/statements/${statementId}/open-attempt`, {}, { headers: authHeaders() });
+  }
+
+  ensureMasavAttempts(statementIds: string[]): Observable<{ results: EnsureMasavAttemptResult[] }> {
+    return this.http.post<{ results: EnsureMasavAttemptResult[] }>(
+      `${this.base}/masav/statements/ensure-attempts`,
+      { statementIds },
+      { headers: authHeaders() },
+    );
   }
 
   // v1 stops at the Excel file -- there is no endpoint (and so no service

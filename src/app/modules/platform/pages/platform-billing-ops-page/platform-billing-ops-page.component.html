@@ -689,25 +689,29 @@
           @if (exportError) { <span class="ops-action-error">{{ exportError }}</span> }
         </div>
 
+        @if (masavExportResult) {
+          <div class="bo-bulk-approval-result">
+            <span class="bo-bulk-approval-success">{{ masavExportResult.successText }}</span>
+            <span class="bo-bulk-approval-warning">{{ masavExportResult.excludedText }}</span>
+          </div>
+        }
+
+        <!-- Every ready Statement is selectable immediately -- opening the
+             MASAV collection attempt is no longer a separate operator step
+             (2026-09-16 UX simplification); exportSelected() ensures it
+             exists (reusing or creating it) for each selected row before
+             generating the file. -->
         <div class="bo-table-wrap">
           <table class="bo-table">
-            <thead><tr><th class="bo-checkbox-col"></th><th>עמותה</th><th>סכום לחיוב</th><th>סטטוס ניסיון</th><th></th></tr></thead>
+            <thead><tr><th class="bo-checkbox-col"></th><th>עמותה</th><th>סכום לחיוב</th></tr></thead>
             <tbody>
               @for (item of actionableStatements; track item.statement_id) {
                 <tr>
                   <td class="bo-checkbox-col">
-                    @if (item.attempt_id && item.attempt_status === 'pending') {
-                      <input type="checkbox" [checked]="isSelectedForExport(item.statement_id)" (change)="toggleExportSelection(item.statement_id)" />
-                    }
+                    <input type="checkbox" [checked]="isSelectedForExport(item.statement_id)" (change)="toggleExportSelection(item.statement_id)" />
                   </td>
                   <td>{{ item.entity_name }}</td>
                   <td>₪{{ item.total_due }}</td>
-                  <td>{{ attemptStatusLabel(item.attempt_status) }}</td>
-                  <td>
-                    @if (!item.attempt_id) {
-                      <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openMasavAttempt(item.statement_id)">פתיחת ניסיון גבייה</button>
-                    }
-                  </td>
                 </tr>
               }
             </tbody>

@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, Subject } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
-import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail, BillingPeriod } from '../../services/billing-ops.service';
+import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail, BillingPeriod, ActionableMasavStatement } from '../../services/billing-ops.service';
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
 import { BillingSettingsService } from '../../services/billing-settings.service';
 
@@ -1507,5 +1507,143 @@ describe('PlatformBillingOpsPageComponent - loading vs. refreshing (2026-09-16 f
     listBlocked$.complete();
     fixture.detectChanges();
     expect(fixture.componentInstance.masavRefreshing).toBe(false);
+  });
+});
+
+// Regression coverage for the 2026-09-16 MASAV export UX simplification:
+// the operator no longer opens a "collection attempt" as a separate step
+// ("פתיחת ניסיון גבייה" removed entirely) -- every ready Statement is
+// selectable immediately, and exportSelected() ensures/reuses the required
+// attempt itself via ensureMasavAttempts() -> the same openMasavAttempt()
+// logic, unchanged, just called from the export click instead of a
+// dedicated button. A Statement that stops being ready before export is
+// excluded and named, never silently dropped.
+describe('PlatformBillingOpsPageComponent - מס״ב export auto-attempt (2026-09-16 UX simplification)', () => {
+  function actionable(overrides: Partial<ActionableMasavStatement>): ActionableMasavStatement {
+    return {
+      statement_id: 's-1', total_due: '5000.00', status: 'approved', created_at: '2026-09-01T00:00:00.000Z',
+      entity_id: 'entity-1', entity_name: 'עמותת האור', bank_code: '12', branch_code: '345', account_number: '000123',
+      attempt_id: null, attempt_status: null, attempt_number: null,
+      ...overrides,
+    };
+  }
+
+  async function setup(overrides: Record<string, any> = {}) {
+    const service = {
+      listPeriods: () => of({ periods: [] }), listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [actionable({})] }),
+      ensureMasavAttempts: jasmine.createSpy('ensureMasavAttempts').and.returnValue(
+        of({ results: [{ statementId: 's-1', skipped: false, attemptId: 'att-1' }] }),
+      ),
+      exportMasavExcel: jasmine.createSpy('exportMasavExcel').and.returnValue(of(new Blob(['x']))),
+      ...overrides,
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('masav');
+    fixture.detectChanges();
+    return { fixture, service };
+  }
+
+  it('1. a ready Statement is selectable immediately -- no "פתיחת ניסיון גבייה" button, checkbox always present', async () => {
+    const { fixture } = await setup();
+    const checkbox = fixture.debugElement.query(By.css('.bo-checkbox-col input[type="checkbox"]'));
+    expect(checkbox).toBeTruthy();
+    expect(fixture.nativeElement.textContent).not.toContain('פתיחת ניסיון גבייה');
+    expect(fixture.nativeElement.textContent).not.toContain('סטטוס ניסיון');
+  });
+
+  it('2. export ensures/creates the pending attempt automatically, then downloads the excel for the ready ids -- clean export stays silent', async () => {
+    const { fixture, service } = await setup();
+    fixture.componentInstance.toggleExportSelection('s-1');
+    fixture.componentInstance.exportSelected();
+    fixture.detectChanges();
+
+    expect(service.ensureMasavAttempts).toHaveBeenCalledWith(['s-1']);
+    expect(service.exportMasavExcel).toHaveBeenCalledWith(['s-1']);
+    expect(fixture.componentInstance.masavExportResult).toBeNull();
+  });
+
+  it('3. an existing pending attempt is reused (idempotent) -- still included in export, not recreated', async () => {
+    const { fixture, service } = await setup({
+      ensureMasavAttempts: jasmine.createSpy('ensureMasavAttempts').and.returnValue(
+        of({ results: [{ statementId: 's-1', skipped: true, reason: 'attempt_already_active', attemptId: 'att-existing' }] }),
+      ),
+    });
+    fixture.componentInstance.toggleExportSelection('s-1');
+    fixture.componentInstance.exportSelected();
+    fixture.detectChanges();
+
+    expect(service.exportMasavExcel).toHaveBeenCalledWith(['s-1']); // reused attempt still exports
+  });
+
+  it('4. a Statement that becomes non-ready before export is excluded and clearly named -- never silently dropped', async () => {
+    const { fixture, service } = await setup({
+      listActionableMasavStatements: () => of({
+        statements: [
+          actionable({ statement_id: 's-1', entity_name: 'עמותת האור' }),
+          actionable({ statement_id: 's-2', entity_name: 'עמותת הזריחה' }),
+        ],
+      }),
+      ensureMasavAttempts: jasmine.createSpy('ensureMasavAttempts').and.returnValue(of({
+        results: [
+          { statementId: 's-1', skipped: false, attemptId: 'att-1' },
+          { statementId: 's-2', skipped: true, reason: 'masav_not_authorized' },
+        ],
+      })),
+    });
+    fixture.componentInstance.toggleExportSelection('s-1');
+    fixture.componentInstance.toggleExportSelection('s-2');
+    fixture.componentInstance.exportSelected();
+    fixture.detectChanges();
+
+    expect(service.exportMasavExcel).toHaveBeenCalledWith(['s-1']); // only the still-ready one
+    expect(fixture.componentInstance.masavExportResult?.successText).toContain('1');
+    expect(fixture.componentInstance.masavExportResult?.excludedText).toContain('עמותת הזריחה');
+    expect(fixture.componentInstance.masavExportResult?.excludedText).toContain('לא אושרה הרשאה');
+  });
+
+  it('4b. when none of the selected Statements are still ready, no file is exported and the operator sees why', async () => {
+    const { fixture, service } = await setup({
+      ensureMasavAttempts: jasmine.createSpy('ensureMasavAttempts').and.returnValue(
+        of({ results: [{ statementId: 's-1', skipped: true, reason: 'not_masav_routed' }] }),
+      ),
+    });
+    fixture.componentInstance.toggleExportSelection('s-1');
+    fixture.componentInstance.exportSelected();
+    fixture.detectChanges();
+
+    expect(service.exportMasavExcel).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.exportError).toContain('עמותת האור');
+  });
+
+  it('5. ensureMasavAttempts is called exactly once per export click, with exactly the selected ids -- no extra attempt-creation logic invented client-side', async () => {
+    const { fixture, service } = await setup({
+      listActionableMasavStatements: () => of({
+        statements: [
+          actionable({ statement_id: 's-1' }),
+          actionable({ statement_id: 's-2', entity_name: 'עמותת הזריחה' }),
+        ],
+      }),
+      ensureMasavAttempts: jasmine.createSpy('ensureMasavAttempts').and.returnValue(of({
+        results: [
+          { statementId: 's-1', skipped: false, attemptId: 'att-1' },
+          { statementId: 's-2', skipped: false, attemptId: 'att-2' },
+        ],
+      })),
+    });
+    fixture.componentInstance.toggleExportSelection('s-1');
+    fixture.componentInstance.toggleExportSelection('s-2');
+    fixture.componentInstance.exportSelected();
+    fixture.detectChanges();
+
+    expect(service.ensureMasavAttempts).toHaveBeenCalledTimes(1);
+    expect(service.ensureMasavAttempts).toHaveBeenCalledWith(['s-1', 's-2']);
   });
 });
