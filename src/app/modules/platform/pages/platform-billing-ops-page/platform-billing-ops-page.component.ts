@@ -89,7 +89,27 @@ interface CommissionIssue {
   title: string;
   subtitle: string;
   severity: 'critical' | 'warning';
+  // Task-list fields (2026-09-16) -- only set for finding types that have a
+  // known, existing fix (billing setup); every other finding stays a plain
+  // informational row (no button, no entity/amount line).
+  entityId?: string;
+  entityName?: string;
+  amount?: string;
+  actionLabel?: string;
 }
+
+// Specific, operator-facing wording for the two MASAV blocking reasons the
+// data actually distinguishes (routing.js only ever returns these two for
+// "not yet routable" -- masav_incomplete and masav_not_configured both mean
+// "bank details aren't on file/complete"). There is no third, separate
+// "document missing" reason at this level -- masav_not_authorized covers
+// both "document missing" and "just needs the click," and inventing a
+// three-way split here would mean guessing at data this card doesn't have.
+const MASAV_BLOCK_REASON_LABELS: Record<string, string> = {
+  masav_not_configured: 'חסרים פרטי חשבון בנק',
+  masav_incomplete: 'חסרים פרטי חשבון בנק',
+  masav_not_authorized: 'נדרש אישור מס״ב',
+};
 
 const STATEMENT_STATUS_LABELS: Record<string, string> = {
   draft: 'ממתין לאישור',
@@ -1477,16 +1497,56 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         );
         this.commissionIssues = [
           ...this.commissionIssues,
-          ...commissionFindings.map((f) => ({
-            id: `finding-${f.id}`,
-            title: sharedFindingTypeLabel(f.finding_type),
-            subtitle: (f.details as Record<string, unknown> | null)?.['displayName'] as string || '',
-            severity: (f.severity === 'critical' ? 'critical' : 'warning') as 'critical' | 'warning',
-          })),
+          ...commissionFindings.map((f) => this.toCommissionIssue(f)),
         ];
       },
       error: () => {},
     });
+  }
+
+  // "דורש טיפול" as a task list, not an alert feed (2026-09-16): the two
+  // finding types that have a known, existing operator fix get a specific
+  // reason + entity/amount + a button that opens the exact same Billing
+  // Setup drawer already used everywhere else on this page (openBillingSetup
+  // -- no new destination, no new workflow). entityId/entityName are read
+  // from data already on the page (readinessEntities, loaded unconditionally
+  // in ngOnInit) or straight from the finding's own subject/details -- no
+  // new backend call. Every other finding type keeps the previous generic
+  // title/subtitle with no button, since no known fix exists for those here.
+  private toCommissionIssue(f: ReconciliationFinding): CommissionIssue {
+    const details = (f.details as Record<string, unknown> | null) || {};
+    const severity = (f.severity === 'critical' ? 'critical' : 'warning') as 'critical' | 'warning';
+
+    if (f.finding_type === 'active_entity_missing_billing_account') {
+      const entityId = f.subject_id;
+      const entityName = (details['displayName'] as string) || '';
+      const amount = details['paidGrossTotal'] as string | undefined;
+      return {
+        id: `finding-${f.id}`, severity, entityId, entityName, amount,
+        title: 'טרם הוגדר חשבון חיוב', actionLabel: 'להגדרת חיוב',
+        subtitle: '',
+      };
+    }
+
+    if (f.finding_type === 'masav_blocked_pending_authorization') {
+      const entityId = details['entityId'] as string | undefined;
+      const entityName = entityId ? this.readinessEntities.find((e) => e.id === entityId)?.display_name : undefined;
+      const reason = details['reason'] as string | undefined;
+      return {
+        id: `finding-${f.id}`, severity, entityId, entityName,
+        amount: details['totalDue'] as string | undefined,
+        title: (reason && MASAV_BLOCK_REASON_LABELS[reason]) || sharedFindingTypeLabel(f.finding_type),
+        actionLabel: 'להשלמת הגדרות מס״ב',
+        subtitle: '',
+      };
+    }
+
+    return {
+      id: `finding-${f.id}`,
+      title: sharedFindingTypeLabel(f.finding_type),
+      subtitle: (details['displayName'] as string) || '',
+      severity,
+    };
   }
 
   // ---- masav ------------------------------------------------------------

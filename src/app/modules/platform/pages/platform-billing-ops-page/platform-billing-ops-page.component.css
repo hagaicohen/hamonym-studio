@@ -899,6 +899,8 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
 .bo-issue-body { display: flex; flex-direction: column; gap: 2px; }
 .bo-issue-title { font-size: 13px; font-weight: 600; color: #1e293b; }
 .bo-issue-subtitle { font-size: 12px; color: #64748b; }
+.bo-issue-entity { font-size: 12px; color: #475569; }
+.bo-issue-action { align-self: flex-start; margin-top: 4px; }
 
 .ops-severity-dot {
   width: 9px;

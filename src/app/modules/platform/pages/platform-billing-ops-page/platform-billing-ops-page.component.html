@@ -376,17 +376,30 @@
 
       <!-- "דורש טיפול" -- commission-area issues only (the same underlying
            data "תרומות" shows, filtered here to billing/collection). See
-           loadCommissionIssues() -- no new architecture, just a filtered
-           read of the existing health/findings endpoints. -->
+           loadCommissionIssues()/toCommissionIssue() -- no new architecture,
+           just a filtered read of the existing health/findings endpoints.
+           A task list, not an alert feed (2026-09-16): a finding with a
+           known fix (entityId + actionLabel set) shows the specific reason,
+           the association + amount, and a button straight into Billing
+           Setup for that entity; everything else stays a plain
+           informational row, unchanged. -->
       @if (commissionIssues.length > 0) {
         <div class="plat-card bo-issues-card">
-          <div class="bo-card-title">🔴 {{ commissionIssues.length }} {{ commissionIssues.length === 1 ? 'דבר דורש' : 'דברים דורשים' }} טיפול</div>
+          <div class="bo-card-title">🔴 דורש טיפול</div>
           @for (issue of commissionIssues; track issue.id) {
             <div class="bo-issue-row">
               <span class="ops-severity-dot" [class]="'ops-severity-' + issue.severity"></span>
               <div class="bo-issue-body">
                 <span class="bo-issue-title">{{ issue.title }}</span>
+                @if (issue.entityName || issue.amount) {
+                  <span class="bo-issue-entity">{{ issue.entityName }}{{ issue.entityName && issue.amount ? ' · ' : '' }}{{ issue.amount ? '₪' + issue.amount : '' }}</span>
+                }
                 @if (issue.subtitle) { <span class="bo-issue-subtitle">{{ issue.subtitle }}</span> }
+                @if (issue.entityId && issue.actionLabel) {
+                  <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm bo-issue-action" (click)="openBillingSetup(issue.entityId, issue.entityName || '')">
+                    {{ issue.actionLabel }}
+                  </button>
+                }
               </div>
             </div>
           }

@@ -8,6 +8,7 @@ import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.com
 import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail, BillingPeriod, ActionableMasavStatement } from '../../services/billing-ops.service';
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
 import { BillingSettingsService } from '../../services/billing-settings.service';
+import { CardcomOpsService, ReconciliationFinding, HealthResponse } from '../../services/cardcom-ops.service';
 
 // The component now also injects BillingProvisioningService (for "הגדרות
 // עמותות") and CardcomOpsService (for the "דורש טיפול" section) -- neither
@@ -1645,5 +1646,128 @@ describe('PlatformBillingOpsPageComponent - מס״ב export auto-attempt (2026-0
 
     expect(service.ensureMasavAttempts).toHaveBeenCalledTimes(1);
     expect(service.ensureMasavAttempts).toHaveBeenCalledWith(['s-1', 's-2']);
+  });
+});
+
+// Regression coverage for the 2026-09-16 "דורש טיפול" task-list redesign:
+// a finding with a known fix (entity missing a billing account, or a MASAV
+// Statement blocked on setup/authorization) must surface the specific
+// reason, the association + amount, and a working action button -- reusing
+// openBillingSetup(), never a new destination. Every other finding type
+// must keep rendering exactly as before (no button invented for it).
+describe('PlatformBillingOpsPageComponent - "דורש טיפול" task list (2026-09-16)', () => {
+  function emptyHealth(): HealthResponse {
+    return { webhooks: [], jobs: [], knownJobs: [], schedulerHeartbeat: { lastHeartbeatAt: null, minutesSinceLastHeartbeat: null, healthy: true }, alerts: [] };
+  }
+
+  function finding(overrides: Partial<ReconciliationFinding>): ReconciliationFinding {
+    return {
+      id: 1, job_name: 'billing-provisioning-gap', finding_type: 'active_entity_missing_billing_account',
+      severity: 'warning', subject_type: 'entity', subject_id: 'entity-1', details: {},
+      found_at: '2026-09-16T00:00:00.000Z', last_seen_at: '2026-09-16T00:00:00.000Z', resolved_at: null, resolved_by: null,
+      ...overrides,
+    };
+  }
+
+  async function setup(findings: ReconciliationFinding[], readinessEntities: Partial<BillingReadinessEntity>[] = []) {
+    const cardcomStub = {
+      getHealth: () => of(emptyHealth()),
+      getFindings: () => of({ findings }),
+    };
+    const provisioningStub = {
+      getReadiness: () => of({ entities: readinessEntities as BillingReadinessEntity[] }),
+      getByEntityId: () => of({ account: null }),
+      getUnprovisioned: () => of({ entities: [] }),
+    };
+    const service = {
+      listPeriods: () => of({ periods: [] }), listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: BillingOpsService, useValue: service },
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+        { provide: CardcomOpsService, useValue: cardcomStub },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('heading reads "דורש טיפול" regardless of count -- no "X דברים דורשים טיפול"', async () => {
+    const { fixture } = await setup([finding({}), finding({ id: 2, subject_id: 'entity-2' })]);
+    const title = fixture.debugElement.query(By.css('.bo-card-title'));
+    expect(title.nativeElement.textContent.trim()).toBe('🔴 דורש טיפול');
+  });
+
+  it('active_entity_missing_billing_account: shows the association + amount + a button that opens Billing Setup for that exact entity', async () => {
+    const { fixture } = await setup([
+      finding({
+        finding_type: 'active_entity_missing_billing_account', subject_id: 'entity-abc',
+        details: { displayName: 'עמותת הזריחה', paidDonationCount: 8, paidGrossTotal: '207.00' },
+      }),
+    ]);
+
+    const row = fixture.debugElement.query(By.css('.bo-issue-row'));
+    expect(row.nativeElement.textContent).toContain('טרם הוגדר חשבון חיוב');
+    expect(row.nativeElement.textContent).toContain('עמותת הזריחה');
+    expect(row.nativeElement.textContent).toContain('207.00');
+
+    const button = row.query(By.css('.bo-issue-action'));
+    expect(button.nativeElement.textContent).toContain('להגדרת חיוב');
+    button.nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.billingSetupEntityId).toBe('entity-abc');
+    expect(fixture.componentInstance.billingSetupEntityName).toBe('עמותת הזריחה');
+  });
+
+  it('masav_blocked_pending_authorization + masav_not_configured: specific reason "חסרים פרטי חשבון בנק", entity name resolved from readinessEntities (no new backend call)', async () => {
+    const { fixture } = await setup(
+      [finding({
+        finding_type: 'masav_blocked_pending_authorization', subject_type: 'statement', subject_id: 'stmt-1',
+        details: { reason: 'masav_not_configured', entityId: 'entity-xyz', totalDue: '4820.00' },
+      })],
+      [{ id: 'entity-xyz', display_name: 'קרן אור לילד' }],
+    );
+
+    const row = fixture.debugElement.query(By.css('.bo-issue-row'));
+    expect(row.nativeElement.textContent).toContain('חסרים פרטי חשבון בנק');
+    expect(row.nativeElement.textContent).toContain('קרן אור לילד');
+    expect(row.nativeElement.textContent).toContain('4820.00');
+    expect(row.nativeElement.textContent).toContain('להשלמת הגדרות מס״ב');
+  });
+
+  it('masav_blocked_pending_authorization + masav_not_authorized: specific reason "נדרש אישור מס״ב"', async () => {
+    const { fixture } = await setup(
+      [finding({
+        finding_type: 'masav_blocked_pending_authorization', subject_type: 'statement', subject_id: 'stmt-2',
+        details: { reason: 'masav_not_authorized', entityId: 'entity-xyz', totalDue: '6000.00' },
+      })],
+      [{ id: 'entity-xyz', display_name: 'קרן אור לילד' }],
+    );
+
+    const row = fixture.debugElement.query(By.css('.bo-issue-row'));
+    expect(row.nativeElement.textContent).toContain('נדרש אישור מס״ב');
+  });
+
+  it('a finding type with no known fix (e.g. no_active_payment_instrument) stays a plain informational row -- no button invented', async () => {
+    const { fixture } = await setup([
+      finding({
+        finding_type: 'no_active_payment_instrument', job_name: 'collection-router', subject_type: 'statement', subject_id: 'stmt-3',
+        details: { entityId: 'entity-xyz' },
+      }),
+    ]);
+
+    const row = fixture.debugElement.query(By.css('.bo-issue-row'));
+    expect(row.nativeElement.textContent).toContain('אין אמצעי תשלום פעיל לגבייה');
+    expect(row.query(By.css('.bo-issue-action'))).toBeFalsy();
   });
 });
