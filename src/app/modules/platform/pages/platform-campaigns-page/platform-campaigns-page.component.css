@@ -274,21 +274,43 @@ thead .actions-col { background: #f8fafc; z-index: 2; }
 
 .toggle-chip:disabled { cursor: not-allowed; opacity: 0.4; }
 
-/* ROW ACTIONS */
+/* ROW ACTIONS -- icon-only buttons, one row, tooltip via [title] */
 .camp-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  white-space: normal;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-.btn-secondary,
-.btn-delete,
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.icon-btn .btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.icon-btn-secondary { background: #f1f5f9; color: #475569; }
+.icon-btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+
+.icon-btn-delete { background: #fef2f2; color: #ef4444; }
+.icon-btn-delete:hover:not(:disabled) { background: #fee2e2; }
+
+.icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .btn-restore {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -296,25 +318,11 @@ thead .actions-col { background: #f8fafc; z-index: 2; }
   cursor: pointer;
   border: 1px solid transparent;
   white-space: nowrap;
+  background: #e6f9f3;
+  color: #0EA65A;
 }
 
-.btn-icon {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
-.btn-secondary { background: #f1f5f9; color: #475569; }
-.btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
-
-.btn-delete { background: #fef2f2; color: #ef4444; }
-.btn-delete:hover:not(:disabled) { background: #fee2e2; }
-
-.btn-restore { background: #e6f9f3; color: #0EA65A; }
 .btn-restore:hover:not(:disabled) { background: #d1f5e8; }
-
-.btn-secondary:disabled,
-.btn-delete:disabled,
 .btn-restore:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* FOOTER */
