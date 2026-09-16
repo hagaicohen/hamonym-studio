@@ -152,8 +152,12 @@
             }
 
             @if (periodBlockedEntities(period).length > 0) {
+              <button type="button" class="bo-blocked-summary-toggle" (click)="showBlockedEntities = !showBlockedEntities">
+                ⚠ {{ periodBlockedEntities(period).length }} {{ periodBlockedEntities(period).length === 1 ? 'עמותה חסרה הגדרות חיוב' : 'עמותות חסרות הגדרות חיוב' }} — {{ showBlockedEntities ? 'הסתר' : 'הצג' }}
+              </button>
+            }
+            @if (showBlockedEntities && periodBlockedEntities(period).length > 0) {
               <div class="bo-blocked-list">
-                <div class="bo-blocked-title">עמותות הדורשות השלמת הגדרות חיוב</div>
                 @for (item of periodBlockedEntities(period); track item.entityId) {
                   <div class="bo-blocked-item">
                     <div class="bo-blocked-main">

@@ -202,6 +202,11 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   creatingPeriod = false;
   periodActionError: string | null = null;
   showAdvanced = false;
+  // Collapsed by default (2026-09-16 "החודש" simplification) -- this list
+  // used to render open, dominating the page above the billing table it
+  // duplicates ("מה עושים עכשיו" already covers each affected row). Same
+  // information, just progressive disclosure instead of always-on.
+  showBlockedEntities = false;
 
   runs: BillingRun[] = [];
   runsLoading = false;

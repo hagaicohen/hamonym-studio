@@ -95,6 +95,10 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     fixture.componentInstance.setTab('periods'); // blocked-entities list lives on the periods tab, not the default 'statements' tab
     fixture.detectChanges();
 
+    // Collapsed by default (2026-09-16 "החודש" simplification) -- expand it first.
+    fixture.componentInstance.showBlockedEntities = true;
+    fixture.detectChanges();
+
     const buttons = fixture.debugElement.queryAll(By.css('.bo-blocked-item button.ops-btn'));
     expect(buttons.length).toBe(1); // only the no_billing_account entity gets an action button
 
@@ -123,6 +127,10 @@ describe('PlatformBillingOpsPageComponent - blocked entity setup link', () => {
     const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
     fixture.detectChanges();
     fixture.componentInstance.setTab('periods'); // blocked-entities list lives on the periods tab, not the default 'statements' tab
+    fixture.detectChanges();
+
+    // Collapsed by default (2026-09-16 "החודש" simplification) -- expand it first.
+    fixture.componentInstance.showBlockedEntities = true;
     fixture.detectChanges();
 
     const manualNotes = fixture.debugElement.queryAll(By.css('.bo-blocked-manual-note'));
