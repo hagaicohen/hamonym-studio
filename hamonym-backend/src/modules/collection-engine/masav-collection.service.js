@@ -124,6 +124,25 @@ async function openMasavAttempt(statementId) {
   }
 }
 
+// Bulk-wraps openMasavAttempt() so the operator-facing export flow never
+// needs its own separate "open an attempt" step (2026-09-16 UX
+// simplification, following the workflow investigation that confirmed the
+// attempt itself carries no financial meaning -- see openMasavAttempt's own
+// header comment: no charge, no MASAV call, no change to what's owed).
+// Reuses openMasavAttempt() completely unchanged, once per statement -- no
+// new routing/readiness/attempt-creation rule. Sequential rather than
+// parallel so each call's own Statement-row lock is acquired and released
+// one at a time, matching how the operator used to trigger these one by
+// one; a handful of Statements per export batch makes this negligible.
+async function ensureAttemptsForExport(statementIds) {
+  const results = [];
+  for (const statementId of statementIds) {
+    const result = await openMasavAttempt(statementId);
+    results.push({ statementId, ...result });
+  }
+  return results;
+}
+
 // Statements above the card threshold that cannot be routed to MASAV yet
 // (not configured / incomplete / not authorized) and have no active
 // collection attempt already in flight -- the operator-visible
@@ -332,6 +351,7 @@ async function generateExportExcel(statementIds) {
 
 module.exports = {
   openMasavAttempt,
+  ensureAttemptsForExport,
   listBlockedStatements,
   listActionableMasavStatements,
   generateExportExcel,

@@ -47,4 +47,11 @@ router.put('/masav/:entityId/authorization-document', upload.single('file'), mas
 router.get('/masav/:entityId/authorization-document', masavCtrl.downloadAuthorizationDocument);
 router.post('/masav/statements/:id/open-attempt', masavCtrl.openAttempt);
 
+// Bulk-ensures a pending attempt exists for each given Statement, reusing
+// openAttempt's exact same guarded/idempotent logic once per id (2026-09-16
+// UX simplification -- see masav-collection.service.js#ensureAttemptsForExport).
+// Lets the operator select "MASAV-ready" Statements and export directly,
+// without a separate "open an attempt" step that had no financial meaning.
+router.post('/masav/statements/ensure-attempts', masavCtrl.ensureAttemptsForExport);
+
 module.exports = router;
