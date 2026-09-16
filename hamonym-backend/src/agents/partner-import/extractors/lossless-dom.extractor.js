@@ -12,7 +12,6 @@
 // Uses Playwright (real Chromium) rather than static fetch — many business
 // sites are JS-rendered and a static fetch would see an empty shell.
 
-const { chromium } = require('playwright');
 const { EXTRACTOR_VERSION } = require('../partner-import.types');
 
 const NAV_TIMEOUT_MS = 25000;
@@ -77,9 +76,22 @@ function isPrivateOrInternal(ip, family) {
 
 // Kept warm across requests — a fresh Chromium launch per request would add
 // several seconds of pure overhead on top of the page load itself.
+//
+// require('playwright') is deliberately lazy (module-load time, not
+// top-of-file) -- found live, 2026-09-16: server.js eagerly requires this
+// extractor's whole require chain (partner-import.routes ->
+// partner-import.controller -> here) just to register its Express route,
+// and Playwright's own package calls process.exit(1) at require-time on
+// Node < 20 ("Playwright requires Node.js 20 or higher"), crashing the
+// ENTIRE server on startup -- unrelated routes included -- on any Node 18
+// environment, before a single request is ever served. Deferring the
+// require into this function (only reached when a real extraction request
+// actually calls getBrowser()) fixes that without changing this
+// extractor's own behavior at all.
 let browserPromise = null;
 function getBrowser() {
   if (!browserPromise) {
+    const { chromium } = require('playwright');
     browserPromise = chromium.launch({ headless: true });
   }
   return browserPromise;
