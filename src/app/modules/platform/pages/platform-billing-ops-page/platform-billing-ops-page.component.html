@@ -478,22 +478,48 @@
       <div class="bo-intro">היסטוריית החיובים של העמותות, כולל מצב הגבייה והפעולה הנדרשת.</div>
 
       <div class="bo-form-row">
+        <!-- Real calendar months as plain Hebrew month/year (2026-09-17
+             filter UX fix) -- was raw fmtDateTime() start/end timestamps,
+             which exposed billing_periods internals (and, for a genuine
+             calendar month, a bidi-rendering artifact that could make the
+             end date visually appear before the start date). This is a
+             MONTH picker, not a billing_periods browser: listPeriods()
+             itself now only returns rows that are (a) retired = false,
+             (b) a genuine calendar month, and (c) within a 12-month
+             operational horizon of today -- so a permanent but isolated
+             far-future fixture period (e.g. the 2099-08 Donation->Billing
+             E2E test period) never appears here, without the backend ever
+             checking for a test id/name/year. periodMonthLabel()'s date-
+             range fallback below is now effectively unreachable (every
+             period the backend returns is already a genuine calendar
+             month) but kept for defense-in-depth, matching the same
+             pattern statementPeriodLabel()/blockedStatementPeriodLabel()
+             use elsewhere on this page. -->
         <label class="ba-field">
           <span>חודש</span>
           <select [(ngModel)]="filterPeriodId" (ngModelChange)="loadStatements()">
             <option value="">הכל</option>
             @for (period of periods; track period.id) {
-              <option [value]="period.id">{{ fmtDateTime(period.period_start) }} – {{ fmtDateTime(period.period_end) }}</option>
+              <option [value]="period.id">{{ periodMonthLabel(period) || (fmtDate(period.period_start) + '–' + fmtInclusiveEndDate(period.period_end)) }}</option>
             }
           </select>
         </label>
+        <!-- Operator-facing operational states, matching exactly what the
+             "מצב" column below already shows (2026-09-17 filter UX fix) --
+             not raw statements.status values. 'pending_collection'/
+             'collection_failed' are the same two buckets
+             operationalStateLabel()/isCollectionFailed() already split
+             approved/open into for display; the backend now filters on
+             the identical condition (see billing-ops.service.js#
+             listStatements), so selecting a status here always matches
+             what's actually shown in that row. -->
         <label class="ba-field">
-          <span>סטטוס</span>
+          <span>מצב</span>
           <select [(ngModel)]="filterStatus" (ngModelChange)="loadStatements()">
             <option value="">הכל</option>
-            <option value="draft">טיוטה</option>
-            <option value="approved">מאושר</option>
-            <option value="open">בגבייה</option>
+            <option value="draft">ממתין לאישור</option>
+            <option value="pending_collection">ממתין לגבייה</option>
+            <option value="collection_failed">הגבייה נכשלה</option>
             <option value="paid">שולם</option>
             <option value="abandoned">בוטל (טיוטה)</option>
             <option value="cancelled">מבוטל</option>

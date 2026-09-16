@@ -1771,3 +1771,84 @@ describe('PlatformBillingOpsPageComponent - "דורש טיפול" task list (202
     expect(row.query(By.css('.bo-issue-action'))).toBeFalsy();
   });
 });
+
+// Regression coverage for the 2026-09-17 "כל החיובים" filter-dropdown UX
+// fix: the חודש dropdown used to render raw fmtDateTime() start/end
+// timestamps (retired test/harness periods included, since listPeriods()
+// never filtered them); the מצב dropdown exposed raw statements.status
+// values ("מאושר"/"בגבייה") that never actually appear in the table's own
+// מצב column, which already collapses approved/open into "ממתין לגבייה"/
+// "הגבייה נכשלה" via operationalStateLabel(). Both dropdowns now show only
+// what the operator would actually recognize from this same screen.
+describe('PlatformBillingOpsPageComponent - "כל החיובים" filter dropdowns (2026-09-17)', () => {
+  async function setup(periods: BillingPeriod[], overrides: Record<string, any> = {}) {
+    const service = {
+      listPeriods: () => of({ periods }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: jasmine.createSpy('listStatements').and.returnValue(of({ statements: [] })),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      ...overrides,
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('statements');
+    fixture.detectChanges();
+    return { fixture, service };
+  }
+
+  it('month dropdown: a real calendar-month period renders as plain Hebrew month/year, with the real period id as the option value', async () => {
+    const period: BillingPeriod = {
+      id: 'period-nov-2026', period_start: '2026-11-01T00:00:00.000Z', period_end: '2026-12-01T00:00:00.000Z',
+      created_at: '2026-11-01T00:00:00.000Z', retired: false, run_count: 0,
+    };
+    const { fixture } = await setup([period]);
+
+    const options = fixture.debugElement.queryAll(By.css('.ba-field select'))[0].queryAll(By.css('option'));
+    const periodOption = options.find((o) => o.nativeElement.value === 'period-nov-2026');
+    expect(periodOption).toBeTruthy();
+    expect(periodOption!.nativeElement.textContent.trim()).toBe('נובמבר 2026');
+    // No raw timestamp leaks into the label.
+    expect(periodOption!.nativeElement.textContent).not.toContain('2026-11-01');
+    expect(periodOption!.nativeElement.textContent).not.toContain(':');
+  });
+
+  it('month dropdown: a genuine non-calendar period (doesn\'t start on the 1st) falls back to a real date range, not a false month label', async () => {
+    const period: BillingPeriod = {
+      id: 'period-custom', period_start: '2026-08-15T00:00:00.000Z', period_end: '2026-08-20T00:00:00.000Z',
+      created_at: '2026-08-15T00:00:00.000Z', retired: false, run_count: 0,
+    };
+    const { fixture } = await setup([period]);
+
+    const options = fixture.debugElement.queryAll(By.css('.ba-field select'))[0].queryAll(By.css('option'));
+    const periodOption = options.find((o) => o.nativeElement.value === 'period-custom');
+    expect(periodOption!.nativeElement.textContent).toContain('15/08/2026');
+    expect(periodOption!.nativeElement.textContent).not.toMatch(/^אוגוסט/);
+  });
+
+  it('status dropdown: options are exactly the operational buckets shown in the מצב column -- no raw "approved"/"open" values exposed', async () => {
+    const { fixture } = await setup([]);
+    const selects = fixture.debugElement.queryAll(By.css('.ba-field select'));
+    const statusSelect = selects[1];
+    const values = statusSelect.queryAll(By.css('option')).map((o) => o.nativeElement.value);
+    expect(values).toEqual(['', 'draft', 'pending_collection', 'collection_failed', 'paid', 'abandoned', 'cancelled', 'written_off']);
+    expect(values).not.toContain('approved');
+    expect(values).not.toContain('open');
+
+    const labels = statusSelect.queryAll(By.css('option')).map((o) => o.nativeElement.textContent.trim());
+    expect(labels).toEqual(['הכל', 'ממתין לאישור', 'ממתין לגבייה', 'הגבייה נכשלה', 'שולם', 'בוטל (טיוטה)', 'מבוטל', 'נמחק כחוב אבוד']);
+  });
+
+  it('selecting a status filter passes the operational key straight through to listStatements() unchanged', async () => {
+    const { fixture, service } = await setup([]);
+    fixture.componentInstance.filterStatus = 'collection_failed';
+    fixture.componentInstance.loadStatements();
+    expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(
+      jasmine.objectContaining({ status: 'collection_failed' }),
+    );
+  });
+});
