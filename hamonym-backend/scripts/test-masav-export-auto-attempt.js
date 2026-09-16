@@ -34,48 +34,67 @@ const FIXTURE_TAG = `ZZZ_TEST_DATA_DO_NOT_USE_masav-auto-attempt-${Date.now()}`;
 const SUPER_ADMIN_USER_ID = 17; // test-scoped-admin@example.com, same fixture actor as other live-fixture scripts.
 const TOTAL_DUE = 6000; // > CARD_MASAV_THRESHOLD (3540)
 
+// Self-cleaning on partial failure -- found live, 2026-09-16: an earlier
+// version of this function let a later step's failure (e.g. a
+// billing_periods bounds collision with another script's still-live
+// fixture) leak the entity+billing_account rows already created by the
+// steps before it, since the caller's Object.assign() never ran and those
+// ids were never captured anywhere. Two such orphaned entities sat in the
+// DB until found by a later residue sweep. Now tracks everything it
+// creates locally and deletes it (FK-safe order) before rethrowing.
 async function makeFixtureStatement(label, dayOfMonth) {
-  const entity = await pool.query(
-    `INSERT INTO entities (display_name, created_by_user_id, status, entity_type)
-     VALUES ($1, $2, 'active', 'association') RETURNING id`,
-    [`${FIXTURE_TAG}_${label}`, SUPER_ADMIN_USER_ID]
-  );
-  const entityId = entity.rows[0].id;
+  const created = { entityId: null, accountId: null, periodId: null, runId: null, statementId: null };
+  try {
+    const entity = await pool.query(
+      `INSERT INTO entities (display_name, created_by_user_id, status, entity_type)
+       VALUES ($1, $2, 'active', 'association') RETURNING id`,
+      [`${FIXTURE_TAG}_${label}`, SUPER_ADMIN_USER_ID]
+    );
+    created.entityId = entity.rows[0].id;
 
-  const account = await pool.query(
-    `INSERT INTO billing_accounts (entity_id, fee_rate, vat_rate) VALUES ($1, 0.03, 0.18) RETURNING id`,
-    [entityId]
-  );
-  const accountId = account.rows[0].id;
+    const account = await pool.query(
+      `INSERT INTO billing_accounts (entity_id, fee_rate, vat_rate) VALUES ($1, 0.03, 0.18) RETURNING id`,
+      [created.entityId]
+    );
+    created.accountId = account.rows[0].id;
 
-  // Far-future window, collision-proof with real periods; a distinct day
-  // per fixture statement avoids billing_periods' own (period_start,
-  // period_end) uniqueness constraint when this script creates more than
-  // one period in the same run.
-  const day = String(dayOfMonth).padStart(2, '0');
-  const periodStart = `2099-07-${day}T00:00:00.000Z`;
-  const periodEnd = `2099-07-${String(dayOfMonth + 1).padStart(2, '0')}T00:00:00.000Z`;
-  const period = await pool.query(
-    `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
-    [periodStart, periodEnd]
-  );
-  const periodId = period.rows[0].id;
+    // Far-future window, collision-proof with real periods; a distinct day
+    // per fixture statement avoids billing_periods' own (period_start,
+    // period_end) uniqueness constraint when this script creates more than
+    // one period in the same run.
+    const day = String(dayOfMonth).padStart(2, '0');
+    const periodStart = `2099-07-${day}T00:00:00.000Z`;
+    const periodEnd = `2099-07-${String(dayOfMonth + 1).padStart(2, '0')}T00:00:00.000Z`;
+    const period = await pool.query(
+      `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
+      [periodStart, periodEnd]
+    );
+    created.periodId = period.rows[0].id;
 
-  const run = await pool.query(
-    `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)
-     VALUES ($1, 'production', $2, 'draft', NOW()) RETURNING id`,
-    [periodId, periodStart]
-  );
-  const runId = run.rows[0].id;
+    const run = await pool.query(
+      `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)
+       VALUES ($1, 'production', $2, 'draft', NOW()) RETURNING id`,
+      [created.periodId, periodStart]
+    );
+    created.runId = run.rows[0].id;
 
-  const stmt = await pool.query(
-    `INSERT INTO statements (billing_account_id, billing_run_id, gross_raised, fee_rate, vat_rate, fee_amount, vat_amount, total_due, status)
-     VALUES ($1, $2, $3, 0.03, 0.18, $3, 0, $3, 'approved') RETURNING id, status`,
-    [accountId, runId, TOTAL_DUE]
-  );
-  assert.strictEqual(stmt.rows[0].status, 'approved');
+    const stmt = await pool.query(
+      `INSERT INTO statements (billing_account_id, billing_run_id, gross_raised, fee_rate, vat_rate, fee_amount, vat_amount, total_due, status)
+       VALUES ($1, $2, $3, 0.03, 0.18, $3, 0, $3, 'approved') RETURNING id, status`,
+      [created.accountId, created.runId, TOTAL_DUE]
+    );
+    assert.strictEqual(stmt.rows[0].status, 'approved');
+    created.statementId = stmt.rows[0].id;
 
-  return { entityId, accountId, periodId, runId, statementId: stmt.rows[0].id };
+    return created;
+  } catch (err) {
+    if (created.statementId) await pool.query(`DELETE FROM statements WHERE id = $1`, [created.statementId]);
+    if (created.runId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [created.runId]);
+    if (created.periodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [created.periodId]);
+    if (created.accountId) await pool.query(`DELETE FROM billing_accounts WHERE id = $1`, [created.accountId]);
+    if (created.entityId) await pool.query(`DELETE FROM entities WHERE id = $1`, [created.entityId]);
+    throw err;
+  }
 }
 
 async function main() {
