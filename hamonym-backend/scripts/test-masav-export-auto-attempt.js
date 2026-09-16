@@ -83,8 +83,11 @@ async function main() {
   const notReady = { entityId: null, accountId: null, periodId: null, runId: null, statementId: null };
 
   try {
-    Object.assign(ready, await makeFixtureStatement('ready', 1));
-    Object.assign(notReady, await makeFixtureStatement('not_ready', 5));
+    // Days 10/15 -- deliberately distinct from create-masav-export-ui-
+    // fixture.js's own day 1/5 window, since that script's fixture may be
+    // live in the DB at the same time this one runs.
+    Object.assign(ready, await makeFixtureStatement('ready', 10));
+    Object.assign(notReady, await makeFixtureStatement('not_ready', 15));
 
     // ready: bank details + explicit authorization -- routing.js will
     // resolve this to 'masav'.
@@ -149,6 +152,15 @@ async function main() {
   } finally {
     for (const fixture of [ready, notReady]) {
       if (fixture.statementId) {
+        // Test 1 deliberately exercises the blocked branch of
+        // ensureAttemptsForExport() -> openMasavAttempt(), which calls
+        // recordFinding() for 'masav_blocked_pending_authorization' on the
+        // not-ready Statement -- that finding row is its own residue, not
+        // covered by any other DELETE below (found live, orphaned, on
+        // 2026-09-16: it surfaced as a real "דורש טיפול" card entry on the
+        // "החודש" tab after a run of this script, since nothing had ever
+        // cleaned it up).
+        await pool.query(`DELETE FROM reconciliation_findings WHERE subject_type = 'statement' AND subject_id = $1`, [fixture.statementId]);
         await pool.query(`DELETE FROM collection_attempts WHERE statement_id = $1`, [fixture.statementId]);
         await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.statementId]);
       }
@@ -164,7 +176,7 @@ async function main() {
 
     await check('cleanup verification: zero residue for both fixture entities', async () => {
       for (const fixture of [ready, notReady]) {
-        const [ca, emd, s, r, p, a, e, aud] = await Promise.all([
+        const [ca, emd, s, r, p, a, e, aud, rf] = await Promise.all([
           fixture.statementId ? pool.query(`SELECT id FROM collection_attempts WHERE statement_id = $1`, [fixture.statementId]) : { rows: [] },
           fixture.entityId ? pool.query(`SELECT id FROM entity_masav_details WHERE entity_id = $1`, [fixture.entityId]) : { rows: [] },
           fixture.statementId ? pool.query(`SELECT id FROM statements WHERE id = $1`, [fixture.statementId]) : { rows: [] },
@@ -173,6 +185,7 @@ async function main() {
           fixture.accountId ? pool.query(`SELECT id FROM billing_accounts WHERE id = $1`, [fixture.accountId]) : { rows: [] },
           fixture.entityId ? pool.query(`SELECT id FROM entities WHERE id = $1`, [fixture.entityId]) : { rows: [] },
           fixture.entityId ? pool.query(`SELECT id FROM platform_audit_log WHERE entity_id = $1`, [fixture.entityId]) : { rows: [] },
+          fixture.statementId ? pool.query(`SELECT id FROM reconciliation_findings WHERE subject_type = 'statement' AND subject_id = $1`, [fixture.statementId]) : { rows: [] },
         ]);
         assert.strictEqual(ca.rows.length, 0, 'collection_attempts residue');
         assert.strictEqual(emd.rows.length, 0, 'entity_masav_details residue');
@@ -181,6 +194,7 @@ async function main() {
         assert.strictEqual(p.rows.length, 0, 'billing_periods residue');
         assert.strictEqual(a.rows.length, 0, 'billing_accounts residue');
         assert.strictEqual(e.rows.length, 0, 'entities residue');
+        assert.strictEqual(rf.rows.length, 0, 'reconciliation_findings residue');
         assert.strictEqual(aud.rows.length, 0, 'platform_audit_log residue');
       }
     });
