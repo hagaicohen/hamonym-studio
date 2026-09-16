@@ -742,24 +742,70 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
 .bo-drawer-header h2 { font-size: 18px; margin: 0; color: #1e293b; }
 .bo-drawer-subtitle { font-size: 13px; color: #64748b; margin-top: 2px; }
 
-.bo-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.bo-detail-grid > div {
+/* Human-readable summary (2026-09-16 drawer simplification) -- replaces
+   the old 7-field grid; every number appears here exactly once. */
+.bo-statement-summary {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
-.bo-detail-grid span { font-size: 11px; color: #64748b; }
-.bo-detail-grid b { font-size: 14px; color: #1e293b; }
+.bo-statement-summary-line { font-size: 13px; color: #475569; }
+
+.bo-statement-summary-highlight {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4a30bd;
+}
+
+.bo-drawer-next-action { margin-bottom: 16px; }
+
+.bo-drawer-next-action-title { margin-top: 0; }
+
+.bo-drawer-next-action-done {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* De-emphasized on purpose (2026-09-16) -- must not visually compete with
+   the primary "אשר חיוב" button above it; still fully capable, just not
+   asking for attention. */
+.bo-drawer-secondary-action {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: #94a3b8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.bo-drawer-secondary-action:hover:not(:disabled) { color: #dc2626; }
+.bo-drawer-secondary-action:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.bo-drawer-history {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf3;
+}
+
+.bo-drawer-history-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
 
 .bo-collection-state {
   display: flex;

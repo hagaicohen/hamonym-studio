@@ -727,107 +727,145 @@
           <div class="plat-loading">טוען...</div>
         } @else if (selectedStatement) {
           <div class="bo-drawer-header">
-            <h2>{{ selectedStatement.entity_name }}</h2>
+            <h2>חיוב {{ statementPeriodLabel(selectedStatement) }} — {{ selectedStatement.entity_name }}</h2>
             <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="closeStatement()">סגור</button>
           </div>
 
-          <div class="bo-detail-grid">
-            <div><span>סטטוס</span><b>{{ statementStatusLabel(selectedStatement.status) }}</b></div>
-            <div><span>גיוס ברוטו</span><b>₪{{ selectedStatement.gross_raised }}</b></div>
-            <div><span>עמלה</span><b>₪{{ selectedStatement.fee_amount }}</b></div>
-            <div><span>מע״מ</span><b>₪{{ selectedStatement.vat_amount }}</b></div>
-            <div><span>לחיוב</span><b>₪{{ selectedStatement.total_due }}</b></div>
-            <div><span>מס׳ תרומות בסיס</span><b>{{ selectedStatement.componentCount }}</b></div>
-            <div><span>אמצעי מוצהר בחשבון</span><b>{{ selectedStatement.account_declared_method === 'masav' ? 'מס״ב' : 'כרטיס אשראי' }}</b></div>
+          <!-- One human-readable story instead of a field grid (2026-09-16
+               drawer simplification) -- מהו החיוב / כמה / מה המצב, each
+               number shown exactly once. אמצעי גבייה reads from
+               readiness.route (never account_declared_method), the same
+               authoritative, truthful source collectionState() itself
+               reads -- readiness.route is never anything but 'card'/'masav'
+               (see CollectionReadiness), so this never renders a confident
+               label for a blocked/unknown route. -->
+          <div class="bo-statement-summary">
+            <div class="bo-statement-summary-line">
+              {{ selectedStatement.componentCount }} {{ selectedStatement.componentCount === 1 ? 'תרומה' : 'תרומות' }} בסך ₪{{ selectedStatement.gross_raised }}
+            </div>
+            <div class="bo-statement-summary-line bo-statement-summary-highlight">
+              עמלת פלטפורמה ₪{{ selectedStatement.fee_amount }} + מע״מ ₪{{ selectedStatement.vat_amount }} = ₪{{ selectedStatement.total_due }} לחיוב
+            </div>
+            <div class="bo-statement-summary-line">אמצעי גבייה: {{ routedMethodLabel(selectedStatement.readiness.route) }}</div>
+            <div class="bo-statement-summary-line">מצב: {{ statementStatusLabel(selectedStatement.status) }}</div>
           </div>
 
           @if (statementActionError) {
             <div class="ops-action-error">{{ statementActionError }}</div>
           }
 
-          @if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
-            @if (collectionState(selectedStatement); as state) {
-              <div class="bo-collection-state" [class.bo-collection-state-ready]="state.canCollect" [class.bo-collection-state-blocked]="!state.canCollect">
-                <div class="bo-collection-state-label">{{ state.label }}</div>
-                @if (state.sublabel) {
-                  <div class="bo-collection-state-sublabel">{{ state.sublabel }}</div>
-                }
-              </div>
+          <!-- Single "מה עושים עכשיו" action area (2026-09-16) -- every
+               branch below reuses an existing backend-derived fact
+               (collectionState()/readiness/isCollectionFailed), never a
+               new frontend business rule. Approval and collection stay two
+               separate explicit operator actions: אשר חיוב never triggers
+               collection, and גבה/עבור-למס״ב only ever appear once a
+               Statement is already approved/open. -->
+          <div class="bo-drawer-next-action">
+            <div class="bo-subtitle bo-drawer-next-action-title">מה עושים עכשיו</div>
 
+            @if (selectedStatement.status === 'draft') {
               <div class="bo-drawer-actions">
-                @if (state.canCollect) {
-                  <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
-                    {{ statementActionBusy ? 'גובה...' : 'גבה ₪' + selectedStatement.total_due }}
-                  </button>
-                }
+                <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="approveStatement()">
+                  {{ statementActionBusy ? 'מאשר...' : 'אשר חיוב' }}
+                </button>
               </div>
-            }
-          }
-
-          @if (selectedStatement.status === 'draft') {
-            <div class="bo-drawer-actions">
-              <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="approveStatement()">אישור</button>
-              <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="statementActionBusy" (click)="abandonStatement()">ביטול טיוטה</button>
-            </div>
-          }
-
-          <h3 class="bo-subtitle">ניסיונות גבייה</h3>
-          @if (reconcileError) {
-            <div class="ops-action-error">{{ reconcileError }}</div>
-          }
-          @if (reconcileMessage) {
-            <div class="ops-action-success">{{ reconcileMessage }}</div>
-          }
-          @if (selectedStatement.attempts.length === 0) {
-            <div class="ops-empty-small">אין עדיין ניסיונות גבייה.</div>
-          } @else {
-            <div class="bo-table-wrap">
-              <table class="bo-table bo-table-attempts">
-                <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th><th></th></tr></thead>
-                <tbody>
-                  @for (attempt of selectedStatement.attempts; track attempt.id) {
-                    <tr>
-                      <td>{{ attempt.attempt_number }}</td>
-                      <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
-                      <td>{{ attemptStatusLabel(attempt.status) }}</td>
-                      <td>{{ attempt.provider }}</td>
-                      <td>{{ attempt.provider_reference || '—' }}</td>
-                      <td class="bo-reason-cell" [title]="attempt.failure_reason || ''">{{ attempt.failure_reason || '—' }}</td>
-                      <td class="bo-table-action-col">
-                        @if (canReconcileAttempt(attempt)) {
-                          <button
-                            class="ops-btn ops-btn-secondary ops-btn-sm"
-                            [disabled]="!!reconcilingAttemptId"
-                            (click)="reconcileAttempt(attempt)"
-                          >
-                            {{ reconcilingAttemptId === attempt.id ? 'בודק...' : 'בדוק מול הספק' }}
-                          </button>
-                        }
-                      </td>
-                    </tr>
+              <button type="button" class="bo-drawer-secondary-action" [disabled]="statementActionBusy" (click)="abandonStatement()">בטל את טיוטת החיוב</button>
+            } @else if (selectedStatement.status === 'paid') {
+              <div class="bo-drawer-next-action-done">שולם</div>
+            } @else if (selectedStatement.status === 'approved' || selectedStatement.status === 'open') {
+              @if (collectionState(selectedStatement); as state) {
+                <div class="bo-collection-state" [class.bo-collection-state-ready]="state.canCollect" [class.bo-collection-state-blocked]="!state.canCollect">
+                  <div class="bo-collection-state-label">{{ state.label }}</div>
+                  @if (state.sublabel) {
+                    <div class="bo-collection-state-sublabel">{{ state.sublabel }}</div>
                   }
-                </tbody>
-              </table>
-            </div>
-          }
+                </div>
 
-          <h3 class="bo-subtitle">תשלומים</h3>
-          @if (selectedStatement.payments.length === 0) {
-            <div class="ops-empty-small">אין עדיין תשלומים.</div>
-          } @else {
-            <table class="bo-table">
-              <thead><tr><th>סכום</th><th>ספק</th><th>אסמכתא</th><th>התקבל</th></tr></thead>
-              <tbody>
-                @for (payment of selectedStatement.payments; track payment.id) {
-                  <tr>
-                    <td>₪{{ payment.amount }}</td>
-                    <td>{{ payment.provider }}</td>
-                    <td>{{ payment.provider_reference }}</td>
-                    <td>{{ fmtDateTime(payment.received_at) }}</td>
-                  </tr>
+                @if (state.canCollect) {
+                  <div class="bo-drawer-actions">
+                    <button class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="statementActionBusy" (click)="triggerCollection()">
+                      {{ statementActionBusy ? 'גובה...' : (isCollectionFailed(selectedStatement) ? 'נסה גבייה שוב' : 'גבה ₪' + selectedStatement.total_due) }}
+                    </button>
+                  </div>
+                } @else if (!selectedStatement.readiness.ready) {
+                  <div class="bo-drawer-actions">
+                    <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="goToBillingSetupFromDrawer()">השלם הגדרות חיוב</button>
+                  </div>
+                } @else if (selectedStatement.readiness.route === 'masav') {
+                  <div class="bo-drawer-actions">
+                    <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="goToMasavTab()">עבור למס״ב</button>
+                  </div>
                 }
-              </tbody>
-            </table>
+              }
+            }
+          </div>
+
+          <!-- History only when history exists (2026-09-16) -- a Statement
+               that hasn't been collected yet (the common case: draft, or
+               approved-and-not-yet-collected) has nothing to show here, so
+               the whole section is omitted rather than showing two
+               permanent "אין עדיין..." headings. Nothing here is removed,
+               only shown once there's something to show. -->
+          @if (selectedStatement.attempts.length > 0 || selectedStatement.payments.length > 0) {
+            <div class="bo-drawer-history">
+              <h3 class="bo-drawer-history-title">היסטוריית גבייה ותשלומים</h3>
+
+              @if (selectedStatement.attempts.length > 0) {
+                @if (reconcileError) {
+                  <div class="ops-action-error">{{ reconcileError }}</div>
+                }
+                @if (reconcileMessage) {
+                  <div class="ops-action-success">{{ reconcileMessage }}</div>
+                }
+                <h4 class="bo-subtitle">ניסיונות גבייה</h4>
+                <div class="bo-table-wrap">
+                  <table class="bo-table bo-table-attempts">
+                    <thead><tr><th>#</th><th>מסלול</th><th>סטטוס</th><th>ספק</th><th>אסמכתא</th><th>סיבה</th><th></th></tr></thead>
+                    <tbody>
+                      @for (attempt of selectedStatement.attempts; track attempt.id) {
+                        <tr>
+                          <td>{{ attempt.attempt_number }}</td>
+                          <td>{{ routedMethodLabel(attempt.collection_method) }}</td>
+                          <td>{{ attemptStatusLabel(attempt.status) }}</td>
+                          <td>{{ attempt.provider }}</td>
+                          <td>{{ attempt.provider_reference || '—' }}</td>
+                          <td class="bo-reason-cell" [title]="attempt.failure_reason || ''">{{ attempt.failure_reason || '—' }}</td>
+                          <td class="bo-table-action-col">
+                            @if (canReconcileAttempt(attempt)) {
+                              <button
+                                class="ops-btn ops-btn-secondary ops-btn-sm"
+                                [disabled]="!!reconcilingAttemptId"
+                                (click)="reconcileAttempt(attempt)"
+                              >
+                                {{ reconcilingAttemptId === attempt.id ? 'בודק...' : 'בדוק מול הספק' }}
+                              </button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              @if (selectedStatement.payments.length > 0) {
+                <h4 class="bo-subtitle">תשלומים</h4>
+                <table class="bo-table">
+                  <thead><tr><th>סכום</th><th>ספק</th><th>אסמכתא</th><th>התקבל</th></tr></thead>
+                  <tbody>
+                    @for (payment of selectedStatement.payments; track payment.id) {
+                      <tr>
+                        <td>₪{{ payment.amount }}</td>
+                        <td>{{ payment.provider }}</td>
+                        <td>{{ payment.provider_reference }}</td>
+                        <td>{{ fmtDateTime(payment.received_at) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
           }
         }
       </div>

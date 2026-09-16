@@ -957,6 +957,25 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.selectedStatement = null;
   }
 
+  // Statement-detail drawer "מה עושים עכשיו" navigation (2026-09-16
+  // drawer simplification) -- both destinations already exist and are
+  // reached from elsewhere on this page (openBillingSetup from the table's
+  // own next-action click and the blocked-entities list; setTab('masav')
+  // from "החודש"'s stage-3 breakdown link). This only wires the drawer to
+  // the same two existing destinations, closing itself first since its
+  // Statement-specific context no longer applies once the operator has
+  // navigated away from it.
+  goToBillingSetupFromDrawer(): void {
+    if (!this.selectedStatement) return;
+    this.openBillingSetup(this.selectedStatement.entity_id, this.selectedStatement.entity_name);
+    this.closeStatement();
+  }
+
+  goToMasavTab(): void {
+    this.setTab('masav');
+    this.closeStatement();
+  }
+
   private refreshSelectedStatement(): void {
     if (!this.selectedStatement) return;
     const id = this.selectedStatement.id;
@@ -1167,7 +1186,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // still legitimately waiting for its export/processing must never show
   // as "הגבייה נכשלה" just because some unrelated card-route attempt
   // history happens to exist on the row.
-  private isCollectionFailed(statement: StatementListItem): boolean {
+  isCollectionFailed(statement: StatementListItem): boolean {
     return statement.routed_method === 'card' && (
       statement.latest_attempt_status === 'declined'
       || statement.latest_attempt_status === 'technical_failure'

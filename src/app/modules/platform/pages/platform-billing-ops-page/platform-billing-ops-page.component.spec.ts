@@ -490,7 +490,7 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
 
     function stubService(statement: StatementDetail) {
       return {
-        listPeriods: () => of({ periods: [] }),
+        listPeriods: () => of({ periods: [period] }),
         listRuns: () => of({ runs: [] }),
         listStatements: () => of({ statements: [] }),
         listBlockedMasavStatements: () => of({ statements: [] }),
@@ -529,33 +529,48 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
       expect(button.nativeElement.textContent).toContain('גבה');
     });
 
-    it('CARD-missing-instrument: shows "דורש טיפול" + "לא הוגדר אמצעי גבייה בכרטיס", exposes NO enabled collection action', async () => {
+    it('CARD-missing-instrument: shows "דורש טיפול" + "לא הוגדר אמצעי גבייה בכרטיס", exposes a billing-setup link but no collection action (2026-09-16 drawer simplification)', async () => {
       const statement = baseStatement({
         total_due: '7.33',
         readiness: { route: 'card', ready: false, reason: 'no_active_payment_instrument' },
       });
-      const { fixture } = await openDrawer(statement);
+      const { fixture, component } = await openDrawer(statement);
 
       const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
       expect(stateEl.nativeElement.textContent).toContain('דורש טיפול');
       expect(stateEl.nativeElement.textContent).toContain('לא הוגדר אמצעי גבייה בכרטיס');
 
-      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+      const button = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(button.nativeElement.textContent).toContain('השלם הגדרות חיוב');
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      // Reuses the exact same destination "מה עושים עכשיו" already uses
+      // from the table -- no new business rule, just this drawer wired to it.
+      expect(component.billingSetupEntityId).toBe('entity-1');
+      expect(component.selectedStatement).toBeNull(); // closes itself, context no longer applies
     });
 
-    it('MASAV-ready: shows "מוכן למס״ב", no generic collect action (MASAV is driven from the מס״ב tab)', async () => {
+    it('MASAV-ready: shows "מוכן למס״ב" + a "עבור למס״ב" navigation action, no collection action (MASAV is driven from the מס״ב tab)', async () => {
       const statement = baseStatement({
         total_due: '5000.00',
         readiness: { route: 'masav', ready: true, reason: null },
       });
-      const { fixture } = await openDrawer(statement);
+      const { fixture, component } = await openDrawer(statement);
 
       const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
       expect(stateEl.nativeElement.textContent).toContain('מוכן למס״ב');
-      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+
+      const button = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(button.nativeElement.textContent).toContain('עבור למס״ב');
+
+      button.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.tab).toBe('masav');
+      expect(component.selectedStatement).toBeNull();
     });
 
-    it('MASAV-not-ready: shows "דורש טיפול" + "חסרים פרטי מס״ב / הרשאת מס״ב", no enabled action', async () => {
+    it('MASAV-not-ready: shows "דורש טיפול" + "חסרים פרטי מס״ב / הרשאת מס״ב" + a billing-setup link, no collection action', async () => {
       const statement = baseStatement({
         total_due: '5000.00',
         readiness: { route: 'masav', ready: false, reason: 'masav_not_authorized' },
@@ -565,7 +580,97 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
       const stateEl = fixture.debugElement.query(By.css('.bo-collection-state'));
       expect(stateEl.nativeElement.textContent).toContain('דורש טיפול');
       expect(stateEl.nativeElement.textContent).toContain('חסרים פרטי מס״ב / הרשאת מס״ב');
-      expect(fixture.debugElement.query(By.css('.bo-drawer-actions button'))).toBeFalsy();
+
+      const button = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(button.nativeElement.textContent).toContain('השלם הגדרות חיוב');
+    });
+
+    it('CARD-ready with a failed latest attempt: the collect button reads "נסה גבייה שוב", not the generic "גבה" label', async () => {
+      const statement = baseStatement({
+        total_due: '0.28',
+        readiness: { route: 'card', ready: true, reason: null },
+        latest_attempt_status: 'declined',
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const button = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(button.nativeElement.textContent).toContain('נסה גבייה שוב');
+    });
+
+    it('header + summary tell the whole story once, using readiness.route (never account_declared_method) for the collection method', async () => {
+      const statement = baseStatement({
+        entity_name: 'גדולים מהחיים',
+        gross_raised: '100.00', fee_amount: '2.50', vat_amount: '0.43', total_due: '2.93',
+        componentCount: 3,
+        status: 'draft',
+        account_declared_method: 'masav', // deliberately disagrees with readiness -- must NOT be shown
+        readiness: { route: 'card', ready: true, reason: null },
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const header = fixture.debugElement.query(By.css('.bo-drawer-header h2'));
+      expect(header.nativeElement.textContent).toContain('גדולים מהחיים');
+
+      const summary = fixture.debugElement.query(By.css('.bo-statement-summary'));
+      const text = summary.nativeElement.textContent;
+      expect(text).toContain('3 תרומות בסך ₪100.00');
+      expect(text).toContain('עמלת פלטפורמה ₪2.50 + מע״מ ₪0.43 = ₪2.93 לחיוב');
+      expect(text).toContain('אמצעי גבייה: כרטיס אשראי'); // from readiness.route, not the disagreeing account_declared_method
+      expect(text).not.toContain('מס״ב');
+      expect(text).toContain('מצב: ממתין לאישור');
+    });
+
+    it('draft: "אשר חיוב" is the primary action; "בטל את טיוטת החיוב" is present but visually secondary, not a second equal-weight button', async () => {
+      const statement = baseStatement({ status: 'draft' });
+      const { fixture, service } = await openDrawer(statement);
+      (service as any).abandonStatement = jasmine.createSpy('abandonStatement').and.returnValue(of({}));
+
+      const primary = fixture.debugElement.query(By.css('.bo-drawer-actions button'));
+      expect(primary.nativeElement.textContent).toContain('אשר חיוב');
+
+      const secondary = fixture.debugElement.query(By.css('.bo-drawer-secondary-action'));
+      expect(secondary.nativeElement.textContent).toContain('בטל את טיוטת החיוב');
+      // Not inside .bo-drawer-actions (the primary-action button row) -- de-emphasized, own element.
+      expect(fixture.debugElement.query(By.css('.bo-drawer-actions .bo-drawer-secondary-action'))).toBeFalsy();
+
+      secondary.nativeElement.click();
+      fixture.detectChanges();
+      expect((service as any).abandonStatement).toHaveBeenCalledWith('stmt-1'); // still wired, unchanged semantics
+    });
+
+    it('paid: shows "שולם" as a done state, no collection action', async () => {
+      const statement = baseStatement({ status: 'paid' });
+      const { fixture } = await openDrawer(statement);
+
+      const done = fixture.debugElement.query(By.css('.bo-drawer-next-action-done'));
+      expect(done.nativeElement.textContent).toContain('שולם');
+      expect(fixture.debugElement.query(By.css('.bo-drawer-actions'))).toBeFalsy();
+    });
+
+    it('history section is omitted entirely when there are no attempts and no payments', async () => {
+      const statement = baseStatement({ attempts: [], payments: [] });
+      const { fixture } = await openDrawer(statement);
+
+      expect(fixture.debugElement.query(By.css('.bo-drawer-history'))).toBeFalsy();
+      expect(fixture.nativeElement.textContent).not.toContain('אין עדיין ניסיונות גבייה');
+      expect(fixture.nativeElement.textContent).not.toContain('אין עדיין תשלומים');
+    });
+
+    it('history section appears once a collection attempt exists, even with no payments yet', async () => {
+      const statement = baseStatement({
+        attempts: [{
+          id: 'att-1', statement_id: 'stmt-1', collection_method: 'card', attempt_number: 1,
+          status: 'declined', provider: 'cardcom', provider_reference: null, provider_raw_status: null,
+          failure_reason: 'card declined', requested_amount: '0.28', initiated_at: '2026-09-10T00:00:00.000Z', resolved_at: null,
+        }],
+        payments: [],
+      });
+      const { fixture } = await openDrawer(statement);
+
+      const history = fixture.debugElement.query(By.css('.bo-drawer-history'));
+      expect(history).toBeTruthy();
+      expect(history.nativeElement.textContent).toContain('היסטוריית גבייה ותשלומים');
+      expect(history.nativeElement.textContent).toContain('ניסיונות גבייה');
     });
 
     it('clicking the collect action calls triggerCollection -- wiring proof for the ready state only', async () => {
@@ -629,7 +734,9 @@ describe('PlatformBillingOpsPageComponent - bulk approval', () => {
 
   it('clicking the entity/account row action still opens the individual review drawer (unchanged path)', async () => {
     const { fixture, service } = await setup();
-    (service as any).getStatement = jasmine.createSpy().and.returnValue(of({ statement: { ...draftA, attempts: [], payments: [], componentCount: 2, account_declared_method: 'card' } }));
+    (service as any).getStatement = jasmine.createSpy().and.returnValue(of({
+      statement: { ...draftA, attempts: [], payments: [], componentCount: 2, account_declared_method: 'card', readiness: { route: 'card', ready: true, reason: null } },
+    }));
 
     const detailButtons = fixture.debugElement.queryAll(By.css('.bo-table tbody button'));
     detailButtons[0].nativeElement.click();
