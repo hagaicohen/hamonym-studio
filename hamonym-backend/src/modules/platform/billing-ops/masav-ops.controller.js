@@ -112,6 +112,19 @@ exports.openAttempt = async (req, res) => {
   }
 };
 
+// 2026-09-16 UX simplification -- the export flow calls this for every
+// selected Statement instead of the operator opening each attempt by hand.
+// See masav-collection.service.js#ensureAttemptsForExport.
+exports.ensureAttemptsForExport = async (req, res) => {
+  try {
+    const statementIds = Array.isArray(req.body.statementIds) ? req.body.statementIds : [];
+    const results = await masavCollection.ensureAttemptsForExport(statementIds);
+    res.json({ results });
+  } catch (err) {
+    handle(res, 'ensureAttemptsForExport', err);
+  }
+};
+
 exports.exportExcel = async (req, res) => {
   try {
     const statementIds = String(req.query.statementIds || '').split(',').map((s) => s.trim()).filter(Boolean);
