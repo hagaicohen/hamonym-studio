@@ -157,10 +157,22 @@ export class PlatformUsersPageComponent implements OnInit {
     // Menu opens toward the reading-appropriate side in RTL: its right edge
     // aligns with the trigger button's own right edge (same visual anchor
     // the old absolute-positioned `left: 0` produced relative to the
-    // button-sized wrapper).
-    this.menuPosition = { top: rect.bottom + 4, right: window.innerWidth - rect.right };
+    // button-sized wrapper) -- but clamped so it can never render partway
+    // off the LEFT edge of the viewport (2026-09-16 follow-up fix). "פעולות"
+    // is the trailing table column, which in RTL sits at the physically
+    // LEFT edge of the page -- a trigger there has very little room to its
+    // own left, so right-anchoring it naively (as the original fix did)
+    // pushed the menu's left edge into negative coordinates, clipping it by
+    // the browser viewport itself. MENU_MIN_WIDTH mirrors .user-menu's own
+    // CSS min-width; VIEWPORT_MARGIN keeps a small gap from the edge.
+    const desiredRight = window.innerWidth - rect.right;
+    const maxRight = window.innerWidth - PlatformUsersPageComponent.MENU_MIN_WIDTH - PlatformUsersPageComponent.VIEWPORT_MARGIN;
+    this.menuPosition = { top: rect.bottom + 4, right: Math.max(PlatformUsersPageComponent.VIEWPORT_MARGIN, Math.min(desiredRight, maxRight)) };
     this.openMenuUserId = userId;
   }
+
+  private static readonly MENU_MIN_WIDTH = 190;
+  private static readonly VIEWPORT_MARGIN = 8;
 
   // Closes the menu on any click outside it -- the menu's own buttons stop
   // propagation on their own click handlers (see template), so this only
