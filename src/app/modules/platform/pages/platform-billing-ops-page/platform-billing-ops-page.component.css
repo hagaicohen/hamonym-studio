@@ -15,6 +15,13 @@
   font-size: 14px;
 }
 
+/* Same loading/refreshing convention as platform-organizations-page
+   (2026-09-16 loading-state fix) -- month switching, filter changes, and
+   post-save refetches dim the already-visible content in place instead of
+   replacing it with a "טוען..." placeholder. Shared across כל 4 sections
+   (החודש / כל החיובים / הגדרות עמותות / מס״ב) that refetch on this page. */
+.refreshing { opacity: 0.5; pointer-events: none; transition: opacity 0.15s; }
+
 .plat-header {
   display: flex;
   align-items: center;

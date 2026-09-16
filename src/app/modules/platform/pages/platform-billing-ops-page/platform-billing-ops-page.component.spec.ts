@@ -3,7 +3,7 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { PlatformBillingOpsPageComponent } from './platform-billing-ops-page.component';
 import { BillingOpsService, BlockedBillingEntity, StatementListItem, StatementDetail, BillingPeriod } from '../../services/billing-ops.service';
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
@@ -1233,5 +1233,164 @@ describe('PlatformBillingOpsPageComponent - column sorting + visibility', () => 
     fixture.detectChanges();
     const headerText = fixture.debugElement.query(By.css('.bo-table thead')).nativeElement.textContent;
     expect(headerText).not.toContain('כרטיס אשראי');
+  });
+});
+
+// 2026-09-16 loading-state audit/fix: a true first load (nothing on
+// screen yet) may show "טוען...", but stepMonth()/calculatePeriod()/
+// filter changes/bulk-approve/post-billing-setup-save refetches must keep
+// the existing content visible -- dimmed via the shared .refreshing class,
+// never replaced.
+describe('PlatformBillingOpsPageComponent - loading vs. refreshing (2026-09-16 fix)', () => {
+  function stmt(overrides: Partial<StatementListItem>): StatementListItem {
+    return {
+      id: 'stmt-1', billing_account_id: 'acct-1', billing_period_id: 'period-1', billing_run_id: 'run-1',
+      gross_raised: '50.00', fee_amount: '1.50', vat_amount: '0.27', total_due: '1.77',
+      status: 'approved', created_at: '2026-08-05T00:00:00.000Z',
+      entity_id: 'entity-a', entity_name: 'עמותת א', component_count: 1,
+      routed_method: 'card', latest_attempt_status: null, payment_count: 0,
+      next_action: 'מוכן לגבייה',
+    };
+  }
+
+  const period: BillingPeriod = { id: 'period-1', period_start: '2026-08-01T00:00:00.000Z', period_end: '2026-08-31T23:59:59.999Z', created_at: '2026-08-01T00:00:00.000Z', retired: false, run_count: 1 };
+  const run = {
+    id: 'run-1', billing_period_id: 'period-1', mode: 'production' as const, as_of: '2026-08-05T00:00:00.000Z',
+    status: 'completed', result_summary: { accountsEvaluated: 1, statementsCreated: 1, zeroActivityAccountIds: [], errors: [] },
+    created_at: '2026-08-05T00:00:00.000Z', completed_at: '2026-08-05T00:00:01.000Z',
+  };
+
+  it('"החודש"/"כל החיובים": calculatePeriod() (re-triggers both loadPeriods and loadStatements) dims the existing content instead of blanking it', async () => {
+    const listPeriods$ = new Subject<any>();
+    const listStatements$ = new Subject<any>();
+    const listPeriodsSpy = jasmine.createSpy('listPeriods').and.returnValues(of({ periods: [period] }), listPeriods$);
+    const listStatementsSpy = jasmine.createSpy('listStatements').and.returnValues(of({ statements: [stmt({})] }), listStatements$);
+    const service = {
+      listPeriods: listPeriodsSpy,
+      listRuns: () => of({ runs: [run] }),
+      listStatements: listStatementsSpy,
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      calculatePeriod: () => of({}),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+
+    // Real first load already resolved synchronously.
+    expect(fixture.componentInstance.periodsLoading).toBe(false);
+    expect(fixture.componentInstance.statementsLoading).toBe(false);
+    expect(fixture.debugElement.query(By.css('.bo-current-period'))).toBeTruthy();
+
+    fixture.componentInstance.calculatePeriod(period);
+    fixture.detectChanges();
+
+    // Never flip back to the blanking flags -- refreshing instead.
+    expect(fixture.componentInstance.periodsLoading).toBe(false);
+    expect(fixture.componentInstance.statementsLoading).toBe(false);
+    expect(fixture.componentInstance.periodsRefreshing).toBe(true);
+    expect(fixture.componentInstance.statementsRefreshing).toBe(true);
+
+    // The content stays in the DOM, dimmed, "טוען..." never reappears in
+    // its place.
+    const currentPeriodCard = fixture.debugElement.query(By.css('.bo-current-period'));
+    expect(currentPeriodCard).toBeTruthy();
+    expect(currentPeriodCard.nativeElement.classList).toContain('refreshing');
+
+    listPeriods$.next({ periods: [period] });
+    listPeriods$.complete();
+    listStatements$.next({ statements: [stmt({})] });
+    listStatements$.complete();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodsRefreshing).toBe(false);
+    expect(fixture.componentInstance.statementsRefreshing).toBe(false);
+  });
+
+  it('"הגדרות עמותות": a readiness refresh (e.g. after a billing-setup save) dims the existing table instead of blanking it', async () => {
+    const entity: BillingReadinessEntity = {
+      id: 'entity-a', display_name: 'עמותת א', billing_account_id: 'ba-1',
+      fee_rate: '0.03', vat_rate: '0.18', enforcement_status: 'active', preferred_collection_method: 'card',
+      masav_authorized: false, masav_configured: false, paid_donation_count: 1, paid_gross_total: '10.00',
+    };
+    const getReadiness$ = new Subject<any>();
+    const getReadinessSpy = jasmine.createSpy('getReadiness').and.returnValues(of({ entities: [entity] }), getReadiness$);
+    const opsStub = {
+      listPeriods: () => of({ periods: [] }), listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }), listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    const provisioningStub = { getReadiness: getReadinessSpy, getByEntityId: () => of({ account: null }), getUnprovisioned: () => of({ entities: [] }) };
+    const settingsStub = { get: () => of({ setting: { vat_rate: '0.18', updated_at: '', updated_by: null } }) };
+
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: BillingOpsService, useValue: opsStub },
+        { provide: BillingProvisioningService, useValue: provisioningStub },
+        { provide: BillingSettingsService, useValue: settingsStub },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('entities');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.readinessLoading).toBe(false);
+
+    fixture.componentInstance.loadReadiness(); // same call billingAccountCreated/masavChanged trigger
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.readinessLoading).toBe(false);
+    expect(fixture.componentInstance.readinessRefreshing).toBe(true);
+    const tableWrap = fixture.debugElement.query(By.css('.bo-table-wrap'));
+    expect(tableWrap).toBeTruthy();
+    expect(tableWrap.nativeElement.classList).toContain('refreshing');
+
+    getReadiness$.next({ entities: [entity] });
+    getReadiness$.complete();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.readinessRefreshing).toBe(false);
+  });
+
+  it('"מס״ב": a blocked-statements refresh dims the existing table instead of blanking it', async () => {
+    const blocked = {
+      statement_id: 's-1', entity_id: 'entity-a', entity_name: 'עמותת א', total_due: '5000.00',
+      reason: 'no_billing_account', period_start: '2026-08-01T00:00:00.000Z', period_end: '2026-08-31T23:59:59.999Z',
+    };
+    const listBlocked$ = new Subject<any>();
+    const listBlockedSpy = jasmine.createSpy('listBlockedMasavStatements').and.returnValues(of({ statements: [blocked] }), listBlocked$);
+    const service = {
+      listPeriods: () => of({ periods: [] }), listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: listBlockedSpy, listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('masav');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.masavLoading).toBe(false);
+
+    fixture.componentInstance.loadMasav(); // same call closeBillingSetup()/openMasavAttempt() trigger
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.masavLoading).toBe(false);
+    expect(fixture.componentInstance.masavRefreshing).toBe(true);
+    const tableWrap = fixture.debugElement.query(By.css('.bo-table-wrap'));
+    expect(tableWrap).toBeTruthy();
+    expect(tableWrap.nativeElement.classList).toContain('refreshing');
+
+    listBlocked$.next({ statements: [blocked] });
+    listBlocked$.complete();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.masavRefreshing).toBe(false);
   });
 });

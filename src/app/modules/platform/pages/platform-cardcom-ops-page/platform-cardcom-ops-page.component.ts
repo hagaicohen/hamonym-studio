@@ -209,6 +209,11 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   // ---- Donations browser (2026-09-15s) -----------------------------------
   donations: PlatformDonation[] = [];
   donationsLoading = true;
+  // Set instead of `loading` once rows are already on screen (2026-09-16
+  // loading-state audit/fix) -- search/filter/sort/pagination must never
+  // blank the table while a new page is in flight; same loading/refreshing
+  // convention already proven on platform-organizations-page.
+  donationsRefreshing = false;
   donationsError: string | null = null;
   donationsTotal = 0;
   donationsPage = 0;
@@ -261,7 +266,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   }
 
   loadDonations(): void {
-    this.donationsLoading = true;
+    if (this.donations.length === 0) this.donationsLoading = true;
+    else this.donationsRefreshing = true;
     this.donationsError = null;
     this.cardcomOps
       .listDonations({
@@ -277,10 +283,12 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
           this.donations = res.donations;
           this.donationsTotal = res.total;
           this.donationsLoading = false;
+          this.donationsRefreshing = false;
         },
         error: () => {
           this.donationsError = 'שגיאה בטעינת התרומות';
           this.donationsLoading = false;
+          this.donationsRefreshing = false;
         },
       });
   }

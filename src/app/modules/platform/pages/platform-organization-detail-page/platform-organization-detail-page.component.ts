@@ -51,7 +51,19 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
 
   entityId = '';
   loading = true;
+  // Set instead of loading once an entity is already on screen (2026-09-16
+  // loading-state fix) -- reloading after approve/reject/suspend/
+  // reactivate/AI-access-toggle must never blank the whole detail page;
+  // same loading/refreshing convention already proven on
+  // platform-organizations-page.
+  refreshing = false;
   error: string | null = null;
+  // Separate from `error` (page-LOAD failure, the only thing that still
+  // blanks the whole page) -- an action failing must show inline near the
+  // action buttons instead, exactly like recommendationError/
+  // hardDeleteError already do, not replace the entire page the operator
+  // is actively looking at.
+  actionError: string | null = null;
 
   entity: any = null;
   users: any[] = [];
@@ -85,7 +97,8 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   }
 
   load(): void {
-    this.loading = true;
+    if (!this.entity) this.loading = true;
+    else this.refreshing = true;
     this.platformService.getOrganization(this.entityId).subscribe({
       next: (res) => {
         this.entity = res.entity;
@@ -97,10 +110,16 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
         this.auditLog = res.auditLog ?? [];
         this.donorCount = res.donorCount ?? 0;
         this.loading = false;
+        this.refreshing = false;
       },
       error: (err) => {
-        this.error = err.error?.error || 'שגיאה בטעינת העמותה';
+        // A load() triggered by a post-action refresh must not blank an
+        // already-visible page just because the refetch itself failed --
+        // only a genuine first-load failure (no entity yet) does that.
+        if (!this.entity) this.error = err.error?.error || 'שגיאה בטעינת העמותה';
+        else this.actionError = err.error?.error || 'רענון הנתונים נכשל';
         this.loading = false;
+        this.refreshing = false;
       },
     });
   }
@@ -194,6 +213,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
     this.noteRequiredError = false;
 
     this.actionInProgress = true;
+    this.actionError = null;
     this.platformService[action](this.entityId, trimmedNotes || undefined, this.selectedReasonTags).subscribe({
       next: () => {
         this.notes = '';
@@ -202,7 +222,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
         this.load();
       },
       error: (err) => {
-        this.error = err.error?.error || 'הפעולה נכשלה';
+        this.actionError = err.error?.error || 'הפעולה נכשלה';
         this.actionInProgress = false;
       },
     });
@@ -245,9 +265,10 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   toggleAiAccess(): void {
     if (this.aiAccessInProgress || !this.entity) return;
     this.aiAccessInProgress = true;
+    this.actionError = null;
     this.platformService.setAiAccess(this.entityId, !this.entity.ai_features_enabled).subscribe({
       next: () => { this.aiAccessInProgress = false; this.load(); },
-      error: (err) => { this.error = err.error?.error || 'הפעולה נכשלה'; this.aiAccessInProgress = false; },
+      error: (err) => { this.actionError = err.error?.error || 'הפעולה נכשלה'; this.aiAccessInProgress = false; },
     });
   }
 

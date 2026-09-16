@@ -1,4 +1,4 @@
-<div class="plat-page">
+<div class="plat-page" [class.refreshing]="refreshing">
 
   <div class="plat-back">
     <a routerLink="/platform/organizations">← כל העמותות</a>
@@ -179,6 +179,10 @@
                 <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
               </div>
             </div>
+
+            @if (actionError) {
+              <div class="plat-note-error">{{ actionError }}</div>
+            }
           </div>
 
           <!-- AI Visibility Gate — separate from the approval workflow above:
@@ -196,6 +200,9 @@
                 {{ aiAccessInProgress ? 'מעדכן...' : (entity.ai_features_enabled ? 'ביטול גישה' : 'הפעלת גישה') }}
               </button>
             </div>
+            @if (actionError) {
+              <div class="plat-note-error">{{ actionError }}</div>
+            }
           </div>
 
           @if (recommendation) {

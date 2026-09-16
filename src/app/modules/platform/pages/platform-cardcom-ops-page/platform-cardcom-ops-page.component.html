@@ -85,7 +85,7 @@
     } @else if (donations.length === 0) {
       <div class="ops-empty-small">לא נמצאו תרומות</div>
     } @else {
-      <div class="ops-donations-table-wrap">
+      <div class="ops-donations-table-wrap" [class.refreshing]="donationsRefreshing">
         <table class="ops-donations-table">
           <thead>
             <tr>

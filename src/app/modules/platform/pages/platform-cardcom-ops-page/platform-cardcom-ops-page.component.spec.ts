@@ -2,7 +2,7 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { PlatformCardcomOpsPageComponent } from './platform-cardcom-ops-page.component';
 import { CardcomOpsService, HealthResponse, ReconciliationFinding, PlatformDonation, PlatformDonationsResponse } from '../../services/cardcom-ops.service';
 import { PlatformService } from '../../services/platform.service';
@@ -621,6 +621,49 @@ describe('PlatformCardcomOpsPageComponent - donations browser', () => {
     fixture.componentInstance.prevDonationsPage();
     fixture.detectChanges();
     expect(listSpy).toHaveBeenCalledWith(jasmine.objectContaining({ page: 0 }));
+  });
+
+  // 2026-09-16 loading-state audit/fix: the true first load (no rows on
+  // screen yet) may show the "טוען תרומות..." placeholder, but any
+  // subsequent refetch (search/filter/sort/pagination) must keep the
+  // existing rows visible -- dimmed via .refreshing, never replaced.
+  it('initial load shows the loading placeholder (no rows yet); a subsequent refresh keeps existing rows visible and just dims them', async () => {
+    const second$ = new Subject<any>();
+    const listSpy = jasmine.createSpy('listDonations').and.returnValues(
+      of({ donations: [donation()], total: 1, page: 0, limit: 25 }),
+      second$,
+    );
+    const fixture = await createFixture({
+      getHealth: () => of(healthWith()),
+      getFindings: () => of({ findings: [] }),
+      listDonations: listSpy,
+    });
+
+    // First load already resolved synchronously in createFixture (real
+    // first-load: donationsLoading was true, now false, one row visible).
+    expect(fixture.componentInstance.donationsLoading).toBe(false);
+    expect(fixture.debugElement.query(By.css('.ops-donations-table'))).toBeTruthy();
+
+    // Trigger a refresh (status filter change) -- the second listDonations
+    // call is deliberately left unresolved so we can inspect the
+    // in-flight state.
+    fixture.componentInstance.donationsStatus = 'paid';
+    fixture.componentInstance.onDonationsStatusChange();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.donationsLoading).toBe(false); // never flips back to the blanking flag
+    expect(fixture.componentInstance.donationsRefreshing).toBe(true);
+    // The table (with its stale-but-still-valid row) stays in the DOM,
+    // "טוען תרומות..." never reappears.
+    const tableWrap = fixture.debugElement.query(By.css('.ops-donations-table-wrap'));
+    expect(tableWrap).toBeTruthy();
+    expect(tableWrap.nativeElement.classList).toContain('refreshing');
+    expect(fixture.nativeElement.textContent).not.toContain('טוען תרומות');
+
+    second$.next({ donations: [donation({ id: 'donation-2' })], total: 1, page: 0, limit: 25 });
+    second$.complete();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.donationsRefreshing).toBe(false);
   });
 
   // 2026-09-16: sortable columns + a column-visibility picker, matching

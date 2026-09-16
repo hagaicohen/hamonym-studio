@@ -26,7 +26,7 @@
     } @else {
 
       @if (displayedPeriod; as period) {
-        <div class="plat-card bo-current-period">
+        <div class="plat-card bo-current-period" [class.refreshing]="periodsRefreshing">
           <!-- Compact header: title + inline month control, replacing the
                old separate "בחר חודש חיוב" card (2026-09-14 refinement).
                Typing any month here -- past or future -- still reaches it,
@@ -497,7 +497,7 @@
       } @else if (statements.length === 0) {
         <div class="ops-empty-small">אין חיובים תואמים.</div>
       } @else {
-        <div class="bo-table-wrap">
+        <div class="bo-table-wrap" [class.refreshing]="statementsRefreshing">
           <table class="bo-table">
             <thead>
               <tr>
@@ -565,7 +565,7 @@
             (visibleChange)="onVisibleReadinessColumnsChange($event)"
           ></app-column-picker>
         </div>
-        <div class="bo-table-wrap">
+        <div class="bo-table-wrap" [class.refreshing]="readinessRefreshing">
           <table class="bo-table">
             <thead>
               <tr>
@@ -649,7 +649,7 @@
       } @else if (blockedStatements.length === 0) {
         <div class="ops-empty-small">אין חיובים הדורשים מס״ב כרגע.</div>
       } @else {
-        <div class="bo-table-wrap">
+        <div class="bo-table-wrap" [class.refreshing]="masavRefreshing">
           <table class="bo-table">
             <thead><tr><th>עמותה</th><th>חודש חיוב</th><th>סכום לחיוב</th><th>מה חסר</th><th></th></tr></thead>
             <tbody>

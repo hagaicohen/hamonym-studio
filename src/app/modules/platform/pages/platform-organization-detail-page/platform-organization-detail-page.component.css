@@ -7,6 +7,14 @@
   direction: rtl;
 }
 
+/* Same loading/refreshing convention as platform-organizations-page
+   (2026-09-16 loading-state fix) -- reloading after approve/reject/
+   suspend/reactivate/AI-access-toggle dims the already-visible page in
+   place instead of replacing it with "טוען..." (the single biggest
+   instance in the audit: this page's own load() used to blank the
+   *entire* detail page -- all tabs, KPIs, history -- after every action). */
+.plat-page.refreshing { opacity: 0.5; pointer-events: none; transition: opacity 0.15s; }
+
 .plat-back { margin-bottom: 12px; }
 .plat-back a {
   font-size: 13px;

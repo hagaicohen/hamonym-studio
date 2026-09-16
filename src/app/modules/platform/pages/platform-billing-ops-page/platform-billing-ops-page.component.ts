@@ -185,6 +185,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- periods & calculation -------------------------------------------
   periods: BillingPeriod[] = [];
   periodsLoading = true;
+  // Set instead of periodsLoading once periods are already on screen
+  // (2026-09-16 loading-state fix) -- stepMonth()/pickMonth() must never
+  // blank the "החודש" tab while the newly-selected month loads; same
+  // loading/refreshing convention already proven on
+  // platform-organizations-page.
+  periodsRefreshing = false;
   periodsError: string | null = null;
   // "בחר חודש" -- bound to a native <input type="month">, giving "YYYY-MM"
   // directly; Hamonym derives the exact calendar boundaries itself
@@ -208,6 +214,10 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- statements ---------------------------------------------------
   statements: StatementListItem[] = [];
   statementsLoading = true;
+  // Set instead of statementsLoading once statements are already on screen
+  // (2026-09-16 loading-state fix) -- filter changes, calculate, and
+  // bulk-approve refetches must never blank "כל החיובים"/"החודש"'s table.
+  statementsRefreshing = false;
   statementsError: string | null = null;
   filterPeriodId = '';
   filterStatus = '';
@@ -247,12 +257,21 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   blockedStatements: BlockedMasavStatement[] = [];
   actionableStatements: ActionableMasavStatement[] = [];
   masavLoading = true;
+  // Set instead of masavLoading once blockedStatements are already on
+  // screen (2026-09-16 loading-state fix) -- refetching after a
+  // billing-setup drawer save must never blank the מס״ב tab.
+  masavRefreshing = false;
   masavError: string | null = null;
 
   // ---- הגדרות עמותות (billing-account provisioning, merged in 2026-09-14
   // from the old standalone /platform/billing-accounts page) --------------
   readinessEntities: BillingReadinessEntity[] = [];
   readinessLoading = true;
+  // Set instead of readinessLoading once entities are already on screen
+  // (2026-09-16 loading-state fix) -- refetching after a billing-setup
+  // drawer save (billingAccountCreated/masavChanged) must never blank
+  // "הגדרות עמותות".
+  readinessRefreshing = false;
   readinessError: string | null = null;
 
   readonly readinessColumns = READINESS_COLUMNS;
@@ -338,17 +357,20 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- periods & calculation -------------------------------------------
 
   private loadPeriods(): void {
-    this.periodsLoading = true;
+    if (this.periods.length === 0) this.periodsLoading = true;
+    else this.periodsRefreshing = true;
     this.periodsError = null;
     this.service.listPeriods().subscribe({
       next: (res) => {
         this.periods = res.periods;
         this.periodsLoading = false;
+        this.periodsRefreshing = false;
         this.syncSelectedMonthToDisplayedPeriod();
       },
       error: () => {
         this.periodsError = 'שגיאה בטעינת תקופות חיוב';
         this.periodsLoading = false;
+        this.periodsRefreshing = false;
       },
     });
     this.loadRuns();
@@ -862,17 +884,20 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- statements -----------------------------------------------------
 
   loadStatements(): void {
-    this.statementsLoading = true;
+    if (this.statements.length === 0) this.statementsLoading = true;
+    else this.statementsRefreshing = true;
     this.statementsError = null;
     this.service.listStatements({ periodId: this.filterPeriodId || undefined, status: this.filterStatus || undefined }).subscribe({
       next: (res) => {
         this.statements = res.statements;
         this.statementsLoading = false;
+        this.statementsRefreshing = false;
         this.pruneApprovalSelection();
       },
       error: () => {
         this.statementsError = 'שגיאה בטעינת חשבונות לחיוב';
         this.statementsLoading = false;
+        this.statementsRefreshing = false;
       },
     });
   }
@@ -1206,11 +1231,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- הגדרות עמותות (billing-account provisioning + readiness) --------
 
   loadReadiness(): void {
-    this.readinessLoading = true;
+    if (this.readinessEntities.length === 0) this.readinessLoading = true;
+    else this.readinessRefreshing = true;
     this.readinessError = null;
     this.provisioningService.getReadiness().subscribe({
-      next: (res) => { this.readinessEntities = res.entities; this.readinessLoading = false; },
-      error: () => { this.readinessError = 'שגיאה בטעינת מוכנות החיוב של העמותות'; this.readinessLoading = false; },
+      next: (res) => { this.readinessEntities = res.entities; this.readinessLoading = false; this.readinessRefreshing = false; },
+      error: () => { this.readinessError = 'שגיאה בטעינת מוכנות החיוב של העמותות'; this.readinessLoading = false; this.readinessRefreshing = false; },
     });
   }
 
@@ -1427,11 +1453,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // ---- masav ------------------------------------------------------------
 
   loadMasav(): void {
-    this.masavLoading = true;
+    if (this.blockedStatements.length === 0) this.masavLoading = true;
+    else this.masavRefreshing = true;
     this.masavError = null;
     this.service.listBlockedMasavStatements().subscribe({
-      next: (res) => { this.blockedStatements = res.statements; this.masavLoading = false; },
-      error: () => { this.masavError = 'שגיאה בטעינת Statements חסומים'; this.masavLoading = false; },
+      next: (res) => { this.blockedStatements = res.statements; this.masavLoading = false; this.masavRefreshing = false; },
+      error: () => { this.masavError = 'שגיאה בטעינת Statements חסומים'; this.masavLoading = false; this.masavRefreshing = false; },
     });
     this.service.listActionableMasavStatements().subscribe({
       next: (res) => { this.actionableStatements = res.statements; },

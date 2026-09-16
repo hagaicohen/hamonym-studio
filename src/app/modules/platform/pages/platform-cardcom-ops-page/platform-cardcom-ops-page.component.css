@@ -474,6 +474,11 @@
   overflow-x: auto;
 }
 
+/* Same loading/refreshing convention as platform-organizations-page
+   (2026-09-16 loading-state fix) -- search/filter/sort/pagination dims the
+   already-visible rows in place instead of replacing them with "טוען...". */
+.ops-donations-table-wrap.refreshing { opacity: 0.5; pointer-events: none; transition: opacity 0.15s; }
+
 .ops-donations-table {
   width: 100%;
   border-collapse: collapse;
