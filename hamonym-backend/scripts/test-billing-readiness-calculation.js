@@ -295,7 +295,21 @@ function newFixture() {
   const state = createFakeState();
   state.periods.set(PERIOD_ID, { period_start: PERIOD_START, period_end: PERIOD_END });
   const fakePool = buildFakePool(state);
-  const fakeEmail = { calls: [], queue: (payload) => { fakeEmail.calls.push(payload); } };
+  // billing-setup-notification.service.js awaits exports.send (not the
+  // fire-and-forget exports.queue) so it can know the real delivery
+  // outcome -- see that file's own header comment. This fake was still
+  // only implementing .queue() (stale since that change), which made
+  // every real await emailService.send(...) call throw a TypeError,
+  // silently caught by calculation.service.js's own try/catch and
+  // recorded as notification: { sent: false, reason: 'error' } -- found
+  // live, 2026-09-16, via a full regression run: the real notification
+  // code path itself was never broken (test-billing-setup-notification.js
+  // and its -dedup sibling, which exercise the real function against the
+  // real DB, both passed throughout), only this hand-rolled mock had
+  // drifted from the real contract. 'stub' matches what
+  // email.service.js#dispatch actually returns whenever EMAIL_ENABLED
+  // isn't 'true' in this environment.
+  const fakeEmail = { calls: [], send: async (payload) => { fakeEmail.calls.push(payload); return { status: 'stub' }; } };
   const mods = freshModules(fakePool, fakeEmail);
   return { state, fakeEmail, ...mods };
 }
