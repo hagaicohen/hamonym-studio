@@ -117,12 +117,15 @@ export class BillingEntitySetupComponent implements OnInit {
   // MASAV setup pieces (2026-09-16 drawer redesign -- replaces the single
   // "עריכת פרטי מס״ב" toggle that used to wrap both together, which made
   // the document upload flow read as nested inside/dependent on the bank
-  // form even after the backend ordering dependency was removed). Each
-  // defaults to collapsed once its own piece already exists (compact
-  // summary + "עריכת פרטים"/"החלפת מסמך"), and auto-expands to the direct
-  // form/picker the first time there's genuinely nothing to summarize yet
-  // (see loadMasav()) -- same progressive-disclosure principle as before,
-  // just decoupled per-piece instead of one flag for both.
+  // form even after the backend ordering dependency was removed).
+  //
+  // Both default to, and stay, collapsed on load (2026-09-16 checklist
+  // simplification -- previously auto-expanded to the raw form whenever
+  // the piece was still missing, which meant the drawer's very first
+  // render for any not-yet-configured association was two open forms, the
+  // opposite of "see what's missing at a glance"). The checklist row's
+  // own "הוסף"/"עריכה" or "העלה"/"החלף" button is now the only way either
+  // form opens -- an explicit operator choice, never an automatic one.
   showMasavBankEdit = false;
   showMasavDocReplace = false;
 
@@ -221,14 +224,6 @@ export class BillingEntitySetupComponent implements OnInit {
           this.masavAccountNumber = res.config.account_number;
           this.masavAccountHolderName = res.config.account_holder_name || '';
         }
-        // Nothing to summarize yet for a given piece -- go straight to its
-        // form/picker instead of making the operator open a toggle to find
-        // it. Independent per piece: a document-only entity (bank details
-        // still '') auto-expands the bank form but keeps the document
-        // section collapsed on its own already-uploaded summary, and vice
-        // versa.
-        this.showMasavBankEdit = !this.masavBankConfigured;
-        this.showMasavDocReplace = !this.masavDocumentUploaded;
       },
       error: () => { /* non-critical for this screen */ },
     });

@@ -246,27 +246,31 @@ describe('BillingEntitySetupComponent - מס״ב checklist (bank details + docum
     return { fixture };
   }
 
-  it('with existing bank details + document: shows compact summaries, no editable bank fields, no file picker -- אישור מס״ב is the only primary action', async () => {
+  it('with existing bank details + document: shows compact summaries with ✓, no editable bank fields, no file picker -- אישור מס״ב is the only primary action', async () => {
     const { fixture } = await createComponent(fullyConfigured);
 
     expect(fixture.componentInstance.showMasavBankEdit).toBe(false);
     expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
-    expect(fixture.componentInstance.masavSetupSummary).toBeNull(); // both done -- no summary banner
 
     expect(fixture.debugElement.query(By.css('.ba-form'))).toBeFalsy(); // no editable bank form
     expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeFalsy(); // no file picker
     expect(fixture.nativeElement.textContent).toContain('ishur-masav.pdf');
 
-    const authorizeBtn = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
+    const rows = fixture.debugElement.queryAll(By.css('.bes-checklist-row'));
+    expect(rows[0].nativeElement.textContent).toContain('✓'); // bank
+    expect(rows[1].nativeElement.textContent).toContain('✓'); // document
+    expect(rows[2].nativeElement.textContent).toContain('○'); // not yet authorized
+
+    const authorizeBtn = fixture.debugElement.query(By.css('.ops-btn-primary'));
     expect(authorizeBtn.nativeElement.textContent).toContain('אישור מס״ב');
     expect(authorizeBtn.nativeElement.disabled).toBe(false);
   });
 
-  it('"עריכת פרטים" (bank) reveals the editable bank form on request, independently of the document section', async () => {
+  it('"עריכה" (bank) reveals the editable bank form on request, independently of the document section', async () => {
     const { fixture } = await createComponent(fullyConfigured);
 
     const editBtn = [...fixture.debugElement.queryAll(By.css('button'))]
-      .find((b) => b.nativeElement.textContent.trim() === 'עריכת פרטים');
+      .find((b) => b.nativeElement.textContent.trim() === 'עריכה');
     editBtn!.nativeElement.click();
     fixture.detectChanges();
 
@@ -275,11 +279,11 @@ describe('BillingEntitySetupComponent - מס״ב checklist (bank details + docum
     expect(fixture.componentInstance.showMasavDocReplace).toBe(false); // untouched
   });
 
-  it('"החלפת מסמך" reveals the acknowledgement + file picker on request', async () => {
+  it('"החלף" reveals the acknowledgement + file picker on request', async () => {
     const { fixture } = await createComponent(fullyConfigured);
 
     const replaceBtn = [...fixture.debugElement.queryAll(By.css('button'))]
-      .find((b) => b.nativeElement.textContent.trim() === 'החלפת מסמך');
+      .find((b) => b.nativeElement.textContent.trim() === 'החלף');
     replaceBtn!.nativeElement.click();
     fixture.detectChanges();
 
@@ -288,42 +292,64 @@ describe('BillingEntitySetupComponent - מס״ב checklist (bank details + docum
     expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
   });
 
-  it('with nothing configured yet: both pieces auto-expand to their direct form/picker, no compact summary shown', async () => {
+  it('with nothing configured yet: the checklist stays collapsed (no forms shown by default), each row offering its own "הוסף"/"העלה" action (2026-09-16 checklist simplification)', async () => {
     const { fixture } = await createComponent(null);
 
+    // Neither form is auto-opened -- the operator sees the checklist first.
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(false);
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeFalsy();
+    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeFalsy();
+
+    const rows = fixture.debugElement.queryAll(By.css('.bes-checklist-row'));
+    expect(rows[0].nativeElement.textContent).toContain('○'); // bank, not yet configured
+    expect(rows[0].nativeElement.textContent).toContain('הוסף');
+    expect(rows[1].nativeElement.textContent).toContain('○'); // document, not yet uploaded
+    expect(rows[1].nativeElement.textContent).toContain('העלה');
+    expect(rows[2].nativeElement.textContent).toContain('○'); // authorization
+
+    // Clicking the bank row's own action reveals only the bank form.
+    const addBankBtn = [...fixture.debugElement.queryAll(By.css('button'))]
+      .find((b) => b.nativeElement.textContent.trim() === 'הוסף');
+    addBankBtn!.nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(true);
     expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
-    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('הגדרת מס״ב לא הושלמה');
-    expect(fixture.nativeElement.textContent).toContain('פרטי חשבון');
-    expect(fixture.nativeElement.textContent).toContain('מסמך הרשאה');
+    expect(fixture.debugElement.query(By.css('input[type="file"]'))).toBeFalsy(); // document section untouched
   });
 
   // The exact scenario the ordering-dependency fix exists for.
-  it('document uploaded before bank details: document reads ✓ הועלה while bank details read טרם הוגדר -- and the file picker was never gated on bank details existing', async () => {
+  it('document uploaded before bank details: document reads ✓ while bank details read ○ -- and the file picker was never gated on bank details existing', async () => {
     const { fixture } = await createComponent(documentOnlyConfig);
 
     expect(fixture.componentInstance.masavBankConfigured).toBe(false);
     expect(fixture.componentInstance.masavDocumentUploaded).toBe(true);
 
-    // Document section: collapsed compact summary (already uploaded).
+    // Both sections start collapsed -- document shows its compact ✓
+    // summary, bank shows its collapsed ○ row with "הוסף" (not an
+    // auto-opened form).
     expect(fixture.componentInstance.showMasavDocReplace).toBe(false);
+    expect(fixture.componentInstance.showMasavBankEdit).toBe(false);
+    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeFalsy();
     expect(fixture.nativeElement.textContent).toContain('early-upload.pdf');
 
-    // Bank section: auto-expanded (nothing to summarize yet).
-    expect(fixture.componentInstance.showMasavBankEdit).toBe(true);
-    expect(fixture.debugElement.query(By.css('.ba-form'))).toBeTruthy();
+    const rows = fixture.debugElement.queryAll(By.css('.bes-checklist-row'));
+    expect(rows[0].nativeElement.textContent).toContain('○'); // bank
+    expect(rows[0].nativeElement.textContent).toContain('הוסף');
+    expect(rows[1].nativeElement.textContent).toContain('✓'); // document
 
-    // The overall summary names only the genuinely missing piece.
+    // The underlying "what's missing" fact is unchanged -- only its
+    // presentation (no more permanent banner) moved to the checklist rows.
     expect(fixture.componentInstance.masavSetupSummary).toContain('פרטי חשבון');
     expect(fixture.componentInstance.masavSetupSummary).not.toContain('מסמך הרשאה');
 
     // אישור מס״ב stays disabled with an explanation naming what's missing.
-    const authorizeBtn = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
+    const authorizeBtn = fixture.debugElement.query(By.css('.ops-btn-primary'));
     expect(authorizeBtn.nativeElement.disabled).toBe(true);
     expect(fixture.componentInstance.masavAuthorizationBlockedReason).toContain('פרטי חשבון');
   });
 
-  it('bank details saved before any document: bank details read ✓ הוגדר while the document section stays open on its own upload picker', async () => {
+  it('bank details saved before any document: bank details read ✓ while the document section offers its own "העלה" action, independent of bank details', async () => {
     const { fixture } = await createComponent({
       id: 'masav-3', entity_id: 'entity-gedolim-mehachaim',
       bank_code: '12', branch_code: '345', account_number: '000123456', account_holder_name: 'שם',
@@ -334,10 +360,19 @@ describe('BillingEntitySetupComponent - מס״ב checklist (bank details + docum
     expect(fixture.componentInstance.masavBankConfigured).toBe(true);
     expect(fixture.componentInstance.masavDocumentUploaded).toBe(false);
     expect(fixture.componentInstance.showMasavBankEdit).toBe(false); // compact summary
-    expect(fixture.componentInstance.showMasavDocReplace).toBe(true); // auto-expanded picker
+    expect(fixture.componentInstance.showMasavDocReplace).toBe(false); // collapsed, not auto-opened
 
-    // The file input must be enabled purely on the ack checkbox -- no
-    // dependency on bank details being configured.
+    const rows = fixture.debugElement.queryAll(By.css('.bes-checklist-row'));
+    expect(rows[1].nativeElement.textContent).toContain('○');
+    expect(rows[1].nativeElement.textContent).toContain('העלה');
+
+    // Clicking "העלה" reveals the picker -- enabled purely by the ack
+    // checkbox, no dependency on bank details being configured.
+    const uploadBtn = [...fixture.debugElement.queryAll(By.css('button'))]
+      .find((b) => b.nativeElement.textContent.trim() === 'העלה');
+    uploadBtn!.nativeElement.click();
+    fixture.detectChanges();
+
     const fileInput: HTMLInputElement = fixture.debugElement.query(By.css('input[type="file"]')).nativeElement;
     expect(fileInput.disabled).toBe(true); // ack not yet checked
     fixture.componentInstance.masavAckChecked = true;

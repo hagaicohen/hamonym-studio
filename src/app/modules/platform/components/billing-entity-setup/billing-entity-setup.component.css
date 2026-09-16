@@ -78,28 +78,64 @@
   margin: 6px 0 0;
 }
 
-.bes-masav-summary {
-  font-size: 12px;
-  font-weight: 700;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
-}
-
-/* One checklist item's compact state (bank details / document), replacing
-   its own full form/picker until "עריכת פרטים"/"החלפת מסמך" is clicked
-   (2026-09-16). */
-.bes-compact-summary {
+/* מס״ב checklist row (2026-09-16 simplification) -- one line per
+   requirement: status dot, label, an optional compact detail once
+   configured, and its own action. Replaces the old separate "status row +
+   full form" pairing, whose form rendered unconditionally whenever a
+   piece was missing. */
+.bes-checklist-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 4px 0 10px;
-  font-size: 13px;
-  color: #475569;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.bes-checklist-row + .bes-checklist-row { border-top: 1px solid #f1f5f9; }
+
+.bes-checklist-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.bes-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bes-check-done {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #fff;
+}
+
+.bes-checklist-detail {
+  font-size: 12px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.bes-checklist-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .bes-input {
@@ -343,18 +379,6 @@
 .bo-upload-helper {
   font-size: 12px;
   color: #64748b;
-}
-
-/* Compact "already configured" summaries inside עריכת פרטי מס״ב
-   (2026-09-14l) -- secondary actions ("עריכת פרטי חשבון" / "הצגת האישור" /
-   "החלפת מסמך") stay visually light so אישור מס״ב, above, remains the one
-   button that reads as the primary action once everything is ready. */
-.bes-secondary-action { margin-top: 4px; }
-
-.bes-doc-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
 }
 
 .bo-upload-note {
