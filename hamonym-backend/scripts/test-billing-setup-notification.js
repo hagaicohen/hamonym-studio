@@ -45,9 +45,18 @@ async function setup() {
 
   await pool.query(`INSERT INTO user_entities (user_id, entity_id, role) VALUES ($1, $2, 'owner')`, [ids.ownerUserId, ids.entityId]);
 
+  // Moved from 2099-08 to 2097-05 on 2026-09-17: the real, permanent
+  // Donation->Billing E2E fixture (ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17)
+  // now occupies the entire 2099-08-01..2099-09-01 calendar month, which
+  // conflicts with this script's own billing_periods_no_overlap-checked
+  // window. This script never needed real month semantics here (only a
+  // billing_period_id to attach the notification to), so moving the
+  // reserved window is the correct fix -- see also
+  // test-billing-ops-manual-month-calculation.js's header comment for the
+  // same lesson learned from an earlier 2099-08 collision.
   const period = await pool.query(
     `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
-    ['2099-08-01T00:00:00.000Z', '2099-08-02T00:00:00.000Z']
+    ['2097-05-01T00:00:00.000Z', '2097-05-02T00:00:00.000Z']
   );
   ids.periodId = period.rows[0].id;
 }

@@ -54,11 +54,44 @@ async function auditLog(client, { superAdminUserId, entityId, action, notes, ip 
   );
 }
 
+// Excludes retired periods (2026-09-17 Billing Ops filter UX fix) --
+// `retired` already means "no longer the real period for its bounds"
+// (ensurePeriod itself only ever matches WHERE retired = false when
+// finding-or-creating), so an operator-facing list has no business
+// showing them either. Found live: three sub-second test/harness periods
+// from 2026-08-28 were already correctly marked retired=true (each has a
+// real billing_run attached, making them permanently undeletable -- see
+// migration triggers), but still showed up in the "כל החיובים" month
+// filter as confusing raw timestamp ranges. This is a pure visibility
+// fix -- retired rows are untouched, never modified or deleted.
+// The חודש filter is an operator-facing MONTH picker, not a raw
+// billing_periods browser (2026-09-17 follow-up to the retired-exclusion
+// fix). Two more conditions on top of `retired = false`:
+//   - genuine calendar month: period_start sits exactly on a month
+//     boundary (date_trunc('month', x) = x) AND period_end is exactly one
+//     calendar month later -- the same shape computeCalendarMonthUtcBoundary()
+//     always produces. Excludes the sub-second technical/harness periods
+//     (already also caught by retired=false today, but this is the real
+//     structural reason they'd never belong here even if one were ever
+//     left non-retired).
+//   - bounded operational horizon: period_start no more than 12 months
+//     past the start of the current calendar month. Not a hardcoded
+//     year/test-id check -- no genuine "בחר חודש" planning ever needs
+//     more than a few months of lookahead, so this only ever excludes
+//     periods that are structurally not real operational months, such as
+//     the permanent 2099-08 Donation->Billing E2E isolation fixture
+//     (ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17), which stays in the DB
+//     forever (real Statement/statement_component chain attached) but has
+//     no business being offered as a selectable month.
 exports.listPeriods = async () => {
   const { rows } = await pool.query(
     `SELECT p.*,
             (SELECT count(*) FROM billing_runs r WHERE r.billing_period_id = p.id) AS run_count
      FROM billing_periods p
+     WHERE p.retired = false
+       AND date_trunc('month', p.period_start) = p.period_start
+       AND p.period_end = p.period_start + INTERVAL '1 month'
+       AND p.period_start <= date_trunc('month', NOW()) + INTERVAL '12 months'
      ORDER BY p.period_start DESC`
   );
   return rows;
@@ -172,30 +205,58 @@ exports.nextActionLabel = nextActionLabel; // exported for direct unit testing (
 // threshold+authorization rule routing.js applies authoritatively at
 // collection time -- never used to decide anything, only to show the
 // operator what will happen.
+// Operator-facing status filter (2026-09-17 Billing Ops filter UX fix) --
+// 'pending_collection'/'collection_failed' are NOT raw statements.status
+// values. The מצב column already collapses status IN ('approved','open')
+// into exactly these two operational buckets (see this frontend's own
+// operationalStateLabel()/isCollectionFailed(), and nextActionLabel's own
+// card-only gating comment above -- MASAV attempts can never carry a
+// failure status, per the collection-attempt-reconciliation-masav-
+// exclusion invariant, so this condition only ever fires for the real
+// card-declined case it's meant to catch). Restructured into a CTE so
+// routed_method/latest_attempt_status are computed exactly once and
+// referenced by both the result columns and this filter, instead of
+// duplicating the CASE/subquery text -- one definition, not two.
+const COLLECTION_FAILED_SQL = `routed_method = 'card' AND latest_attempt_status IN ('declined', 'technical_failure', 'not_found_confirmed')`;
+// The direct negation of COLLECTION_FAILED_SQL, written out rather than
+// wrapped in NOT(...) -- SQL's three-valued logic means NOT(x AND NULL) is
+// NULL, not TRUE, so a card-routed Statement with no attempt yet
+// (latest_attempt_status IS NULL, the normal "never tried" case) would be
+// wrongly excluded from "ממתין לגבייה" by a naive NOT(). This mirrors
+// isCollectionFailed()'s own JS semantics exactly (Array.includes(null) is
+// false, not "unknown"), just spelled out for SQL's different null rules.
+const NOT_COLLECTION_FAILED_SQL = `(routed_method != 'card' OR latest_attempt_status IS NULL OR latest_attempt_status NOT IN ('declined', 'technical_failure', 'not_found_confirmed'))`;
+
 exports.listStatements = async ({ periodId, runId, status }) => {
   const { rows } = await pool.query(
-    `SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
-            s.gross_raised, s.fee_amount, s.vat_amount, s.total_due, s.status, s.created_at,
-            ba.entity_id, e.display_name AS entity_name,
-            (SELECT count(*)::int FROM statement_components sc WHERE sc.statement_id = s.id) AS component_count,
-            CASE
-              WHEN s.total_due <= $4 THEN 'card'
-              WHEN emd.entity_id IS NOT NULL AND emd.authorized
-                   AND emd.bank_code IS NOT NULL AND emd.branch_code IS NOT NULL AND emd.account_number IS NOT NULL
-                THEN 'masav'
-              ELSE 'blocked'
-            END AS routed_method,
-            (SELECT ca.status FROM collection_attempts ca WHERE ca.statement_id = s.id
-             ORDER BY ca.attempt_number DESC LIMIT 1) AS latest_attempt_status,
-            (SELECT count(*) FROM payments p WHERE p.statement_id = s.id)::int AS payment_count
-     FROM statements s
-     JOIN billing_accounts ba ON ba.id = s.billing_account_id
-     JOIN entities e ON e.id = ba.entity_id
-     LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
-     WHERE ($1::uuid IS NULL OR s.billing_period_id = $1)
-       AND ($2::uuid IS NULL OR s.billing_run_id = $2)
-       AND ($3::text IS NULL OR s.status = $3)
-     ORDER BY s.created_at DESC`,
+    `WITH scored AS (
+       SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
+              s.gross_raised, s.fee_amount, s.vat_amount, s.total_due, s.status, s.created_at,
+              ba.entity_id, e.display_name AS entity_name,
+              (SELECT count(*)::int FROM statement_components sc WHERE sc.statement_id = s.id) AS component_count,
+              CASE
+                WHEN s.total_due <= $4 THEN 'card'
+                WHEN emd.entity_id IS NOT NULL AND emd.authorized
+                     AND emd.bank_code IS NOT NULL AND emd.branch_code IS NOT NULL AND emd.account_number IS NOT NULL
+                  THEN 'masav'
+                ELSE 'blocked'
+              END AS routed_method,
+              (SELECT ca.status FROM collection_attempts ca WHERE ca.statement_id = s.id
+               ORDER BY ca.attempt_number DESC LIMIT 1) AS latest_attempt_status,
+              (SELECT count(*) FROM payments p WHERE p.statement_id = s.id)::int AS payment_count
+       FROM statements s
+       JOIN billing_accounts ba ON ba.id = s.billing_account_id
+       JOIN entities e ON e.id = ba.entity_id
+       LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
+       WHERE ($1::uuid IS NULL OR s.billing_period_id = $1)
+         AND ($2::uuid IS NULL OR s.billing_run_id = $2)
+     )
+     SELECT * FROM scored
+     WHERE $3::text IS NULL
+        OR ($3 = 'collection_failed' AND status IN ('approved', 'open') AND ${COLLECTION_FAILED_SQL})
+        OR ($3 = 'pending_collection' AND status IN ('approved', 'open') AND ${NOT_COLLECTION_FAILED_SQL})
+        OR ($3 NOT IN ('collection_failed', 'pending_collection') AND status = $3)
+     ORDER BY created_at DESC`,
     [periodId || null, runId || null, status || null, routing.CARD_MASAV_THRESHOLD]
   );
 
