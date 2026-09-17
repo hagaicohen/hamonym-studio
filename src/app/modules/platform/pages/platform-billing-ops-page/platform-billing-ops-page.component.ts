@@ -254,8 +254,84 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // bulk-approve refetches must never blank "כל החיובים"/"החודש"'s table.
   statementsRefreshing = false;
   statementsError: string | null = null;
-  filterPeriodId = '';
+  // "YYYY-MM", or '' for "כל החודשים" -- 2026-09-17 month-picker redesign.
+  // No longer a billing_period.id: the operator picks any calendar month,
+  // past or future, whether or not a billing_periods row exists for it yet
+  // (see loadStatements()/listStatements()'s own `month` param). Defaults
+  // to last calendar month on load (defaultFilterMonth()) -- this tab is
+  // primarily historical, and the previous month is normally the latest
+  // one with a complete, settled billing picture; "החודש" tab's own
+  // "latest existing period" default is a different, DB-driven concept
+  // for a different (administration) purpose and doesn't apply here.
+  filterMonth = '';
   filterStatus = '';
+
+  // ---- "כל החיובים" month/year filter control (2026-09-17) --------------
+  // A second, independent instance of the same compact Hebrew "‹ חודש שנה
+  // ›" stepper + popover pattern as the "החודש" tab's own month control
+  // below (same CSS classes, same heMonthNames) -- deliberately NOT
+  // shared state or shared methods: this one only ever calls
+  // loadStatements() (a read filter), never createPeriodForMonth()/
+  // calculatePeriod() (a business action). Two small parallel widgets,
+  // not one widget serving two different meanings.
+  filterMonthPickerOpen = false;
+  filterMonthPickerYear = new Date().getFullYear();
+
+  private defaultFilterMonth(): string {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  get filterMonthLabel(): string {
+    if (!this.filterMonth) return 'כל החודשים';
+    const [yearStr, monthStr] = this.filterMonth.split('-');
+    const monthIdx = Number(monthStr) - 1;
+    if (monthIdx < 0 || monthIdx > 11) return this.filterMonth;
+    return `${HE_MONTH_NAMES[monthIdx]} ${yearStr}`;
+  }
+
+  toggleFilterMonthPicker(event: Event): void {
+    event.stopPropagation();
+    this.filterMonthPickerOpen = !this.filterMonthPickerOpen;
+    if (this.filterMonthPickerOpen) {
+      const [yearStr] = (this.filterMonth || '').split('-');
+      this.filterMonthPickerYear = Number(yearStr) || new Date().getFullYear();
+    }
+  }
+
+  @HostListener('document:click')
+  closeFilterMonthPicker(): void {
+    this.filterMonthPickerOpen = false;
+  }
+
+  filterPickerPrevYear(): void {
+    this.filterMonthPickerYear--;
+  }
+
+  filterPickerNextYear(): void {
+    this.filterMonthPickerYear++;
+  }
+
+  isSelectedFilterMonth(monthIndex: number): boolean {
+    if (!this.filterMonth) return false;
+    const [yearStr, monthStr] = this.filterMonth.split('-');
+    return Number(yearStr) === this.filterMonthPickerYear && Number(monthStr) === monthIndex + 1;
+  }
+
+  pickFilterMonth(monthIndex: number): void {
+    this.filterMonth = `${this.filterMonthPickerYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+    this.filterMonthPickerOpen = false;
+    this.loadStatements();
+  }
+
+  stepFilterMonth(delta: -1 | 1): void {
+    if (!this.filterMonth) return;
+    const [yearStr, monthStr] = this.filterMonth.split('-');
+    const d = new Date(Number(yearStr), Number(monthStr) - 1 + delta, 1);
+    this.filterMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    this.loadStatements();
+  }
 
   // ---- column sorting + visibility (2026-09-16, החודש / כל החיובים) ----
   readonly monthTableColumns = MONTH_TABLE_COLUMNS;
@@ -378,6 +454,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     }
     this.justSetupEntityName = qp.get('justSetupName') || (qp.get('justSetupEntity') ? 'העמותה' : null);
 
+    this.filterMonth = this.defaultFilterMonth();
     this.loadPeriods();
     this.loadStatements();
     this.loadMasav();
@@ -923,11 +1000,17 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   // ---- statements -----------------------------------------------------
 
+  clearMonthFilter(): void {
+    this.filterMonth = '';
+    this.filterMonthPickerOpen = false;
+    this.loadStatements();
+  }
+
   loadStatements(): void {
     if (this.statements.length === 0) this.statementsLoading = true;
     else this.statementsRefreshing = true;
     this.statementsError = null;
-    this.service.listStatements({ periodId: this.filterPeriodId || undefined, status: this.filterStatus || undefined }).subscribe({
+    this.service.listStatements({ month: this.filterMonth || undefined, status: this.filterStatus || undefined }).subscribe({
       next: (res) => {
         this.statements = res.statements;
         this.statementsLoading = false;

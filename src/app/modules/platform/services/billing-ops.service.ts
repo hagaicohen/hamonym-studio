@@ -266,11 +266,12 @@ export class BillingOpsService {
     return this.http.get<{ runs: BillingRun[] }>(url, { headers: authHeaders() });
   }
 
-  listStatements(filters: { periodId?: string; runId?: string; status?: string }): Observable<{ statements: StatementListItem[] }> {
+  listStatements(filters: { periodId?: string; runId?: string; status?: string; month?: string }): Observable<{ statements: StatementListItem[] }> {
     const params = new URLSearchParams();
     if (filters.periodId) params.set('periodId', filters.periodId);
     if (filters.runId) params.set('runId', filters.runId);
     if (filters.status) params.set('status', filters.status);
+    if (filters.month) params.set('month', filters.month);
     const qs = params.toString();
     return this.http.get<{ statements: StatementListItem[] }>(
       `${this.base}/statements${qs ? '?' + qs : ''}`,

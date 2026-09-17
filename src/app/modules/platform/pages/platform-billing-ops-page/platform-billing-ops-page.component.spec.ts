@@ -1781,9 +1781,9 @@ describe('PlatformBillingOpsPageComponent - "דורש טיפול" task list (202
 // "הגבייה נכשלה" via operationalStateLabel(). Both dropdowns now show only
 // what the operator would actually recognize from this same screen.
 describe('PlatformBillingOpsPageComponent - "כל החיובים" filter dropdowns (2026-09-17)', () => {
-  async function setup(periods: BillingPeriod[], overrides: Record<string, any> = {}) {
+  async function setup(overrides: Record<string, any> = {}) {
     const service = {
-      listPeriods: () => of({ periods }),
+      listPeriods: () => of({ periods: [] }),
       listRuns: () => of({ runs: [] }),
       listStatements: jasmine.createSpy('listStatements').and.returnValue(of({ statements: [] })),
       listBlockedMasavStatements: () => of({ statements: [] }),
@@ -1801,39 +1801,9 @@ describe('PlatformBillingOpsPageComponent - "כל החיובים" filter dropdow
     return { fixture, service };
   }
 
-  it('month dropdown: a real calendar-month period renders as plain Hebrew month/year, with the real period id as the option value', async () => {
-    const period: BillingPeriod = {
-      id: 'period-nov-2026', period_start: '2026-11-01T00:00:00.000Z', period_end: '2026-12-01T00:00:00.000Z',
-      created_at: '2026-11-01T00:00:00.000Z', retired: false, run_count: 0,
-    };
-    const { fixture } = await setup([period]);
-
-    const options = fixture.debugElement.queryAll(By.css('.ba-field select'))[0].queryAll(By.css('option'));
-    const periodOption = options.find((o) => o.nativeElement.value === 'period-nov-2026');
-    expect(periodOption).toBeTruthy();
-    expect(periodOption!.nativeElement.textContent.trim()).toBe('נובמבר 2026');
-    // No raw timestamp leaks into the label.
-    expect(periodOption!.nativeElement.textContent).not.toContain('2026-11-01');
-    expect(periodOption!.nativeElement.textContent).not.toContain(':');
-  });
-
-  it('month dropdown: a genuine non-calendar period (doesn\'t start on the 1st) falls back to a real date range, not a false month label', async () => {
-    const period: BillingPeriod = {
-      id: 'period-custom', period_start: '2026-08-15T00:00:00.000Z', period_end: '2026-08-20T00:00:00.000Z',
-      created_at: '2026-08-15T00:00:00.000Z', retired: false, run_count: 0,
-    };
-    const { fixture } = await setup([period]);
-
-    const options = fixture.debugElement.queryAll(By.css('.ba-field select'))[0].queryAll(By.css('option'));
-    const periodOption = options.find((o) => o.nativeElement.value === 'period-custom');
-    expect(periodOption!.nativeElement.textContent).toContain('15/08/2026');
-    expect(periodOption!.nativeElement.textContent).not.toMatch(/^אוגוסט/);
-  });
-
   it('status dropdown: options are exactly the operational buckets shown in the מצב column -- no raw "approved"/"open" values exposed', async () => {
-    const { fixture } = await setup([]);
-    const selects = fixture.debugElement.queryAll(By.css('.ba-field select'));
-    const statusSelect = selects[1];
+    const { fixture } = await setup();
+    const statusSelect = fixture.debugElement.query(By.css('.ba-field select'));
     const values = statusSelect.queryAll(By.css('option')).map((o) => o.nativeElement.value);
     expect(values).toEqual(['', 'draft', 'pending_collection', 'collection_failed', 'paid', 'abandoned', 'cancelled', 'written_off']);
     expect(values).not.toContain('approved');
@@ -1844,11 +1814,168 @@ describe('PlatformBillingOpsPageComponent - "כל החיובים" filter dropdow
   });
 
   it('selecting a status filter passes the operational key straight through to listStatements() unchanged', async () => {
-    const { fixture, service } = await setup([]);
+    const { fixture, service } = await setup();
     fixture.componentInstance.filterStatus = 'collection_failed';
     fixture.componentInstance.loadStatements();
     expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(
       jasmine.objectContaining({ status: 'collection_failed' }),
     );
+  });
+});
+
+describe('PlatformBillingOpsPageComponent - "חודש" month/year picker (2026-09-17 redesign)', () => {
+  async function setup(overrides: Record<string, any> = {}) {
+    const service = {
+      listPeriods: () => of({ periods: [] }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: jasmine.createSpy('listStatements').and.returnValue(of({ statements: [] })),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+      ...overrides,
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('statements');
+    fixture.detectChanges();
+    return { fixture, service };
+  }
+
+  it('is a compact app-controlled Hebrew stepper, not a native <input type="month"> and not a <select>', async () => {
+    const { fixture } = await setup();
+    const monthField = fixture.debugElement.queryAll(By.css('.ba-field'))[0];
+    expect(monthField.query(By.css('input[type="month"]'))).toBeFalsy();
+    expect(monthField.query(By.css('select'))).toBeFalsy();
+    expect(monthField.query(By.css('.bo-month-picker-trigger'))).toBeTruthy();
+  });
+
+  it('defaults to last calendar month on load, and loads statements for it', async () => {
+    const { fixture, service } = await setup();
+    const now = new Date();
+    const expected = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const expectedKey = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}`;
+    expect(fixture.componentInstance.filterMonth).toBe(expectedKey);
+    expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(
+      jasmine.objectContaining({ month: expectedKey }),
+    );
+  });
+
+  it('the collapsed trigger shows a Hebrew month name + year, never an English abbreviation', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.filterMonth = '2026-08';
+    fixture.detectChanges();
+    const trigger = fixture.debugElement.query(By.css('.bo-month-picker-trigger'));
+    expect(trigger.nativeElement.textContent.trim()).toBe('אוגוסט 2026');
+    expect(trigger.nativeElement.textContent).not.toMatch(/[A-Za-z]/);
+  });
+
+  it('stepFilterMonth steps exactly one calendar month and reloads, including across a year boundary', async () => {
+    const { fixture, service } = await setup();
+    fixture.componentInstance.filterMonth = '2026-01';
+    fixture.componentInstance.stepFilterMonth(-1);
+    expect(fixture.componentInstance.filterMonth).toBe('2025-12');
+    expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(jasmine.objectContaining({ month: '2025-12' }));
+
+    fixture.componentInstance.stepFilterMonth(1);
+    expect(fixture.componentInstance.filterMonth).toBe('2026-01');
+  });
+
+  it('RTL nav order matches the existing החודש control exactly: the first (rightmost) arrow (→) steps to the PREVIOUS month, the last (leftmost) arrow (←) steps to the NEXT month', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.filterMonth = '2026-06';
+    fixture.detectChanges();
+    const navButtons = fixture.debugElement.queryAll(By.css('.bo-month-switch .bo-month-nav-btn'));
+    expect(navButtons.length).toBe(2);
+    expect(navButtons[0].nativeElement.textContent.trim()).toBe('→');
+    expect(navButtons[1].nativeElement.textContent.trim()).toBe('←');
+
+    navButtons[0].nativeElement.click();
+    expect(fixture.componentInstance.filterMonth).toBe('2026-05'); // → = previous
+    navButtons[1].nativeElement.click();
+    navButtons[1].nativeElement.click();
+    expect(fixture.componentInstance.filterMonth).toBe('2026-07'); // ← = next
+  });
+
+  it('popover: opens on trigger click, shows exactly the 12 Hebrew month names (no day/date grid), and picking one sets the month, closes the popover, and reloads', async () => {
+    const { fixture, service } = await setup();
+    const trigger = fixture.debugElement.query(By.css('.bo-month-picker-trigger'));
+    trigger.nativeElement.click();
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('.bo-month-picker-popover .bo-month-picker-cell'));
+    expect(cells.map((c) => c.nativeElement.textContent.trim())).toEqual([
+      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+    ]);
+    expect(fixture.debugElement.query(By.css('.bo-month-picker-popover input[type="date"]'))).toBeFalsy();
+
+    fixture.componentInstance.filterMonthPickerYear = 2024;
+    fixture.detectChanges();
+    cells[0].nativeElement.click(); // ינואר
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.filterMonthPickerOpen).toBe(false);
+    expect(fixture.componentInstance.filterMonth).toBe('2024-01');
+    expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(jasmine.objectContaining({ month: '2024-01' }));
+    // The old billing_period.id contract must be fully gone.
+    expect((service.listStatements as jasmine.Spy).calls.mostRecent().args[0].periodId).toBeUndefined();
+  });
+
+  it('popover year row steps the picker year without touching the selected month until a cell is picked', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.filterMonth = '2026-06';
+    fixture.componentInstance.toggleFilterMonthPicker(new Event('click'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.filterMonthPickerYear).toBe(2026);
+
+    fixture.componentInstance.filterPickerNextYear();
+    expect(fixture.componentInstance.filterMonthPickerYear).toBe(2027);
+    expect(fixture.componentInstance.filterMonth).toBe('2026-06'); // unchanged until a cell is clicked
+
+    fixture.componentInstance.filterPickerPrevYear();
+    expect(fixture.componentInstance.filterMonthPickerYear).toBe(2026);
+  });
+
+  it('"כל החודשים" reset lives inside the popover (not a persistent second line under the collapsed control), and clears the filter back to "all months"', async () => {
+    const { fixture, service } = await setup();
+    // Collapsed state stays a single clean line, same shape as מצב/עמודות
+    // beside it -- no reset control visible until the popover is open.
+    expect(fixture.debugElement.query(By.css('.ba-field .bo-month-picker-all-btn'))).toBeFalsy();
+
+    fixture.debugElement.query(By.css('.bo-month-picker-trigger')).nativeElement.click();
+    fixture.detectChanges();
+    const resetBtn = fixture.debugElement.query(By.css('.bo-month-picker-popover .bo-month-picker-all-btn'));
+    expect(resetBtn).toBeTruthy('default month is pre-filled, so the reset action starts available in the popover');
+    expect(resetBtn.nativeElement.textContent.trim()).toBe('כל החודשים');
+
+    resetBtn.nativeElement.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.filterMonth).toBe('');
+    expect(fixture.componentInstance.filterMonthPickerOpen).toBe(false);
+    expect((service.listStatements as jasmine.Spy)).toHaveBeenCalledWith(jasmine.objectContaining({ month: undefined }));
+
+    const navButtons = fixture.debugElement.queryAll(By.css('.bo-month-switch .bo-month-nav-btn'));
+    expect(navButtons[0].nativeElement.disabled).toBe(true, 'stepping has no anchor once "כל החודשים" is selected');
+  });
+
+  it('empty state reads "אין חיובים בחודש שנבחר" specifically when a month is selected and it has no charges', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.filterMonth = '2030-01';
+    fixture.componentInstance.statementsLoading = false;
+    fixture.detectChanges();
+    const empty = fixture.debugElement.query(By.css('.ops-empty-small'));
+    expect(empty.nativeElement.textContent.trim()).toBe('אין חיובים בחודש שנבחר.');
+  });
+
+  it('empty state falls back to the generic message when no month is selected', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.filterMonth = '';
+    fixture.componentInstance.statementsLoading = false;
+    fixture.detectChanges();
+    const empty = fixture.debugElement.query(By.css('.ops-empty-small'));
+    expect(empty.nativeElement.textContent.trim()).toBe('אין חיובים תואמים.');
   });
 });

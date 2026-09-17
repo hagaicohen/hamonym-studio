@@ -254,6 +254,14 @@
   border-inline-start: 1px solid #e2e8f0;
 }
 
+/* "כל החיובים"'s own instance (2026-09-17) sits alone inside a .ba-field,
+   with no adjacent title to divide from -- drop the divider border/padding
+   the "החודש" tab's header context needs, keep everything else identical. */
+.bo-month-switch-standalone {
+  padding-inline-start: 0;
+  border-inline-start: none;
+}
+
 /* "←"/"→" one-month-at-a-time steppers -- the most common real action
    (check last month, peek at next month) shouldn't require opening the
    picker at all. Same round-icon-button shape as the footer pager
@@ -370,6 +378,28 @@
   border-color: #583cd6;
   color: #fff;
 }
+
+/* "כל החודשים" reset (2026-09-17) -- lives inside the popover as a picker
+   action, not a persistent second line under the collapsed control (that
+   made the "כל החיובים" filter row visibly taller/misaligned next to the
+   plain מצב/עמודות fields beside it). Only shown once a month is actually
+   selected -- resetting from "already showing everything" is a no-op. */
+.bo-month-picker-all-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: none;
+  color: #583cd6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.bo-month-picker-all-btn:hover { background: #ede9fe; }
 
 .bo-current-title {
   font-size: 22px;

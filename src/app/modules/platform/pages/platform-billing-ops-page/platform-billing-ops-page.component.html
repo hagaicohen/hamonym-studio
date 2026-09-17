@@ -478,31 +478,59 @@
       <div class="bo-intro">היסטוריית החיובים של העמותות, כולל מצב הגבייה והפעולה הנדרשת.</div>
 
       <div class="bo-form-row">
-        <!-- Real calendar months as plain Hebrew month/year (2026-09-17
-             filter UX fix) -- was raw fmtDateTime() start/end timestamps,
-             which exposed billing_periods internals (and, for a genuine
-             calendar month, a bidi-rendering artifact that could make the
-             end date visually appear before the start date). This is a
-             MONTH picker, not a billing_periods browser: listPeriods()
-             itself now only returns rows that are (a) retired = false,
-             (b) a genuine calendar month, and (c) within a 12-month
-             operational horizon of today -- so a permanent but isolated
-             far-future fixture period (e.g. the 2099-08 Donation->Billing
-             E2E test period) never appears here, without the backend ever
-             checking for a test id/name/year. periodMonthLabel()'s date-
-             range fallback below is now effectively unreachable (every
-             period the backend returns is already a genuine calendar
-             month) but kept for defense-in-depth, matching the same
-             pattern statementPeriodLabel()/blockedStatementPeriodLabel()
-             use elsewhere on this page. -->
+        <!-- Compact app-controlled Hebrew month/year stepper, not a native
+             <input type="month"> (2026-09-17 -- the native control rendered
+             English month abbreviations and looked foreign here) and not a
+             billing_periods-driven dropdown either. A second, independent
+             instance of the exact "‹ חודש שנה ›" + popover pattern the
+             החודש tab already uses below (see toggleMonthPicker() there vs.
+             toggleFilterMonthPicker() here) -- same CSS/heMonthNames, but
+             its own state, since this one only ever filters (loadStatements)
+             and never creates/calculates a billing_period. The operator can
+             pick ANY calendar month -- past, present or future -- with no
+             dependency on a billing_periods row existing for it.
+             listStatements()'s own `month` param resolves the picked
+             "YYYY-MM" to real calendar boundaries and matches Statements
+             directly, so a month with nothing in it just returns zero rows
+             (empty state below) -- no billing_period/billing_run/Statement
+             is ever created by selecting a month here. This also retires
+             the whole earlier "which billing_periods rows deserve to be
+             listed" problem (retired rows, sub-second harness periods, the
+             far-future 2099-08 E2E fixture) at the root: none of them can
+             leak into a picker that was never built from that table.
+             Defaults to last calendar month (defaultFilterMonth(), set in
+             ngOnInit) -- this tab is primarily historical. -->
         <label class="ba-field">
           <span>חודש</span>
-          <select [(ngModel)]="filterPeriodId" (ngModelChange)="loadStatements()">
-            <option value="">הכל</option>
-            @for (period of periods; track period.id) {
-              <option [value]="period.id">{{ periodMonthLabel(period) || (fmtDate(period.period_start) + '–' + fmtInclusiveEndDate(period.period_end)) }}</option>
-            }
-          </select>
+          <div class="bo-month-switch bo-month-switch-standalone">
+            <button type="button" class="bo-month-nav-btn" [disabled]="!filterMonth" (click)="stepFilterMonth(-1)" aria-label="חודש קודם" title="חודש קודם">→</button>
+            <div class="bo-month-picker-wrap">
+              <button
+                type="button"
+                class="bo-month-picker-trigger"
+                [class.bo-month-picker-trigger-open]="filterMonthPickerOpen"
+                (click)="toggleFilterMonthPicker($event)"
+              >{{ filterMonthLabel }}</button>
+              @if (filterMonthPickerOpen) {
+                <div class="bo-month-picker-popover" (click)="$event.stopPropagation()">
+                  <div class="bo-month-picker-year-row">
+                    <button type="button" class="bo-month-picker-year-btn" (click)="filterPickerPrevYear()" aria-label="שנה קודמת">←</button>
+                    <span class="bo-month-picker-year-label">{{ filterMonthPickerYear }}</span>
+                    <button type="button" class="bo-month-picker-year-btn" (click)="filterPickerNextYear()" aria-label="שנה הבאה">→</button>
+                  </div>
+                  <div class="bo-month-picker-grid">
+                    @for (name of heMonthNames; track name; let i = $index) {
+                      <button type="button" class="bo-month-picker-cell" [class.bo-month-picker-cell-selected]="isSelectedFilterMonth(i)" (click)="pickFilterMonth(i)">{{ name }}</button>
+                    }
+                  </div>
+                  @if (filterMonth) {
+                    <button type="button" class="bo-month-picker-all-btn" (click)="clearMonthFilter()">כל החודשים</button>
+                  }
+                </div>
+              }
+            </div>
+            <button type="button" class="bo-month-nav-btn" [disabled]="!filterMonth" (click)="stepFilterMonth(1)" aria-label="חודש הבא" title="חודש הבא">←</button>
+          </div>
         </label>
         <!-- Operator-facing operational states, matching exactly what the
              "מצב" column below already shows (2026-09-17 filter UX fix) --
@@ -538,7 +566,7 @@
       } @else if (statementsError) {
         <div class="plat-error">{{ statementsError }}</div>
       } @else if (statements.length === 0) {
-        <div class="ops-empty-small">אין חיובים תואמים.</div>
+        <div class="ops-empty-small">{{ filterMonth ? 'אין חיובים בחודש שנבחר.' : 'אין חיובים תואמים.' }}</div>
       } @else {
         <div class="bo-table-wrap" [class.refreshing]="statementsRefreshing">
           <table class="bo-table">
