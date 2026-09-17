@@ -64,25 +64,28 @@ async function auditLog(client, { superAdminUserId, entityId, action, notes, ip 
 // migration triggers), but still showed up in the "כל החיובים" month
 // filter as confusing raw timestamp ranges. This is a pure visibility
 // fix -- retired rows are untouched, never modified or deleted.
-// The חודש filter is an operator-facing MONTH picker, not a raw
-// billing_periods browser (2026-09-17 follow-up to the retired-exclusion
-// fix). Two more conditions on top of `retired = false`:
+// Backs the "החודש" tab's current/selected-period lookup and calculation
+// flow only (2026-09-17 -- "כל החיובים" no longer builds its month filter
+// from this list at all, see listStatements()'s own `month` param below,
+// which queries billing_periods directly instead). Two conditions:
+//   - retired = false: a retired row is never "the" period for its
+//     window (see billing_periods.retired's own invariant) and must never
+//     be offered as the current/creatable period.
 //   - genuine calendar month: period_start sits exactly on a month
 //     boundary (date_trunc('month', x) = x) AND period_end is exactly one
 //     calendar month later -- the same shape computeCalendarMonthUtcBoundary()
 //     always produces. Excludes the sub-second technical/harness periods
 //     (already also caught by retired=false today, but this is the real
 //     structural reason they'd never belong here even if one were ever
-//     left non-retired).
-//   - bounded operational horizon: period_start no more than 12 months
-//     past the start of the current calendar month. Not a hardcoded
-//     year/test-id check -- no genuine "בחר חודש" planning ever needs
-//     more than a few months of lookahead, so this only ever excludes
-//     periods that are structurally not real operational months, such as
-//     the permanent 2099-08 Donation->Billing E2E isolation fixture
-//     (ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17), which stays in the DB
-//     forever (real Statement/statement_component chain attached) but has
-//     no business being offered as a selectable month.
+//     left non-retired) -- a data-quality filter, unrelated to whether a
+//     period is a deliberate test fixture (there is no reliable way to
+//     tell those apart from period properties alone, and this endpoint
+//     doesn't need to: it's read-only-scoped to genuinely-shaped periods).
+//   No time-horizon bound: history is real financial data and stays
+//   queryable indefinitely (a 12-month cutoff was tried and reverted the
+//   same day -- it fixed the immediate 2099-08 test-fixture symptom but
+//   would have silently hidden genuine old months once the platform had
+//   more than a year of real history, which is a worse problem).
 exports.listPeriods = async () => {
   const { rows } = await pool.query(
     `SELECT p.*,
@@ -91,7 +94,6 @@ exports.listPeriods = async () => {
      WHERE p.retired = false
        AND date_trunc('month', p.period_start) = p.period_start
        AND p.period_end = p.period_start + INTERVAL '1 month'
-       AND p.period_start <= date_trunc('month', NOW()) + INTERVAL '12 months'
      ORDER BY p.period_start DESC`
   );
   return rows;
@@ -227,7 +229,33 @@ const COLLECTION_FAILED_SQL = `routed_method = 'card' AND latest_attempt_status 
 // false, not "unknown"), just spelled out for SQL's different null rules.
 const NOT_COLLECTION_FAILED_SQL = `(routed_method != 'card' OR latest_attempt_status IS NULL OR latest_attempt_status NOT IN ('declined', 'technical_failure', 'not_found_confirmed'))`;
 
-exports.listStatements = async ({ periodId, runId, status }) => {
+// `month` ("YYYY-MM", 2026-09-17 month-picker redesign) is a pure read
+// filter: the operator picks any calendar month -- past, present or
+// future, with no dependency on a billing_periods row existing for it --
+// and this resolves it to that month's real canonical boundaries via the
+// SAME computeCalendarMonthUtcBoundary() the automatic job and "בחר חודש"
+// both already use, then matches Statements whose billing_period_id
+// points at a billing_periods row with those exact bounds. Deliberately
+// NOT filtered by retired: a Statement is real, permanent financial
+// history regardless of whether its billing_periods row was later
+// retired (retired only ever means "not the current/active row for this
+// window", never "not real" -- see billing_periods.retired's own
+// invariant). No new billing_periods/billing_runs row is ever created
+// here -- a month with nothing to show just returns zero rows.
+function monthToBoundary(month) {
+  if (!month) return null;
+  const m = /^(\d{4})-(\d{2})$/.exec(month);
+  const year = m ? Number(m[1]) : NaN;
+  const monthNum = m ? Number(m[2]) : NaN;
+  if (!m || monthNum < 1 || monthNum > 12) {
+    throw Object.assign(new Error('Invalid month format, expected YYYY-MM'), { code: 'INVALID_MONTH' });
+  }
+  const { periodStart, periodEnd } = computeCalendarMonthUtcBoundary(year, monthNum);
+  return { periodStart, periodEnd };
+}
+
+exports.listStatements = async ({ periodId, runId, status, month }) => {
+  const boundary = monthToBoundary(month);
   const { rows } = await pool.query(
     `WITH scored AS (
        SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
@@ -250,6 +278,9 @@ exports.listStatements = async ({ periodId, runId, status }) => {
        LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
        WHERE ($1::uuid IS NULL OR s.billing_period_id = $1)
          AND ($2::uuid IS NULL OR s.billing_run_id = $2)
+         AND ($5::timestamptz IS NULL OR s.billing_period_id IN (
+               SELECT id FROM billing_periods WHERE period_start = $5 AND period_end = $6
+             ))
      )
      SELECT * FROM scored
      WHERE $3::text IS NULL
@@ -257,7 +288,11 @@ exports.listStatements = async ({ periodId, runId, status }) => {
         OR ($3 = 'pending_collection' AND status IN ('approved', 'open') AND ${NOT_COLLECTION_FAILED_SQL})
         OR ($3 NOT IN ('collection_failed', 'pending_collection') AND status = $3)
      ORDER BY created_at DESC`,
-    [periodId || null, runId || null, status || null, routing.CARD_MASAV_THRESHOLD]
+    [
+      periodId || null, runId || null, status || null, routing.CARD_MASAV_THRESHOLD,
+      boundary ? boundary.periodStart.toISOString() : null,
+      boundary ? boundary.periodEnd.toISOString() : null,
+    ]
   );
 
   // next_action ("מה עושים עכשיו") only needs a real readiness check for

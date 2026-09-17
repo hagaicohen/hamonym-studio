@@ -1,20 +1,31 @@
 // Regression coverage for the 2026-09-17 Billing Ops "כל החיובים" filter
-// UX fix:
+// UX work, in the order it actually happened:
 //   1. listPeriods() excludes retired periods (found live: three real
 //      retired sub-second test/harness periods from 2026-08-28 were
-//      showing up as confusing raw timestamp ranges in the חודש filter).
-//   1b. listPeriods() is a MONTH picker, not a raw billing_periods browser
-//      (follow-up, same day): it also excludes non-retired rows that
-//      aren't a genuine calendar month, and non-retired genuine calendar
-//      months more than 12 months beyond the current one -- the bounded-
-//      horizon rule that excludes the permanent 2099-08 Donation->Billing
-//      E2E fixture without ever checking for a test id/name/year.
-//   2. listStatements()'s status filter now accepts the same two
-//      operational buckets the מצב column already displays
-//      ('pending_collection'/'collection_failed', splitting
-//      status IN ('approved','open') exactly like operationalStateLabel()/
-//      isCollectionFailed() already do on the frontend) -- never a second,
-//      diverging definition of the same split.
+//      showing up as confusing raw timestamp ranges in the חודש filter),
+//      and excludes non-retired rows that aren't a genuine calendar month
+//      (same sub-second harness shape, as a structural backstop).
+//   1b. A same-day 12-month bounded-horizon rule was tried (to hide the
+//      permanent 2099-08 Donation->Billing E2E fixture) and then REVERTED:
+//      real Billing history must stay queryable indefinitely, and no
+//      existing period/run property can reliably distinguish "artificial
+//      test period" from "genuine old/future period" (investigated and
+//      confirmed -- see that conversation). So listPeriods() no longer has
+//      any time-horizon bound; 1e below now asserts a far-future genuine
+//      calendar month IS included, not excluded.
+//   2. The real fix for 2099-08 (and for "does this month have any
+//      charges" in general) is architectural: "כל החיובים" no longer
+//      drives its חודש control from listPeriods() at all. The operator
+//      picks ANY calendar month via a native month/year input, and
+//      listStatements()'s new `month` ("YYYY-MM") param resolves it to
+//      real calendar boundaries and matches Statements directly -- a
+//      month with no billing_periods row just returns zero rows, never
+//      creating one. See section 3 below.
+//   2b. listStatements()'s status filter accepts the same two operational
+//      buckets the מצב column already displays ('pending_collection'/
+//      'collection_failed', splitting status IN ('approved','open')
+//      exactly like operationalStateLabel()/isCollectionFailed() already
+//      do on the frontend) -- never a second, diverging definition.
 //
 // Uses the exact same live-fixture pattern as every other scripts/test-
 // billing-*.js script: real DB, real service functions, periods placed at
@@ -43,6 +54,13 @@ function monthBoundaryOffset(offsetMonths) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+// "YYYY-MM" for the same offset -- the exact value shape the frontend's
+// native <input type="month"> sends as listStatements()'s `month` param.
+function monthKeyOffset(offsetMonths) {
+  const { start } = monthBoundaryOffset(offsetMonths);
+  return start.slice(0, 7);
+}
+
 let failures = 0;
 let passed = 0;
 function check(name, fn) {
@@ -62,6 +80,7 @@ async function main() {
     pendingStmtId: null, failedStmtId: null, attemptId: null,
     nearFuturePeriodId: null, farFuturePeriodId: null,
     technicalPeriodId: null, pastLegitPeriodId: null,
+    pastLegitRunId: null, pastLegitStmtId: null,
   };
 
   try {
@@ -142,7 +161,7 @@ async function main() {
     );
     fixture.nearFuturePeriodId = nearFuturePeriod.rows[0].id;
 
-    const farFuture = monthBoundaryOffset(1800); // 150 years out -- structurally not a real operational month
+    const farFuture = monthBoundaryOffset(1800); // 150 years out -- a genuine calendar month, must still be listed (no horizon bound)
     const farFuturePeriod = await pool.query(
       `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
       [farFuture.start, farFuture.end]
@@ -172,9 +191,9 @@ async function main() {
       assert.ok(ids.includes(fixture.nearFuturePeriodId));
     });
 
-    await check('1e. listPeriods() excludes a genuine calendar month 150 years out (beyond the 12-month horizon) -- same shape as the real 2099-08 E2E fixture', async () => {
+    await check('1e. listPeriods() INCLUDES a genuine calendar month 150 years out -- no time-horizon bound (reverted 2026-09-17): real history/legitimate far-future periods are never hidden by date range', async () => {
       const ids = (await billingOpsService.listPeriods()).map((p) => p.id);
-      assert.ok(!ids.includes(fixture.farFuturePeriodId));
+      assert.ok(ids.includes(fixture.farFuturePeriodId));
     });
 
     await check('1f. listPeriods() excludes a non-retired, non-calendar-shaped (sub-second) technical period', async () => {
@@ -245,11 +264,72 @@ async function main() {
       const rows = await billingOpsService.listStatements({ periodId: fixture.periodId });
       assert.strictEqual(rows.length, 2);
     });
+
+    // ---- 3. month/year filter (2026-09-17 month-picker redesign) --------
+    // A real Statement in an old historical month (pastLegitPeriodId, 6
+    // months in the past -- created back in section 1c), proving history
+    // stays queryable indefinitely, not just "the current period".
+    const pastLegitRun = await pool.query(
+      `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)
+       VALUES ($1, 'production', $2, 'draft', NOW()) RETURNING id`,
+      [fixture.pastLegitPeriodId, pastLegit.start]
+    );
+    fixture.pastLegitRunId = pastLegitRun.rows[0].id;
+
+    const pastLegitStmt = await pool.query(
+      `INSERT INTO statements (billing_account_id, billing_run_id, gross_raised, fee_rate, vat_rate, fee_amount, vat_amount, total_due, status)
+       VALUES ($1, $2, 50, 0.03, 0.18, 1.5, 0.27, 1.77, 'approved') RETURNING id`,
+      [fixture.accountId, fixture.pastLegitRunId]
+    );
+    fixture.pastLegitStmtId = pastLegitStmt.rows[0].id;
+
+    await check('3a. month filter: an old historical month with a real charge returns it', async () => {
+      const rows = await billingOpsService.listStatements({ month: monthKeyOffset(-6) });
+      const ids = rows.map((r) => r.id);
+      assert.ok(ids.includes(fixture.pastLegitStmtId), 'historical month statement must be returned');
+    });
+
+    await check('3b. month filter: the current fixture month returns exactly its two statements, same as filtering by periodId', async () => {
+      const rows = await billingOpsService.listStatements({ month: monthKeyOffset(9) });
+      const ids = rows.map((r) => r.id).sort();
+      assert.deepStrictEqual(ids, [fixture.pendingStmtId, fixture.failedStmtId].sort());
+    });
+
+    await check('3c. month filter combines correctly with status: month + collection_failed returns only the declined one', async () => {
+      const rows = await billingOpsService.listStatements({ month: monthKeyOffset(9), status: 'collection_failed' });
+      assert.deepStrictEqual(rows.map((r) => r.id), [fixture.failedStmtId]);
+    });
+
+    await check('3d. month filter: a month with no billing_periods row at all returns zero rows, and creates nothing', async () => {
+      const emptyMonthKey = monthKeyOffset(50); // far enough out to have no fixture/real period
+      const emptyBoundary = monthBoundaryOffset(50);
+      const before = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = $1`, [emptyBoundary.start]);
+      assert.strictEqual(Number(before.rows[0].count), 0, 'sanity: no period should pre-exist for this offset');
+
+      const rows = await billingOpsService.listStatements({ month: emptyMonthKey });
+      assert.strictEqual(rows.length, 0);
+
+      const after = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = $1`, [emptyBoundary.start]);
+      assert.strictEqual(Number(after.rows[0].count), 0, 'a read-only month filter must never create a billing_periods row');
+    });
+
+    await check('3e. month filter: an invalid "YYYY-MM" value is rejected with INVALID_MONTH, not a silent wrong result', async () => {
+      let threw = null;
+      try {
+        await billingOpsService.listStatements({ month: '2026-13' });
+      } catch (err) {
+        threw = err;
+      }
+      assert.ok(threw, 'month=2026-13 must throw');
+      assert.strictEqual(threw.code, 'INVALID_MONTH');
+    });
   } finally {
     if (fixture.attemptId) await pool.query(`DELETE FROM collection_attempts WHERE id = $1`, [fixture.attemptId]);
     if (fixture.pendingStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.pendingStmtId]);
     if (fixture.failedStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.failedStmtId]);
+    if (fixture.pastLegitStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.pastLegitStmtId]);
     if (fixture.runId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [fixture.runId]);
+    if (fixture.pastLegitRunId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [fixture.pastLegitRunId]);
     if (fixture.retiredPeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.retiredPeriodId]);
     if (fixture.periodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.periodId]);
     if (fixture.pastLegitPeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.pastLegitPeriodId]);
@@ -266,10 +346,12 @@ async function main() {
         fixture.periodId, fixture.retiredPeriodId, fixture.pastLegitPeriodId,
         fixture.nearFuturePeriodId, fixture.farFuturePeriodId, fixture.technicalPeriodId,
       ].filter(Boolean);
+      const stmtIds = [fixture.pendingStmtId, fixture.failedStmtId, fixture.pastLegitStmtId].filter(Boolean);
+      const runIds = [fixture.runId, fixture.pastLegitRunId].filter(Boolean);
       const [ca, s, r, p, a, e] = await Promise.all([
-        fixture.pendingStmtId ? pool.query(`SELECT id FROM collection_attempts WHERE statement_id = ANY($1::uuid[])`, [[fixture.pendingStmtId, fixture.failedStmtId]]) : { rows: [] },
-        fixture.pendingStmtId ? pool.query(`SELECT id FROM statements WHERE id = ANY($1::uuid[])`, [[fixture.pendingStmtId, fixture.failedStmtId]]) : { rows: [] },
-        fixture.runId ? pool.query(`SELECT id FROM billing_runs WHERE id = $1`, [fixture.runId]) : { rows: [] },
+        pool.query(`SELECT id FROM collection_attempts WHERE statement_id = ANY($1::uuid[])`, [stmtIds]),
+        pool.query(`SELECT id FROM statements WHERE id = ANY($1::uuid[])`, [stmtIds]),
+        pool.query(`SELECT id FROM billing_runs WHERE id = ANY($1::uuid[])`, [runIds]),
         pool.query(`SELECT id FROM billing_periods WHERE id = ANY($1::uuid[])`, [periodIds]),
         pool.query(`SELECT id FROM billing_accounts WHERE id = ANY($1::uuid[])`, [[fixture.accountId, fixture.accountId2].filter(Boolean)]),
         pool.query(`SELECT id FROM entities WHERE id = ANY($1::uuid[])`, [[fixture.entityId, fixture.entityId2].filter(Boolean)]),

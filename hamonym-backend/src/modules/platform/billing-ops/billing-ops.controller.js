@@ -57,6 +57,7 @@ exports.listStatements = async (req, res) => {
       periodId: req.query.periodId,
       runId: req.query.runId,
       status: req.query.status,
+      month: req.query.month,
     });
     res.json({ statements });
   } catch (err) {
