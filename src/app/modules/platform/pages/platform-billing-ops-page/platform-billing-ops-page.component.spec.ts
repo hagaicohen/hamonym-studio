@@ -1979,3 +1979,87 @@ describe('PlatformBillingOpsPageComponent - "חודש" month/year picker (2026-0
     expect(empty.nativeElement.textContent.trim()).toBe('אין חיובים תואמים.');
   });
 });
+
+describe('PlatformBillingOpsPageComponent - "החודש" default must not jump to a far-future fixture period (2026-09-17)', () => {
+  // Offsets from the REAL current month (never a fixed year) so this test
+  // stays meaningful no matter when it runs -- same reasoning as the
+  // backend's own monthBoundaryOffset() in test-billing-ops-filter-ux.js.
+  function monthOffsetIso(offsetMonths: number): { start: string; end: string } {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const start = new Date(Date.UTC(y, m + offsetMonths, 1, 0, 0, 0, 0));
+    const end = new Date(Date.UTC(y, m + offsetMonths + 1, 1, 0, 0, 0, 0));
+    return { start: start.toISOString(), end: end.toISOString() };
+  }
+
+  function period(id: string, offsetMonths: number, runCount = 1): BillingPeriod {
+    const { start, end } = monthOffsetIso(offsetMonths);
+    return { id, period_start: start, period_end: end, created_at: start, retired: false, run_count: runCount };
+  }
+
+  async function setup(periods: BillingPeriod[]) {
+    const service = {
+      listPeriods: () => of({ periods }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('a genuine current-month period is preferred over a far-future one (real 2099-08 E2E fixture shape), even though the future one sorts first', async () => {
+    // listPeriods() orders by period_start DESC -- the far-future fixture
+    // is deliberately listed FIRST, exactly like the real 2099-08 row.
+    const periods = [period('period-far-future', 1188, 1), period('period-current', 0, 1)]; // +99 years vs. this month
+    const { fixture } = await setup(periods);
+
+    expect(fixture.componentInstance.currentPeriod?.id).toBe('period-current');
+    expect(fixture.componentInstance.displayedPeriod?.id).toBe('period-current');
+  });
+
+  it('falls back to last month when the current month has no period yet, but still never picks a future one', async () => {
+    const periods = [period('period-far-future', 600, 1), period('period-last-month', -1, 1)];
+    const { fixture } = await setup(periods);
+
+    expect(fixture.componentInstance.currentPeriod?.id).toBe('period-last-month');
+  });
+
+  it('a manually pre-created NEXT-month period (a real, supported "בחר חודש" use case) is excluded from the default too -- only reachable by explicit navigation', async () => {
+    const periods = [period('period-next-month', 1, 0), period('period-this-month', 0, 1)];
+    const { fixture } = await setup(periods);
+
+    expect(fixture.componentInstance.currentPeriod?.id).toBe('period-this-month');
+
+    // Still fully reachable via explicit navigation (focusedPeriodId) --
+    // this fix only changes the unset-focus DEFAULT, nothing else.
+    fixture.componentInstance.focusedPeriodId = 'period-next-month';
+    expect(fixture.componentInstance.displayedPeriod?.id).toBe('period-next-month');
+  });
+
+  it('retired periods are still excluded from the default, unaffected by this fix', async () => {
+    const retired = period('period-retired', 0, 1);
+    retired.retired = true;
+    const periods = [retired, period('period-last-month', -1, 1)];
+    const { fixture } = await setup(periods);
+
+    expect(fixture.componentInstance.currentPeriod?.id).toBe('period-last-month');
+  });
+
+  it('this fix does not touch "כל החיובים"\'s own month filter default or behavior', async () => {
+    const periods = [period('period-far-future', 1188, 1), period('period-current', 0, 1)];
+    const { fixture } = await setup(periods);
+
+    const now = new Date();
+    const expectedDefault = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const expectedKey = `${expectedDefault.getFullYear()}-${String(expectedDefault.getMonth() + 1).padStart(2, '0')}`;
+    expect(fixture.componentInstance.filterMonth).toBe(expectedKey);
+  });
+});

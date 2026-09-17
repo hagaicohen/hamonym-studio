@@ -639,13 +639,32 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   }
 
   // ---- operational periods view ----------------------------------------
-  // "Current period" = the latest non-retired period. Retired periods
-  // (test/harness residue, see billing_periods.retired) never show up as
-  // the operator's current period or clutter the previous-periods list --
-  // they're invisible here without being touched at the data layer.
+  // "Current period" = the latest non-retired period that has actually
+  // started -- NOT simply MAX(period_start) (2026-09-17 fix). listPeriods()
+  // itself has no time-horizon bound (removed the same day -- real Billing
+  // history must stay queryable indefinitely), so `periods` can legitimately
+  // contain a period far in the future (e.g. the permanent 2099-08
+  // Donation->Billing E2E fixture, ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17)
+  // alongside real ones. Without this bound, "החודש" -- whose whole job is
+  // showing "the operator's current billing context" -- would default to
+  // whichever row happens to sort first by period_start, including that
+  // one. Bounding to "not later than the current UTC calendar month" is a
+  // permanent structural rule (never a rolling N-month window, never a
+  // check for 2099/test ids/names): a period that hasn't started yet in
+  // reality is definitionally not "the current" one, regardless of whether
+  // an admin has manually pre-created it (Oct/Nov 2026 both already exist
+  // this way) -- those remain fully reachable via the compact month
+  // control's own explicit navigation (focusedPeriodId below), completely
+  // unaffected; only the unset-focus DEFAULT changes. Retired periods
+  // (test/harness residue) stay invisible here too, unchanged.
+  private currentUtcMonthStart(): Date {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  }
 
   get currentPeriod(): BillingPeriod | null {
-    const active = this.periods.filter((p) => !p.retired);
+    const monthStart = this.currentUtcMonthStart().getTime();
+    const active = this.periods.filter((p) => !p.retired && new Date(p.period_start).getTime() <= monthStart);
     return active.length ? active[0] : null;
   }
 
