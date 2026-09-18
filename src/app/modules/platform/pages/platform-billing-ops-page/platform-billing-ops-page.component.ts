@@ -629,9 +629,20 @@ export class PlatformBillingOpsPageComponent implements OnInit {
       },
       error: (err) => {
         this.calculatingPeriodId = null;
-        this.periodActionError = err?.error?.error || 'הרצת החישוב נכשלה';
+        this.periodActionError = err?.error?.code === 'PERIOD_NOT_YET_CLOSED'
+          ? 'לא ניתן לחשב תקופת חיוב שעדיין לא הסתיימה'
+          : err?.error?.error || 'הרצת החישוב נכשלה';
       },
     });
+  }
+
+  // A period still open to new fee-bearing activity must never be
+  // calculated early (see billing-ops.service.js#calculatePeriod) -- the
+  // backend already refuses this authoritatively; disabling the action
+  // here is UX only, so the Super Admin doesn't hit the error in the first
+  // place for the obviously-current, still-running period.
+  periodNotYetClosed(period: BillingPeriod): boolean {
+    return new Date(period.period_end).getTime() > Date.now();
   }
 
   runsForPeriod(periodId: string): BillingRun[] {
