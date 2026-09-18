@@ -619,10 +619,12 @@ exports.updateCampaign =
       await db.query(
 
         `
-        SELECT entity_id, is_locked, title, slug, cover_image_url, video_url,
-               hero_type, target_amount, start_date, end_date, campaign_lifecycle
-        FROM campaigns
-        WHERE id = $1
+        SELECT c.entity_id, c.is_locked, c.title, c.slug, c.cover_image_url, c.video_url,
+               c.hero_type, c.target_amount, c.start_date, c.end_date, c.campaign_lifecycle,
+               e.status AS entity_status
+        FROM campaigns c
+        JOIN entities e ON e.id = c.entity_id
+        WHERE c.id = $1
         LIMIT 1
         `,
 
@@ -651,6 +653,13 @@ exports.updateCampaign =
     // original title-only version of this backstop.
     if (data.status === 'published') {
       const row = campaignResult.rows[0];
+      // The owning entity must be an approved, fundraising-eligible organization
+      // (pending_review/draft/rejected/suspended entities can build and preview
+      // a campaign, but may not take it public — see the matching gate already
+      // in place for donation creation and public campaign visibility).
+      if (row.entity_status !== 'active') {
+        throw new Error('Entity is not approved to fundraise yet');
+      }
       const effectiveTitle = (data.title ?? row.title ?? '').trim();
       if (!effectiveTitle) {
         throw new Error('Campaign title is required to publish');
