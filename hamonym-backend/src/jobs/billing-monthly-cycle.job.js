@@ -1,9 +1,10 @@
-// Billing Monthly Cycle v1 (2026-09-08) -- the automated entry point for
-// Billing's month-start steps: ensure a billing_period exists for the
-// immediately preceding calendar month, then run production calculation
-// against it exactly once. Everything after that -- Statement approval,
-// CARD collection, MASAV export/submission -- stays a deliberate, manual
-// Super Admin action; this job never calls any of those services, so it is
+// Billing Monthly Cycle v1 (2026-09-08; restored to the frozen 28->28
+// cutoff model 2026-09-18) -- the automated entry point for Billing's
+// cutoff step: ensure a billing_period exists for the most recently-passed
+// 28th-20:00-Israel-time cutoff, then run production calculation against
+// it exactly once. Everything after that -- Statement approval, CARD
+// collection, MASAV export/submission -- stays a deliberate, manual Super
+// Admin action; this job never calls any of those services, so it is
 // structurally incapable of approving anything, collecting anything, or
 // creating a Payment. See docs/HAMONYM_BILLING_ENGINE_SPEC.md and the
 // 2026-09-07 Billing v1 Operational Cycle Audit for why this is the
@@ -43,42 +44,43 @@
 //     Payment -- structurally impossible, since this job never calls any of
 //     those services.
 const calculation = require('../modules/billing-engine/calculation.service');
-const { computeCalendarMonthUtcBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
+const { resolveSelectedMonthBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
 
-// UTC calendar-month boundaries, matching the exact convention already used
-// by every real billing_period in production (period_start/period_end sit
-// on UTC month boundaries -- confirmed directly against the live July/
-// August 2026 rows). Computed from `now`'s own UTC year/month rather than
-// from the cron's theoretical scheduled window (job-runner.js's handler
-// signature is `(db) => result`, it does not thread windowStart through) --
-// correct as long as the job actually executes within its intended month,
-// which schedule-window.js's 40-day catch-up lookback (raised alongside
-// this job) comfortably covers for any realistic Render Cron outage.
-//
-// 2026-09-13: date math itself (computeCalendarMonthUtcBoundary) and the
-// find-or-create (ensurePeriod) moved to billing-period.util.js, shared
-// verbatim with the new manual "בחר חודש" Platform Admin action
-// (billing-ops.service.js#createPeriodForMonth) -- so both paths compute
-// the exact same boundaries for the same calendar month and structurally
-// cannot create two different billing_periods for it. Confirmed
-// byte-identical to the pre-move implementation for every boundary case
-// including the January -> December-of-prior-year rollover (passing
-// month - 1 = 0 straight through to Date.UTC, which normalizes it
-// natively -- no special-casing needed) before this refactor.
-function computePreviousMonthUtcBoundary(now) {
+// The cycle whose cutoff has MOST RECENTLY passed, at-or-before `now` --
+// the correct target for a real 20:00-Israel-time cutoff run (2026-09-18
+// 28->28 restoration). The scheduler itself only knows "day 28, UTC, some
+// hour" (see `schedule` below) -- it cannot know the exact DST-dependent
+// cutoff instant, so the job checks every hour on that day and the real
+// decision of "has the cutoff actually happened yet" lives here, in
+// business logic, via resolveSelectedMonthBoundary's own Postgres-backed
+// Asia/Jerusalem conversion. Tries THIS calendar month's cycle first; if
+// its own cutoff (periodEnd) is still in the future relative to `now`, the
+// cutoff hasn't happened yet this month, so falls back to the PREVIOUS
+// cycle instead (normally already ensured+calculated by an earlier hourly
+// check the same day -- a safety-net no-op, not the primary path). This
+// is what makes an early-in-the-day check (e.g. 03:00 UTC on the 28th,
+// hours before the real 17:00/18:00 UTC cutoff) a harmless no-op instead
+// of prematurely closing a cycle that hasn't finished yet.
+async function computeMostRecentCycleBoundary(db, now) {
   const year = now.getUTCFullYear();
-  const currentMonth1to12 = now.getUTCMonth() + 1;
-  return computeCalendarMonthUtcBoundary(year, currentMonth1to12 - 1);
+  const month = now.getUTCMonth() + 1;
+  const thisCycle = await resolveSelectedMonthBoundary(db, year, month);
+  if (thisCycle.periodEnd.getTime() <= now.getTime()) {
+    return thisCycle;
+  }
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  return resolveSelectedMonthBoundary(db, prevYear, prevMonth);
 }
 
 // `now` is injectable (defaults to the real clock) so
 // scripts/test-billing-monthly-cycle.js can target a fixed, far-future
-// fixture month instead of racing whatever real July/August/September 2026
-// billing_periods already exist in production -- job-runner.js still calls
-// `job.handler(db)` with a single argument in production, so this default
-// is what actually runs on a real schedule tick.
+// fixture month instead of racing whatever real billing_periods already
+// exist in production -- job-runner.js still calls `job.handler(db)` with
+// a single argument in production, so this default is what actually runs
+// on a real schedule tick.
 async function handler(db, { now = new Date() } = {}) {
-  const { periodStart, periodEnd } = computePreviousMonthUtcBoundary(now);
+  const { periodStart, periodEnd } = await computeMostRecentCycleBoundary(db, now);
 
   const { periodId, periodCreated } = await ensurePeriod(db, periodStart, periodEnd);
 
@@ -117,10 +119,23 @@ async function handler(db, { now = new Date() } = {}) {
 
 module.exports = {
   name: 'billing-monthly-cycle',
-  schedule: '0 3 1 * *', // 03:00 UTC on the 1st calendar day of every month
+  // Every hour, but only on UTC day-of-month 28 (2026-09-18 28->28
+  // restoration; was '0 3 1 * *', calendar-month model). schedule-window.js's
+  // matcher (cronMatches) is UTC-only with no timezone concept -- it can
+  // only ever express "day 28, some UTC hour", never "20:00 Israel time"
+  // directly. The real cutoff (17:00 UTC in DST, 18:00 UTC in standard
+  // time -- verified against the real DB, never assumed) always falls
+  // safely inside UTC day 28 in both seasons, so checking every hour that
+  // day and letting computeMostRecentCycleBoundary decide the real instant
+  // is the smallest reliable fix -- no rewrite of the cron matcher, no new
+  // timezone library, same idempotent-run pattern as before. Costs 24
+  // cheap idempotent checks/month instead of 1; the existing 40-day
+  // schedule-window lookback already comfortably covers the largest gap
+  // between two day-28 matches (under 31 days), so no change needed there.
+  schedule: '0 * 28 * *',
   timeoutMs: 5 * 60 * 1000, // same order as the other billing jobs; calculation loops per billing_account
   handler,
   // Exported for scripts/test-billing-monthly-cycle.js only.
-  computePreviousMonthUtcBoundary,
+  computeMostRecentCycleBoundary,
   ensurePeriod,
 };
