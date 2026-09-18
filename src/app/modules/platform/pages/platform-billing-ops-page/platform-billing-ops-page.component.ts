@@ -648,23 +648,26 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // alongside real ones. Without this bound, "החודש" -- whose whole job is
   // showing "the operator's current billing context" -- would default to
   // whichever row happens to sort first by period_start, including that
-  // one. Bounding to "not later than the current UTC calendar month" is a
-  // permanent structural rule (never a rolling N-month window, never a
-  // check for 2099/test ids/names): a period that hasn't started yet in
-  // reality is definitionally not "the current" one, regardless of whether
-  // an admin has manually pre-created it (Oct/Nov 2026 both already exist
-  // this way) -- those remain fully reachable via the compact month
+  // one. A period that hasn't started yet in reality is definitionally not
+  // "the current" one, regardless of whether an admin has manually pre-
+  // created it -- those remain fully reachable via the compact month
   // control's own explicit navigation (focusedPeriodId below), completely
   // unaffected; only the unset-focus DEFAULT changes. Retired periods
   // (test/harness residue) stay invisible here too, unchanged.
-  private currentUtcMonthStart(): Date {
-    const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-  }
-
+  //
+  // 2026-09-18 28->28 restoration: bound changed from "not later than the
+  // start of the current UTC calendar month" to plain "not later than
+  // NOW" -- the calendar-month version was only ever a proxy for "has this
+  // period actually started", coincidentally correct while every period
+  // started on the 1st. A 28->28 cycle's period_start sits on a 28th, not
+  // the 1st, so comparing against month-start would wrongly keep excluding
+  // the current cycle for the first ~27 days after its own start. "now" is
+  // the actually-correct, shape-agnostic version of the exact same rule --
+  // still permanently excludes 2099-08 (decades in the future, always
+  // after "now"), unchanged.
   get currentPeriod(): BillingPeriod | null {
-    const monthStart = this.currentUtcMonthStart().getTime();
-    const active = this.periods.filter((p) => !p.retired && new Date(p.period_start).getTime() <= monthStart);
+    const now = Date.now();
+    const active = this.periods.filter((p) => !p.retired && new Date(p.period_start).getTime() <= now);
     return active.length ? active[0] : null;
   }
 
@@ -979,11 +982,44 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // Same calendar-month-label logic as periodMonthLabel, but over a raw
   // period_start/period_end pair instead of a full BillingPeriod -- used by
   // the MASAV "דורשים טיפול" list, which carries its Statement's period
-  // dates directly rather than a billing_period_id to look up.
+  // dates directly rather than a billing_period_id to look up. Tries the
+  // OLD calendar-month shape first (every real historical period through
+  // September 2026, never touched, keeps displaying exactly as it always
+  // has), then the restored 28->28 cycle shape (2026-09-18) as a sibling
+  // fallback -- never replacing the old check, since a real old-model
+  // period and a real new-model cycle are never confusable (one starts on
+  // the 1st, the other's END sits on a 28th-20:00-Israel instant).
   private monthLabelFromRange(periodStart: string, periodEnd: string): string | null {
     const d = new Date(periodStart);
-    if (d.getDate() !== 1) return null;
-    return `${HE_MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    if (d.getDate() === 1) {
+      return `${HE_MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return this.cycleLabelFromRange(periodEnd);
+  }
+
+  // Recognizes a 28->28 cycle (including the one-time October 2026
+  // transition bridge, whose END is a genuine cutoff even though its START
+  // isn't) by shape -- period_end sits exactly on "28th, 20:00:00" Israel-
+  // local time -- via Intl's own timeZone support, native in every
+  // evergreen browser, no library needed (the same reasoning the backend
+  // uses Postgres's AT TIME ZONE for). Labeled by the month the CUTOFF
+  // falls in (frozen decision: a cycle ending 28 Nov 2026 -> "נובמבר
+  // 2026") -- this is also exactly why checking only period_end's shape,
+  // never period_start's, transparently and correctly labels the
+  // transition bridge as "אוקטובר 2026" too, with no special-casing here.
+  private cycleLabelFromRange(periodEnd: string): string | null {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(periodEnd));
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    const day = get('day');
+    const hour = get('hour');
+    const minute = get('minute');
+    const second = get('second');
+    if (day !== 28 || hour !== 20 || minute !== 0 || second !== 0) return null;
+    return `${HE_MONTH_NAMES[get('month') - 1]} ${get('year')}`;
   }
 
   blockedStatementPeriodLabel(item: BlockedMasavStatement): string {

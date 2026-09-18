@@ -2063,3 +2063,101 @@ describe('PlatformBillingOpsPageComponent - "החודש" default must not jump t
     expect(fixture.componentInstance.filterMonth).toBe(expectedKey);
   });
 });
+
+describe('PlatformBillingOpsPageComponent - 28->28 cycle restoration (2026-09-18)', () => {
+  async function setup(periods: BillingPeriod[] = []) {
+    const service = {
+      listPeriods: () => of({ periods }),
+      listRuns: () => of({ runs: [] }),
+      listStatements: () => of({ statements: [] }),
+      listBlockedMasavStatements: () => of({ statements: [] }),
+      listActionableMasavStatements: () => of({ statements: [] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [PlatformBillingOpsPageComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: BillingOpsService, useValue: service }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PlatformBillingOpsPageComponent);
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  describe('cycle label recognition (periodMonthLabel / cycleLabelFromRange)', () => {
+    it('labels a real 28->28 cycle by the month its CUTOFF (period_end) falls in -- a cycle ending 28 Nov 2026 reads "נובמבר 2026"', async () => {
+      const { fixture } = await setup();
+      const cyclePeriod: BillingPeriod = {
+        id: 'p1', period_start: '2026-10-28T18:00:00.000Z', period_end: '2026-11-28T18:00:00.000Z',
+        created_at: '2026-10-28T18:00:00.000Z', retired: false, run_count: 1,
+      };
+      expect(fixture.componentInstance.periodMonthLabel(cyclePeriod)).toBe('נובמבר 2026');
+    });
+
+    it('a DST-season cycle (ending 28 Aug, UTC+3) still labels correctly by its Israel-local month', async () => {
+      const { fixture } = await setup();
+      const cyclePeriod: BillingPeriod = {
+        id: 'p2', period_start: '2027-07-28T17:00:00.000Z', period_end: '2027-08-28T17:00:00.000Z',
+        created_at: '2027-07-28T17:00:00.000Z', retired: false, run_count: 1,
+      };
+      expect(fixture.componentInstance.periodMonthLabel(cyclePeriod)).toBe('אוגוסט 2027');
+    });
+
+    it('the one-time October 2026 transition bridge (period_start is NOT a 28th, period_end IS) labels correctly as "אוקטובר 2026" with no special-casing needed on the frontend', async () => {
+      const { fixture } = await setup();
+      const bridgePeriod: BillingPeriod = {
+        id: 'bridge', period_start: '2026-10-01T00:00:00.000Z', period_end: '2026-10-28T18:00:00.000Z',
+        created_at: '2026-10-01T00:00:00.000Z', retired: false, run_count: 0,
+      };
+      expect(fixture.componentInstance.periodMonthLabel(bridgePeriod)).toBe('אוקטובר 2026');
+    });
+
+    it('real old-model calendar-month history (e.g. September 2026) keeps displaying exactly as it always has, unaffected by the new shape check', async () => {
+      const { fixture } = await setup();
+      const oldPeriod: BillingPeriod = {
+        id: 'old', period_start: '2026-09-01T00:00:00.000Z', period_end: '2026-10-01T00:00:00.000Z',
+        created_at: '2026-09-01T00:00:00.000Z', retired: false, run_count: 1,
+      };
+      expect(fixture.componentInstance.periodMonthLabel(oldPeriod)).toBe('ספטמבר 2026');
+    });
+
+    it('a genuinely irregular period (neither shape) still falls back to a real date range, not a false label', async () => {
+      const { fixture } = await setup();
+      const oddPeriod: BillingPeriod = {
+        id: 'odd', period_start: '2026-08-15T00:00:00.000Z', period_end: '2026-08-20T00:00:00.000Z',
+        created_at: '2026-08-15T00:00:00.000Z', retired: false, run_count: 0,
+      };
+      expect(fixture.componentInstance.periodMonthLabel(oddPeriod)).toBeNull();
+    });
+  });
+
+  describe('currentPeriod default with 28->28-shaped periods', () => {
+    it('a 28->28 cycle whose period_start (the previous cutoff) has already passed IS the current default, even mid-month', async () => {
+      const now = new Date();
+      const pastStart = new Date(now.getTime() - 3 * 24 * 3600 * 1000); // 3 days ago -- mid-month, not the 1st
+      const period: BillingPeriod = {
+        id: 'active-cycle', period_start: pastStart.toISOString(), period_end: new Date(now.getTime() + 25 * 24 * 3600 * 1000).toISOString(),
+        created_at: pastStart.toISOString(), retired: false, run_count: 0,
+      };
+      const { fixture } = await setup([period]);
+      // This is exactly the case the old "start of current UTC month" bound
+      // got wrong: a 28->28 period_start sits mid-month, not on the 1st, so
+      // comparing against month-start would have wrongly excluded it for
+      // the first ~27 days after it genuinely started.
+      expect(fixture.componentInstance.currentPeriod?.id).toBe('active-cycle');
+    });
+
+    it('a 28->28 cycle whose period_start is still in the future is correctly excluded from the default', async () => {
+      const now = new Date();
+      const futureStart = new Date(now.getTime() + 3 * 24 * 3600 * 1000); // 3 days from now
+      const notYetStarted: BillingPeriod = {
+        id: 'not-yet', period_start: futureStart.toISOString(), period_end: new Date(now.getTime() + 31 * 24 * 3600 * 1000).toISOString(),
+        created_at: futureStart.toISOString(), retired: false, run_count: 0,
+      };
+      const stillOpen: BillingPeriod = {
+        id: 'still-open', period_start: new Date(now.getTime() - 20 * 24 * 3600 * 1000).toISOString(), period_end: futureStart.toISOString(),
+        created_at: new Date(now.getTime() - 20 * 24 * 3600 * 1000).toISOString(), retired: false, run_count: 0,
+      };
+      const { fixture } = await setup([notYetStarted, stillOpen]);
+      expect(fixture.componentInstance.currentPeriod?.id).toBe('still-open');
+    });
+  });
+});
