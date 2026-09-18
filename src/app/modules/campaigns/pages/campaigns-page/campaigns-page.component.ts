@@ -65,7 +65,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   private ambassadorSvc  = inject(AmbassadorService);
   private loader         = inject(AppLoaderService);
   private currentContext = inject(CurrentContextService);
-  private currentEntity  = inject(CurrentEntityService);
+  protected currentEntity = inject(CurrentEntityService);
 
   // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
   // this entity access (see entities.ai_features_enabled, migration 041).
