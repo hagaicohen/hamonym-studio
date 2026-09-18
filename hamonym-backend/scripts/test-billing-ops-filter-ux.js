@@ -39,6 +39,7 @@ require('dotenv').config();
 const assert = require('assert');
 const pool = require('../src/db/db');
 const billingOpsService = require('../src/modules/platform/billing-ops/billing-ops.service');
+const { resolveSelectedMonthBoundary } = require('../src/modules/billing-engine/billing-period.util');
 
 // Calendar-month boundary offset from the REAL current month (not a fixed
 // year), so this test's "within horizon" / "beyond horizon" cases stay
@@ -81,6 +82,7 @@ async function main() {
     nearFuturePeriodId: null, farFuturePeriodId: null,
     technicalPeriodId: null, pastLegitPeriodId: null,
     pastLegitRunId: null, pastLegitStmtId: null,
+    cyclePeriodId: null, cycleRunId: null, cyclePendingStmtId: null, cycleFailedStmtId: null, cycleAttemptId: null,
   };
 
   try {
@@ -289,15 +291,71 @@ async function main() {
       assert.ok(ids.includes(fixture.pastLegitStmtId), 'historical month statement must be returned');
     });
 
-    await check('3b. month filter: the current fixture month returns exactly its two statements, same as filtering by periodId', async () => {
-      const rows = await billingOpsService.listStatements({ month: monthKeyOffset(9) });
+    // 3b/3c specifically exercise a month far enough out that
+    // resolveSelectedMonthBoundary() resolves it through the restored
+    // 28->28 CYCLE model (2026-09-18), not the old calendar-month shape --
+    // true for any such offset from here on, since the cutover to the
+    // cycle model (September 2026) only ever recedes further into the
+    // past as real time moves forward. Needs its OWN fixture built from
+    // the exact real boundary the service itself would compute -- reusing
+    // section 1's calendar-month-shaped `activeWindow` would silently test
+    // the wrong shape. Offset 20 (distinct from every other offset already
+    // used above) -- a 28->28 cycle spans parts of two calendar months, so
+    // it must sit far enough from every other fixture's own month to never
+    // overlap it.
+    const cycleMonthKey = monthKeyOffset(20);
+    const cycleYear = Number(cycleMonthKey.slice(0, 4));
+    const cycleMonth = Number(cycleMonthKey.slice(5, 7));
+    const cycleBoundary = await resolveSelectedMonthBoundary(pool, cycleYear, cycleMonth);
+
+    const cyclePeriod = await pool.query(
+      `INSERT INTO billing_periods (period_start, period_end) VALUES ($1, $2) RETURNING id`,
+      [cycleBoundary.periodStart.toISOString(), cycleBoundary.periodEnd.toISOString()]
+    );
+    fixture.cyclePeriodId = cyclePeriod.rows[0].id;
+
+    const cycleRun = await pool.query(
+      `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)
+       VALUES ($1, 'production', $2, 'draft', NOW()) RETURNING id`,
+      [fixture.cyclePeriodId, cycleBoundary.periodStart.toISOString()]
+    );
+    fixture.cycleRunId = cycleRun.rows[0].id;
+
+    const cyclePendingStmt = await pool.query(
+      `INSERT INTO statements (billing_account_id, billing_run_id, gross_raised, fee_rate, vat_rate, fee_amount, vat_amount, total_due, status)
+       VALUES ($1, $2, 100, 0.03, 0.18, 3, 0.54, 3.54, 'approved') RETURNING id`,
+      [fixture.accountId, fixture.cycleRunId]
+    );
+    fixture.cyclePendingStmtId = cyclePendingStmt.rows[0].id;
+
+    const cycleFailedStmt = await pool.query(
+      `INSERT INTO statements (billing_account_id, billing_run_id, gross_raised, fee_rate, vat_rate, fee_amount, vat_amount, total_due, status)
+       VALUES ($1, $2, 200, 0.03, 0.18, 6, 1.08, 7.08, 'approved') RETURNING id`,
+      [fixture.accountId2, fixture.cycleRunId]
+    );
+    fixture.cycleFailedStmtId = cycleFailedStmt.rows[0].id;
+
+    const cycleAttempt = await pool.query(
+      `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, provider, status)
+       VALUES ($1, 'card', 1, 7.08, 'cardcom', 'declined') RETURNING id`,
+      [fixture.cycleFailedStmtId]
+    );
+    fixture.cycleAttemptId = cycleAttempt.rows[0].id;
+
+    await check('3a2. listPeriods() recognizes a genuine 28->28 cycle period by shape (period_end sits exactly on 28th-20:00-Israel), not just calendar-month shapes', async () => {
+      const ids = (await billingOpsService.listPeriods()).map((p) => p.id);
+      assert.ok(ids.includes(fixture.cyclePeriodId), '28->28-shaped period must be included in listPeriods()');
+    });
+
+    await check('3b. month filter: a post-restoration month resolves through the 28->28 cycle model and returns exactly its two statements', async () => {
+      const rows = await billingOpsService.listStatements({ month: cycleMonthKey });
       const ids = rows.map((r) => r.id).sort();
-      assert.deepStrictEqual(ids, [fixture.pendingStmtId, fixture.failedStmtId].sort());
+      assert.deepStrictEqual(ids, [fixture.cyclePendingStmtId, fixture.cycleFailedStmtId].sort());
     });
 
     await check('3c. month filter combines correctly with status: month + collection_failed returns only the declined one', async () => {
-      const rows = await billingOpsService.listStatements({ month: monthKeyOffset(9), status: 'collection_failed' });
-      assert.deepStrictEqual(rows.map((r) => r.id), [fixture.failedStmtId]);
+      const rows = await billingOpsService.listStatements({ month: cycleMonthKey, status: 'collection_failed' });
+      assert.deepStrictEqual(rows.map((r) => r.id), [fixture.cycleFailedStmtId]);
     });
 
     await check('3d. month filter: a month with no billing_periods row at all returns zero rows, and creates nothing', async () => {
@@ -325,17 +383,22 @@ async function main() {
     });
   } finally {
     if (fixture.attemptId) await pool.query(`DELETE FROM collection_attempts WHERE id = $1`, [fixture.attemptId]);
+    if (fixture.cycleAttemptId) await pool.query(`DELETE FROM collection_attempts WHERE id = $1`, [fixture.cycleAttemptId]);
     if (fixture.pendingStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.pendingStmtId]);
     if (fixture.failedStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.failedStmtId]);
     if (fixture.pastLegitStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.pastLegitStmtId]);
+    if (fixture.cyclePendingStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.cyclePendingStmtId]);
+    if (fixture.cycleFailedStmtId) await pool.query(`DELETE FROM statements WHERE id = $1`, [fixture.cycleFailedStmtId]);
     if (fixture.runId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [fixture.runId]);
     if (fixture.pastLegitRunId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [fixture.pastLegitRunId]);
+    if (fixture.cycleRunId) await pool.query(`DELETE FROM billing_runs WHERE id = $1`, [fixture.cycleRunId]);
     if (fixture.retiredPeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.retiredPeriodId]);
     if (fixture.periodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.periodId]);
     if (fixture.pastLegitPeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.pastLegitPeriodId]);
     if (fixture.nearFuturePeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.nearFuturePeriodId]);
     if (fixture.farFuturePeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.farFuturePeriodId]);
     if (fixture.technicalPeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.technicalPeriodId]);
+    if (fixture.cyclePeriodId) await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [fixture.cyclePeriodId]);
     if (fixture.accountId) await pool.query(`DELETE FROM billing_accounts WHERE id = $1`, [fixture.accountId]);
     if (fixture.accountId2) await pool.query(`DELETE FROM billing_accounts WHERE id = $1`, [fixture.accountId2]);
     if (fixture.entityId) await pool.query(`DELETE FROM entities WHERE id = $1`, [fixture.entityId]);
@@ -344,10 +407,10 @@ async function main() {
     await check('cleanup verification: zero residue', async () => {
       const periodIds = [
         fixture.periodId, fixture.retiredPeriodId, fixture.pastLegitPeriodId,
-        fixture.nearFuturePeriodId, fixture.farFuturePeriodId, fixture.technicalPeriodId,
+        fixture.nearFuturePeriodId, fixture.farFuturePeriodId, fixture.technicalPeriodId, fixture.cyclePeriodId,
       ].filter(Boolean);
-      const stmtIds = [fixture.pendingStmtId, fixture.failedStmtId, fixture.pastLegitStmtId].filter(Boolean);
-      const runIds = [fixture.runId, fixture.pastLegitRunId].filter(Boolean);
+      const stmtIds = [fixture.pendingStmtId, fixture.failedStmtId, fixture.pastLegitStmtId, fixture.cyclePendingStmtId, fixture.cycleFailedStmtId].filter(Boolean);
+      const runIds = [fixture.runId, fixture.pastLegitRunId, fixture.cycleRunId].filter(Boolean);
       const [ca, s, r, p, a, e] = await Promise.all([
         pool.query(`SELECT id FROM collection_attempts WHERE statement_id = ANY($1::uuid[])`, [stmtIds]),
         pool.query(`SELECT id FROM statements WHERE id = ANY($1::uuid[])`, [stmtIds]),

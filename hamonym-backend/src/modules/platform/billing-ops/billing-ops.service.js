@@ -18,7 +18,7 @@ const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
 const billingRepository = require('../../billing/billing.repository');
 const getAdapter = require('../../collection-engine/adapters/get-adapter');
-const { computeCalendarMonthUtcBoundary, ensurePeriod } = require('../../billing-engine/billing-period.util');
+const { resolveSelectedMonthBoundary, ensurePeriod } = require('../../billing-engine/billing-period.util');
 
 // Read-only collection-readiness projection (Billing Collection UX
 // truthfulness fix, 2026-09-02) -- mirrors, never re-implements, the exact
@@ -71,16 +71,18 @@ async function auditLog(client, { superAdminUserId, entityId, action, notes, ip 
 //   - retired = false: a retired row is never "the" period for its
 //     window (see billing_periods.retired's own invariant) and must never
 //     be offered as the current/creatable period.
-//   - genuine calendar month: period_start sits exactly on a month
-//     boundary (date_trunc('month', x) = x) AND period_end is exactly one
-//     calendar month later -- the same shape computeCalendarMonthUtcBoundary()
-//     always produces. Excludes the sub-second technical/harness periods
-//     (already also caught by retired=false today, but this is the real
-//     structural reason they'd never belong here even if one were ever
-//     left non-retired) -- a data-quality filter, unrelated to whether a
-//     period is a deliberate test fixture (there is no reliable way to
-//     tell those apart from period properties alone, and this endpoint
-//     doesn't need to: it's read-only-scoped to genuinely-shaped periods).
+//   - genuinely shaped: EITHER a real calendar month (period_start on a
+//     month boundary, period_end exactly one month later -- every real
+//     historical period through September 2026) OR a real 28->28 cycle
+//     (period_end sits exactly on "28th, 20:00:00" Israel-local time --
+//     every period going forward, including the one-time October 2026
+//     transition bridge, which is a genuine 28-20:00-Israel cutoff on its
+//     END even though its START isn't -- 2026-09-18 28->28 restoration).
+//     Both branches exist purely to exclude the sub-second technical/
+//     harness periods (already also caught by retired=false today) -- a
+//     data-quality filter, unrelated to whether a period is a deliberate
+//     test fixture (there is no reliable way to tell those apart from
+//     period properties alone, and this endpoint doesn't need to).
 //   No time-horizon bound: history is real financial data and stays
 //   queryable indefinitely (a 12-month cutoff was tried and reverted the
 //   same day -- it fixed the immediate 2099-08 test-fixture symptom but
@@ -92,8 +94,15 @@ exports.listPeriods = async () => {
             (SELECT count(*) FROM billing_runs r WHERE r.billing_period_id = p.id) AS run_count
      FROM billing_periods p
      WHERE p.retired = false
-       AND date_trunc('month', p.period_start) = p.period_start
-       AND p.period_end = p.period_start + INTERVAL '1 month'
+       AND (
+         (date_trunc('month', p.period_start) = p.period_start AND p.period_end = p.period_start + INTERVAL '1 month')
+         OR (
+           EXTRACT(DAY FROM (p.period_end AT TIME ZONE 'Asia/Jerusalem')) = 28
+           AND EXTRACT(HOUR FROM (p.period_end AT TIME ZONE 'Asia/Jerusalem')) = 20
+           AND EXTRACT(MINUTE FROM (p.period_end AT TIME ZONE 'Asia/Jerusalem')) = 0
+           AND EXTRACT(SECOND FROM (p.period_end AT TIME ZONE 'Asia/Jerusalem')) = 0
+         )
+       )
      ORDER BY p.period_start DESC`
   );
   return rows;
@@ -102,14 +111,19 @@ exports.listPeriods = async () => {
 // "בחר חודש" -- the Platform Admin's manual-control entry point (Billing
 // Ops operator-control hardening, 2026-09-13). Replaces free-typed
 // period_start/period_end with a plain calendar month/year, and is
-// idempotent by construction: computeCalendarMonthUtcBoundary + ensurePeriod
-// are the exact same functions billing-monthly-cycle.job.js uses for "the
-// previous calendar month" -- selecting "August 2026" here always resolves
-// to the identical billing_periods row the automatic job would find/create
-// for August, never a duplicate (enforced at the DB level too, by the
-// billing_periods_no_overlap EXCLUDE constraint ensurePeriod already
+// idempotent by construction: resolveSelectedMonthBoundary + ensurePeriod
+// are the exact same functions billing-monthly-cycle.job.js uses --
+// selecting "November 2026" here always resolves to the identical
+// billing_periods row the automatic job would find/create for the cycle
+// ending in November, never a duplicate (enforced at the DB level too, by
+// the billing_periods_no_overlap EXCLUDE constraint ensurePeriod already
 // handles). Only writes an audit-log entry when a period is actually
 // created -- finding an existing one is not an admin action with an effect.
+// 2026-09-18: resolveSelectedMonthBoundary is the one place that decides
+// old calendar-month vs. new 28->28 model for a given (year, month) --
+// selecting a real historical month (through September 2026) still finds
+// that exact, immutable, already-existing calendar-month period; October
+// 2026 onward resolves through the restored 28->28 cycle model.
 exports.createPeriodForMonth = async ({ year, month, superAdminUserId, ip }) => {
   const y = Number(year);
   const m = Number(month);
@@ -119,7 +133,7 @@ exports.createPeriodForMonth = async ({ year, month, superAdminUserId, ip }) => 
     throw err;
   }
 
-  const { periodStart, periodEnd } = computeCalendarMonthUtcBoundary(y, m);
+  const { periodStart, periodEnd } = await resolveSelectedMonthBoundary(pool, y, m);
   const { periodId, periodCreated } = await ensurePeriod(pool, periodStart, periodEnd);
 
   if (periodCreated) {
@@ -230,19 +244,21 @@ const COLLECTION_FAILED_SQL = `routed_method = 'card' AND latest_attempt_status 
 const NOT_COLLECTION_FAILED_SQL = `(routed_method != 'card' OR latest_attempt_status IS NULL OR latest_attempt_status NOT IN ('declined', 'technical_failure', 'not_found_confirmed'))`;
 
 // `month` ("YYYY-MM", 2026-09-17 month-picker redesign) is a pure read
-// filter: the operator picks any calendar month -- past, present or
-// future, with no dependency on a billing_periods row existing for it --
-// and this resolves it to that month's real canonical boundaries via the
-// SAME computeCalendarMonthUtcBoundary() the automatic job and "בחר חודש"
-// both already use, then matches Statements whose billing_period_id
-// points at a billing_periods row with those exact bounds. Deliberately
-// NOT filtered by retired: a Statement is real, permanent financial
-// history regardless of whether its billing_periods row was later
-// retired (retired only ever means "not the current/active row for this
-// window", never "not real" -- see billing_periods.retired's own
-// invariant). No new billing_periods/billing_runs row is ever created
-// here -- a month with nothing to show just returns zero rows.
-function monthToBoundary(month) {
+// filter: the operator picks any month -- past, present or future, with
+// no dependency on a billing_periods row existing for it -- and this
+// resolves it to that month's real boundaries via the SAME
+// resolveSelectedMonthBoundary() the automatic job and "בחר חודש" both
+// already use (old calendar-month model through September 2026, restored
+// 28->28 cycle model from October 2026 -- 2026-09-18), then matches
+// Statements whose billing_period_id points at a billing_periods row with
+// those exact bounds. Deliberately NOT filtered by retired: a Statement
+// is real, permanent financial history regardless of whether its
+// billing_periods row was later retired (retired only ever means "not the
+// current/active row for this window", never "not real" -- see
+// billing_periods.retired's own invariant). No new billing_periods/
+// billing_runs row is ever created here -- a month with nothing to show
+// just returns zero rows.
+async function monthToBoundary(month) {
   if (!month) return null;
   const m = /^(\d{4})-(\d{2})$/.exec(month);
   const year = m ? Number(m[1]) : NaN;
@@ -250,12 +266,11 @@ function monthToBoundary(month) {
   if (!m || monthNum < 1 || monthNum > 12) {
     throw Object.assign(new Error('Invalid month format, expected YYYY-MM'), { code: 'INVALID_MONTH' });
   }
-  const { periodStart, periodEnd } = computeCalendarMonthUtcBoundary(year, monthNum);
-  return { periodStart, periodEnd };
+  return resolveSelectedMonthBoundary(pool, year, monthNum);
 }
 
 exports.listStatements = async ({ periodId, runId, status, month }) => {
-  const boundary = monthToBoundary(month);
+  const boundary = await monthToBoundary(month);
   const { rows } = await pool.query(
     `WITH scored AS (
        SELECT s.id, s.billing_account_id, s.billing_period_id, s.billing_run_id,
