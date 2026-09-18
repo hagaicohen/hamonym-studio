@@ -79,7 +79,21 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     const entityId = this.currentEntity.currentEntity()?.id;
     if (!entityId) { this.count = 0; this.notifications = []; return of(null); }
     return this.entitiesApi.getNotifications(entityId).pipe(
-      tap(r => { this.notifications = r.notifications; this.count = r.notifications.length; }),
+      tap(r => {
+        this.notifications = r.notifications;
+        this.count = r.notifications.length;
+        // A notification means a Super Admin action (approve/reject/suspend/...)
+        // changed this entity server-side -- CurrentEntityService otherwise only
+        // ever re-fetches on context switch (see its own effect()), so a manager
+        // sitting on an already-open tab would keep seeing the stale pending/
+        // suspended state (and the gates tied to it, e.g. campaign publish)
+        // even after being told right here that it changed.
+        if (r.notifications.length > 0) {
+          this.entitiesApi.getEntityById(entityId).subscribe({
+            next: (entity) => this.currentEntity.setEntity(entity),
+          });
+        }
+      }),
       catchError(() => { this.count = 0; return of(null); }),
     );
   }
