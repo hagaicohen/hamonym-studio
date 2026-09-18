@@ -81,8 +81,13 @@
 
           @if (runsForPeriod(period.id).length === 0) {
             <div class="bo-empty-calc">
-              <div class="ops-empty-small">טרם בוצע חישוב חיובים לחודש זה.</div>
-              <button class="ops-btn ops-btn-primary" [disabled]="calculatingPeriodId === period.id" (click)="onCalculateClick(period)">
+              <div class="ops-empty-small">
+                {{ periodNotYetClosed(period) ? 'התקופה עדיין פתוחה — ניתן לחשב רק לאחר שהסתיימה.' : 'טרם בוצע חישוב חיובים לחודש זה.' }}
+              </div>
+              <button class="ops-btn ops-btn-primary"
+                [disabled]="calculatingPeriodId === period.id || periodNotYetClosed(period)"
+                [title]="periodNotYetClosed(period) ? 'לא ניתן לחשב תקופת חיוב שעדיין לא הסתיימה' : ''"
+                (click)="onCalculateClick(period)">
                 {{ calculatingPeriodId === period.id ? 'מחשב...' : 'חשב חיובים' }}
               </button>
             </div>
