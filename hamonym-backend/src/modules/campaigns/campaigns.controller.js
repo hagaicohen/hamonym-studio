@@ -11,6 +11,7 @@ function getStatusCode(
   switch (error.message) {
 
     case 'Unauthorized':
+    case 'Entity is not approved to fundraise yet':
       return 403;
 
     case 'Campaign not found':
@@ -47,6 +48,9 @@ function getErrorMessage(
 
     case 'Unauthorized':
       return 'אין לך הרשאה לבצע פעולה זו';
+
+    case 'Entity is not approved to fundraise yet':
+      return 'העמותה ממתינה לאישור ועדיין לא ניתן לפרסם קמפיינים או לגייס כספים';
 
     case 'Campaign not found':
       return 'הקמפיין לא נמצא';
