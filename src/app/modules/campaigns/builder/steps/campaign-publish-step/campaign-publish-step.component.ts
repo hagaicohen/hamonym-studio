@@ -106,6 +106,18 @@ export class CampaignPublishStepComponent implements OnInit {
     return this.missingFields.length === 0;
   }
 
+  // Publishing takes the campaign public and lets it accept real donations —
+  // an entity still pending Super Admin review may build/preview a campaign,
+  // but may not fundraise yet (backend is the actual authority, see
+  // campaigns.service.js#updateCampaign; this is UX only).
+  get entityApproved(): boolean {
+    return this.currentEntity.currentEntity()?.status === 'active';
+  }
+
+  get canPublish(): boolean {
+    return this.isReady && this.entityApproved;
+  }
+
   // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
   // this entity access (see entities.ai_features_enabled, migration 041).
   get aiEnabled(): boolean {
@@ -179,6 +191,11 @@ export class CampaignPublishStepComponent implements OnInit {
 
     if (!this.isReady) {
       this.errorMessage = 'יש להשלים את כל השדות הנדרשים לפני פרסום';
+      return;
+    }
+
+    if (!this.entityApproved) {
+      this.errorMessage = 'העמותה ממתינה לאישור ועדיין לא ניתן לפרסם קמפיינים או לגייס כספים';
       return;
     }
 

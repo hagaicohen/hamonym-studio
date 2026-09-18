@@ -379,16 +379,11 @@
   <!-- CTA BAR                                                       -->
   <!-- ============================================================ -->
 
-  <div class="cta-bar" [class.ready]="isReady" [class.not-ready]="!isReady">
+  <div class="cta-bar" [class.ready]="canPublish" [class.not-ready]="!canPublish">
 
     <div class="cta-text-block">
 
-      @if (isReady) {
-        <div class="cta-title">🎉 הקמפיין מוכן לפרסום!</div>
-        <div class="cta-description">
-          כל השלבים הושלמו בהצלחה. לאחר הפרסום הקמפיין יהיה זמין לציבור ויתחיל לקבל תרומות.
-        </div>
-      } @else {
+      @if (!isReady) {
         <div class="cta-title">יש להשלים פרטים לפני הפרסום</div>
         <ul class="missing-list">
           <li class="missing-item" *ngFor="let field of missingFields">
@@ -396,6 +391,16 @@
             {{ field }}
           </li>
         </ul>
+      } @else if (!entityApproved) {
+        <div class="cta-title">העמותה ממתינה לאישור</div>
+        <div class="cta-description">
+          ניתן להכין ולערוך את הקמפיין באופן חופשי, אך הפרסום לציבור וקבלת תרומות יתאפשרו רק לאחר אישור העמותה.
+        </div>
+      } @else {
+        <div class="cta-title">🎉 הקמפיין מוכן לפרסום!</div>
+        <div class="cta-description">
+          כל השלבים הושלמו בהצלחה. לאחר הפרסום הקמפיין יהיה זמין לציבור ויתחיל לקבל תרומות.
+        </div>
       }
 
     </div>
@@ -408,8 +413,8 @@
 
       <button
         class="publish-button"
-        [disabled]="isPublishing || !isReady"
-        [title]="!isReady ? 'יש להשלים קודם את הפרטים החסרים' : ''"
+        [disabled]="isPublishing || !canPublish"
+        [title]="!isReady ? 'יש להשלים קודם את הפרטים החסרים' : (!entityApproved ? 'העמותה ממתינה לאישור' : '')"
         (click)="publishCampaign()"
         type="button">
         @if (isPublishing) {

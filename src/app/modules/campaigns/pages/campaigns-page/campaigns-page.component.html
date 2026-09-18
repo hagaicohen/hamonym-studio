@@ -76,6 +76,13 @@
     </div>
   </div>
 
+  <!-- PENDING APPROVAL NOTICE -->
+  @if (currentEntity.currentEntity()?.status === 'pending_review') {
+    <div class="campaigns-alert campaigns-alert--pending">
+      העמותה ממתינה לאישור. ניתן להכין ולערוך קמפיינים, אך ניתן יהיה לפרסם אותם לאחר אישור העמותה.
+    </div>
+  }
+
   <!-- ALERT -->
   <div class="campaigns-alert">
     <strong>שים לב:</strong> כל קמפיין דורש מסוף סליקה ייעודי.
