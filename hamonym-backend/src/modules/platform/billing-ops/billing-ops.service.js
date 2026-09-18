@@ -150,6 +150,32 @@ exports.createPeriodForMonth = async ({ year, month, superAdminUserId, ip }) => 
 };
 
 exports.calculatePeriod = async ({ periodId, asOf, superAdminUserId, ip }) => {
+  const periodRes = await pool.query(
+    `SELECT id, period_end FROM billing_periods WHERE id = $1`,
+    [periodId]
+  );
+  if (!periodRes.rows[0]) {
+    const err = new Error('Billing period not found');
+    err.code = 'BILLING_PERIOD_NOT_FOUND';
+    throw err;
+  }
+
+  // The automatic cutoff job (billing-monthly-cycle.job.js) only ever
+  // targets a cycle whose periodEnd has already passed -- it falls back to
+  // the previous cycle otherwise. The manual Super Admin trigger had no
+  // matching guard: calculating a period before it actually closes creates
+  // a real billing_run, which PERIOD_ALREADY_CALCULATED below then locks
+  // forever -- any donation arriving afterward but still inside that same
+  // calendar window becomes permanently uncalculable through any normal
+  // flow, whether or not its entity even has a billing_account yet. A hard
+  // block, not a bypassable warning: there is no legitimate reason to
+  // finalize a period that is still open to receiving fee-bearing activity.
+  if (new Date(periodRes.rows[0].period_end).getTime() > Date.now()) {
+    const err = new Error('This billing period has not ended yet');
+    err.code = 'PERIOD_NOT_YET_CLOSED';
+    throw err;
+  }
+
   const existingRun = await pool.query(
     `SELECT id FROM billing_runs WHERE billing_period_id = $1 LIMIT 1`,
     [periodId]
