@@ -114,7 +114,9 @@ export class CampaignDiscoverComponent implements OnInit {
 
   daysLeft(endDate: string | null): number | null {
     if (!endDate) return null;
-    const diff = new Date(endDate).getTime() - Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = new Date(endDate).getTime() - today.getTime();
     return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
   }
 

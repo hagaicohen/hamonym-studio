@@ -1020,7 +1020,9 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
 
   daysRemaining(draft: CampaignDraft): string {
     if (!draft.endDate) return '—';
-    const diff = new Date(draft.endDate).getTime() - Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = new Date(draft.endDate).getTime() - today.getTime();
     return String(Math.max(0, Math.ceil(diff / 86400000)));
   }
 
