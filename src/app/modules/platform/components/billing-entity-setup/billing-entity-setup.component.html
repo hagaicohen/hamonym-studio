@@ -45,15 +45,10 @@
     </div>
 
     @if (!billingAccount) {
-      <label class="bes-confirm">
-        <input type="checkbox" [(ngModel)]="confirmed" />
-        אני מאשר את תנאי החיוב לעמותה
-      </label>
-
       @if (submitError) { <div class="ops-action-error">{{ submitError }}</div> }
 
       <div class="bes-primary-action">
-        <button class="ops-btn ops-btn-primary" [disabled]="submitting || !confirmed" (click)="submit()">
+        <button class="ops-btn ops-btn-primary" [disabled]="submitting" (click)="submit()">
           {{ submitting ? 'שומר...' : 'שמור והפעל' }}
         </button>
       </div>

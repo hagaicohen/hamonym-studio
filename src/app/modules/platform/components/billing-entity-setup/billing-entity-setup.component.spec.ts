@@ -124,11 +124,10 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
     let createdEmitted = false;
     fixture.componentInstance.billingAccountCreated.subscribe(() => { createdEmitted = true; });
 
-    // Explicit operator confirmation is the actual gate -- submit() is a
-    // no-op without it, mirroring the disabled primary button in the
-    // template. See the Billing-provisioning readiness correction
-    // (2026-09-02) this behavior exists to close.
-    fixture.componentInstance.confirmed = true;
+    // Clicking "שמור והפעל" itself is the confirmation (2026-09-20 -- the
+    // separate "אני מאשר" checkbox was removed; the Super Admin is already
+    // inside the dedicated Billing Setup flow, sees the fee rate explicitly,
+    // and must click the primary action deliberately).
     fixture.componentInstance.submit();
     fixture.detectChanges();
 
@@ -158,19 +157,56 @@ describe('BillingEntitySetupComponent - entity resolution', () => {
     expect(fixture.nativeElement.textContent).toContain('18%');
   });
 
-  it('does not create a billing account when the operator has not confirmed the commercial terms', async () => {
-    const { fixture, provisioningStub } = await createComponent({ displayNameHint: 'גדולים מהחיים' });
+  it('the fee field defaults to 3% (Hamonym\'s standard default), "שמור והפעל" is enabled with no confirmation checkbox, and clicking it alone creates the account (2026-09-20 -- the separate "אני מאשר" checkbox was removed)', async () => {
+    const { fixture, provisioningStub } = await createComponent({
+      displayNameHint: 'גדולים מהחיים',
+      provisioning: {
+        getByEntityId: jasmine.createSpy('getByEntityId').and.returnValue(of({ account: null })),
+        getUnprovisioned: jasmine.createSpy('getUnprovisioned'),
+        create: jasmine.createSpy('create').and.returnValue(
+          of({
+            account: {
+              id: 'ba-1', entity_id: 'entity-gedolim-mehachaim', fee_rate: '0.03', vat_rate: '0.18',
+              preferred_collection_method: 'card', enforcement_status: 'active', masav_ceiling: null,
+              created_at: '', updated_at: '',
+            },
+          }),
+        ),
+      },
+    });
+    fixture.detectChanges();
 
-    expect(fixture.componentInstance.confirmed).toBe(false);
+    expect(fixture.componentInstance.feeRatePercent).toBe(3);
+    expect(fixture.debugElement.query(By.css('.bes-confirm'))).toBeFalsy();
+    expect(fixture.debugElement.query(By.css('input[type="checkbox"]'))).toBeFalsy();
 
     const button = fixture.debugElement.query(By.css('.bes-primary-action .ops-btn-primary'));
-    expect(button.nativeElement.disabled).toBe(true);
+    expect(button.nativeElement.disabled).toBe(false);
 
     fixture.componentInstance.submit();
     fixture.detectChanges();
 
+    expect(provisioningStub.create).toHaveBeenCalledTimes(1);
+    expect(provisioningStub.create.calls.mostRecent().args[0].feeRate).toBe(0.03);
+    expect(fixture.componentInstance.justCreatedBanner).toBe(true);
+  });
+
+  it('submit() is still a no-op while already submitting or once a billing account already exists', async () => {
+    const { fixture, provisioningStub } = await createComponent({ displayNameHint: 'גדולים מהחיים' });
+    fixture.detectChanges();
+
+    fixture.componentInstance.submitting = true;
+    fixture.componentInstance.submit();
     expect(provisioningStub.create).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.justCreatedBanner).toBe(false);
+
+    fixture.componentInstance.submitting = false;
+    fixture.componentInstance.billingAccount = {
+      id: 'ba-1', entity_id: 'x', fee_rate: '0.03', vat_rate: '0.18',
+      preferred_collection_method: 'card', enforcement_status: 'active', masav_ceiling: null,
+      created_at: '', updated_at: '',
+    };
+    fixture.componentInstance.submit();
+    expect(provisioningStub.create).not.toHaveBeenCalled();
   });
 });
 

@@ -16,7 +16,10 @@ import {
 } from '../../../../shared/constants/masav.constants';
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
 
-const SUGGESTED_FEE_RATE = 0.03;
+// Hamonym's standard default fee rate for a newly provisioned organization
+// (product decision, 2026-09-20) -- pre-fills the field below, always
+// editable per-entity before the Super Admin saves.
+const DEFAULT_FEE_RATE = 0.03;
 
 // Single-entity billing setup: fee/VAT terms, CARD readiness, MASAV setup/
 // authorization -- the full content of what used to be the standalone
@@ -66,16 +69,11 @@ export class BillingEntitySetupComponent implements OnInit {
   billingAccount: BillingAccount | null = null;
   masavConfig: MasavConfig | null = null;
 
-  feeRatePercent = SUGGESTED_FEE_RATE * 100;
+  feeRatePercent = DEFAULT_FEE_RATE * 100;
   // Read-only, always the current platform-wide rate (2026-09-14i) -- shown
   // regardless of whether a billing_account exists yet, since VAT is no
   // longer something set per-association at all. null until loaded.
   systemVatRatePercent: number | null = null;
-
-  // Required, unchecked-by-default confirmation gate (Billing-provisioning
-  // readiness correction, 2026-09-02) -- clicking the primary action must
-  // never itself count as confirming the commercial terms.
-  confirmed = false;
 
   submitting = false;
   submitError: string | null = null;
@@ -280,8 +278,13 @@ export class BillingEntitySetupComponent implements OnInit {
     return { icon: '✓', label: 'מאושר' };
   }
 
+  // The Super Admin is already inside the dedicated Billing Setup flow,
+  // sees the fee rate explicitly (default DEFAULT_FEE_RATE, editable), and
+  // must click "שמור והפעל" itself -- that explicit save/activate action is
+  // the confirmation (2026-09-20 product decision, replaces the previously
+  // required separate "אני מאשר" checkbox).
   submit(): void {
-    if (this.submitting || this.billingAccount || !this.confirmed) return;
+    if (this.submitting || this.billingAccount) return;
     this.submitting = true;
     this.submitError = null;
     this.provisioningService
