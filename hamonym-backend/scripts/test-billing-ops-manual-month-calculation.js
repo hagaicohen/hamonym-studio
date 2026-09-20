@@ -28,6 +28,17 @@
 // the reserved month is the correct fix, not touching the now-permanent
 // E2E data.
 //
+// 2026-09-18 -- calculatePeriod now also refuses a period whose period_end
+// hasn't actually passed yet (PERIOD_NOT_YET_CLOSED, see
+// billing-ops.service.js and test-billing-manual-calc-period-not-closed-
+// guard.js). 2098-08 is a FUTURE fixture -- it remains correct for proving
+// period creation/idempotency (checks 1-4 below, unaffected by that new
+// guard), but can no longer be used to prove a calculation actually
+// *succeeds* (checks 5-7 originally did). Those three checks now use a
+// second, disjoint, genuinely-past reserved month (1998-08) instead --
+// distinct from the other new guard-test script's own past fixture
+// (1999-08) purely so the two scripts' fixtures never overlap either.
+//
 // Run: node scripts/test-billing-ops-manual-month-calculation.js
 
 require('dotenv').config();
@@ -49,9 +60,12 @@ function check(name, fn) {
 
 const SUPER_ADMIN_USER_ID = 17; // test-scoped-admin@example.com -- same fixture actor other live-fixture scripts use
 const YEAR = 2098;
-const MONTH = 8; // August -- far-future, reserved for this script only
+const MONTH = 8; // August -- far-future, reserved for this script only (period creation/idempotency only)
+const CLOSED_YEAR = 1998;
+const CLOSED_MONTH = 8; // real past, reserved for this script's own calculation checks
 
 let periodId = null;
+let closedPeriodId = null;
 
 // Deterministic audit-log cleanup fix (2026-09-14k). The old version
 // matched by text (LIKE '%2098-08%' for billing_period_create, LIKE
@@ -78,9 +92,16 @@ async function cleanup() {
      WHERE id > $1 AND action IN ('billing_period_create', 'billing_calculation_trigger')`,
     [startAuditId]
   );
-  if (!periodId) return;
-  await pool.query(`DELETE FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
-  await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [periodId]);
+  if (periodId) {
+    await pool.query(`DELETE FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
+    await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [periodId]);
+  }
+  if (closedPeriodId) {
+    await pool.query(`DELETE FROM statement_components WHERE statement_id IN (SELECT id FROM statements WHERE billing_run_id IN (SELECT id FROM billing_runs WHERE billing_period_id = $1))`, [closedPeriodId]);
+    await pool.query(`DELETE FROM statements WHERE billing_run_id IN (SELECT id FROM billing_runs WHERE billing_period_id = $1)`, [closedPeriodId]);
+    await pool.query(`DELETE FROM billing_runs WHERE billing_period_id = $1`, [closedPeriodId]);
+    await pool.query(`DELETE FROM billing_periods WHERE id = $1`, [closedPeriodId]);
+  }
 }
 
 async function main() {
@@ -128,14 +149,22 @@ async function main() {
       assert.strictEqual(Number(rows[0].count), 1);
     });
 
-    await check('5. calculatePeriod runs successfully the first time (creates a billing_run via the real production engine)', async () => {
+    await check('setup: create the closed (1998-08) fixture period used by checks 5-7', async () => {
+      const { period } = await billingOpsService.createPeriodForMonth({
+        year: CLOSED_YEAR, month: CLOSED_MONTH, superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
+      });
+      closedPeriodId = period.id;
+      assert.ok(new Date(period.period_end).getTime() <= Date.now(), 'sanity: this fixture period_end must genuinely be in the past');
+    });
+
+    await check('5. calculatePeriod runs successfully for a genuinely closed period (creates a billing_run via the real production engine)', async () => {
       const result = await billingOpsService.calculatePeriod({
-        periodId, asOf: '2098-08-15T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
+        periodId: closedPeriodId, asOf: '1998-08-29T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
       });
       assert.ok(result.billingRunId);
       billingRunId = result.billingRunId;
 
-      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
+      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [closedPeriodId]);
       assert.strictEqual(Number(rows[0].count), 1);
     });
 
@@ -143,7 +172,7 @@ async function main() {
       let threw = null;
       try {
         await billingOpsService.calculatePeriod({
-          periodId, asOf: '2098-08-20T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
+          periodId: closedPeriodId, asOf: '1998-09-01T00:00:00.000Z', superAdminUserId: SUPER_ADMIN_USER_ID, ip: '127.0.0.1',
         });
       } catch (err) {
         threw = err;
@@ -151,17 +180,17 @@ async function main() {
       assert.ok(threw, 'a second calculatePeriod call must throw');
       assert.strictEqual(threw.code, 'PERIOD_ALREADY_CALCULATED');
 
-      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
+      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [closedPeriodId]);
       assert.strictEqual(Number(rows[0].count), 1, 'still exactly one billing_run -- the refused call must not have created a second one');
     });
 
     await check('7. the automatic job itself also refuses to recalculate the same period (its own pre-existing guard, unaffected by this change)', async () => {
-      const result = await monthlyCycleJob.handler(pool, { now: new Date(Date.UTC(2098, 8, 15)) }); // targets August 2098, same period
-      assert.strictEqual(result.periodId, periodId, 'the job must resolve to the SAME period the manual selector created');
+      const result = await monthlyCycleJob.handler(pool, { now: new Date(Date.UTC(1998, 8, 15)) }); // targets August 1998, same period
+      assert.strictEqual(result.periodId, closedPeriodId, 'the job must resolve to the SAME period the manual selector created');
       assert.strictEqual(result.calculationRan, false);
       assert.strictEqual(result.reason, 'already_calculated');
 
-      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
+      const { rows } = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [closedPeriodId]);
       assert.strictEqual(Number(rows[0].count), 1, 'still exactly one billing_run after the automatic job also declined to recalculate');
     });
   } finally {
@@ -170,17 +199,23 @@ async function main() {
 
   await check('cleanup verification: zero residue -- billing period, billing run, statements/components, and every audit row this run created are all gone', async () => {
     const period = await pool.query(`SELECT count(*) FROM billing_periods WHERE period_start = '2098-07-28T17:00:00.000Z' AND period_end = '2098-08-28T17:00:00.000Z'`);
-    assert.strictEqual(Number(period.rows[0].count), 0, 'billing_periods residue');
+    assert.strictEqual(Number(period.rows[0].count), 0, 'billing_periods residue (2098-08 fixture)');
 
     assert.ok(periodId, 'sanity: the period must have been created earlier in this run for the checks below to mean anything');
     const run = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [periodId]);
-    assert.strictEqual(Number(run.rows[0].count), 0, 'billing_runs residue');
+    assert.strictEqual(Number(run.rows[0].count), 0, 'billing_runs residue (2098-08 fixture -- was never calculated anyway)');
 
-    // No real donation was ever eligible in the far-future 2098-08 window
-    // (see this file's own header comment), so calculateAccountStatement's
-    // zero-activity path never wrote either table for this run's
-    // billing_run_id -- re-affirms the invariant directly rather than only
-    // inferring it from statementsCreated=0 in check 5's return value.
+    assert.ok(closedPeriodId, 'sanity: the closed (1998-08) period must have been created earlier in this run');
+    const closedPeriodResidue = await pool.query(`SELECT count(*) FROM billing_periods WHERE id = $1`, [closedPeriodId]);
+    assert.strictEqual(Number(closedPeriodResidue.rows[0].count), 0, 'billing_periods residue (1998-08 fixture)');
+    const closedRunResidue = await pool.query(`SELECT count(*) FROM billing_runs WHERE billing_period_id = $1`, [closedPeriodId]);
+    assert.strictEqual(Number(closedRunResidue.rows[0].count), 0, 'billing_runs residue (1998-08 fixture)');
+
+    // No real donation was ever eligible in the far-past 1998-08 window,
+    // so calculateAccountStatement's zero-activity path never wrote either
+    // table for this run's billing_run_id -- re-affirms the invariant
+    // directly rather than only inferring it from statementsCreated=0 in
+    // check 5's return value.
     assert.ok(billingRunId, 'sanity: calculatePeriod must have returned a billingRunId earlier in this run');
     const stmts = await pool.query(`SELECT count(*) FROM statements WHERE billing_run_id = $1`, [billingRunId]);
     assert.strictEqual(Number(stmts.rows[0].count), 0, 'statements residue');
