@@ -54,6 +54,12 @@ export interface DonationPayload {
   // recurring instruction alongside this first charge. Absent/false = the
   // existing one-time flow, unchanged.
   recurring?: boolean;
+  // Attribution to the ambassador page/action the donor entered checkout
+  // through (2026-09-22) — source metadata, not donor identity; absent for
+  // every donation that didn't go through an ambassador context. The
+  // backend independently re-verifies this against campaign_ambassadors
+  // before ever persisting it — never trusted as-is.
+  ambassadorId?: string;
 }
 
 export interface DonationResult {

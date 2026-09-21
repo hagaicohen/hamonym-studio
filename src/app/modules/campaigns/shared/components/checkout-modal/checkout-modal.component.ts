@@ -7,6 +7,7 @@ import {
 } from '../../../services/campaign-studio-state.service';
 import { DonationService } from '../../../services/donation.service';
 import { AnalyticsService } from '../../../../../core/services/analytics.service';
+import { Ambassador } from '../../../services/ambassador.service';
 
 // One entry in the Registration participant repeater. Deliberately just
 // these 3 fields (name/option/shirtSize) — no Schema/Rules engine, each
@@ -51,6 +52,11 @@ export class CheckoutModalComponent implements OnInit {
   // Donation mode only — a registration from an earlier, separately-closed
   // checkout that should combine into this same payment.
   @Input() pendingRegistration: PendingRegistration | null = null;
+  // Set by campaign-preview when the visitor is on an ambassador's personal
+  // page/context (2026-09-22) — forwarded as ambassadorId so the donation
+  // is attributed to its real source; the backend independently re-verifies
+  // it, this is just carrying the context through, not the authority.
+  @Input() ambassador: Ambassador | null = null;
 
   @Output() closed = new EventEmitter<void>();
   // Fired when a registration checkout is closed (not submitted) with at
@@ -313,6 +319,7 @@ export class CheckoutModalComponent implements OnInit {
       participants,
       utmParams: this.captureUtmParams(),
       recurring: this.recurring || undefined,
+      ambassadorId: this.ambassador?.id || undefined,
     }).subscribe({
       next: (res) => {
         document.body.style.overflow = '';
