@@ -1224,11 +1224,17 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     this.router.navigate([localStorage.getItem('token') ? '/my-donations' : '/login']);
   }
 
+  // A suggested/default amount is never financial consent (2026-09-21) — this
+  // used to silently assign getEffectiveAmount()'s "middle suggested amount"
+  // fallback into selectedAmount here, so a donor who picked ONLY a ₪100
+  // reward and never touched the amount picker would reach checkout owing
+  // ₪280 (the untouched ₪180 "suggestion" plus the reward), with nothing on
+  // screen explaining where the extra ₪180 came from. Only an amount the
+  // donor actually selected/typed (selectedAmount/customAmount) may ever
+  // count toward the payable total — see explicitAmount/totalAmount above,
+  // which the pre-checkout summary already correctly relies on; this was the
+  // one place that corrupted that invariant right before checkout opened.
   openCheckout(draft: CampaignDraft): void {
-    if (this.selectedAmount === null && !this.customAmount) {
-      const effective = this.getEffectiveAmount(draft);
-      if (effective > 0) this.selectedAmount = effective;
-    }
     // A pending registration alone is enough reason to open — the visitor
     // may just want to pay for it with zero extra donation.
     if (this.totalAmount(draft) === 0 && !this.pendingRegistration) return;
