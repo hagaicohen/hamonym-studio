@@ -1333,10 +1333,16 @@
     <h2 [class.hm-section-title]="!inSidebarSection(draft, 'sponsors')" [class.hm-amb-list-title]="inSidebarSection(draft, 'sponsors')" [style.color]="primaryColor(draft)">חסויות</h2>
     <ng-container *ngIf="draft.sponsors?.length > 0; else sponsorsEmpty">
       <div class="hm-sponsors-grid">
-        <div class="hm-sponsor-card" *ngFor="let sp of draft.sponsors">
-          <img *ngIf="sp.logoUrl" [src]="sp.logoUrl" [alt]="sp.name">
-          <span *ngIf="!sp.logoUrl" class="hm-sponsor-name-text">{{ sp.name || 'חוסה' }}</span>
-        </div>
+        <ng-container *ngFor="let sp of draft.sponsors">
+          <a *ngIf="sp.link" class="hm-sponsor-card" [href]="sp.link" target="_blank" [attr.aria-label]="sp.name">
+            <img *ngIf="sp.logoUrl" [src]="sp.logoUrl" [alt]="sp.name">
+            <span *ngIf="!sp.logoUrl" class="hm-sponsor-name-text">{{ sp.name || 'חוסה' }}</span>
+          </a>
+          <div *ngIf="!sp.link" class="hm-sponsor-card">
+            <img *ngIf="sp.logoUrl" [src]="sp.logoUrl" [alt]="sp.name">
+            <span *ngIf="!sp.logoUrl" class="hm-sponsor-name-text">{{ sp.name || 'חוסה' }}</span>
+          </div>
+        </ng-container>
       </div>
     </ng-container>
     <ng-template #sponsorsEmpty>
