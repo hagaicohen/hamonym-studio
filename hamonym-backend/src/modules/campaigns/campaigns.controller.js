@@ -25,6 +25,7 @@ function getStatusCode(
     case 'A hero image or video is required to publish':
     case 'A fundraising goal is required to publish':
     case 'End date must be on or after the start date to publish':
+    case 'Cannot change slug after publishing':
       return 400;
 
     case 'Campaign slug already exists':
@@ -84,6 +85,9 @@ function getErrorMessage(
 
     case 'End date must be on or after the start date to publish':
       return 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה';
+
+    case 'Cannot change slug after publishing':
+      return 'לא ניתן לשנות את כתובת הקמפיין לאחר שפורסם — הכתובת כבר משותפת';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';
