@@ -13,8 +13,8 @@ exports.getCampaignPerformance = async (req, res) => {
 
 exports.getMarketingSources = async (req, res) => {
   try {
-    const { from, to } = req.query;
-    const result = await svc.getMarketingSources(req.params.id, { from, to });
+    const { from, to, campaignId } = req.query;
+    const result = await svc.getMarketingSources(req.params.id, { from, to, campaignId });
     res.json(result);
   } catch (e) {
     console.error('[reports.getMarketingSources] error:', e.message);
@@ -24,8 +24,8 @@ exports.getMarketingSources = async (req, res) => {
 
 exports.getTrends = async (req, res) => {
   try {
-    const { from, to } = req.query;
-    const result = await svc.getTrends(req.params.id, { from, to });
+    const { from, to, campaignId } = req.query;
+    const result = await svc.getTrends(req.params.id, { from, to, campaignId });
     res.json(result);
   } catch (e) {
     console.error('[reports.getTrends] error:', e.message);
@@ -35,8 +35,8 @@ exports.getTrends = async (req, res) => {
 
 exports.getFailures = async (req, res) => {
   try {
-    const { search, status, sortBy, sortDir, from, to } = req.query;
-    const result = await svc.getFailures(req.params.id, { search, status, sortBy, sortDir, from, to });
+    const { search, status, sortBy, sortDir, from, to, campaignId } = req.query;
+    const result = await svc.getFailures(req.params.id, { search, status, sortBy, sortDir, from, to, campaignId });
     res.json(result);
   } catch (e) {
     console.error('[reports.getFailures] error:', e.message);
