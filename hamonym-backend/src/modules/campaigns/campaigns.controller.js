@@ -26,6 +26,7 @@ function getStatusCode(
     case 'A fundraising goal is required to publish':
     case 'End date must be on or after the start date to publish':
     case 'Cannot change slug after publishing':
+    case 'Invalid campaign category':
       return 400;
 
     case 'Campaign slug already exists':
@@ -88,6 +89,9 @@ function getErrorMessage(
 
     case 'Cannot change slug after publishing':
       return 'לא ניתן לשנות את כתובת הקמפיין לאחר שפורסם — הכתובת כבר משותפת';
+
+    case 'Invalid campaign category':
+      return 'יש לבחור קטגוריה מהרשימה הקיימת';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';
