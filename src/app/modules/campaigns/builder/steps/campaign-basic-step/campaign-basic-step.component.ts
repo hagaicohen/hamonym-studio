@@ -113,6 +113,17 @@ export class CampaignBasicStepComponent implements OnInit {
   slugAvailable: boolean | null = null;
   slugFocused = false;
 
+  // Once a campaign has ever been published its address is live -- shared
+  // donor/ambassador links, past communications, external listings -- so
+  // the slug becomes frozen, same rule campaign-settings-page.component.ts
+  // already enforces (readonly input there). Server-side guard in
+  // campaigns.service.js#updateCampaign is the real authority; this is the
+  // matching UX-level lock so a manager isn't allowed to type a change that
+  // would just be rejected on save. publishedAt (set once, never cleared)
+  // rather than status !== 'draft', which doesn't by itself mean "was
+  // published" (e.g. changes_requested/suspended).
+  get isSlugLocked(): boolean { return !!this.state.draft.publishedAt; }
+
   ngOnInit(): void {
     const entity = this.entityService.currentEntity();
     if (!entity?.id) return;

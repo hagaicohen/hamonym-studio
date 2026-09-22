@@ -337,20 +337,23 @@
   <!-- ── SLUG (required, not advanced) ── -->
   <div class="field-section">
     <label class="field-label">כתובת הקמפיין <span class="required">*</span></label>
-    <p class="field-hint">אותיות (עברית או לועזית), מספרים ומקפים בלבד</p>
+    <p class="field-hint" *ngIf="!isSlugLocked">אותיות (עברית או לועזית), מספרים ומקפים בלבד</p>
     <div class="url-field-wrapper" [class.focused]="slugFocused" [class.invalid]="slugAvailable === false">
       <span class="url-prefix">{{ urlPrefix }}</span>
       <input type="text" class="url-input"
         [ngModel]="draft.slug"
+        [readonly]="isSlugLocked"
+        [title]="isSlugLocked ? 'שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה לאחר פרסום' : ''"
         (focus)="slugFocused = true"
         (blur)="onSlugBlur()"
         (keydown)="allowSlugChars($event)"
         (ngModelChange)="onSlugChange($event)"
         placeholder="campaign-name">
     </div>
-    <div class="slug-success"  *ngIf="slugAvailable === true">✓ הכתובת זמינה</div>
-    <div class="slug-error"    *ngIf="slugAvailable === false">✕ הכתובת כבר בשימוש</div>
-    <div class="slug-checking" *ngIf="isCheckingSlug">בודק זמינות...</div>
+    <p class="field-hint" *ngIf="isSlugLocked">🔒 לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
+    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true">✓ הכתובת זמינה</div>
+    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false">✕ הכתובת כבר בשימוש</div>
+    <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">בודק זמינות...</div>
   </div>
 
   <!-- ── ADVANCED TOGGLE ── -->
