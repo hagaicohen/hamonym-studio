@@ -238,7 +238,7 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, ambassadorId }) => {
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -397,6 +397,25 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // see loadRegistrationOptions above.
   const registrationOptionsById = await loadRegistrationOptions(campaignId, participants);
 
+  // Server-side ambassador attribution validation (2026-09-22) — never
+  // trust ambassadorId merely because the client sent it. Attribution is
+  // metadata about the donation's SOURCE (which ambassador page/action the
+  // donor entered the flow through), not about donor identity — an
+  // anonymous donation may still carry it. v1 is deliberately simple: only
+  // a donation opened explicitly through an ambassador's own context is
+  // attributed; no cookies, no last-touch/session tracking. An
+  // ambassadorId that doesn't resolve to a real, same-campaign, active
+  // ambassador is silently dropped (donation still proceeds normally) —
+  // attribution failing must never block a real donation.
+  let attributedAmbassadorId = null;
+  if (ambassadorId) {
+    const ambassadorRes = await db.query(
+      `SELECT id FROM campaign_ambassadors WHERE id = $1 AND campaign_id = $2 AND status = 'active'`,
+      [ambassadorId, campaignId]
+    );
+    if (ambassadorRes.rows[0]) attributedAmbassadorId = ambassadorRes.rows[0].id;
+  }
+
   // Recurring signup — creates the Hamonym-internal instruction row before
   // Cardcom knows anything about it (see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md
   // §1/§2). The donation links to it from creation, not via a boolean flag.
@@ -418,8 +437,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
        rewards, status, is_mock,
-       utm_params, ip_address, user_agent, recurring_instruction_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16)
+       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17)
      RETURNING id`,
     [
       campaignId,
@@ -438,6 +457,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       ipAddress  || null,
       userAgent  || null,
       recurringInstructionId,
+      attributedAmbassadorId,
     ]
   );
   const donationId = donationRes.rows[0].id;
