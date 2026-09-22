@@ -2,8 +2,6 @@
   display: flex;
   gap: 20px;
   align-items: flex-start;
-  max-width: 1600px;
-  margin: 0 auto;
   padding: 24px 20px 60px;
   direction: rtl;
 }

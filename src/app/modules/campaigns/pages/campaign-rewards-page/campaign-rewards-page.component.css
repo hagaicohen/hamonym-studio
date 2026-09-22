@@ -1,7 +1,7 @@
 :host { display: block; }
 
 .rw-shell {
-  max-width: 1600px; margin: 0 auto; padding: 24px 20px 60px;
+  padding: 24px 20px 60px;
   display: flex; gap: 20px; align-items: flex-start;
   font-family: 'Heebo', sans-serif; direction: rtl;
 }
