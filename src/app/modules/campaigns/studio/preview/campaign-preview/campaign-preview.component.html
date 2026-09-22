@@ -1008,7 +1008,12 @@
     [class.conv-compact]="draft.layout.conversionWidgetLayout === 'compact'"
     [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
     [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'">
-    <h2>{{ draft.registrationOptions.length > 0 ? 'תרמו סכום חופשי לקמפיין' : 'בחרו סכום לתמיכה' }}</h2>
+    <!-- "תרמו סכום חופשי לקמפיין" only when a free/custom amount is actually
+         allowed (allowCustomAmount) -- this used to key off registrationOptions
+         alone, so with custom amount turned off it kept promising a "free
+         amount" the donor could no longer actually enter, leaving only fixed
+         suggested amounts. Found live 2026-09-22. -->
+    <h2>{{ draft.registrationOptions.length > 0 ? (draft.allowCustomAmount ? 'תרמו סכום חופשי לקמפיין' : 'תרמו לקמפיין') : 'בחרו סכום לתמיכה' }}</h2>
 
     <!-- Monthly opt-in: only visible when the campaign manager both enabled
          it (allowMonthlyDonation) AND configured at least one monthlyAmounts
@@ -1023,8 +1028,16 @@
         (click)="selectFrequency('monthly')">חודשית</button>
     </div>
 
+    <!-- slice:0:6 matches the manager's own cap on both suggestedAmounts and
+         monthlyAmounts (campaign-donation-page.component.ts's "+ הוסף"
+         buttons stop at 6) -- this used to be slice:0:5, silently dropping
+         a manager-configured 6th amount from the public page with no
+         indication anywhere that it was being ignored. Found live
+         2026-09-22 (the campaign's own suggestedAmounts had 6 entries; only
+         5 ever rendered). .hm-amounts is an auto-fill grid, so a 6th button
+         wraps/fits safely at any width. -->
     <div class="hm-amounts">
-      <button *ngFor="let a of amountsFor(draft) | slice:0:5; let i = index"
+      <button *ngFor="let a of amountsFor(draft) | slice:0:6; let i = index"
         class="hm-amount-preset" type="button"
         [class.is-selected]="selectedAmount === a && customAmount === null || (selectedAmount === null && customAmount === null && i === middleAmountIndex(amountsFor(draft)))"
         (click)="selectAmount($any(a))">
