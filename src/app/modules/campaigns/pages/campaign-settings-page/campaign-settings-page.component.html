@@ -43,7 +43,10 @@
 
           <div class="csp-row">
             <label class="csp-label">קטגוריה</label>
-            <input class="csp-input" type="text" [ngModel]="d.category" (change)="patchText('category', $any($event.target).value)">
+            <select class="csp-input" [ngModel]="d.category" (change)="patchText('category', $any($event.target).value)">
+              <option value="">— ללא קטגוריה —</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.label }}</option>
+            </select>
           </div>
 
           <div class="csp-row">

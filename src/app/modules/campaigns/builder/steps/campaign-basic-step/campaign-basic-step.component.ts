@@ -79,8 +79,17 @@ export class CampaignBasicStepComponent implements OnInit {
     return this.categorySearch.trim() ? this.categorySearch.trim().split(/\s+/).length : 0;
   }
 
+  // Category persistence = ENTITY_CATEGORIES id (canonical), presentation =
+  // label (2026-09-23). The search box is free text for FILTERING the
+  // dropdown only -- it no longer writes to draft.category on its own
+  // (onCategoryInput used to patch whatever was typed directly, so a search
+  // that was never actually selected from the list still silently became
+  // the persisted category; the "no matches -- your text will be used"
+  // empty-state message documented that as intentional, which is exactly
+  // the behavior this fix removes). Only selectCategory(), a real list
+  // pick, ever writes draft.category, and it writes the id.
   openCategoryDropdown(): void {
-    this.categorySearch = this.draft.category || '';
+    this.categorySearch = this.categories.find((c) => c.id === this.draft.category)?.label || '';
     this.categoryDropdownOpen = true;
   }
 
@@ -90,19 +99,22 @@ export class CampaignBasicStepComponent implements OnInit {
     if (this.categoryInputRef && limited !== value) {
       this.categoryInputRef.nativeElement.value = limited;
     }
-    this.state.patch({ category: limited.trim() });
-    this.sync();
   }
 
-  selectCategory(label: string): void {
-    this.categorySearch = label;
-    this.state.patch({ category: label });
+  selectCategory(category: { id: string; label: string }): void {
+    this.categorySearch = category.label;
+    this.state.patch({ category: category.id });
     this.sync();
     this.categoryDropdownOpen = false;
   }
 
   onCategoryBlur(): void {
-    setTimeout(() => { this.categoryDropdownOpen = false; }, 150);
+    // Discard typed-but-never-selected search text -- the visible field
+    // must never show something that wasn't actually persisted.
+    setTimeout(() => {
+      this.categoryDropdownOpen = false;
+      this.categorySearch = this.categories.find((c) => c.id === this.draft.category)?.label || '';
+    }, 150);
   }
 
   @HostListener('document:keydown.escape')

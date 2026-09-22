@@ -6,6 +6,7 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
 // Dedicated page (2026-08-06 architecture reset) — CONTENT/setup fields
 // only, no Design (no colors/layout/placement — those stay in the Builder).
@@ -27,6 +28,13 @@ export class CampaignSettingsPageComponent implements OnInit {
   private router = inject(Router);
   private campaignApi = inject(CampaignApiService);
   private loader = inject(AppLoaderService);
+
+  // Category persistence = ENTITY_CATEGORIES id (canonical), presentation =
+  // label -- same shared source the Builder's picker uses, native <select>
+  // here to match this page's own "simple, rarely-changed metadata"
+  // pattern rather than replicating the Builder's custom autocomplete
+  // widget (2026-09-23).
+  readonly categories = ENTITY_CATEGORIES;
 
   campaignId = '';
   draft: CampaignDraft | null = null;

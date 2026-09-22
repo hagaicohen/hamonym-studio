@@ -157,12 +157,12 @@
           *ngFor="let cat of filteredCategories"
           type="button"
           class="category-option"
-          [class.selected]="draft.category === cat.label"
-          (mousedown)="selectCategory(cat.label)">
+          [class.selected]="draft.category === cat.id"
+          (mousedown)="selectCategory(cat)">
           {{ cat.label }}
         </button>
         <div *ngIf="filteredCategories.length === 0" class="category-empty">
-          לא נמצאו קטגוריות — הטקסט שהזנתם ישמש כקטגוריה
+          לא נמצאו קטגוריות תואמות — בחרו קטגוריה מהרשימה
         </div>
       </div>
     </div>
