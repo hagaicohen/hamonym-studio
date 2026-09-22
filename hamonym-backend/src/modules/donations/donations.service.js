@@ -180,11 +180,14 @@ async function loadRegistrationOptions(campaignId, participants) {
   if (ids.length === 0) return new Map();
 
   const { rows } = await db.query(
-    `SELECT id, key, title FROM registration_options
+    `SELECT id, key, title, price FROM registration_options
      WHERE campaign_id = $1 AND is_active = true AND id = ANY($2::uuid[])`,
     [campaignId, ids]
   );
-  const byId = new Map(rows.map(r => [r.id, { key: r.key, title: r.title }]));
+  // price carried through only for the Cardcom line-item build below
+  // (createDonation) -- registration_participants itself still never stores
+  // price, same as before (option_key/option_title snapshot only).
+  const byId = new Map(rows.map(r => [r.id, { key: r.key, title: r.title, price: Number(r.price) }]));
 
   const missing = ids.filter(id => !byId.has(id));
   if (missing.length > 0) {
@@ -473,11 +476,32 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     };
   }
 
+  // Registration participants get their own Cardcom line items, built from
+  // registrationOptionsById (server-validated against registration_options
+  // above, loadRegistrationOptions) — entirely separate from the reward/
+  // Offering catalog. The frontend used to fake reward-shaped
+  // {title, minimumAmount} entries (no id) to get these onto the Cardcom
+  // invoice, which broke the moment the reward-catalog id validation above
+  // was added (2026-08-31): every registration submission was rejected with
+  // INVALID_REWARD. Fixed 2026-09-22 by giving registration line items their
+  // own path instead of overloading `rewards`.
+  const registrationProducts = [];
+  let registrationParticipantsTotal = 0;
+  for (const p of (participants || [])) {
+    const option = p.registrationOptionId ? registrationOptionsById.get(p.registrationOptionId) : null;
+    if (!option) continue;
+    registrationProducts.push({
+      Description: `${p.name}: ${option.title}`,
+      UnitCost: round2(option.price),
+    });
+    registrationParticipantsTotal += option.price;
+  }
+
   // 3. Build Cardcom products list — from authoritativeRewards (server-
   // validated) and authoritativeRewardsTotal (computed above), never from
   // the client's raw `rewards`/`amount`.
-  const products = [];
-  const baseAmount = round2(donationAmount - authoritativeRewardsTotal);
+  const products = [...registrationProducts];
+  const baseAmount = round2(donationAmount - authoritativeRewardsTotal - registrationParticipantsTotal);
 
   // Rewards first — each with its own title and minimum amount
   for (const r of authoritativeRewards) {
@@ -489,7 +513,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   // Free / top-up amount
   if (baseAmount > 0) {
-    const label = authoritativeRewards.length > 0
+    const label = (authoritativeRewards.length > 0 || registrationProducts.length > 0)
       ? `תרומה נוספת — ${campaign.title}`
       : `תרומה — ${campaign.title}`;
     products.push({ Description: label, UnitCost: baseAmount });
