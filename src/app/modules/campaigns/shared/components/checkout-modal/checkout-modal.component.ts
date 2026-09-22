@@ -267,27 +267,24 @@ export class CheckoutModalComponent implements OnInit {
     this.loading  = true;
     this.errorMsg = '';
 
-    // One reward line per participant when registering (even if two
-    // participants picked the same option) so Cardcom line items and the
-    // total match; the plain cart-offerings snapshot otherwise. A pending
-    // registration carried over from an earlier, separately-closed checkout
-    // adds its own participant lines on top of the donation's own cart.
+    // `rewards` is real Offering-catalog selections only (server-validated
+    // against campaign.rewards by id — see donations.service.js). Registration
+    // participants are NOT rewards and never belong here: this used to also
+    // push a synthetic {title, minimumAmount} line per participant (no id) so
+    // Cardcom's invoice would show what was registered for, which broke every
+    // registration submission the moment the backend started requiring a real
+    // catalog id on every `rewards` entry (2026-08-31, INVALID_REWARD). The
+    // backend now builds those Cardcom line items itself directly from
+    // `participants` (2026-09-22, donations.service.js's registrationProducts),
+    // using the server-validated registration_options catalog — so this only
+    // ever needs to carry genuine cart offerings.
     const rewards = this.isRegistrationCheckout
-      ? this.participants.map(p => {
-          const o = this.optionFor(p.optionId);
-          return { title: o?.title ?? '', minimumAmount: o?.price ?? 0 };
-        })
-      : [
-          ...this.cartOfferings.map(o => ({
-            id:            o.id,
-            title:         o.title,
-            minimumAmount: o.minimumAmount ?? 0,
-          })),
-          ...(this.pendingRegistration?.participants.map(p => {
-            const o = this.optionFor(p.optionId);
-            return { title: o?.title ?? '', minimumAmount: o?.price ?? 0 };
-          }) ?? []),
-        ];
+      ? []
+      : this.cartOfferings.map(o => ({
+          id:            o.id,
+          title:         o.title,
+          minimumAmount: o.minimumAmount ?? 0,
+        }));
 
     // participants — "who's registered," backend re-derives the option
     // title/price from the DB (registration_options), not trusted from here.
