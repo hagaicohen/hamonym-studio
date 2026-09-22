@@ -621,7 +621,7 @@ exports.updateCampaign =
         `
         SELECT c.entity_id, c.is_locked, c.title, c.slug, c.cover_image_url, c.video_url,
                c.hero_type, c.target_amount, c.start_date, c.end_date, c.campaign_lifecycle,
-               e.status AS entity_status
+               c.published_at, e.status AS entity_status
         FROM campaigns c
         JOIN entities e ON e.id = c.entity_id
         WHERE c.id = $1
@@ -713,6 +713,27 @@ exports.updateCampaign =
         'Campaign is locked'
       );
 
+    }
+
+    // Slug immutability (2026-09-22) — once a campaign has ever been
+    // published, its address is live: shared donor/ambassador links, past
+    // communications, external listings. Settings' own UI already treats
+    // this as a frozen product rule (readonly input with a "will break
+    // shared links" warning) — this is that same rule enforced server-side,
+    // so it holds regardless of which surface sends the update (the Builder's
+    // slug field had no such guard at all until this fix). published_at is
+    // the authoritative "has this campaign ever been published" signal
+    // (set once via COALESCE, never cleared — see the UPDATE below), not
+    // `status !== 'draft'`, which doesn't by itself mean "was published"
+    // (e.g. changes_requested/suspended). Sending the SAME slug back
+    // unchanged (the normal full-draft autosave shape) is explicitly not
+    // a "change" and must keep working.
+    if (
+      campaignResult.rows[0].published_at &&
+      data.slug !== undefined &&
+      data.slug !== campaignResult.rows[0].slug
+    ) {
+      throw new Error('Cannot change slug after publishing');
     }
 
     // registration_options isn't a campaigns column — it's synced into its
