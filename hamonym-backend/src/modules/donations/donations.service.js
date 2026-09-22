@@ -1061,63 +1061,84 @@ const SORT_COLUMNS = {
 };
 
 exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
-  const where  = ['d.entity_id = $1'];
-  const params = [entityId];
+  // period/campaignId/search are legitimate scoping for the KPI summary too
+  // (a manager filtering to one campaign or one month expects the summary to
+  // match) -- only `status` is list-view-only, built separately below.
+  const baseWhere  = ['d.entity_id = $1'];
+  const baseParams = [entityId];
   let idx = 2;
 
   const sortCol = SORT_COLUMNS[sortBy] || 'd.created_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
   if (period === 'month') {
-    where.push(`d.created_at >= date_trunc('month', NOW())`);
+    baseWhere.push(`d.created_at >= date_trunc('month', NOW())`);
   } else if (period === 'last_month') {
-    where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
-    where.push(`d.created_at <  date_trunc('month', NOW())`);
+    baseWhere.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
+    baseWhere.push(`d.created_at <  date_trunc('month', NOW())`);
   } else if (period === 'quarter') {
-    where.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
-  }
-
-  if (status && status !== 'all') {
-    where.push(`d.status = $${idx++}`);
-    params.push(status);
+    baseWhere.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
   }
 
   if (campaignId) {
-    where.push(`d.campaign_id = $${idx++}`);
-    params.push(campaignId);
+    baseWhere.push(`d.campaign_id = $${idx++}`);
+    baseParams.push(campaignId);
   }
 
   if (search) {
-    where.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
-    params.push(`%${search}%`);
+    baseWhere.push(`(d.donor_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.donor_phone ILIKE $${idx})`);
+    baseParams.push(`%${search}%`);
     idx++;
   }
 
-  const whereStr = where.join(' AND ');
+  // Financial summary (paid/failed/pending counts, total raised, avg) must
+  // stay stable regardless of which status the list is currently filtered
+  // to -- it answers "what happened here overall", not "what happened among
+  // rows matching the status I picked". Found live 2026-09-22: filtering the
+  // list to "pending" made every summary card read ₪0/0, because this used
+  // to share the status-filtered WHERE clause with the list query -- a
+  // FILTER (WHERE d.status='paid') over a result set already restricted to
+  // status='pending' can only ever be empty.
+  const summaryWhereStr = baseWhere.join(' AND ');
+  const summaryParams = [...baseParams];
 
-  const [listRes, kpiRes, campaignsRes] = await Promise.all([
+  // The list itself, and the pagination total tied to it, DOES respect the
+  // status filter -- a manager choosing "pending" wants only pending rows,
+  // and the page count must match what's actually being shown.
+  const listWhere = [...baseWhere];
+  const listParams = [...baseParams];
+  if (status && status !== 'all') {
+    listWhere.push(`d.status = $${idx++}`);
+    listParams.push(status);
+  }
+  const listWhereStr = listWhere.join(' AND ');
+
+  const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
               d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
-       WHERE ${whereStr}
+       WHERE ${listWhereStr}
        ORDER BY ${sortCol} ${sortOrd}
        LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...params, limit, page * limit]
+      [...listParams, limit, page * limit]
+    ),
+    db.query(
+      `SELECT COUNT(*)::int AS total FROM donations d WHERE ${listWhereStr}`,
+      listParams
     ),
     db.query(
       `SELECT
-         COUNT(*)::int AS total,
          COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
          COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
          COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
          COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
          COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount
        FROM donations d
-       WHERE ${whereStr}`,
-      params
+       WHERE ${summaryWhereStr}`,
+      summaryParams
     ),
     db.query(
       `SELECT id::text, title FROM campaigns WHERE entity_id = $1 AND status != 'draft' ORDER BY title ASC`,
@@ -1125,19 +1146,20 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     ),
   ]);
 
-  const kpi = kpiRes.rows[0];
+  const listTotal = listTotalRes.rows[0].total;
+  const summary = summaryRes.rows[0];
   return {
     donations: listRes.rows,
     kpi: {
-      totalRaised:  kpi.total_raised,
-      paidCount:    kpi.paid_count,
-      failedCount:  kpi.failed_count,
-      pendingCount: kpi.pending_count,
-      avgAmount:    kpi.avg_amount,
-      total:        kpi.total,
+      totalRaised:  summary.total_raised,
+      paidCount:    summary.paid_count,
+      failedCount:  summary.failed_count,
+      pendingCount: summary.pending_count,
+      avgAmount:    summary.avg_amount,
+      total:        listTotal,
     },
     campaigns: campaignsRes.rows,
-    total:     kpi.total,
+    total:     listTotal,
     page,
     limit,
   };
