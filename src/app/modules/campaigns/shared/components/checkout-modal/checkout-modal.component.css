@@ -566,11 +566,22 @@
   to { transform: rotate(360deg); }
 }
 
-/* Error floats above the button — zero impact on layout */
+/* Error floats above the button — zero impact on layout. Sticky to the
+   bottom of .checkout-form-panel's own scroll area (2026-09-22) -- on a
+   registration with participants added, the form above it (participant
+   rows + payer fields) easily grows past the modal's max-height, and the
+   button used to just sit wherever that content ended, needing a real
+   scroll to ever reach it. Padding/background/shadow match the panel so it
+   reads as a footer, not a floating overlay; no border-collapse involved
+   here (unlike the earlier platform-users-page sticky bug), so this is safe. */
 .pay-btn-wrap {
-  position: relative;
+  position: sticky;
+  bottom: 0;
   margin-top: 8px;
-  margin-bottom: 4px;
+  padding-top: 10px;
+  padding-bottom: 4px;
+  background: #fff;
+  box-shadow: 0 -8px 12px -4px rgba(255,255,255,0.9);
 }
 .api-error {
   position: absolute;
