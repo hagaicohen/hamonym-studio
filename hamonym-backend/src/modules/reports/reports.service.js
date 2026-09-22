@@ -120,9 +120,23 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
 /* ─────────────────────────────────────────
    2. MARKETING & TRAFFIC SOURCES
 ───────────────────────────────────────── */
-exports.getMarketingSources = async (entityId, { from, to } = {}) => {
-  const rangeClause = from && to ? `AND completed_at >= $2 AND completed_at < $3` : '';
-  const rangeParams = from && to ? [from, to] : [];
+exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) => {
+  // Reached from a specific Campaign Workspace (Campaign ← דוחות) means every
+  // tab must describe that one campaign, not the whole organization -- a
+  // manager doesn't expect "מקורות תנועה" to silently blend in every other
+  // campaign's donations just because this endpoint is nominally entity-
+  // scoped. campaignId is optional so the entity-wide /reports route (no
+  // campaign in the URL) keeps its existing behavior. Fixed 2026-09-22.
+  const scopeParams = [entityId];
+  let scopeClause = 'entity_id = $1';
+  if (campaignId) {
+    scopeParams.push(campaignId);
+    scopeClause += ` AND campaign_id = $${scopeParams.length}`;
+  }
+  if (from && to) {
+    scopeParams.push(from, to);
+    scopeClause += ` AND completed_at >= $${scopeParams.length - 1} AND completed_at < $${scopeParams.length}`;
+  }
 
   const [channelRes, utmRes, totalRes] = await Promise.all([
     db.query(
@@ -135,10 +149,10 @@ exports.getMarketingSources = async (entityId, { from, to } = {}) => {
          COUNT(*)::int AS count,
          COALESCE(SUM(amount), 0)::float AS total
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid' ${rangeClause}
+       WHERE ${scopeClause} AND status = 'paid'
        GROUP BY channel
        ORDER BY total DESC`,
-      [entityId, ...rangeParams]
+      scopeParams
     ),
     db.query(
       `SELECT
@@ -147,10 +161,10 @@ exports.getMarketingSources = async (entityId, { from, to } = {}) => {
          COUNT(*)::int AS count,
          COALESCE(SUM(amount), 0)::float AS total
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid' AND utm_params IS NOT NULL ${rangeClause}
+       WHERE ${scopeClause} AND status = 'paid' AND utm_params IS NOT NULL
        GROUP BY utm_params->>'source', utm_params->>'medium'
        ORDER BY total DESC`,
-      [entityId, ...rangeParams]
+      scopeParams
     ),
     db.query(
       `SELECT
@@ -158,8 +172,8 @@ exports.getMarketingSources = async (entityId, { from, to } = {}) => {
          COUNT(*) FILTER (WHERE utm_params IS NOT NULL)::int AS with_utm_count,
          COALESCE(SUM(amount), 0)::float AS total_raised
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid' ${rangeClause}`,
-      [entityId, ...rangeParams]
+       WHERE ${scopeClause} AND status = 'paid'`,
+      scopeParams
     ),
   ]);
 
@@ -185,7 +199,12 @@ exports.getMarketingSources = async (entityId, { from, to } = {}) => {
 // year-over-year monthly chart stays a fixed calendar-year view regardless
 // of the selected range — it answers a different question (seasonality)
 // than the period-over-period comparison above it.
-exports.getTrends = async (entityId, { from, to } = {}) => {
+exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
+  // Same Campaign Workspace scoping fix as getMarketingSources/getFailures
+  // (2026-09-22) -- campaignId optional, entity-wide /reports route unaffected.
+  const campaignClause = campaignId ? `AND campaign_id = $4` : '';
+  const campaignClauseYear = campaignId ? `AND campaign_id = $2` : '';
+
   const hasRange = !!(from && to);
   const rangeFrom = hasRange ? from : null;
   const rangeTo   = hasRange ? to   : null;
@@ -196,24 +215,33 @@ exports.getTrends = async (entityId, { from, to } = {}) => {
     prevFrom = new Date(new Date(rangeFrom).getTime() - spanMs).toISOString().slice(0, 10);
   }
 
+  const thisMonthParams = [entityId, rangeFrom, rangeTo];
+  const lastMonthParams = [entityId, prevFrom, prevTo];
+  const yearParams = [entityId];
+  if (campaignId) {
+    thisMonthParams.push(campaignId);
+    lastMonthParams.push(campaignId);
+    yearParams.push(campaignId);
+  }
+
   const [thisMonthRes, lastMonthRes, yearSeriesRes] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
               COALESCE(AVG(amount), 0)::float AS avg
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid'
+       WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
          AND completed_at >= COALESCE($2::date, date_trunc('month', NOW()))
          AND ($3::date IS NULL OR completed_at < $3::date)`,
-      [entityId, rangeFrom, rangeTo]
+      thisMonthParams
     ),
     db.query(
       `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
               COALESCE(AVG(amount), 0)::float AS avg
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid'
+       WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
          AND completed_at >= COALESCE($2::date, date_trunc('month', NOW() - INTERVAL '1 month'))
          AND completed_at  < COALESCE($3::date, date_trunc('month', NOW()))`,
-      [entityId, prevFrom, prevTo]
+      lastMonthParams
     ),
     db.query(
       `SELECT
@@ -221,11 +249,11 @@ exports.getTrends = async (entityId, { from, to } = {}) => {
          EXTRACT(MONTH FROM completed_at)::int AS month,
          COALESCE(SUM(amount), 0)::float AS total
        FROM donations
-       WHERE entity_id = $1 AND status = 'paid'
+       WHERE entity_id = $1 AND status = 'paid' ${campaignClauseYear}
          AND completed_at >= date_trunc('year', NOW() - INTERVAL '1 year')
        GROUP BY 1, 2
        ORDER BY 1, 2`,
-      [entityId]
+      yearParams
     ),
   ]);
 
@@ -272,11 +300,20 @@ const FAILURES_SORT = {
   date:     'd.updated_at',
 };
 
-exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, to } = {}) => {
+exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, to, campaignId } = {}) => {
+  // Same Campaign Workspace scoping fix as getMarketingSources/getTrends
+  // (2026-09-22) -- campaignId optional, entity-wide /reports route
+  // unaffected. pendingCount deliberately left all-time here, unchanged --
+  // that's a separate, already-flagged presentation question, not part of
+  // this scoping fix.
   const where  = ['d.entity_id = $1', `d.status IN ('failed', 'pending')`];
   const params = [entityId];
   let idx = 2;
 
+  if (campaignId) {
+    where.push(`d.campaign_id = $${idx++}`);
+    params.push(campaignId);
+  }
   if (status && status !== 'all') {
     where.push(`d.status = $${idx++}`);
     params.push(status);
@@ -297,9 +334,13 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, 
   const kpiRangeClause = from && to ? `updated_at >= $2 AND updated_at < $3` : `updated_at >= date_trunc('month', NOW())`;
   const kpiPaidRangeClause = from && to ? `completed_at >= $2 AND completed_at < $3` : `completed_at >= date_trunc('month', NOW())`;
   const kpiParams = from && to ? [entityId, from, to] : [entityId];
+  const kpiCampaignClause = campaignId ? `AND campaign_id = $${kpiParams.length + 1}` : '';
+  if (campaignId) kpiParams.push(campaignId);
 
   const reasonsRangeClause = from && to ? `AND updated_at >= $2 AND updated_at < $3` : '';
   const reasonsParams = from && to ? [entityId, from, to] : [entityId];
+  const reasonsCampaignClause = campaignId ? `AND campaign_id = $${reasonsParams.length + 1}` : '';
+  if (campaignId) reasonsParams.push(campaignId);
 
   const [kpiRes, reasonsRes, listRes] = await Promise.all([
     db.query(
@@ -309,13 +350,13 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, 
          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_count,
          COUNT(*) FILTER (WHERE status = 'paid' AND ${kpiPaidRangeClause})::int   AS paid_count_month
        FROM donations
-       WHERE entity_id = $1`,
+       WHERE entity_id = $1 ${kpiCampaignClause}`,
       kpiParams
     ),
     db.query(
       `SELECT COALESCE(NULLIF(failure_reason, ''), 'לא צוין') AS reason, COUNT(*)::int AS count
        FROM donations
-       WHERE entity_id = $1 AND status = 'failed' ${reasonsRangeClause}
+       WHERE entity_id = $1 AND status = 'failed' ${reasonsRangeClause} ${reasonsCampaignClause}
        GROUP BY reason
        ORDER BY count DESC
        LIMIT 10`,
