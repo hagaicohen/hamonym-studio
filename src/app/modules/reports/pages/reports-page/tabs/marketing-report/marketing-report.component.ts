@@ -1,4 +1,4 @@
-import { Component, inject, effect, untracked } from '@angular/core';
+import { Component, Input, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
@@ -28,6 +28,12 @@ export class MarketingReportComponent {
   private http           = inject(HttpClient);
   private currentEntity  = inject(CurrentEntityService);
   private analyticsRange = inject(AnalyticsRangeService);
+
+  // Set when arriving from a specific campaign's "📊 דוחות" button -- scopes
+  // this tab to that campaign instead of the whole organization. Reports
+  // reached from a Campaign Workspace must describe that campaign across
+  // every tab, not just Campaign Performance -- fixed 2026-09-22.
+  @Input() campaignId?: string;
 
   channels: Channel[] = [];
   utmBreakdown: UtmRow[] = [];
@@ -61,7 +67,8 @@ export class MarketingReportComponent {
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     const range = this.analyticsRange.activeRange();
-    const params = new HttpParams().set('from', range.from).set('to', range.to);
+    let params = new HttpParams().set('from', range.from).set('to', range.to);
+    if (this.campaignId) params = params.set('campaignId', this.campaignId);
 
     this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/marketing`, { headers, params })
       .subscribe({

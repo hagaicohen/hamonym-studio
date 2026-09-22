@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect, untracked } from '@angular/core';
+import { Component, Input, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -48,6 +48,12 @@ export class FailuresReportComponent implements OnInit {
   private http           = inject(HttpClient);
   private currentEntity  = inject(CurrentEntityService);
   private analyticsRange = inject(AnalyticsRangeService);
+
+  // Set when arriving from a specific campaign's "📊 דוחות" button -- scopes
+  // this tab to that campaign instead of the whole organization. Reports
+  // reached from a Campaign Workspace must describe that campaign across
+  // every tab, not just Campaign Performance -- fixed 2026-09-22.
+  @Input() campaignId?: string;
 
   kpi: Kpi = { failedCount: 0, failedAmount: 0, pendingCount: 0, successRate: null };
   failureReasons: FailureReason[] = [];
@@ -141,6 +147,7 @@ export class FailuresReportComponent implements OnInit {
       .set('from', range.from).set('to', range.to);
     if (this.statusFilter !== 'all')  params = params.set('status', this.statusFilter);
     if (this.searchQuery.trim())      params = params.set('search', this.searchQuery.trim());
+    if (this.campaignId)              params = params.set('campaignId', this.campaignId);
 
     this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/failures`, { headers, params })
       .subscribe({
