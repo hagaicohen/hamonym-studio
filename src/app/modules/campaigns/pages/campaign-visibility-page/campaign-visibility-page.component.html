@@ -14,39 +14,54 @@
 
       <div class="cvp-panel">
         <div class="cvp-row cvp-row--primary">
-          <span class="cvp-label">הצג את הקמפיין (לא מוסתר)</span>
-          <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="!d.isHidden" (click)="toggleHidden()">
-            {{ d.isHidden ? 'מוסתר' : 'גלוי' }}
-          </button>
+          <span class="cvp-label">הצג את הקמפיין</span>
+          <div class="cvp-switch-group">
+            <span class="cvp-switch-state">{{ d.isHidden ? 'מוסתר' : 'גלוי' }}</span>
+            <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="!d.isHidden" [class.cvp-switch--on]="!d.isHidden" (click)="toggleHidden()">
+              <span class="cvp-switch-thumb"></span>
+            </button>
+          </div>
         </div>
 
         <div class="cvp-group">
           <div class="cvp-row">
             <span class="cvp-label">🎁 תשורות</span>
-            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="d.offeringsEnabled" (click)="toggleOfferings()">
-              {{ d.offeringsEnabled ? 'מופעל' : 'כבוי' }}
-            </button>
+            <div class="cvp-switch-group">
+              <span class="cvp-switch-state">{{ d.offeringsEnabled ? 'מוצג' : 'מוסתר' }}</span>
+              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="d.offeringsEnabled" [class.cvp-switch--on]="d.offeringsEnabled" (click)="toggleOfferings()">
+                <span class="cvp-switch-thumb"></span>
+              </button>
+            </div>
           </div>
 
           <div class="cvp-row" *ngIf="blockVisible('sponsors') !== null">
             <span class="cvp-label">🤝 חסויות</span>
-            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('sponsors')" (click)="toggleBlockVisible('sponsors')">
-              {{ blockVisible('sponsors') ? 'מוצג' : 'מוסתר' }}
-            </button>
+            <div class="cvp-switch-group">
+              <span class="cvp-switch-state">{{ blockVisible('sponsors') ? 'מוצג' : 'מוסתר' }}</span>
+              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('sponsors')" [class.cvp-switch--on]="blockVisible('sponsors')" (click)="toggleBlockVisible('sponsors')">
+                <span class="cvp-switch-thumb"></span>
+              </button>
+            </div>
           </div>
 
           <div class="cvp-row" *ngIf="blockVisible('ambassadors') !== null">
             <span class="cvp-label">🏃 שגרירים</span>
-            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('ambassadors')" (click)="toggleBlockVisible('ambassadors')">
-              {{ blockVisible('ambassadors') ? 'מוצג' : 'מוסתר' }}
-            </button>
+            <div class="cvp-switch-group">
+              <span class="cvp-switch-state">{{ blockVisible('ambassadors') ? 'מוצג' : 'מוסתר' }}</span>
+              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('ambassadors')" [class.cvp-switch--on]="blockVisible('ambassadors')" (click)="toggleBlockVisible('ambassadors')">
+                <span class="cvp-switch-thumb"></span>
+              </button>
+            </div>
           </div>
 
           <div class="cvp-row" *ngIf="blockVisible('updates') !== null">
             <span class="cvp-label">📰 עדכונים</span>
-            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="blockVisible('updates')" (click)="toggleBlockVisible('updates')">
-              {{ blockVisible('updates') ? 'מוצג' : 'מוסתר' }}
-            </button>
+            <div class="cvp-switch-group">
+              <span class="cvp-switch-state">{{ blockVisible('updates') ? 'מוצג' : 'מוסתר' }}</span>
+              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('updates')" [class.cvp-switch--on]="blockVisible('updates')" (click)="toggleBlockVisible('updates')">
+                <span class="cvp-switch-thumb"></span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -54,9 +69,12 @@
           <span class="cvp-group-label">פס נתונים (בלוק בעמוד)</span>
           <div class="cvp-row" *ngFor="let item of statItems">
             <span class="cvp-label">{{ statLabels[item.key] }}</span>
-            <button type="button" class="cvp-toggle" [class.cvp-toggle--on]="item.visible" (click)="toggleStatItem(item.key)">
-              {{ item.visible ? 'מוצג' : 'מוסתר' }}
-            </button>
+            <div class="cvp-switch-group">
+              <span class="cvp-switch-state">{{ item.visible ? 'מוצג' : 'מוסתר' }}</span>
+              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="item.visible" [class.cvp-switch--on]="item.visible" (click)="toggleStatItem(item.key)">
+                <span class="cvp-switch-thumb"></span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
