@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import {
   CampaignDraft,
   CampaignBlock,
@@ -32,6 +33,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private campaignApi = inject(CampaignApiService);
+  private ctx = inject(CampaignWorkspaceContextService);
   private loader = inject(AppLoaderService);
 
   readonly statLabels: Record<StatKey, string> = {
@@ -59,7 +61,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
     this.loader.hide();
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
     if (!this.campaignId) { this.loading = false; return; }
-    this.campaignApi.getById(this.campaignId).subscribe({
+    this.ctx.ensureLoaded(this.campaignId).subscribe({
       next: draft => { this.draft = draft; this.loading = false; },
       error: () => { this.loading = false; },
     });
@@ -90,7 +92,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
     this.saved = false;
     this.saveError = null;
     this.campaignApi.setVisibility(this.campaignId, nextHidden).subscribe({
-      next: () => { this.saving = false; this.saved = true; },
+      next: () => { this.saving = false; this.saved = true; if (this.draft) this.ctx.setDraft(this.draft); },
       error: (err) => {
         // Same optimistic-revert-on-failure guard as persist() below --
         // only revert if nothing newer has since replaced this attempt.
@@ -156,7 +158,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
     this.saved = false;
     this.saveError = null;
     this.campaignApi.update(this.campaignId, attempted).subscribe({
-      next: () => { this.saving = false; this.saved = true; },
+      next: (updated) => { this.saving = false; this.saved = true; this.ctx.setDraft(updated); },
       error: (err) => {
         // Revert the optimistic toggle so the UI doesn't show an unsaved
         // state as if it had actually saved -- previously this failed

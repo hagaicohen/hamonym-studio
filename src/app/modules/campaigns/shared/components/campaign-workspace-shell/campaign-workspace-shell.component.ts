@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { CampaignApiService } from '../../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../../services/campaign-workspace-context.service';
 import { CampaignManagementSidebarComponent } from '../campaign-management-sidebar/campaign-management-sidebar.component';
 
 // Campaign Workspace persistent shell (2026-09-23) -- renders the sidebar
@@ -20,11 +20,15 @@ import { CampaignManagementSidebarComponent } from '../campaign-management-sideb
 })
 export class CampaignWorkspaceShellComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
-  private campaignApi = inject(CampaignApiService);
+  private ctx = inject(CampaignWorkspaceContextService);
   private sub?: Subscription;
 
   campaignId = '';
-  isOngoing = false;
+
+  // Reads straight from the shared context signal, so the moment any
+  // CampaignDraft-based child page's ensureLoaded() call resolves (or was
+  // already cached), the sidebar picks it up too -- no separate fetch here.
+  get isOngoing(): boolean { return this.ctx.draft()?.campaignLifecycle === 'ongoing'; }
 
   ngOnInit(): void {
     // Subscribed, not a one-time snapshot read -- if the campaign id
@@ -36,12 +40,10 @@ export class CampaignWorkspaceShellComponent implements OnInit, OnDestroy {
       const id = params.get('id') ?? '';
       if (!id || id === this.campaignId) return;
       this.campaignId = id;
-      this.campaignApi.getById(id).subscribe({
-        next: draft => { this.isOngoing = draft.campaignLifecycle === 'ongoing'; },
-        // Sidebar just falls back to isOngoing=false; each child page still
-        // fetches and surfaces its own load error independently.
-        error: () => { this.isOngoing = false; },
-      });
+      // Sidebar just falls back to isOngoing=false on error; each child
+      // page still fetches (via the same shared context) and surfaces its
+      // own load error independently.
+      this.ctx.ensureLoaded(id).subscribe({ error: () => {} });
     });
   }
 

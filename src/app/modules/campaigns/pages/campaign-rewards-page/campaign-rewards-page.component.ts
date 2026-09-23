@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft, Offering } from '../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignPartnersService, CampaignPartner } from '../../services/campaign-partners.service';
@@ -29,6 +30,7 @@ export class CampaignRewardsPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private campaignApi = inject(CampaignApiService);
+  private ctx = inject(CampaignWorkspaceContextService);
   private uploadService = inject(UploadService);
   private partnersService = inject(CampaignPartnersService);
   private loader = inject(AppLoaderService);
@@ -75,7 +77,7 @@ export class CampaignRewardsPageComponent implements OnInit {
     this.loader.hide();
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
     if (!this.campaignId) { this.loading = false; return; }
-    this.campaignApi.getById(this.campaignId).subscribe({
+    this.ctx.ensureLoaded(this.campaignId).subscribe({
       next: draft => {
         this.draft = draft;
         this.loading = false;
@@ -214,7 +216,7 @@ export class CampaignRewardsPageComponent implements OnInit {
     this.saving = true;
     this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: () => { this.saving = false; },
+      next: (updated) => { this.saving = false; this.ctx.setDraft(updated); },
       error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת התשורה נכשלה, נסו שוב'; },
     });
   }

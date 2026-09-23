@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
@@ -26,6 +27,7 @@ export class CampaignSettingsPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private campaignApi = inject(CampaignApiService);
+  private ctx = inject(CampaignWorkspaceContextService);
   private loader = inject(AppLoaderService);
 
   // Category persistence = ENTITY_CATEGORIES id (canonical), presentation =
@@ -53,7 +55,7 @@ export class CampaignSettingsPageComponent implements OnInit {
     this.loader.hide();
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
     if (!this.campaignId) { this.loading = false; return; }
-    this.campaignApi.getById(this.campaignId).subscribe({
+    this.ctx.ensureLoaded(this.campaignId).subscribe({
       next: draft => { this.draft = draft; this.loading = false; },
       error: () => { this.loading = false; },
     });
@@ -86,7 +88,7 @@ export class CampaignSettingsPageComponent implements OnInit {
     this.saved = false;
     this.saveError = null;
     this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: () => { this.saving = false; this.saved = true; },
+      next: (updated) => { this.saving = false; this.saved = true; this.ctx.setDraft(updated); },
       error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת ההגדרות נכשלה, נסו שוב'; },
     });
   }
