@@ -1,6 +1,4 @@
 <div class="don-shell" [class.don-shell--scoped]="campaignScoped">
-  <app-campaign-management-sidebar *ngIf="campaignScoped" [campaignId]="campaignId!" [isOngoing]="isOngoing" />
-
   <div class="don-page">
 
   <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>

@@ -9,14 +9,13 @@ import { FailuresReportComponent } from './tabs/failures-report/failures-report.
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-import { CampaignManagementSidebarComponent } from '../../../campaigns/shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 type ReportTab = 'campaigns' | 'marketing' | 'trends' | 'failures';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, CampaignPerformanceReportComponent, MarketingReportComponent, TrendsReportComponent, FailuresReportComponent, DateRangePickerComponent, CampaignManagementSidebarComponent],
+  imports: [CommonModule, LucideAngularModule, CampaignPerformanceReportComponent, MarketingReportComponent, TrendsReportComponent, FailuresReportComponent, DateRangePickerComponent],
   templateUrl: './reports-page.component.html',
   styleUrls: ['./reports-page.component.css', '../../shared/reports-shared.css'],
 })

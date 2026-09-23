@@ -7,7 +7,6 @@ import { CampaignDraft, Offering } from '../../services/campaign-studio-state.se
 import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignPartnersService, CampaignPartner } from '../../services/campaign-partners.service';
 import { PartnerLinkModalComponent } from '../../shared/components/partner-link-modal/partner-link-modal.component';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 // Dedicated page (2026-08-06 architecture reset) — CONTENT only: title,
@@ -22,7 +21,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-rewards-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent, PartnerLinkModalComponent],
+  imports: [CommonModule, FormsModule, PartnerLinkModalComponent],
   templateUrl: './campaign-rewards-page.component.html',
   styleUrl: './campaign-rewards-page.component.css',
 })

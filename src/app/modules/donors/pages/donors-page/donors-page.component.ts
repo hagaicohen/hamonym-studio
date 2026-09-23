@@ -7,7 +7,6 @@ import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-import { CampaignManagementSidebarComponent } from '../../../campaigns/shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 interface Kpi {
   donorCount:  number;
@@ -45,7 +44,7 @@ const COLUMNS_STORAGE_KEY = 'donors-hidden-columns';
 @Component({
   selector: 'app-donors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './donors-page.component.html',
   styleUrl: './donors-page.component.css',
 })

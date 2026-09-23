@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft, RegistrationOption } from '../../services/campaign-studio-state.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 // Dedicated page (2026-08-06 architecture reset). The Builder's own
@@ -14,7 +13,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-registration-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './campaign-registration-page.component.html',
   styleUrl: './campaign-registration-page.component.css',
 })

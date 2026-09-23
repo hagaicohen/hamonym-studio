@@ -2,8 +2,6 @@
   <p class="cvp-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
-
     <div class="cvp-main">
       <button type="button" class="cvp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <div class="cvp-title-row">

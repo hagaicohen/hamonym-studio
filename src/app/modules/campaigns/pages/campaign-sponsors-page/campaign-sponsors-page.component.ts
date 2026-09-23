@@ -5,7 +5,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft, CampaignSponsor } from '../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../core/services/upload.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 // Dedicated page (2026-08-06 architecture reset) — CONTENT only: name,
@@ -14,7 +13,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-sponsors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './campaign-sponsors-page.component.html',
   styleUrl: './campaign-sponsors-page.component.css',
 })

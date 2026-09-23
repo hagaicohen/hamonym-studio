@@ -4,7 +4,6 @@ import { ActivatedRoute } from '@angular/router';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { CampaignDashboardStatusComponent } from './sections/campaign-dashboard-status/campaign-dashboard-status.component';
 import { CampaignDashboardKpisComponent } from './sections/campaign-dashboard-kpis/campaign-dashboard-kpis.component';
 import { CampaignDashboardUpdatesComponent } from './sections/campaign-dashboard-updates/campaign-dashboard-updates.component';
@@ -27,7 +26,6 @@ import { CampaignDashboardFinanceComponent } from './sections/campaign-dashboard
   standalone: true,
   imports: [
     CommonModule,
-    CampaignManagementSidebarComponent,
     CampaignDashboardStatusComponent,
     CampaignDashboardKpisComponent,
     CampaignDashboardUpdatesComponent,

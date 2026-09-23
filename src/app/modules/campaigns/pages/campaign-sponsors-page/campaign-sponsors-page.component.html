@@ -2,8 +2,6 @@
   <p class="sp-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
-
     <div class="sp-main">
       <button type="button" class="sp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="sp-title">🤝 חסויות</h1>
