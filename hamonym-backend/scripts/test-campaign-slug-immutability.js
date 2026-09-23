@@ -92,10 +92,13 @@ async function main() {
   await check('C. published campaign: sending the SAME slug unchanged does NOT break ordinary autosave', async () => {
     const slug = `zzz-test-c-${Date.now()}`;
     const id = await makeCampaign({ slug, status: 'published', publishedAt: new Date() });
-    // Mirrors the real full-draft autosave shape: slug included, same value, plus another field changing.
-    const result = await updateCampaign({ userId, campaignId: id, data: { slug, category: 'חינוך' } });
+    // Mirrors the real full-draft autosave shape: slug included, same value,
+    // plus another field changing -- 'education', a real canonical category
+    // id (see test-campaign-category-validation.js's own dedicated fix,
+    // 2026-09-23; a Hebrew label here would now correctly be rejected).
+    const result = await updateCampaign({ userId, campaignId: id, data: { slug, category: 'education' } });
     assert.strictEqual(result.slug, slug);
-    assert.strictEqual(result.category, 'חינוך');
+    assert.strictEqual(result.category, 'education');
   });
 
   await check('D. published campaign: an unrelated permitted field (title) still updates normally', async () => {

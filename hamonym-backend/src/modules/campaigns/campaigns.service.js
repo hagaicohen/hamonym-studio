@@ -4,6 +4,9 @@ const db =
 const { isEntityMember } =
   require('../../middleware/entity-permission.middleware');
 
+const { isValidCategoryId } =
+  require('./entity-categories');
+
 // The placeholder createCampaign backfills when a draft has no title yet
 // (see below) — exported so anything that needs to tell "a real title" apart
 // from "just the cosmetic default" (e.g. CampaignAdvisorAgent's hasTitle
@@ -734,6 +737,21 @@ exports.updateCampaign =
       data.slug !== campaignResult.rows[0].slug
     ) {
       throw new Error('Cannot change slug after publishing');
+    }
+
+    // Category canonicalization (2026-09-23) — persistence is always an
+    // ENTITY_CATEGORIES id (e.g. "health"), never the Hebrew label or
+    // arbitrary free text; the label is presentation-only, looked up at
+    // render time. Before this, the Builder/Settings could both write
+    // whatever text a manager typed, and the public campaign page displayed
+    // it raw -- discovered live when a real published campaign showed the
+    // literal English id ("health") to donors instead of "בריאות". Blank/
+    // null stays allowed (a campaign may have no category); an actual
+    // attempt to set a non-blank value must match a real curated id.
+    if (data.category !== undefined && data.category !== null && data.category !== '') {
+      if (!isValidCategoryId(data.category)) {
+        throw new Error('Invalid campaign category');
+      }
     }
 
     // registration_options isn't a campaigns column — it's synced into its
