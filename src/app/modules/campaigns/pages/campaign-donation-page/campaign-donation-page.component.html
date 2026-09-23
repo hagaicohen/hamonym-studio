@@ -2,8 +2,6 @@
   <p class="dp-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
-
     <div class="dp-main">
       <button type="button" class="dp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="dp-title">💳 טופס תרומה</h1>

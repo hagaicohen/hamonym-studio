@@ -1,0 +1,17 @@
+:host { display: block; width: 100%; }
+
+.cws-shell {
+  display: flex;
+  width: 100%;
+  gap: 20px;
+  align-items: flex-start;
+  direction: rtl;
+}
+
+/* Each routed child page already owns its own padding/background (was
+   previously wrapping itself + the sidebar) -- this just gives the child's
+   root element the width the sidebar used to leave it. */
+.cws-shell > *:not(app-campaign-management-sidebar) {
+  flex: 1;
+  min-width: 0;
+}

@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 // Dedicated page (2026-08-06 architecture reset). Was briefly embedded in
@@ -14,7 +13,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-donation-page',
   standalone: true,
-  imports: [CommonModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule],
   templateUrl: './campaign-donation-page.component.html',
   styleUrl: './campaign-donation-page.component.css',
 })

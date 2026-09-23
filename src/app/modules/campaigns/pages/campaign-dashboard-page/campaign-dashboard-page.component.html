@@ -3,8 +3,6 @@
   <p class="cdp-error" *ngIf="loadError">{{ loadError }}</p>
 
   <ng-container *ngIf="!loading && !loadError && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
-
     <div class="cdp-main">
       <app-campaign-dashboard-status [draft]="d" [campaignId]="campaignId" />
       <app-campaign-dashboard-kpis [draft]="d" />

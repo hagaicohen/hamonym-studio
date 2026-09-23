@@ -2,8 +2,6 @@
   <p class="csp-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" />
-
     <div class="csp-main">
       <button type="button" class="csp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <div class="csp-title-row">

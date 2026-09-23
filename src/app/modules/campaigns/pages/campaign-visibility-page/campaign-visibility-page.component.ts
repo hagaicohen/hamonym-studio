@@ -9,7 +9,6 @@ import {
   StatItem,
   StatKey,
 } from '../../services/campaign-studio-state.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
 type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
@@ -25,7 +24,7 @@ type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
 @Component({
   selector: 'app-campaign-visibility-page',
   standalone: true,
-  imports: [CommonModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule],
   templateUrl: './campaign-visibility-page.component.html',
   styleUrl: './campaign-visibility-page.component.css',
 })

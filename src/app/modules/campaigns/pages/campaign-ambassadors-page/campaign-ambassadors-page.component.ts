@@ -9,7 +9,6 @@ import {
 import { AmbassadorService, Ambassador, AmbassadorFormData, ImportRow } from '../../services/ambassador.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 
 function parseCommas(s: string): number | null {
   const digits = s.replace(/[^0-9]/g, '');
@@ -36,7 +35,7 @@ const EMPTY_FORM: AmbassadorFormData = {
 @Component({
   selector: 'app-campaign-ambassadors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-ambassadors-page.component.html',
   styleUrls: ['./campaign-ambassadors-page.component.css'],
 })

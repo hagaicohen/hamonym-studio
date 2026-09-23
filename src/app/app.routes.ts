@@ -3,6 +3,7 @@
 import { Routes } from '@angular/router';
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
+import { CampaignWorkspaceShellComponent } from './modules/campaigns/shared/components/campaign-workspace-shell/campaign-workspace-shell.component';
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
@@ -19,128 +20,112 @@ const AMBASSADOR_STUDIO_ROUTE = {
     ),
 };
 
-const CAMPAIGN_AMBASSADORS_ROUTE = {
-  path: 'campaigns/:id/ambassadors',
+// Campaign Workspace persistent shell (2026-09-23) — all 12 pages that
+// render the Workspace sidebar are nested here as children of one
+// campaigns/:id parent instead of each being its own flat top-level route.
+// contextGuard now runs once on entry instead of on every internal click,
+// and CampaignWorkspaceShellComponent's sidebar/router-outlet stay mounted
+// across all of them — see app.component.ts's workspaceKey() for the
+// matching loader-suppression half of this fix. ambassador-studio and
+// :id/edit are deliberately NOT here — they're full-screen Studio/editor
+// pages, not part of the Workspace shell.
+const CAMPAIGN_WORKSPACE_ROUTE = {
+  path: 'campaigns/:id',
   canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-ambassadors-page/campaign-ambassadors-page.component').then(
-      (m) => m.CampaignAmbassadorsPageComponent,
-    ),
-};
-
-// Campaign Management Dashboard — Sprint 1, shell only (see
-// docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md). Same route-declaration pattern
-// as CAMPAIGN_AMBASSADORS_ROUTE (flat, own guard, no AppLayout shell — this
-// page owns its own status bar instead).
-const CAMPAIGN_DASHBOARD_ROUTE = {
-  path: 'campaigns/:id/dashboard',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-dashboard-page/campaign-dashboard-page.component').then(
-      (m) => m.CampaignDashboardPageComponent,
-    ),
-};
-
-// Dedicated management pages (2026-08-06 architecture reset) — each
-// capability is its own page, not an accordion embedded in the Dashboard.
-// Same flat/own-guard pattern as CAMPAIGN_AMBASSADORS_ROUTE.
-const CAMPAIGN_REWARDS_ROUTE = {
-  path: 'campaigns/:id/rewards',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-rewards-page/campaign-rewards-page.component').then(
-      (m) => m.CampaignRewardsPageComponent,
-    ),
-};
-
-const CAMPAIGN_SPONSORS_ROUTE = {
-  path: 'campaigns/:id/sponsors',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-sponsors-page/campaign-sponsors-page.component').then(
-      (m) => m.CampaignSponsorsPageComponent,
-    ),
-};
-
-const CAMPAIGN_REGISTRATION_ROUTE = {
-  path: 'campaigns/:id/registration',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-registration-page/campaign-registration-page.component').then(
-      (m) => m.CampaignRegistrationPageComponent,
-    ),
-};
-
-// Same flat/no-AppLayout-shell pattern as the other CAMPAIGN_*_ROUTE
-// entries — RegistrationsPageComponent renders the Workspace sidebar
-// itself when it detects it was reached via :id (this route) rather than
-// the entity-wide ?campaignId= query param (/registrations). See
-// registrations-page.component.ts's campaignScoped flag.
-const CAMPAIGN_REGISTRATIONS_ROUTE = {
-  path: 'campaigns/:id/registrations',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/registrations/pages/registrations-page/registrations-page.component').then(
-      (m) => m.RegistrationsPageComponent,
-    ),
-};
-
-const CAMPAIGN_DONATION_ROUTE = {
-  path: 'campaigns/:id/donation',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-donation-page/campaign-donation-page.component').then(
-      (m) => m.CampaignDonationPageComponent,
-    ),
-};
-
-const CAMPAIGN_SETTINGS_ROUTE = {
-  path: 'campaigns/:id/settings',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-settings-page/campaign-settings-page.component').then(
-      (m) => m.CampaignSettingsPageComponent,
-    ),
-};
-
-const CAMPAIGN_VISIBILITY_ROUTE = {
-  path: 'campaigns/:id/visibility',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/campaigns/pages/campaign-visibility-page/campaign-visibility-page.component').then(
-      (m) => m.CampaignVisibilityPageComponent,
-    ),
-};
-
-// Same flat/no-AppLayout-shell pattern as CAMPAIGN_REGISTRATIONS_ROUTE —
-// the three "תרומות ונתונים" pages (Donations/Donors/Reports) each detect
-// whether they were reached via :id (this route, Workspace shell/sidebar)
-// or the entity-wide ?campaignId= query param (plain /donations etc.).
-const CAMPAIGN_DONATIONS_ROUTE = {
-  path: 'campaigns/:id/donations',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/donations/pages/donations-page/donations-page.component').then(
-      (m) => m.DonationsPageComponent,
-    ),
-};
-
-const CAMPAIGN_DONORS_ROUTE = {
-  path: 'campaigns/:id/donors',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/donors/pages/donors-page/donors-page.component').then(
-      (m) => m.DonorsPageComponent,
-    ),
-};
-
-const CAMPAIGN_REPORTS_ROUTE = {
-  path: 'campaigns/:id/reports',
-  canActivate: [contextGuard],
-  loadComponent: () =>
-    import('./modules/reports/pages/reports-page/reports-page.component').then(
-      (m) => m.ReportsPageComponent,
-    ),
+  component: CampaignWorkspaceShellComponent,
+  children: [
+    {
+      path: 'ambassadors',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-ambassadors-page/campaign-ambassadors-page.component').then(
+          (m) => m.CampaignAmbassadorsPageComponent,
+        ),
+    },
+    {
+      path: 'dashboard',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-dashboard-page/campaign-dashboard-page.component').then(
+          (m) => m.CampaignDashboardPageComponent,
+        ),
+    },
+    {
+      path: 'rewards',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-rewards-page/campaign-rewards-page.component').then(
+          (m) => m.CampaignRewardsPageComponent,
+        ),
+    },
+    {
+      path: 'sponsors',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-sponsors-page/campaign-sponsors-page.component').then(
+          (m) => m.CampaignSponsorsPageComponent,
+        ),
+    },
+    {
+      path: 'registration',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-registration-page/campaign-registration-page.component').then(
+          (m) => m.CampaignRegistrationPageComponent,
+        ),
+    },
+    // RegistrationsPageComponent renders its own back-button/title (not the
+    // sidebar, now owned by the shell) when it detects it was reached via
+    // :id (this route) rather than the entity-wide ?campaignId= query param
+    // (/registrations). See registrations-page.component.ts's campaignScoped flag.
+    {
+      path: 'registrations',
+      loadComponent: () =>
+        import('./modules/registrations/pages/registrations-page/registrations-page.component').then(
+          (m) => m.RegistrationsPageComponent,
+        ),
+    },
+    {
+      path: 'donation',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-donation-page/campaign-donation-page.component').then(
+          (m) => m.CampaignDonationPageComponent,
+        ),
+    },
+    {
+      path: 'settings',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-settings-page/campaign-settings-page.component').then(
+          (m) => m.CampaignSettingsPageComponent,
+        ),
+    },
+    {
+      path: 'visibility',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-visibility-page/campaign-visibility-page.component').then(
+          (m) => m.CampaignVisibilityPageComponent,
+        ),
+    },
+    // Same campaignScoped-detection pattern as registrations — the three
+    // "תרומות ונתונים" pages (Donations/Donors/Reports) are shared with the
+    // entity-wide ?campaignId= routes below (under AppLayoutComponent).
+    {
+      path: 'donations',
+      loadComponent: () =>
+        import('./modules/donations/pages/donations-page/donations-page.component').then(
+          (m) => m.DonationsPageComponent,
+        ),
+    },
+    {
+      path: 'donors',
+      loadComponent: () =>
+        import('./modules/donors/pages/donors-page/donors-page.component').then(
+          (m) => m.DonorsPageComponent,
+        ),
+    },
+    {
+      path: 'reports',
+      loadComponent: () =>
+        import('./modules/reports/pages/reports-page/reports-page.component').then(
+          (m) => m.ReportsPageComponent,
+        ),
+    },
+  ],
 };
 
 export const routes: Routes = [
@@ -374,18 +359,7 @@ export const routes: Routes = [
   },
 
   AMBASSADOR_STUDIO_ROUTE,
-  CAMPAIGN_AMBASSADORS_ROUTE,
-  CAMPAIGN_DASHBOARD_ROUTE,
-  CAMPAIGN_REWARDS_ROUTE,
-  CAMPAIGN_SPONSORS_ROUTE,
-  CAMPAIGN_REGISTRATION_ROUTE,
-  CAMPAIGN_REGISTRATIONS_ROUTE,
-  CAMPAIGN_DONATION_ROUTE,
-  CAMPAIGN_SETTINGS_ROUTE,
-  CAMPAIGN_VISIBILITY_ROUTE,
-  CAMPAIGN_DONATIONS_ROUTE,
-  CAMPAIGN_DONORS_ROUTE,
-  CAMPAIGN_REPORTS_ROUTE,
+  CAMPAIGN_WORKSPACE_ROUTE,
 
   {
     path: 'campaigns/:slug/:ambassadorSlug',

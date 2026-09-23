@@ -2,8 +2,6 @@
   <p class="rg-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="d.campaignLifecycle === 'ongoing'" />
-
     <div class="rg-main">
       <button type="button" class="rg-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <h1 class="rg-title">📝 הרשמה</h1>

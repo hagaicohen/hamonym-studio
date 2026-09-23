@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
-import { CampaignManagementSidebarComponent } from '../../shared/components/campaign-management-sidebar/campaign-management-sidebar.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
@@ -19,7 +18,7 @@ import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 @Component({
   selector: 'app-campaign-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, CampaignManagementSidebarComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './campaign-settings-page.component.html',
   styleUrl: './campaign-settings-page.component.css',
 })
