@@ -44,6 +44,14 @@ export class CampaignVisibilityPageComponent implements OnInit {
   campaignId = '';
   draft: CampaignDraft | null = null;
   loading = true;
+  // Save-state indicator (2026-09-23) -- every control on this page
+  // autosaves with zero feedback beforehand, so a manager clicking a toggle
+  // had no way to tell "saving" from "saved" from "silently failed" (the
+  // is_hidden bug above was the sharpest example: it looked identical to a
+  // successful save). Same שומר.../✓ נשמר/error pattern Campaign Settings
+  // already uses -- reused here rather than inventing a new one.
+  saving = false;
+  saved = false;
   saveError: string | null = null;
 
   get isOngoing(): boolean { return this.draft?.campaignLifecycle === 'ongoing'; }
@@ -79,13 +87,17 @@ export class CampaignVisibilityPageComponent implements OnInit {
     const nextHidden = !this.draft.isHidden;
     const attempted = { ...this.draft, isHidden: nextHidden };
     this.draft = attempted;
+    this.saving = true;
+    this.saved = false;
     this.saveError = null;
     this.campaignApi.setVisibility(this.campaignId, nextHidden).subscribe({
+      next: () => { this.saving = false; this.saved = true; },
       error: (err) => {
         // Same optimistic-revert-on-failure guard as persist() below --
         // only revert if nothing newer has since replaced this attempt.
         if (this.draft === attempted) this.draft = previous;
-        this.saveError = err?.error?.error || 'שמירת השינוי נכשלה, נסו שוב';
+        this.saving = false;
+        this.saveError = err?.error?.error || 'השמירה נכשלה — נסה שוב';
       },
     });
   }
@@ -141,14 +153,18 @@ export class CampaignVisibilityPageComponent implements OnInit {
   private persist(previous: CampaignDraft): void {
     if (!this.draft) return;
     const attempted = this.draft;
+    this.saving = true;
+    this.saved = false;
     this.saveError = null;
     this.campaignApi.update(this.campaignId, attempted).subscribe({
+      next: () => { this.saving = false; this.saved = true; },
       error: (err) => {
         // Revert the optimistic toggle so the UI doesn't show an unsaved
         // state as if it had actually saved -- previously this failed
         // silently (bare .subscribe(), no handler at all).
         if (this.draft === attempted) this.draft = previous;
-        this.saveError = err?.error?.error || 'שמירת השינוי נכשלה, נסו שוב';
+        this.saving = false;
+        this.saveError = err?.error?.error || 'השמירה נכשלה — נסה שוב';
       },
     });
   }
