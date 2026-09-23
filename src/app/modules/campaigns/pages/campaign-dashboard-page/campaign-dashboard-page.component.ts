@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-import { CampaignApiService } from '../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { CampaignDashboardStatusComponent } from './sections/campaign-dashboard-status/campaign-dashboard-status.component';
 import { CampaignDashboardKpisComponent } from './sections/campaign-dashboard-kpis/campaign-dashboard-kpis.component';
@@ -39,7 +39,7 @@ import { CampaignDashboardFinanceComponent } from './sections/campaign-dashboard
 export class CampaignDashboardPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private loader = inject(AppLoaderService);
-  private campaignApi = inject(CampaignApiService);
+  private ctx = inject(CampaignWorkspaceContextService);
 
   campaignId = this.route.snapshot.paramMap.get('id') ?? '';
   draft: CampaignDraft | null = null;
@@ -55,7 +55,7 @@ export class CampaignDashboardPageComponent implements OnInit {
       this.loadError = 'לא נמצא קמפיין';
       return;
     }
-    this.campaignApi.getById(this.campaignId).subscribe({
+    this.ctx.ensureLoaded(this.campaignId).subscribe({
       next: draft => { this.draft = draft; this.loading = false; },
       error: () => { this.loadError = 'שגיאה בטעינת הקמפיין'; this.loading = false; },
     });
