@@ -93,6 +93,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Centralized, not per-router -- see the middleware's own header comment.
+// req.user isn't set yet at this point in the chain (whichever router's own
+// requireAuth eventually handles the request sets it), but the listener it
+// registers only fires after that's already happened.
+app.use(require('./middleware/impersonation-audit.middleware'));
+
 /*
 |--------------------------------------------------------------------------
 | API ROUTES
