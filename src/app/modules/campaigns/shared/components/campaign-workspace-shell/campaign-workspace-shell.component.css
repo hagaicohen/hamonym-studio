@@ -1,25 +1,18 @@
-:host { display: block; width: 100%; }
+:host { display: block; }
 
 .cws-shell {
   display: flex;
-  width: 100%;
   gap: 20px;
   align-items: flex-start;
   direction: rtl;
 }
 
-/* router-outlet renders as a real (empty) element and sits as a sibling of
-   the routed component, not a wrapper around it -- without this it was an
-   invisible flex item competing equally for flex-grow space, silently
-   taking half the width away from the actual page content next to it. */
-router-outlet {
-  display: none;
-}
-
-/* Each routed child page already owns its own padding/background (was
-   previously wrapping itself + the sidebar) -- this just gives the child's
-   root element the width the sidebar used to leave it. */
-.cws-shell > *:not(app-campaign-management-sidebar) {
+/* Same pattern as AppLayoutComponent's .app-content -- router-outlet sits
+   inside a dedicated flex:1 wrapper instead of being a flex item itself,
+   so the routed page (a normal block child of this wrapper) reliably fills
+   the width next to the sidebar regardless of how Angular's view
+   encapsulation scopes the router-outlet's dynamically inserted sibling. */
+.cws-content {
   flex: 1;
   min-width: 0;
 }
