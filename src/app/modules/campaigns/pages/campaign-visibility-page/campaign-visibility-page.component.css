@@ -24,11 +24,8 @@
 .cvp-group { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px dashed #eef2f7; }
 .cvp-group-label { font-size: 11px; color: #94a3b8; font-weight: 700; }
 
-/* .cvp-panel fills the full content width (matching every other Workspace
-   page) -- max-width lives on the row itself instead, so the label/switch
-   pair stays close together instead of spreading across the whole panel. */
-.cvp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; max-width: 480px; }
-.cvp-row--primary { padding-bottom: 10px; border-bottom: 1px dashed #eef2f7; max-width: 480px; }
+.cvp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.cvp-row--primary { padding-bottom: 10px; border-bottom: 1px dashed #eef2f7; }
 
 .cvp-label { font-size: 13px; color: #1e293b; font-weight: 600; }
 
