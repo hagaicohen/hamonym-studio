@@ -60,11 +60,34 @@ export class CampaignVisibilityPageComponent implements OnInit {
 
   back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
 
+  // Routed through the dedicated campaignApi.setVisibility() ->
+  // PATCH /api/campaigns/:id/visibility (2026-09-23) -- this used to go
+  // through the same generic persist()/campaignApi.update() every other
+  // toggle on this page uses, but is_hidden is deliberately NOT in the
+  // backend's UPDATABLE_CAMPAIGN_COLUMNS whitelist (see campaigns.service.js
+  // -- "bypassing every dedicated endpoint (setCampaignVisibility...) that
+  // exists specifically to guard those fields"). The generic update silently
+  // drops disallowed keys rather than erroring, so this toggle looked like
+  // it worked (optimistic UI flip, 200 OK from the rest of the payload) while
+  // never actually persisting is_hidden at all. The correct endpoint already
+  // existed and was already used correctly by campaigns-page's own list
+  // quick-action -- just never wired up here, the one place it's the primary
+  // control.
   toggleHidden(): void {
     if (!this.draft) return;
     const previous = this.draft;
-    this.draft = { ...this.draft, isHidden: !this.draft.isHidden };
-    this.persist(previous);
+    const nextHidden = !this.draft.isHidden;
+    const attempted = { ...this.draft, isHidden: nextHidden };
+    this.draft = attempted;
+    this.saveError = null;
+    this.campaignApi.setVisibility(this.campaignId, nextHidden).subscribe({
+      error: (err) => {
+        // Same optimistic-revert-on-failure guard as persist() below --
+        // only revert if nothing newer has since replaced this attempt.
+        if (this.draft === attempted) this.draft = previous;
+        this.saveError = err?.error?.error || 'שמירת השינוי נכשלה, נסו שוב';
+      },
+    });
   }
 
   toggleOfferings(): void {
