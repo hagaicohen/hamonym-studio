@@ -8,6 +8,14 @@
   direction: rtl;
 }
 
+/* router-outlet renders as a real (empty) element and sits as a sibling of
+   the routed component, not a wrapper around it -- without this it was an
+   invisible flex item competing equally for flex-grow space, silently
+   taking half the width away from the actual page content next to it. */
+router-outlet {
+  display: none;
+}
+
 /* Each routed child page already owns its own padding/background (was
    previously wrapping itself + the sidebar) -- this just gives the child's
    root element the width the sidebar used to leave it. */
