@@ -11,6 +11,12 @@ function getDonationErrorMessage(error) {
   if (error.code === 'PAYMENT_NOT_CONFIGURED') {
     return 'לא ניתן לתרום לקמפיין זה כרגע — אמצעי התשלום של הקמפיין אינו מוגדר.';
   }
+  if (error.code === 'INVALID_INSTALLMENTS') {
+    return 'מספר החודשים שנבחר אינו תקין — נסו שוב.';
+  }
+  if (error.code === 'EMBEDDED_SPIKE_DISABLED') {
+    return 'Embedded checkout spike is not enabled — set ALLOW_EMBEDDED_DONATION_SPIKE=true in .env';
+  }
   switch (error.message) {
     case 'Entity not approved':
       return 'לא ניתן לתרום לקמפיין זה כרגע — העמותה המפעילה אותו ממתינה לאישור.';
@@ -56,7 +62,7 @@ exports.getMyDonations = async (req, res) => {
 
 exports.createDonation = async (req, res) => {
   try {
-    const { campaignId, donor, amount, rewards, participants, utmParams, recurring, ambassadorId } = req.body;
+    const { campaignId, donor, amount, rewards, participants, utmParams, recurring, installments, ambassadorId, embedded } = req.body;
 
     if (!campaignId || !donor || !amount) {
       return res.status(400).json({ error: 'campaignId, donor and amount are required' });
@@ -67,7 +73,7 @@ exports.createDonation = async (req, res) => {
 
     const result = await donationsService.createDonation({
       campaignId, donor, amount, rewards, participants,
-      utmParams, ipAddress, userAgent, recurring, ambassadorId,
+      utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded,
     });
     res.json(result);
   } catch (err) {

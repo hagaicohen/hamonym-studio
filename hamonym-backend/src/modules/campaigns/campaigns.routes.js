@@ -92,6 +92,12 @@ router.patch(
 );
 
 router.post(
+  '/:id/request-publish',
+  requireAuth,
+  controller.requestPublish
+);
+
+router.post(
   '/:id/advise',
   requireAuth,
   requireAiAccessForCampaign(),

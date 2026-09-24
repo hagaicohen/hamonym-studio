@@ -645,6 +645,21 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
       [superAdminUserId, entityId, action, notes || null, reasonTags && reasonTags.length ? reasonTags : null, ip || null]
     );
 
+    // Publication intent (2026-09-24) — ONLY the entity's initial approval
+    // auto-publishes anything it was asked to. Deliberately gated on
+    // action === 'approve', not just status === 'active': a suspend→
+    // reactivate cycle also lands on status:'active' via the exact same
+    // setStatus() function (see exports.reactivate below), and a draft
+    // sitting untouched since before the suspension must never resurface
+    // as published just because the entity came back — publish_requested_at
+    // means "finished and asked to publish, waiting on the ENTITY'S FIRST
+    // approval", not "publish whenever the entity is next active for any
+    // reason". Runs inside this same transaction — see
+    // campaigns.service.js#publishRequestedCampaigns's own doc comment.
+    if (status === 'active' && action === 'approve') {
+      await require('../campaigns/campaigns.service').publishRequestedCampaigns(entityId, client);
+    }
+
     await client.query('COMMIT');
     return result.rows[0];
   } catch (err) {

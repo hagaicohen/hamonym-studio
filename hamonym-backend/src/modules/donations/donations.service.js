@@ -241,7 +241,25 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, ambassadorId }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded }) => {
+
+  // Embedded OpenFields spike (2026-09-24) — a second, independent gate on
+  // top of the frontend's devOnlyGuard (hostname check). Neither trusts the
+  // other: even if the dev-only route were somehow reached in a real
+  // deployment, this server-side flag (explicit opt-in, unset by default,
+  // never committed — .env is gitignored) still refuses to honor
+  // `embedded:true` there. Found while building this: environment.production
+  // can't be trusted (angular.json has no fileReplacements for the
+  // `production` build config, so environment.ts — production:false,
+  // hardcoded — ships to every build including real production), and this
+  // backend has no NODE_ENV convention at all — so this is a genuinely new,
+  // explicit flag, not a reuse of an existing (nonexistent) one.
+  if (embedded && process.env.ALLOW_EMBEDDED_DONATION_SPIKE !== 'true') {
+    const err = new Error('Embedded checkout spike is not enabled in this environment');
+    err.status = 403;
+    err.code = 'EMBEDDED_SPIKE_DISABLED';
+    throw err;
+  }
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -419,6 +437,26 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     if (ambassadorRes.rows[0]) attributedAmbassadorId = ambassadorRes.rows[0].id;
   }
 
+  // Donor-chosen installment count (2026-09-24) — a donation-level choice
+  // the donor makes on the donation page itself (MinimalDonationPageComponent),
+  // independent of any campaign-level setting. Bounded 1–60 (5 years
+  // monthly) as a sanity ceiling, not a real product limit — same "never
+  // trust a client number without validating it" rule as donationAmount
+  // above. Only meaningful alongside recurring:true; silently ignored
+  // otherwise (a stray installments value on a one-time donation is not an
+  // error worth failing the donation over).
+  let donorRequestedInstallments = null;
+  if (recurring && installments != null) {
+    const parsed = Number(installments);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 60) {
+      const err = new Error('Invalid installments count');
+      err.status = 400;
+      err.code = 'INVALID_INSTALLMENTS';
+      throw err;
+    }
+    donorRequestedInstallments = parsed;
+  }
+
   // Recurring signup — creates the Hamonym-internal instruction row before
   // Cardcom knows anything about it (see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md
   // §1/§2). The donation links to it from creation, not via a boolean flag.
@@ -430,6 +468,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
         donorEmail: donor.email,
         donorPhone: donor.phone,
         amount: donationAmount,
+        donorRequestedInstallments,
       })
     : null;
 
@@ -601,9 +640,26 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     [cardcomData.LowProfileId, donationId]
   );
 
+  // Embedded OpenFields spike (2026-09-24, isolated — not yet wired into the
+  // real checkout, not yet exercised against a real card) — additive only,
+  // opt-in via `embedded`, never changes the response shape a caller
+  // already relies on today. `lowProfileId` is the ONLY thing the OpenFields
+  // postMessage protocol actually consumes (verified directly against
+  // billing/openfields-form.component.ts's own tokenize(): terminalNumber/
+  // apiName are stored on that component but never referenced anywhere in
+  // its doTransaction payload — only `lowProfileCode`, i.e. this same
+  // LowProfileId, is). No terminal number, no API name, no credentials of
+  // any kind returned here — this is a narrower surface than the already-
+  // proven billing/init-openfields response, not a copy of it. Webhook/
+  // ReturnValue/reconciliation are completely unchanged — this only adds a
+  // second way for the SAME already-created LowProfile session to reach the
+  // donor: driven via CardCom's iframes instead of a full-page redirect to
+  // `url`. Both fields are still returned together — url stays a usable
+  // fallback for as long as embedded mode is unproven.
   return {
     url:        cardcomData.Url,
     donationId,
+    ...(embedded ? { lowProfileId: cardcomData.LowProfileId } : {}),
   };
 };
 
