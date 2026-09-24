@@ -25,6 +25,11 @@ export class CampaignDashboardManagementComponent implements OnChanges {
 
   get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
 
+  // Same reasoning as campaign-workspace-shell.component.ts's sidebar gate —
+  // Rewards/Sponsors have no equivalent on MinimalDonationPageComponent,
+  // Ambassadors does apply to every format. UI-only.
+  get isMinimalFormat(): boolean { return this.draft.layout?.pageFormat === 'minimal'; }
+
   // Ambassadors moved to their own table/service (campaign_ambassadors,
   // ambassadorSvc) — draft.ambassadors is the pre-migration CampaignDraft
   // field, never written to since, so this card always showed 0 real

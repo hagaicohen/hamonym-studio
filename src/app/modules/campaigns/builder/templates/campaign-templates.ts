@@ -93,6 +93,11 @@ export interface CampaignTemplate {
   // two sidebar layoutModes; absent = today's full-page-width Hero.
   // See DECISIONS.md (2026-07-16).
   heroPlacement?: 'full-width' | 'main-column';
+  // Absent/'full' = today's block-based Page Builder page. 'minimal' picks
+  // CampaignStudioStateService.CampaignLayout.pageFormat = 'minimal' instead
+  // — see that field's own doc comment. Only the "דף תרומה מינימלי" entry
+  // below sets this.
+  pageFormat?: 'full' | 'minimal';
   buildPreview(palette: TemplatePalette): TemplatePreviewRow[];
   createBlocks(palette: TemplatePalette): CampaignBlock[];
   buildTheme(palette: TemplatePalette): Record<string, any>;
@@ -531,6 +536,20 @@ function videoHeroPreview(palette: TemplatePalette): TemplatePreviewRow[] {
 }
 
 // ─────────────────────────────────────
+// 10. דף תרומה מינימלי — Minimal Donation Page
+// pageFormat: 'minimal' — rendered by MinimalDonationPageComponent instead
+// of the block-based page, so no starter blocks are needed here.
+// ─────────────────────────────────────
+function minimalPreview(palette: TemplatePalette): TemplatePreviewRow[] {
+  const s = shadesOf(palette.base);
+  return previewRows([
+    { cols: [{ flex: 1, tone: 'paleBg', height: 28 }] },
+    { cols: [{ flex: 30, tone: 'light', height: 28 }, { flex: 40, tone: 'paleBg', height: 28 }, { flex: 30, tone: 'light', height: 28 }] },
+    { cols: [{ flex: 1, tone: 'accent', height: 36 }] },
+  ], s);
+}
+
+// ─────────────────────────────────────
 // TEMPLATE REGISTRY
 // ─────────────────────────────────────
 export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
@@ -669,6 +688,19 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     defaultPaletteId: 'red',
     buildPreview: videoHeroPreview,
     createBlocks: videoHeroBlocks,
+    buildTheme,
+  },
+
+  // 10 — Minimal Donation Page
+  {
+    id: 'minimal-donation',
+    name: 'דף תרומה מינימלי',
+    description: 'לוגו, כותרת קצרה וסכום תרומה — בלי כלום מעבר לזה. הכי מהיר בשביל המבקר להשלים תרומה.',
+    layoutMode: 'standard',
+    pageFormat: 'minimal',
+    defaultPaletteId: 'green',
+    buildPreview: minimalPreview,
+    createBlocks: () => [],
     buildTheme,
   },
 ];

@@ -9,8 +9,8 @@
   box-sizing: border-box;
   overflow-y: auto;
   position: sticky;
-  top: 72px;
-  height: calc(100vh - 72px);
+  top: var(--header-height, 72px);
+  height: calc(100vh - var(--header-height, 72px));
   z-index: 200;
   flex-shrink: 0;
   display: flex;
@@ -115,10 +115,10 @@
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
-    top: 72px;
+    top: var(--header-height, 72px);
     right: 0;
     width: 260px;
-    height: calc(100vh - 72px);
+    height: calc(100vh - var(--header-height, 72px));
     transform: translateX(100%);
     transition: transform 0.2s ease;
     z-index: 250;

@@ -54,17 +54,34 @@ export interface DonationPayload {
   // recurring instruction alongside this first charge. Absent/false = the
   // existing one-time flow, unchanged.
   recurring?: boolean;
+  // Donor's own choice of how many monthly charges they want (2026-09-24) —
+  // a donation-level choice, made on the donation page itself before
+  // checkout ever opens (MinimalDonationPageComponent). No credit-limit
+  // hold either way — CardCom bills each cycle on its own schedule
+  // (TotalNumOfBills is a charge-count instruction, not an authorization).
+  installments?: number;
   // Attribution to the ambassador page/action the donor entered checkout
   // through (2026-09-22) — source metadata, not donor identity; absent for
   // every donation that didn't go through an ambassador context. The
   // backend independently re-verifies this against campaign_ambassadors
   // before ever persisting it — never trusted as-is.
   ambassadorId?: string;
+  // Embedded OpenFields spike (2026-09-24) — opt-in flag requesting the
+  // additional `lowProfileId` field on the response (see DonationResult).
+  // Isolated: nothing in the real checkout sends this yet. Never changes
+  // the existing redirect flow's own response shape when absent/false.
+  embedded?: boolean;
 }
 
 export interface DonationResult {
   url:        string;
   donationId: string;
+  // Only present when the request set `embedded: true` — see
+  // donations.service.js#createDonation's own doc comment for exactly why
+  // this is the ONLY field returned for embedded mode (no terminal number,
+  // no API name, no credentials — verified unnecessary against the
+  // existing OpenFields protocol).
+  lowProfileId?: string;
 }
 
 export interface Receipt {

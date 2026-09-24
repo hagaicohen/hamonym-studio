@@ -5,6 +5,7 @@ import { Title } from '@angular/platform-browser';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/campaign-preview.component';
+import { MinimalDonationPageComponent } from '../../shared/components/minimal-donation-page/minimal-donation-page.component';
 import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
@@ -17,7 +18,7 @@ import { AnalyticsService } from '../../../../core/services/analytics.service';
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [CommonModule, CampaignPreviewComponent, PaymentFailedPopupComponent, DonationToastComponent],
+  imports: [CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })
@@ -38,6 +39,10 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   get isAmbassadorMode(): boolean {
     return this.ctx.active()?.role === 'ambassador';
+  }
+
+  get isMinimalFormat(): boolean {
+    return this.state.draft?.layout?.pageFormat === 'minimal';
   }
 
   editMyAmbassadorPage(): void {

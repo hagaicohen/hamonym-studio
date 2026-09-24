@@ -1,0 +1,137 @@
+<ng-container *ngIf="draft$ | async as draft">
+<div class="mdp-page"
+  [class.mdp-page--embedded]="embedded"
+  [style.--mdp-primary]="draft.layout.theme.primaryColor"
+  [style.--mdp-accent]="draft.layout.theme.accentColor">
+
+  <!-- .mdp-frame — on mobile this is a transparent pass-through (the card
+       and footer keep their existing full-bleed/page-fixed behavior
+       unchanged); on desktop (see the min-width media query) it becomes the
+       actual bordered "app window" box — a defined width/height, with
+       .mdp-card as its scrollable body and .mdp-trust-footer sitting at its
+       own bottom edge as a real (non page-wide) footer, instead of floating
+       separately below a small centered card. 2026-09-24: "החלון של
+       האפליקציה צריך להיות רחב יותר ולהתפרש על כל הגובה... פוטר סטיקי למטה". -->
+  <div class="mdp-frame">
+  <div class="mdp-card">
+    <div class="mdp-logo"
+      *ngIf="draft.showLogo !== false"
+      [class.mdp-logo--square]="draft.layout.minimalLogoShape === 'square'"
+      [class.mdp-logo--none]="draft.layout.minimalLogoShape === 'none'"
+      [class.mdp-logo--sm]="(draft.layout.minimalLogoSize ?? 'md') === 'sm'"
+      [class.mdp-logo--lg]="draft.layout.minimalLogoSize === 'lg'"
+      [style.background]="draft.layout.minimalLogoShape === 'none' ? 'transparent' : (draft.layout.theme.logoBg || 'transparent')">
+      <img *ngIf="logoUrl(draft)" [src]="logoUrl(draft)" alt="">
+      <span *ngIf="!logoUrl(draft)" class="mdp-logo-emoji">🏢</span>
+    </div>
+
+    <ng-container *ngIf="draft.layout.minimalAdvancedText; else simpleTitle">
+      <h1 class="mdp-title mdp-title--rich" [innerHTML]="richHtml(draft.layout.minimalTitleRichHtml || draft.title || 'דף תרומה')"></h1>
+    </ng-container>
+    <ng-template #simpleTitle>
+      <h1 class="mdp-title" [style.color]="draft.layout.minimalTitleColor || '#0f2747'">{{ draft.title || 'דף תרומה' }}</h1>
+    </ng-template>
+
+    <ng-container *ngIf="draft.layout.minimalAdvancedText; else simpleSubtitle">
+      <div class="mdp-subtitle mdp-subtitle--rich" *ngIf="draft.layout.projectDescription" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
+    </ng-container>
+    <ng-template #simpleSubtitle>
+      <p class="mdp-subtitle" *ngIf="draft.shortDescription" [style.color]="draft.layout.minimalSubtitleColor || '#62728d'">{{ draft.shortDescription }}</p>
+    </ng-template>
+
+    <div class="mdp-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
+      <button type="button" class="mdp-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
+        (click)="selectFrequency('one-time')">חד-פעמית</button>
+      <button type="button" class="mdp-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
+        (click)="selectFrequency('monthly')">חודשית</button>
+    </div>
+
+    <div class="mdp-amounts">
+      <button *ngFor="let a of amountsFor(draft) | slice:0:6"
+        class="mdp-amount-preset" type="button"
+        [class.is-selected]="isAmountSelected($any(a))"
+        (click)="selectAmount($any(a))">
+        ₪{{ $any(a).toLocaleString('he-IL') }}
+      </button>
+    </div>
+
+    <div class="mdp-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
+      <span class="mdp-currency-symbol">₪</span>
+      <input class="mdp-custom-amount"
+        type="text"
+        inputmode="numeric"
+        placeholder="סכום אחר"
+        [value]="amountDisplay"
+        (input)="onCustomAmountInput($event)">
+    </div>
+
+    <!-- Installment count — donation-level choice (2026-09-24), not a
+         campaign setting: the donor picks how many separate monthly
+         charges they want, right here, before ever reaching checkout.
+         Replaces the old two-variant note tied to the campaign's own
+         recurringBillingMode/recurringInstallmentsCount — those stay
+         campaign-level defaults for the full-format widget only; this page
+         no longer reads them at all. No "ללא הגבלה" option by design. -->
+    <div class="mdp-installments" *ngIf="donationFrequency === 'monthly'">
+      <p class="mdp-installments-label">לכמה חודשים תרצו לתרום?</p>
+      <div class="mdp-installments-options">
+        <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button"
+          class="mdp-installments-preset"
+          [class.is-selected]="isInstallmentsSelected(n)"
+          (click)="selectInstallments(n)">
+          {{ n }}
+        </button>
+        <div class="mdp-installments-custom-wrap">
+          <input class="mdp-installments-custom"
+            type="text" inputmode="numeric"
+            placeholder="מספר אחר"
+            [value]="customInstallmentsInput"
+            (input)="onCustomInstallmentsInput($event)">
+        </div>
+      </div>
+      <p class="mdp-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
+      <p class="mdp-installments-explain" *ngIf="hasValidInstallments && explicitAmount > 0">
+        {{ explicitAmount.toLocaleString('he-IL') }} ₪ יחויבו פעם בחודש, למשך {{ selectedInstallments }} חודשים.
+        החיוב מתבצע בכל חודש בנפרד ואינו תופס מסגרת אשראי עבור מלוא התקופה.
+      </p>
+    </div>
+
+    <button class="mdp-donate-btn" type="button" (click)="openCheckout()">
+      <span class="mdp-lock-icon">🔒</span>
+      <span>לתמיכה מאובטחת</span>
+    </button>
+  </div>
+
+  <!-- Fixed-bottom stack — trust line always present (2026-09-24: "גם במסך
+       הזה, הראשון"), the sticky CTA on top of it only once the main donate
+       button scrolls out of view. One wrapper stacks them via flex instead
+       of each hardcoding its own bottom offset, so the CTA bar's height
+       never has to be guessed in CSS. Hidden entirely in embedded mode
+       (Builder preview) — position:fixed would escape the confined preview
+       panel and stick to the real browser window instead. -->
+  <div class="mdp-fixed-bottom" *ngIf="!embedded">
+    <div class="mdp-sticky-bar" *ngIf="showStickyBar">
+      <span class="mdp-sticky-title">{{ draft.title || 'דף תרומה' }}</span>
+      <button class="mdp-sticky-cta" type="button" (click)="openCheckout()">לתמיכה מאובטחת</button>
+    </div>
+    <div class="mdp-trust-footer">
+      הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<app-checkout-modal
+  *ngIf="checkoutOpen"
+  [draft]="draft"
+  [amount]="explicitAmount"
+  [recurring]="donationFrequency === 'monthly'"
+  [installments]="donationFrequency === 'monthly' ? selectedInstallments : null"
+  [entityLogoUrl]="logoUrl(draft)"
+  [entityName]="draft.entityName || ''"
+  [ambassador]="ambassador"
+  (closed)="closeCheckout()">
+</app-checkout-modal>
+
+</ng-container>

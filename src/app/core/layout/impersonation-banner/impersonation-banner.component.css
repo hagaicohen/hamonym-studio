@@ -1,5 +1,8 @@
 :host { display: block; }
 
+/* Normal flow block -- app-layout.component.html wraps this together with
+   app-topbar in one .fixed-header that owns the fixed positioning, so this
+   never needs its own position/top/z-index. */
 .imp-banner {
   display: flex;
   align-items: center;
@@ -11,9 +14,6 @@
   font-size: 13px;
   font-weight: 600;
   direction: rtl;
-  position: sticky;
-  top: 0;
-  z-index: 2000;
 }
 
 .imp-icon { font-size: 15px; }

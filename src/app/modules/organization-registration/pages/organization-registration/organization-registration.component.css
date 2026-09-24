@@ -1,11 +1,12 @@
-/* 734px = .step-card's TRUE rendered width below: 680 content + 26px
-   padding x2 + 1px border x2 (step-card is content-box, no box-sizing
-   reset in this app) — box-sizing: border-box here so this max-width is
-   the same kind of "true outer width", not just a matching nominal number
-   that then drifts apart once padding/border are added on top. */
+/* 760px = .step-card's own max-width (src/styles/onboarding.css), which
+   already has box-sizing: border-box — so 760px IS its true outer width,
+   padding/border included, nothing to add on top. (This used to say 734px,
+   derived from a step-billing-method-only LOCAL override of .step-card that
+   has since been removed — see that component's own CSS comment,
+   2026-09-23 — so 734 no longer corresponds to any real card on any step.) */
 .draft-resume-banner {
   box-sizing: border-box;
-  max-width: 734px;
+  max-width: 760px;
   margin: 20px auto 0;
   padding: 16px 20px;
   background: #f0fdfa;
@@ -55,7 +56,7 @@
 }
 
 .draft-save-bar {
-  max-width: 734px; /* see .draft-resume-banner comment */
+  max-width: 760px; /* see .draft-resume-banner comment */
   margin: 20px auto 0;
   display: flex;
   justify-content: left;

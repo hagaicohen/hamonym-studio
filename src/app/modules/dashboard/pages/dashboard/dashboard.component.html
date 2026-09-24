@@ -5,29 +5,23 @@
 @if (!error && data) {
 <div class="db">
 
-  <!-- ══ TOP HEADER ══ -->
-  <div class="dash-header-card">
-
-    <!-- ימין: avatar + שם + תפקיד -->
-    <div class="dh-user">
-      <div class="dh-avatar">
-        @if (userPhoto) {
-          <img class="avatar-photo" [src]="userPhoto" [alt]="userName" />
-        } @else {
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
-          </svg>
+  <!-- ══ PAGE HEADER — title + entity context + period control together,
+       the actual dashboard content (KPIs) starts right after. User identity
+       (name/role/avatar) already lives in the global topbar's context
+       switcher — not repeated here. ══ -->
+  <div class="db-page-header">
+    <div class="db-title-block">
+      <h1 class="db-title">דשבורד</h1>
+      <div class="db-subtitle">
+        @if (entityLogoUrl) {
+          <img class="db-subtitle-logo" [src]="entityLogoUrl" [alt]="entityName" />
         }
-      </div>
-      <div class="dh-user-info">
-        <span class="dh-name">{{ userName }}</span>
-        <span class="dh-role">{{ ctx.active()?.roleLabel }}</span>
+        <span>{{ entityName }}</span>
       </div>
     </div>
 
-    <!-- שמאל: פעמון + לוגו עמותה -->
-    <div class="dh-right-actions">
-      <div class="dh-bell" (click)="scrollToAlerts()">
+    <div class="db-header-actions">
+      <div class="dh-bell" (click)="scrollToAlerts()" title="לתראות">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
@@ -36,33 +30,13 @@
           <span class="dh-badge">{{ allAlerts.length }}</span>
         }
       </div>
-
-      <div class="dh-divider"></div>
-
-      <div class="dh-entity">
-        <span class="dh-entity-name">{{ entityName }}</span>
-        <div class="dh-entity-logo">
-          @if (entityLogoUrl) {
-            <img [src]="entityLogoUrl" [alt]="entityName" />
-          } @else {
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
-            </svg>
-          }
-        </div>
-      </div>
+      <app-date-range-picker></app-date-range-picker>
     </div>
-
   </div>
 
   @if (currentEntity.currentEntity()?.id) {
     <app-approval-status-card [entityId]="currentEntity.currentEntity()!.id"></app-approval-status-card>
   }
-
-  <!-- ══ DATE RANGE ══ -->
-  <div class="dash-range-row">
-    <app-date-range-picker></app-date-range-picker>
-  </div>
 
   <!-- ══ KPI GRID ══ -->
   <section class="kpi-grid">

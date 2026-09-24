@@ -30,4 +30,5 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 export class CampaignManagementSidebarComponent {
   @Input() campaignId = '';
   @Input() isOngoing = false;
+  @Input() isMinimalFormat = false;
 }

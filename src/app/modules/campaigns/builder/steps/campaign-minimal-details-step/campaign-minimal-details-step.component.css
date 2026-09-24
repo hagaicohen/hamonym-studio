@@ -1,0 +1,124 @@
+.minimal-step {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px 24px;
+  direction: rtl;
+}
+
+/* ── STEP HEADER ── */
+.step-header_campaign { direction: rtl; margin-bottom: 4px; }
+.step-title-row { display: flex; align-items: center; gap: 8px; }
+.step-icon-wrapper {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: #ede9fe;
+  border: 1.5px solid #c4b5fd;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.step-icon { color: #7c3aed; display: block; }
+.step-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.step-desc  { font-size: 13px; color: #64748b; margin: 4px 0 0; }
+
+.field-section { display: flex; flex-direction: column; gap: 8px; }
+.field-meta    { display: flex; justify-content: space-between; align-items: center; }
+.field-label   { font-size: 13px; font-weight: 700; color: #374151; margin: 0; }
+.field-hint    { font-size: 12px; color: #94a3b8; margin: 0; }
+.required      { color: #ef4444; margin-right: 2px; }
+.char-counter  { font-size: 11px; color: #94a3b8; }
+
+.field-input {
+  width: 100%; box-sizing: border-box;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  padding: 11px 14px; font-size: 14px; font-family: inherit;
+  color: #0f172a; background: #fff; outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: #7c3aed; }
+.field-input--lg { font-size: 16px; font-weight: 600; }
+
+/* ── LOGO ── */
+.auto-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.auto-logo-preview {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+}
+/* contain, not cover — a wide/non-square logo was getting cropped to fill
+   the circle. Found 2026-09-24. */
+.auto-logo-preview img { width: 78%; height: 78%; object-fit: contain; }
+.auto-logo-emoji { font-size: 22px; }
+.auto-logo-actions { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.logo-btn-row { display: flex; gap: 8px; }
+.logo-btn {
+  padding: 7px 12px;
+  border: 1.5px solid #c4b5fd; border-radius: 8px;
+  background: #fff; color: #7c3aed;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-btn:hover:not(:disabled) { background: #f5f3ff; border-color: #7c3aed; }
+.logo-btn:disabled { opacity: 0.5; cursor: wait; }
+.logo-btn--remove { border-color: #fecaca; color: #ef4444; }
+.logo-btn--remove:hover { background: #fef2f2; }
+
+/* ── COLORS ── */
+.color-row { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* ── LOGO STYLE ── */
+.logo-style-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.logo-style-group { display: flex; align-items: center; gap: 6px; }
+.logo-style-label { font-size: 12px; color: #94a3b8; margin-left: 4px; }
+.logo-style-btn {
+  padding: 5px 10px;
+  border: 1.5px solid #e2e8f0; border-radius: 7px;
+  background: #fff; color: #64748b;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-style-btn.active { border-color: #7c3aed; color: #7c3aed; background: #f5f3ff; }
+
+/* ── ADVANCED TOGGLE ── */
+.advanced-toggle-row { margin: -8px 0 4px; }
+.advanced-toggle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #64748b; cursor: pointer;
+}
+.advanced-toggle input { accent-color: #7c3aed; width: 16px; height: 16px; cursor: pointer; }
+
+/* ── SLUG ── */
+.url-field-wrapper {
+  display: flex; align-items: center;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  overflow: hidden; background: #fff; transition: border-color 0.15s;
+  direction: ltr;
+}
+.url-field-wrapper:focus-within { border-color: #7c3aed; }
+.url-field-wrapper.invalid { border-color: #ef4444; }
+.url-prefix {
+  padding: 11px 10px 11px 0; background: #f8fafc;
+  font-size: 11px; color: #94a3b8;
+  border-right: 1px solid #e2e8f0; white-space: nowrap; flex-shrink: 0;
+}
+.url-input {
+  flex: 1; border: none; outline: none;
+  padding: 11px 12px 11px 0; font-size: 14px; font-family: inherit;
+  color: #7c3aed; direction: ltr; background: transparent;
+  min-width: 0; text-align: left;
+}
+.slug-success  { font-size: 12px; color: #16a34a; font-weight: 600; }
+.slug-error    { font-size: 12px; color: #ef4444; font-weight: 600; }
+.slug-checking { font-size: 12px; color: #94a3b8; }
+
+@media (max-width: 768px) {
+  .minimal-step { padding: 5px; }
+}

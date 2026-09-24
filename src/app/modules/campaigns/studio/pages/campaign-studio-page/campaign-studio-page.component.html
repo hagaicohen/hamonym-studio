@@ -18,7 +18,10 @@
 
     <div class="preview-card">
       <div class="preview-inner" [class.preview-inner--mobile]="s.device === 'mobile'">
-        <app-campaign-preview />
+        <app-minimal-donation-page *ngIf="stateService.draft.layout.pageFormat === 'minimal'; else fullPreview" [embedded]="true" />
+        <ng-template #fullPreview>
+          <app-campaign-preview />
+        </ng-template>
       </div>
     </div>
 
@@ -28,7 +31,9 @@
 <!-- Preset picker overlay — shown first when creating a new campaign -->
 <app-campaign-preset-picker
   *ngIf="showPresetPicker"
-  (presetSelected)="onPresetSelected($event)">
+  (presetSelected)="onPresetSelected($event)"
+  (minimalSelected)="onMinimalSelected()"
+  (closed)="goBack()">
 </app-campaign-preset-picker>
 
 <!-- Template picker overlay — shown after the preset is chosen -->

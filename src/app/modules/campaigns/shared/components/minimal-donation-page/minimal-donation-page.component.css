@@ -1,0 +1,435 @@
+:host { display: block; }
+
+/* Full-bleed white page — not a card floating on a gray background. A
+   distinct "page" background behind a smaller centered white card (the
+   original design here) always reads as not-quite-filling its container,
+   in both the real full-page context and the Builder's own preview panel.
+   Matches the reference layout the user pointed to (Givechak/Tickchak's own
+   donation page): plain white from edge to edge, content starts near the
+   top (not vertically centered mid-page), the page itself IS the
+   background. 2026-09-24. */
+.mdp-page {
+  direction: rtl;
+  min-height: 100dvh;
+  width: 100%;
+  /* Extra bottom padding — the trust footer is fixed to the viewport bottom
+     (see .mdp-fixed-bottom) even on a short page with nothing to scroll, so
+     the flow content needs room reserved or the footer would sit on top of
+     the donate button instead of below it. */
+  padding: 48px 20px 76px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+/* Builder live-preview only (see [embedded] on the component) — the whole
+   ancestor chain down to .preview-inner is a real, definite-height flex/grid
+   layout (not viewport units), so height:100% correctly fills that panel
+   instead of measuring the actual browser viewport like 100dvh does. */
+.mdp-page--embedded {
+  min-height: 100%;
+  height: 100%;
+}
+
+.mdp-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.mdp-logo {
+  width: 88px; height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e5e9f0;
+}
+/* Shape/size are now manager-controlled (layout.minimalLogoShape/Size,
+   background is layout.theme.logoBg via inline style) — see the component
+   comment on those fields. Background used to be hardcoded here; removed
+   since the inline [style.background] binding always wins anyway and a
+   leftover CSS value here would just be confusing dead weight. */
+.mdp-logo--square { border-radius: 16px; }
+.mdp-logo--sm { width: 64px; height: 64px; }
+.mdp-logo--lg { width: 112px; height: 112px; }
+/* contain + inset (not cover/100%) — a wide/non-square logo used to get
+   cropped to fill the circle; this lets it scale to fit whole instead,
+   matching the full-page Hero logo's own pattern (.hm-hero-org-logo img in
+   campaign-preview.component.css). Found 2026-09-24. */
+.mdp-logo img { width: 78%; height: 78%; object-fit: contain; }
+.mdp-logo-emoji { font-size: 32px; }
+
+/* No frame at all — the uploaded file shown as-is, no crop/circle/square,
+   no forced 1:1 box. Sized by height only (matching the same sm/md/lg
+   presets as a max-height) so it still fits the page layout regardless of
+   the image's own aspect ratio. 2026-09-24. */
+.mdp-logo--none {
+  width: auto; height: 88px;
+  border: none; border-radius: 0;
+}
+.mdp-logo--none.mdp-logo--sm { height: 64px; }
+.mdp-logo--none.mdp-logo--lg { height: 112px; }
+.mdp-logo--none img { width: auto; height: 100%; object-fit: contain; }
+
+.mdp-title {
+  font-size: 22px; font-weight: 800;
+  margin: 0 0 6px;
+}
+.mdp-subtitle {
+  font-size: 14px;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+/* Advanced mode — content comes from the shared rich-text editor (Tiptap),
+   which produces its own <p> margins; reset them here so spacing stays
+   consistent with the simple-mode fields it replaces. */
+.mdp-title--rich, .mdp-subtitle--rich { text-align: center; }
+.mdp-title--rich :is(p, h1, h2, h3) { margin: 0; }
+.mdp-subtitle--rich { margin: 0 0 22px; }
+.mdp-subtitle--rich p { margin: 0; }
+
+.mdp-frequency-toggle {
+  display: flex; gap: 6px;
+  margin-bottom: 16px;
+  border: 1.5px solid #dbe3ea;
+  border-radius: 8px;
+  padding: 4px;
+}
+.mdp-frequency-btn {
+  flex: 1; padding: 8px 4px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  font-weight: 700; font-size: 14px;
+  color: #62728d; cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.mdp-frequency-btn.is-selected {
+  background: var(--mdp-primary, #0f2747);
+  color: #fff;
+}
+
+.mdp-amounts {
+  display: grid;
+  /* Fixed column count (not auto-fill) — the חד-פעמית/חודשית amount lists
+     are usually different lengths (e.g. 6 vs 4), and auto-fill can wrap
+     them into a different number of rows each time, resizing the page on
+     every toggle. A fixed 3 columns keeps both the common 4- and 6-item
+     cases at the same 2 rows. min-height is a safety net for mismatched
+     custom lists (e.g. 2 vs 6) where even 3 fixed columns still differ by a
+     row. Found 2026-09-24. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+  min-height: 92px;
+  align-content: start;
+}
+.mdp-amount-preset {
+  padding: 12px 4px;
+  border: 1.5px solid #dbe3ea;
+  background: #fff;
+  font-weight: 800; font-size: 14px;
+  border-radius: 8px; cursor: pointer;
+  color: #0f2747;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.mdp-amount-preset:hover {
+  border-color: var(--mdp-accent, #59c3f0);
+  transform: translateY(-1px);
+}
+.mdp-amount-preset.is-selected {
+  background: var(--mdp-primary, #0f2747);
+  border-color: var(--mdp-primary, #0f2747);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.mdp-custom-amount-wrap {
+  position: relative;
+  margin-bottom: 16px;
+}
+.mdp-currency-symbol {
+  position: absolute;
+  right: 16px; top: 50%;
+  transform: translateY(-50%);
+  font-weight: 800; color: #62728d; font-size: 16px;
+  pointer-events: none;
+}
+.mdp-custom-amount {
+  width: 100%;
+  padding: 14px 40px 14px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 15px; font-weight: 700;
+  text-align: right; direction: rtl;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* Installment count (2026-09-24) — donation-level choice, shown only for
+   monthly. Same visual language as the amount preset grid/custom-amount
+   field just above it. */
+.mdp-installments {
+  margin-bottom: 16px;
+  text-align: right;
+}
+.mdp-installments-label {
+  font-size: 13px; font-weight: 700; color: #0f2747;
+  margin: 0 0 8px;
+}
+.mdp-installments-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) 1.3fr;
+  gap: 8px;
+}
+.mdp-installments-preset {
+  padding: 10px 4px;
+  border: 1.5px solid #dbe3ea;
+  background: #fff;
+  font-weight: 800; font-size: 14px;
+  border-radius: 8px; cursor: pointer;
+  color: #0f2747;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.mdp-installments-preset:hover {
+  border-color: var(--mdp-accent, #59c3f0);
+}
+.mdp-installments-preset.is-selected {
+  background: var(--mdp-primary, #0f2747);
+  border-color: var(--mdp-primary, #0f2747);
+  color: #fff;
+}
+.mdp-installments-custom-wrap { display: flex; }
+.mdp-installments-custom {
+  width: 100%;
+  padding: 10px 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  text-align: center; direction: rtl;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.mdp-installments-hint {
+  font-size: 12px; color: #94a3b8;
+  text-align: center;
+  margin: 10px 0 0;
+}
+.mdp-installments-explain {
+  font-size: 13px; color: #62728d;
+  text-align: center;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.mdp-donate-btn {
+  width: 100%; padding: 16px;
+  border: none; border-radius: 12px;
+  background: var(--mdp-primary, #0f2747);
+  color: #fff;
+  font-weight: 800; font-size: 17px;
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s ease;
+  height: 56px;
+}
+.mdp-donate-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+.mdp-donate-btn:active { transform: translateY(0); }
+
+/* Fixed-bottom stack — always spans the full viewport width regardless of
+   the desktop card border/max-width below (matches Givechak: the trust line
+   sits at the very bottom of the screen, not scoped to the card). */
+.mdp-fixed-bottom {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  direction: rtl;
+}
+
+.mdp-sticky-bar {
+  height: 60px;
+  padding: 0 20px;
+  background: #fff;
+  border-top: 1px solid #e5e9f0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.mdp-sticky-title {
+  font-size: 14px; font-weight: 700; color: #0f2747;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mdp-sticky-cta {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  border: none; border-radius: 24px;
+  background: var(--mdp-primary, #0f2747);
+  color: #fff;
+  font-size: 14px; font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.mdp-sticky-cta:hover { filter: brightness(1.15); }
+
+/* Trust line — always present, small font, bottom of screen (2026-09-24:
+   "גם במסך הזה, הראשון" / "אותו דבר כמו במובייל" — every payment-adjacent
+   screen, not just the checkout modal, and identical on desktop). */
+.mdp-trust-footer {
+  padding: 8px 20px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.mdp-trust-footer strong { color: #64748b; }
+
+/* Desktop/wide-screen framing (2026-09-24) — full-bleed white-on-white had
+   no visible boundary on a wide viewport (the mobile-style card just floated
+   in empty space). A light backdrop + bordered card reads as a distinct
+   widget instead. Mobile stays full-bleed (no backdrop contrast needed
+   edge-to-edge).
+
+   Two DISTINCT contexts both hit this media query, and were wrongly given
+   the SAME rules through 2026-09-24's earlier passes:
+   — the real public page (.mdp-page, no --embedded class) — sized against
+     the actual browser viewport (100dvh), flex-centered by .mdp-page.
+   — the Builder's live-preview panel (.mdp-page--embedded) — a
+     definite-but-NOT-viewport-sized box (.preview-inner's own real pixel
+     height, see campaign-studio-page.component.css). .mdp-frame's min-height
+     was accidentally left keyed to 100dvh for BOTH — inside the (usually
+     much shorter) preview panel that measured against the real screen, not
+     the panel, producing a mismatched/oversized frame. On top of that,
+     .mdp-page's own base `padding: 48px 20px 76px` (further up this file,
+     unconditional — written for the plain mobile full-bleed layout) was
+     never neutralized here: in the non-embedded page its visual effect was
+     absorbed into the flex-centering math, but the embedded panel isn't
+     flex-centered, so that same 48px showed up as a bare gap above the now-
+     bordered card. Fixed by: resetting .mdp-page's own padding to 0 here (
+     .mdp-frame owns all visual spacing now, in both contexts) and giving
+     each context its OWN frame-sizing rule, relative to ITS OWN real
+     container height (100dvh for the public page, 100% for the embedded
+     panel — see .mdp-page--embedded's height:100% a few rules up). */
+@media (min-width: 640px) {
+  .mdp-page:not(.mdp-page--embedded) {
+    background: #f4f6f9;
+    padding-top: 3px;
+    /* Horizontally centers .mdp-frame as a self-contained "app window" —
+       2026-09-24: "רחב יותר... להתפרש על כל הגובה", inspired by (not
+       copied from) Givechak's own boxed desktop layout. align-items was
+       "center" (vertical) until 2026-09-24's third pass — that put half of
+       .mdp-frame's own leftover height (64px) above it as dead space
+       whenever the owner-preview-bar pushed this whole page down; changed
+       to flex-start + a 3px padding-top so the frame starts almost flush
+       under whatever bar(s) are above it instead. */
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .mdp-page--embedded {
+    padding: 0;
+    /* Same centering as the public page, but against .preview-inner's own
+       real height (see the file-level comment above), not the viewport. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* .mdp-frame is the actual bordered box — nearly the full available
+     height (a MIN, not a fixed height — see .mdp-card below for why), with
+     a small even margin top/bottom baked into each context's own calc
+     rather than a content-fit box. .mdp-card is its body, .mdp-fixed-bottom
+     a real footer inside it (position:static, not page-fixed), sitting
+     right after the body instead of floating separately below a small card.
+     2026-09-24 (third pass): the first two attempts (vertical centering,
+     then justify-content:space-between across every child) both tried to
+     fill the tall frame by spreading the CARD'S OWN CONTENT out — that's
+     the wrong axis. The frame itself needs the height; the content inside
+     stays naturally grouped at the top, and only the CTA gets pushed to the
+     bottom (via margin-top:auto below), not every gap stretched equally. */
+  .mdp-frame {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e5e9f0;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(15, 39, 71, 0.06);
+    overflow: hidden;
+  }
+
+  /* Public page — sized against the real viewport. min-height, not height:
+     a flex item's natural min-height is "auto" only when nothing overrides
+     it, so when content genuinely exceeds this, the frame (and the real
+     page underneath it) grows taller and the document scrolls normally
+     instead of clipping or trapping an inner scrollbar. */
+  .mdp-page:not(.mdp-page--embedded) .mdp-frame {
+    min-height: calc(100dvh - 64px);
+  }
+
+  /* Builder preview — sized against .preview-inner's own real height (the
+     parent's 100%, resolvable because .mdp-page--embedded itself has a
+     definite height:100% a few rules up), never the viewport. Same
+     min-height-not-height reasoning — .preview-inner already has its own
+     overflow-y:auto, so genuinely tall content just scrolls there instead
+     of clipping. */
+  .mdp-page--embedded .mdp-frame {
+    min-height: calc(100% - 32px);
+  }
+
+  .mdp-card {
+    width: 100%;
+    max-width: none;
+    /* flex:1 (not a fixed portion) — when content is short, this stretches
+       to fill whatever's left of .mdp-frame's min-height, giving
+       .mdp-donate-btn's margin-top:auto (below) real space to push into.
+       When content is genuinely tall, flex items don't shrink below their
+       own content size by default (min-height:auto, deliberately NOT
+       overridden to 0 here, unlike the scrollable-body attempt this
+       replaces) — so it simply grows past the frame's min-height instead of
+       clipping/scrolling internally. No overflow-y here for the same
+       reason — this must never become its own confined scroll box. */
+    flex: 1;
+    padding: 44px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Pushes just the CTA down to the bottom of .mdp-card's available space —
+     everything above it (logo/title/subtitle/toggle/amounts/custom-amount/
+     recurring-note) keeps its own natural, compact, mobile-tuned margins,
+     unchanged. This is the "stretch the CARD, not the gaps" the space-
+     between attempt got backwards. */
+  .mdp-donate-btn {
+    margin-top: auto;
+  }
+
+  .mdp-fixed-bottom {
+    position: static;
+    flex-shrink: 0;
+  }
+
+  .mdp-sticky-bar {
+    box-shadow: none;
+  }
+}

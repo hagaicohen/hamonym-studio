@@ -1,20 +1,12 @@
-.step-card {
-  max-width: 680px;
-
-  margin: 20px auto;
-
-  padding: 26px;
-
-  background: #ffffff;
-
-  border: 1px solid #e2e8f0;
-
-  border-radius: 24px;
-
-  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.04);
-
-  box-sizing: border-box;
-}
+/* .step-card is intentionally NOT redefined here — it comes from the
+   shared global src/styles/onboarding.css (max-width: 760px), exactly like
+   every other wizard step (step-entity/profile/goals/payment). A local
+   override used to live here (max-width: 680px, its own padding/margin) and
+   silently diverged from that shared width, which is also what
+   organization-registration.component.css's .draft-save-bar/.draft-resume-
+   banner max-width is calibrated against — the "שמור טיוטה" bar only lined
+   up with THIS step's card, and every other step (using the real 760px
+   card) was the one actually misaligned. Found + fixed 2026-09-23. */
 
 .icon-wrapper {
   display: flex;
@@ -227,6 +219,22 @@
   line-height: 1.7;
 
   color: #475569;
+}
+
+.ensure-entity-error {
+  padding: 14px;
+
+  border-radius: 14px;
+
+  background: #fef2f2;
+
+  border: 1px solid #fecaca;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+
+  color: #dc2626;
 }
 
 .token-success {
@@ -467,14 +475,6 @@
 }
 
 @media (max-width: 768px) {
-  .step-card {
-    margin: 12px;
-
-    padding: 18px;
-
-    border-radius: 18px;
-  }
-
   .page-title {
     font-size: 24px;
   }

@@ -1,6 +1,6 @@
 // app.routes.ts
 
-import { Routes } from '@angular/router';
+import { Routes, UrlSegment, UrlMatchResult } from '@angular/router';
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
 import { CampaignWorkspaceShellComponent } from './modules/campaigns/shared/components/campaign-workspace-shell/campaign-workspace-shell.component';
@@ -9,6 +9,7 @@ import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
+import { devOnlyGuard } from './core/guards/dev-only.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -20,6 +21,30 @@ const AMBASSADOR_STUDIO_ROUTE = {
     ),
 };
 
+// Campaign ids are always DB UUIDs (campaigns.id, gen_random_uuid()) — this
+// matcher only claims a 'campaigns/<id>[...]' URL when the id segment is
+// actually UUID-shaped, so CAMPAIGN_WORKSPACE_ROUTE can never collide with
+// sibling flat routes that also live at 'campaigns/<word>' or
+// 'campaigns/<slug>/<slug>' (campaigns/discover, the bare campaigns/:slug
+// public page, campaigns/:slug/:ambassadorSlug) regardless of array order —
+// those values aren't UUIDs, so this route simply doesn't match and the
+// router falls through to them. Replaces an ordinary `path: 'campaigns/:id'`
+// string: being a plain wildcard, it could only ever be disambiguated from
+// those siblings by array position, and no single position satisfied both a
+// bare 1-segment collision (with discover/:slug) and a 2-segment-plus-child
+// collision (with :slug/:ambassadorSlug) at once — found 2026-09-24 after
+// two rounds of reordering each fixed one collision while reintroducing the
+// other (campaigns/:id/dashboard etc. were being swallowed by
+// campaigns/:slug/:ambassadorSlug once this route was moved late enough to
+// stop swallowing campaigns/discover).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function campaignIdMatcher(segments: UrlSegment[]): UrlMatchResult | null {
+  if (segments.length < 2 || segments[0].path !== 'campaigns' || !UUID_RE.test(segments[1].path)) {
+    return null;
+  }
+  return { consumed: segments.slice(0, 2), posParams: { id: segments[1] } };
+}
+
 // Campaign Workspace persistent shell (2026-09-23) — all 12 pages that
 // render the Workspace sidebar are nested here as children of one
 // campaigns/:id parent instead of each being its own flat top-level route.
@@ -30,7 +55,7 @@ const AMBASSADOR_STUDIO_ROUTE = {
 // :id/edit are deliberately NOT here — they're full-screen Studio/editor
 // pages, not part of the Workspace shell.
 const CAMPAIGN_WORKSPACE_ROUTE = {
-  path: 'campaigns/:id',
+  matcher: campaignIdMatcher,
   canActivate: [contextGuard],
   component: CampaignWorkspaceShellComponent,
   children: [
@@ -359,6 +384,8 @@ export const routes: Routes = [
   },
 
   AMBASSADOR_STUDIO_ROUTE,
+  // Positioned here (before campaigns/:slug/:ambassadorSlug) — safe now that
+  // it's a UUID-gated matcher, not a plain wildcard. See its own comment.
   CAMPAIGN_WORKSPACE_ROUTE,
 
   {
@@ -366,6 +393,18 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
         .then((m) => m.CampaignPublicPageComponent),
+  },
+
+  /* Embedded OpenFields spike (2026-09-24), Phase 1 — dev-only manual test
+     harness, gated by devOnlyGuard (hostname check; see its own comment for
+     why environment.production can't be trusted here). Not linked from any
+     nav/menu — reached only by typing the URL directly. */
+  {
+    path: 'dev/embedded-donation-test',
+    canActivate: [devOnlyGuard],
+    loadComponent: () =>
+      import('./modules/dev/pages/embedded-donation-test/embedded-donation-test-page.component')
+        .then((m) => m.EmbeddedDonationTestPageComponent),
   },
 
   /* ========================================

@@ -536,7 +536,14 @@
 
       <!-- Bottom strip -->
       <div class="hm-footer-bottom">
-        <p>© {{ currentYear }} {{ (isCampaign(draft) ? entityName : draft.title) || 'המונים' }} — כל הזכויות שמורות.<ng-container *ngIf="isCampaign(draft)"> תרומות מוכרות לצרכי מס לפי סעיף 46.</ng-container></p>
+        <!-- "תרומות מוכרות לצרכי מס לפי סעיף 46" removed 2026-09-24 — it was
+             asserted unconditionally for every campaign regardless of the
+             owning entity's actual, verified Section 46 status (audited: no
+             DB field records a verified/expiring status; the only real
+             source, a live GuideStar lookup, exists only inside the internal
+             approval-agent tooling and isn't persisted or exposed here).
+             Restore per-campaign once that becomes a real, stored field. -->
+        <p>© {{ currentYear }} {{ (isCampaign(draft) ? entityName : draft.title) || 'המונים' }} — כל הזכויות שמורות.</p>
       </div>
 
     </footer>
@@ -552,7 +559,13 @@
       <div class="hm-sticky-progress-wrap">
         <div class="hm-sticky-progress-fill" [style.width.%]="raisedPct(draft)"></div>
       </div>
-      <button class="hm-sticky-cta" (click)="scrollToDonation()">לתמיכה מאובטחת</button>
+      <!-- Same method the in-page CTA calls (openCheckout(draft), not
+           scrollToDonation()) — both CTAs must trigger the identical
+           donation flow per the 2026-09-23 donation-UX decision. Its
+           existing amount===0 guard (see openCheckout's own doc comment)
+           applies here exactly as it already does for the in-page button —
+           not a new behavior, just consistency. -->
+      <button class="hm-sticky-cta" (click)="openCheckout(draft)">לתמיכה מאובטחת</button>
     </div>
   </div>
 
@@ -1079,7 +1092,15 @@
       </div>
     </div>
 
-    <button class="hm-donate-btn" type="button" (click)="openCheckout(draft)">
+    <!-- hm-primary-donate-cta: a second, distinct class — .hm-donate-btn
+         alone also matches the separate "הרשמה עכשיו" register CTA above
+         (line ~998, its own independent action), so
+         document.querySelector('.hm-donate-btn') in the sticky-CTA observer
+         (campaign-preview.component.ts) would grab whichever renders first
+         in the DOM on any campaign with Registration Options — not
+         necessarily this one, the actual amount-picker's donate button.
+         Found 2026-09-23 while wiring up the registration Drawer request. -->
+    <button class="hm-donate-btn hm-primary-donate-cta" type="button" (click)="openCheckout(draft)">
       <span class="hm-lock-icon">🔒</span>
       <span class="hm-btn-text">לתמיכה מאובטחת</span>
       <span class="hm-cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
@@ -1093,7 +1114,12 @@
         <svg viewBox="0 0 24 24"><path d="M16.6 3.2c-.9.1-1.9.7-2.5 1.5-.5.7-.9 1.6-.8 2.5 1 0 2-.6 2.6-1.4.6-.8.9-1.7.7-2.6z"/><path d="M19 16.4c-.4.9-.7 1.3-1.3 2.1-.8 1.2-1.9 2.6-3.3 2.6-1.2 0-1.5-.8-3.1-.8s-2 .8-3.1.8c-1.4.1-2.5-1.5-3.3-2.7-1.8-2.6-2-5.6-.9-7.2.8-1.2 2-1.8 3.2-1.8 1.2 0 2 .8 3.1.8 1 0 1.6-.8 3.1-.8 1.1 0 2.3.6 3.1 1.7-2.7 1.5-2.3 5.3.5 6.3z"/></svg>
         <span>Apple Pay</span>
       </span>
-      <span class="hm-payment-badge bit"><strong>bit</strong></span>
+      <!-- Bit badge removed 2026-09-24 — no reliable per-entity/terminal
+           signal exists today that Bit is actually enabled on this
+           campaign's CardCom terminal (audited: not in entities.cardcom_*
+           columns, not in the LowProfile/Create payload, not in CardCom's
+           response). Restore once that's confirmed as either a real
+           per-entity field or a guaranteed platform-wide CardCom policy. -->
     </div>
   </div>
 

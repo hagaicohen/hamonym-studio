@@ -130,6 +130,22 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     return this.campaigns.filter(c => c.status !== 'draft');
   }
 
+  // Minimal donation pages have no Hero image/video at all — showing the
+  // same gray Hero placeholder as a full campaign implies a missing photo
+  // that was never asked for. The card shows the entity's own logo instead.
+  isMinimal(c: any): boolean {
+    return c?.layout?.pageFormat === 'minimal';
+  }
+
+  // Same precedence MinimalDonationPageComponent's own logoUrl() uses — a
+  // campaign-specific logo override wins over the entity's own logo when
+  // set. Using entityLogo alone here showed the fallback icon even when
+  // the donation page itself was already showing a real logo (a
+  // campaignLogoUrl the card never checked).
+  minimalLogoFor(c: any): string | null {
+    return c?.campaignLogoUrl || c?.entityLogo || null;
+  }
+
   // Video-hero campaigns have no coverImageUrl — fall back to the YouTube
   // thumbnail so the card isn't blank.
   cardCoverUrl(c: any): string | null {

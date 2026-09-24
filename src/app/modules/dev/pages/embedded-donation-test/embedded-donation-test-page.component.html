@@ -1,0 +1,70 @@
+<div class="dev-page">
+  <div class="dev-banner">
+    ⚠️ Dev-only test harness — Embedded OpenFields spike (Phase 1). לא חלק מה-checkout האמיתי.
+  </div>
+
+  <h1>Embedded Donation Test</h1>
+
+  <section class="dev-card">
+    <h2>1. פרטי בדיקה</h2>
+
+    <label>
+      Campaign ID (קמפיין אמיתי, עם עמותה שיש לה CardCom מאומת)
+      <input type="text" [(ngModel)]="campaignId" placeholder="uuid של קמפיין אמיתי" [disabled]="loading || !!lowProfileId">
+    </label>
+
+    <div class="dev-row">
+      <label>שם תורם <input type="text" [(ngModel)]="donorName" [disabled]="loading || !!lowProfileId"></label>
+      <label>אימייל <input type="text" [(ngModel)]="donorEmail" [disabled]="loading || !!lowProfileId"></label>
+      <label>טלפון <input type="text" [(ngModel)]="donorPhone" [disabled]="loading || !!lowProfileId"></label>
+    </div>
+
+    <div class="dev-row">
+      <label>
+        סוג תרומה
+        <select [(ngModel)]="frequency" [disabled]="loading || !!lowProfileId">
+          <option value="one-time">חד-פעמית</option>
+          <option value="monthly">חודשית</option>
+        </select>
+      </label>
+      <label>סכום (₪) <input type="number" [(ngModel)]="amount" [disabled]="loading || !!lowProfileId"></label>
+      <label *ngIf="frequency === 'monthly'">מספר חודשים <input type="number" [(ngModel)]="months" [disabled]="loading || !!lowProfileId"></label>
+    </div>
+
+    <button type="button" [disabled]="!canCreate || !!lowProfileId" (click)="createEmbeddedDonation()">
+      {{ loading ? 'יוצר...' : 'Create Embedded Donation' }}
+    </button>
+
+    <p class="dev-error" *ngIf="errorMsg">{{ errorMsg }}</p>
+  </section>
+
+  <section class="dev-card" *ngIf="donationId">
+    <h2>2. Diagnostics</h2>
+    <dl class="dev-diagnostics">
+      <dt>donationId</dt><dd>{{ donationId }}</dd>
+      <dt>lowProfileId</dt><dd>{{ lowProfileId || '—' }}</dd>
+      <dt>card iframe loaded</dt><dd>{{ embeddedCheckout?.cardIframeReady ? '✅' : '⏳' }}</dd>
+      <dt>cvv iframe loaded</dt><dd>{{ embeddedCheckout?.cvvIframeReady ? '✅' : '⏳' }}</dd>
+      <dt>payment result</dt>
+      <dd *ngIf="!paymentResult">— (טרם נשלח doTransaction)</dd>
+      <dd *ngIf="paymentResult">
+        IsSuccess: {{ paymentResult.success }}<br>
+        InternalDealNumber: {{ paymentResult.internalDealNumber || '—' }}
+      </dd>
+    </dl>
+  </section>
+
+  <section class="dev-card" *ngIf="lowProfileId">
+    <h2>3. CardCom OpenFields</h2>
+    <p class="dev-hint">
+      🛑 עצרו כאן אם אתם רק בודקים שה-iframes נטענים. אל תזינו כרטיס אמיתי עד שסיכמתם על כרטיס בדיקה.
+    </p>
+    <app-embedded-openfields-checkout
+      [lowProfileId]="lowProfileId"
+      [donorName]="donorName"
+      [donorEmail]="donorEmail"
+      [donorPhone]="donorPhone"
+      (result)="onPaymentResult($event)">
+    </app-embedded-openfields-checkout>
+  </section>
+</div>

@@ -33,12 +33,18 @@
   width: 100%;
 }
 
+/* Normal document flow (not fixed) — was position:fixed before 2026-09-24,
+   which meant it never pushed .public-preview-wrap down on its own; a
+   hardcoded padding-top:44px on the wrap compensated for that, sized for
+   this bar alone. That broke the moment both bars can render at once
+   (ownerPreview && canEdit both true — an entity manager previewing their
+   own pending-approval campaign): the fixed bar visually overlapped the
+   in-flow .owner-preview-bar underneath it, while the wrap's 44px still
+   stacked on top of the owner bar's own real height, leaving an empty gap
+   the size of a whole second bar with nothing in it. Matching
+   .owner-preview-bar's own (already-correct) flow behavior lets 0/1/2 bars
+   stack with zero manual offset math, in any combination. */
 .ambassador-edit-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 999;
   background: #6D5DF6;
   color: #fff;
   display: flex;
@@ -50,8 +56,6 @@
   direction: rtl;
 }
 
-/* Normal document flow (not fixed) — sits above the page and pushes it
-   down, rather than floating over the nav bar like .ambassador-edit-bar. */
 .owner-preview-bar {
   background: #6D5DF6;
   color: #fff;
@@ -84,6 +88,3 @@
   opacity: 0.9;
 }
 
-.public-preview-wrap.has-edit-bar {
-  padding-top: 44px;
-}

@@ -30,6 +30,14 @@ export class CampaignWorkspaceShellComponent implements OnInit, OnDestroy {
   // already cached), the sidebar picks it up too -- no separate fetch here.
   get isOngoing(): boolean { return this.ctx.draft()?.campaignLifecycle === 'ongoing'; }
 
+  // Rewards/Sponsors have no equivalent on MinimalDonationPageComponent
+  // (see campaign-editor.component.ts's MINIMAL_FORMAT_GATED_STEPS) — the
+  // Workspace sidebar shouldn't offer nav to pages that manage content the
+  // public page never renders. Ambassadors stays visible for every format
+  // (2026-09-24: "minimal ≠ no ambassadors"). UI-only — no backend
+  // capability is removed, a manager can still reach those routes directly.
+  get isMinimalFormat(): boolean { return this.ctx.draft()?.layout?.pageFormat === 'minimal'; }
+
   ngOnInit(): void {
     // Subscribed, not a one-time snapshot read -- if the campaign id
     // changes without the shell being destroyed (Angular's default

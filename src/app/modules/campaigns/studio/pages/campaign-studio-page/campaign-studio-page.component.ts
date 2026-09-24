@@ -4,9 +4,11 @@ import { Router, ActivatedRoute } from '@angular/router';
 
 import { CampaignEditorComponent }       from '../../editor/campaign-editor/campaign-editor.component';
 import { CampaignPreviewComponent }      from '../../preview/campaign-preview/campaign-preview.component';
+import { MinimalDonationPageComponent }  from '../../../shared/components/minimal-donation-page/minimal-donation-page.component';
 import { CampaignStudioTopbarComponent } from '../../topbar/campaign-studio-topbar/campaign-studio-topbar.component';
 import { TemplatePickerComponent, TemplateSelection } from '../../../builder/template-picker/template-picker.component';
 import { CampaignPresetPickerComponent } from '../../../builder/preset-picker/campaign-preset-picker.component';
+import { CAMPAIGN_TEMPLATES, TEMPLATE_PALETTES } from '../../../builder/templates/campaign-templates';
 import { StudioUiService }               from '../../services/studio-ui.service';
 import { CampaignApiService }            from '../../../services/campaign-api.service';
 import { CampaignStudioStateService, PresetId } from '../../../services/campaign-studio-state.service';
@@ -20,6 +22,7 @@ import { AppLoaderService }              from '../../../../../core/services/app-
     CampaignStudioTopbarComponent,
     CampaignEditorComponent,
     CampaignPreviewComponent,
+    MinimalDonationPageComponent,
     TemplatePickerComponent,
     CampaignPresetPickerComponent,
   ],
@@ -30,7 +33,7 @@ export class CampaignStudioPageComponent implements OnInit {
   private router       = inject(Router);
   private route        = inject(ActivatedRoute);
   private campaignApi  = inject(CampaignApiService);
-  private stateService = inject(CampaignStudioStateService);
+  stateService = inject(CampaignStudioStateService);
   private loader       = inject(AppLoaderService);
   ui = inject(StudioUiService);
 
@@ -89,6 +92,28 @@ export class CampaignStudioPageComponent implements OnInit {
     this.showTemplatePicker = true;
   }
 
+  // "דף תרומה מהיר" card on the preset picker — a direct entry point to
+  // layout.pageFormat='minimal', reusing the exact same 'minimal-donation'
+  // template entry the Template Picker itself offers (see
+  // campaign-templates.ts), just applied immediately instead of making the
+  // visitor pick it again from a 9-template grid full of full-page layouts
+  // that don't even apply to this format. Goes straight to the editor —
+  // showTemplatePicker never turns on. See DECISIONS.md (2026-09-24).
+  onMinimalSelected(): void {
+    const template = CAMPAIGN_TEMPLATES.find(t => t.id === 'minimal-donation');
+    if (!template) return;
+    const palette = TEMPLATE_PALETTES.find(p => p.id === template.defaultPaletteId) ?? TEMPLATE_PALETTES[0];
+    this.stateService.applyTemplate(
+      template.createBlocks(palette),
+      template.buildTheme(palette),
+      template.layoutMode,
+      template.id,
+      template.heroPlacement,
+      template.pageFormat,
+    );
+    this.showPresetPicker = false;
+  }
+
   onTemplateSelected(selection: TemplateSelection): void {
     const { template, palette } = selection;
     this.stateService.applyTemplate(
@@ -97,6 +122,7 @@ export class CampaignStudioPageComponent implements OnInit {
       template.layoutMode,
       template.id,
       template.heroPlacement,
+      template.pageFormat,
     );
     this.showTemplatePicker = false;
   }

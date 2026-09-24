@@ -2,11 +2,13 @@
 <div class="app-shell">
   <app-idle-warning-modal></app-idle-warning-modal>
 
-  <app-impersonation-banner></app-impersonation-banner>
-
-  <!-- TOPBAR -->
-
-  <app-topbar (menuClick)="toggleSidebar()"> </app-topbar>
+  <!-- Banner + topbar move as a single fixed unit -- see
+       AppLayoutComponent's ResizeObserver, which measures this element's
+       real height into --header-height instead of any hardcoded offset. -->
+  <div class="fixed-header" #fixedHeader>
+    <app-impersonation-banner></app-impersonation-banner>
+    <app-topbar (menuClick)="toggleSidebar()"></app-topbar>
+  </div>
 
   <!-- MOBILE OVERLAY -->
 

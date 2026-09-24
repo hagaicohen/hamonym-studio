@@ -10,7 +10,12 @@
     <!-- Each block below is destroyed/recreated on every step change (not
          just toggled), so the .step-fade CSS animation replays every time —
          a lightweight "you moved" cue with no Angular animations module. -->
-    @if (currentStep === 1) { <div class="step-fade"><app-campaign-basic-step /></div> }
+    @if (currentStep === 1) {
+      <div class="step-fade">
+        @if (isMinimalFormat) { <app-campaign-minimal-details-step /> }
+        @else { <app-campaign-basic-step /> }
+      </div>
+    }
     @if (currentStep === 2) { <div class="step-fade"><app-campaign-type-step /></div> }
     @if (currentStep === 3) { <div class="step-fade"><app-campaign-donation-step /></div> }
     @if (currentStep === 4) { <div class="step-fade"><app-campaign-offerings-step /></div> }

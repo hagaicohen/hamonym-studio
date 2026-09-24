@@ -3,7 +3,7 @@
     <span class="cdmg-title">🎨 תוכן הקמפיין</span>
   </div>
   <div class="cdmg-grid">
-    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'rewards']">
+    <a class="cdmg-card" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'rewards']">
       <span class="cdmg-icon">🎁</span>
       <span class="cdmg-label">תשורות</span>
       <span class="cdmg-count">{{ draft.offerings.length }} פעילות</span>
@@ -15,7 +15,7 @@
       <span class="cdmg-count">{{ ambassadorCount ?? 0 }} שגרירים</span>
       <span class="cdmg-cta">נהל שגרירים ←</span>
     </a>
-    <a class="cdmg-card" [routerLink]="['/campaigns', campaignId, 'sponsors']">
+    <a class="cdmg-card" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'sponsors']">
       <span class="cdmg-icon">🤝</span>
       <span class="cdmg-label">חסויות</span>
       <span class="cdmg-count">{{ draft.sponsors.length }} חסויות</span>

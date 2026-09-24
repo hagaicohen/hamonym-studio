@@ -35,76 +35,56 @@
 
 
 /* ══════════════════════════════
-   DASH HEADER CARD
+   PAGE HEADER — title + entity context (compact) + period control.
+   Replaces the old oversized identity card (2026-09-22): user name/role/
+   avatar already live in the global topbar's context switcher, so this only
+   carries what's unique to the dashboard page itself -- the entity's own
+   logo (not shown anywhere else) and the period control that scopes the KPIs
+   directly below it.
 ══════════════════════════════ */
-.dash-header-card {
+.db-page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e8edf3;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-  padding: 14px 24px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 20px;
   direction: rtl;
 }
 
-/* ── ימין: user ── */
-.dh-user {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.dh-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 2px solid #f1f5f9;
-  overflow: hidden;
-  color: #94a3b8;
-}
-
-.dh-avatar svg {
-  width: 30px;
-  height: 30px;
-}
-
-.dh-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dh-user-info {
+.db-title-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
-.dh-name {
-  font-size: 16px;
+.db-title {
+  font-size: 22px;
   font-weight: 700;
   color: #1e293b;
-  line-height: 1.3;
+  margin: 0;
+  line-height: 1.2;
 }
 
-.dh-role {
+.db-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   color: #64748b;
 }
 
-/* ── שמאל: פעמון + עמותה ── */
-.dh-right-actions {
+.db-subtitle-logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.db-header-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
 }
 
 .dh-bell {
@@ -114,17 +94,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   transition: background 0.15s ease;
+  flex-shrink: 0;
 }
 
 .dh-bell:hover { background: #f1f5f9; }
 
 .dh-bell svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .dh-badge {
@@ -144,50 +125,6 @@
   padding: 0 3px;
   border: 2px solid white;
   line-height: 1;
-}
-
-.dh-divider {
-  width: 1px;
-  height: 32px;
-  background: #e2e8f0;
-}
-
-.dh-entity {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dh-entity-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-  color: #94a3b8;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-}
-
-.dh-entity-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dh-entity-logo svg {
-  width: 22px;
-  height: 22px;
-}
-
-.dh-entity-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1e293b;
 }
 
 /* ── SECTION HEADER ── */
@@ -285,15 +222,6 @@
 .pager-dot-active {
   background: #583cd6;
   transform: scale(1.3);
-}
-
-/* ══════════════════════════════
-   DATE RANGE
-══════════════════════════════ */
-.dash-range-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
 }
 
 /* ══════════════════════════════
@@ -451,21 +379,21 @@
   border-radius: 14px;
   border: 1px solid #e8edf3;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-  padding: 24px 28px;
+  padding: 16px 20px;
 }
 
 .alerts-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .alert-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 18px;
-  border-radius: 10px;
+  padding: 9px 14px;
+  border-radius: 9px;
   border-right: 5px solid transparent;
 }
 
@@ -476,21 +404,21 @@
 .alert-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
 .alert-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.alert-icon svg { width: 20px; height: 20px; }
+.alert-icon svg { width: 16px; height: 16px; }
 
 .alert-icon-critical { background: #fee2e2; color: #ef4444; }
 .alert-icon-warning  { background: #fef3c7; color: #f59e0b; }
@@ -522,14 +450,14 @@
 }
 
 .alert-action-btn {
-  padding: 7px 16px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-right: 16px;
+  margin-right: 12px;
   transition: opacity 0.15s;
 }
 
@@ -788,4 +716,6 @@
   .kpi-value        { font-size: 26px; }
   .top-header       { flex-direction: column; align-items: flex-start; gap: 16px; }
   .header-actions   { width: 100%; justify-content: flex-start; }
+  .db-page-header   { flex-direction: column; align-items: flex-start; }
+  .db-header-actions { width: 100%; justify-content: space-between; }
 }

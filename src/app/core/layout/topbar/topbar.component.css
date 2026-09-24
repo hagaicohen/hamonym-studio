@@ -1,8 +1,11 @@
 /* src/app/core/layout/topbar/topbar.component.css */
 
+/* No longer position: fixed on its own -- app-layout.component.html now
+   wraps this together with app-impersonation-banner in one .fixed-header
+   that owns the fixed positioning (see app-layout.component.css), so the
+   two always move as a single unit during scroll instead of each managing
+   their own top offset independently. */
 .topbar {
-  position: fixed;
-  top: 0; right: 0; left: 0;
   height: 72px;
   background: white;
   border-bottom: 1px solid #e2e8f0;
@@ -10,7 +13,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  z-index: 100;
 }
 
 .topbar-right,

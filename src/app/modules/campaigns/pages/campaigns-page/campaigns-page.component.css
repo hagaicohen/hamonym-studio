@@ -236,6 +236,29 @@
 
 .card-cover--deleting { opacity: 0.45; pointer-events: none; }
 
+/* Minimal donation pages have no Hero at all — a much shorter neutral box
+   with the entity's own logo centered, instead of the full campaign's
+   200px gray Hero placeholder implying a missing photo. */
+.card-cover--minimal {
+  height: 110px;
+  background: #fafbfc;
+  align-items: center;
+  justify-content: center;
+}
+.card-cover-logo {
+  max-width: 60%;
+  max-height: 60%;
+  object-fit: contain;
+}
+.card-cover-logo-fallback {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #94a3b8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
 .card-body {
   padding: 16px 18px;
   display: flex;
@@ -374,6 +397,23 @@
   flex-shrink: 0;
   position: relative;
   background: #e2e8f0 center / cover no-repeat;
+}
+.list-cover--minimal {
+  background: #fafbfc;
+  display: flex; align-items: center; justify-content: center;
+}
+.list-cover-logo {
+  max-width: 70%;
+  max-height: 70%;
+  object-fit: contain;
+}
+.list-cover-logo-fallback {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #94a3b8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
 }
 
 .list-cover .card-delete-btn {
@@ -594,6 +634,21 @@
   color: #94a3b8;
 }
 
+.draft-cover--minimal { background: #fafbfc; }
+.draft-cover-logo {
+  max-width: 70%;
+  max-height: 70%;
+  object-fit: contain;
+}
+.draft-cover-logo-fallback {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #94a3b8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+
 .draft-body {
   flex: 1;
   padding: 0 16px;
@@ -616,6 +671,18 @@
 .draft-date {
   font-size: 12px;
   color: #94a3b8;
+}
+
+.draft-status-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.draft-status-badge--pending {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .draft-actions {

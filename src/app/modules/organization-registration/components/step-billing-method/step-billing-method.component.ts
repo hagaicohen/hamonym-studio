@@ -1,6 +1,7 @@
 import {
   Component,
   EventEmitter,
+  OnInit,
   Output,
   ViewChild,
   inject,
@@ -27,7 +28,7 @@ type PaymentMethod = 'credit-card' | 'masav';
 
   styleUrls: ['./step-billing-method.component.css'],
 })
-export class StepBillingMethodComponent {
+export class StepBillingMethodComponent implements OnInit {
   @Output()
   back = new EventEmitter<void>();
 
@@ -47,12 +48,37 @@ export class StepBillingMethodComponent {
 
   saveCompleted = false;
 
+  // OpenfieldsFormComponent silently no-ops (never initializes CardCom's
+  // real card-number/CVV iframes, leaving the static "0000 0000..."
+  // skeleton showing forever, non-interactive) if it doesn't get a real
+  // entityId — see its own ngOnInit guard. entityId is only ever set by an
+  // explicit save (see OrganizationRegistrationState.entityId doc comment),
+  // and nothing before this step required the visitor to click "שמור
+  // טיוטה" — so arriving here straight from step 4 left entityId still
+  // null and the card fields permanently dead. Silently draft-saving on
+  // arrival (same canSaveDraft fields step 1 already required) fixes this
+  // without asking the visitor to do anything extra. Found 2026-09-23.
+  ensuringEntity = false;
+  ensureEntityError: string | null = null;
+
   constructor() {
     const state = this.stateService.state();
 
     this.paymentMethod = state.paymentMethod as PaymentMethod;
 
     this.continueLater = state.continueLater;
+  }
+
+  ngOnInit(): void {
+    if (this.stateService.state().entityId) return;
+    this.ensuringEntity = true;
+    this.stateService.save({ includeBilling: false }).subscribe({
+      next: () => { this.ensuringEntity = false; },
+      error: (err) => {
+        this.ensuringEntity = false;
+        this.ensureEntityError = err?.error?.error || 'לא ניתן היה לשמור את פרטי העמותה. נסו לחזור לשלב הקודם ולהמשיך שוב.';
+      },
+    });
   }
 
   private syncState(): void {

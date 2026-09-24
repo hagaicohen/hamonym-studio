@@ -1,0 +1,163 @@
+<div class="minimal-step">
+
+  <!-- ── STEP HEADER ── -->
+  <div class="step-header_campaign">
+    <div class="step-title-row">
+      <span class="step-icon-wrapper">
+        <lucide-angular [img]="ZapIcon" [size]="18" class="step-icon"></lucide-angular>
+      </span>
+      <h2 class="step-title">פרטי דף התרומה</h2>
+    </div>
+    <p class="step-desc">כותרת והסבר קצר — זהו. בלי תמונת רקע, בלי עיצוב מורכב.</p>
+  </div>
+
+  <!-- ── LOGO — defaults automatically to the עמותה's own logo; uploading
+       one here overrides it for this page only (draft.campaignLogoUrl). ── -->
+  <div class="field-section">
+    <label class="field-label">לוגו</label>
+    <div class="auto-logo-row">
+      <div class="auto-logo-preview"
+        [class.auto-logo-preview--square]="logoShape === 'square'"
+        [class.auto-logo-preview--none]="logoShape === 'none'"
+        [style.background]="logoShape === 'none' ? 'transparent' : (draft.layout.theme.logoBg || 'transparent')">
+        <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+        <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="auto-logo-emoji">🏢</span>
+      </div>
+      <div class="auto-logo-actions">
+        <p class="field-hint" *ngIf="!draft.campaignLogoUrl">כברירת מחדל נלקח מפרטי {{ entityName || 'העמותה' }}</p>
+        <p class="field-hint" *ngIf="draft.campaignLogoUrl">לוגו מותאם אישית לדף הזה</p>
+        <div class="logo-btn-row">
+          <button type="button" class="logo-btn" (click)="campaignLogoInput.click()" [disabled]="isUploadingLogo">
+            {{ isUploadingLogo ? 'מעלה...' : (draft.campaignLogoUrl ? 'החלף לוגו' : 'העלאת לוגו מותאם') }}
+          </button>
+          <button type="button" class="logo-btn logo-btn--remove" *ngIf="draft.campaignLogoUrl" (click)="removeCampaignLogo()">חזרה ללוגו אוטומטי</button>
+        </div>
+        <input #campaignLogoInput type="file" accept="image/*" hidden (change)="onCampaignLogoChange($event)">
+
+        <div class="logo-style-row">
+          <div class="logo-style-group">
+            <span class="logo-style-label">צורה</span>
+            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'circle'" (click)="setLogoShape('circle')">עיגול</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'square'" (click)="setLogoShape('square')">מרובע</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'none'" (click)="setLogoShape('none')">ללא צורה</button>
+          </div>
+          <div class="logo-style-group">
+            <span class="logo-style-label">גודל</span>
+            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'sm'" (click)="setLogoSize('sm')">קטן</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'md'" (click)="setLogoSize('md')">בינוני</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'lg'" (click)="setLogoSize('lg')">גדול</button>
+          </div>
+          <app-color-picker
+            [value]="draft.layout.theme.logoBg"
+            [showNone]="true"
+            (valueChange)="patchTheme({ logoBg: $event })"
+            label="רקע הלוגו">
+          </app-color-picker>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COLORS — button/hover always apply. Title/subtitle color only in
+       simple mode — in advanced mode the rich editor controls those itself,
+       per-selection, so a separate global picker for them would conflict. ── -->
+  <div class="field-section">
+    <label class="field-label">צבעים</label>
+    <div class="color-row">
+      <app-color-picker
+        *ngIf="!advancedText"
+        [value]="draft.layout.minimalTitleColor || '#0f2747'"
+        (valueChange)="patchLayout({ minimalTitleColor: $event })"
+        label="כותרת">
+      </app-color-picker>
+      <app-color-picker
+        *ngIf="!advancedText"
+        [value]="draft.layout.minimalSubtitleColor || '#62728d'"
+        (valueChange)="patchLayout({ minimalSubtitleColor: $event })"
+        label="טקסט משני">
+      </app-color-picker>
+      <app-color-picker
+        [value]="draft.layout.theme.primaryColor"
+        (valueChange)="patchTheme({ primaryColor: $event })"
+        label="כפתור תרומה">
+      </app-color-picker>
+      <app-color-picker
+        [value]="draft.layout.theme.accentColor"
+        (valueChange)="patchTheme({ accentColor: $event })"
+        label="הדגשה / hover">
+      </app-color-picker>
+    </div>
+  </div>
+
+  <!-- ── ADVANCED TEXT TOGGLE — opt-in, off by default. On: replaces the
+       plain title/description fields with the existing rich-text editor
+       (compact: font size/color/align/bold...), the same tool used
+       elsewhere in the Builder — not a new parallel editor. ── -->
+  <div class="advanced-toggle-row">
+    <label class="advanced-toggle">
+      <input type="checkbox" [checked]="advancedText" (change)="toggleAdvancedText()">
+      <span>עריכה מתקדמת לכותרת ולהסבר (גופן, צבע, הדגשה ועוד)</span>
+    </label>
+  </div>
+
+  <!-- ── TITLE ── -->
+  <div class="field-section" *ngIf="!advancedText">
+    <div class="field-meta">
+      <label class="field-label">כותרת <span class="required">*</span></label>
+      <span class="char-counter">{{ draft.title.length }}/80</span>
+    </div>
+    <input class="field-input field-input--lg" type="text"
+      [ngModel]="draft.title" (ngModelChange)="onTitleChange($event)"
+      maxlength="80" placeholder="לדוגמה: תרומה לבניית בית הכנסת">
+  </div>
+  <div class="field-section" *ngIf="advancedText">
+    <label class="field-label">כותרת <span class="required">*</span></label>
+    <app-rich-text-editor
+      [compact]="true"
+      [ngModel]="draft.layout.minimalTitleRichHtml || draft.title"
+      (ngModelChange)="onTitleRichChange($event)"
+      placeholder="לדוגמה: תרומה לבניית בית הכנסת">
+    </app-rich-text-editor>
+  </div>
+
+  <!-- ── SHORT DESCRIPTION ── -->
+  <div class="field-section" *ngIf="!advancedText">
+    <div class="field-meta">
+      <label class="field-label">הסבר קצר</label>
+      <span class="char-counter">{{ draft.shortDescription.length }}/160</span>
+    </div>
+    <input class="field-input" type="text"
+      [(ngModel)]="draft.shortDescription" (ngModelChange)="sync()"
+      maxlength="160" placeholder="עבור מה תורמים — משפט אחד קצר">
+  </div>
+  <div class="field-section" *ngIf="advancedText">
+    <label class="field-label">הסבר קצר</label>
+    <app-rich-text-editor
+      [compact]="true"
+      [ngModel]="draft.layout.projectDescription"
+      (ngModelChange)="onDescriptionRichChange($event)"
+      placeholder="עבור מה תורמים — משפט או שניים">
+    </app-rich-text-editor>
+  </div>
+
+  <!-- ── SLUG — auto-derived from the title, still editable/visible since
+       it's literally the link they'll share. ── -->
+  <div class="field-section">
+    <label class="field-label">כתובת הדף <span class="required">*</span></label>
+    <p class="field-hint" *ngIf="!isSlugLocked">מתעדכן אוטומטית מהכותרת — אפשר גם לשנות ידנית</p>
+    <div class="url-field-wrapper" [class.invalid]="slugAvailable === false">
+      <span class="url-prefix">hamonym.org/campaigns/</span>
+      <input type="text" class="url-input"
+        [ngModel]="draft.slug"
+        [readonly]="isSlugLocked"
+        [title]="isSlugLocked ? 'שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה לאחר פרסום' : ''"
+        (ngModelChange)="onSlugChange($event)"
+        placeholder="donation-page">
+    </div>
+    <p class="field-hint" *ngIf="isSlugLocked">🔒 לא ניתן לשינוי — הכתובת כבר משותפת.</p>
+    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true">✓ הכתובת זמינה</div>
+    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false">✕ הכתובת כבר בשימוש</div>
+    <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">בודק זמינות...</div>
+  </div>
+
+</div>

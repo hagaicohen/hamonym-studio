@@ -54,7 +54,7 @@
 
     </div>
 
-    <div class="cover-image-row" *ngIf="draft.coverImageUrl">
+    <div class="cover-image-row" *ngIf="draft.coverImageUrl && !isMinimalFormat">
       <img [src]="draft.coverImageUrl" class="cover-thumb" alt="תמונת קמפיין">
     </div>
 
@@ -144,26 +144,28 @@
         <button type="button" class="ai-suggestion-regenerate" (click)="regenerateSuggestion()">🔄 צור מחדש</button>
       }
 
-      <div class="field-row">
-        <span class="field-name">בלוקי תוכן</span>
-        <span class="status-chip" [class.filled]="hasStoryBlock" [class.optional-empty]="!hasStoryBlock">
-          {{ hasStoryBlock ? 'הוגדרו ✓' : 'לא הוגדרו' }}
-        </span>
-      </div>
+      <ng-container *ngIf="!isMinimalFormat">
+        <div class="field-row">
+          <span class="field-name">בלוקי תוכן</span>
+          <span class="status-chip" [class.filled]="hasStoryBlock" [class.optional-empty]="!hasStoryBlock">
+            {{ hasStoryBlock ? 'הוגדרו ✓' : 'לא הוגדרו' }}
+          </span>
+        </div>
 
-      <div class="field-row">
-        <span class="field-name">Hero</span>
-        <span class="status-chip" [class.filled]="hasHero" [class.missing]="!hasHero">
-          {{ hasHero ? 'הוגדר ✓' : 'חסר' }}
-        </span>
-      </div>
+        <div class="field-row">
+          <span class="field-name">Hero</span>
+          <span class="status-chip" [class.filled]="hasHero" [class.missing]="!hasHero">
+            {{ hasHero ? 'הוגדר ✓' : 'חסר' }}
+          </span>
+        </div>
 
-      <div class="field-row">
-        <span class="field-name">סרטון</span>
-        <span class="status-chip" [class.filled]="draft.videoUrl" [class.optional-empty]="!draft.videoUrl">
-          {{ draft.videoUrl ? 'הוגדר ✓' : 'לא הוגדר' }}
-        </span>
-      </div>
+        <div class="field-row">
+          <span class="field-name">סרטון</span>
+          <span class="status-chip" [class.filled]="draft.videoUrl" [class.optional-empty]="!draft.videoUrl">
+            {{ draft.videoUrl ? 'הוגדר ✓' : 'לא הוגדר' }}
+          </span>
+        </div>
+      </ng-container>
 
     </div>
 
@@ -209,29 +211,13 @@
 
     </div>
 
-    <!-- חסויות ובלוקים -->
-    <div class="section-card">
-      <div class="card-header">
-        <lucide-angular [img]="Settings" class="card-icon"></lucide-angular>
-        <span class="card-title">דף הקמפיין</span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-name">חסויות</span>
-        <span class="status-chip" [class.filled]="draft.sponsors.length > 0" [class.optional-empty]="draft.sponsors.length === 0">
-          {{ draft.sponsors.length > 0 ? (draft.sponsors.length + ' הוגדרו ✓') : 'לא הוגדרו' }}
-        </span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-name">בלוקים בדף</span>
-        <span class="status-chip filled">{{ draft.blocks.length }} בלוקים ✓</span>
-      </div>
-
-    </div>
-
-    <!-- שגרירים -->
-    <div class="section-card">
+    <!-- שגרירים — full format only (2026-09-24, third pass): step 7 is
+         gated again for minimal (see campaign-editor.component.ts), so
+         draft.ambassadors can't actually be populated from this builder for
+         a minimal campaign — showing this full CRUD summary there would
+         just show "לא הוגדרו" forever, or worse, be misread as "this is how
+         you add them". The lightweight minimal-only note below replaces it. -->
+    <div class="section-card" *ngIf="!isMinimalFormat">
       <div class="card-header">
         <lucide-angular [img]="Users" class="card-icon"></lucide-angular>
         <span class="card-title">שגרירים</span>
@@ -262,68 +248,110 @@
       </ng-container>
     </div>
 
-    <!-- תגמולים -->
-    <div class="section-card">
+    <!-- שגרירים — minimal note only (2026-09-24): "Minimal = מינימום בהקמה
+         ובדף הציבורי, לא מינימום ביכולות הניהול" — ambassadors ARE a real
+         capability for a minimal campaign, just not part of its fast-setup
+         flow. No CTA/button here on purpose — once the campaign is saved
+         (see the CTA bar below), Ambassadors is already a normal, visible
+         entry in the Workspace sidebar/management cards (see
+         campaign-management-sidebar.component.html's isMinimalFormat gate),
+         so there's nothing this note needs to DO beyond telling the manager
+         the option exists. -->
+    <div class="section-card ambassadors-note" *ngIf="isMinimalFormat">
       <div class="card-header">
-        <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
-        <span class="card-title">תגמולים</span>
+        <lucide-angular [img]="Users" class="card-icon"></lucide-angular>
+        <span class="card-title">שגרירים</span>
       </div>
+      <p class="ambassadors-note-text">
+        רוצים לגייס באמצעות שגרירים? תוכלו להוסיף אותם מניהול הקמפיין.
+      </p>
+    </div>
 
-      <div *ngIf="!draft.offeringsEnabled" class="field-row">
-        <span class="field-name">תגמולים</span>
-        <span class="status-chip disabled">מושבת</span>
-      </div>
-
-      <div *ngIf="draft.offeringsEnabled">
-
-        <div *ngIf="draft.offerings.length === 0" class="field-row">
-          <span class="field-name">תגמולים</span>
-          <span class="status-chip optional-empty">לא הוגדרו</span>
+    <ng-container *ngIf="!isMinimalFormat">
+      <!-- חסויות ובלוקים -->
+      <div class="section-card">
+        <div class="card-header">
+          <lucide-angular [img]="Settings" class="card-icon"></lucide-angular>
+          <span class="card-title">דף הקמפיין</span>
         </div>
 
-        <div *ngIf="draft.offerings.length > 0">
+        <div class="field-row">
+          <span class="field-name">חסויות</span>
+          <span class="status-chip" [class.filled]="draft.sponsors.length > 0" [class.optional-empty]="draft.sponsors.length === 0">
+            {{ draft.sponsors.length > 0 ? (draft.sponsors.length + ' הוגדרו ✓') : 'לא הוגדרו' }}
+          </span>
+        </div>
+
+        <div class="field-row">
+          <span class="field-name">בלוקים בדף</span>
+          <span class="status-chip filled">{{ draft.blocks.length }} בלוקים ✓</span>
+        </div>
+
+      </div>
+
+      <!-- תגמולים -->
+      <div class="section-card">
+        <div class="card-header">
+          <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
+          <span class="card-title">תגמולים</span>
+        </div>
+
+        <div *ngIf="!draft.offeringsEnabled" class="field-row">
+          <span class="field-name">תגמולים</span>
+          <span class="status-chip disabled">מושבת</span>
+        </div>
+
+        <div *ngIf="draft.offeringsEnabled">
+
+          <div *ngIf="draft.offerings.length === 0" class="field-row">
+            <span class="field-name">תגמולים</span>
+            <span class="status-chip optional-empty">לא הוגדרו</span>
+          </div>
+
+          <div *ngIf="draft.offerings.length > 0">
+            <div class="rewards-count">
+              <span class="status-chip filled">{{ draft.offerings.length }} תגמולים הוגדרו ✓</span>
+            </div>
+
+            <div class="rewards-preview">
+              <div class="reward-preview-item" *ngFor="let o of draft.offerings">
+                <span class="reward-preview-name">{{ o.title }}</span>
+                <span class="reward-preview-amount">₪{{ o.minimumAmount | number }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- הרשמה -->
+      <div class="section-card">
+        <div class="card-header">
+          <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
+          <span class="card-title">הרשמה</span>
+        </div>
+
+        <div *ngIf="draft.registrationOptions.length === 0" class="field-row">
+          <span class="field-name">הרשמה</span>
+          <span class="status-chip disabled">לא בשימוש</span>
+        </div>
+
+        <div *ngIf="draft.registrationOptions.length > 0">
           <div class="rewards-count">
-            <span class="status-chip filled">{{ draft.offerings.length }} תגמולים הוגדרו ✓</span>
+            <span class="status-chip filled">{{ draft.registrationOptions.length }} אפשרויות הרשמה הוגדרו ✓</span>
           </div>
 
           <div class="rewards-preview">
-            <div class="reward-preview-item" *ngFor="let o of draft.offerings">
+            <div class="reward-preview-item" *ngFor="let o of draft.registrationOptions">
               <span class="reward-preview-name">{{ o.title }}</span>
-              <span class="reward-preview-amount">₪{{ o.minimumAmount | number }}</span>
+              <span class="reward-preview-amount">₪{{ o.price | number }}</span>
             </div>
           </div>
         </div>
 
       </div>
-
-    </div>
-
-    <!-- הרשמה -->
-    <div class="section-card">
-      <div class="card-header">
-        <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
-        <span class="card-title">הרשמה</span>
-      </div>
-
-      <div *ngIf="draft.registrationOptions.length === 0" class="field-row">
-        <span class="field-name">הרשמה</span>
-        <span class="status-chip disabled">לא בשימוש</span>
-      </div>
-
-      <div *ngIf="draft.registrationOptions.length > 0">
-        <div class="rewards-count">
-          <span class="status-chip filled">{{ draft.registrationOptions.length }} אפשרויות הרשמה הוגדרו ✓</span>
-        </div>
-
-        <div class="rewards-preview">
-          <div class="reward-preview-item" *ngFor="let o of draft.registrationOptions">
-            <span class="reward-preview-name">{{ o.title }}</span>
-            <span class="reward-preview-amount">₪{{ o.price | number }}</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    </ng-container>
 
   </div>
 
@@ -379,7 +407,22 @@
   <!-- CTA BAR                                                       -->
   <!-- ============================================================ -->
 
-  <div class="cta-bar" [class.ready]="canPublish" [class.not-ready]="!canPublish">
+  <!-- 2026-09-24 (second pass): the first reframe still made "waiting for
+       entity approval" the center of this screen — a purple card explaining
+       what the manager COULDN'T do yet, with a disabled publish button as
+       the visible CTA. That's exactly backwards from the model: the
+       campaign is DONE and SAVED; entity approval is a status footnote, not
+       the screen's subject. When !entityApproved there is no publish
+       button here at all (not even disabled) — showing a disabled CTA to
+       explain a future capability is itself the anti-pattern being removed.
+       isReady && !entityApproved gets its own plain success block, visually
+       unremarkable (no colored card) — "מעבר לקמפיין" is the only real
+       action. The publish button only exists at all once entityApproved is
+       actually true. -->
+  <div class="cta-bar"
+    [class.ready]="canPublish"
+    [class.saved]="isReady && !entityApproved"
+    [class.not-ready]="!isReady">
 
     <div class="cta-text-block">
 
@@ -387,14 +430,14 @@
         <div class="cta-title">יש להשלים פרטים לפני הפרסום</div>
         <ul class="missing-list">
           <li class="missing-item" *ngFor="let field of missingFields">
-            <lucide-angular [img]="CircleAlert" class="missing-icon"></lucide-angular>
+            <lucide-angular [img]="CircleAlert" [size]="15" class="missing-icon"></lucide-angular>
             {{ field }}
           </li>
         </ul>
       } @else if (!entityApproved) {
-        <div class="cta-title">העמותה ממתינה לאישור</div>
+        <div class="cta-title">✓ הקמפיין נשמר</div>
         <div class="cta-description">
-          ניתן להכין ולערוך את הקמפיין באופן חופשי, אך הפרסום לציבור וקבלת תרומות יתאפשרו רק לאחר אישור העמותה.
+          הקמפיין זמין עכשיו באזור שלך ותוכל להמשיך לנהל ולערוך אותו בכל עת.
         </div>
       } @else {
         <div class="cta-title">🎉 הקמפיין מוכן לפרסום!</div>
@@ -411,20 +454,45 @@
         <div class="publish-error">{{ errorMessage }}</div>
       }
 
-      <button
-        class="publish-button"
-        [disabled]="isPublishing || !canPublish"
-        [title]="!isReady ? 'יש להשלים קודם את הפרטים החסרים' : (!entityApproved ? 'העמותה ממתינה לאישור' : '')"
-        (click)="publishCampaign()"
-        type="button">
-        @if (isPublishing) {
-          <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
-          <span>מפרסם...</span>
-        } @else {
-          <lucide-angular [img]="Rocket" class="publish-icon"></lucide-angular>
-          <span>פרסם קמפיין</span>
-        }
-      </button>
+      @if (isReady && !entityApproved) {
+        <!-- Primary — an explicit confirm action, not a passive link that
+             assumes the campaign is already saved. Actually saves
+             (create/update, same call publishCampaign() itself uses) before
+             navigating — see confirmAndGoToCampaign()'s own doc comment for
+             why this can't be a plain routerLink. -->
+        <button class="manage-campaign-button" (click)="confirmAndGoToCampaign()" [disabled]="isSaving" type="button">
+          @if (isSaving) {
+            <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
+            <span>שומר...</span>
+          } @else {
+            <span>אישור ומעבר לקמפיין</span>
+          }
+        </button>
+        <!-- Private Preview — same real public renderer/route as a truly
+             published campaign (owner-auth fallback in
+             campaign-public-page.component.ts, no c.status filter on the
+             backend query behind it), not a separate/fake preview. Only
+             meaningful once the campaign actually has a saved id/slug. -->
+        <a *ngIf="draft.id && draft.slug" class="preview-live-link" [routerLink]="['/campaigns', draft.slug, 'view']" target="_blank">
+          צפייה בקמפיין ↗
+        </a>
+        <!-- Status footnote, not the screen's subject — no publish button
+             exists in this state at all, not even disabled. -->
+        <p class="approval-status-note">🔒 העמותה נמצאת בתהליך אישור. לאחר האישור ניתן יהיה לפרסם את הקמפיין לציבור.</p>
+      } @else if (canPublish) {
+        <button class="publish-button" (click)="publishCampaign()" [disabled]="isPublishing" type="button">
+          @if (isPublishing) {
+            <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
+            <span>מפרסם...</span>
+          } @else {
+            <lucide-angular [img]="Rocket" class="publish-icon"></lucide-angular>
+            <span>פרסום לציבור</span>
+          }
+        </button>
+        <button class="preview-live-link preview-live-link--btn" (click)="confirmAndGoToCampaign()" [disabled]="isSaving" type="button">
+          {{ isSaving ? 'שומר...' : 'מעבר לקמפיין' }}
+        </button>
+      }
 
     </div>
 

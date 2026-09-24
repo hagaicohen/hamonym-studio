@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CampaignDraft, CampaignStatus } from '../../../../services/campaign-studio-state.service';
+import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 
 const STATUS_LABELS: Record<CampaignStatus, string> = {
   draft: 'טיוטה', published: 'פעיל', paused: 'מושהה', ended: 'הסתיים',
@@ -25,9 +26,29 @@ export class CampaignDashboardStatusComponent {
   @Input() campaignId = '';
   @Output() shareMoment = new EventEmitter<void>();
 
+  private currentEntity = inject(CurrentEntityService);
+
   get statusLabel(): string { return STATUS_LABELS[this.draft.status] ?? this.draft.status; }
   get canView(): boolean { return !!this.draft.slug; }
   get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
+
+  // 2026-09-24 — a draft campaign under a pending entity is a normal,
+  // real, saved campaign (see the audit: nothing about create/save/list/
+  // Workspace access depends on entity.status, only publish and donation
+  // creation do). This bar is where that "publish gate, not a lifecycle
+  // gate" distinction should surface — small and secondary, not a blocking
+  // warning state, since every other capability on this page works
+  // normally regardless.
+  get isDraft(): boolean { return this.draft.status === 'draft'; }
+  get entityApproved(): boolean { return this.currentEntity.currentEntity()?.status === 'active'; }
+
+  // Reuses the Builder's own publish step (returnStep=10) rather than
+  // duplicating its isReady/missingFields validation here — this bar only
+  // ever offers to take the manager there, it never claims publish will
+  // succeed on its own.
+  get publishStepLink(): any[] {
+    return ['/campaigns', this.campaignId, 'edit'];
+  }
 
   formatDate(iso: string): string {
     if (!iso) return '';

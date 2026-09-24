@@ -1,4 +1,6 @@
 <div class="disc-page">
+  <button type="button" class="disc-back-btn" (click)="goBack()">→ חזרה</button>
+
   <div class="disc-header">
     <img src="/logo.png" alt="Hamonym" class="disc-logo" />
     <h1 class="disc-title">{{ pageTitle }}</h1>
@@ -30,8 +32,9 @@
     <div class="disc-loading">טוען קמפיינים...</div>
   } @else if (campaigns.length === 0) {
     <div class="disc-empty">
-      <div class="disc-empty-icon">🔍</div>
-      <p>לא נמצאו קמפיינים תואמים</p>
+      <div class="disc-empty-icon">{{ searchQuery.trim() ? '🔍' : '🌱' }}</div>
+      <p class="disc-empty-title">{{ emptyStateTitle }}</p>
+      <p class="disc-empty-subtitle">{{ emptyStateSubtitle }}</p>
     </div>
   } @else {
     <div class="disc-grid" [class.refreshing]="refreshing">

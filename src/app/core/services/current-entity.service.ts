@@ -34,7 +34,19 @@ export class CurrentEntityService {
     // entity. Keep it synced whenever the active entity-manager context changes.
     effect(() => {
       const active = this.ctx.active();
-      if (!active || active.role !== 'entity-manager' || !active.context) return;
+      if (!active || active.role !== 'entity-manager' || !active.context) {
+        // The active context stopped being (or never was) a valid
+        // entity-manager pointing at a real entity — most commonly because
+        // CurrentContextService just discovered the previously-active
+        // entity no longer exists (hard-deleted, or — as found during the
+        // 2026-09-23 pre-pilot DB cleanup — wiped entirely) and reset
+        // `active` accordingly. Without this, a stale entity from an
+        // earlier session/localStorage would keep being treated as "the"
+        // current entity by every page that reads currentEntity()?.id
+        // (per CLAUDE.md's own documented pattern), even after it's gone.
+        if (this.currentEntity()) this.clear();
+        return;
+      }
       if (this.currentEntity()?.id === active.context.id) return;
 
       this.entitiesApi.getEntityById(active.context.id).subscribe({

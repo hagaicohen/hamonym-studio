@@ -12,14 +12,30 @@
   background: #f8fafc;
 }
 
+/* FIXED HEADER — banner + topbar as one unit, so they can never desync
+   during scroll (each used to position itself independently -- sticky vs
+   fixed -- which is what broke). --header-height is this element's own
+   real measured height (AppLayoutComponent's ResizeObserver), defaulting to
+   72px (the topbar alone) before the first measurement runs and whenever
+   the banner isn't present -- same number the rest of this file used to
+   hardcode. */
+
+.fixed-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 500;
+}
+
 /* BODY */
 
 .app-body {
   display: flex;
 
-  padding-top: 72px;
+  padding-top: var(--header-height, 72px);
 
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - var(--header-height, 72px));
 }
 
 /* CONTENT */
@@ -56,7 +72,7 @@
 
     position: fixed;
 
-    top: 72px;
+    top: var(--header-height, 72px);
     right: 0;
     left: 0;
     bottom: 0;

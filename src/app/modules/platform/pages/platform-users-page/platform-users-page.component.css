@@ -253,19 +253,12 @@
   white-space: nowrap;
 }
 
-/* Pinned to the leading edge of the horizontal scroll area (physical
-   left, regardless of RTL) so "פעולות" is always reachable without
-   scrolling the table sideways -- the button on the loudest surface. */
-.actions-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: #fff;
-  box-shadow: 1px 0 0 #e8edf3;
-}
-
-thead .actions-col { background: #f8fafc; z-index: 2; }
-.plat-row:hover .actions-col { background: #f8fafc; }
+/* `position: sticky` was tried here to pin "פעולות" to the leading edge of
+   the horizontal scroll area, but `.plat-table` uses `border-collapse:
+   collapse` (line 184) -- sticky positioning on a <td> doesn't compute its
+   containing block correctly under collapsed borders (a documented browser
+   incompatibility), so the cell visually detached from the table instead of
+   sticking to it. Plain static positioning -- no pin, but renders correctly. */
 
 .user-menu-wrap { position: relative; }
 

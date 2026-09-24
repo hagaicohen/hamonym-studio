@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService, DiscoverCampaign } from '../../services/campaign-api.service';
@@ -26,6 +26,7 @@ export class CampaignDiscoverComponent implements OnInit {
   private loader = inject(AppLoaderService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
 
   readonly sortOptions = SORT_OPTIONS;
 
@@ -53,6 +54,36 @@ export class CampaignDiscoverComponent implements OnInit {
     return this.mode === 'ambassador'
       ? 'בחרו קמפיין שתרצו לגייס עבורו, ותצטרפו כשגרירים בלחיצה אחת'
       : 'חפשו פרויקטים ועמותות לתמיכה מתוך כל הקמפיינים הפעילים';
+  }
+
+  // Distinguishes "nothing in the system yet" (no search term, zero results)
+  // from "no match for your search" — same empty grid either way, but a
+  // pre-pilot/fresh system with literally zero campaigns shouldn't tell a
+  // visitor their search came up empty when they never searched anything.
+  get emptyStateTitle(): string {
+    if (this.searchQuery.trim()) return 'לא נמצאו קמפיינים תואמים לחיפוש';
+    return this.mode === 'ambassador'
+      ? 'אין כרגע קמפיינים פעילים להצטרפות כשגריר'
+      : 'אין כרגע קמפיינים פעילים לתרומה';
+  }
+
+  get emptyStateSubtitle(): string {
+    if (this.searchQuery.trim()) return 'נסו מילות חיפוש אחרות, או חזרו לבדוק מאוחר יותר.';
+    return 'חזרו לבדוק בקרוב — קמפיינים חדשים מתפרסמים כל הזמן.';
+  }
+
+  // This page has 3 real entry points with different "came from"s — /welcome
+  // (no shell), the topbar's context-switcher menu, and my-donations' empty
+  // state (both inside the shell) — and no shell/sidebar of its own to offer
+  // any other way out (see app.routes.ts, "PUBLIC AUTHENTICATED — ללא
+  // context"). Browser-history back() correctly returns to whichever of
+  // those the visitor actually came from, instead of hardcoding one. Falls
+  // back to /welcome only when there's truly nothing to go back to (page
+  // opened directly/refreshed) — history.length <=1 is the standard,
+  // if imperfect, signal for that.
+  goBack(): void {
+    if (window.history.length > 1) this.location.back();
+    else this.router.navigateByUrl('/welcome');
   }
 
   ngOnInit(): void {

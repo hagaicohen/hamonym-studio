@@ -46,6 +46,12 @@ export class CheckoutModalComponent implements OnInit {
   // Set by campaign-preview when the visitor picked the "חודשית" tab —
   // forwarded to POST /api/donations as-is, no logic here.
   @Input() recurring = false;
+  // Donor-chosen installment count (2026-09-24) — the donor already picked
+  // this on the donation page itself (MinimalDonationPageComponent's own
+  // "לכמה חודשים תרצו לתרום?" picker), before checkout ever opened. This
+  // modal has no picker of its own — it only forwards whatever it's given,
+  // same as `recurring` above.
+  @Input() installments: number | null = null;
   @Input() initialOptionId: string | null = null;
   @Input() entityLogoUrl: string | null = null;
   @Input() entityName = '';
@@ -118,8 +124,28 @@ export class CheckoutModalComponent implements OnInit {
     return this.participants.some(p => p.name.trim().length > 1 && !!p.optionId);
   }
 
+  // "רגע לפני המעבר ל-CardCom" (2026-09-24) — a recurring donor must never
+  // see just "₪50" here, as if that were the one-time total. This modal has
+  // no installment picker of its own (see the [installments] input's doc
+  // comment) — the donor already chose amount+months on the donation page;
+  // this just needs to keep restating that choice clearly through to the
+  // final CTA, not silently drop the "×N months" half of it.
   get formattedAmount(): string {
-    return '₪' + this.effectiveAmount.toLocaleString('he-IL');
+    const base = '₪' + this.effectiveAmount.toLocaleString('he-IL');
+    return this.recurring && !this.isRegistrationCheckout ? base + ' לחודש' : base;
+  }
+
+  get installmentsSummary(): string | null {
+    return this.recurring && this.installments ? `${this.installments} חודשים` : null;
+  }
+
+  // Full "50 ₪ לחודש × 12 חודשים" phrasing for the one place this matters
+  // most — the actual pay button, right before redirecting to CardCom.
+  get payButtonLabel(): string {
+    if (this.recurring && this.installments && !this.isRegistrationCheckout) {
+      return `₪${this.effectiveAmount.toLocaleString('he-IL')} לחודש × ${this.installments} חודשים`;
+    }
+    return this.formattedAmount;
   }
 
   get isRegistrationCheckout(): boolean {
@@ -316,6 +342,7 @@ export class CheckoutModalComponent implements OnInit {
       participants,
       utmParams: this.captureUtmParams(),
       recurring: this.recurring || undefined,
+      installments: this.recurring ? (this.installments ?? undefined) : undefined,
       ambassadorId: this.ambassador?.id || undefined,
     }).subscribe({
       next: (res) => {

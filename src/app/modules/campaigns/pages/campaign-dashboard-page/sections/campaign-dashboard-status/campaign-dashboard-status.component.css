@@ -27,6 +27,12 @@
 .cds-status--draft .cds-status-dot { background: #92400e; }
 
 .cds-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+.cds-subtitle--gate { color: #92400e; }
+
+.cds-view-hint { color: #94a3b8; font-weight: 500; }
+
+.cds-link--publish { color: #16a34a; border-color: #bbf7d0; }
+.cds-link--publish:hover { background: #f0fdf4; }
 
 @media (max-width: 480px) {
   .cds-title { font-size: 18px; }

@@ -461,6 +461,46 @@ export type LayoutMode =
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
+  // 'full' (default/undefined) = today's block-based Page Builder page,
+  // rendered by CampaignPreviewComponent. 'minimal' = a single-purpose
+  // donation page (logo/title/short text/amount picker/CTA only), rendered
+  // by MinimalDonationPageComponent instead — blocks/hero/sponsors/etc. are
+  // simply unused, not migrated away. Lives here for the same no-migration
+  // reason as preset/templateId above — just another key inside the
+  // already-passthrough `layout` JSON blob. See 2026-09-23 conversation
+  // (pre-pilot "minimal donation page" decision).
+  pageFormat?:        'full' | 'minimal';
+  // Minimal-format logo presentation only (MinimalDonationPageComponent) —
+  // the full page's own Hero logo has always been a fixed circle with no
+  // shape/size control at all, so there's no existing field to reuse for
+  // that axis; background color DOES reuse the existing theme.logoBg
+  // (empty string = no background, same "none" semantics ColorPickerComponent
+  // already uses elsewhere). No migration needed, same reasoning as
+  // pageFormat/preset/templateId above. See DECISIONS.md (2026-09-24).
+  minimalLogoShape?:  'circle' | 'square' | 'none';
+  minimalLogoSize?:   'sm' | 'md' | 'lg';
+  // Title/subtitle text color — NOT heroTextStyle.color: that field's
+  // default is white (#ffffff, tuned for the full page's photo-background
+  // Hero) which would render an invisible white-on-white title on this
+  // page's plain white background for every campaign that never touches
+  // this control. Own fields, own sane defaults, applied directly in
+  // MinimalDonationPageComponent (not via a --mdp-* CSS var, since those are
+  // shared with the button/selected-amount state and need to vary
+  // independently per the 2026-09-24 "control every part separately" ask).
+  minimalTitleColor?:    string;
+  minimalSubtitleColor?: string;
+  // Opt-in "advanced" mode (2026-09-24) — off by default (plain title input +
+  // the simple color pickers above), on lets the manager use the existing
+  // rich-text editor (compact mode: font size/color/align/bold etc.) instead.
+  // minimalTitleRichHtml is a SEPARATE field from `title` on purpose:
+  // `title` must stay plain text everywhere else (browser tab, slug
+  // generation, analytics event `campaign_name`, campaign list cards) — it's
+  // kept in sync as a plain-text mirror (HTML tags stripped) whenever the
+  // rich version changes, rather than repurposing the shared field itself.
+  // The description side reuses the already-existing, already-rich
+  // `projectDescription` field one-for-one — no new field needed there.
+  minimalAdvancedText?:   boolean;
+  minimalTitleRichHtml?:  string;
   // Which Campaign Preset (§ CAMPAIGN_PRESETS_VISION.md) was chosen at creation.
   // Lives here (not on CampaignDraft directly) so it's just another key inside
   // the already-passthrough `layout` JSON blob — no backend column/migration
@@ -571,6 +611,11 @@ export interface CampaignDraft {
   createdAt?:   string;  // ISO timestamp
   updatedAt?:   string;  // ISO timestamp
   publishedAt?: string;  // ISO timestamp
+  // Publication intent (2026-09-24) — set once the manager finished the
+  // campaign and asked to publish while blocked only on entity approval;
+  // null = ordinary in-progress draft. See campaigns.service.js#
+  // publishRequestedCampaigns for what happens once the entity is approved.
+  publishRequestedAt?: string | null;  // ISO timestamp
   entityGaMeasurementId?: string | null;  // owning entity's optional GA4 property (public campaign page only)
   entityName?: string;         // owning entity's display name (public campaign page only)
   entityLogo?: string | null;  // owning entity's logo_url (public campaign page only)
@@ -1071,6 +1116,7 @@ export class CampaignStudioStateService {
     layoutMode?: LayoutMode,
     templateId?: string,
     heroPlacement?: 'full-width' | 'main-column',
+    pageFormat?: 'full' | 'minimal',
   ): void {
     // Preserve whatever Preset was chosen in the (earlier) preset picker step —
     // this resets to a fresh createInitialDraft() otherwise, which would wipe it.
@@ -1082,6 +1128,7 @@ export class CampaignStudioStateService {
       templateId,
       preset: currentPreset,
       heroPlacement,
+      pageFormat,
       theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });

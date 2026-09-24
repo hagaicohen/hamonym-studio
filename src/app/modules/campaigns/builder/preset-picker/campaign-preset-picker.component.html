@@ -7,11 +7,27 @@
     </div>
 
     <div class="pp-grid">
-      <button class="pp-card" type="button" *ngFor="let p of presets" (click)="select(p)">
+      <button class="pp-card" type="button" *ngFor="let p of presets"
+        [style.order]="orderFor(p.id)" (click)="select(p)">
         <span class="pp-icon">{{ p.icon }}</span>
         <span class="pp-name">{{ p.name }}</span>
         <span class="pp-desc">{{ p.description }}</span>
       </button>
+
+      <!-- "דף תרומה מהיר" — a direct entry point to layout.pageFormat=
+           'minimal' (see campaign-studio-page.component.ts#onMinimalSelected),
+           not a PresetId — see the doc comment on minimalSelected above.
+           order:2 places it right after קמפיין תרומות regardless of
+           `presets`' own array order. -->
+      <button class="pp-card" type="button" style="order: 2" (click)="selectMinimal()">
+        <span class="pp-icon">⚡</span>
+        <span class="pp-name">דף תרומה מהיר</span>
+        <span class="pp-desc">עמוד פשוט וממוקד לקבלת תרומות. מקימים במהירות ומשתפים קישור לתורמים.</span>
+      </button>
+    </div>
+
+    <div class="pp-footer">
+      <button class="pp-skip-btn" type="button" (click)="close()">→ חזרה</button>
     </div>
 
   </div>

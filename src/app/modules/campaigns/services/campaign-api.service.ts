@@ -125,6 +125,7 @@ export class CampaignApiService {
       createdAt:               data.created_at,
       updatedAt:               data.updated_at,
       publishedAt:             data.published_at,
+      publishRequestedAt:      data.publish_requested_at ?? null,
       entityGaMeasurementId:   data.entity_ga_measurement_id ?? null,
       entityName:              data.entity_name,
       entityLogo:              data.entity_logo ?? null,
@@ -320,6 +321,18 @@ export class CampaignApiService {
   publish(campaignId: string): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${campaignId}`,
       { status: 'published' },
+      { headers: this.headers() }
+    );
+  }
+
+  // Publication intent (2026-09-24) — a genuinely dedicated endpoint (not a
+  // PATCH field), same as visibility/lock above: records that the manager
+  // finished and asked to publish while blocked only on entity approval.
+  // Never actually publishes anything itself — see campaigns.service.js#
+  // publishRequestedCampaigns for what happens once the entity is approved.
+  requestPublish(campaignId: string): Observable<{ success: boolean; publish_requested_at: string }> {
+    return this.http.post<{ success: boolean; publish_requested_at: string }>(
+      `${this.apiUrl}/${campaignId}/request-publish`, {},
       { headers: this.headers() }
     );
   }

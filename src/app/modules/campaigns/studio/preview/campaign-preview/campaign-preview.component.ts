@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, Input, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, AfterViewInit, Input, HostListener } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -57,7 +57,7 @@ import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
-export class CampaignPreviewComponent implements OnInit, OnDestroy {
+export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestroy {
   private state           = inject(CampaignStudioStateService);
   readonly GripVertical = GripVertical;
   readonly Mail = Mail;
@@ -314,7 +314,15 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
   entityLogoUrl: string | null = null;
   entityName = '';
   navOpen = false;
-  showStickyBar = true;
+  // Reactive now (was a static `true`, i.e. always shown from page load
+  // regardless of scroll — the in-page donate CTA and this bar could both
+  // be visible on screen at once, and this never actually behaved like a
+  // "scrolled past the CTA" bar in the first place since it sits right
+  // before the closing tag, near the very end of the page in normal flow).
+  // Toggled by an IntersectionObserver on the in-page CTA — see
+  // setupStickyObserver()/ngAfterViewInit. Found + fixed 2026-09-23.
+  showStickyBar = false;
+  private stickyObserver: IntersectionObserver | null = null;
   readonly currentYear = new Date().getFullYear();
   private expandedOfferings = new Set<string>();
   private gallerySlides     = new Map<string, number>();
@@ -491,7 +499,31 @@ export class CampaignPreviewComponent implements OnInit, OnDestroy {
     });
   }
 
+  ngAfterViewInit(): void {
+    this.setupStickyObserver();
+  }
+
+  // .hm-donate-btn only exists once the async draft$ has resolved and the
+  // relevant block has rendered — not yet at ngAfterViewInit in the common
+  // case, hence the short retry loop instead of a one-shot querySelector.
+  // Gives up after ~4s (Partner pages / drafts with no donation-widget block
+  // at all never find it, by design — hasDonationWidget already gates the
+  // bar itself in the template either way).
+  private setupStickyObserver(attempt = 0): void {
+    const target = document.querySelector('.hm-primary-donate-cta');
+    if (!target) {
+      if (attempt < 20) setTimeout(() => this.setupStickyObserver(attempt + 1), 200);
+      return;
+    }
+    this.stickyObserver = new IntersectionObserver(
+      ([entry]) => { this.showStickyBar = !entry.isIntersecting; },
+      { threshold: 0 },
+    );
+    this.stickyObserver.observe(target);
+  }
+
   ngOnDestroy(): void {
+    this.stickyObserver?.disconnect();
     this._destroy$.next();
     this._destroy$.complete();
   }

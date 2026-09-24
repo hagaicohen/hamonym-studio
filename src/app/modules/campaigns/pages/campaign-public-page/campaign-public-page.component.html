@@ -26,8 +26,12 @@
     </div>
   }
 
-  <div class="public-preview-wrap" [class.has-edit-bar]="(isAmbassadorMode && currentAmbassador) || canEdit">
-    <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" />
+  <div class="public-preview-wrap">
+    @if (isMinimalFormat) {
+      <app-minimal-donation-page [ambassador]="currentAmbassador" />
+    } @else {
+      <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" />
+    }
   </div>
 }
 

@@ -90,12 +90,21 @@
           פרטי האשראי נשמרים בצורה מאובטחת באמצעות CardCom.
         </div>
 
-        <!-- OPENFIELDS -->
-
-        <app-openfields-form
-          [entityId]="stateService.state().entityId ?? undefined"
-        >
-        </app-openfields-form>
+        <!-- OPENFIELDS — only rendered once we know entityId is real
+             (see ngOnInit's ensureEntity flow); with no entityId yet, the
+             CardCom iframes never initialize and the placeholder stays
+             frozen/non-interactive forever, which is exactly the bug this
+             gate exists to prevent. -->
+        @if (ensuringEntity) {
+          <div class="hosted-info">טוען טופס תשלום מאובטח...</div>
+        } @else if (ensureEntityError) {
+          <div class="ensure-entity-error">{{ ensureEntityError }}</div>
+        } @else {
+          <app-openfields-form
+            [entityId]="stateService.state().entityId ?? undefined"
+          >
+          </app-openfields-form>
+        }
 
         @if (stateService.state().cardcomInternalDealNumber) {
           <div class="token-success">✓ אמצעי החיוב נשמר בהצלחה</div>
@@ -143,7 +152,7 @@
         <button
           type="button"
           class="continue-btn"
-          [disabled]="!canContinue || isSaving"
+          [disabled]="!canContinue || isSaving || ensuringEntity"
           (click)="savePaymentMethod()"
         >
           {{ submitButtonText }}

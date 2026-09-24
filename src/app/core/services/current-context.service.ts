@@ -183,11 +183,24 @@ export class CurrentContextService {
     this.roles.set(groups);
     localStorage.setItem(ROLES_KEY, JSON.stringify(groups));
 
-    // Restore last active context if it still exists, otherwise pick highest-priority
+    // Restore last active context if it still exists, otherwise pick highest-priority.
+    // Checking the ROLE alone used to be enough to restore — but a role can
+    // survive (e.g. 'entity-manager' still exists because the user owns a
+    // DIFFERENT entity) while the specific saved context.id was deleted out
+    // from under it (hard-deleted entity, or — as found during the 2026-09-23
+    // pre-pilot DB cleanup — the whole group disappearing because the user's
+    // only entities were wiped). Restoring it anyway left `active` pointing at
+    // a dead id that every entity-scoped page/service (CurrentEntityService,
+    // dashboard, donations, reports...) then queried forever, since nothing
+    // else ever re-validates it against the server.
     const saved = this._loadSaved();
-    if (saved && groups.some((g) => g.role === saved.role)) {
+    const savedGroup = saved ? groups.find((g) => g.role === saved.role) : undefined;
+    const savedContextStillValid = !saved?.context || !!savedGroup?.contexts.some((c) => c.id === saved.context!.id);
+    if (saved && savedGroup && savedContextStillValid) {
       this.active.set(saved);
     } else {
+      this.active.set(null);
+      localStorage.removeItem(STORAGE_KEY);
       this._setDefault(groups);
     }
   }

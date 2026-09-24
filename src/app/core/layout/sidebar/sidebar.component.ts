@@ -61,7 +61,7 @@ export class SidebarComponent {
   @Input() mobileOpen = false;
   @Output() closeMobile = new EventEmitter<void>();
 
-  private readonly ctx = inject(CurrentContextService);
+  protected readonly ctx = inject(CurrentContextService);
   private readonly router = inject(Router);
 
   // Entered via the dedicated /admin login — shows only the platform section,

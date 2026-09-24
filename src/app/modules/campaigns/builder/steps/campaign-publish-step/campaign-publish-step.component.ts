@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import {
   LucideAngularModule,
@@ -13,7 +13,7 @@ import { CurrentEntityService }       from '../../../../../core/services/current
 @Component({
   selector: 'app-campaign-publish-step',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, RouterLink],
   templateUrl: './campaign-publish-step.component.html',
   styleUrl: './campaign-publish-step.component.css',
 })
@@ -26,6 +26,64 @@ export class CampaignPublishStepComponent implements OnInit {
 
   isPublishing = false;
   errorMessage: string | null = null;
+
+  // "מעבר לקמפיין" — found 2026-09-24 that this was a plain routerLink,
+  // meaning a manager who reached this screen via the streamlined
+  // isReady/!entityApproved path (no publish button reachable there at all)
+  // could click it, land on a real-looking "✓ הקמפיין נשמר" success screen,
+  // and leave — while nothing had ever actually been saved (the campaign is
+  // only ever persisted by an explicit save, previously only reachable via
+  // the topbar's separate "שמור טיוטה" button or by publishCampaign(), and
+  // publishCampaign() returns early with an error before saving when
+  // !entityApproved). This makes the confirmation itself DO the save (same
+  // create/update call publishCampaign() uses, minus the publish step) before
+  // navigating — an explicit "אישור" action, not a passive link that assumes
+  // persistence already happened.
+  isSaving = false;
+
+  confirmAndGoToCampaign(): void {
+    if (this.isSaving || this.isPublishing) return;
+    this.errorMessage = null;
+
+    const entityId = this.currentEntity.currentEntity()?.id;
+    if (!entityId) {
+      this.errorMessage = 'לא נמצאה עמותה מחוברת. נסה להתחבר מחדש.';
+      return;
+    }
+
+    this.isSaving = true;
+    const draft = this.draft;
+    // Publication intent (2026-09-24) — captured at click time, before the
+    // save resolves: this is exactly the "finished, ready, only entity
+    // approval is blocking me" moment described in the lifecycle fix. Never
+    // set outside this exact condition (e.g. the canPublish branch's own
+    // "מעבר לקמפיין" call to this same method doesn't need it — the entity
+    // is already approved there, so there's nothing to wait for).
+    const shouldRequestPublish = this.isReady && !this.entityApproved;
+    const save$ = draft.id
+      ? this.campaignApi.update(draft.id, draft)
+      : this.campaignApi.create(entityId, draft);
+
+    save$.subscribe({
+      next: (res) => {
+        const id = (draft.id ?? res?.id) as string;
+        if (!draft.id && id) this.campaignState.patch({ id });
+        this.isSaving = false;
+        // Fire-and-forget — never blocks navigation, never surfaces its own
+        // error. This just records intent for campaigns.service.js#
+        // publishRequestedCampaigns to act on once the entity is approved;
+        // the campaign itself already saved successfully regardless.
+        if (shouldRequestPublish && id) {
+          this.campaignApi.requestPublish(id).subscribe({ error: () => {} });
+        }
+        this.router.navigate(['/campaigns', id, 'dashboard']);
+      },
+      error: (err) => {
+        this.isSaving = false;
+        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'שמירת הקמפיין נכשלה. נסה שוב.';
+      },
+    });
+  }
 
   // AI-generated title/short-description candidate (see DECISIONS.md) — only
   // triggered when the dedicated field is actually empty. Optional/best-effort:
@@ -74,6 +132,14 @@ export class CampaignPublishStepComponent implements OnInit {
       : !!this.draft.videoUrl;
   }
 
+  // MinimalDonationPageComponent never renders a hero image/video — requiring
+  // one to publish would force a pointless upload on the one format whose
+  // entire point is "logo, short text, amount, done." See
+  // campaign-studio-state.service.ts CampaignLayout.pageFormat.
+  get isMinimalFormat(): boolean {
+    return this.draft.layout.pageFormat === 'minimal';
+  }
+
   get hasStoryBlock(): boolean {
     return this.draft.blocks.some(b =>
       b.type === 'rich-text' && !!(b.data as { content?: string }).content?.replace(/<[^>]*>/g, '').trim()
@@ -91,8 +157,11 @@ export class CampaignPublishStepComponent implements OnInit {
     const missing: string[] = [];
     if (!d.title?.trim())            missing.push('שם הקמפיין');
     if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
-    if (!this.hasHero)               missing.push('תמונה / וידאו ראשי');
-    if (!d.targetAmount)             missing.push('יעד גיוס');
+    if (!this.hasHero && !this.isMinimalFormat) missing.push('תמונה / וידאו ראשי');
+    // Step 2 ("סוג ויעד") is reachable for minimal-format campaigns too
+    // (2026-09-24 decision) — target amount is a real, settable field there
+    // again, so it's required the same as full format.
+    if (!d.targetAmount) missing.push('יעד גיוס');
     // Dates are meaningless for an ongoing campaign (hidden entirely in
     // campaign-type-step) — only enforce the range for a one-time campaign,
     // where they're real user-entered values.

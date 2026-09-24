@@ -35,7 +35,11 @@
 
       <div class="summary-row" *ngIf="!isRegistrationCheckout">
         <span class="summary-label">סכום התרומה</span>
-        <span class="summary-value summary-amount">₪{{ amount.toLocaleString('he-IL') }}</span>
+        <span class="summary-value summary-amount">₪{{ amount.toLocaleString('he-IL') }}<span *ngIf="recurring"> לחודש</span></span>
+      </div>
+      <div class="summary-row" *ngIf="!isRegistrationCheckout && installmentsSummary">
+        <span class="summary-label">משך התרומה</span>
+        <span class="summary-value">{{ installmentsSummary }}</span>
       </div>
 
       <!-- A registration carried over from an earlier, separately-closed
@@ -110,9 +114,45 @@
 
     <!-- RIGHT PANEL — form -->
     <div class="checkout-form-panel">
+     <div class="checkout-form-scroll">
+      <!-- Honest 3-node path — not a fabricated in-app "card details" step:
+           amount selection already happened on the campaign page before this
+           Drawer ever opened (see openCheckout() callers — amount is always
+           passed in pre-selected), and actual card entry happens on
+           CardCom's own hosted page after redirect (res.url, onSubmit()
+           below) — outside this app entirely. Node 3 ("תשלום מאובטח") is
+           shown as upcoming/not-yet-reached rather than skipped, so the
+           donor sees the whole path (2026-09-24: "a clear path of what's
+           expected", own design — not Givechak's card-styled stepper). -->
+      <div class="checkout-steps">
+        <div class="checkout-step checkout-step--done">
+          <span class="checkout-step-num">✓</span>
+          <span class="checkout-step-label">{{ isRegistrationCheckout ? 'הרשמה' : 'סכום' }} · {{ formattedAmount }}</span>
+        </div>
+        <div class="checkout-step-line"></div>
+        <div class="checkout-step checkout-step--active">
+          <span class="checkout-step-num">2</span>
+          <span class="checkout-step-label">פרטים</span>
+        </div>
+        <div class="checkout-step-line"></div>
+        <div class="checkout-step checkout-step--upcoming">
+          <span class="checkout-step-num">3</span>
+          <span class="checkout-step-label">תשלום מאובטח</span>
+        </div>
+      </div>
+
       <div class="form-header">
         <h3 class="form-title">{{ formTitle }}</h3>
         <p class="form-subtitle">{{ formSubtitle }}</p>
+      </div>
+
+      <!-- Attribution — the donation was reached via an ambassador's personal
+           page/link (ambassadorId already carried through to the backend
+           regardless, see onSubmit(); this just makes that visible to the
+           donor, matching the pattern of showing who referred them). -->
+      <div class="referral-chip" *ngIf="ambassador">
+        <span class="referral-icon">🤝</span>
+        <span>תרמתם דרך <strong>{{ ambassador.fullName }}</strong></span>
       </div>
 
       <form class="checkout-form" (ngSubmit)="onSubmit()" novalidate>
@@ -286,19 +326,31 @@
           <button class="pay-btn" type="submit" [disabled]="loading">
             <span class="pay-btn-inner" [class.pay-btn-inner--hidden]="loading">
               <span class="pay-lock">🔒</span>
-              מעבר לתשלום מאובטח — {{ formattedAmount }}
+              מעבר לתשלום מאובטח — {{ payButtonLabel }}
             </span>
             <span class="pay-spinner" *ngIf="loading"></span>
           </button>
         </div>
 
       </form>
+     </div>
 
-      <div class="payment-logos">
-        <span class="pay-logo">ויזה</span>
-        <span class="pay-logo">מסטרקארד</span>
-        <span class="pay-logo">Apple Pay</span>
-        <span class="pay-logo pay-logo--bit">bit</span>
+      <!-- Trust footer — outside .checkout-form-scroll on purpose, so it
+           never scrolls away with the form content and stays visible at the
+           bottom of every payment screen (desktop AND mobile — 2026-09-24:
+           "הסטיקי - לא רק במובייל"), same idea as Givechak's persistent
+           bottom line. bit logo removed 2026-09-24 — no reliable signal
+           it's actually enabled on this campaign's CardCom terminal (see
+           the matching removal in campaign-preview.component.html). -->
+      <div class="checkout-trust-footer">
+        <div class="payment-logos">
+          <span class="pay-logo">ויזה</span>
+          <span class="pay-logo">מסטרקארד</span>
+          <span class="pay-logo">Apple Pay</span>
+        </div>
+        <p class="provider-trust-line">
+          הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong>
+        </p>
       </div>
     </div>
 

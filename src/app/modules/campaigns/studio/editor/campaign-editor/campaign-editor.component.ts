@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { CampaignStepperComponent } from '../../../shared/components/campaign-stepper/campaign-stepper.component';
 import { CampaignEditorFooterComponent } from '../../../shared/components/footer/campaign-editor-footer/campaign-editor-footer.component';
 import { CampaignBasicStepComponent } from '../../../builder/steps/campaign-basic-step/campaign-basic-step.component';
+import { CampaignMinimalDetailsStepComponent } from '../../../builder/steps/campaign-minimal-details-step/campaign-minimal-details-step.component';
 import { CampaignTypeStepComponent } from '../../../builder/steps/campaign-type-step/campaign-type-step.component';
 import { CampaignDonationStepComponent } from '../../../builder/steps/campaign-donation-step/campaign-donation-step.component';
 import { CampaignOfferingsStepComponent } from '../../../builder/steps/campaign-offerings-step/campaign-offerings-step.component';
@@ -28,6 +29,26 @@ const PAGE_BUILDER_STEP = 9;
 // by design, not migration candidates.
 const PUBLISHED_GATED_STEPS = [1, 3, 4, 5, 6, 7, 8];
 
+// layout.pageFormat === 'minimal' (see campaign-studio-state.service.ts) —
+// Basic/Details (1), Type/Goal (2), Donation amounts (3) and Publish (10)
+// are all meaningful for a single-purpose donation page (2026-09-24: goal
+// tracking and funding type are still useful even without a page-builder
+// page); Offerings (4), Registration (5), Sponsors (6), Updates (8) and the
+// Page Builder (9) have no equivalent on MinimalDonationPageComponent.
+// Ambassadors (7) IS gated here too (2026-09-24, third pass — reverted the
+// second pass's un-gating) — not because minimal campaigns can't have
+// ambassadors (they fully can: management/attribution/links are all
+// unconditional, see campaign-workspace-shell's isMinimalFormat and
+// campaigns-management sidebar), but because "דף תרומה מהיר" is a fast
+// SETUP path — pulling the full Ambassadors CRUD step back into that setup
+// flow recreates the very Builder the minimal format exists to skip. The
+// publish step's own minimal-only note points managers to the Workspace's
+// Ambassadors page instead, once the campaign exists. Gating a step (same
+// disabledSteps mechanism as isOngoing/isPublished below) never touches the
+// underlying draft data — switching pageFormat back to 'full' later just
+// un-gates these steps again with whatever was already there.
+const MINIMAL_FORMAT_GATED_STEPS = [4, 5, 6, 7, 8, 9];
+
 @Component({
   selector: 'app-campaign-editor',
   standalone: true,
@@ -36,6 +57,7 @@ const PUBLISHED_GATED_STEPS = [1, 3, 4, 5, 6, 7, 8];
     CampaignStepperComponent,
     CampaignEditorFooterComponent,
     CampaignBasicStepComponent,
+    CampaignMinimalDetailsStepComponent,
     CampaignTypeStepComponent,
     CampaignDonationStepComponent,
     CampaignOfferingsStepComponent,
@@ -77,8 +99,10 @@ export class CampaignEditorComponent implements OnInit {
     } else if (this.isPublished) {
       // Step 1 (now disabled for published campaigns) is a bad landing
       // spot — go straight to Page Builder, the thing the Builder is for
-      // once live.
-      this.currentStep = PAGE_BUILDER_STEP;
+      // once live. A minimal-format campaign has no Page Builder step at
+      // all (gated, see MINIMAL_FORMAT_GATED_STEPS) — land on Publish
+      // instead, the only step still enabled for it post-publish.
+      this.currentStep = this.isMinimalFormat ? TOTAL_STEPS : PAGE_BUILDER_STEP;
     }
   }
 
@@ -95,6 +119,10 @@ export class CampaignEditorComponent implements OnInit {
     return this.state.draft.campaignLifecycle === 'ongoing';
   }
 
+  get isMinimalFormat(): boolean {
+    return this.state.draft.layout.pageFormat === 'minimal';
+  }
+
   // 'draft' is pre-publish; 'published'/'paused'/'ended' all mean the
   // campaign went live at some point, so the Workspace is already the real
   // source of truth for its content.
@@ -105,6 +133,7 @@ export class CampaignEditorComponent implements OnInit {
   get disabledSteps(): number[] {
     const gated = new Set<number>();
     if (this.isOngoing) gated.add(REGISTRATION_STEP);
+    if (this.isMinimalFormat) MINIMAL_FORMAT_GATED_STEPS.forEach(s => gated.add(s));
     if (this.isPublished) PUBLISHED_GATED_STEPS.forEach(s => gated.add(s));
     return [...gated];
   }

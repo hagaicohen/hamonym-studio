@@ -11,13 +11,13 @@
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'dashboard']" fragment="updates">
       <span class="cms-icon">📰</span> עדכונים
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active">
       <span class="cms-icon">🎁</span> תשורות
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'ambassadors']" routerLinkActive="cms-item--active">
       <span class="cms-icon">🏃</span> שגרירים
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active">
       <span class="cms-icon">🤝</span> חסויות
     </a>
     <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']" routerLinkActive="cms-item--active">

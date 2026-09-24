@@ -1,18 +1,28 @@
 <div class="cds-bar">
   <div class="cds-actions">
     <a class="cds-link" routerLink="/dashboard">→ חזרה לדשבורד</a>
-    <a class="cds-link" *ngIf="canView" [routerLink]="['/campaigns', draft.slug, 'view']" target="_blank">👁 צפה בקמפיין</a>
+    <a class="cds-link" *ngIf="canView" [routerLink]="['/campaigns', draft.slug, 'view']" target="_blank">
+      👁 צפה בקמפיין<span *ngIf="isDraft" class="cds-view-hint"> · תצוגה פרטית</span>
+    </a>
     <a class="cds-link" [routerLink]="['/campaigns', campaignId, 'edit']">✏️ עריכת עיצוב</a>
+    <a class="cds-link cds-link--publish" *ngIf="isDraft && entityApproved"
+      [routerLink]="publishStepLink" [queryParams]="{ returnStep: 10 }">🚀 פרסום לציבור</a>
   </div>
 
   <div class="cds-identity">
     <div class="cds-title-group">
       <span class="cds-title">{{ draft.title || '(ללא כותרת)' }}</span>
       <span class="cds-status" [class.cds-status--draft]="draft.status === 'draft'">
-        <span class="cds-status-dot"></span>{{ statusLabel }}
+        <span class="cds-status-dot"></span>{{ statusLabel }}<ng-container *ngIf="isDraft"> · טרם פורסם</ng-container>
       </span>
     </div>
     <p class="cds-subtitle" *ngIf="!isOngoing && draft.endDate">קמפיין עד {{ formatDate(draft.endDate) }}</p>
     <p class="cds-subtitle" *ngIf="isOngoing">🔁 קמפיין מתמשך</p>
+    <!-- Publish-gate explanation — small and secondary on purpose (see the
+         component's own doc comment): the campaign itself isn't waiting for
+         anything, only public visibility/fundraising is. -->
+    <p class="cds-subtitle cds-subtitle--gate" *ngIf="isDraft && !entityApproved">
+      🔒 פרסום לציבור יתאפשר לאחר אישור העמותה. אפשר להמשיך לערוך ולנהל את הקמפיין כרגיל.
+    </p>
   </div>
 </div>

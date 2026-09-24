@@ -99,8 +99,14 @@
       <div class="drafts-grid">
         @for (c of drafts; track c.id) {
           <div class="draft-card" [class.draft-card--deleting]="deletingId === c.id">
-            <div class="draft-cover">
-              @if (c.coverImageUrl) {
+            <div class="draft-cover" [class.draft-cover--minimal]="isMinimal(c)">
+              @if (isMinimal(c)) {
+                @if (minimalLogoFor(c)) {
+                  <img [src]="minimalLogoFor(c)" [alt]="c.title" class="draft-cover-logo" />
+                } @else {
+                  <div class="draft-cover-logo-fallback">🏢</div>
+                }
+              } @else if (c.coverImageUrl) {
                 <img [src]="c.coverImageUrl" [alt]="c.title" class="draft-cover-img" />
               } @else {
                 <div class="draft-cover-placeholder">
@@ -112,6 +118,15 @@
             </div>
             <div class="draft-body">
               <h3 class="draft-title">{{ c.title || 'ללא כותרת' }}</h3>
+              <!-- Publication intent (2026-09-24): status === 'draft' alone
+                   no longer means "still being worked on" — a campaign here
+                   with publishRequestedAt set is finished and waiting only
+                   on entity approval, not on the manager. Editing stays
+                   available either way (see "המשך עריכה" below), this is
+                   just the framing shown up front. -->
+              @if (c.publishRequestedAt) {
+                <span class="draft-status-badge draft-status-badge--pending">⏳ ממתין לאישור העמותה</span>
+              }
               @if (c.createdAt) {
                 <span class="draft-date">נוצרה {{ fmtDate(c.createdAt) }}</span>
               }
@@ -167,8 +182,16 @@
               <div class="campaign-card campaign-card--clickable" [class.card--hidden]="c.isHidden" (click)="manageCampaign(c.id)">
 
                 <div class="card-cover"
-                  [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'"
+                  [class.card-cover--minimal]="isMinimal(c)"
+                  [style.backgroundImage]="isMinimal(c) ? 'none' : (cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none')"
                   [class.card-cover--deleting]="deletingId === c.id">
+                  @if (isMinimal(c)) {
+                    @if (minimalLogoFor(c)) {
+                      <img [src]="minimalLogoFor(c)" [alt]="c.title" class="card-cover-logo" />
+                    } @else {
+                      <div class="card-cover-logo-fallback">🏢</div>
+                    }
+                  }
                   <span class="card-status-badge" [class]="'badge-' + c.status">
                     {{ statusLabel(c.status) }}
                   </span>
@@ -241,7 +264,15 @@
               <div class="list-item list-item--clickable" [class.card--hidden]="c.isHidden" (click)="manageCampaign(c.id)">
 
                 <div class="list-cover"
-                  [style.backgroundImage]="cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none'">
+                  [class.list-cover--minimal]="isMinimal(c)"
+                  [style.backgroundImage]="isMinimal(c) ? 'none' : (cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none')">
+                  @if (isMinimal(c)) {
+                    @if (minimalLogoFor(c)) {
+                      <img [src]="minimalLogoFor(c)" [alt]="c.title" class="list-cover-logo" />
+                    } @else {
+                      <div class="list-cover-logo-fallback">🏢</div>
+                    }
+                  }
                 </div>
 
                 <div class="list-body">

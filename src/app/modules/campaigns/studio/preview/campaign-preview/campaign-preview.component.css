@@ -3458,18 +3458,28 @@
    STICKY BOTTOM BAR
 ══════════════════════════════════════ */
 .hm-sticky-bar {
-  position: sticky;
+  /* was `position: sticky` — placed right before the page's closing tag
+     (near the very end of the flow, after the footer), a sticky element
+     there has almost no room to actually stick through: it only ever
+     appeared once you'd already scrolled past nearly everything, not while
+     scrolling through the campaign content it's meant to shadow. `fixed`
+     pins it to the true viewport bottom regardless of scroll depth, which
+     is what the IntersectionObserver toggling `showStickyBar` (see
+     campaign-preview.component.ts) actually needs. Found + fixed 2026-09-23. */
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 1000;
   height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #0f172a;
   border-top: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
   display: flex;
   align-items: center;
-  padding: 0 48px 0 48px;
+  padding-right: 48px;
+  padding-left: 48px;
   direction: rtl;
 }
 
@@ -3548,7 +3558,9 @@
 
 /* Mobile sticky bar */
 .campaign-page--mobile .hm-sticky-bar {
-  padding: 0 16px 0 40px;
+  padding-right: 16px;
+  padding-left: 40px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   height: 56px;
 }
 .campaign-page--mobile .hm-sticky-amount { font-size: 16px; }

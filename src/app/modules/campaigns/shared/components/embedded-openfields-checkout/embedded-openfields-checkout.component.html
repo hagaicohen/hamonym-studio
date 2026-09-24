@@ -1,0 +1,66 @@
+<!-- Isolated spike (2026-09-24) — not reachable from any real page yet. -->
+<div class="embedded-checkout">
+
+  <iframe
+    id="DonationCardComMasterFrame"
+    name="DonationCardComMasterFrame"
+    src="https://secure.cardcom.solutions/api/openfields/master"
+    class="master-frame">
+  </iframe>
+
+  <div class="field">
+    <label>מספר כרטיס</label>
+    <div class="card-frame-shell">
+      @if (!cardIframeReady) {
+        <div class="card-skeleton">
+          <div class="card-skeleton-number">0000 0000 0000 0000</div>
+        </div>
+      }
+      <iframe
+        id="DonationCardComCardNumber"
+        name="DonationCardComCardNumber"
+        src="https://secure.cardcom.solutions/api/openfields/cardNumber"
+        class="cardcom-field-frame"
+        [class.cardcom-visible]="cardIframeReady">
+      </iframe>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>חודש</label>
+      <input class="exp-input" id="donationExpirationMonth" type="text" placeholder="MM" maxlength="2">
+    </div>
+    <div class="field">
+      <label>שנה</label>
+      <input class="exp-input" id="donationExpirationYear" type="text" placeholder="YY" maxlength="2">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>CVV</label>
+    <div class="card-frame-shell">
+      @if (!cvvIframeReady) {
+        <div class="card-skeleton cvv-skeleton">
+          <div class="cvv-skeleton-number">123</div>
+        </div>
+      }
+      <iframe
+        id="DonationCardComCvv"
+        name="DonationCardComCvv"
+        src="https://secure.cardcom.solutions/api/openfields/CVV"
+        class="cardcom-field-frame"
+        [class.cardcom-visible]="cvvIframeReady">
+      </iframe>
+    </div>
+  </div>
+
+  <p class="embedded-error" *ngIf="errorMsg">{{ errorMsg }}</p>
+
+  <!-- Never clicked anywhere in this codebase yet — see the component's own
+       doc comment. Present so the spike is a complete, buildable unit. -->
+  <button type="button" [disabled]="loading" (click)="submitPayment()">
+    {{ loading ? 'מעבד תשלום...' : 'שלם' }}
+  </button>
+
+</div>
