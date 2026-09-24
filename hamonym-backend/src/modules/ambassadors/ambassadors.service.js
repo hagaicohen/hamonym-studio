@@ -236,6 +236,15 @@ exports.addAdjustment = async (userId, ambassadorId, amount, reason) => {
 };
 
 exports.listPublic = async (campaignSlug) => {
+  // c.status = 'published' AND e.status = 'active' added 2026-09-24 — every
+  // other public-facing campaign query (getCampaignBySlugPublic,
+  // discoverCampaigns, selfRegister below) already filters on both; this one
+  // didn't, so an ambassador's public leaderboard could be reached for a
+  // campaign whose entity isn't approved yet (or that isn't published) even
+  // though the campaign itself wasn't publicly visible any other way. Became
+  // a real gap once "content-complete but pending entity approval" became an
+  // intentional, longer-lived state (Private Preview) rather than a
+  // transient one.
   const { rows } = await db.query(
     `SELECT a.id, a.full_name, a.slug, a.goal_amount, a.personal_message,
             ${STATS_SQL}
@@ -243,6 +252,7 @@ exports.listPublic = async (campaignSlug) => {
      JOIN campaigns c ON c.id = a.campaign_id
      JOIN entities  e ON e.id = c.entity_id
      WHERE c.slug = $1 AND a.status = 'active'
+       AND c.status = 'published' AND e.status = 'active'
        AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      ORDER BY raised_total DESC`,
     [campaignSlug]

@@ -135,6 +135,64 @@ function buildUpdateQuery(
 
 }
 
+// Shared publish-readiness check (2026-09-24, extracted from updateCampaign
+// so both the manual "פרסום לציבור" path and the entity-approval auto-
+// publish path — see exports.publishRequestedCampaigns below — run through
+// the EXACT same rules, never two copies that can drift). Mirrors
+// campaign-publish-step.component.ts's own missingFields getter. Does NOT
+// include the entity-approval check itself — callers decide separately
+// whether/how that's checked (updateCampaign checks it inline right after
+// calling this; publishRequestedCampaigns is only ever invoked once the
+// entity JUST became active, so it's true by construction there).
+// `overrides` layers pending PATCH values on top of `row` (the currently-
+// persisted campaign) — updateCampaign's PATCH may only send
+// {status:'published'}, so every field here falls back to whatever's
+// already saved, same "effective value" pattern as before.
+// Returns an array of blocker messages — empty = ready to publish.
+function getPublishBlockers(row, overrides = {}) {
+  const blockers = [];
+
+  const effectiveTitle = (overrides.title ?? row.title ?? '').trim();
+  if (!effectiveTitle) blockers.push('Campaign title is required to publish');
+
+  const effectiveSlug = (overrides.slug ?? row.slug ?? '').trim();
+  if (!effectiveSlug) blockers.push('Campaign slug is required to publish');
+
+  // MinimalDonationPageComponent never renders a hero image/video — this
+  // check used to apply unconditionally, matching the client's OWN
+  // pre-2026-09 gate but not the 2026-09-24 minimal-format exemption
+  // (campaign-publish-step.component.ts#isMinimalFormat) that the client
+  // side already got. Found while extracting this function: any minimal-
+  // format campaign hitting the real publish PATCH would have been
+  // rejected here even though its own Builder never asks for a hero at
+  // all — fixed here since both the manual and auto-publish paths share
+  // this function now.
+  const effectiveLayout = overrides.layout ?? row.layout ?? {};
+  const isMinimalFormat = effectiveLayout?.pageFormat === 'minimal';
+  if (!isMinimalFormat) {
+    const effectiveHeroType = overrides.hero_type ?? row.hero_type ?? 'image';
+    const effectiveCoverImageUrl = overrides.cover_image_url ?? row.cover_image_url;
+    const effectiveVideoUrl = overrides.video_url ?? row.video_url;
+    const hasHero = effectiveHeroType === 'image' ? !!effectiveCoverImageUrl : !!effectiveVideoUrl;
+    if (!hasHero) blockers.push('A hero image or video is required to publish');
+  }
+
+  const effectiveTargetAmount = overrides.target_amount ?? row.target_amount;
+  if (!effectiveTargetAmount || Number(effectiveTargetAmount) <= 0) {
+    blockers.push('A fundraising goal is required to publish');
+  }
+
+  const effectiveLifecycle = overrides.campaign_lifecycle ?? row.campaign_lifecycle ?? 'one-time';
+  const effectiveStartDate = overrides.start_date ?? row.start_date;
+  const effectiveEndDate = overrides.end_date ?? row.end_date;
+  if (effectiveLifecycle !== 'ongoing' && effectiveStartDate && effectiveEndDate
+      && new Date(effectiveEndDate) < new Date(effectiveStartDate)) {
+    blockers.push('End date must be on or after the start date to publish');
+  }
+
+  return blockers;
+}
+
 /*
 |--------------------------------------------------------------------------
 | CREATE CAMPAIGN
@@ -536,7 +594,7 @@ exports.getMyCampaigns =
           c.*,
 
           e.display_name AS entity_name,
-          e.logo_url
+          e.logo_url AS entity_logo
 
         FROM campaigns c
 
@@ -576,13 +634,22 @@ exports.getCampaignById =
     const result =
       await db.query(
 
+        // e.logo_url/e.display_name added 2026-09-24 — only
+        // getCampaignBySlugPublic joined these before, so the Builder (which
+        // calls this one while editing, pre-publish) had no way to show the
+        // entity's own logo at all; MinimalDonationPageComponent's "logo
+        // defaults automatically to the entity's" only ever worked once a
+        // campaign was actually published and fetched via the public route.
         `
-        SELECT c.*
+        SELECT c.*, e.logo_url AS entity_logo, e.display_name AS entity_name
 
         FROM campaigns c
 
         INNER JOIN user_entities ue
           ON ue.entity_id = c.entity_id
+
+        JOIN entities e
+          ON e.id = c.entity_id
 
         WHERE c.id = $1
         AND ue.user_id = $2
@@ -624,7 +691,7 @@ exports.updateCampaign =
         `
         SELECT c.entity_id, c.is_locked, c.title, c.slug, c.cover_image_url, c.video_url,
                c.hero_type, c.target_amount, c.start_date, c.end_date, c.campaign_lifecycle,
-               c.published_at, e.status AS entity_status
+               c.published_at, c.layout, e.status AS entity_status
         FROM campaigns c
         JOIN entities e ON e.id = c.entity_id
         WHERE c.id = $1
@@ -663,32 +730,8 @@ exports.updateCampaign =
       if (row.entity_status !== 'active') {
         throw new Error('Entity is not approved to fundraise yet');
       }
-      const effectiveTitle = (data.title ?? row.title ?? '').trim();
-      if (!effectiveTitle) {
-        throw new Error('Campaign title is required to publish');
-      }
-      const effectiveSlug = (data.slug ?? row.slug ?? '').trim();
-      if (!effectiveSlug) {
-        throw new Error('Campaign slug is required to publish');
-      }
-      const effectiveHeroType = data.hero_type ?? row.hero_type ?? 'image';
-      const effectiveCoverImageUrl = data.cover_image_url ?? row.cover_image_url;
-      const effectiveVideoUrl = data.video_url ?? row.video_url;
-      const hasHero = effectiveHeroType === 'image' ? !!effectiveCoverImageUrl : !!effectiveVideoUrl;
-      if (!hasHero) {
-        throw new Error('A hero image or video is required to publish');
-      }
-      const effectiveTargetAmount = data.target_amount ?? row.target_amount;
-      if (!effectiveTargetAmount || Number(effectiveTargetAmount) <= 0) {
-        throw new Error('A fundraising goal is required to publish');
-      }
-      const effectiveLifecycle = data.campaign_lifecycle ?? row.campaign_lifecycle ?? 'one-time';
-      const effectiveStartDate = data.start_date ?? row.start_date;
-      const effectiveEndDate = data.end_date ?? row.end_date;
-      if (effectiveLifecycle !== 'ongoing' && effectiveStartDate && effectiveEndDate
-          && new Date(effectiveEndDate) < new Date(effectiveStartDate)) {
-        throw new Error('End date must be on or after the start date to publish');
-      }
+      const blockers = getPublishBlockers(row, data);
+      if (blockers.length) throw new Error(blockers[0]);
     }
 
     const hasAccess =
@@ -1113,6 +1156,77 @@ exports.setCampaignVisibility =
     );
 
   };
+
+// Publication intent (2026-09-24) — deliberately NOT part of the generic
+// updateCampaign/UPDATABLE_CAMPAIGN_COLUMNS path (same reasoning as
+// setCampaignVisibility above: a dedicated endpoint for a dedicated action,
+// not a client-writable content field). Records that the manager finished
+// the campaign and asked to publish, but was blocked only by entity
+// approval — the campaign itself stays exactly as it was (still 'draft',
+// not publicly visible). COALESCE — first intent wins; revisiting this
+// screen again later doesn't reset the original "when did they finish"
+// timestamp.
+exports.requestPublish = async ({ userId, campaignId }) => {
+  const campaignResult = await db.query(
+    `SELECT entity_id FROM campaigns WHERE id = $1 LIMIT 1`,
+    [campaignId]
+  );
+  if (!campaignResult.rows.length) throw new Error('Campaign not found');
+
+  const hasAccess = await validateOwnership(userId, campaignResult.rows[0].entity_id);
+  if (!hasAccess) throw new Error('Unauthorized');
+
+  const result = await db.query(
+    `UPDATE campaigns SET publish_requested_at = COALESCE(publish_requested_at, NOW())
+     WHERE id = $1 RETURNING publish_requested_at`,
+    [campaignId]
+  );
+  return result.rows[0];
+};
+
+// Auto-publish on entity approval (2026-09-24) — called from
+// platform.service.js#setStatus, inside its own entity-approval
+// transaction, ONLY for the 'approve' action (never 'reactivate' — see
+// that call site's own comment: a campaign resurfacing after a
+// suspend→reactivate cycle must never auto-publish just because status
+// flipped back to 'active'). `client` defaults to the shared pool but is
+// meant to be passed the caller's own transaction client, so this
+// participates in the SAME atomic transaction as the entity status change
+// rather than being a separate, later, non-atomic step.
+//
+// Finds every campaign that finished setup and asked to publish while
+// blocked only on entity approval, and re-validates each one against its
+// CURRENT saved data — through the exact same getPublishBlockers() the
+// manual publish path uses, never a bespoke/duplicated check — before
+// actually publishing it. A campaign that's no longer valid (something
+// changed since intent was expressed) is silently left as a draft; its
+// publish_requested_at is deliberately NOT cleared, so it remains eligible
+// if the entity's status changes again later (e.g. a future re-approval).
+exports.publishRequestedCampaigns = async (entityId, client = db) => {
+  const { rows } = await client.query(
+    `SELECT id, title, slug, cover_image_url, video_url, hero_type,
+            target_amount, start_date, end_date, campaign_lifecycle, layout, published_at
+     FROM campaigns
+     WHERE entity_id = $1 AND status = 'draft' AND publish_requested_at IS NOT NULL AND deleted_at IS NULL`,
+    [entityId]
+  );
+
+  const publishedIds = [];
+  for (const row of rows) {
+    if (getPublishBlockers(row).length > 0) continue; // still not ready — leave as draft
+    await client.query(
+      `UPDATE campaigns SET status = 'published', published_at = COALESCE(published_at, NOW()), updated_at = NOW()
+       WHERE id = $1`,
+      [row.id]
+    );
+    publishedIds.push(row.id);
+  }
+
+  if (publishedIds.length) {
+    require('../dashboard/dashboard.service').invalidateDashboard(entityId);
+  }
+  return publishedIds;
+};
 
 exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
   const { rows: found } = await db.query(

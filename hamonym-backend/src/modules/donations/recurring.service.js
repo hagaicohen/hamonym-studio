@@ -69,12 +69,20 @@ function nextOccurrenceOfAnchorDay(anchorDay) {
 // nothing about it yet. Returns its id so the donation row can link to it
 // immediately (see docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §2 — the
 // donation is linked from creation, not via a separate boolean flag).
-exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, donorPhone, amount, timeIntervalId = 1 }) => {
+// donorRequestedInstallments (migration 067, 2026-09-24) — the donor's own
+// choice, made on the donation page itself before checkout ever opens
+// (MinimalDonationPageComponent's "לכמה חודשים תרצו לתרום?"). This is a
+// donation-level value, not a campaign setting: completeSignup() below uses
+// it directly when present, and only falls back to the campaign's own
+// recurring_billing_mode/recurring_installments_count (the full-format
+// widget's own campaign-level default) when it's absent — e.g. an older
+// client, or a full-format donation that never sends it.
+exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, donorPhone, amount, timeIntervalId = 1, donorRequestedInstallments = null }) => {
   const res = await db.query(
-    `INSERT INTO recurring_instructions (entity_id, campaign_id, donor_name, donor_email, donor_phone, amount, time_interval_id, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'pending_payment')
+    `INSERT INTO recurring_instructions (entity_id, campaign_id, donor_name, donor_email, donor_phone, amount, time_interval_id, donor_requested_installments, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending_payment')
      RETURNING id`,
-    [entityId, campaignId, donorName || null, donorEmail || null, donorPhone || null, amount, timeIntervalId]
+    [entityId, campaignId, donorName || null, donorEmail || null, donorPhone || null, amount, timeIntervalId, donorRequestedInstallments]
   );
   return res.rows[0].id;
 };
@@ -92,6 +100,7 @@ exports.completeSignup = async (donationId) => {
   const donationRes = await db.query(
     `SELECT d.recurring_instruction_id, d.low_profile_id, d.donor_name,
             ri.status, ri.cardcom_recurring_id, ri.amount, ri.time_interval_id,
+            ri.donor_requested_installments,
             c.recurring_billing_mode, c.recurring_installments_count
      FROM donations d
      LEFT JOIN recurring_instructions ri ON ri.id = d.recurring_instruction_id
@@ -107,16 +116,21 @@ exports.completeSignup = async (donationId) => {
 
   const instructionId = row.recurring_instruction_id;
 
-  // Snapshot the campaign's billing plan at signup time — independent of
-  // any later change to the campaign's own settings, same principle as
-  // billing_anchor_day (Phase 5). null = until cancelled (existing
-  // behavior, and also what a still-'pending_creation' idempotent retry
-  // would recompute identically). A number = total payments promised,
-  // including the LowProfile one already charged. See
+  // totalInstallments = TOTAL payments promised, including the LowProfile
+  // one already charged (see totalNumOfBills below for the off-by-one this
+  // implies). The donor's own explicit choice (donor_requested_installments)
+  // always wins when present — this is a donation-level decision, not a
+  // campaign one. Only falls back to the campaign's own
+  // recurring_billing_mode/recurring_installments_count (the full-format
+  // widget's campaign-level default) when the donor didn't send one. null =
+  // until cancelled — still reachable for a full-format 'until_cancelled'
+  // campaign, but never produced by MinimalDonationPageComponent's own
+  // picker, which has no "ללא הגבלה" option. Snapshotted at signup time —
+  // independent of any later change to the campaign's own settings, same
+  // principle as billing_anchor_day (Phase 5). See
   // docs/CARDCOM_RECURRING_IMPLEMENTATION_PLAN.md §9.3.
-  const totalInstallments = row.recurring_billing_mode === 'fixed_installments'
-    ? row.recurring_installments_count
-    : null;
+  const totalInstallments = row.donor_requested_installments
+    ?? (row.recurring_billing_mode === 'fixed_installments' ? row.recurring_installments_count : null);
 
   // N=1: the single promised payment already happened via the LowProfile
   // itself — Verified (2026-08-14): Cardcom never counts that charge

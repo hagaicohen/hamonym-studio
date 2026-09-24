@@ -408,6 +408,21 @@ exports.setCampaignVisibility =
 
   };
 
+exports.requestPublish = async (req, res) => {
+  try {
+    const result = await service.requestPublish({
+      userId: req.user.id,
+      campaignId: req.params.id,
+    });
+    res.json({ success: true, publish_requested_at: result.publish_requested_at });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(err.status || getStatusCode(err))
+      .json({ error: getErrorMessage(err) });
+  }
+};
+
 exports.adviseCampaign = async (req, res) => {
   try {
     const response = await campaignAdvisorAgent.advise(req.params.id, req.user.id);
