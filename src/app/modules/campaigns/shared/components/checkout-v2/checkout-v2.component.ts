@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostBinding, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import {
   CampaignDraft, Offering,
@@ -53,16 +53,20 @@ import { OpenfieldsFormComponent } from '../../../../billing/components/openfiel
 //    itself (Step 1) instead of the donation page, since it must be
 //    editable from inside a shared drawer for both minimal and full
 //    campaigns (full campaigns never had this picker before this).
-//  - the existing DonationSuccessComponent route/page for the true "thank
-//    you" moment (campaigns/:slug/success?ref=&amount=) — the SAME
-//    trust-level signal the existing redirect flow already uses (CardCom's
-//    own SuccessRedirectUrl is no more "proven" than HandleSubmit; the
-//    donations.status='paid' write is still webhook-only either way, and
-//    that success page already doesn't gate on donation.status itself).
+//  - the existing DonationSuccessComponent route/page for the hosted flow's
+//    true "thank you" moment (campaigns/:slug/success?ref=&amount=),
+//    reached via CardCom's own SuccessRedirectUrl → onHostedCheckoutMessage
+//    below — unchanged. The OpenFields flow (2026-09-27, final revision)
+//    does NOT navigate there at all: it shows an inline success state
+//    inside this same Drawer instead (see paymentState's own doc comment
+//    and Step 3's #cv2PaidBlock in the template), only once the backend
+//    itself confirms donations.status='paid' — HandleSubmit's own
+//    IsSuccess is CardCom's word on the CHARGE, never treated as
+//    authoritative for that status.
 @Component({
   selector: 'app-checkout-v2',
   standalone: true,
-  imports: [CommonModule, FormsModule, OpenfieldsFormComponent],
+  imports: [CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
   templateUrl: './checkout-v2.component.html',
   styleUrl: './checkout-v2.component.css',
 })
@@ -145,6 +149,8 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.presentation === 'drawer') document.body.style.overflow = '';
     window.removeEventListener('message', this.boundHostedCheckoutMessage);
+    if (this.confirmPollTimer) clearTimeout(this.confirmPollTimer);
+    if (this.receiptPollTimer) clearTimeout(this.receiptPollTimer);
   }
 
   // Step 3's iframe/postMessage bridge (2026-09-26) — CardCom's hosted
@@ -352,6 +358,15 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     return this.isValidId ? 'valid' : 'invalid';
   }
 
+  // ID number is optional in Checkout V2 (2026-09-27) — not gated behind
+  // donorFields.showIdNumber (see the field's own template comment): empty
+  // is always valid, a non-empty value must pass the checksum. Whether to
+  // make it required is an explicit future business/product decision, not
+  // inferred here.
+  get idNumberValid(): boolean {
+    return this.idDigits.length === 0 || this.isValidId;
+  }
+
   get isValidEmail(): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim());
   }
@@ -363,7 +378,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
       && this.phone.trim().length >= 9
       && (!df.showAddress    || this.address.trim().length > 2)
       && (!df.showPostalCode || this.postalCode.trim().length >= 4)
-      && (!df.showIdNumber   || this.isValidId);
+      && this.idNumberValid;
   }
 
   private captureUtmParams(): Record<string, string> | undefined {
@@ -401,20 +416,145 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   lowProfileId: string | null = null;
   private createdTermsSnapshot: { amount: number; frequency: 'one-time' | 'monthly'; installments: number | null } | null = null;
   creatingDonation = false;
-  // Guards the OpenFields payment button against double-submission while
-  // tokenize() is in flight — the hosted-iframe path needs no equivalent
-  // since CardCom's own button already guards itself.
-  paymentProcessing = false;
   createDonationError = '';
 
-  // Same "don't retry the same spent LowProfile" semantics as
-  // onHostedCheckoutMessage's own failure branch.
-  private resetAfterOpenFieldsFailure(): void {
+  // OpenFields payment lifecycle (2026-09-27, final revision) — CardCom's
+  // own HandleSubmit succeeding (tokenize()===true) is NOT authoritative for
+  // donations.status; only the webhook/GetLpResult/Gate-v1/markDonationPaid
+  // pipeline in payment.handler.js ever writes 'paid'. The donor must never
+  // see a donation declared successful before the backend itself confirms
+  // it, but also must never be told it failed while the outcome is merely
+  // still unknown — either would risk a duplicate charge (retrying after a
+  // false "failed") or a false promise (celebrating before 'paid' is real).
+  //   'idle'       — Step 3, ready for (or after a declined) submit attempt.
+  //   'processing' — tokenize() in flight (the CardCom round-trip itself).
+  //   'confirming' — HandleSubmit succeeded; polling GET
+  //                  /api/donations/public/:id for the real backend status.
+  //   'uncertain'  — the short foreground confirmation window elapsed with
+  //                  the donation still 'pending' at our own DB (NOT
+  //                  declared failed) — background polling continues
+  //                  quietly in case it resolves while the drawer stays
+  //                  open; never re-enables payment while in this state.
+  //   'paid'       — backend confirmed 'paid' — inline Thank You replaces
+  //                  Step 3's content (see the template).
+  paymentState: 'idle' | 'processing' | 'confirming' | 'uncertain' | 'paid' = 'idle';
+  // Populated once available (either immediately with 'paid', or via the
+  // quiet post-paid poll below) — drives the inline receipt link/action.
+  receiptId: string | null = null;
+
+  private confirmPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private confirmPollAttempts = 0;
+  private readonly CONFIRM_POLL_INTERVAL_MS = 1500;
+  // ~18s of visible "מאשרים את התרומה..." — long enough for ordinary
+  // webhook delivery, short enough to still feel like one transaction.
+  private readonly CONFIRM_FOREGROUND_ATTEMPTS = 12;
+  // After the foreground window, keep trying quietly (slower) for a good
+  // while longer, in case the donor just leaves the drawer open — total
+  // background budget below is on top of the foreground attempts.
+  private readonly CONFIRM_BACKGROUND_INTERVAL_MS = 5000;
+  private readonly CONFIRM_BACKGROUND_ATTEMPTS = 48;
+
+  private receiptPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private receiptPollAttempts = 0;
+  private readonly RECEIPT_POLL_INTERVAL_MS = 3000;
+  private readonly RECEIPT_POLL_MAX_ATTEMPTS = 20;
+
+  get formattedChargeAmount(): string {
+    return '₪' + this.chargeAmount.toLocaleString('he-IL');
+  }
+
+  // A genuine CardCom-side decline (HandleSubmit IsSuccess=false) — the
+  // LowProfile session itself is still valid (OpenfieldsFormComponent's own
+  // transactionStarted guard resets on every terminal outcome, confirmed
+  // against its tokenize()), so this deliberately does NOT create a new
+  // Donation/LowProfile: same donationId/lowProfileId, donor fixes their
+  // card details and tries again on the exact same OpenFields session.
+  private resetAfterCardComDecline(): void {
+    this.paymentState = 'idle';
+    this.createDonationError = 'התשלום לא הושלם. בדקו את פרטי הכרטיס ונסו שוב.';
+  }
+
+  // A definitive backend-side failure signal (donations.status='failed') —
+  // unlike a CardCom decline, this means something is wrong with this
+  // donation/LowProfile itself; same "don't retry the same spent
+  // LowProfile" semantics as onHostedCheckoutMessage's own failure branch.
+  private resetAfterBackendFailure(): void {
+    this.clearConfirmPoll();
+    this.paymentState = 'idle';
     this.lowProfileId = null;
     this.donationId = null;
     this.createdTermsSnapshot = null;
     this.createDonationError = 'התשלום נכשל, נסו שוב';
     this.step = 2;
+  }
+
+  private clearConfirmPoll(): void {
+    if (this.confirmPollTimer) clearTimeout(this.confirmPollTimer);
+    this.confirmPollTimer = null;
+  }
+
+  private startPaymentConfirmation(): void {
+    this.paymentState = 'confirming';
+    this.confirmPollAttempts = 0;
+    this.pollConfirmation();
+  }
+
+  private pollConfirmation(): void {
+    if (!this.donationId) return;
+    const donationId = this.donationId;
+    this.donationService.getStatus(donationId).subscribe({
+      next: (res) => {
+        // Stale response for a donation this component has already moved
+        // on from — ignore rather than act on an outdated poll.
+        if (this.donationId !== donationId) return;
+
+        if (res.status === 'paid') {
+          this.paymentState = 'paid';
+          this.receiptId = res.receipt_id;
+          if (!res.receipt_id) this.scheduleQuietReceiptPoll(donationId);
+          return;
+        }
+        if (res.status === 'failed') {
+          this.resetAfterBackendFailure();
+          return;
+        }
+        this.scheduleNextConfirmPoll();
+      },
+      // A transient network error polling our own backend isn't a payment
+      // failure — keep trying within the same bounded window.
+      error: () => this.scheduleNextConfirmPoll(),
+    });
+  }
+
+  private scheduleNextConfirmPoll(): void {
+    this.confirmPollAttempts++;
+    const totalBudget = this.CONFIRM_FOREGROUND_ATTEMPTS + this.CONFIRM_BACKGROUND_ATTEMPTS;
+    if (this.confirmPollAttempts >= totalBudget) return; // quietly stop -- reconciliation covers the rest
+
+    const stillForeground = this.confirmPollAttempts < this.CONFIRM_FOREGROUND_ATTEMPTS;
+    this.paymentState = stillForeground ? 'confirming' : 'uncertain';
+    const interval = stillForeground ? this.CONFIRM_POLL_INTERVAL_MS : this.CONFIRM_BACKGROUND_INTERVAL_MS;
+    this.confirmPollTimer = setTimeout(() => this.pollConfirmation(), interval);
+  }
+
+  private scheduleQuietReceiptPoll(donationId: string): void {
+    this.receiptPollTimer = setTimeout(() => this.pollQuietReceipt(donationId), this.RECEIPT_POLL_INTERVAL_MS);
+  }
+
+  private pollQuietReceipt(donationId: string): void {
+    if (this.donationId !== donationId) return;
+    this.donationService.getStatus(donationId).subscribe({
+      next: (res) => {
+        if (this.donationId !== donationId) return;
+        if (res.receipt_id) { this.receiptId = res.receipt_id; return; }
+        this.receiptPollAttempts++;
+        if (this.receiptPollAttempts < this.RECEIPT_POLL_MAX_ATTEMPTS) this.scheduleQuietReceiptPoll(donationId);
+      },
+      error: () => {
+        this.receiptPollAttempts++;
+        if (this.receiptPollAttempts < this.RECEIPT_POLL_MAX_ATTEMPTS) this.scheduleQuietReceiptPoll(donationId);
+      },
+    });
   }
 
   private canReuseExistingDonation(): boolean {
@@ -452,7 +592,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         name:       this.name.trim(),
         email:      this.email.trim(),
         phone:      this.phone.trim(),
-        idNumber:   df.showIdNumber   ? this.idNumber.replace(/\D/g, '') : '',
+        // Optional in Checkout V2 regardless of df.showIdNumber (see the
+        // Step 2 field's own template comment) — this.idDigits is '' when
+        // not entered, matching the existing empty-string convention below.
+        idNumber:   this.idDigits,
         address:    df.showAddress    ? this.address.trim()               : '',
         postalCode: df.showPostalCode ? this.postalCode.trim()            : '',
         isAnonymous: this.isAnonymous,
@@ -533,41 +676,34 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // as OpenfieldsFormComponent's other two consumers (Settings/org
   // registration) already do via their own tokenize()-calling buttons.
   //
-  // 2026-09-27 (product decision, reversed the same day) — an earlier
-  // version of this method held the donor on Step 3 behind a bounded
-  // "מאמתים את התרומה..." poll, waiting for donations.status='paid' before
-  // navigating, since HandleSubmit's IsSuccess is CardCom's word on the
-  // CHARGE, not on donations.status (only payment.handler.js's webhook/
-  // GetLpResult pipeline ever writes that). That blocking wait was
-  // deliberately removed: the donor experience must feel immediate. A true
-  // HandleSubmit success now navigates to the success page right away —
-  // backend finalization (webhook → GetLpResult → Gate v1 → markDonationPaid
-  // → receipt) continues asynchronously and unmodified; the success page
-  // itself now does the quiet, non-blocking background status/receipt
-  // refresh (see DonationSuccessComponent). This is still a UX-only signal,
-  // exactly like the hosted flow's own onHostedCheckoutMessage precedent —
-  // the webhook remains the only thing that ever writes
-  // donations.status='paid'.
+  // 2026-09-27 (final revision) — a true HandleSubmit success no longer
+  // navigates anywhere by itself; it starts startPaymentConfirmation(),
+  // which polls the backend's own public status endpoint and only declares
+  // success once donations.status is actually 'paid'. See paymentState's
+  // own doc comment for the full state machine and why "declared failed"
+  // and "outcome still unknown" are kept strictly separate (retrying after
+  // a false "failed" is exactly how a duplicate charge would happen).
   async submitOpenFieldsPayment(): Promise<void> {
-    if (this.paymentProcessing || !this.openfieldsForm) return;
-    this.paymentProcessing = true;
+    if (this.paymentState !== 'idle' || !this.openfieldsForm) return;
+    this.paymentState = 'processing';
     this.createDonationError = '';
     const success = await this.openfieldsForm.tokenize();
-    this.paymentProcessing = false;
 
     if (!success) {
-      this.resetAfterOpenFieldsFailure();
+      this.resetAfterCardComDecline();
       return;
     }
     if (!this.donationId) return;
-    this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
-      queryParams: { ref: this.donationId, amount: this.chargeAmount },
-    });
+    this.startPaymentConfirmation();
+  }
+
+  finishSuccess(): void {
+    this.close();
   }
 
   // ── Navigation / close ───────────────────────────────────────────
   goBack(): void {
-    if (this.step > 1) this.step = (this.step - 1) as 1 | 2;
+    if (this.step > 1 && this.paymentState === 'idle') this.step = (this.step - 1) as 1 | 2;
   }
 
   close(): void {
@@ -579,6 +715,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     // No backdrop to click in page mode — the "overlay" element there is
     // just the plain page background, not a dismissible scrim.
     if (this.presentation !== 'drawer') return;
+    // A charge is either mid-flight or its result isn't known yet — closing
+    // now wouldn't stop it, it would just make the donor think they can
+    // safely try again elsewhere. See paymentState's own doc comment.
+    if (this.paymentState === 'processing' || this.paymentState === 'confirming') return;
     if ((event.target as HTMLElement).classList.contains('cv2-overlay')) {
       this.close();
     }

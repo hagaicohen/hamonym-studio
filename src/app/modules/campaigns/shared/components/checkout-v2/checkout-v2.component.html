@@ -11,7 +11,7 @@
     <!-- STICKY HEADER — all 3 steps visible from the very first render,
          never progressively revealed. -->
     <div class="cv2-header">
-      <button class="cv2-close" *ngIf="presentation === 'drawer'" type="button" (click)="close()" aria-label="סגור">✕</button>
+      <button class="cv2-close" *ngIf="presentation === 'drawer' && paymentState !== 'processing' && paymentState !== 'confirming'" type="button" (click)="close()" aria-label="סגור">✕</button>
 
       <div class="cv2-header-brand">
         <!-- Logo only — no separate org-name text label (2026-09-24: the
@@ -152,17 +152,25 @@
             <span class="cv2-error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
           </div>
 
-          <div class="cv2-field-group" *ngIf="donorFields.showIdNumber">
-            <label class="cv2-field-label">תעודת זהות <span class="cv2-required">*</span></label>
+          <!-- 2026-09-27 — always shown in Checkout V2 (not gated behind
+               donorFields.showIdNumber, which has no Campaign Studio UI to
+               enable it and defaults false everywhere) but optional: empty
+               is valid, a non-empty value must pass the checksum. Feeds
+               OpenfieldsFormComponent's cardOwnerId when non-empty, and
+               donor_id_number either way — the same donor.idNumber field
+               the backend already expects for both the hosted flow's
+               CardOwnerIdValue prefill and OpenFields. -->
+          <div class="cv2-field-group">
+            <label class="cv2-field-label">תעודת זהות <span class="cv2-optional">(לא חובה)</span></label>
             <div class="cv2-field-input-wrap">
               <input class="cv2-field-input" type="text" [(ngModel)]="idNumber" name="idNumber" placeholder="000000000"
                 inputmode="numeric" maxlength="9" dir="ltr"
-                [class.cv2-field-error]="(submitted || idLiveState === 'invalid') && !isValidId"
+                [class.cv2-field-error]="idLiveState === 'invalid'"
                 [class.cv2-field-valid]="idLiveState === 'valid'">
               <span class="cv2-field-status-icon" *ngIf="idLiveState === 'valid'">✓</span>
               <span class="cv2-field-status-icon cv2-field-status-icon--bad" *ngIf="idLiveState === 'invalid'">✕</span>
             </div>
-            <span class="cv2-error-msg" *ngIf="(submitted || idLiveState === 'invalid') && !isValidId">מספר ת.ז אינו תקין</span>
+            <span class="cv2-error-msg" *ngIf="idLiveState === 'invalid'">מספר ת.ז אינו תקין</span>
           </div>
 
           <div class="cv2-field-group" *ngIf="donorFields.showAddress">
@@ -204,33 +212,65 @@
 
       <!-- ── STEP 3 — תשלום ── -->
       <ng-container *ngIf="step === 3">
-        <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError }}</div>
+        <ng-container *ngIf="paymentState !== 'paid'; else cv2PaidBlock">
+          <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError }}</div>
 
-        <!-- Hosted flow (CHECKOUT_V2_OPENFIELDS_ENABLED=false, rollback path) —
-             CardCom's own hosted LowProfile checkout page, framed inline —
-             styled via UIDefinition.CSSUrl (cardcom-embed.css) to read as
-             part of Hamonym's own UI, including its own real submit button
-             (see checkout-v2.component.ts's own doc comment on why there is
-             no second, Hamonym-side payment button in this branch). -->
-        <iframe
-          *ngIf="!CHECKOUT_V2_OPENFIELDS_ENABLED && hostedCheckoutUrl"
-          [src]="hostedCheckoutUrl"
-          class="cv2-cardcom-iframe">
-        </iframe>
+          <!-- Hosted flow (CHECKOUT_V2_OPENFIELDS_ENABLED=false, rollback path) —
+               CardCom's own hosted LowProfile checkout page, framed inline —
+               styled via UIDefinition.CSSUrl (cardcom-embed.css) to read as
+               part of Hamonym's own UI, including its own real submit button
+               (see checkout-v2.component.ts's own doc comment on why there is
+               no second, Hamonym-side payment button in this branch). -->
+          <iframe
+            *ngIf="!CHECKOUT_V2_OPENFIELDS_ENABLED && hostedCheckoutUrl"
+            [src]="hostedCheckoutUrl"
+            class="cv2-cardcom-iframe">
+          </iframe>
 
-        <!-- OpenFields flow (CHECKOUT_V2_OPENFIELDS_ENABLED=true) — the same
-             hardened component Settings/org-registration already use, fed
-             the donation's own LowProfile. The payment button lives in the
-             sticky footer CTA below (case 3), not here — see
-             submitOpenFieldsPayment()'s own doc comment. -->
-        <app-openfields-form
-          *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED && lowProfileId"
-          [lowProfileId]="lowProfileId"
-          [cardOwnerName]="name"
-          [cardOwnerEmail]="email"
-          [cardOwnerPhone]="phone"
-          [cardOwnerId]="donorFields.showIdNumber ? idDigits : ''">
-        </app-openfields-form>
+          <!-- OpenFields flow (CHECKOUT_V2_OPENFIELDS_ENABLED=true) — the same
+               hardened component Settings/org-registration already use, fed
+               the donation's own LowProfile. The payment button lives in the
+               sticky footer CTA below (case 3), not here — see
+               submitOpenFieldsPayment()'s own doc comment. -->
+          <app-openfields-form
+            *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED && lowProfileId"
+            [lowProfileId]="lowProfileId"
+            [cardOwnerName]="name"
+            [cardOwnerEmail]="email"
+            [cardOwnerPhone]="phone"
+            [cardOwnerId]="idDigits">
+          </app-openfields-form>
+
+          <!-- Backend-authoritative confirmation states (2026-09-27) — see
+               paymentState's own doc comment in checkout-v2.component.ts.
+               Neither state is dismissible/retryable: 'confirming' is a
+               brief, normal wait; 'uncertain' explicitly avoids implying
+               either success or failure, since a real charge is already
+               real and retrying it risks a duplicate. -->
+          <div class="cv2-payment-status cv2-payment-status--confirming" *ngIf="paymentState === 'confirming'">
+            <span class="cv2-spinner cv2-spinner--dark"></span>
+            <span>מאשרים את התרומה...</span>
+          </div>
+          <div class="cv2-payment-status cv2-payment-status--uncertain" *ngIf="paymentState === 'uncertain'">
+            התשלום נקלט וממתין לאישור סופי.<br>אין צורך לבצע את התשלום שוב.
+          </div>
+        </ng-container>
+
+        <!-- Inline success (2026-09-27) — never a separate route/navigation
+             for Checkout V2; the campaign stays underneath the Drawer the
+             entire time, exactly like every other step. Only ever shown
+             once the backend itself confirmed 'paid' — see paymentState. -->
+        <ng-template #cv2PaidBlock>
+          <div class="cv2-success">
+            <div class="cv2-success-icon">❤️</div>
+            <h2 class="cv2-success-title">תודה רבה!</h2>
+            <p class="cv2-success-text">תרומתך בסך {{ formattedChargeAmount }} התקבלה בהצלחה.</p>
+            <a class="cv2-success-receipt-link" *ngIf="receiptId" [routerLink]="'/receipts/' + receiptId">
+              🧾 צפייה בקבלה
+            </a>
+            <p class="cv2-success-receipt-note" *ngIf="!receiptId">הקבלה תישלח אליך למייל.</p>
+          </div>
+        </ng-template>
       </ng-container>
 
     </div>
@@ -246,7 +286,7 @@
              not competing visually with the primary CTA below it
              (2026-09-24: the pill/border version made it fight the main
              action instead of clearly reading as secondary). -->
-        <button type="button" class="cv2-back-btn" *ngIf="step > 1 && !paymentProcessing" (click)="goBack()">→ חזרה</button>
+        <button type="button" class="cv2-back-btn" *ngIf="step > 1 && paymentState === 'idle'" (click)="goBack()">→ חזרה</button>
 
         <div class="cv2-api-error cv2-api-error--footer" *ngIf="step === 2 && createDonationError">{{ createDonationError }}</div>
 
@@ -269,21 +309,29 @@
             <!-- Hosted flow: no case-3 button here — CardCom's own real
                  submit button, styled to match .cv2-cta via
                  cardcom-embed.css, is the single visible payment action
-                 inside the iframe above. OpenFields flow: this IS that
-                 single payment action, since OpenfieldsFormComponent has no
-                 button of its own. On success it navigates straight to the
-                 success page (see submitOpenFieldsPayment()'s doc comment
-                 on why this is intentionally immediate, not gated on
-                 backend confirmation). -->
+                 inside the iframe above. OpenFields flow: one button per
+                 paymentState (see checkout-v2.component.ts's own doc
+                 comment) — 'confirming'/'uncertain' deliberately show no
+                 button here at all (the inline status above already
+                 communicates it, and there must never be a second payment
+                 action while the outcome is still unknown). -->
             <ng-container *ngSwitchCase="3">
-              <button *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED" type="button" class="cv2-cta"
-                [disabled]="paymentProcessing || openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
-                <span *ngIf="!paymentProcessing">שלם עכשיו</span>
-                <ng-container *ngIf="paymentProcessing">
+              <ng-container *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED">
+                <button *ngIf="paymentState === 'idle'" type="button" class="cv2-cta"
+                  [disabled]="openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
+                  שלם עכשיו
+                </button>
+                <button *ngIf="paymentState === 'processing'" type="button" class="cv2-cta" disabled>
                   <span class="cv2-spinner"></span>
                   <span>מעבדים את התשלום...</span>
-                </ng-container>
-              </button>
+                </button>
+                <button *ngIf="paymentState === 'uncertain'" type="button" class="cv2-cta cv2-cta--muted" (click)="close()">
+                  סגור
+                </button>
+                <button *ngIf="paymentState === 'paid'" type="button" class="cv2-cta" (click)="finishSuccess()">
+                  סיום
+                </button>
+              </ng-container>
             </ng-container>
           </ng-container>
         </div>
