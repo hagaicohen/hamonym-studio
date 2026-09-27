@@ -1114,6 +1114,13 @@ const SORT_COLUMNS = {
   // type column to sort by.
   entity:   'e.display_name',
   type:     '(d.recurring_instruction_id IS NOT NULL)',
+  // Admin global "new paid donation" toast (2026-09-27, paid-donation-toast
+  // component) -- distinct from `date` (created_at) on purpose: a donation
+  // can sit 'pending' for a while (webhook lag) before flipping to 'paid',
+  // so sorting by created_at would miss/misorder it relative to more
+  // recently-CREATED donations that happened to confirm instantly. Not
+  // exposed in the admin list's own UI, only used by that poll.
+  completedAt: 'd.completed_at',
 };
 
 exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
