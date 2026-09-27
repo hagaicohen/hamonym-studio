@@ -793,3 +793,13 @@ Backend: migration `033_partner_draft.sql` — `entities.blocks`/`entities.layou
 **Reason:** רעיון שעלה מתוך שימוש אמיתי בדף תרומה חיצוני. נשמר כמסמך חזון נפרד (לא כאן) כדי לתעד גם את ה*-למה* וגם את מה שאסור להרוס בו — בעיקר העיקרון שאסור להוסיף לו פיצ'רים בהדרגה עד שהוא הופך לעוד עמוד קמפיין מלא. ר' [`SIMPLE_DONATION_PAGE_VISION.md`](SIMPLE_DONATION_PAGE_VISION.md) למסמך המלא. שום קוד לא שונה בסבב הזה.
 
 ---
+
+**2026-09-27**
+
+**Decision:** `CheckoutV2Component` הוא ה-checkout הסטנדרטי לכל תרומה בהמונים — לא פיצ'ר ספציפי ל"דף תרומה פשוט". שונות בין סוגי קמפיינים (מינימלי/מלא/שותף/שגריר, סכומים, חד-פעמי מול חודשי, תשורות, שדות תורם) היא קלט ל-Checkout V2 (`@Input()`-ים), לא checkout נפרד.
+
+**Reason:** אחרי שה-flow המלא (תשלום → אימות backend `paid` → תודה בתוך ה-Drawer → קבלה) הוכח מקצה לקצה מול production, נדרש audit לפני שקובעים את זה כסטנדרט — לא להניח. Audit קוד (לא הנחה) אישר: שתי נקודות הכניסה הציבוריות היחידות שקיימות (`CampaignPublicPageComponent`, `PartnerPublicPageComponent`) שתיהן מרנדרות בסופו של דבר את אותם שני קומפוננטים בדיוק — `MinimalDonationPageComponent`/`CampaignPreviewComponent` — וגם ה-Preview של הבעלים בתוך ה-Studio הוא **אותו קומפוננט**, לא עותק נפרד. שני אלה כבר פותחים `<app-checkout-v2>` לתרומה רגילה (`CHECKOUT_V2_ENABLED`), עם שגריר/תשורות/UTM/חד-פעמי-חודשי מחוברים בפועל דרך ה-`@Input()`-ים הקיימים (`[ambassador]`, `[cartOfferings]`, `captureUtmParams()` הפנימי, `donationFrequency`/`selectedInstallments`). ה-CTA הדביק (sticky) קורא לאותו `openCheckout()` כמו הכפתור הראשי — אין מסלול תשלום נפרד שם.
+
+**חריג אחד, מכוון ולא באג:** זרימת **הרשמה לאירוע** (`checkoutMode==='registration'`/`pendingRegistration`) בתוך `CampaignPreviewComponent` נשארת על `CheckoutModalComponent` הישן — מתועד כבר בהערת הכותרת של `checkout-v2.component.ts` כ-out of scope מכוון (Checkout V2 נבנה לתרומות, לא להרשמות). המודל הישן נשאר קיים בקוד גם כ-fallback רדום אם `CHECKOUT_V2_ENABLED` יכבה אי-פעם.
+
+**נושא פתוח שעלה מה-audit, לא טופל בסבב הזה:** ל-Preview של הבעלים בתוך ה-Studio (`[embedded]="true"`) אין שום gate/mock המונע תשלום אמיתי אם יש ל-draft `id` שמור — לחיצה על "תרום" בפריוויו עוברת את אותה שרשרת CardCom/OpenFields/webhook כמו תורם אמיתי. סיכון תפעולי (חיוב בטעות תוך כדי עריכה), לא קשור לשאלת האיחוד עצמה — נשאר ל-backlog.
