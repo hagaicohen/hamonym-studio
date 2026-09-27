@@ -88,7 +88,14 @@ export class DonationsPageComponent implements OnInit, OnDestroy {
   selected:   Donation | null = null;
 
   period:         Period = 'month';
-  statusFilter    = 'all';
+  // Defaults to confirmed donations only (2026-09-27) — an audit of all
+  // pending rows found 64/73 were abandoned/incomplete Checkout sessions
+  // (CardCom itself never recorded a completed transaction for them), which
+  // dominated this list and made it look like nearly every donation was
+  // stuck. The KPI bar above still reflects every status regardless of this
+  // filter (see getEntityDonations's own summaryWhereStr, unchanged) — a
+  // manager can still switch to "כל הסטטוסים"/"ממתין" to see everything.
+  statusFilter    = 'paid';
   campaignFilter  = '';
   searchQuery     = '';
 

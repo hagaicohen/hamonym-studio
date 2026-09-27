@@ -444,10 +444,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
   private confirmPollTimer: ReturnType<typeof setTimeout> | null = null;
   private confirmPollAttempts = 0;
-  private readonly CONFIRM_POLL_INTERVAL_MS = 1500;
-  // ~18s of visible "מאשרים את התרומה..." — long enough for ordinary
+  private readonly CONFIRM_POLL_INTERVAL_MS = 1000;
+  // ~15s of visible "מאשרים את התרומה..." — long enough for ordinary
   // webhook delivery, short enough to still feel like one transaction.
-  private readonly CONFIRM_FOREGROUND_ATTEMPTS = 12;
+  private readonly CONFIRM_FOREGROUND_ATTEMPTS = 15;
   // After the foreground window, keep trying quietly (slower) for a good
   // while longer, in case the donor just leaves the drawer open — total
   // background budget below is on top of the foreground attempts.

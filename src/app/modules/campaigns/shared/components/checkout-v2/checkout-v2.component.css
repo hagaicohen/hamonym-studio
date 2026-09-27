@@ -647,31 +647,29 @@
 }
 @keyframes cv2Spin { to { transform: rotate(360deg); } }
 
-/* Backend-confirmation states (2026-09-27) — sit where the card fields/
-   button were, same footprint family as .cv2-api-error. */
+/* Backend-confirmation states (2026-09-27, calm copy revision) — sit where
+   the card fields/button were, same footprint family as .cv2-api-error.
+   Deliberately NOT warning/error colored (no yellow/amber/red) — both
+   states are normal, expected parts of the flow, not something wrong. */
 .cv2-payment-status {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 12px;
   text-align: center;
   margin-top: 16px;
 }
+.cv2-payment-status-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+.cv2-payment-status-subtitle { font-size: 13px; font-weight: 400; color: #64748b; margin-top: 2px; }
 .cv2-payment-status--confirming {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 .cv2-payment-status--uncertain {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  font-weight: 600;
-  line-height: 1.5;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 .cv2-spinner--dark {
   border-color: rgba(29,78,216,0.25);

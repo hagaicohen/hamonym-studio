@@ -1,0 +1,74 @@
+/* Same corner/animation language as the public live-donation ticker
+   (campaigns/shared/components/donation-toast) -- top-right, slides in
+   along the RTL reading direction. */
+.pdt-stack {
+  position: fixed;
+  top: calc(var(--header-height, 64px) + 16px);
+  right: 20px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.pdt-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  direction: rtl;
+  min-width: 260px;
+  max-width: 320px;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.pdt-toast.pdt-toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.pdt-icon { font-size: 24px; line-height: 1; flex-shrink: 0; }
+
+.pdt-body { flex: 1; min-width: 0; }
+
+.pdt-title { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 2px; }
+.pdt-text { font-size: 13px; font-weight: 600; color: #583cd6; }
+.pdt-campaign {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdt-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.pdt-close:hover { color: #475569; }
+
+@media (max-width: 480px) {
+  .pdt-stack {
+    right: 12px;
+    left: 12px;
+  }
+  .pdt-toast {
+    min-width: unset;
+    max-width: 100%;
+  }
+}

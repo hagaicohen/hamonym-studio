@@ -241,18 +241,27 @@
             [cardOwnerId]="idDigits">
           </app-openfields-form>
 
-          <!-- Backend-authoritative confirmation states (2026-09-27) — see
-               paymentState's own doc comment in checkout-v2.component.ts.
-               Neither state is dismissible/retryable: 'confirming' is a
-               brief, normal wait; 'uncertain' explicitly avoids implying
-               either success or failure, since a real charge is already
-               real and retrying it risks a duplicate. -->
+          <!-- Backend-authoritative confirmation states (2026-09-27, calm
+               copy revision) — see paymentState's own doc comment in
+               checkout-v2.component.ts. Neither state is dismissible/
+               retryable: 'confirming' is a brief, ordinary wait, styled and
+               worded to feel like a normal step in the flow, not a
+               technical delay; 'uncertain' explicitly avoids implying
+               either success or failure (a real charge is already real —
+               retrying it risks a duplicate) but is deliberately worded and
+               styled to read as calm/neutral, not as a warning or error. -->
           <div class="cv2-payment-status cv2-payment-status--confirming" *ngIf="paymentState === 'confirming'">
             <span class="cv2-spinner cv2-spinner--dark"></span>
-            <span>מאשרים את התרומה...</span>
+            <div class="cv2-payment-status-text">
+              <div class="cv2-payment-status-title">מאשרים את התרומה...</div>
+              <div class="cv2-payment-status-subtitle">זה ייקח עוד רגע.</div>
+            </div>
           </div>
           <div class="cv2-payment-status cv2-payment-status--uncertain" *ngIf="paymentState === 'uncertain'">
-            התשלום נקלט וממתין לאישור סופי.<br>אין צורך לבצע את התשלום שוב.
+            <div class="cv2-payment-status-text">
+              <div class="cv2-payment-status-title">התשלום עדיין בתהליך אישור</div>
+              <div class="cv2-payment-status-subtitle">אפשר לסגור את החלון. נשלח את הקבלה למייל מיד עם השלמת התרומה.</div>
+            </div>
           </div>
         </ng-container>
 

@@ -8,6 +8,7 @@ import { TopbarComponent }   from '../topbar/topbar.component';
 import { SidebarComponent }  from '../sidebar/sidebar.component';
 import { ImpersonationBannerComponent } from '../impersonation-banner/impersonation-banner.component';
 import { IdleWarningModalComponent } from '../idle-warning-modal/idle-warning-modal.component';
+import { PaidDonationToastComponent } from '../paid-donation-toast/paid-donation-toast.component';
 import { IdleTimeoutService } from '../../services/idle-timeout.service';
 
 @Component({
@@ -20,6 +21,7 @@ import { IdleTimeoutService } from '../../services/idle-timeout.service';
     SidebarComponent,
     ImpersonationBannerComponent,
     IdleWarningModalComponent,
+    PaidDonationToastComponent,
   ],
   templateUrl: './app-layout.component.html',
   styleUrls: ['./app-layout.component.css'],
