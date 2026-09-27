@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
+import { DonationService } from '../../services/donation.service';
 
 interface DonationResult {
   id:             string;
@@ -31,7 +32,7 @@ interface DonationResult {
   templateUrl: './donation-success.component.html',
   styleUrls: ['./donation-success.component.css'],
 })
-export class DonationSuccessComponent implements OnInit {
+export class DonationSuccessComponent implements OnInit, OnDestroy {
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
   private meta   = inject(Meta);
@@ -39,6 +40,20 @@ export class DonationSuccessComponent implements OnInit {
   private http   = inject(HttpClient);
   private loader = inject(AppLoaderService);
   private analytics = inject(AnalyticsService);
+  private donationService = inject(DonationService);
+
+  // Quiet background status/receipt refresh (2026-09-27) — the donor already
+  // sees "תודה רבה!" the instant this page loads, regardless of
+  // donations.status (CardCom's HandleSubmit succeeding is not the same as
+  // the webhook/GetLpResult pipeline having finished writing 'paid' yet —
+  // see checkout-v2.component.ts's submitOpenFieldsPayment() doc comment).
+  // This never blocks or delays the thank-you message; it only quietly
+  // fills in the receipt link once one exists. Bounded so an donation that
+  // genuinely never finalizes (abandoned webhook) doesn't poll forever.
+  private statusPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private statusPollAttempts = 0;
+  private readonly STATUS_POLL_INTERVAL_MS = 3000;
+  private readonly STATUS_POLL_MAX_ATTEMPTS = 20; // ~60s of quiet, invisible retrying
 
   slug       = '';
   ref        = '';
@@ -91,6 +106,8 @@ export class DonationSuccessComponent implements OnInit {
               campaign_id:   d.campaign_id,
               transaction_id: d.id,
             });
+
+            if (d.status !== 'paid') this.scheduleQuietStatusPoll();
           },
           error: () => { this.loading = false; this.loader.hide(); },
         });
@@ -98,6 +115,33 @@ export class DonationSuccessComponent implements OnInit {
       this.loading = false;
       this.loader.hide();
     }
+  }
+
+  ngOnDestroy(): void {
+    if (this.statusPollTimer) clearTimeout(this.statusPollTimer);
+  }
+
+  private scheduleQuietStatusPoll(): void {
+    this.statusPollTimer = setTimeout(() => this.pollQuietStatus(), this.STATUS_POLL_INTERVAL_MS);
+  }
+
+  private pollQuietStatus(): void {
+    if (!this.ref) return;
+    this.donationService.getStatus(this.ref).subscribe({
+      next: (res) => {
+        if (this.donation) this.donation = { ...this.donation, status: res.status, receipt_id: res.receipt_id };
+        if (res.status === 'paid') return; // done -- receipt_id is written in the same transaction as 'paid'
+        this.statusPollAttempts++;
+        if (this.statusPollAttempts < this.STATUS_POLL_MAX_ATTEMPTS) this.scheduleQuietStatusPoll();
+        // else: quietly give up -- the donor already saw "תודה רבה!" long
+        // ago; the receipt-by-email fallback message covers this case (see
+        // the template).
+      },
+      error: () => {
+        this.statusPollAttempts++;
+        if (this.statusPollAttempts < this.STATUS_POLL_MAX_ATTEMPTS) this.scheduleQuietStatusPoll();
+      },
+    });
   }
 
   get formattedAmount(): string {

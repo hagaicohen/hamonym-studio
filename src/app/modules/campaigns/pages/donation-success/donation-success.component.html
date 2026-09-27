@@ -39,6 +39,7 @@
     <a *ngIf="receiptUrl" class="receipt-link-btn" [routerLink]="receiptUrl">
       🧾 צפייה בקבלה
     </a>
+    <p class="receipt-pending-note" *ngIf="!receiptUrl">הקבלה תישלח אליך למייל עם הפקתה.</p>
 
     <div class="create-account-box" *ngIf="showCreateAccountPrompt">
       <p class="create-account-text">רוצים לשמור את כל התרומות שלכם במקום אחד?</p>

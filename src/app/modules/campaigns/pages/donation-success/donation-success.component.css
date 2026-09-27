@@ -133,6 +133,13 @@
 
 .receipt-link-btn:hover { background: #f1f5f9; }
 
+.receipt-pending-note {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
 /* ── CREATE ACCOUNT PROMPT ── */
 .create-account-box {
   padding: 16px;
