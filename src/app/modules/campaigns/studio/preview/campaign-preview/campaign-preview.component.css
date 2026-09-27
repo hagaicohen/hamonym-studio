@@ -893,6 +893,16 @@
   font-size: 14px; color: #64748b; text-align: center;
   margin: 0 0 20px;
 }
+/* Donation widget title/security-line (2026-09-28) -- same look as the
+   registration subtitle above, reused rather than duplicated. */
+.hm-donate-subtitle {
+  font-size: 14px; color: #64748b; text-align: center;
+  margin: -12px 0 16px;
+}
+.hm-security-note {
+  font-size: 12px; color: #64748b; text-align: center;
+  margin: 10px 0 0;
+}
 .hm-donate-or-divider {
   display: flex;
   align-items: center;
@@ -1690,6 +1700,11 @@
 .cta-title  { font-size: 22px; font-weight: 900; margin: 0; }
 .cta-text   { font-size: 14px; margin: 0; opacity: 0.85; }
 .cta-btn-wrap { display: flex; }
+/* Hero CTA (2026-09-28) — same .cta-btn-wrap/.cta-btn as the generic cta
+   block, plus full width so justifyContent (from heroCtaConfig.align)
+   actually positions the button instead of being centered by .hm-hero-copy's
+   own align-items:center regardless of the chosen alignment. */
+.hm-hero-cta-wrap { width: 100%; }
 .cta-btn {
   padding: 11px 24px; border-radius: 10px; border: none;
   color: #fff; font-size: 14px; font-weight: 700;

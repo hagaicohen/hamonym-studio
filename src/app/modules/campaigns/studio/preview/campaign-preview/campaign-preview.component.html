@@ -233,6 +233,24 @@
             (click)="openHeroVideo()" aria-label="נגן וידאו">
             <span class="hm-play-icon"></span>
           </button>
+
+          <!-- Hero CTA (2026-09-28) — heroCtaConfig already had a full Builder
+               editor (campaign-page-builder-step.component.html) but no
+               renderer anywhere; this wires the existing config instead of
+               inventing a second one. Same donate action as every other CTA
+               on this page (scrollToDonation() → the one real "לתמיכה
+               מאובטחת" button that calls openCheckout(draft)) — heroCtaConfig
+               has no ctaAction field (unlike the generic cta block), so it's
+               always donation-oriented by design. `?.` guards campaigns
+               saved before this field existed. -->
+          <div class="hm-hero-cta-wrap cta-btn-wrap" *ngIf="draft.heroCtaConfig?.visible"
+            [style.justifyContent]="ctaAlignStyle(draft.heroCtaConfig.align)">
+            <button class="cta-btn" type="button" [style.background]="draft.heroCtaConfig.color"
+              (click)="scrollToDonation()">
+              <span *ngIf="draft.heroCtaConfig.icon">{{ draft.heroCtaConfig.icon }}</span>
+              {{ draft.heroCtaConfig.label }}
+            </button>
+          </div>
         </div>
 
         <!-- Logo overlaid on hero (left or center) -->
@@ -1041,7 +1059,16 @@
          alone, so with custom amount turned off it kept promising a "free
          amount" the donor could no longer actually enter, leaving only fixed
          suggested amounts. Found live 2026-09-22. -->
-    <h2>{{ draft.registrationOptions.length > 0 ? (draft.allowCustomAmount ? 'תרמו סכום חופשי לקמפיין' : 'תרמו לקמפיין') : 'בחרו סכום לתמיכה' }}</h2>
+    <!-- title/subtitle (2026-09-28) -- wired to the existing
+         DonationWidgetBlockData config (was fully editable in the Builder,
+         never rendered) only for the plain donate case; the
+         registration-combo copy above stays exactly as it was, that's a
+         separate concern. `|| fallback` preserves today's exact copy for
+         any block saved before these fields existed. -->
+    <h2>{{ draft.registrationOptions.length > 0 ? (draft.allowCustomAmount ? 'תרמו סכום חופשי לקמפיין' : 'תרמו לקמפיין') : (asDonationWidget(block.data).title || 'בחרו סכום לתמיכה') }}</h2>
+    <p class="hm-donate-subtitle" *ngIf="draft.registrationOptions.length === 0 && asDonationWidget(block.data).subtitle">
+      {{ asDonationWidget(block.data).subtitle }}
+    </p>
 
     <!-- Monthly opt-in: only visible when the campaign manager both enabled
          it (allowMonthlyDonation) AND configured at least one monthlyAmounts
@@ -1115,26 +1142,41 @@
          in the DOM on any campaign with Registration Options — not
          necessarily this one, the actual amount-picker's donate button.
          Found 2026-09-23 while wiring up the registration Drawer request. -->
-    <button class="hm-donate-btn hm-primary-donate-cta" type="button" (click)="openCheckout(draft)">
-      <span class="hm-lock-icon">🔒</span>
-      <span class="hm-btn-text">לתמיכה מאובטחת</span>
+    <!-- ctaLabel/ctaIcon/ctaColor (2026-09-28) -- wired to the existing
+         config; `|| fallback` preserves today's exact button for blocks
+         saved before these fields existed. ctaColor uses `|| null` (not
+         `|| ''`) so an absent value removes the inline style entirely and
+         lets the existing CSS default show through, instead of an invalid
+         empty background. -->
+    <button class="hm-donate-btn hm-primary-donate-cta" type="button"
+      [style.background]="asDonationWidget(block.data).ctaColor || null"
+      (click)="openCheckout(draft)">
+      <span class="hm-lock-icon">{{ asDonationWidget(block.data).ctaIcon || '🔒' }}</span>
+      <span class="hm-btn-text">{{ asDonationWidget(block.data).ctaLabel || 'לתמיכה מאובטחת' }}</span>
       <span class="hm-cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
     </button>
-    <div class="hm-payments">
+    <!-- showSecurityBadge (2026-09-28) -- wired to a real, honest trust
+         line (CardCom genuinely handles the charge) rather than to the
+         button's own icon, since ctaIcon already independently controls
+         that. `!== false` treats an absent field (older campaigns) as the
+         current always-shown default. -->
+    <p class="hm-security-note" *ngIf="asDonationWidget(block.data).showSecurityBadge !== false">
+      🔒 תשלום מאובטח באמצעות קארדקום בע״מ
+    </p>
+    <!-- showPaymentLogos (2026-09-28) -- wired, but deliberately renders
+         only the one genuinely-real badge (generic card acceptance via
+         CardCom/OpenFields) regardless of which specific brands are listed
+         in paymentLogos. Apple Pay was never an integrated capability here
+         (no Payment Request API/Apple Pay JS anywhere in this codebase) --
+         removed for the same reason the Bit badge already was (2026-09-24
+         comment above): a decorative badge is a false claim, not a
+         cosmetic choice. paymentLogos itself is left untouched (out of
+         scope -- not the Builder's config model, just this renderer). -->
+    <div class="hm-payments" *ngIf="asDonationWidget(block.data).showPaymentLogos !== false">
       <span class="hm-payment-badge visa">
         <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
         <span>אשראי</span>
       </span>
-      <span class="hm-payment-badge applepay">
-        <svg viewBox="0 0 24 24"><path d="M16.6 3.2c-.9.1-1.9.7-2.5 1.5-.5.7-.9 1.6-.8 2.5 1 0 2-.6 2.6-1.4.6-.8.9-1.7.7-2.6z"/><path d="M19 16.4c-.4.9-.7 1.3-1.3 2.1-.8 1.2-1.9 2.6-3.3 2.6-1.2 0-1.5-.8-3.1-.8s-2 .8-3.1.8c-1.4.1-2.5-1.5-3.3-2.7-1.8-2.6-2-5.6-.9-7.2.8-1.2 2-1.8 3.2-1.8 1.2 0 2 .8 3.1.8 1 0 1.6-.8 3.1-.8 1.1 0 2.3.6 3.1 1.7-2.7 1.5-2.3 5.3.5 6.3z"/></svg>
-        <span>Apple Pay</span>
-      </span>
-      <!-- Bit badge removed 2026-09-24 — no reliable per-entity/terminal
-           signal exists today that Bit is actually enabled on this
-           campaign's CardCom terminal (audited: not in entities.cardcom_*
-           columns, not in the LowProfile/Create payload, not in CardCom's
-           response). Restore once that's confirmed as either a real
-           per-entity field or a guaranteed platform-wide CardCom policy. -->
     </div>
   </div>
 
