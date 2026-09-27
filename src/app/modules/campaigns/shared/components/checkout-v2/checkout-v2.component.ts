@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostBinding, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostBinding, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,6 +11,8 @@ import { DonationService } from '../../../services/donation.service';
 import { AnalyticsService } from '../../../../../core/services/analytics.service';
 import { Ambassador } from '../../../services/ambassador.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
+import { CHECKOUT_V2_OPENFIELDS_ENABLED } from '../../config/checkout-v2.config';
+import { OpenfieldsFormComponent } from '../../../../billing/components/openfields-form/openfields-form.component';
 
 // Checkout V2 (2026-09-24) — the real, continuous 3-step donation checkout
 // (סכום → פרטים אישיים → תשלום) behind CHECKOUT_V2_ENABLED. Deliberately a
@@ -31,14 +33,16 @@ import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html
 //    UIDefinition.CSSUrl on the LowProfile/Create call itself (confirmed
 //    already enabled on this entity's CardCom account — see
 //    donations.service.js#createDonation and hamonym-app/public/
-//    cardcom-embed.css). Superseded an OpenFields-based Step 3
-//    (OpenfieldsFormComponent) that worked for Settings/the registration
-//    wizard but never completed CardCom's own postMessage handshake for a
-//    donation LowProfile under this entity's specific CardCom account —
-//    isolated via extensive controlled testing to that account's own
-//    CardCom-side configuration, not fixable in this codebase.
-//    OpenfieldsFormComponent itself is untouched; Checkout V2 just no
-//    longer calls it.
+//    cardcom-embed.css). An earlier OpenFields-based Step 3 attempt was
+//    abandoned as apparently CardCom-account-specific; that conclusion was
+//    later found to actually be a race condition in
+//    OpenfieldsFormComponent's own init lifecycle (fixed 2026-09-26, see its
+//    header comment) — not a CardCom-side limitation. OpenFields is
+//    reintroduced here behind CHECKOUT_V2_OPENFIELDS_ENABLED — active by
+//    default (2026-09-27) after a real controlled TEST donation verified
+//    the full chain end-to-end (see checkout-v2.config.ts's own doc
+//    comment); the hosted iframe above remains in the code, untouched, as
+//    the instant-rollback path if the flag is set back to false.
 //  - donor-field validation logic (name/email/phone/idNumber/address/
 //    postalCode), ported from CheckoutModalComponent's own getters — small
 //    enough that duplicating it here is cheaper than extracting a shared
@@ -58,7 +62,7 @@ import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html
 @Component({
   selector: 'app-checkout-v2',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, OpenfieldsFormComponent],
   templateUrl: './checkout-v2.component.html',
   styleUrl: './checkout-v2.component.css',
 })
@@ -97,6 +101,11 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   @Input() ambassador: Ambassador | null = null;
 
   @Output() closed = new EventEmitter<void>();
+
+  // Template-exposed so Step 3's *ngIf branches can read it directly.
+  readonly CHECKOUT_V2_OPENFIELDS_ENABLED = CHECKOUT_V2_OPENFIELDS_ENABLED;
+
+  @ViewChild(OpenfieldsFormComponent) openfieldsForm?: OpenfieldsFormComponent;
 
   private donationService = inject(DonationService);
   private analytics       = inject(AnalyticsService);
@@ -386,12 +395,21 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // curl). Styled via UIDefinition.CSSUrl — see donations.service.js and
   // cardcom-embed.css.
   hostedCheckoutUrl: SafeResourceUrl | null = null;
+  // OpenFields path only (CHECKOUT_V2_OPENFIELDS_ENABLED) — the same
+  // LowProfile POST /api/donations already returns as res.lowProfileId,
+  // handed straight to OpenfieldsFormComponent's own [lowProfileId] input.
+  lowProfileId: string | null = null;
   private createdTermsSnapshot: { amount: number; frequency: 'one-time' | 'monthly'; installments: number | null } | null = null;
   creatingDonation = false;
+  // Guards the OpenFields payment button against double-submission while
+  // tokenize() is in flight — the hosted-iframe path needs no equivalent
+  // since CardCom's own button already guards itself.
+  paymentProcessing = false;
   createDonationError = '';
 
   private canReuseExistingDonation(): boolean {
-    if (!this.donationId || !this.hostedCheckoutUrl || !this.createdTermsSnapshot) return false;
+    if (!this.donationId || !this.createdTermsSnapshot) return false;
+    if (CHECKOUT_V2_OPENFIELDS_ENABLED ? !this.lowProfileId : !this.hostedCheckoutUrl) return false;
     const s = this.createdTermsSnapshot;
     return s.amount === this.chargeAmount
       && s.frequency === this.donationFrequency
@@ -442,19 +460,28 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
       // embedded:true — signals the backend this is Checkout V2's own Step
       // 3 (not a plain redirect-flow donation), which also applies the
       // UIDefinition CSS/donor-field styling (see donations.service.js).
-      // res.url (always returned regardless of this flag) is what's
-      // actually used here, not res.lowProfileId.
+      // The response always includes both res.url and res.lowProfileId;
+      // which one is actually used below depends on
+      // CHECKOUT_V2_OPENFIELDS_ENABLED.
       embedded: true,
       note: this.dedicationEnabled ? (this.dedicationText.trim() || undefined) : undefined,
     }).subscribe({
       next: (res) => {
         this.creatingDonation = false;
-        if (!res.url) {
-          this.createDonationError = 'שגיאה בהכנת התשלום, נסו שוב';
-          return;
+        if (CHECKOUT_V2_OPENFIELDS_ENABLED) {
+          if (!res.lowProfileId) {
+            this.createDonationError = 'שגיאה בהכנת התשלום, נסו שוב';
+            return;
+          }
+          this.lowProfileId = res.lowProfileId;
+        } else {
+          if (!res.url) {
+            this.createDonationError = 'שגיאה בהכנת התשלום, נסו שוב';
+            return;
+          }
+          this.hostedCheckoutUrl = this.sanitizer.bypassSecurityTrustResourceUrl(res.url);
         }
         this.donationId = res.donationId;
-        this.hostedCheckoutUrl = this.sanitizer.bypassSecurityTrustResourceUrl(res.url);
         this.createdTermsSnapshot = {
           amount: this.chargeAmount,
           frequency: this.donationFrequency,
@@ -479,15 +506,51 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     });
   }
 
-  // No submitPayment()/external CTA for Step 3 (2026-09-26) — CardCom's own
-  // hosted page has its own real submit button (styled via cardcom-embed.css
-  // to match .cv2-cta, never hidden — see donations.service.js's own doc
-  // comment on why). There is no supported way to trigger it from outside
-  // the iframe, and there must never be a second, competing Hamonym button.
+  // Hosted-iframe path (CHECKOUT_V2_OPENFIELDS_ENABLED=false): no
+  // submitPayment()/external CTA for Step 3 — CardCom's own hosted page has
+  // its own real submit button (styled via cardcom-embed.css to match
+  // .cv2-cta, never hidden — see donations.service.js's own doc comment on
+  // why). There is no supported way to trigger it from outside the iframe,
+  // and there must never be a second, competing Hamonym button there.
   // Payment completion is entirely CardCom's own SuccessRedirectUrl/
   // FailedRedirectUrl → /api/donations/return, exactly as the pre-Checkout-
   // V2 redirect flow already worked — webhook remains the only thing that
   // ever writes donations.status='paid'.
+  //
+  // OpenFields path (CHECKOUT_V2_OPENFIELDS_ENABLED=true): unlike the hosted
+  // page, OpenfieldsFormComponent has no button of its own — Hamonym owns
+  // the surrounding UI, so this IS the one Hamonym-side payment button, same
+  // as OpenfieldsFormComponent's other two consumers (Settings/org
+  // registration) already do via their own tokenize()-calling buttons.
+  // tokenize() resolving true is a direct CardCom API charge response
+  // (HandleSubmit's IsSuccess) — the same trust level as the hosted flow's
+  // own redirect-based signal (see this file's header comment), so success
+  // navigates immediately, exactly like onHostedCheckoutMessage's success
+  // branch. It's still a UX-only signal: the webhook remains the only thing
+  // that ever writes donations.status='paid'.
+  async submitOpenFieldsPayment(): Promise<void> {
+    if (this.paymentProcessing || !this.openfieldsForm) return;
+    this.paymentProcessing = true;
+    this.createDonationError = '';
+    const success = await this.openfieldsForm.tokenize();
+    this.paymentProcessing = false;
+
+    if (success) {
+      if (!this.donationId) return;
+      this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
+        queryParams: { ref: this.donationId, amount: this.chargeAmount },
+      });
+      return;
+    }
+
+    // Same "don't retry the same spent LowProfile" semantics as
+    // onHostedCheckoutMessage's own failure branch above.
+    this.lowProfileId = null;
+    this.donationId = null;
+    this.createdTermsSnapshot = null;
+    this.createDonationError = 'התשלום נכשל, נסו שוב';
+    this.step = 2;
+  }
 
   // ── Navigation / close ───────────────────────────────────────────
   goBack(): void {

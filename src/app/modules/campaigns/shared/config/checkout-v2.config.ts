@@ -9,3 +9,14 @@
 // by this feature at all — see MinimalDonationPageComponent/CampaignPreview
 // Component's own `*ngIf="CHECKOUT_V2_ENABLED"` branches.
 export const CHECKOUT_V2_ENABLED = true;
+
+// OpenFields Step 3 (2026-09-27) — same reversibility mechanism as
+// CHECKOUT_V2_ENABLED above, one level down. true (default, since a real
+// controlled TEST donation was verified end-to-end: CardCom charge → the
+// existing payment.handler.js#handle() reconciliation → paid → receipt —
+// see checkout-v2.component.ts's own doc comment for why OpenFields was
+// previously abandoned and why it's back). Step 3 renders
+// OpenfieldsFormComponent, using the lowProfileId POST /api/donations
+// already returns. Set to false to instantly roll back to CardCom's hosted
+// LowProfile iframe, which remains untouched in the code for exactly that.
+export const CHECKOUT_V2_OPENFIELDS_ENABLED = true;

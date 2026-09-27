@@ -50,6 +50,19 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   @Input() cardOwnerName = 'Hamonym User';
   @Input() cardOwnerEmail = 'test@test.com';
   @Input() cardOwnerPhone = '0500000000';
+  // Stage 2a (2026-09-27) — was hardcoded '000000000' directly in
+  // tokenize()'s doTransaction payload. CardCom's own master script
+  // (OpenFields.js#setTransactionValues) reads this as `data.cardOwnerId`
+  // into `state.cardOwnerId`, which then appears both as a top-level field
+  // in its ChargeLowProfileDeal request and inside
+  // GetDataToSend().creditcard.cardUserId -- confirmed directly against
+  // that live script, not guessed. Not in validateTransactionValues()'s
+  // required-field list, so an empty/fallback value never blocks a charge
+  // -- optional, exactly like the three fields above. Defaults to the same
+  // placeholder the two existing (entity-billing) consumers already relied
+  // on, byte-for-byte -- neither passes this input, so both keep getting
+  // '000000000' via tokenize()'s own `|| '000000000'` fallback.
+  @Input() cardOwnerId = '';
 
   // Was a plain internal field, set only after initOpenFields() resolved.
   // Now also an @Input — a donation passes an already-created LowProfileId
@@ -467,7 +480,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
 
         lowProfileCode: this.lowProfileId,
 
-        cardOwnerId: '000000000',
+        cardOwnerId: this.cardOwnerId || '000000000',
 
         cardOwnerName: this.cardOwnerName,
 

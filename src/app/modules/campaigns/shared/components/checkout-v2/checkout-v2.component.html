@@ -205,16 +205,32 @@
       <!-- ── STEP 3 — תשלום ── -->
       <ng-container *ngIf="step === 3">
         <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError }}</div>
-        <!-- CardCom's own hosted LowProfile checkout page, framed inline —
+
+        <!-- Hosted flow (CHECKOUT_V2_OPENFIELDS_ENABLED=false, rollback path) —
+             CardCom's own hosted LowProfile checkout page, framed inline —
              styled via UIDefinition.CSSUrl (cardcom-embed.css) to read as
              part of Hamonym's own UI, including its own real submit button
              (see checkout-v2.component.ts's own doc comment on why there is
-             no second, Hamonym-side payment button anywhere on this step). -->
+             no second, Hamonym-side payment button in this branch). -->
         <iframe
-          *ngIf="hostedCheckoutUrl"
+          *ngIf="!CHECKOUT_V2_OPENFIELDS_ENABLED && hostedCheckoutUrl"
           [src]="hostedCheckoutUrl"
           class="cv2-cardcom-iframe">
         </iframe>
+
+        <!-- OpenFields flow (CHECKOUT_V2_OPENFIELDS_ENABLED=true) — the same
+             hardened component Settings/org-registration already use, fed
+             the donation's own LowProfile. The payment button lives in the
+             sticky footer CTA below (case 3), not here — see
+             submitOpenFieldsPayment()'s own doc comment. -->
+        <app-openfields-form
+          *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED && lowProfileId"
+          [lowProfileId]="lowProfileId"
+          [cardOwnerName]="name"
+          [cardOwnerEmail]="email"
+          [cardOwnerPhone]="phone"
+          [cardOwnerId]="donorFields.showIdNumber ? idDigits : ''">
+        </app-openfields-form>
       </ng-container>
 
     </div>
@@ -250,9 +266,20 @@
               <span class="cv2-spinner" *ngIf="creatingDonation"></span>
             </button>
 
-            <!-- No case 3 button — CardCom's own real submit button, styled
-                 to match .cv2-cta via cardcom-embed.css, is the single
-                 visible payment action inside the iframe above. -->
+            <!-- Hosted flow: no case-3 button here — CardCom's own real
+                 submit button, styled to match .cv2-cta via
+                 cardcom-embed.css, is the single visible payment action
+                 inside the iframe above. OpenFields flow: this IS that
+                 single payment action, since OpenfieldsFormComponent has no
+                 button of its own (see submitOpenFieldsPayment()'s doc
+                 comment). -->
+            <ng-container *ngSwitchCase="3">
+              <button *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED" type="button" class="cv2-cta"
+                [disabled]="paymentProcessing || openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
+                <span *ngIf="!paymentProcessing">שלם עכשיו</span>
+                <span class="cv2-spinner" *ngIf="paymentProcessing"></span>
+              </button>
+            </ng-container>
           </ng-container>
         </div>
       </div>
