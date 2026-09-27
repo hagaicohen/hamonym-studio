@@ -9,87 +9,100 @@
   >
   </iframe>
 
-  <!-- CARD -->
-
-  <div class="field">
-    <label> מספר כרטיס </label>
-
-    <div class="card-frame-shell">
-      <!-- FAKE FIELD -->
-
-      @if (!cardIframeReady) {
-        <div class="card-skeleton">
-          <img class="card-skeleton-icon" src="./credit-card.png" alt="" />
-
-          <div class="card-skeleton-number">0000 0000 0000 0000</div>
-        </div>
-      }
-
-      <!-- REAL IFRAME -->
-
-      <iframe
-        id="CardComCardNumber"
-        name="CardComCardNumber"
-        src="https://secure.cardcom.solutions/api/openfields/cardNumber"
-        class="cardcom-field-frame"
-        [class.cardcom-visible]="cardIframeReady"
-      >
-      </iframe>
+  <!-- Genuine init failure (2026-09-24) — the master frame never became
+       ready after retrying; showing the skeleton forever with no signal
+       anything was wrong was the actual bug. Real, visible error + a way
+       to retry instead. -->
+  @if (initError) {
+    <div class="openfields-init-error">
+      <p>לא הצלחנו לטעון את טופס פרטי האשראי. בדקו את החיבור לאינטרנט ונסו שוב.</p>
+      <button type="button" (click)="retryInit()">נסה שוב</button>
     </div>
-  </div>
-
-  <!-- EXP -->
-
-  <div class="field-row">
-    <div class="field">
-      <label> חודש </label>
-
-      <input
-        class="exp-input"
-        id="expirationMonth"
-        type="text"
-        value="05"
-        maxlength="2"
-      />
-    </div>
+  } @else {
+    <!-- CARD -->
 
     <div class="field">
-      <label> שנה </label>
+      <label> מספר כרטיס </label>
 
-      <input
-        class="exp-input"
-        id="expirationYear"
-        type="text"
-        value="29"
-        maxlength="2"
-      />
+      <div class="card-frame-shell">
+        <!-- FAKE FIELD -->
+
+        @if (!cardIframeReady) {
+          <div class="card-skeleton">
+            <img class="card-skeleton-icon" src="./credit-card.png" alt="" />
+
+            <div class="card-skeleton-number">0000 0000 0000 0000</div>
+          </div>
+        }
+
+        <!-- REAL IFRAME -->
+
+        <iframe
+          id="CardComCardNumber"
+          name="CardComCardNumber"
+          src="https://secure.cardcom.solutions/api/openfields/cardNumber"
+          class="cardcom-field-frame"
+          [class.cardcom-visible]="cardIframeReady"
+          (load)="onCardFrameLoad()"
+        >
+        </iframe>
+      </div>
     </div>
-  </div>
 
-  <!-- CVV -->
+    <!-- EXP -->
 
-  <div class="field">
-    <label> CVV </label>
+    <div class="field-row">
+      <div class="field">
+        <label> חודש </label>
 
-    <div class="card-frame-shell">
-      <!-- SKELETON -->
+        <input
+          class="exp-input"
+          id="expirationMonth"
+          type="text"
+          value="05"
+          maxlength="2"
+        />
+      </div>
 
-      @if (!cvvIframeReady) {
-        <div class="card-skeleton cvv-skeleton">
-          <div class="cvv-skeleton-number">123</div>
-        </div>
-      }
+      <div class="field">
+        <label> שנה </label>
 
-      <!-- REAL -->
-
-      <iframe
-        id="CardComCvv"
-        name="CardComCvv"
-        src="https://secure.cardcom.solutions/api/openfields/CVV"
-        class="cardcom-field-frame"
-        [class.cardcom-visible]="cvvIframeReady"
-      >
-      </iframe>
+        <input
+          class="exp-input"
+          id="expirationYear"
+          type="text"
+          value="29"
+          maxlength="2"
+        />
+      </div>
     </div>
-  </div>
+
+    <!-- CVV -->
+
+    <div class="field">
+      <label> CVV </label>
+
+      <div class="card-frame-shell">
+        <!-- SKELETON -->
+
+        @if (!cvvIframeReady) {
+          <div class="card-skeleton cvv-skeleton">
+            <div class="cvv-skeleton-number">123</div>
+          </div>
+        }
+
+        <!-- REAL -->
+
+        <iframe
+          id="CardComCvv"
+          name="CardComCvv"
+          src="https://secure.cardcom.solutions/api/openfields/CVV"
+          class="cardcom-field-frame"
+          [class.cardcom-visible]="cvvIframeReady"
+          (load)="onCvvFrameLoad()"
+        >
+        </iframe>
+      </div>
+    </div>
+  }
 </div>
