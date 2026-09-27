@@ -641,6 +641,45 @@
 }
 @keyframes cv2Spin { to { transform: rotate(360deg); } }
 
+/* Payment-verification states (2026-09-27) — same pill shape/footprint as
+   .cv2-cta so swapping between button and status doesn't shift layout. */
+.cv2-payment-status {
+  flex: 0 1 260px;
+  width: auto;
+  max-width: 260px;
+  margin-right: auto;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.cv2-payment-status--verifying {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+.cv2-payment-status--paid {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+.cv2-payment-status--timeout {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-weight: 600;
+  max-width: 340px;
+}
+.cv2-spinner--dark {
+  border-color: rgba(29,78,216,0.25);
+  border-top-color: #1d4ed8;
+}
+
 .cv2-trust-line {
   margin: 0;
   text-align: center;
@@ -678,6 +717,7 @@
   /* Near/full-width CTA on mobile (2026-09-24) — the desktop cap above
      doesn't apply here; back to filling the remaining row space. */
   .cv2-cta { flex: 1 1 auto; max-width: none; margin-right: 0; }
+  .cv2-payment-status { flex: 1 1 auto; max-width: none; margin-right: 0; }
 
   /* Page mode on mobile stays full-bleed (2026-09-24) — the desktop-only
      "subtle card" treatment above only makes sense with visible page

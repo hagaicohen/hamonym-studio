@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   CampaignDraft, Offering,
   DonorFieldsConfig, DEFAULT_DONOR_FIELDS,
@@ -111,6 +113,12 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   private analytics       = inject(AnalyticsService);
   private sanitizer       = inject(DomSanitizer);
   private router          = inject(Router);
+  // Cancels the payment-verification poll's in-flight HTTP call on destroy
+  // (see ngOnDestroy) — clearPaymentVerificationPoll() alone only cancels
+  // the NEXT scheduled attempt via clearTimeout; without this, a request
+  // already in flight when the donor navigates away/closes checkout would
+  // still resolve and schedule yet another attempt on a dead component.
+  private destroy$ = new Subject<void>();
 
   // Same sanitize-then-bypass pattern MinimalDonationPageComponent already
   // uses for this exact field (its own richHtml()) — reused verbatim.
@@ -145,6 +153,9 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.presentation === 'drawer') document.body.style.overflow = '';
     window.removeEventListener('message', this.boundHostedCheckoutMessage);
+    this.clearPaymentVerificationPoll();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   // Step 3's iframe/postMessage bridge (2026-09-26) — CardCom's hosted
@@ -407,6 +418,92 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   paymentProcessing = false;
   createDonationError = '';
 
+  // Payment-verification polling (2026-09-27, OpenFields path only) —
+  // HandleSubmit's own IsSuccess is CardCom's word on the CHARGE, not on
+  // donations.status, which only payment.handler.js's webhook/GetLpResult
+  // pipeline ever writes (see submitOpenFieldsPayment()'s own doc comment
+  // below for why a real controlled TEST donation proved these can be
+  // seconds-to-minutes apart when webhook delivery is slow/delayed).
+  // 'verifying': polling GET /api/donations/public/:id, waiting for the
+  // backend to actually confirm 'paid' before treating the donation as
+  // done. 'verification_timeout': the bounded wait elapsed with the
+  // donation still 'pending' at Cardcom's own record of things (not
+  // failed) — reconciliation/webhook may still complete it later.
+  paymentPhase: 'idle' | 'verifying' | 'paid' | 'verification_timeout' = 'idle';
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private pollAttempts = 0;
+  private readonly POLL_INTERVAL_MS = 2000;
+  // ~30s — long enough for ordinary webhook delivery, short enough that a
+  // genuinely delayed donor isn't stuck staring at a spinner indefinitely.
+  private readonly POLL_MAX_ATTEMPTS = 15;
+
+  private clearPaymentVerificationPoll(): void {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.pollTimer = null;
+  }
+
+  private startPaymentVerification(): void {
+    // Guard against a second, parallel poll loop -- the button that calls
+    // submitOpenFieldsPayment() is already hidden once paymentPhase leaves
+    // 'idle' (see the template), so this is defense in depth, not the
+    // primary guard.
+    if (this.paymentPhase === 'verifying') return;
+    this.clearPaymentVerificationPoll();
+    this.paymentPhase = 'verifying';
+    this.pollAttempts = 0;
+    this.pollDonationStatus();
+  }
+
+  private pollDonationStatus(): void {
+    if (!this.donationId) return;
+    const donationId = this.donationId;
+    this.donationService.getStatus(donationId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        // Stale response for a donation this component has already moved
+        // on from (e.g. the donor went back and started a new one) —
+        // ignore rather than act on an outdated poll.
+        if (this.donationId !== donationId) return;
+
+        if (res.status === 'paid') {
+          this.paymentPhase = 'paid';
+          this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
+            queryParams: { ref: donationId, amount: this.chargeAmount },
+          });
+          return;
+        }
+        if (res.status === 'failed') {
+          this.resetAfterOpenFieldsFailure();
+          return;
+        }
+        this.continuePollingOrTimeout();
+      },
+      // A transient network error polling our own backend isn't the same
+      // as a payment failure — keep trying within the same bounded window.
+      error: () => this.continuePollingOrTimeout(),
+    });
+  }
+
+  private continuePollingOrTimeout(): void {
+    this.pollAttempts++;
+    if (this.pollAttempts >= this.POLL_MAX_ATTEMPTS) {
+      this.paymentPhase = 'verification_timeout';
+      return;
+    }
+    this.pollTimer = setTimeout(() => this.pollDonationStatus(), this.POLL_INTERVAL_MS);
+  }
+
+  // Same "don't retry the same spent LowProfile" semantics as
+  // onHostedCheckoutMessage's own failure branch.
+  private resetAfterOpenFieldsFailure(): void {
+    this.clearPaymentVerificationPoll();
+    this.paymentPhase = 'idle';
+    this.lowProfileId = null;
+    this.donationId = null;
+    this.createdTermsSnapshot = null;
+    this.createDonationError = 'התשלום נכשל, נסו שוב';
+    this.step = 2;
+  }
+
   private canReuseExistingDonation(): boolean {
     if (!this.donationId || !this.createdTermsSnapshot) return false;
     if (CHECKOUT_V2_OPENFIELDS_ENABLED ? !this.lowProfileId : !this.hostedCheckoutUrl) return false;
@@ -474,6 +571,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
             return;
           }
           this.lowProfileId = res.lowProfileId;
+          // Fresh donation/LowProfile -- a stale phase from a previous
+          // attempt on this same component instance must not leak forward.
+          this.clearPaymentVerificationPoll();
+          this.paymentPhase = 'idle';
         } else {
           if (!res.url) {
             this.createDonationError = 'שגיאה בהכנת התשלום, נסו שוב';
@@ -522,12 +623,20 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // the surrounding UI, so this IS the one Hamonym-side payment button, same
   // as OpenfieldsFormComponent's other two consumers (Settings/org
   // registration) already do via their own tokenize()-calling buttons.
-  // tokenize() resolving true is a direct CardCom API charge response
-  // (HandleSubmit's IsSuccess) — the same trust level as the hosted flow's
-  // own redirect-based signal (see this file's header comment), so success
-  // navigates immediately, exactly like onHostedCheckoutMessage's success
-  // branch. It's still a UX-only signal: the webhook remains the only thing
-  // that ever writes donations.status='paid'.
+  //
+  // 2026-09-27 — tokenize() resolving true is CardCom's own HandleSubmit
+  // signal about the CHARGE, not about donations.status, which only
+  // payment.handler.js's webhook/GetLpResult pipeline ever writes. A real
+  // controlled TEST donation proved these can be apart for a while (a
+  // delayed/missed webhook leaves the donation 'pending' at Cardcom's own
+  // successful charge) — navigating straight to the success page on
+  // HandleSubmit alone showed the donor a "done" state the backend hadn't
+  // actually reached yet: paid()/receipt/campaign-aggregate lag behind. So
+  // a true HandleSubmit success now starts startPaymentVerification()
+  // (below) instead of navigating immediately — the donor sees a brief
+  // "מאמתים את התרומה..." state and only reaches the success page (with its
+  // already-existing receipt link, see DonationSuccessComponent's own
+  // receiptUrl getter) once the backend itself confirms 'paid'.
   async submitOpenFieldsPayment(): Promise<void> {
     if (this.paymentProcessing || !this.openfieldsForm) return;
     this.paymentProcessing = true;
@@ -535,21 +644,12 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     const success = await this.openfieldsForm.tokenize();
     this.paymentProcessing = false;
 
-    if (success) {
-      if (!this.donationId) return;
-      this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
-        queryParams: { ref: this.donationId, amount: this.chargeAmount },
-      });
+    if (!success) {
+      this.resetAfterOpenFieldsFailure();
       return;
     }
-
-    // Same "don't retry the same spent LowProfile" semantics as
-    // onHostedCheckoutMessage's own failure branch above.
-    this.lowProfileId = null;
-    this.donationId = null;
-    this.createdTermsSnapshot = null;
-    this.createDonationError = 'התשלום נכשל, נסו שוב';
-    this.step = 2;
+    if (!this.donationId) return;
+    this.startPaymentVerification();
   }
 
   // ── Navigation / close ───────────────────────────────────────────

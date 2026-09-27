@@ -246,7 +246,7 @@
              not competing visually with the primary CTA below it
              (2026-09-24: the pill/border version made it fight the main
              action instead of clearly reading as secondary). -->
-        <button type="button" class="cv2-back-btn" *ngIf="step > 1" (click)="goBack()">→ חזרה</button>
+        <button type="button" class="cv2-back-btn" *ngIf="step > 1 && paymentPhase !== 'verifying'" (click)="goBack()">→ חזרה</button>
 
         <div class="cv2-api-error cv2-api-error--footer" *ngIf="step === 2 && createDonationError">{{ createDonationError }}</div>
 
@@ -270,15 +270,32 @@
                  submit button, styled to match .cv2-cta via
                  cardcom-embed.css, is the single visible payment action
                  inside the iframe above. OpenFields flow: this IS that
-                 single payment action, since OpenfieldsFormComponent has no
-                 button of its own (see submitOpenFieldsPayment()'s doc
-                 comment). -->
+                 single payment action while paymentPhase is 'idle'; once
+                 HandleSubmit succeeds the button is replaced by the
+                 verification-status states below (see
+                 submitOpenFieldsPayment()'s doc comment on why success
+                 isn't declared until the backend confirms it). -->
             <ng-container *ngSwitchCase="3">
-              <button *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED" type="button" class="cv2-cta"
-                [disabled]="paymentProcessing || openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
-                <span *ngIf="!paymentProcessing">שלם עכשיו</span>
-                <span class="cv2-spinner" *ngIf="paymentProcessing"></span>
-              </button>
+              <ng-container *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED">
+                <button *ngIf="paymentPhase === 'idle'" type="button" class="cv2-cta"
+                  [disabled]="paymentProcessing || openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
+                  <span *ngIf="!paymentProcessing">שלם עכשיו</span>
+                  <span class="cv2-spinner" *ngIf="paymentProcessing"></span>
+                </button>
+
+                <div class="cv2-payment-status cv2-payment-status--verifying" *ngIf="paymentPhase === 'verifying'">
+                  <span class="cv2-spinner cv2-spinner--dark"></span>
+                  <span>מאמתים את התרומה...</span>
+                </div>
+
+                <div class="cv2-payment-status cv2-payment-status--paid" *ngIf="paymentPhase === 'paid'">
+                  ✓ התרומה התקבלה בהצלחה!
+                </div>
+
+                <div class="cv2-payment-status cv2-payment-status--timeout" *ngIf="paymentPhase === 'verification_timeout'">
+                  התשלום התקבל ונמצא באימות. נעדכן את סטטוס התרומה מיד עם השלמת האימות.
+                </div>
+              </ng-container>
             </ng-container>
           </ng-container>
         </div>

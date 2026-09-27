@@ -107,6 +107,17 @@ export interface Receipt {
   legal_name: string | null;
 }
 
+// Checkout V2 OpenFields payment-verification polling (2026-09-27) — the
+// same public, unauthenticated endpoint DonationSuccessComponent already
+// uses (GET /api/donations/public/:id). status is the backend-authoritative
+// value (only ever written by payment.handler.js's webhook/GetLpResult
+// pipeline) — never HandleSubmit's own client-side signal.
+export interface DonationStatusResult {
+  id: string;
+  status: 'pending' | 'paid' | 'failed' | string;
+  receipt_id: string | null;
+}
+
 export interface MyDonation {
   id: string;
   amount: string | number;
@@ -159,6 +170,10 @@ export class DonationService {
   getRewardCounts(slug: string): Observable<Record<string, number>> {
     return this.http.get<{ counts: Record<string, number> }>(`${this.apiUrl}/campaign/${slug}/reward-counts`)
       .pipe(map(r => r.counts ?? {}));
+  }
+
+  getStatus(id: string): Observable<DonationStatusResult> {
+    return this.http.get<DonationStatusResult>(`${this.apiUrl}/public/${id}`);
   }
 
   getReceipt(id: string): Observable<Receipt> {

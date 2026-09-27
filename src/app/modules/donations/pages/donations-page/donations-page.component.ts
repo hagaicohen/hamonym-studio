@@ -1,12 +1,24 @@
-import { Component, OnInit, inject, effect, untracked } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, interval } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
+
+// Background auto-refresh (2026-09-27) — same interval-polling pattern
+// already used by notification-bell.component.ts. Without this, a donation
+// that transitions pending -> paid server-side (e.g. Checkout V2's OpenFields
+// path, whose backend confirmation can lag a few seconds behind the charge)
+// stayed visually "ממתין" here until a manager manually changed a filter/
+// page/sort -- load() itself already has a silent-refresh mode (see its own
+// `refreshing` flag, used whenever donations are already loaded), this just
+// needed something to actually call it periodically.
+const AUTO_REFRESH_MS = 20000;
 
 interface Kpi {
   totalRaised:  number;
@@ -54,8 +66,9 @@ const COLUMNS_STORAGE_KEY = 'donations-hidden-columns';
   templateUrl: './donations-page.component.html',
   styleUrl: './donations-page.component.css',
 })
-export class DonationsPageComponent implements OnInit {
+export class DonationsPageComponent implements OnInit, OnDestroy {
   private http          = inject(HttpClient);
+  private destroy$ = new Subject<void>();
   private currentEntity = inject(CurrentEntityService);
   private loader        = inject(AppLoaderService);
   private route         = inject(ActivatedRoute);
@@ -131,6 +144,15 @@ export class DonationsPageComponent implements OnInit {
       const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
       if (saved) this.hiddenColumns = new Set(JSON.parse(saved));
     } catch { /* ignore malformed storage */ }
+
+    interval(AUTO_REFRESH_MS).pipe(takeUntil(this.destroy$)).subscribe(() => {
+      if (this.currentEntity.currentEntity()?.id) this.load();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   back(): void { this.router.navigate(['/campaigns', this.campaignFilter, 'dashboard']); }
