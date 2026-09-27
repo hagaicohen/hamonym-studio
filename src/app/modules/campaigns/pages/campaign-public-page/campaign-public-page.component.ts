@@ -103,6 +103,16 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     if (!slug) { this.router.navigate(['/campaigns']); return; }
 
     if (this.route.snapshot.queryParamMap.get('payment') === 'failed') {
+      // Checkout V2 Step 3 (2026-09-26) — same iframe/postMessage bridge as
+      // donation-success.component.ts's own doc comment. CardCom's
+      // FailedRedirectUrl chain can land here inside the payment iframe;
+      // showing the whole campaign page + failed popup squeezed into that
+      // small frame would look broken, so signal the parent instead and
+      // skip rendering anything here.
+      if (window.top !== window.self) {
+        window.parent.postMessage({ source: 'hamonym-donation-return', status: 'failed' }, window.location.origin);
+        return;
+      }
       this.showFailedPopup = true;
       this.router.navigate([], { replaceUrl: true, queryParams: ambassadorSlug ? { a: ambassadorSlug } : {} });
     }

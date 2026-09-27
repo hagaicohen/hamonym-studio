@@ -1,0 +1,699 @@
+/* Checkout V2 (2026-09-24) — single-column drawer/bottom-sheet, visually
+   lighter than the old two-panel CheckoutModalComponent (design reference:
+   a donation checkout whose persistent header/compact stepper/independent-
+   scroll body/sticky footer the donor liked — adapted to Hamonym's own
+   components/colors, not copied). Selected-state chips use the campaign's
+   own theme color (same var(--mdp-primary) pattern MinimalDonationPage
+   already uses for its amount/installment pickers, which this Step 1 is
+   ported from); the actual "pay" CTA stays green, matching every other
+   money-committing button in this app (CheckoutModalComponent's .pay-btn). */
+
+* { box-sizing: border-box; }
+:host { display: block; }
+
+.cv2-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  direction: rtl;
+}
+
+.cv2-drawer {
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 100vw);
+  max-width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  background: #fff;
+  box-shadow: -32px 0 80px rgba(0,0,0,0.35);
+  animation: cv2DrawerIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes cv2DrawerIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── PAGE MODE (2026-09-24) — this IS the donation page, not an overlay on
+   top of one. Same white full-bleed-page / centered-narrow-column look
+   MinimalDonationPageComponent's old markup used (.mdp-page/.mdp-card), so
+   swapping to V2 doesn't feel like a different product. No backdrop, no
+   fixed/locked viewport, no slide-in animation, no close button (nothing
+   to dismiss back to) — normal page flow with a sticky header/footer
+   instead of an internally-scrolled fixed drawer. ── */
+.cv2-overlay.cv2-overlay--page {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  background: #fff;
+  backdrop-filter: none;
+  display: block;
+  align-items: unset;
+  justify-content: unset;
+  padding: 32px 20px;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+.cv2-overlay.cv2-overlay--page.cv2-overlay--embedded { min-height: 100%; padding: 20px; }
+
+/* Compound selectors (.cv2-drawer.cv2-drawer--page, not just .cv2-drawer--page
+   alone) deliberately — higher specificity than the plain .cv2-drawer rules
+   inside the mobile media query below (same-specificity + later-in-file
+   would otherwise let those win and silently re-lock page mode back into a
+   fixed-height drawer on small viewports). */
+.cv2-drawer.cv2-drawer--page {
+  display: flex;
+  flex-direction: column;
+  position: static;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  height: auto;
+  min-height: calc(100dvh - 64px);
+  max-height: none;
+  animation: none;
+  /* One outer container for the whole checkout (2026-09-24) — subtle
+     neutral/blue-gray border, no nested cards inside: the amount picker,
+     donor form etc. stay plain, unboxed content inside this single frame. */
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(15,23,42,0.05);
+}
+.cv2-overlay--embedded .cv2-drawer.cv2-drawer--page { min-height: calc(100% - 40px); }
+
+.cv2-drawer.cv2-drawer--page .cv2-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  border-radius: 16px 16px 0 0; /* matches the outer card's own top corners */
+}
+.cv2-drawer.cv2-drawer--page .cv2-header-brand { padding-left: 0; }
+.cv2-drawer.cv2-drawer--page .cv2-body {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+.cv2-sticky-bottom {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.cv2-drawer.cv2-drawer--page .cv2-sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  border-radius: 0 0 16px 16px; /* matches the outer card's own bottom corners */
+}
+.cv2-drawer.cv2-drawer--page .cv2-footer {
+  border-radius: 0 0 16px 16px;
+}
+
+/* ── HEADER (sticky, compact, always shows all 3 steps) ── */
+.cv2-header {
+  flex-shrink: 0;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid #eef1f5;
+  background: #fff;
+  position: relative;
+}
+
+.cv2-close {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.cv2-close:hover { background: #e2e8f0; }
+
+.cv2-header-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 40px; /* room for the close button */
+  margin-bottom: 14px;
+}
+
+/* Each row independently alignable (2026-09-24) — flex-start/flex-end are
+   relative to the row's own main axis, which already follows :host's rtl
+   direction, so "start" = right, "end" = left without hardcoding either
+   physically. */
+.cv2-logo-row, .cv2-title-row, .cv2-subtitle-row {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+.cv2-logo-row.cv2-align-right, .cv2-title-row.cv2-align-right, .cv2-subtitle-row.cv2-align-right {
+  justify-content: flex-start; text-align: right;
+}
+.cv2-logo-row.cv2-align-left, .cv2-title-row.cv2-align-left, .cv2-subtitle-row.cv2-align-left {
+  justify-content: flex-end; text-align: left;
+}
+
+.cv2-logo {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border: 1px solid #eef1f5;
+  display: flex; align-items: center; justify-content: center;
+}
+.cv2-logo--square { border-radius: 14px; }
+.cv2-logo--sm { width: 36px; height: 36px; }
+.cv2-logo--lg { width: 64px; height: 64px; }
+.cv2-logo img { width: 78%; height: 78%; object-fit: contain; }
+
+/* No frame — shown as-is, sized by height only, same as
+   MinimalDonationPageComponent's own mdp-logo--none. */
+.cv2-logo--none {
+  width: auto; height: 48px;
+  border: none; border-radius: 0; background: transparent !important;
+}
+.cv2-logo--none.cv2-logo--sm { height: 36px; }
+.cv2-logo--none.cv2-logo--lg { height: 64px; }
+.cv2-logo--none img { width: auto; height: 100%; object-fit: contain; }
+
+.cv2-campaign-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv2-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #62728d;
+  line-height: 1.4;
+}
+.cv2-subtitle--rich :is(p) { margin: 0; }
+
+.cv2-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cv2-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+.cv2-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  color: #94a3b8;
+  transition: background 0.15s, color 0.15s;
+}
+.cv2-step--done .cv2-step-num { background: #16a34a; color: #fff; }
+.cv2-step--done .cv2-step-label { color: #16a34a; }
+.cv2-step--active .cv2-step-num { background: var(--cv2-primary, #0f2747); color: #fff; }
+.cv2-step--active .cv2-step-label { color: #0f172a; }
+.cv2-step-label { white-space: nowrap; }
+.cv2-step-line {
+  flex: 1;
+  height: 1.5px;
+  background: #e2e8f0;
+  min-width: 12px;
+}
+.cv2-step-line--done { background: #16a34a; }
+
+/* ── BODY (only this region scrolls) ── */
+.cv2-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cv2-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  margin: 0;
+}
+
+/* Frequency toggle — same look as MinimalDonationPageComponent's own
+   .mdp-frequency-toggle, this component's own class names. */
+.cv2-frequency-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.cv2-frequency-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cv2-frequency-btn.is-selected {
+  background: var(--cv2-primary, #0f2747);
+  color: #fff;
+}
+
+.cv2-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cv2-amount-preset {
+  padding: 14px 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cv2-amount-preset.is-selected {
+  background: var(--cv2-primary, #0f2747);
+  border-color: var(--cv2-primary, #0f2747);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.cv2-custom-amount-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cv2-currency-symbol {
+  position: absolute;
+  right: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.cv2-custom-amount {
+  width: 100%;
+  padding: 13px 34px 13px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+  background: #f8fafc;
+}
+.cv2-custom-amount:focus { border-color: var(--cv2-primary, #0f2747); background: #fff; }
+
+.cv2-amount-confirm {
+  align-self: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cv2-installments { display: flex; flex-direction: column; gap: 8px; }
+/* visibility (not display:none) — keeps the box's own height reserved in
+   layout even while hidden, so toggling חד-פעמית/חודשית never changes the
+   body's total height and the sticky footer never jumps. Also removes it
+   from focus/tab order and the a11y tree, same as display:none would. */
+.cv2-installments--hidden { visibility: hidden; }
+.cv2-installments-label { font-size: 13px; font-weight: 600; color: #374151; margin: 0; }
+.cv2-installments-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cv2-installments-preset {
+  padding: 9px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cv2-installments-preset.is-selected {
+  background: var(--cv2-primary, #0f2747);
+  border-color: var(--cv2-primary, #0f2747);
+  color: #fff;
+}
+.cv2-installments-custom-wrap { flex: 1; min-width: 100px; }
+.cv2-installments-custom {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+}
+.cv2-installments-hint { font-size: 12px; color: #94a3b8; margin: 2px 0 0; }
+
+.cv2-offerings-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+.cv2-offerings-title { font-size: 12px; font-weight: 700; color: #64748b; width: 100%; }
+.cv2-offerings-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── STEP 2 fields (visual parity with CheckoutModalComponent's own
+   .field-* classes — duplicated rather than shared, view-encapsulated
+   component styles aren't shareable across components without a bigger
+   shared-module refactor, out of scope here). ── */
+.cv2-referral-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-size: 13px;
+}
+
+.cv2-form { display: flex; flex-direction: column; gap: 14px; }
+.cv2-field-group { display: flex; flex-direction: column; gap: 6px; }
+.cv2-field-label { font-size: 13px; font-weight: 600; color: #374151; }
+.cv2-required { color: #ef4444; }
+
+/* Optional, secondary donor UX (2026-09-24) — visually lighter than the
+   required fields above: a top divider, smaller/muted text, no red
+   required-marker. Keeps Step 2 from reading as "one more giant form". */
+.cv2-optional-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+.cv2-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+.cv2-checkbox-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--cv2-primary, #0f2747);
+  cursor: pointer;
+}
+.cv2-dedication-wrap { display: flex; flex-direction: column; gap: 4px; }
+.cv2-dedication-input {
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.cv2-dedication-count {
+  align-self: flex-start;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.cv2-field-input {
+  padding: 13px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  direction: rtl;
+  background: #f8fafc;
+  width: 100%;
+}
+.cv2-field-input:focus {
+  border-color: var(--cv2-primary, #0f2747);
+  box-shadow: 0 0 0 3px rgba(15,39,71,0.08);
+  background-color: #fff;
+}
+.cv2-field-input.cv2-field-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  background-color: #fff;
+}
+.cv2-field-input.cv2-field-valid {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+  background-color: #f0fdf4;
+}
+
+.cv2-field-input-wrap { position: relative; display: flex; align-items: center; }
+.cv2-field-input-wrap .cv2-field-input { padding-left: 36px; }
+.cv2-field-status-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #22c55e;
+  pointer-events: none;
+}
+.cv2-field-status-icon--bad { color: #ef4444; }
+
+.cv2-error-msg { font-size: 12px; color: #ef4444; }
+
+.cv2-api-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: center;
+}
+.cv2-api-error--footer { margin-bottom: 4px; }
+
+/* ── STEP 3 — CardCom's own hosted checkout, framed inline. Height is a
+   fixed estimate (CardCom's page isn't ours to measure/resize against —
+   no cross-origin JS resize hook) — sized to the trimmed form's actual
+   content now that cardcom-embed.css hides the header/invoice-table/
+   wallet-buttons/heading, not the original untrimmed page. ── */
+.cv2-cardcom-iframe {
+  width: 100%;
+  min-height: 680px;
+  border: none;
+  display: block;
+}
+
+/* ── CTA BAR (sticky) — the primary action, its own bar directly above
+   the quieter summary/footer (2026-09-24). Full-width now that it isn't
+   sharing a row with the amount chip anymore. ── */
+.cv2-cta-bar {
+  flex-shrink: 0;
+  padding: 14px 20px 16px; /* bottom padding so the button doesn't sit flush against the footer's border-top */
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* חזרה sits closer to the main action row below it */
+}
+
+/* ── FOOTER (sticky) — quiet summary + trust line, sits right below the
+   CTA bar as one combined sticky bottom unit. ── */
+.cv2-footer {
+  flex-shrink: 0;
+  padding: 10px 20px 18px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cv2-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cv2-footer-amount-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.cv2-footer-amount {
+  font-size: 21px;
+  font-weight: 900;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cv2-footer-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b; /* darker for better contrast (2026-09-24) */
+}
+/* Plain secondary text action, its own row above the main CTA row
+   (2026-09-24) — no border/pill: it should read as clearly secondary, not
+   compete with the primary CTA below it. Right-aligned (align-self in RTL
+   flex-start = right). Out of .cv2-footer entirely — that's trust-line
+   only now. */
+.cv2-back-btn {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cv2-back-btn:hover { color: #0f172a; text-decoration: underline; }
+
+.cv2-cta {
+  position: relative;
+  /* Desktop default: a real button, not a banner (2026-09-24) — capped
+     width instead of filling the row. Pinned to the left via margin-right
+     auto (physical property — correct regardless of RTL row reversal),
+     same as before flex-grow replaced it, now reinstated since the button
+     no longer grows to fill the gap itself. Mobile override below goes
+     back to filling the row. */
+  flex: 0 1 260px;
+  width: auto;
+  max-width: 260px;
+  margin-right: auto;
+  padding: 14px 20px; /* ~46px total height with this font-size */
+  border: none;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+.cv2-cta:hover:not(:disabled) { background: #15803d; }
+.cv2-cta:active:not(:disabled) { transform: scale(0.99); }
+.cv2-cta:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cv2-spinner {
+  display: inline-block;
+  width: 20px; height: 20px;
+  border: 3px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cv2Spin 0.7s linear infinite;
+}
+@keyframes cv2Spin { to { transform: rotate(360deg); } }
+
+.cv2-trust-line {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}
+.cv2-trust-line strong { color: #475569; font-weight: 700; }
+
+/* ══════════════════════════════════════
+   MOBILE — full-height bottom sheet, same convention as
+   CheckoutModalComponent's own mobile treatment.
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .cv2-overlay { align-items: flex-end; }
+
+  .cv2-drawer {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    animation: cv2SheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    /* Respect the home-indicator safe area so the footer/CTA is never
+       covered on notched devices. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  @keyframes cv2SheetUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .cv2-amounts { grid-template-columns: repeat(3, 1fr); }
+  .cv2-field-input { font-size: 16px; } /* prevents iOS zoom-on-focus */
+
+  /* Near/full-width CTA on mobile (2026-09-24) — the desktop cap above
+     doesn't apply here; back to filling the remaining row space. */
+  .cv2-cta { flex: 1 1 auto; max-width: none; margin-right: 0; }
+
+  /* Page mode on mobile stays full-bleed (2026-09-24) — the desktop-only
+     "subtle card" treatment above only makes sense with visible page
+     around it; on a full-screen mobile sheet there's no surrounding page
+     to separate it from, so a border/radius/padding here would just eat
+     into the already-tight viewport for no visual benefit. */
+  .cv2-overlay.cv2-overlay--page { padding: 0; }
+  .cv2-drawer.cv2-drawer--page {
+    min-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .cv2-drawer.cv2-drawer--page .cv2-header,
+  .cv2-drawer.cv2-drawer--page .cv2-sticky-bottom,
+  .cv2-drawer.cv2-drawer--page .cv2-footer {
+    border-radius: 0;
+  }
+}

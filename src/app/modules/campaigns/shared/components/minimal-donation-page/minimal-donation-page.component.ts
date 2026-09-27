@@ -4,6 +4,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { CampaignStudioStateService, CampaignDraft } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
+import { CheckoutV2Component } from '../checkout-v2/checkout-v2.component';
+import { CHECKOUT_V2_ENABLED } from '../../config/checkout-v2.config';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { Ambassador } from '../../../services/ambassador.service';
 
@@ -20,7 +22,7 @@ import { Ambassador } from '../../../services/ambassador.service';
 @Component({
   selector: 'app-minimal-donation-page',
   standalone: true,
-  imports: [CommonModule, CheckoutModalComponent],
+  imports: [CommonModule, CheckoutModalComponent, CheckoutV2Component],
   templateUrl: './minimal-donation-page.component.html',
   styleUrl: './minimal-donation-page.component.css',
 })
@@ -28,6 +30,7 @@ export class MinimalDonationPageComponent implements OnInit, AfterViewInit, OnDe
   private state = inject(CampaignStudioStateService);
   private sanitizer = inject(DomSanitizer);
   readonly draft$ = this.state.draft$;
+  readonly CHECKOUT_V2_ENABLED = CHECKOUT_V2_ENABLED;
 
   // Advanced text mode (layout.minimalAdvancedText) — same sanitize-then-
   // bypass pattern campaign-preview.component.ts already uses for every

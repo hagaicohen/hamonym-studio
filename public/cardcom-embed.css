@@ -1,0 +1,199 @@
+/* cardcom-embed.css
+ *
+ * Injected into CardCom's hosted LowProfile checkout page via
+ * UIDefinition.CSSUrl (hamonym-backend/src/modules/donations/donations.service.js
+ * #createDonation) — CardCom's own server fetches this file and adds it as
+ * a <link rel="stylesheet"> on the page loaded inside Checkout V2 Step 3's
+ * iframe (this <link> lands at the END of <head>, after CardCom's own
+ * inline <style id="conCss">, so equal-specificity rules here already win
+ * on cascade order alone — !important is used only where CardCom's own
+ * rule is MORE specific, e.g. .submitDiv.target-element.submitContainer
+ * .buttonDiv, not as a blanket habit).
+ *
+ * Scope: purely cosmetic. Never touches field names/ids/behavior — CardCom's
+ * own real payment form, submit button, and validation are untouched. Donor
+ * fields already collected in Checkout V2 Step 2 (name/phone/email/id) are
+ * hidden server-side via UIDefinition's own IsHideCardOwner*/CardOwner*Value
+ * flags, not CSS.
+ *
+ * Elements hidden below (invoice/product table, currency conversion,
+ * PayPal/Apple Pay/Google Pay/Bit, the "business name for invoice" custom
+ * field) have NO documented request-level toggle in CardCom's own
+ * LowProfile/Create API (verified against their official OpenAPI spec —
+ * only UIDefinition's CardOwner*/CVV/CSSUrl/CustomFields/GooglePayBtnDesign
+ * fields exist). Their visibility is driven by this specific test
+ * terminal's own account-level config (IsTestTerminal:true — confirmed in
+ * the page's own init data), not something we can request via the API —
+ * CSS is the only available lever. Revisit if a real production entity's
+ * terminal has different payment methods legitimately enabled and wants
+ * them shown.
+ */
+
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100%;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Page title ("הכנס פרטי אשראי") — Checkout V2's own Step 3 already has no
+   separate heading; this is the ONLY <h1> on the page (verified), safe to
+   target bare. */
+h1 {
+  display: none !important;
+}
+
+/* Redundant — Hamonym's own header/stepper already renders above this
+   iframe in Checkout V2. */
+.header.user-header {
+  display: none !important;
+}
+
+/* Payment form's own wrapper — CardCom's base CSS fixes this at 979px
+   (desktop) and only 96% under its own max-width:978px media query
+   (verified in the page's own inline <style id="conCss">). Both still
+   leave room for a few px of overflow depending on padding/box-sizing;
+   forcing a clean 100% removes the fixed-width math entirely rather than
+   just widening the iframe to match it. */
+.blockDetails .blockDetailsIn,
+.paymentDetails .blockDetailsIn {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* "שם העסק עבור החשבונית" — a generic custom field configured on this test
+   terminal, unrelated to a donation. */
+.blockDetails.customDetails {
+  display: none !important;
+}
+
+/* Product/invoice breakdown table (mobile + desktop variants) — also the
+   only place the currency-conversion dropdown and "original sum" line
+   live, so hiding this one container removes all three at once. The
+   amount itself stays visible via Checkout V2's own sticky footer, which
+   is never hidden. */
+.productsDetails.showProductsTabs,
+.productsDetails.showProductsTables {
+  display: none !important;
+}
+
+/* "Pay by credit card" heading — only meaningful when shown alongside
+   alternative payment methods, which are all hidden below. */
+.title[data-bind*="hideCreditCardInputs"] {
+  display: none !important;
+}
+
+/* Alternative payment methods (PayPal / Apple Pay / Google Pay / Bit) —
+   this test terminal has some of these active at the account level with
+   no way to request them off; hidden here so the only payment path shown
+   is the actual credit-card form Hamonym already committed to. */
+.paypalDiv,
+.apple-pay,
+.GooglePayDiv,
+#uPayBitDiv,
+#PayMeBitDiv,
+#CardcomBitDiv {
+  display: none !important;
+}
+
+/* CardCom's own wordmark graphic only — the surrounding security/legal
+   text (.footer-text) is left exactly as CardCom renders it. */
+.footer .footer-logo {
+  display: none !important;
+}
+
+/* ── Form fields — match Hamonym's own field styling (same values as
+   openfields-form.component.css / checkout-v2.component.css's own donor
+   fields) so this reads as one continuous form, not a second design
+   language. ── */
+.formRow {
+  margin: 0 0 16px;
+}
+.formRow .fieldName,
+.formRow label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+.formRow input[type="text"],
+.formRow input[type="tel"],
+.formRow input[type="email"],
+.formRow input[type="number"],
+.formRow select {
+  width: 100%;
+  height: 54px;
+  border: 1px solid #dbe2ea;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 0 16px;
+  margin: 0;
+  font-size: 17px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #0f172a;
+}
+.formRow input:focus,
+.formRow select:focus {
+  border-color: #2563eb;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+/* Expiry month/year sit naturally side by side already via CardCom's own
+   .fieldInput wrapper — just tightening the gap to match Hamonym's own
+   field-row spacing. */
+.formRow .fieldInput.validityDate select {
+  display: inline-block;
+  width: auto;
+  min-width: 90px;
+  margin-inline-end: 8px;
+}
+
+/* ── Submit — CardCom's real button (data-bind="click: sendData"),
+   restyled only, never hidden. Its own CSS floats/margins the .buttonDiv
+   container to a shrink-wrapped, left-aligned box (.submitDiv .buttonDiv
+   {float:left; margin-left:48px}, verified in conCss) — that container
+   has to be reset to full-width block first, or a 100%-wide button inside
+   it just fills that same narrow shrunk box. .submitDiv.target-element
+   .submitContainer .buttonDiv is CardCom's own more specific override
+   (4 classes) — !important is needed here to beat it, not just cascade
+   order. ── */
+.submitDiv {
+  display: block !important;
+  width: 100% !important;
+}
+.submitDiv .buttonDiv {
+  float: none !important;
+  margin: 24px 0 0 !important;
+  width: 100% !important;
+  display: block !important;
+}
+.submitDiv .buttonDiv input[type="button"] {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.submitDiv .buttonDiv input[type="button"]:hover {
+  background: #15803d;
+}

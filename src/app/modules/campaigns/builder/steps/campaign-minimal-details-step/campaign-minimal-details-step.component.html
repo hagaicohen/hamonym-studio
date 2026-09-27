@@ -54,6 +54,30 @@
             label="רקע הלוגו">
           </app-color-picker>
         </div>
+
+        <!-- Header alignment (2026-09-24) — logo/כותרת/הסבר קצר are each
+             their own row in the new checkout header, independently
+             alignable. Default (undefined) = באמצע for all three. -->
+        <div class="logo-style-row">
+          <div class="logo-style-group">
+            <span class="logo-style-label">יישור לוגו</span>
+            <button type="button" class="logo-style-btn" [class.active]="logoAlign === 'right'" (click)="setLogoAlign('right')">ימין</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoAlign === 'center'" (click)="setLogoAlign('center')">אמצע</button>
+            <button type="button" class="logo-style-btn" [class.active]="logoAlign === 'left'" (click)="setLogoAlign('left')">שמאל</button>
+          </div>
+          <div class="logo-style-group">
+            <span class="logo-style-label">יישור כותרת</span>
+            <button type="button" class="logo-style-btn" [class.active]="titleAlign === 'right'" (click)="setTitleAlign('right')">ימין</button>
+            <button type="button" class="logo-style-btn" [class.active]="titleAlign === 'center'" (click)="setTitleAlign('center')">אמצע</button>
+            <button type="button" class="logo-style-btn" [class.active]="titleAlign === 'left'" (click)="setTitleAlign('left')">שמאל</button>
+          </div>
+          <div class="logo-style-group">
+            <span class="logo-style-label">יישור הסבר קצר</span>
+            <button type="button" class="logo-style-btn" [class.active]="subtitleAlign === 'right'" (click)="setSubtitleAlign('right')">ימין</button>
+            <button type="button" class="logo-style-btn" [class.active]="subtitleAlign === 'center'" (click)="setSubtitleAlign('center')">אמצע</button>
+            <button type="button" class="logo-style-btn" [class.active]="subtitleAlign === 'left'" (click)="setSubtitleAlign('left')">שמאל</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

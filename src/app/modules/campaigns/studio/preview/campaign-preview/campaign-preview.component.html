@@ -706,8 +706,23 @@
 </ng-container>
 
 <!-- ══ CHECKOUT MODAL ══ -->
+<!-- Checkout V2 — donation-only (registration and the register-then-
+     donate-later combo via pendingRegistration are explicitly out of
+     scope; both keep using the old modal below even with the flag on). -->
+<app-checkout-v2
+  *ngIf="checkoutOpen && CHECKOUT_V2_ENABLED && checkoutMode === 'donation' && !pendingRegistration"
+  [draft]="draft"
+  [initialAmount]="explicitAmount"
+  [initialFrequency]="donationFrequency"
+  [cartOfferings]="cartOfferingList(draft)"
+  [entityLogoUrl]="entityLogoUrl"
+  [entityName]="entityName"
+  [ambassador]="ambassador"
+  (closed)="closeCheckout()">
+</app-checkout-v2>
+
 <app-checkout-modal
-  *ngIf="checkoutOpen"
+  *ngIf="checkoutOpen && (!CHECKOUT_V2_ENABLED || checkoutMode === 'registration' || pendingRegistration)"
   [draft]="draft"
   [amount]="totalAmount(draft)"
   [cartOfferings]="cartOfferingList(draft)"

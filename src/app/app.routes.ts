@@ -9,7 +9,6 @@ import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
-import { devOnlyGuard } from './core/guards/dev-only.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -393,18 +392,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
         .then((m) => m.CampaignPublicPageComponent),
-  },
-
-  /* Embedded OpenFields spike (2026-09-24), Phase 1 — dev-only manual test
-     harness, gated by devOnlyGuard (hostname check; see its own comment for
-     why environment.production can't be trusted here). Not linked from any
-     nav/menu — reached only by typing the URL directly. */
-  {
-    path: 'dev/embedded-donation-test',
-    canActivate: [devOnlyGuard],
-    loadComponent: () =>
-      import('./modules/dev/pages/embedded-donation-test/embedded-donation-test-page.component')
-        .then((m) => m.EmbeddedDonationTestPageComponent),
   },
 
   /* ========================================

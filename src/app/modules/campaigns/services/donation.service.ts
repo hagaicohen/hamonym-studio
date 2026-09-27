@@ -34,8 +34,18 @@ export interface DonationPayload {
     idNumber?:   string;
     address?:    string;
     postalCode?: string;
+    // Public-display privacy only (2026-09-24) — donor identity/contact
+    // info is still fully collected and stored either way; this never
+    // removes anything CardCom or receipts need. Already wired end-to-end
+    // on the backend (donations.is_anonymous) before this — the checkout
+    // just didn't expose it as a donor choice until now.
+    isAnonymous?: boolean;
   };
   amount:  number;
+  // Optional dedication/message text (2026-09-24) — reuses the existing
+  // donations.note column (previously write-only, admin manual-entry
+  // only). Not shown anywhere in the entity dashboard yet.
+  note?: string;
   // Cardcom line items — title + price drive pricing; id is optional (absent
   // for registration-option lines, which have no Offering) and is only used
   // to attribute a paid donation to an Offering for the "X מתוך Y" purchase

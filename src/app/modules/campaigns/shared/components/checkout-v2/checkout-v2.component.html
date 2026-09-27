@@ -1,0 +1,266 @@
+<div class="cv2-overlay"
+  [class.cv2-overlay--page]="presentation === 'page'"
+  [class.cv2-overlay--embedded]="embedded"
+  (click)="onOverlayClick($event)"
+  [style.--cv2-primary]="draft.layout.theme.primaryColor">
+  <div class="cv2-drawer"
+    [class.cv2-drawer--page]="presentation === 'page'"
+    role="dialog"
+    [attr.aria-modal]="presentation === 'drawer' ? true : null">
+
+    <!-- STICKY HEADER — all 3 steps visible from the very first render,
+         never progressively revealed. -->
+    <div class="cv2-header">
+      <button class="cv2-close" *ngIf="presentation === 'drawer'" type="button" (click)="close()" aria-label="סגור">✕</button>
+
+      <div class="cv2-header-brand">
+        <!-- Logo only — no separate org-name text label (2026-09-24: the
+             campaign title row below already carries identity; a small
+             caption next to the logo was redundant clutter). Size/shape
+             mirror MinimalDonationPageComponent's own mdp-logo classes so
+             the campaign's configured logo settings are actually respected
+             here too. -->
+        <div class="cv2-logo-row"
+          [class.cv2-align-right]="logoAlign === 'right'"
+          [class.cv2-align-left]="logoAlign === 'left'"
+          *ngIf="entityLogoUrl">
+          <div class="cv2-logo"
+            [class.cv2-logo--square]="draft.layout.minimalLogoShape === 'square'"
+            [class.cv2-logo--none]="draft.layout.minimalLogoShape === 'none'"
+            [class.cv2-logo--sm]="(draft.layout.minimalLogoSize ?? 'md') === 'sm'"
+            [class.cv2-logo--lg]="draft.layout.minimalLogoSize === 'lg'"
+            [style.background]="draft.layout.minimalLogoShape === 'none' ? 'transparent' : (draft.layout.theme.logoBg || 'transparent')">
+            <img [src]="entityLogoUrl" [alt]="entityName">
+          </div>
+        </div>
+        <div class="cv2-title-row"
+          [class.cv2-align-right]="titleAlign === 'right'"
+          [class.cv2-align-left]="titleAlign === 'left'">
+          <span class="cv2-campaign-title">{{ draft.title }}</span>
+        </div>
+
+        <!-- Short description — same simple/rich-text branch as
+             MinimalDonationPageComponent's own subtitle (2026-09-24: was
+             missing entirely here). -->
+        <div class="cv2-subtitle-row"
+          [class.cv2-align-right]="subtitleAlign === 'right'"
+          [class.cv2-align-left]="subtitleAlign === 'left'"
+          *ngIf="(draft.layout.minimalAdvancedText && draft.layout.projectDescription) || (!draft.layout.minimalAdvancedText && draft.shortDescription)">
+          <div class="cv2-subtitle cv2-subtitle--rich" *ngIf="draft.layout.minimalAdvancedText" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
+          <p class="cv2-subtitle" *ngIf="!draft.layout.minimalAdvancedText">{{ draft.shortDescription }}</p>
+        </div>
+      </div>
+
+      <div class="cv2-stepper">
+        <div class="cv2-step" [class.cv2-step--done]="step > 1" [class.cv2-step--active]="step === 1">
+          <span class="cv2-step-num">{{ step > 1 ? '✓' : '1' }}</span>
+          <span class="cv2-step-label">סכום</span>
+        </div>
+        <div class="cv2-step-line" [class.cv2-step-line--done]="step > 1"></div>
+        <div class="cv2-step" [class.cv2-step--done]="step > 2" [class.cv2-step--active]="step === 2">
+          <span class="cv2-step-num">{{ step > 2 ? '✓' : '2' }}</span>
+          <span class="cv2-step-label">פרטים אישיים</span>
+        </div>
+        <div class="cv2-step-line" [class.cv2-step-line--done]="step > 2"></div>
+        <div class="cv2-step" [class.cv2-step--active]="step === 3">
+          <span class="cv2-step-num">3</span>
+          <span class="cv2-step-label">תשלום</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCROLLABLE BODY — only this region scrolls, header/footer stay put. -->
+    <div class="cv2-body">
+
+      <!-- ── STEP 1 — סכום ── -->
+      <ng-container *ngIf="step === 1">
+        <div class="cv2-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
+          <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
+            (click)="selectFrequency('one-time')">חד-פעמית</button>
+          <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
+            (click)="selectFrequency('monthly')">הוראת קבע חודשית</button>
+        </div>
+
+        <p class="cv2-section-label">בחר/י סכום לתרומה {{ donationFrequency === 'monthly' ? 'חודשית' : 'חד פעמית' }}</p>
+
+        <div class="cv2-amounts">
+          <button *ngFor="let a of amountsFor() | slice:0:6" class="cv2-amount-preset" type="button"
+            [class.is-selected]="isAmountSelected($any(a))" (click)="selectAmount($any(a))">
+            ₪{{ $any(a).toLocaleString('he-IL') }}
+          </button>
+        </div>
+
+        <div class="cv2-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
+          <span class="cv2-currency-symbol">₪</span>
+          <input class="cv2-custom-amount" type="text" inputmode="numeric" placeholder="סכום אחר"
+            [value]="amountDisplay" (input)="onCustomAmountInput($event)">
+        </div>
+
+        <div class="cv2-amount-confirm" *ngIf="explicitAmount > 0">✓ סכום שנבחר: ₪{{ explicitAmount.toLocaleString('he-IL') }}</div>
+
+        <!-- Donation-level installment count — same picker/logic already
+             proven on MinimalDonationPageComponent, now owned by the
+             checkout itself. No default pre-selection by design.
+             Always rendered (visibility toggle, not *ngIf) so switching
+             frequency never changes the body's height and the sticky
+             footer never jumps — see .cv2-installments--hidden. -->
+        <div class="cv2-installments" [class.cv2-installments--hidden]="donationFrequency !== 'monthly'">
+          <p class="cv2-installments-label">לכמה חודשים תרצו לתרום?</p>
+          <div class="cv2-installments-options">
+            <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button" class="cv2-installments-preset"
+              [class.is-selected]="isInstallmentsSelected(n)" (click)="selectInstallments(n)">{{ n }}</button>
+            <div class="cv2-installments-custom-wrap">
+              <input class="cv2-installments-custom" type="text" inputmode="numeric" placeholder="מספר אחר"
+                [value]="customInstallmentsInput" (input)="onCustomInstallmentsInput($event)">
+            </div>
+          </div>
+          <p class="cv2-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
+        </div>
+
+        <div class="cv2-offerings-note" *ngIf="cartOfferings.length > 0">
+          <span class="cv2-offerings-title">תשורות נבחרות ({{ cartOfferings.length }})</span>
+          <span class="cv2-offerings-tag" *ngFor="let o of cartOfferings">✓ {{ o.title }}</span>
+        </div>
+      </ng-container>
+
+      <!-- ── STEP 2 — פרטים אישיים ── -->
+      <ng-container *ngIf="step === 2">
+        <div class="cv2-referral-chip" *ngIf="ambassador">
+          <span class="cv2-referral-icon">🤝</span>
+          <span>תרמתם דרך <strong>{{ ambassador.fullName }}</strong></span>
+        </div>
+
+        <form class="cv2-form" (ngSubmit)="goToStep3()" novalidate>
+          <div class="cv2-field-group">
+            <label class="cv2-field-label">שם מלא <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="text" [(ngModel)]="name" name="name" placeholder="ישראל ישראלי"
+              autocomplete="name" [class.cv2-field-error]="submitted && name.trim().length < 2">
+            <span class="cv2-error-msg" *ngIf="submitted && name.trim().length < 2">נא להזין שם מלא</span>
+          </div>
+
+          <div class="cv2-field-group">
+            <label class="cv2-field-label">כתובת אימייל <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="email" [(ngModel)]="email" name="email" placeholder="israel@gmail.com"
+              autocomplete="email" dir="ltr" [class.cv2-field-error]="submitted && !isValidEmail">
+            <span class="cv2-error-msg" *ngIf="submitted && !isValidEmail">נא להזין כתובת אימייל תקינה</span>
+          </div>
+
+          <div class="cv2-field-group">
+            <label class="cv2-field-label">מספר טלפון <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="tel" [(ngModel)]="phone" name="phone" placeholder="050-0000000"
+              autocomplete="tel" dir="ltr" [class.cv2-field-error]="submitted && phone.trim().length < 9">
+            <span class="cv2-error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
+          </div>
+
+          <div class="cv2-field-group" *ngIf="donorFields.showIdNumber">
+            <label class="cv2-field-label">תעודת זהות <span class="cv2-required">*</span></label>
+            <div class="cv2-field-input-wrap">
+              <input class="cv2-field-input" type="text" [(ngModel)]="idNumber" name="idNumber" placeholder="000000000"
+                inputmode="numeric" maxlength="9" dir="ltr"
+                [class.cv2-field-error]="(submitted || idLiveState === 'invalid') && !isValidId"
+                [class.cv2-field-valid]="idLiveState === 'valid'">
+              <span class="cv2-field-status-icon" *ngIf="idLiveState === 'valid'">✓</span>
+              <span class="cv2-field-status-icon cv2-field-status-icon--bad" *ngIf="idLiveState === 'invalid'">✕</span>
+            </div>
+            <span class="cv2-error-msg" *ngIf="(submitted || idLiveState === 'invalid') && !isValidId">מספר ת.ז אינו תקין</span>
+          </div>
+
+          <div class="cv2-field-group" *ngIf="donorFields.showAddress">
+            <label class="cv2-field-label">כתובת <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="text" [(ngModel)]="address" name="address" placeholder="רחוב, מספר, עיר"
+              autocomplete="street-address" [class.cv2-field-error]="submitted && address.trim().length <= 2">
+            <span class="cv2-error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
+          </div>
+
+          <div class="cv2-field-group" *ngIf="donorFields.showPostalCode">
+            <label class="cv2-field-label">מיקוד <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="text" [(ngModel)]="postalCode" name="postalCode" placeholder="1234567"
+              inputmode="numeric" maxlength="7" dir="ltr" autocomplete="postal-code"
+              [class.cv2-field-error]="submitted && postalCode.trim().length < 4">
+            <span class="cv2-error-msg" *ngIf="submitted && postalCode.trim().length < 4">נא להזין מיקוד תקין</span>
+          </div>
+
+          <!-- Optional, secondary — visually lighter than the required
+               fields above (2026-09-24). -->
+          <div class="cv2-optional-section">
+            <label class="cv2-checkbox-row">
+              <input type="checkbox" [(ngModel)]="isAnonymous" name="isAnonymous">
+              <span>תרומה אנונימית</span>
+            </label>
+
+            <label class="cv2-checkbox-row">
+              <input type="checkbox" [(ngModel)]="dedicationEnabled" name="dedicationEnabled">
+              <span>הוספת הקדשה</span>
+            </label>
+            <div class="cv2-dedication-wrap" *ngIf="dedicationEnabled">
+              <textarea class="cv2-field-input cv2-dedication-input" [(ngModel)]="dedicationText" name="dedicationText"
+                [maxlength]="DEDICATION_MAX_LENGTH" rows="2"
+                placeholder="לזכר / לכבוד / לרפואה / הקדשה אישית..."></textarea>
+              <span class="cv2-dedication-count">{{ dedicationText.length }}/{{ DEDICATION_MAX_LENGTH }}</span>
+            </div>
+          </div>
+        </form>
+      </ng-container>
+
+      <!-- ── STEP 3 — תשלום ── -->
+      <ng-container *ngIf="step === 3">
+        <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError }}</div>
+        <!-- CardCom's own hosted LowProfile checkout page, framed inline —
+             styled via UIDefinition.CSSUrl (cardcom-embed.css) to read as
+             part of Hamonym's own UI, including its own real submit button
+             (see checkout-v2.component.ts's own doc comment on why there is
+             no second, Hamonym-side payment button anywhere on this step). -->
+        <iframe
+          *ngIf="hostedCheckoutUrl"
+          [src]="hostedCheckoutUrl"
+          class="cv2-cardcom-iframe">
+        </iframe>
+      </ng-container>
+
+    </div>
+
+    <!-- STICKY BOTTOM — one wrapper so the CTA bar and the quieter trust
+         footer below it always stick together as a single unit (2026-09-24:
+         amount summary + CTA share one row here, on the same line; the
+         footer below is trust-line/back-link only — no business info in
+         the quiet part). -->
+    <div class="cv2-sticky-bottom">
+      <div class="cv2-cta-bar">
+        <!-- Back — a subtle secondary text action on its own small row,
+             not competing visually with the primary CTA below it
+             (2026-09-24: the pill/border version made it fight the main
+             action instead of clearly reading as secondary). -->
+        <button type="button" class="cv2-back-btn" *ngIf="step > 1" (click)="goBack()">→ חזרה</button>
+
+        <div class="cv2-api-error cv2-api-error--footer" *ngIf="step === 2 && createDonationError">{{ createDonationError }}</div>
+
+        <div class="cv2-cta-row">
+          <div class="cv2-footer-amount-block" *ngIf="commitmentText">
+            <span class="cv2-footer-amount">{{ commitmentText }}</span>
+            <span class="cv2-footer-sub">{{ donationFrequency === 'monthly' ? 'תרומה חודשית' : 'תרומה חד פעמית' }}</span>
+          </div>
+
+          <ng-container [ngSwitch]="step">
+            <button *ngSwitchCase="1" type="button" class="cv2-cta" [disabled]="!step1Valid" (click)="goToStep2()">
+              המשך לפרטים אישיים ←
+            </button>
+
+            <button *ngSwitchCase="2" type="button" class="cv2-cta" [disabled]="creatingDonation" (click)="goToStep3()">
+              <span *ngIf="!creatingDonation">המשך לתשלום ←</span>
+              <span class="cv2-spinner" *ngIf="creatingDonation"></span>
+            </button>
+
+            <!-- No case 3 button — CardCom's own real submit button, styled
+                 to match .cv2-cta via cardcom-embed.css, is the single
+                 visible payment action inside the iframe above. -->
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="cv2-footer">
+        <p class="cv2-trust-line">🔒 הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong></p>
+      </div>
+    </div>
+
+  </div>
+</div>

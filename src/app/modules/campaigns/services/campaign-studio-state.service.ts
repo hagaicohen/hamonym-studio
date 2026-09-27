@@ -479,6 +479,14 @@ export interface CampaignLayout {
   // pageFormat/preset/templateId above. See DECISIONS.md (2026-09-24).
   minimalLogoShape?:  'circle' | 'square' | 'none';
   minimalLogoSize?:   'sm' | 'md' | 'lg';
+  // Checkout V2's own sticky page-mode header (2026-09-24) — independently
+  // alignable logo/title, since they're each their own row there (not a
+  // single combined block like this page's own vertical layout below).
+  // Undefined = 'center' for both, same default-is-center convention as
+  // logoStripAlign elsewhere.
+  minimalHeaderLogoAlign?:     'right' | 'center' | 'left';
+  minimalHeaderTitleAlign?:    'right' | 'center' | 'left';
+  minimalHeaderSubtitleAlign?: 'right' | 'center' | 'left';
   // Title/subtitle text color — NOT heroTextStyle.color: that field's
   // default is white (#ffffff, tuned for the full page's photo-background
   // Hero) which would render an invisible white-on-white title on this

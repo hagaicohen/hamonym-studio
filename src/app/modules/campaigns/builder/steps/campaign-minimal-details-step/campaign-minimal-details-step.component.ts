@@ -84,6 +84,23 @@ export class CampaignMinimalDetailsStepComponent implements OnInit {
     this.state.patch({ layout: { ...this.draft.layout, minimalLogoSize: size } });
   }
 
+  // ── Header alignment (2026-09-24, Checkout V2's own page-mode header) —
+  // logo/title/description are each their own row there, independently
+  // alignable. Undefined = center for all three.
+  get logoAlign(): 'right' | 'center' | 'left' { return this.draft.layout.minimalHeaderLogoAlign ?? 'center'; }
+  get titleAlign(): 'right' | 'center' | 'left' { return this.draft.layout.minimalHeaderTitleAlign ?? 'center'; }
+  get subtitleAlign(): 'right' | 'center' | 'left' { return this.draft.layout.minimalHeaderSubtitleAlign ?? 'center'; }
+
+  setLogoAlign(align: 'right' | 'center' | 'left'): void {
+    this.patchLayout({ minimalHeaderLogoAlign: align });
+  }
+  setTitleAlign(align: 'right' | 'center' | 'left'): void {
+    this.patchLayout({ minimalHeaderTitleAlign: align });
+  }
+  setSubtitleAlign(align: 'right' | 'center' | 'left'): void {
+    this.patchLayout({ minimalHeaderSubtitleAlign: align });
+  }
+
   patchLayout(partial: Partial<CampaignDraft['layout']>): void {
     this.state.patch({ layout: { ...this.draft.layout, ...partial } });
   }

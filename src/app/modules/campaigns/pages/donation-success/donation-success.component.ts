@@ -48,6 +48,24 @@ export class DonationSuccessComponent implements OnInit {
   linkCopied = false;
 
   ngOnInit(): void {
+    // Checkout V2 Step 3 (2026-09-26) — CardCom's own hosted checkout runs
+    // inside an <iframe>; its SuccessRedirectUrl chain (CardCom → our own
+    // /api/donations/return → here) ends up loading this same page INSIDE
+    // that iframe once the redirect lands back on our own origin. Rendering
+    // the full success page inside a small payment iframe would look
+    // broken, so instead: signal the parent window (which already knows
+    // its own donationId/amount — this carries no data of its own) and
+    // stop here. window.top !== window.self is the standard "am I framed"
+    // check; window.parent.postMessage is only reachable once same-origin,
+    // which this page always is by the time CardCom's redirect chain
+    // reaches it. Purely a navigation signal — the webhook remains the
+    // only thing that ever writes donations.status='paid' (see
+    // handleReturn's own doc comment in donations.service.js).
+    if (window.top !== window.self) {
+      window.parent.postMessage({ source: 'hamonym-donation-return', status: 'success' }, window.location.origin);
+      return;
+    }
+
     // Prevent indexing
     this.meta.addTag({ name: 'robots', content: 'noindex,nofollow' });
 

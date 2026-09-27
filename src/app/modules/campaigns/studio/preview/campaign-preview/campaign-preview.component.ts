@@ -43,6 +43,8 @@ import {
   FUNDING_TYPE_LABELS,
 } from '../../../services/campaign-studio-state.service';
 import { CheckoutModalComponent, PendingRegistration } from '../../../shared/components/checkout-modal/checkout-modal.component';
+import { CheckoutV2Component } from '../../../shared/components/checkout-v2/checkout-v2.component';
+import { CHECKOUT_V2_ENABLED } from '../../../shared/config/checkout-v2.config';
 import { DonationService, Donor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
@@ -53,7 +55,7 @@ import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, LucideAngularModule],
+  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
@@ -328,6 +330,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private gallerySlides     = new Map<string, number>();
 
   // ── Checkout state ──
+  readonly CHECKOUT_V2_ENABLED = CHECKOUT_V2_ENABLED;
   checkoutOpen = false;
   // 'registration' bypasses the cart/donation-widget entirely — the widget's
   // primary action becomes "Register" whenever the campaign has Registration
