@@ -1176,12 +1176,16 @@
          Found 2026-09-23 while wiring up the registration Drawer request. -->
     <!-- ctaLabel/ctaIcon/ctaColor (2026-09-28) -- wired to the existing
          config; `|| fallback` preserves today's exact button for blocks
-         saved before these fields existed. ctaColor uses `|| null` (not
-         `|| ''`) so an absent value removes the inline style entirely and
-         lets the existing CSS default show through, instead of an invalid
-         empty background. -->
+         saved before these fields existed. ctaColor: '' = Auto (Design
+         Evolution semantic-roles pass, 2026-09-29) -- the donation CTA is a
+         PRIMARY ACTION, so it falls back to themePrimaryColor(), the exact
+         same color the nav's own "תרמו עכשיו" button already uses -- NOT
+         accentColor(), which is the decorative/highlight role instead. A
+         persisted concrete ctaColor (every campaign created before this
+         change) stays exactly as saved; only newly-created blocks default
+         to Auto now (see campaign-templates.ts / defaultBlockData()). -->
     <button class="hm-donate-btn hm-primary-donate-cta" type="button"
-      [style.background]="asDonationWidget(block.data).ctaColor || null"
+      [style.background]="asDonationWidget(block.data).ctaColor || themePrimaryColor(draft)"
       (click)="openCheckout(draft)">
       <span class="hm-lock-icon">{{ asDonationWidget(block.data).ctaIcon || '🔒' }}</span>
       <span class="hm-btn-text">{{ asDonationWidget(block.data).ctaLabel || 'לתמיכה מאובטחת' }}</span>
@@ -1218,7 +1222,7 @@
     [class.conv-compact]="draft.layout.conversionWidgetLayout === 'compact'"
     [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
     [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'"
-    [style.--stat-icon-color]="asStats(block.data).iconColor || null"
+    [style.--stat-icon-color]="asStats(block.data).iconColor || accentColor(draft)"
     [style.--stat-icon-bg]="asStats(block.data).backgroundColor === '' ? 'transparent' : (asStats(block.data).backgroundColor || null)"
     [style.--stat-icon-border]="asStats(block.data).borderColor === '' ? 'transparent' : (asStats(block.data).borderColor || null)"
     [style.--stat-icon-radius.px]="asStats(block.data).borderRadius">

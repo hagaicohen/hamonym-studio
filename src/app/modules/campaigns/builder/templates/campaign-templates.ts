@@ -128,7 +128,11 @@ function donationData(overrides: Partial<DonationWidgetBlockData> = {}): Donatio
     title: 'תמכו עכשיו',
     subtitle: 'כל תרומה מקרבת אותנו ליעד',
     ctaLabel: 'תרמו עכשיו',
-    ctaColor: '#22c55e',
+    // '' = Auto (Design Evolution, 2026-09-29) — falls back to
+    // themePrimaryColor() at render time, the same color the nav's own
+    // "תרמו עכשיו" button already uses. Templates below no longer snapshot
+    // a palette color here; see their own ctaColor: '' overrides.
+    ctaColor: '',
     ctaIcon: '',
     showSecurityBadge: true,
     showPaymentLogos: true,
@@ -137,6 +141,9 @@ function donationData(overrides: Partial<DonationWidgetBlockData> = {}): Donatio
   } as DonationWidgetBlockData;
 }
 
+// iconColor: '' = Auto (Design Evolution, 2026-09-29) — falls back to
+// accentColor() at render time instead of a one-time palette snapshot.
+// Every call site below now passes '' rather than a palette color.
 function statsBlock(
   id: string,
   order: number,
@@ -178,8 +185,8 @@ function classicBlocks(palette: TemplatePalette): CampaignBlock[] {
     { id: ctId, type: 'container', order: 1, visible: true, label: 'מסגרת ראשית',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 16, direction: 'row', splitPercent: 55 } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'md', s.accent),
-    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    statsBlock(statsId, 1, 'cards', 'md', ''),
+    donationBlock(donationId, 2, { ctaColor: '' }),
     { id: gid(), type: 'rich-text', order: 2, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'rewards',   order: 3, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 4, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
@@ -206,8 +213,8 @@ function largeHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
   const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale),
-    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    statsBlock(statsId, 1, 'inline', 'lg', '', s.paleBg, s.pale),
+    donationBlock(donationId, 2, { ctaColor: '' }),
     { id: gid(), type: 'rich-text', order: 3, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'gallery',   order: 4, visible: true, label: 'גלריה',    spacingTop: 0, spacingBottom: 0, data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',   order: 5, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -252,8 +259,8 @@ function sidebarRightBlocks(palette: TemplatePalette): CampaignBlock[] {
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [richTextId], backgroundColor: '', borderColor: '',
               backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column' } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
-    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    statsBlock(statsId, 1, 'cards', 'sm', ''),
+    donationBlock(donationId, 2, { ctaColor: '' }),
     { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -299,8 +306,8 @@ function sidebarLeftBlocks(palette: TemplatePalette): CampaignBlock[] {
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
               backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column' } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
-    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    statsBlock(statsId, 1, 'cards', 'sm', ''),
+    donationBlock(donationId, 2, { ctaColor: '' }),
     { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -343,8 +350,8 @@ function sidebarFullHeightBlocks(palette: TemplatePalette): CampaignBlock[] {
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '',
               backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column',
               railZone: 'sidebar' } as ContainerBlockData },
-    statsBlock(statsId, 1, 'cards', 'sm', s.accent),
-    donationBlock(donationId, 2, { ctaColor: s.accent }),
+    statsBlock(statsId, 1, 'cards', 'sm', ''),
+    donationBlock(donationId, 2, { ctaColor: '' }),
     { id: mainCtId, type: 'container', order: 2, visible: true, label: 'תוכן ראשי',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [heroId, richTextId], backgroundColor: '', borderColor: '',
@@ -392,8 +399,8 @@ function donationFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
     { id: ctId, type: 'container', order: 1, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId, statsId], backgroundColor: s.paleBg, borderColor: '', backgroundImageUrl: '', padding: 24, gap: 16, direction: 'row', splitPercent: 60 } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: s.accent, ctaLabel: 'תרמו עכשיו', title: 'תמכו במיזם' }),
-    statsBlock(statsId, 2, 'cards', 'sm', s.accent),
+    donationBlock(donationId, 1, { ctaColor: '', ctaLabel: 'תרמו עכשיו', title: 'תמכו במיזם' }),
+    statsBlock(statsId, 2, 'cards', 'sm', ''),
     { id: gid(), type: 'rich-text',   order: 2, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'cta',         order: 3, visible: true, label: 'קריאה לפעולה', spacingTop: 0, spacingBottom: 0,
       data: { title: 'כל תרומה עושה את ההבדל', text: '', backgroundColor: s.accent, textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' }, ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#ffffff', align: 'center', icon: '' } } },
@@ -423,11 +430,11 @@ function storyFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
   return [
     { id: gid(), type: 'rich-text', order: 1, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 24, data: { content: '', lineHeight: 1.8 } },
     { id: gid(), type: 'image',     order: 2, visible: true, label: 'תמונה',    spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
-    statsBlock(statsId, 3, 'inline', 'lg', s.accent, s.paleBg, s.pale),
+    statsBlock(statsId, 3, 'inline', 'lg', '', s.paleBg, s.pale),
     { id: ctId, type: 'container', order: 4, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: s.accent }),
+    donationBlock(donationId, 1, { ctaColor: '' }),
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'updates',     order: 6, visible: true, label: 'עדכונים',  spacingTop: 0, spacingBottom: 0, data: { viewMode: 'slider' } },
     { id: gid(), type: 'donors',      order: 7, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -453,10 +460,10 @@ function ambassadorsFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
   const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale, true),
+    statsBlock(statsId, 1, 'inline', 'lg', '', s.paleBg, s.pale, true),
     { id: gid(), type: 'ambassadors', order: 2, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
-    donationBlock(donationId, 4, { ctaColor: s.accent, ctaLabel: 'הצטרפו לקהילה' }),
+    donationBlock(donationId, 4, { ctaColor: '', ctaLabel: 'הצטרפו לקהילה' }),
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'updates',     order: 7, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
@@ -484,8 +491,8 @@ function magazineBlocks(palette: TemplatePalette): CampaignBlock[] {
     { id: gid(), type: 'rich-text', order: 1, visible: true, label: 'כותרת ראשית', spacingTop: 24, spacingBottom: 8,  data: { content: '', lineHeight: 1.5 } },
     { id: gid(), type: 'image',     order: 2, visible: true, label: 'תמונה',        spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
     { id: gid(), type: 'rich-text', order: 3, visible: true, label: 'גוף הכתבה',   spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.9 } },
-    statsBlock(statsId, 4, 'cards', 'sm', s.accent, s.paleBg, s.pale),
-    donationBlock(donationId, 5, { ctaColor: s.accent, title: 'תמכו בכתבה' }),
+    statsBlock(statsId, 4, 'cards', 'sm', '', s.paleBg, s.pale),
+    donationBlock(donationId, 5, { ctaColor: '', title: 'תמכו בכתבה' }),
     { id: gid(), type: 'gallery',   order: 6, visible: true, label: 'גלריה', spacingTop: 0, spacingBottom: 0, data: { items: [], style: 'grid', aspectRatio: '4:3', showCaptions: true, showDots: false, showArrows: false, autoPlay: false } },
     { id: gid(), type: 'updates',   order: 7, visible: true, label: 'עדכונים', spacingTop: 0, spacingBottom: 0, data: { viewMode: 'list' } },
     { id: gid(), type: 'rewards',   order: 8, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -510,11 +517,11 @@ function videoHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
   const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
-    statsBlock(statsId, 1, 'inline', 'lg', s.accent, s.paleBg, s.pale),
+    statsBlock(statsId, 1, 'inline', 'lg', '', s.paleBg, s.pale),
     { id: ctId, type: 'container', order: 2, visible: true, label: 'אזור תרומה',
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData },
-    donationBlock(donationId, 1, { ctaColor: s.accent, ctaLabel: 'תמכו עכשיו' }),
+    donationBlock(donationId, 1, { ctaColor: '', ctaLabel: 'תמכו עכשיו' }),
     { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'gallery',     order: 4, visible: true, label: 'גלריה',    spacingTop: 0,  spacingBottom: 0,  data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },

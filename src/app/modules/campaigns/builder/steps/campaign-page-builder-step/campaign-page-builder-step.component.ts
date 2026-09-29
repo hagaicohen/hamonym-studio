@@ -681,6 +681,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { ...block.data, [field]: value } as StatsBlockData);
   }
 
+  // Switching to "מותאם אישית" seeds the picker with the current live
+  // accent color (design-evolution semantic-roles pass, 2026-09-29) rather
+  // than leaving the field blank — the manager sees the color they're
+  // customizing FROM, and can still change it right away.
+  setStatsIconColorCustom(id: string): void {
+    this.updateStatsField(id, 'iconColor', this.state.draft.layout.theme.accentColor);
+  }
+
   // Warn (don't block) when the icon color is nearly invisible against its
   // own background — e.g. a white icon on a white/transparent background.
   // Transparent background is checked against the page's own white card,
@@ -739,6 +747,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
     this.state.updateBlockData(id, { ...block.data, [field]: value } as DonationWidgetBlockData);
+  }
+
+  // Switching to "מותאם אישית" seeds the picker with the current live
+  // primary-action color (design-evolution semantic-roles pass, 2026-09-29)
+  // — the donation CTA is a PRIMARY ACTION, so it seeds from themePrimary,
+  // not from accent (see campaign-preview.component.html's own comment).
+  setCtaColorCustom(id: string): void {
+    this.updateDonationWidgetField(id, 'ctaColor', this.state.draft.layout.theme.primaryColor);
   }
 
   togglePaymentLogo(id: string, logo: string): void {

@@ -911,6 +911,16 @@
 
             <div class="editor-row">
               <label class="editor-label">צבע אייקונים</label>
+              <div class="direction-toggle">
+                <button type="button" class="direction-btn" [class.active]="!asStats(block.data).iconColor"
+                  (click)="updateStatsField(block.id, 'iconColor', '')">אוטומטי</button>
+                <button type="button" class="direction-btn" [class.active]="!!asStats(block.data).iconColor"
+                  (click)="setStatsIconColorCustom(block.id)">מותאם אישית</button>
+              </div>
+            </div>
+            <p class="theme-hint" *ngIf="!asStats(block.data).iconColor">בהתאם לצבע ההדגשה של הסגנון</p>
+            <div class="editor-row" *ngIf="asStats(block.data).iconColor">
+              <label class="editor-label"></label>
               <app-color-picker
                 [value]="asStats(block.data).iconColor"
                 (valueChange)="updateStatsField(block.id, 'iconColor', $event)">
@@ -1000,6 +1010,16 @@
             </div>
             <div class="editor-row">
               <label class="editor-label">צבע כפתור</label>
+              <div class="direction-toggle">
+                <button type="button" class="direction-btn" [class.active]="!asDonationWidget(block.data).ctaColor"
+                  (click)="updateDonationWidgetField(block.id, 'ctaColor', '')">אוטומטי</button>
+                <button type="button" class="direction-btn" [class.active]="!!asDonationWidget(block.data).ctaColor"
+                  (click)="setCtaColorCustom(block.id)">מותאם אישית</button>
+              </div>
+            </div>
+            <p class="theme-hint" *ngIf="!asDonationWidget(block.data).ctaColor">בהתאם לעיצוב הקמפיין (צבע הפעולה הראשית)</p>
+            <div class="editor-row" *ngIf="asDonationWidget(block.data).ctaColor">
+              <label class="editor-label"></label>
               <app-color-picker
                 [value]="asDonationWidget(block.data).ctaColor"
                 (valueChange)="updateDonationWidgetField(block.id, 'ctaColor', $event)">

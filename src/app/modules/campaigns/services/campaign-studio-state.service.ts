@@ -1670,7 +1670,9 @@ function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | '
     case 'stats':       return {
       style:           'cards',
       size:            'md',
-      iconColor:       '#7c3aed',
+      // '' = Auto (Design Evolution, 2026-09-29) — falls back to
+      // accentColor() at render time instead of a fixed hex.
+      iconColor:       '',
       backgroundColor: '#ffffff',
       borderColor:     '#e2e8f0',
       borderRadius:    12,
@@ -1690,7 +1692,10 @@ function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | '
       subtitle:          'כל תרומה מקרבת אותנו ליעד',
       ctaLabel:          'תמכו עכשיו',
       ctaIcon:           '❤️',
-      ctaColor:          '#16a34a',
+      // '' = Auto (Design Evolution, 2026-09-29) — falls back to
+      // themePrimaryColor() at render time instead of a fixed hex; this is
+      // a PRIMARY ACTION, not a decorative accent.
+      ctaColor:          '',
       showSecurityBadge: true,
       showPaymentLogos:  true,
       paymentLogos:      ['visa', 'mastercard', 'apple-pay', 'google-pay', 'bit'],

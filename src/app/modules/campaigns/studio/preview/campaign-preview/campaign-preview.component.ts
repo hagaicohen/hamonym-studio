@@ -1367,6 +1367,15 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return draft.layout?.theme?.primaryColor || '#333333';
   }
 
+  // theme.accentColor ("הדגשה / קישורים" in the Builder's color panel) — the
+  // Auto fallback for decorative/highlight block-local fields (stats icons,
+  // etc.), as opposed to themePrimaryColor() above (primary actions like the
+  // donation CTA) or primaryColor() (actually secondaryColor — see its own
+  // comment). Design Evolution semantic-roles pass, 2026-09-29.
+  accentColor(draft: CampaignDraft): string {
+    return draft.layout?.theme?.accentColor || '#cc350f';
+  }
+
   // Heading style for .section-heading (rich-text/video/gallery's own
   // `label`, rendered as a real page heading) — only rich-text carries a
   // headingStyle field (see RichTextBlockData); video/gallery keep the
