@@ -181,3 +181,58 @@ describe('CampaignPreviewComponent — amount-intent invariant (suggested amount
     expect(component.selectedAmount).toBeNull();
   });
 });
+
+// Regression guard (2026-09-29) — every test above exercises component
+// methods directly and deliberately never calls fixture.detectChanges()/
+// ngOnInit() (see the first describe block's own comment), so none of them
+// could have caught a regression that reintroduces auto-selection inside
+// ngOnInit's draft$ subscription specifically. That is exactly what almost
+// shipped in this session (fixing the amount grid's misleading default
+// highlight by making selectedAmount genuinely equal the suggested amount
+// on load) before being caught by manual review and reverted in df27067.
+// This test calls the real ngOnInit() so a future reintroduction of that
+// pattern fails here.
+describe('CampaignPreviewComponent — amount-intent invariant survives ngOnInit', () => {
+  let component: CampaignPreviewComponent;
+
+  const rewardA: Offering = {
+    id: 'r1', title: 'תשורת E2E', description: '',
+    minimumAmount: 100, stock: null, imageUrl: null,
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [CampaignPreviewComponent, HttpClientTestingModule],
+      providers: [provideRouter([])],
+    });
+    const fixture = TestBed.createComponent(CampaignPreviewComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('loading a campaign with suggested amounts never auto-selects one, so a reward alone still costs exactly its own price', () => {
+    const state = TestBed.inject(CampaignStudioStateService);
+    // Non-empty and deliberately including the exact value (₪180) the
+    // template used to fake-highlight -- a reintroduced auto-select would
+    // have something real to wrongly pick here, unlike an empty list.
+    state.patch({ suggestedAmounts: [50, 100, 180, 360, 500] });
+
+    // The real lifecycle hook — not skipped, unlike the suite above. slug
+    // stays '' (createInitialDraft()'s default), so none of ngOnInit's
+    // slug-gated HTTP calls (donors/ambassadors/comments) fire.
+    component.ngOnInit();
+
+    expect(component.selectedAmount).toBeNull();
+    expect(component.isAmountSelected(180))
+      .toBe(false, 'the middle suggested amount must not appear selected just because it is the default suggestion');
+
+    const draftWithReward = { ...state.draft, offerings: [rewardA] };
+    component.selectOffering(rewardA, draftWithReward);
+    expect(component.totalAmount(draftWithReward))
+      .toBe(100, 'a reward alone, amount picker never touched, must cost exactly the reward price');
+
+    component.selectAmount(180);
+    expect(component.isAmountSelected(180)).toBe(true);
+    expect(component.totalAmount(draftWithReward))
+      .toBe(280, 'after an explicit click, the chosen amount must count toward the total');
+  });
+});
