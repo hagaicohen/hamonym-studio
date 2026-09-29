@@ -41,11 +41,34 @@ interface CampaignStyleRecipe {
   bodyText:  { satMul: number; light: number };
 }
 
+// Phase 3A (2026-09-29) — visual tokens beyond color. Deliberately small:
+// only fields with a real consumer wired up this phase (see
+// campaign-preview.component.ts/.css). fontFamily is real infrastructure,
+// not yet real variation — see its own note on CAMPAIGN_STYLES below, font
+// availability only allows one safe value right now.
+export interface CampaignStyleVisualTokens {
+  typography: {
+    fontFamily:    string;
+    headingWeight: number; // applied to Hero title + section titles only
+    headingScale:  number; // multiplier on their existing clamp()/px base, kept in 0.9-1.15 -- not a free-form size
+  };
+  buttons: {
+    radius: string; // CSS length
+    weight: number;
+    shadow: string; // CSS box-shadow value, or 'none'
+  };
+  cards: {
+    radius: string;
+    shadow: string;
+  };
+}
+
 export interface CampaignStyleDefinition {
   id:    CampaignStyleId;
   label: string;
   defaultPrimary: string;
   recipe: CampaignStyleRecipe;
+  visual: CampaignStyleVisualTokens;
 }
 
 // Recipe coefficients are a first, reasonable-but-placeholder pass (not
@@ -67,6 +90,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       accent:    { hueShift: 10,  satMul: 0.90, lightAdd: -0.05 },
       bodyText:  { satMul: 0.15, light: 0.20 },
     },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 800, headingScale: 1.00 },
+      buttons: { radius: '10px', weight: 800, shadow: '0 2px 6px rgba(0,0,0,0.12)' },
+      cards:   { radius: '10px', shadow: '0 1px 3px rgba(15,23,42,0.08)' },
+    },
   },
   {
     id: 'clean', label: 'Clean', defaultPrimary: '#2563eb',
@@ -74,6 +102,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       secondary: { hueShift: 0,   satMul: 0.45, lightAdd: 0.18 },
       accent:    { hueShift: 15,  satMul: 0.55, lightAdd: 0.08 },
       bodyText:  { satMul: 0.10, light: 0.22 },
+    },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 0.95 },
+      buttons: { radius: '20px', weight: 700, shadow: 'none' },
+      cards:   { radius: '16px', shadow: 'none' },
     },
   },
   {
@@ -83,6 +116,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       accent:    { hueShift: 150, satMul: 1.00, lightAdd: 0.00 },
       bodyText:  { satMul: 0.05, light: 0.08 },
     },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.10 },
+      buttons: { radius: '6px', weight: 900, shadow: '0 6px 16px rgba(0,0,0,0.25)' },
+      cards:   { radius: '6px', shadow: '0 8px 20px rgba(0,0,0,0.18)' },
+    },
   },
   {
     id: 'editorial', label: 'Editorial', defaultPrimary: '#3f3f46',
@@ -90,6 +128,15 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       secondary: { hueShift: 0,   satMul: 0.12, lightAdd: -0.08 },
       accent:    { hueShift: 20,  satMul: 0.30, lightAdd: -0.12 },
       bodyText:  { satMul: 0.05, light: 0.16 },
+    },
+    // No serif dependency (explicitly out of scope, and a Latin serif
+    // wouldn't render for Hebrew glyphs anyway -- see fontFamily's own
+    // note above). Restraint comes from lighter weight + tighter radius +
+    // no shadow instead.
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 500, headingScale: 0.95 },
+      buttons: { radius: '4px', weight: 700, shadow: 'none' },
+      cards:   { radius: '4px', shadow: 'none' },
     },
   },
   {
@@ -99,6 +146,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       accent:    { hueShift: 30,  satMul: 0.80, lightAdd: 0.05 },
       bodyText:  { satMul: 0.18, light: 0.18 },
     },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 1.00 },
+      buttons: { radius: '18px', weight: 800, shadow: '0 4px 12px rgba(0,0,0,0.10)' },
+      cards:   { radius: '14px', shadow: '0 2px 8px rgba(0,0,0,0.08)' },
+    },
   },
   {
     id: 'vibrant', label: 'Vibrant', defaultPrimary: '#db2777',
@@ -106,6 +158,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       secondary: { hueShift: 40,  satMul: 0.90, lightAdd: -0.05 },
       accent:    { hueShift: 180, satMul: 1.00, lightAdd: 0.05 }, // true complementary — deliberately high-energy contrast
       bodyText:  { satMul: 0.10, light: 0.15 },
+    },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.10 },
+      buttons: { radius: '22px', weight: 800, shadow: '0 6px 18px rgba(0,0,0,0.20)' },
+      cards:   { radius: '18px', shadow: '0 8px 22px rgba(0,0,0,0.16)' },
     },
   },
   {
@@ -115,6 +172,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       accent:    { hueShift: 40,  satMul: 0.75, lightAdd: 0.10 },
       bodyText:  { satMul: 0.12, light: 0.18 },
     },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 1.00 },
+      buttons: { radius: '14px', weight: 700, shadow: '0 2px 8px rgba(0,0,0,0.08)' },
+      cards:   { radius: '16px', shadow: '0 2px 10px rgba(0,0,0,0.07)' },
+    },
   },
   {
     id: 'midnight', label: 'Midnight', defaultPrimary: '#1e3a8a',
@@ -122,6 +184,11 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       secondary: { hueShift: 0,   satMul: 0.70, lightAdd: -0.18 },
       accent:    { hueShift: 170, satMul: 0.85, lightAdd: 0.15 }, // warm pop against a deliberately dark, near-neutral secondary
       bodyText:  { satMul: 0.08, light: 0.10 },
+    },
+    visual: {
+      typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.05 },
+      buttons: { radius: '10px', weight: 800, shadow: '0 10px 24px rgba(0,0,0,0.35)' },
+      cards:   { radius: '8px', shadow: '0 12px 28px rgba(0,0,0,0.30)' },
     },
   },
 ];
@@ -227,4 +294,14 @@ export function resolveTheme(
     accentColor:    overrides?.accentColor    ?? derived.accentColor,
     bodyTextColor:  overrides?.bodyTextColor  ?? derived.bodyTextColor,
   };
+}
+
+// Phase 3A (2026-09-29) — visual tokens have no per-field user override in
+// this phase (Style owns them outright, see the phase's own product
+// decision), so unlike resolveTheme this is a direct lookup, not a merge.
+// campaignStyleId undefined -> undefined -> every consumer's own CSS
+// var(--hm-x, <legacy-literal>) fallback applies, unchanged from today.
+export function resolveVisualTokens(styleId: CampaignStyleId | undefined): CampaignStyleVisualTokens | undefined {
+  if (!styleId) return undefined;
+  return CAMPAIGN_STYLE_MAP[styleId]?.visual;
 }

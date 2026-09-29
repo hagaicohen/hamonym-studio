@@ -16,7 +16,10 @@
 
 .campaign-page {
   min-height: 100%;
-  font-family: 'Heebo', sans-serif;
+  /* Phase 3A (2026-09-29) -- the one root-level font-family token; nearly
+     everything else in this file is font-family:inherit, so this single
+     line is what actually cascades a Style's typeface everywhere. */
+  font-family: var(--hm-font-family, 'Heebo', sans-serif);
   direction: rtl;
   background: #ffffff;
   overflow-x: clip;
@@ -96,8 +99,9 @@
   min-width: 150px;
   text-align: center;
   color: #fff;
-  border: none; border-radius: 20px;
-  font-size: 13px; font-weight: 700;
+  border: none; border-radius: var(--hm-btn-radius, 20px);
+  box-shadow: var(--hm-btn-shadow, none);
+  font-size: 13px; font-weight: var(--hm-btn-weight, 700);
   cursor: pointer; font-family: inherit;
   white-space: nowrap;
 }
@@ -360,11 +364,15 @@
 .hm-hero-container--mobile .hm-hero-copy { max-width: 340px; }
 
 .hm-hero-title {
-  font-size: 40px; font-weight: 900;
+  /* Phase 3A -- headingScale multiplies the existing base size rather than
+     replacing it outright, so it stays a modest nudge (0.9-1.15 across all
+     8 Styles) instead of an arbitrary free-form size. */
+  font-size: calc(40px * var(--hm-heading-scale, 1));
+  font-weight: var(--hm-heading-weight, 900);
   color: #ffffff; line-height: 1.15; margin: 0;
   text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
-.hm-hero--mobile .hm-hero-title { font-size: 26px; }
+.hm-hero--mobile .hm-hero-title { font-size: calc(26px * var(--hm-heading-scale, 1)); }
 
 .hm-hero-subtitle {
   font-size: 17px; line-height: 1.4;
@@ -675,12 +683,23 @@
 /* Both cards share base styles */
 .hm-stats, .hm-donate {
   background: #ffffff;
-  border-radius: 8px;
+  /* Phase 3A card tokens -- these are two of the three "high-visibility
+     surfaces" this phase connects (the third is .hm-reward-card below).
+     No box-shadow existed here before (legacy fallback 'none' below is
+     the true current behavior, not an invented one). */
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
   padding: 28px 24px;
   border: 1px solid var(--line, #e2e8f0);
   display: flex;
   flex-direction: column;
-  font-family: 'Assistant', 'Heebo', sans-serif;
+  /* Phase 3A -- Assistant was never actually loaded anywhere in this app
+     (confirmed: only Heebo is linked in index.html), so this fallback has
+     likely always silently rendered as Heebo in every browser already.
+     Kept as the literal fallback (byte-for-byte unchanged legacy CSS) but
+     now yields to a Style's own font when one is active, same as every
+     other typography rule in this file. */
+  font-family: var(--hm-font-family, 'Assistant', 'Heebo', sans-serif);
   direction: rtl
 }
 
@@ -1011,10 +1030,11 @@
 }
 .hm-donate-btn {
   width: 100%; padding: 16px;
-  border: none; border-radius: 12px;
+  border: none; border-radius: var(--hm-btn-radius, 12px);
+  box-shadow: var(--hm-btn-shadow, none);
   background: #0f2747;
   color: #fff;
-  font-weight: 800; font-size: 17px;
+  font-weight: var(--hm-btn-weight, 800); font-size: 17px;
   cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: all 0.2s ease;
@@ -1708,8 +1728,9 @@
    own align-items:center regardless of the chosen alignment. */
 .hm-hero-cta-wrap { width: 100%; }
 .cta-btn {
-  padding: 11px 24px; border-radius: 10px; border: none;
-  color: #fff; font-size: 14px; font-weight: 700;
+  padding: 11px 24px; border-radius: var(--hm-btn-radius, 10px); border: none;
+  box-shadow: var(--hm-btn-shadow, none);
+  color: #fff; font-size: 14px; font-weight: var(--hm-btn-weight, 700);
   cursor: pointer; font-family: inherit;
   display: inline-flex; align-items: center; gap: 6px;
   transition: filter 0.15s;
@@ -1722,7 +1743,9 @@
   color: #fff;
   padding: 40px clamp(16px, 5vw, 48px);
   border-bottom: 1px solid rgba(255,255,255,0.1);
-  font-family: 'Assistant', 'Heebo', sans-serif;
+  /* Phase 3A -- same Assistant note as .hm-stats/.hm-donate above (never
+     actually loaded, so this fallback already renders as Heebo today). */
+  font-family: var(--hm-font-family, 'Assistant', 'Heebo', sans-serif);
 }
 .hm-rewards h2 {
   color: #fff;
@@ -1944,7 +1967,12 @@
   scroll-snap-align: start;
   background: rgba(255,255,255,0.05);
   border: 1.5px solid var(--hm-reward-border, rgba(255,255,255,.15));
-  border-radius: 20px;
+  /* Phase 3A -- the third of the three high-visibility card surfaces this
+     phase connects. box-shadow here is the RESTING state only; :hover
+     below already has its own distinct interaction shadow (focus ring +
+     lift) and is untouched. */
+  border-radius: var(--hm-card-radius, 20px);
+  box-shadow: var(--hm-card-shadow, none);
   overflow: visible;
   display: flex;
   flex-direction: column;
@@ -2380,8 +2408,8 @@
   direction: rtl;
 }
 .hm-section-title {
-  font-size: clamp(22px, 2.5vw, 32px);
-  font-weight: 900;
+  font-size: calc(clamp(22px, 2.5vw, 32px) * var(--hm-heading-scale, 1));
+  font-weight: var(--hm-heading-weight, 900);
   text-align: center;
   margin: 0 0 32px;
 }
@@ -2403,8 +2431,9 @@
 
 /* ══ AMBASSADOR JOIN BTN ══ */
 .hm-amb-join-btn {
-  padding: 10px 22px; border: none; border-radius: 10px;
-  color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+  padding: 10px 22px; border: none; border-radius: var(--hm-btn-radius, 10px);
+  box-shadow: var(--hm-btn-shadow, none);
+  color: #fff; font-size: 14px; font-weight: var(--hm-btn-weight, 800); cursor: pointer;
   font-family: inherit; white-space: nowrap; transition: opacity 0.15s;
 }
 .hm-amb-join-btn:hover { opacity: 0.88; }
@@ -2464,8 +2493,9 @@
   padding: 0 24px 24px;
 }
 .hm-join-submit {
-  width: 100%; padding: 14px; border: none; border-radius: 12px;
-  color: #fff; font-size: 15px; font-weight: 800; cursor: pointer;
+  width: 100%; padding: 14px; border: none; border-radius: var(--hm-btn-radius, 12px);
+  box-shadow: var(--hm-btn-shadow, none);
+  color: #fff; font-size: 15px; font-weight: var(--hm-btn-weight, 800); cursor: pointer;
   font-family: inherit; transition: opacity 0.15s;
 }
 .hm-join-submit:disabled { opacity: 0.45; cursor: default; }
@@ -2621,8 +2651,9 @@
 .hm-lb-empty-title { font-size: 20px; font-weight: 800; color: #0f172a; }
 .hm-lb-empty-sub   { font-size: 14px; color: #64748b; }
 .hm-lb-empty-btn {
-  padding: 12px 28px; border: none; border-radius: 12px; margin-top: 4px;
-  color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
+  padding: 12px 28px; border: none; border-radius: var(--hm-btn-radius, 12px); margin-top: 4px;
+  box-shadow: var(--hm-btn-shadow, none);
+  color: #fff; font-size: 15px; font-weight: var(--hm-btn-weight, 800); cursor: pointer; font-family: inherit;
 }
 
 /* ── AMBASSADORS: sidebar placement (compact vertical list) — no search/sort
@@ -3191,7 +3222,7 @@
   padding: 28px 16px;
 }
 .campaign-page--mobile .hm-section-title {
-  font-size: 20px;
+  font-size: calc(20px * var(--hm-heading-scale, 1));
   margin-bottom: 20px;
 }
 
@@ -3373,7 +3404,7 @@
 
   /* HERO */
   .hm-hero { min-height: 480px; }
-  .hm-hero-title { font-size: 26px; }
+  .hm-hero-title { font-size: calc(26px * var(--hm-heading-scale, 1)); }
   .hm-hero-subtitle { font-size: 14px; }
   .hm-hero-container {
     flex-direction: column;
@@ -3426,7 +3457,7 @@
 
   /* SECTIONS */
   .hm-section { padding: 28px 16px; }
-  .hm-section-title { font-size: 20px; margin-bottom: 20px; }
+  .hm-section-title { font-size: calc(20px * var(--hm-heading-scale, 1)); margin-bottom: 20px; }
 
   /* DONORS */
   .hm-donors-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -3463,7 +3494,7 @@
   .sidebar-main { width: 100%; }
   .hm-reward-slider { padding: 20px 0 16px; }
   .hm-slider-track { gap: 12px; }
-  .hm-reward-card { flex: 0 0 88%; min-width: 88%; border-radius: 16px; }
+  .hm-reward-card { flex: 0 0 88%; min-width: 88%; border-radius: var(--hm-card-radius, 16px); }
 }
 
 

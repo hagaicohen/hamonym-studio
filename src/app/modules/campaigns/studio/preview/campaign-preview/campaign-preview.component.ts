@@ -12,6 +12,7 @@ import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
 import { StudioUiService } from '../../services/studio-ui.service';
+import { resolveVisualTokens, CampaignStyleVisualTokens } from '../../../builder/styles/campaign-styles';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 import {
   CampaignStudioStateService,
@@ -1374,6 +1375,15 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // comment). Design Evolution semantic-roles pass, 2026-09-29.
   accentColor(draft: CampaignDraft): string {
     return draft.layout?.theme?.accentColor || '#cc350f';
+  }
+
+  // Phase 3A (2026-09-29) — visual tokens beyond color (typography/buttons/
+  // cards). undefined for a legacy campaign (no campaignStyleId), in which
+  // case every CSS custom property below is simply never set and each
+  // consuming rule's own var(--hm-x, <legacy-literal>) fallback applies —
+  // zero visual change, same principle already proven for theme colors.
+  visualTokens(draft: CampaignDraft): CampaignStyleVisualTokens | undefined {
+    return resolveVisualTokens(draft.layout?.campaignStyleId);
   }
 
   // Heading style for .section-heading (rich-text/video/gallery's own
