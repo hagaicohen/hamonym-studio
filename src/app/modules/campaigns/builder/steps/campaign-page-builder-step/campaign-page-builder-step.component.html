@@ -1099,10 +1099,10 @@
              there's a sidebar to place it in -->
         <div class="editor-field" *ngIf="block.type === 'donors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
           <label class="editor-label">מיקום התורמים</label>
-          <div class="tse-chips">
-            <button class="tse-chip" [class.active]="!state.isSidebarSection('donors')"
+          <div class="direction-toggle">
+            <button class="direction-btn" [class.active]="!state.isSidebarSection('donors')"
               (click)="state.setSidebarSection('donors', false)">מתחת לתוכן (רוחב מלא)</button>
-            <button class="tse-chip" [class.active]="state.isSidebarSection('donors')"
+            <button class="direction-btn" [class.active]="state.isSidebarSection('donors')"
               (click)="state.setSidebarSection('donors', true)">בסיידבר</button>
           </div>
         </div>
@@ -1113,11 +1113,11 @@
             <span>📢</span> תוכן העדכונים מנוהל בצעד 6 — עדכונים
           </div>
           <label class="editor-label">תצוגה בדף</label>
-          <div class="tse-chips">
-            <button class="tse-chip"
+          <div class="direction-toggle">
+            <button class="direction-btn"
               [class.active]="(asUpdatesBlock(block.data).viewMode || 'slider') === 'slider'"
               (click)="updateUpdatesViewMode(block.id, 'slider')">סליידר</button>
-            <button class="tse-chip"
+            <button class="direction-btn"
               [class.active]="asUpdatesBlock(block.data).viewMode === 'list'"
               (click)="updateUpdatesViewMode(block.id, 'list')">רשימה</button>
           </div>
@@ -1550,6 +1550,26 @@
     <p class="theme-hint">שינוי צבע משני יעדכן את כל הכותרות בדף. שינוי הדגשה יעדכן קישורים וכפתורי CTA.</p>
     </ng-template>
     </ng-container>
+
+    <!-- CTA color — mirrors the exact same field the donation-widget block's
+         own "צבע כפתור" control edits (2026-09-29). Both read/write
+         donationWidgetBlock.data.ctaColor directly, so a change in either
+         place is immediately visible in the other -- there is only one
+         underlying value, shown from two locations, not two synced copies. -->
+    <div class="theme-cta-section" *ngIf="donationWidgetBlock">
+      <p class="theme-complementary-label">צבע כפתור תרומה (CTA)</p>
+      <div class="direction-toggle">
+        <button type="button" class="direction-btn" [class.active]="!donationCtaColor"
+          (click)="setDonationCtaColorAuto()">אוטומטי</button>
+        <button type="button" class="direction-btn" [class.active]="!!donationCtaColor"
+          (click)="setDonationCtaColorCustom()">מותאם אישית</button>
+      </div>
+      <p class="theme-hint" *ngIf="!donationCtaColor">בהתאם לעיצוב הקמפיין (צבע הפעולה הראשית)</p>
+      <div class="editor-row" *ngIf="donationCtaColor">
+        <app-color-picker [value]="donationCtaColor"
+          (valueChange)="setDonationCtaColorValue($event)"></app-color-picker>
+      </div>
+    </div>
   </div>
 
   <!-- CAMPAIGN BACKGROUND -->

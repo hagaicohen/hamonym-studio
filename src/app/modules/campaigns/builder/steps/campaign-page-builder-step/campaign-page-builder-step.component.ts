@@ -757,6 +757,35 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.updateDonationWidgetField(id, 'ctaColor', this.state.draft.layout.theme.primaryColor);
   }
 
+  // Second entry point for the exact same field, surfaced in the global
+  // "צבעי תמה" panel (2026-09-29) — not a second donation widget, and not a
+  // synced copy: donation-widget blocks aren't SINGLE_INSTANCE-enforced, but
+  // in practice a campaign has at most one, so this simply finds it and
+  // reuses the same mutator methods the per-block panel already calls. A
+  // change from either location is the same write to the same block.
+  get donationWidgetBlock(): CampaignBlock | undefined {
+    return this.state.draft.blocks.find(b => b.type === 'donation-widget');
+  }
+
+  get donationCtaColor(): string {
+    return (this.donationWidgetBlock?.data as DonationWidgetBlockData | undefined)?.ctaColor ?? '';
+  }
+
+  setDonationCtaColorAuto(): void {
+    const block = this.donationWidgetBlock;
+    if (block) this.updateDonationWidgetField(block.id, 'ctaColor', '');
+  }
+
+  setDonationCtaColorCustom(): void {
+    const block = this.donationWidgetBlock;
+    if (block) this.setCtaColorCustom(block.id);
+  }
+
+  setDonationCtaColorValue(value: string): void {
+    const block = this.donationWidgetBlock;
+    if (block) this.updateDonationWidgetField(block.id, 'ctaColor', value);
+  }
+
   togglePaymentLogo(id: string, logo: string): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;

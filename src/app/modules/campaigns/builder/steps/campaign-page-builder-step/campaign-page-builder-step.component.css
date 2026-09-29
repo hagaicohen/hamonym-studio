@@ -841,6 +841,12 @@
   color: #64748b;
   margin: 4px 0 2px;
 }
+
+.theme-cta-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
 .theme-reset-btn {
   border: none;
   background: transparent;
