@@ -460,6 +460,25 @@ export type LayoutMode =
   | 'sidebar-left'
   | 'magazine';
 
+// Campaign Location (2026-09-29) — see CampaignLayout.campaignLocation's own
+// doc comment. `type` is the structured axis a future Discover filter can
+// group by directly (nationwide/region/online/international/custom)
+// without parsing arbitrary text. `label` is always the exact text shown in
+// the Hero chip; for 'nationwide'/'online'/'international' it's a fixed
+// canned string the UI sets automatically, for 'region'/'custom' the
+// manager types it. `city` exists ONLY for 'region', kept separate from
+// `label` (which may carry extra words like "והסביבה") specifically so a
+// future filter can match on it without parsing the display label — plain
+// text, not a picklist, since no Israeli city/region dataset exists
+// anywhere in this codebase (confirmed by audit, 2026-09-29).
+export type CampaignLocationType = 'nationwide' | 'region' | 'online' | 'international' | 'custom';
+
+export interface CampaignLocation {
+  type:   CampaignLocationType;
+  label:  string;
+  city?:  string;
+}
+
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
@@ -587,6 +606,15 @@ export interface CampaignLayout {
   // is untouched by this mechanism.
   campaignStyleId?:   CampaignStyleId;
   styleOverrides?:    Partial<Record<StyleColorField, string>>;
+  // Campaign Location (2026-09-29) — campaign DATA, not Hero styling, and
+  // deliberately NOT inferred from the entity's own registered city/address
+  // (entities.city/address in the backend) — a campaign can be nationwide
+  // even though the nonprofit's office sits in one city. Absent = no
+  // location chip rendered at all, no default/inferred value. Lives here for
+  // the same no-migration reason as campaignStyleId/preset/templateId above
+  // — just another optional key inside the already-passthrough `layout`
+  // JSON blob.
+  campaignLocation?:  CampaignLocation;
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -1654,6 +1682,14 @@ export class CampaignStudioStateService {
   }
   setProjectDescriptionPosition(pos: 'above' | 'hero' | 'below' | 'hidden'): void {
     this.patch({ layout: { ...this.draft.layout, projectDescriptionPosition: pos } });
+  }
+
+  setCampaignLocation(location: CampaignLocation): void {
+    this.patch({ layout: { ...this.draft.layout, campaignLocation: location } });
+  }
+
+  clearCampaignLocation(): void {
+    this.patch({ layout: { ...this.draft.layout, campaignLocation: undefined } });
   }
 }
 

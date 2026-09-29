@@ -7,6 +7,7 @@ import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/colo
 import { LogoAppearanceEditorComponent } from '../../../../../shared/ui/logo-appearance-editor/logo-appearance-editor.component';
 import {
   CampaignStudioStateService, HeroType, CampaignDraft, RichTextBlockData, ContainerBlockData, CampaignTheme,
+  CampaignLocation, CampaignLocationType,
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService } from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
@@ -120,6 +121,55 @@ export class CampaignBasicStepComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   closeCategoryOnEscape(): void { this.categoryDropdownOpen = false; }
+
+  // ── Campaign Location (2026-09-29) — optional campaign metadata, NOT
+  // Entity address. 'nationwide'/'online'/'international' get a fixed
+  // canned label the manager never types; 'region'/'custom' need a short
+  // typed label (no city dataset exists to autocomplete against — see
+  // CampaignLocation's own doc comment). ──
+  readonly LOCATION_TYPES: { type: CampaignLocationType; label: string }[] = [
+    { type: 'nationwide',     label: 'כל הארץ' },
+    { type: 'region',         label: 'עיר / אזור בישראל' },
+    { type: 'online',         label: 'אונליין' },
+    { type: 'international',  label: 'פעילות בינלאומית' },
+    { type: 'custom',         label: 'מיקום מותאם אישית' },
+  ];
+
+  private static readonly CANNED_LABEL: Partial<Record<CampaignLocationType, string>> = {
+    nationwide: 'כל הארץ',
+    online: 'אונליין',
+    international: 'פעילות בינלאומית',
+  };
+
+  get campaignLocation(): CampaignLocation | undefined {
+    return this.draft.layout.campaignLocation;
+  }
+
+  setLocationType(type: CampaignLocationType): void {
+    const canned = CampaignBasicStepComponent.CANNED_LABEL[type];
+    if (canned) {
+      this.state.setCampaignLocation({ type, label: canned });
+    } else {
+      // region/custom — keep whatever text was already typed if the
+      // manager is just switching between the two free-text types.
+      const existing = this.campaignLocation;
+      this.state.setCampaignLocation({ type, label: existing?.label ?? '', city: existing?.city });
+    }
+  }
+
+  setLocationLabel(value: string): void {
+    const current = this.campaignLocation;
+    if (!current) return;
+    this.state.setCampaignLocation({
+      ...current,
+      label: value,
+      ...(current.type === 'region' ? { city: value } : {}),
+    });
+  }
+
+  clearLocation(): void {
+    this.state.clearCampaignLocation();
+  }
 
   slugTimeout: any;
   isCheckingSlug = false;

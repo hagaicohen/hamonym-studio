@@ -168,6 +168,29 @@
     </div>
   </div>
 
+  <!-- ── CAMPAIGN LOCATION (optional, 2026-09-29) — campaign metadata, not
+       Entity address; a campaign can be nationwide even if the nonprofit's
+       office sits in one city. ── -->
+  <div class="field-section">
+    <label class="field-label">מיקום הקמפיין</label>
+    <p class="field-hint">איפה מתקיים הקמפיין / למי הוא מיועד? (רשות)</p>
+    <div class="media-toggle location-type-row">
+      <button type="button" *ngFor="let opt of LOCATION_TYPES"
+        class="media-toggle-btn" [class.active]="campaignLocation?.type === opt.type"
+        (click)="setLocationType(opt.type)">
+        {{ opt.label }}
+      </button>
+    </div>
+    <input *ngIf="campaignLocation?.type === 'region' || campaignLocation?.type === 'custom'"
+      class="field-input" type="text" maxlength="40"
+      [value]="campaignLocation?.label || ''"
+      (input)="setLocationLabel($any($event.target).value)"
+      [placeholder]="campaignLocation?.type === 'region' ? 'לדוגמה: בית שמש והסביבה' : 'לדוגמה: יישובי עוטף עזה'">
+    <button *ngIf="campaignLocation" type="button" class="location-clear-btn" (click)="clearLocation()">
+      ✕ ללא מיקום
+    </button>
+  </div>
+
   <!-- ── MANAGER NAME ── -->
   <div class="field-section">
     <label class="field-label">מנהל הקמפיין</label>

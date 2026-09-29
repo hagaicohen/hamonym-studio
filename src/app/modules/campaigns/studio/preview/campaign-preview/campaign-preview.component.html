@@ -314,6 +314,15 @@
           </svg>
           {{ categoryLabel(draft.category) || 'קטגוריה' }}
         </span>
+        <!-- Campaign Location (2026-09-29, optional) -- campaign metadata,
+             not Entity address. Absent = renders nothing, no empty chip. -->
+        <span class="hm-meta-badge" *ngIf="draft.layout.campaignLocation as loc">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          {{ loc.label }}
+        </span>
         <span class="hm-meta-badge">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

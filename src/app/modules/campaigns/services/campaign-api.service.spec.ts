@@ -68,3 +68,44 @@ describe('CampaignApiService — Offering / Registration Options round trip', ()
     expect(result.registrationOptions[0].price).toBe(50);
   });
 });
+
+// Campaign Location (2026-09-29) — lives inside the opaque `layout` JSONB
+// passthrough (see CampaignLayout.campaignLocation's own doc comment), same
+// as campaignStyleId/preset/templateId — no dedicated backend column, no
+// migration. These tests exist specifically to prove an existing campaign
+// row with no campaignLocation at all comes back with the field genuinely
+// absent, not an invented/default value.
+describe('CampaignApiService — Campaign Location backward compatibility', () => {
+  let api: CampaignApiService;
+  let httpMock: HttpTestingController;
+  const apiUrl = `${environment.apiUrl}/api/campaigns`;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
+    api = TestBed.inject(CampaignApiService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('an existing campaign whose layout has no campaignLocation loads with the field genuinely undefined', () => {
+    let result: any;
+    api.getById('old-campaign').subscribe(r => (result = r));
+
+    const req = httpMock.expectOne(`${apiUrl}/old-campaign`);
+    req.flush({ id: 'old-campaign', rewards: [], registration_options: [], layout: { theme: {} } });
+
+    expect(result.layout.campaignLocation).toBeUndefined();
+  });
+
+  it('a campaign with a persisted campaignLocation loads it back unchanged', () => {
+    let result: any;
+    const location = { type: 'region', label: 'תל אביב, ישראל', city: 'תל אביב' };
+    api.getById('c2').subscribe(r => (result = r));
+
+    const req = httpMock.expectOne(`${apiUrl}/c2`);
+    req.flush({ id: 'c2', rewards: [], registration_options: [], layout: { theme: {}, campaignLocation: location } });
+
+    expect(result.layout.campaignLocation).toEqual(location);
+  });
+});

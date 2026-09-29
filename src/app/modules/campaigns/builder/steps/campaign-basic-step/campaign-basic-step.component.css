@@ -78,6 +78,14 @@
   line-height: 1;
 }
 .media-toggle-btn.active { border-color: #7c3aed; background: #faf5ff; color: #7c3aed; }
+.location-type-row { flex-wrap: wrap; }
+.location-clear-btn {
+  align-self: flex-start;
+  border: none; background: transparent;
+  color: #94a3b8; font-size: 12px; font-weight: 600;
+  cursor: pointer; padding: 2px 0;
+}
+.location-clear-btn:hover { color: #ef4444; }
 .toggle-icon {
   flex-shrink: 0;
   display: inline-flex;
