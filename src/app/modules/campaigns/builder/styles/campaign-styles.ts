@@ -7,7 +7,9 @@ import type { CampaignTheme } from '../../services/campaign-studio-state.service
 // outside layout.campaignStyleId/layout.styleOverrides/the 4 fields below
 // inside layout.theme. See docs/DECISIONS.md for the full architecture
 // writeup.
-export type CampaignStyleId = 'classic' | 'clean' | 'bold' | 'editorial' | 'warm';
+export type CampaignStyleId =
+  | 'classic' | 'clean' | 'bold' | 'editorial' | 'warm'
+  | 'vibrant' | 'nature' | 'midnight';
 
 // Only these 4 CampaignTheme fields are Style-managed. Every other theme
 // field (logoBg, rewardsBg, topStripBg, etc.) is untouched by Style/
@@ -96,6 +98,30 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       secondary: { hueShift: -20, satMul: 0.65, lightAdd: -0.15 },
       accent:    { hueShift: 30,  satMul: 0.80, lightAdd: 0.05 },
       bodyText:  { satMul: 0.18, light: 0.18 },
+    },
+  },
+  {
+    id: 'vibrant', label: 'Vibrant', defaultPrimary: '#db2777',
+    recipe: {
+      secondary: { hueShift: 40,  satMul: 0.90, lightAdd: -0.05 },
+      accent:    { hueShift: 180, satMul: 1.00, lightAdd: 0.05 }, // true complementary — deliberately high-energy contrast
+      bodyText:  { satMul: 0.10, light: 0.15 },
+    },
+  },
+  {
+    id: 'nature', label: 'Nature', defaultPrimary: '#15803d',
+    recipe: {
+      secondary: { hueShift: -15, satMul: 0.55, lightAdd: -0.20 },
+      accent:    { hueShift: 40,  satMul: 0.75, lightAdd: 0.10 },
+      bodyText:  { satMul: 0.12, light: 0.18 },
+    },
+  },
+  {
+    id: 'midnight', label: 'Midnight', defaultPrimary: '#1e3a8a',
+    recipe: {
+      secondary: { hueShift: 0,   satMul: 0.70, lightAdd: -0.18 },
+      accent:    { hueShift: 170, satMul: 0.85, lightAdd: 0.15 }, // warm pop against a deliberately dark, near-neutral secondary
+      bodyText:  { satMul: 0.08, light: 0.10 },
     },
   },
 ];
