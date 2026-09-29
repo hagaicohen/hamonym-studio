@@ -7,6 +7,8 @@ import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-brows
 import { LucideAngularModule, GripVertical, Mail, Facebook } from 'lucide-angular';
 import { TextStyle } from '../../../../../shared/models/text-style.model';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
+import { AccountNavService } from '../../../../../core/services/account-nav.service';
+import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
 import { StudioUiService } from '../../services/studio-ui.service';
@@ -124,6 +126,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private autoOpenJoinTriggered = false;
   private ambassadorSvc = inject(AmbassadorService);
   private router        = inject(Router);
+  private accountNav    = inject(AccountNavService);
 
   // ── Ambassador leaderboard state ──
   ambSearch   = '';
@@ -313,8 +316,15 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
 
-  entityLogoUrl: string | null = null;
-  entityName = '';
+  // Fallback ONLY — the entity currently ACTIVE in the topbar switcher, for
+  // a brand-new/not-yet-saved draft that has no campaign row yet to join an
+  // entity against. For any real (already-persisted) campaign, prefer
+  // draft.entityLogo/draft.entityName instead (see resolvedEntityLogo()/
+  // resolvedEntityName() below) — using these fields directly used to leak
+  // whatever entity happens to be globally "current" for the logged-in
+  // manager into a DIFFERENT campaign's Checkout/Hero/footer (2026-09-28).
+  private fallbackEntityLogoUrl: string | null = null;
+  private fallbackEntityName = '';
   navOpen = false;
   // Reactive now (was a static `true`, i.e. always shown from page load
   // regardless of scroll — the in-page donate CTA and this bar could both
@@ -397,19 +407,43 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   constructor() {
     const entity = this.entityService.currentEntity();
     if (entity?.id) {
-      this.entityName = entity.display_name || entity.legal_name || entity.name || '';
+      this.fallbackEntityName = entity.display_name || entity.legal_name || entity.name || '';
       this.entitiesService.getEntityById(entity.id).subscribe({
         next: (res: any) => {
           const raw = res?.logo_url ?? null;
           if (raw) {
-            this.entityLogoUrl = (raw.startsWith('http') || raw.startsWith('data:image'))
+            this.fallbackEntityLogoUrl = (raw.startsWith('http') || raw.startsWith('data:image'))
               ? raw : `${environment.apiUrl}${raw}`;
           }
-          if (!this.entityName)
-            this.entityName = res?.display_name || res?.legal_name || res?.name || '';
+          if (!this.fallbackEntityName)
+            this.fallbackEntityName = res?.display_name || res?.legal_name || res?.name || '';
         },
       });
     }
+  }
+
+  // Campaign's own logo/entity, not whatever entity happens to be globally
+  // "current" — see resolveCampaignLogo()'s own doc comment. The
+  // fallbackEntityLogoUrl/fallbackEntityName fallback is gated on !draft.id
+  // (2026-09-29, tightened after review) rather than on resolveCampaignLogo()
+  // returning falsy — an existing/persisted campaign (real draft.id, always
+  // true on the public page and owner preview, which only ever render an
+  // already-loaded campaign) can legitimately have no logo at all when its
+  // owning entity never uploaded one; that must render as no-logo, not
+  // silently borrow whatever entity happens to be active in the manager's
+  // topbar. draft.id is undefined ONLY for a brand-new Studio draft that
+  // has never been saved (createInitialDraft() never sets it) — the one
+  // case where there is no persisted campaign/entity to resolve against yet
+  // and this fallback is the correct, editor-only convenience.
+  resolvedEntityLogo(draft: CampaignDraft): string | null {
+    const logo = resolveCampaignLogo(draft);
+    if (logo) return logo;
+    return draft.id ? null : this.fallbackEntityLogoUrl;
+  }
+
+  resolvedEntityName(draft: CampaignDraft): string {
+    if (draft.entityName) return draft.entityName;
+    return draft.id ? '' : this.fallbackEntityName;
   }
 
   ngOnInit(): void {
@@ -1252,11 +1286,11 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     this.scrollToDonation();
   }
 
+  // Shared with PlatformTopStripComponent's own desktop account link
+  // (2026-09-28) via AccountNavService — kept here too since the mobile nav
+  // drawer below still needs the identical behavior.
   goToAccount(): void {
-    // A logged-in visitor here is always a donor viewing a public campaign
-    // page (entity managers/admins don't browse it while authenticated as
-    // themselves) — send them straight to their donation history.
-    this.router.navigate([localStorage.getItem('token') ? '/my-donations' : '/login']);
+    this.accountNav.goToAccount();
   }
 
   // A suggested/default amount is never financial consent (2026-09-21) — this
@@ -1311,8 +1345,26 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     el.scrollBy({ left: dir === 'prev' ? cardWidth : -cardWidth, behavior: 'smooth' });
   }
 
+  // Misleadingly named (pre-existing) — actually reads theme.secondaryColor,
+  // used ~60 places across the page as the general accent/heading color
+  // (section titles, stat numbers, ambassador/donor UI, progress bars,
+  // tab/accordion accents). Matches the Builder's own "משני / כותרות" label
+  // for that field, so those usages are correct as-is — left unchanged
+  // (2026-09-28 audit) since renaming/redirecting it would re-theme nearly
+  // every existing campaign's page unexpectedly. See themePrimaryColor()
+  // below for the actual theme.primaryColor ("ראשי" / primary CTA color).
   primaryColor(draft: CampaignDraft): string {
     return draft.layout?.theme?.secondaryColor || '#6fc9eb';
+  }
+
+  // The TRUE theme.primaryColor ("ראשי" in the Builder's color panel,
+  // campaign-page-builder-step.component.html) — for primary-action CTAs
+  // specifically (2026-09-28, campaign header consolidation). Always seeded
+  // ('#333333') by createInitialDraft()/createInitialPartnerDraft(), so
+  // every real campaign already has a value; the fallback here only matches
+  // that same seed default, not a new invented color.
+  themePrimaryColor(draft: CampaignDraft): string {
+    return draft.layout?.theme?.primaryColor || '#333333';
   }
 
   // Heading style for .section-heading (rich-text/video/gallery's own

@@ -72,45 +72,24 @@
   background: #ffffff;
 }
 
-/* ══ SITE HEADER ══ */
-.site-header {
-  height: 56px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.site-logo-img {
-  height: 32px;
-  width: auto;
-  display: block;
-}
-.site-login-btn {
-  position: absolute;
-  left: 16px;                      /* physical LEFT in RTL */
-  padding: 6px 14px;
-  min-width: 150px;
-  text-align: center;
-  border: 1.5px solid currentColor;
-  border-radius: 20px;
-  background: transparent;
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; font-family: inherit;
-  transition: color 0.15s, border-color 0.15s;
-}
-.site-login-btn:hover { color: #cc350f !important; border-color: #cc350f !important; }
-
-/* ══ CAMPAIGN NAV ══ */
+/* ══ CAMPAIGN NAV ══ — the <nav> itself stays full width for its
+   background/border; only .campaign-nav-inner (below) is constrained to
+   the campaign content container, so nav-links/nav-actions read as one
+   unit aligned with the Hero/content column, not spread to the browser
+   edges. */
 .campaign-nav {
   height: 48px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
+}
+.campaign-nav-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  gap: 24px;
 }
 .nav-donate-btn {
   padding: 8px 18px;
@@ -121,11 +100,22 @@
   font-size: 13px; font-weight: 700;
   cursor: pointer; font-family: inherit;
   white-space: nowrap;
-  order: 2;                        /* push to physical left in RTL flex */
 }
 .nav-links {
   display: flex; gap: 20px;
   order: 1;
+}
+/* Ambassador join (secondary) + donate (primary), grouped as one flex item
+   so the whole cluster lands on the correct RTL edge via a single `order`.
+   DOM order inside (ambassador, donate) puts donate at the cluster's own
+   outer/left edge — the most prominent position. Account access moved to
+   PlatformTopStripComponent (2026-09-28) — it's a platform action, not a
+   campaign one, so it no longer lives in this cluster. */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  order: 2;                        /* push cluster to physical left in RTL flex */
 }
 .nav-link {
   font-size: 13px; font-weight: 600;
@@ -143,10 +133,6 @@
 .nav-mobile  { display: none; }
 
 /* ── MOBILE NAV ── */
-.campaign-nav--mobile {
-  justify-content: space-between;
-  padding: 0 16px;
-}
 .campaign-nav--mobile .nav-desktop { display: none; }
 .campaign-nav--mobile .nav-mobile  { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: space-between; }
 
@@ -609,6 +595,18 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+/* Shape/size (2026-09-28) — sm/md/lg are proportional steps around this
+   element's own previous fixed 128px ("md"), same shape/size vocabulary as
+   LogoAppearanceEditorComponent everywhere it's used. */
+.hm-hero-org-logo--square { border-radius: 18px; }
+.hm-hero-org-logo--none {
+  border-radius: 0;
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
+}
+.hm-hero-org-logo--sm { width: 96px; height: 96px; }
+.hm-hero-org-logo--lg { width: 160px; height: 160px; }
 /* ── Logo above-hero strip — background lives on a circular badge around
    the logo, never a full-width bar, same visual language as the
    Hero-overlay circle (.hm-hero-org-logo) below. ── */
@@ -637,6 +635,17 @@
   object-position: center;
   display: block;
 }
+/* Shape/size (2026-09-28) — same vocabulary/proportions as
+   .hm-hero-org-logo above, scaled around this badge's own previous fixed
+   112px ("md"). */
+.hm-logo-above-badge--square { border-radius: 18px; }
+.hm-logo-above-badge--none {
+  border-radius: 0;
+  background: transparent !important;
+  border: none;
+}
+.hm-logo-above-badge--sm { width: 84px; height: 84px; }
+.hm-logo-above-badge--lg { width: 140px; height: 140px; }
 .hero-logo-emoji { font-size: 52px; }
 
 /* ══ SUPPORT ROW — floats over hero bottom ══ */
@@ -1530,13 +1539,6 @@
 .block-accordion--boxed .accordion-panel-header { padding: 12px 0; color: #334155; }
 .block-accordion--boxed .accordion-panel-header.open { color: var(--accordion-accent); }
 .block-accordion--boxed .accordion-panel-body { padding-bottom: 12px; }
-
-/* Mobile: site header — logo right side */
-.campaign-page--mobile .site-header {
-  justify-content: flex-start;
-  padding: 0 16px;
-}
-.campaign-page--mobile .site-login-btn { min-width: 120px; }
 
 /* Mobile: stats + donate cards — compact */
 .campaign-page--mobile .hm-stats,
@@ -3366,12 +3368,8 @@
 @media (max-width: 768px) {
 
   /* NAV */
-  .campaign-nav { justify-content: space-between; padding: 0 16px; }
   .nav-desktop { display: none; }
   .nav-mobile  { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: space-between; }
-
-  /* SITE HEADER */
-  .site-header { justify-content: flex-start; padding: 0 16px; }
 
   /* HERO */
   .hm-hero { min-height: 480px; }

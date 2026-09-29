@@ -49,63 +49,83 @@
 
   <ng-container *ngIf="!isEmpty(draft)">
 
-    <!-- ══ HAMONYM SITE HEADER ══ -->
+    <!-- ══ CAMPAIGN HEADER ══ — the Hamonym Platform Top Strip (mounted
+         above this component, see PlatformTopStripComponent) is the ONLY
+         place the Hamonym brand/logo appears now; this row is purely the
+         campaign's own functional nav+actions, no duplicate branding
+         (2026-09-28 consolidation — previously a separate 56px
+         `.site-header` row duplicated the Hamonym logo here too).
+         Campaign-only: on a Partner/Campaign Participation page this row
+         only ever has room for "אודות" (donate/ambassador buttons never
+         apply — see SECTION_REGISTRY), so a whole dedicated strip for one
+         link is pointless clutter on what's meant to be a short,
+         single-scroll page. -->
     <div class="hm-sticky-header">
-      <div class="site-header">
-        <img src="logo-hamonym.svg" class="site-logo-img" alt="המונים">
-        <button class="site-login-btn"
-          [style.color]="primaryColor(draft)"
-          [style.borderColor]="primaryColor(draft)"
-          (click)="goToAccount()">
-          כניסה / אזור אישי
-        </button>
-      </div>
-
-      <!-- ══ CAMPAIGN NAV ══ — campaign-only. On a Partner/Campaign
-           Participation page this row only ever has room for "אודות"
-           (donate/ambassador buttons never apply — see SECTION_REGISTRY),
-           so a whole dedicated strip for one link is pointless clutter on
-           what's meant to be a short, single-scroll page. -->
       <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile">
+        <!-- Inner content is constrained to the SAME container the campaign
+             content below (Hero/sidebar) already uses (.page-content-outer,
+             max-width:1200px) — 2026-09-28, so the header reads as one
+             coherent unit aligned with the campaign column instead of
+             spreading its two groups to the physical browser edges. The
+             <nav> background/border stay full width; only the content is
+             constrained. -->
+        <div class="campaign-nav-inner page-content-outer">
 
-        <!-- Desktop: links + donate -->
-        <ng-container *ngIf="!vm.mobile">
-          <div class="nav-links">
-            <a class="nav-link" *ngFor="let item of navItems(draft)"
-              [style.color]="primaryColor(draft)"
-              (click)="scrollTo(item.sectionId)">
-              {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
-            </a>
-          </div>
-          <button class="nav-amb-join-btn"
-                  *ngIf="hasAmbassadorsSection(draft)"
-                  [style.color]="primaryColor(draft)"
-                  [style.borderColor]="primaryColor(draft)"
-                  (click)="openJoinModal()">
-            <span>🚀 הצטרפו כשגרירים</span>
-          </button>
-          <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
-            לתמיכה מאובטחת
-          </button>
-        </ng-container>
+          <!-- Desktop: nav links (right) + actions cluster (left) —
+               ambassador join (secondary, outline) -> donate (primary,
+               filled). Account access lives in PlatformTopStripComponent
+               above, not here — it's a platform action, not a campaign
+               one. -->
+          <ng-container *ngIf="!vm.mobile">
+            <div class="nav-links">
+              <a class="nav-link" *ngFor="let item of navItems(draft)"
+                [style.color]="primaryColor(draft)"
+                (click)="scrollTo(item.sectionId)">
+                {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
+              </a>
+            </div>
+            <div class="nav-actions">
+              <!-- Both CTAs use the TRUE theme.primaryColor ("ראשי" in the
+                   Builder) now, not the page's general accent color
+                   (2026-09-28) — filled vs outline keeps Donate visually
+                   primary and Ambassador visually secondary despite sharing
+                   a color family. -->
+              <button class="nav-amb-join-btn"
+                      *ngIf="hasAmbassadorsSection(draft)"
+                      [style.color]="themePrimaryColor(draft)"
+                      [style.borderColor]="themePrimaryColor(draft)"
+                      (click)="openJoinModal()">
+                <span>🚀 הצטרפו כשגרירים</span>
+              </button>
+              <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
+                תרמו עכשיו
+              </button>
+            </div>
+          </ng-container>
 
-        <!-- Mobile: donate + hamburger -->
-        <ng-container *ngIf="vm.mobile">
-          <button class="nav-donate-btn nav-donate-btn--sm" *ngIf="hasDonationWidget(draft)" [style.background]="primaryColor(draft)" (click)="scrollToDonation()">
-            לתמיכה מאובטחת
-          </button>
-          <button class="nav-hamburger" (click)="navOpen = !navOpen"
-            [class.nav-hamburger--open]="navOpen">
-            <span></span><span></span><span></span>
-          </button>
-        </ng-container>
+          <!-- Mobile: primary donate + hamburger only — account/ambassador/
+               nav links all live in the drawer below, not as a permanent
+               second header row. -->
+          <ng-container *ngIf="vm.mobile">
+            <button class="nav-donate-btn nav-donate-btn--sm" *ngIf="hasDonationWidget(draft)" [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
+              תרמו עכשיו
+            </button>
+            <button class="nav-hamburger" (click)="navOpen = !navOpen"
+              [class.nav-hamburger--open]="navOpen">
+              <span></span><span></span><span></span>
+            </button>
+          </ng-container>
 
+        </div>
       </nav>
 
       <!-- Mobile nav drawer -->
       <div class="nav-mobile-drawer" *ngIf="isCampaign(draft) && vm.mobile && navOpen">
         <a class="nav-drawer-link" *ngFor="let item of navItems(draft)"
           [style.color]="primaryColor(draft)" (click)="scrollTo(item.sectionId); navOpen=false">{{ item.label }}</a>
+        <a class="nav-drawer-link" *ngIf="hasAmbassadorsSection(draft)"
+          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false">🚀 הצטרפו כשגרירים</a>
+        <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="goToAccount(); navOpen=false">כניסה / אזור אישי</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
       </div>
 
@@ -179,11 +199,15 @@
     <ng-template #logoAboveStripTpl>
       <div class="hm-logo-above-strip"
            *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition === 'above'">
-        <div class="hm-logo-above-badge">
-          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
+        <div class="hm-logo-above-badge"
+          [class.hm-logo-above-badge--square]="draft.heroLogoShape === 'square'"
+          [class.hm-logo-above-badge--none]="draft.heroLogoShape === 'none'"
+          [class.hm-logo-above-badge--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
+          [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'">
+          <img *ngIf="resolvedEntityLogo(draft)"
                class="hm-logo-above-img"
-               [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
+               [src]="resolvedEntityLogo(draft)" alt="">
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
         </div>
       </div>
     </ng-template>
@@ -253,12 +277,20 @@
           </div>
         </div>
 
-        <!-- Logo overlaid on hero (left or center) -->
+        <!-- Logo overlaid on hero (left or center) — shape/size (2026-09-28,
+             LogoAppearanceEditorComponent) default to circle/md, matching
+             this element's own previous hardcoded look exactly, so existing
+             campaigns without heroLogoShape/heroLogoSize set render
+             unchanged. -->
         <div class="hm-hero-org-logo"
              *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition !== 'above'"
-             [class.hm-hero-org-logo--center]="draft.heroLogoPosition === 'center'">
-          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hero-logo-emoji">🏢</span>
+             [class.hm-hero-org-logo--center]="draft.heroLogoPosition === 'center'"
+             [class.hm-hero-org-logo--square]="draft.heroLogoShape === 'square'"
+             [class.hm-hero-org-logo--none]="draft.heroLogoShape === 'none'"
+             [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
+             [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'">
+          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="">
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
         </div>
 
       </div>
@@ -512,8 +544,8 @@
       <!-- Brand -->
       <div class="hm-footer-brand">
         <div class="hm-footer-logo" *ngIf="isCampaign(draft)">
-          <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-          <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="hm-footer-logo-name">{{ entityName || 'לוגו עמותה' }}</span>
+          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="">
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hm-footer-logo-name">{{ resolvedEntityName(draft) || 'לוגו עמותה' }}</span>
         </div>
         <p>{{ draft.shortDescription || (isCampaign(draft) ? 'תיאור קצר של הקמפיין יופיע כאן.' : '') }}</p>
         <div class="hm-footer-social">
@@ -561,7 +593,7 @@
              source, a live GuideStar lookup, exists only inside the internal
              approval-agent tooling and isn't persisted or exposed here).
              Restore per-campaign once that becomes a real, stored field. -->
-        <p>© {{ currentYear }} {{ (isCampaign(draft) ? entityName : draft.title) || 'המונים' }} — כל הזכויות שמורות.</p>
+        <p>© {{ currentYear }} {{ (isCampaign(draft) ? resolvedEntityName(draft) : draft.title) || 'המונים' }} — כל הזכויות שמורות.</p>
       </div>
 
     </footer>
@@ -733,8 +765,8 @@
   [initialAmount]="explicitAmount"
   [initialFrequency]="donationFrequency"
   [cartOfferings]="cartOfferingList(draft)"
-  [entityLogoUrl]="entityLogoUrl"
-  [entityName]="entityName"
+  [entityLogoUrl]="resolvedEntityLogo(draft)"
+  [entityName]="resolvedEntityName(draft)"
   [ambassador]="ambassador"
   (closed)="closeCheckout()">
 </app-checkout-v2>
@@ -747,8 +779,8 @@
   [checkoutMode]="checkoutMode"
   [recurring]="donationFrequency === 'monthly'"
   [pendingRegistration]="pendingRegistration"
-  [entityLogoUrl]="entityLogoUrl"
-  [entityName]="entityName"
+  [entityLogoUrl]="resolvedEntityLogo(draft)"
+  [entityName]="resolvedEntityName(draft)"
   [ambassador]="ambassador"
   (closed)="closeCheckout()"
   (participantsSaved)="onParticipantsSaved($event)"
