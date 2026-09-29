@@ -1124,9 +1124,9 @@
          5 ever rendered). .hm-amounts is an auto-fill grid, so a 6th button
          wraps/fits safely at any width. -->
     <div class="hm-amounts">
-      <button *ngFor="let a of amountsFor(draft) | slice:0:6; let i = index"
+      <button *ngFor="let a of amountsFor(draft) | slice:0:6"
         class="hm-amount-preset" type="button"
-        [class.is-selected]="selectedAmount === a && customAmount === null || (selectedAmount === null && customAmount === null && i === middleAmountIndex(amountsFor(draft)))"
+        [class.is-selected]="isAmountSelected($any(a))"
         (click)="selectAmount($any(a))">
         ₪{{ $any(a).toLocaleString('he-IL') }}
       </button>
