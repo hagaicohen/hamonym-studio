@@ -8,6 +8,7 @@ import { CheckoutV2Component } from '../checkout-v2/checkout-v2.component';
 import { CHECKOUT_V2_ENABLED } from '../../config/checkout-v2.config';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { Ambassador } from '../../../services/ambassador.service';
+import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 
 // layout.pageFormat === 'minimal' — a single-purpose donation page (logo,
 // short text, amount picker, CTA) for campaigns that don't need the full
@@ -150,7 +151,7 @@ export class MinimalDonationPageComponent implements OnInit, AfterViewInit, OnDe
   }
 
   logoUrl(draft: CampaignDraft): string | null {
-    return draft.campaignLogoUrl || draft.entityLogo || null;
+    return resolveCampaignLogo(draft);
   }
 
   amountsFor(draft: CampaignDraft): number[] {

@@ -803,3 +803,13 @@ Backend: migration `033_partner_draft.sql` — `entities.blocks`/`entities.layou
 **חריג אחד, מכוון ולא באג:** זרימת **הרשמה לאירוע** (`checkoutMode==='registration'`/`pendingRegistration`) בתוך `CampaignPreviewComponent` נשארת על `CheckoutModalComponent` הישן — מתועד כבר בהערת הכותרת של `checkout-v2.component.ts` כ-out of scope מכוון (Checkout V2 נבנה לתרומות, לא להרשמות). המודל הישן נשאר קיים בקוד גם כ-fallback רדום אם `CHECKOUT_V2_ENABLED` יכבה אי-פעם.
 
 **נושא פתוח שעלה מה-audit, לא טופל בסבב הזה:** ל-Preview של הבעלים בתוך ה-Studio (`[embedded]="true"`) אין שום gate/mock המונע תשלום אמיתי אם יש ל-draft `id` שמור — לחיצה על "תרום" בפריוויו עוברת את אותה שרשרת CardCom/OpenFields/webhook כמו תורם אמיתי. סיכון תפעולי (חיוב בטעות תוך כדי עריכה), לא קשור לשאלת האיחוד עצמה — נשאר ל-backlog.
+
+---
+
+**2026-09-29**
+
+**Decision:** עמוד קמפיין ציבורי/קמפיין שנשמר לעולם לא שואב זהות או מיתוג מ-`CurrentEntityService`. סדר הפתרון היחיד למיתוג קמפיין קיים: (1) override ספציפי לקמפיין ← (2) נתוני הישות הבעלים שנטענו יחד עם אותו קמפיין ← (3) מצב ניטרלי/ללא לוגו. לעולם לא (4) הישות שנבחרת כרגע בממשק הניהול.
+
+**Reason:** `CurrentEntityService` מייצג את הישות שנבחרה כרגע בממשק הניהול המאומת (Studio/topbar switcher) — זה context אדמיניסטרטיבי, לא בעלות על קמפיין. נמצא באג אמיתי: `CampaignPreviewComponent` שאב `entityLogoUrl`/`entityName` מ-`CurrentEntityService.currentEntity()` פעם אחת ב-constructor, בלי תלות בקמפיין המוצג בפועל — מנהל שדפדף בין קמפיינים של ישויות שונות בזמן שהטופבר שלו הצביע על ישות אחרת ראה את המיתוג של הישות הלא-נכונה דולף ל-Checkout/Hero/footer. הפתרון: resolver משותף (`resolveCampaignLogo()`) שקורא אך ורק משדות `draft.campaignLogoUrl`/`draft.entityLogo` (נטענים מה-backend per-קמפיין). ה-fallback ל-`CurrentEntityService` מותר **רק** כש-`!draft.id` — כלומר draft חדש שמעולם לא נשמר (`createInitialDraft()` לא קובע `id` בכלל), המקרה היחיד שבו אין עדיין קמפיין/ישות בעלים אמיתיים לפתור מולם. כל קמפיין טעון בפועל (עמוד ציבורי, owner preview, או עריכת קמפיין קיים ב-Studio) תמיד נושא `id` אמיתי, כך שה-fallback הזה פשוט לא נגיש משם — לא רק מוסכמה, אלא הבחנה מובנית בקוד.
+
+**חל גם מעבר ללוגו:** העיקרון תקף לכל מידע ציבורי-ספציפי-לקמפיין שבו שימוש בישות הנבחרת בממשק הניהול עלול לגרום לדליפה בין ישויות (שם, מיתוג, סליקה וכו') — לא רק לוגו.
