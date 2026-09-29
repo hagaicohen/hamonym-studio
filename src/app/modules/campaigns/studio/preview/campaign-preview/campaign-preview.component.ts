@@ -12,7 +12,7 @@ import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
 import { StudioUiService } from '../../services/studio-ui.service';
-import { resolveVisualTokens, CampaignStyleVisualTokens } from '../../../builder/styles/campaign-styles';
+import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposition, ConversionWidgetLayout } from '../../../builder/styles/campaign-styles';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 import {
   CampaignStudioStateService,
@@ -1384,6 +1384,38 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // zero visual change, same principle already proven for theme colors.
   visualTokens(draft: CampaignDraft): CampaignStyleVisualTokens | undefined {
     return resolveVisualTokens(draft.layout?.campaignStyleId);
+  }
+
+  // Phase 3B (2026-09-29) — render-time only, never writes back into
+  // draft.layout.conversionWidgetLayout. See resolveDonationComposition's
+  // own doc comment for the verified precedence proof.
+  effectiveDonationComposition(draft: CampaignDraft): ConversionWidgetLayout {
+    return resolveDonationComposition(
+      draft.layout?.conversionWidgetLayout as ConversionWidgetLayout | undefined,
+      draft.layout?.campaignStyleId,
+    );
+  }
+
+  // Semantic -> concrete CSS value maps, kept here (not in campaign-styles.ts)
+  // since these px/multiplier choices are a rendering decision, not part of
+  // the Style's own design-intent data. undefined (no style, or unknown
+  // semantic value) removes the inline style entirely, so each CSS
+  // consumer's own var(--hm-x, <legacy-literal>) fallback applies.
+  private static readonly CONTENT_WIDTH_PX: Record<string, string> = {
+    narrow: '720px', standard: '900px', wide: '1040px',
+  };
+  private static readonly SECTION_RHYTHM_SCALE: Record<string, number> = {
+    balanced: 1, airy: 1.6,
+  };
+
+  contentWidthPx(draft: CampaignDraft): string | undefined {
+    const width = this.visualTokens(draft)?.content?.width;
+    return width ? CampaignPreviewComponent.CONTENT_WIDTH_PX[width] : undefined;
+  }
+
+  sectionRhythmScale(draft: CampaignDraft): number | undefined {
+    const rhythm = this.visualTokens(draft)?.section?.rhythm;
+    return rhythm ? CampaignPreviewComponent.SECTION_RHYTHM_SCALE[rhythm] : undefined;
   }
 
   // Heading style for .section-heading (rich-text/video/gallery's own

@@ -61,6 +61,26 @@ export interface CampaignStyleVisualTokens {
     radius: string;
     shadow: string;
   };
+  // Phase 3B (2026-09-29) — layout PERSONALITY, not just token values. These
+  // describe design intent (semantic types); the renderer translates each
+  // into CSS variables/root modifier classes. See campaign-preview's own
+  // CSS for exactly what each value does structurally.
+  hero: {
+    composition: 'centered' | 'editorial' | 'split';
+  };
+  content: {
+    width: 'narrow' | 'standard' | 'wide';
+  };
+  section: {
+    rhythm: 'balanced' | 'airy';
+  };
+  donation: {
+    // Deliberately a SUBSET of ConversionWidgetLayout (below) — 'split-
+    // horizontal' is reachable only as an explicit user choice in the
+    // Builder, never as a Style default (see resolveDonationComposition's
+    // own doc comment for why).
+    composition: 'classic' | 'unified' | 'hero' | 'compact';
+  };
 }
 
 export interface CampaignStyleDefinition {
@@ -94,6 +114,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 800, headingScale: 1.00 },
       buttons: { radius: '10px', weight: 800, shadow: '0 2px 6px rgba(0,0,0,0.12)' },
       cards:   { radius: '10px', shadow: '0 1px 3px rgba(15,23,42,0.08)' },
+      hero:    { composition: 'centered' },
+      content: { width: 'standard' },
+      section: { rhythm: 'balanced' },
+      donation:{ composition: 'classic' },
     },
   },
   {
@@ -107,6 +131,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 0.95 },
       buttons: { radius: '20px', weight: 700, shadow: 'none' },
       cards:   { radius: '16px', shadow: 'none' },
+      hero:    { composition: 'centered' },
+      content: { width: 'wide' },
+      section: { rhythm: 'airy' },
+      donation:{ composition: 'unified' },
     },
   },
   {
@@ -120,6 +148,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.10 },
       buttons: { radius: '6px', weight: 900, shadow: '0 6px 16px rgba(0,0,0,0.25)' },
       cards:   { radius: '6px', shadow: '0 8px 20px rgba(0,0,0,0.18)' },
+      hero:    { composition: 'centered' },
+      content: { width: 'wide' },
+      section: { rhythm: 'balanced' },
+      donation:{ composition: 'hero' },
     },
   },
   {
@@ -137,6 +169,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 500, headingScale: 0.95 },
       buttons: { radius: '4px', weight: 700, shadow: 'none' },
       cards:   { radius: '4px', shadow: 'none' },
+      hero:    { composition: 'editorial' },
+      content: { width: 'narrow' },
+      section: { rhythm: 'airy' },
+      donation:{ composition: 'classic' },
     },
   },
   {
@@ -150,6 +186,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 1.00 },
       buttons: { radius: '18px', weight: 800, shadow: '0 4px 12px rgba(0,0,0,0.10)' },
       cards:   { radius: '14px', shadow: '0 2px 8px rgba(0,0,0,0.08)' },
+      hero:    { composition: 'centered' },
+      content: { width: 'standard' },
+      section: { rhythm: 'airy' },
+      donation:{ composition: 'unified' },
     },
   },
   {
@@ -163,6 +203,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.10 },
       buttons: { radius: '22px', weight: 800, shadow: '0 6px 18px rgba(0,0,0,0.20)' },
       cards:   { radius: '18px', shadow: '0 8px 22px rgba(0,0,0,0.16)' },
+      hero:    { composition: 'split' },
+      content: { width: 'wide' },
+      section: { rhythm: 'balanced' },
+      donation:{ composition: 'hero' },
     },
   },
   {
@@ -176,6 +220,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 700, headingScale: 1.00 },
       buttons: { radius: '14px', weight: 700, shadow: '0 2px 8px rgba(0,0,0,0.08)' },
       cards:   { radius: '16px', shadow: '0 2px 10px rgba(0,0,0,0.07)' },
+      hero:    { composition: 'centered' },
+      content: { width: 'standard' },
+      section: { rhythm: 'airy' },
+      donation:{ composition: 'unified' },
     },
   },
   {
@@ -189,6 +237,10 @@ export const CAMPAIGN_STYLES: CampaignStyleDefinition[] = [
       typography: { fontFamily: "'Heebo', sans-serif", headingWeight: 900, headingScale: 1.05 },
       buttons: { radius: '10px', weight: 800, shadow: '0 10px 24px rgba(0,0,0,0.35)' },
       cards:   { radius: '8px', shadow: '0 12px 28px rgba(0,0,0,0.30)' },
+      hero:    { composition: 'split' },
+      content: { width: 'standard' },
+      section: { rhythm: 'balanced' },
+      donation:{ composition: 'hero' },
     },
   },
 ];
@@ -304,4 +356,31 @@ export function resolveTheme(
 export function resolveVisualTokens(styleId: CampaignStyleId | undefined): CampaignStyleVisualTokens | undefined {
   if (!styleId) return undefined;
   return CAMPAIGN_STYLE_MAP[styleId]?.visual;
+}
+
+// Matches CampaignLayout.conversionWidgetLayout's own literal union exactly
+// (campaign-studio-state.service.ts) -- declared again here rather than
+// imported, so this file (already imported BY that service) never needs a
+// circular reference just for one type name.
+export type ConversionWidgetLayout = 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
+
+// Render-time resolution ONLY -- verified in the actual code before this was
+// approved (2026-09-29): conversionWidgetLayout is optional, no template or
+// createInitialDraft()/applyTemplate() ever populates it, and the ONLY way
+// it ever gets a concrete value (including the literal 'classic') is the
+// manager clicking one of the 5 buttons in campaign-page-builder-step,
+// which always calls setConversionWidgetLayout(...) with a real value. So:
+// explicit (any concrete value, 'classic' included) always wins permanently
+// -- this function must NEVER be used to write back into
+// draft.layout.conversionWidgetLayout, only to compute what CSS class to
+// apply for THIS render. 'split-horizontal' is deliberately not a Style
+// default (see CampaignStyleVisualTokens.donation's own comment) but still
+// wins normally when explicitly chosen, since it's just another concrete value.
+export function resolveDonationComposition(
+  explicit: ConversionWidgetLayout | undefined,
+  styleId: CampaignStyleId | undefined,
+): ConversionWidgetLayout {
+  if (explicit) return explicit;
+  const style = styleId ? CAMPAIGN_STYLE_MAP[styleId] : undefined;
+  return style?.visual.donation.composition ?? 'classic';
 }

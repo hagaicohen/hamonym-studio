@@ -3,6 +3,8 @@
 
 <div class="campaign-page"
   [class.campaign-page--mobile]="vm.mobile"
+  [class.campaign-page--hero-editorial]="visualTokens(draft)?.hero?.composition === 'editorial'"
+  [class.campaign-page--hero-split]="visualTokens(draft)?.hero?.composition === 'split'"
   [style]="'background:' + pageBackground(draft)"
   [style.--hm-primary]="draft.layout.theme.primaryColor"
   [style.--hm-secondary]="draft.layout.theme.secondaryColor"
@@ -27,6 +29,8 @@
   [style.--hm-btn-weight]="visualTokens(draft)?.buttons?.weight"
   [style.--hm-btn-shadow]="visualTokens(draft)?.buttons?.shadow"
   [style.--hm-card-radius]="visualTokens(draft)?.cards?.radius"
+  [style.--hm-content-width]="contentWidthPx(draft)"
+  [style.--hm-section-rhythm]="sectionRhythmScale(draft)"
   [style.--hm-card-shadow]="visualTokens(draft)?.cards?.shadow"
   [style.--hm-section-odd]="draft.layout.sectionBgOdd || '#ffffff'"
   [style.--hm-section-even]="draft.layout.sectionBgEven || '#f8fafc'"
@@ -1099,10 +1103,10 @@
        regardless of Registration Options, so a visitor can support the
        campaign financially without registering for the race. -->
   <div class="hm-donate" *ngIf="block.type === 'donation-widget'"
-    [class.conv-unified]="draft.layout.conversionWidgetLayout === 'unified'"
-    [class.conv-compact]="draft.layout.conversionWidgetLayout === 'compact'"
-    [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
-    [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'">
+    [class.conv-unified]="effectiveDonationComposition(draft) === 'unified'"
+    [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
+    [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
+    [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'">
     <!-- "תרמו סכום חופשי לקמפיין" only when a free/custom amount is actually
          allowed (allowCustomAmount) -- this used to key off registrationOptions
          alone, so with custom amount turned off it kept promising a "free
@@ -1235,10 +1239,10 @@
 
   <!-- STATS BLOCK -->
   <div class="hm-stats" *ngIf="block.type === 'stats'"
-    [class.conv-unified]="draft.layout.conversionWidgetLayout === 'unified'"
-    [class.conv-compact]="draft.layout.conversionWidgetLayout === 'compact'"
-    [class.conv-hero]="draft.layout.conversionWidgetLayout === 'hero'"
-    [class.conv-split]="draft.layout.conversionWidgetLayout === 'split-horizontal'"
+    [class.conv-unified]="effectiveDonationComposition(draft) === 'unified'"
+    [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
+    [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
+    [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'"
     [style.--stat-icon-color]="asStats(block.data).iconColor || accentColor(draft)"
     [style.--stat-icon-bg]="asStats(block.data).backgroundColor === '' ? 'transparent' : (asStats(block.data).backgroundColor || null)"
     [style.--stat-icon-border]="asStats(block.data).borderColor === '' ? 'transparent' : (asStats(block.data).borderColor || null)"

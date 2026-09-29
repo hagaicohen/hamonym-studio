@@ -361,6 +361,85 @@
   text-align: center;
   padding: 0 20px;
 }
+
+/* ══ Phase 3B — Editorial Hero composition (2026-09-29) ══
+   Same full-bleed image model as centered (today's default) -- only the
+   copy's alignment changes, plus a lighter scrim. Conservative on purpose
+   (readability over decorative difference, per product decision): still a
+   real gradient, just less dark, so long Hebrew titles over a bright photo
+   stay legible. text-align:start / align-items:flex-start is RTL-correct
+   automatically (start = right in this page's rtl context). Also drives
+   section titles for this Style only -- no separate section-title token. */
+.campaign-page--hero-editorial .hm-hero-bg-layer::after {
+  background: linear-gradient(180deg, rgba(6,27,58,0.22) 0%, rgba(6,27,58,0.62) 100%);
+}
+.campaign-page--hero-editorial .hm-hero-container {
+  justify-content: flex-start;
+}
+.campaign-page--hero-editorial .hm-hero-copy {
+  align-items: flex-start;
+  text-align: start;
+  max-width: 620px;
+}
+.campaign-page--hero-editorial.campaign-page--mobile .hm-hero-copy {
+  max-width: none; /* no room for a narrow column on a phone -- alignment stays, width constraint doesn't */
+}
+.campaign-page--hero-editorial .hm-section-title {
+  text-align: start;
+}
+
+/* ══ Phase 3B — Split Hero composition (2026-09-29, Vibrant + Midnight only) ══
+   The real structural change: image and copy become two separate regions
+   instead of image-behind-text. Uses the EXISTING Hero DOM as-is --
+   .hm-hero-bg-layer and .hm-hero-container are already direct siblings
+   inside .hm-hero (not nested), so making .hm-hero itself a 2-column grid
+   needs no markup change, just repositioning these two existing boxes.
+   Desktop only (min-width:769px) -- scoped by a real @media query, not
+   just the vm.mobile-driven class, as defense-in-depth after this session's
+   partner-public-page bug (a page whose device-sync silently broke); a
+   real query can never be fooled by that class being wrong. Below 769px
+   this rule block simply doesn't exist, so split renders IDENTICAL to
+   centered on mobile -- not "close to", literally the same, per the
+   approved "usability wins" instruction.
+
+   RTL note (verify visually -- the trickiest part of this phase): with
+   direction:rtl on the grid, column 1 sits at the RIGHT edge, and
+   auto-placement sorts by `order` before DOM position. .hm-hero-container
+   gets order:-1 (bg-layer stays at its default order:0), so the container
+   -- copy -- is placed into column 1 (right) and the image into column 2
+   (left), matching "copy on right, image on left" exactly as specified. */
+@media (min-width: 769px) {
+  .campaign-page--hero-split .hm-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    min-height: 480px;
+  }
+  .campaign-page--hero-split .hm-hero-bg-layer {
+    position: static;
+    inset: auto;
+  }
+  .campaign-page--hero-split .hm-hero-bg-layer::after {
+    display: none; /* the image is a standalone box now, not text's backdrop -- no scrim needed */
+  }
+  .campaign-page--hero-split .hm-hero-container {
+    order: -1;
+    position: relative;
+    display: flex;
+    width: auto;
+    padding: 56px 48px;
+    justify-content: flex-start;
+    /* Same neutral dark already used as .hm-hero's own no-image fallback
+       (`background: linear-gradient(155deg, #1e293b, #334155)` above) --
+       reused deliberately, not a new color, since the copy needs a solid,
+       legible surface once it's no longer overlaid on the photo. */
+    background: #1e293b;
+  }
+  .campaign-page--hero-split .hm-hero-copy {
+    align-items: flex-start;
+    text-align: start;
+  }
+}
 .hm-hero-container--mobile .hm-hero-copy { max-width: 340px; }
 
 .hm-hero-title {
@@ -1260,7 +1339,10 @@
   font-size: 15px;
   color: var(--hm-body);
   text-align: justify;
-  max-width: 900px;
+  /* Phase 3B content.width -- deliberately NOT applied to
+     .page-content-outer (1200px), which participates in wider page/
+     sidebar/grid structure and stays untouched. */
+  max-width: var(--hm-content-width, 900px);
   margin-inline: auto;
   line-height: 1.5;
 }
@@ -1280,7 +1362,7 @@
    container (e.g. a sidebar column) is unaffected. The one real behavior
    change is for a page that deliberately used a full-bleed image WIDER than
    900px as a hero-style break-out — that now caps at 900px too. */
-.block-image { padding: 0; display: flex; flex-direction: column; max-width: 900px; margin-inline: auto; }
+.block-image { padding: 0; display: flex; flex-direction: column; max-width: var(--hm-content-width, 900px); margin-inline: auto; }
 .block-image img { display: block; object-fit: cover; }
 .block-caption { font-size: 12px; color: #94a3b8; text-align: center; padding: 6px; }
 
@@ -2404,7 +2486,10 @@
 
 /* ══ SHARED SECTION BASE ══ */
 .hm-section {
-  padding: 40px clamp(16px, 5vw, 48px);
+  /* Phase 3B section.rhythm -- one semantic multiplier on the existing
+     vertical padding only (horizontal stays the same clamp() for every
+     Style). balanced=1 (today's exact 40px), airy=1.6 (~64px). */
+  padding: calc(40px * var(--hm-section-rhythm, 1)) clamp(16px, 5vw, 48px);
   direction: rtl;
 }
 .hm-section-title {
@@ -3219,7 +3304,10 @@
 
 /* Sections: tighter vertical padding, full centering */
 .campaign-page--mobile .hm-section {
-  padding: 28px 16px;
+  /* Dampened rhythm on mobile (half the desktop boost, not the full 1.6x --
+     "airy" would be ~45px here instead of a blind 64px). balanced still
+     equals today's exact 28px. */
+  padding: calc(28px * (1 + (var(--hm-section-rhythm, 1) - 1) * 0.5)) 16px;
 }
 .campaign-page--mobile .hm-section-title {
   font-size: calc(20px * var(--hm-heading-scale, 1));
@@ -3456,7 +3544,7 @@
   .hm-slider-outer { max-width: 100%; padding: 0 4px; gap: 8px; }
 
   /* SECTIONS */
-  .hm-section { padding: 28px 16px; }
+  .hm-section { padding: calc(28px * (1 + (var(--hm-section-rhythm, 1) - 1) * 0.5)) 16px; }
   .hm-section-title { font-size: calc(20px * var(--hm-heading-scale, 1)); margin-bottom: 20px; }
 
   /* DONORS */
