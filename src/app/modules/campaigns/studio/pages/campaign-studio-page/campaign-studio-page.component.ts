@@ -13,6 +13,7 @@ import { StudioUiService }               from '../../services/studio-ui.service'
 import { CampaignApiService }            from '../../../services/campaign-api.service';
 import { CampaignStudioStateService, PresetId } from '../../../services/campaign-studio-state.service';
 import { AppLoaderService }              from '../../../../../core/services/app-loader.service';
+import { PlatformTopStripComponent }     from '../../../../../core/layout/platform-top-strip/platform-top-strip.component';
 
 @Component({
   selector: 'app-campaign-studio-page',
@@ -25,6 +26,7 @@ import { AppLoaderService }              from '../../../../../core/services/app-
     MinimalDonationPageComponent,
     TemplatePickerComponent,
     CampaignPresetPickerComponent,
+    PlatformTopStripComponent,
   ],
   templateUrl: './campaign-studio-page.component.html',
   styleUrls: ['./campaign-studio-page.component.css'],

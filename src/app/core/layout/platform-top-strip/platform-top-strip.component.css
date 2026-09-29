@@ -1,0 +1,130 @@
+/* Thin, restrained platform chrome — must almost disappear into the page.
+   Background matches the real old-platform value confirmed from its own
+   source (`.single-campaign #secondary-nav-menu-header { background-color:
+   whitesmoke; }`) — no border-bottom there either, so none added here. The
+   background itself stays full viewport width; only .pts-inner is
+   constrained, to a fixed platform-level width independent of whatever
+   content column the specific page format below it uses (see .pts-inner's
+   own comment) — 2026-09-28, explicit decision after comparing the full
+   campaign (1200px content) against the minimal donation page (460px
+   Checkout V2 card): the platform's own branding must never be dictated by
+   a narrow donation page. */
+.pts-strip {
+  position: relative; /* anchor for the ::after shadow below */
+  /* Above campaign-preview.component.css's .hm-sticky-header (z-index:100)
+     — that header is a normal sibling in the same stacking context (no
+     positioned/transformed ancestor sits between them), so without this its
+     opaque white background painted over the shadow bleeding down from
+     here, hiding it entirely (found 2026-09-28 on the real running page,
+     after the campaign-header consolidation made it visible for the first
+     time that this was never actually rendering). */
+  z-index: 101;
+  width: 100%;
+  height: 34px;
+  background: whitesmoke;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+/* Real asset from the old platform (wp-content/themes/faster/images/
+   shadow-top.png, the parent theme's own file — the child theme's CSS
+   references it as a relative "images/shadow-top.png" and inherits this
+   path), confirmed against the live site's own `#secondary-nav-menu-
+   header:after` rule (2026-09-28) — same file, same positioning, only the
+   selector renamed to match this component's own class. Desktop only, per
+   the original (no override for the mobile breakpoint below). */
+.pts-strip::after {
+  content: '';
+  background: url(/shadow-top.png) center top no-repeat;
+  position: absolute;
+  height: 42px;
+  width: 100%;
+  left: 0;
+  bottom: -42px;
+}
+
+/* Fixed platform container — happens to match campaign-preview.component
+   .css's own .page-content-outer value (max-width:1200px; margin:0 auto;
+   padding:0 16px) for the full campaign layout, but this is NOT derived
+   from it and is used as-is on every page format, including the narrow
+   460px minimal-donation Checkout V2 card (see this file's header comment).
+   `direction: rtl` is set explicitly (not inherited) so the physical
+   left/right placement below is deterministic regardless of context: first
+   DOM child (home link) lands on the right, second (Facebook) on the left. */
+.pts-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+  direction: rtl;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pts-home {
+  display: flex;
+  align-items: center;
+}
+
+.pts-logo {
+  display: block;
+  height: 20px;
+  width: auto;
+}
+
+.pts-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pts-login {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.pts-login:hover {
+  color: #414042;
+}
+
+.pts-fb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  text-decoration: none;
+}
+.pts-fb:hover {
+  color: #414042;
+}
+
+@media (max-width: 480px) {
+  .pts-strip {
+    height: 28px;
+  }
+  /* Desktop-only in the original too, per your own observation. */
+  .pts-strip::after {
+    display: none;
+  }
+  .pts-inner {
+    padding: 0 12px;
+  }
+  .pts-logo {
+    height: 16px;
+  }
+  /* Platform strip stays minimal branding on mobile — account access is
+     reachable from the campaign header's own mobile drawer instead. */
+  .pts-login {
+    display: none;
+  }
+}

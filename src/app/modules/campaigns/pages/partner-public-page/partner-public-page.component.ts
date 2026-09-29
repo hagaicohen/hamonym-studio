@@ -8,6 +8,7 @@ import { CampaignBlock, CampaignStudioStateService, createInitialPartnerDraft } 
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { CampaignPartnersService } from '../../services/campaign-partners.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { PlatformTopStripComponent } from '../../../../core/layout/platform-top-strip/platform-top-strip.component';
 
 // Phase 5, Sprint 5.1 — Public Partner Page. Guiding principle (see
 // docs/PARTNER_DOMAIN_MODEL_ADR.md "Phase 5"): public pages are Renderers
@@ -34,7 +35,7 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 @Component({
   selector: 'app-partner-public-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, CampaignPreviewComponent],
+  imports: [CommonModule, RouterLink, CampaignPreviewComponent, PlatformTopStripComponent],
   templateUrl: './partner-public-page.component.html',
   styleUrl: './partner-public-page.component.css',
 })

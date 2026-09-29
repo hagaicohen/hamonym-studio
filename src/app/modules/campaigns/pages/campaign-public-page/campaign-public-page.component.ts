@@ -10,6 +10,7 @@ import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
 import { DonationToastComponent } from '../../shared/components/donation-toast/donation-toast.component';
+import { PlatformTopStripComponent } from '../../../../core/layout/platform-top-strip/platform-top-strip.component';
 import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DonationService } from '../../services/donation.service';
@@ -18,7 +19,7 @@ import { AnalyticsService } from '../../../../core/services/analytics.service';
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent],
+  imports: [CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent, PlatformTopStripComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })
