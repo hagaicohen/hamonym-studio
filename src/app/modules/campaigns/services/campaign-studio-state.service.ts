@@ -653,6 +653,15 @@ export interface CampaignDraft {
   showLogo:           boolean;
   campaignLogoUrl:    string | null;
   heroLogoPosition:   'left' | 'center' | 'above';
+  // Shared with the Quick Donation page's own minimalLogoShape/
+  // minimalLogoSize (2026-09-28, LogoAppearanceEditorComponent) — a
+  // genuinely new axis for Hero, which previously had shape hardcoded to a
+  // circle and size hardcoded to 128px/56px in CSS with no field at all.
+  // Optional and undefined on every existing campaign — the renderer
+  // defaults ?? 'circle'/?? 'md', matching that exact previous hardcoded
+  // look, so old campaigns render unchanged.
+  heroLogoShape?:     'circle' | 'square' | 'none';
+  heroLogoSize?:      'sm' | 'md' | 'lg';
   showHeroTitle:    boolean;
   showHeroSubtitle: boolean;
 

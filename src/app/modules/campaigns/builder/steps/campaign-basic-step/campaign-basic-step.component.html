@@ -256,37 +256,30 @@
             </div>
           </div>
 
-          <!-- Background behind the logo itself — a white/transparent logo
-               disappears on a light Hero photo without this. Auto-set to a
-               dark shade on upload when the logo turns out to be mostly
-               light (see autoContrastLogoBg()); always overridable here. -->
+          <!-- Shape/size/background/border — shared editor (2026-09-28),
+               the SAME controls the Quick Donation page's own logo editor
+               uses (LogoAppearanceEditorComponent). Shape/size are new for
+               Hero (previously hardcoded circle/128px in CSS with no
+               field); background/border reuse the existing theme.logoBg/
+               logoBorderColor/Style/Width fields exactly as before. -->
           <div class="logo-option-section">
-            <span class="logo-option-label">רקע ללוגו</span>
-            <app-color-picker [value]="draft.layout.theme.logoBg"
-              (valueChange)="patchTheme({ logoBg: $event })"
-              [showNone]="true">
-            </app-color-picker>
+            <span class="logo-option-label">עיצוב הלוגו</span>
+            <app-logo-appearance-editor
+              [shape]="draft.heroLogoShape ?? 'circle'"
+              (shapeChange)="state.patch({ heroLogoShape: $event }); sync()"
+              [size]="draft.heroLogoSize ?? 'md'"
+              (sizeChange)="state.patch({ heroLogoSize: $event }); sync()"
+              [background]="draft.layout.theme.logoBg"
+              (backgroundChange)="patchTheme({ logoBg: $event })"
+              [showBorder]="true"
+              [borderColor]="draft.layout.theme.logoBorderColor || ''"
+              (borderColorChange)="patchTheme({ logoBorderColor: $event })"
+              [borderStyle]="draft.layout.theme.logoBorderStyle || 'solid'"
+              (borderStyleChange)="patchTheme({ logoBorderStyle: $event })"
+              [borderWidth]="draft.layout.theme.logoBorderWidth ?? 3"
+              (borderWidthChange)="patchTheme({ logoBorderWidth: $event })">
+            </app-logo-appearance-editor>
             <span class="logo-option-hint">לוגו בצבע בהיר? תנו לו רקע כהה כדי שיישאר גלוי.</span>
-          </div>
-
-          <div class="logo-option-section">
-            <span class="logo-option-label">מסגרת סביב הלוגו</span>
-            <app-color-picker [value]="draft.layout.theme.logoBorderColor || ''"
-              (valueChange)="patchTheme({ logoBorderColor: $event })"
-              [showNone]="true">
-            </app-color-picker>
-            <div class="logo-position-row" style="margin-top:6px">
-              <button class="logo-pos-btn"
-                [class.logo-pos-btn--active]="(draft.layout.theme.logoBorderStyle || 'solid') === 'solid'"
-                (click)="patchTheme({ logoBorderStyle: 'solid' })">קו רציף</button>
-              <button class="logo-pos-btn"
-                [class.logo-pos-btn--active]="draft.layout.theme.logoBorderStyle === 'dashed'"
-                (click)="patchTheme({ logoBorderStyle: 'dashed' })">מקווקו</button>
-            </div>
-            <input type="range" class="logo-border-width-slider" min="0" max="10" step="1"
-              [value]="draft.layout.theme.logoBorderWidth ?? 3"
-              (input)="patchTheme({ logoBorderWidth: +$any($event.target).value })">
-            <span class="logo-option-hint">עובי הקו: {{ draft.layout.theme.logoBorderWidth ?? 3 }}px</span>
           </div>
 
         </ng-container>

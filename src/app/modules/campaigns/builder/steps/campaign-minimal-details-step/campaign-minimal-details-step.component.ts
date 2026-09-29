@@ -8,6 +8,7 @@ import { CurrentEntityService } from '../../../../../core/services/current-entit
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
+import { LogoAppearanceEditorComponent } from '../../../../../shared/ui/logo-appearance-editor/logo-appearance-editor.component';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { environment } from '../../../../../../environments/environment';
 
@@ -23,7 +24,7 @@ import { environment } from '../../../../../../environments/environment';
 @Component({
   selector: 'app-campaign-minimal-details-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent, LogoAppearanceEditorComponent],
   templateUrl: './campaign-minimal-details-step.component.html',
   styleUrl: './campaign-minimal-details-step.component.css',
 })

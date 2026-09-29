@@ -1,0 +1,43 @@
+/* Same visual language as the minimal-donation-page step's own
+   .logo-style-row/.logo-style-btn (campaign-minimal-details-step.component
+   .css) — reused verbatim under a component-scoped class prefix rather
+   than duplicated with a slightly-different look. */
+.lae-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lae-row + .lae-row { margin-top: 8px; }
+
+.lae-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lae-group--slider { flex: 1 1 160px; min-width: 160px; flex-direction: column; align-items: stretch; gap: 4px; }
+
+.lae-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.lae-btn {
+  padding: 5px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lae-btn.active { border-color: #7c3aed; color: #7c3aed; background: #f5f3ff; }
+
+.lae-slider {
+  width: 100%;
+  accent-color: #7c3aed;
+}

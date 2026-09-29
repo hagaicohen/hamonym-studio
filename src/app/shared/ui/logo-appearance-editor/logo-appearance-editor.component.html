@@ -1,0 +1,40 @@
+<div class="lae-row">
+  <div class="lae-group">
+    <span class="lae-label">צורה</span>
+    <button type="button" class="lae-btn" [class.active]="shape === 'circle'" (click)="setShape('circle')">עיגול</button>
+    <button type="button" class="lae-btn" [class.active]="shape === 'square'" (click)="setShape('square')">מרובע</button>
+    <button type="button" class="lae-btn" [class.active]="shape === 'none'" (click)="setShape('none')">ללא צורה</button>
+  </div>
+
+  <div class="lae-group">
+    <span class="lae-label">גודל</span>
+    <button type="button" class="lae-btn" [class.active]="size === 'sm'" (click)="setSize('sm')">קטן</button>
+    <button type="button" class="lae-btn" [class.active]="size === 'md'" (click)="setSize('md')">בינוני</button>
+    <button type="button" class="lae-btn" [class.active]="size === 'lg'" (click)="setSize('lg')">גדול</button>
+  </div>
+
+  <app-color-picker
+    [value]="background"
+    [showNone]="true"
+    (valueChange)="setBackground($event)"
+    label="רקע הלוגו">
+  </app-color-picker>
+</div>
+
+<div class="lae-row" *ngIf="showBorder">
+  <div class="lae-group">
+    <span class="lae-label">מסגרת</span>
+    <app-color-picker
+      [value]="borderColor"
+      [showNone]="true"
+      (valueChange)="setBorderColor($event)">
+    </app-color-picker>
+    <button type="button" class="lae-btn" [class.active]="(borderStyle || 'solid') === 'solid'" (click)="setBorderStyle('solid')">קו רציף</button>
+    <button type="button" class="lae-btn" [class.active]="borderStyle === 'dashed'" (click)="setBorderStyle('dashed')">מקווקו</button>
+  </div>
+
+  <div class="lae-group lae-group--slider">
+    <span class="lae-label">עובי: {{ borderWidth }}px</span>
+    <input type="range" class="lae-slider" min="0" max="10" step="1" [value]="borderWidth" (input)="onBorderWidthInput($event)">
+  </div>
+</div>

@@ -34,26 +34,18 @@
         </div>
         <input #campaignLogoInput type="file" accept="image/*" hidden (change)="onCampaignLogoChange($event)">
 
-        <div class="logo-style-row">
-          <div class="logo-style-group">
-            <span class="logo-style-label">צורה</span>
-            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'circle'" (click)="setLogoShape('circle')">עיגול</button>
-            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'square'" (click)="setLogoShape('square')">מרובע</button>
-            <button type="button" class="logo-style-btn" [class.active]="logoShape === 'none'" (click)="setLogoShape('none')">ללא צורה</button>
-          </div>
-          <div class="logo-style-group">
-            <span class="logo-style-label">גודל</span>
-            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'sm'" (click)="setLogoSize('sm')">קטן</button>
-            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'md'" (click)="setLogoSize('md')">בינוני</button>
-            <button type="button" class="logo-style-btn" [class.active]="logoSize === 'lg'" (click)="setLogoSize('lg')">גדול</button>
-          </div>
-          <app-color-picker
-            [value]="draft.layout.theme.logoBg"
-            [showNone]="true"
-            (valueChange)="patchTheme({ logoBg: $event })"
-            label="רקע הלוגו">
-          </app-color-picker>
-        </div>
+        <!-- Shared logo-appearance editor (2026-09-28) — same shape/size/
+             background controls now reused by the regular Campaign Hero's
+             logo editor. See LogoAppearanceEditorComponent's own header
+             comment. -->
+        <app-logo-appearance-editor
+          [shape]="logoShape"
+          (shapeChange)="setLogoShape($event)"
+          [size]="logoSize"
+          (sizeChange)="setLogoSize($event)"
+          [background]="draft.layout.theme.logoBg"
+          (backgroundChange)="patchTheme({ logoBg: $event })">
+        </app-logo-appearance-editor>
 
         <!-- Header alignment (2026-09-24) — logo/כותרת/הסבר קצר are each
              their own row in the new checkout header, independently
