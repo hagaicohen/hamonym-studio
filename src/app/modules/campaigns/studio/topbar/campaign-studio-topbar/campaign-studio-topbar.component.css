@@ -63,6 +63,10 @@
   font-weight: 600;
 
   color: #111827;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .device-switcher {
@@ -356,18 +360,28 @@
   .device-switcher {
     display: none;
   }
+}
 
-  .save-button {
-    width: 140px;
-
-    left: 20px;
-
-    position: fixed;
-
-    padding: 0 8px;
-
-    font-size: 14px;
-
-    border-radius: 8px;
+/* Phone-width fix (2026-09-29) — .topbar-actions used to keep ALL FOUR
+   buttons at full text width with no wrap inside a fixed 56px-tall grid
+   row, so on a real phone they overflowed/overlapped (the advisor button's
+   full label squeezed into an illegible sliver next to the exit button).
+   save-button's old fix was pulling it OUT of the header entirely via
+   position:fixed, which read as a disconnected floating box rather than
+   part of the header -- removed that in favor of keeping it in-flow like
+   every other button, just icon-only alongside them. */
+@media (max-width: 640px) {
+  .studio-topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 8px 10px;
+  }
+  .campaign-title { max-width: 90px; }
+  .topbar-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .topbar-btn-label { display: none; }
+  .advisor-button, .view-campaign-button, .save-button {
+    padding: 0 10px;
+    min-width: 36px;
+    justify-content: center;
   }
 }

@@ -37,7 +37,7 @@
       <button class="advisor-button" [disabled]="advising || !aiEnabled"
         (click)="getAdvice()"
         [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : 'קבל המלצות לשיפור הקמפיין מבינה מלאכותית'">
-        ✨ קבל המלצות לשיפור הקמפיין
+        <span aria-hidden="true">✨</span><span class="topbar-btn-label"> קבל המלצות לשיפור הקמפיין</span>
         @if (advising) {
           <div class="btn-spinner"></div>
         }
@@ -45,12 +45,12 @@
     }
     @if (campaignState.draft.id) {
       <button class="view-campaign-button" (click)="openDashboard()" title="ניהול שוטף של הקמפיין">
-        📊 Dashboard
+        <span aria-hidden="true">📊</span><span class="topbar-btn-label"> Dashboard</span>
       </button>
     }
     @if (campaignSlug) {
       <button class="view-campaign-button" (click)="viewCampaign()" title="צפה בדף הקמפיין">
-        צפה בקמפיין
+        <span aria-hidden="true">👁</span><span class="topbar-btn-label"> צפה בקמפיין</span>
       </button>
     }
     <button class="save-button"
