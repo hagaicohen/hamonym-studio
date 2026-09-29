@@ -108,6 +108,24 @@
   color: #414042;
 }
 
+/* Quieter than .pts-login — a secondary link next to it, not a competing
+   control. */
+.pts-logout {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.pts-logout:hover {
+  color: #6b7280;
+}
+
 .pts-fb {
   display: flex;
   align-items: center;
@@ -135,7 +153,8 @@
   }
   /* Platform strip stays minimal branding on mobile — account access is
      reachable from the campaign header's own mobile drawer instead. */
-  .pts-login {
+  .pts-login,
+  .pts-logout {
     display: none;
   }
 }

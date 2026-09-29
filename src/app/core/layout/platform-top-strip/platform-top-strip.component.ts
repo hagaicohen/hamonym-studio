@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { AccountNavService } from '../../services/account-nav.service';
 
 // Permanent Hamonym platform chrome (2026-09-28) — NOT a Campaign Studio
@@ -20,13 +21,27 @@ import { AccountNavService } from '../../services/account-nav.service';
 @Component({
   selector: 'app-platform-top-strip',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './platform-top-strip.component.html',
   styleUrl: './platform-top-strip.component.css',
 })
 export class PlatformTopStripComponent {
   private accountNav = inject(AccountNavService);
 
+  // Logged-in visitors get "אזור אישי" + a quiet "התנתקות" link (not
+  // "כניסה / אזור אישי", which is misleading once already signed in) —
+  // 2026-09-29. Logout stays a small secondary link next to it, not a
+  // dominant control: this remains a public campaign page, not an admin
+  // toolbar.
+  get isLoggedIn(): boolean {
+    return !!localStorage.getItem('token');
+  }
+
   goToAccount(): void {
     this.accountNav.goToAccount();
+  }
+
+  logout(): void {
+    this.accountNav.logout();
   }
 }

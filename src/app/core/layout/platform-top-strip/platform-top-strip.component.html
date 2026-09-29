@@ -22,7 +22,13 @@
            strip stays minimal branding there; account access is reachable
            from the campaign header's own mobile drawer instead. -->
       <button type="button" class="pts-login" (click)="goToAccount()">
-        כניסה / אזור אישי
+        {{ isLoggedIn ? 'אזור אישי' : 'כניסה / אזור אישי' }}
+      </button>
+      <!-- Logout (2026-09-29) — logged-in only, kept as a quiet secondary
+           link right next to "אזור אישי" rather than a dominant control;
+           still a public campaign page, not an admin toolbar. -->
+      <button type="button" class="pts-logout" *ngIf="isLoggedIn" (click)="logout()">
+        התנתקות
       </button>
       <a class="pts-fb" href="https://facebook.com/hamonym" target="_blank" rel="noopener" aria-label="עמוד הפייסבוק של המונים">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
