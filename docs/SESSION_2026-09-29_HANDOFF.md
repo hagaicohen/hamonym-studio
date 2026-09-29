@@ -85,26 +85,12 @@ did not return the user to the Studio editor.
    visually invisible (it's a mostly-transparent PNG). Fixed by adding
    `pointer-events: none` to that pseudo-element.
 
-**Status: this fix has NOT been manually verified yet.** The user had not
-re-tested at the time this session ended.
-
-**Temporary diagnostics are still active** in two places — remove them once
-the fix is confirmed working end-to-end:
-- `campaign-public-page.component.ts` → `goToEdit()` — several
-  `console.log('[goToEdit] ...')` lines, tracing click → `draft.id` →
-  target route → `navigate()` result → resulting URL.
-- `core/guards/campaign-editor.guard.ts` — several
-  `console.log('[campaignEditorGuard] ...')` lines, tracing guard entry →
-  `getById()` result → final decision.
-
-**Next step for whoever picks this up:** ask the user to hard-refresh, open
-DevTools console, hover then click "חזרה לעריכה" on an owner-preview page.
-If hover now works and the console shows the full
-`[goToEdit] CLICK HANDLER FIRED` → `[campaignEditorGuard] ALLOW (true)` →
-landing on the Studio editor for the same campaign, remove both sets of
-diagnostics (small, easy diffs) and this item is closed. If it's still
-broken, the diagnostics will show exactly which link in the chain fails
-this time.
+**Status: manually verified working (2026-09-29).** The user re-tested
+"חזרה לעריכה" end-to-end and confirmed it routes to the Studio editor for
+the same persisted campaign. Both temporary diagnostic blocks have been
+removed:
+- `campaign-public-page.component.ts` → `goToEdit()`
+- `core/guards/campaign-editor.guard.ts`
 
 ## Explicitly left alone this entire session (still uncommitted, still untracked)
 

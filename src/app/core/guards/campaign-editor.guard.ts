@@ -10,10 +10,7 @@ export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot
   const campaignApi = inject(CampaignApiService);
 
   const token = localStorage.getItem('token');
-  // TEMPORARY DIAGNOSTIC (2026-09-29) — remove once "חזרה לעריכה" is
-  // confirmed fixed.
-  console.log('[campaignEditorGuard] entered for URL:', router.getCurrentNavigation()?.finalUrl?.toString() ?? '(unknown)', '| token present:', !!token, '| route.paramMap id:', route.paramMap.get('id'));
-  if (!token) { console.log('[campaignEditorGuard] no token -> /login'); return router.createUrlTree(['/login']); }
+  if (!token) return router.createUrlTree(['/login']);
 
   const campaignId = route.paramMap.get('id');
 
@@ -31,11 +28,9 @@ export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot
   // A live, per-campaign check can't be fooled by which entity/role
   // happens to be active in the topbar, and needs no exclusion list at all.
   if (campaignId) {
-    console.log('[campaignEditorGuard] editing existing campaign, calling getById(', campaignId, ')');
     return campaignApi.getById(campaignId).pipe(
       map(data => {
-        console.log('[campaignEditorGuard] getById result: data?.id =', data?.id, '| full response:', data);
-        if (data?.id) { console.log('[campaignEditorGuard] ALLOW (true)'); return true; }
+        if (data?.id) return true;
         // Not the owning entity's manager — an ambassador reaching their
         // own campaign's edit link lands on ambassador-studio instead;
         // anyone else is bounced to the campaign list. Unchanged from
@@ -46,17 +41,12 @@ export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot
             context.roles().find(g => g.role === 'ambassador')?.contexts.map(c => c.id) ?? []
           );
           if (ambassadorCampaignIds.has(campaignId)) {
-            console.log('[campaignEditorGuard] REDIRECT -> ambassador-studio');
             return router.createUrlTree(['/campaigns', campaignId, 'ambassador-studio']);
           }
         }
-        console.log('[campaignEditorGuard] REDIRECT -> /campaigns (ownership check failed)');
         return router.createUrlTree(['/campaigns']);
       }),
-      catchError(err => {
-        console.log('[campaignEditorGuard] getById ERRORED:', err, '-> REDIRECT -> /campaigns');
-        return of(router.createUrlTree(['/campaigns']));
-      }),
+      catchError(() => of(router.createUrlTree(['/campaigns']))),
     );
   }
 
@@ -64,6 +54,5 @@ export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot
   // yet, so this stays the existing, unrelated check: some real
   // entity-manager role to attach it to. Unchanged from before.
   const hasEntityManager = context.roles().some(g => g.role === 'entity-manager');
-  console.log('[campaignEditorGuard] no campaignId (create flow) -> hasEntityManager:', hasEntityManager);
   return hasEntityManager ? true : router.createUrlTree(['/campaigns']);
 };
