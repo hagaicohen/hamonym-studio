@@ -39,4 +39,32 @@
 .csp-setup { margin-top: 4px; padding-top: 16px; border-top: 1px dashed #eef2f7; display: flex; flex-direction: column; gap: 16px; }
 .csp-setup-label { font-size: 11px; color: #94a3b8; font-weight: 700; }
 
+.csp-location-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.csp-location-btn {
+  display: inline-flex; align-items: center; padding: 7px 14px;
+  border: 1.5px solid #e2e8f0; border-radius: 20px;
+  background: #fff; font-size: 13px; font-weight: 600; color: #64748b;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.csp-location-btn.active { border-color: #7c3aed; background: #faf5ff; color: #7c3aed; }
+.csp-location-clear {
+  align-self: flex-start; border: none; background: transparent;
+  color: #94a3b8; font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 0;
+}
+.csp-location-clear:hover { color: #dc2626; }
+
+.csp-save-bar {
+  margin-top: 8px; padding-top: 16px; border-top: 1px solid #eef2f7;
+  display: flex; align-items: center; gap: 14px;
+}
+.csp-save-btn {
+  padding: 11px 28px; border: none; border-radius: 10px;
+  background: #7c3aed; color: #fff; font-family: inherit;
+  font-size: 15px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+.csp-save-btn:hover:not(:disabled) { background: #6d28d9; }
+.csp-save-btn:disabled { opacity: 0.6; cursor: default; }
+.csp-save-bar .csp-status { font-size: 13px; }
+
 @media (max-width: 480px) { .csp-row--pair { flex-direction: column; } }

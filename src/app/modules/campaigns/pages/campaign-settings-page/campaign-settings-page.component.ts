@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
-import { CampaignDraft } from '../../services/campaign-studio-state.service';
+import { CampaignDraft, CampaignLocation, CampaignLocationType } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
@@ -36,6 +36,30 @@ export class CampaignSettingsPageComponent implements OnInit {
   // pattern rather than replicating the Builder's custom autocomplete
   // widget (2026-09-23).
   readonly categories = ENTITY_CATEGORIES;
+
+  // Campaign Location (2026-09-29) — Step 1 in the Builder (where this field
+  // was first added) is one of PUBLISHED_GATED_STEPS (campaign-editor
+  // .component.ts), so a manager editing an already-published campaign can
+  // never reach it there. This page is exactly the "Workspace equivalent"
+  // gated Builder steps are meant to hand off to (see that file's own
+  // comment) — same duplication pattern already used here for category/
+  // managerName/title. Mutates this.draft.layout directly, same
+  // fetch->mutate->save round trip as every other field on this page (no
+  // shared CampaignStudioStateService — this page is deliberately self-
+  // sufficient).
+  readonly LOCATION_TYPES: { type: CampaignLocationType; label: string }[] = [
+    { type: 'nationwide',     label: 'כל הארץ' },
+    { type: 'region',         label: 'עיר / אזור בישראל' },
+    { type: 'online',         label: 'אונליין' },
+    { type: 'international',  label: 'פעילות בינלאומית' },
+    { type: 'custom',         label: 'מיקום מותאם אישית' },
+  ];
+
+  private static readonly LOCATION_CANNED_LABEL: Partial<Record<CampaignLocationType, string>> = {
+    nationwide: 'כל הארץ',
+    online: 'אונליין',
+    international: 'פעילות בינלאומית',
+  };
 
   campaignId = '';
   draft: CampaignDraft | null = null;
@@ -76,9 +100,53 @@ export class CampaignSettingsPageComponent implements OnInit {
     this.persist();
   }
 
+  // Display only — patchTarget above already strips non-digit characters
+  // when parsing the input back, so commas round-trip safely.
+  formatMoney(n: number): string {
+    return (n || 0).toLocaleString('he-IL');
+  }
+
   patchDate(field: 'startDate' | 'endDate', value: string): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, [field]: value };
+    this.persist();
+  }
+
+  setLocationType(type: CampaignLocationType): void {
+    if (!this.draft) return;
+    const canned = CampaignSettingsPageComponent.LOCATION_CANNED_LABEL[type];
+    const existing = this.draft.layout.campaignLocation;
+    const location: CampaignLocation = canned
+      ? { type, label: canned }
+      : { type, label: existing?.label ?? '', city: existing?.city };
+    this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: location } };
+    this.persist();
+  }
+
+  setLocationLabel(value: string): void {
+    const current = this.draft?.layout.campaignLocation;
+    if (!this.draft || !current) return;
+    const location: CampaignLocation = {
+      ...current,
+      label: value,
+      ...(current.type === 'region' ? { city: value } : {}),
+    };
+    this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: location } };
+    this.persist();
+  }
+
+  clearLocation(): void {
+    if (!this.draft) return;
+    this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: undefined } };
+    this.persist();
+  }
+
+  // Explicit save action (2026-09-29) — every field on this page already
+  // auto-saves on (change), but a visible, clickable "שמור" the manager can
+  // press and watch confirm gives a much stronger sense that an update
+  // actually happened than passively noticing small status text. Same
+  // persist() round trip, not a second save mechanism.
+  saveNow(): void {
     this.persist();
   }
 

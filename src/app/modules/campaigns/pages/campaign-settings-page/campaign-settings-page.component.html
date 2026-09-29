@@ -6,9 +6,6 @@
       <button type="button" class="csp-back" (click)="back()">→ חזרה לסקירה כללית</button>
       <div class="csp-title-row">
         <h1 class="csp-title">⚙️ הגדרות קמפיין</h1>
-        <span class="csp-status" *ngIf="saving">שומר...</span>
-        <span class="csp-status csp-status--saved" *ngIf="saved && !saving">✓ נשמר</span>
-        <span class="csp-status csp-status--error" *ngIf="saveError && !saving">{{ saveError }}</span>
       </div>
       <p class="csp-subtitle">{{ d.title }} · כל שינוי נשמר אוטומטית</p>
 
@@ -16,7 +13,27 @@
         <div class="csp-row">
           <label class="csp-label">🎯 יעד גיוס (₪)</label>
           <input class="csp-input" type="text" inputmode="numeric"
-            [ngModel]="d.targetAmount" (change)="patchTarget($any($event.target).value)">
+            [ngModel]="formatMoney(d.targetAmount)" (change)="patchTarget($any($event.target).value)">
+        </div>
+
+        <div class="csp-row">
+          <label class="csp-label">📍 מיקום הקמפיין</label>
+          <div class="csp-location-types">
+            <button type="button" *ngFor="let opt of LOCATION_TYPES"
+              class="csp-location-btn" [class.active]="d.layout.campaignLocation?.type === opt.type"
+              (click)="setLocationType(opt.type)">
+              {{ opt.label }}
+            </button>
+          </div>
+          <input *ngIf="d.layout.campaignLocation?.type === 'region' || d.layout.campaignLocation?.type === 'custom'"
+            class="csp-input" type="text" maxlength="40"
+            [ngModel]="d.layout.campaignLocation?.label || ''"
+            (change)="setLocationLabel($any($event.target).value)"
+            [placeholder]="d.layout.campaignLocation?.type === 'region' ? 'לדוגמה: בית שמש והסביבה' : 'לדוגמה: יישובי עוטף עזה'">
+          <button *ngIf="d.layout.campaignLocation" type="button" class="csp-location-clear" (click)="clearLocation()">
+            ✕ ללא מיקום
+          </button>
+          <p class="csp-note" *ngIf="!d.layout.campaignLocation">רשות — מוצג כתגית על ה-Hero כשמוגדר.</p>
         </div>
 
         <div class="csp-row csp-row--pair" *ngIf="!isOngoing">
@@ -58,6 +75,14 @@
               title="שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה כאן">
             <p class="csp-note">🔒 לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
           </div>
+        </div>
+
+        <div class="csp-save-bar">
+          <button type="button" class="csp-save-btn" [disabled]="saving" (click)="saveNow()">
+            {{ saving ? 'שומר...' : '💾 שמור שינויים' }}
+          </button>
+          <span class="csp-status csp-status--saved" *ngIf="saved && !saving">✓ נשמר בהצלחה</span>
+          <span class="csp-status csp-status--error" *ngIf="saveError && !saving">{{ saveError }}</span>
         </div>
       </div>
     </div>
