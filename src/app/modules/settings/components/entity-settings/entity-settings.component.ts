@@ -604,7 +604,10 @@ export class EntitySettingsComponent implements OnInit {
       next: () => {
         this.currentContextService.removeEntityContext(entityId);
         this.currentEntityService.setEntity(null);
-        this.router.navigate(['/settings']);
+        // 2026-09-28 — the entities list moved from /settings to its own
+        // /entities route (MyOrganizationsPageComponent); this is the one
+        // internal link that pointed back to it.
+        this.router.navigate(['/entities']);
       },
       error: (err) => {
         this.isDeletingEntity = false;

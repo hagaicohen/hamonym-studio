@@ -513,6 +513,18 @@ export const routes: Routes = [
             (m) => m.SettingsPageComponent,
           ),
       },
+      // Promoted out of Settings (2026-09-28, "הישויות שלי" -> main-nav
+      // "ארגונים") -- top-level sibling to campaigns/donations/etc., same
+      // AppLayoutComponent parent so it gets contextGuard for free, exactly
+      // like every other main-nav route. /settings/entities/:id (the actual
+      // per-entity manage screen) is unchanged below.
+      {
+        path: 'entities',
+        loadComponent: () =>
+          import('./modules/settings/pages/my-organizations-page/my-organizations-page.component').then(
+            (m) => m.MyOrganizationsPageComponent,
+          ),
+      },
       {
         path: 'settings/entities/:id',
         loadComponent: () =>

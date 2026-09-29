@@ -9,13 +9,18 @@ import { RoleType } from '../../models/user-context.model';
 interface NavItem {
   route: string;
   label: string;
-  icon: 'dashboard' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'registrations' | 'reports' | 'settings' | 'platform' | 'partners';
+  icon: 'dashboard' | 'entities' | 'campaigns' | 'donations' | 'donors' | 'ambassadors' | 'registrations' | 'reports' | 'settings' | 'platform' | 'partners';
   // true when another nav route is a path-prefix of this one (e.g. '/platform' vs '/platform/organizations') —
   // without it, routerLinkActive's default non-exact match would light up both at once.
   exactMatch?: boolean;
 }
 
 const DASHBOARD:   NavItem = { route: '/dashboard',   label: 'דשבורד',   icon: 'dashboard' };
+// 2026-09-28 — promoted out of Settings ("הישויות שלי") into a first-class
+// main-nav destination: an organization is a primary workspace object, not
+// a system setting. Reuses the exact same page/data/actions that used to
+// live inside SettingsPageComponent — see MyOrganizationsPageComponent.
+const ENTITIES:    NavItem = { route: '/entities',    label: 'ארגונים',  icon: 'entities' };
 const CAMPAIGNS:   NavItem = { route: '/campaigns',   label: 'קמפיינים', icon: 'campaigns' };
 const DONATIONS:   NavItem = { route: '/donations',   label: 'תרומות',   icon: 'donations' };
 const REGISTRATIONS: NavItem = { route: '/registrations', label: 'הרשמות', icon: 'registrations' };
@@ -43,7 +48,7 @@ const PLATFORM_BILLING_OPS:  NavItem = { route: '/platform/billing-ops', label: 
 const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'הגדרות כלליות', icon: 'settings' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
-  'entity-manager':   [DASHBOARD, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
+  'entity-manager':   [DASHBOARD, ENTITIES, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
   'campaign-manager': [CAMPAIGNS, AMBASSADORS, DONATIONS, REGISTRATIONS, REPORTS],
   'ambassador':       [CAMPAIGNS, DONATIONS],
   'company':          [CAMPAIGNS],
