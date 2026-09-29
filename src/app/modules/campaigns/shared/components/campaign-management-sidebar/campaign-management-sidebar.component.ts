@@ -31,4 +31,16 @@ export class CampaignManagementSidebarComponent {
   @Input() campaignId = '';
   @Input() isOngoing = false;
   @Input() isMinimalFormat = false;
+
+  // Mobile hamburger + drawer (2026-09-29) — below 860px this nav used to
+  // just disappear entirely (.cms-sidebar had display:none and nothing
+  // replaced it), so every workspace page (רשומות/תשורות/שגרירים/הגדרות
+  // וכו') became unreachable from a phone once already on the Dashboard.
+  // Same inline-dropdown pattern (not a fixed overlay) already proven on
+  // the public page's own mobile nav (campaign-preview.component's
+  // navOpen/.nav-hamburger/.nav-mobile-drawer).
+  mobileOpen = false;
+
+  toggleMobile(): void { this.mobileOpen = !this.mobileOpen; }
+  closeMobile(): void { this.mobileOpen = false; }
 }

@@ -1,55 +1,68 @@
-<nav class="cms-sidebar">
+<!-- Mobile-only hamburger bar (2026-09-29) -- .cms-sidebar below is
+     display:none under 860px (see its own CSS), so without this the whole
+     workspace nav was simply unreachable on a phone once already on a
+     campaign management page. Lives outside <nav> since that's the element
+     that gets hidden/shown -- the bar itself must stay visible regardless
+     of open/closed state. -->
+<button type="button" class="cms-mobile-bar" (click)="toggleMobile()">
+  <span class="cms-mobile-hamburger" [class.cms-mobile-hamburger--open]="mobileOpen">
+    <span></span><span></span><span></span>
+  </span>
+  <span class="cms-mobile-label">ניהול קמפיין</span>
+</button>
+
+<nav class="cms-sidebar" [class.cms-sidebar--mobile-open]="mobileOpen">
   <span class="cms-workspace-label">Campaign Workspace</span>
 
   <a class="cms-item cms-item--main" [routerLink]="['/campaigns', campaignId, 'dashboard']"
-    routerLinkActive="cms-item--active" [routerLinkActiveOptions]="{ exact: true }">
+    routerLinkActive="cms-item--active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobile()">
     <span class="cms-icon">🏠</span> סקירה כללית
   </a>
 
   <div class="cms-section">
     <span class="cms-section-label">תוכן הקמפיין</span>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'dashboard']" fragment="updates">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'dashboard']" fragment="updates" (click)="closeMobile()">
       <span class="cms-icon">📰</span> עדכונים
     </a>
-    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">🎁</span> תשורות
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'ambassadors']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'ambassadors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">🏃</span> שגרירים
     </a>
-    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">🤝</span> חסויות
     </a>
-    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">📝</span> הרשמה
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donation']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donation']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">💳</span> טופס תרומה
     </a>
   </div>
 
   <div class="cms-section">
     <span class="cms-section-label">תרומות ונתונים</span>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donations']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donations']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">💰</span> תרומות
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donors']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">🧑‍🤝‍🧑</span> תורמים
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'reports']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'reports']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">📊</span> דוחות
     </a>
-    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registrations']" routerLinkActive="cms-item--active">
+    <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registrations']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">🏁</span> משתתפים
     </a>
   </div>
 
   <div class="cms-section">
     <span class="cms-section-label">הגדרות</span>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'settings']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'settings']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">⚙️</span> הגדרות קמפיין
     </a>
-    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'visibility']" routerLinkActive="cms-item--active">
+    <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'visibility']" routerLinkActive="cms-item--active" (click)="closeMobile()">
       <span class="cms-icon">👁</span> נראות לציבור
     </a>
   </div>

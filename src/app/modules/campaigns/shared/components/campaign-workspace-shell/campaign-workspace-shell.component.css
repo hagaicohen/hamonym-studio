@@ -16,3 +16,10 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Below this, the sidebar collapses into a hamburger bar (see
+   campaign-management-sidebar's own CSS) -- stretch so both it and the
+   content fill the full width instead of sizing to their own content. */
+@media (max-width: 860px) {
+  .cws-shell { flex-direction: column; align-items: stretch; gap: 12px; }
+}
