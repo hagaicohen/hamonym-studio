@@ -13,6 +13,19 @@
   padding: 4px;
   background: #f3f4f6;
   border-radius: 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 480px) {
+  /* No wrap/scroll existed at all before -- 5 nowrap buttons simply ran
+     past the viewport edge on a phone, the last one clipped outright.
+     Scrolling (not wrapping) keeps every preset a single tap away instead
+     of spreading them across two uneven rows. */
+  .range-picker-wrap { width: 100%; align-items: stretch; }
+  .range-btn { padding: 0 10px; font-size: 12px; }
+  .range-display { text-align: start; }
 }
 
 .range-btn {
