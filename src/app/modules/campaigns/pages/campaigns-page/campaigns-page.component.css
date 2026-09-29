@@ -189,18 +189,42 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  overflow: hidden;
+  /* No overflow:hidden here (2026-09-24 fix) — it was clipping .card-menu's
+     own absolutely-positioned dropdown (the "⋯" button's menu), which
+     renders past the card's own bottom edge. Only .card-cover actually
+     needs clipping to keep its square corners from poking out past the
+     card's rounded top — moved directly onto it below instead. */
   transition: box-shadow 0.2s, transform 0.2s;
+  /* Flex column (2026-09-29) so .card-body (flex:1 below) can actually use
+     the extra height CSS Grid's default row-stretch already gives this
+     card when a sibling in the same row is taller — e.g. a full-campaign
+     card (200px cover) next to a minimal-donation card (110px cover, see
+     .card-cover--minimal). Without this, that extra height just became
+     invisible empty space at the very bottom of the shorter card, while
+     its progress bar/actions stayed pinned near the top, misaligned with
+     the taller card's. */
+  display: flex;
+  flex-direction: column;
 }
 
 .campaign-card:hover {
   box-shadow: 0 12px 32px rgba(0,0,0,0.1);
-  transform: translateY(-3px);
+  /* No transform here (2026-09-24 fix) — a transform on this ancestor
+     creates a new stacking context while the card is hovered, which
+     silently traps .card-menu's z-index inside it. The dropdown then
+     paints BEHIND the next row of cards instead of above the page,
+     invisible for as long as the card stays hovered (i.e. the whole time
+     the donor's mouse is still over the "⋯" button/menu). .list-item's
+     own :hover never had this transform, which is exactly why list view
+     never showed the bug. box-shadow alone still gives the hover-lift
+     feedback. */
 }
 
 .card-cover {
   height: 200px;
   background: #e2e8f0 center / cover no-repeat;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
   position: relative;
   display: flex;
   align-items: flex-start;
@@ -264,6 +288,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
 }
 
 .card-title {
@@ -293,6 +318,12 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  /* Pushes progress+meta+actions (its normal-flow siblings after it) down
+     as one group, flush to the card's bottom edge, regardless of how much
+     the title/badge above it take up or how tall the card was stretched by
+     the grid — this is what actually aligns the progress bar/buttons
+     across cards of different cover heights (2026-09-29). */
+  margin-top: auto;
 }
 
 .card-progress-row {
@@ -379,7 +410,9 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  overflow: hidden;
+  /* No overflow:hidden here (2026-09-24 fix, same reasoning as .campaign-
+     card above) — clipped the "⋯" menu's dropdown. .list-cover keeps its
+     own clip below instead. */
   display: flex;
   align-items: center;
   height: 56px;
@@ -397,6 +430,12 @@
   flex-shrink: 0;
   position: relative;
   background: #e2e8f0 center / cover no-repeat;
+  /* Logical properties — always the two corners on the row's leading edge
+     (where this cover sits, being the first flex child), regardless of
+     RTL/LTR, matching .list-item's own 10px radius on that same side. */
+  border-start-start-radius: 10px;
+  border-end-start-radius: 10px;
+  overflow: hidden;
 }
 .list-cover--minimal {
   background: #fafbfc;
@@ -811,15 +850,30 @@
 }
 .btn-manage:hover { background: #6d28d9; }
 
-.card-menu-wrap { position: relative; }
+/* z-index alone (2026-09-24 fix) — .card-menu (31) vs .card-menu-backdrop
+   (30) were siblings but NOT guaranteed to be compared in the same local
+   stacking context (position:relative without a z-index does not itself
+   establish one), so the backdrop could paint over the menu depending on
+   how far up the ancestor chain their nearest shared stacking context
+   actually was. Giving the wrap its own explicit stacking context makes
+   its two children compare directly against each other, unambiguously,
+   regardless of anything above it. */
+.card-menu-wrap { position: relative; z-index: 1; }
 .btn-icon-action.btn-menu { font-size: 16px; font-weight: 900; line-height: 1; }
 
 .card-menu-backdrop { position: fixed; inset: 0; z-index: 30; }
 
+/* Opens UPWARD (2026-09-24 fix), not downward — the "⋯" trigger always
+   sits in the actions row at the very bottom edge of its card/list-item,
+   so opening downward routinely had no room left in the viewport below it
+   (confirmed: the menu was rendering correctly, just mostly below the
+   visible browser window). Opening upward has the whole card/page above
+   it to work with instead, which is available far more reliably than
+   whatever happens to be left below the fold. */
 .card-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 31;
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 31;
   background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  box-shadow: 0 -12px 28px rgba(0,0,0,0.12);
   min-width: 170px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
 }
 .card-menu-item {
