@@ -34,12 +34,24 @@
   .ckp-card { flex-direction: column; align-items: stretch; }
   .ckp-divider { display: none; }
   .ckp-primary { min-width: 0; }
-  .ckp-stats { justify-content: space-between; gap: 14px; }
+  /* CSS Grid instead of flex-wrap+space-between+percentage-basis -- that
+     combination distributes leftover space per wrapped line rather than
+     across the whole area, so pairs of stats end up spaced inconsistently
+     from row to row. Grid gives every cell an equal, predictable column
+     width regardless of how many stats are shown (3 or 4, ongoing vs not).
+     Same auto-fit pattern already used for .cdmg-grid on this page. */
+  .ckp-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 14px;
+    margin-right: 0;
+    width: 100%;
+  }
+  .ckp-stat { min-width: 0; }
 }
 
 @media (max-width: 420px) {
   .ckp-card { padding: 18px 16px; gap: 16px; }
   .ckp-amount { font-size: 26px; }
-  .ckp-stats { gap: 10px; }
-  .ckp-stat { min-width: 0; flex: 1 1 40%; }
+  .ckp-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
