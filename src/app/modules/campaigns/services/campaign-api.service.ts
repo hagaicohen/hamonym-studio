@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { CampaignDraft } from './campaign-studio-state.service';
+import { resolveTheme } from '../builder/styles/campaign-styles';
 
 export interface DiscoverCampaign {
   id: string;
@@ -213,19 +214,29 @@ export class CampaignApiService {
         // app-wide, silently leaving whatever the app-loader overlay was
         // doing at that moment (visible or not) stuck forever. See
         // docs/DECISIONS.md.
-        theme: {
-          primaryColor:   '#333333',
-          secondaryColor: '#6fc9eb',
-          accentColor:    '#cc350f',
-          bodyTextColor:  '#334155',
-          logoBg:         '#ffffff',
-          topStripBg:     '#061b3a',
-          rewardsBg:              '#014737',
-          rewardCardBorder:       'rgba(255,255,255,.12)',
-          rewardCardBorderActive: '#7DD3FC',
-          lineColor:      '#e2e8f0',
-          ...(data.layout?.theme ?? {}),
-        },
+        // Design Evolution Phase 1 (2026-09-29) — campaignStyleId/
+        // styleOverrides pass through via the `...(data.layout ?? {})`
+        // spread above; resolveTheme() is the single writer for the theme
+        // fields a Style manages. When campaignStyleId is absent (every
+        // existing campaign today) it returns the object below completely
+        // unchanged — identical values, identical behavior.
+        theme: resolveTheme(
+          {
+            primaryColor:   '#333333',
+            secondaryColor: '#6fc9eb',
+            accentColor:    '#cc350f',
+            bodyTextColor:  '#334155',
+            logoBg:         '#ffffff',
+            topStripBg:     '#061b3a',
+            rewardsBg:              '#014737',
+            rewardCardBorder:       'rgba(255,255,255,.12)',
+            rewardCardBorderActive: '#7DD3FC',
+            lineColor:      '#e2e8f0',
+            ...(data.layout?.theme ?? {}),
+          },
+          data.layout?.campaignStyleId,
+          data.layout?.styleOverrides,
+        ),
       } as any,
     };
   }

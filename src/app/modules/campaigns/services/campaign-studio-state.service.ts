@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { TextStyle, CtaConfig } from '../../../shared/models/text-style.model';
 export { TextStyle, CtaConfig, TextAlign, TextFontSize, TextPosition } from '../../../shared/models/text-style.model';
+import { CampaignStyleId, StyleColorField, resolveTheme } from '../builder/styles/campaign-styles';
+export { CampaignStyleId, StyleColorField, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
 
 export type CampaignFundingType =
   | 'all-or-nothing'
@@ -577,6 +579,14 @@ export interface CampaignLayout {
   // look for every existing campaign — no migration needed, same pattern as
   // heroPlacement above. See DECISIONS.md (2026-07-26).
   conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
+  // Campaign Design Evolution Phase 1 (2026-09-29) — see campaign-styles.ts.
+  // Both absent = legacy campaign, `theme` below is the one and only source
+  // of truth exactly as before. Once campaignStyleId is set, `theme`'s 4
+  // Style-managed color fields become a materialized snapshot written ONLY
+  // by resolveTheme() (single-writer invariant) — every other theme field
+  // is untouched by this mechanism.
+  campaignStyleId?:   CampaignStyleId;
+  styleOverrides?:    Partial<Record<StyleColorField, string>>;
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -1116,6 +1126,41 @@ export class CampaignStudioStateService {
 
   patch(partial: Partial<CampaignDraft>): void {
     this.draftSubject.next({ ...this.draft, ...partial });
+  }
+
+  // ── Campaign Style (Design Evolution Phase 1, 2026-09-29) ──
+  // Non-destructive by design — unlike applyTemplate(), these never touch
+  // blocks/content/layoutMode/hero. resolveTheme() is the ONLY thing
+  // allowed to write the 4 Style-managed theme fields from here on for a
+  // campaign that has a campaignStyleId (single-writer invariant) — no
+  // other call site should patch those 4 fields directly once a Style is
+  // selected (legacy patchTheme()-style direct writes remain fine as long
+  // as campaignStyleId stays undefined).
+  setCampaignStyle(styleId: CampaignStyleId): void {
+    const layout = this.draft.layout;
+    const theme  = resolveTheme(layout.theme, styleId, layout.styleOverrides);
+    this.patch({ layout: { ...layout, campaignStyleId: styleId, theme } });
+  }
+
+  setStyleColorOverride(field: StyleColorField, value: string): void {
+    const layout = this.draft.layout;
+    const styleOverrides = { ...layout.styleOverrides, [field]: value };
+    const theme = resolveTheme(layout.theme, layout.campaignStyleId, styleOverrides);
+    this.patch({ layout: { ...layout, styleOverrides, theme } });
+  }
+
+  resetStyleColorOverride(field: StyleColorField): void {
+    const layout = this.draft.layout;
+    const styleOverrides = { ...layout.styleOverrides };
+    delete styleOverrides[field];
+    const theme = resolveTheme(layout.theme, layout.campaignStyleId, styleOverrides);
+    this.patch({ layout: { ...layout, styleOverrides, theme } });
+  }
+
+  resetAllStyleColorOverrides(): void {
+    const layout = this.draft.layout;
+    const theme = resolveTheme(layout.theme, layout.campaignStyleId, undefined);
+    this.patch({ layout: { ...layout, styleOverrides: undefined, theme } });
   }
 
   sync(): void {

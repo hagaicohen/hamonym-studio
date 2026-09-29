@@ -94,12 +94,12 @@
       </app-color-picker>
       <app-color-picker
         [value]="draft.layout.theme.primaryColor"
-        (valueChange)="patchTheme({ primaryColor: $event })"
+        (valueChange)="onThemeColorChange('primaryColor', $event)"
         label="כפתור תרומה">
       </app-color-picker>
       <app-color-picker
         [value]="draft.layout.theme.accentColor"
-        (valueChange)="patchTheme({ accentColor: $event })"
+        (valueChange)="onThemeColorChange('accentColor', $event)"
         label="הדגשה / hover">
       </app-color-picker>
     </div>

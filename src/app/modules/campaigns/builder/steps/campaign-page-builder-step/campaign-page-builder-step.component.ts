@@ -35,6 +35,7 @@ import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.mo
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TemplatePickerComponent, TemplateSelection } from '../../template-picker/template-picker.component';
 import { TEMPLATE_PALETTES, TemplatePalette, buildTheme } from '../../templates/campaign-templates';
+import { CAMPAIGN_STYLES, CampaignStyleId, StyleColorField } from '../../styles/campaign-styles';
 import { OwnerType, isSectionAvailableFor } from '../../../services/owner-registry';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
@@ -766,11 +767,67 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   readonly themeColorPalettes = TEMPLATE_PALETTES;
 
   applyThemePalette(palette: TemplatePalette): void {
+    // Single-writer invariant (Design Evolution Phase 1) — this row is
+    // already hidden in the template once campaignStyleId is set (see the
+    // *ngIf next to .theme-palette-row); guarded here too so a stray caller
+    // can't bypass resolveTheme() and write theme's 4 managed fields directly.
+    if (this.state.draft.layout.campaignStyleId) return;
     this.patchTheme(buildTheme(palette) as Partial<CampaignTheme>);
   }
 
   isActiveThemePalette(palette: TemplatePalette, theme: CampaignTheme): boolean {
     return theme.primaryColor === buildTheme(palette)['primaryColor'];
+  }
+
+  // ── Campaign Style (Design Evolution Phase 1) ──
+  readonly campaignStyles = CAMPAIGN_STYLES;
+
+  setCampaignStyle(id: CampaignStyleId): void {
+    this.state.setCampaignStyle(id);
+  }
+
+  // Routes a color-picker change through the override mechanism once a
+  // Style is active (single-writer invariant — theme's 4 managed fields
+  // must only ever be written by resolveTheme() from that point on), and
+  // falls back to the original direct patchTheme() otherwise so a campaign
+  // that never opts into Campaign Style keeps behaving exactly as before.
+  onThemeColorChange(field: StyleColorField, value: string): void {
+    if (this.state.draft.layout.campaignStyleId) {
+      this.state.setStyleColorOverride(field, value);
+    } else {
+      this.patchTheme({ [field]: value });
+    }
+  }
+
+  hasStyleOverride(field: StyleColorField): boolean {
+    return !!this.state.draft.layout.styleOverrides?.[field];
+  }
+
+  resetStyleOverride(field: StyleColorField): void {
+    this.state.resetStyleColorOverride(field);
+  }
+
+  get hasAnyStyleOverride(): boolean {
+    const overrides = this.state.draft.layout.styleOverrides;
+    return !!overrides && Object.keys(overrides).length > 0;
+  }
+
+  resetAllStyleOverrides(): void {
+    this.state.resetAllStyleColorOverrides();
+  }
+
+  // "אוטומטי" / "מותאם אישית" — Primary is included on the same footing as
+  // the other 3 (product decision, 2026-09-29): mechanically it resolves
+  // through the identical override-else-automatic rule as secondary/accent/
+  // bodyText, it just happens that its own "automatic" is the Style's seed
+  // color rather than something derived from another field.
+  styleFieldStatusLabel(field: StyleColorField): string {
+    return this.hasStyleOverride(field) ? 'מותאם אישית' : 'אוטומטי';
+  }
+
+  get currentPaletteSwatches(): string[] {
+    const theme = this.state.draft.layout.theme;
+    return [theme.primaryColor, theme.secondaryColor, theme.accentColor, theme.bodyTextColor];
   }
 
   // Hero text style/CTA — same fields step 1 edits, surfaced here too so

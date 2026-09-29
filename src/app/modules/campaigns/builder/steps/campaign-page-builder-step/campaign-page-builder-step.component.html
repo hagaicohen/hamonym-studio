@@ -1403,10 +1403,26 @@
     </div>
 
     <ng-container *ngIf="!isSectionCollapsed('theme-colors')">
-    <!-- Presets — same palette swatches as the initial Template Picker; one
-         click sets a whole coordinated theme. The manual pickers below stay
-         available for fine-tuning afterward. -->
-    <div class="theme-palette-row">
+    <!-- Campaign Style (Design Evolution Phase 1) — a curated set of design
+         defaults for the 4 brand-color fields below. Picking one never
+         touches blocks/content, and any manual color change afterward is
+         kept as an explicit override when switching between styles. -->
+    <div class="theme-style-row">
+      <span class="theme-palette-label">סגנון קמפיין:</span>
+      <button class="theme-style-btn"
+        *ngFor="let s of campaignStyles"
+        [class.theme-style-btn--active]="draft.layout.campaignStyleId === s.id"
+        (click)="setCampaignStyle(s.id)">
+        {{ s.label }}
+      </button>
+    </div>
+
+    <!-- Legacy quick-palette swatches — only shown before a Campaign Style
+         has been chosen. Once campaignStyleId is set, theme's 4 managed
+         fields must only ever be written by resolveTheme() (single-writer
+         invariant); this row's direct patchTheme(buildTheme(...)) write
+         would silently violate that, so it's hidden instead of adapted. -->
+    <div class="theme-palette-row" *ngIf="!draft.layout.campaignStyleId">
       <span class="theme-palette-label">צבע:</span>
       <button class="theme-palette-swatch"
         *ngFor="let p of themeColorPalettes"
@@ -1417,29 +1433,102 @@
       </button>
     </div>
 
+    <!-- Design-enabled layout: Primary singled out as the brand-identity
+         input, a live palette-strip preview, and the 3 complementary colors
+         grouped below with explicit automatic/customized status — the
+         "Style derives a palette around Primary" product model (2026-09-29).
+         Only shown once a Campaign Style is chosen; without one there's no
+         "automatic" to speak of, so the plain legacy grid below applies. -->
+    <ng-container *ngIf="draft.layout.campaignStyleId; else legacyColorsGrid">
+      <div class="palette-preview-strip">
+        <span class="palette-preview-swatch" *ngFor="let c of currentPaletteSwatches" [style.background]="c"></span>
+      </div>
+
+      <div class="theme-primary-block">
+        <span class="theme-color-label">צבע המותג הראשי</span>
+        <div class="theme-color-control">
+          <app-color-picker [value]="draft.layout.theme.primaryColor"
+            (valueChange)="onThemeColorChange('primaryColor', $event)"></app-color-picker>
+          <span class="theme-field-status">{{ styleFieldStatusLabel('primaryColor') }}</span>
+          <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('primaryColor')"
+            title="חזרה לצבע המוצע של הסגנון" (click)="resetStyleOverride('primaryColor')">↺</button>
+        </div>
+      </div>
+
+      <p class="theme-complementary-label">צבעים משלימים</p>
+      <div class="theme-colors-grid">
+        <div class="theme-color-row">
+          <span class="theme-color-label">משני / כותרות</span>
+          <div class="theme-color-control">
+            <app-color-picker [value]="draft.layout.theme.secondaryColor"
+              (valueChange)="onThemeColorChange('secondaryColor', $event)"></app-color-picker>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('secondaryColor') }}</span>
+            <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('secondaryColor')"
+              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('secondaryColor')">↺</button>
+          </div>
+        </div>
+        <div class="theme-color-row">
+          <span class="theme-color-label">הדגשה / קישורים</span>
+          <div class="theme-color-control">
+            <app-color-picker [value]="draft.layout.theme.accentColor"
+              (valueChange)="onThemeColorChange('accentColor', $event)"></app-color-picker>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('accentColor') }}</span>
+            <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('accentColor')"
+              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('accentColor')">↺</button>
+          </div>
+        </div>
+        <div class="theme-color-row">
+          <span class="theme-color-label">צבע טקסט</span>
+          <div class="theme-color-control">
+            <app-color-picker [value]="draft.layout.theme.bodyTextColor"
+              (valueChange)="onThemeColorChange('bodyTextColor', $event)"></app-color-picker>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('bodyTextColor') }}</span>
+            <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('bodyTextColor')"
+              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('bodyTextColor')">↺</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="theme-reset-all-btn" *ngIf="hasAnyStyleOverride" (click)="resetAllStyleOverrides()">
+        איפוס התאמות עיצוב
+      </button>
+      <p class="theme-hint">שינוי הצבע הראשי יעדכן אוטומטית את הצבעים המשלימים, חוץ מאלה ששינית ידנית.</p>
+    </ng-container>
+
+    <!-- Legacy grid — unchanged from before this Style existed, shown only
+         when no Campaign Style has been chosen. -->
+    <ng-template #legacyColorsGrid>
     <div class="theme-colors-grid">
       <div class="theme-color-row">
         <span class="theme-color-label">ראשי</span>
-        <app-color-picker [value]="draft.layout.theme.primaryColor"
-          (valueChange)="patchTheme({ primaryColor: $event })"></app-color-picker>
+        <div class="theme-color-control">
+          <app-color-picker [value]="draft.layout.theme.primaryColor"
+            (valueChange)="onThemeColorChange('primaryColor', $event)"></app-color-picker>
+        </div>
       </div>
       <div class="theme-color-row">
         <span class="theme-color-label">משני / כותרות</span>
-        <app-color-picker [value]="draft.layout.theme.secondaryColor"
-          (valueChange)="patchTheme({ secondaryColor: $event })"></app-color-picker>
+        <div class="theme-color-control">
+          <app-color-picker [value]="draft.layout.theme.secondaryColor"
+            (valueChange)="onThemeColorChange('secondaryColor', $event)"></app-color-picker>
+        </div>
       </div>
       <div class="theme-color-row">
         <span class="theme-color-label">הדגשה / קישורים</span>
-        <app-color-picker [value]="draft.layout.theme.accentColor"
-          (valueChange)="patchTheme({ accentColor: $event })"></app-color-picker>
+        <div class="theme-color-control">
+          <app-color-picker [value]="draft.layout.theme.accentColor"
+            (valueChange)="onThemeColorChange('accentColor', $event)"></app-color-picker>
+        </div>
       </div>
       <div class="theme-color-row">
         <span class="theme-color-label">צבע טקסט</span>
-        <app-color-picker [value]="draft.layout.theme.bodyTextColor"
-          (valueChange)="patchTheme({ bodyTextColor: $event })"></app-color-picker>
+        <div class="theme-color-control">
+          <app-color-picker [value]="draft.layout.theme.bodyTextColor"
+            (valueChange)="onThemeColorChange('bodyTextColor', $event)"></app-color-picker>
+        </div>
       </div>
     </div>
     <p class="theme-hint">שינוי צבע משני יעדכן את כל הכותרות בדף. שינוי הדגשה יעדכן קישורים וכפתורי CTA.</p>
+    </ng-template>
     </ng-container>
   </div>
 

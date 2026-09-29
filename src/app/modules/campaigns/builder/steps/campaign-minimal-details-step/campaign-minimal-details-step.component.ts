@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, ElementRef } from '@angular/core'
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule, Zap } from 'lucide-angular';
-import { CampaignStudioStateService, CampaignDraft, CampaignTheme } from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignStudioStateService, CampaignDraft, CampaignTheme, StyleColorField } from '../../../../campaigns/services/campaign-studio-state.service';
 import { CampaignApiService } from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { EntitiesService } from '../../../../../core/services/entities.service';
@@ -115,6 +115,22 @@ export class CampaignMinimalDetailsStepComponent implements OnInit {
   patchTheme(partial: Partial<CampaignTheme>): void {
     const draft = this.state.draft;
     this.state.patch({ layout: { ...draft.layout, theme: { ...draft.layout.theme, ...partial } } });
+  }
+
+  // Single-writer invariant (Design Evolution Phase 1, 2026-09-29) — once a
+  // campaign has campaignStyleId, primaryColor/accentColor must only ever
+  // be written by resolveTheme() via the centralized state methods, the
+  // same rule campaign-page-builder-step's own color pickers follow. A
+  // legacy minimal campaign (no campaignStyleId) keeps writing theme
+  // directly via patchTheme() above, unchanged. No Style-selection UI is
+  // added here — a design-enabled campaign that reaches Minimal can still
+  // only pick its Style from the full Page Builder step.
+  onThemeColorChange(field: StyleColorField, value: string): void {
+    if (this.draft.layout.campaignStyleId) {
+      this.state.setStyleColorOverride(field, value);
+    } else {
+      this.patchTheme({ [field]: value });
+    }
   }
 
   ngOnInit(): void {
