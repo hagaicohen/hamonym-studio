@@ -164,8 +164,28 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   }
 
   goToEdit(): void {
+    // TEMPORARY DIAGNOSTIC (2026-09-29) — remove once "חזרה לעריכה" is
+    // confirmed fixed. First line fires unconditionally, before anything
+    // else, so it alone proves whether the click is even reaching this
+    // handler. Then traces: id -> current URL -> target command ->
+    // navigate() result -> actual resulting URL.
+    console.log('[goToEdit] CLICK HANDLER FIRED');
+
     const id = this.state.draft?.id;
-    if (id) this.router.navigate(['/campaigns', id, 'edit']);
+    console.log('[goToEdit] draft.id =', id, '| full draft present:', !!this.state.draft, '| draft.slug =', this.state.draft?.slug);
+    console.log('[goToEdit] current router.url =', this.router.url);
+
+    if (!id) {
+      console.log('[goToEdit] ABORTED — no id, navigate() never called.');
+      return;
+    }
+
+    const target = ['/campaigns', id, 'edit'];
+    console.log('[goToEdit] target router command =', JSON.stringify(target));
+
+    this.router.navigate(target).then(success => {
+      console.log('[goToEdit] navigate() resolved with:', success, '| resulting router.url =', this.router.url);
+    });
   }
 
   private showNotFound(): void {

@@ -42,6 +42,17 @@
   width: 100%;
   left: 0;
   bottom: -42px;
+  /* Purely decorative — must never intercept pointer events (2026-09-29).
+     Raising .pts-strip's own z-index to 101 (above .hm-sticky-header's 100)
+     fixed the shadow being visually hidden, but this pseudo-element still
+     inherits that same elevated stacking level and, without this, its
+     full-width 42px-tall box (mostly transparent PNG) sat directly over
+     whatever renders immediately below the strip — on the public campaign
+     page, that's the purple owner-preview bar and its "חזרה לעריכה"
+     button, which is why it was visible but had no hover and never
+     received clicks: the pointer was hitting this transparent shadow
+     layer, not the button underneath it. */
+  pointer-events: none;
 }
 
 /* Fixed platform container — happens to match campaign-preview.component
