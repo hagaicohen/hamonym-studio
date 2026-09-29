@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -9,6 +9,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 import { CampaignPartnersService } from '../../services/campaign-partners.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { PlatformTopStripComponent } from '../../../../core/layout/platform-top-strip/platform-top-strip.component';
+import { StudioUiService } from '../../studio/services/studio-ui.service';
 
 // Phase 5, Sprint 5.1 — Public Partner Page. Guiding principle (see
 // docs/PARTNER_DOMAIN_MODEL_ADR.md "Phase 5"): public pages are Renderers
@@ -45,7 +46,25 @@ export class PartnerPublicPageComponent implements OnInit {
   private entitiesService = inject(EntitiesService);
   private campaignPartnersService = inject(CampaignPartnersService);
   private campaignApiService = inject(CampaignApiService);
+  private ui = inject(StudioUiService);
   state = inject(CampaignStudioStateService);
+
+  // Found in a code audit, not from a live report (2026-09-29) — unlike
+  // campaign-public-page.component.ts, this page never called setDevice()
+  // at all, so StudioUiService.device$ stayed stuck on its 'desktop'
+  // default regardless of real viewport width. The shared renderer's own
+  // [class.campaign-page--mobile]="vm.mobile" binding never activated here
+  // as a result -- every rule scoped to that CLASS (e.g. reward cards'
+  // mobile carousel width) silently used its desktop value on a real phone,
+  // while the separate, purely CSS @media(max-width) rules kept working
+  // (they don't depend on this at all) -- explaining why the breakage was
+  // partial rather than total. Same 768px breakpoint already used there.
+  @HostListener('window:resize')
+  onResize(): void { this.syncDevice(); }
+
+  private syncDevice(): void {
+    this.ui.setDevice(window.innerWidth <= 768 ? 'mobile' : 'desktop');
+  }
 
   loading = true;
   loadErrorMessage: string | null = null;
@@ -77,6 +96,7 @@ export class PartnerPublicPageComponent implements OnInit {
   campaignEntityLogo: string | null = null;
 
   ngOnInit(): void {
+    this.syncDevice();
     const id = this.route.snapshot.paramMap.get('id');
     const qp = this.route.snapshot.queryParamMap;
     this.campaignSlug = qp.get('campaignSlug');
