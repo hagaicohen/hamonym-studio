@@ -97,14 +97,38 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   @Input() initialFrequency: 'one-time' | 'monthly' = 'one-time';
   @Input() initialInstallments: number | null = null;
   // Offerings ("תשורות") already selected on the page itself, same as
-  // CheckoutModalComponent's own [cartOfferings] — informational + added on
-  // top of the donor-picked amount, never editable from inside checkout.
+  // CheckoutModalComponent's own [cartOfferings] — never editable from
+  // inside checkout. Reward Checkout bug fix (2026-10-06): a non-empty
+  // cartOfferings now puts the WHOLE of Step 1 into "Reward mode" (see
+  // isRewardMode below) — the Offering(s)' own minimumAmount become the
+  // sole source of truth for the charge, replacing the normal amount
+  // picker entirely, rather than being added on top of a donor-picked
+  // amount as the old comment here described. That old "added on top"
+  // model is exactly what caused the real bug: Step 1 stayed gated on
+  // explicitAmount (the normal picker) even though the footer already
+  // displayed a reward-driven total, so a donor who only picked a reward
+  // could never get past Step 1.
   @Input() cartOfferings: Offering[] = [];
   @Input() entityLogoUrl: string | null = null;
   @Input() entityName = '';
   @Input() ambassador: Ambassador | null = null;
 
   @Output() closed = new EventEmitter<void>();
+  // Post-payment cart/stock staleness fix (2026-10-06) -- cartOfferings is a
+  // plain, checkout-owned-only @Input() (see its own doc comment); nothing
+  // in this component ever told the PARENT (which actually owns
+  // cartOfferingIds/rewardCounts) that the offerings just bought here are no
+  // longer "in cart" or that their stock/purchased-count may have just
+  // changed. Without this, closing the drawer after a successful purchase
+  // left the just-bought Reward still showing as selected/in-cart and its
+  // availability still reflecting pre-purchase stock -- reopening checkout
+  // (or even just looking at the card) wrongly looked like the purchase
+  // never happened, and a now-sold-out Reward could still appear
+  // available/selectable. Emitted once, exactly when payment is actually
+  // confirmed (OpenFields: backend-confirmed 'paid', never CardCom's own
+  // HandleSubmit success alone; hosted iframe: SuccessRedirectUrl bridge) --
+  // never on an ordinary close/cancel, which must leave the cart untouched.
+  @Output() paymentSucceeded = new EventEmitter<{ offeringIds: string[] }>();
 
   // Template-exposed so Step 3's *ngIf branches can read it directly.
   readonly CHECKOUT_V2_OPENFIELDS_ENABLED = CHECKOUT_V2_OPENFIELDS_ENABLED;
@@ -143,6 +167,13 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     this.donationFrequency = this.initialFrequency;
     this.selectedAmount = this.initialAmount > 0 ? this.initialAmount : null;
     this.selectedInstallments = this.initialInstallments;
+    // Reward mode (2026-10-06 bug fix, see isRewardMode's own doc comment)
+    // is always one-time -- recurring Reward purchases aren't a supported
+    // product concept, so a stale/explicit 'monthly' initialFrequency must
+    // never leak through here. cartOfferings is a plain @Input() (never
+    // edited from inside checkout, see its own doc comment) and is always
+    // bound before ngOnInit runs, so this only needs to run once.
+    if (this.isRewardMode) this.donationFrequency = 'one-time';
     window.addEventListener('message', this.boundHostedCheckoutMessage);
   }
 
@@ -170,6 +201,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
     if (event.data.status === 'success') {
       if (!this.donationId) return;
+      this.paymentSucceeded.emit({ offeringIds: this.cartOfferings.map(o => o.id) });
       this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
         queryParams: { ref: this.donationId, amount: this.chargeAmount },
       });
@@ -241,14 +273,26 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     return this.cartOfferings.reduce((sum, o) => sum + (o.minimumAmount || 0), 0);
   }
 
-  // The actual payable/chargeable total — donor-picked amount plus whatever
-  // offerings were already selected on the page before checkout opened.
-  // Ownership of amount-selection moved into this component (Step 1 is
-  // editable), so — unlike the old modal, which just displayed a
-  // pre-combined number handed to it — this has to keep re-deriving the
-  // combined total itself as the donor edits Step 1.
+  // Reward Checkout (2026-10-06 bug fix) — the ONE explicit switch Step 1's
+  // amount/validity/UI all branch on. A donor who already selected a
+  // Reward/Offering on the page is making a fundamentally different choice
+  // than a normal donor picking a donation amount; this makes that
+  // distinction a real, named concept instead of leaving every call site to
+  // separately re-derive "is cartOfferings non-empty?" (and risk
+  // inconsistent answers, which is exactly how the bug happened: the footer
+  // already treated a reward as chargeable while step1Valid didn't).
+  get isRewardMode(): boolean {
+    return this.cartOfferings.length > 0;
+  }
+
+  // The actual payable/chargeable total. Reward mode: the selected
+  // Offering(s)' own minimumAmount IS the amount -- never combined with
+  // explicitAmount (Step 1's normal picker is hidden entirely in this mode,
+  // see the template, so explicitAmount has no legitimate value to add here
+  // regardless). Normal mode: unchanged, the donor's own picked/custom
+  // amount.
   get chargeAmount(): number {
-    return this.explicitAmount + this.cartOfferingsTotal;
+    return this.isRewardMode ? this.cartOfferingsTotal : this.explicitAmount;
   }
 
   selectInstallments(n: number): void {
@@ -288,14 +332,20 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     return this.draft?.layout?.minimalHeaderSubtitleAlign ?? 'center';
   }
 
+  // Reward mode: the Offering(s)' own total is already a complete,
+  // one-time financial choice -- the donor made it by selecting the reward,
+  // not by picking a frequency/amount here, so no further Step 1 input is
+  // required (this is the actual fix for the disabled Continue button).
   get step1Valid(): boolean {
+    if (this.isRewardMode) return this.cartOfferingsTotal > 0;
     return this.explicitAmount > 0 && (this.donationFrequency !== 'monthly' || this.hasValidInstallments);
   }
 
   // "X ₪ לחודש × N חודשים" — never a bare amount for a monthly commitment
   // (2026-09-24 requirement, carried through from the old modal's own
   // payButtonLabel). Shown in the sticky footer on every step once an
-  // amount is chosen.
+  // amount is chosen. Reward mode is always one-time (see isRewardMode's
+  // own doc comment), so it always takes the plain bare-amount branch here.
   get commitmentText(): string {
     const amt = this.chargeAmount;
     if (!amt) return '';
@@ -305,6 +355,20 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         : `₪${amt.toLocaleString('he-IL')} לחודש`;
     }
     return `₪${amt.toLocaleString('he-IL')}`;
+  }
+
+  // The footer's own small sub-label under commitmentText. Reward mode must
+  // never describe the choice as merely "תרומה חד פעמית" (explicit product
+  // requirement) -- the donor chose a Reward, not a plain one-time donation
+  // amount, even though the underlying payment rail still correctly uses
+  // one-time payment semantics for it.
+  get commitmentSubLabel(): string {
+    if (this.isRewardMode) {
+      return this.cartOfferings.length === 1
+        ? `עבור התשורה: ${this.cartOfferings[0].title}`
+        : `עבור ${this.cartOfferings.length} תשורות שנבחרו`;
+    }
+    return this.donationFrequency === 'monthly' ? 'תרומה חודשית' : 'תרומה חד פעמית';
   }
 
   goToStep2(): void {
@@ -414,7 +478,18 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // LowProfile POST /api/donations already returns as res.lowProfileId,
   // handed straight to OpenfieldsFormComponent's own [lowProfileId] input.
   lowProfileId: string | null = null;
-  private createdTermsSnapshot: { amount: number; frequency: 'one-time' | 'monthly'; installments: number | null } | null = null;
+  // offeringIds (2026-10-06 bug fix) -- a sorted, joined id string so two
+  // DIFFERENT Offerings that happen to share the same minimumAmount (e.g.
+  // Reward A ₪250 swapped for Reward B ₪250) are never mistaken for the
+  // same financial selection: amount/frequency/installments alone would be
+  // identical for both, which would otherwise let canReuseExistingDonation()
+  // wrongly reuse Reward A's already-created Donation/LowProfile for
+  // Reward B's checkout.
+  private createdTermsSnapshot: { amount: number; frequency: 'one-time' | 'monthly'; installments: number | null; offeringIds: string } | null = null;
+
+  private get offeringIdsKey(): string {
+    return this.cartOfferings.map(o => o.id).sort().join(',');
+  }
   creatingDonation = false;
   createDonationError = '';
 
@@ -441,6 +516,11 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // Populated once available (either immediately with 'paid', or via the
   // quiet post-paid poll below) — drives the inline receipt link/action.
   receiptId: string | null = null;
+  // Frozen the instant payment is confirmed (2026-10-06 bug fix) -- see its
+  // own assignment site's doc comment for exactly why the success screen
+  // cannot just keep reading the live chargeAmount/isRewardMode/
+  // cartOfferings getters after that point.
+  private paidSnapshot: { amount: number; isRewardMode: boolean; offeringTitles: string[] } | null = null;
 
   private confirmPollTimer: ReturnType<typeof setTimeout> | null = null;
   private confirmPollAttempts = 0;
@@ -461,6 +541,27 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
   get formattedChargeAmount(): string {
     return '₪' + this.chargeAmount.toLocaleString('he-IL');
+  }
+
+  // Success screen only -- prefers the frozen paidSnapshot over the live
+  // chargeAmount/isRewardMode getters once payment is confirmed (see
+  // paidSnapshot's own doc comment). A Reward purchase is explicitly NOT
+  // framed as "your donation" (product requirement, 2026-10-06) -- the
+  // donor bought a Reward, not a plain one-time gift, even though the
+  // payment rail underneath still correctly uses one-time payment
+  // semantics for it. Combining a Reward with an additional separate
+  // donation amount in the same checkout isn't a supported flow today (see
+  // isRewardMode/chargeAmount's own doc comments), so there is no mixed
+  // case to word here yet.
+  get successMessage(): string {
+    const snap = this.paidSnapshot;
+    const amount = '₪' + (snap?.amount ?? this.chargeAmount).toLocaleString('he-IL');
+    if (snap?.isRewardMode) {
+      return snap.offeringTitles.length === 1
+        ? `הרכישה שלך — ${snap.offeringTitles[0]} — בסך ${amount} התקבלה בהצלחה.`
+        : `הרכישה שלך בסך ${amount} התקבלה בהצלחה.`;
+    }
+    return `תרומתך בסך ${amount} התקבלה בהצלחה.`;
   }
 
   // A genuine CardCom-side decline (HandleSubmit IsSuccess=false) — the
@@ -511,6 +612,23 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         if (res.status === 'paid') {
           this.paymentState = 'paid';
           this.receiptId = res.receipt_id;
+          // Freeze the success screen's own numbers BEFORE emitting
+          // paymentSucceeded below -- that event is exactly what tells the
+          // parent to clear the just-bought offering out of
+          // cartOfferingIds, which flows straight back into this
+          // component's own [cartOfferings] @Input() on the very next
+          // change detection tick (same component instance, drawer stays
+          // open showing this success screen). Without this snapshot,
+          // chargeAmount/isRewardMode would already have gone back to 0/
+          // false by the time the template renders them, showing "תרומתך
+          // בסך ₪0 התקבלה" for a ₪250 Reward purchase that had in fact
+          // already succeeded.
+          this.paidSnapshot = {
+            amount: this.chargeAmount,
+            isRewardMode: this.isRewardMode,
+            offeringTitles: this.cartOfferings.map(o => o.title),
+          };
+          this.paymentSucceeded.emit({ offeringIds: this.cartOfferings.map(o => o.id) });
           if (!res.receipt_id) this.scheduleQuietReceiptPoll(donationId);
           return;
         }
@@ -563,7 +681,8 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     const s = this.createdTermsSnapshot;
     return s.amount === this.chargeAmount
       && s.frequency === this.donationFrequency
-      && s.installments === (this.donationFrequency === 'monthly' ? this.selectedInstallments : null);
+      && s.installments === (this.donationFrequency === 'monthly' ? this.selectedInstallments : null)
+      && s.offeringIds === this.offeringIdsKey;
   }
 
   goToStep3(): void {
@@ -639,6 +758,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
           amount: this.chargeAmount,
           frequency: this.donationFrequency,
           installments: this.donationFrequency === 'monthly' ? this.selectedInstallments : null,
+          offeringIds: this.offeringIdsKey,
         };
         // Parity with the old modal's onSubmit(): fired once, right at the
         // moment checkout hands off to payment — there it's immediately

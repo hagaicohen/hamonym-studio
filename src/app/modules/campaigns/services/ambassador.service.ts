@@ -29,6 +29,11 @@ export interface AmbassadorFormData {
   goalAmount: number | null;
   personalMessage: string;
   personalTitle: string;
+  // Personal link slug (2026-10-01) -- optional: omitting it keeps the
+  // existing auto-generate-and-dedupe server behavior exactly as before.
+  // Sent only when the ambassador/admin explicitly typed/edited it (see
+  // AmbassadorSlugFieldComponent).
+  slug?: string;
 }
 
 export interface ImportRow {
@@ -212,7 +217,7 @@ export class AmbassadorService {
 
   selfRegister(
     campaignSlug: string,
-    data: { fullName: string; phone: string; email: string; goalAmount?: number | null }
+    data: { fullName: string; phone: string; email: string; goalAmount?: number | null; slug?: string }
   ): Observable<{ slug: string; shareUrl: string }> {
     return this.http.post<{ slug: string; shareUrl: string }>(
       `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/self-register`,
@@ -221,8 +226,30 @@ export class AmbassadorService {
         phone:       data.phone || null,
         email:       data.email || null,
         goal_amount: data.goalAmount ?? null,
+        ...(data.slug ? { slug: data.slug } : {}),
       }
     );
+  }
+
+  // Personal-link availability check (2026-10-01) -- same precedence
+  // pattern as the existing campaign-slug check (CampaignApiService
+  // #checkSlugAvailable). No auth header -- this is deliberately a PUBLIC
+  // endpoint (the self-registration flow it primarily serves is anonymous).
+  //
+  // `failed: true` on a transport/server error (e.g. a stale backend mid-
+  // deploy, a dropped connection) is kept distinct from a genuine conflict --
+  // collapsing both into `available: false` made a transient failure look
+  // exactly like "this link is already taken" to the ambassador, which is
+  // misleading and was reported as a false positive during testing.
+  checkSlugAvailable(
+    campaignSlug: string,
+    candidateSlug: string,
+    excludeAmbassadorId?: string,
+  ): Observable<{ slug: string; available: boolean; failed?: boolean }> {
+    const url = `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/check-slug/${encodeURIComponent(candidateSlug)}`
+      + (excludeAmbassadorId ? `?excludeAmbassadorId=${encodeURIComponent(excludeAmbassadorId)}` : '');
+    return this.http.get<{ slug: string; available: boolean }>(url)
+      .pipe(catchError(() => of({ slug: candidateSlug, available: false, failed: true })));
   }
 
   computeStats(ambassadors: Ambassador[]): AmbassadorStats {
@@ -274,6 +301,7 @@ export class AmbassadorService {
     if (data.goalAmount       !== undefined) r['goal_amount']      = data.goalAmount;
     if (data.personalMessage  !== undefined) r['personal_message'] = data.personalMessage;
     if (data.personalTitle    !== undefined) r['personal_title']   = data.personalTitle;
+    if (data.slug             !== undefined) r['slug']             = data.slug;
     return r;
   }
 }

@@ -1,4 +1,4 @@
-<app-platform-top-strip />
+<app-platform-top-strip [manageCampaignId]="canEdit ? (state.draft.id ?? null) : null" />
 
 @if (notFound) {
   <div class="public-not-found">
@@ -7,8 +7,13 @@
 } @else if (!isLoading) {
 
   @if (ownerPreview) {
+    <!-- Lightweight preview-status indication only (2026-10-06) — NOT a
+         management bar: "ניהול הקמפיין" in the Platform Top Strip above is
+         now the only management affordance, so this never needs its own
+         Edit action, just enough to tell the manager this campaign isn't
+         publicly visible yet. -->
     <div class="owner-preview-bar">
-      <span>🔒 תצוגה מקדימה בלבד — העמותה שלכם עדיין ממתינה לאישור, כך שהדף עדיין לא גלוי לציבור</span>
+      <span>🔒 תצוגה מקדימה — הקמפיין עדיין אינו מפורסם לציבור (העמותה ממתינה לאישור)</span>
     </div>
   }
 
@@ -19,20 +24,13 @@
         ✏️ ערוך הדף שלי
       </button>
     </div>
-  } @else if (canEdit) {
-    <div class="ambassador-edit-bar">
-      <span class="ambassador-edit-label">אתה צופה בתצוגה הציבורית של הקמפיין שלך</span>
-      <button class="ambassador-edit-btn" (click)="goToEdit()">
-        ✏️ חזרה לעריכה
-      </button>
-    </div>
   }
 
   <div class="public-preview-wrap">
     @if (isMinimalFormat) {
       <app-minimal-donation-page [ambassador]="currentAmbassador" />
     } @else {
-      <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" />
+      <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" [isPublicPage]="true" />
     }
   </div>
 }

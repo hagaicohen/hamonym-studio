@@ -22,71 +22,13 @@
 
   <ng-container *ngIf="draft.offeringsEnabled">
 
-    <!-- ── LAYOUT PICKER ── -->
-    <div class="rs-layout-picker">
-      <div class="rs-layout-label">מבנה כרטיסיה</div>
-      <div class="rs-layout-btns">
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="draft.layout.rewardsLayout !== 'image'"
-          (click)="setOfferingsLayout('standard')">
-          <span class="rs-layout-icon rs-layout-icon--standard">
-            <span class="rli-row"><span class="rli-thumb"></span><span class="rli-lines"><span></span><span></span></span></span>
-          </span>
-          כרטיסיה רגילה
-        </button>
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="draft.layout.rewardsLayout === 'image'"
-          (click)="setOfferingsLayout('image')">
-          <span class="rs-layout-icon rs-layout-icon--image">
-            <span class="rli-price"></span>
-            <span class="rli-img-block"></span>
-            <span class="rli-text-lines"><span></span><span></span></span>
-          </span>
-          כרטיסיה עם תמונה
-        </button>
-      </div>
-    </div>
-
-    <!-- ── PLACEMENT PICKER — only meaningful when there's a sidebar to place it in ── -->
-    <div class="rs-layout-picker" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
-      <div class="rs-layout-label">מיקום התשורות</div>
-      <div class="rs-layout-btns">
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="!state.isSidebarSection('rewards')"
-          (click)="state.setSidebarSection('rewards', false)">
-          מתחת לתוכן (רוחב מלא)
-        </button>
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="state.isSidebarSection('rewards')"
-          (click)="state.setSidebarSection('rewards', true)">
-          בסיידבר (מתחת לנתונים ולתרומה)
-        </button>
-      </div>
-    </div>
-
-    <!-- ── IMAGE POSITION — only meaningful when rewards are actually placed
-         in the sidebar (the below-sidebar carousel uses "מבנה כרטיסיה" above
-         instead) ── -->
-    <div class="rs-layout-picker" *ngIf="state.isSidebarSection('rewards')">
-      <div class="rs-layout-label">מיקום התמונה בכרטיסיה</div>
-      <div class="rs-layout-btns">
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="(draft.layout.rewardsImagePosition ?? 'inline') === 'inline'"
-          (click)="setRewardsImagePosition('inline')">
-          אייקון קטן בצד הכותרת (ברירת מחדל)
-        </button>
-        <button class="rs-layout-btn"
-          [class.rs-layout-btn--active]="draft.layout.rewardsImagePosition === 'full'"
-          (click)="setRewardsImagePosition('full')">
-          תמונה מתחת לכותרת
-        </button>
-      </div>
-      <div class="rs-layout-size-row" *ngIf="draft.layout.rewardsImagePosition === 'full'">
-        <label class="rs-layout-size-label">גובה התמונה ({{ draft.layout.rewardsImageSize ?? 120 }}px)</label>
-        <input type="range" min="60" max="240" step="10"
-          [value]="draft.layout.rewardsImageSize ?? 120"
-          (input)="setRewardsImageSize(+$any($event.target).value)">
-      </div>
+    <!-- Placement + Section Presentation (how/where the whole rewards
+         section displays) moved to the Page Builder step (2026-10-04) --
+         this step stays content-only (add/edit the actual reward items),
+         which matters because this step is gated/unreachable once the
+         campaign is published, while the Page Builder step never is. -->
+    <div class="rs-layout-note">
+      🎨 עיצוב התצוגה (כרטיסים/רשימה/תמונה, מיקום, צבעים) נמצא בשלב "בניית דף".
     </div>
 
     <!-- ── BUILDER: Form + Preview ── -->
@@ -366,46 +308,6 @@
       (linked)="onPartnerLinked($event)"
       (closed)="onLinkModalClosed()">
     </app-partner-link-modal>
-
-    <!-- ── ADVANCED (colors) ── -->
-    <button class="rewards-advanced-toggle" type="button" (click)="showAdvanced = !showAdvanced">
-      <lucide-angular [img]="Settings2" [size]="15" class="adv-icon"></lucide-angular>
-      <span>עיצוב מתקדם</span>
-      <lucide-angular [img]="showAdvanced ? ChevronUp : ChevronDown" [size]="15" class="adv-chevron"></lucide-angular>
-    </button>
-
-    <div class="rewards-advanced-panel" *ngIf="showAdvanced">
-      <div class="adv-row">
-        <label class="adv-label">רקע סקשן</label>
-        <app-color-picker [value]="draft.layout.theme.rewardsBg"
-          (valueChange)="patchTheme({ rewardsBg: $event })"></app-color-picker>
-      </div>
-      <div class="adv-row">
-        <label class="adv-label">בורדר כרטיס</label>
-        <app-color-picker [value]="draft.layout.theme.rewardCardBorder"
-          (valueChange)="patchTheme({ rewardCardBorder: $event })"></app-color-picker>
-      </div>
-      <div class="adv-row">
-        <label class="adv-label">נבחר / Hover</label>
-        <app-color-picker [value]="draft.layout.theme.rewardCardBorderActive"
-          (valueChange)="patchTheme({ rewardCardBorderActive: $event })"></app-color-picker>
-      </div>
-      <div class="adv-row">
-        <label class="adv-label">צבע כותרת</label>
-        <app-color-picker [value]="draft.layout.theme.rewardTitleColor ?? '#ffffff'"
-          (valueChange)="patchTheme({ rewardTitleColor: $event })"></app-color-picker>
-      </div>
-      <div class="adv-row">
-        <label class="adv-label">צבע תיאור</label>
-        <app-color-picker [value]="draft.layout.theme.rewardDescColor ?? '#ffffff'"
-          (valueChange)="patchTheme({ rewardDescColor: $event })"></app-color-picker>
-      </div>
-      <div class="adv-row">
-        <label class="adv-label">צבע כפתור "לבחירה"</label>
-        <app-color-picker [value]="draft.layout.theme.rewardButtonColor ?? draft.layout.theme.secondaryColor"
-          (valueChange)="patchTheme({ rewardButtonColor: $event })"></app-color-picker>
-      </div>
-    </div>
 
   </ng-container>
 

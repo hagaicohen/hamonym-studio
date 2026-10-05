@@ -238,6 +238,19 @@
         <span>יעד אישי (₪)</span>
         <input type="text" inputmode="numeric" [value]="goalDisplay" (input)="onGoalInput($event)" placeholder="5,000">
       </label>
+      <p class="form-goal-warning" *ngIf="goalAboveCampaignGoal()">
+        שימו לב: היעד שבחרתם גבוה מיעד הקמפיין, שעומד על {{ campaignTargetAmount | number }} ₪. ניתן להמשיך עם היעד שבחרתם.
+      </p>
+      <div class="form-field" *ngIf="campaignSlug">
+        <app-ambassador-slug-field
+          [campaignSlug]="campaignSlug"
+          [nameForDefault]="form.fullName"
+          [excludeAmbassadorId]="editingId ?? undefined"
+          [value]="form.slug ?? ''"
+          (valueChange)="form.slug = $event"
+          (availabilityChange)="slugAvailable = $event">
+        </app-ambassador-slug-field>
+      </div>
       <label class="form-field">
         <span>הודעה אישית (אופציונלי)</span>
         <textarea rows="2" [(ngModel)]="form.personalMessage" placeholder="הצטרפו אליי במסע הזה..."></textarea>

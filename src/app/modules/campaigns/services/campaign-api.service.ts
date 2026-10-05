@@ -191,7 +191,7 @@ export class CampaignApiService {
       updates:                 data.updates                 ?? [],
       blocks:                  (data.blocks ?? []).map((b: any) => ({
         ...b,
-        label: b.label || DEFAULT_BLOCK_LABELS[b.type as string] || '',
+        label: b.label ?? DEFAULT_BLOCK_LABELS[b.type as string] ?? '',
       })),
       layout: {
         ...(data.layout ?? {}),

@@ -10,7 +10,15 @@
    Checkout V2 card): the platform's own branding must never be dictated by
    a narrow donation page. */
 .pts-strip {
-  position: relative; /* anchor for the ::after shadow below */
+  /* Sticky (2026-10-06) -- stays pinned at the very top of the viewport
+     while the page scrolls, same as .hm-sticky-header right below it (see
+     that selector's own comment for why its `top` offset now equals this
+     strip's own height, so the two stack directly on top of each other
+     instead of overlapping once both are stuck). `position: relative` was
+     the previous value, kept only as the anchor for the ::after shadow
+     below -- `position: sticky` still establishes that same anchor. */
+  position: sticky;
+  top: 0;
   /* Above campaign-preview.component.css's .hm-sticky-header (z-index:100)
      — that header is a normal sibling in the same stacking context (no
      positioned/transformed ancestor sits between them), so without this its
@@ -75,6 +83,12 @@
   justify-content: space-between;
 }
 
+.pts-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .pts-home {
   display: flex;
   align-items: center;
@@ -86,10 +100,40 @@
   width: auto;
 }
 
+/* Same visual weight as .pts-login — a platform nav action, not a CTA. */
+.pts-discover {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.pts-discover:hover {
+  color: #414042;
+}
+
 .pts-left {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+/* The one genuine call-to-action in this strip (everything else here is
+   plain navigation) — uses the dashboard's own primary color so it reads
+   as an action, not just another nav link. */
+.pts-manage {
+  font-size: 11px;
+  font-weight: 600;
+  color: #583cd6;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.pts-manage:hover {
+  opacity: 0.8;
 }
 
 .pts-login {
@@ -150,6 +194,13 @@
   }
   .pts-logo {
     height: 16px;
+  }
+  /* Tighter gaps so "לכל הקמפיינים" + "ניהול הקמפיין" (which, unlike
+     login/logout below, have no alternate mobile path and so stay visible
+     here) don't crowd the 28px-tall strip on a narrow phone. */
+  .pts-right,
+  .pts-left {
+    gap: 10px;
   }
   /* Platform strip stays minimal branding on mobile — account access is
      reachable from the campaign header's own mobile drawer instead. */

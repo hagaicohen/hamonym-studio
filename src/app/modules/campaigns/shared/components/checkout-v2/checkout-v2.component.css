@@ -390,25 +390,36 @@
 }
 .cv2-installments-hint { font-size: 12px; color: #94a3b8; margin: 2px 0 0; }
 
-.cv2-offerings-note {
+/* Reward mode Step 1 (2026-10-06 bug fix) -- replaces the normal amount
+   picker entirely (see the template's own comment); same green "confirmed
+   selection" palette .cv2-amount-confirm/the old .cv2-offerings-tag already
+   used in this file, now promoted to the step's primary content instead of
+   a small aside note. */
+.cv2-reward-summary {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #f1f5f9;
+  flex-direction: column;
+  gap: 10px;
 }
-.cv2-offerings-title { font-size: 12px; font-weight: 700; color: #64748b; width: 100%; }
-.cv2-offerings-tag {
-  display: inline-flex;
+.cv2-reward-summary-item {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
   background: #f0fdf4;
-  color: #15803d;
   border: 1px solid #bbf7d0;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 600;
+}
+.cv2-reward-summary-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #14532d;
+}
+.cv2-reward-summary-amount {
+  font-size: 16px;
+  font-weight: 800;
+  color: #15803d;
+  white-space: nowrap;
 }
 
 /* ── STEP 2 fields (visual parity with CheckoutModalComponent's own

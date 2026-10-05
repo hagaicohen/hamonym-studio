@@ -26,7 +26,7 @@
     <span class="ppp-campaign-banner-title">{{ campaignTitle }}</span>
   </div>
 
-  <app-campaign-preview />
+  <app-campaign-preview [isPublicPage]="true" />
 
   <div class="ppp-partner-nav" *ngIf="prevPartner || nextPartner">
     <a class="ppp-partner-nav-link ppp-partner-nav-link--prev" *ngIf="prevPartner"

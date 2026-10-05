@@ -1,0 +1,52 @@
+:host { display: block; direction: rtl; font-family: inherit; }
+
+.asf-wrap { display: flex; flex-direction: column; gap: 6px; }
+.asf-label { font-size: 13px; font-weight: 700; color: #334155; }
+.asf-hint { font-size: 12px; color: #94a3b8; margin: 0; }
+
+.asf-input-row {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.asf-input-row--available { border-color: #16a34a; }
+.asf-input-row--taken { border-color: #dc2626; }
+
+.asf-prefix {
+  padding: 9px 4px 9px 10px;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-size: 13px;
+  white-space: nowrap;
+  border-right: 1px solid #e2e8f0;
+}
+.asf-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 9px 12px 9px 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: transparent;
+  text-align: left;
+}
+
+.asf-status { font-size: 12px; margin: 0; font-weight: 600; }
+.asf-status--checking { color: #94a3b8; }
+.asf-status--available { color: #16a34a; }
+.asf-status--taken { color: #dc2626; }
+.asf-status--short { color: #94a3b8; }
+.asf-status--error { color: #b45309; }
+
+.asf-preview {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+  word-break: break-all;
+}

@@ -5,17 +5,36 @@
      independent of whatever content-column width the specific page format
      below it uses (1200px for the full campaign, ~460px for the minimal
      donation card) — the platform's own branding container must never be
-     dictated by a narrow donation page. Right: Hamonym's own home link.
-     Left: Facebook + account access, grouped in .pts-left (Facebook stays
-     the outermost/edge element exactly as before; login is the new sibling
-     inserted before it in DOM, which in this RTL flex context renders it
-     just inside Facebook, closer to center, not past it). -->
+     dictated by a narrow donation page. Right: Hamonym's own home link (an
+     external link to the real hamonym.com marketing site — deliberately
+     NOT routerLink/Discover; there is no in-app homepage route, and the
+     brand mark keeps pointing at the real one, per explicit product
+     decision 2026-10-06) + "לכל הקמפיינים" grouped together in .pts-right.
+     Left: Facebook + account access + the contextual manage action, grouped
+     in .pts-left (Facebook stays the outermost/edge element exactly as
+     before; login was already the sibling inserted before it in DOM; the
+     manage link is inserted before login so it renders closer to center,
+     i.e. nearer "לכל הקמפיינים" across the strip, matching the product
+     layout sketch: Hamonym · לכל הקמפיינים ... ניהול הקמפיין · אזור אישי). -->
 <div class="pts-strip">
   <div class="pts-inner">
-    <a class="pts-home" href="https://hamonym.com/" aria-label="המונים - מעבר לאתר הראשי">
-      <img class="pts-logo" src="/logo-hamonym-mark.svg" alt="המונים">
-    </a>
+    <div class="pts-right">
+      <a class="pts-home" href="https://hamonym.com/" aria-label="המונים - מעבר לאתר הראשי">
+        <img class="pts-logo" src="/logo-hamonym-mark.svg" alt="המונים">
+      </a>
+      <a class="pts-discover" routerLink="/campaigns/discover">לכל הקמפיינים</a>
+    </div>
     <div class="pts-left">
+      <!-- Contextual manage action (2026-10-06) — only when the caller has
+           already established, via its own existing campaign-ownership
+           check, that the current viewer may manage THIS campaign. See
+           this component's own doc comment for why no permission boolean
+           is needed here. Deliberately NOT hidden on mobile below (unlike
+           login/logout) — there is no alternate mobile path to it the way
+           account access has via the campaign header's own drawer. -->
+      <a *ngIf="manageCampaignId" class="pts-manage" [routerLink]="['/campaigns', manageCampaignId, 'dashboard']">
+        ניהול הקמפיין
+      </a>
       <!-- Account access lives here, not in the campaign nav below — it's a
            platform/account action, not a campaign action (2026-09-28).
            Hidden on the narrow mobile breakpoint (see .css) — the platform

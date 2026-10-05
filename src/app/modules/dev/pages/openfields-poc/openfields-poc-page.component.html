@@ -1,0 +1,138 @@
+<div class="poc-page">
+  <h1>OpenFields POC — אישורי עמותה (dev only)</h1>
+  <p class="poc-warning">
+    עמוד בדיקה זמני. לא יוצר תרומה/הוראת קבע/קבלה כלשהי. משתמש אך ורק
+    באישורי ה-CardCom של העמותה עצמה (לעולם לא באישורי הפלטפורמה/fallback).
+    אתחול אוטומטי — אין כפתור "התחל" ידני בזרימה הרגילה.
+  </p>
+
+  <div class="poc-grid">
+    <!-- ══ LEFT: Hamonym-owned payment card ══ -->
+    <div class="poc-card">
+      <h2>כרטיס תשלום (Hamonym UI)</h2>
+
+      <label>Entity ID</label>
+      <input class="poc-input" [(ngModel)]="entityId" placeholder="entity id עם CardCom מאומת" />
+
+      <div class="poc-status">
+        <div>initState: <b [class.ok]="initState === 'initialized'" [class.bad]="initState === 'failed'">{{ initState }}</b></div>
+        <div>lowProfileId: <b>{{ lowProfileId || '—' }}</b></div>
+        <div>sawReady: <b [class.ok]="sawReady">{{ sawReady }}</b></div>
+        <div>cardFrameLoaded: <b [class.ok]="cardFrameLoaded">{{ cardFrameLoaded }}</b></div>
+        <div>cvvFrameLoaded: <b [class.ok]="cvvFrameLoaded">{{ cvvFrameLoaded }}</b></div>
+        <div>sawGetScreenValues: <b [class.ok]="sawGetScreenValues">{{ sawGetScreenValues }}</b></div>
+        <div>handshakeInitialized: <b [class.ok]="handshakeInitialized">{{ handshakeInitialized }}</b></div>
+        <div class="poc-error" *ngIf="initError">{{ initError }}</div>
+      </div>
+
+      <!-- Manual retry -- ONLY shown on failure. Never part of the normal
+           automatic path (point 11: kept separate from the automatic
+           lifecycle, diagnostic-only). -->
+      <button *ngIf="initState === 'failed'" class="poc-btn-secondary" (click)="retryInit()">
+        נסה שוב
+      </button>
+
+      <hr />
+
+      <label>שם בעל הכרטיס</label>
+      <input class="poc-input" [(ngModel)]="cardOwnerName" placeholder="שם מלא" />
+
+      <label>אימייל</label>
+      <input class="poc-input" [(ngModel)]="cardOwnerEmail" placeholder="email" />
+
+      <label>טלפון</label>
+      <input class="poc-input" [(ngModel)]="cardOwnerPhone" placeholder="050..." />
+
+      <label>ת.ז (אם נדרש ע"י CardCom)</label>
+      <input class="poc-input" [(ngModel)]="cardOwnerId" placeholder="000000000" />
+
+      <label>מספר כרטיס</label>
+      <div class="poc-frame-shell">
+        <!-- Skeleton placeholder -- purely visual, occupies the SAME final
+             dimensions as the real field. Shown until initState ===
+             'initialized'. Never accepts input itself. -->
+        <div class="poc-field-skeleton" *ngIf="initState !== 'initialized'">
+          <span class="poc-skeleton-text">0000 0000 0000 0000</span>
+        </div>
+        <!-- name MUST be exactly CardComCardNumber -- CardCom's own master
+             script (OpenFields.js) looks this frame up by name via
+             window.parent.frames.CardComCardNumber to relay setStyles AND
+             to read the entered card value at transaction time. Always
+             rendered (never *ngIf'd) -- its own (load) event is the
+             deterministic signal that its message listener has attached
+             (CardNumber.js attaches it inside its own DOMContentLoaded,
+             which fires before this event) -- see component's own header
+             comment for the race this fixes. Visually hidden via opacity
+             until ready; never removed from the DOM. -->
+        <iframe
+          id="CardComCardNumber"
+          name="CardComCardNumber"
+          src="https://secure.cardcom.solutions/api/openfields/cardNumber"
+          class="poc-field-frame"
+          [class.poc-frame-visible]="initState === 'initialized'"
+          (load)="onCardFrameLoad()">
+        </iframe>
+      </div>
+
+      <div class="poc-field-row">
+        <div>
+          <label>חודש</label>
+          <input class="poc-exp-input" [(ngModel)]="expirationMonth" maxlength="2" />
+        </div>
+        <div>
+          <label>שנה</label>
+          <input class="poc-exp-input" [(ngModel)]="expirationYear" maxlength="2" />
+        </div>
+      </div>
+
+      <label>CVV</label>
+      <div class="poc-frame-shell">
+        <div class="poc-field-skeleton" *ngIf="initState !== 'initialized'">
+          <span class="poc-skeleton-text">123</span>
+        </div>
+        <!-- name MUST be exactly CardComCvv -- same reasoning as
+             CardComCardNumber above. -->
+        <iframe
+          id="CardComCvv"
+          name="CardComCvv"
+          src="https://secure.cardcom.solutions/api/openfields/CVV"
+          class="poc-field-frame"
+          [class.poc-frame-visible]="initState === 'initialized'"
+          (load)="onCvvFrameLoad()">
+        </iframe>
+      </div>
+
+      <!-- Always present (needed for postMessage), never visible -- name
+           MUST be exactly CardComMasterFrame -- CardCom's own
+           CardNumber.js/CVV.js look this up via
+           window.parent.frames["CardComMasterFrame"] for Enter-key/
+           validation relay, independent of our own direct
+           contentWindow.postMessage() calls to it. -->
+      <iframe id="CardComMasterFrame" name="CardComMasterFrame" src="https://secure.cardcom.solutions/api/openfields/master" class="poc-master-frame"></iframe>
+
+      <label class="poc-confirm-row">
+        <input type="checkbox" [(ngModel)]="confirmRealCharge" />
+        אני מאשר חיוב אמיתי של 5 ₪ בלחיצה על הכפתור למטה
+      </label>
+
+      <button class="poc-btn-pay" [disabled]="!readyToCharge || !confirmRealCharge" (click)="startTransaction()">
+        שלם 5 ₪
+      </button>
+    </div>
+
+    <!-- ══ RIGHT: live log ══ -->
+    <div class="poc-log-panel">
+      <div class="poc-log-header">
+        <h2>Log</h2>
+        <button class="poc-btn-secondary" (click)="clearLogs()">נקה</button>
+      </div>
+      <div class="poc-log-list">
+        <div *ngFor="let entry of logs" class="poc-log-entry" [class]="'dir-' + entry.dir">
+          <span class="poc-log-ts">{{ entry.ts }}</span>
+          <span class="poc-log-label">{{ entry.label }}</span>
+          <pre *ngIf="entry.data">{{ entry.data | json }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

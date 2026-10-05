@@ -7,11 +7,12 @@ import { AmbassadorService, Ambassador } from '../../services/ambassador.service
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { environment } from '../../../../../environments/environment';
 import { LucideAngularModule, ChevronRight, ChevronLeft, Eye, User, MessageSquare } from 'lucide-angular';
+import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
 
 @Component({
   selector: 'app-ambassador-studio-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, HttpClientModule, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './ambassador-studio-page.component.html',
   styleUrls: ['./ambassador-studio-page.component.css'],
 })
@@ -47,7 +48,12 @@ export class AmbassadorStudioPageComponent implements OnInit {
     personalTitle:   '',
     personalMessage: '',
     goalAmount:      null as number | null,
+    slug:            '',
   };
+  // Pre-existing saved slug always starts available (the slug field
+  // component confirms it optimistically on first change without a round
+  // trip) — same pattern as the admin CRUD edit drawer.
+  slugAvailable = true;
 
   readonly steps = [
     { num: 1, label: 'פרופיל', icon: 'user' },
@@ -92,6 +98,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
           personalTitle:   ambassador.personalTitle   ?? '',
           personalMessage: ambassador.personalMessage ?? '',
           goalAmount:      ambassador.goalAmount,
+          slug:            ambassador.slug ?? '',
         };
         this.isLoading = false;
         this.loader.hide();
@@ -119,7 +126,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
   }
 
   save(onDone?: () => void): void {
-    if (!this.ambassador()) return;
+    if (!this.ambassador() || !this.slugAvailable) return;
     this.isSaving = true;
     const token = localStorage.getItem('token') ?? '';
     this.http.patch<{ ambassador: any }>(
@@ -131,6 +138,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
         personal_message: this.draft.personalMessage,
         personal_title:   this.draft.personalTitle || null,
         goal_amount:      this.draft.goalAmount,
+        slug:             this.draft.slug,
       },
       { headers: { Authorization: `Bearer ${token}` } }
     ).subscribe({
@@ -144,17 +152,23 @@ export class AmbassadorStudioPageComponent implements OnInit {
           personalMessage: r.personal_message ?? '',
           personalTitle:   r.personal_title   ?? '',
           goalAmount:      r.goal_amount != null ? Number(r.goal_amount) : null,
+          slug:            r.slug ?? a.slug,
         } : a);
         this.isSaving = false;
         this.saved    = true;
         setTimeout(() => this.saved = false, 2500);
         onDone?.();
       },
-      error: () => {
+      error: (err) => {
         this.isSaving = false;
-        this.errorMsg = 'שגיאה בשמירה';
+        this.errorMsg = err?.error?.error || 'שגיאה בשמירה';
       },
     });
+  }
+
+  goalAboveCampaignGoal(): boolean {
+    const target = this.campaign?.target_amount ?? 0;
+    return !!this.draft.goalAmount && target > 0 && this.draft.goalAmount > target;
   }
 
   reload(): void {

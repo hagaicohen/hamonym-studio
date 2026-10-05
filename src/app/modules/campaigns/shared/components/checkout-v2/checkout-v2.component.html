@@ -74,53 +74,71 @@
 
       <!-- ── STEP 1 — סכום ── -->
       <ng-container *ngIf="step === 1">
-        <div class="cv2-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
-          <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
-            (click)="selectFrequency('one-time')">חד-פעמית</button>
-          <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
-            (click)="selectFrequency('monthly')">הוראת קבע חודשית</button>
-        </div>
 
-        <p class="cv2-section-label">בחר/י סכום לתרומה {{ donationFrequency === 'monthly' ? 'חודשית' : 'חד פעמית' }}</p>
-
-        <div class="cv2-amounts">
-          <button *ngFor="let a of amountsFor() | slice:0:6" class="cv2-amount-preset" type="button"
-            [class.is-selected]="isAmountSelected($any(a))" (click)="selectAmount($any(a))">
-            ₪{{ $any(a).toLocaleString('he-IL') }}
-          </button>
-        </div>
-
-        <div class="cv2-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
-          <span class="cv2-currency-symbol">₪</span>
-          <input class="cv2-custom-amount" type="text" inputmode="numeric" placeholder="סכום אחר"
-            [value]="amountDisplay" (input)="onCustomAmountInput($event)">
-        </div>
-
-        <div class="cv2-amount-confirm" *ngIf="explicitAmount > 0">✓ סכום שנבחר: ₪{{ explicitAmount.toLocaleString('he-IL') }}</div>
-
-        <!-- Donation-level installment count — same picker/logic already
-             proven on MinimalDonationPageComponent, now owned by the
-             checkout itself. No default pre-selection by design.
-             Always rendered (visibility toggle, not *ngIf) so switching
-             frequency never changes the body's height and the sticky
-             footer never jumps — see .cv2-installments--hidden. -->
-        <div class="cv2-installments" [class.cv2-installments--hidden]="donationFrequency !== 'monthly'">
-          <p class="cv2-installments-label">לכמה חודשים תרצו לתרום?</p>
-          <div class="cv2-installments-options">
-            <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button" class="cv2-installments-preset"
-              [class.is-selected]="isInstallmentsSelected(n)" (click)="selectInstallments(n)">{{ n }}</button>
-            <div class="cv2-installments-custom-wrap">
-              <input class="cv2-installments-custom" type="text" inputmode="numeric" placeholder="מספר אחר"
-                [value]="customInstallmentsInput" (input)="onCustomInstallmentsInput($event)">
+        <!-- Reward mode (2026-10-06 bug fix) -- a donor who already selected
+             a Reward/Offering made their financial choice by doing that, not
+             by picking a normal donation amount here; isRewardMode's own
+             doc comment explains why this is a named, explicit branch
+             rather than every piece of UI re-checking cartOfferings itself.
+             The normal amount/frequency/installments controls below are
+             entirely replaced by this summary -- never shown alongside it,
+             so there is no way to additionally pick a normal amount on top
+             of the reward (see chargeAmount's own doc comment on why that
+             combination is deliberately impossible, not just hidden). -->
+        <ng-container *ngIf="isRewardMode; else normalAmountStep">
+          <p class="cv2-section-label">תשורה נבחרת</p>
+          <div class="cv2-reward-summary">
+            <div class="cv2-reward-summary-item" *ngFor="let o of cartOfferings">
+              <span class="cv2-reward-summary-title">{{ o.title }}</span>
+              <span class="cv2-reward-summary-amount">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</span>
             </div>
           </div>
-          <p class="cv2-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
-        </div>
+        </ng-container>
 
-        <div class="cv2-offerings-note" *ngIf="cartOfferings.length > 0">
-          <span class="cv2-offerings-title">תשורות נבחרות ({{ cartOfferings.length }})</span>
-          <span class="cv2-offerings-tag" *ngFor="let o of cartOfferings">✓ {{ o.title }}</span>
-        </div>
+        <ng-template #normalAmountStep>
+          <div class="cv2-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
+            <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
+              (click)="selectFrequency('one-time')">חד-פעמית</button>
+            <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
+              (click)="selectFrequency('monthly')">הוראת קבע חודשית</button>
+          </div>
+
+          <p class="cv2-section-label">בחר/י סכום לתרומה {{ donationFrequency === 'monthly' ? 'חודשית' : 'חד פעמית' }}</p>
+
+          <div class="cv2-amounts">
+            <button *ngFor="let a of amountsFor() | slice:0:6" class="cv2-amount-preset" type="button"
+              [class.is-selected]="isAmountSelected($any(a))" (click)="selectAmount($any(a))">
+              ₪{{ $any(a).toLocaleString('he-IL') }}
+            </button>
+          </div>
+
+          <div class="cv2-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
+            <span class="cv2-currency-symbol">₪</span>
+            <input class="cv2-custom-amount" type="text" inputmode="numeric" placeholder="סכום אחר"
+              [value]="amountDisplay" (input)="onCustomAmountInput($event)">
+          </div>
+
+          <div class="cv2-amount-confirm" *ngIf="explicitAmount > 0">✓ סכום שנבחר: ₪{{ explicitAmount.toLocaleString('he-IL') }}</div>
+
+          <!-- Donation-level installment count — same picker/logic already
+               proven on MinimalDonationPageComponent, now owned by the
+               checkout itself. No default pre-selection by design.
+               Always rendered (visibility toggle, not *ngIf) so switching
+               frequency never changes the body's height and the sticky
+               footer never jumps — see .cv2-installments--hidden. -->
+          <div class="cv2-installments" [class.cv2-installments--hidden]="donationFrequency !== 'monthly'">
+            <p class="cv2-installments-label">לכמה חודשים תרצו לתרום?</p>
+            <div class="cv2-installments-options">
+              <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button" class="cv2-installments-preset"
+                [class.is-selected]="isInstallmentsSelected(n)" (click)="selectInstallments(n)">{{ n }}</button>
+              <div class="cv2-installments-custom-wrap">
+                <input class="cv2-installments-custom" type="text" inputmode="numeric" placeholder="מספר אחר"
+                  [value]="customInstallmentsInput" (input)="onCustomInstallmentsInput($event)">
+              </div>
+            </div>
+            <p class="cv2-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
+          </div>
+        </ng-template>
       </ng-container>
 
       <!-- ── STEP 2 — פרטים אישיים ── -->
@@ -273,7 +291,7 @@
           <div class="cv2-success">
             <div class="cv2-success-icon">❤️</div>
             <h2 class="cv2-success-title">תודה רבה!</h2>
-            <p class="cv2-success-text">תרומתך בסך {{ formattedChargeAmount }} התקבלה בהצלחה.</p>
+            <p class="cv2-success-text">{{ successMessage }}</p>
             <a class="cv2-success-receipt-link" *ngIf="receiptId" [routerLink]="'/receipts/' + receiptId">
               🧾 צפייה בקבלה
             </a>
@@ -302,7 +320,7 @@
         <div class="cv2-cta-row">
           <div class="cv2-footer-amount-block" *ngIf="commitmentText">
             <span class="cv2-footer-amount">{{ commitmentText }}</span>
-            <span class="cv2-footer-sub">{{ donationFrequency === 'monthly' ? 'תרומה חודשית' : 'תרומה חד פעמית' }}</span>
+            <span class="cv2-footer-sub">{{ commitmentSubLabel }}</span>
           </div>
 
           <ng-container [ngSwitch]="step">

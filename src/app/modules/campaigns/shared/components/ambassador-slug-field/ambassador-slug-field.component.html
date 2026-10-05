@@ -1,0 +1,17 @@
+<div class="asf-wrap">
+  <label class="asf-label">הקישור האישי שלך</label>
+  <p class="asf-hint">בחרו את הסיומת של הקישור האישי שלכם לקמפיין — אפשר בעברית או באנגלית.</p>
+
+  <div class="asf-input-row" dir="ltr" [class.asf-input-row--available]="status === 'available'" [class.asf-input-row--taken]="status === 'taken'">
+    <span class="asf-prefix">{{ campaignSlug }}/</span>
+    <input class="asf-input" type="text" dir="ltr" [ngModel]="value" (ngModelChange)="onInput($event)" maxlength="60" placeholder="ישראל-ישראלי">
+  </div>
+
+  <p class="asf-status asf-status--checking" *ngIf="status === 'checking'">בודק זמינות…</p>
+  <p class="asf-status asf-status--available" *ngIf="status === 'available'">✓ הקישור זמין</p>
+  <p class="asf-status asf-status--taken" *ngIf="status === 'taken'">הקישור הזה כבר בשימוש. בחרו שם אחר.</p>
+  <p class="asf-status asf-status--short" *ngIf="status === 'too-short'">יש להזין לפחות 2 תווים.</p>
+  <p class="asf-status asf-status--error" *ngIf="status === 'error'">לא הצלחנו לבדוק את זמינות הקישור כרגע. נסו שוב בעוד רגע.</p>
+
+  <p class="asf-preview">כך ייראה הקישור שלכם: <span dir="ltr">{{ publicUrl }}</span></p>
+</div>

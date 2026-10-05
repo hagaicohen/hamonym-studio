@@ -16,7 +16,6 @@ import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-pu
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
 const TOTAL_STEPS = 10;
 const REGISTRATION_STEP = 5;
-const PAGE_BUILDER_STEP = 9;
 
 // Every content-management step now has a real, working equivalent in the
 // Campaign Workspace (Settings/Donation/Rewards/Registration/Sponsors/
@@ -27,7 +26,21 @@ const PAGE_BUILDER_STEP = 9;
 // these are greyed out — Type/Lifecycle (2) has no Workspace equivalent
 // yet and stays open; Page Builder (9) and Publish (10) are Builder-only
 // by design, not migration candidates.
-const PUBLISHED_GATED_STEPS = [1, 3, 4, 5, 6, 7, 8];
+//
+// Basic Info (1) is deliberately NOT in this list (2026-09-30 reversal —
+// used to be) — it was gated purely as a side effect of also containing
+// content fields with a Workspace/Settings equivalent (title/category/
+// managerName), but that swept its Style/design controls (logo — see
+// campaign-page-builder-step.component.html's "CAMPAIGN LOGO" section)
+// into the same lock with no alternative home. Explicit product decision:
+// a published campaign should still feel like a normal editing experience
+// here, accepting that title/category/managerName are now editable from
+// both Step 1 and Settings (same accepted tradeoff Hero text/CTA already
+// had between Step 1 and Page Builder). The one field that genuinely
+// cannot change post-publish (slug) enforces that at the FIELD level via
+// isSlugLocked (readonly input, campaign-basic-step.component.ts), not by
+// disabling the whole step — exactly the granularity this decision asks for.
+const PUBLISHED_GATED_STEPS = [3, 4, 5, 6, 7, 8];
 
 // layout.pageFormat === 'minimal' (see campaign-studio-state.service.ts) —
 // Basic/Details (1), Type/Goal (2), Donation amounts (3) and Publish (10)
@@ -91,18 +104,16 @@ export class CampaignEditorComponent implements OnInit {
 
   currentStep = 1;
 
+  // Step 1 is never PUBLISHED_GATED (2026-09-30) — a published campaign now
+  // lands on step 1 by default, same as a draft, for a genuinely "normal"
+  // editing feel. The previous special-case redirect to Page Builder existed
+  // only because step 1 used to be a disabled dead end for a published
+  // campaign; it no longer is, for either format (minimal or full).
   ngOnInit(): void {
     if (this.initialStep && this.initialStep >= 1 && this.initialStep <= TOTAL_STEPS) {
       this.currentStep = this.disabledSteps.includes(this.initialStep)
         ? this.nearestEnabledStep(this.initialStep, 1)
         : this.initialStep;
-    } else if (this.isPublished) {
-      // Step 1 (now disabled for published campaigns) is a bad landing
-      // spot — go straight to Page Builder, the thing the Builder is for
-      // once live. A minimal-format campaign has no Page Builder step at
-      // all (gated, see MINIMAL_FORMAT_GATED_STEPS) — land on Publish
-      // instead, the only step still enabled for it post-publish.
-      this.currentStep = this.isMinimalFormat ? TOTAL_STEPS : PAGE_BUILDER_STEP;
     }
   }
 

@@ -1,0 +1,48 @@
+:host { display: block; direction: rtl; font-family: inherit; }
+
+.spp-wrap { display: flex; flex-direction: column; gap: 8px; }
+.spp-label { font-size: 13px; font-weight: 700; color: #334155; }
+.spp-hint { font-size: 12px; color: #94a3b8; margin: 0; }
+
+.spp-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.spp-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 92px; padding: 10px 8px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: #fff; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.spp-card:hover { border-color: #c4b5fd; }
+.spp-card--active { border-color: #7c3aed; background: #faf5ff; }
+
+.spp-thumb {
+  width: 100%; height: 44px;
+  background: #f8fafc; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px; box-sizing: border-box;
+}
+
+/* Cards thumbnail — 2x2 grid of squares */
+.spp-thumb--cards { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.spp-sq { background: #cbd5e1; border-radius: 2px; }
+
+/* List thumbnail — 3 stacked horizontal bars */
+.spp-thumb--list { flex-direction: column; gap: 4px; }
+.spp-bar { width: 100%; height: 6px; background: #cbd5e1; border-radius: 2px; }
+
+/* Image thumbnail — a big image block + a small caption strip */
+.spp-thumb--image { flex-direction: column; gap: 3px; }
+.spp-img { width: 100%; flex: 1; background: #cbd5e1; border-radius: 2px; }
+.spp-strip { width: 70%; height: 5px; background: #e2e8f0; border-radius: 2px; }
+
+.spp-card-label { font-size: 12px; font-weight: 700; color: #334155; }
+.spp-recommended { font-size: 10px; font-weight: 700; color: #7c3aed; text-align: center; }
+
+.spp-reset {
+  align-self: flex-start;
+  font-size: 12px; font-weight: 700; color: #7c3aed;
+  background: none; border: none; cursor: pointer; padding: 2px 0;
+}
+.spp-reset:hover { text-decoration: underline; }

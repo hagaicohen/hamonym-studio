@@ -1,13 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Gift, Settings2, ChevronDown, ChevronUp, Eye, Building2, X } from 'lucide-angular';
+import { LucideAngularModule, Gift, Eye, Building2, X } from 'lucide-angular';
 import { Router, RouterLink } from '@angular/router';
 import {
   CampaignStudioStateService,
   Offering,
 } from '../../../../campaigns/services/campaign-studio-state.service';
-import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { CampaignApiService } from '../../../services/campaign-api.service';
 import { CampaignPartnersService, CampaignPartner } from '../../../services/campaign-partners.service';
@@ -17,7 +16,7 @@ import { CurrentEntityService } from '../../../../../core/services/current-entit
 @Component({
   selector: 'app-campaign-offerings-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, ColorPickerComponent, PartnerLinkModalComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, PartnerLinkModalComponent],
   templateUrl: './campaign-offerings-step.component.html',
   styleUrl: './campaign-offerings-step.component.css',
 })
@@ -115,9 +114,6 @@ export class CampaignOfferingsStepComponent implements OnInit {
   }
 
   readonly Gift        = Gift;
-  readonly Settings2   = Settings2;
-  readonly ChevronDown = ChevronDown;
-  readonly ChevronUp   = ChevronUp;
   readonly Eye         = Eye;
   readonly Building2   = Building2;
   readonly X           = X;
@@ -147,8 +143,6 @@ export class CampaignOfferingsStepComponent implements OnInit {
   };
 
   get draft() { return this.state.draft; }
-
-  showAdvanced = false;
 
   // ── Form state ──
   editingOfferingId: string | null = null;
@@ -241,30 +235,6 @@ export class CampaignOfferingsStepComponent implements OnInit {
   }
 
   removeImage(): void { this.offering.imageUrl = null; }
-
-  // NB: layout.rewardsLayout is the persisted key name (unchanged — see
-  // campaign-studio-state.service.ts) even though the method reads "Offerings".
-  setOfferingsLayout(layout: 'standard' | 'image'): void {
-    this.state.patch({ layout: { ...this.draft.layout, rewardsLayout: layout } });
-    this.sync();
-  }
-
-  setRewardsImagePosition(position: 'full' | 'inline'): void {
-    this.state.patch({ layout: { ...this.draft.layout, rewardsImagePosition: position } });
-    this.sync();
-  }
-
-  setRewardsImageSize(size: number): void {
-    this.state.patch({ layout: { ...this.draft.layout, rewardsImageSize: size } });
-    this.sync();
-  }
-
-  // ── Theme ──
-  patchTheme(partial: Partial<typeof this.draft.layout.theme>): void {
-    this.state.patch({
-      layout: { ...this.draft.layout, theme: { ...this.draft.layout.theme, ...partial } },
-    });
-  }
 
   private empty(): Offering {
     // A real id is assigned up front (not only at save()) so a brand-new,

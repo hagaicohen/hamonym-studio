@@ -1,0 +1,29 @@
+<div class="spp-wrap">
+  <label class="spp-label">{{ label }}</label>
+  <p class="spp-hint" *ngIf="hint">{{ hint }}</p>
+
+  <div class="spp-row">
+    <button type="button" class="spp-card" *ngFor="let opt of options"
+      [class.spp-card--active]="isActive(opt.value)"
+      (click)="select(opt.value)">
+
+      <span class="spp-thumb spp-thumb--cards" *ngIf="opt.value === 'cards'">
+        <span class="spp-sq"></span><span class="spp-sq"></span>
+        <span class="spp-sq"></span><span class="spp-sq"></span>
+      </span>
+      <span class="spp-thumb spp-thumb--list" *ngIf="opt.value === 'list'">
+        <span class="spp-bar"></span><span class="spp-bar"></span><span class="spp-bar"></span>
+      </span>
+      <span class="spp-thumb spp-thumb--image" *ngIf="opt.value === 'image'">
+        <span class="spp-img"></span><span class="spp-strip"></span>
+      </span>
+
+      <span class="spp-card-label">{{ opt.label }}</span>
+      <span class="spp-recommended" *ngIf="recommended === opt.value">מומלץ</span>
+    </button>
+  </div>
+
+  <button type="button" class="spp-reset" *ngIf="value" (click)="onReset()">
+    ↺ חזרה להמלצה
+  </button>
+</div>

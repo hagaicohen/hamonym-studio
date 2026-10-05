@@ -9,6 +9,7 @@ import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
+import { devOnlyGuard } from './core/guards/dev-only.guard';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -392,6 +393,18 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
         .then((m) => m.CampaignPublicPageComponent),
+  },
+
+  /* OpenFields entity-credentials feasibility POC (2026-09-27), dev-only —
+     see openfields-poc-page.component.ts's own doc comment. Not linked from
+     any nav/menu, reached only by typing the URL directly. Isolated from
+     Checkout V2/the hosted iframe flow -- creates no donation. */
+  {
+    path: 'dev/openfields-poc',
+    canActivate: [devOnlyGuard],
+    loadComponent: () =>
+      import('./modules/dev/pages/openfields-poc/openfields-poc-page.component')
+        .then((m) => m.OpenfieldsPocPageComponent),
   },
 
   /* ========================================

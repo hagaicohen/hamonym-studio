@@ -6,14 +6,19 @@ import { LucideAngularModule, Users, Plus, Upload, Download, Search, Pencil, Tra
 import { CampaignStudioStateService, CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { AmbassadorService } from '../../../services/ambassador.service';
 
+// Hebrew-preserving (2026-10-01) -- same normalization rule as the live
+// backend/admin flows (ambassadors.service.js#normalizeSlug), replacing the
+// old ASCII-transliterating map so a Hebrew name's DEFAULT suggestion is
+// Hebrew too, not forced English. The user can still freely edit it
+// afterward (onSlugInput already accepted Hebrew) -- only the default changed.
 function nameToSlug(name: string): string {
-  const map: Record<string, string> = {
-    'א':'a','ב':'b','ג':'g','ד':'d','ה':'h','ו':'v','ז':'z','ח':'ch','ט':'t',
-    'י':'y','כ':'k','ך':'k','ל':'l','מ':'m','ם':'m','נ':'n','ן':'n','ס':'s',
-    'ע':'a','פ':'p','ף':'p','צ':'tz','ץ':'tz','ק':'k','ר':'r','ש':'sh','ת':'t',
-  };
-  return name.trim().split('').map(c => map[c] ?? (c === ' ' ? '-' : c.toLowerCase())).join('')
-    .replace(/-+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  return (name || '').trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9א-ת-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
 }
 
 function uniqueSlug(base: string, existing: CampaignAmbassador[], excludeId?: string): string {
@@ -138,6 +143,12 @@ export class CampaignAmbassadorsStepComponent {
   }
 
   get campaignSlug(): string { return this.state.draft.slug ?? ''; }
+  get campaignTargetAmount(): number { return this.state.draft.targetAmount ?? 0; }
+
+  goalAboveCampaignGoal(): boolean {
+    return !!this.form.goalAmount && this.campaignTargetAmount > 0 && this.form.goalAmount > this.campaignTargetAmount;
+  }
+
   get withGoalCount():      number { return this.ambassadors.filter(a => a.goalAmount != null).length; }
   get validImportCount():   number { return this.importRows.filter(r =>  r.valid).length; }
   get invalidImportCount(): number { return this.importRows.filter(r => !r.valid).length; }

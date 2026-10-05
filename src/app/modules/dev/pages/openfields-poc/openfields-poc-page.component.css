@@ -1,0 +1,229 @@
+.poc-page {
+  direction: rtl;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.poc-warning {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.poc-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+}
+
+.poc-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.poc-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin: 12px 0 4px;
+}
+
+.poc-input, .poc-exp-input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 15px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.poc-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.poc-frame-shell {
+  position: relative;
+  width: 100%;
+  height: 54px;
+}
+
+/* Parity with the proven openfields-form.component.css's own
+   .cardcom-field-frame -- iframe defaults to display:inline in the UA
+   stylesheet, which is a real (if usually minor) source of width/baseline
+   quirks the proven component explicitly guards against. Border/radius
+   still live on THIS outer iframe element (matching this POC's own visual
+   approach, not the proven component's -- see the accompanying report for
+   why that distinction matters here). */
+.poc-field-frame {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 54px;
+  max-height: 54px;
+  border: 1px solid #dbe2ea;
+  border-radius: 16px;
+  overflow: hidden;
+  line-height: 0;
+  vertical-align: top;
+  box-sizing: border-box;
+  /* Always loading underneath -- never removed from the DOM (needed for
+     its own (load) event + CardCom's cross-frame name lookups) -- just
+     invisible until initState==='initialized'. See component's own header
+     comment for why this is the actual race fix, not a cosmetic choice. */
+  opacity: 0;
+  z-index: 1;
+}
+
+.poc-field-frame.poc-frame-visible {
+  opacity: 1;
+}
+
+/* Skeleton placeholder -- purely visual, occupies the identical box the
+   real field will fill, so revealing the real field never shifts layout.
+   Never accepts input -- text only. */
+.poc-field-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  border: 1px solid #dbe2ea;
+  border-radius: 16px;
+  background: #f1f5f9;
+  padding: 0 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.poc-skeleton-text {
+  color: #94a3b8;
+  font-size: 15px;
+  font-family: Arial, sans-serif;
+  direction: ltr;
+}
+
+.poc-master-frame {
+  width: 1px;
+  height: 1px;
+  border: none;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.poc-btn-secondary {
+  margin-top: 12px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.poc-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 20px;
+}
+
+.poc-confirm-row input {
+  width: auto;
+}
+
+.poc-btn-pay {
+  width: 100%;
+  margin-top: 12px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.poc-btn-pay:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.poc-status {
+  margin-top: 12px;
+  font-size: 13px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.poc-status b { color: #64748b; }
+.poc-status b.ok { color: #16a34a; }
+.poc-status b.bad { color: #dc2626; }
+
+.poc-error {
+  color: #dc2626;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.poc-log-panel {
+  background: #0f172a;
+  border-radius: 16px;
+  padding: 16px;
+  color: #e2e8f0;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.poc-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.poc-log-header h2 { color: #fff; margin: 0; }
+
+.poc-log-list {
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.poc-log-entry {
+  border-bottom: 1px solid #1e293b;
+  padding: 8px 0;
+}
+
+.poc-log-entry.dir-out .poc-log-label { color: #38bdf8; }
+.poc-log-entry.dir-in .poc-log-label { color: #4ade80; }
+.poc-log-entry.dir-error .poc-log-label { color: #f87171; }
+.poc-log-entry.dir-info .poc-log-label { color: #facc15; }
+
+.poc-log-ts {
+  color: #64748b;
+  margin-inline-end: 8px;
+}
+
+.poc-log-entry pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 6px 0 0;
+  color: #cbd5e1;
+}

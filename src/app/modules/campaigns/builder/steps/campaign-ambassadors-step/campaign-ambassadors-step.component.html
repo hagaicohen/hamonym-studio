@@ -36,13 +36,13 @@
     </div>
   </div>
 
-  <!-- PLACEMENT — only meaningful when there's a sidebar to place it in -->
-  <div class="amb-placement-row" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
-    <span class="amb-placement-label">מיקום השגרירים</span>
-    <button class="amb-placement-btn" [class.amb-placement-btn--active]="!state.isSidebarSection('ambassadors')"
-            (click)="state.setSidebarSection('ambassadors', false)">מתחת לתוכן (רוחב מלא)</button>
-    <button class="amb-placement-btn" [class.amb-placement-btn--active]="state.isSidebarSection('ambassadors')"
-            (click)="state.setSidebarSection('ambassadors', true)">בסיידבר</button>
+  <!-- Placement + Section Presentation (how/where the whole ambassadors
+       section displays) moved to the Page Builder step (2026-10-04) -- this
+       step stays content-only (add/edit the actual ambassador records),
+       which matters because this step is gated/unreachable once the
+       campaign is published, while the Page Builder step never is. -->
+  <div class="amb-design-note">
+    🎨 עיצוב התצוגה (כרטיסים/רשימה, מיקום) נמצא בשלב "בניית דף".
   </div>
 
   <!-- TOOLBAR -->
@@ -175,6 +175,9 @@
                (input)="onGoalInput($event)"
                placeholder="5,000">
       </div>
+      <p class="adf-goal-warning" *ngIf="goalAboveCampaignGoal()">
+        שימו לב: היעד שבחרתם גבוה מיעד הקמפיין, שעומד על {{ campaignTargetAmount | number }} ₪. ניתן להמשיך עם היעד שבחרתם.
+      </p>
     </div>
     <div class="adf-field">
       <label class="adf-label">הודעה אישית</label>

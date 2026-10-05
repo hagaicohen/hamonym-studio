@@ -12,7 +12,7 @@
     </div>
     <div class="studio-actions">
       <span class="saved-badge" *ngIf="saved">✓ נשמר</span>
-      <button class="btn-save" (click)="save()" [disabled]="isSaving || currentStep === 3">
+      <button class="btn-save" (click)="save()" [disabled]="isSaving || currentStep === 3 || !slugAvailable">
         {{ isSaving ? 'שומר...' : 'שמור' }}
       </button>
     </div>
@@ -64,6 +64,17 @@
             <input class="field-input" type="email" [(ngModel)]="draft.email" placeholder="me@example.com" dir="ltr" />
           </div>
         </div>
+
+        <div class="field-group" *ngIf="campaign?.slug">
+          <app-ambassador-slug-field
+            [campaignSlug]="campaign.slug"
+            [nameForDefault]="draft.fullName"
+            [excludeAmbassadorId]="ambassador()?.id"
+            [value]="draft.slug"
+            (valueChange)="draft.slug = $event"
+            (availabilityChange)="slugAvailable = $event">
+          </app-ambassador-slug-field>
+        </div>
       </div>
     }
 
@@ -95,6 +106,9 @@
                  [(ngModel)]="draft.goalAmount"
                  placeholder="25000" />
           <span class="field-hint">השאר ריק אם אין לך יעד אישי</span>
+          <p class="goal-warning" *ngIf="goalAboveCampaignGoal()">
+            שימו לב: היעד שבחרתם גבוה מיעד הקמפיין, שעומד על {{ campaign?.target_amount | number }} ₪. ניתן להמשיך עם היעד שבחרתם.
+          </p>
         </div>
       </div>
     }
@@ -147,7 +161,7 @@
       </button>
 
       @if (currentStep < TOTAL_STEPS) {
-        <button class="btn-next" (click)="next()" [disabled]="isSaving">
+        <button class="btn-next" (click)="next()" [disabled]="isSaving || (currentStep === 2 && !slugAvailable)">
           {{ currentStep === 2 ? (isSaving ? 'שומר...' : 'שמור והמשך') : 'הבא' }}
           <lucide-angular [img]="ChevronLeft" [size]="15"></lucide-angular>
         </button>

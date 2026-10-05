@@ -203,111 +203,19 @@
   <!-- ── HERO VISIBILITY ── -->
   <div class="step-collapse-section">
     <div class="step-collapse-header" (click)="toggleSection('hero-display')">
-      <span class="step-collapse-title">🎯 תצוגת Hero — לוגו, כותרת ותת-כותרת</span>
+      <span class="step-collapse-title">🎯 תצוגת Hero — כותרת ותת-כותרת</span>
       <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('hero-display')">›</span>
     </div>
-    <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">בחרו אילו אלמנטים יוצגו על תמונת הכיסוי</p>
+    <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">בחרו היכן יוצגו הכותרת ותת-הכותרת</p>
 
     <div class="hero-toggles" *ngIf="!isSectionCollapsed('hero-display')">
 
-      <div class="toggle-row" (click)="state.patch({ showLogo: !draft.showLogo }); sync()">
-        <div class="toggle-switch" [class.toggle-on]="draft.showLogo">
-          <div class="toggle-knob"></div>
-        </div>
-        <div class="toggle-info">
-          <span class="toggle-label">הצג לוגו על ה-Hero</span>
-          <span class="toggle-sub">עיגול הלוגו מעל תמונת הכיסוי</span>
-        </div>
-      </div>
-
-      <!-- Logo options — only when logo is visible -->
-      <div class="logo-options" *ngIf="draft.showLogo">
-
-        <!-- Custom logo upload -->
-        <div class="logo-option-section">
-          <span class="logo-option-label">לוגו</span>
-          <div class="logo-source-row">
-            <div class="logo-source-preview">
-              <img *ngIf="draft.campaignLogoUrl || entityLogoUrl"
-                   [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-              <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl">🏢</span>
-            </div>
-            <input #campaignLogoInput type="file" accept="image/*"
-              (change)="onCampaignLogoChange($event)" hidden>
-            <button class="logo-upload-btn" (click)="campaignLogoInput.click()"
-              [disabled]="isUploadingLogo">
-              {{ isUploadingLogo ? 'מעלה...' : (draft.campaignLogoUrl ? 'החלף' : 'העלה לוגו מותאם') }}
-            </button>
-            <button class="logo-remove-btn" *ngIf="draft.campaignLogoUrl"
-              (click)="removeCampaignLogo()">הסר</button>
-          </div>
-          <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">מוצג לוגו העמותה</span>
-        </div>
-
-        <!-- Fine-tuning (position/background/border) collapsed by default —
-             the upload above is the one decision most managers need to make;
-             everyone else can leave the rest at their defaults. -->
-        <button class="logo-design-toggle" type="button" (click)="logoDesignOpen = !logoDesignOpen">
-          <span>עיצוב הלוגו — מיקום, רקע ומסגרת</span>
-          <lucide-angular [img]="logoDesignOpen ? ChevronUp : ChevronDown" [size]="14"></lucide-angular>
-        </button>
-
-        <ng-container *ngIf="logoDesignOpen">
-
-          <!-- Position picker -->
-          <div class="logo-option-section">
-            <span class="logo-option-label">מיקום</span>
-            <div class="logo-position-row">
-              <button class="logo-pos-btn"
-                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'left'"
-                (click)="state.patch({ heroLogoPosition: 'left' }); sync()">
-                <span class="logo-pos-icon">◀</span>
-                שמאל
-              </button>
-              <button class="logo-pos-btn"
-                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'center'"
-                (click)="state.patch({ heroLogoPosition: 'center' }); sync()">
-                <span class="logo-pos-icon">◉</span>
-                מרכז
-              </button>
-              <button class="logo-pos-btn"
-                [class.logo-pos-btn--active]="draft.heroLogoPosition === 'above'"
-                (click)="state.patch({ heroLogoPosition: 'above' }); sync()">
-                <span class="logo-pos-icon">▲</span>
-                מעל
-              </button>
-            </div>
-          </div>
-
-          <!-- Shape/size/background/border — shared editor (2026-09-28),
-               the SAME controls the Quick Donation page's own logo editor
-               uses (LogoAppearanceEditorComponent). Shape/size are new for
-               Hero (previously hardcoded circle/128px in CSS with no
-               field); background/border reuse the existing theme.logoBg/
-               logoBorderColor/Style/Width fields exactly as before. -->
-          <div class="logo-option-section">
-            <span class="logo-option-label">עיצוב הלוגו</span>
-            <app-logo-appearance-editor
-              [shape]="draft.heroLogoShape ?? 'circle'"
-              (shapeChange)="state.patch({ heroLogoShape: $event }); sync()"
-              [size]="draft.heroLogoSize ?? 'md'"
-              (sizeChange)="state.patch({ heroLogoSize: $event }); sync()"
-              [background]="draft.layout.theme.logoBg"
-              (backgroundChange)="patchTheme({ logoBg: $event })"
-              [showBorder]="true"
-              [borderColor]="draft.layout.theme.logoBorderColor || ''"
-              (borderColorChange)="patchTheme({ logoBorderColor: $event })"
-              [borderStyle]="draft.layout.theme.logoBorderStyle || 'solid'"
-              (borderStyleChange)="patchTheme({ logoBorderStyle: $event })"
-              [borderWidth]="draft.layout.theme.logoBorderWidth ?? 3"
-              (borderWidthChange)="patchTheme({ logoBorderWidth: $event })">
-            </app-logo-appearance-editor>
-            <span class="logo-option-hint">לוגו בצבע בהיר? תנו לו רקע כהה כדי שיישאר גלוי.</span>
-          </div>
-
-        </ng-container>
-
-      </div>
+      <!-- Logo/appearance controls moved to Page Builder (2026-09-30) — Style/
+           design controls belong in the design step, both before AND after
+           publication (this step is PUBLISHED_GATED, Page Builder never is).
+           See campaign-page-builder-step.component.html's "CAMPAIGN LOGO"
+           section for the one remaining home of showLogo/campaignLogoUrl/
+           heroLogoPosition/Shape/Size/logoBg/Border. -->
 
       <div class="logo-meta-options">
         <div class="logo-option-section">

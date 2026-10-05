@@ -9,6 +9,7 @@ import {
 import { AmbassadorService, Ambassador, AmbassadorFormData, ImportRow } from '../../services/ambassador.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
 
 function parseCommas(s: string): number | null {
   const digits = s.replace(/[^0-9]/g, '');
@@ -29,13 +30,13 @@ function normalizePhone(raw: string): string {
 }
 
 const EMPTY_FORM: AmbassadorFormData = {
-  fullName: '', phone: '', email: '', goalAmount: null, personalMessage: '', personalTitle: '',
+  fullName: '', phone: '', email: '', goalAmount: null, personalMessage: '', personalTitle: '', slug: '',
 };
 
 @Component({
   selector: 'app-campaign-ambassadors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-ambassadors-page.component.html',
   styleUrls: ['./campaign-ambassadors-page.component.css'],
 })
@@ -59,6 +60,8 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
 
   campaignId    = '';
   campaignTitle = '';
+  campaignSlug  = '';
+  campaignTargetAmount = 0;
   isOngoing = false;
   ambassadors: Ambassador[] = [];
   isLoading   = true;
@@ -72,6 +75,11 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   goalDisplay = '';
   saving = false;
   saveError: string | null = null;
+  // Gates save() alongside fullName — same pattern as the self-registration
+  // modal's joinSlugAvailable. true-by-default in edit mode because the
+  // slug field component itself optimistically confirms a pre-existing
+  // value on first change (see AmbassadorSlugFieldComponent#ngOnChanges).
+  slugAvailable = false;
 
   // ── Bulk import (.csv/.xlsx) — same parsing shape as the Builder's own
   // campaign-ambassadors-step, but wired to the real backend (create/
@@ -97,7 +105,12 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     this.loader.forceHide();
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
     this.campaignApi.getById(this.campaignId).subscribe({
-      next: (c) => { this.campaignTitle = c.title; this.isOngoing = c.campaignLifecycle === 'ongoing'; },
+      next: (c) => {
+        this.campaignTitle = c.title;
+        this.campaignSlug  = c.slug;
+        this.campaignTargetAmount = c.targetAmount ?? 0;
+        this.isOngoing = c.campaignLifecycle === 'ongoing';
+      },
       error: () => {},
     });
     this.loadAmbassadors();
@@ -185,6 +198,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     this.editingId = null;
     this.form = { ...EMPTY_FORM };
     this.goalDisplay = '';
+    this.slugAvailable = false;
     this.saveError = null;
     this.showDrawer = true;
   }
@@ -194,10 +208,19 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     this.form = {
       fullName: a.fullName, phone: a.phone ?? '', email: a.email ?? '',
       goalAmount: a.goalAmount, personalMessage: a.personalMessage, personalTitle: a.personalTitle,
+      slug: a.slug,
     };
     this.goalDisplay = a.goalAmount != null ? a.goalAmount.toLocaleString('he-IL') : '';
+    // The slug field component optimistically confirms a non-empty
+    // pre-existing value as available on its first change, so this is
+    // the normal case rather than a race — see ngOnChanges there.
+    this.slugAvailable = true;
     this.saveError = null;
     this.showDrawer = true;
+  }
+
+  goalAboveCampaignGoal(): boolean {
+    return !!this.form.goalAmount && this.campaignTargetAmount > 0 && this.form.goalAmount > this.campaignTargetAmount;
   }
 
   closeDrawer(): void {
@@ -215,7 +238,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   }
 
   get canSaveAmbassador(): boolean {
-    return !!this.form.fullName.trim() && !this.saving;
+    return !!this.form.fullName.trim() && !this.saving && this.slugAvailable;
   }
 
   saveAmbassador(): void {

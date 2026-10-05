@@ -30,7 +30,9 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   private router          = inject(Router);
   private title           = inject(Title);
   private api             = inject(CampaignApiService);
-  private state           = inject(CampaignStudioStateService);
+  // Not private: the template reads state.draft?.id directly to pass as
+  // [manageCampaignId] to the Platform Top Strip once canEdit is true.
+  state                    = inject(CampaignStudioStateService);
   private ui              = inject(StudioUiService);
   private loader          = inject(AppLoaderService);
   private ambassadorSvc   = inject(AmbassadorService);
@@ -61,12 +63,15 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   // anonymous visitors can't see it, but the manager themselves should
   // still be able to preview their own work in progress.
   ownerPreview    = false;
-  // True when the logged-in visitor manages this campaign's entity — shows
-  // a "back to edit" affordance. Deliberately checked via an authenticated
-  // API call (reusing getBySlug()'s existing user_entities ownership join),
-  // never via a URL flag/query-param/referrer — those could be guessed,
-  // bookmarked, or shared, exposing the affordance (even just its
-  // existence) to an outside visitor. A stranger's request to the
+  // True when the logged-in visitor manages this campaign's entity — drives
+  // the Platform Top Strip's "ניהול הקמפיין" action (2026-10-06 Platform
+  // Navigation Cleanup; previously also showed an in-page "back to edit"
+  // bar, removed — management now lives only in the Top Strip, never
+  // inside the campaign content itself). Deliberately checked via an
+  // authenticated API call (reusing getBySlug()'s existing user_entities
+  // ownership join), never via a URL flag/query-param/referrer — those
+  // could be guessed, bookmarked, or shared, exposing the affordance (even
+  // just its existence) to an outside visitor. A stranger's request to the
   // authenticated endpoint below simply 403/404s, so canEdit stays false
   // for them regardless of how they arrived at this URL.
   canEdit         = false;
@@ -161,12 +166,6 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
       next: () => { this.canEdit = true; },
       error: () => {},
     });
-  }
-
-  goToEdit(): void {
-    const id = this.state.draft?.id;
-    if (!id) return;
-    this.router.navigate(['/campaigns', id, 'edit']);
   }
 
   private showNotFound(): void {
