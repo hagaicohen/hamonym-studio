@@ -813,3 +813,120 @@ Backend: migration `033_partner_draft.sql` — `entities.blocks`/`entities.layou
 **Reason:** `CurrentEntityService` מייצג את הישות שנבחרה כרגע בממשק הניהול המאומת (Studio/topbar switcher) — זה context אדמיניסטרטיבי, לא בעלות על קמפיין. נמצא באג אמיתי: `CampaignPreviewComponent` שאב `entityLogoUrl`/`entityName` מ-`CurrentEntityService.currentEntity()` פעם אחת ב-constructor, בלי תלות בקמפיין המוצג בפועל — מנהל שדפדף בין קמפיינים של ישויות שונות בזמן שהטופבר שלו הצביע על ישות אחרת ראה את המיתוג של הישות הלא-נכונה דולף ל-Checkout/Hero/footer. הפתרון: resolver משותף (`resolveCampaignLogo()`) שקורא אך ורק משדות `draft.campaignLogoUrl`/`draft.entityLogo` (נטענים מה-backend per-קמפיין). ה-fallback ל-`CurrentEntityService` מותר **רק** כש-`!draft.id` — כלומר draft חדש שמעולם לא נשמר (`createInitialDraft()` לא קובע `id` בכלל), המקרה היחיד שבו אין עדיין קמפיין/ישות בעלים אמיתיים לפתור מולם. כל קמפיין טעון בפועל (עמוד ציבורי, owner preview, או עריכת קמפיין קיים ב-Studio) תמיד נושא `id` אמיתי, כך שה-fallback הזה פשוט לא נגיש משם — לא רק מוסכמה, אלא הבחנה מובנית בקוד.
 
 **חל גם מעבר ללוגו:** העיקרון תקף לכל מידע ציבורי-ספציפי-לקמפיין שבו שימוש בישות הנבחרת בממשק הניהול עלול לגרום לדליפה בין ישויות (שם, מיתוג, סליקה וכו') — לא רק לוגו.
+
+---
+
+**2026-10-03**
+
+**Decision:** Section Presentation (Cards/List לכל סקשן: תשורות/תורמים/שגרירים/עדכונים) היא ציר **עצמאי** מ-Placement (Sidebar/Main) — לא עוד שדה שמוחבא לפי מיקום. כל שילוב Placement×Presentation חייב markup/CSS משלו (לא ניתן "להסתפק" בעיצוב ה-sidebar הקומפקטי גם למיקום הראשי).
+
+**Reason:** לפני כן List הייתה "תצוגת ה-sidebar הקבועה" במובלע, ולא בחירה אמיתית שאפשר גם לבחור כשהסקשן יושב בתוכן הראשי. ר' הערות `resolveSectionPresentation()`/`PresentableSection` ב-`campaign-styles.ts`.
+
+---
+
+**2026-10-04**
+
+**Decision:** בקרות Placement + Section Presentation של תשורות/שגרירים/תורמים/עדכונים כולן מועברות ל-Page Builder (שלב 9, **לעולם לא** publish-gated) — לא נשארות בשלבים הייעודיים (Offerings/Ambassadors/Sponsors/Updates) שחלקם ב-`PUBLISHED_GATED_STEPS`.
+
+**Reason:** מנהל קמפיין שפרסם קמפיין היה מאבד לצמיתות את היכולת לשנות מיקום/תצוגה של סקשנים האלה — תוכן נשאר בשלב הייעודי (עדיין gated, זה בכוונה), אבל כל מה שהוא "איפה ואיך מוצג" עובר למקום שתמיד פתוח.
+
+---
+
+**2026-10-04 (המשך — פס חיפוש בתשורות ה-sidebar תפס גובה עצום)**
+
+**Decision/Fix:** ב-`.hm-reward-filters--compact` (sidebar), שדה החיפוש מקבל `flex:0 0 auto` במקום `flex:1 1 160px`.
+
+**Reason:** `flex-basis:160px` נכתב במחשבה על שורה (width), אבל כש-`.hm-reward-filters--compact` עובר ל-`flex-direction:column` (ה-layout של ה-sidebar), אותו `flex-basis` מתפרש כ-**height** — שדה חיפוש בגובה 160px. תוקן בלי לגעת ב-layout הרגיל (שורה), רק בגרסה ה-column-ית.
+
+---
+
+**2026-10-05 (קבוצת תיקוני UX חזותיים — Visual QA)**
+
+**Decisions/Fixes (כל אחד עומד בפני עצמו, לא תלוי בשכניו):**
+1. תגית "הפריט אזל" (grayscale + pill overlay) על תשורה שנגמר המלאי שלה, כולל תיקון באג אמיתי: `selectOffering()` לא בדק `stock`/`purchasedCount` לפני הוספה לעגלה.
+2. ה-checkbox בפילטר התשורות (היה עצום/לא פרופורציונלי) — ננעל ל-16×16px.
+3. פילטרי התשורות (לא מאורגנים, מרגישים כמו בלאגן) — קובצו לתוך סרגל-כלים אחד עם מסגרת.
+4. סקשנים ב-sidebar (תשורות/תורמים/שגרירים/עדכונים/חסויות) התמזגו ויזואלית אחד בשני — קיבלו עיצוב "כרטיס לבן" אמיתי, תואם לעיצוב stats/donate הקיים.
+5. בקרות העיצוב המתקדם של תשורות (`rewardsBg`/`rewardCardBorder`/וכו') היו נגישות רק בשלב 4 (Offerings, publish-gated) — הועברו לשלב 9 (ראו 2026-10-06 למטה), עם ניקוי קוד מת בשלב 4.
+
+**Reason:** כל אחד מהם נמצא ודווח בנפרד בבדיקת UI חיה, לא ממבדק קוד.
+
+---
+
+**2026-10-05 (המשך — Platform Top Strip נהיה sticky)**
+
+**Decision:** `.pts-strip` עובר ל-`position:sticky; top:0`. `.hm-sticky-header` (הכותרת הדביקה של הקמפיין) מקבל `top:34px` (`28px` במובייל) במקום `top:0`.
+
+**Reason:** בלי השינוי ב-offset, שני ה-headers הדביקים (הפס הגלובלי + הכותרת הדביקה של הקמפיין) היו חופפים זה את זה בגלילה. עכשיו הכותרת הדביקה "יושבת" מתחת לפס הגלובלי במקום מעליו/מתחתיו בחפיפה.
+
+---
+
+**2026-10-05 (המשך — תיקון תשורה בצ'קאאוט: סכום תרומה מצטבר שגוי)**
+
+**Decision/Fix:** בחירת תשורה כבר לא מוסיפה את מחיר התשורה **מעל** סכום תרומה נפרד שהמשתמש חייב למלא. נוסף מצג `isRewardMode`: כש-יש תשורות בעגלה, `chargeAmount = סכום התשורות בלבד` (לא `explicitAmount + cartOfferingsTotal`), `step1Valid`/ה-UI/טקסט הכפתורים מתעדכנים בהתאם, ו-`offeringIds` נוסף ל-snapshot של "שימוש חוזר בתרומה".
+
+**Reason:** באג משמעותי שנמצא בבדיקה: בחירת תשורה (למשל ₪180) עדיין חייבה את המשתמש למלא גם סכום תרומה "רגיל" ב-Step 1 של ה-checkout לפני שיכול היה להמשיך — תשלום כפול במובלע, לא רק UX גרוע.
+
+---
+
+**2026-10-05 (המשך — Stale state אחרי תשלום על תשורה)**
+
+**Decision/Fix:** `paymentSucceeded` output חדש מה-Checkout, שהורה (ה-component שמכיל אותו) מאזין לו כדי לנקות את העגלה ולבצע `rewardCounts` refetch.
+
+**Reason:** אחרי תשלום מוצלח על תשורה, ה-UI המשיך להציג אותה כ"בעגלה"/ניתנת-לתשלום, וסטטוס "אזל המלאי" לא התעדכן — כי שום דבר לא הודיע להורה שתשלום הסתיים.
+
+---
+
+**2026-10-05 (המשך — רגרסיה: מסך הצלחה הציג "₪0")**
+
+**Decision/Fix:** `paidSnapshot` — תמונת-מצב קפואה של `chargeAmount`/`isRewardMode` שנלקחת **לפני** ש-`paymentSucceeded` נפלט, כדי שמסך ההצלחה (עדיין פתוח ב-Drawer) ימשיך להציג את הסכום האמיתי אחרי שההורה כבר ניקה את העגלה. נוסף גם getter `successMessage` מודע-לתשורה (לא לקרוא לרכישת תשורה "תרומה").
+
+**Reason:** באג שאני עצמי הכנסתי בתיקון ה-stale-state הקודם (ראו למעלה) — ניקוי העגלה (side-effect של `paymentSucceeded`) קרס את `chargeAmount`/`isRewardMode` ל-0/false **בזמן** שמסך ההצלחה (אותו component, ה-Drawer נשאר פתוח) עדיין היה ברינדור, והציג "תרומתך על סך 0 שקלים".
+
+---
+
+**2026-10-06**
+
+**Decision:** נוספו 3 סגנונות קמפיין חדשים — Royal (מלכותי, Frank Ruhl Libre), Community (קהילתי, Varela Round), Heritage (מורשת, Assistant) — סה"כ 12 סגנונות. בנוסף, Donation/Stats/Donors מקבלים `titleColor?`/Donate+Stats+Donors מקבלים `bodyTextColor` connection ("Style → Theme → Section override"): הסגנון הכללי קובע ברירת מחדל; הקמפיין הבודד יכול לדרוס רק את הכותרת/הטקסט המשני, בלי להפוך לבלוקים מלאכותיים ובלי font-family שונה per-section.
+
+**Reason:** בקשת משתמש מפורשת לשליטה רבה יותר על עיצוב, אבל **נדחה במפורש** הצעה ראשונית שהציעה `textStyle` מלא על כל בלוק + font-family משתנה per-section — העיקרון שנקבע: "הסגנון שולט בטיפוגרפיה (כולל font-family); הסקשן דורס צבע/הדגשה, לא זהות." קריטי: `bodyTextColor`/`secondaryColor` הם שדות **לא-אופציונליים** על `CampaignTheme` (זרועים בכל קמפיין), כך ש-`??` רגיל לעולם לא יפעל — תוקן ב-**בדיקת שוויון מדויק מול הליטרל ה"לא-נגוע" הידוע** (`LEGACY_SECONDARY_COLOR='#6fc9eb'`, `LEGACY_BODY_TEXT_COLOR='#334155'`) בדיוק כמו `resolveSectionSurfaceColors()` הקיים — רק אם השדה סטה מהערך המקורי שלו, הערך בפועל חוזר; אחרת `null` וה-CSS הקשיח הקיים ממשיך לרנדר בלי שינוי. גם: Rubik/Secular One **לא** נטענים בפועל ב-`index.html` למרות שהוזכרו כ"סט מתוכנן" — רק Heebo/Frank Ruhl Libre/Varela Round/Assistant אמיתיים.
+
+---
+
+**2026-10-06 — Typography Phase A: Text Roles, resolver משותף, ותיקון Hero רספונסיבי**
+
+לפני הסבב הזה בוצע **Audit ארכיטקטוני מלא** (לא מומש, רק תיעוד) של כל תפקידי הטקסט בעמוד הקמפיין — יוזם משתמש מפורש: "זה צריך להיות Audit ארכיטקטוני מלא... ולא עוד הרחבה נקודתית של titleColor". ה-audit פורסם כ-Claude Artifact ותומצת להחלטה: **Option A — תפקידי טקסט per-block**, לא מפה גלובלית ממוינת-לפי-סוג-בלוק (כי `rich-text`/`cta`/`stats`/`donation-widget` אינם SINGLE_INSTANCE — שתי מופעים מאותו סוג בלוק יתנגשו על מפתח משותף).
+
+**Decision:** `TextStyle` (מודל משותף) מתרחב עם `fontFamily?`/`fontWeight?` אופציונליים — תאימות-לאחור מלאה (3 הצרכנים הקיימים, Hero/CTA/RichText, לא נוגעים). נוסף resolver טהור ומשותף (`text-role-resolver.ts`): `resolveRoleColor`/`resolveRoleFontWeight`/`resolveRoleFontSizePx`/`resolveRoleFontFamily`/`resolveRoleAlign` — העקרון: **ה-resolver בלבד** קובע את תפקיד-הטקסט הסמנטי; שום template (Cards/List/Main/Sidebar) לא מקבל החלטה עצמאית. `data.textStyles?: Partial<Record<RoleName, Partial<TextStyle>>>` נוסף ל-`StatsBlockData`/`DonorsBlockData`/`AmbassadorsBlockData` (ל-Ambassadors זה שדה חדש לגמרי — ה-interface היה ריק). `titleColor` הקיים (Stats/Donors) נשאר **alias קריאה לצמיתות** — override חדש ← titleColor ישן ← ברירת מחדל מגודרת — בלי מיגרציה.
+
+**ה-Bug האמיתי שנמצא ונפתר:** Ambassadors Cards מול List היו **לא-עקביים** — שם: Cards `#0f172a`/800, List `#0f2747`/700 בלי שום חיבור ל-theme; סכום שגויס: List כבר התחבר ל-theme (`primaryColor`) בלי תנאי, Cards היה ליטרל קשיח. אוחד לערך אחד ("ה-canonical" = הצד שהיה "נכון" יותר) דרך ה-resolver המשותף — שינוי חזותי מכוון ומתועד (לא תאונה).
+
+**תיקון Hero רספונסיבי:** `[style.fontSize]` (inline) היה גובר תמיד על ה-`@media(max-width:768px)` שמקטין את כותרת ה-Hero במובייל — בלי קשר לתוכן ה-inline style, specificity של inline מנצח class/media selector. תוקן ע"י מעבר ל-CSS custom property: `[style.--hm-hero-title-size]`, ו-`.hm-hero-title` קורא `font-size: var(--hm-hero-title-size, calc(40px * var(--hm-heading-scale,1)))` — עכשיו ה-media query (שקובע `font-size` ישירות, לא דרך המשתנה) מנצח כרגיל.
+
+**נוספו `data-text-role="roleName"`** על אלמנטים שעברו מיגרציה (Stats/Donors/Ambassadors) — **אינרטי לגמרי**, בלי click-to-edit, הכנה ל-fas עתידי.
+
+**בדיקות:** 16+ טסטים ממוקדים + suite מלא ללא רגרסיה (2 כשלים ידועים לא-קשורים ב-`checkout-modal.component.spec.ts`), `ng build` נקי.
+
+---
+
+**2026-10-06/07 — Universal Local Styling: Audit + Phase B1 (יסודות + proof על Donation/Ambassadors/Stats/CTA)**
+
+**ה-Audit (לא מומש, רק תיעוד):** יוזם משתמש מפורש שמתקן את הכיוון — "זה עיקרון רוחבי של כל ה-Campaign Builder, לא Audit של Donation עם הרחבה עתידית". 4 agents מקבילים (read-only) מיפו Content/Display/Design/Text + Style Role Map + מקור-עיצוב-נוכחי לכל אזור קמפיין מרכזי (Donation/Stats/Rewards/CTA/Ambassadors/Donors/Updates/Sponsors/Hero/RichText/Media/Containers/Section-surfaces). פורסם כ-Artifact. **ממצא מרכזי:** `CampaignTheme` מערבב שדות גלובליים אמיתיים (primaryColor וכו') עם שדות ספציפיים-לבלוק (rewardsBg/logoBg וכו') שחיים בטעות היסטורית על האובייקט המשותף — בדיוק ההפך מהעיקרון המבוקש. נמצאו גם: באג Cards/List מקבילה (לא-טקסטואלית) ב-Donors/Updates/Gallery (radius דרך token ב-Cards, קשיח ב-List/grid); Sponsors הוא האזור היחיד ש-placement שלו **עדיין** תקוע בשלב publish-gated (לא תוקן כמו Rewards/Ambassadors/Donors/Updates); כמה שדות מתים (Stats `style`/`size`, Gallery `showDots`/`autoPlay`/`showArrows` מתעלם).
+
+**Decision (B1 — מומש):** אותו מנגנון בדיוק כמו Typography Phase A, מורחב לעיצוב לא-טקסטואלי: מפות-תפקיד אחיות ל-`textStyles` — `surfaceStyles`/`buttonStyles`/`progressStyles` (מודלים: `SurfaceStyle`/`ButtonStyle`/`ProgressStyle` ב-`style-role.model.ts`). resolver חדש אחד בלבד נוסף (`resolveRoleBorderRadius` — explicit ← Style token (`cards.radius`/`buttons.radius` הקיימים, **בלי** tokens חדשים) ← ליטרל legacy); כל צבע ממשיך להשתמש ב-`resolveRoleColor` הקיים. קומפוננטת עורך Builder משותפת אחת, `StyleRoleEditorComponent` (לא שלוש — show-flags בוחרים אילו שדות רלוונטיים), עם אותה סמנטיקת "לפי הסגנון"/reset per-property/per-role כמו `TextRoleEditorComponent`.
+
+**אילוץ אמיתי שנתגלה באמצע המימוש:** `.hm-donate`/`.hm-amount-preset` תלויים ב-composition (`conv-hero` מחליף רקע/צבעים, `conv-compact` מחליף padding/font-size) — אז **כל** התכונות של Donation (container/amount-buttons/CTA) הן explicit-override-only (לעולם לא מזריקות ליטרל legacy inline) כדי שקמפיין לא-נגוע ימשיך לקבל את ה-CSS הקיים בלי שינוי; override מפורש עדיין מנצח הכל, כמתוכנן.
+
+**4 ה-proof areas (לא Donation בלבד, לפי הנחיה מפורשת):** Donation (קומפלקסי: surface+buttons+text), Ambassadors (אוסף card/list — תיקן בפועל את אי-העקביות הלא-טקסטואלית: גודל אווטאר נשאר presentation-local בכוונה/layout, אבל card surface + "לדף השגריר" button עכשיו עוברים drough resolver אחד משותף), Stats (שדות עיצוב קיימים — Phase A לא נגעה — רוכזו תחת כותרת "עיצוב" בלי מיגרציית דאטה, + progressStyles.ring חדש לטבעת ההתקדמות, + נסגר פער: `value` role מקבל בקרת font-size ב-Builder), CTA (בלוק חזרתי — buttonStyles.main מוכיח בידוד per-instance).
+
+**בדיקות:** 53+ טסטים ממוקדים, suite מלא 542/544 (2 כשלים ידועים לא-קשורים), `ng build` נקי (כולל תיקון שגיאת AOT strict-template אמיתית שה-Karma JIT לא תפס — union return type ב-3 מתודות פיצול).
+
+---
+
+**2026-10-05 — Donation Amount Button Presets (המשך ממוקד אחרי B1)**
+
+**Decision:** 7 "אישיויות" סגורות לכפתורי סכום בחירה בתרומה (לא CTA הראשי) — `עדין`/`סולידי`/`רך`/`כרטיסים`/`גלולה`/`מינימלי`/`מודגש`. `DonationWidgetBlockData.amountButtonPreset?: DonationAmountButtonPreset` — `undefined` = "לפי הסגנון". **רק שם ה-preset נשמר** בדאטה; הערכים המלאים (גובה/padding/גודל-טקסט/עובי-מסגרת/radius/צל/צבעים נורמל+נבחר, 15 תכונות) חיים בקטלוג נפרד (`donation-amount-button-presets.ts`) — שינוי עתידי בפיקסלים בפועל לא דורש מיגרציית דאטה. סדר עדיפות: override מפורש קיים מ-B1 (`buttonStyles.amountButton`) ← preset ← לא כלום (CSS הקיים/composition-sensitive ממשיך לרנדר). איפוס preset ("לפי הסגנון") **לא** נוגע ב-overrides ידניים קיימים — שתי פעולות נפרדות בכוונה.
+
+**Reason:** בקשה ממוקדת: "I specifically want the ability to create SMALL, SOLID, DELICATE donation amount buttons" — פקדי B1 (צבע/radius) לא הספיקו כדי לייצר **אישיות** שלמה (מידות/טיפוגרפיה/משקל חזותי), רק גוונים. UI: רשת thumbnails קומפקטית (לא dropdown טכני, לא 7 פאנלים עצומים) בתוך Donation ← 🎨 עיצוב ← "כפתורי סכומים", **מעל** הפקדים הידניים הקיימים מ-B1 (לא מחליפה אותם).
+
+**בדיקות:** 26 טסטים (18 קטגוריות מבוקשות, כולל קטלוג-כל-7-presets, precedence property-level, reset לא-הורס overrides, composition safety). Suite מלא 565/567 (2 כשלים ידועים לא-קשורים), `ng build` נקי.
