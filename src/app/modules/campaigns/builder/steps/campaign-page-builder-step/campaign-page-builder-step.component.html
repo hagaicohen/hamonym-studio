@@ -465,14 +465,46 @@
               <span class="color-value">{{ asCta(block.data).backgroundColor }}</span>
             </div>
           </div>
-          <app-text-style-editor
-            [textStyle]="asCta(block.data).textStyle"
-            (textStyleChange)="updateCtaTextStyle(block.id, $event)"
-            [ctaConfig]="asCta(block.data).ctaConfig"
-            (ctaConfigChange)="updateCtaConfig(block.id, $event)"
-            [showPosition]="false"
-            [showCta]="true">
-          </app-text-style-editor>
+          <!-- Universal Local Styling Phase B1 (2026-10) -- repeatable-block
+               proof: CTA A and CTA B each have their own block.data, so
+               each gets fully independent button styling with zero extra
+               wiring -- background aliases the existing ctaConfig.color
+               field (set below via the text-style editor's own CTA
+               sub-section) rather than duplicating it. -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('cta-design')">
+              <span class="container-design-title">🎨 עיצוב הכפתור</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-design')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('cta-design')">
+              <app-style-role-editor roleLabel="כפתור" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
+                [override]="asCta(block.data).buttonStyles?.main"
+                [resolvedBackground]="ctaButtonResolved(asCta(block.data), 'background')"
+                [resolvedTextColor]="ctaButtonResolved(asCta(block.data), 'textColor')"
+                [resolvedBorderRadius]="ctaButtonResolvedRadius(draft)"
+                (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'main', $event)">
+              </app-style-role-editor>
+            </div>
+          </div>
+
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('cta-texts')">
+              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-texts')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('cta-texts')">
+              <app-text-style-editor
+                [textStyle]="asCta(block.data).textStyle"
+                (textStyleChange)="updateCtaTextStyle(block.id, $event)"
+                [ctaConfig]="asCta(block.data).ctaConfig"
+                (ctaConfigChange)="updateCtaConfig(block.id, $event)"
+                [showPosition]="false"
+                [showCta]="true">
+              </app-text-style-editor>
+            </div>
+          </div>
 
           <div class="spacing-row" style="margin-top:10px">
             <span class="spacing-label">גובה הבלוק</span>
@@ -909,53 +941,120 @@
               </div>
             </div>
 
-            <div class="editor-row">
-              <label class="editor-label">צבע אייקונים</label>
-              <div class="direction-toggle">
-                <button type="button" class="direction-btn" [class.active]="!asStats(block.data).iconColor"
-                  (click)="updateStatsField(block.id, 'iconColor', '')">אוטומטי</button>
-                <button type="button" class="direction-btn" [class.active]="!!asStats(block.data).iconColor"
-                  (click)="setStatsIconColorCustom(block.id)">מותאם אישית</button>
+          </div>
+
+          <!-- Universal Local Styling Phase B1 (2026-10) -- "עיצוב": these 4
+               fields already correctly lived on StatsBlockData (no data
+               migration needed, per the audit's explicit instruction not to
+               duplicate an already-correct field) -- just regrouped under
+               one heading instead of sitting loose in the config grid. -->
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('stats-design')">
+              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-design')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('stats-design')">
+              <div class="editor-row">
+                <label class="editor-label">צבע אייקונים</label>
+                <div class="direction-toggle">
+                  <button type="button" class="direction-btn" [class.active]="!asStats(block.data).iconColor"
+                    (click)="updateStatsField(block.id, 'iconColor', '')">אוטומטי</button>
+                  <button type="button" class="direction-btn" [class.active]="!!asStats(block.data).iconColor"
+                    (click)="setStatsIconColorCustom(block.id)">מותאם אישית</button>
+                </div>
+              </div>
+              <p class="theme-hint" *ngIf="!asStats(block.data).iconColor">בהתאם לצבע ההדגשה של הסגנון</p>
+              <div class="editor-row" *ngIf="asStats(block.data).iconColor">
+                <label class="editor-label"></label>
+                <app-color-picker
+                  [value]="asStats(block.data).iconColor"
+                  (valueChange)="updateStatsField(block.id, 'iconColor', $event)">
+                </app-color-picker>
+              </div>
+
+              <div class="editor-row">
+                <label class="editor-label">רקע</label>
+                <app-color-picker
+                  [value]="asStats(block.data).backgroundColor"
+                  (valueChange)="updateStatsField(block.id, 'backgroundColor', $event)"
+                  [showNone]="true">
+                </app-color-picker>
+              </div>
+
+              <div class="editor-row">
+                <label class="editor-label">מסגרת</label>
+                <app-color-picker
+                  [value]="asStats(block.data).borderColor"
+                  (valueChange)="updateStatsField(block.id, 'borderColor', $event)"
+                  [showNone]="true">
+                </app-color-picker>
+              </div>
+
+              <p class="stats-contrast-warning" *ngIf="statsLowContrast(asStats(block.data))">
+                ⚠ צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
+              </p>
+
+              <div class="editor-row">
+                <label class="editor-label">עיגול פינות ({{ asStats(block.data).borderRadius }}px)</label>
+                <input type="range" class="split-slider" min="0" max="24" step="2"
+                  [value]="asStats(block.data).borderRadius"
+                  (input)="updateStatsField(block.id, 'borderRadius', +$any($event.target).value)">
               </div>
             </div>
-            <p class="theme-hint" *ngIf="!asStats(block.data).iconColor">בהתאם לצבע ההדגשה של הסגנון</p>
-            <div class="editor-row" *ngIf="asStats(block.data).iconColor">
-              <label class="editor-label"></label>
-              <app-color-picker
-                [value]="asStats(block.data).iconColor"
-                (valueChange)="updateStatsField(block.id, 'iconColor', $event)">
-              </app-color-picker>
+          </div>
+
+          <!-- Typography Phase A (2026-10) -- "טקסטים": per-role color
+               override, Section > Theme (gated) > Style/legacy. Replaces
+               the old standalone "צבע כותרת" row above -- titleColor stays
+               a permanent read-side alias (statsSectionTitleColor() in
+               campaign-preview.component.ts) when a campaign already set it
+               via that control, but every NEW edit goes through
+               textStyles.sectionTitle instead. -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('stats-texts')">
+              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-texts')">›</span>
             </div>
-
-            <div class="editor-row">
-              <label class="editor-label">רקע</label>
-              <app-color-picker
-                [value]="asStats(block.data).backgroundColor"
-                (valueChange)="updateStatsField(block.id, 'backgroundColor', $event)"
-                [showNone]="true">
-              </app-color-picker>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('stats-texts')">
+              <app-text-role-editor roleLabel="כותרת (&quot;גויס עד כה&quot;)"
+                [override]="asStats(block.data).textStyles?.sectionTitle ?? (asStats(block.data).titleColor ? { color: asStats(block.data).titleColor } : undefined)"
+                [resolvedColor]="statsRoleResolvedColor(draft, 'sectionTitle', asStats(block.data))"
+                (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="סכום שגויס" [showFontSize]="true"
+                [override]="asStats(block.data).textStyles?.value"
+                [resolvedColor]="statsRoleResolvedColor(draft, 'value', asStats(block.data))"
+                (overrideChange)="updateTextStyleRole(block.id, 'value', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="טקסט משני (תוויות)"
+                [override]="asStats(block.data).textStyles?.label"
+                [resolvedColor]="statsRoleResolvedColor(draft, 'label', asStats(block.data))"
+                (overrideChange)="updateTextStyleRole(block.id, 'label', $event)">
+              </app-text-role-editor>
             </div>
+          </div>
 
-            <div class="editor-row">
-              <label class="editor-label">מסגרת</label>
-              <app-color-picker
-                [value]="asStats(block.data).borderColor"
-                (valueChange)="updateStatsField(block.id, 'borderColor', $event)"
-                [showNone]="true">
-              </app-color-picker>
+          <!-- Universal Local Styling Phase B1 (2026-10) -- the fundraising
+               ring's track/fill (previously pure hardcoded CSS). "Donation
+               progress" from the audit maps onto THIS element -- the
+               donation-widget block itself has no independent progress
+               visual (see DONATION_ROLE_NOTES, campaign-preview.component
+               .ts). -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('stats-progress')">
+              <span class="container-design-title">⭕ טבעת ההתקדמות</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-progress')">›</span>
             </div>
-
-            <p class="stats-contrast-warning" *ngIf="statsLowContrast(asStats(block.data))">
-              ⚠ צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
-            </p>
-
-            <div class="editor-row">
-              <label class="editor-label">עיגול פינות ({{ asStats(block.data).borderRadius }}px)</label>
-              <input type="range" class="split-slider" min="0" max="24" step="2"
-                [value]="asStats(block.data).borderRadius"
-                (input)="updateStatsField(block.id, 'borderRadius', +$any($event.target).value)">
+            <div class="container-editor" *ngIf="!isSectionCollapsed('stats-progress')">
+              <app-style-role-editor roleLabel="מסילה ומילוי" [showTrackColor]="true" [showFillColor]="true"
+                [override]="asStats(block.data).progressStyles?.ring"
+                [resolvedTrackColor]="statsRingResolvedColor('trackColor')"
+                [resolvedFillColor]="statsRingResolvedColor('fillColor')"
+                (overrideChange)="updateStyleRole(block.id, 'progressStyles', 'ring', $event)">
+              </app-style-role-editor>
             </div>
-
           </div>
 
           <div class="editor-divider"></div>
@@ -1057,6 +1156,108 @@
           <div class="system-note">
             <span>💡</span> סכומי התרומה נלקחים מהגדרות בשלב "הגדרות תרומה".
           </div>
+
+          <!-- Universal Local Styling Phase B1 (2026-10) -- "עיצוב": the
+               container card, the amount buttons (incl. selected state) and
+               the main CTA button. Every property here is a LOCAL override
+               on top of the selected Campaign Style -- "לפי הסגנון" until
+               touched. See DONATION_ROLE_NOTES in campaign-preview
+               .component.ts for why these resolve explicit-override-only
+               (no composition-sensitive literal is ever silently replaced
+               for an untouched campaign). -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('donation-design')">
+              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-design')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('donation-design')">
+              <app-style-role-editor roleLabel="כרטיס התרומה" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+                [override]="asDonationWidget(block.data).surfaceStyles?.container"
+                [resolvedBackground]="donationContainerResolved(draft, 'background')"
+                [resolvedBorderColor]="donationContainerResolved(draft, 'borderColor')"
+                [resolvedBorderRadius]="donationContainerResolvedRadius(draft)"
+                (overrideChange)="updateStyleRole(block.id, 'surfaceStyles', 'container', $event)">
+              </app-style-role-editor>
+              <!-- Donation Amount Button Presets (2026-10) -- a closed,
+                   named set of visual personalities, NOT a free-form
+                   designer. Sits ABOVE the existing B1 manual controls
+                   below it; selecting a preset never touches those
+                   overrides, and an existing override still wins per-
+                   property over the preset (StyleRoleEditor's own
+                   "לפי הסגנון" semantics, generalized one layer deeper). -->
+              <label class="editor-label">כפתורי סכומים</label>
+              <div class="amt-preset-row">
+                <span class="editor-label" style="min-width:auto">סגנון</span>
+                <div class="amt-preset-picker">
+                  <button type="button" class="amt-preset-swatch"
+                    *ngFor="let opt of amountButtonPresetOptions"
+                    [class.active]="(asDonationWidget(block.data).amountButtonPreset ?? 'inherit') === opt.value"
+                    (click)="setAmountButtonPreset(block.id, opt.value)">
+                    <span class="amt-preset-mini">
+                      <span class="amt-preset-mini-btn" [ngStyle]="miniAmountButtonStyle(opt.value, false)">50 ₪</span>
+                      <span class="amt-preset-mini-btn" [ngStyle]="miniAmountButtonStyle(opt.value, true)">100 ₪</span>
+                    </span>
+                    <span class="amt-preset-label">{{ opt.label }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="editor-divider"></div>
+              <label class="editor-label">התאמה אישית</label>
+              <app-style-role-editor roleLabel="כפתורי סכום" [showBackground]="true" [showTextColor]="true" [showBorderColor]="true" [showBorderRadius]="true"
+                [override]="asDonationWidget(block.data).buttonStyles?.amountButton"
+                [resolvedBackground]="donationAmountButtonResolved('background')"
+                [resolvedTextColor]="donationAmountButtonResolved('textColor')"
+                [resolvedBorderColor]="donationAmountButtonResolved('borderColor')"
+                [resolvedBorderRadius]="donationAmountButtonResolvedRadius()"
+                (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'amountButton', $event)">
+              </app-style-role-editor>
+              <app-style-role-editor roleLabel="כפתור סכום נבחר" [showBackground]="true" [showTextColor]="true"
+                [override]="asDonationWidget(block.data).buttonStyles?.amountButtonSelected"
+                [resolvedBackground]="donationAmountButtonSelectedResolved('background')"
+                [resolvedTextColor]="donationAmountButtonSelectedResolved('textColor')"
+                (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'amountButtonSelected', $event)">
+              </app-style-role-editor>
+              <app-style-role-editor roleLabel="כפתור תרומה" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
+                [override]="asDonationWidget(block.data).buttonStyles?.cta"
+                [resolvedBackground]="donationCtaResolved(draft, asDonationWidget(block.data), 'background')"
+                [resolvedTextColor]="donationCtaResolved(draft, asDonationWidget(block.data), 'textColor')"
+                [resolvedBorderRadius]="donationCtaResolvedRadius(draft)"
+                (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'cta', $event)">
+              </app-style-role-editor>
+            </div>
+          </div>
+
+          <!-- "טקסטים" -- sectionTitle keeps titleColor as a permanent
+               read-side alias (donationSectionTitleColor() in
+               campaign-preview.component.ts), same pattern as Stats/Donors. -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('donation-texts')">
+              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-texts')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('donation-texts')">
+              <app-text-role-editor roleLabel="כותרת"
+                [override]="asDonationWidget(block.data).textStyles?.sectionTitle ?? (asDonationWidget(block.data).titleColor ? { color: asDonationWidget(block.data).titleColor } : undefined)"
+                [resolvedColor]="donorsRoleResolvedColor(draft, 'sectionTitle')"
+                (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="תת-כותרת"
+                [override]="asDonationWidget(block.data).textStyles?.subtitle"
+                (overrideChange)="updateTextStyleRole(block.id, 'subtitle', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="טקסט משני (הערות/סיכום)"
+                [override]="asDonationWidget(block.data).textStyles?.secondaryMeta"
+                (overrideChange)="updateTextStyleRole(block.id, 'secondaryMeta', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel='סה"כ לתשלום'
+                [override]="asDonationWidget(block.data).textStyles?.totalSum"
+                (overrideChange)="updateTextStyleRole(block.id, 'totalSum', $event)">
+              </app-text-role-editor>
+            </div>
+          </div>
         </div>
 
         <!-- ── SPACING — for a container, these same sliders are rendered
@@ -1085,18 +1286,200 @@
           <span>🔧</span> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
         </div>
 
-        <!-- SPONSORS — managed in step 4 -->
+        <!-- SPONSORS — managed in step 6 -->
         <div class="system-note" *ngIf="block.type === 'sponsors'">
-          <span>🤝</span> החסויות מנוהלות בצעד 4 — חסויות
+          <span>🤝</span> החסויות מנוהלות בצעד 6 — חסויות
         </div>
 
-        <!-- AMBASSADORS — managed in step 5 -->
+        <!-- REWARDS — item content managed in step 4; placement + Section
+             Presentation live here (2026-10-04 fix) so they stay editable
+             after publish, same as every other section's design controls on
+             this step -- see the product rule above REWARDS_PRESENTATION
+             _OPTIONS in the .ts. -->
+        <div class="editor-field" *ngIf="block.type === 'rewards'">
+          <div class="system-note" style="margin-bottom:10px">
+            <span>🎁</span> תוכן התשורות מנוהל בצעד 4 — תשורות
+          </div>
+          <app-section-presentation-picker
+            label="תצוגת התשורות"
+            [options]="REWARDS_PRESENTATION_OPTIONS"
+            [value]="draft.layout.sectionPresentation?.rewards"
+            [recommended]="recommendedRewardsPresentation(draft)"
+            (valueChange)="state.setSectionPresentation('rewards', $event)"
+            (reset)="state.resetSectionPresentation('rewards')">
+          </app-section-presentation-picker>
+        </div>
+        <div class="editor-field" *ngIf="block.type === 'rewards' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
+          <label class="editor-label">מיקום התשורות</label>
+          <div class="direction-toggle">
+            <button class="direction-btn" [class.active]="!state.isSidebarSection('rewards')"
+              (click)="state.setSidebarSection('rewards', false)">מתחת לתוכן (רוחב מלא)</button>
+            <button class="direction-btn" [class.active]="state.isSidebarSection('rewards')"
+              (click)="state.setSidebarSection('rewards', true)">בסיידבר</button>
+          </div>
+        </div>
+        <!-- Only meaningful for the compact sidebar reward card -->
+        <div class="editor-field" *ngIf="block.type === 'rewards' && state.isSidebarSection('rewards')">
+          <label class="editor-label">מיקום התמונה בכרטיסיה</label>
+          <div class="direction-toggle">
+            <button class="direction-btn" [class.active]="(draft.layout.rewardsImagePosition ?? 'inline') === 'inline'"
+              (click)="setRewardsImagePosition('inline')">אייקון קטן בצד הכותרת</button>
+            <button class="direction-btn" [class.active]="draft.layout.rewardsImagePosition === 'full'"
+              (click)="setRewardsImagePosition('full')">תמונה מתחת לכותרת</button>
+          </div>
+          <div class="spacing-row" *ngIf="draft.layout.rewardsImagePosition === 'full'" style="margin-top:10px">
+            <span class="spacing-label">גובה התמונה ({{ draft.layout.rewardsImageSize ?? 120 }}px)</span>
+            <input type="range" class="split-slider" min="60" max="240" step="10"
+              [value]="draft.layout.rewardsImageSize ?? 120"
+              (input)="setRewardsImageSize(+$any($event.target).value)">
+          </div>
+        </div>
+
+        <!-- Rewards colors ("עיצוב מתקדם") -- moved here from step 4 (2026-10-06
+             fix): this panel lived only in campaign-offerings-step, one of
+             PUBLISHED_GATED_STEPS, so a manager could set it while the
+             campaign was still a draft but could never change it again once
+             published -- the exact bug the placement/presentation controls
+             above were already fixed for on 2026-10-04. Same
+             toggleSection/isSectionCollapsed mechanism as "מתקדם" on Tabs
+             blocks above. -->
+        <div class="editor-field" *ngIf="block.type === 'rewards'">
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('rewards-advanced')">
+              <span class="container-design-title">🎨 עיצוב מתקדם</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('rewards-advanced')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('rewards-advanced')">
+              <div class="editor-row">
+                <label class="editor-label">רקע סקשן</label>
+                <app-color-picker [value]="draft.layout.theme.rewardsBg"
+                  (valueChange)="patchTheme({ rewardsBg: $event })"></app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">בורדר כרטיס</label>
+                <app-color-picker [value]="draft.layout.theme.rewardCardBorder"
+                  (valueChange)="patchTheme({ rewardCardBorder: $event })"></app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">נבחר / Hover</label>
+                <app-color-picker [value]="draft.layout.theme.rewardCardBorderActive"
+                  (valueChange)="patchTheme({ rewardCardBorderActive: $event })"></app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">צבע כותרת</label>
+                <app-color-picker [value]="draft.layout.theme.rewardTitleColor ?? '#ffffff'"
+                  (valueChange)="patchTheme({ rewardTitleColor: $event })"></app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">צבע תיאור</label>
+                <app-color-picker [value]="draft.layout.theme.rewardDescColor ?? '#ffffff'"
+                  (valueChange)="patchTheme({ rewardDescColor: $event })"></app-color-picker>
+              </div>
+              <div class="editor-row">
+                <label class="editor-label">צבע כפתור "לבחירה"</label>
+                <app-color-picker [value]="draft.layout.theme.rewardButtonColor ?? draft.layout.theme.secondaryColor"
+                  (valueChange)="patchTheme({ rewardButtonColor: $event })"></app-color-picker>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AMBASSADORS — item content managed in step 7; placement +
+             Section Presentation live here (2026-10-04 fix, same reasoning
+             as Rewards above). -->
         <div class="system-note" *ngIf="block.type === 'ambassadors'">
-          <span>⭐</span> השגרירים מנוהלים בצעד 5 — שגרירים
+          <span>⭐</span> השגרירים מנוהלים בצעד 7 — שגרירים
+        </div>
+        <div class="editor-field" *ngIf="block.type === 'ambassadors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
+          <label class="editor-label">מיקום השגרירים</label>
+          <div class="direction-toggle">
+            <button class="direction-btn" [class.active]="!state.isSidebarSection('ambassadors')"
+              (click)="state.setSidebarSection('ambassadors', false)">מתחת לתוכן (רוחב מלא)</button>
+            <button class="direction-btn" [class.active]="state.isSidebarSection('ambassadors')"
+              (click)="state.setSidebarSection('ambassadors', true)">בסיידבר</button>
+          </div>
+        </div>
+        <div class="editor-field" *ngIf="block.type === 'ambassadors'">
+          <app-section-presentation-picker
+            label="תצוגת השגרירים"
+            [options]="AMBASSADORS_PRESENTATION_OPTIONS"
+            [value]="draft.layout.sectionPresentation?.ambassadors"
+            [recommended]="recommendedSectionPresentation(draft, 'ambassadors')"
+            (valueChange)="state.setSectionPresentation('ambassadors', $event)"
+            (reset)="state.resetSectionPresentation('ambassadors')">
+          </app-section-presentation-picker>
+        </div>
+        <!-- Universal Local Styling Phase B1 (2026-10) -- "עיצוב": the card/
+             row surface and the "view ambassador" button, shared by Cards
+             AND List (one resolver call from both -- fixes the real
+             non-text divergence the Universal Styling Audit found: avatar
+             size stays presentation-local layout, deliberately NOT included
+             here). -->
+        <div class="editor-field" *ngIf="block.type === 'ambassadors'">
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('ambassadors-design')">
+              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-design')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-design')">
+              <app-style-role-editor roleLabel="כרטיס/שורה" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+                [override]="asAmbassadorsBlock(block.data).surfaceStyles?.card"
+                [resolvedBackground]="ambassadorsSurfaceResolvedColor(draft, 'background')"
+                [resolvedBorderColor]="ambassadorsSurfaceResolvedColor(draft, 'borderColor')"
+                [resolvedBorderRadius]="ambassadorsCardResolvedRadius(draft)"
+                (overrideChange)="updateStyleRole(block.id, 'surfaceStyles', 'card', $event)">
+              </app-style-role-editor>
+              <app-style-role-editor roleLabel="כפתור &quot;לדף השגריר&quot;" [showBackground]="true" [showTextColor]="true"
+                [override]="asAmbassadorsBlock(block.data).buttonStyles?.viewButton"
+                [resolvedBackground]="ambassadorsSurfaceResolvedColor(draft, 'buttonBackground')"
+                [resolvedTextColor]="ambassadorsSurfaceResolvedColor(draft, 'buttonTextColor')"
+                (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'viewButton', $event)">
+              </app-style-role-editor>
+            </div>
+          </div>
         </div>
 
-        <!-- DONORS — no dedicated step; placement only, only shown when
-             there's a sidebar to place it in -->
+        <!-- Typography Phase A (2026-10) -- "טקסטים": per-role color (+
+             עובי פונט for the name) override, Section > Theme (gated) >
+             Style/legacy. Fresh addition -- AmbassadorsBlockData had no
+             text-color field at all before this phase. -->
+        <div class="editor-field" *ngIf="block.type === 'ambassadors'">
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('ambassadors-texts')">
+              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-texts')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-texts')">
+              <app-text-role-editor roleLabel="כותרת (&quot;שגרירים&quot;)"
+                [override]="asAmbassadorsBlock(block.data).textStyles?.sectionTitle"
+                [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'sectionTitle')"
+                (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="שם שגריר/ה" [showFontWeight]="true"
+                [override]="asAmbassadorsBlock(block.data).textStyles?.ambassadorName"
+                [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'ambassadorName')"
+                (overrideChange)="updateTextStyleRole(block.id, 'ambassadorName', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="סכום שגויס"
+                [override]="asAmbassadorsBlock(block.data).textStyles?.raisedAmount"
+                [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'raisedAmount')"
+                (overrideChange)="updateTextStyleRole(block.id, 'raisedAmount', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="מספר תורמים"
+                [override]="asAmbassadorsBlock(block.data).textStyles?.donorCount"
+                [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'donorCount')"
+                (overrideChange)="updateTextStyleRole(block.id, 'donorCount', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="טקסט משני (יעד/תורמים)"
+                [override]="asAmbassadorsBlock(block.data).textStyles?.secondaryMeta"
+                [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'secondaryMeta')"
+                (overrideChange)="updateTextStyleRole(block.id, 'secondaryMeta', $event)">
+              </app-text-role-editor>
+            </div>
+          </div>
+        </div>
+
+        <!-- DONORS — no dedicated step; placement + Section Presentation only -->
         <div class="editor-field" *ngIf="block.type === 'donors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
           <label class="editor-label">מיקום התורמים</label>
           <div class="direction-toggle">
@@ -1106,21 +1489,81 @@
               (click)="state.setSidebarSection('donors', true)">בסיידבר</button>
           </div>
         </div>
+        <div class="editor-field" *ngIf="block.type === 'donors'">
+          <app-section-presentation-picker
+            label="תצוגת התורמים"
+            [options]="DONORS_PRESENTATION_OPTIONS"
+            [value]="draft.layout.sectionPresentation?.donors"
+            [recommended]="recommendedSectionPresentation(draft, 'donors')"
+            (valueChange)="state.setSectionPresentation('donors', $event)"
+            (reset)="state.resetSectionPresentation('donors')">
+          </app-section-presentation-picker>
+        </div>
+        <!-- Typography Phase A (2026-10) -- "טקסטים": per-role color
+             override, Section > Theme (gated) > Style/legacy. Replaces the
+             old standalone "צבע הכותרת" row -- titleColor stays a permanent
+             read-side alias (donorsSectionTitleColor() in
+             campaign-preview.component.ts) for a campaign that already set
+             it, but every NEW edit goes through textStyles.sectionTitle. -->
+        <div class="editor-field" *ngIf="block.type === 'donors'">
+          <div class="container-design-section">
+            <div class="container-design-header" (click)="toggleSection('donors-texts')">
+              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('donors-texts')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('donors-texts')">
+              <app-text-role-editor roleLabel="כותרת (&quot;התורמים שלנו&quot;)"
+                [override]="asDonors(block.data).textStyles?.sectionTitle ?? (asDonors(block.data).titleColor ? { color: asDonors(block.data).titleColor } : undefined)"
+                [resolvedColor]="donorsRoleResolvedColor(draft, 'sectionTitle')"
+                (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="שם תורם/ת"
+                [override]="asDonors(block.data).textStyles?.donorName"
+                [resolvedColor]="donorsRoleResolvedColor(draft, 'donorName')"
+                (overrideChange)="updateTextStyleRole(block.id, 'donorName', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="סכום תרומה"
+                [override]="asDonors(block.data).textStyles?.donorAmount"
+                [resolvedColor]="donorsRoleResolvedColor(draft, 'donorAmount')"
+                (overrideChange)="updateTextStyleRole(block.id, 'donorAmount', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor roleLabel="טקסט משני (זמן)"
+                [override]="asDonors(block.data).textStyles?.donorMeta"
+                [resolvedColor]="donorsRoleResolvedColor(draft, 'donorMeta')"
+                (overrideChange)="updateTextStyleRole(block.id, 'donorMeta', $event)">
+              </app-text-role-editor>
+            </div>
+          </div>
+        </div>
 
-        <!-- UPDATES — view mode only, content in step 6 -->
+        <!-- UPDATES — content in step 8; placement (moved here 2026-10-04,
+             same reasoning as Rewards/Ambassadors above) + Section
+             Presentation, which supersedes the old slider/list viewMode
+             toggle as the manager-facing control (viewMode/
+             updateUpdatesViewMode() stay in the code untouched for backward
+             compatibility -- see recommendedUpdatesPresentation()'s own doc
+             comment). -->
+        <div class="editor-field" *ngIf="block.type === 'updates' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
+          <label class="editor-label">מיקום העדכונים</label>
+          <div class="direction-toggle">
+            <button class="direction-btn" [class.active]="!state.isSidebarSection('updates')"
+              (click)="state.setSidebarSection('updates', false)">מתחת לתוכן (רוחב מלא)</button>
+            <button class="direction-btn" [class.active]="state.isSidebarSection('updates')"
+              (click)="state.setSidebarSection('updates', true)">בסיידבר</button>
+          </div>
+        </div>
         <div class="editor-field" *ngIf="block.type === 'updates'">
           <div class="system-note" style="margin-bottom:10px">
-            <span>📢</span> תוכן העדכונים מנוהל בצעד 6 — עדכונים
+            <span>📢</span> תוכן העדכונים מנוהל בצעד 8 — עדכונים
           </div>
-          <label class="editor-label">תצוגה בדף</label>
-          <div class="direction-toggle">
-            <button class="direction-btn"
-              [class.active]="(asUpdatesBlock(block.data).viewMode || 'slider') === 'slider'"
-              (click)="updateUpdatesViewMode(block.id, 'slider')">סליידר</button>
-            <button class="direction-btn"
-              [class.active]="asUpdatesBlock(block.data).viewMode === 'list'"
-              (click)="updateUpdatesViewMode(block.id, 'list')">רשימה</button>
-          </div>
+          <app-section-presentation-picker
+            label="תצוגת העדכונים"
+            [options]="UPDATES_PRESENTATION_OPTIONS"
+            [value]="draft.layout.sectionPresentation?.updates"
+            [recommended]="recommendedUpdatesPresentation(draft, block)"
+            (valueChange)="state.setSectionPresentation('updates', $event)"
+            (reset)="state.resetSectionPresentation('updates')">
+          </app-section-presentation-picker>
         </div>
 
         <!-- COMMENTS — public, unmoderated; posted directly by site visitors -->
@@ -1338,105 +1781,94 @@
     </ng-container>
   </div>
 
-  <!-- ══ ZONE 3 — GENERAL DESIGN: site-wide settings not tied to any one
-       block (Hero text style/position, theme colors, page background,
-       footer). Closed by default, same reasoning as Zone 1 — opt-in, not
-       the main thing a manager looks at on every visit. ══ -->
+  <!-- ══ ZONE 3 — CAMPAIGN DESIGN (renamed 2026-10-01 from "עיצוב כללי",
+       UX reorg): Campaign Style, Opening structure, Colors and Logo as one
+       coherent "how does my campaign look" area, plus secondary site-wide
+       settings (Hero text position, page background, footer) that aren't
+       part of that primary 4-part decision. Closed by default, same
+       reasoning as Zone 1 — opt-in, not the main thing a manager looks at
+       on every visit. ══ -->
   <div class="builder-zone builder-zone--design">
     <div class="builder-zone-header" (click)="toggleSection('zone-design')">
       <span class="section-icon-box section-icon-box--design">🎨</span>
-      <span class="builder-zone-title">עיצוב כללי</span>
+      <span class="builder-zone-title">עיצוב הקמפיין</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-design')">›</span>
     </div>
     <ng-container *ngIf="!isSectionCollapsed('zone-design')">
 
-  <!-- HERO TEXTS — position + style for title/subtitle, not tied to any one
-       block since Hero isn't always a block. Text VALUES stay editable only
-       in "פרטי בסיס" (step 1) — this is position/style only, so there's one
-       authoritative place to change the actual words. See DECISIONS.md
-       (2026-07-17). -->
+  <!-- ══ CAMPAIGN DESIGN REORGANIZATION (2026-10-01, UX only) ══
+       Pure presentation reorganization -- the Style × Opening Composition
+       engine (verified working in the integration review) is UNTOUCHED:
+       same setCampaignStyle()/setOpeningComposition()/resolvers/state
+       methods as before, same internal CampaignStyleId/OpeningComposition
+       literal values. Only grouping/labels/order/helper text changed, so a
+       non-technical campaign creator reads "how do I want my campaign to
+       look" (Style -> Opening -> Colors -> Logo) instead of a flat list of
+       CSS-flavored settings under "zone-design" ("עיצוב כללי" below). -->
+
+  <!-- 1. סגנון עיצובי — the Campaign Style picker, extracted from the old
+       combined "צבעי תמה" section so it reads as the FIRST, primary design
+       decision (Style already controls typography/buttons/cards/section
+       surface/Opening default -- far more than "colors" alone). -->
   <div class="campaign-theme-section">
-    <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
-      <span class="campaign-bg-title">📝 {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
-      <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
+    <div class="campaign-bg-header" (click)="toggleSection('design-style')">
+      <span class="campaign-bg-title">✨ סגנון עיצובי</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('design-style')">›</span>
     </div>
-
-    <ng-container *ngIf="!isSectionCollapsed('hero-texts')">
-    <div class="editor-row">
-      <label class="editor-label">כותרת — מיקום</label>
-      <div class="direction-toggle">
-        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'above'"
-          (click)="state.setHeroTitlePosition('above')">מעל</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hero'"
-          (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'below'"
-          (click)="state.setHeroTitlePosition('below')">מתחת</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hidden'"
-          (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
+    <ng-container *ngIf="!isSectionCollapsed('design-style')">
+      <p class="theme-hint">בחרו את האופי החזותי של הקמפיין — צבעים, טיפוגרפיה, כפתורים וכרטיסים.</p>
+      <div class="theme-style-row">
+        <button class="theme-style-btn"
+          *ngFor="let s of campaignStyles"
+          [class.theme-style-btn--active]="draft.layout.campaignStyleId === s.id"
+          (click)="setCampaignStyle(s.id)">
+          {{ s.label }}
+        </button>
       </div>
-    </div>
-
-    <div class="editor-row">
-      <label class="editor-label">תת-כותרת — מיקום</label>
-      <div class="direction-toggle">
-        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'above'"
-          (click)="state.setHeroSubtitlePosition('above')">מעל</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hero'"
-          (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'below'"
-          (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
-        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hidden'"
-          (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
-      </div>
-    </div>
-
-    <div class="editor-row">
-      <label class="editor-label">תיאור קצר — מיקום</label>
-      <div class="direction-toggle">
-        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'above'"
-          (click)="state.setProjectDescriptionPosition('above')">מעל</button>
-        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hero'"
-          (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
-        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'below'"
-          (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
-        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hidden'"
-          (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
-      </div>
-    </div>
-
-    <app-text-style-editor
-      [textStyle]="draft.heroTextStyle"
-      (textStyleChange)="onHeroTextStyleChange($event)"
-      [ctaConfig]="draft.heroCtaConfig"
-      (ctaConfigChange)="onHeroCtaConfigChange($event)"
-      [showPosition]="true"
-      [showCta]="true">
-    </app-text-style-editor>
     </ng-container>
   </div>
 
-  <!-- CAMPAIGN THEME COLORS -->
+  <!-- 2. מבנה הפתיחה (renamed from "פריסת פתיחה", UI copy only -- internal
+       OpeningComposition values/resolver/state untouched). -->
+  <div class="campaign-theme-section" *ngIf="isCampaign">
+    <div class="campaign-bg-header" (click)="toggleSection('opening-composition')">
+      <span class="campaign-bg-title">🧭 מבנה הפתיחה</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('opening-composition')">›</span>
+    </div>
+
+    <ng-container *ngIf="!isSectionCollapsed('opening-composition')">
+      <p class="theme-hint">בחרו איך המבקר יפגוש את הקמפיין בתחילת העמוד.</p>
+      <div class="opening-comp-row">
+        <button type="button" class="opening-comp-card" *ngFor="let opt of OPENING_COMPOSITIONS"
+          [class.opening-comp-card--active]="effectiveOpeningComposition(draft) === opt.value"
+          (click)="setOpeningComposition(opt.value)">
+          <span class="opening-comp-thumb" [class.opening-comp-thumb--classic]="opt.value === 'classic'"
+            [class.opening-comp-thumb--story-first]="opt.value === 'story-first'"
+            [class.opening-comp-thumb--fundraising-split]="opt.value === 'fundraising-split'">
+            <span class="opening-comp-thumb-a"></span>
+            <span class="opening-comp-thumb-b"></span>
+          </span>
+          <span class="opening-comp-label">{{ opt.label }}</span>
+          <span class="opening-comp-recommended" *ngIf="styleRecommendedOpeningComposition(draft) === opt.value">מומלץ לסגנון הזה</span>
+        </button>
+      </div>
+      <button type="button" class="logo-design-toggle" *ngIf="draft.layout.openingComposition" (click)="resetOpeningComposition()">
+        <span>↺ חזרה להמלצת הסגנון</span>
+      </button>
+    </ng-container>
+  </div>
+
+  <!-- 3. צבעים (renamed from "צבעי תמה" -- the Campaign Style picker moved
+       out to its own section above; everything else here is byte-for-byte
+       the same controls/bindings as before). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('theme-colors')">
-      <span class="campaign-bg-title">🎨 צבעי תמה</span>
+      <span class="campaign-bg-title">🎨 צבעים</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('theme-colors')">›</span>
     </div>
 
     <ng-container *ngIf="!isSectionCollapsed('theme-colors')">
-    <!-- Campaign Style (Design Evolution Phase 1) — a curated set of design
-         defaults for the 4 brand-color fields below. Picking one never
-         touches blocks/content, and any manual color change afterward is
-         kept as an explicit override when switching between styles. -->
-    <div class="theme-style-row">
-      <span class="theme-palette-label">סגנון קמפיין:</span>
-      <button class="theme-style-btn"
-        *ngFor="let s of campaignStyles"
-        [class.theme-style-btn--active]="draft.layout.campaignStyleId === s.id"
-        (click)="setCampaignStyle(s.id)">
-        {{ s.label }}
-      </button>
-    </div>
-
+    <p class="theme-hint">התאמה אישית של צבעי הסגנון שבחרתם.</p>
     <!-- Legacy quick-palette swatches — only shown before a Campaign Style
          has been chosen. Once campaignStyleId is set, theme's 4 managed
          fields must only ever be written by resolveTheme() (single-writer
@@ -1570,6 +2002,168 @@
           (valueChange)="setDonationCtaColorValue($event)"></app-color-picker>
       </div>
     </div>
+  </div>
+
+  <!-- 4. לוגו (renamed from "לוגו קמפיין" -- same controls/bindings as
+       before, moved here from "פרטי בסיס" (step 1) on 2026-09-30: logo/
+       appearance are Style/design controls, so their one home is the
+       design step, not the content step, and Step 9 (unlike Step 1) is
+       never gated for a published campaign — see campaign-editor
+       .component.ts's PUBLISHED_GATED_STEPS. Campaign-only, same as the
+       Hero itself. -->
+  <div class="campaign-theme-section" *ngIf="isCampaign">
+    <div class="campaign-bg-header" (click)="toggleSection('campaign-logo')">
+      <span class="campaign-bg-title">🖼️ לוגו</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('campaign-logo')">›</span>
+    </div>
+
+    <ng-container *ngIf="!isSectionCollapsed('campaign-logo')">
+      <div class="editor-row">
+        <label class="donor-field-toggle">
+          <input type="checkbox" [checked]="draft.showLogo" (change)="state.patch({ showLogo: !draft.showLogo })">
+          הצג לוגו על ה-Hero
+        </label>
+      </div>
+
+      <ng-container *ngIf="draft.showLogo">
+        <div class="editor-row">
+          <label class="editor-label">לוגו</label>
+          <div class="logo-source-row">
+            <div class="logo-source-preview">
+              <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
+              <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl">🏢</span>
+            </div>
+            <input #campaignLogoInput type="file" accept="image/*" (change)="onCampaignLogoChange($event)" hidden>
+            <button class="logo-upload-btn" type="button" [disabled]="isUploadingLogo" (click)="campaignLogoInput.click()">
+              {{ isUploadingLogo ? 'מעלה...' : (draft.campaignLogoUrl ? 'החלף' : 'העלה לוגו מותאם') }}
+            </button>
+            <button class="logo-remove-btn" type="button" *ngIf="draft.campaignLogoUrl" (click)="removeCampaignLogo()">הסר</button>
+          </div>
+          <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">מוצג לוגו העמותה</span>
+        </div>
+
+        <button class="logo-design-toggle" type="button" (click)="logoDesignOpen = !logoDesignOpen">
+          <span>עיצוב הלוגו — מיקום, רקע ומסגרת</span>
+          <span>{{ logoDesignOpen ? '▲' : '▼' }}</span>
+        </button>
+
+        <ng-container *ngIf="logoDesignOpen">
+          <div class="editor-row">
+            <label class="editor-label">מיקום</label>
+            <div class="direction-toggle">
+              <button class="direction-btn" *ngFor="let opt of LOGO_POSITIONS"
+                [class.active]="(draft.heroLogoPosition || 'left') === opt.pos"
+                (click)="setLogoPosition(opt.pos)">{{ opt.label }}</button>
+            </div>
+          </div>
+
+          <!-- Horizontal sub-position, only when 'above' is chosen (2026-09-30)
+               -- 'above' is otherwise always centered with no horizontal
+               control at all, unlike the overlay left/center/right values. -->
+          <div class="editor-row" *ngIf="draft.heroLogoPosition === 'above'">
+            <label class="editor-label">יישור אופקי (מעל ה-Hero)</label>
+            <div class="direction-toggle">
+              <button class="direction-btn" *ngFor="let opt of LOGO_ALIGNS"
+                [class.active]="(draft.logoStripAlign || 'center') === opt.align"
+                (click)="setLogoStripAlign(opt.align)">{{ opt.label }}</button>
+            </div>
+          </div>
+
+          <div class="editor-row">
+            <label class="editor-label">עיצוב הלוגו</label>
+            <app-logo-appearance-editor
+              [shape]="draft.heroLogoShape ?? 'circle'"
+              (shapeChange)="setLogoShape($event)"
+              [size]="draft.heroLogoSize ?? 'md'"
+              (sizeChange)="setLogoSize($event)"
+              [background]="draft.layout.theme.logoBg"
+              (backgroundChange)="patchTheme({ logoBg: $event })"
+              [showBorder]="true"
+              [borderColor]="draft.layout.theme.logoBorderColor || ''"
+              (borderColorChange)="patchTheme({ logoBorderColor: $event })"
+              [borderStyle]="draft.layout.theme.logoBorderStyle || 'solid'"
+              (borderStyleChange)="patchTheme({ logoBorderStyle: $event })"
+              [borderWidth]="draft.layout.theme.logoBorderWidth ?? 3"
+              (borderWidthChange)="patchTheme({ logoBorderWidth: $event })">
+            </app-logo-appearance-editor>
+          </div>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+  </div>
+
+  <!-- HERO TEXTS — position + style for title/subtitle, not tied to any one
+       block since Hero isn't always a block. Text VALUES stay editable only
+       in "פרטי בסיס" (step 1) — this is position/style only, so there's one
+       authoritative place to change the actual words. See DECISIONS.md
+       (2026-07-17). Moved after the 4 design sections (2026-10-01 UX reorg)
+       -- it's a secondary/text-position concern, not a primary design
+       decision. Position rows hidden (not deleted, values untouched) when a
+       structured Opening is active, since heroTpl -- the only thing they
+       affect -- is entirely suppressed then (verified in the integration
+       review); app-text-style-editor stays visible because its CTA portion
+       (heroCtaConfig) remains genuinely effective for Fundraising Split's
+       own Opening CTA -- only the position rows are provably dead code for
+       EVERY structured composition, so only those are conditioned here. -->
+  <div class="campaign-theme-section">
+    <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
+      <span class="campaign-bg-title">📝 {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
+    </div>
+
+    <ng-container *ngIf="!isSectionCollapsed('hero-texts')">
+    <p class="theme-hint" *ngIf="isCampaign && hasStructuredOpening(draft)">מבנה הפתיחה הנוכחי ("מבנה הפתיחה" למעלה) קובע איפה הכותרות מופיעות — מיקומי הטקסט הבאים לא פעילים כרגע.</p>
+    <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
+      <label class="editor-label">כותרת — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'above'"
+          (click)="state.setHeroTitlePosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hero'"
+          (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'below'"
+          (click)="state.setHeroTitlePosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hidden'"
+          (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
+      <label class="editor-label">תת-כותרת — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'above'"
+          (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hero'"
+          (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'below'"
+          (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hidden'"
+          (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
+      <label class="editor-label">תיאור קצר — מיקום</label>
+      <div class="direction-toggle">
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'above'"
+          (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hero'"
+          (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'below'"
+          (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+        <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hidden'"
+          (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+      </div>
+    </div>
+
+    <app-text-style-editor
+      [textStyle]="draft.heroTextStyle"
+      (textStyleChange)="onHeroTextStyleChange($event)"
+      [ctaConfig]="draft.heroCtaConfig"
+      (ctaConfigChange)="onHeroCtaConfigChange($event)"
+      [showPosition]="true"
+      [showCta]="true">
+    </app-text-style-editor>
+    </ng-container>
   </div>
 
   <!-- CAMPAIGN BACKGROUND -->

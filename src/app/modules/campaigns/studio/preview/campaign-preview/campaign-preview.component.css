@@ -70,9 +70,20 @@
 /* ══ STICKY HEADER WRAPPER ══ */
 .hm-sticky-header {
   position: sticky;
-  top: 0;
+  /* 34px = the Platform Top Strip's own height (.pts-strip,
+     platform-top-strip.component.css, 2026-10-06 sticky fix) -- that strip
+     is mounted directly above this header on every real page and is now
+     ALSO sticky at top:0, so this header must stick just below it rather
+     than at top:0 too (which would make the two overlap, with the
+     higher-z-index strip visually covering this header's own top 34px once
+     both are stuck). Matches the strip's own mobile height at the same
+     breakpoint below. */
+  top: 34px;
   z-index: 100;
   background: #ffffff;
+}
+@media (max-width: 480px) {
+  .hm-sticky-header { top: 28px; }
 }
 
 /* ══ CAMPAIGN NAV ══ — the <nav> itself stays full width for its
@@ -127,6 +138,8 @@
   transition: color 0.15s;
 }
 .nav-link:hover { color: #cc350f !important; }
+.nav-link--faded { opacity: 0.4; cursor: default; pointer-events: none; }
+.nav-link--faded:hover { color: inherit !important; }
 .nav-link-count {
   display: inline-block; margin-right: 4px;
   font-size: 11px; font-weight: 700; opacity: 0.75;
@@ -316,6 +329,214 @@
   padding: 40px 28px 56px;
 }
 
+/* ══ OPENING COMPOSITION — Fundraising-Split prototype (2026-09-29,
+   refined 2026-09-30 after real browser QA) ══
+   Full-bleed like .hm-hero (not constrained to .page-content-outer's
+   max-width) -- same visual weight/prominence as the Hero it replaces.
+   Content is the first DOM child so RTL places it on the physical right
+   with no `order` override needed; media second/left. On mobile the grid
+   collapses to a single column and DOM order alone produces the required
+   semantic stack (org -> title -> intro -> summary -> CTA -> media).
+
+   Height is intentionally NOT a fixed/min-height on the section itself
+   (QA finding: 480px read as "a giant banner", not an opening) -- both grid
+   cells stretch to the row's natural height by default, which is now driven
+   by .hm-opening-media's aspect-ratio (below) at its actual rendered column
+   width. For a typical desktop width this lands in the ~360-400px range on
+   its own, without hardcoding another arbitrary number. */
+.hm-opening {
+  display: grid;
+  grid-template-columns: 2fr 3fr; /* content 40% / media 60% (was 50/50) */
+  background: linear-gradient(155deg, #1e293b, #334155);
+}
+.hm-opening-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px clamp(24px, 4vw, 56px);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--hm-primary, #583cd6), var(--hm-secondary, #6fc9eb));
+  /* Sole floor: keeps the content side from collapsing to almost nothing
+     when the campaign has neither projectDescription nor shortDescription
+     (title + summary + CTA alone are short) -- NOT a re-introduction of the
+     old whole-section 480px, this only bounds the text column. */
+  min-height: 320px;
+}
+/* Logo shape/size/background/border wired to the same fields the classic
+   Hero's .hm-hero-org-logo uses (2026-09-30 fix -- this was previously a
+   fixed 40px circle with no size/shape/border effect at all, the reported
+   "changing size does nothing" bug in Vibrant/Fundraising-Split). 40px "md"
+   baseline is Opening-specific (its logo sits inline in a text column, not
+   overlaid on a photo like the Hero's 128px) -- sm/lg step around it
+   proportionally instead of reusing the Hero's own px values verbatim. */
+.hm-opening-org {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--hm-logo-bg, #ffffff);
+  border: var(--hm-logo-border-width, 0px) var(--hm-logo-border-style, solid) var(--hm-logo-border-color, transparent);
+  flex-shrink: 0;
+  align-self: flex-end; /* default = 'left' position, see the position map below */
+}
+.hm-opening-org img { width: 78%; height: 78%; object-fit: contain; margin: auto; display: block; }
+.hm-opening-org--square { border-radius: 8px; }
+.hm-opening-org--none { border-radius: 0; background: transparent !important; border: none; }
+.hm-opening-org--sm { width: 30px; height: 30px; }
+.hm-opening-org--lg { width: 56px; height: 56px; }
+/* Horizontal-axis position (2026-09-30) -- the Opening's content column is
+   flex-direction:column, so its cross axis (horizontal) already respects
+   direction:rtl: flex-end = visual right's opposite = left, flex-start =
+   right, matching 'left'/'right' exactly as they read on the classic Hero.
+   'above' has no distinct meaning in this single-column layout (the logo is
+   already the first item, "above" the title) -- falls back to 'left'. */
+.hm-opening-org--center { align-self: center; }
+.hm-opening-org--right { align-self: flex-start; }
+.hm-opening-title {
+  font-size: clamp(24px, 2.6vw, 32px);
+  font-weight: var(--hm-heading-weight, 800);
+  font-family: var(--hm-font-family, inherit);
+  margin: 0;
+  color: #ffffff;
+}
+/* Bounded presentation (QA finding #4) -- clamps to 3 lines regardless of
+   how much rich text projectDescription actually holds. Purely visual;
+   draft.layout.projectDescription itself is never touched/truncated. */
+.hm-opening-intro {
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.88);
+  max-width: 420px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hm-opening-intro--plain { margin: 0; }
+.hm-opening-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 400px;
+}
+.hm-opening-summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+}
+.hm-opening-raised { font-size: 26px; font-weight: 800; color: #ffffff; }
+.hm-opening-goal { color: rgba(255,255,255,0.75); }
+.hm-opening-pct { margin-inline-start: auto; font-weight: 700; color: #ffffff; }
+.hm-opening-progress-wrap {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.22);
+  overflow: hidden;
+}
+.hm-opening-progress-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 4px;
+}
+.hm-opening-cta {
+  align-self: flex-start;
+  border: none;
+  padding: 14px 32px;
+  border-radius: var(--hm-btn-radius, 12px);
+  box-shadow: var(--hm-btn-shadow, none);
+  font-weight: var(--hm-btn-weight, 800);
+  font-size: 16px;
+  font-family: inherit;
+  color: #ffffff;
+  cursor: pointer;
+}
+.hm-opening-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  max-width: 400px; /* same width as .hm-opening-summary/the progress bar, so centering lines up with it, not the wider content column */
+}
+.hm-opening-meta .hm-meta-badge { font-size: 12px; padding: 6px 14px; }
+
+.hm-opening-media {
+  position: relative;
+  overflow: hidden;
+  /* Wide ratio + a cap (not a fixed height) -- at typical desktop widths
+     this lands close to the ~360-400px target on its own; the cap only
+     stops it ballooning on very wide viewports, since aspect-ratio alone
+     scales with whatever 60% of the full-bleed width happens to be. */
+  aspect-ratio: 21 / 9;
+  max-height: 420px;
+}
+.hm-opening-media-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgba(0,0,0,0.15);
+}
+.hm-opening-media .hm-play-trigger {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.campaign-page--mobile .hm-opening {
+  grid-template-columns: 1fr;
+}
+.campaign-page--mobile .hm-opening-content { padding: 28px 20px; min-height: 0; }
+.campaign-page--mobile .hm-opening-media { aspect-ratio: 16 / 9; }
+
+/* ══ STORY FIRST (2026-10-01) ══ — deliberately a DIFFERENT shape from
+   Fundraising Split's side-by-side grid (not just a ratio tweak), so the
+   two compositions read as structurally distinct: single-column stack,
+   narrative text leads (DOM/visual order unchanged -- org/title/intro
+   already come before media in the markup), large media follows to confirm
+   the story. No stats/CTA at all -- the real donation interaction stays on
+   the rest of the page. Light/white, not the dark gradient card -- this
+   composition is about editorial quiet, not a bold fundraising moment.
+   Reuses the exact same .hm-opening-content/.hm-opening-media elements and
+   data bindings as Fundraising Split; only the modifier class below changes
+   shape/color, same "one DOM, Style+Composition pick the CSS" principle
+   already used throughout. Mobile needs no separate override -- it's
+   already a single column at every width. */
+.hm-opening--story-first {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+.hm-opening--story-first .hm-opening-content {
+  background: none;
+  color: inherit;
+  align-items: center;
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
+  min-height: 0;
+  padding: 48px clamp(24px, 5vw, 64px) 32px;
+}
+.hm-opening--story-first .hm-opening-title { color: #0f172a; }
+.hm-opening--story-first .hm-opening-intro { color: #475569; max-width: 640px; }
+.hm-opening--story-first .hm-opening-meta { max-width: none; }
+.hm-opening--story-first .hm-opening-meta .hm-meta-badge {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.hm-opening--story-first .hm-opening-media {
+  aspect-ratio: 21 / 9;
+  max-height: 560px;
+}
+@media (max-width: 768px) {
+  .hm-opening--story-first .hm-opening-media { aspect-ratio: 16 / 9; max-height: none; }
+}
+
 /* Background image via separate layer (avoids Angular [style] parsing issues) */
 .hm-hero-bg-layer {
   position: absolute;
@@ -445,8 +666,16 @@
 .hm-hero-title {
   /* Phase 3A -- headingScale multiplies the existing base size rather than
      replacing it outright, so it stays a modest nudge (0.9-1.15 across all
-     8 Styles) instead of an arbitrary free-form size. */
-  font-size: calc(40px * var(--hm-heading-scale, 1));
+     8 Styles) instead of an arbitrary free-form size.
+     --hm-hero-title-size is set inline per-block from heroTextStyle.fontSize
+     (see heroTitleSize() on the component). It used to be a raw
+     [style.fontSize] binding, which beat the .hm-hero--mobile/@media
+     overrides below outright (inline specificity always wins over a
+     class/media selector) -- the Hero title never actually shrank on
+     mobile. Routing it through a custom property instead lets those
+     overrides win normally, since they set font-size directly rather than
+     going through the var. */
+  font-size: var(--hm-hero-title-size, calc(40px * var(--hm-heading-scale, 1)));
   font-weight: var(--hm-heading-weight, 900);
   color: #ffffff; line-height: 1.15; margin: 0;
   text-shadow: 0 2px 10px rgba(0,0,0,0.5);
@@ -681,6 +910,13 @@
 .hm-hero-org-logo--center {
   left: 50%;
   transform: translate(-50%, -50%);
+}
+/* Horizontal-axis 'right' option (2026-09-30) -- 'left' was the only
+   physical-side placement before this; direction:rtl on the page means
+   `right` here IS the actual CSS `right` property (not a values swap). */
+.hm-hero-org-logo--right {
+  left: auto;
+  right: 48px;
 }
 /* Shape/size (2026-09-28) — sm/md/lg are proportional steps around this
    element's own previous fixed 128px ("md"), same shape/size vocabulary as
@@ -1217,6 +1453,19 @@
   border-radius: 6px;
 }
 
+/* Click-to-edit affordance (2026-09-30) -- deliberately subtle and separate
+   from .block-wrap--hovered above (that one reflects hoveredBlockId, i.e.
+   "selected in the Builder's own list"; this is a plain CSS :hover, i.e.
+   "you can click this in the preview itself"). Dashed + low-opacity so the
+   two states read as visually distinct, not competing. Only applied while
+   pageBuilderActive -- zero effect on the real public/donor-facing page. */
+.block-wrap--editable { cursor: pointer; }
+.block-wrap--editable:hover {
+  outline: 1.5px dashed rgba(124, 58, 237, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Containers get a stronger "selected"-looking treatment than the plain
    hover outline above — a filled tint + solid border around the whole
    container, not just a thin ring, so its full extent reads clearly at a
@@ -1281,18 +1530,22 @@
   background: #f8fafc;
   border-radius: 16px;
   overflow-x: hidden;
-  /* Independent scroll pane (2026-08-04): a FIXED height (not max-height —
-     that only capped/scrolled once content happened to be taller, which
-     read as randomly "running out" rather than a predictable, always-there
-     boundary) matching the viewport, so this column scrolls entirely on its
-     own, independent of the main column's scroll — same split-pane feel
-     regardless of which side (`page-layout-sidebar--right/--left`) it's on.
-     `overflow: hidden` here only clips; the actual scrolling happens on
-     .sidebar-rail-inner (see DECISIONS.md — keeping sticky and the
-     scrollable region on the SAME element previously caused content to
-     vanish instead of scrolling in some browsers). */
-  height: calc(100vh - 32px);
-  overflow-y: hidden;
+  /* Natural page scroll (2026-10-05) -- supersedes the 2026-08-04 "independent
+     scroll pane" below, which fixed this column's height to the viewport and
+     scrolled it internally. That made sense when the rail only ever held a
+     small donate/stats widget, but Section Placement now lets Ambassadors/
+     Donors/Rewards/Updates live here too -- real visual QA found that extra
+     content was silently trapped below the fold of that internal scroller,
+     read as those sections "missing entirely" rather than just unscrolled-to.
+     No height/overflow-y constraint now -- the rail grows with its content
+     like any normal column, and the PAGE'S own scroll reaches all of it.
+     `position: sticky` is kept (not the whole fix, just the donate card's
+     reasonable-accessibility ask) -- a sticky column taller than the
+     viewport behaves exactly like any ordinary sticky sidebar: pinned at
+     `top: 16px` while the main column scrolls past it, then it scrolls away
+     normally once its own bottom edge is reached. That's standard sticky
+     behavior, not a re-introduction of the trapped-content problem --
+     nothing below the fold is ever hidden from page scroll anymore. */
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
@@ -1302,8 +1555,16 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
-  height: 100%;
+}
+/* Vertical-alignment fix (2026-09-29): the rail's own 20px top inset above
+   pushes its first card ~20px below the Hero's top edge even though both
+   columns share the same flex row start (align-items:flex-start) — the Hero
+   itself has no such inset when it renders as .sidebar-main's first child.
+   Scoped narrowly via :has() (same technique as .conv-split above) to the
+   one case that's actually misaligned, so every other sidebar-rail context
+   (Hero not in main-column) keeps its normal 20px inset on all sides. */
+.sidebar-main:has(.hm-hero--in-column) ~ .sidebar-rail .sidebar-rail-inner {
+  padding-top: 0;
 }
 
 /* Mobile: stack sidebar on top */
@@ -1363,11 +1624,15 @@
    change is for a page that deliberately used a full-bleed image WIDER than
    900px as a hero-style break-out — that now caps at 900px too. */
 .block-image { padding: 0; display: flex; flex-direction: column; max-width: var(--hm-content-width, 900px); margin-inline: auto; }
-.block-image img { display: block; object-fit: cover; }
+/* Section-presentation audit (2026-09-30) -- in-content media now consumes
+   the same generic cards.radius/shadow tokens Rewards already did; Hero/
+   Opening's own media stays untouched (deliberately immersive/full-bleed,
+   a different treatment by design, not an oversight). */
+.block-image img { display: block; object-fit: cover; border-radius: var(--hm-card-radius, 0); box-shadow: var(--hm-card-shadow, none); }
 .block-caption { font-size: 12px; color: #94a3b8; text-align: center; padding: 6px; }
 
 /* VIDEO */
-.block-video { position: relative; width: 100%; aspect-ratio: 16/9; background: #0f172a; }
+.block-video { position: relative; width: 100%; aspect-ratio: 16/9; background: #0f172a; border-radius: var(--hm-card-radius, 0); box-shadow: var(--hm-card-shadow, none); overflow: hidden; }
 .block-video-iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 /* ── GALLERY BLOCK — hm-gal- prefix avoids collision with rewards ── */
@@ -1428,7 +1693,8 @@
   flex: 0 0 calc((100% - 32px) / 3);
   min-width: 200px;
   position: relative;
-  border-radius: 10px;
+  border-radius: var(--hm-card-radius, 10px);
+  box-shadow: var(--hm-card-shadow, none);
   overflow: hidden;
   background: #e2e8f0;
   scroll-snap-align: start;
@@ -1848,15 +2114,114 @@
   font-size: 14px; margin: 0;
 }
 
+/* Rewards browsing controls (2026-10-04, tidied 2026-10-06) -- light-on-dark,
+   matching this section's own always-dark background (.hm-rewards above) and
+   the semi-transparent-white treatment .hm-reward-card already uses. Grouped
+   inside one visible "toolbar" surface (background+border+radius below) so
+   the three controls read as one coherent filter bar instead of three loose
+   floating elements; all three share the same height/padding rhythm for the
+   same reason. */
+.hm-reward-filters {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  max-width: 1200px; margin: 0 auto 16px; padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.hm-reward-filters--compact { gap: 8px; flex-direction: column; align-items: stretch; padding: 10px; }
+.hm-reward-filter-search,
+.hm-reward-filter-select {
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px; font-size: 13px; font-family: inherit;
+  background: rgba(255,255,255,0.08); color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.2); border-radius: 8px;
+}
+.hm-reward-filter-search { flex: 1 1 160px; min-width: 140px; }
+.hm-reward-filter-search::placeholder { color: rgba(255,255,255,0.5); }
+.hm-reward-filter-select { flex: 0 0 auto; }
+.hm-reward-filter-select option { color: #0f172a; }
+/* margin-right: auto pushes this item to the strip's far end (left, given
+   the inherited RTL flex direction -- first DOM child/search renders on the
+   right) so "הצג רק זמינות" reads as a distinct toggle, not just a third
+   item crowded against the sort dropdown. */
+.hm-reward-filter-toggle {
+  display: flex; align-items: center; gap: 6px; font-size: 13px;
+  color: rgba(255,255,255,0.85); cursor: pointer;
+  height: 36px; margin-right: auto; flex: 0 0 auto;
+}
+/* Native checkboxes have no reliable intrinsic size across browsers/zoom
+   levels once nothing else on the page constrains them -- pin it explicitly
+   rather than leaving it to render at whatever size the UA/zoom happens to
+   pick (reported as "huge and illogical" at default size here). */
+.hm-reward-filter-toggle input[type="checkbox"] {
+  width: 16px; height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #fff;
+  cursor: pointer;
+}
+.hm-reward-filters--compact .hm-reward-filter-select,
+.hm-reward-filters--compact .hm-reward-filter-search { width: 100%; box-sizing: border-box; min-width: 0; }
+/* .hm-reward-filter-search's own `flex: 1 1 160px` (above) is written for
+   the MAIN (non-compact) row layout, where flex-basis/grow act on WIDTH.
+   .hm-reward-filters--compact switches to flex-direction:column, which
+   makes the main axis VERTICAL -- the same `flex: 1 1 160px` then sets
+   flex-basis on HEIGHT instead and lets the input grow to fill the
+   column's remaining space, ballooning it to 160px+ tall (reported as "the
+   search field is too large"). Reset to the select's own flex:0 0 auto so
+   it just takes its natural 36px height here, same as every other compact
+   control. */
+.hm-reward-filters--compact .hm-reward-filter-search { flex: 0 0 auto; }
+.hm-reward-filters--compact .hm-reward-filter-toggle { margin-right: 0; }
+/* Light-theme override for the sidebar placement (2026-10-06) -- the
+   defaults above are light-on-dark, built for .hm-rewards's own always-dark
+   background; once Rewards sits in the sidebar it now renders on a white
+   card (.hm-rewards--sidebar-list, see its own comment), so white text on a
+   barely-there white-tinted border/background would be close to invisible
+   there. Matches the existing light-theme compact controls already used by
+   Ambassadors/Donors in the sidebar (.hm-amb-compact-search etc.). */
+.hm-reward-filters--compact {
+  background: transparent;
+  border: none;
+}
+.hm-reward-filters--compact .hm-reward-filter-search,
+.hm-reward-filters--compact .hm-reward-filter-select {
+  background: #ffffff;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.hm-reward-filters--compact .hm-reward-filter-search::placeholder { color: #94a3b8; }
+.hm-reward-filters--compact .hm-reward-filter-toggle { color: #334155; }
+.hm-reward-filters--compact .hm-reward-filter-toggle input[type="checkbox"] { accent-color: var(--hm-primary, #583cd6); }
+.hm-rewards--sidebar-list .hm-reward-filter-empty { color: #94a3b8; }
+.hm-reward-filter-empty {
+  text-align: center; padding: 24px 16px; color: rgba(255,255,255,0.6); font-size: 14px;
+}
+.hm-reward-filter-empty button {
+  display: block; margin: 8px auto 0; background: none; border: none;
+  color: #fff; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0;
+}
+.hm-rewards--sidebar-list .hm-reward-filter-empty button { color: var(--hm-primary, #583cd6); }
+.hm-reward-stock-badge--sold-out { color: #fca5a5; font-weight: 700; }
+
 /* ── Rewards: sidebar placement (compact vertical list, no carousel) ──
    Sits inside .sidebar-rail-inner alongside .hm-stats/.hm-donate — matches
-   their white-card look instead of the full-width dark-green section
-   styling above. See DECISIONS.md (2026-07-26). */
+   their white-card look (background/border/radius/shadow, see their own
+   shared rule) instead of the full-width dark-green section styling above.
+   See DECISIONS.md (2026-07-26). Previously went fully transparent with
+   padding:0, relying only on .sidebar-rail-inner's 16px gap for separation
+   from whatever sidebar section sits next to it -- with no visible boundary
+   of its own, stacking it next to Ambassadors/Donors read as one continuous
+   list rather than distinct sections (2026-10-06 visual QA). */
 .hm-rewards--sidebar-list {
-  background: transparent;
+  background: #ffffff;
   color: inherit;
-  padding: 0;
-  border-bottom: none;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
 }
 .hm-rewards--sidebar-list h2 {
   color: #0f2747;
@@ -1864,6 +2229,11 @@
   text-align: center;
   margin: 0 0 14px;
 }
+/* .hm-rewards-empty's own p/icon were styled for the dark main-section
+   background (white text at reduced opacity) -- need a dark-on-light
+   equivalent now that the sidebar placement is a white card. */
+.hm-rewards--sidebar-list .hm-rewards-empty p { color: #94a3b8; }
+.hm-rewards--sidebar-list .hm-rewards-empty-icon { opacity: 0.6; }
 .hm-reward-list {
   display: flex;
   flex-direction: column;
@@ -2040,6 +2410,15 @@
 @supports (justify-content: safe center) {
   .hm-slider-track { justify-content: safe center; }
 }
+
+/* Section Presentation (2026-10-03) -- Cards/Image presentation placed in
+   the sidebar: same .hm-reward-card/.hm-reward-card--img markup, but
+   stacked vertically full-width instead of a horizontal scroll-slider (too
+   narrow a column to scroll sideways through 3-up cards). The slider's own
+   prev/next arrows are hidden via *ngIf in the template for this case. */
+.hm-rewards--sidebar-list .hm-reward-slider { overflow: visible; padding: 0; }
+.hm-rewards--sidebar-list .hm-slider-track { flex-direction: column; min-width: 0; }
+.hm-rewards--sidebar-list .hm-reward-card { flex: none; width: 100%; min-width: 0; }
 
 /* ── Reward card ── */
 .hm-reward-card {
@@ -2260,6 +2639,49 @@
   border-radius: 999px;
   padding: 2px 10px;
   margin: 4px 0;
+}
+
+/* ── Sold-out visual treatment (2026-10-06) ── dims every other direct
+   child of the card via the :not() exception below, while this overlay
+   itself stays full-color/crisp on top of that dimmed content -- a `filter`
+   set directly on the card element would instead rasterize the WHOLE
+   subtree including this overlay, making the "הפריט אזל" label itself go
+   gray too, so each real content child is targeted directly via this
+   sibling selector instead of filtering the card as a whole. Covers all
+   three reward card markups (.hm-reward-card, its --img variant, and
+   .hm-reward-list-card) since they all share the same direct-children
+   shape: badge/price/image/body-ish content siblings + this overlay. */
+.hm-reward-card.hm-reward-soldout > *:not(.hm-reward-soldout-overlay),
+.hm-reward-list-card.hm-reward-soldout > *:not(.hm-reward-soldout-overlay) {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.hm-reward-card.hm-reward-soldout,
+.hm-reward-list-card.hm-reward-soldout {
+  cursor: default;
+}
+.hm-reward-soldout-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Informational only -- selectOffering() already no-ops for a sold-out
+     offering regardless of where the click lands, so this never needs to
+     intercept clicks itself. */
+  pointer-events: none;
+}
+.hm-reward-soldout-pill {
+  background: #fff;
+  color: #0f2747;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 22px;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
 }
 
 /* ── Selection overlay ── */
@@ -2573,6 +2995,10 @@
   position: absolute; right: 12px; color: #94a3b8; font-size: 14px; pointer-events: none;
 }
 .hm-join-input--money { padding-right: 28px; }
+.hm-join-goal-warning {
+  margin: 0; font-size: 12px; font-weight: 600; color: #b45309;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 10px;
+}
 
 .hm-join-footer {
   padding: 0 24px 24px;
@@ -2669,6 +3095,10 @@
 .hm-lb-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px; direction: rtl;
 }
+/* Section Presentation (2026-10-03) -- Cards presentation placed in the
+   sidebar: same .hm-lb-card markup, collapsed to a single column (too
+   narrow a rail for 2). */
+.hm-lb-grid--sidebar { grid-template-columns: 1fr; }
 
 .hm-lb-card {
   background: #fff; border: 1px solid #e8edf3; border-radius: 16px;
@@ -2741,14 +3171,35 @@
   color: #fff; font-size: 15px; font-weight: var(--hm-btn-weight, 800); cursor: pointer; font-family: inherit;
 }
 
-/* ── AMBASSADORS: sidebar placement (compact vertical list) — no search/sort
-   controls, no 2-col grid; reuses ambVisible/ambPct()/viewAmbassador(). ── */
-.hm-ambassadors--sidebar-list { padding: 0; }
+/* ── AMBASSADORS: sidebar placement (compact vertical list) — compact
+   search+sort (2026-10-04) instead of the full main-content toolbar, no
+   2-col grid; reuses ambVisible/ambPct()/viewAmbassador(). Same white-card
+   treatment as .hm-rewards--sidebar-list (see its own comment) — section
+   separation in the sidebar, 2026-10-06. */
+.hm-ambassadors--sidebar-list {
+  background: #ffffff;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
+}
 .hm-amb-list-title { font-size: 16px; text-align: center; margin: 0 0 12px; }
 .hm-ambassadors--sidebar-list .hm-lb-empty { padding: 24px 12px; gap: 8px; }
 .hm-ambassadors--sidebar-list .hm-lb-empty-icon { font-size: 32px; }
 .hm-ambassadors--sidebar-list .hm-lb-empty-title { font-size: 14px; }
 .hm-ambassadors--sidebar-list .hm-lb-empty-btn { padding: 9px 16px; font-size: 12px; border-radius: 8px; }
+.hm-amb-compact-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.hm-amb-compact-search, .hm-amb-compact-select {
+  width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; color: #334155;
+}
+.hm-amb-compact-no-results {
+  text-align: center; font-size: 12px; color: #94a3b8; padding: 10px; margin-bottom: 8px;
+}
+.hm-amb-compact-no-results button {
+  display: block; margin: 6px auto 0; background: none; border: none;
+  color: #6D5DF6; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0;
+}
 .hm-amb-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
 .hm-amb-list-row {
   background: #ffffff; border: 1.5px solid var(--line, #e2e8f0); border-radius: 10px;
@@ -2796,7 +3247,8 @@
   width: 140px; height: 80px;
   background: #fff;
   border: 1px solid var(--hm-section-divider, #e2e8f0);
-  border-radius: 12px;
+  border-radius: var(--hm-card-radius, 12px);
+  box-shadow: var(--hm-card-shadow, none);
   display: flex; align-items: center; justify-content: center;
   padding: 12px; overflow: hidden;
   transition: box-shadow 0.2s;
@@ -2807,8 +3259,16 @@
 .hm-sponsor-name-text { font-size: 13px; font-weight: 700; color: #475569; text-align: center; }
 
 /* ── SPONSORS: sidebar placement — single narrow column instead of the
-   wide wrapping grid; same .hm-sponsor-card markup, just re-laid-out. ── */
-.hm-sponsors--sidebar-list { padding: 0; }
+   wide wrapping grid; same .hm-sponsor-card markup, just re-laid-out. Same
+   white-card treatment as .hm-rewards--sidebar-list (see its own comment) —
+   section separation in the sidebar, 2026-10-06. */
+.hm-sponsors--sidebar-list {
+  background: #ffffff;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
+}
 .hm-sponsors--sidebar-list .hm-sponsors-grid {
   flex-direction: column; max-width: none; gap: 10px;
 }
@@ -2830,8 +3290,16 @@
 
 /* ── UPDATES: sidebar placement (compact vertical list) — own ▲/▼ paging
    (visibleUpdates()/canGoPrevUpdates()/canGoNextUpdates()), no media, no
-   carousel/list-view toggle (that's the below-sidebar variant's concern). ── */
-.hm-updates--sidebar-list { padding: 0; }
+   carousel/list-view toggle (that's the below-sidebar variant's concern).
+   Same white-card treatment as .hm-rewards--sidebar-list (see its own
+   comment) — section separation in the sidebar, 2026-10-06. */
+.hm-updates--sidebar-list {
+  background: #ffffff;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
+}
 .hm-update-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
 .hm-update-list-sidebar-item {
   background: #ffffff; border: 1.5px solid var(--line, #e2e8f0); border-radius: 10px;
@@ -2933,7 +3401,8 @@
   gap: 10px;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: var(--hm-card-radius, 14px);
+  box-shadow: var(--hm-card-shadow, none);
   padding: 14px 16px;
   transition: box-shadow 0.2s;
 }
@@ -2983,9 +3452,24 @@
 .hm-donors-empty span { font-size: 28px; display: block; margin-bottom: 8px; }
 
 /* ── DONORS: sidebar placement (compact vertical list) — skips the stats
-   row/period tabs/Top-10 panel, reuses visibleDonors/canShowMore/showMoreDonors. ── */
-.hm-donors--sidebar-list { padding: 0; }
+   row/full period+sort toolbar, but keeps compact period+sort selects
+   (2026-10-04) so the sidebar stays filterable, not a static dump; reuses
+   visibleDonors/canShowMore/showMoreDonors. Same white-card treatment as
+   .hm-rewards--sidebar-list (see its own comment) — section separation in
+   the sidebar, 2026-10-06. */
+.hm-donors--sidebar-list {
+  background: #ffffff;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
+}
 .hm-donor-list-title { font-size: 16px; text-align: center; margin: 0 0 12px; }
+.hm-donor-compact-filters { display: flex; gap: 6px; margin-bottom: 10px; }
+.hm-donor-compact-select {
+  flex: 1; min-width: 0; box-sizing: border-box; padding: 7px 8px; font-size: 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; color: #334155;
+}
 .hm-donor-list-sidebar { display: flex; flex-direction: column; gap: 10px; }
 .hm-donor-list-row {
   display: flex; align-items: center; gap: 10px;
@@ -3159,6 +3643,13 @@
 @supports (justify-content: safe center) {
   .hm-updates-track { justify-content: safe center; }
 }
+/* Section Presentation (2026-10-03) -- Cards presentation placed in the
+   sidebar: same .hm-update-card markup, stacked vertically full-width
+   instead of a horizontal scroll-slider (no prev/next arrows rendered for
+   this combination -- see the template). */
+.hm-updates--sidebar-list .hm-updates-slider { overflow: visible; padding: 0; }
+.hm-updates--sidebar-list .hm-updates-track { flex-direction: column; min-width: 0; }
+.hm-updates--sidebar-list .hm-update-card { flex: none; width: 100%; min-width: 0; }
 .hm-update-card {
   flex: 0 0 calc((100% - 40px) / 3);
   min-width: 260px;
@@ -3166,7 +3657,8 @@
   display: flex; flex-direction: column;
   background: #ffffff;
   border: 1px solid var(--hm-section-divider, #e2e8f0);
-  border-radius: 16px;
+  border-radius: var(--hm-card-radius, 16px);
+  box-shadow: var(--hm-card-shadow, none);
   overflow: hidden;
   direction: rtl;
   cursor: pointer;
@@ -3221,6 +3713,24 @@
 /* ── Updates paging (list/sidebar-list) — ▲/▼, centered, pages of
    UPDATES_PAGE_SIZE so a campaign with many updates never shows them all
    at once. ── */
+/* Updates search (2026-10-05) -- light-background styling matching the
+   existing Comments search precedent (.hm-comments-search), since Updates
+   (unlike Rewards) sits on the default light section background. */
+.hm-updates-filters { max-width: 1100px; margin: 0 auto 16px; }
+.hm-updates-filters--compact { max-width: none; }
+.hm-updates-filter-search {
+  width: 100%; box-sizing: border-box; padding: 9px 14px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px;
+  font-family: inherit; color: #334155;
+}
+.hm-updates-filter-search:focus { outline: none; border-color: #7c3aed; }
+.hm-updates-filter-empty {
+  text-align: center; padding: 20px 16px; color: #94a3b8; font-size: 13px;
+}
+.hm-updates-filter-empty button {
+  display: block; margin: 6px auto 0; background: none; border: none;
+  color: #7c3aed; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0;
+}
 .hm-updates-pager {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   margin: 4px auto 0;

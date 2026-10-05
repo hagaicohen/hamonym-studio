@@ -2,8 +2,12 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { TextStyle, CtaConfig } from '../../../shared/models/text-style.model';
 export { TextStyle, CtaConfig, TextAlign, TextFontSize, TextPosition } from '../../../shared/models/text-style.model';
-import { CampaignStyleId, StyleColorField, resolveTheme } from '../builder/styles/campaign-styles';
-export { CampaignStyleId, StyleColorField, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
+import { SurfaceStyle, ButtonStyle, ProgressStyle } from '../../../shared/models/style-role.model';
+export { SurfaceStyle, ButtonStyle, ProgressStyle } from '../../../shared/models/style-role.model';
+import { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
+export { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
+import { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, resolveTheme } from '../builder/styles/campaign-styles';
+export { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
 
 export type CampaignFundingType =
   | 'all-or-nothing'
@@ -106,6 +110,34 @@ export interface StatItem {
   order:   number;
 }
 
+// Typography Phase A (2026-10) -- per-block Text Roles (Option A: a
+// Partial<TextStyle> keyed by role name, living on the block's own data,
+// NOT a centralized layout.textStyles map -- rich-text/cta/stats/
+// donation-widget are genuinely repeatable block types, so a type-keyed
+// map would collide across multiple instances of the same type). Every
+// property resolves independently (color/fontSize/fontWeight/fontFamily/
+// align) via resolveTextRole()/resolveRoleColor() (text-role-resolver.ts):
+// Section override (here) > Theme (gated) > Style/legacy default. Absent
+// key = today's exact behavior, unchanged -- see each role's own resolver
+// call site in campaign-preview.component.ts for its legacy defaults.
+export type StatsTextRole = 'sectionTitle' | 'value' | 'label';
+export type DonorsTextRole = 'sectionTitle' | 'donorName' | 'donorAmount' | 'donorMeta';
+export type AmbassadorsTextRole = 'sectionTitle' | 'ambassadorName' | 'raisedAmount' | 'donorCount' | 'secondaryMeta';
+
+// Universal Local Styling Phase B1 (2026-10) -- the non-text sibling role
+// families, same Partial<...>-keyed-by-role-name shape as the TextRole
+// families above. See text-role-resolver.ts's own doc comment for the
+// resolution chain (color properties reuse resolveRoleColor() as-is;
+// borderRadius resolves against the Campaign Style's existing generic
+// cards.radius/buttons.radius tokens, never a new per-component token).
+export type DonationTextRole    = 'sectionTitle' | 'subtitle' | 'secondaryMeta' | 'totalSum';
+export type DonationButtonRole  = 'amountButton' | 'amountButtonSelected' | 'cta';
+export type DonationSurfaceRole = 'container';
+export type AmbassadorsSurfaceRole = 'card';
+export type AmbassadorsButtonRole  = 'viewButton';
+export type StatsProgressRole = 'ring';
+export type CtaButtonRole = 'main';
+
 export interface StatsBlockData {
   items:           StatItem[];
   style:           'cards' | 'inline';
@@ -114,6 +146,22 @@ export interface StatsBlockData {
   backgroundColor: string;
   borderColor:     string;
   borderRadius:    number;
+  // Section text override (2026-10-06, "Style → Theme → Section override"
+  // model) -- the block's own heading ("גויס עד כה"), falling back to
+  // theme.secondaryColor. Undefined = today's behavior, unchanged. See
+  // sectionTitleColor()'s own doc comment in campaign-preview.component.ts
+  // for why this one specifically needs a legacy-equality guard that
+  // Donate/Donors' own titleColor fallback doesn't.
+  // Kept as a permanent read-side alias once textStyles.sectionTitle
+  // exists (Phase A) -- never migrated/rewritten, just superseded by the
+  // new key when both are present.
+  titleColor?:     string;
+  textStyles?:     Partial<Record<StatsTextRole, Partial<TextStyle>>>;
+  // Phase B1 (2026-10) -- the fundraising ring's track/fill. The ring was
+  // pure hardcoded CSS before this (zero theme connection); fillColor is
+  // gated against secondaryColor like every other "amount-adjacent" role,
+  // trackColor stays a pure legacy literal (no sensible theme mapping).
+  progressStyles?: Partial<Record<StatsProgressRole, Partial<ProgressStyle>>>;
 }
 
 export interface DonorFieldsConfig {
@@ -137,6 +185,32 @@ export interface DonationWidgetBlockData {
   showSecurityBadge: boolean;
   showPaymentLogos: boolean;
   paymentLogos:     string[];
+  // Section text override (2026-10-06, "Style → Theme → Section override"
+  // model) -- the card's own title, falling back to theme.secondaryColor
+  // (the same value its CSS already defaulted to via var(--hm-secondary),
+  // so this is a pure additive override with no legacy-preservation gate
+  // needed -- unlike StatsBlockData.titleColor).
+  titleColor?:      string;
+  // Phase B1 (2026-10) -- Universal Local Styling, Donation proof. Roles
+  // map onto the REAL elements in .hm-donate's own markup (not the Stats
+  // ring/numbers, a separate block -- see the Phase B1 report for why
+  // "Donation progress" was implemented on Stats instead of invented
+  // here). buttonStyles.cta.background aliases the existing ctaColor
+  // field above rather than duplicating it.
+  textStyles?:    Partial<Record<DonationTextRole, Partial<TextStyle>>>;
+  surfaceStyles?: Partial<Record<DonationSurfaceRole, Partial<SurfaceStyle>>>;
+  buttonStyles?:  Partial<Record<DonationButtonRole, Partial<ButtonStyle>>>;
+  // Donation Amount Button Presets (2026-10) -- a closed set of visual
+  // personalities for the amount-preset buttons specifically (NOT the main
+  // donate CTA, see buttonStyles.cta above -- that stays independent).
+  // undefined = "לפי הסגנון" = today's exact legacy/composition-driven
+  // rendering, never silently migrated. The preset NAME is the only thing
+  // persisted -- see donation-amount-button-presets.ts for the resolved
+  // token catalog, looked up at render/edit time so refining a preset's
+  // pixel values never needs a data migration. Sits BELOW buttonStyles.
+  // amountButton/amountButtonSelected in precedence -- an explicit B1
+  // property override still wins per-property over the preset.
+  amountButtonPreset?: DonationAmountButtonPreset;
 }
 
 export interface RichTextBlockData {
@@ -158,6 +232,14 @@ export interface DividerBlockData {
 
 export interface DonorsBlockData {
   viewMode: 'grid' | 'list';
+  // Section text override (2026-10-06, "Style → Theme → Section override"
+  // model) -- the section's own "התורמים שלנו" title, falling back to
+  // theme.secondaryColor (same value its existing [style.color]="primaryColor
+  // (draft)" binding already resolves to, so this is additive, no
+  // legacy-preservation gate needed -- unlike StatsBlockData.titleColor).
+  // Permanent read-side alias, same as StatsBlockData.titleColor above.
+  titleColor?: string;
+  textStyles?: Partial<Record<DonorsTextRole, Partial<TextStyle>>>;
 }
 
 export interface ShareBlockData {
@@ -172,7 +254,20 @@ export interface ShareBlockData {
 
 // Block-level view configs — content lives at draft root level
 export interface SponsorsBlockData    { /* view config only */ }
-export interface AmbassadorsBlockData { /* view config only */ }
+export interface AmbassadorsBlockData {
+  // Typography Phase A (2026-10) -- no pre-existing titleColor field here
+  // (this interface was previously completely empty), so there is no
+  // legacy alias to preserve -- a fresh textStyles-only role set.
+  textStyles?: Partial<Record<AmbassadorsTextRole, Partial<TextStyle>>>;
+  // Phase B1 (2026-10) -- Universal Local Styling, Ambassadors proof. Fixes
+  // the real non-text Cards/List divergence the audit found: both
+  // presentations' card/row surface and "view ambassador" button now
+  // resolve through the SAME role instead of each hardcoding its own
+  // (different) literal. Avatar SIZE stays presentation-local CSS --
+  // that's a legitimate layout difference, not a style identity.
+  surfaceStyles?: Partial<Record<AmbassadorsSurfaceRole, Partial<SurfaceStyle>>>;
+  buttonStyles?:  Partial<Record<AmbassadorsButtonRole, Partial<ButtonStyle>>>;
+}
 export interface CommentsBlockData    { /* view config only — comments live in campaign_comments table */ }
 export interface UpdatesBlockData {
   viewMode: 'slider' | 'list';
@@ -271,6 +366,14 @@ export interface CtaBlockData {
   // renderer, so there's one simple control instead of two technical ones.
   // Undefined on older blocks falls back to 32 (the original fixed value).
   blockHeight?: number;
+  // Phase B1 (2026-10) -- Universal Local Styling, CTA proof (repeatable-
+  // block instance isolation). Button chrome only -- `textStyle` above
+  // already covers typography and is left untouched (still edited via the
+  // existing TextStyleEditorComponent, not migrated to the role-map shape
+  // in this phase). `buttonStyles.main.background` aliases `ctaConfig.
+  // color` rather than duplicating it; textColor/borderRadius are new
+  // (previously pure hardcoded CSS).
+  buttonStyles?: Partial<Record<CtaButtonRole, Partial<ButtonStyle>>>;
 }
 
 // childBlockIds — same shape as ContainerBlockData on purpose: each entry is
@@ -606,6 +709,29 @@ export interface CampaignLayout {
   // is untouched by this mechanism.
   campaignStyleId?:   CampaignStyleId;
   styleOverrides?:    Partial<Record<StyleColorField, string>>;
+  // Opening Composition — Phase A, generic (2026-10-01). Optional and NEVER
+  // populated by any template/createInitialDraft (verified, same guarantee
+  // conversionWidgetLayout already has) — absent means "follow the Campaign
+  // Style's own opening.composition default", not "classic" directly; see
+  // resolveOpeningComposition's own doc comment for the full precedence
+  // chain. Setting this explicitly (including the literal 'classic') always
+  // wins over the Style default from that point on, exactly like
+  // conversionWidgetLayout's own explicit-vs-default rule. Clearing it back
+  // to undefined (the Builder's "Use Style recommendation" action) returns
+  // control to the Style, not to whatever the Style's current default
+  // happened to be at the moment of clearing -- so a later Style change
+  // keeps auto-updating the effective composition.
+  openingComposition?: OpeningComposition;
+  // Section Presentation (2026-10-03) — see campaign-styles.ts's own doc
+  // comment for the full product writeup. A THIRD, independent axis from
+  // sidebarSections above (WHERE a section sits) — this is HOW it displays
+  // (cards/list, 'image' for rewards only), per section, per campaign.
+  // Optional and NEVER populated by any template/createInitialDraft (same
+  // guarantee every other field in this file's precedence chains has) —
+  // absent means "follow the Campaign Style's own lists.presentation
+  // default", which itself falls back to today's placement-driven behavior
+  // if the campaign has no Style either. See resolveSectionPresentation.
+  sectionPresentation?: Partial<Record<PresentableSection, SectionPresentation>>;
   // Campaign Location (2026-09-29) — campaign DATA, not Hero styling, and
   // deliberately NOT inferred from the entity's own registered city/address
   // (entities.city/address in the backend) — a campaign can be nationwide
@@ -690,7 +816,7 @@ export interface CampaignDraft {
   showEntityName: boolean;
   showLogo:           boolean;
   campaignLogoUrl:    string | null;
-  heroLogoPosition:   'left' | 'center' | 'above';
+  heroLogoPosition:   'left' | 'center' | 'right' | 'above';
   // Shared with the Quick Donation page's own minimalLogoShape/
   // minimalLogoSize (2026-09-28, LogoAppearanceEditorComponent) — a
   // genuinely new axis for Hero, which previously had shape hardcoded to a
@@ -1191,6 +1317,21 @@ export class CampaignStudioStateService {
     this.patch({ layout: { ...layout, styleOverrides: undefined, theme } });
   }
 
+  // Opening Composition — Phase A (2026-10-01). Same shape as the color-
+  // override pair above: set writes the campaign's own explicit choice;
+  // reset clears it back to undefined so the Campaign Style's own default
+  // takes over again (NOT frozen to whatever that default happened to be
+  // at reset time — see openingComposition's own doc comment).
+  setOpeningComposition(composition: OpeningComposition): void {
+    this.patch({ layout: { ...this.draft.layout, openingComposition: composition } });
+  }
+
+  resetOpeningComposition(): void {
+    const layout = { ...this.draft.layout };
+    delete layout.openingComposition;
+    this.patch({ layout });
+  }
+
   sync(): void {
     this.draftSubject.next({ ...this.draft });
   }
@@ -1233,10 +1374,46 @@ export class CampaignStudioStateService {
 
   setSidebarSection(type: 'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors', inSidebar: boolean): void {
     const current = this.draft.layout.sidebarSections ?? [];
+    const wasInSidebar = current.includes(type);
     const next = inSidebar
-      ? (current.includes(type) ? current : [...current, type])
+      ? (wasInSidebar ? current : [...current, type])
       : current.filter(t => t !== type);
-    this.patch({ layout: { ...this.draft.layout, sidebarSections: next } });
+    const layout = { ...this.draft.layout, sidebarSections: next };
+    // An actual placement change (not a redundant call with the same value)
+    // invalidates any explicit Section Presentation override: the manager's
+    // past choice was made FOR the old placement and must not blindly follow
+    // the section into the new one (e.g. an explicit 'cards' pick for Main
+    // must not survive a move into Sidebar, which only ever recommends
+    // 'list'). Clearing it here — rather than in resolveSectionPresentation —
+    // lets the resolver fall through to the new placement's own
+    // recommendation while still allowing the manager to re-override it
+    // afterward. See resolveSectionPresentation in campaign-styles.ts.
+    if (wasInSidebar !== inSidebar && type !== 'sponsors' && layout.sectionPresentation?.[type]) {
+      const sectionPresentation = { ...layout.sectionPresentation };
+      delete sectionPresentation[type];
+      layout.sectionPresentation = sectionPresentation;
+    }
+    this.patch({ layout });
+  }
+
+  // Section Presentation (2026-10-03) — independent of the sidebar-placement
+  // pair above; see CampaignLayout.sectionPresentation's own doc comment.
+  // Same explicit-set/reset-to-Style-default shape as
+  // setOpeningComposition/resetOpeningComposition.
+  getSectionPresentation(type: PresentableSection): SectionPresentation | undefined {
+    return this.draft.layout.sectionPresentation?.[type];
+  }
+
+  setSectionPresentation(type: PresentableSection, presentation: SectionPresentation): void {
+    const current = { ...(this.draft.layout.sectionPresentation ?? {}) };
+    current[type] = presentation;
+    this.patch({ layout: { ...this.draft.layout, sectionPresentation: current } });
+  }
+
+  resetSectionPresentation(type: PresentableSection): void {
+    const current = { ...(this.draft.layout.sectionPresentation ?? {}) };
+    delete current[type];
+    this.patch({ layout: { ...this.draft.layout, sectionPresentation: current } });
   }
 
   // Sets the chosen Campaign Preset (§ CAMPAIGN_PRESETS_VISION.md §0 — this

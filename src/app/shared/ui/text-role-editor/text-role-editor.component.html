@@ -1,0 +1,76 @@
+<div class="tse">
+
+  <!-- TOGGLE ROW -->
+  <div class="tse-toggle-row" (click)="expanded = !expanded">
+    <div class="tse-toggle-left">
+      <span class="tse-advanced-label">{{ roleLabel }}</span>
+      <span class="tse-summary" *ngIf="!expanded">{{ hasOverride ? 'מותאם אישית' : 'לפי הסגנון' }}</span>
+    </div>
+    <label class="tse-switch" (click)="$event.stopPropagation()">
+      <input type="checkbox" [checked]="expanded" (change)="expanded = !expanded">
+      <span class="tse-switch-slider"></span>
+    </label>
+  </div>
+
+  <!-- EXPANDED CONTENT -->
+  <div class="tse-body" *ngIf="expanded">
+
+    <!-- COLOR -->
+    <div class="tse-row" *ngIf="showColor">
+      <span class="tse-label">צבע</span>
+      <app-color-picker [value]="override?.color ?? resolvedColor" (valueChange)="patch({ color: $event })"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.color" (click)="resetProperty('color')" title="איפוס לצבע לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.color">לפי הסגנון</span>
+    </div>
+
+    <!-- FONT WEIGHT -->
+    <div class="tse-row" *ngIf="showFontWeight">
+      <span class="tse-label">עובי פונט</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of weightOptions" class="tse-chip"
+          [class.active]="override?.fontWeight === opt.value"
+          (click)="patch({ fontWeight: opt.value })">{{ opt.label }}</button>
+      </div>
+      <button class="tse-reset" type="button" *ngIf="override?.fontWeight" (click)="resetProperty('fontWeight')" title="איפוס לעובי לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.fontWeight">לפי הסגנון</span>
+    </div>
+
+    <!-- FONT SIZE -->
+    <div class="tse-row" *ngIf="showFontSize">
+      <span class="tse-label">גודל פונט</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
+          [class.active]="override?.fontSize === opt.value"
+          (click)="patch({ fontSize: opt.value })">{{ opt.label }}</button>
+      </div>
+      <button class="tse-reset" type="button" *ngIf="override?.fontSize" (click)="resetProperty('fontSize')" title="איפוס לגודל לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.fontSize">לפי הסגנון</span>
+    </div>
+
+    <!-- FONT FAMILY -->
+    <div class="tse-row" *ngIf="showFontFamily">
+      <span class="tse-label">גופן</span>
+      <select class="tse-input" [ngModel]="override?.fontFamily ?? ''" (ngModelChange)="patch({ fontFamily: $event })">
+        <option value="">לפי הסגנון</option>
+        <option *ngFor="let opt of fontOptions" [value]="opt.value">{{ opt.label }}</option>
+      </select>
+      <button class="tse-reset" type="button" *ngIf="override?.fontFamily" (click)="resetProperty('fontFamily')" title="איפוס לגופן לפי הסגנון">↺</button>
+    </div>
+
+    <!-- ALIGN -->
+    <div class="tse-row" *ngIf="showAlign">
+      <span class="tse-label">יישור</span>
+      <div class="tse-chips">
+        <button *ngFor="let opt of alignOptions" class="tse-chip"
+          [class.active]="override?.align === opt.value"
+          (click)="patch({ align: opt.value })">{{ opt.label }}</button>
+      </div>
+      <button class="tse-reset" type="button" *ngIf="override?.align" (click)="resetProperty('align')" title="איפוס ליישור לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.align">לפי הסגנון</span>
+    </div>
+
+    <div class="tse-divider" *ngIf="hasOverride"></div>
+    <button class="tse-reset-role" type="button" *ngIf="hasOverride" (click)="resetRole()">איפוס כל ההתאמות של {{ roleLabel }}</button>
+
+  </div>
+</div>

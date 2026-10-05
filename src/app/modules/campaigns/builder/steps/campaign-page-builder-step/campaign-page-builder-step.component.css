@@ -755,6 +755,101 @@
   padding: 24px 16px;
 }
 
+/* CAMPAIGN LOGO — ported verbatim from campaign-basic-step.component.css on
+   the 2026-09-30 move (view encapsulation means classes don't cross
+   components — must exist here too, same lesson as the .tse-chip bug). */
+.logo-design-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px dashed #d8d3f5; border-radius: 8px;
+  background: #fff;
+  color: #7c3aed;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-design-toggle:hover { background: #f5f3ff; border-color: #7c3aed; }
+
+.logo-option-hint { font-size: 11px; color: #94a3b8; }
+
+.logo-source-row {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.logo-source-preview {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; border: 1.5px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; flex-shrink: 0;
+  font-size: 20px;
+}
+.logo-source-preview img { width: 80%; height: 80%; object-fit: contain; }
+
+.logo-upload-btn {
+  flex: 1; padding: 7px 12px;
+  border: 1.5px solid #c4b5fd; border-radius: 8px;
+  background: #fff; color: #7c3aed;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-upload-btn:hover:not(:disabled) { background: #f5f3ff; border-color: #7c3aed; }
+.logo-upload-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.logo-remove-btn {
+  padding: 7px 10px;
+  border: 1.5px solid #fecaca; border-radius: 8px;
+  background: #fff; color: #ef4444;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.logo-remove-btn:hover { background: #fef2f2; }
+
+/* OPENING COMPOSITION — Phase A (2026-10-01). Thumbnails are plain CSS
+   boxes, not images/real colors -- they communicate STRUCTURE only, per
+   spec. Deliberately simple/neutral grays so they read the same regardless
+   of the campaign's own Campaign Style. */
+.opening-comp-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.opening-comp-card {
+  flex: 1 1 110px;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.opening-comp-card:hover { border-color: #c4b5fd; }
+.opening-comp-card--active { border-color: #7c3aed; background: #faf5ff; }
+.opening-comp-thumb {
+  width: 100%;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  background: #f1f5f9;
+}
+.opening-comp-thumb--classic { flex-direction: column; }
+.opening-comp-thumb--classic .opening-comp-thumb-a { height: 58%; background: #cbd5e1; }
+.opening-comp-thumb--classic .opening-comp-thumb-b { height: 42%; background: #e2e8f0; }
+.opening-comp-thumb--story-first { flex-direction: column; }
+.opening-comp-thumb--story-first .opening-comp-thumb-a { height: 72%; background: #cbd5e1; }
+.opening-comp-thumb--story-first .opening-comp-thumb-b { height: 28%; background: #fff; border-top: 2px solid #94a3b8; }
+.opening-comp-thumb--fundraising-split { flex-direction: row; }
+.opening-comp-thumb--fundraising-split .opening-comp-thumb-a { width: 42%; background: #94a3b8; }
+.opening-comp-thumb--fundraising-split .opening-comp-thumb-b { width: 58%; background: #cbd5e1; }
+.opening-comp-label { font-size: 12px; font-weight: 700; color: #334155; }
+.opening-comp-recommended { font-size: 10px; font-weight: 700; color: #7c3aed; }
+
 /* CAMPAIGN THEME */
 .campaign-theme-section {
   display: flex;
@@ -1128,7 +1223,50 @@
 }
 .block-picker--mini .picker-label { font-size: 11px; }
 
+/* Donation Amount Button Presets (2026-10) -- compact visual thumbnail
+   picker, not a technical dropdown and not seven giant preview panels.
+   Each swatch renders a real (tiny) preview of the preset's own values. */
+.amt-preset-row { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.amt-preset-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.amt-preset-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  width: 84px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.amt-preset-swatch:hover { border-color: #a78bfa; }
+.amt-preset-swatch.active { border-color: #7c3aed; background: #faf5ff; }
+.amt-preset-mini {
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+.amt-preset-mini-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  padding: 4px 5px;
+  white-space: nowrap;
+}
+.amt-preset-label { font-size: 11px; font-weight: 600; color: #64748b; }
+.amt-preset-swatch.active .amt-preset-label { color: #7c3aed; }
+
 @media (max-width: 768px) {
+  .amt-preset-swatch { width: 76px; }
   .footer-colors-row {
     display: flex;
     flex-direction: column;

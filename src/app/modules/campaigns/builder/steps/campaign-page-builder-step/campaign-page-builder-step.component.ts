@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Layers, GripVertical } from 'lucide-angular';
 import {
@@ -16,9 +16,21 @@ import {
   TabsBlockData,
   AccordionBlockData,
   StatsBlockData,
+  StatsTextRole,
+  StatsProgressRole,
   StatItem,
   DonationWidgetBlockData,
+  DonationTextRole,
+  DonationButtonRole,
+  DonationSurfaceRole,
+  DonorsBlockData,
+  DonorsTextRole,
+  AmbassadorsBlockData,
+  AmbassadorsTextRole,
+  AmbassadorsSurfaceRole,
+  AmbassadorsButtonRole,
   CtaBlockData,
+  CtaButtonRole,
   DividerBlockData,
   UpdatesBlockData,
   ShareBlockData,
@@ -30,13 +42,29 @@ import {
 } from '../../../services/campaign-studio-state.service';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
+import { TextRoleEditorComponent } from '../../../../../shared/ui/text-role-editor/text-role-editor.component';
+import { StyleRoleEditorComponent, StyleRoleOverride } from '../../../../../shared/ui/style-role-editor/style-role-editor.component';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
+import { resolveRoleColor, resolveRoleBorderRadius, LEGACY_THEME_COLOR } from '../../../utils/text-role-resolver';
+import {
+  AMOUNT_BUTTON_PRESETS, DONATION_AMOUNT_BUTTON_PRESET_OPTIONS, DonationAmountButtonPreset,
+} from '../../../utils/donation-amount-button-presets';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TemplatePickerComponent, TemplateSelection } from '../../template-picker/template-picker.component';
 import { TEMPLATE_PALETTES, TemplatePalette, buildTheme } from '../../templates/campaign-templates';
-import { CAMPAIGN_STYLES, CampaignStyleId, StyleColorField } from '../../styles/campaign-styles';
+import {
+  CAMPAIGN_STYLES, CAMPAIGN_STYLE_MAP, CampaignStyleId, StyleColorField, OpeningComposition, resolveOpeningComposition,
+  resolveSectionPresentation, SectionPresentation, PresentableSection, resolveVisualTokens,
+} from '../../styles/campaign-styles';
+import { SectionPresentationPickerComponent } from '../../../shared/components/section-presentation-picker/section-presentation-picker.component';
 import { OwnerType, isSectionAvailableFor } from '../../../services/owner-registry';
+import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
+import { EntitiesService } from '../../../../../core/services/entities.service';
+import { environment } from '../../../../../../environments/environment';
+import {
+  LogoAppearanceEditorComponent, LogoShape, LogoSize,
+} from '../../../../../shared/ui/logo-appearance-editor/logo-appearance-editor.component';
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   'rich-text':   'טקסט',
@@ -117,13 +145,20 @@ const ADDABLE_BLOCKS: BlockType[] = [
 @Component({
   selector: 'app-campaign-page-builder-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent, ColorPickerComponent, TemplatePickerComponent],
+  imports: [
+    CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent,
+    TextRoleEditorComponent, StyleRoleEditorComponent,
+    ColorPickerComponent, TemplatePickerComponent, LogoAppearanceEditorComponent, SectionPresentationPickerComponent,
+  ],
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
 export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
+  private entityService = inject(CurrentEntityService);
+  private entitiesService = inject(EntitiesService);
+  private doc = inject(DOCUMENT);
 
   readonly LayersIcon = Layers;
   readonly GripVertical = GripVertical;
@@ -172,6 +207,22 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   hoveredBlockId: string | null = null;
   private _destroy$ = new Subject<void>();
 
+  // Campaign Hero logo (moved from campaign-basic-step, 2026-09-30) — Style/
+  // design controls belong in the Builder's design step, both before AND
+  // after publication (Step 1 is PUBLISHED_GATED, Step 9 never is — see
+  // campaign-editor.component.ts). entityLogoUrl is read-only preview data
+  // (the fallback shown when no campaign-specific logo is set), same fetch
+  // basic-step used to do for the identical purpose.
+  entityLogoUrl: string | null = null;
+  isUploadingLogo = false;
+  logoDesignOpen = false;
+  readonly LOGO_POSITIONS: { pos: 'left' | 'center' | 'right' | 'above'; label: string }[] = [
+    { pos: 'right', label: 'ימין' },
+    { pos: 'center', label: 'מרכז' },
+    { pos: 'left', label: 'שמאל' },
+    { pos: 'above', label: 'מעל' },
+  ];
+
   setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'builder'); }
 
   ngOnInit(): void {
@@ -187,6 +238,22 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.focusBlockRequest$.pipe(takeUntil(this._destroy$)).subscribe(({ id, type }) => {
       this.openNewBlockEditor(id, type);
     });
+
+    // Entity logo preview only (moved from campaign-basic-step, 2026-09-30) —
+    // shown as the fallback preview when no campaign-specific logo is set;
+    // does not touch entities.logo_url itself (that stays Entity Settings).
+    const entity = this.entityService.currentEntity();
+    if (entity?.id) {
+      this.entitiesService.getEntityById(entity.id).subscribe({
+        next: (res: any) => {
+          const raw = res?.logo_url ?? null;
+          if (raw) {
+            this.entityLogoUrl = (raw.startsWith('http') || raw.startsWith('data:image'))
+              ? raw : `${environment.apiUrl}${raw}`;
+          }
+        },
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -749,6 +816,172 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.updateBlockData(id, { ...block.data, [field]: value } as DonationWidgetBlockData);
   }
 
+  // Donation Amount Button Presets (2026-10) -- a dedicated setter, not
+  // updateDonationWidgetField, because 'inherit' must DELETE the field
+  // rather than persist a string. Resetting the preset never touches
+  // buttonStyles.amountButton/amountButtonSelected (the separate, already-
+  // existing B1 manual overrides) -- "reset preset" and "reset all amount-
+  // button styling" are deliberately two different actions.
+  readonly amountButtonPresetOptions = DONATION_AMOUNT_BUTTON_PRESET_OPTIONS;
+
+  setAmountButtonPreset(id: string, preset: DonationAmountButtonPreset | 'inherit'): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = { ...(block.data as DonationWidgetBlockData) };
+    if (preset === 'inherit') delete data.amountButtonPreset;
+    else data.amountButtonPreset = preset;
+    this.state.updateBlockData(id, data);
+  }
+
+  // Compact thumbnail preview for the preset picker -- a real (if tiny)
+  // rendering of the preset's own values, not a generic icon, so the
+  // manager can tell presets apart before clicking into any of them.
+  miniAmountButtonStyle(preset: DonationAmountButtonPreset | 'inherit', selected: boolean): Record<string, string> {
+    if (preset === 'inherit') {
+      return selected
+        ? { background: '#0f2747', borderColor: '#0f2747', color: '#ffffff', borderRadius: '8px', borderWidth: '1.5px', borderStyle: 'solid', fontWeight: '800' }
+        : { background: '#ffffff', borderColor: '#dbe3ea', color: '#0f2747', borderRadius: '8px', borderWidth: '1.5px', borderStyle: 'solid', fontWeight: '800' };
+    }
+    const t = AMOUNT_BUTTON_PRESETS[preset];
+    return {
+      background:   selected ? t.selectedBackground  : t.background,
+      borderColor:  selected ? t.selectedBorderColor  : t.borderColor,
+      color:        selected ? t.selectedTextColor    : t.textColor,
+      borderRadius: t.borderRadiusPx + 'px',
+      borderWidth:  Math.max(1, t.borderWidthPx) + 'px', // kept visible even at 0 so the thumbnail itself stays legible
+      borderStyle:  'solid',
+      fontWeight:   String(t.fontWeight),
+    };
+  }
+
+  // Donors — same shape as updateDonationWidgetField/updateStatsField above,
+  // currently only used for the new titleColor override (2026-10-06).
+  updateDonorsField(id: string, field: keyof DonorsBlockData, value: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    this.state.updateBlockData(id, { ...block.data, [field]: value } as DonorsBlockData);
+  }
+
+  // Typography Phase A (2026-10) -- Donors/Ambassadors/Stats Text Role
+  // overrides all share the exact same shape (data.textStyles?.[role]), so
+  // one generic updater serves every <app-text-role-editor> on this step
+  // regardless of which of the 3 block types it's editing -- no per-section
+  // duplicate method. undefined deletes the role key entirely rather than
+  // writing an empty object, keeping the persisted JSON minimal.
+  updateTextStyleRole(id: string, role: string, override: Partial<TextStyle> | undefined): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as { textStyles?: Record<string, Partial<TextStyle>> };
+    const textStyles = { ...(data.textStyles ?? {}) };
+    if (override) textStyles[role] = override;
+    else delete textStyles[role];
+    this.state.updateBlockData(id, { ...data, textStyles } as unknown as StatsBlockData);
+  }
+
+  // Universal Local Styling Phase B1 (2026-10) -- the non-text sibling of
+  // updateTextStyleRole() above. surfaceStyles/buttonStyles/progressStyles
+  // all share the exact same shape (data.<kind>?.[role]), so one generic
+  // updater serves every <app-style-role-editor> on this step regardless
+  // of kind or block type.
+  updateStyleRole(id: string, kind: 'surfaceStyles' | 'buttonStyles' | 'progressStyles', role: string, override: StyleRoleOverride | undefined): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as Record<string, Record<string, StyleRoleOverride>>;
+    const roles = { ...(data[kind] ?? {}) };
+    if (override) roles[role] = override;
+    else delete roles[role];
+    this.state.updateBlockData(id, { ...data, [kind]: roles } as unknown as StatsBlockData);
+  }
+
+  asAmbassadorsBlock(data: unknown): AmbassadorsBlockData { return data as AmbassadorsBlockData; }
+
+  // "לפי הסגנון" preview swatch in the role editor -- the exact same
+  // resolver/legacy-literal pair campaign-preview.component.ts uses to
+  // RENDER each role, so what the Builder shows as "today's default" is
+  // never a guess.
+  donorsRoleResolvedColor(draft: CampaignDraft, role: DonorsTextRole): string {
+    const theme = draft.layout.theme;
+    switch (role) {
+      case 'sectionTitle':  return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'donorName':     return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'donorAmount':   return resolveRoleColor(undefined, LEGACY_THEME_COLOR.accentColor, theme, 'accentColor');
+      case 'donorMeta':     return resolveRoleColor(undefined, '#94a3b8', theme, 'bodyTextColor');
+    }
+  }
+
+  ambassadorsRoleResolvedColor(draft: CampaignDraft, role: AmbassadorsTextRole): string {
+    const theme = draft.layout.theme;
+    switch (role) {
+      case 'sectionTitle':     return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'ambassadorName':   return resolveRoleColor(undefined, '#0f172a', theme, 'secondaryColor');
+      case 'raisedAmount':     return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'donorCount':       return resolveRoleColor(undefined, '#0f172a', theme);
+      case 'secondaryMeta':    return resolveRoleColor(undefined, '#94a3b8', theme, 'bodyTextColor');
+    }
+  }
+
+  statsRoleResolvedColor(draft: CampaignDraft, role: StatsTextRole, data: StatsBlockData): string {
+    const theme = draft.layout.theme;
+    switch (role) {
+      case 'sectionTitle': return resolveRoleColor(data.titleColor, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'value':        return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'label':        return resolveRoleColor(undefined, '#62728d', theme, 'bodyTextColor');
+    }
+  }
+
+  // Universal Local Styling Phase B1 (2026-10) -- "לפי הסגנון" preview
+  // swatches for the new non-text roles. These mirror each role's own
+  // legacy/classic-composition default (the renderer's explicit-or-null
+  // roles don't inject these automatically into the page -- see the
+  // DONATION_ROLE_NOTES comment in campaign-preview.component.ts -- but the
+  // Builder still shows the manager what "לפי הסגנון" currently looks like
+  // in the default/classic composition).
+  donationContainerResolved(draft: CampaignDraft, prop: 'background' | 'borderColor'): string {
+    return prop === 'background' ? '#ffffff' : '#e2e8f0';
+  }
+  donationContainerResolvedRadius(draft: CampaignDraft): number {
+    return resolveRoleBorderRadius(undefined, 8, resolveVisualTokens(draft.layout?.campaignStyleId), 'cards');
+  }
+  donationAmountButtonResolved(prop: 'background' | 'textColor' | 'borderColor'): string {
+    return { background: '#ffffff', textColor: '#0f2747', borderColor: '#dbe3ea' }[prop];
+  }
+  donationAmountButtonResolvedRadius(): number {
+    return 8;
+  }
+  donationAmountButtonSelectedResolved(prop: 'background' | 'textColor'): string {
+    return { background: '#0f2747', textColor: '#ffffff' }[prop];
+  }
+  donationCtaResolved(draft: CampaignDraft, data: DonationWidgetBlockData, prop: 'background' | 'textColor'): string {
+    return prop === 'background' ? (data.ctaColor || draft.layout.theme.primaryColor) : '#ffffff';
+  }
+  donationCtaResolvedRadius(draft: CampaignDraft): number {
+    return resolveRoleBorderRadius(undefined, 12, resolveVisualTokens(draft.layout?.campaignStyleId), 'buttons');
+  }
+
+  ambassadorsSurfaceResolvedColor(draft: CampaignDraft, prop: 'background' | 'borderColor' | 'buttonBackground' | 'buttonTextColor'): string {
+    const theme = draft.layout.theme;
+    switch (prop) {
+      case 'background':       return resolveRoleColor(undefined, '#ffffff', undefined);
+      case 'borderColor':      return resolveRoleColor(undefined, '#e2e8f0', undefined);
+      case 'buttonBackground': return resolveRoleColor(undefined, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
+      case 'buttonTextColor':  return '#ffffff';
+    }
+  }
+  ambassadorsCardResolvedRadius(draft: CampaignDraft): number {
+    return resolveRoleBorderRadius(undefined, 16, resolveVisualTokens(draft.layout?.campaignStyleId), 'cards');
+  }
+
+  statsRingResolvedColor(prop: 'trackColor' | 'fillColor'): string {
+    return prop === 'trackColor' ? '#e8eef5' : '#0f2747';
+  }
+
+  ctaButtonResolved(data: CtaBlockData, prop: 'background' | 'textColor'): string {
+    return prop === 'background' ? data.ctaConfig.color : '#ffffff';
+  }
+  ctaButtonResolvedRadius(draft: CampaignDraft): number {
+    return resolveRoleBorderRadius(undefined, 10, resolveVisualTokens(draft.layout?.campaignStyleId), 'buttons');
+  }
+
   // Switching to "מותאם אישית" seeds the picker with the current live
   // primary-action color (design-evolution semantic-roles pass, 2026-09-29)
   // — the donation CTA is a PRIMARY ACTION, so it seeds from themePrimary,
@@ -831,6 +1064,114 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.setCampaignStyle(id);
   }
 
+  // ── Opening Composition — Phase A (2026-10-01) ──
+  // Labels are user-facing Hebrew ONLY (UX reorg, 2026-10-01) -- the
+  // internal `value`s are the real OpeningComposition literals, unchanged,
+  // consumed by state/resolver/renderer exactly as before.
+  readonly OPENING_COMPOSITIONS: { value: OpeningComposition; label: string }[] = [
+    { value: 'classic', label: 'קלאסי' },
+    { value: 'story-first', label: 'הסיפור במרכז' },
+    { value: 'fundraising-split', label: 'גיוס ומדיה' },
+  ];
+
+  // The actually-rendered composition right now (explicit if set, else the
+  // Style's own default, else 'classic') -- same resolver the renderer uses,
+  // so the Builder's "active" card always matches what Preview shows.
+  effectiveOpeningComposition(draft: CampaignDraft): OpeningComposition {
+    return resolveOpeningComposition(draft.layout?.openingComposition, draft.layout?.campaignStyleId);
+  }
+
+  // UX reorg (2026-10-01) -- used only to hide the now-ineffective legacy
+  // Hero position rows ("טקסטי Hero") when a structured Opening is active;
+  // see that section's own template comment for exactly which controls this
+  // does/doesn't affect and why.
+  hasStructuredOpening(draft: CampaignDraft): boolean {
+    return this.effectiveOpeningComposition(draft) !== 'classic';
+  }
+
+  // What the CURRENT Campaign Style recommends, independent of whether the
+  // campaign has an explicit override -- used only to label a card
+  // "מומלץ לסגנון", never to decide what's active.
+  styleRecommendedOpeningComposition(draft: CampaignDraft): OpeningComposition {
+    const style = draft.layout?.campaignStyleId ? CAMPAIGN_STYLE_MAP[draft.layout.campaignStyleId] : undefined;
+    return style?.visual.opening.composition ?? 'classic';
+  }
+
+  setOpeningComposition(value: OpeningComposition): void {
+    this.state.setOpeningComposition(value);
+  }
+
+  // Clears the explicit override back to undefined -- control returns to
+  // the Style's own default, which keeps auto-updating if the Style changes
+  // again later (NOT frozen to today's recommendation).
+  resetOpeningComposition(): void {
+    this.state.resetOpeningComposition();
+  }
+
+  // Section Presentation + placement (2026-10-03, consolidated 2026-10-04) —
+  // EVERY layout/design control for all four list-type sections lives here,
+  // in the Page Builder step, regardless of whether that section also has
+  // its own dedicated content-management step elsewhere (Donors doesn't;
+  // Rewards/Ambassadors/Updates do). This is deliberate, not an oversight:
+  // this step is the one step NEVER in PUBLISHED_GATED_STEPS
+  // (campaign-editor.component.ts), so it's the only place a design choice
+  // stays editable after the campaign is published — exactly the product
+  // rule "this is a design matter, it belongs in the Builder" (2026-10-04
+  // fix; previously Rewards'/Ambassadors' pickers lived in their own
+  // steps, which ARE gated post-publish, silently making them
+  // uneditable for any already-published campaign).
+  readonly REWARDS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
+    { value: 'cards', label: 'כרטיסים' },
+    { value: 'list', label: 'קומפקטי' },
+    { value: 'image', label: 'תמונה מודגשת' },
+  ];
+  readonly DONORS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
+    { value: 'cards', label: 'כרטיסים' },
+    { value: 'list', label: 'רשימה' },
+  ];
+  readonly AMBASSADORS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
+    { value: 'cards', label: 'כרטיסים' },
+    { value: 'list', label: 'רשימה קומפקטית' },
+  ];
+  readonly UPDATES_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
+    { value: 'cards', label: 'כרטיסים' },
+    { value: 'list', label: 'רשימה' },
+  ];
+
+  recommendedSectionPresentation(draft: CampaignDraft, type: PresentableSection): SectionPresentation {
+    return resolveSectionPresentation(type, undefined, draft.layout.campaignStyleId, this.state.isSidebarSection(type));
+  }
+
+  // Rewards-only: an existing campaign may already have an explicit
+  // rewardsLayout='image' choice (the OLD, mandatory field predating this
+  // axis — see CampaignLayout.rewardsLayout's own doc comment). Only used to
+  // seed the NEW picker's "recommended" badge correctly for a campaign that
+  // never touches the new field; writing through the picker always goes to
+  // the new field going forward. Gated to main placement only — the sidebar
+  // always recommends 'list' regardless of this legacy field (see
+  // resolveSectionPresentation). Identical escape hatch to
+  // campaign-preview.component.ts#sectionPresentation.
+  recommendedRewardsPresentation(draft: CampaignDraft): SectionPresentation {
+    if (!this.state.isSidebarSection('rewards') && !draft.layout.sectionPresentation?.rewards && draft.layout.rewardsLayout === 'image') {
+      return 'image';
+    }
+    return this.recommendedSectionPresentation(draft, 'rewards');
+  }
+
+  // Updates-only: an existing campaign may already have an explicit
+  // viewMode='list' choice on the block itself (the OLD per-block control,
+  // now removed from this panel's UI but left in the data/service layer for
+  // backward compatibility — see campaign-preview.component.ts's identical
+  // escape hatch). Only used to seed the NEW picker's "recommended" badge
+  // correctly for a campaign that never touches the new field; writing
+  // through the picker always goes to the new field going forward.
+  recommendedUpdatesPresentation(draft: CampaignDraft, block: CampaignBlock): SectionPresentation {
+    if (!draft.layout.sectionPresentation?.updates && this.asUpdatesBlock(block.data).viewMode === 'list') {
+      return 'list';
+    }
+    return this.recommendedSectionPresentation(draft, 'updates');
+  }
+
   // Routes a color-picker change through the override mechanism once a
   // Style is active (single-writer invariant — theme's 4 managed fields
   // must only ever be written by resolveTheme() from that point on), and
@@ -881,6 +1222,85 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   onHeroTextStyleChange(style: TextStyle): void { this.state.patch({ heroTextStyle: style }); }
   onHeroCtaConfigChange(cta: CtaConfig): void   { this.state.patch({ heroCtaConfig: cta }); }
 
+  // ── Campaign Hero logo (moved from campaign-basic-step, 2026-09-30 —
+  // Style/design controls belong in the design step, not the content step,
+  // and this is now their ONE home regardless of publish status) ──
+  onCampaignLogoChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.isUploadingLogo = true;
+    this.uploadService.upload(file, 'campaigns/logos').subscribe({
+      next: url => {
+        this.state.patch({ campaignLogoUrl: url });
+        this.isUploadingLogo = false;
+        this.autoContrastLogoBg(url);
+      },
+      error: () => { this.isUploadingLogo = false; },
+    });
+  }
+
+  removeCampaignLogo(): void {
+    this.state.patch({ campaignLogoUrl: null });
+  }
+
+  setLogoPosition(pos: 'left' | 'center' | 'right' | 'above'): void {
+    this.state.patch({ heroLogoPosition: pos });
+  }
+
+  // Horizontal sub-position, only meaningful/shown when heroLogoPosition is
+  // 'above' -- see campaign-preview.component.ts#openingLogoAlign's own
+  // comment for why this reuses the existing (previously dead) logoStripAlign
+  // field instead of inventing a new one.
+  readonly LOGO_ALIGNS: { align: 'right' | 'center' | 'left'; label: string }[] = [
+    { align: 'right', label: 'ימין' },
+    { align: 'center', label: 'מרכז' },
+    { align: 'left', label: 'שמאל' },
+  ];
+  setLogoStripAlign(align: 'right' | 'center' | 'left'): void {
+    this.state.patch({ logoStripAlign: align });
+  }
+
+  setLogoShape(shape: LogoShape): void { this.state.patch({ heroLogoShape: shape }); }
+  setLogoSize(size: LogoSize): void   { this.state.patch({ heroLogoSize: size }); }
+
+  // Same heuristic as the original campaign-basic-step implementation — a
+  // near-white logo on the default white background is invisible; switches
+  // to a dark background automatically, only while the background is still
+  // untouched (default white), so it never overrides a manager's own choice.
+  private autoContrastLogoBg(url: string): void {
+    if (this.state.draft.layout.theme.logoBg !== '#ffffff') return;
+    const img = this.doc.createElement('img');
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = this.doc.createElement('canvas');
+      const size = 40;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, size, size);
+      let data: Uint8ClampedArray;
+      try {
+        data = ctx.getImageData(0, 0, size, size).data;
+      } catch {
+        return; // canvas tainted by a cross-origin image without CORS headers
+      }
+      let total = 0, litSum = 0, opaquePixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        if (alpha < 20) continue;
+        opaquePixels++;
+        const lightness = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
+        litSum += lightness;
+        total++;
+      }
+      if (!total || opaquePixels < 10) return;
+      const avgLightness = litSum / total;
+      if (avgLightness > 220) this.patchTheme({ logoBg: '#1e293b' });
+    };
+    img.onerror = () => {};
+    img.src = url;
+  }
+
   blockIcon(block: CampaignBlock): string  { return BLOCK_ICONS[block.type] ?? ''; }
   blockLabel(block: CampaignBlock): string { return this.blockTypeLabel(block.type); }
 
@@ -907,6 +1327,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   asAccordion(data: unknown): AccordionBlockData         { return data as AccordionBlockData; }
   asStats(data: unknown): StatsBlockData                 { return data as StatsBlockData; }
   asDonationWidget(data: unknown): DonationWidgetBlockData { return data as DonationWidgetBlockData; }
+  asDonors(data: unknown): DonorsBlockData               { return data as DonorsBlockData; }
   asCta(data: unknown): CtaBlockData                     { return data as CtaBlockData; }
   asDivider(data: unknown): DividerBlockData             { return data as DividerBlockData; }
   asShare(data: unknown): ShareBlockData                 { return data as ShareBlockData; }
@@ -955,5 +1376,19 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     const block = this.state.draft.blocks.find(b => b.id === blockId);
     if (!block) return;
     this.state.updateBlockData(blockId, { viewMode: mode } as UpdatesBlockData);
+  }
+
+  // Rewards image position/size (moved here from campaign-offerings-step,
+  // 2026-10-04) -- see the product fix note on the rewards editor-field
+  // above: every layout/design control for a content section belongs here,
+  // in the one step that stays editable after publish, not in that
+  // section's own content-management step (which is correctly content-only
+  // and gated post-publish).
+  setRewardsImagePosition(position: 'full' | 'inline'): void {
+    this.state.patch({ layout: { ...this.state.draft.layout, rewardsImagePosition: position } });
+  }
+
+  setRewardsImageSize(size: number): void {
+    this.state.patch({ layout: { ...this.state.draft.layout, rewardsImageSize: size } });
   }
 }

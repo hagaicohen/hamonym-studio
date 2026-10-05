@@ -6,13 +6,15 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { LucideAngularModule, GripVertical, Mail, Facebook } from 'lucide-angular';
 import { TextStyle } from '../../../../../shared/models/text-style.model';
+import { resolveRoleColor, resolveRoleFontWeight, resolveRoleBorderRadius, LEGACY_THEME_COLOR } from '../../../utils/text-role-resolver';
+import { AMOUNT_BUTTON_PRESETS, AmountButtonPresetTokens } from '../../../utils/donation-amount-button-presets';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 import { AccountNavService } from '../../../../../core/services/account-nav.service';
 import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
 import { StudioUiService } from '../../services/studio-ui.service';
-import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposition, ConversionWidgetLayout } from '../../../builder/styles/campaign-styles';
+import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposition, ConversionWidgetLayout, resolveOpeningComposition, resolveSectionSurfaceColors, OpeningComposition, resolveSectionPresentation, SectionPresentation, PresentableSection } from '../../../builder/styles/campaign-styles';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 import {
   CampaignStudioStateService,
@@ -54,11 +56,12 @@ import { CampaignAmbassador } from '../../../services/campaign-studio-state.serv
 import { CommentsService, CampaignComment } from '../../../services/comments.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
+import { AmbassadorSlugFieldComponent } from '../../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
 
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule],
+  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
@@ -76,6 +79,35 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // rather than removing every (mouseenter)/(mouseleave) binding in the
   // template, so this is a one-line revert if that's ever wanted back.
   setHovered(id: string | null): void {}
+
+  // ── Click-to-edit (2026-09-30) — connects the live preview to the
+  // EXISTING Builder editor via requestFocusBlock(), the same method/Subject
+  // already used right after a drag-and-drop insertion (see
+  // insertBlockAt()'s caller below) — no new selection/focus state
+  // introduced. Only active while pageBuilderActive (Builder editing mode);
+  // zero behavior change on the real public/donor-facing page, which never
+  // sets pageBuilderActive at all.
+  onBlockClick(event: MouseEvent, block: CampaignBlock): void {
+    if (!this.pageBuilderActive) return;
+    if (this.isInteractiveClickTarget(event)) return;
+    // Stops this same click from also bubbling to an ANCESTOR .block-wrap/
+    // .container-child (a block nested inside a container) and requesting
+    // focus for the wrong (outer) block too — same stopPropagation
+    // convention already used for nested hover (.container-child's own
+    // (mouseenter) in the template).
+    event.stopPropagation();
+    this.state.requestFocusBlock(block.id, block.type);
+  }
+
+  // Generic guard, not block-type-specific — a click that lands on (or
+  // inside) a real interactive control must keep doing its own thing
+  // (follow a link, submit a donation amount, open a video lightbox, etc.),
+  // never get hijacked into "open this block's editor" just because that
+  // control happens to live inside a Page Builder block.
+  private isInteractiveClickTarget(event: Event): boolean {
+    const el = event.target as HTMLElement | null;
+    return !!el?.closest('a, button, input, textarea, select, video, audio, iframe, [role="button"], [contenteditable="true"]');
+  }
 
   // ── Drag-to-reorder FROM the preview itself — a small "⠿" handle shown
   // on hover over each block (see .preview-drag-handle in the template, all
@@ -124,6 +156,12 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
   @Input() autoOpenJoin = false;
+  // Set by the real public-facing pages (campaign-public-page,
+  // partner-public-page) only -- stays false everywhere this component is
+  // used for editing (the Studio's own preview tab, the Page Builder's live
+  // pane), which is what keeps every section visible with its Builder-facing
+  // empty state there regardless of content. See shouldRenderBlock().
+  @Input() isPublicPage = false;
   private autoOpenJoinTriggered = false;
   private ambassadorSvc = inject(AmbassadorService);
   private router        = inject(Router);
@@ -139,7 +177,10 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // ── Ambassador self-join modal ──
   showJoinModal = false;
   joinStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
-  joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null };
+  joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null, slug: '' };
+  // Gates submit alongside fullName -- mirrors how the existing campaign-slug
+  // field gates the publish flow on its own availability flag.
+  joinSlugAvailable = false;
   joinGoalDisplay = '';
   joinShareUrl = '';
   joinCopied   = false;
@@ -189,13 +230,21 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   openJoinModal(): void {
-    this.joinForm        = { fullName: '', phone: '', email: '', goalAmount: null };
-    this.joinGoalDisplay = '';
-    this.joinStatus      = 'idle';
-    this.joinShareUrl    = '';
-    this.joinCopied      = false;
-    this.joinError       = '';
-    this.showJoinModal   = true;
+    this.joinForm          = { fullName: '', phone: '', email: '', goalAmount: null, slug: '' };
+    this.joinSlugAvailable = false;
+    this.joinGoalDisplay   = '';
+    this.joinStatus        = 'idle';
+    this.joinShareUrl      = '';
+    this.joinCopied        = false;
+    this.joinError         = '';
+    this.showJoinModal     = true;
+  }
+
+  // Non-blocking (Product Requirement 2): a personal goal above the
+  // campaign's target is allowed, just flagged -- never disables submit.
+  joinGoalAboveCampaignGoal(draft: CampaignDraft): boolean {
+    const target = draft.targetAmount ?? 0;
+    return !!this.joinForm.goalAmount && target > 0 && this.joinForm.goalAmount > target;
   }
 
   onJoinGoalInput(event: Event): void {
@@ -210,13 +259,14 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   closeJoinModal(): void { this.showJoinModal = false; }
 
   submitJoin(draft: CampaignDraft): void {
-    if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading') return;
+    if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading' || !this.joinSlugAvailable) return;
     this.joinStatus = 'loading';
     this.ambassadorSvc.selfRegister(draft.slug!, {
       fullName: this.joinForm.fullName,
       phone: this.joinForm.phone,
       email: this.joinForm.email,
       goalAmount: this.joinForm.goalAmount,
+      slug: this.joinForm.slug,
     }).subscribe({
       next: (res: { slug: string; shareUrl: string }) => {
         this.joinShareUrl = res.shareUrl;
@@ -643,6 +693,49 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return !!draft.layout.sidebarSections?.includes(type);
   }
 
+  // Section Presentation (2026-10-03, placement-aware 2026-10-06) — see
+  // campaign-styles.ts#resolveSectionPresentation for the full precedence
+  // chain (explicit -> placement's own recommendation [Sidebar always
+  // 'list'; Main uses Campaign Style if set] -> 'cards').
+  //
+  // Rewards-only legacy escape hatch: layout.rewardsLayout predates this axis
+  // and is a MANDATORY field (always 'standard' or 'image', never undefined —
+  // see its own doc comment), so a campaign whose manager already explicitly
+  // chose 'image' there keeps seeing image-emphasis cards by default, without
+  // needing to re-pick it through the new field. Only applies when the new
+  // field hasn't been touched for rewards AND the section is in the main
+  // column — rewardsLayout='image' only ever affected the main-content
+  // carousel historically (the sidebar always used its own separate list-card
+  // regardless of rewardsLayout), so it must not override the sidebar's
+  // compact recommendation now that rewards can actually BE placed there. An
+  // explicit sectionPresentation choice always wins outright regardless of
+  // placement, same as every other precedence chain here.
+  sectionPresentation(draft: CampaignDraft, type: PresentableSection): SectionPresentation {
+    const inSidebar = this.inSidebarSection(draft, type);
+    if (type === 'rewards' && !inSidebar && !draft.layout.sectionPresentation?.rewards && draft.layout.rewardsLayout === 'image') {
+      return 'image';
+    }
+    return resolveSectionPresentation(
+      type,
+      draft.layout.sectionPresentation,
+      draft.layout.campaignStyleId,
+      inSidebar,
+    );
+  }
+
+  // Updates-only legacy escape hatch: viewMode lives on the BLOCK's own data
+  // (not layout), predates this axis, and is OPTIONAL (undefined = today's
+  // 'slider' default -- never an explicit past choice, so it must NOT force
+  // 'cards' here the way rewardsLayout's always-concrete value does above).
+  // Only an explicit past 'list' choice is honored as a legacy override;
+  // anything else falls through to the normal precedence chain.
+  updatesPresentation(draft: CampaignDraft, block: CampaignBlock): SectionPresentation {
+    if (!draft.layout.sectionPresentation?.updates && this.asUpdates(block.data).viewMode === 'list') {
+      return 'list';
+    }
+    return this.sectionPresentation(draft, 'updates');
+  }
+
   // ── Content blocks for standard/magazine layouts ──
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
@@ -668,16 +761,22 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
         .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
         .sort((a, b) => a.order - b.order);
     }
-    // sidebarSections appends any (top-level, not-already-claimed) blocks of
-    // the chosen FULL_WIDTH_TYPES after whatever the container/fallback above
-    // produced, in their own `order` — works the same whether this campaign
-    // uses an explicit railZone container or the older flat-blocks fallback.
+    // sidebarSections appends any not-already-claimed block of the chosen
+    // FULL_WIDTH_TYPES after whatever the container/fallback above produced,
+    // in their own `order`. Searches ALL of draft.blocks regardless of
+    // nesting (2026-10-04 fix, generalized) — childBlocks() below now
+    // excludes a sidebarSections-flagged block from ANY container/tabs/
+    // accordion's own rendering (wherever it actually lives in the block
+    // tree), so this is the one place left responsible for actually
+    // rendering it; restricting the search to top-level blocks only (the
+    // original implementation) silently failed for any campaign where the
+    // Page Builder had nested that block inside a container, which is the
+    // common case for anything built via drag-and-drop, not the exception.
     const sections = draft.layout.sidebarSections;
     if (sections && sections.length > 0) {
-      const childIds = this.topLevelChildIds(draft);
       const claimed = new Set(blocks.map(b => b.type));
       const extra = draft.blocks
-        .filter(b => b.visible && !childIds.has(b.id) && sections.includes(b.type as any) && !claimed.has(b.type))
+        .filter(b => b.visible && sections.includes(b.type as any) && !claimed.has(b.type))
         .sort((a, b) => a.order - b.order);
       blocks = [...blocks, ...extra];
     }
@@ -688,7 +787,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // (so the user can add/reorder any block type into it, including a 'hero'
   // block wherever they want Hero to sit), falling back to mainBlocks()'s
   // implicit assembly for campaigns saved before this existed. See
-  // DECISIONS.md (2026-07-17).
+  // DECISIONS.md (2026-07-17). The sidebarSections exclusion itself now
+  // lives centrally in childBlocks() (2026-10-04), so this needs no filter
+  // of its own — see that function's own doc comment for why.
   mainColumnBlocks(draft: CampaignDraft): CampaignBlock[] {
     const railId = this.railZoneContainerId(draft, 'main');
     if (!railId) return [];
@@ -1013,11 +1114,27 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return draft.blocks.find(b => b.id === id);
   }
 
+  // A FULL_WIDTH_TYPES block flagged into the sidebar via sidebarSections
+  // (2026-10-04 fix) never renders through its container's own normal child
+  // list -- it moves to the sidebar rail instead (sidebarBlocks() picks it
+  // up from anywhere in draft.blocks). This is the single shared function
+  // behind EVERY container/tabs/accordion's child rendering, so excluding it
+  // here is what makes the move work regardless of which container (or how
+  // deeply nested) the manager's Page Builder actually placed that block in
+  // -- the earlier, narrower fix only handled the one railZone:'main'
+  // container specifically and still silently failed for any other
+  // container. The ONE exception is the sidebar rail-zone container's own
+  // children: a block actually placed there must still render through it,
+  // and sidebarBlocks() reads exactly that container's children via this
+  // same function.
   childBlocks(block: CampaignBlock, draft: CampaignDraft): CampaignBlock[] {
     const ids = (block.data as ContainerBlockData).childBlockIds;
+    const sections = draft.layout.sidebarSections;
+    const isSidebarZone = (block.data as ContainerBlockData).railZone === 'sidebar';
     return ids
       .map(id => draft.blocks.find(b => b.id === id))
       .filter((b): b is CampaignBlock => !!b && b.visible)
+      .filter(b => isSidebarZone || !sections?.includes(b.type as any))
       .sort((a, b) => a.order - b.order);
   }
 
@@ -1229,6 +1346,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // Registration lives entirely outside this grid now (see startRegistration
   // below). See DECISIONS.md (2026-07-16).
   selectOffering(offering: Offering, draft: CampaignDraft): void {
+    if (this.isSoldOut(offering)) return;
     this.cartOfferingIds.add(offering.id);
     this.cartOfferingIds = new Set(this.cartOfferingIds);
   }
@@ -1236,6 +1354,54 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   removeOffering(id: string): void {
     this.cartOfferingIds.delete(id);
     this.cartOfferingIds = new Set(this.cartOfferingIds);
+  }
+
+  // Rewards browsing/filtering (2026-10-04) -- Offering has no category/tag
+  // field, so filtering is built purely from what the model already has:
+  // minimumAmount (price sort) and stock vs. purchasedCount (availability).
+  // 'featured' already has a user-facing meaning (the existing ⭐ מומלץ
+  // badge), so surfacing it as the default sort is reusing an existing
+  // concept, not inventing a new one. Plain component state, same as
+  // ambSearch/donorSort -- never persisted to the draft.
+  rewardsSortBy: 'featured' | 'price-asc' | 'price-desc' = 'featured';
+  rewardsHideSoldOut = false;
+  // Text search (2026-10-05) -- searches the Offering's existing textual
+  // fields (title, description); not a new taxonomy, same reasoning as the
+  // sort/availability filters above. Plain component state, never persisted.
+  rewardsSearch = '';
+
+  // Derived purely from existing fields (stock, purchasedCount()) -- no new
+  // persisted data. stock === null means unlimited (never sold out).
+  isSoldOut(offering: Offering): boolean {
+    return offering.stock != null && this.purchasedCount(offering.id) >= offering.stock;
+  }
+
+  // The ONE filtered/sorted collection every presentation (cards/list/image)
+  // reads from, in both placements -- filtering is a data/list concern,
+  // independent of which card markup is currently rendering it.
+  rewardsFiltered(draft: CampaignDraft): Offering[] {
+    let list = draft.offerings ?? [];
+    const q = this.rewardsSearch.trim().toLowerCase();
+    if (q) list = list.filter(o => o.title.toLowerCase().includes(q) || o.description.toLowerCase().includes(q));
+    if (this.rewardsHideSoldOut) list = list.filter(o => !this.isSoldOut(o));
+    const sorted = [...list];
+    switch (this.rewardsSortBy) {
+      case 'featured':
+        sorted.sort((a, b) => (b.featured === true ? 1 : 0) - (a.featured === true ? 1 : 0));
+        break;
+      case 'price-asc':
+        sorted.sort((a, b) => a.minimumAmount - b.minimumAmount);
+        break;
+      case 'price-desc':
+        sorted.sort((a, b) => b.minimumAmount - a.minimumAmount);
+        break;
+    }
+    return sorted;
+  }
+
+  resetRewardsFilter(): void {
+    this.rewardsSearch = '';
+    this.rewardsHideSoldOut = false;
   }
 
   toggleOffering(id: string): void {
@@ -1317,6 +1483,27 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     this.checkoutMode = 'donation';
   }
 
+  // Post-payment cart/stock staleness fix (2026-10-06) -- "I selected a
+  // reward, paid, came back to the page, and it was still in the 'continue
+  // to pay' state even though I already paid; it should also check whether
+  // it's now sold out." Checkout-v2's own [cartOfferings] is never mutated
+  // from inside checkout (see its own doc comment), so without this nothing
+  // ever cleared the just-bought offering(s) out of cartOfferingIds, and
+  // rewardCounts (loaded once per slug, see ngOnInit's own
+  // loadedRewardCountsSlug guard) never got a reason to refresh after a
+  // purchase actually changed it. Both are fixed by this single handler,
+  // called exactly once per confirmed payment (see
+  // CheckoutV2Component#paymentSucceeded's own doc comment on when it fires).
+  onCheckoutPaymentSucceeded(event: { offeringIds: string[] }): void {
+    for (const id of event.offeringIds) this.cartOfferingIds.delete(id);
+    this.cartOfferingIds = new Set(this.cartOfferingIds);
+    if (this.loadedSlug) {
+      this.donationService.getRewardCounts(this.loadedSlug).subscribe({
+        next: counts => { this.rewardCounts = counts; },
+      });
+    }
+  }
+
   cartOfferingList(draft: CampaignDraft) {
     return draft.offerings.filter(o => this.cartOfferingIds.has(o.id));
   }
@@ -1377,6 +1564,305 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return draft.layout?.theme?.accentColor || '#cc350f';
   }
 
+  // Section text overrides (2026-10-06, "Style → Theme → Section override"
+  // model, confirmed with the user) — Phase 1: Donate/Stats/Donors only.
+  // theme.secondaryColor/bodyTextColor are MANDATORY fields (never
+  // undefined, always seeded by createInitialDraft() — see CampaignTheme's
+  // own doc comment), so a naive read would start applying to every
+  // existing campaign the instant an element begins consuming it, even one
+  // that never touched its theme at all. Same exact-equality "untouched"
+  // detection already established for CampaignLayout.sectionBgOdd/
+  // sectionBgEven/sectionDividerColor (see resolveSectionSurfaceColors's
+  // own comment, campaign-styles.ts) — these two constants are the known
+  // literal seed values (createInitialDraft()), not arbitrary guesses.
+  private readonly LEGACY_SECONDARY_COLOR = '#6fc9eb';
+  private readonly LEGACY_BODY_TEXT_COLOR = '#334155';
+
+  // Donate's own <h2> already resolves through theme.secondaryColor via a
+  // plain CSS rule (`color: var(--hm-secondary, #6fc9eb)`), not an Angular
+  // binding — so titleColor only needs to be bound directly in the
+  // template (`[style.color]="asDonationWidget(block.data).titleColor"`);
+  // undefined removes the inline style and that CSS rule's own fallback
+  // carries on exactly as before, with no TS-side helper needed. Donors'
+  // own title, by contrast, already has an explicit Angular
+  // `[style.color]="primaryColor(draft)"` binding — there `|| primaryColor
+  // (draft)` is just inlined directly in the template too. Stats' own
+  // title needs a different (gated) resolver instead — see
+  // statsTitleColor() below.
+
+  // Stats' own title ("גויס עד כה") was PURE hardcoded CSS before this
+  // feature — zero theme connection, unlike Donate/Donors. Wiring it to
+  // theme.secondaryColor for the first time must not fire unless the
+  // campaign's secondaryColor has actually diverged from its own known
+  // untouched default. Returns null to mean "apply no inline color — let
+  // the existing hardcoded CSS literal show through exactly as before."
+  statsTitleColor(draft: CampaignDraft, titleColor: string | undefined): string | null {
+    if (titleColor) return titleColor;
+    const secondary = draft.layout?.theme?.secondaryColor;
+    return secondary && secondary !== this.LEGACY_SECONDARY_COLOR ? secondary : null;
+  }
+
+  // Secondary/caption text across Donate/Stats/Donors (2026-10-06) — every
+  // one of these elements was previously a plain hardcoded CSS literal with
+  // zero theme connection (several DIFFERENT grays across different
+  // elements). This is the "Theme" layer of "Style → Theme → Section
+  // override" actually reaching them for the first time: null (apply no
+  // inline color, legacy literal shows through) until the manager's
+  // bodyTextColor has genuinely diverged from its own known untouched
+  // default — never on first render for any pre-existing campaign.
+  sectionBodyTextColor(draft: CampaignDraft): string | null {
+    const body = draft.layout?.theme?.bodyTextColor;
+    return body && body !== this.LEGACY_BODY_TEXT_COLOR ? body : null;
+  }
+
+  // Typography Phase A (2026-10) -- Donors/Ambassadors/Stats Text Roles.
+  // Every method below is a thin, role-specific call into the one shared
+  // resolver (text-role-resolver.ts) -- every Cards/List/Main/Sidebar copy
+  // of a given role calls the SAME method here, so no template can
+  // independently decide a different answer for the same semantic role.
+  // Legacy defaults are each role's own exact pre-existing CSS literal
+  // (campaign-preview.component.css) -- an untouched campaign resolves to
+  // the identical pixel value it rendered before this phase, EXCEPT where
+  // noted (ambassadorName/raisedAmount — see the Ambassadors note below).
+
+  // Donors — already fully consistent across all 4 presentation/placement
+  // copies before this phase (pure refactor into the shared resolver, zero
+  // visual change). sectionTitle keeps titleColor as a permanent read-side
+  // alias ahead of the new per-role override.
+  donorsSectionTitleColor(draft: CampaignDraft, data: DonorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.sectionTitle?.color ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  donorNameColor(draft: CampaignDraft, data: DonorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.donorName?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  donorAmountColor(draft: CampaignDraft, data: DonorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.donorAmount?.color, LEGACY_THEME_COLOR.accentColor, draft.layout?.theme, 'accentColor');
+  }
+  donorMetaColor(draft: CampaignDraft, data: DonorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.donorMeta?.color, '#94a3b8', draft.layout?.theme, 'bodyTextColor');
+  }
+
+  // Ambassadors — AMBASSADORS_ROLE_NOTES: this is the section with a REAL
+  // Cards/List divergence (found in the typography audit), not just a
+  // refactor. Two deliberate, approved rendering changes ship with this
+  // phase for an untouched campaign:
+  //  - ambassadorName: Cards (#0f172a/800) was already today's visual
+  //    anchor; List (#0f2747/700, zero theme connection) now matches it
+  //    exactly instead of silently differing. Gated onto secondaryColor
+  //    like Stats' own title (2026-10-06) — invisible unless the manager
+  //    has already diverged their theme's secondary color.
+  //  - raisedAmount: List already resolved this unconditionally through
+  //    primaryColor(draft)/secondaryColor; Cards (hardcoded #0f172a) now
+  //    matches List's existing, already-shipped behavior instead of
+  //    staying disconnected from theme.
+  // Neither change touches content shown (List still omits personalMessage/
+  // donorCount, unchanged) or button chrome (left as its own deferred,
+  // documented inconsistency).
+  ambassadorsSectionTitleColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.sectionTitle?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  ambassadorNameColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.ambassadorName?.color, '#0f172a', draft.layout?.theme, 'secondaryColor');
+  }
+  ambassadorNameWeight(data: AmbassadorsBlockData): number {
+    return resolveRoleFontWeight(data.textStyles?.ambassadorName?.fontWeight, 800);
+  }
+  ambassadorRaisedColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.raisedAmount?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  ambassadorDonorCountColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.donorCount?.color, '#0f172a', draft.layout?.theme);
+  }
+  ambassadorSecondaryMetaColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.textStyles?.secondaryMeta?.color, '#94a3b8', draft.layout?.theme, 'bodyTextColor');
+  }
+
+  // Stats — sectionTitle keeps the exact statsTitleColor()/titleColor
+  // Phase 1 behavior (titleColor alias, same gate), now also reachable via
+  // the new per-role override. value/label expose the new override layer
+  // IN FRONT of the existing CSS var cascade / sectionBodyTextColor() gate
+  // instead of reimplementing it — .hm-raised-amount/.hm-stat-box strong
+  // are already unconditionally theme-connected via var(--hm-secondary, …)
+  // in pure CSS, so "no override" must keep deferring to that, not a new
+  // TS-computed literal.
+  statsSectionTitleColor(draft: CampaignDraft, data: StatsBlockData): string | null {
+    return this.statsTitleColor(draft, data.textStyles?.sectionTitle?.color ?? data.titleColor);
+  }
+  statsValueColorOverride(data: StatsBlockData): string | null {
+    return data.textStyles?.value?.color || null;
+  }
+  statsLabelColor(draft: CampaignDraft, data: StatsBlockData): string | null {
+    return data.textStyles?.label?.color || this.sectionBodyTextColor(draft);
+  }
+
+  // Universal Local Styling — Phase B1 (2026-10). Stats' fundraising ring
+  // (.hm-ring-bg/.hm-ring-fill) was pure hardcoded CSS before this, AND is
+  // composition-sensitive (.hm-stats.conv-hero forces it white) — so, like
+  // statsValueColorOverride() above, this is explicit-override-only (never
+  // injects a legacy/theme value), so an untouched campaign's ring keeps
+  // reacting to conv-hero exactly as before.
+  statsRingTrackColor(data: StatsBlockData): string | null {
+    return data.progressStyles?.ring?.trackColor || null;
+  }
+  statsRingFillColor(data: StatsBlockData): string | null {
+    return data.progressStyles?.ring?.fillColor || null;
+  }
+
+  // Universal Local Styling — Phase B1 (2026-10) — Donation proof.
+  // DONATION_ROLE_NOTES: every surface/button property below is deliberately
+  // explicit-override-only (never injects a legacy/theme value even when
+  // untouched) because .hm-donate's container/amount-buttons/CTA/total row
+  // are all genuinely composition-sensitive — conv-hero in particular
+  // replaces the container's background with a full gradient and recolors
+  // the amount buttons/CTA/total text to white (campaign-preview.component
+  // .css ~1033-1095). Injecting a concrete inline fallback for an untouched
+  // campaign would silently defeat those composition rules. An explicit
+  // Section override is still allowed to win outright — that's the correct
+  // "local always beats everything" behavior — only the NO-OVERRIDE case
+  // must stay null. Text roles (sectionTitle/subtitle) have no such
+  // composition conflict and keep the normal gated/legacy resolution.
+  donationSectionTitleColor(draft: CampaignDraft, data: DonationWidgetBlockData): string {
+    return resolveRoleColor(data.textStyles?.sectionTitle?.color ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  donationSubtitleColor(draft: CampaignDraft, data: DonationWidgetBlockData): string | null {
+    return data.textStyles?.subtitle?.color || this.sectionBodyTextColor(draft);
+  }
+  donationSecondaryMetaColor(draft: CampaignDraft, data: DonationWidgetBlockData): string | null {
+    return data.textStyles?.secondaryMeta?.color || this.sectionBodyTextColor(draft);
+  }
+  donationTotalSumColor(data: DonationWidgetBlockData): string | null {
+    return data.textStyles?.totalSum?.color || null;
+  }
+
+  donationContainerBackground(data: DonationWidgetBlockData): string | null {
+    return data.surfaceStyles?.container?.background || null;
+  }
+  donationContainerBorderColor(data: DonationWidgetBlockData): string | null {
+    return data.surfaceStyles?.container?.borderColor || null;
+  }
+  donationContainerBorderRadius(data: DonationWidgetBlockData): number | null {
+    return data.surfaceStyles?.container?.borderRadius ?? null;
+  }
+
+  // Donation Amount Button Presets (2026-10) — precedence is explicit B1
+  // property override > explicit preset > nothing (composition CSS/legacy
+  // literal cascades normally, same explicit-override-only rule as every
+  // other Donation role — conv-hero/conv-compact both genuinely touch
+  // .hm-amount-preset, confirmed, so an untouched campaign must inject
+  // nothing at all). Selecting a preset NEVER overwrites an existing
+  // buttonStyles.amountButton/amountButtonSelected override — each
+  // property is resolved independently.
+  private amountButtonPresetTokens(data: DonationWidgetBlockData): AmountButtonPresetTokens | null {
+    return data.amountButtonPreset ? AMOUNT_BUTTON_PRESETS[data.amountButtonPreset] : null;
+  }
+  donationAmountButtonBackground(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButton?.background || this.amountButtonPresetTokens(data)?.background || null;
+  }
+  donationAmountButtonTextColor(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButton?.textColor || this.amountButtonPresetTokens(data)?.textColor || null;
+  }
+  donationAmountButtonBorderColor(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButton?.borderColor || this.amountButtonPresetTokens(data)?.borderColor || null;
+  }
+  donationAmountButtonBorderRadius(data: DonationWidgetBlockData): number | null {
+    return data.buttonStyles?.amountButton?.borderRadius ?? this.amountButtonPresetTokens(data)?.borderRadiusPx ?? null;
+  }
+  donationAmountButtonSelectedBackground(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButtonSelected?.background || this.amountButtonPresetTokens(data)?.selectedBackground || null;
+  }
+  donationAmountButtonSelectedTextColor(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButtonSelected?.textColor || this.amountButtonPresetTokens(data)?.selectedTextColor || null;
+  }
+  donationAmountButtonSelectedBorderColor(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.amountButtonSelected?.borderColor || this.amountButtonPresetTokens(data)?.selectedBorderColor || null;
+  }
+  // These properties only ever come from a preset — B1 never exposed a
+  // manual control for them (they were pure legacy CSS literals before
+  // this feature), so there is no property-level override to beat here.
+  donationAmountButtonMinHeight(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.minHeightPx ?? null;
+  }
+  donationAmountButtonPaddingBlock(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.paddingBlockPx ?? null;
+  }
+  donationAmountButtonPaddingInline(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.paddingInlinePx ?? null;
+  }
+  donationAmountButtonFontSize(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.fontSizePx ?? null;
+  }
+  donationAmountButtonFontWeight(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.fontWeight ?? null;
+  }
+  donationAmountButtonBorderWidth(data: DonationWidgetBlockData): number | null {
+    return this.amountButtonPresetTokens(data)?.borderWidthPx ?? null;
+  }
+  donationAmountButtonShadow(data: DonationWidgetBlockData): string | null {
+    return this.amountButtonPresetTokens(data)?.shadow ?? null;
+  }
+  donationAmountButtonSelectedShadow(data: DonationWidgetBlockData): string | null {
+    return this.amountButtonPresetTokens(data)?.selectedShadow ?? null;
+  }
+
+  // CTA background aliases the existing ctaColor field (Design Evolution,
+  // 2026-09-29) rather than duplicating it — a new buttonStyles.cta
+  // override takes priority, then ctaColor/Auto exactly as before.
+  donationCtaBackground(draft: CampaignDraft, data: DonationWidgetBlockData): string {
+    return data.buttonStyles?.cta?.background || data.ctaColor || this.themePrimaryColor(draft);
+  }
+  donationCtaTextColor(data: DonationWidgetBlockData): string | null {
+    return data.buttonStyles?.cta?.textColor || null;
+  }
+  // CTA radius has no composition conflict (unlike background/text above) —
+  // already Style-token-driven today (var(--hm-btn-radius,12px)), so this
+  // safely resolves through the normal 3-step chain instead of staying
+  // explicit-only.
+  donationCtaBorderRadius(draft: CampaignDraft, data: DonationWidgetBlockData): number {
+    return resolveRoleBorderRadius(data.buttonStyles?.cta?.borderRadius, 12, this.visualTokens(draft), 'buttons');
+  }
+
+  // Ambassadors — AMBASSADORS_SURFACE_NOTES: fixes the real non-text Cards/
+  // List divergence the Universal Styling audit found (card/row surface and
+  // "view ambassador" button each independently hardcoded a different
+  // literal). Both presentations now call these SAME methods. No
+  // composition-sensitivity concern here (unlike Donation) — normal 3-step
+  // resolution applies. Avatar SIZE stays presentation-local CSS, untouched
+  // (a legitimate layout difference, not a style identity — see the Phase
+  // B1 report).
+  ambassadorCardBackground(data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.surfaceStyles?.card?.background, '#ffffff', undefined);
+  }
+  ambassadorCardBorderColor(data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.surfaceStyles?.card?.borderColor, 'var(--line, #e2e8f0)', undefined);
+  }
+  ambassadorCardBorderRadius(draft: CampaignDraft, data: AmbassadorsBlockData): number {
+    return resolveRoleBorderRadius(data.surfaceStyles?.card?.borderRadius, 16, this.visualTokens(draft), 'cards');
+  }
+  // Canonical = Cards' own pre-existing behavior (themed background, white
+  // text) — List's previously-hardcoded gray button now matches it exactly,
+  // the same kind of deliberate, approved fix as ambassadorNameColor/
+  // ambassadorRaisedColor in Typography Phase A.
+  ambassadorViewButtonBackground(draft: CampaignDraft, data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.buttonStyles?.viewButton?.background, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+  }
+  ambassadorViewButtonTextColor(data: AmbassadorsBlockData): string {
+    return resolveRoleColor(data.buttonStyles?.viewButton?.textColor, '#ffffff', undefined);
+  }
+
+  // CTA — repeatable-block proof. No composition conflict for CTA (it's
+  // independent of conversionWidgetLayout), so background/textColor can
+  // safely resolve with a concrete legacy fallback too; background aliases
+  // the existing ctaConfig.color field rather than duplicating it.
+  ctaButtonBackground(data: CtaBlockData): string {
+    return data.buttonStyles?.main?.background || data.ctaConfig.color;
+  }
+  ctaButtonTextColor(data: CtaBlockData): string {
+    return resolveRoleColor(data.buttonStyles?.main?.textColor, '#ffffff', undefined);
+  }
+  ctaButtonBorderRadius(draft: CampaignDraft, data: CtaBlockData): number {
+    return resolveRoleBorderRadius(data.buttonStyles?.main?.borderRadius, 10, this.visualTokens(draft), 'buttons');
+  }
+
   // Phase 3A (2026-09-29) — visual tokens beyond color (typography/buttons/
   // cards). undefined for a legacy campaign (no campaignStyleId), in which
   // case every CSS custom property below is simply never set and each
@@ -1394,6 +1880,43 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       draft.layout?.conversionWidgetLayout as ConversionWidgetLayout | undefined,
       draft.layout?.campaignStyleId,
     );
+  }
+
+  // Opening Composition — Phase A, generic (2026-10-01) -- see
+  // resolveOpeningComposition's own doc comment for the full explicit ->
+  // Style default -> legacy precedence chain. Campaign-only (isCampaign
+  // gate lives in the template, same pattern as the Hero outlet/meta chips)
+  // -- a Partner page has no fundraising summary/story to build an opening
+  // out of.
+  openingComposition(draft: CampaignDraft): OpeningComposition {
+    return resolveOpeningComposition(draft.layout?.openingComposition, draft.layout?.campaignStyleId);
+  }
+
+  isFundraisingSplitOpening(draft: CampaignDraft): boolean {
+    return this.openingComposition(draft) === 'fundraising-split';
+  }
+
+  isStoryFirstOpening(draft: CampaignDraft): boolean {
+    return this.openingComposition(draft) === 'story-first';
+  }
+
+  // True for either structured Opening -- the one check every legacy Hero
+  // suppression site needs (both fundraising-split and story-first replace
+  // .hm-hero entirely; only 'classic' still renders it).
+  hasStructuredOpening(draft: CampaignDraft): boolean {
+    return this.openingComposition(draft) !== 'classic';
+  }
+
+
+  // Refinement (2026-09-30) -- explicit user choice > Style default, same
+  // principle as effectiveDonationComposition(). heroCtaConfig defaults to
+  // visible:false on every new campaign (createInitialDraft) and `?.` alone
+  // only guards campaigns saved before the field existed at all (undefined
+  // there) -- so "!== false" reads as "show unless a real config object
+  // explicitly says false," never inventing a third state that doesn't
+  // exist in the persisted data.
+  isOpeningCtaVisible(draft: CampaignDraft): boolean {
+    return draft.heroCtaConfig?.visible !== false;
   }
 
   // Semantic -> concrete CSS value maps, kept here (not in campaign-styles.ts)
@@ -1416,6 +1939,18 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   sectionRhythmScale(draft: CampaignDraft): number | undefined {
     const rhythm = this.visualTokens(draft)?.section?.rhythm;
     return rhythm ? CampaignPreviewComponent.SECTION_RHYTHM_SCALE[rhythm] : undefined;
+  }
+
+  // Section-presentation audit (2026-09-30) -- see resolveSectionSurfaceColors'
+  // own doc comment for why "explicit" is detected by equality against the
+  // known legacy literal rather than undefined (sectionBgOdd/Even/Divider
+  // are mandatory fields, always initialized to that exact literal today).
+  sectionSurfaceColors(draft: CampaignDraft): { odd: string; even: string; divider: string } {
+    return resolveSectionSurfaceColors(draft.layout?.campaignStyleId, {
+      odd: draft.layout.sectionBgOdd,
+      even: draft.layout.sectionBgEven,
+      divider: draft.layout.sectionDividerColor,
+    });
   }
 
   // Heading style for .section-heading (rich-text/video/gallery's own
@@ -1460,7 +1995,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return '';
   }
 
-  navItems(draft: CampaignDraft): { label: string; sectionId: string; count?: number }[] {
+  navItems(draft: CampaignDraft): { label: string; sectionId: string; count?: number; faded?: boolean }[] {
     const LABELS: Partial<Record<string, string>> = {
       'rich-text':    'אודות הקמפיין',
       'rewards':      'תשורות',
@@ -1471,7 +2006,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       'comments':     'תגובות',
     };
     const seen = new Set<string>();
-    const items: { label: string; sectionId: string; count?: number }[] = [];
+    const items: { label: string; sectionId: string; count?: number; faded?: boolean }[] = [];
     for (const block of (draft.blocks ?? [])) {
       const sectionId = this.blockSectionId(block, draft);
       if (!sectionId || seen.has(sectionId)) continue;
@@ -1485,7 +2020,12 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
         block.type === 'donors'      ? (this.activeDonors.length  || undefined) :
         block.type === 'comments'    ? (this.comments.length      || undefined) :
         undefined;
-      items.push({ label, sectionId, count });
+      // Toolbar link dims (not removed) for donors/תשורות/שגרירים/עדכונים
+      // once the campaign has no content there yet — on the public page
+      // only, so the Builder's own nav preview stays fully legible while
+      // editing (2026-10-02).
+      const faded = this.isPublicPage && !this.hasMeaningfulContent(block, draft);
+      items.push({ label, sectionId, count, faded });
     }
     return items;
   }
@@ -1493,6 +2033,16 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   scrollTo(sectionId: string): void {
     const el = document.getElementById(sectionId);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Mobile drawer's faded nav items (see navItems()) must not be clickable
+  // either -- the desktop nav-link handles this inline with a simple `&&`
+  // guard, but the drawer also closes itself on click, which needs a real
+  // method rather than a template expression with two statements.
+  onNavItemClick(item: { sectionId: string; faded?: boolean }): void {
+    if (item.faded) return;
+    this.scrollTo(item.sectionId);
+    this.navOpen = false;
   }
 
   // Page background
@@ -1595,6 +2145,72 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return (draft.updates ?? []).filter(u => (u.status ?? 'published') === 'published');
   }
 
+  // Empty section = hidden on the public campaign page, rather than a
+  // header over nothing or a Builder-facing "add this in the Page Builder"
+  // placeholder shown to a real visitor (2026-10-02 product decision — an
+  // empty-looking section makes a whole campaign read as inactive). Editing
+  // contexts (isPublicPage stays false there — the Studio's own preview tab,
+  // the Page Builder's live pane) keep every section visible so the editor
+  // can find and populate it, which is why this is a no-op unless isPublicPage
+  // is explicitly set. One map instead of a per-block-type `*ngIf` so adding
+  // another block type here never means hunting down a fourth special case.
+  //
+  // 'ambassadors' is included here too, but ONLY so navItems() below can fade
+  // its toolbar link when empty — shouldRenderBlock() explicitly excludes it
+  // (see the guard inside), because its "empty" state isn't a placeholder,
+  // it's a donor-facing invite ("be the first ambassador!"); the SECTION
+  // itself always stays visible even when the toolbar link to it is faded.
+  private readonly PUBLIC_EMPTY_CHECK: Partial<Record<BlockType, (draft: CampaignDraft) => boolean>> = {
+    rewards: (draft) => (draft.offerings?.length ?? 0) > 0,
+    // Based on the campaign's overall supporter count, not the currently
+    // selected period filter (visibleDonors) -- otherwise switching to
+    // "today" with zero donations today would make the whole section
+    // vanish even though the campaign has donation history.
+    donors:      (draft) => (draft.supportersCount ?? 0) > 0,
+    updates:     (draft) => this.publishedUpdates(draft).length > 0,
+    ambassadors: () => this.ambEffective.length > 0,
+  };
+
+  hasMeaningfulContent(block: { type: BlockType }, draft: CampaignDraft): boolean {
+    const hasContent = this.PUBLIC_EMPTY_CHECK[block.type];
+    return hasContent ? hasContent(draft) : true;
+  }
+
+  shouldRenderBlock(block: { type: BlockType }, draft: CampaignDraft): boolean {
+    if (!this.isPublicPage || block.type === 'ambassadors') return true;
+    return this.hasMeaningfulContent(block, draft);
+  }
+
+  // Text search (2026-10-05) -- searches the existing title/description
+  // fields, same reasoning as Rewards' search: not a new taxonomy, the
+  // content is already there. Deliberately NOT used by PUBLIC_EMPTY_CHECK
+  // above (that must stay based on the RAW published collection) -- an
+  // empty search result must never make the whole section disappear on the
+  // public page, only show its own "no matches" state below.
+  updatesSearch = '';
+
+  // The ONE filtered collection every presentation (slider/list) and the
+  // pager below read from, in both placements -- filtering is upstream of
+  // both pagination and presentation.
+  updatesFiltered(draft: CampaignDraft): CampaignUpdate[] {
+    const q = this.updatesSearch.trim().toLowerCase();
+    const list = this.publishedUpdates(draft);
+    if (!q) return list;
+    return list.filter(u => u.title.toLowerCase().includes(q) || u.description.toLowerCase().includes(q));
+  }
+
+  // Changing the search query can shrink the filtered collection below the
+  // current page's start index, which would otherwise show an emptied-out
+  // page instead of the first page of real results.
+  onUpdatesSearchChange(): void {
+    this.updatesPageIndex = 0;
+  }
+
+  resetUpdatesSearch(): void {
+    this.updatesSearch = '';
+    this.updatesPageIndex = 0;
+  }
+
   // List/sidebar-list variants show a fixed window of updates at a time —
   // ▲/▼ paging instead of an unbounded "show more" so a campaign with many
   // updates never dumps them all on the page at once.
@@ -1602,13 +2218,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private updatesPageIndex = 0;
   visibleUpdates(draft: CampaignDraft): CampaignUpdate[] {
     const start = this.updatesPageIndex * this.UPDATES_PAGE_SIZE;
-    return this.publishedUpdates(draft).slice(start, start + this.UPDATES_PAGE_SIZE);
+    return this.updatesFiltered(draft).slice(start, start + this.UPDATES_PAGE_SIZE);
   }
   canGoPrevUpdates(): boolean {
     return this.updatesPageIndex > 0;
   }
   canGoNextUpdates(draft: CampaignDraft): boolean {
-    return (this.updatesPageIndex + 1) * this.UPDATES_PAGE_SIZE < this.publishedUpdates(draft).length;
+    return (this.updatesPageIndex + 1) * this.UPDATES_PAGE_SIZE < this.updatesFiltered(draft).length;
   }
   prevUpdatesPage(): void {
     if (this.canGoPrevUpdates()) this.updatesPageIndex--;

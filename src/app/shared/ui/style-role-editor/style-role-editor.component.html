@@ -1,0 +1,73 @@
+<div class="tse">
+
+  <!-- TOGGLE ROW -->
+  <div class="tse-toggle-row" (click)="expanded = !expanded">
+    <div class="tse-toggle-left">
+      <span class="tse-advanced-label">{{ roleLabel }}</span>
+      <span class="tse-summary" *ngIf="!expanded">{{ hasOverride ? 'מותאם אישית' : 'לפי הסגנון' }}</span>
+    </div>
+    <label class="tse-switch" (click)="$event.stopPropagation()">
+      <input type="checkbox" [checked]="expanded" (change)="expanded = !expanded">
+      <span class="tse-switch-slider"></span>
+    </label>
+  </div>
+
+  <!-- EXPANDED CONTENT -->
+  <div class="tse-body" *ngIf="expanded">
+
+    <!-- BACKGROUND -->
+    <div class="tse-row" *ngIf="showBackground">
+      <span class="tse-label">רקע</span>
+      <app-color-picker [value]="override?.background ?? resolvedBackground" (valueChange)="patch({ background: $event })"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.background" (click)="resetProperty('background')" title="איפוס לרקע לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.background">לפי הסגנון</span>
+    </div>
+
+    <!-- TEXT COLOR (buttons) -->
+    <div class="tse-row" *ngIf="showTextColor">
+      <span class="tse-label">צבע טקסט</span>
+      <app-color-picker [value]="override?.textColor ?? resolvedTextColor" (valueChange)="patch({ textColor: $event })"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.textColor" (click)="resetProperty('textColor')" title="איפוס לצבע טקסט לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.textColor">לפי הסגנון</span>
+    </div>
+
+    <!-- BORDER COLOR -->
+    <div class="tse-row" *ngIf="showBorderColor">
+      <span class="tse-label">מסגרת</span>
+      <app-color-picker [value]="override?.borderColor ?? resolvedBorderColor" (valueChange)="patch({ borderColor: $event })" [showNone]="true"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.borderColor" (click)="resetProperty('borderColor')" title="איפוס למסגרת לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.borderColor">לפי הסגנון</span>
+    </div>
+
+    <!-- BORDER RADIUS -->
+    <div class="tse-row" *ngIf="showBorderRadius">
+      <span class="tse-label">עיגול פינות</span>
+      <input type="range" class="tse-range" min="0" max="32" step="2"
+        [value]="override?.borderRadius ?? resolvedBorderRadius"
+        (input)="patch({ borderRadius: +$any($event.target).value })">
+      <span class="tse-range-val">{{ override?.borderRadius ?? resolvedBorderRadius }}px</span>
+      <button class="tse-reset" type="button" *ngIf="override?.borderRadius !== undefined" (click)="resetProperty('borderRadius')" title="איפוס לעיגול פינות לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="override?.borderRadius === undefined">לפי הסגנון</span>
+    </div>
+
+    <!-- TRACK COLOR (progress) -->
+    <div class="tse-row" *ngIf="showTrackColor">
+      <span class="tse-label">מסילה</span>
+      <app-color-picker [value]="override?.trackColor ?? resolvedTrackColor" (valueChange)="patch({ trackColor: $event })"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.trackColor" (click)="resetProperty('trackColor')" title="איפוס למסילה לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.trackColor">לפי הסגנון</span>
+    </div>
+
+    <!-- FILL COLOR (progress) -->
+    <div class="tse-row" *ngIf="showFillColor">
+      <span class="tse-label">מילוי</span>
+      <app-color-picker [value]="override?.fillColor ?? resolvedFillColor" (valueChange)="patch({ fillColor: $event })"></app-color-picker>
+      <button class="tse-reset" type="button" *ngIf="override?.fillColor" (click)="resetProperty('fillColor')" title="איפוס למילוי לפי הסגנון">↺</button>
+      <span class="tse-inherited" *ngIf="!override?.fillColor">לפי הסגנון</span>
+    </div>
+
+    <div class="tse-divider" *ngIf="hasOverride"></div>
+    <button class="tse-reset-role" type="button" *ngIf="hasOverride" (click)="resetRole()">איפוס כל ההתאמות של {{ roleLabel }}</button>
+
+  </div>
+</div>

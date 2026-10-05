@@ -7,6 +7,13 @@ export interface TextStyle {
   color:    string;
   fontSize: TextFontSize;
   position: TextPosition;
+  // Optional -- added for the per-block Text Role system (Phase A, 2026-10).
+  // Absent on every pre-existing TextStyle value (Hero/CTA/RichText), which
+  // stay governed by the Campaign Style's own fontFamily/headingWeight via
+  // normal CSS inheritance/cascade -- only an explicit Role override sets
+  // these.
+  fontFamily?: string;
+  fontWeight?: number;
 }
 
 export interface CtaConfig {

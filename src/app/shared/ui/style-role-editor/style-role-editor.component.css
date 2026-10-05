@@ -1,0 +1,128 @@
+/* Shared visual language with ../text-role-editor/text-role-editor
+   .component.css and ../text-style-editor/text-style-editor.component.css
+   (same .tse-* names, scoped separately per component) -- all three
+   role-editor families read as one system in the Builder. */
+.tse {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.tse-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 10px;
+}
+.tse-toggle-row:hover { background: #f1f5f9; }
+
+.tse-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tse-advanced-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.tse-summary {
+  font-size: 12px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tse-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 14px;
+  border-top: 1.5px solid #e2e8f0;
+  background: #faf5ff;
+  border-radius: 0 0 10px 10px;
+}
+
+.tse-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tse-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.tse-range { flex: 1; min-width: 100px; max-width: 180px; }
+.tse-range-val { font-size: 12px; color: #64748b; min-width: 36px; }
+
+.tse-divider { height: 1px; background: #e2e8f0; margin: 2px 0; }
+
+.tse-switch {
+  position: relative; width: 44px; height: 24px; flex-shrink: 0;
+}
+.tse-switch input { display: none; }
+.tse-switch-slider {
+  position: absolute; inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.tse-switch-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  top: 3px; right: 3px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.tse-switch input:checked + .tse-switch-slider { background: #7c3aed; }
+.tse-switch input:checked + .tse-switch-slider::before { transform: translateX(-20px); }
+
+.tse-inherited {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.tse-reset {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.tse-reset:hover { color: #7c3aed; background: #ede9fe; }
+
+.tse-reset-role {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.tse-reset-role:hover { text-decoration: underline; }

@@ -32,9 +32,9 @@
   [style.--hm-content-width]="contentWidthPx(draft)"
   [style.--hm-section-rhythm]="sectionRhythmScale(draft)"
   [style.--hm-card-shadow]="visualTokens(draft)?.cards?.shadow"
-  [style.--hm-section-odd]="draft.layout.sectionBgOdd || '#ffffff'"
-  [style.--hm-section-even]="draft.layout.sectionBgEven || '#f8fafc'"
-  [style.--hm-section-divider]="draft.layout.sectionDividerColor || '#e2e8f0'"
+  [style.--hm-section-odd]="sectionSurfaceColors(draft).odd"
+  [style.--hm-section-even]="sectionSurfaceColors(draft).even"
+  [style.--hm-section-divider]="sectionSurfaceColors(draft).divider"
   [style.--hm-footer-bg]="draft.layout.footerBg || '#030712'"
   [style.--hm-footer-text]="draft.layout.footerTextColor || 'rgba(255,255,255,0.85)'">
 
@@ -91,8 +91,9 @@
           <ng-container *ngIf="!vm.mobile">
             <div class="nav-links">
               <a class="nav-link" *ngFor="let item of navItems(draft)"
+                [class.nav-link--faded]="item.faded"
                 [style.color]="primaryColor(draft)"
-                (click)="scrollTo(item.sectionId)">
+                (click)="!item.faded && scrollTo(item.sectionId)">
                 {{ item.label }}<span class="nav-link-count" *ngIf="item.count"> {{ item.count | number }}</span>
               </a>
             </div>
@@ -134,7 +135,8 @@
       <!-- Mobile nav drawer -->
       <div class="nav-mobile-drawer" *ngIf="isCampaign(draft) && vm.mobile && navOpen">
         <a class="nav-drawer-link" *ngFor="let item of navItems(draft)"
-          [style.color]="primaryColor(draft)" (click)="scrollTo(item.sectionId); navOpen=false">{{ item.label }}</a>
+          [class.nav-link--faded]="item.faded"
+          [style.color]="primaryColor(draft)" (click)="onNavItemClick(item)">{{ item.label }}</a>
         <a class="nav-drawer-link" *ngIf="hasAmbassadorsSection(draft)"
           [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false">🚀 הצטרפו כשגרירים</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="goToAccount(); navOpen=false">כניסה / אזור אישי</a>
@@ -210,7 +212,8 @@
          always. See DECISIONS.md (2026-07-16). -->
     <ng-template #logoAboveStripTpl>
       <div class="hm-logo-above-strip"
-           *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition === 'above'">
+           *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition === 'above'"
+           [style.justifyContent]="ctaAlignStyle(draft.logoStripAlign)">
         <div class="hm-logo-above-badge"
           [class.hm-logo-above-badge--square]="draft.heroLogoShape === 'square'"
           [class.hm-logo-above-badge--none]="draft.heroLogoShape === 'none'"
@@ -256,7 +259,7 @@
 
         <!-- Title, subtitle, play button -->
         <div class="hm-hero-copy">
-          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title" [style.fontSize]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title" [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
             {{ draft.title }}
           </h1>
           <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
@@ -297,6 +300,7 @@
         <div class="hm-hero-org-logo"
              *ngIf="isCampaign(draft) && draft.showLogo !== false && draft.heroLogoPosition !== 'above'"
              [class.hm-hero-org-logo--center]="draft.heroLogoPosition === 'center'"
+             [class.hm-hero-org-logo--right]="draft.heroLogoPosition === 'right'"
              [class.hm-hero-org-logo--square]="draft.heroLogoShape === 'square'"
              [class.hm-hero-org-logo--none]="draft.heroLogoShape === 'none'"
              [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
@@ -355,6 +359,139 @@
 
     </ng-template>
 
+    <!-- ══ OPENING COMPOSITION — generic, Phase A (2026-10-01) ══
+         Replaces Hero entirely (full-width outlet below, main-column
+         fallback, and the 'hero' block instance in blockTpl are all
+         suppressed via hasStructuredOpening() when this renders, for EITHER
+         structured composition) so title/subtitle/projectDescription/media
+         never render twice — see resolveOpeningComposition's doc comment.
+         Sits ABOVE the
+         page-layout-sidebar split on purpose: squeezing a two-column opening
+         into the already-narrow .sidebar-main (alongside a sticky donation
+         rail) reproduces the exact failure hero.composition:'split' had.
+         Independent of heroPlacement/layoutMode -- Style behaves the same
+         regardless of which Template/layout the manager chose. RTL: content
+         is the first DOM child so it lands on the physical right without any
+         order override, media second/left, same convention as
+         .page-layout-sidebar. Campaign-only, same gate as the Hero outlet
+         below -- a Partner page has no fundraising summary to build an
+         opening from. -->
+    <!-- 'above' logo position (2026-09-30 fix) -- reuses the exact same
+         full-width strip Classic uses, placed here so it sits above the
+         WHOLE Opening (media + content), matching what 'above' actually
+         means everywhere else. Previously heroLogoPosition==='above' had no
+         distinct rendering at all here -- .hm-opening-org (inline, inside
+         the text column) doesn't visually read as "above" anything, it's
+         adjacent to the media at the same height. -->
+    <ng-container *ngIf="isCampaign(draft) && hasStructuredOpening(draft) && draft.heroLogoPosition === 'above'"
+      [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
+    <section class="hm-opening" *ngIf="isCampaign(draft) && hasStructuredOpening(draft)"
+      [class.hm-opening--story-first]="isStoryFirstOpening(draft)">
+      <div class="hm-opening-content">
+        <!-- Org identity (2026-09-30 refinement) -- same source as the
+             standalone .hm-logo-above-strip this composition suppresses
+             below (see that ng-container's own updated guard); reused here,
+             not duplicated data, just a different render location so the
+             logo isn't left stranded alone in its own white band. -->
+        <div class="hm-opening-org" *ngIf="draft.showLogo !== false && draft.heroLogoPosition !== 'above' && resolvedEntityLogo(draft)"
+          [class.hm-opening-org--center]="draft.heroLogoPosition === 'center'"
+          [class.hm-opening-org--right]="draft.heroLogoPosition === 'right'"
+          [class.hm-opening-org--square]="draft.heroLogoShape === 'square'"
+          [class.hm-opening-org--none]="draft.heroLogoShape === 'none'"
+          [class.hm-opening-org--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
+          [class.hm-opening-org--lg]="draft.heroLogoSize === 'lg'">
+          <img [src]="resolvedEntityLogo(draft)" alt="">
+        </div>
+        <h1 class="hm-opening-title">{{ draft.title }}</h1>
+        <!-- Bounded presentation only (2026-09-30) -- CSS line-clamp on the
+             container, NOT truncation of draft.layout.projectDescription
+             itself. The full text is untouched and still renders in full
+             wherever its own position setting would normally show it once
+             Fundraising-Split is generalized past a single-source render;
+             for now this is simply the one place it's consumed. Known
+             limitation: line-clamp on rich HTML with multiple block-level
+             children (e.g. several <p> tags) can clip mid-element rather
+             than at a clean line boundary -- acceptable for a short "intro"
+             field by design, flagged in the refinement report. -->
+        <div class="hm-opening-intro" *ngIf="draft.layout.projectDescription; else openingShortDesc"
+          [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
+        <ng-template #openingShortDesc>
+          <p class="hm-opening-intro hm-opening-intro--plain" *ngIf="draft.shortDescription">{{ draft.shortDescription }}</p>
+        </ng-template>
+        <!-- Story First deliberately omits the fundraising summary — per
+             spec, donation/progress must NOT dominate its first screen; the
+             real donation interaction stays elsewhere on the page (sidebar/
+             below). Fundraising Split is exactly the opposite intent, so it
+             keeps this. -->
+        <div class="hm-opening-summary" *ngIf="!isStoryFirstOpening(draft)">
+          <div class="hm-opening-summary-row">
+            <span class="hm-opening-raised">{{ statValue('raised', draft) }}</span>
+            <span class="hm-opening-goal">מתוך {{ statValue('target', draft) }}</span>
+            <span class="hm-opening-pct">{{ statValue('percent', draft) }}</span>
+          </div>
+          <div class="hm-opening-progress-wrap">
+            <div class="hm-opening-progress-fill" [style.width.%]="raisedPct(draft)"></div>
+          </div>
+        </div>
+        <!-- CTA precedence (2026-09-30 fix) -- explicit user choice wins over
+             Style, same principle as effectiveDonationComposition(). This
+             config's own default (createInitialDraft) is visible:false, and
+             `?.` alone guards only legacy campaigns saved before the field
+             existed (draft.heroCtaConfig === undefined there) -- so
+             `!== false` reads as "show unless a real config object says
+             explicitly false," never silently inventing a third state. -->
+        <button class="hm-opening-cta" type="button" *ngIf="isOpeningCtaVisible(draft) && !isStoryFirstOpening(draft)"
+          [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
+          {{ draft.heroCtaConfig.label || 'תרמו עכשיו' }}
+        </button>
+
+        <!-- Meta chips (2026-09-30 fix) -- same content/conditions as
+             .hm-hero-meta (which this composition suppresses along with the
+             rest of heroTpl), reusing .hm-meta-badge per-chip styling as-is.
+             Own container (not .hm-hero-meta itself) because that one is
+             position:absolute/bottom-of-Hero, tuned for the old full-bleed
+             photo Hero -- here it renders in normal flow, after the CTA. -->
+        <div class="hm-opening-meta">
+          <span class="hm-meta-badge" *ngIf="!isOngoing(draft)">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ draft.endDate ? (vm.mobile ? formatDateShort(draft.endDate) : 'פעיל עד ' + formatDate(draft.endDate)) : 'תאריך סיום' }}
+          </span>
+          <span class="hm-meta-badge">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            {{ categoryLabel(draft.category) || 'קטגוריה' }}
+          </span>
+          <span class="hm-meta-badge" *ngIf="draft.layout.campaignLocation as loc">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            {{ loc.label }}
+          </span>
+          <span class="hm-meta-badge">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            {{ draft.managerName ? (vm.mobile ? draft.managerName : 'מנהל: ' + draft.managerName) : 'מנהל' }}
+          </span>
+        </div>
+      </div>
+      <div class="hm-opening-media">
+        <div class="hm-opening-media-bg" [style.backgroundImage]="heroBg(draft)"></div>
+        <button class="hm-play-trigger" *ngIf="draft.heroType === 'video' && draft.videoUrl" type="button"
+          (click)="openHeroVideo()" aria-label="נגן וידאו">
+          <span class="hm-play-icon"></span>
+        </button>
+      </div>
+    </section>
+
     <!-- Full-width Hero — today's default, and always on mobile (side-by-side
          columns don't exist on mobile in the first place). Logo strip renders
          immediately before it, same as always. Suppressed once the user has
@@ -364,8 +501,10 @@
          (2026-07-17). Campaign-only: a Partner Profile/Campaign Participation
          draft starts on a genuinely blank page — no auto-Hero at all unless
          the user explicitly adds a 'hero' block themselves (see §13 in
-         PARTNER_DOMAIN_MODEL_ADR.md — "don't get stuck with the Hero"). -->
-    <ng-container *ngIf="isCampaign(draft) && (vm.mobile || (draft.layout.heroPlacement !== 'main-column' && !hasHeroBlock(draft)))">
+         PARTNER_DOMAIN_MODEL_ADR.md — "don't get stuck with the Hero"). Also
+         suppressed when the Opening Composition above already rendered
+         Hero's content. -->
+    <ng-container *ngIf="isCampaign(draft) && !hasStructuredOpening(draft) && (vm.mobile || (draft.layout.heroPlacement !== 'main-column' && !hasHeroBlock(draft)))">
       <ng-container [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
       <ng-container [ngTemplateOutlet]="heroTpl"></ng-container>
     </ng-container>
@@ -377,12 +516,14 @@
           <div class="block-wrap"
             [id]="blockSectionId(block, draft) || null"
             [attr.data-block-id]="pageBuilderActive ? block.id : null"
+            [class.block-wrap--editable]="pageBuilderActive"
             [style.marginTop.px]="block.spacingTop"
             [style.marginBottom.px]="block.spacingBottom"
             [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
             (mouseenter)="setHovered(block.id)"
-            (mouseleave)="setHovered(null)">
+            (mouseleave)="setHovered(null)"
+            (click)="onBlockClick($event, block)">
             <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
               (dragstart)="onExistingBlockDragStart($event, block.id)"
               (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -406,8 +547,14 @@
            the Hero column) — so Hero and the rail both start at the same
            height below it. Only when Hero actually lives in this row
            (desktop + heroPlacement === 'main-column'); otherwise the
-           top-of-page outlet above already rendered it right before Hero. -->
-      <ng-container *ngIf="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
+           top-of-page outlet above already rendered it right before Hero.
+           Suppressed for Fundraising-Split (2026-09-30) -- this was the
+           actual source of the "logo stranded alone in a large white band"
+           finding from browser QA: unlike the other two Hero outlets, this
+           one was never gated on Hero/Opening ownership at all, since it was
+           written before either existed. The Opening now renders the org
+           identity itself (see .hm-opening-org above). -->
+      <ng-container *ngIf="!vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasStructuredOpening(draft)">
         <div class="page-content-outer">
           <ng-container [ngTemplateOutlet]="logoAboveStripTpl"></ng-container>
         </div>
@@ -431,12 +578,14 @@
                   [id]="blockSectionId(block, draft) || null"
                   [attr.data-block-id]="pageBuilderActive ? block.id : null"
                   [attr.data-parent-id]="pageBuilderActive ? railZoneContainerId(draft, 'main') : null"
+                  [class.block-wrap--editable]="pageBuilderActive"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
-                  (mouseleave)="setHovered(null)">
+                  (mouseleave)="setHovered(null)"
+                  (click)="onBlockClick($event, block)">
                   <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
                     (dragstart)="onExistingBlockDragStart($event, block.id)"
                     (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -460,18 +609,20 @@
                  user has pulled Hero into the block tree via a 'hero' block
                  — see DECISIONS.md (2026-07-17). -->
             <ng-template #mainColumnFallback>
-              <ng-container *ngIf="isCampaign(draft) && !vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasHeroBlock(draft)"
+              <ng-container *ngIf="isCampaign(draft) && !vm.mobile && draft.layout.heroPlacement === 'main-column' && !hasHeroBlock(draft) && !hasStructuredOpening(draft)"
                 [ngTemplateOutlet]="heroTpl"></ng-container>
               <ng-container *ngFor="let block of mainBlocks(draft)">
                 <div class="block-wrap"
                   [id]="blockSectionId(block, draft) || null"
                   [attr.data-block-id]="pageBuilderActive ? block.id : null"
+                  [class.block-wrap--editable]="pageBuilderActive"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
-                  (mouseleave)="setHovered(null)">
+                  (mouseleave)="setHovered(null)"
+                  (click)="onBlockClick($event, block)">
                   <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
                     (dragstart)="onExistingBlockDragStart($event, block.id)"
                     (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -496,12 +647,14 @@
                 <div class="block-wrap"
                   [attr.data-block-id]="pageBuilderActive ? block.id : null"
                   [attr.data-parent-id]="pageBuilderActive ? railZoneContainerId(draft, 'sidebar') : null"
+                  [class.block-wrap--editable]="pageBuilderActive"
                   [style.marginTop.px]="block.spacingTop"
                   [style.marginBottom.px]="block.spacingBottom"
                   [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
                   (mouseenter)="setHovered(block.id)"
-                  (mouseleave)="setHovered(null)">
+                  (mouseleave)="setHovered(null)"
+                  (click)="onBlockClick($event, block)">
                   <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
                     (dragstart)="onExistingBlockDragStart($event, block.id)"
                     (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -519,12 +672,14 @@
         <div class="block-wrap"
           [id]="blockSectionId(block, draft)"
           [attr.data-block-id]="pageBuilderActive ? block.id : null"
+          [class.block-wrap--editable]="pageBuilderActive"
           [style.marginTop.px]="block.spacingTop"
           [style.marginBottom.px]="block.spacingBottom"
           [class.block-wrap--hovered]="pageBuilderActive && hoveredBlockId === block.id"
           [class.block-wrap--hovered-container]="pageBuilderActive && hoveredBlockId === block.id && block.type === 'container'"
           (mouseenter)="setHovered(block.id)"
-          (mouseleave)="setHovered(null)">
+          (mouseleave)="setHovered(null)"
+          (click)="onBlockClick($event, block)">
           <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
             (dragstart)="onExistingBlockDragStart($event, block.id)"
             (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -685,12 +840,23 @@
                    placeholder="5,000"
                    [disabled]="joinStatus === 'loading'">
           </div>
+          <p class="hm-join-goal-warning" *ngIf="joinGoalAboveCampaignGoal(draft)">
+            שימו לב: היעד שבחרתם גבוה מיעד הקמפיין, שעומד על {{ draft.targetAmount | number }} ₪. ניתן להמשיך עם היעד שבחרתם.
+          </p>
+        </div>
+        <div class="hm-join-field">
+          <app-ambassador-slug-field
+            [campaignSlug]="draft.slug!"
+            [nameForDefault]="joinForm.fullName"
+            [(value)]="joinForm.slug"
+            (availabilityChange)="joinSlugAvailable = $event">
+          </app-ambassador-slug-field>
         </div>
       </div>
       <div class="hm-join-footer">
         <button class="hm-join-submit"
                 [style.background]="primaryColor(draft)"
-                [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading'"
+                [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable"
                 (click)="submitJoin(draft)">
           <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי 🚀</span>
           <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
@@ -752,7 +918,7 @@
     <div class="hm-join-body">
       <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-details-img">
       <div class="hm-reward-details-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
-      <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
+      <div class="hm-reward-stock-badge" [class.hm-reward-stock-badge--sold-out]="isSoldOut(offering)" *ngIf="offering.stock != null">{{ isSoldOut(offering) ? 'אזל מהמלאי' : (purchasedCount(offering.id) + ' רכשו מתוך ' + offering.stock) }}</div>
 
       <!-- Multi-line description (e.g. numbered terms, one per line) renders
            as a real list; a single-line description stays a plain paragraph. -->
@@ -789,6 +955,7 @@
   [entityLogoUrl]="resolvedEntityLogo(draft)"
   [entityName]="resolvedEntityName(draft)"
   [ambassador]="ambassador"
+  (paymentSucceeded)="onCheckoutPaymentSucceeded($event)"
   (closed)="closeCheckout()">
 </app-checkout-v2>
 
@@ -831,8 +998,10 @@
 
   <!-- HERO — positional marker only; renders wherever it sits in the tree.
        Suppressed on mobile (Hero always full-width at the top there, same
-       deliberate simplification as the two fixed-slot outlets below). -->
-  <ng-container *ngIf="block.type === 'hero' && !mobile" [ngTemplateOutlet]="heroTpl"></ng-container>
+       deliberate simplification as the two fixed-slot outlets below), and
+       suppressed whenever the Opening Composition prototype already
+       rendered Hero's content above the sidebar/main split (2026-09-29). -->
+  <ng-container *ngIf="block.type === 'hero' && !mobile && !hasStructuredOpening(draft)" [ngTemplateOutlet]="heroTpl"></ng-container>
 
   <!-- RICH TEXT -->
   <div class="block-rich-text" *ngIf="block.type === 'rich-text'"
@@ -941,8 +1110,10 @@
           ? (asContainer(block.data).childDividerWidth ?? 1) + 'px solid ' + asContainer(block.data).childDividerColor : 'none'"
         [class.container-child--hovered]="pageBuilderActive && hoveredBlockId === child.id"
         [class.container-child--hovered-container]="pageBuilderActive && hoveredBlockId === child.id && child.type === 'container'"
+        [class.block-wrap--editable]="pageBuilderActive"
         (mouseenter)="$event.stopPropagation(); setHovered(child.id)"
-        (mouseleave)="setHovered(block.id)">
+        (mouseleave)="setHovered(block.id)"
+        (click)="onBlockClick($event, child)">
         <span class="preview-drag-handle" *ngIf="pageBuilderActive" draggable="true" title="גררו לשינוי מיקום"
           (dragstart)="onExistingBlockDragStart($event, child.id)"
           (dragend)="onExistingBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="16"></lucide-icon></span>
@@ -1017,7 +1188,10 @@
     <p class="cta-text" [style.color]="asCta(block.data).textStyle.color" *ngIf="asCta(block.data).text">{{ asCta(block.data).text }}</p>
     <div class="cta-btn-wrap" *ngIf="asCta(block.data).ctaConfig.visible"
       [style.justifyContent]="ctaAlignStyle(asCta(block.data).ctaConfig.align)">
-      <button class="cta-btn" [style.background]="asCta(block.data).ctaConfig.color"
+      <button class="cta-btn" data-style-role="main"
+        [style.background]="ctaButtonBackground(asCta(block.data))"
+        [style.color]="ctaButtonTextColor(asCta(block.data))"
+        [style.borderRadius.px]="ctaButtonBorderRadius(draft, asCta(block.data))"
         (click)="onCtaClick(asCta(block.data))">
         <span *ngIf="asCta(block.data).ctaConfig.icon">{{ asCta(block.data).ctaConfig.icon }}</span>
         {{ asCta(block.data).ctaConfig.label }}
@@ -1086,8 +1260,8 @@
        unaffected: this condition is false and only the block below renders,
        exactly as before. See DECISIONS.md (2026-07-16). -->
   <div class="hm-donate hm-register" *ngIf="block.type === 'donation-widget' && draft.registrationOptions.length > 0">
-    <h2>{{ asDonationWidget(block.data).title || 'הרשמה' }}</h2>
-    <p class="hm-register-subtitle" *ngIf="asDonationWidget(block.data).subtitle">{{ asDonationWidget(block.data).subtitle }}</p>
+    <h2 [style.color]="asDonationWidget(block.data).titleColor">{{ asDonationWidget(block.data).title || 'הרשמה' }}</h2>
+    <p class="hm-register-subtitle" [style.color]="sectionBodyTextColor(draft)" *ngIf="asDonationWidget(block.data).subtitle">{{ asDonationWidget(block.data).subtitle }}</p>
     <button class="hm-donate-btn" type="button"
       [style.background]="asDonationWidget(block.data).ctaColor"
       (click)="startRegistration()">
@@ -1096,7 +1270,7 @@
   </div>
 
   <div class="hm-donate-or-divider" *ngIf="block.type === 'donation-widget' && draft.registrationOptions.length > 0">
-    <span>או</span>
+    <span [style.color]="sectionBodyTextColor(draft)">או</span>
   </div>
 
   <!-- DONATION WIDGET (perks/explicit-amount flow) — always available,
@@ -1106,7 +1280,11 @@
     [class.conv-unified]="effectiveDonationComposition(draft) === 'unified'"
     [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
     [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
-    [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'">
+    [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'"
+    data-style-role="container"
+    [style.background]="donationContainerBackground(asDonationWidget(block.data))"
+    [style.borderColor]="donationContainerBorderColor(asDonationWidget(block.data))"
+    [style.borderRadius.px]="donationContainerBorderRadius(asDonationWidget(block.data))">
     <!-- "תרמו סכום חופשי לקמפיין" only when a free/custom amount is actually
          allowed (allowCustomAmount) -- this used to key off registrationOptions
          alone, so with custom amount turned off it kept promising a "free
@@ -1118,8 +1296,8 @@
          registration-combo copy above stays exactly as it was, that's a
          separate concern. `|| fallback` preserves today's exact copy for
          any block saved before these fields existed. -->
-    <h2>{{ draft.registrationOptions.length > 0 ? (draft.allowCustomAmount ? 'תרמו סכום חופשי לקמפיין' : 'תרמו לקמפיין') : (asDonationWidget(block.data).title || 'בחרו סכום לתמיכה') }}</h2>
-    <p class="hm-donate-subtitle" *ngIf="draft.registrationOptions.length === 0 && asDonationWidget(block.data).subtitle">
+    <h2 data-text-role="sectionTitle" [style.color]="donationSectionTitleColor(draft, asDonationWidget(block.data))">{{ draft.registrationOptions.length > 0 ? (draft.allowCustomAmount ? 'תרמו סכום חופשי לקמפיין' : 'תרמו לקמפיין') : (asDonationWidget(block.data).title || 'בחרו סכום לתמיכה') }}</h2>
+    <p class="hm-donate-subtitle" data-text-role="subtitle" [style.color]="donationSubtitleColor(draft, asDonationWidget(block.data))" *ngIf="draft.registrationOptions.length === 0 && asDonationWidget(block.data).subtitle">
       {{ asDonationWidget(block.data).subtitle }}
     </p>
 
@@ -1144,10 +1322,23 @@
          2026-09-22 (the campaign's own suggestedAmounts had 6 entries; only
          5 ever rendered). .hm-amounts is an auto-fill grid, so a 6th button
          wraps/fits safely at any width. -->
-    <div class="hm-amounts">
+    <div class="hm-amounts" data-style-role="amountButton">
       <button *ngFor="let a of amountsFor(draft) | slice:0:6"
         class="hm-amount-preset" type="button"
         [class.is-selected]="isAmountSelected($any(a))"
+        [style.background]="isAmountSelected($any(a)) ? donationAmountButtonSelectedBackground(asDonationWidget(block.data)) : donationAmountButtonBackground(asDonationWidget(block.data))"
+        [style.color]="isAmountSelected($any(a)) ? donationAmountButtonSelectedTextColor(asDonationWidget(block.data)) : donationAmountButtonTextColor(asDonationWidget(block.data))"
+        [style.borderColor]="isAmountSelected($any(a)) ? donationAmountButtonSelectedBorderColor(asDonationWidget(block.data)) : donationAmountButtonBorderColor(asDonationWidget(block.data))"
+        [style.borderWidth.px]="donationAmountButtonBorderWidth(asDonationWidget(block.data))"
+        [style.borderRadius.px]="donationAmountButtonBorderRadius(asDonationWidget(block.data))"
+        [style.minHeight.px]="donationAmountButtonMinHeight(asDonationWidget(block.data))"
+        [style.paddingTop.px]="donationAmountButtonPaddingBlock(asDonationWidget(block.data))"
+        [style.paddingBottom.px]="donationAmountButtonPaddingBlock(asDonationWidget(block.data))"
+        [style.paddingLeft.px]="donationAmountButtonPaddingInline(asDonationWidget(block.data))"
+        [style.paddingRight.px]="donationAmountButtonPaddingInline(asDonationWidget(block.data))"
+        [style.fontSize.px]="donationAmountButtonFontSize(asDonationWidget(block.data))"
+        [style.fontWeight]="donationAmountButtonFontWeight(asDonationWidget(block.data))"
+        [style.boxShadow]="isAmountSelected($any(a)) ? donationAmountButtonSelectedShadow(asDonationWidget(block.data)) : donationAmountButtonShadow(asDonationWidget(block.data))"
         (click)="selectAmount($any(a))">
         ₪{{ $any(a).toLocaleString('he-IL') }}
       </button>
@@ -1161,29 +1352,29 @@
         [value]="amountDisplay"
         (input)="onCustomAmountInput($event)">
     </div>
-    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode !== 'fixed_installments'">
+    <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode !== 'fixed_installments'">
       🔁 חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
     </p>
-    <p class="hm-recurring-note" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode === 'fixed_installments'">
+    <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode === 'fixed_installments'">
       🔁 חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
     </p>
 
     <!-- Total breakdown -->
     <div class="hm-total-section" *ngIf="cartCount > 0">
       <div class="hm-total-line" *ngIf="explicitAmount > 0">
-        <span class="hm-total-label">תרומה</span>
-        <span class="hm-total-val">₪{{ explicitAmount.toLocaleString('he-IL') }}</span>
+        <span class="hm-total-label" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))">תרומה</span>
+        <span class="hm-total-val" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))">₪{{ explicitAmount.toLocaleString('he-IL') }}</span>
       </div>
       <ng-container *ngFor="let o of cartOfferingList(draft)">
         <div class="hm-total-line">
-          <span class="hm-total-label">{{ o.title }}</span>
-          <span class="hm-total-val">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</span>
+          <span class="hm-total-label" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))">{{ o.title }}</span>
+          <span class="hm-total-val" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</span>
         </div>
       </ng-container>
       <div class="hm-total-divider"></div>
       <div class="hm-total-sum">
         <span>סה"כ לתשלום</span>
-        <span class="hm-total-sum-val">₪{{ totalAmount(draft).toLocaleString('he-IL') }}</span>
+        <span class="hm-total-sum-val" data-text-role="totalSum" [style.color]="donationTotalSumColor(asDonationWidget(block.data))">₪{{ totalAmount(draft).toLocaleString('he-IL') }}</span>
       </div>
     </div>
 
@@ -1206,7 +1397,10 @@
          change) stays exactly as saved; only newly-created blocks default
          to Auto now (see campaign-templates.ts / defaultBlockData()). -->
     <button class="hm-donate-btn hm-primary-donate-cta" type="button"
-      [style.background]="asDonationWidget(block.data).ctaColor || themePrimaryColor(draft)"
+      data-style-role="cta"
+      [style.background]="donationCtaBackground(draft, asDonationWidget(block.data))"
+      [style.color]="donationCtaTextColor(asDonationWidget(block.data))"
+      [style.borderRadius.px]="donationCtaBorderRadius(draft, asDonationWidget(block.data))"
       (click)="openCheckout(draft)">
       <span class="hm-lock-icon">{{ asDonationWidget(block.data).ctaIcon || '🔒' }}</span>
       <span class="hm-btn-text">{{ asDonationWidget(block.data).ctaLabel || 'לתמיכה מאובטחת' }}</span>
@@ -1217,7 +1411,7 @@
          button's own icon, since ctaIcon already independently controls
          that. `!== false` treats an absent field (older campaigns) as the
          current always-shown default. -->
-    <p class="hm-security-note" *ngIf="asDonationWidget(block.data).showSecurityBadge !== false">
+    <p class="hm-security-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="asDonationWidget(block.data).showSecurityBadge !== false">
       🔒 תשלום מאובטח באמצעות קארדקום בע״מ
     </p>
     <!-- showPaymentLogos (2026-09-28) -- wired, but deliberately renders
@@ -1249,26 +1443,26 @@
     [style.--stat-icon-radius.px]="asStats(block.data).borderRadius">
     <div class="hm-stats-top">
       <div class="hm-ring-wrapper">
-        <svg class="hm-ring-svg" viewBox="0 0 36 36">
-          <circle class="hm-ring-bg"   cx="18" cy="18" r="15" stroke-width="5"/>
+        <svg class="hm-ring-svg" viewBox="0 0 36 36" data-style-role="ring">
+          <circle class="hm-ring-bg"   cx="18" cy="18" r="15" stroke-width="5" [style.stroke]="statsRingTrackColor(asStats(block.data))"/>
           <circle class="hm-ring-fill" cx="18" cy="18" r="15" stroke-width="5"
-            [attr.stroke-dasharray]="ringDash(draft)" stroke-linecap="round"/>
+            [attr.stroke-dasharray]="ringDash(draft)" stroke-linecap="round" [style.stroke]="statsRingFillColor(asStats(block.data))"/>
         </svg>
         <div class="hm-ring-text">
-          <strong>{{ raisedPct(draft) }}%</strong><span>מהיעד</span>
+          <strong>{{ raisedPct(draft) }}%</strong><span data-text-role="label" [style.color]="statsLabelColor(draft, asStats(block.data))">מהיעד</span>
         </div>
       </div>
       <div class="hm-raised-info">
-        <span class="hm-raised-title">גויס עד כה</span>
-        <span class="hm-raised-amount">{{ formatAmount(draft.currentAmount ?? 0) }}</span>
-        <span class="hm-raised-goal">מתוך {{ formatAmount(draft.targetAmount) }}</span>
+        <span class="hm-raised-title" data-text-role="sectionTitle" [style.color]="statsSectionTitleColor(draft, asStats(block.data))">גויס עד כה</span>
+        <span class="hm-raised-amount" data-text-role="value" [style.color]="statsValueColorOverride(asStats(block.data))">{{ formatAmount(draft.currentAmount ?? 0) }}</span>
+        <span class="hm-raised-goal" data-text-role="label" [style.color]="statsLabelColor(draft, asStats(block.data))">מתוך {{ formatAmount(draft.targetAmount) }}</span>
       </div>
     </div>
     <div class="hm-stat-grid">
       <div class="hm-stat-box">
         <span class="hm-stat-icon hm-stat-icon--shekel">₪</span>
-        <strong>{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
-        <span>נותר ליעד</span>
+        <strong data-text-role="value" [style.color]="statsValueColorOverride(asStats(block.data))">{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
+        <span data-text-role="label" [style.color]="statsLabelColor(draft, asStats(block.data))">נותר ליעד</span>
       </div>
 
       <!-- KPI grid — driven by StatsBlockData.items (visible + order), set in
@@ -1305,8 +1499,8 @@
               <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </span>
-          <strong>{{ statValue(item.key, draft) }}</strong>
-          <span>{{ statLabels[item.key] }}</span>
+          <strong data-text-role="value" [style.color]="statsValueColorOverride(asStats(block.data))">{{ statValue(item.key, draft) }}</strong>
+          <span data-text-role="label" [style.color]="statsLabelColor(draft, asStats(block.data))">{{ statLabels[item.key] }}</span>
         </div>
       </ng-container>
     </div>
@@ -1314,17 +1508,43 @@
 
   <!-- ══ REWARDS ══ -->
   <section class="hm-rewards" [class.hm-rewards--sidebar-list]="inSidebarSection(draft, 'rewards')"
-    *ngIf="block.type === 'rewards' && draft.offeringsEnabled !== false" id="section-rewards">
+    *ngIf="block.type === 'rewards' && draft.offeringsEnabled !== false && shouldRenderBlock(block, draft)" id="section-rewards">
     <h2>בחרו את התשורה המתאימה לכם</h2>
 
     <ng-container *ngIf="draft.offerings && draft.offerings.length > 0; else rewardsEmpty">
 
-      <!-- ── Sidebar placement: compact vertical list, no carousel shell ── -->
-      <div class="hm-reward-list" *ngIf="inSidebarSection(draft, 'rewards')">
-        <article *ngFor="let offering of draft.offerings"
+      <!-- Browsing controls (2026-10-04) -- full in main content, compact in
+           sidebar (same density rule as every other section), present in
+           BOTH placements per product requirement. Filtering is a pure data
+           concern (rewardsFiltered()), independent of Section Presentation —
+           every card markup below consumes the SAME filtered/sorted
+           collection instead of the raw draft.offerings. -->
+      <div class="hm-reward-filters" [class.hm-reward-filters--compact]="inSidebarSection(draft, 'rewards')">
+        <input type="text" class="hm-reward-filter-search" [(ngModel)]="rewardsSearch" placeholder="חיפוש תשורה...">
+        <select class="hm-reward-filter-select" [(ngModel)]="rewardsSortBy">
+          <option value="featured">מומלצים קודם</option>
+          <option value="price-asc">מחיר: מהנמוך לגבוה</option>
+          <option value="price-desc">מחיר: מהגבוה לנמוך</option>
+        </select>
+        <label class="hm-reward-filter-toggle">
+          <input type="checkbox" [(ngModel)]="rewardsHideSoldOut">
+          <span>הצג רק זמינות</span>
+        </label>
+      </div>
+
+      <!-- Filter returned zero matches (everything sold out, or no search
+           hits) -- distinct from the "no rewards at all" empty state below. -->
+      <ng-container *ngIf="rewardsFiltered(draft).length > 0; else rewardsFilterEmpty">
+
+      <!-- ── List presentation (Section Presentation, 2026-10-03) —
+           independent of placement; a compact vertical list now renders
+           wherever the section sits, not only in the sidebar. ── -->
+      <div class="hm-reward-list" *ngIf="sectionPresentation(draft, 'rewards') === 'list'">
+        <article *ngFor="let offering of rewardsFiltered(draft)"
           class="hm-reward-list-card"
           [class.is-featured]="offering.featured === true"
           [class.is-selected]="isOfferingInCart(offering.id)"
+          [class.hm-reward-soldout]="isSoldOut(offering)"
           (click)="selectOffering(offering, draft)">
           <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
 
@@ -1332,7 +1552,7 @@
                separate full-image row) → full image row (default mode) →
                description. -->
           <div class="hm-reward-list-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
-          <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
+          <div class="hm-reward-stock-badge" *ngIf="offering.stock != null && !isSoldOut(offering)">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
 
           <div class="hm-reward-list-title-row">
             <h3>{{ offering.title }}</h3>
@@ -1364,7 +1584,10 @@
             {{ p.displayName }} ←
           </a>
 
-          <button class="hm-reward-list-btn" type="button">לבחירה</button>
+          <button class="hm-reward-list-btn" type="button" *ngIf="!isSoldOut(offering)">לבחירה</button>
+          <div class="hm-reward-soldout-overlay" *ngIf="isSoldOut(offering)">
+            <span class="hm-reward-soldout-pill">הפריט אזל</span>
+          </div>
           <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
             <div class="hm-reward-overlay-check">✓</div>
             <p class="hm-reward-overlay-title">בחירתך נוספה!</p>
@@ -1377,18 +1600,22 @@
         </article>
       </div>
 
-      <!-- ── Below-sidebar placement (default): horizontal carousel, unchanged ── -->
-      <div class="hm-slider-outer" *ngIf="!inSidebarSection(draft, 'rewards')">
-        <button class="hm-slider-arrow hm-slider-arrow--prev" (click)="scrollSlider(slider, 'prev')">‹</button>
+      <!-- ── Cards / Image presentation (Section Presentation, 2026-10-03) —
+           horizontal carousel in the main content, vertical stack when
+           placed in the sidebar (see .hm-rewards--sidebar-list overrides
+           in the .css — same card markup either way). ── -->
+      <div class="hm-slider-outer" *ngIf="sectionPresentation(draft, 'rewards') !== 'list'">
+        <button class="hm-slider-arrow hm-slider-arrow--prev" *ngIf="!inSidebarSection(draft, 'rewards')" (click)="scrollSlider(slider, 'prev')">‹</button>
         <div class="hm-reward-slider" #slider>
           <div class="hm-slider-track">
 
-            <!-- ── Standard layout ── -->
-            <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
-              <article *ngFor="let offering of draft.offerings"
+            <!-- ── Standard cards ── -->
+            <ng-container *ngIf="sectionPresentation(draft, 'rewards') === 'cards'">
+              <article *ngFor="let offering of rewardsFiltered(draft)"
                 class="hm-reward-card"
                 [class.is-featured]="offering.featured === true"
                 [class.is-selected]="isOfferingInCart(offering.id)"
+                [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
                 <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
                 <div class="hm-reward-card-top">
@@ -1400,7 +1627,7 @@
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
-                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
+                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null && !isSoldOut(offering)">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
                   <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
                     *ngIf="offering.description && offering.description.length > 120"
@@ -1412,7 +1639,10 @@
                     (click)="$event.stopPropagation()">
                     {{ p.displayName }} ←
                   </a>
-                  <div class="hm-reward-select-hint">לחץ לבחירה</div>
+                  <div class="hm-reward-select-hint" *ngIf="!isSoldOut(offering)">לחץ לבחירה</div>
+                </div>
+                <div class="hm-reward-soldout-overlay" *ngIf="isSoldOut(offering)">
+                  <span class="hm-reward-soldout-pill">הפריט אזל</span>
                 </div>
                 <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
                   <div class="hm-reward-overlay-check">✓</div>
@@ -1426,12 +1656,13 @@
               </article>
             </ng-container>
 
-            <!-- ── Image layout: amount → image → title + description ── -->
-            <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
-              <article *ngFor="let offering of draft.offerings"
+            <!-- ── Image-emphasis cards: amount → image → title + description ── -->
+            <ng-container *ngIf="sectionPresentation(draft, 'rewards') === 'image'">
+              <article *ngFor="let offering of rewardsFiltered(draft)"
                 class="hm-reward-card hm-reward-card--img"
                 [class.is-featured]="offering.featured === true"
                 [class.is-selected]="isOfferingInCart(offering.id)"
+                [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
                 <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
                 <div class="hm-reward-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
@@ -1441,7 +1672,7 @@
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
-                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
+                  <div class="hm-reward-stock-badge" *ngIf="offering.stock != null && !isSoldOut(offering)">{{ purchasedCount(offering.id) }} רכשו מתוך {{ offering.stock }}</div>
                   <p *ngIf="offering.description" [class.hm-reward-desc--clamped]="!isExpanded(offering.id)">{{ offering.description }}</p>
                   <button class="hm-reward-more-btn"
                     *ngIf="offering.description && offering.description.length > 120"
@@ -1453,7 +1684,10 @@
                     (click)="$event.stopPropagation()">
                     {{ p.displayName }} ←
                   </a>
-                  <div class="hm-reward-select-hint">לחץ לבחירה</div>
+                  <div class="hm-reward-select-hint" *ngIf="!isSoldOut(offering)">לחץ לבחירה</div>
+                </div>
+                <div class="hm-reward-soldout-overlay" *ngIf="isSoldOut(offering)">
+                  <span class="hm-reward-soldout-pill">הפריט אזל</span>
                 </div>
                 <div class="hm-reward-overlay" *ngIf="isOfferingInCart(offering.id)" (click)="$event.stopPropagation()">
                   <div class="hm-reward-overlay-check">✓</div>
@@ -1469,8 +1703,16 @@
 
           </div>
         </div>
-        <button class="hm-slider-arrow hm-slider-arrow--next" (click)="scrollSlider(slider, 'next')">›</button>
+        <button class="hm-slider-arrow hm-slider-arrow--next" *ngIf="!inSidebarSection(draft, 'rewards')" (click)="scrollSlider(slider, 'next')">›</button>
       </div>
+      </ng-container>
+
+      <ng-template #rewardsFilterEmpty>
+        <div class="hm-reward-filter-empty">
+          {{ rewardsSearch.trim() ? 'לא נמצאו תשורות התואמות את החיפוש.' : 'כל התשורות אזלו מהמלאי כרגע.' }}
+          <button type="button" (click)="resetRewardsFilter()">הצג הכל</button>
+        </div>
+      </ng-template>
     </ng-container>
 
     <ng-template #rewardsEmpty>
@@ -1511,29 +1753,110 @@
     *ngIf="block.type === 'ambassadors'" id="section-ambassadors">
     <div class="hm-lb-container">
 
-      <!-- ── Sidebar placement: compact vertical list, no search/sort/2-col grid ── -->
+      <!-- ── Sidebar placement: simple header (no search/sort/social-proof —
+           see the main-content branch below for those); the item markup
+           itself follows Section Presentation, independent of placement. ── -->
       <ng-container *ngIf="inSidebarSection(draft, 'ambassadors')">
-        <h2 class="hm-amb-list-title" [style.color]="primaryColor(draft)">שגרירים</h2>
-        <div class="hm-amb-list-sidebar" *ngIf="ambEffective.length > 0; else ambassadorsEmptySidebar">
-          <div class="hm-amb-list-row" *ngFor="let a of ambVisible">
-            <div class="hm-amb-list-top">
-              <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
-                {{ a.fullName.charAt(0) }}
-              </div>
-              <div class="hm-amb-list-info">
-                <span class="hm-amb-list-name">{{ a.fullName }}</span>
-                <span class="hm-amb-list-raised" [style.color]="primaryColor(draft)">₪{{ a.raisedTotal | number }}</span>
-              </div>
-            </div>
-            <div class="hm-lb-bar" *ngIf="a.goalAmount">
-              <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
-            </div>
-            <button class="hm-amb-list-btn" (click)="viewAmbassador(a.slug, draft)">לדף השגריר ←</button>
+        <h2 class="hm-amb-list-title" data-text-role="sectionTitle" [style.color]="ambassadorsSectionTitleColor(draft, asAmbassadorsBlock(block.data))">שגרירים</h2>
+        <ng-container *ngIf="ambEffective.length > 0; else ambassadorsEmptySidebar">
+
+          <!-- Compact filtering (2026-10-04) -- same ambSearch/ambSortBy
+               state as the main-content controls below, just a smaller UI
+               bound to it, so a sidebar-placed list stays navigable instead
+               of becoming a static dump. -->
+          <div class="hm-amb-compact-filters">
+            <input type="text" class="hm-amb-compact-search" [(ngModel)]="ambSearch"
+                   (ngModelChange)="ambShowCount = 6" placeholder="חיפוש שגריר/ה...">
+            <select class="hm-amb-compact-select" [(ngModel)]="ambSortBy" (ngModelChange)="ambShowCount = 6">
+              <option value="raised">הכי גבוה</option>
+              <option value="name">שם</option>
+              <option value="pct">קרוב ליעד</option>
+              <option value="donors">תורמים</option>
+            </select>
           </div>
+
+          <!-- Filter returned zero matches -- distinct from the "no
+               ambassadors at all" empty state below. -->
+          <div class="hm-amb-compact-no-results" *ngIf="ambFiltered.length === 0">
+            לא נמצאו שגרירים התואמים את החיפוש
+            <button type="button" (click)="ambSearch = ''">נקה חיפוש</button>
+          </div>
+
+          <!-- List presentation -->
+          <div class="hm-amb-list-sidebar" *ngIf="sectionPresentation(draft, 'ambassadors') === 'list'">
+            <div class="hm-amb-list-row" *ngFor="let a of ambVisible" data-style-role="card"
+              [style.background]="ambassadorCardBackground(asAmbassadorsBlock(block.data))"
+              [style.borderColor]="ambassadorCardBorderColor(asAmbassadorsBlock(block.data))"
+              [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
+              <div class="hm-amb-list-top">
+                <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
+                  {{ a.fullName.charAt(0) }}
+                </div>
+                <div class="hm-amb-list-info">
+                  <span class="hm-amb-list-name" data-text-role="ambassadorName"
+                        [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
+                        [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</span>
+                  <span class="hm-amb-list-raised" data-text-role="raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">₪{{ a.raisedTotal | number }}</span>
+                </div>
+              </div>
+              <div class="hm-lb-bar" *ngIf="a.goalAmount">
+                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+              </div>
+              <button class="hm-amb-list-btn" data-style-role="viewButton"
+                [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
+                [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
+                (click)="viewAmbassador(a.slug, draft)">לדף השגריר ←</button>
+            </div>
+          </div>
+
+          <!-- Cards presentation (new combination -- same card markup as the
+               main-content grid below, collapsed to 1 column by CSS since
+               the sidebar rail is too narrow for 2). -->
+          <div class="hm-lb-grid hm-lb-grid--sidebar" *ngIf="sectionPresentation(draft, 'ambassadors') === 'cards'">
+            <div class="hm-lb-card" *ngFor="let a of ambVisible" data-style-role="card"
+              [style.background]="ambassadorCardBackground(asAmbassadorsBlock(block.data))"
+              [style.borderColor]="ambassadorCardBorderColor(asAmbassadorsBlock(block.data))"
+              [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
+              <div class="hm-lb-card-header">
+                <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
+                  {{ a.fullName.charAt(0) }}
+                </div>
+                <div class="hm-lb-card-info">
+                  <div class="hm-lb-card-name" data-text-role="ambassadorName"
+                       [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
+                       [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</div>
+                  <div class="hm-lb-card-msg" *ngIf="a.personalMessage">{{ a.personalMessage }}</div>
+                </div>
+              </div>
+              <div class="hm-lb-progress-wrap">
+                <div class="hm-lb-progress-nums">
+                  <span class="hm-lb-raised" data-text-role="raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">₪{{ a.raisedTotal | number }}</span>
+                  <span class="hm-lb-goal" data-text-role="secondaryMeta" [style.color]="ambassadorSecondaryMetaColor(draft, asAmbassadorsBlock(block.data))" *ngIf="a.goalAmount"> מתוך ₪{{ a.goalAmount | number }}</span>
+                  <span class="hm-lb-pct-tag" [style.color]="primaryColor(draft)" *ngIf="a.goalAmount">{{ ambPct(a) }}%</span>
+                </div>
+                <div class="hm-lb-bar">
+                  <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+                </div>
+              </div>
+              <div class="hm-lb-card-footer">
+                <div class="hm-lb-donors">
+                  <span class="hm-lb-donors-num" data-text-role="donorCount" [style.color]="ambassadorDonorCountColor(draft, asAmbassadorsBlock(block.data))">{{ a.donorCount | number }}</span>
+                  <span class="hm-lb-donors-lbl" data-text-role="secondaryMeta" [style.color]="ambassadorSecondaryMetaColor(draft, asAmbassadorsBlock(block.data))">תורמים</span>
+                </div>
+                <button class="hm-lb-view-btn" data-style-role="viewButton"
+                  [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
+                  [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
+                  (click)="viewAmbassador(a.slug, draft)">
+                  לדף השגריר ←
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button class="hm-donor-list-more" *ngIf="ambFiltered.length > ambShowCount" (click)="ambShowCount = ambShowCount + 6">
             הצג עוד שגרירים
           </button>
-        </div>
+        </ng-container>
         <ng-template #ambassadorsEmptySidebar>
           <div class="hm-lb-empty">
             <div class="hm-lb-empty-icon">🤝</div>
@@ -1554,7 +1877,7 @@
            button, so this one is hidden (not duplicated) and the title
            centers on its own. -->
       <div class="hm-lb-section-header" [class.hm-lb-section-header--center]="ambEffective.length === 0">
-        <h2 class="hm-lb-section-title" [style.color]="primaryColor(draft)">שגרירים</h2>
+        <h2 class="hm-lb-section-title" data-text-role="sectionTitle" [style.color]="ambassadorsSectionTitleColor(draft, asAmbassadorsBlock(block.data))">שגרירים</h2>
         <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
           🚀 הצטרפו כשגרירים
         </button>
@@ -1598,9 +1921,12 @@
           </div>
         </div>
 
-        <!-- ── Cards grid — 2 per row ── -->
-        <div class="hm-lb-grid">
-          <div class="hm-lb-card" *ngFor="let a of ambVisible">
+        <!-- ── Cards presentation — 2 per row ── -->
+        <div class="hm-lb-grid" *ngIf="sectionPresentation(draft, 'ambassadors') === 'cards'">
+          <div class="hm-lb-card" *ngFor="let a of ambVisible" data-style-role="card"
+            [style.background]="ambassadorCardBackground(asAmbassadorsBlock(block.data))"
+            [style.borderColor]="ambassadorCardBorderColor(asAmbassadorsBlock(block.data))"
+            [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
 
             <!-- Card header: avatar + name + copy -->
             <div class="hm-lb-card-header">
@@ -1608,7 +1934,9 @@
                 {{ a.fullName.charAt(0) }}
               </div>
               <div class="hm-lb-card-info">
-                <div class="hm-lb-card-name">{{ a.fullName }}</div>
+                <div class="hm-lb-card-name" data-text-role="ambassadorName"
+                     [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
+                     [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</div>
                 <div class="hm-lb-card-msg" *ngIf="a.personalMessage">{{ a.personalMessage }}</div>
               </div>
             </div>
@@ -1616,8 +1944,8 @@
             <!-- Progress -->
             <div class="hm-lb-progress-wrap">
               <div class="hm-lb-progress-nums">
-                <span class="hm-lb-raised">₪{{ a.raisedTotal | number }}</span>
-                <span class="hm-lb-goal" *ngIf="a.goalAmount"> מתוך ₪{{ a.goalAmount | number }}</span>
+                <span class="hm-lb-raised" data-text-role="raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">₪{{ a.raisedTotal | number }}</span>
+                <span class="hm-lb-goal" data-text-role="secondaryMeta" [style.color]="ambassadorSecondaryMetaColor(draft, asAmbassadorsBlock(block.data))" *ngIf="a.goalAmount"> מתוך ₪{{ a.goalAmount | number }}</span>
                 <span class="hm-lb-pct-tag" [style.color]="primaryColor(draft)" *ngIf="a.goalAmount">{{ ambPct(a) }}%</span>
               </div>
               <div class="hm-lb-bar">
@@ -1628,16 +1956,45 @@
             <!-- Footer: donors + view -->
             <div class="hm-lb-card-footer">
               <div class="hm-lb-donors">
-                <span class="hm-lb-donors-num">{{ a.donorCount | number }}</span>
-                <span class="hm-lb-donors-lbl">תורמים</span>
+                <span class="hm-lb-donors-num" data-text-role="donorCount" [style.color]="ambassadorDonorCountColor(draft, asAmbassadorsBlock(block.data))">{{ a.donorCount | number }}</span>
+                <span class="hm-lb-donors-lbl" data-text-role="secondaryMeta" [style.color]="ambassadorSecondaryMetaColor(draft, asAmbassadorsBlock(block.data))">תורמים</span>
               </div>
-              <button class="hm-lb-view-btn"
-                      [style.background]="primaryColor(draft)"
+              <button class="hm-lb-view-btn" data-style-role="viewButton"
+                      [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
+                      [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
                       (click)="viewAmbassador(a.slug, draft)">
                 לדף השגריר ←
               </button>
             </div>
 
+          </div>
+        </div>
+
+        <!-- ── List presentation (new combination -- same compact row
+             markup as the sidebar variant above, full-width here). ── -->
+        <div class="hm-amb-list-sidebar hm-amb-list-sidebar--wide" *ngIf="sectionPresentation(draft, 'ambassadors') === 'list'">
+          <div class="hm-amb-list-row" *ngFor="let a of ambVisible" data-style-role="card"
+            [style.background]="ambassadorCardBackground(asAmbassadorsBlock(block.data))"
+            [style.borderColor]="ambassadorCardBorderColor(asAmbassadorsBlock(block.data))"
+            [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
+            <div class="hm-amb-list-top">
+              <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
+                {{ a.fullName.charAt(0) }}
+              </div>
+              <div class="hm-amb-list-info">
+                <span class="hm-amb-list-name" data-text-role="ambassadorName"
+                      [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
+                      [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</span>
+                <span class="hm-amb-list-raised" data-text-role="raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">₪{{ a.raisedTotal | number }}</span>
+              </div>
+            </div>
+            <div class="hm-lb-bar" *ngIf="a.goalAmount">
+              <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+            </div>
+            <button class="hm-amb-list-btn" data-style-role="viewButton"
+              [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
+              [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
+              (click)="viewAmbassador(a.slug, draft)">לדף השגריר ←</button>
           </div>
         </div>
 
@@ -1672,12 +2029,32 @@
 
   <!-- DONORS — grid or list -->
   <section class="hm-section hm-donors" [class.hm-donors--sidebar-list]="inSidebarSection(draft, 'donors')"
-    *ngIf="block.type === 'donors'" id="section-donors">
+    *ngIf="block.type === 'donors' && shouldRenderBlock(block, draft)" id="section-donors">
 
-    <!-- ── Sidebar placement: compact vertical list, no stats row/period tabs/Top-10 ── -->
+    <!-- ── Sidebar placement: simple header, no stats row/period tabs; the
+         item markup itself follows Section Presentation, independent of
+         placement. ── -->
     <ng-container *ngIf="inSidebarSection(draft, 'donors')">
-      <h2 class="hm-donor-list-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
-      <div class="hm-donor-list-sidebar">
+      <h2 class="hm-donor-list-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
+
+      <!-- Compact filtering (2026-10-04) -- same donorPeriod/donorSort
+           state + setters as the main-content controls below, just a
+           smaller UI bound to them, so a sidebar-placed list isn't a static
+           dump once moved there. -->
+      <div class="hm-donor-compact-filters">
+        <select class="hm-donor-compact-select" [ngModel]="donorPeriod" (ngModelChange)="setDonorPeriod($event)">
+          <option value="all">כל התרומות</option>
+          <option value="week">השבוע</option>
+          <option value="today">היום</option>
+        </select>
+        <select class="hm-donor-compact-select" [ngModel]="donorSort" (ngModelChange)="setDonorSort($event)">
+          <option value="recent">אחרונות</option>
+          <option value="amount">הגדולות ביותר</option>
+        </select>
+      </div>
+
+      <!-- List presentation -->
+      <div class="hm-donor-list-sidebar" *ngIf="sectionPresentation(draft, 'donors') === 'list'">
         <div class="hm-donor-list-row" *ngFor="let d of visibleDonors">
           <div class="hm-donor-list-avatar"
             [style.background]="draft.layout.theme.accentColor + '22'"
@@ -1685,21 +2062,48 @@
             {{ donorInitials(d.name) }}
           </div>
           <div class="hm-donor-list-info">
-            <span class="hm-donor-list-name">{{ d.name }}</span>
-            <span class="hm-donor-list-time">{{ timeAgo(d.completedAt) }}</span>
+            <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+            <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
           </div>
-          <div class="hm-donor-list-amount" [style.color]="draft.layout.theme.accentColor">
+          <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
             ₪{{ d.amount.toLocaleString('he-IL') }}
           </div>
         </div>
-        <div class="hm-donors-empty" *ngIf="visibleDonors.length === 0">אין עדיין תרומות</div>
-        <button class="hm-donor-list-more" *ngIf="canShowMore" (click)="showMoreDonors()">הצג עוד תורמים</button>
+        <div class="hm-donors-empty" [style.color]="sectionBodyTextColor(draft)" *ngIf="visibleDonors.length === 0">אין עדיין תרומות בטווח הזמן הזה</div>
       </div>
+
+      <!-- Cards presentation (new combination -- same card markup as the
+           main-content grid below, collapsed to 1 column by CSS). -->
+      <div class="hm-donors-grid hm-donors-grid--sidebar" *ngIf="sectionPresentation(draft, 'donors') === 'cards'">
+        <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+          <div class="hm-donor-v2-left">
+            <div class="hm-donor-v2-avatar"
+              [style.background]="draft.layout.theme.accentColor + '22'"
+              [style.color]="draft.layout.theme.accentColor">
+              {{ donorInitials(d.name) }}
+            </div>
+            <div class="hm-donor-v2-info">
+              <span class="hm-donor-v2-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+              <div class="hm-donor-v2-tags">
+                <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
+                <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+              </div>
+              <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
+            </div>
+          </div>
+          <div class="hm-donor-v2-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
+            ₪{{ d.amount.toLocaleString('he-IL') }}
+          </div>
+        </div>
+        <div class="hm-donors-empty" [style.color]="sectionBodyTextColor(draft)" *ngIf="visibleDonors.length === 0">אין עדיין תרומות בטווח הזמן הזה</div>
+      </div>
+
+      <button class="hm-donor-list-more" *ngIf="canShowMore" (click)="showMoreDonors()">הצג עוד תורמים</button>
     </ng-container>
 
     <!-- ── Below-sidebar placement (default): unchanged ── -->
     <ng-container *ngIf="!inSidebarSection(draft, 'donors')">
-      <h2 class="hm-section-title" [style.color]="primaryColor(draft)">התורמים שלנו ❤️</h2>
+      <h2 class="hm-section-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
 
       <!-- Stats row -->
       <div class="hm-donors-stats">
@@ -1707,19 +2111,19 @@
           <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
             ₪{{ (draft.currentAmount ?? 0).toLocaleString('he-IL') }}
           </span>
-          <span class="hm-donors-stat-label">סך התרומות</span>
+          <span class="hm-donors-stat-label" [style.color]="sectionBodyTextColor(draft)">סך התרומות</span>
         </div>
         <div class="hm-donors-stat">
           <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
             {{ draft.supportersCount ?? 0 | number }}
           </span>
-          <span class="hm-donors-stat-label">תורמים</span>
+          <span class="hm-donors-stat-label" [style.color]="sectionBodyTextColor(draft)">תורמים</span>
         </div>
         <div class="hm-donors-stat">
           <span class="hm-donors-stat-value" [style.color]="draft.layout.theme.accentColor">
             ₪{{ (draft.supportersCount ? (draft.currentAmount ?? 0) / draft.supportersCount : 0) | number:'1.0-0' }}
           </span>
-          <span class="hm-donors-stat-label">תרומה ממוצעת</span>
+          <span class="hm-donors-stat-label" [style.color]="sectionBodyTextColor(draft)">תרומה ממוצעת</span>
         </div>
       </div>
 
@@ -1729,7 +2133,7 @@
              duplicating it in a second, mostly-redundant card. -->
         <div class="hm-donors-filters">
           <div class="hm-donors-filter-group">
-            <span class="hm-donors-filter-label">תקופה</span>
+            <span class="hm-donors-filter-label" [style.color]="sectionBodyTextColor(draft)">תקופה</span>
             <div class="hm-donors-period-tabs">
               <button [class.active]="donorPeriod === 'all'"   [style.background]="donorPeriod === 'all'   ? primaryColor(draft) : ''" (click)="setDonorPeriod('all')">כל התרומות</button>
               <button [class.active]="donorPeriod === 'week'"  [style.background]="donorPeriod === 'week'  ? primaryColor(draft) : ''" (click)="setDonorPeriod('week')">השבוע</button>
@@ -1737,7 +2141,7 @@
             </div>
           </div>
           <div class="hm-donors-filter-group">
-            <span class="hm-donors-filter-label">מיון</span>
+            <span class="hm-donors-filter-label" [style.color]="sectionBodyTextColor(draft)">מיון</span>
             <div class="hm-donors-period-tabs">
               <button [class.active]="donorSort === 'recent'" [style.background]="donorSort === 'recent' ? primaryColor(draft) : ''" (click)="setDonorSort('recent')">אחרונות</button>
               <button [class.active]="donorSort === 'amount'" [style.background]="donorSort === 'amount' ? primaryColor(draft) : ''" (click)="setDonorSort('amount')">הגדולות ביותר</button>
@@ -1745,30 +2149,54 @@
           </div>
         </div>
 
-        <div class="hm-donors-grid" *ngIf="visibleDonors.length > 0; else donorsEmpty">
-          <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
-            <div class="hm-donor-v2-left">
-              <div class="hm-donor-v2-avatar"
+        <ng-container *ngIf="visibleDonors.length > 0; else donorsEmpty">
+
+          <!-- Cards presentation (today's default) -->
+          <div class="hm-donors-grid" *ngIf="sectionPresentation(draft, 'donors') === 'cards'">
+            <div class="hm-donor-card-v2" *ngFor="let d of visibleDonors">
+              <div class="hm-donor-v2-left">
+                <div class="hm-donor-v2-avatar"
+                  [style.background]="draft.layout.theme.accentColor + '22'"
+                  [style.color]="draft.layout.theme.accentColor">
+                  {{ donorInitials(d.name) }}
+                </div>
+                <div class="hm-donor-v2-info">
+                  <span class="hm-donor-v2-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+                  <div class="hm-donor-v2-tags">
+                    <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
+                    <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
+                  </div>
+                  <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
+                </div>
+              </div>
+              <div class="hm-donor-v2-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
+                ₪{{ d.amount.toLocaleString('he-IL') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- List presentation (new combination -- same compact row markup
+               as the sidebar variant above, full-width here). -->
+          <div class="hm-donor-list-sidebar hm-donor-list-sidebar--wide" *ngIf="sectionPresentation(draft, 'donors') === 'list'">
+            <div class="hm-donor-list-row" *ngFor="let d of visibleDonors">
+              <div class="hm-donor-list-avatar"
                 [style.background]="draft.layout.theme.accentColor + '22'"
                 [style.color]="draft.layout.theme.accentColor">
                 {{ donorInitials(d.name) }}
               </div>
-              <div class="hm-donor-v2-info">
-                <span class="hm-donor-v2-name" [style.color]="primaryColor(draft)">{{ d.name }}</span>
-                <div class="hm-donor-v2-tags">
-                  <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
-                  <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
-                </div>
-                <span class="hm-donor-v2-time">{{ timeAgo(d.completedAt) }}</span>
+              <div class="hm-donor-list-info">
+                <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+                <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
+              </div>
+              <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
+                ₪{{ d.amount.toLocaleString('he-IL') }}
               </div>
             </div>
-            <div class="hm-donor-v2-amount" [style.color]="draft.layout.theme.accentColor">
-              ₪{{ d.amount.toLocaleString('he-IL') }}
-            </div>
           </div>
-        </div>
+
+        </ng-container>
         <ng-template #donorsEmpty>
-          <div class="hm-donors-empty">אין עדיין תרומות בטווח הזמן הזה</div>
+          <div class="hm-donors-empty" [style.color]="sectionBodyTextColor(draft)">אין עדיין תרומות בטווח הזמן הזה</div>
         </ng-template>
 
         <div class="hm-donors-footer" *ngIf="canShowMore">
@@ -1785,13 +2213,26 @@
 
   <!-- UPDATES — slider, list, or compact sidebar list -->
   <section class="hm-section hm-updates" [class.hm-updates--sidebar-list]="inSidebarSection(draft, 'updates')"
-    *ngIf="block.type === 'updates'" id="section-updates">
+    *ngIf="block.type === 'updates' && shouldRenderBlock(block, draft)" id="section-updates">
 
-    <!-- ── Sidebar placement: compact vertical list, own pagination ── -->
+    <!-- ── Sidebar placement: simple header, own pagination; the item
+         markup itself follows Section Presentation, independent of
+         placement. ── -->
     <ng-container *ngIf="inSidebarSection(draft, 'updates')">
       <h2 class="hm-amb-list-title" [style.color]="primaryColor(draft)">עדכונים</h2>
       <ng-container *ngIf="publishedUpdates(draft).length > 0; else updatesEmpty">
-        <div class="hm-update-list-sidebar">
+
+        <!-- Compact search (2026-10-05) -- same updatesSearch state/pipeline
+             as the main-content control below. -->
+        <div class="hm-updates-filters hm-updates-filters--compact">
+          <input type="text" class="hm-updates-filter-search" [(ngModel)]="updatesSearch"
+                 (ngModelChange)="onUpdatesSearchChange()" placeholder="חיפוש בעדכונים...">
+        </div>
+
+        <ng-container *ngIf="updatesFiltered(draft).length > 0; else updatesSearchEmpty">
+
+        <!-- List presentation -->
+        <div class="hm-update-list-sidebar" *ngIf="updatesPresentation(draft, block) === 'list'">
           <article class="hm-update-list-sidebar-item" *ngFor="let u of visibleUpdates(draft)" (click)="openUpdate(u)">
             <span class="hm-update-date-badge">{{ formatDate(u.date) }}</span>
             <h3 class="hm-update-title" [style.color]="primaryColor(draft)" [innerHTML]="safeHtml(u.title)"></h3>
@@ -1804,6 +2245,39 @@
             <button type="button" class="hm-updates-pager-btn" [disabled]="!canGoNextUpdates(draft)" (click)="nextUpdatesPage(draft)" aria-label="עדכונים הבאים">▼</button>
           </div>
         </div>
+
+        <!-- Cards presentation (new combination -- same card markup as the
+             main-content slider below, stacked vertically instead of
+             scrolling horizontally; see .hm-updates--sidebar-list overrides
+             in the .css). -->
+        <div class="hm-updates-outer" *ngIf="updatesPresentation(draft, block) === 'cards'">
+          <div class="hm-updates-slider">
+            <div class="hm-updates-track">
+              <article class="hm-update-card" *ngFor="let u of updatesFiltered(draft)" (click)="openUpdate(u)">
+                <div class="hm-update-media">
+                  <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
+                  <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
+                  <span class="hm-update-date-badge hm-update-date-badge--floating">{{ formatDate(u.date) }}</span>
+                </div>
+                <div class="hm-update-content">
+                  <h3 class="hm-update-title" [style.color]="primaryColor(draft)" [innerHTML]="safeHtml(u.title)"></h3>
+                  <a *ngIf="u.linkUrl" class="hm-update-link" [href]="u.linkUrl" target="_blank" (click)="$event.stopPropagation()">
+                    {{ u.linkLabel || 'קרא עוד' }} →
+                  </a>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        </ng-container>
+        <ng-template #updatesSearchEmpty>
+          <div class="hm-updates-filter-empty">
+            לא נמצאו עדכונים התואמים את החיפוש.
+            <button type="button" (click)="resetUpdatesSearch()">נקה חיפוש</button>
+          </div>
+        </ng-template>
+
       </ng-container>
     </ng-container>
 
@@ -1813,13 +2287,22 @@
 
     <ng-container *ngIf="publishedUpdates(draft).length > 0; else updatesEmpty">
 
-      <!-- SLIDER — horizontal scroll is its own "paging", shows everything -->
-      <ng-container *ngIf="(asUpdates(block.data).viewMode || 'slider') === 'slider'">
+      <!-- Search (2026-10-05) -- same updatesSearch state/pipeline as the
+           sidebar's compact control. -->
+      <div class="hm-updates-filters">
+        <input type="text" class="hm-updates-filter-search" [(ngModel)]="updatesSearch"
+               (ngModelChange)="onUpdatesSearchChange()" placeholder="חיפוש בעדכונים...">
+      </div>
+
+      <ng-container *ngIf="updatesFiltered(draft).length > 0; else updatesSearchEmptyMain">
+
+      <!-- Cards presentation — horizontal scroll is its own "paging", shows everything -->
+      <ng-container *ngIf="updatesPresentation(draft, block) === 'cards'">
         <div class="hm-updates-outer">
           <button class="hm-amb-arrow" (click)="scrollSlider(updatesSlider, 'prev')">‹</button>
           <div class="hm-updates-slider" #updatesSlider>
             <div class="hm-updates-track">
-              <article class="hm-update-card" *ngFor="let u of publishedUpdates(draft)" (click)="openUpdate(u)">
+              <article class="hm-update-card" *ngFor="let u of updatesFiltered(draft)" (click)="openUpdate(u)">
                 <div class="hm-update-media">
                   <img *ngIf="u.mediaUrl" [src]="u.mediaUrl" alt="">
                   <div *ngIf="!u.mediaUrl" class="hm-update-media-placeholder"></div>
@@ -1838,10 +2321,10 @@
         </div>
       </ng-container>
 
-      <!-- LIST — paged, same "הצג עוד" pattern as the sidebar variant, so a
-           campaign with many updates doesn't turn the whole page into one
-           long vertical scroll. -->
-      <ng-container *ngIf="asUpdates(block.data).viewMode === 'list'">
+      <!-- List presentation — paged, same "הצג עוד" pattern as the sidebar
+           variant, so a campaign with many updates doesn't turn the whole
+           page into one long vertical scroll. -->
+      <ng-container *ngIf="updatesPresentation(draft, block) === 'list'">
         <div class="hm-updates-list-view">
           <article class="hm-update-list-item" *ngFor="let u of visibleUpdates(draft)" (click)="openUpdate(u)">
             <div class="hm-update-media hm-update-media--sm">
@@ -1862,6 +2345,14 @@
           </div>
         </div>
       </ng-container>
+
+      </ng-container>
+      <ng-template #updatesSearchEmptyMain>
+        <div class="hm-updates-filter-empty">
+          לא נמצאו עדכונים התואמים את החיפוש.
+          <button type="button" (click)="resetUpdatesSearch()">נקה חיפוש</button>
+        </div>
+      </ng-template>
 
     </ng-container>
     </ng-container>
