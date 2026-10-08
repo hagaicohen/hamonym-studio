@@ -27,9 +27,13 @@ function getStatusCode(
     case 'End date must be on or after the start date to publish':
     case 'Cannot change slug after publishing':
     case 'Invalid campaign category':
+    // Raised by syncAmbassadors when a Builder draft carries an
+    // ambassador personal link that fails canonical validation.
+    case 'Slug too short':
       return 400;
 
     case 'Campaign slug already exists':
+    case 'Slug taken':
       return 409;
 
     case 'Campaign is locked':
@@ -68,6 +72,12 @@ function getErrorMessage(
 
     case 'Campaign slug already exists':
       return 'כתובת הקמפיין כבר קיימת';
+
+    case 'Slug taken':
+      return 'הכתובת האישית הזו כבר תפוסה בקמפיין — בחרו כתובת אחרת';
+
+    case 'Slug too short':
+      return 'הכתובת האישית קצרה מדי';
 
     case 'Campaign is locked':
       return 'הקמפיין נעול על ידי מנהל הפלטפורמה';
@@ -453,7 +463,8 @@ exports.updateMyAmbassadorRecord = async (req, res) => {
     res.json({ ambassador: record });
   } catch (err) {
     const status = err.message === 'Ambassador not found' ? 404
-      : err.message === 'No fields supplied' ? 400 : 500;
+      : err.message === 'Slug taken' ? 409
+      : err.message === 'No fields supplied' || err.message === 'Slug too short' ? 400 : 500;
     res.status(status).json({ error: err.message });
   }
 };

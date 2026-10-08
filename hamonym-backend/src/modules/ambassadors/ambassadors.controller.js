@@ -3,10 +3,13 @@ const svc = require('./ambassadors.service');
 function statusFor(err) {
   switch (err.message) {
     case 'Unauthorized':        return 403;
-    case 'Ambassador not found': return 404;
-    case 'Has donations':       return 409;
+    case 'Ambassador not found':
+    case 'Campaign not found':  return 404;
+    case 'Has donations':
+    case 'Slug taken':          return 409;
     case 'Name required':
     case 'No fields supplied':
+    case 'Slug too short':
     case 'Amount must be positive': return 400;
     default:                    return 500;
   }
@@ -88,8 +91,23 @@ exports.selfRegister = async (req, res) => {
     const result = await svc.selfRegister(req.params.campaignSlug, req.body);
     res.status(201).json(result);
   } catch (e) {
-    const status = e.message === 'Campaign not found' ? 404
-      : e.message === 'Name required' ? 400 : 500;
-    res.status(status).json({ error: e.message });
+    res.status(statusFor(e)).json({ error: e.message });
+  }
+};
+
+// Public — availability check for a candidate personal link. Deliberately
+// unauthenticated, same reasoning as selfRegister/listPublic/getBySlug: the
+// registration it precedes is itself anonymous, so the check must be too.
+// Pure read, no reservation.
+exports.checkSlugAvailable = async (req, res) => {
+  try {
+    const result = await svc.checkSlugAvailable(
+      req.params.campaignSlug,
+      req.params.candidateSlug,
+      req.query.excludeAmbassadorId || undefined,
+    );
+    res.json(result);
+  } catch (e) {
+    res.status(statusFor(e)).json({ error: e.message });
   }
 };

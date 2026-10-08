@@ -7,6 +7,14 @@ const { isEntityMember } =
 const { isValidCategoryId } =
   require('./entity-categories');
 
+// Reused only for the ambassador personal-link slug rules, so that the
+// Ambassador Studio self-edit path (updateMyAmbassadorRecord) and the
+// Campaign Builder draft path (syncAmbassadors) share exactly ONE
+// normalization/validation implementation with the admin CRUD path
+// (ambassadors.service.js#update) instead of drifting copies.
+const { validateAndReserveSlug, normalizeSlugOrThrow } =
+  require('../ambassadors/ambassadors.service');
+
 // The placeholder createCampaign backfills when a draft has no title yet
 // (see below) — exported so anything that needs to tell "a real title" apart
 // from "just the cosmetic default" (e.g. CampaignAdvisorAgent's hasTitle
@@ -487,7 +495,30 @@ exports.createCampaign =
 async function syncAmbassadors(campaignId, ambassadors) {
   if (!Array.isArray(ambassadors) || ambassadors.length === 0) return;
 
-  const incomingSlugs = ambassadors.map(a => a.slug).filter(Boolean);
+  // The Builder submits each ambassador's personal link straight from client
+  // state, so it is run through the SAME canonical normalizer/validator as
+  // every other write path (ambassadors.service.js#update,
+  // #create, #selfRegister, updateMyAmbassadorRecord) before anything is
+  // persisted or deleted. Without this, a draft save could store a raw
+  // client string ("Gad Ivgi") that no other path would ever accept and that
+  // would not resolve as a URL.
+  //
+  // The conflict rule differs only in scope, not in content: here the slug
+  // IS the business key the upsert below matches an existing row on, so a
+  // slug already held by this same campaign is the ambassador's own row
+  // (the self-exclusion case), not a conflict. What must still be rejected
+  // is two ambassadors in one submitted list claiming the same link — an
+  // explicit choice that cannot be silently deduplicated.
+  const seen = new Set();
+  ambassadors = ambassadors.map(a => {
+    if (!a || !a.slug) return a;
+    const slug = normalizeSlugOrThrow(a.slug);
+    if (seen.has(slug)) throw new Error('Slug taken');
+    seen.add(slug);
+    return { ...a, slug };
+  });
+
+  const incomingSlugs = ambassadors.map(a => a && a.slug).filter(Boolean);
 
   // Delete rows whose slugs are no longer in the list
   if (incomingSlugs.length > 0) {
@@ -1243,10 +1274,19 @@ exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
   if (!found.length) throw new Error('Ambassador not found');
   const ambassadorId = found[0].id;
 
+  // Validated/reserved before the generic field loop, same reasoning as
+  // ambassadors.service.js#update: a change to an already-taken personal
+  // link must fail loudly rather than surface the DB unique constraint as
+  // an opaque error. campaignId is already this function's own parameter,
+  // so no extra lookup is needed, and the ambassador is self-excluded.
+  if (data.slug !== undefined) {
+    data = { ...data, slug: await validateAndReserveSlug(campaignId, data.slug, ambassadorId) };
+  }
+
   const fields = [];
   const vals   = [];
   let   i      = 1;
-  const allowed    = ['full_name','phone','email','goal_amount','personal_message','personal_title'];
+  const allowed    = ['full_name','phone','email','goal_amount','personal_message','personal_title','slug'];
   const notNullable = new Set(['full_name', 'personal_message']);
   for (const key of allowed) {
     if (data[key] !== undefined) {
@@ -1282,7 +1322,7 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
             a.goal_amount, a.personal_message, a.status, a.slug,
             a.personal_title, a.created_at,
             c.title AS campaign_title, c.slug AS campaign_slug,
-            c.cover_image_url AS campaign_cover
+            c.cover_image_url AS campaign_cover, c.target_amount AS campaign_target_amount
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
      WHERE a.campaign_id = $2
@@ -1309,6 +1349,9 @@ exports.myAmbassadorRecord = async (userId, campaignId) => {
       title: r.campaign_title ?? '',
       slug:  r.campaign_slug  ?? '',
       cover: r.campaign_cover ?? null,
+      // Context for the ambassador's own personal goal, which is
+      // motivational only — never enforced as a cap.
+      target_amount: r.campaign_target_amount != null ? Number(r.campaign_target_amount) : 0,
     },
   };
 };

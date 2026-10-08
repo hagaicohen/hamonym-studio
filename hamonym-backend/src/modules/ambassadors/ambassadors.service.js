@@ -3,20 +3,41 @@ const { isEntityMember } = require('../../middleware/entity-permission.middlewar
 
 // ─── Slug helpers ────────────────────────────────────────────────────────────
 
-const HE_MAP = {
-  'א':'a','ב':'b','ג':'g','ד':'d','ה':'h','ו':'v','ז':'z','ח':'ch','ט':'t',
-  'י':'y','כ':'k','ך':'k','ל':'l','מ':'m','ם':'m','נ':'n','ן':'n','ס':'s',
-  'ע':'a','פ':'p','ף':'p','צ':'tz','ץ':'tz','ק':'k','ר':'r','ש':'sh','ת':'t',
-};
+// THE one canonical normalizer for an ambassador personal-link slug. Every
+// write path (admin CRUD, public self-register, Ambassador Studio self-edit,
+// Campaign Builder draft sync) must go through this — see
+// normalizeSlugOrThrow / validateAndReserveSlug below.
+//
+// Hebrew is preserved as-is rather than transliterated to ASCII through a
+// HE_MAP (א->a, ש->sh ...), which used to force every auto-generated link to
+// be Latin even for a Hebrew name, contradicting the product rule that the
+// personal link may be Hebrew or English. The accepted charset mirrors the
+// existing CAMPAIGN slug mechanism exactly (campaign-basic-step's
+// allowSlugChars; campaigns.controller#checkSlugAvailable), so this is not a
+// new convention.
+function normalizeSlug(raw) {
+  return (raw || '').trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9א-ת-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
+
+const MIN_SLUG_LENGTH = 2;
+
+// Canonical normalize + shape validation, with no DB access — the part of
+// the rule that every write path shares even when the conflict scope
+// differs (see syncAmbassadors in campaigns.service.js).
+function normalizeSlugOrThrow(raw) {
+  const normalized = normalizeSlug(raw);
+  if (normalized.length < MIN_SLUG_LENGTH) throw new Error('Slug too short');
+  return normalized;
+}
 
 function nameToSlug(name) {
-  return name.trim()
-    .split('')
-    .map(c => HE_MAP[c] ?? (c === ' ' ? '-' : c.toLowerCase()))
-    .join('')
-    .replace(/-+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .slice(0, 60);
+  return normalizeSlug(name);
 }
 
 async function uniqueSlug(campaignId, base) {
@@ -32,6 +53,53 @@ async function uniqueSlug(campaignId, base) {
     attempt++;
   }
 }
+
+// Explicit slug chosen by a human (ambassador or admin). Unlike uniqueSlug()
+// above — which may silently append -1/-2... because nobody chose that exact
+// AUTO-generated default on purpose — this never substitutes: an already
+// taken value is a real error the caller must surface, per the product rule
+// that unavailability is communicated, never auto-resolved.
+// Conflict scope is (campaign_id, slug), matching the DB's own
+// campaign_ambassadors_unique_slug constraint — per campaign, never global.
+// excludeAmbassadorId gives an ambassador self-exclusion when re-saving
+// their own current slug.
+async function validateAndReserveSlug(campaignId, requestedSlug, excludeAmbassadorId) {
+  const normalized = normalizeSlugOrThrow(requestedSlug);
+  const { rows } = await db.query(
+    excludeAmbassadorId
+      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND id != $3'
+      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
+    excludeAmbassadorId ? [campaignId, normalized, excludeAmbassadorId] : [campaignId, normalized]
+  );
+  if (rows.length > 0) throw new Error('Slug taken');
+  return normalized;
+}
+
+exports.normalizeSlug = normalizeSlug;
+exports.normalizeSlugOrThrow = normalizeSlugOrThrow;
+exports.validateAndReserveSlug = validateAndReserveSlug;
+
+// Public availability check — same precedence pattern as the existing
+// campaign-slug check (campaigns.controller#checkSlugAvailable): debounced
+// on the frontend, pure lookup here, no reservation or side effect.
+exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassadorId) => {
+  const normalized = normalizeSlug(candidateSlug);
+  const { rows: camps } = await db.query(
+    `SELECT id FROM campaigns WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`,
+    [campaignSlug]
+  );
+  if (!camps.length) throw new Error('Campaign not found');
+  if (normalized.length < MIN_SLUG_LENGTH) {
+    return { slug: normalized, available: false, reason: 'too_short' };
+  }
+  const { rows } = await db.query(
+    excludeAmbassadorId
+      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND id != $3'
+      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
+    excludeAmbassadorId ? [camps[0].id, normalized, excludeAmbassadorId] : [camps[0].id, normalized]
+  );
+  return { slug: normalized, available: rows.length === 0 };
+};
 
 // ─── Row mapper ──────────────────────────────────────────────────────────────
 
@@ -133,10 +201,15 @@ exports.list = async (userId, campaignId) => {
 
 exports.create = async (userId, campaignId, data) => {
   await verifyCampaignOwnership(userId, campaignId);
-  const { full_name, phone, email, goal_amount, personal_message } = data;
+  const { full_name, phone, email, goal_amount, personal_message, slug: requestedSlug } = data;
   if (!full_name?.trim()) throw new Error('Name required');
 
-  const slug = await uniqueSlug(campaignId, nameToSlug(full_name));
+  // An explicit personal link typed by the admin wins and is validated
+  // without substitution; with none supplied, keep the existing
+  // auto-generate-and-dedupe default behavior unchanged.
+  const slug = requestedSlug
+    ? await validateAndReserveSlug(campaignId, requestedSlug)
+    : await uniqueSlug(campaignId, nameToSlug(full_name));
 
   const { rows } = await db.query(
     `INSERT INTO campaign_ambassadors
@@ -160,10 +233,25 @@ exports.update = async (userId, id, data) => {
     data = { ...data, deactivated_at: null, deactivated_by: null };
   }
 
+  // Validated/normalized BEFORE the generic field loop below (which assigns
+  // values verbatim and has no per-field validation hook), so a change to an
+  // already-taken slug fails loudly as 'Slug taken' instead of surfacing the
+  // DB unique constraint as an opaque 500. The ambassador's own current slug
+  // is excluded, so re-saving it unchanged is a no-op rather than a conflict.
+  // An existing link is never altered as a side effect of editing other
+  // fields — only when `slug` is explicitly supplied.
+  if (data.slug !== undefined) {
+    const { rows: campRows } = await db.query(
+      'SELECT campaign_id FROM campaign_ambassadors WHERE id = $1', [id]
+    );
+    if (!campRows.length) throw new Error('Ambassador not found');
+    data = { ...data, slug: await validateAndReserveSlug(campRows[0].campaign_id, data.slug, id) };
+  }
+
   const fields = [];
   const vals   = [];
   let   i      = 1;
-  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title','status','deactivated_at','deactivated_by'];
+  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title','status','slug','deactivated_at','deactivated_by'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = $${i++}`);
@@ -260,7 +348,7 @@ exports.listPublic = async (campaignSlug) => {
   return rows.map(mapRow);
 };
 
-exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount }) => {
+exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, slug: requestedSlug }) => {
   if (!full_name?.trim()) throw new Error('Name required');
 
   const { rows: camps } = await db.query(
@@ -274,7 +362,14 @@ exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amou
   if (!camps.length) throw new Error('Campaign not found');
   const campaignId = camps[0].id;
 
-  const slug = await uniqueSlug(campaignId, nameToSlug(full_name));
+  // An explicit link the ambassador chose before submitting is always
+  // re-validated here — the debounced client-side availability check is
+  // never trusted on its own, since a second registrant could have taken
+  // the slug in between. No explicit slug falls back to the original
+  // auto-generate-and-dedupe behavior unchanged.
+  const slug = requestedSlug
+    ? await validateAndReserveSlug(campaignId, requestedSlug)
+    : await uniqueSlug(campaignId, nameToSlug(full_name));
 
   const { rows } = await db.query(
     `INSERT INTO campaign_ambassadors

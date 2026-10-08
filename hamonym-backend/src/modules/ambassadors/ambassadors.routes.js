@@ -21,6 +21,13 @@ router.post(
   ctrl.selfRegister
 );
 
+// Public — is a candidate personal link still free? No auth, same reasoning
+// as self-register above.
+router.get(
+  '/campaigns/:campaignSlug/ambassadors/check-slug/:candidateSlug',
+  ctrl.checkSlugAvailable
+);
+
 // Protected — entity-wide ambassadors admin page
 router.get(
   '/entities/:id/ambassadors',
