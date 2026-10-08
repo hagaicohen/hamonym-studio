@@ -1,11 +1,12 @@
-// Real-DB regression test for getApprovalStatus's audit-log filter
-// (entities.service.js#getApprovalStatus) -- fixes a real bug where the
-// single most-recent platform_audit_log row for an entity, regardless of
-// action type, leaked verbatim onto the association's own Settings page as
-// an "issues to complete" comment. Found live: a Super Admin's
-// billing_account_create action auto-writes an internal note
+// Real-DB regression test for the platform_audit_log action filter shared by
+// entities.service.js#getApprovalStatus AND #getNotifications -- fixes a
+// real bug where an unfiltered platform_audit_log row for an entity leaked
+// verbatim onto an association-facing surface. Found live twice: first on
+// the Settings page's "issues to complete" comment (getApprovalStatus), then
+// again in the notification bell itself (getNotifications) -- a Super
+// Admin's billing_account_create action auto-writes an internal note
 // ("fee_rate=0.03 vat_rate=0.18 preferred_collection_method=card") that
-// then surfaced as if it were an approval-reviewer comment.
+// surfaced there as if it were a real admin decision notification.
 //
 // Everything created here is throwaway and fully deleted at the end
 // (verified by re-querying).
@@ -108,6 +109,29 @@ async function main() {
       assert.strictEqual(status.comment, 'חסר מסמך התאגדות');
       assert.deepStrictEqual(status.reasonTags, ['missing_document']);
       assert.strictEqual(status.actionBy, 'ZZZ Test Super Admin');
+    });
+
+    await check('getNotifications never surfaces a non-decision audit action (billing_account_create)', async () => {
+      const notifs = await entitiesService.getNotifications(ids.entityId, ids.ownerUser);
+      assert.ok(
+        notifs.every((n) => n.action !== 'billing_account_create'),
+        'billing_account_create must never appear in the notification bell feed'
+      );
+      assert.ok(
+        notifs.every((n) => n.action !== 'masav_bank_details_upsert' && n.action !== 'masav_authorize'),
+        'MASAV self-service actions must never appear in the notification bell feed either'
+      );
+    });
+
+    await check('getNotifications DOES surface a real unacknowledged approval-decision action', async () => {
+      await pool.query(
+        `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes) VALUES ($1, $2, 'suspend', $3)`,
+        [ids.superAdmin, ids.entityId, 'בדיקה תקופתית']
+      );
+      const notifs = await entitiesService.getNotifications(ids.entityId, ids.ownerUser);
+      const suspendNotif = notifs.find((n) => n.action === 'suspend');
+      assert.ok(suspendNotif, 'a real suspend decision must appear in the notification bell feed');
+      assert.strictEqual(suspendNotif.notes, 'בדיקה תקופתית');
     });
   } finally {
     await cleanup();

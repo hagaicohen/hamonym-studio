@@ -1158,13 +1158,18 @@ exports.getApprovalStatus = async (entityId, userId) => {
 exports.getNotifications = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 
+  // Same leak this file already fixed once for getApprovalStatus above (see
+  // APPROVAL_DECISION_ACTIONS' comment) -- without this filter, every
+  // unrelated Super Admin action on this entity (billing account
+  // provisioning, MASAV edits, etc.) surfaced verbatim in the bell too, e.g.
+  // "fee_rate=0.03 vat_rate=0.18 preferred_collection_method=card".
   const result = await db.query(
     `SELECT a.id, a.action, a.notes, a.reason_tags, a.created_at, u.full_name AS actor_name
      FROM platform_audit_log a
      JOIN users u ON u.id = a.super_admin_user_id
-     WHERE a.entity_id = $1 AND a.acknowledged_at IS NULL
+     WHERE a.entity_id = $1 AND a.acknowledged_at IS NULL AND a.action = ANY($2)
      ORDER BY a.created_at DESC`,
-    [entityId]
+    [entityId, APPROVAL_DECISION_ACTIONS]
   );
 
   return result.rows.map(r => ({
