@@ -20,6 +20,7 @@
 // exist" before deciding to create another. Until either of those is
 // resolved, recovery here can only make things worse, never better.
 const { recordFinding } = require('./reconciliation-findings');
+const adminNotifications = require('../modules/email/admin-notification.service');
 
 module.exports = {
   name: 'stuck-recurring-signups',
@@ -52,7 +53,7 @@ module.exports = {
     let stuckFindings = 0;
     for (const row of res.rows) {
       stuckFindings++;
-      await recordFinding(db, {
+      const finding = await recordFinding(db, {
         jobName: 'stuck-recurring-signups',
         findingType: 'stuck_recurring_signup',
         severity: 'critical',
@@ -66,6 +67,33 @@ module.exports = {
           donationCompletedAt: row.donation_completed_at,
         },
       });
+
+      // Admin/ops notification (event F, 2026-10-07) — after the finding is
+      // committed, keyed on the finding row id, so the hourly re-detection of
+      // the same stuck instruction upserts into the same row and emails once.
+      //
+      // Carries ids and the instruction's status only: donor_email is stored
+      // in the finding (where an operator with access sees it) but is NOT put
+      // in the email. Still detect-only — no repair is attempted here or in
+      // the notification path, and the wording says so explicitly.
+      if (finding) {
+        adminNotifications.queueAdminNotification('stuck_recurring_signup', {
+          incidentKey: `FINDING:stuck_recurring_signup:${finding.id}`,
+          data: {
+            findingId: finding.id,
+            findingType: 'stuck_recurring_signup',
+            jobName: 'stuck-recurring-signups',
+            subjectType: 'recurring_instruction',
+            subjectId: row.id,
+            foundAt: finding.found_at,
+            details: {
+              instructionStatus: row.status,
+              paidDonationId: row.donation_id,
+              entityId: row.entity_id,
+            },
+          },
+        });
+      }
     }
 
     // Auto-resolve: rechecks each currently-open finding's OWN instruction

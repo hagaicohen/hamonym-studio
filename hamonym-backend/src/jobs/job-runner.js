@@ -1,4 +1,5 @@
 const db = require('../db/db');
+const adminNotifications = require('../modules/email/admin-notification.service');
 
 // Generic scheduled-job core — not Cardcom-specific. See
 // docs/CARDCOM_OPERATIONAL_PROCESSES.md (Part F). Deliberately NOT wired to
@@ -92,6 +93,29 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
         `UPDATE job_runs SET status='failed', finished_at=NOW(), duration_ms=$1, error=$2 WHERE id=$3`,
         [durationMs, err.message, runId]
       );
+
+      // Admin/ops notification (event A, 2026-10-07) — fired only AFTER the
+      // job_runs row is durably marked 'failed', so the email can never
+      // describe a failure that no row records. Keyed on runId, which is
+      // unique per real run, so a re-run (or an admin "Run now" while the
+      // scheduler also runs it) produces its own alert rather than re-sending
+      // this one, and nothing re-sends for this run ever again.
+      //
+      // queueAdminNotification is synchronous and cannot throw — the job's
+      // own 'failed' result below is returned identically whether or not any
+      // notification is ever delivered.
+      adminNotifications.queueAdminNotification('job_run_failed', {
+        incidentKey: `JOB_RUN_FAILED:${runId}`,
+        data: {
+          jobName,
+          jobRunId: runId,
+          failedAt: new Date().toISOString(),
+          durationMs,
+          triggeredBy,
+          error: err.message,
+        },
+      });
+
       return { runId, status: 'failed', error: err.message };
     } finally {
       await lockClient.query('COMMIT'); // releases the xact lock

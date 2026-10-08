@@ -6,6 +6,7 @@ const entitiesService = require('../entities/entities.service');
 const ambassadorsService = require('../ambassadors/ambassadors.service');
 const donationsService = require('../donations/donations.service');
 const emailService = require('../email/email.service');
+const adminNotifications = require('../email/admin-notification.service');
 
 const ORG_SORT_COLUMNS = {
   name: 'COALESCE(NULLIF(e.display_name, \'\'), e.legal_name)',
@@ -620,6 +621,9 @@ exports.getOrganizationDetail = async (entityId) => {
 
 async function setStatus(entityId, superAdminUserId, status, action, notes, reasonTags, ip) {
   const client = await db.connect();
+  let auditLogId = null;
+  let autoPublishedCount = 0;
+  let updatedEntity = null;
   try {
     await client.query('BEGIN');
 
@@ -638,12 +642,20 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
       [status, entityId, clearsFlag]
     );
     if (!result.rows[0]) throw new Error('Entity not found');
+    updatedEntity = result.rows[0];
 
-    await client.query(
+    // RETURNING id (2026-10-05, Pilot Email P0): this row IS the decision —
+    // one audit row per approve/reject click — so its id is the natural
+    // stable idempotency key for "the email about THIS decision". A
+    // timestamp or the entity id alone would either collide across repeat
+    // decisions or dedupe two genuinely different decisions into one.
+    const auditRes = await client.query(
       `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, reason_tags, ip_address)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
       [superAdminUserId, entityId, action, notes || null, reasonTags && reasonTags.length ? reasonTags : null, ip || null]
     );
+    auditLogId = auditRes.rows[0].id;
 
     // Publication intent (2026-09-24) — ONLY the entity's initial approval
     // auto-publishes anything it was asked to. Deliberately gated on
@@ -657,16 +669,102 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
     // reason". Runs inside this same transaction — see
     // campaigns.service.js#publishRequestedCampaigns's own doc comment.
     if (status === 'active' && action === 'approve') {
-      await require('../campaigns/campaigns.service').publishRequestedCampaigns(entityId, client);
+      const publishedIds = await require('../campaigns/campaigns.service').publishRequestedCampaigns(entityId, client);
+      autoPublishedCount = publishedIds?.length || 0;
     }
 
     await client.query('COMMIT');
-    return result.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
+  }
+
+  const entity = updatedEntity;
+
+  // Transactional email — AFTER COMMIT, never inside the transaction above
+  // (same rule donations.service.js#queueReceiptEmail already follows: an
+  // email about a state change that a rollback then erased is worse than no
+  // email at all). Never throws: the approval/rejection the Super Admin
+  // just performed is already durable by this point, so a failure to even
+  // *queue* an email must not surface to them as if the decision itself
+  // failed. Logged, not raised. emailService.queue is itself
+  // fire-and-forget and swallows provider errors (see email.service.js).
+  if (action === 'approve' || action === 'reject') {
+    await notifyEntityDecision({ entity, entityId, action, auditLogId, autoPublishedCount });
+  }
+
+  return entity;
+}
+
+// Recipient resolution deliberately reuses billing-setup-notification
+// .service.js#resolveEntityAdmins rather than inventing a second rule: that
+// is the already-settled definition of "entity administrator"
+// (user_entities.role = 'owner' AND users.is_active), with its own comment
+// explaining why 'owner' is the correct target in today's production data.
+// An entity can legitimately have several owners — all of them are notified,
+// and no arbitrary single user is ever guessed.
+//
+// Rejection reason: read back through the EXACT same filtered lookup the
+// entity's own Settings page uses (entities.service.js#getApprovalStatus ->
+// APPROVAL_DECISION_ACTIONS), i.e. only the note attached to THIS approval
+// decision. platform_audit_log is a shared audit trail and its non-decision
+// rows have already leaked internal billing notes to a user-facing screen
+// once; reading the decision row by its own id can't repeat that. If the
+// note is empty, nothing is passed and the template falls back to a neutral
+// "requires attention / contact us" wording instead of inventing a reason.
+async function notifyEntityDecision({ entity, entityId, action, auditLogId, autoPublishedCount }) {
+  try {
+    const { resolveEntityAdmins } = require('../billing-engine/billing-setup-notification.service');
+    const admins = await resolveEntityAdmins(entityId);
+    if (admins.length === 0) return;
+
+    const entityName = entity?.display_name || entity?.legal_name || 'העמותה';
+    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+    let template;
+    let data;
+    let keyPrefix;
+    if (action === 'approve') {
+      template = 'entity-approved';
+      keyPrefix = 'ENTITY_APPROVED';
+      data = {
+        entityName,
+        dashboardUrl: `${frontBase}/dashboard`,
+        hadPendingCampaigns: autoPublishedCount > 0,
+      };
+    } else {
+      const decisionRes = await db.query(
+        `SELECT notes FROM platform_audit_log WHERE id = $1 AND action = 'reject' LIMIT 1`,
+        [auditLogId]
+      );
+      template = 'entity-rejected';
+      keyPrefix = 'ENTITY_REJECTED';
+      data = {
+        entityName,
+        reason: decisionRes.rows[0]?.notes || null,
+        settingsUrl: `${frontBase}/settings/entities/${entityId}`,
+        supportEmail: process.env.EMAIL_REPLY_TO || null,
+      };
+    }
+
+    for (const admin of admins) {
+      emailService.queue({
+        template,
+        to: admin.email,
+        data,
+        entityId,
+        userId: admin.id,
+        // One email per (decision, recipient) — a repeated approve/reject
+        // request writes a NEW audit row and is therefore a new decision,
+        // while a retried/duplicated dispatch of the same decision collides
+        // on this key and sends nothing (migration 070).
+        idempotencyKey: `${keyPrefix}:${entityId}:${auditLogId}:${admin.id}`,
+      });
+    }
+  } catch (err) {
+    console.error(`[platform.setStatus] failed to queue ${action} email:`, err.message);
   }
 }
 
@@ -726,6 +824,8 @@ exports.setAiAccess = async (entityId, superAdminUserId, enabled, ip) => {
 // the entity is gone by the time it would try to reference it.
 exports.hardDeleteEntity = async (entityId, superAdminUserId, notes, ip) => {
   const client = await db.connect();
+  let auditLogId = null;
+  let deletedEntityName = null;
   try {
     await client.query('BEGIN');
 
@@ -755,20 +855,54 @@ exports.hardDeleteEntity = async (entityId, superAdminUserId, notes, ip) => {
 
     await client.query(`DELETE FROM entities WHERE id = $1`, [entityId]);
 
-    await client.query(
+    // RETURNING id (2026-10-07, Admin Notifications P0) — this row is the
+    // permanent, in-transaction record of the deletion, so its id is the
+    // natural idempotency basis for the notification about it. Nothing else
+    // survives: the entity row is gone by this point.
+    const auditRes = await client.query(
       `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
-       VALUES ($1, NULL, 'hard_delete', $2, $3)`,
+       VALUES ($1, NULL, 'hard_delete', $2, $3)
+       RETURNING id`,
       [superAdminUserId, `מחיקה לצמיתות: ${entityName} (${entityId})${notes ? ' — ' + notes : ''}`, ip || null]
     );
+    auditLogId = auditRes.rows[0].id;
+    deletedEntityName = entityName;
 
     await client.query('COMMIT');
-    return { success: true, entityName };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
   }
+
+  // Admin/ops notification (event H) — strictly AFTER COMMIT. A rollback
+  // must never leave behind an email announcing a deletion that did not
+  // happen, and this notification can never affect the delete: by the time
+  // it runs the transaction is closed and its result already returned below.
+  // Keyed on (entityId, auditLogId) so a retried/duplicated request — which
+  // would be a NEW audit row — is its own event, while any re-dispatch of
+  // this one sends nothing.
+  //
+  // The email_logs row for this notification deliberately carries no
+  // entity_id: the entity is deleted (the FK would reject it), and
+  // hardDeleteEntity itself deletes email_logs by entity_id, which must not
+  // be able to erase the record of the deletion.
+  if (auditLogId) {
+    adminNotifications.queueAdminNotification('entity_hard_deleted', {
+      incidentKey: `ENTITY_HARD_DELETE:${entityId}:${auditLogId}`,
+      data: {
+        entityId,
+        entityName: deletedEntityName,
+        actingAdminId: superAdminUserId,
+        auditLogId,
+        deletedAt: new Date().toISOString(),
+        notes: notes || null,
+      },
+    });
+  }
+
+  return { success: true, entityName: deletedEntityName };
 };
 
 exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page = 0, limit = 25, showDeleted, featuredOnly }) => {

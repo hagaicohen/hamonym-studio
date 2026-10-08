@@ -1,6 +1,5 @@
 const db = require('../../../db/db');
 const jobRunner = require('../../../jobs');
-const { checkStaleness } = require('../../../jobs/schedule-window');
 const donationsService = require('../../donations/donations.service');
 
 // Read-only + "repair local state" actions only — see
@@ -19,124 +18,28 @@ const donationsService = require('../../donations/donations.service');
 // stay in production). Evidence preserved in
 // docs/BILLING_ENGINE_SESSION_HANDOFF_2026-08-28.md's MILESTONE sections.
 
-// Alerts are computed here, not stored/pushed anywhere — Operational Policy
-// (2026-08-16): no new notification system yet, the Platform Admin
-// dashboard reading this endpoint IS the alert surface for now. Three
-// conditions, each traceable to a real, already-seen failure mode rather
-// than invented for completeness: a job's last run failed outright; an
-// open `critical` finding exists; webhook-recovery's own last run ended
-// with unresolved `failed`/`notRouted` events (the two outcomes that were
-// specifically NOT folded into "recovered" when its metrics were fixed —
-// see webhook-recovery.job.js).
-function computeAlerts(jobRuns, criticalOpenCount) {
-  const alerts = [];
+// Alert DETECTION now lives in ./ops-health.js (extracted 2026-10-07,
+// unchanged logic) because operational-alerting.job.js has to raise the exact
+// same conditions as push notifications from a write path — two definitions
+// of "stale" is how a dashboard and an alert start disagreeing. This
+// controller stays what it always was: READ-ONLY. It computes and returns;
+// it stores nothing, pushes nothing and sends no email. Do not add a
+// notification call anywhere in this file — see
+// src/modules/email/admin-notification.service.js's guarantee #4.
+const opsHealth = require('./ops-health');
 
-  for (const job of jobRuns) {
-    if (job.status === 'failed') {
-      alerts.push({
-        type: 'job_failed',
-        severity: 'critical',
-        jobName: job.job_name,
-        message: `${job.job_name} נכשל בריצה האחרונה: ${job.error}`,
-      });
-    }
-    if (job.job_name === 'webhook-recovery' && job.result_summary) {
-      const { failed = 0, notRouted = 0 } = job.result_summary;
-      if (failed > 0 || notRouted > 0) {
-        alerts.push({
-          type: 'webhook_recovery_unresolved',
-          severity: 'warning',
-          jobName: job.job_name,
-          failed,
-          notRouted,
-          message: `webhook-recovery סיים עם ${failed} failed ו-${notRouted} not-routed שלא טופלו`,
-        });
-      }
-    }
-  }
+// Signature preserved as (now) for scripts/test-cardcom-ops-cadence-
+// classification.js, which monkey-patches the shared pool and calls this
+// with one argument; ops-health takes db explicitly so a job/test can pass
+// its own handle.
+const computeStaleAlerts = (now) => opsHealth.computeStaleAlerts(db, now);
 
-  if (criticalOpenCount > 0) {
-    alerts.push({
-      type: 'critical_findings_open',
-      severity: 'critical',
-      count: criticalOpenCount,
-      message: `${criticalOpenCount} findings פתוחים בחומרה critical`,
-    });
-  }
-
-  return alerts;
-}
-
-// Separate from computeAlerts (which only reads the already-fetched
-// lastJobRuns rows) — staleness needs its own per-job query via
-// schedule-window.checkStaleness(): "how long since this job last actually
-// succeeded", not "did its last recorded run fail" (a job that simply never
-// got triggered has no failed run to catch it, no critical finding either —
-// exactly the 2026-08-18 gap). 2x the job's own schedule interval before
-// alarming — one missed cycle is within normal trigger jitter, two in a row
-// means the trigger itself likely isn't firing.
-async function computeStaleAlerts(now) {
-  const alerts = [];
-
-  for (const name of jobRunner.list()) {
-    const job = jobRunner.get(name);
-    if (!job?.schedule) continue;
-
-    const { stale, msSinceLastSuccess } = await checkStaleness(db, job, now);
-    if (!stale) continue;
-
-    const message = msSinceLastSuccess == null
-      ? `${name} מעולם לא הצליח לרוץ`
-      : `${name} לא רץ בהצלחה ${Math.round(msSinceLastSuccess / 60_000)} דקות`;
-    alerts.push({
-      type: 'job_stale',
-      severity: 'critical',
-      jobName: name,
-      minutesSinceLastSuccess: msSinceLastSuccess == null ? null : Math.round(msSinceLastSuccess / 60_000),
-      message,
-    });
-  }
-
-  return alerts;
-}
-
-// Scheduler heartbeat (2026-09-08) — distinct from computeStaleAlerts'
-// per-job staleness. A job going stale only proves ITS OWN last success is
-// old; it says nothing about whether the trigger process (the Render Cron
-// Job hitting cron-entry.js every 15 minutes) is running at all. The real
-// 2026-08-28..2026-09-07 outage this was built to detect showed up as 8
-// separate job_stale alerts with no single fact anyone could point at —
-// this reads cron-entry.js's own unconditional heartbeat row instead, so
-// "is the trigger itself alive" is one direct answer, not an inference from
-// several jobs all going quiet together. 30 minutes = 2x the 15-minute tick
-// interval, same "one miss is jitter, two in a row means it stopped"
-// tolerance as checkStaleness.
-const HEARTBEAT_TOLERANCE_MS = 30 * 60 * 1000;
-
-// Takes db explicitly (same injectable convention as schedule-window.js's
-// checkStaleness(db, job, now)) so scripts/test-billing-monthly-cycle.js can
-// exercise this against a fake db instead of racing real production
-// job_runs rows (a real MAX(started_at) in a shared table can't be held
-// still for a "not healthy" assertion once the real scheduler is running).
-async function getSchedulerHeartbeat(db, now) {
-  const { rows } = await db.query(
-    `SELECT MAX(started_at) AS last_heartbeat_at FROM job_runs WHERE job_name = 'scheduler-heartbeat'`
-  );
-  const lastHeartbeatAt = rows[0].last_heartbeat_at;
-  const ageMs = lastHeartbeatAt ? now.getTime() - new Date(lastHeartbeatAt).getTime() : null;
-  return {
-    lastHeartbeatAt,
-    minutesSinceLastHeartbeat: ageMs == null ? null : Math.round(ageMs / 60_000),
-    healthy: ageMs != null && ageMs <= HEARTBEAT_TOLERANCE_MS,
-  };
-}
-
-// Exported for scripts/test-cardcom-ops-cadence-classification.js only —
-// all three functions are pure (given their already-fetched rows/db), no
-// route depends on these exports existing.
-exports.computeAlerts = computeAlerts;
+// Exported for scripts/test-cardcom-ops-cadence-classification.js and
+// scripts/test-billing-monthly-cycle.js only — all three are pure (given
+// their already-fetched rows/db), no route depends on these exports existing.
+exports.computeAlerts = opsHealth.computeAlerts;
 exports.computeStaleAlerts = computeStaleAlerts;
-exports.getSchedulerHeartbeat = getSchedulerHeartbeat;
+exports.getSchedulerHeartbeat = opsHealth.getSchedulerHeartbeat;
 
 exports.getHealth = async (req, res) => {
   try {
@@ -153,22 +56,15 @@ exports.getHealth = async (req, res) => {
       `SELECT count(*)::int AS count FROM reconciliation_findings WHERE resolved_at IS NULL AND severity = 'critical'`
     );
     const staleAlerts = await computeStaleAlerts(new Date());
-    const schedulerHeartbeat = await getSchedulerHeartbeat(db, new Date());
-    const schedulerAlerts = schedulerHeartbeat.healthy ? [] : [{
-      type: 'scheduler_not_running',
-      severity: 'critical',
-      minutesSinceLastHeartbeat: schedulerHeartbeat.minutesSinceLastHeartbeat,
-      message: schedulerHeartbeat.minutesSinceLastHeartbeat == null
-        ? 'ה-Scheduler (Render Cron) מעולם לא דיווח על ריצה'
-        : `ה-Scheduler (Render Cron) לא דיווח על ריצה כבר ${schedulerHeartbeat.minutesSinceLastHeartbeat} דקות`,
-    }];
+    const schedulerHeartbeat = await opsHealth.getSchedulerHeartbeat(db, new Date());
+    const schedulerAlerts = opsHealth.schedulerAlertsFor(schedulerHeartbeat);
 
     res.json({
       webhooks: lastWebhooks.rows,
       jobs: lastJobRuns.rows,
       knownJobs: jobRunner.list(),
       schedulerHeartbeat,
-      alerts: [...schedulerAlerts, ...computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count), ...staleAlerts],
+      alerts: [...schedulerAlerts, ...opsHealth.computeAlerts(lastJobRuns.rows, criticalOpenRes.rows[0].count), ...staleAlerts],
     });
   } catch (err) {
     console.error('[cardcom-ops.getHealth]', err.message);

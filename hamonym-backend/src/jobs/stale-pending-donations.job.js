@@ -28,6 +28,7 @@
 // deliberately left open.
 const paymentHandler = require('../modules/payment/handlers/payment.handler');
 const { recordFinding } = require('./reconciliation-findings');
+const adminNotifications = require('../modules/email/admin-notification.service');
 
 const STALE_AFTER_HOURS = 2;
 
@@ -114,14 +115,16 @@ module.exports = {
     // audit found: the old query's own `low_profile_id IS NOT NULL` filter
     // meant these rows were never even looked at).
     const noLowProfileIdRes = await db.query(
-      `SELECT id FROM donations
+      `SELECT id, campaign_id, entity_id, created_at,
+              ROUND(EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600)::int AS age_hours
+       FROM donations
        WHERE status = 'pending' AND low_profile_id IS NULL
          AND created_at < NOW() - INTERVAL '${STALE_AFTER_HOURS} hours'
        ORDER BY created_at ASC
        LIMIT 50`
     );
     for (const row of noLowProfileIdRes.rows) {
-      await recordFinding(db, {
+      const finding = await recordFinding(db, {
         jobName: 'stale-pending-donations',
         findingType: 'pending_donation_missing_low_profile_id',
         severity: 'warning',
@@ -129,6 +132,35 @@ module.exports = {
         subjectId: row.id,
         details: { note: 'No LowProfileId was ever persisted -- Cardcom cannot be queried for this donation by any known key. Requires manual investigation, not auto-recoverable.' },
       });
+
+      // Admin/ops notification (event D, 2026-10-07) — after the finding is
+      // committed, keyed on the finding row id. Every hourly re-run upserts
+      // into the SAME open finding row, so this emails once per real stuck
+      // donation, not once per hour. If the auto-resolve below ever closes
+      // it and the donation somehow goes back to pending, that is a new
+      // finding row, a new id, and correctly a new email.
+      //
+      // Carries ids/age only — it deliberately does not state anything about
+      // whether the donor was charged, because that is precisely what cannot
+      // be determined without a LowProfileId.
+      if (finding) {
+        adminNotifications.queueAdminNotification('pending_donation_missing_low_profile_id', {
+          incidentKey: `FINDING:pending_donation_missing_low_profile_id:${finding.id}`,
+          data: {
+            findingId: finding.id,
+            findingType: 'pending_donation_missing_low_profile_id',
+            jobName: 'stale-pending-donations',
+            subjectType: 'donation',
+            subjectId: row.id,
+            foundAt: finding.found_at,
+            details: {
+              campaignId: row.campaign_id,
+              entityId: row.entity_id,
+              ageHours: row.age_hours,
+            },
+          },
+        });
+      }
     }
 
     // Auto-resolve: a donation stops being a candidate for any of these

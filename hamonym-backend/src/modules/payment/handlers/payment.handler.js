@@ -2,10 +2,11 @@ const cardcomClient = require('../cardcom/cardcom.client');
 const donationsService = require('../../donations/donations.service');
 const { evaluateGateV1 } = require('../verification-gate');
 const { recordFinding } = require('../../../jobs/reconciliation-findings');
+const adminNotifications = require('../../email/admin-notification.service');
 const db = require('../../../db/db');
 
 async function holdForVerification(donationId, reasons, extraDetails) {
-  await recordFinding(db, {
+  const finding = await recordFinding(db, {
     jobName: 'payment_verification_gate',
     findingType: 'gate_v1_mismatch',
     severity: 'critical',
@@ -13,6 +14,34 @@ async function holdForVerification(donationId, reasons, extraDetails) {
     subjectId: donationId,
     details: { reasons, ...extraDetails },
   });
+
+  // Admin/ops notification (event C, 2026-10-07) — AFTER the finding row is
+  // committed (recordFinding runs on the pool, outside any transaction), and
+  // keyed on that row's id, so the live webhook, a webhook redelivery and
+  // stale-pending-donations.job.js all re-detecting the same held donation
+  // produce one email, not three (recordFinding upserts into the same open
+  // row and hands back the same id).
+  //
+  // Nothing about payment handling changes: the return value below is
+  // byte-identical to before, and queueAdminNotification is synchronous and
+  // cannot throw. The email states only that the donation is HELD and that
+  // the charge status at CardCom is undetermined — the `reasons` list is the
+  // whole claim, nothing is asserted about the donor having been charged.
+  if (finding) {
+    adminNotifications.queueAdminNotification('gate_v1_mismatch', {
+      incidentKey: `FINDING:gate_v1_mismatch:${finding.id}`,
+      data: {
+        findingId: finding.id,
+        findingType: 'gate_v1_mismatch',
+        jobName: 'payment_verification_gate',
+        subjectType: 'donation',
+        subjectId: donationId,
+        foundAt: finding.found_at,
+        details: { reasons },
+      },
+    });
+  }
+
   return { outcome: 'verification_hold', donationId, reasons };
 }
 
