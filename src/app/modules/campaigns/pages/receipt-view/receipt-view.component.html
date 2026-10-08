@@ -6,7 +6,7 @@
     </div>
   } @else if (notFound) {
     <div class="receipt-card receipt-not-found">
-      <p>הקבלה לא נמצאה</p>
+      <p>אישור התרומה לא נמצא</p>
       <a routerLink="/">חזרה לעמוד הבית</a>
     </div>
   } @else if (receipt) {
@@ -24,7 +24,7 @@
       </div>
 
       <div class="receipt-title-row">
-        <h1>קבלה על תרומה</h1>
+        <h1>אישור תרומה</h1>
         <span class="receipt-number">מס' {{ receipt.receipt_number }}</span>
       </div>
 
@@ -52,7 +52,7 @@
       </div>
 
       <p class="receipt-footer-note">
-        קבלה זו מהווה אישור על קבלת תרומה במערכת המונים.
+        מסמך זה מהווה אישור על קבלת תרומה במערכת המונים, ואינו קבלה או מסמך חשבונאי רשמי.
       </p>
 
     </div>

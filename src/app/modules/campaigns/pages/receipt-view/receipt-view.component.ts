@@ -37,7 +37,7 @@ export class ReceiptViewComponent implements OnInit {
     this.donationService.getReceipt(id).subscribe({
       next: (r) => {
         this.receipt = r;
-        this.title.setTitle(`קבלה מספר ${r.receipt_number} — ${r.entity_name}`);
+        this.title.setTitle(`אישור תרומה מספר ${r.receipt_number} — ${r.entity_name}`);
         this.loading = false;
         this.loader.hide();
       },
