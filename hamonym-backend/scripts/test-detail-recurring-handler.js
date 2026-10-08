@@ -43,7 +43,16 @@ function fakeDb({ instructionExists = true, existingDonation = false } = {}) {
       }
       if (sql.includes('INSERT INTO donations')) {
         inserts.push(params);
-        return { rows: [] };
+        // RETURNING id since 2026-10-05 (Pilot Email P0): the failed-donation
+        // insert now hands its id to the donor-facing failure email, so the
+        // mock has to return what a real INSERT ... RETURNING id returns.
+        return { rows: [{ id: 'failed-donation-1' }] };
+      }
+      // Campaign/entity lookup for the donor failure email's content —
+      // queued only for the allowlisted unambiguous statuses, and wrapped
+      // in its own try/catch in the handler.
+      if (sql.includes('FROM campaigns c')) {
+        return { rows: [{ campaign_title: 'Fake Campaign', entity_name: 'Fake Entity' }] };
       }
       throw new Error('fakeDb: unexpected query: ' + sql.slice(0, 60));
     },

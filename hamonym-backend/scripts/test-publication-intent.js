@@ -70,10 +70,20 @@ async function setup() {
 }
 
 async function cleanup() {
+  // The entity-decision email is fire-and-forget (setImmediate), so its
+  // email_logs row can still be in flight when the last assertion returns.
+  // Let it land before deleting, otherwise the row appears right after the
+  // DELETE and blocks the entity delete on the FK.
+  await new Promise((r) => setTimeout(r, 300));
   if (campaignIds.length) await pool.query(`DELETE FROM campaigns WHERE id = ANY($1)`, [campaignIds]);
   if (entityIds.length) {
     // approve/suspend/reactivate each write a platform_audit_log row FK'd
-    // to the entity — must go before the entities themselves.
+    // to the entity — must go before the entities themselves. Since
+    // 2026-10-05 (Pilot Email P0) approve/reject also queue an entity-
+    // decision email, whose email_logs row is FK'd to the entity the same
+    // way (production's own hardDeleteEntity already deletes email_logs for
+    // exactly this reason).
+    await pool.query(`DELETE FROM email_logs WHERE entity_id = ANY($1)`, [entityIds]);
     await pool.query(`DELETE FROM platform_audit_log WHERE entity_id = ANY($1)`, [entityIds]);
     await pool.query(`DELETE FROM user_entities WHERE entity_id = ANY($1)`, [entityIds]);
     await pool.query(`DELETE FROM entities WHERE id = ANY($1)`, [entityIds]);

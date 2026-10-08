@@ -15,6 +15,40 @@
 // unfixable old failure doesn't get retried forever on every run.
 const paymentHandler = require('../modules/payment/handlers/payment.handler');
 const webhookDispatcher = require('../modules/payment/webhook.dispatcher');
+const adminNotifications = require('../modules/email/admin-notification.service');
+
+// Admin/ops notification (event E, 2026-10-07) — raised ONLY on the two
+// outcomes where this job gives up on an event: `not_routed` (no handler
+// exists for that RecordType) and `failed` (the re-run threw again). An event
+// that was actually recovered, or that turned out to be already consistent,
+// notifies nothing.
+//
+// Durable evidence is the cardcom_webhook_events row this job has just
+// written `error` to — no new finding type and no new table is introduced for
+// this case; the row that already records the problem is the record.
+//
+// Idempotency is keyed on the webhook event id alone, deliberately NOT on
+// the run or the error text: this job re-attempts the same event every 15
+// minutes for up to 3 days, and one unprocessable webhook is ONE incident.
+// A changed error message on a later attempt is the same incident, so it
+// stays silent rather than emailing again.
+//
+// No raw_payload is ever passed on — a CardCom body can carry donor identity
+// and transaction detail. The event id, the record type and the stored error
+// are enough to open the real row.
+function notifyUnresolved(row, outcome, error) {
+  adminNotifications.queueAdminNotification('webhook_recovery_unresolved', {
+    incidentKey: `WEBHOOK_UNRESOLVED:${row.id}`,
+    data: {
+      webhookEventId: row.id,
+      recordType: row.record_type || null,
+      outcome,
+      error,
+      receivedAt: row.received_at,
+      attemptedAt: new Date().toISOString(),
+    },
+  });
+}
 
 // Metrics semantics fixed 2026-08-15 (Operational Processes audit finding):
 // `recovered` used to mean nothing more than "the handler didn't throw" —
@@ -48,7 +82,7 @@ module.exports = {
   timeoutMs: 2 * 60 * 1000,
   handler: async (db) => {
     const res = await db.query(
-      `SELECT id, record_type, raw_payload
+      `SELECT id, record_type, raw_payload, received_at
        FROM cardcom_webhook_events
        WHERE error IS NOT NULL AND received_at > NOW() - INTERVAL '3 days'
        ORDER BY received_at ASC
@@ -68,10 +102,12 @@ module.exports = {
           const dispatchResult = await webhookDispatcher(row.raw_payload);
           if (dispatchResult && dispatchResult.routed === false) {
             notRouted++;
+            const errorText = `NOT_ROUTED: ${dispatchResult.reason}`;
             await db.query(
               `UPDATE cardcom_webhook_events SET error=$1, processed_at=NOW() WHERE id=$2`,
-              [`NOT_ROUTED: ${dispatchResult.reason}`, row.id]
+              [errorText, row.id]
             );
+            notifyUnresolved(row, 'not_routed', errorText);
             continue;
           }
           processed++;
@@ -85,6 +121,7 @@ module.exports = {
         failed++;
         failedIds.push(row.id);
         await db.query(`UPDATE cardcom_webhook_events SET error=$1, processed_at=NOW() WHERE id=$2`, [err.message, row.id]);
+        notifyUnresolved(row, 'failed', err.message);
       }
     }
 

@@ -1,4 +1,6 @@
 const db = require('../../../db/db');
+const { recordFinding } = require('../../../jobs/reconciliation-findings');
+const adminNotifications = require('../../email/admin-notification.service');
 
 // MasterRecurring — a change notification for the recurring instruction
 // itself (created / IsActive flip / any field edit), not a charge. Fires on
@@ -57,6 +59,68 @@ function resolveInactiveStatus(current, payload) {
   return 'inactive';
 }
 
+// The one piece of NEW persistence this notification slice adds (event G,
+// 2026-10-07). resolveInactiveStatus's generic 'inactive' fallback — a
+// CardCom-initiated deactivation Hamonym cannot explain — previously left no
+// trace at all: no finding, no log, no email, just a status column quietly
+// changing. There was therefore nothing durable to notify off.
+//
+// Fitted into the EXISTING reconciliation_findings mechanism rather than a
+// new store: same table, same recordFinding() dedup, same Platform ops
+// screen, same resolve-by-operator workflow as every other finding. The only
+// new thing is the finding_type string.
+//
+// Recorded ONLY on the observed transition INTO unexplained-inactive
+// (previous status was not already 'inactive'). A MasterRecurring webhook
+// fires on every field change, and a redelivered/subsequent webhook for an
+// already-inactive instruction is not a new deactivation — recording it
+// again would be able to reopen a finding an operator had already resolved
+// and email a second time about the same event.
+//
+// Nothing here guesses WHY: CardCom reports exactly one signal (IsActive =
+// false) with no reason, and natural completion is already ruled out
+// deterministically by resolveInactiveStatus before this point.
+async function recordUnexplainedDeactivation(instruction, recurringId) {
+  try {
+    const finding = await recordFinding(db, {
+      jobName: 'master_recurring_webhook',
+      findingType: 'recurring_unexplained_inactive',
+      severity: 'warning',
+      subjectType: 'recurring_instruction',
+      subjectId: instruction.id,
+      details: {
+        previousStatus: instruction.status,
+        cardcomRecurringId: recurringId,
+        note: 'CardCom reported IsActive=false without a reason, and this was not a Hamonym-initiated pause/cancel nor a deterministic natural completion. Reason unknown -- requires manual investigation.',
+      },
+    });
+    if (!finding) return;
+
+    adminNotifications.queueAdminNotification('recurring_unexplained_inactive', {
+      incidentKey: `FINDING:recurring_unexplained_inactive:${finding.id}`,
+      data: {
+        findingId: finding.id,
+        findingType: 'recurring_unexplained_inactive',
+        jobName: 'master_recurring_webhook',
+        subjectType: 'recurring_instruction',
+        subjectId: instruction.id,
+        foundAt: finding.found_at,
+        details: {
+          previousStatus: instruction.status,
+          cardcomRecurringId: recurringId,
+          entityId: instruction.entity_id,
+          campaignId: instruction.campaign_id,
+        },
+      },
+    });
+  } catch (err) {
+    // Observability must never break webhook processing: the status update
+    // above is already committed and is the authoritative outcome of this
+    // webhook.
+    console.error('[master-recurring] failed to record unexplained deactivation:', err.message);
+  }
+}
+
 exports.handle = async (payload) => {
   const recurringId = payload.RecurringId;
   if (!recurringId) return;
@@ -65,7 +129,8 @@ exports.handle = async (payload) => {
   const nextDateToBill = parseSlashedDate(payload.NextDateToBill);
 
   const current = await db.query(
-    `SELECT status, total_installments FROM recurring_instructions WHERE cardcom_recurring_id = $1`,
+    `SELECT id, entity_id, campaign_id, status, total_installments
+     FROM recurring_instructions WHERE cardcom_recurring_id = $1`,
     [recurringId]
   );
   const instruction = current.rows[0];
@@ -87,4 +152,12 @@ exports.handle = async (payload) => {
      WHERE cardcom_recurring_id = $3`,
     [status, nextDateToBill, recurringId]
   );
+
+  // AFTER the status update is committed (pool query, no open transaction) —
+  // the finding and the email must never describe a state change that did not
+  // land. See recordUnexplainedDeactivation's own header for why this is
+  // gated on the transition rather than on the resulting status alone.
+  if (status === 'inactive' && instruction.status !== 'inactive') {
+    await recordUnexplainedDeactivation(instruction, recurringId);
+  }
 };
