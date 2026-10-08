@@ -1044,13 +1044,28 @@ exports.softDeleteCampaign = (campaignId, superAdminUserId, notes, ip) =>
     )
   );
 
+// Slug-reuse collision on restore (2026-10-08, migration 069): the partial
+// unique index campaigns_slug_unique_active only covers non-deleted rows, so
+// a campaign's slug can legitimately be taken by a different, newer active
+// campaign while this one was soft-deleted. Restoring it then collides.
+// Same translation campaigns.service.js already uses for this exact
+// constraint (err.code === '23505' -> 'Campaign slug already exists'), so
+// the Super Admin sees the same clean, understood message instead of a raw
+// Postgres constraint-violation string.
 exports.restoreCampaign = (campaignId, superAdminUserId, notes, ip) =>
-  campaignAction(campaignId, superAdminUserId, 'restore', notes, ip, (client) =>
-    client.query(
-      `UPDATE campaigns SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *`,
-      [campaignId]
-    )
-  );
+  campaignAction(campaignId, superAdminUserId, 'restore', notes, ip, async (client) => {
+    try {
+      return await client.query(
+        `UPDATE campaigns SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = $1 AND deleted_at IS NOT NULL RETURNING *`,
+        [campaignId]
+      );
+    } catch (err) {
+      if (err.code === '23505') {
+        throw new Error('Campaign slug already exists');
+      }
+      throw err;
+    }
+  });
 
 exports.transferCampaignOwnership = (campaignId, superAdminUserId, newEntityId, notes, ip) =>
   campaignAction(campaignId, superAdminUserId, 'transfer_ownership', notes, ip, (client) =>

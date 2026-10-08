@@ -1016,8 +1016,11 @@ exports.checkSlugAvailable =
 
     const params = [slug];
 
+    // deleted_at IS NULL (2026-09-24) — a soft-deleted campaign's slug is
+    // no longer "taken"; matches the DB's own partial unique index
+    // (campaigns_slug_unique_active, migration 069).
     let query =
-      `SELECT 1 FROM campaigns WHERE slug = $1`;
+      `SELECT 1 FROM campaigns WHERE slug = $1 AND deleted_at IS NULL`;
 
     if (excludeId) {
       query += ` AND id != $2`;

@@ -12,6 +12,7 @@ function statusFor(err) {
     case 'Cannot impersonate a super admin': return 400;
     case 'Email is required': return 400;
     case 'Email already exists': return 409;
+    case 'Campaign slug already exists': return 409;
     default: return 500;
   }
 }
