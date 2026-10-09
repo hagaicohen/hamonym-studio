@@ -80,13 +80,19 @@ module.exports = {
   // Not wired to a scheduler yet.
   schedule: '*/15 * * * *',
   timeoutMs: 2 * 60 * 1000,
-  handler: async (db) => {
+  // `now` is BUSINESS time from job-runner.js (src/lib/clock.js) — it moves
+  // only the 3-day RETRY-ELIGIBILITY window below, i.e. the business
+  // judgement "is this failure still worth re-attempting". received_at and
+  // processed_at are real event-audit facts and keep their SQL NOW()
+  // untouched, as does notifyUnresolved's attemptedAt.
+  handler: async (db, { now = new Date() } = {}) => {
     const res = await db.query(
       `SELECT id, record_type, raw_payload, received_at
        FROM cardcom_webhook_events
-       WHERE error IS NOT NULL AND received_at > NOW() - INTERVAL '3 days'
+       WHERE error IS NOT NULL AND received_at > $1::timestamptz - INTERVAL '3 days'
        ORDER BY received_at ASC
-       LIMIT 50`
+       LIMIT 50`,
+      [now]
     );
 
     let recovered = 0;

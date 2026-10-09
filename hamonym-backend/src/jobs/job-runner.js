@@ -1,4 +1,5 @@
 const db = require('../db/db');
+const clock = require('../lib/clock');
 const adminNotifications = require('../modules/email/admin-notification.service');
 
 // Generic scheduled-job core — not Cardcom-specific. See
@@ -11,7 +12,10 @@ const adminNotifications = require('../modules/email/admin-notification.service'
 
 const registry = new Map();
 
-// { name, handler, timeoutMs? } — handler is async (db) => resultSummary.
+// { name, handler, timeoutMs? } — handler is async (db, { now }) =>
+// resultSummary. `db` is and stays the first argument; the second argument
+// is additive, so a handler declared as `async (db) => ...` keeps working
+// completely unmodified (JS ignores an argument it doesn't declare).
 exports.register = (job) => {
   if (!job?.name || typeof job.handler !== 'function') {
     throw new Error('job-runner.register requires { name, handler }');
@@ -75,9 +79,19 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
     const runId = runRes.rows[0].id;
     const startedAt = runRes.rows[0].started_at;
 
+    // BUSINESS time for this run, resolved exactly once so every decision
+    // inside one job run is made against a single consistent instant.
+    // Deliberately NOT used for job_runs.started_at/finished_at/duration_ms
+    // above and below — those are operational facts about this process and
+    // stay real wall-clock (`started_at` is the DB default, `finished_at` is
+    // SQL NOW(), `duration_ms` comes from Date.now()) under every
+    // configuration, simulation on or off. With simulation off this is a
+    // plain `new Date()` and costs no query. See src/lib/clock.js.
+    const businessNow = await clock.now(db);
+
     try {
       const result = await Promise.race([
-        job.handler(db),
+        job.handler(db, { now: businessNow }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Job timed out')), job.timeoutMs)),
       ]);
 

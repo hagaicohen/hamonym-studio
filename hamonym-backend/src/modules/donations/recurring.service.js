@@ -1,4 +1,5 @@
 const db = require('../../db/db');
+const clock = require('../../lib/clock');
 const recurringClient = require('../payment/cardcom/recurring.client');
 
 // dd/MM/yyyy — the format RecurringPayment.aspx expects for date fields,
@@ -17,8 +18,14 @@ function formatDateSlashed(date) {
 // (verified: that charge is not counted in Cardcom's own
 // NumOfPaymentsAlreadyCharged) — so the recurring schedule starts one
 // interval from now, not immediately.
-function nextMonthDate() {
-  const d = new Date();
+//
+// `now` is BUSINESS time (src/lib/clock.js): deciding WHICH calendar day a
+// future charge should be requested for is a scheduling decision, not an
+// audit timestamp. Callers pass `await clock.now(db)`; the default keeps
+// this callable standalone and, with simulation off, identical to the
+// previous `new Date()`.
+function nextMonthDate(now = new Date()) {
+  const d = new Date(now.getTime());
   d.setMonth(d.getMonth() + 1);
   return d;
 }
@@ -54,8 +61,11 @@ function clampedMonthDate(year, month, day) {
   return new Date(year, month, Math.min(day, daysInMonth));
 }
 
-function nextOccurrenceOfAnchorDay(anchorDay) {
-  const now = new Date();
+// `now` is BUSINESS time (src/lib/clock.js) — same reasoning as
+// nextMonthDate: "which future day does this donor's billing anchor next
+// land on" is a scheduling decision. clampedMonthDate itself is pure
+// (year/month/day in, Date out) and has no time dependency to convert.
+function nextOccurrenceOfAnchorDay(anchorDay, now = new Date()) {
   const candidate = clampedMonthDate(now.getFullYear(), now.getMonth(), anchorDay);
   if (candidate <= now) {
     return clampedMonthDate(now.getFullYear(), now.getMonth() + 1, anchorDay);
@@ -151,7 +161,10 @@ exports.completeSignup = async (donationId) => {
 
   try {
     const credentials = await require('./donations.service').resolveCardcomCredentials(donationId);
-    const nextDateToBill = formatDateSlashed(nextMonthDate());
+    // One business instant for the whole signup, so the date sent to Cardcom
+    // and the date persisted below cannot disagree across a midnight boundary.
+    const businessNow = await clock.now(db);
+    const nextDateToBill = formatDateSlashed(nextMonthDate(businessNow));
     // Verified end-to-end (2026-08-14, RecurringId=44215): the LowProfile's
     // own charge isn't counted against TotalNumOfBills, so N total
     // payments including it means N-1 further Cardcom-managed cycles.
@@ -174,7 +187,7 @@ exports.completeSignup = async (donationId) => {
     });
 
     if (result.ResponseCode === '0') {
-      const scheduledDate = nextMonthDate();
+      const scheduledDate = nextMonthDate(businessNow);
       await db.query(
         `UPDATE recurring_instructions
          SET status='active', cardcom_account_id=$1, cardcom_recurring_id=$2, next_date_to_bill=$3,
@@ -279,10 +292,11 @@ exports.resumeRecurring = async (instructionId) => {
 
   // Same lazy-backfill fallback as pauseRecurring, for a row that somehow
   // reached Resume without ever going through Pause under this code.
+  const businessNow = await clock.now(db);
   const anchorDay = instruction.billing_anchor_day
-    || (instruction.next_date_to_bill ? dayOfMonthFromDate(instruction.next_date_to_bill) : dayOfMonthFromDate(new Date()));
+    || (instruction.next_date_to_bill ? dayOfMonthFromDate(instruction.next_date_to_bill) : dayOfMonthFromDate(businessNow));
 
-  const nextDate = nextOccurrenceOfAnchorDay(anchorDay);
+  const nextDate = nextOccurrenceOfAnchorDay(anchorDay, businessNow);
   const nextDateToBill = formatDateSlashed(nextDate);
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
@@ -433,12 +447,17 @@ exports.getMyRecurringInstructions = async (userId) => {
     [userId]
   );
 
+  // Same business instant the real resumeRecurring would use, so the
+  // previewed date stays guaranteed-identical to what an actual Resume sets
+  // (the invariant this field exists for).
+  const businessNow = await clock.now(db);
+
   return res.rows.map((row) => ({
     ...row,
     next_date_to_bill: toDateOnlyIsoString(row.next_date_to_bill),
     resume_preview_next_date_to_bill:
       row.status === 'paused' && row.billing_anchor_day
-        ? formatDateSlashed(nextOccurrenceOfAnchorDay(row.billing_anchor_day))
+        ? formatDateSlashed(nextOccurrenceOfAnchorDay(row.billing_anchor_day, businessNow))
         : null,
   }));
 };
@@ -459,3 +478,11 @@ exports.getRecurringDonationHistory = async (instructionId) => {
   );
   return res.rows;
 };
+
+// Exported for scripts/test-business-clock.js only — pure date math over an
+// injected business instant, no DB and no Cardcom involvement, so the
+// scheduling decisions these drive can be asserted directly (including
+// calendar edge cases like anchor-day clamping) without creating any
+// donation or contacting any provider.
+exports.nextMonthDate = nextMonthDate;
+exports.nextOccurrenceOfAnchorDay = nextOccurrenceOfAnchorDay;

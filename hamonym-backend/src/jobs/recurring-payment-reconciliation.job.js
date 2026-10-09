@@ -107,9 +107,15 @@ async function alreadyRepresented(db, instructionId, item) {
   return false;
 }
 
-async function reconcileInstruction(db, instruction, { getHistory, resolveCredentials, finalizeCharge }) {
+// `now` is BUSINESS time (src/lib/clock.js), threaded in from the handler
+// below. It defines ONLY the LOOKBACK_WINDOW_DAYS window this job asks
+// CardCom about — "which stretch of history is worth re-examining", a
+// business decision. The request's shape, credentials and routing are
+// completely unchanged: the same two FromDate/ToDate fields in the same
+// DDMMYYYY format, carrying the same values they do today whenever
+// simulation is off (clock.now() is then literally new Date()).
+async function reconcileInstruction(db, instruction, { getHistory, resolveCredentials, finalizeCharge, now = new Date() }) {
   const credentials = await resolveCredentials(instruction.entity_id);
-  const now = new Date();
   const from = new Date(now.getTime() - LOOKBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
   let response;
@@ -187,6 +193,7 @@ async function reconcileAllActiveInstructions(db, deps = {}) {
   const getHistory = deps.getHistory || defaultCardcomClient.getRecurringPaymentHistory;
   const resolveCredentials = deps.resolveCredentials || donationsService.resolveCardcomCredentialsForEntity;
   const finalizeCharge = deps.finalizeCharge || donationsService.finalizeSuccessfulRecurringCharge;
+  const now = deps.now || new Date();
 
   const instructionsRes = await db.query(
     `SELECT id, entity_id, campaign_id, cardcom_account_id, cardcom_recurring_id
@@ -197,7 +204,7 @@ async function reconcileAllActiveInstructions(db, deps = {}) {
   let totalChecked = 0;
   let totalRecovered = 0;
   for (const instruction of instructionsRes.rows) {
-    const { checked, recovered } = await reconcileInstruction(db, instruction, { getHistory, resolveCredentials, finalizeCharge });
+    const { checked, recovered } = await reconcileInstruction(db, instruction, { getHistory, resolveCredentials, finalizeCharge, now });
     totalChecked += checked;
     totalRecovered += recovered;
   }
@@ -216,7 +223,7 @@ async function reconcileAllActiveInstructions(db, deps = {}) {
 module.exports = {
   name: 'recurring-payment-reconciliation',
   timeoutMs: 5 * 60 * 1000,
-  handler: (db) => reconcileAllActiveInstructions(db),
+  handler: (db, { now } = {}) => reconcileAllActiveInstructions(db, { now }),
   // exported for scripts/test-recurring-payment-reconciliation.js
   reconcileAllActiveInstructions,
   reconcileInstruction,

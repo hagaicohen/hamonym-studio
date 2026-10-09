@@ -36,16 +36,23 @@ module.exports = {
   // and the realistic row count per run is zero.
   schedule: '*/10 * * * *',
   timeoutMs: 2 * 60 * 1000,
-  handler: async (db) => {
+  // `now` is BUSINESS time from job-runner.js (src/lib/clock.js) — both
+  // bounds below are retry-ELIGIBILITY judgements ("settled long enough to
+  // be really stuck" / "young enough to still be worth sending"), so both
+  // read from the same business instant. email_logs' own created_at and
+  // terminal-status timestamps are written by email.service.js and are
+  // untouched here.
+  handler: async (db, { now = new Date() } = {}) => {
     const res = await db.query(
       `SELECT id, payload
        FROM email_logs
        WHERE status = 'pending'
          AND payload IS NOT NULL
-         AND created_at < NOW() - INTERVAL '5 minutes'
-         AND created_at > NOW() - INTERVAL '1 day'
+         AND created_at < $1::timestamptz - INTERVAL '5 minutes'
+         AND created_at > $1::timestamptz - INTERVAL '1 day'
        ORDER BY created_at ASC
-       LIMIT 50`
+       LIMIT 50`,
+      [now]
     );
 
     let sent = 0;

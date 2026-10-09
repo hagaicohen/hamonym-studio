@@ -73,12 +73,25 @@ async function computeMostRecentCycleBoundary(db, now) {
   return resolveSelectedMonthBoundary(db, prevYear, prevMonth);
 }
 
-// `now` is injectable (defaults to the real clock) so
-// scripts/test-billing-monthly-cycle.js can target a fixed, far-future
-// fixture month instead of racing whatever real billing_periods already
-// exist in production -- job-runner.js still calls `job.handler(db)` with
-// a single argument in production, so this default is what actually runs
-// on a real schedule tick.
+// `now` is the BUSINESS instant the cutoff decision is made against, and is
+// injectable so scripts/test-billing-monthly-cycle.js can target a fixed,
+// far-future fixture month instead of racing whatever real billing_periods
+// already exist in production.
+//
+// Updated 2026-10-09 (business clock, Phase A): job-runner.js now calls
+// `job.handler(db, { now })` with business time from src/lib/clock.js, so on
+// a real schedule tick this receives that value rather than falling through
+// to the default. With simulation off clock.now() returns a plain
+// `new Date()`, so the value — and therefore which cycle this job closes —
+// is bit-for-bit what it was before. The `new Date()` default is retained
+// for direct callers (scripts, a future admin action) that invoke the
+// handler without a context object.
+//
+// Everything this `now` feeds is genuinely business time: the cutoff
+// comparison in computeMostRecentCycleBoundary below, and the asOf argument
+// to runProductionCalculation. The calculation/period/approval services
+// themselves take their time parametrically (year/month, asOf) and are not
+// modified here.
 async function handler(db, { now = new Date() } = {}) {
   const { periodStart, periodEnd } = await computeMostRecentCycleBoundary(db, now);
 

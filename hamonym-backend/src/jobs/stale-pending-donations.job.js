@@ -41,15 +41,20 @@ module.exports = {
   // scheduler yet.
   schedule: '0 * * * *',
   timeoutMs: 3 * 60 * 1000,
-  handler: async (db) => {
+  // `now` is BUSINESS time, supplied by job-runner.js (src/lib/clock.js) —
+  // the instant the staleness decision below is made against. Defaults to
+  // real wall-clock so a direct call (script/test) behaves exactly as
+  // before. Every audit write in this handler stays SQL NOW().
+  handler: async (db, { now = new Date() } = {}) => {
     const res = await db.query(
       `SELECT id, low_profile_id, campaign_id, amount
        FROM donations
        WHERE status = 'pending'
          AND low_profile_id IS NOT NULL
-         AND created_at < NOW() - INTERVAL '${STALE_AFTER_HOURS} hours'
+         AND created_at < $1::timestamptz - INTERVAL '${STALE_AFTER_HOURS} hours'
        ORDER BY created_at ASC
-       LIMIT 50`
+       LIMIT 50`,
+      [now]
     );
 
     let checked = 0;
@@ -114,14 +119,19 @@ module.exports = {
     // finding for human review rather than silently invisible (the gap the
     // audit found: the old query's own `low_profile_id IS NOT NULL` filter
     // meant these rows were never even looked at).
+    // age_hours is measured from the SAME business instant as the staleness
+    // filter directly below it, not from a second independent NOW(): the
+    // age reported to an admin must be consistent with the window that
+    // selected the row in the first place.
     const noLowProfileIdRes = await db.query(
       `SELECT id, campaign_id, entity_id, created_at,
-              ROUND(EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600)::int AS age_hours
+              ROUND(EXTRACT(EPOCH FROM ($1::timestamptz - created_at)) / 3600)::int AS age_hours
        FROM donations
        WHERE status = 'pending' AND low_profile_id IS NULL
-         AND created_at < NOW() - INTERVAL '${STALE_AFTER_HOURS} hours'
+         AND created_at < $1::timestamptz - INTERVAL '${STALE_AFTER_HOURS} hours'
        ORDER BY created_at ASC
-       LIMIT 50`
+       LIMIT 50`,
+      [now]
     );
     for (const row of noLowProfileIdRes.rows) {
       const finding = await recordFinding(db, {

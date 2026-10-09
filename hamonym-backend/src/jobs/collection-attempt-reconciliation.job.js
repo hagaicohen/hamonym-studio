@@ -56,7 +56,14 @@ function defaultGetAdapter(collectionMethod) {
 // DB or a real CardCom call, and without ever creating a real payments row
 // (which cannot be deleted afterward -- see migration 059's append-only
 // trigger -- making real-DB testing of the success path unsafe).
-async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, resolveAttemptFn = defaultResolveAttempt } = {}) {
+//
+// `now` is BUSINESS time (src/lib/clock.js), threaded in by the handler
+// below from job-runner.js. It moves ONLY the STUCK_AFTER_HOURS eligibility
+// margin on 'pending' attempts — the business judgement "has this been in
+// flight long enough that it can't still be a live charge() call". It does
+// not touch reconciliation_findings' own found_at/last_seen_at/resolved_at,
+// which stay real wall-clock SQL NOW().
+async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, resolveAttemptFn = defaultResolveAttempt, now = new Date() } = {}) {
   // collection_method != 'masav': a MASAV attempt has no in-app-reachable
   // transition out of 'pending' by design (masav-collection.service.js's
   // "STATE AFTER EXPORT" comment -- submission/result handling is manual,
@@ -71,10 +78,11 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
      WHERE collection_method != 'masav'
        AND (
          status = 'ambiguous'
-         OR (status = 'pending' AND initiated_at < NOW() - INTERVAL '${STUCK_AFTER_HOURS} hours')
+         OR (status = 'pending' AND initiated_at < $1::timestamptz - INTERVAL '${STUCK_AFTER_HOURS} hours')
        )
      ORDER BY initiated_at ASC
-     LIMIT 50`
+     LIMIT 50`,
+    [now]
   );
 
   let reconciled = 0;
@@ -188,6 +196,6 @@ module.exports = {
   name: 'collection-attempt-reconciliation',
   schedule: '0 * * * *',
   timeoutMs: 2 * 60 * 1000,
-  handler: (db) => reconcileStuckAttempts(db),
+  handler: (db, { now } = {}) => reconcileStuckAttempts(db, { now }),
   reconcileStuckAttempts, // exported for scripts/test-collection-attempt-recovery.js
 };
