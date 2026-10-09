@@ -241,7 +241,7 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note }) => {
 
   // Embedded OpenFields spike (2026-09-24) — a second, independent gate on
   // top of the frontend's devOnlyGuard (hostname check). Neither trusts the
@@ -479,8 +479,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
        rewards, status, is_mock,
-       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17)
+       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id, note
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17,$18)
      RETURNING id`,
     [
       campaignId,
@@ -500,6 +500,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       userAgent  || null,
       recurringInstructionId,
       attributedAmbassadorId,
+      // Dedication text — reuses the existing donations.note column
+      // (previously write-only from createManualDonation's admin entry
+      // flow); this is its first donor-facing use.
+      note || null,
     ]
   );
   const donationId = donationRes.rows[0].id;
@@ -1114,6 +1118,13 @@ const SORT_COLUMNS = {
   // type column to sort by.
   entity:   'e.display_name',
   type:     '(d.recurring_instruction_id IS NOT NULL)',
+  // Admin global "new paid donation" toast (paid-donation-toast component)
+  // -- distinct from `date` (created_at) on purpose: a donation can sit
+  // 'pending' for a while (webhook lag) before flipping to 'paid', so
+  // sorting by created_at would miss/misorder it relative to more
+  // recently-CREATED donations that happened to confirm instantly. Not
+  // exposed in the admin list's own UI, only used by that poll.
+  completedAt: 'd.completed_at',
 };
 
 exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
