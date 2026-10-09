@@ -1,5 +1,5 @@
-﻿const axios = require('axios');
-const db    = require('../../db/db');
+﻿const db    = require('../../db/db');
+const { getDonationProvider } = require('../payment/donation-provider');
 const emailService = require('../email/email.service');
 
 // Creates a receipt row for a paid donation (idempotent — a donation can only
@@ -235,8 +235,6 @@ async function processRegistrationDonation(donationId, campaignId, participants,
     client.release();
   }
 }
-
-const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
@@ -605,11 +603,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // 5. Call Cardcom
   let cardcomData;
   try {
-    const response = await axios.post(CARDCOM_CREATE_URL, payload, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 15000,
-    });
-    cardcomData = response.data;
+    cardcomData = await getDonationProvider().createLowProfile(payload);
   } catch (err) {
     await db.query(`UPDATE donations SET status='failed', updated_at=NOW() WHERE id=$1`, [donationId]);
     throw new Error(err.response?.data?.Description || 'Cardcom connection failed');

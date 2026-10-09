@@ -62,7 +62,7 @@
 // ever needing a real 'paid' donation row — which, once created, cannot be
 // deleted (migration 055's immutability trigger), making real-DB testing of
 // the "already represented" match unsafe.
-const defaultCardcomClient = require('../modules/payment/cardcom/cardcom.client');
+const { getDonationProvider } = require('../modules/payment/donation-provider');
 const { recordFinding } = require('./reconciliation-findings');
 
 const LOOKBACK_WINDOW_DAYS = 40;
@@ -190,7 +190,7 @@ async function reconcileInstruction(db, instruction, { getHistory, resolveCreden
 
 async function reconcileAllActiveInstructions(db, deps = {}) {
   const donationsService = require('../modules/donations/donations.service');
-  const getHistory = deps.getHistory || defaultCardcomClient.getRecurringPaymentHistory;
+  const getHistory = deps.getHistory || getDonationProvider().getRecurringPaymentHistory;
   const resolveCredentials = deps.resolveCredentials || donationsService.resolveCardcomCredentialsForEntity;
   const finalizeCharge = deps.finalizeCharge || donationsService.finalizeSuccessfulRecurringCharge;
   const now = deps.now || new Date();

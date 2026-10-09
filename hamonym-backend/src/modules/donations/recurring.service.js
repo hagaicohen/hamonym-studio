@@ -1,6 +1,6 @@
 const db = require('../../db/db');
 const clock = require('../../lib/clock');
-const recurringClient = require('../payment/cardcom/recurring.client');
+const { getDonationProvider } = require('../payment/donation-provider');
 
 // dd/MM/yyyy — the format RecurringPayment.aspx expects for date fields,
 // confirmed empirically. Different from every other Cardcom surface touched
@@ -170,7 +170,7 @@ exports.completeSignup = async (donationId) => {
     // payments including it means N-1 further Cardcom-managed cycles.
     const totalNumOfBills = totalInstallments == null ? 99999 : totalInstallments - 1;
 
-    const result = await recurringClient.createRecurring({
+    const result = await getDonationProvider().createRecurring({
       terminalNumber: credentials.terminalNumber,
       userName: credentials.apiName,
       apiPassword: credentials.apiPassword,
@@ -236,7 +236,7 @@ exports.pauseRecurring = async (instructionId) => {
   }
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
-  const result = await recurringClient.updateRecurring({
+  const result = await getDonationProvider().updateRecurring({
     terminalNumber: credentials.terminalNumber,
     userName: credentials.apiName,
     apiPassword: credentials.apiPassword,
@@ -300,7 +300,7 @@ exports.resumeRecurring = async (instructionId) => {
   const nextDateToBill = formatDateSlashed(nextDate);
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
-  const result = await recurringClient.updateRecurring({
+  const result = await getDonationProvider().updateRecurring({
     terminalNumber: credentials.terminalNumber,
     userName: credentials.apiName,
     apiPassword: credentials.apiPassword,
@@ -350,7 +350,7 @@ exports.cancelRecurring = async (instructionId) => {
   }
 
   const credentials = await require('./donations.service').resolveCardcomCredentialsForEntity(instruction.entity_id);
-  const result = await recurringClient.updateRecurring({
+  const result = await getDonationProvider().updateRecurring({
     terminalNumber: credentials.terminalNumber,
     userName: credentials.apiName,
     apiPassword: credentials.apiPassword,

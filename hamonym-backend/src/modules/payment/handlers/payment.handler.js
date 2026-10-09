@@ -1,4 +1,4 @@
-const cardcomClient = require('../cardcom/cardcom.client');
+const { getDonationProvider } = require('../donation-provider');
 const donationsService = require('../../donations/donations.service');
 const { evaluateGateV1 } = require('../verification-gate');
 const { recordFinding } = require('../../../jobs/reconciliation-findings');
@@ -94,7 +94,7 @@ exports.handle = async (payload) => {
 
   const credentials = await donationsService.resolveCardcomCredentials(donationId);
 
-  const result = await cardcomClient.getLpResult({
+  const result = await getDonationProvider().getLpResult({
     ...credentials,
     lowProfileId: donation.low_profile_id,
   });

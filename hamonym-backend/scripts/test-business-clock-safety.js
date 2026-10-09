@@ -93,6 +93,10 @@ function installCardcomTrap() {
   const modules = [
     ['cardcom.client', require('../src/modules/payment/cardcom/cardcom.client')],
     ['recurring.client', require('../src/modules/payment/cardcom/recurring.client')],
+    // Phase B1: LowProfile/Create moved out of donations.service.js into its
+    // own client — trapped here too so the donation rail's entry point stays
+    // covered by this test, not only by the raw http/https trap.
+    ['lowprofile.client', require('../src/modules/payment/cardcom/lowprofile.client')],
   ];
   for (const [label, mod] of modules) {
     for (const key of Object.keys(mod)) {
