@@ -14,9 +14,6 @@ function getDonationErrorMessage(error) {
   if (error.code === 'INVALID_INSTALLMENTS') {
     return 'מספר החודשים שנבחר אינו תקין — נסו שוב.';
   }
-  if (error.code === 'EMBEDDED_SPIKE_DISABLED') {
-    return 'Embedded checkout spike is not enabled — set ALLOW_EMBEDDED_DONATION_SPIKE=true in .env';
-  }
   switch (error.message) {
     case 'Entity not approved':
       return 'לא ניתן לתרום לקמפיין זה כרגע — העמותה המפעילה אותו ממתינה לאישור.';

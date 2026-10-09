@@ -243,24 +243,6 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note }) => {
 
-  // Embedded OpenFields spike (2026-09-24) — a second, independent gate on
-  // top of the frontend's devOnlyGuard (hostname check). Neither trusts the
-  // other: even if the dev-only route were somehow reached in a real
-  // deployment, this server-side flag (explicit opt-in, unset by default,
-  // never committed — .env is gitignored) still refuses to honor
-  // `embedded:true` there. Found while building this: environment.production
-  // can't be trusted (angular.json has no fileReplacements for the
-  // `production` build config, so environment.ts — production:false,
-  // hardcoded — ships to every build including real production), and this
-  // backend has no NODE_ENV convention at all — so this is a genuinely new,
-  // explicit flag, not a reuse of an existing (nonexistent) one.
-  if (embedded && process.env.ALLOW_EMBEDDED_DONATION_SPIKE !== 'true') {
-    const err = new Error('Embedded checkout spike is not enabled in this environment');
-    err.status = 403;
-    err.code = 'EMBEDDED_SPIKE_DISABLED';
-    throw err;
-  }
-
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at, c.rewards,
