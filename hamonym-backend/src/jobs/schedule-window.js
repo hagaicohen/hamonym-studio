@@ -92,11 +92,36 @@ exports.checkWindow = checkWindow;
 // measured against the last time this job actually succeeded, unbounded by
 // the current window — still sized off the same schedule-derived intervalMs
 // the due-check uses, just a different base timestamp.
+// A schedule whose cron expression is dense inside a window that is itself
+// much rarer than that density (billing-monthly-cycle's '0 * 28 * *': hourly,
+// but only on day-of-month 28) breaks the intervalMs-derived tolerance above.
+// intervalMsFor() reads the gap to the *previous matching minute*, which on
+// any day other than the 28th is the gap between two day-28 hours — 1 hour —
+// so for the ~29 days between real runs the job is measured against a 2-hour
+// tolerance and reported stale every single evaluation. Reproduced against
+// the live DB 2026-10-11: {"stale":true,"msSinceLastSuccess":1096862980,
+// "intervalMs":3600000} for a job whose 24 day-28 runs all succeeded, which
+// queued a real admin-scheduler-stale notification.
+//
+// The fix is an explicit, opt-in per-job policy rather than a name check or a
+// smarter cron parser: a job that knows its own real cadence states the
+// longest gap that is still healthy. `staleAfterMs` is an ABSOLUTE threshold
+// and deliberately NOT multiplied by toleranceMultiplier — the multiplier
+// exists to turn a per-tick interval into "one miss is jitter, two is an
+// outage", a translation a job stating its own tolerance has already done.
+// Any job that does not set it keeps the schedule-derived behavior byte for
+// byte.
+function stalenessThresholdFor(job, intervalMs, toleranceMultiplier) {
+  if (typeof job.staleAfterMs === 'number' && job.staleAfterMs > 0) return job.staleAfterMs;
+  return intervalMs * toleranceMultiplier;
+}
+
 async function checkStaleness(db, job, now, toleranceMultiplier = 2) {
   const windowStart = mostRecentWindowStart(job.schedule, now);
-  if (!windowStart) return { stale: false, msSinceLastSuccess: null, intervalMs: null };
+  if (!windowStart) return { stale: false, msSinceLastSuccess: null, intervalMs: null, thresholdMs: null };
 
   const intervalMs = intervalMsFor(job.schedule, windowStart);
+  const thresholdMs = stalenessThresholdFor(job, intervalMs, toleranceMultiplier);
   const res = await db.query(
     `SELECT MAX(started_at) AS last_success FROM job_runs WHERE job_name = $1 AND status = 'success'`,
     [job.name]
@@ -104,7 +129,12 @@ async function checkStaleness(db, job, now, toleranceMultiplier = 2) {
   const lastSuccess = res.rows[0].last_success;
   const msSinceLastSuccess = lastSuccess ? now.getTime() - new Date(lastSuccess).getTime() : null;
 
-  const stale = msSinceLastSuccess == null || msSinceLastSuccess > intervalMs * toleranceMultiplier;
-  return { stale, msSinceLastSuccess, intervalMs };
+  const stale = msSinceLastSuccess == null || msSinceLastSuccess > thresholdMs;
+  // intervalMs stays the schedule-derived value it has always been (callers
+  // display it as "this job's cadence"); thresholdMs is the number staleness
+  // was actually decided against, which is the same thing only when no
+  // explicit staleAfterMs is set.
+  return { stale, msSinceLastSuccess, intervalMs, thresholdMs };
 }
 exports.checkStaleness = checkStaleness;
+exports.stalenessThresholdFor = stalenessThresholdFor;

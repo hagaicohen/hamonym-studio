@@ -12,10 +12,18 @@ const adminNotifications = require('../modules/email/admin-notification.service'
 
 const registry = new Map();
 
-// { name, handler, timeoutMs? } — handler is async (db, { now }) =>
-// resultSummary. `db` is and stays the first argument; the second argument
-// is additive, so a handler declared as `async (db) => ...` keeps working
-// completely unmodified (JS ignores an argument it doesn't declare).
+// { name, handler, timeoutMs?, schedule?, staleAfterMs? } — handler is
+// async (db, { now }) => resultSummary. `db` is and stays the first argument;
+// the second argument is additive, so a handler declared as
+// `async (db) => ...` keeps working completely unmodified (JS ignores an
+// argument it doesn't declare).
+//
+// `schedule` is the approved cron cadence (falsy = frozen/manual-only, which
+// cron-entry.js skips). `staleAfterMs` is an optional explicit staleness
+// tolerance that overrides the one schedule-window.js derives from the cron
+// expression — for a job whose expression cannot express its real cadence
+// (see stalenessThresholdFor there). Both are plain fields stored verbatim
+// and read by callers; nothing in this file interprets them.
 exports.register = (job) => {
   if (!job?.name || typeof job.handler !== 'function') {
     throw new Error('job-runner.register requires { name, handler }');

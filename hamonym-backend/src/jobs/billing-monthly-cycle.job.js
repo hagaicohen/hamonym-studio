@@ -146,6 +146,23 @@ module.exports = {
   // schedule-window lookback already comfortably covers the largest gap
   // between two day-28 matches (under 31 days), so no change needed there.
   schedule: '0 * 28 * *',
+  // Explicit staleness policy (2026-10-11). Required because this schedule is
+  // dense-within-a-rare-window: schedule-window.js's intervalMsFor() reads the
+  // gap to the previous matching MINUTE, which for '0 * 28 * *' is 1 hour, so
+  // the generic 2x-interval tolerance declared this job stale on every one of
+  // the ~29 days between real runs -- a confirmed false positive that queued a
+  // real admin-scheduler-stale notification while all 24 day-28 runs had
+  // succeeded.
+  //
+  // 35 days, not 31: the largest HEALTHY gap between two successes is
+  // Jan 28 00:00 -> Feb 28 23:00 (31 days 23 hours, the longest day-28-to-
+  // day-28 span plus a full day of trigger jitter inside the 24 hourly
+  // windows), so 35 days leaves ~3 days of slack above the worst legitimate
+  // case and cannot be tripped by scheduling jitter around day 28. It is
+  // still far tighter than the next real opportunity to run: a completely
+  // missed month is reported ~4 days into the following month, roughly 25
+  // days before day 28 comes round again.
+  staleAfterMs: 35 * 24 * 60 * 60 * 1000,
   timeoutMs: 5 * 60 * 1000, // same order as the other billing jobs; calculation loops per billing_account
   handler,
   // Exported for scripts/test-billing-monthly-cycle.js only.
