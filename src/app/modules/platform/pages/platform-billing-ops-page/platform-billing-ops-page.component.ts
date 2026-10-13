@@ -432,6 +432,35 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.loadPeriods();
   }
 
+  // FIN-02 — supplemental calculation for one entity whose billing account
+  // was provisioned AFTER this period's one production run already
+  // executed (so it was skipped and shows here as "no_billing_account" even
+  // though the account now exists -- see openBillingSetup/the readiness
+  // flow for provisioning itself). Never approves, never collects; the new
+  // Statement appears in the normal draft-approval list below once
+  // loadStatements() refreshes. Backend guarantees idempotency even under
+  // concurrent clicks, so a disabled-while-pending guard here is a UX nicety
+  // only, not the actual safety mechanism.
+  supplementalCalcPendingEntityId: string | null = null;
+  supplementalCalcError: string | null = null;
+
+  calculateSupplemental(periodId: string, entityId: string): void {
+    if (this.supplementalCalcPendingEntityId) return;
+    this.supplementalCalcPendingEntityId = entityId;
+    this.supplementalCalcError = null;
+    this.provisioningService.calculateSupplementalStatement(entityId, periodId).subscribe({
+      next: () => {
+        this.supplementalCalcPendingEntityId = null;
+        this.loadPeriods();
+        this.loadStatements();
+      },
+      error: (err) => {
+        this.supplementalCalcPendingEntityId = null;
+        this.supplementalCalcError = err?.error?.error || 'חישוב משלים נכשל';
+      },
+    });
+  }
+
   // ---- "דורש טיפול" (commission-area issues, reused from the same data
   // "תרומות" shows, filtered here to billing/collection concerns only --
   // see this class's header note and ../../utils/ops-labels.ts) ----------

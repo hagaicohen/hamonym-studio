@@ -176,6 +176,17 @@
                          (click)="openBillingSetup(item.entityId, item.displayName, item.donationCount, item.grossAmount)">
                         השלם הגדרות חיוב
                       </button>
+                      <!-- FIN-02: if a billing account was already set up after this
+                           period's run, "השלם הגדרות חיוב" above would just reopen
+                           an already-complete drawer -- this is the actual fix. -->
+                      <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm"
+                         [disabled]="supplementalCalcPendingEntityId === item.entityId"
+                         (click)="calculateSupplemental(period.id, item.entityId)">
+                        {{ supplementalCalcPendingEntityId === item.entityId ? 'מחשב...' : 'חשב תרומות שהתגלו באיחור' }}
+                      </button>
+                      @if (supplementalCalcError) {
+                        <div class="bo-result-detail bo-result-warning">{{ supplementalCalcError }}</div>
+                      }
                     } @else {
                       <span class="bo-blocked-manual-note">נדרש טיפול ידני בהגדרות חשבון החיוב הקיים</span>
                     }

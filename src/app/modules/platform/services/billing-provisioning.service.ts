@@ -85,4 +85,27 @@ export class BillingProvisioningService {
       headers: authHeaders(),
     });
   }
+
+  // FIN-02 — a Statement for one entity inside a period that already has a
+  // production billing_run (e.g. its billing account was provisioned after
+  // that run executed, so it was skipped). Never approves, never collects.
+  calculateSupplementalStatement(entityId: string, periodId: string): Observable<SupplementalStatementResult> {
+    return this.http.post<SupplementalStatementResult>(
+      `${this.base}/${entityId}/supplemental-statement`,
+      { periodId },
+      { headers: authHeaders() },
+    );
+  }
+}
+
+export interface SupplementalStatementResult {
+  alreadyExists: boolean;
+  zeroActivity?: boolean;
+  statementId?: string;
+  donationCount?: number;
+  grossRaised?: string;
+  feeAmount?: string;
+  vatAmount?: string;
+  totalDue?: string;
+  statement?: { id: string };
 }
