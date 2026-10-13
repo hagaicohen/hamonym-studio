@@ -7,6 +7,13 @@ const ambassadorsService = require('../ambassadors/ambassadors.service');
 const donationsService = require('../donations/donations.service');
 const emailService = require('../email/email.service');
 const adminNotifications = require('../email/admin-notification.service');
+const billingProvisioning = require('../billing-engine/provisioning.service');
+
+// Business decision (2026-10, FIN-01): every approved nonprofit must have a
+// Hamonym billing account. createBillingAccount() itself never defaults
+// fee_rate (see its own comment) -- this is the one place that decides what
+// "standard" means for auto-provisioning.
+const STANDARD_FEE_RATE = 0.03;
 
 const ORG_SORT_COLUMNS = {
   name: 'COALESCE(NULLIF(e.display_name, \'\'), e.legal_name)',
@@ -693,6 +700,38 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   // fire-and-forget and swallows provider errors (see email.service.js).
   if (action === 'approve' || action === 'reject') {
     await notifyEntityDecision({ entity, entityId, action, auditLogId, autoPublishedCount });
+  }
+
+  // Billing-account provisioning (FIN-01, 2026-10) — AFTER COMMIT, its own
+  // separate call, deliberately NOT nested inside the transaction above:
+  // createBillingAccount() opens its own pool.connect()/BEGIN/COMMIT (it is
+  // not written to accept an external client), so calling it while the
+  // approve transaction above is still open would be two uncoordinated
+  // transactions on two connections -- exactly the unsafe cross-transaction
+  // call this change must avoid. Sequencing it after the approve COMMIT
+  // means the entity's approval is already durable before this runs, so a
+  // failure here can never roll back or appear to invalidate the approval
+  // itself -- same resilience shape as notifyEntityDecision above. Scoped to
+  // 'approve' only (not 'reactivate', which also reaches status:'active')
+  // because a reactivated entity was already approved once and already has
+  // an account; BILLING_ACCOUNT_ALREADY_EXISTS is still the catch-all no-op
+  // guard underneath, same DB UNIQUE constraint createBillingAccount already
+  // relies on, so this is safe even if that scoping assumption is ever wrong.
+  if (action === 'approve') {
+    try {
+      await billingProvisioning.createBillingAccount({
+        entityId,
+        feeRate: STANDARD_FEE_RATE,
+        preferredCollectionMethod: 'card',
+        superAdminUserId,
+        notes: 'Auto-provisioned on entity approval (standard 3% fee) — FIN-01',
+        ip,
+      });
+    } catch (err) {
+      if (err.code !== 'BILLING_ACCOUNT_ALREADY_EXISTS') {
+        console.error('[setStatus] auto-provisioning billing account failed:', err.message);
+      }
+    }
   }
 
   return entity;

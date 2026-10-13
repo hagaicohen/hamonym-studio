@@ -16,5 +16,6 @@ router.get('/unprovisioned', ctrl.listUnprovisioned);
 router.get('/readiness', ctrl.listReadiness);
 router.get('/:entityId', ctrl.getByEntityId);
 router.post('/', ctrl.create);
+router.post('/:entityId/supplemental-statement', ctrl.calculateSupplemental);
 
 module.exports = router;
