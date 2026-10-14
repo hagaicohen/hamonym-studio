@@ -10,7 +10,7 @@
 | Stage 1 — `foldLateDonationsIntoStatement` | **הושלם, נדחף** | `d8d440e` | — (נדחף ל-`origin/main`) | `statement-balance.service.js` | 29/29 PASS |
 | Stage 2A — `getFin11CappedCardProposal` | **הושלם, committed, לא נדחף** | `a4c364b` | `C:/DEV/HamonymStudio-fin11-stage2a` | `collection.service.js` | 18/18 PASS |
 | בידוד נתוני בדיקה (תקרית) | **הושלם** | (UPDATE ישיר, לא commit קוד) | — | `billing_accounts`/`statements` — 2 שורות הושעו/בוטלו | מאומת read-only |
-| Stage 2B — `resolveAttempt` hardening + payment exceptions | **הושלם ונבדק, טרם commit** (עד אישור סופי) | — (ממתין) | `C:/DEV/HamonymStudio-fin11-stage2b` | `collection.service.js`, `payment-exceptions.service.js` (חדש), `migrations/073_*.sql` (חדש, לא הוחל), `scripts/migrate-073.js` (חדש) | 24/24 PASS |
+| Stage 2B — `resolveAttempt` hardening + payment exceptions | **הושלם, committed, לא נדחף** (עברו שני סבבי ביקורת) | `efbdd2f` | `C:/DEV/HamonymStudio-fin11-stage2b` | 11 קבצים — `collection.service.js`, `payment-exceptions.service.js` (חדש), `migrations/073_*.sql` (חדש, לא הוחל), `scripts/{migrate-073,verify-fin11-stage2b-ready,test-fin11-stage2b-resolve}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (חדשים) + `FINANCIAL_BUSINESS_DECISIONS.md` (עודכן) | 24/24 PASS |
 | Stage 3 — חישוב יתרת מס"ב | **לא התחיל** | — | — | — | — |
 | Stage 4 — ניתוב משולב + תזמון | **לא התחיל** | — | — | — | — |
 | Finance UI | **לא התחיל** | — | — | — | — |
@@ -31,7 +31,7 @@
 
 **שער פריסה חדש, אומת ריצתית**: `scripts/verify-fin11-stage2b-ready.js` מול ה-DB האמיתי (ללא migration 073) מחזיר קוד-יציאה 1 ומפרט במדויק אילו טבלאות/טריגרים חסרים — ר' Technical Design סעיף 7.
 
-**לא נדחף** — commit בוצע לאחר אישור סקירת-ביקורת שניה (ר' `FIN11_DECISION_LOG.md`).
+**Commit `efbdd2f` — לא נדחף.** בוצע לאחר שני סבבי ביקורת (הראשון: נעילה+חישוב-יתרה-מחדש; השני: דיוק טענת אימות-הסכום + שער fail-fast לפריסה — ר' `FIN11_DECISION_LOG.md` #13-14).
 
 ## היסטוריית תקריות (לשקיפות)
 
