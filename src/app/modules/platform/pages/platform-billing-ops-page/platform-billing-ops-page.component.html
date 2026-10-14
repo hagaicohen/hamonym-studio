@@ -888,6 +888,55 @@
             }
           </div>
 
+          <!-- Statement Adjustments (2026-10, FIN) -- an exceptional Super
+               Admin correction, separate from the normal approve/collect
+               flow above. Only approved/paid Statements are adjustable
+               (matches statement-balance.service.js's own
+               ADJUSTABLE_STATEMENT_STATUSES) -- draft is corrected by
+               re-calculating, not adjusting. Never auto-collects: applying
+               an adjustment only shows the new balance; reaching outstanding
+               money still requires the separate "פתח לגבייה" action below,
+               itself still gated on the normal גבה button afterward. -->
+          @if (selectedStatement.status === 'approved' || selectedStatement.status === 'paid') {
+            <div class="bo-drawer-next-action">
+              <div class="bo-subtitle bo-drawer-next-action-title">תיקון חיוב (חריג)</div>
+
+              @if (adjustBalance) {
+                <div class="bo-statement-summary">
+                  <div class="bo-statement-summary-line">סכום מקורי: ₪{{ adjustBalance.originalTotal }}</div>
+                  <div class="bo-statement-summary-line">סכום מתואם: ₪{{ adjustBalance.adjustedTotal }}</div>
+                  <div class="bo-statement-summary-line">נגבה בפועל: ₪{{ adjustBalance.collected }}</div>
+                  <div class="bo-statement-summary-line bo-statement-summary-highlight">
+                    {{ adjustBalance.outstanding < 0 ? 'זכות לעמותה' : 'יתרה לגבייה' }}: ₪{{ adjustBalance.outstanding < 0 ? (adjustBalance.outstanding * -1) : adjustBalance.outstanding }}
+                  </div>
+                </div>
+              }
+
+              @if (adjustError) {
+                <div class="ops-action-error">{{ adjustError }}</div>
+              }
+
+              <div class="bo-drawer-actions" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                <input type="number" step="0.01" placeholder="סכום תיקון (חיובי להוספה, שלילי לזיכוי)"
+                       [(ngModel)]="adjustAmount" [disabled]="adjustBusy" />
+                <input type="text" placeholder="הערה (חובה) — הסבר התיקון"
+                       [(ngModel)]="adjustReason" [disabled]="adjustBusy" />
+                <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="adjustBusy" (click)="applyAdjustment()">
+                  {{ adjustBusy ? 'שומר תיקון...' : 'שמור תיקון' }}
+                </button>
+              </div>
+
+              @if (selectedStatement.status === 'paid' && adjustBalance && adjustBalance.outstanding > 0) {
+                @if (reopenError) {
+                  <div class="ops-action-error">{{ reopenError }}</div>
+                }
+                <button type="button" class="bo-drawer-secondary-action" [disabled]="reopenBusy" (click)="reopenForCollection()">
+                  {{ reopenBusy ? 'פותח מחדש...' : 'פתח לגבייה (ללא גבייה אוטומטית)' }}
+                </button>
+              }
+            </div>
+          }
+
           <!-- History only when history exists (2026-09-16) -- a Statement
                that hasn't been collected yet (the common case: draft, or
                approved-and-not-yet-collected) has nothing to show here, so

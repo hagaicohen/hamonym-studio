@@ -15,6 +15,7 @@ import {
   BulkApproveResult,
   CollectionAttempt,
   ReconcileAttemptResult,
+  StatementBalance,
 } from '../../services/billing-ops.service';
 
 import { BillingProvisioningService, BillingReadinessEntity } from '../../services/billing-provisioning.service';
@@ -1167,6 +1168,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     this.reconcileMessage = null;
     this.reconcileError = null;
     this.selectedStatement = null;
+    this.resetAdjustmentState();
     this.service.getStatement(statement.id).subscribe({
       next: (res) => {
         this.selectedStatement = res.statement;
@@ -1181,6 +1183,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
 
   closeStatement(): void {
     this.selectedStatement = null;
+    this.resetAdjustmentState();
   }
 
   // Statement-detail drawer "מה עושים עכשיו" navigation (2026-09-16
@@ -1345,6 +1348,78 @@ export class PlatformBillingOpsPageComponent implements OnInit {
           ? 'החשבון אינו מוכן לגבייה כרגע — רעננו את המסך ונסו שוב'
           : (err?.error?.error || 'הפעלת הגבייה נכשלה');
         this.refreshSelectedStatement();
+      },
+    });
+  }
+
+  // Statement Adjustments (2026-10, FIN) -- exceptional Super Admin
+  // correction on an approved/paid Statement, never automatic, never a
+  // collection trigger itself. adjustBalance is only ever populated from a
+  // real applyAdjustment()/reopenForCollection() response -- there is no
+  // GET endpoint for it, so before the first action this drawer-session it
+  // deliberately shows nothing rather than a guessed number.
+  adjustAmount: number | null = null;
+  adjustReason = '';
+  adjustBusy = false;
+  adjustError: string | null = null;
+  adjustBalance: StatementBalance | null = null;
+  reopenBusy = false;
+  reopenError: string | null = null;
+
+  private resetAdjustmentState(): void {
+    this.adjustAmount = null;
+    this.adjustReason = '';
+    this.adjustBusy = false;
+    this.adjustError = null;
+    this.adjustBalance = null;
+    this.reopenBusy = false;
+    this.reopenError = null;
+  }
+
+  applyAdjustment(): void {
+    if (!this.selectedStatement || this.adjustBusy) return;
+    if (!this.adjustAmount || !Number.isFinite(this.adjustAmount)) {
+      this.adjustError = 'יש להזין סכום תיקון (חיובי או שלילי), שונה מאפס';
+      return;
+    }
+    if (!this.adjustReason.trim()) {
+      this.adjustError = 'נדרשת הערה המסבירה את התיקון';
+      return;
+    }
+    const amount = this.adjustAmount;
+    const reason = this.adjustReason.trim();
+    if (!window.confirm(`לאשר תיקון של ${amount > 0 ? '+' : ''}₪${amount} לחיוב? הפעולה תתועד ולא ניתנת לביטול.`)) return;
+
+    this.adjustBusy = true;
+    this.adjustError = null;
+    this.service.applyAdjustment(this.selectedStatement.id, amount, reason).subscribe({
+      next: (res) => {
+        this.adjustBusy = false;
+        this.adjustBalance = res.balance;
+        this.adjustAmount = null;
+        this.adjustReason = '';
+        this.loadStatements();
+      },
+      error: (err) => {
+        this.adjustBusy = false;
+        this.adjustError = err?.error?.error || 'התיקון נכשל';
+      },
+    });
+  }
+
+  reopenForCollection(): void {
+    if (!this.selectedStatement || this.reopenBusy) return;
+    if (!window.confirm('לפתוח מחדש את החשבון לגבייה? הגבייה עצמה לא תתבצע אוטומטית.')) return;
+    this.reopenBusy = true;
+    this.reopenError = null;
+    this.service.reopenForCollection(this.selectedStatement.id).subscribe({
+      next: () => {
+        this.reopenBusy = false;
+        this.refreshSelectedStatement();
+      },
+      error: (err) => {
+        this.reopenBusy = false;
+        this.reopenError = err?.error?.error || 'פתיחה מחדש לגבייה נכשלה';
       },
     });
   }

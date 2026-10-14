@@ -18,6 +18,14 @@ export interface BillingPeriod {
 
 export type BillingSetupBlockingReason = 'no_billing_account' | 'account_suspended';
 
+// Statement Adjustments (2026-10, FIN) -- mirrors statement-balance.service.js#getStatementBalance's exact return shape.
+export interface StatementBalance {
+  originalTotal: number;
+  adjustedTotal: number;
+  collected: number;
+  outstanding: number;
+}
+
 export interface BillingSetupNotificationResult {
   sent: boolean;
   reason?: 'already_notified' | 'no_admin_found' | 'attempted_not_delivered' | 'error';
@@ -305,6 +313,29 @@ export class BillingOpsService {
 
   triggerCollection(id: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {}, { headers: authHeaders() });
+  }
+
+  // Statement Adjustments (2026-10, FIN) -- exceptional correction on an
+  // approved/paid Statement. Never approves, never collects; see
+  // statement-balance.service.js#applyStatementAdjustment.
+  applyAdjustment(id: string, deltaAmount: number, reason: string): Observable<{ balance: StatementBalance }> {
+    return this.http.post<{ balance: StatementBalance }>(
+      `${this.base}/statements/${id}/adjust`,
+      { deltaAmount, reason },
+      { headers: authHeaders() },
+    );
+  }
+
+  // Flips a 'paid' Statement with outstanding>0 (after a positive
+  // adjustment) back to 'open' -- never triggers collection itself; the
+  // existing גבה button becomes available afterward, same as any other
+  // 'open' Statement. See statement-balance.service.js#reopenStatementForCollection.
+  reopenForCollection(id: string): Observable<{ result: { statementId: string; status: string; outstanding: number } }> {
+    return this.http.post<{ result: { statementId: string; status: string; outstanding: number } }>(
+      `${this.base}/statements/${id}/reopen-for-collection`,
+      {},
+      { headers: authHeaders() },
+    );
   }
 
   // Manual "check with provider" for one past Collection Attempt -- read-only
