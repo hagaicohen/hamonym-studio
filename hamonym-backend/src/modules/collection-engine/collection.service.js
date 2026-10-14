@@ -247,10 +247,141 @@ async function runCollectionForStatement(statementId, { resolveAdapter = default
   return resolveAttempt(opened.attemptId, statementId, outcome);
 }
 
+// FIN-11 Stage 2A (2026-10, revised after Code Review) — PURE READ proposal
+// of a CAPPED card collection amount. Deliberately separate from
+// openAttempt: that function still serves the old model, where
+// routing.resolveCollectionMethod makes ONE binary decision (card vs masav)
+// over the Statement's full total_due. FIN-11's hybrid model needs card to
+// be able to collect up to a fixed cap regardless of what that routing
+// decision would have been for the full amount -- changing openAttempt
+// itself to do this would silently change the existing single-method
+// route's behavior for every Statement in production today, which is
+// explicitly out of scope for this stage.
+//
+// REVISION HISTORY: the first version of this function created a real
+// collection_attempts row (status='pending', collection_method='card') and
+// stopped there, intending that as a safe "preparation, not a charge" step.
+// Code Review caught a Critical gap that analysis missed: a 'pending',
+// non-masav collection_attempts row is EXACTLY what
+// collection-attempt-reconciliation.job.js's hourly cron (STUCK_AFTER_HOURS
+// = 2, see that job's own candidate query) already scans for -- within a
+// couple of hours it would call the real CardCom adapter's reconcile()
+// (GetTransactionByExternalUniqTran) for an ExternalUniqTranId that was
+// NEVER submitted via charge(), a genuine unintended provider contact. Worse,
+// for as long as that row stayed 'pending' it occupied the SAME
+// ACTIVE_ATTEMPT_STATUSES slot openAttempt itself checks (line ~51 above),
+// so merely calling the "preparation" function would silently freeze the
+// Statement's entire collection pipeline -- old path included -- until a
+// human intervened. A DB write that looks inert in isolation was not inert
+// once the EXISTING cron infrastructure is accounted for.
+//
+// The fix: this function no longer writes anything, ever. It locks the
+// Statement only to read a CONSISTENT snapshot (so a concurrent payment/
+// adjustment can't be read half-applied), then releases the lock via a
+// plain COMMIT of a transaction that touched no data. It returns a
+// *proposal* -- a number and the facts that justified it -- never a
+// collection_attempts row, never a status change, never a provider call.
+//
+// IMPORTANT FOR WHOEVER WIRES THIS UP NEXT (Stage 2B+): the returned
+// proposedAmount is a snapshot at the instant this function ran. It goes
+// stale the moment the transaction below commits and the lock is released
+// -- a concurrent payment, adjustment, or another collection attempt could
+// change `outstanding` before any real attempt is ever opened. A future
+// stage that actually acts on this proposal MUST recompute
+// getStatementBalance() again under a FRESH lock, inside the SAME
+// transaction that creates the real collection_attempts row and (if
+// relevant) calls the adapter -- never reuse this function's returned
+// number as if it were still current by the time a charge happens.
+const FIN11_CARD_COLLECTION_CAP = 3000; // ILS -- FIN-11 business decision, docs/finance/FINANCIAL_BUSINESS_DECISIONS.md
+
+// All monetary rounding happens in JS here (unlike the rest of this
+// codebase's "arithmetic inside Postgres as NUMERIC" convention -- see
+// calculation.service.js) because getStatementBalance() already hands back
+// a JS Number (itself a pre-existing design choice, unchanged by this
+// stage). Explicit agorot-precision rounding at the one point this number
+// is used/returned, rather than trusting Math.min's two float operands to
+// already be clean.
+function roundToAgorot(amount) {
+  return Math.round(amount * 100) / 100;
+}
+
+async function getFin11CappedCardProposal(statementId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const stmtRes = await client.query(
+      `SELECT s.*, ba.entity_id
+       FROM statements s
+       JOIN billing_accounts ba ON ba.id = s.billing_account_id
+       WHERE s.id = $1
+       FOR UPDATE OF s`,
+      [statementId]
+    );
+    const statement = stmtRes.rows[0];
+    if (!statement) {
+      const err = new Error('Statement not found');
+      err.code = 'STATEMENT_NOT_FOUND';
+      throw err;
+    }
+
+    if (!ACTIONABLE_STATEMENT_STATUSES.includes(statement.status)) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'not_actionable', status: statement.status };
+    }
+
+    const activeRes = await client.query(
+      `SELECT id FROM collection_attempts WHERE statement_id = $1 AND status = ANY($2::text[])`,
+      [statementId, ACTIVE_ATTEMPT_STATUSES]
+    );
+    if (activeRes.rows[0]) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
+    }
+
+    // Same statement-adjustment-aware balance read as openAttempt, under
+    // the same lock -- never the frozen total_due directly.
+    const balance = await getStatementBalance(statementId, client);
+    const outstanding = roundToAgorot(balance.outstanding);
+    if (outstanding <= 0) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'no_outstanding_balance', outstanding };
+    }
+
+    const paymentInstrument = await billingRepository.getActiveDefaultByEntityId(statement.entity_id);
+    if (!paymentInstrument) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'no_active_payment_instrument' };
+    }
+
+    const proposedAmount = roundToAgorot(Math.min(outstanding, FIN11_CARD_COLLECTION_CAP));
+
+    // No INSERT, no UPDATE -- read-only transaction, nothing to roll back
+    // even on success. COMMIT here only releases the row lock cleanly.
+    await client.query('COMMIT');
+    return {
+      proposed: true,
+      method: 'card',
+      paymentInstrument,
+      entityId: statement.entity_id,
+      proposedAmount,
+      outstandingBeforeCap: outstanding,
+      cappedAt: FIN11_CARD_COLLECTION_CAP,
+    };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   runCollectionForStatement,
   openAttempt,
   resolveAttempt,
   ACTIONABLE_STATEMENT_STATUSES,
   ACTIVE_ATTEMPT_STATUSES,
+  getFin11CappedCardProposal,
+  FIN11_CARD_COLLECTION_CAP,
 };
