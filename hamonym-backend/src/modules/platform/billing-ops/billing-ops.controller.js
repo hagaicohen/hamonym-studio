@@ -1,4 +1,5 @@
 const service = require('./billing-ops.service');
+const statementBalanceService = require('../../billing-engine/statement-balance.service');
 const { statusFor } = require('./error-status');
 
 function handle(res, label, err) {
@@ -116,6 +117,35 @@ exports.triggerCollection = async (req, res) => {
     res.json({ result });
   } catch (err) {
     handle(res, 'triggerCollection', err);
+  }
+};
+
+// Statement Adjustments (2026-10, FIN) -- superAdminUserId always comes
+// from req.user.id (set by requireSuperAdmin off the verified JWT), never
+// from the request body, same as every handler in this file.
+exports.applyAdjustment = async (req, res) => {
+  try {
+    const balance = await statementBalanceService.applyStatementAdjustment({
+      statementId: req.params.id,
+      deltaAmount: req.body.deltaAmount,
+      reason: req.body.reason,
+      superAdminUserId: req.user.id,
+      ip: req.ip,
+    });
+    res.json({ balance });
+  } catch (err) {
+    handle(res, 'applyAdjustment', err);
+  }
+};
+
+exports.reopenForCollection = async (req, res) => {
+  try {
+    const result = await statementBalanceService.reopenStatementForCollection(
+      req.params.id, req.user.id, req.ip
+    );
+    res.json({ result });
+  } catch (err) {
+    handle(res, 'reopenForCollection', err);
   }
 };
 

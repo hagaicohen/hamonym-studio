@@ -27,6 +27,11 @@ router.post('/statements/bulk-approve', ctrl.bulkApproveStatements);
 router.post('/statements/:id/abandon', ctrl.abandonStatement);
 router.post('/statements/:id/collect', ctrl.triggerCollection);
 
+// Statement Adjustments (2026-10, FIN) -- exceptional Super Admin
+// corrections on an approved/paid Statement. See statement-balance.service.js.
+router.post('/statements/:id/adjust', ctrl.applyAdjustment);
+router.post('/statements/:id/reopen-for-collection', ctrl.reopenForCollection);
+
 // Manual "check with provider" for one past Collection Attempt (Billing v1
 // post-launch hardening) -- read-only reconcile lookup, never a new charge.
 // See billing-ops.service.js#reconcileCollectionAttempt.

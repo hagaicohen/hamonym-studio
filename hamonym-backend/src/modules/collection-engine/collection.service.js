@@ -12,6 +12,7 @@ const billingRepository = require('../billing/billing.repository');
 const defaultGetAdapter = require('./adapters/get-adapter');
 const routing = require('./routing');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
+const { getStatementBalance } = require('../billing-engine/statement-balance.service');
 
 const ACTIONABLE_STATEMENT_STATUSES = ['approved', 'open'];
 const ACTIVE_ATTEMPT_STATUSES = ['pending', 'ambiguous'];
@@ -53,6 +54,19 @@ async function openAttempt(statementId, resolveAdapter) {
     if (activeRes.rows[0]) {
       await client.query('COMMIT');
       return { skipped: true, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
+    }
+
+    // Statement Adjustments (2026-10, FIN) -- the actual amount to charge is
+    // the adjusted outstanding balance, not the frozen total_due: a credit
+    // adjustment can bring a statement to zero or negative before any
+    // attempt is ever opened. Read under the SAME lock already held above
+    // (client, still inside this transaction) -- no second lock needed.
+    // Never charge zero/negative/already-covered -- this is the one new
+    // guard; everything above it (status, active-attempt) is unchanged.
+    const balance = await getStatementBalance(statementId, client);
+    if (balance.outstanding <= 0) {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'no_outstanding_balance', outstanding: balance.outstanding };
     }
 
     // Dynamic per-Statement routing (Billing v1 Bundle 1/2 correction) --
@@ -124,7 +138,7 @@ async function openAttempt(statementId, resolveAdapter) {
       `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount)
        VALUES ($1, $2, $3, $4)
        RETURNING id, attempt_number`,
-      [statementId, method, attemptNumber, statement.total_due]
+      [statementId, method, attemptNumber, balance.outstanding]
     );
 
     if (statement.status === 'approved') {
@@ -139,7 +153,7 @@ async function openAttempt(statementId, resolveAdapter) {
       method,
       paymentInstrument,
       entityId: statement.entity_id,
-      requestedAmount: statement.total_due,
+      requestedAmount: balance.outstanding,
     };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -179,12 +193,13 @@ async function resolveAttempt(attemptId, statementId, outcome) {
         [statementId, attemptId, attempt.requested_amount, attempt.provider, outcome.providerReference]
       );
 
-      const sumRes = await client.query(
-        `SELECT COALESCE(SUM(amount), 0) AS total, (SELECT total_due FROM statements WHERE id = $1) AS total_due
-         FROM payments WHERE statement_id = $1`,
-        [statementId]
-      );
-      if (Number(sumRes.rows[0].total) >= Number(sumRes.rows[0].total_due)) {
+      // Reconciled against adjustedTotal (Statement Adjustments, 2026-10),
+      // not raw total_due -- a credit added after this payment was already
+      // in flight must not leave the statement permanently stuck "open"
+      // just because the original, pre-adjustment total was never fully
+      // matched by payments alone.
+      const balance = await getStatementBalance(statementId, client);
+      if (balance.collected >= balance.adjustedTotal) {
         await client.query(`UPDATE statements SET status = 'paid' WHERE id = $1`, [statementId]);
         statementStatus = 'paid';
       }
