@@ -926,8 +926,21 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   // Only present on runs executed after the Billing readiness correction
   // (2026-09-02) -- older runs in run history simply have no blocked
   // entities to show, not an error.
+  //
+  // Excludes entities already captured by a real Statement in this period
+  // (FIN-02, 2026-10) -- same frozen-snapshot-goes-stale reasoning as
+  // periodCapturedActivity above, which already applies this exact filter
+  // to the aggregate totals but not to this list itself: a supplemental
+  // calculation (FIN-02) creates a real Statement under the EXISTING
+  // billing_run without ever producing a new run, so result_summary.
+  // blockedEntities keeps listing that entity as "no_billing_account"
+  // forever even after it's fully resolved. Every caller of this method
+  // wants the exclusion -- there is no legitimate reason to show a blocked-
+  // entity row for an entity that already has a Statement.
   periodBlockedEntities(period: BillingPeriod): BlockedBillingEntity[] {
-    return this.latestRunSummary(period)?.blockedEntities ?? [];
+    const raw = this.latestRunSummary(period)?.blockedEntities ?? [];
+    const capturedEntityIds = new Set(this.periodStatements(period.id).map((s) => s.entity_id));
+    return raw.filter((b) => !capturedEntityIds.has(b.entityId));
   }
 
   periodActivityDiscovered(period: BillingPeriod): BillingActivityDiscovered | null {
