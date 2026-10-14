@@ -13,6 +13,7 @@ const defaultGetAdapter = require('./adapters/get-adapter');
 const routing = require('./routing');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
 const { getStatementBalance } = require('../billing-engine/statement-balance.service');
+const paymentExceptions = require('../billing-engine/payment-exceptions.service');
 
 const ACTIONABLE_STATEMENT_STATUSES = ['approved', 'open'];
 const ACTIVE_ATTEMPT_STATUSES = ['pending', 'ambiguous'];
@@ -40,6 +41,18 @@ async function openAttempt(statementId, resolveAdapter) {
       const err = new Error('Statement not found');
       err.code = 'STATEMENT_NOT_FOUND';
       throw err;
+    }
+
+    // FIN-11 Stage 2B, rule 4.9: a verified overpayment holds ALL new
+    // platform-fee collection from this ENTITY (every Statement, not just
+    // the one that overpaid) until a Super Admin reviews it. Checked first,
+    // before status/active-attempt, because it is an entity-wide block
+    // independent of this particular Statement's own state -- read under
+    // the same lock/transaction already open (client), no second lock.
+    const hold = await paymentExceptions.hasOpenCollectionHold(statement.entity_id, client);
+    if (hold.held) {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'entity_collection_held', exceptionId: hold.exceptionId };
     }
 
     if (!ACTIONABLE_STATEMENT_STATUSES.includes(statement.status)) {
@@ -166,10 +179,83 @@ async function openAttempt(statementId, resolveAdapter) {
 // Phase C: resolve an opened attempt against the adapter's outcome. Runs in
 // its own transaction, after the (possibly slow) external call in Phase B
 // has already returned -- no DB lock is held during the network call.
+//
+// FIN-11 Stage 2B (2026-10) hardening -- Code Review of the pre-Stage-2B
+// version found this function was the one write-path in the whole billing
+// engine that never locked the Statement row and never recomputed the
+// balance before writing a payment: it blindly trusted
+// collection_attempts.requested_amount, frozen at openAttempt time, with no
+// re-check against the Statement's CURRENT state at resolve time (which can
+// be much later -- a stuck 'ambiguous' attempt, an hourly reconciliation
+// run, or a manual admin reconcile). Not exploitable *today* only because
+// ACTIVE_ATTEMPT_STATUSES already serializes all collection activity on a
+// Statement to one attempt at a time -- a protection this function itself
+// never provided. Fixed below by locking the Statement FIRST (same order as
+// every other write function -- openAttempt, applyStatementAdjustment,
+// foldLateDonationsIntoStatement -- so this can never deadlock against
+// them), then recomputing getStatementBalance() under that fresh lock
+// immediately before deciding anything.
+//
+// Provider-amount verification (re-examined 2026-10, Stage 2B review round
+// 2 -- precision correction, not a logic change): be exact about what
+// "verified" means here, because it is easy to overstate. ResponseCode=0
+// is CardCom's confirmation that it SUCCESSFULLY PROCESSED the specific
+// request we sent -- it is NOT an independent, provider-determined echo of
+// a separately-settled amount, because no such field exists for this
+// adapter to read in the first place (see below). The claim this code
+// relies on is narrower and fully traceable in THIS codebase, not a
+// property of payment processors in general:
+//   1. Schema fact, verified against the official CardCom v11 swagger
+//      (docs/CARDCOM_TERMINAL_AUDIT_AND_ADAPTER_RESEARCH_2026-08-28.md,
+//      "מיפוי מדויק — TransactionReq/TransactionInfo"): the REQUEST
+//      (TransactionReq) accepts exactly TerminalNumber/ApiName/Amount/
+//      Token/CardExpirationMMYY/ExternalUniqTranId/ISOCoinId/Advanced
+//      (additionalProperties:false, fully enumerated -- not partially
+//      explored) -- no installment/multi-currency-split/partial-capture
+//      field exists for this adapter to send, and cardcom.client.js
+//      #chargeToken never sends Advanced.IsRefund or any installment
+//      field. The RESPONSE (TransactionInfo) is ResponseCode+Description+
+//      TranzactionId+ApprovalNumber -- no amount field at all, in either
+//      direction.
+//   2. Code fact, traceable end to end in this repo: the `Amount` HTTP
+//      field actually sent to CardCom in charge() is
+//      `opened.requestedAmount` (collection.service.js's own
+//      runCollectionForStatement), which is the EXACT SAME number written
+//      into collection_attempts.requested_amount inside openAttempt's own
+//      INSERT, in the same transaction. grep confirms this column is never
+//      UPDATEd anywhere in this codebase after that INSERT.
+// Put together: for a request/response SHAPE that has no amount-altering
+// field on either side, and where the Amount sent is provably identical to
+// requested_amount, "the amount CardCom executed on success" and
+// "requested_amount" are the same number by construction -- not because
+// CardCom told us so a second time. This is NOT a general law about
+// CardCom's API (a different call shape, e.g. one that ever sets
+// Advanced.IsRefund or an installment field, would need this re-verified
+// from scratch) -- it holds specifically for the one request shape this
+// adapter ever sends. It does NOT answer "was requested_amount still the
+// right number to have asked for, given everything that may have happened
+// on OUR side since the attempt opened" -- that is a completely separate
+// question, and it is exactly the gap the Statement-lock + balance-
+// recompute below closes.
 async function resolveAttempt(attemptId, statementId, outcome) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    const stmtRes = await client.query(
+      `SELECT s.id, ba.entity_id
+       FROM statements s
+       JOIN billing_accounts ba ON ba.id = s.billing_account_id
+       WHERE s.id = $1
+       FOR UPDATE OF s`,
+      [statementId]
+    );
+    const statement = stmtRes.rows[0];
+    if (!statement) {
+      const err = new Error('Statement not found');
+      err.code = 'STATEMENT_NOT_FOUND';
+      throw err;
+    }
 
     await client.query(
       `UPDATE collection_attempts
@@ -180,26 +266,78 @@ async function resolveAttempt(attemptId, statementId, outcome) {
     );
 
     let statementStatus = null;
+    let overpayment = null;
     if (outcome.outcome === 'succeeded') {
       const attemptRes = await client.query(
         `SELECT requested_amount, provider FROM collection_attempts WHERE id = $1`,
         [attemptId]
       );
       const attempt = attemptRes.rows[0];
+      // See the function-level comment above: this is the one verified
+      // provider fact this codebase has -- never invented, never re-derived
+      // from any other field, because no other field exists in the
+      // verified CardCom response schema.
+      const collectedAmount = Number(attempt.requested_amount);
 
+      // Recomputed FRESH, under the Statement lock acquired above -- this
+      // is the actual fix. balanceBeforePayment reflects every adjustment/
+      // prior payment that exists right now, not what existed when this
+      // attempt was opened.
+      const balanceBeforePayment = await getStatementBalance(statementId, client);
+      const outstandingBeforePayment = balanceBeforePayment.outstanding;
+
+      // Rule A (FIN-11 Stage 2B decision, explicit and non-negotiable):
+      // NEVER clamp a real, provider-confirmed payment. The full
+      // collectedAmount is recorded no matter what the current outstanding
+      // balance says -- an overpayment is detected and flagged SEPARATELY
+      // below, never hidden by reducing what gets written here.
       await client.query(
         `INSERT INTO payments (statement_id, collection_attempt_id, amount, provider, provider_reference, received_at)
          VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [statementId, attemptId, attempt.requested_amount, attempt.provider, outcome.providerReference]
+        [statementId, attemptId, collectedAmount, attempt.provider, outcome.providerReference]
       );
+
+      const overpaymentAmount = Math.max(0, collectedAmount - outstandingBeforePayment);
+      if (overpaymentAmount > 0) {
+        const paymentIdRes = await client.query(
+          `SELECT id FROM payments WHERE collection_attempt_id = $1`,
+          [attemptId]
+        );
+        const exceptionRes = await client.query(
+          `INSERT INTO payment_exceptions
+             (statement_id, collection_attempt_id, payment_id, entity_id, outstanding_before, collected_amount, overpayment_amount)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
+          [statementId, attemptId, paymentIdRes.rows[0].id, statement.entity_id, outstandingBeforePayment, collectedAmount, overpaymentAmount]
+        );
+        const exceptionId = exceptionRes.rows[0].id;
+
+        // Alerts Super Admin (rule 4.4) via the same mechanism every other
+        // collection-side anomaly already uses in this file -- no new
+        // notification channel invented for Stage 2B.
+        await recordFinding(client, {
+          jobName: 'collection-resolve',
+          findingType: 'overpayment_detected',
+          severity: 'critical',
+          subjectType: 'statement',
+          subjectId: statementId,
+          details: {
+            attemptId, exceptionId, entityId: statement.entity_id,
+            collectedAmount, outstandingBeforePayment, overpaymentAmount,
+          },
+        });
+
+        overpayment = { exceptionId, overpaymentAmount, collectedAmount, outstandingBeforePayment };
+      }
 
       // Reconciled against adjustedTotal (Statement Adjustments, 2026-10),
       // not raw total_due -- a credit added after this payment was already
       // in flight must not leave the statement permanently stuck "open"
       // just because the original, pre-adjustment total was never fully
-      // matched by payments alone.
-      const balance = await getStatementBalance(statementId, client);
-      if (balance.collected >= balance.adjustedTotal) {
+      // matched by payments alone. Re-read AFTER the INSERT above (must
+      // include the payment just written).
+      const balanceAfterPayment = await getStatementBalance(statementId, client);
+      if (balanceAfterPayment.collected >= balanceAfterPayment.adjustedTotal) {
         await client.query(`UPDATE statements SET status = 'paid' WHERE id = $1`, [statementId]);
         statementStatus = 'paid';
       }
@@ -209,7 +347,7 @@ async function resolveAttempt(attemptId, statementId, outcome) {
     // this function never opens a new attempt itself.
 
     await client.query('COMMIT');
-    return { attemptId, outcome: outcome.outcome, statementStatus };
+    return { attemptId, outcome: outcome.outcome, statementStatus, overpayment };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -323,6 +461,16 @@ async function getFin11CappedCardProposal(statementId) {
       const err = new Error('Statement not found');
       err.code = 'STATEMENT_NOT_FOUND';
       throw err;
+    }
+
+    // Same entity-wide hold check as openAttempt (FIN-11 Stage 2B, rule
+    // 4.9) -- a proposal for an entity under an open overpayment exception
+    // must not be offered at all, otherwise Stage 2A's own purpose
+    // (deciding whether/how much to collect) would contradict the hold.
+    const hold = await paymentExceptions.hasOpenCollectionHold(statement.entity_id, client);
+    if (hold.held) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'entity_collection_held', exceptionId: hold.exceptionId };
     }
 
     if (!ACTIONABLE_STATEMENT_STATUSES.includes(statement.status)) {
