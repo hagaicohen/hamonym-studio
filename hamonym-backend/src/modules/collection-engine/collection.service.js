@@ -69,6 +69,26 @@ async function openAttempt(statementId, resolveAdapter) {
       return { skipped: true, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
     }
 
+    // FIN-11 Stage 3, integration-gap fix #3: an 'exported' MASAV proposal
+    // means a real instruction already left this system for a human to
+    // submit to the bank -- its outcome is not knowable here (no Tranzila
+    // result-ingestion exists). Opening a NEW card attempt for the SAME
+    // Statement while that instruction is still outstanding risks
+    // collecting the same debt through two channels. Lazy require (not a
+    // top-level one) deliberately: masav-proposal.service.js already
+    // requires THIS file at its own top level (for ACTIONABLE_STATEMENT_
+    // STATUSES/ACTIVE_ATTEMPT_STATUSES) -- a top-level require in the other
+    // direction would be a circular require that could resolve to a
+    // partially-initialized module depending on load order. By the time
+    // this function actually runs, both modules have finished loading, so
+    // the lazy require here always returns the complete, correct exports.
+    const { hasExportedMasavProposal } = require('../billing-engine/masav-proposal.service');
+    const exportedMasav = await hasExportedMasavProposal(statementId, client);
+    if (exportedMasav.exists) {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'masav_proposal_exported_unresolved', proposalId: exportedMasav.proposalId };
+    }
+
     // Statement Adjustments (2026-10, FIN) -- the actual amount to charge is
     // the adjusted outstanding balance, not the frozen total_due: a credit
     // adjustment can bring a statement to zero or negative before any
@@ -485,6 +505,17 @@ async function getFin11CappedCardProposal(statementId) {
     if (activeRes.rows[0]) {
       await client.query('COMMIT');
       return { proposed: false, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
+    }
+
+    // Same integration-gap fix #3 as openAttempt (lazy require -- see that
+    // function's comment for why): a proposal for an entity/Statement with
+    // an unresolved exported MASAV instruction must not even be PROPOSED,
+    // let alone opened, for a new card collection.
+    const { hasExportedMasavProposal } = require('../billing-engine/masav-proposal.service');
+    const exportedMasav = await hasExportedMasavProposal(statementId, client);
+    if (exportedMasav.exists) {
+      await client.query('COMMIT');
+      return { proposed: false, reason: 'masav_proposal_exported_unresolved', proposalId: exportedMasav.proposalId };
     }
 
     // Same statement-adjustment-aware balance read as openAttempt, under

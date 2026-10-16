@@ -35,6 +35,14 @@ const XLSX = require('xlsx');
 const routing = require('./routing');
 const { ACTIONABLE_STATEMENT_STATUSES, ACTIVE_ATTEMPT_STATUSES } = require('./collection.service');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
+// Integration-gap fix #1 (2026-10): FIN-11 Stage 3 added a NEW, parallel
+// MASAV mechanism (masav-proposal.service.js, migration 074) that this
+// OLD module has no awareness of. Without this check, this function could
+// open a legacy masav collection_attempts row on a Statement that already
+// has an active FIN-11 proposal in flight -- two uncoordinated MASAV
+// processes on the same debt. No circular require: that module requires
+// THIS file's sibling collection.service.js, never this file.
+const { hasActiveMasavProposal } = require('../billing-engine/masav-proposal.service');
 
 // Mirrors collection.service.js#openAttempt's locking/skip shape, but never
 // calls an adapter -- MASAV in v1 has no charge() to call. Only ever opens
@@ -74,6 +82,25 @@ async function openMasavAttempt(statementId) {
     if (activeRes.rows[0]) {
       await client.query('COMMIT');
       return { skipped: true, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
+    }
+
+    // Integration-gap fix #1: never open a legacy MASAV attempt on a
+    // Statement that already has an active FIN-11 proposal (proposed/
+    // approved/exported) -- the new mechanism is the one actually
+    // intended for ongoing use; this just stops the old one from acting
+    // blind to it.
+    const activeProposal = await hasActiveMasavProposal(statementId, client);
+    if (activeProposal.exists) {
+      await recordFinding(client, {
+        jobName: 'masav-collection',
+        findingType: 'fin11_masav_proposal_active',
+        severity: 'warning',
+        subjectType: 'statement',
+        subjectId: statementId,
+        details: { entityId: statement.entity_id, proposalId: activeProposal.proposalId, proposalStatus: activeProposal.status },
+      });
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'fin11_masav_proposal_active', proposalId: activeProposal.proposalId };
     }
 
     const routed = await routing.resolveCollectionMethod(client, statement);
