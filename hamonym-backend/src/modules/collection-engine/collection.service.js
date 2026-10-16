@@ -14,6 +14,7 @@ const routing = require('./routing');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
 const { getStatementBalance } = require('../billing-engine/statement-balance.service');
 const paymentExceptions = require('../billing-engine/payment-exceptions.service');
+const { isPaymentExceptionsSchemaPresent, isMasavProposalsSchemaPresent } = require('../billing-engine/fin11-schema-probe');
 
 const ACTIONABLE_STATEMENT_STATUSES = ['approved', 'open'];
 const ACTIVE_ATTEMPT_STATUSES = ['pending', 'ambiguous'];
@@ -49,10 +50,19 @@ async function openAttempt(statementId, resolveAdapter) {
     // before status/active-attempt, because it is an entity-wide block
     // independent of this particular Statement's own state -- read under
     // the same lock/transaction already open (client), no second lock.
-    const hold = await paymentExceptions.hasOpenCollectionHold(statement.entity_id, client);
-    if (hold.held) {
-      await client.query('COMMIT');
-      return { skipped: true, reason: 'entity_collection_held', exceptionId: hold.exceptionId };
+    //
+    // Deploy-order compatibility (2026-10-16, see fin11-schema-probe.js):
+    // this guard is additive to openAttempt, which existed before migration
+    // 073 did. Before 073 is applied, no payment_exceptions row can
+    // physically exist yet, so skipping the check reproduces openAttempt's
+    // exact pre-FIN-11 behavior -- not a bypass of a real check on real
+    // data. Once 073 is applied, this is never skipped.
+    if (await isPaymentExceptionsSchemaPresent(client)) {
+      const hold = await paymentExceptions.hasOpenCollectionHold(statement.entity_id, client);
+      if (hold.held) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'entity_collection_held', exceptionId: hold.exceptionId };
+      }
     }
 
     if (!ACTIONABLE_STATEMENT_STATUSES.includes(statement.status)) {
@@ -82,11 +92,20 @@ async function openAttempt(statementId, resolveAdapter) {
     // partially-initialized module depending on load order. By the time
     // this function actually runs, both modules have finished loading, so
     // the lazy require here always returns the complete, correct exports.
-    const { hasExportedMasavProposal } = require('../billing-engine/masav-proposal.service');
-    const exportedMasav = await hasExportedMasavProposal(statementId, client);
-    if (exportedMasav.exists) {
-      await client.query('COMMIT');
-      return { skipped: true, reason: 'masav_proposal_exported_unresolved', proposalId: exportedMasav.proposalId };
+    //
+    // Deploy-order compatibility (2026-10-16, see fin11-schema-probe.js):
+    // this guard is additive to openAttempt, which existed before migration
+    // 074 did. Before 074 is applied, no masav_collection_proposals row can
+    // physically exist yet, so skipping the check reproduces openAttempt's
+    // exact pre-FIN-11 behavior -- not a bypass of a real check on real
+    // data. Once 074 is applied, this is never skipped.
+    if (await isMasavProposalsSchemaPresent(client)) {
+      const { hasExportedMasavProposal } = require('../billing-engine/masav-proposal.service');
+      const exportedMasav = await hasExportedMasavProposal(statementId, client);
+      if (exportedMasav.exists) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'masav_proposal_exported_unresolved', proposalId: exportedMasav.proposalId };
+      }
     }
 
     // Statement Adjustments (2026-10, FIN) -- the actual amount to charge is

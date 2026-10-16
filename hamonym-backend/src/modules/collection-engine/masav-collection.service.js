@@ -43,6 +43,7 @@ const { recordFinding } = require('../../jobs/reconciliation-findings');
 // processes on the same debt. No circular require: that module requires
 // THIS file's sibling collection.service.js, never this file.
 const { hasActiveMasavProposal } = require('../billing-engine/masav-proposal.service');
+const { isMasavProposalsSchemaPresent } = require('../billing-engine/fin11-schema-probe');
 
 // Mirrors collection.service.js#openAttempt's locking/skip shape, but never
 // calls an adapter -- MASAV in v1 has no charge() to call. Only ever opens
@@ -89,18 +90,28 @@ async function openMasavAttempt(statementId) {
     // approved/exported) -- the new mechanism is the one actually
     // intended for ongoing use; this just stops the old one from acting
     // blind to it.
-    const activeProposal = await hasActiveMasavProposal(statementId, client);
-    if (activeProposal.exists) {
-      await recordFinding(client, {
-        jobName: 'masav-collection',
-        findingType: 'fin11_masav_proposal_active',
-        severity: 'warning',
-        subjectType: 'statement',
-        subjectId: statementId,
-        details: { entityId: statement.entity_id, proposalId: activeProposal.proposalId, proposalStatus: activeProposal.status },
-      });
-      await client.query('COMMIT');
-      return { skipped: true, reason: 'fin11_masav_proposal_active', proposalId: activeProposal.proposalId };
+    //
+    // Deploy-order compatibility (2026-10-16, see fin11-schema-probe.js):
+    // this guard is additive to openMasavAttempt, which existed before
+    // migration 074 did. Before 074 is applied, no masav_collection_
+    // proposals row can physically exist yet, so skipping the check
+    // reproduces openMasavAttempt's exact pre-FIN-11 behavior -- not a
+    // bypass of a real check on real data. Once 074 is applied, this is
+    // never skipped.
+    if (await isMasavProposalsSchemaPresent(client)) {
+      const activeProposal = await hasActiveMasavProposal(statementId, client);
+      if (activeProposal.exists) {
+        await recordFinding(client, {
+          jobName: 'masav-collection',
+          findingType: 'fin11_masav_proposal_active',
+          severity: 'warning',
+          subjectType: 'statement',
+          subjectId: statementId,
+          details: { entityId: statement.entity_id, proposalId: activeProposal.proposalId, proposalStatus: activeProposal.status },
+        });
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'fin11_masav_proposal_active', proposalId: activeProposal.proposalId };
+      }
     }
 
     const routed = await routing.resolveCollectionMethod(client, statement);
