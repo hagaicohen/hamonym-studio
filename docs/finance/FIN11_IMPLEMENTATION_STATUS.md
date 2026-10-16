@@ -12,6 +12,8 @@
 | בידוד נתוני בדיקה (תקרית) | **הושלם** | (UPDATE ישיר, לא commit קוד) | — | `billing_accounts`/`statements` — 2 שורות הושעו/בוטלו | מאומת read-only |
 | Stage 2B — `resolveAttempt` hardening + payment exceptions | **הושלם, committed, לא נדחף** (עברו שני סבבי ביקורת) | `efbdd2f` | `C:/DEV/HamonymStudio-fin11-stage2b` | 11 קבצים — `collection.service.js`, `payment-exceptions.service.js` (חדש), `migrations/073_*.sql` (חדש, לא הוחל), `scripts/{migrate-073,verify-fin11-stage2b-ready,test-fin11-stage2b-resolve}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (חדשים) + `FINANCIAL_BUSINESS_DECISIONS.md` (עודכן) | 24/24 PASS |
 | Stage 3 — MASAV משלים + 3 תיקוני אינטגרציה | **הושלם, committed, לא נדחף** | `dea7aca` | `C:/DEV/HamonymStudio-fin11-stage3` | 12 קבצים — `masav-proposal.service.js` (חדש), `masav-collection.service.js`+`collection.service.js` (עודכנו — תיקוני אינטגרציה), `migrations/074_*.sql` (חדש, לא הוחל), `scripts/{migrate-074,verify-fin11-stage3-ready,test-fin11-stage3-masav-proposal}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (עודכנו/נוספו) | 36/36 PASS |
+| Israel Invoices — `Document.TaxId` (ענף עצמאי, לא FIN-11) | **הושלם, committed, לא נדחף** | `1044621` | `C:/DEV/HamonymStudio-israel-invoices-audit` | 3 קבצים — `donations.service.js` (עודכן, 15 שורות), `test-israel-invoices-tax-id.js` (חדש), `docs/finance/ISRAEL_INVOICES_TAX_ID_AUDIT.md` (חדש) | 9/9 PASS |
+| הכנת אינטגרציה (בדיקת שילוב בלבד, לא merge ל-main) | **אומת, לא מאושר ל-merge** | `ac2443b` (ענף `fin11-integration-prep`, לא נדחף, לא ממוזג) | `C:/DEV/HamonymStudio-fin11-integration` | ללא שינויי קוד — cherry-pick נקי של `1044621` על גבי `5f56b98` | 80/80 PASS (24+36+9+11, ללא רגרסיה) |
 | Stage 4 — ניתוב משולב + תזמון | **לא התחיל** | — | — | — | — |
 | Finance UI | **לא התחיל** | — | — | — | — |
 
@@ -50,6 +52,30 @@
 **במהלך תיקון #2 התגלה ותוקן באג אמיתי** (לא רק פער): סדר נעילות שגוי ב-`approveMasavProposal`/`exportMasavProposals` (proposal לפני Statement, ההפך מכל שאר הקוד) — סיכון deadlock ממשי, לא תיאורטי. תוקן לעקביות מלאה.
 
 **Commit `dea7aca` — לא נדחף.** אושר ובוצע לאחר אימות diff מלא (12 קבצים, ללא שינויים לא-קשורים) והרצת בדיקות אחרונה (36/36) מיד לפני ה-commit.
+
+## הכנת אינטגרציה — Git (2026-10-16)
+
+נבדקה האינטגרציה בין שרשרת FIN-11 (Stage1→2A→2B→3) לבין ענף TaxId העצמאי, **ללא merge ל-main וללא push**:
+
+- **שרשרת ה-commits של FIN-11 כבר לינארית מראש**: `d8d440e → a4c364b → efbdd2f → 00de328 → dea7aca → 5f56b98`. כל worktree נבנה מה-worktree הקודם, לא מ-`origin/main` בכל פעם — כך ש-`5f56b98` (ראש Stage 3) **כבר מכיל** את Stage1+2A+2B+3 במלואם. אין צורך ב-merge בין השלבים האלה, רק אישור push.
+- **TaxId (`1044621`) ענף נפרד**, עלה ישירות מ-`d8d440e` (`origin/main` הנוכחי), ללא תלות בשלבי FIN-11 2A/2B/3.
+- **בדיקת חפיפת קבצים** בין `d8d440e..5f56b98` לבין `d8d440e..1044621`: **אפס קבצים משותפים** — FIN-11 נוגע ב-`collection-engine`/`billing-engine`/migrations 073-074; TaxId נוגע רק ב-`donations.service.js` + קבצים חדשים משלו.
+- נפתח worktree בידוד חדש `C:/DEV/HamonymStudio-fin11-integration` (ענף `fin11-integration-prep`), מ-`5f56b98`, ובוצע **cherry-pick** נקי (לא merge) של `1044621` → commit `ac2443b`. **אפס קונפליקטים.**
+- **כל 4 חבילות הבדיקות הורצו מחדש על הענף המשולב** (80/80 PASS): `test-fin11-stage2b-resolve.js` (24/24), `test-fin11-stage3-masav-proposal.js` (36/36), `test-israel-invoices-tax-id.js` (9/9), `test-donation-cardcom-separation.js` (11/11). אפס רשומות ZZZ_TEST נותרו.
+- `scripts/verify-fin11-stage2b-ready.js`/`verify-fin11-stage3-ready.js` הורצו מול ה-DB האמיתי (עדיין לא הוחלו migrations 073/074 עליו) — **נכשלו כצפוי** (exit 1, מפרט בדיוק אילו טבלאות/טריגרים חסרים) — מאשר ששער ה-fail-fast ממשיך לעבוד נכון גם על הענף המשולב.
+- **ענף `fin11-integration-prep` (commit `ac2443b`) נשאר worktree מקומי בלבד — לא push, לא merge ל-main, מחכה לאישור.**
+
+## ⛔ ממצא חוסם Push (2026-10-16) — אושר בקריאת קוד ישירה, לא הנחה
+
+**המסלולים הקיימים, החיים, של הגבייה בפרודקשן (לא רק הפונקציות החדשות של FIN-11) תלויים כעת ללא תנאי בטבלאות שמיגרציות 073/074 יוצרות:**
+
+1. `collection.service.js#openAttempt` (שורה 26) — הפונקציה הקיימת, המשמשת בפועל את מסלול הגבייה באשראי (ר' הערות ב-`billing-ops.service.js`: "the authoritative decision is still made inside collection.service.js"). שורה 52 קוראת ללא-תנאי ל-`paymentExceptions.hasOpenCollectionHold(entity_id, client)` — שאילתת `SELECT` ישירה על `payment_exceptions` (migration 073), **בלי try/catch, בלי fallback**. שורה 86 קוראת ללא-תנאי ל-`hasExportedMasavProposal` — שאילתה ישירה על `masav_collection_proposals` (migration 074), גם היא בלי fallback.
+2. `masav-collection.service.js#openMasavAttempt` (שורה ~92) — המסלול הישן/קיים של מס"ב, קורא ללא-תנאי ל-`hasActiveMasavProposal`, שאילתה נוספת על `masav_collection_proposals`.
+3. `payment-exceptions.service.js#hasOpenCollectionHold` עצמה היא `client.query(...)` גולמי, ללא bloc try/catch — אם הטבלה לא קיימת, היא פשוט תזרוק `42P01: relation "payment_exceptions" does not exist`.
+
+**המשמעות המאומתת**: אם הקוד המשולב (`ac2443b`) ירוץ בפרודקשן לפני שמיגרציות 073 ו-074 הוחלו על ה-DB — **כל קריאה אמיתית ל-`openAttempt` וכל קריאה אמיתית ל-`openMasavAttempt` תיכשל עם שגיאת DB**, כלומר **מסלול הגבייה הקיים (לא רק FIN-11) מושבת לחלוטין**, לא רק "מתנהג מעט שונה". זה תואם בדיוק את תנאי ה-STOP שהוגדר: קיים מסלול ייצור קיים שתלוי כעת בטבלאות של 073/074.
+
+**המשמעות ל-Push**: `git push` עצמו (הכנסת קוד למאגר) אינו מריץ קוד. אבל אם הפרודקשן (Render, לפי `project_pilot_cron_hardening` בזיכרון) מוגדר ל-auto-deploy מ-`origin/main` — **לא אומת ישירות בשיחה הזו אם כן/לא** — אזי push ל-`main` עלול להיות דה-פקטו deploy, מה שיפיל את מסלול הגבייה הקיים באופן מוחלט עד להחלת 073/074. **לכן: אין לדחוף ל-`origin/main` לפני שמצב ה-auto-deploy מאומת, או לפני שמיגרציות 073/074 מוחלות על ה-DB של היעד — לפי מה שמגיע קודם בפועל.**
 
 ## היסטוריית תקריות (לשקיפות)
 

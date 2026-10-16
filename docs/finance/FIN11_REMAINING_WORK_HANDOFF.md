@@ -7,7 +7,9 @@
 - `foldLateDonationsIntoStatement` — **Stage 1, נדחף, בפרודקשן** (`d8d440e`). עדיין לא מחובר לשום caller/route.
 - `getFin11CappedCardProposal` — **Stage 2A, committed, לא נדחף** (`a4c364b`). קריאה טהורה בלבד — לא יוצרת attempt, לא גובה. לא מחוברת לשום caller.
 - `resolveAttempt` מחוזק + `payment_exceptions`/`payment_exception_actions` — **Stage 2B, committed (`efbdd2f`+`00de328`), לא נדחף**. **migration 073 לא הוחלה על שום DB.**
-- `masav-proposal.service.js` (prepare/list/approve/export proposals) — **Stage 3, נבדק (36/36), לא committed עדיין**. **migration 074 לא הוחלה על שום DB.** מנגנון מקביל ל-`masav-collection.service.js` הישן, **עם מודעות חד-כיוונית**: הישן בודק את החדש (לא להפך) — ר' "בדיקות אינטגרציה" למטה.
+- `masav-proposal.service.js` (prepare/list/approve/export proposals) — **Stage 3, committed (`dea7aca`+`5f56b98`), לא נדחף**. **migration 074 לא הוחלה על שום DB.** מנגנון מקביל ל-`masav-collection.service.js` הישן, **עם מודעות חד-כיוונית**: הישן בודק את החדש (לא להפך) — ר' "בדיקות אינטגרציה" למטה.
+- `Document.TaxId` (Israel Invoices, ענף עצמאי) — **committed (`1044621`), לא נדחף**. אינו חלק מ-FIN-11 עצמו (קובץ `donations.service.js`, לא נוגע ב-collection/billing engine).
+- **הכנת אינטגרציה אומתה (2026-10-16)**: שרשרת FIN-11 (`5f56b98`) + TaxId (`1044621`) שולבו (cherry-pick נקי, אפס קונפליקטים, אפס חפיפת קבצים) בענף worktree מבודד `fin11-integration-prep` (commit `ac2443b`, `C:/DEV/HamonymStudio-fin11-integration`). 80/80 בדיקות קיימות עברו על הענף המשולב. **הענף הזה לא נדחף ולא מוזג ל-main — מחכה לאישור.**
 
 ## מה מתועד/מוכרע עסקית בלבד — **לא ממומש**
 
@@ -42,7 +44,7 @@
 
 ## חייב להיבדק/להיקבע לפני כל הפעלת-כסף-אמיתי
 
-1. **migrations 073+074 חייבות להיות מוחלות (בסדר הזה) לפני כל deploy של קוד Stage 2B/3 — סדר מחייב, לא המלצה**: (א) `scripts/migrate-073.js`, (ב) `scripts/migrate-074.js`, (ג) `scripts/verify-fin11-stage3-ready.js` (בודק את שתיהן, שער fail-fast — read-only, יוצא קוד 1 אם משהו חסר, אומת ריצתית), (ד) רק אז קוד ה-application. ר' `FIN11_STAGE2B_TECHNICAL_DESIGN.md` סעיף 7 ו-`FIN11_STAGE3_TECHNICAL_DESIGN.md` סעיף 8.
+1. **migrations 073+074 חייבות להיות מוחלות (בסדר הזה) לפני כל deploy של קוד Stage 2B/3 — סדר מחייב, לא המלצה, ומאומת כקריטי (לא תיאורטי) ב-2026-10-16**: קריאת קוד ישירה אישרה ש-`collection.service.js#openAttempt` **הקיים** (לא רק פונקציות FIN-11 חדשות) קורא ללא-תנאי ל-`hasOpenCollectionHold`/`hasExportedMasavProposal`, ו-`masav-collection.service.js#openMasavAttempt` **הקיים** קורא ללא-תנאי ל-`hasActiveMasavProposal` — שלושתם שאילתות ישירות על טבלאות 073/074, בלי try/catch. אם קוד זה רץ לפני המיגרציות: **מסלול הגבייה הקיים (אשראי+מס"ב) נכשל לחלוטין** (`42P01`), לא רק "מתנהג שונה". סדר מחייב: (א) `scripts/migrate-073.js`, (ב) `scripts/migrate-074.js`, (ג) `scripts/verify-fin11-stage3-ready.js` (בודק את שתיהן, שער fail-fast — read-only, יוצא קוד 1 אם משהו חסר, אומת ריצתית), (ד) רק אז קוד ה-application. ר' `FIN11_STAGE2B_TECHNICAL_DESIGN.md` סעיף 7, `FIN11_STAGE3_TECHNICAL_DESIGN.md` סעיף 8, וסעיף "⛔ ממצא חוסם Push" ב-`FIN11_IMPLEMENTATION_STATUS.md`.
 2. `billing-ops.service.js#reconcileCollectionAttempt` — להוסיף בדיקת סטטוס לפני reconcile (לא עשוי ב-Stage 2B, ר' סיכונים שנותרו).
 3. `collection-attempt-reconciliation.job.js`'s "overpaid" check — לתקן השוואה ל-`adjustedTotal` במקום `total_due` גולמי, לפני שיותר מ-payment אחד הופך לנורמה.
 4. `routing.js` — להחליט ולממש איך אשראי+מס"ב פועלים על אותו Statement בלי "להכריע מחדש" שוב ושוב.
