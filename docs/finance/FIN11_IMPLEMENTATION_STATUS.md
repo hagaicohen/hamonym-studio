@@ -11,7 +11,7 @@
 | Stage 2A — `getFin11CappedCardProposal` | **הושלם, committed, לא נדחף** | `a4c364b` | `C:/DEV/HamonymStudio-fin11-stage2a` | `collection.service.js` | 18/18 PASS |
 | בידוד נתוני בדיקה (תקרית) | **הושלם** | (UPDATE ישיר, לא commit קוד) | — | `billing_accounts`/`statements` — 2 שורות הושעו/בוטלו | מאומת read-only |
 | Stage 2B — `resolveAttempt` hardening + payment exceptions | **הושלם, committed, לא נדחף** (עברו שני סבבי ביקורת) | `efbdd2f` | `C:/DEV/HamonymStudio-fin11-stage2b` | 11 קבצים — `collection.service.js`, `payment-exceptions.service.js` (חדש), `migrations/073_*.sql` (חדש, לא הוחל), `scripts/{migrate-073,verify-fin11-stage2b-ready,test-fin11-stage2b-resolve}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (חדשים) + `FINANCIAL_BUSINESS_DECISIONS.md` (עודכן) | 24/24 PASS |
-| Stage 3 — MASAV משלים + 3 תיקוני אינטגרציה | **הושלם ונבדק, טרם commit** (ממתין לאישור) | — (ממתין) | `C:/DEV/HamonymStudio-fin11-stage3` | `masav-proposal.service.js` (חדש), `masav-collection.service.js`+`collection.service.js` (עודכנו — תיקוני אינטגרציה), `migrations/074_*.sql` (חדש, לא הוחל), `scripts/{migrate-074,verify-fin11-stage3-ready,test-fin11-stage3-masav-proposal}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (עודכנו/נוספו) | 36/36 PASS |
+| Stage 3 — MASAV משלים + 3 תיקוני אינטגרציה | **הושלם, committed, לא נדחף** | `dea7aca` | `C:/DEV/HamonymStudio-fin11-stage3` | 12 קבצים — `masav-proposal.service.js` (חדש), `masav-collection.service.js`+`collection.service.js` (עודכנו — תיקוני אינטגרציה), `migrations/074_*.sql` (חדש, לא הוחל), `scripts/{migrate-074,verify-fin11-stage3-ready,test-fin11-stage3-masav-proposal}.js` (חדשים), 4 קובצי `docs/finance/FIN11_*.md` (עודכנו/נוספו) | 36/36 PASS |
 | Stage 4 — ניתוב משולב + תזמון | **לא התחיל** | — | — | — | — |
 | Finance UI | **לא התחיל** | — | — | — | — |
 
@@ -49,7 +49,7 @@
 
 **במהלך תיקון #2 התגלה ותוקן באג אמיתי** (לא רק פער): סדר נעילות שגוי ב-`approveMasavProposal`/`exportMasavProposals` (proposal לפני Statement, ההפך מכל שאר הקוד) — סיכון deadlock ממשי, לא תיאורטי. תוקן לעקביות מלאה.
 
-**טרם commit** — ממתין לאישור סקירתך לפני commit, בהתאם להנחיה המפורשת.
+**Commit `dea7aca` — לא נדחף.** אושר ובוצע לאחר אימות diff מלא (12 קבצים, ללא שינויים לא-קשורים) והרצת בדיקות אחרונה (36/36) מיד לפני ה-commit.
 
 ## היסטוריית תקריות (לשקיפות)
 
