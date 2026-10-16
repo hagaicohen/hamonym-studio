@@ -578,6 +578,21 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       Email:    donor.email,
       Phone:    donor.phone,
       Mobile:   donor.phone,
+      // Israel Invoices allocation-number support (docs/finance/
+      // ISRAEL_INVOICES_TAX_ID_AUDIT.md) -- verified directly against
+      // Cardcom's own v11 swagger: Document.TaxId accepts "Business
+      // registration number or user Identity number", a single string
+      // field covering both ת.ז and ח.פ. Reuses the SAME value already
+      // collected/persisted as donor_id_number (donor.idNumber) -- no new
+      // field, no new provider. Omitted entirely (not sent as an empty
+      // string) when the donor didn't provide one -- donor identification
+      // stays fully optional, unchanged from today's behavior. Sending
+      // TaxId does NOT by itself prove Cardcom issued a real allocation
+      // number -- that depends on the terminal's own document-type
+      // configuration and Cardcom's own Tax Authority integration, neither
+      // of which this payload controls (see the audit doc's "Known
+      // limitations" section).
+      ...(donor.idNumber ? { TaxId: donor.idNumber } : {}),
       Products: products,
     },
   };
