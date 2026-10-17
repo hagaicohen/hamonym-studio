@@ -74,4 +74,9 @@ router.use('/billing-settings', require('./billing-settings/billing-settings.rou
 // wiring + MASAV manual flow. See billing-ops.routes.js.
 router.use('/billing-ops', require('./billing-ops/billing-ops.routes'));
 
+// Finance Operations (FIN-11) — overpayment exceptions + MASAV proposal
+// review/approve/export. Own sub-router, same requireSuperAdmin convention.
+// See finance-ops.routes.js.
+router.use('/finance-ops', require('./finance-ops/finance-ops.routes'));
+
 module.exports = router;

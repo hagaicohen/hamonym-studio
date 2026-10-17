@@ -1,0 +1,227 @@
+.fin-page {
+  padding: 24px;
+  direction: rtl;
+}
+.fin-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.fin-subtitle {
+  margin: 0 0 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.fin-subtitle a {
+  color: #583cd6;
+  text-decoration: none;
+}
+.fin-subtitle a:hover {
+  text-decoration: underline;
+}
+
+.fin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+.fin-tab {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.fin-tab-active {
+  color: #583cd6;
+  border-bottom-color: #583cd6;
+}
+
+.fin-filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.fin-filter {
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+.fin-filter-active {
+  background: #583cd6;
+  color: #fff;
+  border-color: #583cd6;
+}
+.fin-export-btn {
+  margin-right: auto;
+}
+
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fin-table th {
+  text-align: right;
+  padding: 10px 12px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+.fin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.fin-row {
+  cursor: pointer;
+}
+.fin-row:hover {
+  background: #f9fafb;
+}
+.fin-row-selected {
+  background: #f0edfd;
+}
+.fin-overpayment {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.fin-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.fin-badge-open { background: #fef9c3; color: #854d0e; }
+.fin-badge-resolved { background: #dcfce7; color: #166534; }
+.fin-badge-held { background: #fee2e2; color: #991b1b; }
+.fin-badge-free { background: #dcfce7; color: #166534; }
+.fin-badge-proposed { background: #e0e7ff; color: #3730a3; }
+.fin-badge-approved { background: #fef9c3; color: #854d0e; }
+.fin-badge-exported { background: #dbeafe; color: #1e40af; }
+
+.fin-empty {
+  padding: 24px;
+  text-align: center;
+  color: #9ca3af;
+}
+.fin-error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin: 6px 0;
+}
+.fin-success {
+  color: #166534;
+  font-size: 13px;
+  margin: 6px 0;
+}
+
+.fin-panel {
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+.fin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.fin-panel-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.fin-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #9ca3af;
+}
+.fin-panel-body {
+  padding: 18px;
+}
+.fin-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.fin-action-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+.fin-action-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.fin-action-reason {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.fin-action-block {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 14px;
+}
+.fin-action-block h4 {
+  margin: 14px 0 4px;
+  font-size: 13px;
+}
+.fin-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 8px;
+}
+.fin-action-block textarea,
+.fin-action-block select,
+.fin-inline-action input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  font-family: inherit;
+}
+.fin-inline-action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.fin-btn {
+  padding: 6px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+.fin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.fin-btn-primary {
+  background: #583cd6;
+  color: #fff;
+  border-color: #583cd6;
+}

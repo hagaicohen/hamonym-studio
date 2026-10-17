@@ -16,6 +16,52 @@
 // action with its own transaction.
 const pool = require('../../db/db');
 
+// Read-only preview for the Super Admin Finance screen -- same shape/
+// convention as masav-proposal.service.js#listMasavProposals (join entity
+// name + Statement context for display, no new calculation; the frozen
+// detection facts on the row itself are the only numbers shown). `client`
+// is optional (defaults to the pool) for the same reason
+// hasOpenCollectionHold's is -- lets tests exercise this against fixtures
+// created inside their own BEGIN...ROLLBACK transaction, never visible to
+// a different pooled connection otherwise.
+exports.listPaymentExceptions = async ({ status } = {}, client = pool) => {
+  const where = status ? `WHERE pe.status = $1` : '';
+  const params = status ? [status] : [];
+  const { rows } = await client.query(
+    `SELECT pe.id, pe.statement_id, pe.collection_attempt_id, pe.payment_id, pe.entity_id,
+            pe.outstanding_before, pe.collected_amount, pe.overpayment_amount, pe.detected_at,
+            pe.status, pe.hold_new_collection, pe.created_at,
+            e.display_name AS entity_name, s.total_due, s.status AS statement_status,
+            (SELECT action_type FROM payment_exception_actions a
+             WHERE a.exception_id = pe.id ORDER BY a.created_at DESC LIMIT 1) AS last_action_type,
+            (SELECT created_at FROM payment_exception_actions a
+             WHERE a.exception_id = pe.id ORDER BY a.created_at DESC LIMIT 1) AS last_action_at
+     FROM payment_exceptions pe
+     JOIN entities e ON e.id = pe.entity_id
+     JOIN statements s ON s.id = pe.statement_id
+     ${where}
+     ORDER BY pe.detected_at DESC`,
+    params
+  );
+  return rows;
+};
+
+// Append-only audit trail for one exception -- every override_hold /
+// resolve_* action ever taken, oldest first (matches reading it as "what
+// happened, in order"). `client` optional, same testability reason as above.
+exports.listPaymentExceptionActions = async (exceptionId, client = pool) => {
+  const { rows } = await client.query(
+    `SELECT a.id, a.exception_id, a.action_type, a.super_admin_user_id, a.reason, a.evidence_notes, a.created_at,
+            u.full_name AS admin_name
+     FROM payment_exception_actions a
+     LEFT JOIN users u ON u.id = a.super_admin_user_id
+     WHERE a.exception_id = $1
+     ORDER BY a.created_at ASC`,
+    [exceptionId]
+  );
+  return rows;
+};
+
 // Checked by collection.service.js#openAttempt and
 // getFin11CappedCardProposal (Stage 2A) before opening/proposing any new
 // card collection -- rule 4.9. Scoped to the ENTITY (every Statement of

@@ -1,0 +1,117 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { StatementBalance } from './billing-ops.service';
+
+function authHeaders(): HttpHeaders {
+  return new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+}
+
+// Mirrors payment-exceptions.service.js#listPaymentExceptions's exact
+// joined row shape.
+export interface PaymentException {
+  id: string;
+  statement_id: string;
+  collection_attempt_id: string;
+  payment_id: string;
+  entity_id: string;
+  outstanding_before: string;
+  collected_amount: string;
+  overpayment_amount: string;
+  detected_at: string;
+  status: 'open' | 'resolved';
+  hold_new_collection: boolean;
+  created_at: string;
+  entity_name: string;
+  total_due: string;
+  statement_status: string;
+  last_action_type: string | null;
+  last_action_at: string | null;
+}
+
+export interface PaymentExceptionAction {
+  id: string;
+  exception_id: string;
+  action_type: 'override_hold' | 'resolve_refund' | 'resolve_credit' | 'resolve_no_overpayment';
+  super_admin_user_id: number;
+  reason: string;
+  evidence_notes: string | null;
+  created_at: string;
+  admin_name: string | null;
+}
+
+export type ResolutionType = 'resolve_refund' | 'resolve_credit' | 'resolve_no_overpayment';
+
+// Mirrors masav-proposal.service.js#listMasavProposals's exact joined row
+// shape.
+export interface MasavProposal {
+  id: string;
+  statement_id: string;
+  entity_id: string;
+  proposed_amount: string;
+  outstanding_at_proposal: string;
+  status: 'proposed' | 'approved' | 'exported' | 'superseded' | 'cancelled';
+  status_reason: string | null;
+  created_at: string;
+  approved_at: string | null;
+  exported_at: string | null;
+  entity_name: string;
+  total_due: string;
+  statement_status: string;
+  period_start: string;
+  period_end: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class FinanceOpsService {
+  private http = inject(HttpClient);
+  private base = `${environment.apiUrl}/api/platform/finance-ops`;
+
+  listExceptions(status?: 'open' | 'resolved'): Observable<{ exceptions: PaymentException[] }> {
+    const url = status ? `${this.base}/exceptions?status=${status}` : `${this.base}/exceptions`;
+    return this.http.get<{ exceptions: PaymentException[] }>(url, { headers: authHeaders() });
+  }
+
+  getExceptionActions(id: string): Observable<{ actions: PaymentExceptionAction[] }> {
+    return this.http.get<{ actions: PaymentExceptionAction[] }>(`${this.base}/exceptions/${id}/actions`, { headers: authHeaders() });
+  }
+
+  overrideExceptionHold(id: string, reason: string): Observable<{ result: { exceptionId: string; holdLifted: boolean } }> {
+    return this.http.post<{ result: { exceptionId: string; holdLifted: boolean } }>(
+      `${this.base}/exceptions/${id}/override-hold`,
+      { reason },
+      { headers: authHeaders() },
+    );
+  }
+
+  resolveException(
+    id: string,
+    resolutionType: ResolutionType,
+    reason: string,
+    evidenceNotes?: string,
+  ): Observable<{ result: { exceptionId: string; status: string; resolutionType: string } }> {
+    return this.http.post<{ result: { exceptionId: string; status: string; resolutionType: string } }>(
+      `${this.base}/exceptions/${id}/resolve`,
+      { resolutionType, reason, evidenceNotes },
+      { headers: authHeaders() },
+    );
+  }
+
+  listMasavProposals(status?: MasavProposal['status']): Observable<{ proposals: MasavProposal[] }> {
+    const url = status ? `${this.base}/masav-proposals?status=${status}` : `${this.base}/masav-proposals`;
+    return this.http.get<{ proposals: MasavProposal[] }>(url, { headers: authHeaders() });
+  }
+
+  approveMasavProposal(id: string, reason: string): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/masav-proposals/${id}/approve`, { reason }, { headers: authHeaders() });
+  }
+
+  exportMasavProposals(proposalIds: string[]): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/masav-proposals/export`, { proposalIds }, { headers: authHeaders() });
+  }
+
+  getStatementBalance(statementId: string): Observable<{ balance: StatementBalance }> {
+    return this.http.get<{ balance: StatementBalance }>(`${this.base}/statements/${statementId}/balance`, { headers: authHeaders() });
+  }
+}

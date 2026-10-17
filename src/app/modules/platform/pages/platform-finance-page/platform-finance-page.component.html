@@ -1,0 +1,196 @@
+<div class="fin-page" dir="rtl">
+  <h1 class="fin-title">ניהול כספים — FIN-11</h1>
+  <p class="fin-subtitle">
+    חריגי גביית-יתר והצעות מס״ב. לרשימת החיובים/יתרות המלאה לפי עמותה —
+    <a routerLink="/platform/billing-ops" [queryParams]="{ tab: 'statements' }">כל החיובים</a>.
+  </p>
+
+  <div class="fin-tabs">
+    <button class="fin-tab" [class.fin-tab-active]="tab === 'exceptions'" (click)="setTab('exceptions')">חריגי גביית-יתר</button>
+    <button class="fin-tab" [class.fin-tab-active]="tab === 'masav'" (click)="setTab('masav')">הצעות מס״ב</button>
+  </div>
+
+  @if (tab === 'exceptions') {
+    <div class="fin-section">
+      <div class="fin-filter-row">
+        <button class="fin-filter" [class.fin-filter-active]="exceptionFilter === 'open'" (click)="setExceptionFilter('open')">פתוחות</button>
+        <button class="fin-filter" [class.fin-filter-active]="exceptionFilter === 'resolved'" (click)="setExceptionFilter('resolved')">הוכרעו</button>
+        <button class="fin-filter" [class.fin-filter-active]="exceptionFilter === 'all'" (click)="setExceptionFilter('all')">הכל</button>
+      </div>
+
+      @if (exceptionsLoading) {
+        <div class="fin-empty">טוען...</div>
+      } @else if (exceptionsError) {
+        <div class="fin-error">{{ exceptionsError }}</div>
+      } @else if (exceptions.length === 0) {
+        <div class="fin-empty">אין חריגים להצגה.</div>
+      } @else {
+        <table class="fin-table">
+          <thead>
+            <tr>
+              <th>עמותה</th>
+              <th>סטטוס חיוב</th>
+              <th>נגבה בפועל</th>
+              <th>יתרה לפני התשלום</th>
+              <th>סכום גביית-יתר</th>
+              <th>סטטוס חריג</th>
+              <th>הגבלה פעילה</th>
+              <th>פעולה אחרונה</th>
+              <th>התגלה</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exc of exceptions; track exc.id) {
+              <tr class="fin-row" [class.fin-row-selected]="selectedException?.id === exc.id" (click)="selectException(exc)">
+                <td>{{ exc.entity_name }}</td>
+                <td>{{ exc.statement_status }}</td>
+                <td>₪{{ fmtMoney(exc.collected_amount) }}</td>
+                <td>₪{{ fmtMoney(exc.outstanding_before) }}</td>
+                <td class="fin-overpayment">₪{{ fmtMoney(exc.overpayment_amount) }}</td>
+                <td><span class="fin-badge" [class.fin-badge-open]="exc.status === 'open'" [class.fin-badge-resolved]="exc.status === 'resolved'">{{ exc.status === 'open' ? 'פתוח' : 'הוכרע' }}</span></td>
+                <td><span class="fin-badge" [class.fin-badge-held]="exc.hold_new_collection" [class.fin-badge-free]="!exc.hold_new_collection">{{ exc.hold_new_collection ? 'מוגבל' : 'חופשי' }}</span></td>
+                <td>{{ exc.last_action_type ? actionLabel(exc.last_action_type) : '—' }}</td>
+                <td>{{ fmtDate(exc.detected_at) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @if (selectedException) {
+        <div class="fin-panel">
+          <div class="fin-panel-header">
+            <h3>חריג — {{ selectedException.entity_name }}</h3>
+            <button class="fin-close" (click)="closeExceptionPanel()">✕</button>
+          </div>
+
+          <div class="fin-panel-body">
+            <div class="fin-facts">
+              <div><b>נגבה בפועל:</b> ₪{{ fmtMoney(selectedException.collected_amount) }} (לעולם לא נחתך — מתועד מלא)</div>
+              <div><b>יתרה אמיתית לפני התשלום:</b> ₪{{ fmtMoney(selectedException.outstanding_before) }}</div>
+              <div><b>גביית-יתר:</b> ₪{{ fmtMoney(selectedException.overpayment_amount) }}</div>
+            </div>
+
+            <h4>היסטוריית פעולות</h4>
+            @if (exceptionActionsLoading) {
+              <div class="fin-empty">טוען...</div>
+            } @else if (exceptionActions.length === 0) {
+              <div class="fin-empty">אין פעולות עדיין.</div>
+            } @else {
+              <ul class="fin-action-list">
+                @for (a of exceptionActions; track a.id) {
+                  <li>
+                    <b>{{ actionLabel(a.action_type) }}</b> — {{ a.admin_name || 'מנהל-על' }}, {{ fmtDate(a.created_at) }}
+                    <div class="fin-action-reason">{{ a.reason }}</div>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (selectedException.status === 'open') {
+              <div class="fin-action-block">
+                <h4>ביטול הגבלת גבייה (לפני הכרעה סופית)</h4>
+                <p class="fin-hint">משתמשים בזה כש-בדקת מול הספק וודאת שבטוח להמשיך לגבות מהעמותה הזו, בלי לסגור את החריג עצמו.</p>
+                <textarea [(ngModel)]="overrideReason" placeholder="הערה — למה בטוח לבטל את ההגבלה?" rows="2"></textarea>
+                @if (overrideError) { <div class="fin-error">{{ overrideError }}</div> }
+                <button class="fin-btn" [disabled]="overrideBusy || !selectedException.hold_new_collection" (click)="overrideHold()">
+                  {{ overrideBusy ? 'מעבד...' : (selectedException.hold_new_collection ? 'בטל הגבלה' : 'ההגבלה כבר בוטלה') }}
+                </button>
+
+                <h4>הכרעה סופית</h4>
+                <p class="fin-hint">תיעוד החלטה בלבד — שום החזר/זיכוי לא מבוצע אוטומטית על ידי המערכת.</p>
+                <select [(ngModel)]="resolutionType">
+                  <option value="resolve_no_overpayment">אינה גביית-יתר אמיתית (false positive)</option>
+                  <option value="resolve_credit">יזוכה לעמותה</option>
+                  <option value="resolve_refund">יוחזר לתורם</option>
+                </select>
+                <textarea [(ngModel)]="resolveReason" placeholder="הערה — מה הוחלט ולמה" rows="2"></textarea>
+                <textarea [(ngModel)]="resolveEvidenceNotes" placeholder="ראיות/פרטים נוספים (לא חובה)" rows="2"></textarea>
+                @if (resolveError) { <div class="fin-error">{{ resolveError }}</div> }
+                <button class="fin-btn fin-btn-primary" [disabled]="resolveBusy" (click)="resolveException()">
+                  {{ resolveBusy ? 'מעבד...' : 'תעד הכרעה' }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (tab === 'masav') {
+    <div class="fin-section">
+      <div class="fin-filter-row">
+        <button class="fin-filter" [class.fin-filter-active]="masavFilter === 'proposed'" (click)="setMasavFilter('proposed')">מוצעות</button>
+        <button class="fin-filter" [class.fin-filter-active]="masavFilter === 'approved'" (click)="setMasavFilter('approved')">מאושרות</button>
+        <button class="fin-filter" [class.fin-filter-active]="masavFilter === 'exported'" (click)="setMasavFilter('exported')">שודרו</button>
+        <button class="fin-filter" [class.fin-filter-active]="masavFilter === 'all'" (click)="setMasavFilter('all')">הכל</button>
+
+        @if (selectedProposalIds.size > 0) {
+          <button class="fin-btn fin-btn-primary fin-export-btn" [disabled]="exportBusy" (click)="exportSelectedProposals()">
+            {{ exportBusy ? 'מייצא...' : 'ייצא ' + selectedProposalIds.size + ' נבחרות' }}
+          </button>
+        }
+      </div>
+      @if (exportError) { <div class="fin-error">{{ exportError }}</div> }
+      @if (exportResult) { <div class="fin-success">הייצוא הושלם.</div> }
+
+      @if (proposalsLoading) {
+        <div class="fin-empty">טוען...</div>
+      } @else if (proposalsError) {
+        <div class="fin-error">{{ proposalsError }}</div>
+      } @else if (proposals.length === 0) {
+        <div class="fin-empty">אין הצעות להצגה.</div>
+      } @else {
+        <table class="fin-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>עמותה</th>
+              <th>תקופה</th>
+              <th>סכום מוצע</th>
+              <th>יתרה בעת ההצעה</th>
+              <th>סטטוס</th>
+              <th>אישור</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of proposals; track p.id) {
+              <tr class="fin-row">
+                <td>
+                  @if (p.status === 'approved') {
+                    <input type="checkbox" [checked]="selectedProposalIds.has(p.id)" (change)="toggleProposalSelection(p.id)" />
+                  }
+                </td>
+                <td>{{ p.entity_name }}</td>
+                <td>{{ fmtDate(p.period_start) }}–{{ fmtDate(p.period_end) }}</td>
+                <td>₪{{ fmtMoney(p.proposed_amount) }}</td>
+                <td>₪{{ fmtMoney(p.outstanding_at_proposal) }}</td>
+                <td>
+                  <span class="fin-badge"
+                        [class.fin-badge-proposed]="p.status === 'proposed'"
+                        [class.fin-badge-approved]="p.status === 'approved'"
+                        [class.fin-badge-exported]="p.status === 'exported'"
+                        [class.fin-badge-resolved]="p.status === 'superseded' || p.status === 'cancelled'">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td>
+                  @if (p.status === 'proposed') {
+                    <div class="fin-inline-action">
+                      <input type="text" [(ngModel)]="approveReasonByProposal[p.id]" placeholder="הערה לאישור" />
+                      <button class="fin-btn" [disabled]="approveBusyByProposal[p.id]" (click)="approveProposal(p)">
+                        {{ approveBusyByProposal[p.id] ? 'מעבד...' : 'אשר' }}
+                      </button>
+                      @if (approveErrorByProposal[p.id]) { <div class="fin-error">{{ approveErrorByProposal[p.id] }}</div> }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>

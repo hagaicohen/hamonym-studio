@@ -15,8 +15,8 @@
 | Israel Invoices — `Document.TaxId` (ענף עצמאי, לא FIN-11) | **הושלם, committed, לא נדחף** | `1044621` | `C:/DEV/HamonymStudio-israel-invoices-audit` | 3 קבצים — `donations.service.js` (עודכן, 15 שורות), `test-israel-invoices-tax-id.js` (חדש), `docs/finance/ISRAEL_INVOICES_TAX_ID_AUDIT.md` (חדש) | 9/9 PASS |
 | הכנת אינטגרציה (בדיקת שילוב בלבד, לא merge ל-main) | **הושלם, נדחף** | `ac2443b`→`dd727a1` | — (נדחף ל-`origin/main`, 2026-10-17) | ללא שינויי קוד — cherry-pick נקי של `1044621` על גבי `5f56b98` + תיקון תאימות פריסה | 80/80 PASS → 104/104 PASS (כולל תיקון התאימות) |
 | **מיגרציות 073+074** | **הוחלו בפועל על ה-DB המשותף** (2026-10-17, עם גיבוי מאומת קודם ב-`C:\HamonymBackups\`) | — | — | — | `verify-fin11-stage3-ready.js`: OK |
-| Stage 4 — ניתוב משולב + תזמון | **הושלם, לא committed** — ממתין לאישור commit | — | `C:/DEV/HamonymStudio-fin11-stage4` | ר' "פירוט Stage 4" למטה | 28/28 PASS (+ 100/100 קיימות ללא רגרסיה) |
-| Finance UI | **לא התחיל** | — | — | — | — |
+| Stage 4 — ניתוב משולב + תזמון | **הושלם, committed, לא נדחף** | `3be5208` | `C:/DEV/HamonymStudio-fin11-stage4` | ר' "פירוט Stage 4" למטה | 28/28 PASS (+ 100/100 קיימות ללא רגרסיה) |
+| Finance UI — מסך מנהל-על (חריגים + הצעות מס"ב) | **הושלם, לא committed** — ממתין לאישור commit | — | `C:/DEV/HamonymStudio-finance-ui` | ר' "פירוט Finance UI" למטה | 13/13 PASS (+ 141/141 קיימות ללא רגרסיה) |
 
 ## פירוט Stage 2B
 
@@ -140,6 +140,24 @@
 3. **קולזיה מקרית בין `providerReference` קבוע ("tx-5") ב-`test-fin11-stage2b-resolve.js` הקיים לבין שורת ה-payment הקבועה היחידה שנותרה מהתקרית המתועדת של Stage 4** (ר' "היסטוריית תקריות" למטה — אותה שורה השתמשה גם היא ב-"tx-5" כערך בדיקה גנרי, בלי קשר). תוקן: שינוי ה-literal ל-`tx-2b-N` ב-6 המקומות הרלוונטיים — לא שינוי לוגי, מניעת קולזיה עתידית בלבד.
 
 **לא מופעל**: שום job לא רשום ב-`src/jobs/index.js`. הפעלה (הוספת שורת `jobRunner.register(...)`) היא שינוי התנהגות-פרודקשן אמיתי — `fin11-card-collection.job.js`/`fin11-card-retry-sweep.job.js` יקראו לאדפטר האמיתי של CardCom (`NOT_IMPLEMENTED=false`, `charge()` ממומש) ויזוזו כסף אמיתי מהפעם הראשונה ש-28 בחודש יגיע. דורש אישור נפרד ומפורש.
+
+## פירוט Finance UI — מסך מנהל-על (2026-10-17/18)
+
+**היקף**: מסך Super Admin לחריגי גביית-יתר + הצעות מס"ב — שני המשטחים היחידים ב-FIN-11 שעד כה לא היה להם UI. **לא מציג/לא משכפל** את רשימת החיובים/יתרות לפי עמותה — זו עבודה קיימת ("חיובי עמותות", `platform-billing-ops-page`), והמסך החדש מקשר אליה במקום לשכפל את השאילתה.
+
+**Backend** (`src/modules/platform/finance-ops/`) — כל הפעולות עוטפות פונקציה קיימת ונבדקת (Stage 2B/3):
+- `GET /exceptions`, `GET /exceptions/:id/actions`, `POST /exceptions/:id/override-hold`, `POST /exceptions/:id/resolve` — עוטפים את `payment-exceptions.service.js`.
+- `GET /masav-proposals`, `POST /masav-proposals/:id/approve`, `POST /masav-proposals/export` — עוטפים את `masav-proposal.service.js` (Stage 3, ללא שינוי).
+- `GET /statements/:id/balance` — עוטף `statement-balance.service.js#getStatementBalance`.
+- תוספת אחת חדשה ל-`payment-exceptions.service.js`: `listPaymentExceptions`/`listPaymentExceptionActions` (שאילתות קריאה בלבד, אותה מוסכמה כמו `listMasavProposals` הקיים) — אין פונקציה כזו הייתה קיימת קודם.
+
+**Frontend** (`src/app/modules/platform/pages/platform-finance-page/`) — standalone component, אותה מוסכמה בדיוק כמו `platform-billing-ops-page` (class fields, RxJS subscribe, `@if`/`@for`, `window.confirm()` לפני פעולה הרסנית/לא-הפיכה). שני טאבים: חריגי גביית-יתר (עם פאנל פרטים + היסטוריית פעולות + override/resolve) והצעות מס"ב (עם בחירה מרובה לייצוא). נתיב `/platform/finance`, מוגן `superAdminGuard`, נוסף לתפריט הצד.
+
+**בדיקות**: `test-finance-ops.js` — **13/13 PASS**. Part A (3 בדיקות): השאילתות החדשות, בתוך טרנזקציית BEGIN...ROLLBACK (payment_exceptions append-only, אותה מוסכמה כמו כל קובץ FIN-11 אחר). Part B (10 בדיקות): שכבת ה-controller עצמה — כל endpoint מעביר את הפרמטרים הנכונים לפונקציית ה-service הנכונה, ומיפוי שגיאות ל-HTTP status נכון — באמצעות החלפה זמנית (stub) של הפונקציה המיוצאת, בלי לגעת ב-DB. **רגרסיה**: 128/128 הבדיקות הקיימות (schema-compat+stage2b+stage3+taxid+cardcom-separation+stage4) הורצו מחדש על ה-worktree הזה — ללא שינוי.
+
+**אימות UI בפועל (לא רק קוד)**: `ng build` נקי (0 שגיאות TypeScript). שרת פיתוח מבודד (`localhost:4300`, מול backend מבודד על `localhost:3001`) עלה בהצלחה; נבדק ב-headless Chrome (`--dump-dom`) שהאפליקציה בפועל מתרנדרת (לא מסך לבן) — מגיעה למסך login תקין. **מעבר לזה — דורש כניסה אמיתית**: לא ניתן לבדוק את מסך ה-Finance עצמו (מוגן `superAdminGuard`) בלי session מחובר של Super Admin אמיתי. שני שרתי הבדיקה נסגרו, ושינוי זמני ל-`environment.ts` (להצביע על ה-backend המבודד) הוחזר במדויק למצבו המקורי (`git diff` ריק על הקובץ הזה).
+
+**לא ממומש/נשאר בכוונה**: ייצוא מס"ב בפועל (שידור לבנק) נשאר ידני-מחוץ-למערכת, כמו קודם — הכפתור "ייצא" מסמן `exported`, לא יוצר/שולח קובץ בנק בפועל (אותה גבולת V1 מ-Stage 3). `getStatementBalance` route חדש אך לא עוד נעשה בו שימוש בעמוד עצמו ב-increment הזה (הוכן לדריל-דאון עתידי).
 
 ## היסטוריית תקריות (לשקיפות)
 

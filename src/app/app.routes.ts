@@ -627,6 +627,19 @@ export const routes: Routes = [
           ),
       },
       {
+        // FIN-11 Finance screen (2026-10-17) -- overpayment exceptions +
+        // MASAV proposal review/approve/export. Same super-admin bar as
+        // billing-ops: approving a MASAV proposal, overriding a collection
+        // hold, and recording an overpayment resolution are all financial
+        // operator decisions.
+        path: 'platform/finance',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-finance-page/platform-finance-page.component').then(
+            (m) => m.PlatformFinancePageComponent,
+          ),
+      },
+      {
         // Focused, single-entity Billing setup (UX consolidation, 2026-09-02)
         // -- entered from "הגדרות עמותות" or a blocked entity in "החודש".
         // Same super-admin bar as billing-ops: reuses the same provisioning
