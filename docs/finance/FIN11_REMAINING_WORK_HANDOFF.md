@@ -10,15 +10,15 @@
 - `masav-proposal.service.js` (prepare/list/approve/export proposals) — **Stage 3, committed (`dea7aca`+`5f56b98`), לא נדחף**. **migration 074 לא הוחלה על שום DB.** מנגנון מקביל ל-`masav-collection.service.js` הישן, **עם מודעות חד-כיוונית**: הישן בודק את החדש (לא להפך) — ר' "בדיקות אינטגרציה" למטה.
 - `Document.TaxId` (Israel Invoices, ענף עצמאי) — **committed (`1044621`), לא נדחף**. אינו חלק מ-FIN-11 עצמו (קובץ `donations.service.js`, לא נוגע ב-collection/billing engine).
 - **הכנת אינטגרציה אומתה (2026-10-16)**: שרשרת FIN-11 (`5f56b98`) + TaxId (`1044621`) שולבו (cherry-pick נקי, אפס קונפליקטים, אפס חפיפת קבצים) בענף worktree מבודד `fin11-integration-prep` (commit `ac2443b`, `C:/DEV/HamonymStudio-fin11-integration`). 80/80 בדיקות קיימות עברו על הענף המשולב. **הענף הזה לא נדחף ולא מוזג ל-main — מחכה לאישור.**
-- **תיקון תאימות פריסה (2026-10-16, לא committed עדיין)**: אומת ש-Render מוגדר `Auto-Deploy: On Commit` על `main` — push=deploy בפועל. נמצא ותוקן: `openAttempt`/`openMasavAttempt` (הקיימים) קראו ללא-תנאי לטבלאות 073/074 והיו קורסים לפני המיגרציה. נוסף `fin11-schema-probe.js` (בדיקת `to_regclass` מפורשת, בלי cache, בלי try/catch גנרי) שמדלגת על הבדיקה הרלוונטית רק כשהטבלה שלה חסרה, ולעולם לא מדלגת כשהיא קיימת — שני ה-guards עצמאיים זה מזה, כל אחד בודק רק את הטבלה שלו. `scripts/test-fin11-schema-compat.js` (24/24, **כל ארבעת מצבי המיגרציה**: ללא שתיהן / 073 בלבד / 074 בלבד / שתיהן — אומת ישירות שבמצב חלקי שום הגנה רלוונטית לא מדלגת, וגם שהבדיקה תלוית-client/טרנזקציה, לא pool גלובלי) + אפס רגרסיה ב-80 הבדיקות הקיימות (104/104 סה"כ). ר' `FIN11_IMPLEMENTATION_STATUS.md` לפירוט המלא. **ממתין לאישור commit.**
+- **תיקון תאימות פריסה — הושלם, נדחף** (`dd727a1`, 2026-10-17). `fin11-schema-probe.js` מגן על `openAttempt`/`openMasavAttempt` מפני קריסה לפני מיגרציה. ר' `FIN11_IMPLEMENTATION_STATUS.md` לפירוט.
+- **מיגרציות 073+074 — הוחלו בפועל על ה-DB המשותף** (2026-10-17), לאחר גיבוי מאומת (`pg_dump` + `pg_restore --list`, שמור ב-`C:\HamonymBackups\`). `verify-fin11-stage3-ready.js` מאשר: OK. הגנות FIN-11 Stage 2B/3 **פעילות בפועל כעת** בקוד שכבר נדחף.
+- **Stage 4 — ניתוב משולב + תזמון — הושלם, לא committed** (`C:/DEV/HamonymStudio-fin11-stage4`, ממתין לאישור commit). שכבת תזמון/ריטריי מעל מה שכבר קיים (`openFin11CappedCardAttempt`, `collectWithRetries`, 3 jobs חדשים — **לא רשומים** ב-`src/jobs/index.js`, לכן לא פעילים). ר' `FIN11_IMPLEMENTATION_STATUS.md`/`FIN11_STAGE4_TECHNICAL_DESIGN.md` לפירוט מלא. 28/28 PASS + 100/100 קיימות ללא רגרסיה.
 
 ## מה מתועד/מוכרע עסקית בלבד — **לא ממומש**
 
-- אישור+גבייה אוטומטיים באשראי עד ₪3,000 (אין job/cron, אין caller ל-`getFin11CappedCardProposal`).
-- Job/schedule ל-6 בחודש (מס"ב) — `masav-proposal.service.js` מוכן, אבל לא מתוזמן/מופעל אוטומטית.
-- מסלול קליטת תוצאות מס"ב (recordMasavResult-מחליף) — **דורש החלטה עסקית חדשה**, לא רק קוד (ר' FIN-15#2 ב-`FINANCIAL_BUSINESS_DECISIONS.md`). Stage 3 **לא** פותר את זה — `masav_collection_proposals.status` עוצר ב-`exported` בכוונה.
+- מסלול קליטת תוצאות מס"ב (recordMasavResult-מחליף) — **דורש החלטה עסקית חדשה**, לא רק קוד (ר' FIN-15#2 ב-`FINANCIAL_BUSINESS_DECISIONS.md`). Stage 3 **לא** פותר את זה — `masav_collection_proposals.status` עוצר ב-`exported` בכוונה. Stage 4 **לא** נגע בזה (מחוץ לתחום).
 - תנאי גבייה פרטניים ברמת עמותה.
-- 3-ניסיונות-אשראי-לכל-היותר + escalation אנושי.
+- escalation אנושי אחרי מיצוי 3 ניסיונות — **ה-finding עצמו ממומש** (Stage 4, `fin11_card_attempts_exhausted`); תהליך-המשך אנושי (מי בודק, איך סוגרים) לא מוגדר מעבר לפוליסיה העסקית הקיימת (סופר-אדמין בודק סטטוס אמיתי מול הספק → אם לא נגבה, יכול לכלול בתהליך המס"ב הידני).
 - הבחנת שלבי מס"ב (הוכן/שודר/אומת/נדחה/בהמתנה) — מתועד תפיסתית ב-`FIN11_STAGE3_TECHNICAL_DESIGN.md` סעיף 6, **רק 3 השלבים הראשונים (Prepared/Approved/Exported) ניתנים למימוש בפועל**.
 - `routing.js` — עדיין מכריע בינארית לפי סף ₪3,540; לא תומך "שני אמצעים על אותו Statement" בפועל. Stage 3 **לא נגע בו בכוונה** (מנגנון מקביל).
 - UI לכל חלק ה-overpayment-exception (צפייה בחריגים, override, resolve) — **אין ממשק, רק פונקציות backend**.
@@ -45,19 +45,19 @@
 
 ## חייב להיבדק/להיקבע לפני כל הפעלת-כסף-אמיתי
 
-1. **migrations 073+074 חייבות להיות מוחלות (בסדר הזה) לפני שהגנות FIN-11 Stage 2B/3 פעילות בפועל**: עד 2026-10-16 זה היה חוסם-קריסה (push=deploy ב-Render, `openAttempt`/`openMasavAttempt` הקיימים קראו ללא-תנאי לטבלאות 073/074 ונכשלים אם הן חסרות). **זה תוקן** (`fin11-schema-probe.js`, לא committed עדיין — ר' `FIN11_IMPLEMENTATION_STATUS.md`) — מעתה, אם 073/074 עדיין לא הוחלו כשקוד זה יפרס, מסלולי הגבייה הקיימים ימשיכו לעבוד כמו לפני FIN-11, **אבל** הגנות ה-FIN-11 עצמן (hold על עסקת-יתר, חסימת חפיפת מסלולים) **לא יהיו פעילות** עד שהמיגרציות יוחלו בפועל. סדר מחייב להפעלה מלאה: (א) `scripts/migrate-073.js`, (ב) `scripts/migrate-074.js`, (ג) `scripts/verify-fin11-stage3-ready.js` (בודק את שתיהן, שער fail-fast — read-only, יוצא קוד 1 אם משהו חסר, אומת ריצתית), (ד) קוד ה-application (יכול, אחרי התיקון, להקדים או להתעכב בבטחה — אבל ההגנות מופעלות רק אחרי (א)+(ב)). ר' `FIN11_STAGE2B_TECHNICAL_DESIGN.md` סעיף 7, `FIN11_STAGE3_TECHNICAL_DESIGN.md` סעיף 8, וסעיף "⛔ הממצא המקורי"/"תיקון תאימות פריסה" ב-`FIN11_IMPLEMENTATION_STATUS.md`.
+1. **✅ migrations 073+074 הוחלו בפועל (2026-10-17)** על ה-DB המשותף, עם גיבוי מאומת קודם ו-`verify-fin11-stage3-ready.js` מאשר OK אחריהן. הגנות FIN-11 Stage 2B/3 (hold על עסקת-יתר, חסימת חפיפת מסלולים) **פעילות בפועל כעת**, לא רק בקוד שמוכן להן.
 2. `billing-ops.service.js#reconcileCollectionAttempt` — להוסיף בדיקת סטטוס לפני reconcile (לא עשוי ב-Stage 2B, ר' סיכונים שנותרו).
 3. `collection-attempt-reconciliation.job.js`'s "overpaid" check — לתקן השוואה ל-`adjustedTotal` במקום `total_due` גולמי, לפני שיותר מ-payment אחד הופך לנורמה.
-4. `routing.js` — להחליט ולממש איך אשראי+מס"ב פועלים על אותו Statement בלי "להכריע מחדש" שוב ושוב.
+4. `routing.js` — **עדיין לא נוגע, בכוונה**. Stage 4 לא עבר דרכו: `openFin11CappedCardAttempt` הוא מסלול עצמאי (כמו `getFin11CappedCardProposal` לפניו), לא קריאה ל-`resolveCollectionMethod`. ה"ניתוב המשולב" בפועל נשאר: אשראי מוגבל ל-₪3,000 (Stage 4, אוטומטי כשיופעל) + מס"ב על השארית (Stage 3, הכנה אוטומטית כשיופעל + אישור/ייצוא ידני) — שני מסלולים עצמאיים שמתואמים רק דרך ה-guards (hold/exported-masav), לא דרך הכרעה בינארית אחת ב-`routing.js`. אם בעתיד ירצו גם את המסלול הישן (`openAttempt`/`openMasavAttempt` לפי `routing.js`) לפעול במקביל על סף ₪3,540 — עדיין צריך הכרעה.
 5. החלטה עסקית מפורשת על מסלול קליטת תוצאות מס"ב (לא קיים היום, V1 boundary מכוון מ-1.9.2026). Stage 3 מתעד את המודל התפיסתי (Prepared/Approved/Exported בלבד) אבל לא פותר את זה.
 6. **שני מנגנוני מס"ב (ישן+חדש) קיימים זה לצד זה** — צריך הכרעה עתידית: למזג, להחליף, או לתעד במפורש איזה מהם בשימוש לכל תרחיש.
 
-## רשימת עבודה מוצעת ל-Stage 4/UI (לא מאושרת לביצוע — דורשת אישור נפרד לכל שלב)
+## רשימת עבודה — Stage 4/UI
 
-**Stage 4 (ניתוב משולב + תזמון, מוצע)**:
-- [ ] שינוי `routing.js` לדגם שמאפשר שני אמצעים על Statement אחד.
-- [ ] Job/schedule ל-28/20:00 (אשראי) ו-6-בחודש (מס"ב).
-- [ ] חיבור בפועל של `getFin11CappedCardProposal`/`resolveAttempt` לקריאה אמיתית ל-adapter (`charge()`), כולל 3-ניסיונות-לכל-היותר.
+**Stage 4 (ניתוב משולב + תזמון) — הושלם בקוד, לא מופעל**:
+- [x] Job/schedule ל-28/20:00 (אשראי) ו-6-בחודש (מס"ב) — `fin11-card-collection.job.js`, `fin11-masav-prepare.job.js`, `fin11-card-retry-sweep.job.js` (נוסף, לא היה ברשימה המקורית). **לא רשומים ב-`src/jobs/index.js` — לא פעילים.**
+- [x] חיבור בפועל של גבייה מוגבלת לקריאה אמיתית ל-adapter (`charge()`), כולל 3-ניסיונות-לכל-היותר — `openFin11CappedCardAttempt`/`collectWithRetries`. **האדפטר האמיתי ייקרא בפועל רק אם/כש-jobs אלה יירשמו.**
+- [ ] שינוי `routing.js` לדגם שמאפשר שני אמצעים על Statement אחד — **לא בוצע, בכוונה** (ר' סעיף 4 למעלה). Stage 4 עוקף את השאלה הזו, לא פותר אותה.
 
 **Finance UI (מוצע)**:
 - [ ] מסך חריגי גביית-יתר (`payment_exceptions`) לסופר-אדמין — רשימה, פרטים, override, resolve.
@@ -67,10 +67,11 @@
 
 ## מה חייב להיבדק לפני כל הפעלה בכסף אמיתי (סיכום)
 
-- [ ] migrations 073+074 הוחלו בסביבת היעד ואומתו (כל הטריגרים/האינדקסים קיימים, לא רק הטבלאות) — `verify-fin11-stage3-ready.js`.
-- [ ] `routing.js` מתוקן לדגם ההיברידי.
+- [x] migrations 073+074 הוחלו בסביבת היעד (הפרודקשן המשותף) ואומתו — `verify-fin11-stage3-ready.js`: OK (2026-10-17).
+- [ ] `routing.js` מתוקן לדגם ההיברידי — **לא בוצע, בכוונה** (Stage 4 עוקף, לא פותר).
 - [ ] `reconcileCollectionAttempt` ו-reconciliation job's overpaid-check תוקנו.
 - [ ] החלטה עסקית על מס"ב-result-ingestion קיימת וממומשת.
+- [ ] **רישום שלושת ה-jobs החדשים (`fin11-card-collection`/`fin11-card-retry-sweep`/`fin11-masav-prepare`) ב-`src/jobs/index.js`** — צעד נפרד, מפורש, שמפעיל קריאה אמיתית לאדפטר CardCom. לא בוצע, דורש אישור נפרד מכל מה שלמעלה.
 - [ ] UI לחריגי גביית-יתר **וגם** ל-MASAV proposals קיים — אין טעם ב-hold/proposal-מבלי-יכולת-לסקור.
 - [ ] הכרעה על שני מנגנוני המס"ב הקיימים זה לצד זה.
 - [ ] בדיקת end-to-end אמיתית (sandbox CardCom, לא production) של המחזור המלא: card proposal → attempt → charge → resolve → (אם רלוונטי) exception → resolve → masav proposal → approve → export.

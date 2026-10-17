@@ -178,6 +178,17 @@ async function main() {
   try {
     await client.query('BEGIN');
 
+    // Migrations 073/074 are now applied for real (2026-10-17) -- their
+    // triggers already exist, and CREATE TRIGGER has no IF NOT EXISTS form
+    // in Postgres. Drop them first (inside this rollback-only transaction,
+    // so the real, already-applied triggers are restored untouched the
+    // instant this ROLLBACKs) so the verbatim migration SQL below can
+    // recreate them either way -- same idempotency CREATE TABLE IF NOT
+    // EXISTS already gives the tables. Harmless no-op otherwise.
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exceptions_enforce_immutable_facts ON payment_exceptions`).catch(() => {});
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_update ON payment_exception_actions`).catch(() => {});
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_delete ON payment_exception_actions`).catch(() => {});
+    await client.query(`DROP TRIGGER IF EXISTS trg_masav_proposals_enforce_immutable_facts ON masav_collection_proposals`).catch(() => {});
     for (const file of ['073_fin11_payment_exceptions.sql', '074_fin11_masav_collection_proposals.sql']) {
       const sql = fs.readFileSync(path.join(__dirname, '../migrations/', file), 'utf8');
       await client.query(sql);

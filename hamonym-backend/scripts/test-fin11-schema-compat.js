@@ -74,6 +74,35 @@ function check(name, pass, detail) {
   console.log(`${pass ? 'PASS' : 'FAIL'} — ${name}${detail ? ' :: ' + detail : ''}`);
 }
 
+// Migrations 073/074 are now applied for real (2026-10-17) -- their
+// triggers already exist, and CREATE TRIGGER has no IF NOT EXISTS form in
+// Postgres. Drop them first (inside whichever rollback-only transaction is
+// calling this, so the real, already-applied triggers are restored
+// untouched the instant that transaction ROLLBACKs) so the verbatim
+// migration SQL applied right after can recreate them either way -- same
+// idempotency CREATE TABLE IF NOT EXISTS already gives the tables. Harmless
+// no-op if the table/trigger doesn't exist yet.
+// Split in two (rather than one "drop everything, swallow errors" helper):
+// DROP TRIGGER ... ON <table> requires the table itself to exist (IF EXISTS
+// only covers the trigger name, not the table) -- partC/partD deliberately
+// drop ONE of the two tables first to simulate a partial-migration state,
+// and trying to also drop THAT table's own trigger afterward throws a real
+// error that poisons the whole transaction (Postgres aborts the transaction
+// on ANY error until ROLLBACK, regardless of a JS-level .catch()). Each
+// part calls only the helper for the table it did NOT just drop.
+async function drop073Triggers(client) {
+  await client.query(`DROP TRIGGER IF EXISTS trg_payment_exceptions_enforce_immutable_facts ON payment_exceptions`);
+  await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_update ON payment_exception_actions`);
+  await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_delete ON payment_exception_actions`);
+}
+async function drop074Trigger(client) {
+  await client.query(`DROP TRIGGER IF EXISTS trg_masav_proposals_enforce_immutable_facts ON masav_collection_proposals`);
+}
+async function dropFin11Triggers(client) {
+  await drop073Triggers(client);
+  await drop074Trigger(client);
+}
+
 // ===========================================================================
 // PART A -- schema ABSENT, real functions, real (committed+cleaned) fixture.
 // ===========================================================================
@@ -215,6 +244,7 @@ async function partB() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await dropFin11Triggers(client);
     const sql073 = fs.readFileSync(path.join(__dirname, '../migrations/073_fin11_payment_exceptions.sql'), 'utf8');
     await client.query(sql073);
     const sql074 = fs.readFileSync(path.join(__dirname, '../migrations/074_fin11_masav_collection_proposals.sql'), 'utf8');
@@ -290,6 +320,15 @@ async function partC() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Migrations 073 AND 074 are both genuinely applied for real now
+    // (2026-10-17) -- a throwaway transaction can ADD things temporarily
+    // but cannot make an already-committed, real table disappear just by
+    // not re-creating it. To actually simulate "ONLY 073 applied" (074
+    // genuinely absent), 074's table must be explicitly dropped here --
+    // safe, since this whole transaction ROLLBACKs at the end, restoring
+    // the real table untouched.
+    await client.query(`DROP TABLE IF EXISTS masav_collection_proposals CASCADE`);
+    await drop073Triggers(client); // NOT drop074Trigger -- its table was just dropped above
     const sql073 = fs.readFileSync(path.join(__dirname, '../migrations/073_fin11_payment_exceptions.sql'), 'utf8');
     await client.query(sql073);
 
@@ -359,6 +398,12 @@ async function partD() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // See partC's comment -- both migrations are genuinely applied for
+    // real now, so simulating "ONLY 074 applied" requires explicitly
+    // dropping 073's table here (safe -- this transaction ROLLBACKs,
+    // restoring the real table untouched).
+    await client.query(`DROP TABLE IF EXISTS payment_exceptions CASCADE`);
+    await drop074Trigger(client); // NOT drop073Triggers -- its table was just dropped above
     const sql074 = fs.readFileSync(path.join(__dirname, '../migrations/074_fin11_masav_collection_proposals.sql'), 'utf8');
     await client.query(sql074);
 
@@ -425,13 +470,17 @@ async function partE() {
   const txClient = await pool.connect();
   try {
     await txClient.query('BEGIN');
-    const sql073 = fs.readFileSync(path.join(__dirname, '../migrations/073_fin11_payment_exceptions.sql'), 'utf8');
-    await txClient.query(sql073);
+    // Migration 073 is genuinely applied for real now (2026-10-17), so
+    // proving "a different connection can't see THIS transaction's own
+    // uncommitted change" needs an uncommitted change to actually make --
+    // an uncommitted DROP (MVCC: invisible to every other session until
+    // this COMMITs, restored untouched by the ROLLBACK below either way).
+    await txClient.query(`DROP TABLE IF EXISTS payment_exceptions CASCADE`);
 
     const seenByTxClient = await isPaymentExceptionsSchemaPresent(txClient);
     const seenByBarePool = await isPaymentExceptionsSchemaPresent(pool); // a DIFFERENT connection, outside this uncommitted transaction
-    check('E1. the SAME in-transaction client sees payment_exceptions as present (uncommitted DDL, own transaction)', seenByTxClient === true);
-    check('E2. a DIFFERENT connection (bare pool) correctly does NOT see this transaction\'s own uncommitted DDL -- confirms the check is connection/transaction-scoped, not a global cache', seenByBarePool === false, `seenByBarePool=${seenByBarePool}`);
+    check('E1. the SAME in-transaction client sees its OWN uncommitted DROP -- payment_exceptions reads as absent', seenByTxClient === false);
+    check('E2. a DIFFERENT connection (bare pool) does NOT see this transaction\'s own uncommitted DROP -- still reads the real, untouched table as present. Confirms the check is connection/transaction-scoped, not a global cache -- two connections asking "right now" can get OPPOSITE answers depending on which one holds the relevant lock/transaction', seenByBarePool === true, `seenByBarePool=${seenByBarePool}`);
 
     await txClient.query('ROLLBACK');
   } catch (err) {

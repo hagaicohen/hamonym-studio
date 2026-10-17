@@ -129,6 +129,17 @@ async function main() {
   try {
     await client.query('BEGIN');
 
+    // Migration 073 is now applied for real (2026-10-17) -- these triggers
+    // already exist there, and CREATE TRIGGER has no IF NOT EXISTS form in
+    // Postgres. Drop them first (inside this rollback-only transaction, so
+    // the real, already-applied trigger is restored untouched the instant
+    // this ROLLBACKs) so the verbatim migration SQL below can recreate them
+    // either way -- same idempotency CREATE TABLE IF NOT EXISTS already
+    // gives the tables themselves. Harmless no-op if the table/trigger
+    // doesn't exist yet (first-time run against a genuinely unmigrated DB).
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exceptions_enforce_immutable_facts ON payment_exceptions`).catch(() => {});
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_update ON payment_exception_actions`).catch(() => {});
+    await client.query(`DROP TRIGGER IF EXISTS trg_payment_exception_actions_no_delete ON payment_exception_actions`).catch(() => {});
     const migrationSql = fs.readFileSync(path.join(__dirname, '../migrations/073_fin11_payment_exceptions.sql'), 'utf8');
     await client.query(migrationSql);
 
@@ -178,14 +189,14 @@ async function main() {
     const e1 = await makeEntity();
     const s1 = await makeStatement(e1.accountId, 1000);
     const a1 = await makeAttempt(s1, 1000);
-    const r1 = await resolveAttemptCore(client, a1, s1, { outcome: 'succeeded', providerReference: 'tx-1' });
+    const r1 = await resolveAttemptCore(client, a1, s1, { outcome: 'succeeded', providerReference: 'tx-2b-1' });
     check('1. exact-balance payment -> succeeded, statement flips to paid, no overpayment', r1.statementStatus === 'paid' && r1.overpayment === null, JSON.stringify(r1));
 
     // --- 2. Partial payment (card-cap scenario: 3000 of 5000) ---
     const e2 = await makeEntity();
     const s2 = await makeStatement(e2.accountId, 5000);
     const a2 = await makeAttempt(s2, 3000);
-    const r2 = await resolveAttemptCore(client, a2, s2, { outcome: 'succeeded', providerReference: 'tx-2' });
+    const r2 = await resolveAttemptCore(client, a2, s2, { outcome: 'succeeded', providerReference: 'tx-2b-2' });
     const bal2 = await getStatementBalance(s2, client);
     check('2. partial payment -> statement stays open, no overpayment', r2.statementStatus === null && r2.overpayment === null, JSON.stringify(r2));
     check('2a. outstanding correctly reduced to 2000', Math.abs(bal2.outstanding - 2000) < 0.001, bal2.outstanding);
@@ -196,7 +207,7 @@ async function main() {
     const aPrior3 = await makeAttempt(s3, 2000, 'succeeded');
     await client.query(`INSERT INTO payments (statement_id, collection_attempt_id, amount, provider, provider_reference, received_at) VALUES ($1,$2,2000,'cardcom','tx-3-prior',NOW())`, [s3, aPrior3]);
     const a3 = await makeAttempt(s3, 3000);
-    const r3 = await resolveAttemptCore(client, a3, s3, { outcome: 'succeeded', providerReference: 'tx-3' });
+    const r3 = await resolveAttemptCore(client, a3, s3, { outcome: 'succeeded', providerReference: 'tx-2b-3' });
     check('3. verified overpayment detected: full 3000 recorded, not clamped', r3.overpayment !== null && r3.overpayment.overpaymentAmount === 2000 && r3.overpayment.collectedAmount === 3000, JSON.stringify(r3));
     const payments3 = await client.query(`SELECT SUM(amount) AS total FROM payments WHERE statement_id=$1`, [s3]);
     check('3a. full amount actually recorded (2000+3000=5000, never clamped to 1000)', Number(payments3.rows[0].total) === 5000, payments3.rows[0].total);
@@ -212,7 +223,7 @@ async function main() {
     const e4 = await makeEntity();
     const s4 = await makeStatement(e4.accountId, 1500);
     const a4 = await makeAttempt(s4, 1500);
-    const r4 = await resolveAttemptCore(client, a4, s4, { outcome: 'succeeded', providerReference: 'tx-4', amount: 999999 });
+    const r4 = await resolveAttemptCore(client, a4, s4, { outcome: 'succeeded', providerReference: 'tx-2b-4', amount: 999999 });
     const pay4 = await client.query(`SELECT amount FROM payments WHERE collection_attempt_id=$1`, [a4]);
     check('4. a stray "amount" field on outcome is ignored -- only requested_amount is ever trusted (no invented provider amount)', Number(pay4.rows[0].amount) === 1500, pay4.rows[0].amount);
 
@@ -220,11 +231,11 @@ async function main() {
     const e5 = await makeEntity();
     const s5 = await makeStatement(e5.accountId, 1000);
     const a5 = await makeAttempt(s5, 1000);
-    await resolveAttemptCore(client, a5, s5, { outcome: 'succeeded', providerReference: 'tx-5' });
+    await resolveAttemptCore(client, a5, s5, { outcome: 'succeeded', providerReference: 'tx-2b-5' });
     await client.query('SAVEPOINT sp_dup');
     let duplicateErr = null;
     try {
-      await resolveAttemptCore(client, a5, s5, { outcome: 'succeeded', providerReference: 'tx-5' });
+      await resolveAttemptCore(client, a5, s5, { outcome: 'succeeded', providerReference: 'tx-2b-5' });
     } catch (err) {
       duplicateErr = err;
       await client.query('ROLLBACK TO SAVEPOINT sp_dup');
@@ -239,7 +250,7 @@ async function main() {
     await client.query(`INSERT INTO statement_adjustments (statement_id, delta_amount, reason, created_by_user_id) VALUES ($1,500,'late donation fold',$2)`, [s6, userId]);
     // adjustedTotal = 1500; an attempt requesting exactly 1500 must NOT be flagged as overpayment.
     const a6 = await makeAttempt(s6, 1500);
-    const r6 = await resolveAttemptCore(client, a6, s6, { outcome: 'succeeded', providerReference: 'tx-6' });
+    const r6 = await resolveAttemptCore(client, a6, s6, { outcome: 'succeeded', providerReference: 'tx-2b-6' });
     check('6. payment exactly matching adjustedTotal (1000+500) is NOT an overpayment', r6.overpayment === null && r6.statementStatus === 'paid', JSON.stringify(r6));
 
     // --- 7. pending/ambiguous attempts are treated as unresolved financial exposure (existing guard, re-verified here) ---
