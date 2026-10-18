@@ -143,16 +143,33 @@ async function handler(db, { now = new Date() } = {}) {
   // for. job_runs.result_summary (below) is this job's own already-
   // established audit trail for automated actions, same as every other
   // job in this directory.
-  const autoApproval = await autoApproveDraftStatementsForRun(result.billingRunId);
-  for (const failure of autoApproval.failed) {
-    await recordFinding(pool, {
-      jobName: 'billing-monthly-cycle',
-      findingType: 'statement_auto_approval_failed',
-      severity: 'warning',
-      subjectType: 'statement',
-      subjectId: failure.statementId,
-      details: { code: failure.code, message: failure.message },
-    });
+  //
+  // DEPLOYMENT-SAFETY GUARD (2026-10, controlled production deployment) --
+  // billing-monthly-cycle is ALREADY registered and running on its real
+  // schedule in production. Unlike FIN-11's 3 new jobs (safe simply by
+  // staying unregistered), this job's NEXT real tick would otherwise run
+  // the auto-approval logic above immediately once this code is deployed
+  // -- deploying is not the same decision as activating. FIN11_AUTO_
+  // APPROVAL_ENABLED defaults OFF (unset or anything other than the exact
+  // string 'true'): deploying this commit changes NOTHING about what a
+  // real scheduled run does until a SEPARATE, explicit Render env-var
+  // change turns it on -- the smallest possible guard, not a new
+  // architecture. When OFF, this job's behavior is byte-for-byte what it
+  // was before this stage (create period, run calculation, stop).
+  const autoApprovalEnabled = process.env.FIN11_AUTO_APPROVAL_ENABLED === 'true';
+  let autoApproval = { approved: [], failed: [] };
+  if (autoApprovalEnabled) {
+    autoApproval = await autoApproveDraftStatementsForRun(result.billingRunId);
+    for (const failure of autoApproval.failed) {
+      await recordFinding(pool, {
+        jobName: 'billing-monthly-cycle',
+        findingType: 'statement_auto_approval_failed',
+        severity: 'warning',
+        subjectType: 'statement',
+        subjectId: failure.statementId,
+        details: { code: failure.code, message: failure.message },
+      });
+    }
   }
 
   return {
@@ -166,6 +183,7 @@ async function handler(db, { now = new Date() } = {}) {
     statementsCreated: result.statementsCreated,
     blockedEntitiesCount: result.blockedEntities.length,
     activityDiscovered: result.activityDiscovered,
+    autoApprovalEnabled,
     statementsAutoApproved: autoApproval.approved.length,
     statementsAutoApprovalFailed: autoApproval.failed.length,
   };

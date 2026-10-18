@@ -21,6 +21,13 @@ process.env.DB_NAME = 'hamonym_test';
 process.env.DB_USER = 'postgres';
 process.env.DB_PASSWORD = 'testpass';
 process.env.DB_SSL = 'false';
+// This file's whole purpose is proving the auto-approval LOGIC itself is
+// correct, so it explicitly opts in to the deployment-safety guard added
+// to billing-monthly-cycle.job.js (2026-10, controlled production
+// deployment) -- in every REAL environment this stays unset/false by
+// default; see test-fin11-closure-deploy-guard.js for the test that
+// proves the guard itself (unset -> no auto-approval at all).
+process.env.FIN11_AUTO_APPROVAL_ENABLED = 'true';
 
 const pool = require('../src/db/db');
 const billingMonthlyCycle = require('../src/jobs/billing-monthly-cycle.job');
