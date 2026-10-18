@@ -612,32 +612,31 @@ export const routes: Routes = [
           ),
       },
       {
-        // Full super admin only -- period/calculation/approval/collection
-        // triggers, billing-readiness provisioning, and MASAV authorization
-        // are all financial operator actions. "חיובי עמותות" (UX
-        // simplification pass, 2026-09-14) -- absorbs what used to be a
-        // separate /platform/billing-accounts route/page (provisioning is
-        // now the "הגדרות עמותות" tab here); the underlying provisioning
-        // API is unchanged, just reached from one merged screen.
-        path: 'platform/billing-ops',
+        // Unified "ניהול גבייה" (2026-10) -- replaces the two separate
+        // "חיובי עמותות"/"ניהול כספים" pages with one (3 tabs: סקירה
+        // ופעולות / היסטוריה / דוחות). Reuses BillingOpsService/
+        // FinanceOpsService verbatim for every write action; only the
+        // read-only aggregation is new (CollectionOpsService).
+        path: 'platform/collection-ops',
         canActivate: [superAdminGuard],
         loadComponent: () =>
-          import('./modules/platform/pages/platform-billing-ops-page/platform-billing-ops-page.component').then(
-            (m) => m.PlatformBillingOpsPageComponent,
+          import('./modules/platform/pages/platform-collection-ops-page/platform-collection-ops-page.component').then(
+            (m) => m.PlatformCollectionOpsPageComponent,
           ),
       },
       {
-        // FIN-11 Finance screen (2026-10-17) -- overpayment exceptions +
-        // MASAV proposal review/approve/export. Same super-admin bar as
-        // billing-ops: approving a MASAV proposal, overriding a collection
-        // hold, and recording an overpayment resolution are all financial
-        // operator decisions.
+        // Historical route, kept so any existing bookmark/link still
+        // resolves -- "חיובי עמותות" is now the "סקירה ופעולות" tab of the
+        // unified page above.
+        path: 'platform/billing-ops',
+        redirectTo: 'platform/collection-ops',
+      },
+      {
+        // Historical route, kept so any existing bookmark/link still
+        // resolves -- "ניהול כספים" ("דורש טיפולך") is now part of the
+        // unified page's "סקירה ופעולות" tab above.
         path: 'platform/finance',
-        canActivate: [superAdminGuard],
-        loadComponent: () =>
-          import('./modules/platform/pages/platform-finance-page/platform-finance-page.component').then(
-            (m) => m.PlatformFinancePageComponent,
-          ),
+        redirectTo: 'platform/collection-ops',
       },
       {
         // Focused, single-entity Billing setup (UX consolidation, 2026-09-02)

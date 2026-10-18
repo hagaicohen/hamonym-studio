@@ -79,4 +79,9 @@ router.use('/billing-ops', require('./billing-ops/billing-ops.routes'));
 // See finance-ops.routes.js.
 router.use('/finance-ops', require('./finance-ops/finance-ops.routes'));
 
+// Collection Ops (2026-10) — read-only aggregation for the unified "ניהול
+// גבייה" page (financial overview, needs-attention, system activity,
+// cross-period history, basic Excel report). See collection-ops.routes.js.
+router.use('/collection-ops', require('./collection-ops/collection-ops.routes'));
+
 module.exports = router;

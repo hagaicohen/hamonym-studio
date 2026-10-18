@@ -42,12 +42,11 @@ const PLATFORM_USERS:         NavItem = { route: '/platform/users',         labe
 // עמותות (עמותה -> provider/מס"ב -> Hamonym), the latter absorbing what
 // used to be two separate entries ("חשבונות חיוב" + "תפעול חיוב").
 const PLATFORM_DONATIONS:    NavItem = { route: '/platform/donations',   label: 'תרומות',       icon: 'donations' };
-const PLATFORM_BILLING_OPS:  NavItem = { route: '/platform/billing-ops', label: 'חיובי עמותות', icon: 'settings' };
-// FIN-11 Finance screen (2026-10-17) -- overpayment exceptions + MASAV
-// proposal review, separate from "חיובי עמותות" (which already covers
-// the Statement/balance list itself; this page links to it instead of
-// duplicating it).
-const PLATFORM_FINANCE:      NavItem = { route: '/platform/finance',     label: 'ניהול כספים',  icon: 'settings' };
+// Unified "ניהול גבייה" (2026-10) -- replaces the two separate "חיובי
+// עמותות"/"ניהול כספים" entries with one page (3 tabs: סקירה ופעולות /
+// היסטוריה / דוחות). Both old routes still exist and redirect here
+// (app.routes.ts) so any existing bookmark/link keeps working.
+const PLATFORM_COLLECTION_OPS: NavItem = { route: '/platform/collection-ops', label: 'ניהול גבייה', icon: 'settings' };
 // "הגדרות כלליות" (2026-09-14j) -- platform-wide settings that aren't about
 // any one association or billing operation (currently: system VAT rate).
 const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'הגדרות כלליות', icon: 'settings' };
@@ -92,7 +91,7 @@ export class SidebarComponent {
     const items = [PLATFORM_DASHBOARD];
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_BILLING_OPS, PLATFORM_FINANCE, PLATFORM_GENERAL_SETTINGS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, PLATFORM_GENERAL_SETTINGS);
     return items;
   });
 

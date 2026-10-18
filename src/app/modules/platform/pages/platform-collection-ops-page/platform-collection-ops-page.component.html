@@ -1,0 +1,355 @@
+<div class="col-page">
+  <h1 class="col-title">ניהול גבייה</h1>
+  <p class="col-subtitle">תמונת מצב כספית, פעולות הדורשות הכרעה, פעילות אוטומטית והיסטוריית חיובים — מסך אחד.</p>
+
+  <div class="col-tabs">
+    <button class="col-tab" [class.col-tab-active]="tab === 'overview'" (click)="setTab('overview')">סקירה ופעולות</button>
+    <button class="col-tab" [class.col-tab-active]="tab === 'history'" (click)="setTab('history')">היסטוריה</button>
+    <button class="col-tab" [class.col-tab-active]="tab === 'reports'" (click)="setTab('reports')">דוחות</button>
+  </div>
+
+  @if (tab === 'overview') {
+    <div class="col-period-row">
+      <label for="periodSelect">תקופה:</label>
+      <select id="periodSelect" [(ngModel)]="selectedPeriodId" (ngModelChange)="onPeriodChange()">
+        @for (p of periods; track p.id) {
+          <option [value]="p.id">{{ fmtPeriodLabel(p) }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- A. תמונת מצב כספית -->
+    <section class="col-section">
+      @if (overviewLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else if (overviewError) {
+        <div class="col-error">{{ overviewError }}</div>
+      } @else if (overview) {
+        <div class="col-metrics">
+          <div class="col-metric">
+            <div class="col-metric-label">סך החיובים</div>
+            <div class="col-metric-value">₪{{ fmtMoney(overview.totalBilled) }}</div>
+          </div>
+          <div class="col-metric">
+            <div class="col-metric-label">שולם (גבייה מאומתת בכרטיס)</div>
+            <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.paidConfirmed) }}</div>
+          </div>
+          <div class="col-metric">
+            <div class="col-metric-label">בתהליך גבייה</div>
+            <div class="col-metric-value col-metric-process">₪{{ fmtMoney(overview.inProcess) }}</div>
+          </div>
+          <div class="col-metric">
+            <div class="col-metric-label">יתרה פתוחה</div>
+            <div class="col-metric-value col-metric-open">₪{{ fmtMoney(overview.openBalance) }}</div>
+          </div>
+        </div>
+        @if (overview.carriedOverFromPriorPeriods.statementCount > 0) {
+          <p class="col-hint">
+            + ₪{{ fmtMoney(overview.carriedOverFromPriorPeriods.outstandingTotal) }} יתרה פתוחה מ-{{ overview.carriedOverFromPriorPeriods.statementCount }} חיובים מתקופות קודמות
+          </p>
+        }
+        <p class="col-hint">״שולם״ משקף גבייה אמיתית שאושרה על ידי הספק; מס״ב שיוצא לקובץ נספר ב-״בתהליך גבייה״ עד שלא ידוע לנו אחרת — אין במערכת דרך לאמת הפקדה בבנק.</p>
+      }
+    </section>
+
+    <!-- B. דורש טיפולך -->
+    <section class="col-section">
+      <h2 class="col-section-title">דורש טיפולך @if (needsAttention) {<span class="col-count-badge">{{ needsAttention.totalCount }}</span>}</h2>
+      @if (needsAttentionLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else if (needsAttentionError) {
+        <div class="col-error">{{ needsAttentionError }}</div>
+      } @else if (needsAttention) {
+        @if (needsAttention.totalCount === 0) {
+          <div class="col-empty">אין פעולות הדורשות טיפול כרגע.</div>
+        }
+        @for (group of needsAttention.categories; track group.category) {
+          @if (group.count > 0) {
+            <div class="col-attn-group">
+              <div class="col-attn-group-header">
+                <strong>{{ group.label }}</strong>
+                <span class="col-count-badge">{{ group.count }}</span>
+                @if (group.totalAmount > 0) { <span class="col-attn-amount">₪{{ fmtMoney(group.totalAmount) }}</span> }
+              </div>
+              @for (item of group.items; track item.statementId) {
+                <div class="col-attn-item">
+                  <div
+                    class="col-attn-item-row"
+                    (click)="group.category === 'card_attempts_exhausted' ? openStatementFromAttention(item) : group.category === 'masav_blocked' ? goToBillingSetup(item) : toggleItem(item)"
+                  >
+                    <span class="col-attn-entity">{{ item.entityName }}</span>
+                    <span class="col-attn-reason">{{ item.reason }}</span>
+                    <span class="col-attn-next">{{ item.nextAction }}</span>
+                    @if (item.amount > 0) { <span class="col-attn-item-amount">₪{{ fmtMoney(item.amount) }}</span> }
+                  </div>
+
+                  @if (openItem === item) {
+                    <div class="col-attn-form">
+                      @if (group.category === 'masav_proposal_awaiting_approval') {
+                        <textarea [(ngModel)]="approveReason" placeholder="הערה לאישור ההצעה"></textarea>
+                        @if (attentionActionError) { <div class="col-error">{{ attentionActionError }}</div> }
+                        <button class="col-btn col-btn-primary" [disabled]="attentionActionBusy" (click)="approveProposal(item)">אשר הצעה</button>
+                      }
+                      @if (group.category === 'open_overpayment_exception') {
+                        <div class="col-inline-action">
+                          <textarea [(ngModel)]="overrideReason" placeholder="הערה לביטול הגבלה (אופציונלי בשלב זה)"></textarea>
+                          <button class="col-btn" [disabled]="attentionActionBusy" (click)="overrideHold(item)">בטל הגבלת גבייה</button>
+                        </div>
+                        <div class="col-action-block">
+                          <h4>תעד הכרעה</h4>
+                          <select [(ngModel)]="resolutionType">
+                            <option value="resolve_no_overpayment">אינה גביית-יתר אמיתית</option>
+                            <option value="resolve_credit">יזוכה לעמותה</option>
+                            <option value="resolve_refund">יוחזר לתורם</option>
+                          </select>
+                          <textarea [(ngModel)]="resolveReason" placeholder="הערה המסבירה את ההחלטה"></textarea>
+                          <textarea [(ngModel)]="resolveEvidenceNotes" placeholder="פרטי ראיה (אופציונלי)"></textarea>
+                          @if (attentionActionError) { <div class="col-error">{{ attentionActionError }}</div> }
+                          <button class="col-btn col-btn-primary" [disabled]="attentionActionBusy" (click)="resolveException(item)">שמור הכרעה</button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+    </section>
+
+    <!-- C. פעילות המערכת -->
+    <section class="col-section">
+      <h2 class="col-section-title">פעילות המערכת</h2>
+      @if (systemActivityLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else if (systemActivity) {
+        @for (job of systemActivity.automatic; track job.name) {
+          <div class="col-activity-row">
+            <span class="col-badge" [class.col-badge-ok]="job.status === 'success'" [class.col-badge-fail]="job.status === 'failed'">{{ jobStatusLabel(job.status) }}</span>
+            <strong>{{ job.label }}</strong>
+            @if (job.lastRunAt) { <span class="col-hint-inline">ריצה אחרונה: {{ fmtDate(job.lastRunAt) }}</span> }
+          </div>
+        }
+        <div class="col-activity-row col-activity-fin11">
+          <span class="col-badge col-badge-inactive">לא פעיל</span>
+          <strong>גבייה ומס״ב אוטומטיים (FIN-11)</strong>
+          <span class="col-hint-inline">נבנה בקוד, טרם הופעל — הפעלה היא שלב נפרד ומבוקר</span>
+        </div>
+      }
+    </section>
+
+    <!-- D. חיובי העמותות -->
+    <section class="col-section">
+      <h2 class="col-section-title">חיובי העמותות — התקופה הנבחרת</h2>
+      <div class="col-filter-row">
+        <input type="text" [(ngModel)]="entitySearch" placeholder="חיפוש עמותה..." />
+        <select [(ngModel)]="statusFilter" (ngModelChange)="loadStatements()">
+          <option value="">הכל</option>
+          <option value="draft">טיוטה</option>
+          <option value="approved">מאושר</option>
+          <option value="open">פתוח</option>
+          <option value="paid">שולם</option>
+          <option value="collection_failed">גבייה נכשלה</option>
+          <option value="pending_collection">מחכה לגבייה</option>
+        </select>
+      </div>
+      @if (statementsLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else {
+        <table class="col-table">
+          <thead>
+            <tr>
+              <th>עמותה</th>
+              <th>אמצעי גבייה</th>
+              <th>סכום</th>
+              <th>סטטוס</th>
+              <th>צעד הבא</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of filteredStatements; track s.id) {
+              <tr class="col-row">
+                <td (click)="openStatement(s.id)">{{ s.entity_name }}</td>
+                <td (click)="openStatement(s.id)">{{ s.routed_method === 'card' ? 'כרטיס אשראי' : s.routed_method === 'masav' ? 'מס״ב' : 'חסום' }}</td>
+                <td (click)="openStatement(s.id)">₪{{ fmtMoney(s.total_due) }}</td>
+                <td (click)="openStatement(s.id)">{{ s.status }}</td>
+                <td (click)="openStatement(s.id)">{{ s.next_action }}</td>
+                <td><button class="col-btn col-btn-small" (click)="goToBillingSetupForEntity(s.entity_id)">הגדרות גבייה</button></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="col-empty">אין חיובים לתקופה זו</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      <!-- Access to collection settings for EVERY nonprofit, not only ones
+           with a Statement this period -- product-owner correction
+           (2026-10): settings must not be reachable only through "דורש
+           טיפולך". Reuses the existing readiness list verbatim
+           (BillingProvisioningService#getReadiness, one row per active
+           entity whether or not it has a billing_account/Statement yet). -->
+      <details class="col-all-entities">
+        <summary (click)="loadAllEntitiesOnce()">כל העמותות — הגדרות גבייה</summary>
+        @if (allEntitiesLoading) {
+          <div class="col-empty">טוען...</div>
+        } @else if (allEntities.length > 0) {
+          <table class="col-table col-table-small">
+            <thead><tr><th>עמותה</th><th>אמצעי גבייה מועדף</th><th>מס״ב מאושר</th><th></th></tr></thead>
+            <tbody>
+              @for (e of allEntities; track e.id) {
+                <tr>
+                  <td>{{ e.display_name }}</td>
+                  <td>{{ e.billing_account_id ? (e.preferred_collection_method === 'card' ? 'כרטיס אשראי' : 'מס״ב') : 'לא הוגדר' }}</td>
+                  <td>{{ e.masav_authorized ? 'כן' : 'לא' }}</td>
+                  <td><button class="col-btn col-btn-small" (click)="goToBillingSetupForEntity(e.id)">הגדרות גבייה</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </details>
+    </section>
+
+    <!-- Shared Statement drawer -->
+    @if (selectedStatement) {
+      <div class="col-panel">
+        <div class="col-panel-header">
+          <h3>{{ selectedStatement.entity_name }}</h3>
+          <button class="col-close" (click)="closeDrawer()">✕</button>
+        </div>
+        <div class="col-panel-body">
+          <div class="col-facts">
+            <span>סכום: ₪{{ fmtMoney(selectedStatement.total_due) }}</span>
+            <span>סטטוס: {{ selectedStatement.status }}</span>
+            <span>אמצעי גבייה: {{ selectedStatement.routed_method === 'card' ? 'כרטיס אשראי' : selectedStatement.routed_method === 'masav' ? 'מס״ב' : 'חסום' }}</span>
+            <span>{{ selectedStatement.next_action }}</span>
+          </div>
+
+          <div class="col-action-row">
+            @if (selectedStatement.status === 'draft') {
+              <button class="col-btn col-btn-primary" [disabled]="drawerActionBusy" (click)="approveStatementAction()">אשר חיוב</button>
+            }
+          </div>
+
+          <!-- Exceptional manual actions (2026-10 product-owner correction):
+               manual collection / correction / reopening are NOT the normal
+               flow under the approved FIN-11-automatic model -- kept here,
+               inside the Statement detail only, clearly separated and
+               de-emphasized, never in the main table/overview. Same backend
+               permissions/safeguards as before (unchanged); this is a
+               presentation-only change. -->
+          @if (((selectedStatement.status === 'approved' || selectedStatement.status === 'open') && selectedStatement.readiness.route === 'card') || selectedStatement.status === 'paid') {
+            <div class="col-exceptional">
+              <button class="col-exceptional-toggle" (click)="showExceptionalActions = !showExceptionalActions">
+                ⚠ פעולות חריגות (לא חלק מהתהליך האוטומטי) {{ showExceptionalActions ? '▲' : '▼' }}
+              </button>
+              @if (showExceptionalActions) {
+                <div class="col-exceptional-body">
+                  <p class="col-hint">השתמש בפעולות אלה רק כשיש סיבה ספציפית לחיוב הזה — לא כדרך גבייה שגרתית.</p>
+                  @if ((selectedStatement.status === 'approved' || selectedStatement.status === 'open') && selectedStatement.readiness.route === 'card') {
+                    <button class="col-btn" [disabled]="drawerActionBusy" (click)="triggerCollectionAction()">גבה ידנית ₪{{ fmtMoney(selectedStatement.total_due) }}</button>
+                  }
+                  @if (selectedStatement.status === 'paid') {
+                    <button class="col-btn" [disabled]="drawerActionBusy" (click)="reopenForCollectionAction()">פתח לגבייה (ללא גבייה אוטומטית)</button>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          @if (selectedStatement.status === 'approved' || selectedStatement.status === 'paid') {
+            <div class="col-exceptional">
+              <button class="col-exceptional-toggle" (click)="showAdjustment = !showAdjustment">
+                ⚠ תיקון סכום (פעולה חריגה) {{ showAdjustment ? '▲' : '▼' }}
+              </button>
+              @if (showAdjustment) {
+                <div class="col-exceptional-body">
+                  <input type="number" [(ngModel)]="adjustAmount" placeholder="סכום (חיובי=הוספה, שלילי=זיכוי)" />
+                  <textarea [(ngModel)]="adjustReason" placeholder="נדרשת הערה"></textarea>
+                  <button class="col-btn" [disabled]="drawerActionBusy || adjustAmount === null" (click)="applyAdjustmentAction()">שמור תיקון</button>
+                </div>
+              }
+            </div>
+          }
+
+          <h4>ניסיונות גבייה</h4>
+          <table class="col-table col-table-small">
+            <thead><tr><th>#</th><th>שיטה</th><th>סטטוס</th><th>סכום</th></tr></thead>
+            <tbody>
+              @for (a of selectedStatement.attempts; track a.id) {
+                <tr><td>{{ a.attempt_number }}</td><td>{{ a.collection_method }}</td><td>{{ a.status }}</td><td>₪{{ fmtMoney(a.requested_amount) }}</td></tr>
+              } @empty {
+                <tr><td colspan="4" class="col-empty">אין ניסיונות גבייה</td></tr>
+              }
+            </tbody>
+          </table>
+
+          <h4>תשלומים</h4>
+          <table class="col-table col-table-small">
+            <thead><tr><th>סכום</th><th>התקבל</th></tr></thead>
+            <tbody>
+              @for (p of selectedStatement.payments; track p.id) {
+                <tr><td>₪{{ fmtMoney(p.amount) }}</td><td>{{ fmtDate(p.received_at) }}</td></tr>
+              } @empty {
+                <tr><td colspan="2" class="col-empty">אין תשלומים</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  @if (tab === 'history') {
+    <section class="col-section">
+      <div class="col-filter-row">
+        <input type="text" [(ngModel)]="historyFilters.entityName" placeholder="עמותה..." />
+        <input type="date" [(ngModel)]="historyFilters.dateFrom" />
+        <input type="date" [(ngModel)]="historyFilters.dateTo" />
+        <select [(ngModel)]="historyFilters.status">
+          <option value="">כל הסטטוסים</option>
+          <option value="approved">מאושר</option>
+          <option value="open">פתוח</option>
+          <option value="paid">שולם</option>
+        </select>
+        <button class="col-btn col-btn-primary" (click)="runHistorySearch()">חיפוש</button>
+      </div>
+      @if (historyLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else {
+        <table class="col-table">
+          <thead>
+            <tr><th>עמותה</th><th>תקופה</th><th>סכום</th><th>נגבה</th><th>סטטוס</th></tr>
+          </thead>
+          <tbody>
+            @for (r of historyRows; track r.id) {
+              <tr><td>{{ r.entity_name }}</td><td>{{ fmtDate(r.period_start) }} – {{ fmtDate(r.period_end) }}</td><td>₪{{ fmtMoney(r.total_due) }}</td><td>₪{{ fmtMoney(r.collected) }}</td><td>{{ r.status }}</td></tr>
+            } @empty {
+              <tr><td colspan="5" class="col-empty">אין תוצאות</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+
+  @if (tab === 'reports') {
+    <section class="col-section">
+      <p class="col-hint">דוח כספי בסיסי (עמותה/תקופה/סכום חויב/שולם/יתרה) לתקופה הנבחרת. זהו דוח קריאה בלבד — לא קובץ ייצוא מס״ב לבנק, ולא מסמן שום דבר כ״יוצא״.</p>
+      <div class="col-period-row">
+        <label for="reportPeriodSelect">תקופה:</label>
+        <select id="reportPeriodSelect" [(ngModel)]="selectedPeriodId">
+          @for (p of periods; track p.id) {
+            <option [value]="p.id">{{ fmtPeriodLabel(p) }}</option>
+          }
+        </select>
+      </div>
+      @if (reportError) { <div class="col-error">{{ reportError }}</div> }
+      <button class="col-btn col-btn-primary" [disabled]="reportBusy || !selectedPeriodId" (click)="downloadReport()">הורד דוח Excel</button>
+      <p class="col-hint">ייצוא מס״ב לבנק וייצוא הצעות FIN-11 נשארים בלשונית ״סקירה ופעולות״ — זו אינה פעולה תפעולית.</p>
+    </section>
+  }
+</div>
