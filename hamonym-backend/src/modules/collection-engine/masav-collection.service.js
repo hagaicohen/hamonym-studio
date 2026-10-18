@@ -305,39 +305,78 @@ async function generateExportExcel(statementIds) {
     throw err;
   }
 
-  const { rows } = await pool.query(
-    `SELECT s.id AS statement_id, s.total_due, ba.entity_id,
-            e.display_name AS entity_name, e.contact_full_name, e.contact_email,
-            emd.bank_code, emd.branch_code, emd.account_number, emd.authorized,
-            ca.id AS attempt_id, ca.status AS attempt_status,
-            bp.period_start, bp.period_end
-     FROM statements s
-     JOIN billing_accounts ba ON ba.id = s.billing_account_id
-     JOIN entities e ON e.id = ba.entity_id
-     JOIN billing_periods bp ON bp.id = s.billing_period_id
-     LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
-     LEFT JOIN collection_attempts ca
-       ON ca.statement_id = s.id AND ca.collection_method = 'masav' AND ca.status = 'pending'
-     WHERE s.id = ANY($1::uuid[])`,
-    [statementIds]
-  );
+  // Consolidation fix (2026-10): this function used to query via the bare
+  // `pool` throughout (no lock/transaction needed -- it never writes
+  // anything). Now that it also calls isMasavProposalsSchemaPresent (see
+  // below), it needs ONE consistent connection to pass to that probe --
+  // every other call site in this codebase always passes the same client
+  // it is otherwise already using, never the bare pool (see fin11-schema-
+  // probe.js callers / test-fin11-schema-compat.js's E3/E3a static check),
+  // because the probe's answer can legitimately differ connection-to-
+  // connection while a migration is mid-flight elsewhere. No BEGIN/COMMIT
+  // is opened -- nothing here writes -- just one held connection instead of
+  // letting the pool hand out a different one per call.
+  const client = await pool.connect();
+  let rows;
+  try {
+    ({ rows } = await client.query(
+      `SELECT s.id AS statement_id, s.total_due, ba.entity_id,
+              e.display_name AS entity_name, e.contact_full_name, e.contact_email,
+              emd.bank_code, emd.branch_code, emd.account_number, emd.authorized,
+              ca.id AS attempt_id, ca.status AS attempt_status,
+              bp.period_start, bp.period_end
+       FROM statements s
+       JOIN billing_accounts ba ON ba.id = s.billing_account_id
+       JOIN entities e ON e.id = ba.entity_id
+       JOIN billing_periods bp ON bp.id = s.billing_period_id
+       LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
+       LEFT JOIN collection_attempts ca
+         ON ca.statement_id = s.id AND ca.collection_method = 'masav' AND ca.status = 'pending'
+       WHERE s.id = ANY($1::uuid[])`,
+      [statementIds]
+    ));
 
-  if (rows.length !== statementIds.length) {
-    const err = new Error('One or more statement ids were not found');
-    err.code = 'STATEMENT_NOT_FOUND';
-    throw err;
-  }
-  for (const row of rows) {
-    if (!row.authorized) {
-      const err = new Error(`Statement ${row.statement_id} is not MASAV-authorized`);
-      err.code = 'NOT_AUTHORIZED';
+    if (rows.length !== statementIds.length) {
+      const err = new Error('One or more statement ids were not found');
+      err.code = 'STATEMENT_NOT_FOUND';
       throw err;
     }
-    if (!row.attempt_id) {
-      const err = new Error(`Statement ${row.statement_id} has no open MASAV collection attempt -- open one before exporting`);
-      err.code = 'NO_OPEN_ATTEMPT';
-      throw err;
+    for (const row of rows) {
+      if (!row.authorized) {
+        const err = new Error(`Statement ${row.statement_id} is not MASAV-authorized`);
+        err.code = 'NOT_AUTHORIZED';
+        throw err;
+      }
+      if (!row.attempt_id) {
+        const err = new Error(`Statement ${row.statement_id} has no open MASAV collection attempt -- open one before exporting`);
+        err.code = 'NO_OPEN_ATTEMPT';
+        throw err;
+      }
+      // Consolidation fix (2026-10): openMasavAttempt already refuses to
+      // open a NEW legacy attempt while a FIN-11 proposal is active
+      // (integration-gap fix #1, above), but ensureAttemptsForExport and
+      // this export call are two separate HTTP round trips -- a FIN-11
+      // proposal could in principle be prepared/approved/exported for the
+      // same Statement in the gap between them. Re-checked here,
+      // immediately before building the file, so the legacy export path
+      // can never produce a bank instruction for a Statement FIN-11 is
+      // already (or was about to be) handling. Same deploy-order-safe
+      // gating as every other cross-channel check in this codebase
+      // (fin11-schema-probe.js) -- before migration 074, no masav_
+      // collection_proposals row can physically exist, so skipping this
+      // reproduces pre-FIN-11 behavior exactly, not a bypass of a real
+      // check.
+      if (await isMasavProposalsSchemaPresent(client)) {
+        const activeProposal = await hasActiveMasavProposal(row.statement_id, client);
+        if (activeProposal.exists) {
+          const err = new Error(`Statement ${row.statement_id} has an active FIN-11 MASAV proposal (${activeProposal.status}) -- export via the FIN-11 flow instead, not the legacy one`);
+          err.code = 'FIN11_PROPOSAL_ACTIVE';
+          throw err;
+        }
+      }
     }
+  } finally {
+    client.release();
   }
 
   const header = ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks'];

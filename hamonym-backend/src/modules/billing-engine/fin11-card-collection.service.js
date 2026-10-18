@@ -31,18 +31,17 @@ const {
   ACTIONABLE_STATEMENT_STATUSES,
   ACTIVE_ATTEMPT_STATUSES,
   FIN11_CARD_COLLECTION_CAP,
+  // Consolidation fix (2026-10): MAX_CARD_ATTEMPTS/CONFIRMED_FAILURE_STATUSES
+  // used to be defined locally in this file. They now live in
+  // collection.service.js (single source of truth) because openAttempt --
+  // the legacy manual "גבה" entry point -- enforces the exact same policy
+  // too. Values/business meaning are unchanged (FINANCIAL_BUSINESS_
+  // DECISIONS.md, FIN-11 hybrid collection section): at most 3 card
+  // attempts total per Statement, retry only after a CONFIRMED failure.
+  MAX_CARD_ATTEMPTS,
+  CONFIRMED_FAILURE_STATUSES,
   resolveAttempt,
 } = require('../collection-engine/collection.service');
-
-// Business-approved policy (FINANCIAL_BUSINESS_DECISIONS.md, FIN-11 hybrid
-// collection section): at most 3 card attempts total per Statement
-// (including the first), retry only after a CONFIRMED failure, never while
-// pending/ambiguous. After 3 confirmed failures, responsibility passes to
-// a Super Admin (an alert/finding, never an automatic suspension or an
-// automatic MASAV fallback -- that stays a manual admin decision, per the
-// same business rule, to prevent any possibility of double collection).
-const MAX_CARD_ATTEMPTS = 3;
-const CONFIRMED_FAILURE_STATUSES = ['declined', 'technical_failure'];
 
 function roundToAgorot(amount) {
   return Math.round(amount * 100) / 100;

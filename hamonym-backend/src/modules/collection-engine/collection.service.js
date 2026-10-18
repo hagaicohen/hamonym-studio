@@ -19,6 +19,17 @@ const { isPaymentExceptionsSchemaPresent, isMasavProposalsSchemaPresent } = requ
 const ACTIONABLE_STATEMENT_STATUSES = ['approved', 'open'];
 const ACTIVE_ATTEMPT_STATUSES = ['pending', 'ambiguous'];
 
+// Single source of truth for the FIN-11 business-approved card-retry policy
+// (FINANCIAL_BUSINESS_DECISIONS.md, FIN-11 hybrid collection section): at
+// most 3 card attempts total per Statement, retry only after a CONFIRMED
+// failure, never while pending/ambiguous. Originally defined only inside
+// fin11-card-collection.service.js (which now imports these from here
+// instead) -- moved here so openAttempt below can enforce the exact same
+// cap/retry rule, closing the gap where a manual "גבה" click could retry
+// past the approved limit on a path FIN-11's own cap never covered.
+const MAX_CARD_ATTEMPTS = 3;
+const CONFIRMED_FAILURE_STATUSES = ['declined', 'technical_failure'];
+
 // Phase A: lock the Statement, decide whether a new attempt should even be
 // opened, and if so open it (INSERT collection_attempts + approved->open),
 // all in one transaction so two concurrent callers on the same Statement
@@ -159,6 +170,46 @@ async function openAttempt(statementId, resolveAdapter) {
       });
       await client.query('COMMIT');
       return { skipped: true, reason: 'not_implemented', collectionMethod: method };
+    }
+
+    // Consolidation fix (2026-10): this manual entry point ("גבה"/"נסה
+    // גבייה שוב" on the Statement drawer) is the only other place besides
+    // FIN-11's own openFin11CappedCardAttempt that can open a card
+    // collection_attempts row. Before this guard, it had no awareness of
+    // FIN-11's 3-attempt cap or confirmed-failure-only retry rule -- a
+    // Super Admin clicking "נסה גבייה שוב" repeatedly could retry past the
+    // approved limit, or retry while the latest attempt was never a
+    // confirmed failure (e.g. still ambiguous once resolved to something
+    // else, or already succeeded but a later adjustment left a balance).
+    // Same guard, same constants (imported above, not redefined), same
+    // finding type -- so this manual path can never exceed what the
+    // automated FIN-11 path itself would allow, regardless of which one
+    // ever actually runs in production.
+    if (method === 'card') {
+      const cardAttemptsRes = await client.query(
+        `SELECT status FROM collection_attempts WHERE statement_id = $1 AND collection_method = 'card' ORDER BY attempt_number DESC`,
+        [statementId]
+      );
+      const cardAttempts = cardAttemptsRes.rows;
+      if (cardAttempts.length > 0) {
+        const latestStatus = cardAttempts[0].status;
+        if (!CONFIRMED_FAILURE_STATUSES.includes(latestStatus)) {
+          await client.query('COMMIT');
+          return { skipped: true, reason: 'latest_attempt_not_a_confirmed_failure', latestStatus };
+        }
+        if (cardAttempts.length >= MAX_CARD_ATTEMPTS) {
+          await recordFinding(client, {
+            jobName: 'collection-router',
+            findingType: 'fin11_card_attempts_exhausted',
+            severity: 'critical',
+            subjectType: 'statement',
+            subjectId: statementId,
+            details: { entityId: statement.entity_id, attemptsSoFar: cardAttempts.length },
+          });
+          await client.query('COMMIT');
+          return { skipped: true, reason: 'max_attempts_reached', attemptsSoFar: cardAttempts.length };
+        }
+      }
     }
 
     let paymentInstrument = null;
@@ -582,4 +633,6 @@ module.exports = {
   ACTIVE_ATTEMPT_STATUSES,
   getFin11CappedCardProposal,
   FIN11_CARD_COLLECTION_CAP,
+  MAX_CARD_ATTEMPTS,
+  CONFIRMED_FAILURE_STATUSES,
 };

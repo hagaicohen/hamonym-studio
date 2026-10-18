@@ -52,6 +52,18 @@ function createFakeState({ statement, entityBilling, masavConfig } = {}) {
 
     if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };
 
+    // Deploy-order compatibility probes (fin11-schema-probe.js). This
+    // fixture models the pre-FIN-11 world this file's own tests describe
+    // (Billing v1 Bundle 1/2, 2026-09-01 -- before migrations 073/074
+    // existed), so both probes report "not present," which reproduces
+    // openAttempt/openMasavAttempt/generateExportExcel's exact documented
+    // pre-FIN-11 behavior -- not a bypass of a real check, the same
+    // deploy-order guarantee those functions already rely on in production
+    // before 073/074 are applied.
+    if (sql.startsWith('SELECT to_regclass(')) {
+      return { rows: [{ t: null }] };
+    }
+
     // openAttempt's statement lookup (card-oriented, selects preferred_collection_method)
     if (sql.includes('FROM statements s') && sql.includes('preferred_collection_method') && sql.includes('FOR UPDATE OF s')) {
       const st = state.statements.get(params[0]);
