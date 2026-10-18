@@ -107,8 +107,15 @@ export class FinanceOpsService {
     return this.http.post<{ result: any }>(`${this.base}/masav-proposals/${id}/approve`, { reason }, { headers: authHeaders() });
   }
 
-  exportMasavProposals(proposalIds: string[]): Observable<{ result: any }> {
-    return this.http.post<{ result: any }>(`${this.base}/masav-proposals/export`, { proposalIds }, { headers: authHeaders() });
+  // Returns the real xlsx file bytes (same download pattern
+  // BillingOpsService#exportMasavExcel already uses for the old mechanism)
+  // -- the backend only ever reaches this response after
+  // masav-proposal.service.js#exportMasavProposals has already built the
+  // file and committed the status flip atomically with it, so receiving a
+  // blob here always means a real file was generated, never a bare
+  // {exported:true} from before the file existed.
+  exportMasavProposals(proposalIds: string[]): Observable<Blob> {
+    return this.http.post(`${this.base}/masav-proposals/export`, { proposalIds }, { headers: authHeaders(), responseType: 'blob' });
   }
 
   getStatementBalance(statementId: string): Observable<{ balance: StatementBalance }> {

@@ -83,13 +83,28 @@ exports.approveMasavProposal = async (req, res) => {
   }
 };
 
+// masav-proposal.service.js#exportMasavProposals already does everything
+// the Tranzila export requires in one atomic transaction: it re-verifies
+// each proposal is still 'approved' and its balance is still fresh, builds
+// the exact same 11-column xlsx format the pre-FIN-11 MASAV export already
+// uses (masav-collection.service.js#generateExportExcel), and only then
+// flips status to 'exported' and COMMITs -- if the xlsx build throws for
+// any reason, the whole transaction (including every status flip in the
+// batch) ROLLBACKs, so a proposal can never end up marked 'exported'
+// without a real file having been built. The bug this fixes is narrower
+// than that: this controller was JSON-encoding the returned Buffer (`res.
+// json({ result })`, where `result` was the raw file bytes) instead of
+// actually serving it as a file -- same download pattern
+// masav-ops.controller.js#exportExcel already uses for the old mechanism.
 exports.exportMasavProposals = async (req, res) => {
   try {
-    const result = await masavProposals.exportMasavProposals({
+    const buffer = await masavProposals.exportMasavProposals({
       proposalIds: req.body.proposalIds,
       superAdminUserId: req.user.id,
     });
-    res.json({ result });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="masav-proposals-export-${Date.now()}.xlsx"`);
+    res.send(buffer);
   } catch (err) {
     handle(res, 'exportMasavProposals', err);
   }

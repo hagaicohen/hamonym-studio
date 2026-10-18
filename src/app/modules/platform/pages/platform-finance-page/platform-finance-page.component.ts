@@ -249,23 +249,41 @@ export class PlatformFinancePageComponent implements OnInit {
   exportSelectedProposals(): void {
     if (this.exportBusy || this.selectedProposalIds.size === 0) return;
     const ids = Array.from(this.selectedProposalIds);
-    if (!window.confirm(`לייצא ${ids.length} הצעות מס״ב לקובץ? זה מסמן אותן כ"שודרו" — שידור בפועל לבנק הוא עדיין פעולה ידנית מחוץ למערכת.`)) return;
+    if (!window.confirm(`לייצא ${ids.length} הצעות מס״ב לקובץ? הקובץ יוריד למחשב; שידור בפועל לבנק (Tranzila) הוא עדיין פעולה ידנית מחוץ למערכת. ההצעות יסומנו "שודרו" רק אם הקובץ נוצר בהצלחה.`)) return;
 
     this.exportBusy = true;
     this.exportError = null;
     this.exportResult = null;
     this.service.exportMasavProposals(ids).subscribe({
-      next: (res) => {
+      next: (blob) => {
         this.exportBusy = false;
-        this.exportResult = res.result;
+        this.downloadExcel(blob);
+        this.exportResult = { exported: ids.length };
         this.selectedProposalIds.clear();
         this.loadProposals();
       },
       error: (err) => {
         this.exportBusy = false;
-        this.exportError = err?.error?.error || 'הייצוא נכשל';
+        // err.error is a Blob here (responseType:'blob' applies to error
+        // bodies too) -- the real error JSON the backend sent is inside it,
+        // not directly readable synchronously; fall back to a generic
+        // message rather than showing "[object Blob]".
+        this.exportError = 'הייצוא נכשל — ייתכן שהיתרה השתנתה מאז האישור, או שהעמותה אינה מורשית למס״ב יותר';
       },
     });
+  }
+
+  // v1 stops here, same boundary as the existing MASAV export (platform-
+  // billing-ops-page): once the admin downloads this file, submission to
+  // the bank, collection, and the result are all handled manually outside
+  // Hamonym.
+  private downloadExcel(blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `masav-proposals-export-${Date.now()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   fmtMoney(v: string | number | null | undefined): string {
