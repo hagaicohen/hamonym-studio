@@ -237,11 +237,28 @@ async function openAttempt(statementId, resolveAdapter) {
     );
     const attemptNumber = nextAttemptRes.rows[0].next;
 
+    // Card-cap consistency fix (2026-10, FIN-11 final production
+    // readiness -- explicit business decision: FIN-11's ₪3,000 cap, not
+    // the legacy ₪3,540 routing threshold, is THE rule for how much any
+    // card attempt may ever request). Before this fix, a Statement routed
+    // to card (total_due <= CARD_MASAV_THRESHOLD) was charged its FULL
+    // outstanding balance here -- for the ₪3,000-3,540 band, that meant
+    // this manual entry point could request MORE than FIN-11's own capped
+    // path (fin11-card-collection.service.js#openFin11CappedCardAttempt)
+    // ever would for the exact same Statement. Capping ONLY the card
+    // method's amount -- MASAV still legitimately requests the full
+    // outstanding residual, that is its whole purpose. Never changes any
+    // ALREADY-COMMITTED historical attempt/payment row; only the amount a
+    // NEW attempt requests going forward.
+    const requestedAmount = method === 'card'
+      ? Math.min(balance.outstanding, FIN11_CARD_COLLECTION_CAP)
+      : balance.outstanding;
+
     const insertRes = await client.query(
       `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount)
        VALUES ($1, $2, $3, $4)
        RETURNING id, attempt_number`,
-      [statementId, method, attemptNumber, balance.outstanding]
+      [statementId, method, attemptNumber, requestedAmount]
     );
 
     if (statement.status === 'approved') {
@@ -256,7 +273,7 @@ async function openAttempt(statementId, resolveAdapter) {
       method,
       paymentInstrument,
       entityId: statement.entity_id,
-      requestedAmount: balance.outstanding,
+      requestedAmount,
     };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
