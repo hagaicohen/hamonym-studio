@@ -135,8 +135,16 @@ exports.getFinancialOverview = async ({ periodId }) => {
 // existing list function; this file adds no new eligibility rule.
 // ---------------------------------------------------------------------------
 exports.getNeedsAttention = async () => {
-  const [proposals, exceptions, blocked, exhaustedFindings] = await Promise.all([
+  const [proposals, proposalsApproved, exceptions, blocked, exhaustedFindings, autoApprovalFailures] = await Promise.all([
     masavProposals.listMasavProposals({ status: 'proposed' }),
+    // Closes a real gap found in the 2026-10 FIN-11 closure review: the
+    // unified page previously had no way to see/export an ALREADY-approved
+    // MASAV proposal at all once it left "awaiting approval" -- the only
+    // actions wired were approve (here) and export (finance-ops.service.js
+    // #exportMasavProposals, already built/tested, just never surfaced for
+    // this status). No new backend logic -- same listMasavProposals, same
+    // export function, just a second status filter.
+    masavProposals.listMasavProposals({ status: 'approved' }),
     paymentExceptions.listPaymentExceptions({ status: 'open' }),
     masavCollectionService.listBlockedStatements(),
     pool.query(
@@ -147,6 +155,22 @@ exports.getNeedsAttention = async () => {
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        JOIN entities e ON e.id = ba.entity_id
        WHERE rf.finding_type = 'fin11_card_attempts_exhausted' AND rf.resolved_at IS NULL
+       ORDER BY rf.found_at DESC`
+    ),
+    // "Calculated but not yet eligible" exceptions (2026-10 FIN-11 closure):
+    // a draft Statement the new automatic eligibility transition
+    // (approval.service.js#autoApproveDraftStatementsForRun, called from
+    // billing-monthly-cycle.job.js) tried and failed to auto-approve --
+    // the one genuine human-intervention case the new automation itself
+    // can produce. Never silently retried.
+    pool.query(
+      `SELECT rf.id AS finding_id, rf.subject_id AS statement_id, rf.details, rf.found_at,
+              s.total_due, s.status AS statement_status, e.display_name AS entity_name
+       FROM reconciliation_findings rf
+       JOIN statements s ON s.id = rf.subject_id
+       JOIN billing_accounts ba ON ba.id = s.billing_account_id
+       JOIN entities e ON e.id = ba.entity_id
+       WHERE rf.finding_type = 'statement_auto_approval_failed' AND rf.resolved_at IS NULL
        ORDER BY rf.found_at DESC`
     ),
   ]);
@@ -209,6 +233,36 @@ exports.getNeedsAttention = async () => {
         nextAction: 'השלם הגדרות מס״ב',
         statementId: b.statement_id,
         entityId: b.entity_id,
+      })),
+    },
+    {
+      category: 'masav_proposal_ready_to_export',
+      label: 'הצעות מס״ב מאושרות — מוכנות לייצוא',
+      count: proposalsApproved.length,
+      totalAmount: proposalsApproved.reduce((sum, p) => sum + Number(p.proposed_amount), 0),
+      items: proposalsApproved.map((p) => ({
+        entityName: p.entity_name,
+        amount: Number(p.proposed_amount),
+        reason: 'הצעה אושרה וממתינה להפקת קובץ מס״ב',
+        nextAction: 'הפק קובץ וייצא',
+        statementId: p.statement_id,
+        proposalId: p.id,
+      })),
+    },
+    {
+      category: 'statement_auto_approval_failed',
+      label: 'חיוב לא עבר אישור אוטומטי',
+      count: autoApprovalFailures.rows.length,
+      totalAmount: 0,
+      items: autoApprovalFailures.rows.map((f) => ({
+        entityName: f.entity_name,
+        amount: Number(f.total_due),
+        reason: f.details?.code === 'DONATION_ALREADY_CLAIMED_BY_OTHER_STATEMENT'
+          ? 'תרומה בחיוב זה נתבעה כבר על ידי חיוב אחר'
+          : f.details?.message || 'האישור האוטומטי נכשל בבדיקת תקינות',
+        nextAction: 'בדוק את החיוב וקבע אם לאשר ידנית או לבטל',
+        statementId: f.statement_id,
+        findingId: f.finding_id,
       })),
     },
   ];
@@ -295,7 +349,7 @@ exports.getSystemActivity = async () => {
 // new read query this page needs, mirroring listStatements' exact column/
 // join shape so the two tables show statements the same way.
 // ---------------------------------------------------------------------------
-exports.searchStatementHistory = async ({ entityName, dateFrom, dateTo, status, limit = 200 } = {}) => {
+exports.searchStatementHistory = async ({ entityId, dateFrom, dateTo, status, limit = 200 } = {}) => {
   const { rows } = await pool.query(
     `SELECT s.id, s.billing_account_id, s.billing_period_id, s.total_due, s.status, s.created_at,
             ba.entity_id, e.display_name AS entity_name,
@@ -306,74 +360,123 @@ exports.searchStatementHistory = async ({ entityName, dateFrom, dateTo, status, 
      JOIN billing_accounts ba ON ba.id = s.billing_account_id
      JOIN entities e ON e.id = ba.entity_id
      JOIN billing_periods bp ON bp.id = s.billing_period_id
-     WHERE ($1::text IS NULL OR e.display_name ILIKE '%' || $1 || '%')
-       AND ($2::timestamptz IS NULL OR bp.period_start >= $2)
-       AND ($3::timestamptz IS NULL OR bp.period_end <= $3)
+     WHERE ($1::uuid IS NULL OR ba.entity_id = $1)
+       -- Interval OVERLAP, not containment (2026-10 fix): the previous
+       -- version required period_start >= dateFrom AND period_end <= dateTo,
+       -- so picking an entire calendar month (the single most natural
+       -- thing to type -- e.g. dateFrom=2026-09-01, dateTo=2026-09-30) found
+       -- NOTHING, because a real calendar-month period's period_end is
+       -- 2026-10-01 (the 1st of the NEXT month), which always fails
+       -- "<= 2026-09-30". A period now matches if it overlaps the
+       -- requested range at all -- the standard half-open-interval check.
+       AND ($2::timestamptz IS NULL OR bp.period_end > $2)
+       AND ($3::timestamptz IS NULL OR bp.period_start <= $3)
        AND ($4::text IS NULL OR s.status = $4)
      ORDER BY bp.period_start DESC, e.display_name
      LIMIT $5`,
-    [entityName || null, dateFrom || null, dateTo || null, status || null, limit]
+    [entityId || null, dateFrom || null, dateTo || null, status || null, limit]
   );
   return rows;
 };
 
 // ---------------------------------------------------------------------------
-// Reports tab. Basic Excel report -- entity/period/charged/paid/outstanding/
-// method/status. Deliberately a DIFFERENT file shape from the MASAV bank
-// file (masav-collection.service.js#generateExportExcel / masav-proposal.
-// service.js#exportMasavProposals): this is a read-only business report, no
-// bank column format, no relation to the export-marks-proposal-as-exported
-// side effect those two functions carry. Reuses the `xlsx` package already
-// a dependency for exactly that reason -- same column-shape logic that
-// routing.js's CARD_MASAV_THRESHOLD already classifies by, not re-decided
-// here.
+// Reports tab. One shared row-fetch for BOTH the on-screen preview and the
+// downloaded Excel (2026-10 fix) -- the preview and the file used to be two
+// separate call sites that could in principle drift; now both
+// getFinancialReportPreview and generateFinancialReportExcel call this
+// SAME function, so "the preview matches the file" is true by construction,
+// not by convention. Status is returned raw (statements.status enum,
+// unchanged) -- Hebrew translation happens at the display layer (STATUS_
+// LABELS below for the Excel; the frontend's own identical map for the
+// preview), never by changing what's stored.
 // ---------------------------------------------------------------------------
-exports.generateFinancialReportExcel = async ({ periodId }) => {
-  const XLSX = require('xlsx');
-  const routing = require('../../collection-engine/routing');
+const STATUS_LABELS = {
+  draft: 'טיוטה', approved: 'מאושר', open: 'פתוח', paid: 'שולם',
+  cancelled: 'בוטל', abandoned: 'בוטל', written_off: 'נמחק',
+};
 
-  if (!periodId) {
-    const err = new Error('periodId is required');
-    err.code = 'MISSING_PERIOD_ID';
-    throw err;
+// Three mutually-exclusive scoping modes (2026-10, product-owner request --
+// "month/year, custom date range, all periods"), resolved explicitly, never
+// guessed: exactly one of periodId / (dateFrom or dateTo) / neither applies.
+// periodId filters by the EXACT billing period (the "month/year" mode in
+// the UI, where one real billing_periods row = one month). dateFrom/dateTo
+// filters by period OVERLAP (same half-open-interval logic as
+// searchStatementHistory's date-overlap fix above) -- this is a Statement's
+// BILLING PERIOD window, never a transaction/payment date, which this
+// report does not otherwise filter by (see this function's own callers'
+// UI copy, which must say so). Neither given -- "כל התקופות" -- means no
+// period restriction at all; never silently merged with a default.
+async function getFinancialReportRows({ periodId, dateFrom, dateTo, entityId }) {
+  if (!periodId && !dateFrom && !dateTo) {
+    // "כל התקופות" -- intentionally unscoped, not an error.
   }
-
   const { rows } = await pool.query(
     `SELECT e.display_name AS entity_name, bp.period_start, bp.period_end,
             s.total_due,
             COALESCE((SELECT SUM(delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0) AS adj,
             COALESCE((SELECT SUM(amount) FROM payments p WHERE p.statement_id = s.id), 0) AS collected,
-            s.status,
-            CASE WHEN s.total_due <= $2 THEN 'card' ELSE 'masav' END AS method
+            s.status
      FROM statements s
      JOIN billing_accounts ba ON ba.id = s.billing_account_id
      JOIN entities e ON e.id = ba.entity_id
      JOIN billing_periods bp ON bp.id = s.billing_period_id
-     WHERE s.billing_period_id = $1
-     ORDER BY e.display_name`,
-    [periodId, routing.CARD_MASAV_THRESHOLD]
+     WHERE ($1::uuid IS NULL OR s.billing_period_id = $1)
+       AND ($2::timestamptz IS NULL OR bp.period_end > $2)
+       AND ($3::timestamptz IS NULL OR bp.period_start <= $3)
+       AND ($4::uuid IS NULL OR ba.entity_id = $4)
+     ORDER BY bp.period_start DESC, e.display_name`,
+    [periodId || null, dateFrom || null, dateTo || null, entityId || null]
   );
+  // Draft Statements are shown (status visibly says "טיוטה") but are NOT
+  // yet a real financial obligation -- see collection-ops.service.js#
+  // OVERVIEW_STATEMENT_STATUSES for the same business rule the Overview
+  // tab already applies. Never silently dropped -- the admin still needs
+  // to see them -- just never summed as owed debt if a caller ever adds a
+  // total (none does today).
+  return rows.map((r) => {
+    const billed = Number(r.total_due) + Number(r.adj);
+    const collected = Number(r.collected);
+    return {
+      entityName: r.entity_name,
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      billed,
+      collected,
+      outstanding: billed - collected,
+      status: r.status,
+      isDraft: r.status === 'draft',
+    };
+  });
+}
 
-  const header = ['עמותה', 'תחילת תקופה', 'סוף תקופה', 'סכום חויב', 'שולם', 'יתרה פתוחה', 'אמצעי גבייה', 'סטטוס'];
+// JSON preview for the Reports tab -- identical rows to the Excel below.
+exports.getFinancialReportPreview = async ({ periodId, dateFrom, dateTo, entityId }) => {
+  return getFinancialReportRows({ periodId, dateFrom, dateTo, entityId });
+};
+
+// Deliberately a DIFFERENT file shape from the MASAV bank file (masav-
+// collection.service.js#generateExportExcel / masav-proposal.service.js#
+// exportMasavProposals): this is a read-only business report, no bank
+// column format, no relation to the export-marks-proposal-as-exported side
+// effect those two functions carry.
+exports.generateFinancialReportExcel = async ({ periodId, dateFrom, dateTo, entityId }) => {
+  const XLSX = require('xlsx');
+  const rows = await getFinancialReportRows({ periodId, dateFrom, dateTo, entityId });
+
+  const header = ['עמותה', 'תקופה', 'סכום לחיוב', 'נגבה', 'יתרה', 'סטטוס'];
   const fmtDate = (d) => {
     const iso = d instanceof Date ? d.toISOString() : String(d);
     const [y, m, day] = iso.slice(0, 10).split('-');
     return `${day}/${m}/${y}`;
   };
-  const data = [header, ...rows.map((r) => {
-    const billed = Number(r.total_due) + Number(r.adj);
-    const collected = Number(r.collected);
-    return [
-      r.entity_name,
-      fmtDate(r.period_start),
-      fmtDate(r.period_end),
-      billed,
-      collected,
-      billed - collected,
-      r.method === 'card' ? 'כרטיס אשראי' : 'מס״ב',
-      r.status,
-    ];
-  })];
+  const data = [header, ...rows.map((r) => [
+    r.entityName,
+    `${fmtDate(r.periodStart)} - ${fmtDate(r.periodEnd)}`,
+    r.billed,
+    r.collected,
+    r.outstanding,
+    STATUS_LABELS[r.status] || r.status,
+  ])];
 
   const worksheet = XLSX.utils.aoa_to_sheet(data);
   const workbook = XLSX.utils.book_new();

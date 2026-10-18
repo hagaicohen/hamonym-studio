@@ -205,4 +205,38 @@ async function abandonStatement(statementId) {
   }
 }
 
-module.exports = { approveStatement, abandonStatement, ApprovalError, EFFECTIVE_STATEMENT_STATUSES };
+// Automatic eligibility transition (2026-10, FIN-11 closure) -- "routine
+// monthly Statement approval is NOT part of the intended business
+// workflow" per the approved contract. This does NOT reimplement or
+// bypass validation: it calls the EXACT SAME approveStatement() a human
+// click already used, one Statement at a time, so a draft Statement is
+// only ever auto-approved if it passes the identical structural checks
+// validateForApproval() already enforces (every component donation paid,
+// not mock, amount un-drifted, entity-consistent, gross_raised
+// reconciled). Anything that fails is left in 'draft' -- "calculated but
+// not yet eligible" -- and reported as a named failure for the caller to
+// turn into a genuine Super Admin exception (reconciliation_findings),
+// never silently retried or forced through.
+async function autoApproveDraftStatementsForRun(billingRunId) {
+  const { rows } = await pool.query(
+    `SELECT id FROM statements WHERE billing_run_id = $1 AND status = 'draft' ORDER BY id`,
+    [billingRunId]
+  );
+  const approved = [];
+  const failed = [];
+  for (const row of rows) {
+    try {
+      const result = await approveStatement(row.id);
+      approved.push(result);
+    } catch (err) {
+      failed.push({
+        statementId: row.id,
+        code: err instanceof ApprovalError ? err.code : 'UNEXPECTED_ERROR',
+        message: err.message,
+      });
+    }
+  }
+  return { approved, failed };
+}
+
+module.exports = { approveStatement, abandonStatement, autoApproveDraftStatementsForRun, ApprovalError, EFFECTIVE_STATEMENT_STATUSES };

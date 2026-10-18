@@ -1,0 +1,24 @@
+<div class="ec-wrap">
+  <input
+    type="text"
+    class="ec-input"
+    [value]="open ? query : selectedName"
+    [placeholder]="placeholder"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    (input)="onInput($any($event.target).value)"
+  />
+  @if (selectedId) {
+    <button type="button" class="ec-clear" title="נקה בחירה" (mousedown)="$event.preventDefault()" (click)="clear()">✕</button>
+  }
+  @if (open) {
+    <div class="ec-list">
+      <div class="ec-option ec-option-default" (mousedown)="$event.preventDefault()" (click)="clear()">{{ placeholder }}</div>
+      @for (e of filtered; track e.id) {
+        <div class="ec-option" (mousedown)="$event.preventDefault()" (click)="select(e)">{{ e.name }}</div>
+      } @empty {
+        <div class="ec-option ec-empty">אין עמותות תואמות</div>
+      }
+    </div>
+  }
+</div>

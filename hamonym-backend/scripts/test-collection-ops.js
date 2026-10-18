@@ -71,31 +71,68 @@ async function main() {
   // --- D. searchStatementHistory -- read-only, filter correctness ---
   const histAll = await svc.searchStatementHistory({ limit: 5 });
   check('4. searchStatementHistory returns an array', Array.isArray(histAll));
-  const histNone = await svc.searchStatementHistory({ entityName: 'ZZZ_NO_SUCH_ENTITY_NAME_EVER_XYZ123' });
-  check('4a. an entity-name filter matching nothing returns an empty array, not an error or everything', Array.isArray(histNone) && histNone.length === 0, `length=${histNone.length}`);
+  const histNone = await svc.searchStatementHistory({ entityId: '00000000-0000-0000-0000-000000000000' });
+  check('4a. an entityId filter matching no entity returns an empty array, not an error or everything', Array.isArray(histNone) && histNone.length === 0, `length=${histNone.length}`);
   if (histAll.length > 0) {
-    const name = histAll[0].entity_name;
-    const partial = name.slice(0, Math.max(3, Math.floor(name.length / 2)));
-    const filtered = await svc.searchStatementHistory({ entityName: partial, limit: 50 });
-    check('4b. a partial, case-insensitive entity-name match finds the same real statement', filtered.some((r) => r.id === histAll[0].id), `searched "${partial}", found ${filtered.length} rows`);
+    const target = histAll[0];
+    const filtered = await svc.searchStatementHistory({ entityId: target.entity_id, limit: 50 });
+    check('4b. an exact entityId match finds the same real statement, never a substring guess', filtered.some((r) => r.id === target.id), `entityId=${target.entity_id}, found ${filtered.length} rows`);
   }
 
-  // --- E. generateFinancialReportExcel -- real xlsx, correct header, no write ---
+  // --- D2. the date-range OVERLAP fix (2026-10): picking a whole real
+  // calendar month must find statements in it -- the previous version
+  // (containment, not overlap) found NOTHING for this exact case, because
+  // a calendar-month period's period_end is always the 1st of the NEXT
+  // month, which always failed period_end <= dateTo. ---
+  const sept2026 = await svc.searchStatementHistory({ dateFrom: '2026-09-01', dateTo: '2026-09-30' });
+  check('4c. a date range covering a whole real calendar month finds the real Statement inside it (date-overlap fix)', sept2026.some((r) => r.entity_name === 'קשת נחושה'), `found ${sept2026.length} rows`);
+
+  // --- E. getFinancialReportPreview / generateFinancialReportExcel --
+  // SAME shared rows, read-only, correct 6-column header, no write. ---
   const reportPeriod = periods.rows.find(() => true);
+  const EXPECTED_HEADER = ['עמותה', 'תקופה', 'סכום לחיוב', 'נגבה', 'יתרה', 'סטטוס'];
   if (reportPeriod) {
+    const preview = await svc.getFinancialReportPreview({ periodId: reportPeriod.id });
+    check('5. getFinancialReportPreview returns an array', Array.isArray(preview));
+
     const buffer = await svc.generateFinancialReportExcel({ periodId: reportPeriod.id });
-    check('5. generateFinancialReportExcel returns a real Buffer', Buffer.isBuffer(buffer) && buffer.length > 0, `length=${buffer?.length}`);
+    check('5a. generateFinancialReportExcel returns a real Buffer', Buffer.isBuffer(buffer) && buffer.length > 0, `length=${buffer?.length}`);
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    check('5a. the buffer parses as a valid xlsx workbook with a "דוח כספי" sheet', workbook.SheetNames.includes('דוח כספי'), JSON.stringify(workbook.SheetNames));
+    check('5b. the buffer parses as a valid xlsx workbook with a "דוח כספי" sheet', workbook.SheetNames.includes('דוח כספי'), JSON.stringify(workbook.SheetNames));
     const sheetRows = XLSX.utils.sheet_to_json(workbook.Sheets['דוח כספי'], { header: 1 });
-    check('5b. the header row matches exactly the approved 8 columns', JSON.stringify(sheetRows[0]) === JSON.stringify(['עמותה', 'תחילת תקופה', 'סוף תקופה', 'סכום חויב', 'שולם', 'יתרה פתוחה', 'אמצעי גבייה', 'סטטוס']), JSON.stringify(sheetRows[0]));
-    check('5c. this report is a DIFFERENT file shape from the MASAV bank file (no bank/branch/account columns)', !sheetRows[0].includes('bank') && !sheetRows[0].includes('branch'));
+    check('5c. the header row matches exactly the approved 6 columns', JSON.stringify(sheetRows[0]) === JSON.stringify(EXPECTED_HEADER), JSON.stringify(sheetRows[0]));
+    check('5d. this report is a DIFFERENT file shape from the MASAV bank file (no bank/branch/account columns)', !sheetRows[0].includes('bank') && !sheetRows[0].includes('branch'));
+
+    // The actual consistency guarantee the product owner asked for: same
+    // row count AND same amounts, since both come from the one shared
+    // getFinancialReportRows() call -- not merely "both non-empty".
+    check('5e. the preview and the Excel file show the exact same number of rows', preview.length === sheetRows.length - 1, `preview=${preview.length}, excel=${sheetRows.length - 1}`);
+    if (preview.length > 0) {
+      const p0 = preview[0];
+      const e0 = sheetRows[1];
+      check('5f. the FIRST row\'s amounts are identical between preview and Excel (billed/collected/outstanding)', e0[2] === p0.billed && e0[3] === p0.collected && e0[4] === p0.outstanding, `preview=${JSON.stringify(p0)}, excel=${JSON.stringify(e0)}`);
+    }
   }
-  const EXPECTED_HEADER = ['עמותה', 'תחילת תקופה', 'סוף תקופה', 'סכום חויב', 'שולם', 'יתרה פתוחה', 'אמצעי גבייה', 'סטטוס'];
+  const emptyPreview = await svc.getFinancialReportPreview({ periodId: '00000000-0000-0000-0000-000000000000' });
+  check('5g. a nonexistent periodId\'s preview is an empty array, never a crash or a fabricated row', Array.isArray(emptyPreview) && emptyPreview.length === 0, `length=${emptyPreview.length}`);
   const emptyBuffer = await svc.generateFinancialReportExcel({ periodId: '00000000-0000-0000-0000-000000000000' });
   const emptyWorkbook = XLSX.read(emptyBuffer, { type: 'buffer' });
   const emptyRows = XLSX.utils.sheet_to_json(emptyWorkbook.Sheets['דוח כספי'], { header: 1 });
-  check('5d. a nonexistent periodId produces a valid header-only report, never a crash or a fabricated row', emptyRows.length === 1 && JSON.stringify(emptyRows[0]) === JSON.stringify(EXPECTED_HEADER), `rows=${emptyRows.length}`);
+  check('5h. the same nonexistent periodId produces a valid header-only Excel file, consistent with the empty preview above', emptyRows.length === 1 && JSON.stringify(emptyRows[0]) === JSON.stringify(EXPECTED_HEADER), `rows=${emptyRows.length}`);
+
+  // --- F. entityId scoping on the report -- "כל העמותות" vs one nonprofit ---
+  if (reportPeriod) {
+    const allEntitiesPreview = await svc.getFinancialReportPreview({ periodId: reportPeriod.id });
+    if (allEntitiesPreview.length > 0) {
+      const targetName = allEntitiesPreview[0].entityName;
+      const stmtRes = await pool.query(`SELECT ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id = s.billing_account_id WHERE s.billing_period_id = $1 AND EXISTS (SELECT 1 FROM entities e WHERE e.id = ba.entity_id AND e.display_name = $2) LIMIT 1`, [reportPeriod.id, targetName]);
+      const targetEntityId = stmtRes.rows[0]?.entity_id;
+      if (targetEntityId) {
+        const scoped = await svc.getFinancialReportPreview({ periodId: reportPeriod.id, entityId: targetEntityId });
+        check('6. scoping the report to one entityId returns ONLY that nonprofit\'s rows', scoped.every((r) => r.entityName === targetName), JSON.stringify(scoped.map((r) => r.entityName)));
+      }
+    }
+  }
 
   const failed = results.filter((r) => !r.pass);
   console.log(`\n=== TOTAL: ${results.length - failed.length}/${results.length} passed ===`);

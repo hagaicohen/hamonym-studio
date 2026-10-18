@@ -41,7 +41,7 @@ exports.getSystemActivity = async (req, res) => {
 exports.searchStatementHistory = async (req, res) => {
   try {
     const rows = await service.searchStatementHistory({
-      entityName: req.query.entityName,
+      entityId: req.query.entityId,
       dateFrom: req.query.dateFrom,
       dateTo: req.query.dateTo,
       status: req.query.status,
@@ -52,9 +52,31 @@ exports.searchStatementHistory = async (req, res) => {
   }
 };
 
+// Same rows the Excel export below produces (collection-ops.service.js#
+// getFinancialReportRows is the one shared source) -- the preview table and
+// the file can never drift apart.
+exports.getFinancialReportPreview = async (req, res) => {
+  try {
+    const rows = await service.getFinancialReportPreview({
+      periodId: req.query.periodId,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      entityId: req.query.entityId,
+    });
+    res.json({ rows });
+  } catch (err) {
+    handle(res, 'getFinancialReportPreview', err);
+  }
+};
+
 exports.exportFinancialReport = async (req, res) => {
   try {
-    const buffer = await service.generateFinancialReportExcel({ periodId: req.query.periodId });
+    const buffer = await service.generateFinancialReportExcel({
+      periodId: req.query.periodId,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      entityId: req.query.entityId,
+    });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="financial-report-${Date.now()}.xlsx"`);
     res.send(buffer);

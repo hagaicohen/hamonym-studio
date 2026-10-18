@@ -1,28 +1,33 @@
 // Billing Monthly Cycle v1 (2026-09-08; restored to the frozen 28->28
-// cutoff model 2026-09-18) -- the automated entry point for Billing's
-// cutoff step: ensure a billing_period exists for the most recently-passed
-// 28th-20:00-Israel-time cutoff, then run production calculation against
-// it exactly once. Everything after that -- Statement approval, CARD
-// collection, MASAV export/submission -- stays a deliberate, manual Super
-// Admin action; this job never calls any of those services, so it is
-// structurally incapable of approving anything, collecting anything, or
-// creating a Payment. See docs/HAMONYM_BILLING_ENGINE_SPEC.md and the
-// 2026-09-07 Billing v1 Operational Cycle Audit for why this is the
-// smallest automation that removes the two most fragile "operator has to
-// remember" steps (create the period, run Calculate) without touching the
-// approval boundary.
+// cutoff model 2026-09-18; automatic eligibility transition added 2026-10,
+// FIN-11 closure) -- the automated entry point for Billing's cutoff step:
+// ensure a billing_period exists for the most recently-passed
+// 28th-20:00-Israel-time cutoff, run production calculation against it
+// exactly once, then auto-approve every draft Statement that passes the
+// EXACT SAME validation a human "אשר חיוב" click already used (see
+// autoApproveDraftStatementsForRun below). CARD collection and MASAV
+// export/submission still stay deliberate, separate actions (this job
+// never calls either service) -- only the draft->approved eligibility
+// step, which the approved FIN-11 contract explicitly says should not be
+// a routine manual task, moved into this job. See
+// docs/HAMONYM_BILLING_ENGINE_SPEC.md and the 2026-09-07 Billing v1
+// Operational Cycle Audit for the original two-step automation this
+// extends.
 //
-// Reuses calculation.service.js#runProductionCalculation verbatim -- no
-// financial logic is reimplemented here. Deliberately does NOT call
-// billing-ops.service.js#createPeriod/calculatePeriod (the human-triggered,
-// audit-logged wrappers used by the Super Admin UI): platform_audit_log.
+// Reuses calculation.service.js#runProductionCalculation and
+// approval.service.js#approveStatement verbatim -- no financial logic is
+// reimplemented here. Deliberately does NOT call billing-ops.service.js#
+// createPeriod/calculatePeriod/approveStatement (the human-triggered,
+// audit-logged WRAPPERS used by the Super Admin UI): platform_audit_log.
 // super_admin_user_id is BIGINT NOT NULL REFERENCES users(id) (migration
 // 012), so those wrappers structurally cannot be called by an unattended
-// job without inventing a fake "system" super admin user -- which would
-// misrepresent an automated action as a human one in an audit trail whose
-// entire purpose is tracking real admin decisions. This job's own
-// job_runs.result_summary is the correct, already-established audit trail
-// for automated actions, same as every other job in this directory.
+// job without inventing a fake "system" super admin user. This job instead
+// calls approval.service.js#approveStatement directly -- that underlying
+// function never wrote platform_audit_log to begin with (confirmed by
+// reading it), so there is no such audit problem to work around for the
+// approval step itself. This job's own job_runs.result_summary is the
+// correct, already-established audit trail for automated actions, same as
+// every other job in this directory.
 //
 // Idempotency (mandatory -- see the 2026-09-08 brief). Safe to run any
 // number of times, including via Admin "Run now" while the Render Cron is
@@ -40,11 +45,17 @@
 //     to show, so this job supplies its own guard instead: skip
 //     calculation entirely if a billing_run already exists, whether that
 //     run was created by this job or by a human.
-//   - Never approves, never collects, never touches MASAV, never creates a
-//     Payment -- structurally impossible, since this job never calls any of
-//     those services.
+//   - Approves (2026-10+) draft Statements created by THIS run's own
+//     calculation, via the same approveStatement() idempotency a human
+//     click already relies on (re-approving an already-approved Statement
+//     is a safe no-op, see that function's own header) -- but never
+//     collects, never touches MASAV, never creates a Payment, since this
+//     job still never calls any of those services.
 const calculation = require('../modules/billing-engine/calculation.service');
 const { resolveSelectedMonthBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
+const { autoApproveDraftStatementsForRun } = require('../modules/billing-engine/approval.service');
+const { recordFinding } = require('../jobs/reconciliation-findings');
+const pool = require('../db/db');
 
 // The cycle whose cutoff has MOST RECENTLY passed, at-or-before `now` --
 // the correct target for a real 20:00-Israel-time cutoff run (2026-09-18
@@ -116,6 +127,34 @@ async function handler(db, { now = new Date() } = {}) {
 
   const result = await calculation.runProductionCalculation(periodId, now.toISOString());
 
+  // Automatic eligibility transition (2026-10, FIN-11 closure) -- "routine
+  // monthly Statement approval is NOT part of the intended business
+  // workflow" per the approved contract. Calls the EXACT SAME validated
+  // approveStatement() a human click already used (approval.service.js),
+  // never a parallel/looser check -- so this can only ever auto-approve a
+  // Statement that was already eligible by the existing rules. A Statement
+  // that fails validation stays 'draft' ("calculated but not yet
+  // eligible") and gets ONE recorded finding per statement, surfaced to
+  // the Super Admin as a genuine exception -- never retried blindly, never
+  // forced through. This does NOT write platform_audit_log (unlike the
+  // human-triggered billing-ops.service.js wrapper) -- approval.service.js
+  // #approveStatement never did, by design (see its own header), so there
+  // is no "fake system super admin" audit problem to invent a workaround
+  // for. job_runs.result_summary (below) is this job's own already-
+  // established audit trail for automated actions, same as every other
+  // job in this directory.
+  const autoApproval = await autoApproveDraftStatementsForRun(result.billingRunId);
+  for (const failure of autoApproval.failed) {
+    await recordFinding(pool, {
+      jobName: 'billing-monthly-cycle',
+      findingType: 'statement_auto_approval_failed',
+      severity: 'warning',
+      subjectType: 'statement',
+      subjectId: failure.statementId,
+      details: { code: failure.code, message: failure.message },
+    });
+  }
+
   return {
     periodId,
     periodStart: periodStart.toISOString(),
@@ -127,6 +166,8 @@ async function handler(db, { now = new Date() } = {}) {
     statementsCreated: result.statementsCreated,
     blockedEntitiesCount: result.blockedEntities.length,
     activityDiscovered: result.activityDiscovered,
+    statementsAutoApproved: autoApproval.approved.length,
+    statementsAutoApprovalFailed: autoApproval.failed.length,
   };
 }
 

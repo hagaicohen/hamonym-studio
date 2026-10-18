@@ -13,6 +13,7 @@ router.get('/overview', ctrl.getFinancialOverview);
 router.get('/needs-attention', ctrl.getNeedsAttention);
 router.get('/system-activity', ctrl.getSystemActivity);
 router.get('/history', ctrl.searchStatementHistory);
+router.get('/report/preview', ctrl.getFinancialReportPreview);
 router.get('/report', ctrl.exportFinancialReport);
 
 module.exports = router;

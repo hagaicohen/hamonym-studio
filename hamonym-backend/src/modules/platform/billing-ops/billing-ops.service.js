@@ -312,7 +312,13 @@ exports.listStatements = async ({ periodId, runId, status, month }) => {
               END AS routed_method,
               (SELECT ca.status FROM collection_attempts ca WHERE ca.statement_id = s.id
                ORDER BY ca.attempt_number DESC LIMIT 1) AS latest_attempt_status,
-              (SELECT count(*) FROM payments p WHERE p.statement_id = s.id)::int AS payment_count
+              (SELECT count(*) FROM payments p WHERE p.statement_id = s.id)::int AS payment_count,
+              -- Additive, read-only (2026-10, unified "ניהול גבייה" page's
+              -- simplified table needs "נגבה"/"יתרה" per row without a
+              -- second round trip). Same SUM(payments.amount) statement-
+              -- balance.service.js#getStatementBalance already treats as
+              -- authoritative -- never recalculated differently here.
+              (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.statement_id = s.id) AS collected
        FROM statements s
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        JOIN entities e ON e.id = ba.entity_id

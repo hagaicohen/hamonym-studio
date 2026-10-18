@@ -12,7 +12,12 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
 
-  ssl: { rejectUnauthorized: false },
+  // DB_SSL is unset in every real environment (.env, Render) -- default
+  // stays the exact existing behavior. Only a genuinely isolated local test
+  // database (2026-10, FIN-11 closure task's mandatory mutation-test
+  // isolation requirement) sets DB_SSL=false, because a plain local
+  // Postgres container has no SSL listener to negotiate with at all.
+  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
 
   max: 10,
   // Generous idle timeout — establishing a *new* connection to this

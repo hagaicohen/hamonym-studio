@@ -101,6 +101,10 @@ export interface StatementListItem {
   routed_method: RoutedMethod;
   latest_attempt_status: string | null;
   payment_count: number;
+  // Additive (2026-10, unified "ניהול גבייה" page) -- SUM(payments.amount)
+  // for this Statement, same ledger statement-balance.service.js#
+  // getStatementBalance already treats as authoritative.
+  collected: string;
   // "מה עושים עכשיו" -- server-derived, presentation-only (Billing v1
   // simplicity decision, 2026-09-10). See billing-ops.service.js#
   // nextActionLabel -- never re-derive this from raw readiness data here.

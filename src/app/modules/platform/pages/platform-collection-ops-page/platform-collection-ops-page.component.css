@@ -1,16 +1,18 @@
 .col-page {
   padding: 24px;
   direction: rtl;
+  /* 2026-10 layout fix: max-width alone (no auto margins) left the block
+     hugging the RTL start (right) edge of the main content area, leaving
+     a large empty gap on the left on wide screens. Centering it uses the
+     available width sensibly while still capping line length for
+     readability. */
+  max-width: 1280px;
+  margin: 0 auto;
 }
 .col-title {
-  margin: 0 0 4px;
+  margin: 0 0 16px;
   font-size: 22px;
   font-weight: 700;
-}
-.col-subtitle {
-  margin: 0 0 20px;
-  color: #6b7280;
-  font-size: 14px;
 }
 
 .col-tabs {
@@ -40,96 +42,80 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 18px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .col-period-row select {
-  padding: 6px 10px;
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .col-section {
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 .col-section-title {
   font-size: 15px;
-  margin: 0 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-weight: 700;
+  margin: 0 0 10px;
 }
 
+/* A. Financial overview -- the one thing that must read instantly */
 .col-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .col-metric {
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 16px;
   background: #fff;
+  text-align: center;
 }
 .col-metric-label {
   font-size: 12px;
   color: #6b7280;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .col-metric-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
 }
 .col-metric-paid { color: #166534; }
 .col-metric-process { color: #854d0e; }
 .col-metric-open { color: #b91c1c; }
 
-.col-hint {
+.col-note {
   font-size: 12px;
   color: #6b7280;
-  margin: 8px 0 0;
-}
-.col-hint-inline {
-  font-size: 12px;
-  color: #6b7280;
-  margin-right: 8px;
+  margin: 6px 0 0;
 }
 
-.col-count-badge {
-  display: inline-block;
-  background: #583cd6;
-  color: #fff;
-  border-radius: 999px;
-  font-size: 11px;
-  padding: 1px 8px;
-  font-weight: 700;
-}
-
-.col-attn-group {
-  border: 1px solid #e5e7eb;
+/* B. דורש טיפולך -- the primary operational focus */
+.col-empty-ok {
+  padding: 16px;
+  text-align: center;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   border-radius: 10px;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-.col-attn-group-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #f9fafb;
-  font-size: 13px;
-}
-.col-attn-amount {
-  margin-right: auto;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 .col-attn-item {
-  border-top: 1px solid #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  overflow: hidden;
 }
 .col-attn-item-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 12px 14px;
   cursor: pointer;
   font-size: 13px;
 }
@@ -137,8 +123,12 @@
   background: #f9fafb;
 }
 .col-attn-entity {
-  font-weight: 600;
-  min-width: 140px;
+  font-weight: 700;
+  min-width: 130px;
+}
+.col-attn-item-amount {
+  font-weight: 700;
+  color: #b91c1c;
 }
 .col-attn-reason {
   color: #6b7280;
@@ -147,9 +137,8 @@
 .col-attn-next {
   color: #583cd6;
   font-size: 12px;
-}
-.col-attn-item-amount {
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .col-attn-form {
   padding: 12px 14px;
@@ -168,19 +157,47 @@
   margin-bottom: 8px;
   font-family: inherit;
 }
+.col-action-block {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 10px;
+  margin-top: 8px;
+}
+.col-action-block h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.col-inline-action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
 
+/* C. פעילות המערכת -- collapsed, secondary */
+.col-system-activity {
+  margin-bottom: 26px;
+  font-size: 13px;
+  color: #6b7280;
+}
+.col-system-activity summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.col-system-activity[open] summary {
+  margin-bottom: 6px;
+}
 .col-activity-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
-  font-size: 13px;
+  padding: 6px 0;
+  font-size: 12px;
   border-bottom: 1px solid #f3f4f6;
 }
 .col-activity-fin11 {
-  color: #6b7280;
+  color: #9ca3af;
 }
-
 .col-badge {
   display: inline-block;
   padding: 2px 10px;
@@ -193,20 +210,70 @@
 .col-badge-ok { background: #dcfce7; color: #166534; }
 .col-badge-fail { background: #fee2e2; color: #991b1b; }
 .col-badge-inactive { background: #f3f4f6; color: #9ca3af; }
+.col-hint-inline {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-right: 8px;
+}
 
+/* D. חיובי העמותות -- compact table */
 .col-filter-row {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
+}
+/* Nonprofit combobox stretches to fill the row; other controls (status
+   select, buttons) keep their natural width (2026-10, product-owner
+   request -- "stretch the nonprofit filter the full length"). Styled from
+   here (not inside the combobox itself) since how much space it should
+   take depends on where it's placed, not on the component itself. */
+.col-filter-row app-entity-combobox,
+.col-filter-grid app-entity-combobox {
+  flex: 1;
+  display: block;
+  min-width: 240px;
 }
 .col-filter-row input,
 .col-filter-row select {
-  padding: 6px 10px;
+  padding: 7px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 13px;
+}
+
+.col-filter-grid {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.col-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.col-filter-field label {
+  font-size: 12px;
+  color: #6b7280;
+}
+.col-filter-field input,
+.col-filter-field select {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  min-width: 140px;
+}
+.col-filter-buttons {
+  flex-direction: row;
+  gap: 8px;
+}
+.col-filter-field-wide {
+  flex: 1;
+  min-width: 240px;
 }
 
 .col-table {
@@ -216,14 +283,15 @@
 }
 .col-table th {
   text-align: right;
-  padding: 10px 12px;
+  padding: 9px 12px;
   background: #f9fafb;
   color: #6b7280;
   font-weight: 600;
+  font-size: 12px;
   border-bottom: 1px solid #e5e7eb;
 }
 .col-table td {
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-bottom: 1px solid #f3f4f6;
 }
 .col-table-small th,
@@ -231,15 +299,62 @@
   padding: 6px 10px;
   font-size: 12px;
 }
-.col-row {
-  cursor: pointer;
-}
 .col-row:hover {
   background: #f9fafb;
 }
+.col-entity-cell {
+  cursor: pointer;
+  font-weight: 600;
+  color: #583cd6;
+}
+
+.col-ok-text { color: #166534; }
+.col-warn-text { color: #92400e; }
+
+.col-payment-settings {
+  margin-bottom: 26px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 2px 14px;
+}
+.col-payment-settings summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #583cd6;
+}
+.col-payment-settings[open] summary {
+  margin-bottom: 8px;
+}
+
+.col-row-draft {
+  opacity: 0.75;
+}
+.col-row-draft td {
+  font-style: italic;
+}
+.col-draft-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  font-style: normal;
+}
+
+.col-explain {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.col-explain p {
+  margin: 4px 0;
+}
 
 .col-empty {
-  padding: 18px;
+  padding: 16px;
   text-align: center;
   color: #9ca3af;
   font-size: 13px;
@@ -250,8 +365,9 @@
   margin: 6px 0;
 }
 
+/* Statement drawer */
 .col-panel {
-  margin-top: 20px;
+  margin-top: 18px;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   background: #fff;
@@ -275,32 +391,58 @@
   color: #9ca3af;
 }
 .col-panel-body {
-  padding: 18px;
+  padding: 16px 18px;
 }
 .col-facts {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .col-action-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 4px;
 }
-.col-action-block {
-  border-top: 1px solid #f3f4f6;
-  padding-top: 12px;
-  margin-bottom: 14px;
-}
-.col-action-block h4,
-.col-panel-body h4 {
-  margin: 14px 0 6px;
+.col-drawer-details {
+  margin-top: 14px;
   font-size: 13px;
 }
-.col-action-block input,
-.col-action-block textarea {
+.col-drawer-details summary {
+  cursor: pointer;
+  color: #583cd6;
+  font-size: 13px;
+  padding: 6px 0;
+}
+.col-drawer-details table {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+/* Exceptional manual actions -- low-key, collapsed by default */
+.col-exceptional {
+  margin-top: 10px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 8px;
+}
+.col-exceptional-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #92400e;
+  font-size: 12px;
+  padding: 2px 0;
+}
+.col-exceptional-body {
+  margin-top: 8px;
+  padding: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+.col-exceptional-body input,
+.col-exceptional-body textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 6px 10px;
@@ -333,54 +475,8 @@
   font-size: 12px;
 }
 
-.col-all-entities {
-  margin-top: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 2px 14px;
-}
-.col-all-entities summary {
-  cursor: pointer;
-  padding: 10px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #583cd6;
-}
-.col-all-entities[open] summary {
-  margin-bottom: 8px;
-}
-
-/* Exceptional manual actions -- deliberately low-key: plain border, muted
-   text, collapsed by default, so they never compete visually with "אשר
-   חיוב" (the one routine action a draft Statement still needs). */
-.col-exceptional {
-  margin-top: 14px;
-  border-top: 1px solid #f3f4f6;
-  padding-top: 10px;
-}
-.col-exceptional-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #92400e;
-  font-size: 12px;
-  padding: 2px 0;
-}
-.col-exceptional-body {
-  margin-top: 8px;
-  padding: 10px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-}
-.col-exceptional-body input,
-.col-exceptional-body textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  margin-bottom: 8px;
-  font-family: inherit;
+@media (max-width: 640px) {
+  .col-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

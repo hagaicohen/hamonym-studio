@@ -23,9 +23,12 @@ import {
   NeedsAttentionItem,
   SystemActivity,
   StatementHistoryRow,
+  FinancialReportRow,
 } from '../../services/collection-ops.service';
+import { EntityComboboxComponent, ComboboxEntity } from '../../components/entity-combobox/entity-combobox.component';
 
 type Tab = 'overview' | 'history' | 'reports';
+type ReportPeriodMode = 'period' | 'range' | 'all';
 
 // Unified Super Admin "ניהול גבייה" page (2026-10) -- replaces the two
 // separate "חיובי עמותות"/"ניהול כספים" screens with one. Every action here
@@ -37,7 +40,7 @@ type Tab = 'overview' | 'history' | 'reports';
 @Component({
   selector: 'app-platform-collection-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
   templateUrl: './platform-collection-ops-page.component.html',
   styleUrl: './platform-collection-ops-page.component.css',
 })
@@ -59,6 +62,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   setTab(t: Tab): void {
     this.tab = t;
     if (t === 'history' && this.historyRows.length === 0) this.runHistorySearch();
+    if (t === 'reports') this.runReportPreview();
   }
 
   // --- Period selector (shared by Overview + Reports) ------------------
@@ -77,14 +81,115 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     });
     this.loadNeedsAttention();
     this.loadSystemActivity();
+    // Loaded once, eagerly -- reused by "כל העמותות" below AND by the
+    // searchable nonprofit dropdown on both the History and Reports tabs,
+    // so there is exactly one entity list in this whole page, never one
+    // per consumer.
+    this.loadAllEntities();
   }
 
   onPeriodChange(): void {
     this.loadOverviewAndStatements();
+    if (this.tab === 'reports') this.runReportPreview();
   }
 
+  private readonly HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+  // "ספטמבר 2026", not a raw date range -- a 28-cutoff period's month is
+  // approximated by its period_start's calendar month, same as how the
+  // admin already thinks of "last month's billing" elsewhere in the app.
   fmtPeriodLabel(p: BillingPeriod): string {
-    return `${this.fmtDate(p.period_start)} – ${this.fmtDate(p.period_end)}`;
+    const d = new Date(p.period_start);
+    return `${this.HEBREW_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  }
+
+  // Hebrew labels for every real statements.status value (enum unchanged on
+  // the backend) -- used by both the Statement table and the History tab.
+  private readonly STATUS_LABELS: Record<string, string> = {
+    draft: 'טיוטה',
+    approved: 'מאושר',
+    open: 'פתוח',
+    paid: 'שולם',
+    cancelled: 'בוטל',
+    abandoned: 'בוטל',
+    written_off: 'נמחק',
+    collection_failed: 'גבייה נכשלה',
+    pending_collection: 'מחכה לגבייה',
+  };
+  statusLabel(status: string | null | undefined): string {
+    if (!status) return '—';
+    return this.STATUS_LABELS[status] || status;
+  }
+
+  readinessReasonLabel(reason: string | null): string {
+    switch (reason) {
+      case 'no_active_payment_instrument': return 'אין אמצעי תשלום פעיל';
+      case 'masav_not_configured': return 'פרטי מס״ב לא הוגדרו';
+      case 'masav_incomplete': return 'פרטי מס״ב חסרים';
+      case 'masav_not_authorized': return 'מס״ב לא מאושר';
+      default: return '';
+    }
+  }
+
+  // Plain-Hebrew "what happened / what happens automatically next" (2026-10
+  // product-owner request) -- computed purely from fields the drawer
+  // already has (status/routed_method/readiness/latest attempt status), no
+  // new backend call. Deliberately HONEST about the real gap between the
+  // approved FIN-11-automatic model and what the code actually runs today
+  // (none of FIN-11's 3 jobs are registered -- see getSystemActivity) --
+  // per explicit instruction, a conflict between the approved model and
+  // actual behavior is surfaced here, never silently smoothed over.
+  get statementExplanation(): { whatHappened: string; automaticNext: string } | null {
+    const s = this.selectedStatement;
+    if (!s) return null;
+
+    if (s.status === 'draft') {
+      return {
+        whatHappened: 'החיוב חושב אך עדיין לא אושר — זהו חישוב, לא חוב לגביה.',
+        automaticNext: 'ללא אישור ידני, שום גבייה לא תתבצע — לא אוטומטית ולא ידנית.',
+      };
+    }
+    if (s.status === 'paid') {
+      return {
+        whatHappened: 'הסכום נגבה במלואו ואושר על ידי הספק.',
+        automaticNext: 'אין פעולה נדרשת.',
+      };
+    }
+    if (s.readiness.route === 'card') {
+      if (!s.readiness.ready) {
+        return {
+          whatHappened: `החיוב מאושר לגבייה בכרטיס, אך ${this.readinessReasonLabel(s.readiness.reason)}.`,
+          automaticNext: 'שום דבר לא יקרה אוטומטית עד שהעמותה תגדיר אמצעי תשלום.',
+        };
+      }
+      if (s.latest_attempt_status === 'pending' || s.latest_attempt_status === 'ambiguous') {
+        return {
+          whatHappened: 'ניסיון גבייה בכרטיס פעיל כרגע — התוצאה עדיין לא ידועה.',
+          automaticNext: 'בדיקה אוטומטית שעתית (collection-attempt-reconciliation) תברר את התוצאה מול הספק בשעה הקרובה.',
+        };
+      }
+      if (s.latest_attempt_status === 'declined' || s.latest_attempt_status === 'technical_failure') {
+        return {
+          whatHappened: 'ניסיון גבייה בכרטיס נכשל.',
+          automaticNext: 'אין מנגנון אוטומטי שינסה שוב כרגע — מנגנון הגבייה החוזרת של FIN-11 קיים בקוד אך לא הופעל.',
+        };
+      }
+      return {
+        whatHappened: 'החיוב מאושר ומוכן לגבייה בכרטיס.',
+        automaticNext: 'לפי המודל המאושר, גבייה חודשית אמורה לקרות אוטומטית — אך מנגנון הגבייה האוטומטי של FIN-11 טרם הופעל במערכת. כרגע הדרך היחידה לגבות היא גבייה ידנית (למטה, פעולה מתקדמת).',
+      };
+    }
+    // route === 'masav'
+    if (!s.readiness.ready) {
+      return {
+        whatHappened: `החיוב מאושר ומנותב למס״ב, אך ${this.readinessReasonLabel(s.readiness.reason)}.`,
+        automaticNext: 'שום דבר לא יקרה אוטומטית עד שהגדרות המס״ב יושלמו (״ניהול אמצעי תשלום לעמותות״).',
+      };
+    }
+    return {
+      whatHappened: 'החיוב מאושר ומנותב לגבייה במס״ב.',
+      automaticNext: 'אין יצירה אוטומטית של הצעת מס״ב כיום — מנגנון ההכנה האוטומטית של FIN-11 קיים בקוד אך לא הופעל. פעולת ייצוא מס״ב ידנית אינה זמינה כרגע במסך המאוחד — פער ידוע, ראו דיווח.',
+    };
   }
 
   // --- A. Financial overview --------------------------------------------
@@ -165,6 +270,33 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     });
   }
 
+  // "הצעות מס״ב מאושרות — מוכנות לייצוא" (2026-10 FIN-11 closure gap fix):
+  // reuses FinanceOpsService#exportMasavProposals verbatim -- the exact
+  // same atomic build-file-then-flip-to-exported function already proven
+  // in the earlier MASAV export round, just never reachable from this page
+  // for an already-approved proposal until now.
+  exportSingleProposal(item: NeedsAttentionItem): void {
+    if (!item.proposalId || this.attentionActionBusy) return;
+    if (!window.confirm(`לייצא הצעת מס״ב בסך ₪${item.amount} עבור ${item.entityName}? הקובץ יוריד למחשב; שידור בפועל לבנק הוא עדיין פעולה ידנית.`)) return;
+
+    this.attentionActionBusy = true;
+    this.attentionActionError = null;
+    this.financeOps.exportMasavProposals([item.proposalId]).subscribe({
+      next: (blob) => {
+        this.attentionActionBusy = false;
+        this.openItem = null;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `masav-proposal-export-${Date.now()}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.loadNeedsAttention();
+      },
+      error: () => { this.attentionActionBusy = false; this.attentionActionError = 'הייצוא נכשל — ייתכן שהיתרה השתנתה מאז האישור'; },
+    });
+  }
+
   // "חריגי גביית-יתר" -- reuses FinanceOpsService#overrideExceptionHold / resolveException verbatim.
   overrideHold(item: NeedsAttentionItem): void {
     if (!item.exceptionId || this.attentionActionBusy) return;
@@ -212,21 +344,44 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
 
   // "כל העמותות" -- settings must be reachable for every nonprofit, not
   // only ones with a current Statement or an attention item (product-owner
-  // correction, 2026-10). Lazy-loaded once (collapsed <details>), reusing
-  // BillingProvisioningService#getReadiness verbatim -- the exact same
-  // read the old "הגדרות עמותות" tab already used.
+  // correction, 2026-10), reusing BillingProvisioningService#getReadiness
+  // verbatim -- the exact same read the old "הגדרות עמותות" tab already
+  // used. Loaded eagerly (see ngOnInit) -- also the one source for the
+  // searchable nonprofit dropdowns below.
   allEntities: BillingReadinessEntity[] = [];
   allEntitiesLoading = false;
-  private allEntitiesLoaded = false;
 
-  loadAllEntitiesOnce(): void {
-    if (this.allEntitiesLoaded) return;
-    this.allEntitiesLoaded = true;
+  loadAllEntities(): void {
     this.allEntitiesLoading = true;
     this.billingProvisioning.getReadiness().subscribe({
       next: (res) => { this.allEntities = res.entities; this.allEntitiesLoading = false; },
       error: () => { this.allEntitiesLoading = false; },
     });
+  }
+
+  // Searchable nonprofit combobox (Overview + History + Reports, 2026-10
+  // product-owner request) -- one list, reused via <app-entity-combobox>,
+  // which emits a real entity id directly (never a typed name to resolve).
+  get entityOptions(): ComboboxEntity[] {
+    return this.allEntities
+      .map((e) => ({ id: e.id, name: e.display_name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'he'));
+  }
+
+  // Readiness per the entity's OWN collection method (2026-10 review fix):
+  // a card-routed nonprofit was shown with a MASAV-authorization warning
+  // it has no reason to ever resolve. preferred_collection_method is the
+  // same existing field the old "הגדרות עמותות" tab already read for this
+  // exact purpose -- no new backend logic.
+  entityReadinessLabel(e: BillingReadinessEntity): string {
+    if (!e.billing_account_id) return 'חיוב לא הוגדר';
+    if (e.preferred_collection_method === 'card') return 'מוכן (כרטיס אשראי)';
+    if (e.masav_authorized) return 'מוכן (מס״ב)';
+    if (e.masav_configured) return 'מס״ב הוגדר, ממתין לאישור';
+    return 'מס״ב לא הוגדר';
+  }
+  entityReadinessOk(e: BillingReadinessEntity): boolean {
+    return !!e.billing_account_id && (e.preferred_collection_method === 'card' || !!e.masav_authorized);
   }
 
   // --- C. פעילות המערכת ----------------------------------------------------
@@ -252,25 +407,60 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     }
   }
 
-  // --- D. חיובי העמותות (period-scoped table, reuses BillingOpsService#listStatements) ---
+  // One compact line for the collapsed default view ("עדכון אחרון: ... |
+  // מצב המערכת: ..."); the full job list only shows once expanded. Both
+  // numbers are read directly from job_runs via getSystemActivity -- never
+  // invented when systemActivity hasn't loaded yet.
+  get systemActivitySummary(): string {
+    if (!this.systemActivity) return 'טוען...';
+    const runTimes = this.systemActivity.automatic.map((j) => j.lastRunAt).filter((t): t is string => !!t);
+    const latest = runTimes.length ? runTimes.reduce((a, b) => (a > b ? a : b)) : null;
+    const anyFailed = this.systemActivity.automatic.some((j) => j.status === 'failed');
+    return `עדכון אחרון: ${latest ? this.fmtDate(latest) : 'אין מידע'} | מצב המערכת: ${anyFailed ? 'יש לבדוק' : 'תקין'}`;
+  }
+
+  // --- D. מצב הגבייה מעמותות (period-scoped table, reuses BillingOpsService#listStatements) ---
+  // Renamed from "חיובי העמותות" (2026-10, product-owner request) -- same
+  // data/endpoint, clearer business name. Always fetched UNFILTERED by
+  // status -- the one status dropdown and the nonprofit combobox are both
+  // applied client-side below, so the Overview's "X בטיוטה" notice can
+  // read from the same array without a second call.
   statements: StatementListItem[] = [];
   statementsLoading = false;
-  entitySearch = '';
+  overviewEntityId: string | undefined = undefined;
   statusFilter = '';
 
   loadStatements(): void {
     if (!this.selectedPeriodId) return;
     this.statementsLoading = true;
-    this.billingOps.listStatements({ periodId: this.selectedPeriodId, status: this.statusFilter || undefined }).subscribe({
+    this.billingOps.listStatements({ periodId: this.selectedPeriodId }).subscribe({
       next: (res) => { this.statements = res.statements; this.statementsLoading = false; },
       error: () => { this.statementsLoading = false; },
     });
   }
 
   get filteredStatements(): StatementListItem[] {
-    const q = this.entitySearch.trim().toLowerCase();
-    if (!q) return this.statements;
-    return this.statements.filter((s) => s.entity_name.toLowerCase().includes(q));
+    return this.statements.filter((s) =>
+      (!this.overviewEntityId || s.entity_id === this.overviewEntityId) &&
+      (!this.statusFilter || s.status === this.statusFilter)
+    );
+  }
+
+  statementOutstanding(s: StatementListItem): number {
+    return Number(s.total_due) - Number(s.collected);
+  }
+
+  // "סך החיובים" vs "₪38.90" draft-table mismatch (2026-10 review): drafts
+  // are intentionally excluded from the Overview's 4 metrics (not yet
+  // approved -- could still change on recalculation), but a draft sitting
+  // in the table with no corresponding number in the Overview above it
+  // looks like a bug if left unexplained. This surfaces exactly that,
+  // computed from the SAME unfiltered `statements` array the table uses --
+  // never a second, possibly-inconsistent query.
+  get draftNotice(): { count: number; total: number } | null {
+    const drafts = this.statements.filter((s) => s.status === 'draft');
+    if (drafts.length === 0) return null;
+    return { count: drafts.length, total: drafts.reduce((sum, s) => sum + Number(s.total_due), 0) };
   }
 
   // --- Shared Statement drawer (reuses BillingOpsService verbatim) -------
@@ -351,14 +541,16 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   // --- Tab 2: היסטוריה (cross-period search, new read-only endpoint) ------
+  // "כל העמותות" is simply entityId left undefined -- the combobox emits
+  // the real id directly, no name-matching/resolution needed anymore.
   historyRows: StatementHistoryRow[] = [];
   historyLoading = false;
-  historyFilters = { entityName: '', dateFrom: '', dateTo: '', status: '' };
+  historyFilters = { entityId: undefined as string | undefined, dateFrom: '', dateTo: '', status: '' };
 
   runHistorySearch(): void {
     this.historyLoading = true;
     this.collectionOps.searchHistory({
-      entityName: this.historyFilters.entityName || undefined,
+      entityId: this.historyFilters.entityId,
       dateFrom: this.historyFilters.dateFrom || undefined,
       dateTo: this.historyFilters.dateTo || undefined,
       status: this.historyFilters.status || undefined,
@@ -368,15 +560,53 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     });
   }
 
+  clearHistoryFilters(): void {
+    this.historyFilters = { entityId: undefined, dateFrom: '', dateTo: '', status: '' };
+    this.runHistorySearch();
+  }
+
   // --- Tab 3: דוחות --------------------------------------------------------
+  // Preview and the downloaded file both come from the SAME backend rows
+  // (collection-ops.service.js#getFinancialReportRows) -- picking a
+  // different period-mode/nonprofit re-runs the preview, and the download
+  // button always sends the exact same scope the preview just showed, so
+  // what the admin sees is guaranteed to be what they get.
+  //
+  // Three mutually-exclusive period modes (2026-10, product-owner request):
+  // 'period' = one real billing period (month/year, the normal case),
+  // 'range' = a custom date range (filters by billing-PERIOD overlap, not
+  // by any transaction/payment date -- this report has no transaction-date
+  // dimension to filter by), 'all' = every period, unscoped.
+  reportPeriodMode: ReportPeriodMode = 'period';
+  reportDateFrom = '';
+  reportDateTo = '';
+  reportEntityId: string | undefined = undefined;
+  reportRows: FinancialReportRow[] = [];
+  reportPreviewLoading = false;
   reportBusy = false;
   reportError: string | null = null;
 
+  private reportScope(): { periodId?: string; dateFrom?: string; dateTo?: string; entityId?: string } {
+    const entityId = this.reportEntityId;
+    if (this.reportPeriodMode === 'period') return { periodId: this.selectedPeriodId || undefined, entityId };
+    if (this.reportPeriodMode === 'range') return { dateFrom: this.reportDateFrom || undefined, dateTo: this.reportDateTo || undefined, entityId };
+    return { entityId }; // 'all'
+  }
+
+  runReportPreview(): void {
+    if (this.reportPeriodMode === 'period' && !this.selectedPeriodId) return;
+    this.reportPreviewLoading = true;
+    this.collectionOps.getReportPreview(this.reportScope()).subscribe({
+      next: (res) => { this.reportRows = res.rows; this.reportPreviewLoading = false; },
+      error: () => { this.reportPreviewLoading = false; this.reportRows = []; },
+    });
+  }
+
   downloadReport(): void {
-    if (!this.selectedPeriodId || this.reportBusy) return;
+    if (this.reportBusy) return;
     this.reportBusy = true;
     this.reportError = null;
-    this.collectionOps.exportReport(this.selectedPeriodId).subscribe({
+    this.collectionOps.exportReport(this.reportScope()).subscribe({
       next: (blob) => {
         this.reportBusy = false;
         const url = URL.createObjectURL(blob);

@@ -22,7 +22,9 @@ export type NeedsAttentionCategory =
   | 'masav_proposal_awaiting_approval'
   | 'open_overpayment_exception'
   | 'card_attempts_exhausted'
-  | 'masav_blocked';
+  | 'masav_blocked'
+  | 'masav_proposal_ready_to_export'
+  | 'statement_auto_approval_failed';
 
 export interface NeedsAttentionItem {
   entityName: string;
@@ -80,6 +82,19 @@ export interface StatementHistoryRow {
   collected: string;
 }
 
+// Mirrors collection-ops.service.js#getFinancialReportRows -- the SAME rows
+// the Excel download builds, used for the on-screen preview.
+export interface FinancialReportRow {
+  entityName: string;
+  periodStart: string;
+  periodEnd: string;
+  billed: number;
+  collected: number;
+  outstanding: number;
+  status: string;
+  isDraft: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CollectionOpsService {
   private http = inject(HttpClient);
@@ -97,9 +112,9 @@ export class CollectionOpsService {
     return this.http.get<SystemActivity>(`${this.base}/system-activity`, { headers: authHeaders() });
   }
 
-  searchHistory(filters: { entityName?: string; dateFrom?: string; dateTo?: string; status?: string }): Observable<{ statements: StatementHistoryRow[] }> {
+  searchHistory(filters: { entityId?: string; dateFrom?: string; dateTo?: string; status?: string }): Observable<{ statements: StatementHistoryRow[] }> {
     const params = new URLSearchParams();
-    if (filters.entityName) params.set('entityName', filters.entityName);
+    if (filters.entityId) params.set('entityId', filters.entityId);
     if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
     if (filters.dateTo) params.set('dateTo', filters.dateTo);
     if (filters.status) params.set('status', filters.status);
@@ -107,11 +122,27 @@ export class CollectionOpsService {
     return this.http.get<{ statements: StatementHistoryRow[] }>(`${this.base}/history${qs ? '?' + qs : ''}`, { headers: authHeaders() });
   }
 
+  private reportQueryString(scope: { periodId?: string; dateFrom?: string; dateTo?: string; entityId?: string }): string {
+    const params = new URLSearchParams();
+    if (scope.periodId) params.set('periodId', scope.periodId);
+    if (scope.dateFrom) params.set('dateFrom', scope.dateFrom);
+    if (scope.dateTo) params.set('dateTo', scope.dateTo);
+    if (scope.entityId) params.set('entityId', scope.entityId);
+    return params.toString();
+  }
+
+  // Same rows the Excel export below produces -- see FinancialReportRow.
+  // Exactly one of periodId / (dateFrom or dateTo) / neither ("כל
+  // התקופות") applies -- see collection-ops.service.js#getFinancialReportRows.
+  getReportPreview(scope: { periodId?: string; dateFrom?: string; dateTo?: string; entityId?: string }): Observable<{ rows: FinancialReportRow[] }> {
+    return this.http.get<{ rows: FinancialReportRow[] }>(`${this.base}/report/preview?${this.reportQueryString(scope)}`, { headers: authHeaders() });
+  }
+
   // Basic business Excel report -- deliberately a different endpoint/shape
   // from BillingOpsService#exportMasavExcel and FinanceOpsService#
   // exportMasavProposals (bank-file exports); this one never marks anything
   // as exported, it only reads.
-  exportReport(periodId: string): Observable<Blob> {
-    return this.http.get(`${this.base}/report?periodId=${periodId}`, { headers: authHeaders(), responseType: 'blob' });
+  exportReport(scope: { periodId?: string; dateFrom?: string; dateTo?: string; entityId?: string }): Observable<Blob> {
+    return this.http.get(`${this.base}/report?${this.reportQueryString(scope)}`, { headers: authHeaders(), responseType: 'blob' });
   }
 }
