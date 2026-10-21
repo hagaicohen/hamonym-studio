@@ -900,10 +900,12 @@ exports.getReceipt = async (receiptId) => {
   const res = await db.query(
     `SELECT r.id, r.receipt_number, r.amount, r.donor_name, r.donor_email, r.issued_at,
             c.title AS campaign_title,
-            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name
+            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name,
+            d.note
      FROM receipts r
      JOIN campaigns c ON c.id = r.campaign_id
      JOIN entities  e ON e.id = r.entity_id
+     JOIN donations d ON d.id = r.donation_id
      WHERE r.id = $1`,
     [receiptId]
   );
@@ -912,7 +914,7 @@ exports.getReceipt = async (receiptId) => {
 
 exports.getMyDonations = async (userId) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous,
+    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
             r.id AS receipt_id
@@ -936,7 +938,8 @@ exports.getLiveDonations = async (slug, since) => {
     `SELECT d.donor_name AS name,
             d.amount::float AS amount,
             d.completed_at,
-            d.is_anonymous
+            d.is_anonymous,
+            d.note
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = c.entity_id
@@ -986,7 +989,7 @@ exports.getCampaignDonors = async (slug, period) => {
     db.query(
       `WITH camp AS (
          SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount,
-                d.completed_at, d.is_anonymous
+                d.completed_at, d.is_anonymous, d.note
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
          JOIN entities  e ON e.id = c.entity_id
@@ -1003,6 +1006,7 @@ exports.getCampaignDonors = async (slug, period) => {
          camp.amount,
          camp.completed_at,
          camp.is_anonymous,
+         camp.note,
          (camp.id IN (SELECT id FROM first_ids)) AS is_first
        FROM camp
        WHERE TRUE ${periodClause}
@@ -1174,7 +1178,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
   const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock, d.note,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
