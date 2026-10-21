@@ -13,21 +13,25 @@
     }
 
     <div class="col-month-nav">
-      <button type="button" class="col-month-chevron" (click)="prevMonth()" aria-label="חודש קודם">›</button>
+      <button type="button" class="col-month-chevron" (click)="prevMonth()" aria-label="חודש קודם">‹</button>
       <div class="col-month-label-wrap">
         <label class="col-month-label" for="monthPicker">{{ selectedMonthLabel }}</label>
         <input id="monthPicker" type="month" class="col-month-picker-input" [value]="monthPickerValue" (change)="onMonthPicked($any($event.target).value)" />
       </div>
-      <button type="button" class="col-month-chevron" (click)="nextMonth()" aria-label="חודש הבא">‹</button>
+      <button type="button" class="col-month-chevron" (click)="nextMonth()" aria-label="חודש הבא">›</button>
     </div>
 
     <!-- A. תמונת מצב כספית -->
     <section class="col-section">
-      @if (overviewLoading) {
+      @if (overviewLoading && !overview) {
         <div class="col-empty">טוען...</div>
       } @else if (overviewError) {
         <div class="col-error">{{ overviewError }}</div>
       } @else if (overview) {
+        <!-- Switching months re-requests data but must never read as a full
+             page reload -- the previous month's numbers stay visible,
+             gently dimmed, until the new ones arrive (2026-10 UX fix). -->
+        <div class="col-overview-content" [class.col-overview-dimmed]="overviewLoading">
         <!-- Donations + accrued fees -- real for this month regardless of
              whether a Statement has been calculated yet. -->
         @if (overview.accrued.donationCount > 0) {
@@ -81,6 +85,7 @@
               : 'אין נתוני חיוב לתקופה זו.' }}
           </div>
         }
+        </div>
       }
     </section>
 

@@ -134,6 +134,17 @@
 .col-accrued-row span { color: #64748b; }
 .col-accrued-row strong { color: #1e293b; }
 
+/* Month navigation must never look like a full page reload -- keep the
+   previous month's numbers visible, just gently dimmed, while the next
+   month's data is in flight (2026-10 UX fix). */
+.col-overview-content {
+  transition: opacity 0.15s ease;
+}
+.col-overview-dimmed {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .col-section {
   margin-bottom: 26px;
 }
@@ -186,6 +197,7 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  margin-bottom: 16px;
 }
 .col-attn-item {
   border: 1px solid #e5e7eb;
