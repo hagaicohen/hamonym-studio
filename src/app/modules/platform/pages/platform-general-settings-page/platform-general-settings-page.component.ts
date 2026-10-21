@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BillingSettingsService } from '../../services/billing-settings.service';
@@ -26,7 +26,7 @@ type SettingsTab = 'billing' | 'simulation';
   templateUrl: './platform-general-settings-page.component.html',
   styleUrl: './platform-general-settings-page.component.css',
 })
-export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
+export class PlatformGeneralSettingsPageComponent implements OnInit {
   private settingsService = inject(BillingSettingsService);
   private clockService = inject(SimulationClockService);
   private campaignResetService = inject(CampaignResetService);
@@ -82,18 +82,15 @@ export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  // "Hiding the clock must also disable simulated mode and restore real
-  // time. Never leave a hidden simulated clock active" (explicit product
-  // requirement) -- leaving this page is the only way the clock UI becomes
-  // hidden on this screen, so that is the signal. Fire-and-forget: the
-  // component is already being torn down, there is no view left to update,
-  // and the backend call completes independently of this component's
-  // lifecycle (HttpClient requests are not auto-cancelled on destroy).
-  ngOnDestroy(): void {
-    if (this.clockStatus?.overrideActive) {
-      this.clockService.reset().subscribe({ error: () => {} });
-    }
-  }
+  // 2026-10 FINAL spec supersedes the earlier "hiding the clock resets it"
+  // rule: simulated time must now persist across navigation (this
+  // component used to reset it in ngOnDestroy(), firing on every route
+  // change away from this page -- the exact cause of simulated time
+  // silently reverting to real time whenever the admin navigated to
+  // Collection Ops to check the result). The backend Business Clock itself
+  // is the one persistence boundary now; only the explicit "חזור לזמן אמת"
+  // button (resetClock()) or disabling simulation server-side clears an
+  // override.
 
   // Clear, single-glance mode label (explicit product requirement #4).
   get clockModeLabel(): string {

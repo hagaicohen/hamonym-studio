@@ -166,7 +166,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const hh = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
-    return `זמן עסקי: ${dd}.${mm}.${d.getFullYear()} · ${hh}:${min} | סימולציה פעילה`;
+    return `זמן עסקי: ${dd}.${mm}.${d.getFullYear()} | ${hh}:${min} — סימולציה פעילה`;
   }
 
   // "ספטמבר 2026", not a raw date range -- a 28-cutoff period's month is

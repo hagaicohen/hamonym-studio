@@ -215,8 +215,19 @@
   margin-bottom: 10px;
 }
 .sim-clock-inputs .ba-field input {
-  height: 38px;
-  min-width: 160px;
+  height: 42px;
+  min-width: 170px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sim-clock-inputs .ba-field input:focus {
+  outline: none;
+  border-color: #583cd6;
+  box-shadow: 0 0 0 3px rgba(88, 60, 214, 0.12);
 }
 
 /* "חזור לזמן אמת" must be prominent (explicit product requirement) */

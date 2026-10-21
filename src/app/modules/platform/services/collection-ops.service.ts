@@ -34,6 +34,15 @@ export interface FinancialOverview {
   openBalance: number | null;
   carriedOverFromPriorPeriods: { statementCount: number; outstandingTotal: number };
   accrued: AccruedPreview;
+  // 2026-10 FINAL spec: card/MASAV breakdown (routing.resolveCollectionMethod,
+  // read-only) + whether the real 28th-20:00-Israel cutoff for this period
+  // has passed yet, and whether collection has been attempted at all --
+  // drives the "מועד הגבייה הגיע — הגבייה טרם בוצעה" distinction.
+  cutoffPassed: boolean;
+  collectionAttempted: boolean;
+  cardCollected: number;
+  cardOutstanding: number;
+  masavOutstanding: number;
 }
 
 export type NeedsAttentionCategory =

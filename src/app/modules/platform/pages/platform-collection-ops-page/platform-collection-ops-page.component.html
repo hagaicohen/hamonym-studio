@@ -35,21 +35,53 @@
         <!-- Donations + accrued fees -- real for this month regardless of
              whether a Statement has been calculated yet. -->
         @if (overview.accrued.donationCount > 0) {
-          <div class="col-accrued-box">
-            <div class="col-accrued-row">
-              <span>תרומות בתקופה</span>
-              <strong>{{ overview.accrued.donationCount }} · ₪{{ fmtMoney(overview.accrued.grossRaised) }}</strong>
+          <!-- Business result, not the calculation that produced it
+               (2026-10 simplification) -- fee/VAT math still happens
+               exactly as before in accrued.accruedFee/accruedVat, just not
+               spelled out here anymore. -->
+          <div class="col-metrics col-metrics-kpi">
+            <div class="col-metric">
+              <div class="col-metric-label">סך התרומות</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.accrued.grossRaised) }}</div>
+              <div class="col-metric-sub">{{ overview.accrued.donationCount }} תרומות</div>
             </div>
-            <div class="col-accrued-row">
-              <span>עמלת פלטפורמה נצברת (טרם חויב)</span>
-              <strong>₪{{ fmtMoney(overview.accrued.accruedFee) }} + מע״מ ₪{{ fmtMoney(overview.accrued.accruedVat) }} = ₪{{ fmtMoney(overview.accrued.accruedTotal) }}</strong>
+            <div class="col-metric">
+              <div class="col-metric-label">עמלות לגבייה</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.accrued.accruedTotal) }}</div>
+              <div class="col-metric-sub">כולל מע״מ</div>
             </div>
-            @if (overview.accrued.entitiesMissingAccount.length > 0) {
-              <p class="col-note">{{ overview.accrued.entitiesMissingAccount.length }} עמותה/ות עם תרומות בתקופה זו ללא חשבון חיוב פעיל — העמלה שלהן לא נכללת בסכום הנצבר.</p>
-            }
+            <div class="col-metric">
+              <div class="col-metric-label">נגבה בפועל</div>
+              <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.hasStatements ? overview.paidConfirmed : 0) }}</div>
+              <div class="col-metric-sub">{{ overview.hasStatements && (overview.paidConfirmed ?? 0) > 0 ? 'אושר על ידי הספק' : 'טרם בוצעה גבייה' }}</div>
+            </div>
           </div>
+          @if (overview.accrued.entitiesMissingAccount.length > 0) {
+            <p class="col-note">{{ overview.accrued.entitiesMissingAccount.length }} עמותה/ות עם תרומות בתקופה זו ללא חשבון חיוב פעיל — העמלה שלהן לא נכללת בסכום שלמעלה.</p>
+          }
         } @else {
           <div class="col-empty-ok">אין תרומות בתקופה זו.</div>
+        }
+
+        @if (overview.cutoffPassed && !overview.collectionAttempted) {
+          <div class="col-due-banner">מועד הגבייה הגיע — הגבייה טרם בוצעה</div>
+        }
+
+        @if (overview.hasStatements) {
+          <div class="col-metrics col-metrics-method">
+            <div class="col-metric">
+              <div class="col-metric-label">ממתין לגבייה באשראי</div>
+              <div class="col-metric-value col-metric-process">₪{{ fmtMoney(overview.cardOutstanding) }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">נגבה באשראי</div>
+              <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.cardCollected) }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">יתרה למס״ב</div>
+              <div class="col-metric-value col-metric-open">₪{{ fmtMoney(overview.masavOutstanding) }}</div>
+            </div>
+          </div>
         }
 
         @if (overview.hasStatements) {
@@ -372,8 +404,11 @@
           </select>
         </div>
         <div class="col-filter-field col-filter-buttons">
-          <button class="col-btn col-btn-primary" (click)="runHistorySearch()">חיפוש</button>
-          <button class="col-btn" (click)="clearHistoryFilters()">נקה סינון</button>
+          <label class="col-filter-label-spacer" aria-hidden="true">&nbsp;</label>
+          <div class="col-filter-buttons-row">
+            <button class="col-btn col-btn-primary" (click)="runHistorySearch()">חיפוש</button>
+            <button class="col-btn" (click)="clearHistoryFilters()">נקה סינון</button>
+          </div>
         </div>
       </div>
       <p class="col-note">הטווח חל על תקופת החיוב של כל חיוב, לא על תאריך תרומה בודדת.</p>
