@@ -161,7 +161,12 @@
 }
 
 .col-metrics-method {
-  margin-top: 12px;
+  /* Same fix as .col-metrics-kpi: 3 cards, not .col-metrics' own
+     repeat(4,1fr) -- otherwise a blank 4th column keeps the row from
+     reaching full width. */
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .col-section {
