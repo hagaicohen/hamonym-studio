@@ -1,6 +1,7 @@
 ﻿const axios = require('axios');
 const db    = require('../../db/db');
 const emailService = require('../email/email.service');
+const { isFundraisingEligible } = require('../entities/fundraising-eligibility');
 
 // Creates a receipt row for a paid donation (idempotent — a donation can only
 // ever get one receipt, enforced by the UNIQUE(donation_id) constraint) and
@@ -241,30 +242,13 @@ const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded }) => {
-
-  // Embedded OpenFields spike (2026-09-24) — a second, independent gate on
-  // top of the frontend's devOnlyGuard (hostname check). Neither trusts the
-  // other: even if the dev-only route were somehow reached in a real
-  // deployment, this server-side flag (explicit opt-in, unset by default,
-  // never committed — .env is gitignored) still refuses to honor
-  // `embedded:true` there. Found while building this: environment.production
-  // can't be trusted (angular.json has no fileReplacements for the
-  // `production` build config, so environment.ts — production:false,
-  // hardcoded — ships to every build including real production), and this
-  // backend has no NODE_ENV convention at all — so this is a genuinely new,
-  // explicit flag, not a reuse of an existing (nonexistent) one.
-  if (embedded && process.env.ALLOW_EMBEDDED_DONATION_SPIKE !== 'true') {
-    const err = new Error('Embedded checkout spike is not enabled in this environment');
-    err.status = 403;
-    err.code = 'EMBEDDED_SPIKE_DISABLED';
-    throw err;
-  }
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note }) => {
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at, c.rewards,
             e.status AS entity_status, e.is_hidden AS entity_hidden,
+            e.first_approved_at, e.fundraising_restricted_at,
             e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
             e.cardcom_connection_status
      FROM campaigns c
@@ -276,7 +260,14 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const campaign = campaignRes.rows[0];
   if (!campaign) throw new Error('Campaign not found');
 
-  if (campaign.entity_status !== 'active') {
+  // Administrative Status Changes & Notifications policy, Stage 2
+  // (2026-10) — fundraising eligibility is now independent of
+  // entities.status: a suspended or changes_requested entity that was
+  // once approved keeps fundraising. Only (a) never having completed
+  // initial approval, or (b) an explicit fundraising restriction, blocks
+  // this. Error message unchanged on purpose — donations.controller.js's
+  // getDonationErrorMessage() keys off this exact string.
+  if (!isFundraisingEligible(campaign)) {
     throw new Error('Entity not approved');
   }
 
@@ -479,8 +470,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
        rewards, status, is_mock,
-       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17)
+       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id, note
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17,$18)
      RETURNING id`,
     [
       campaignId,
@@ -500,6 +491,12 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       userAgent  || null,
       recurringInstructionId,
       attributedAmbassadorId,
+      // Dedication text (2026-09-24) — reuses the existing donations.note
+      // column (previously write-only from createManualDonation's admin
+      // entry flow); this is its first donor-facing use. Deliberately not
+      // shown anywhere in the entity dashboard yet — that's a separate,
+      // undone piece, not part of this checkout-only change.
+      note || null,
     ]
   );
   const donationId = donationRes.rows[0].id;
@@ -596,6 +593,36 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       Mobile:   donor.phone,
       Products: products,
     },
+    // Checkout V2 Step 3 embed (2026-09-26) — CardCom's hosted LowProfile
+    // page, loaded in an iframe, styled to read as part of Hamonym's own
+    // UI via UIDefinition.CSSUrl (confirmed already enabled on this
+    // entity's account — verified directly against the returned page HTML,
+    // no CardCom request needed; see cardcom-embed.css's own doc comment).
+    // Donor fields already collected in Step 2 are hidden here via
+    // CardCom's own supported mechanism (IsHideCardOwner*/CardOwner*Value),
+    // not CSS — only pre-filled+hidden when we actually have a real value,
+    // so a field CardCom's own terminal config requires is never hidden
+    // empty. Only applied for the embedded flow; the redirect flow's
+    // full-page checkout is unaffected.
+    ...(embedded ? {
+      UIDefinition: {
+        // CardCom's server fetches this at LowProfile render time, so
+        // frontBase (FRONTEND_URL) must resolve publicly — it does once
+        // deployed (see hamonym-app/public/cardcom-embed.css, served as a
+        // static asset at this exact path).
+        CSSUrl: `${frontBase}/cardcom-embed.css`,
+        IsHideCardOwnerName: true,
+        CardOwnerNameValue: donor.name,
+        IsHideCardOwnerPhone: true,
+        CardOwnerPhoneValue: donor.phone,
+        IsHideCardOwnerEmail: true,
+        CardOwnerEmailValue: donor.email,
+        ...(donor.idNumber ? {
+          IsHideCardOwnerIdentityNumber: true,
+          CardOwnerIdValue: donor.idNumber,
+        } : {}),
+      },
+    } : {}),
   };
 
   // TEMPORARY — confirming what actually goes out on the wire to Cardcom,
@@ -640,22 +667,23 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     [cardcomData.LowProfileId, donationId]
   );
 
-  // Embedded OpenFields spike (2026-09-24, isolated — not yet wired into the
-  // real checkout, not yet exercised against a real card) — additive only,
-  // opt-in via `embedded`, never changes the response shape a caller
-  // already relies on today. `lowProfileId` is the ONLY thing the OpenFields
-  // postMessage protocol actually consumes (verified directly against
-  // billing/openfields-form.component.ts's own tokenize(): terminalNumber/
-  // apiName are stored on that component but never referenced anywhere in
-  // its doTransaction payload — only `lowProfileCode`, i.e. this same
-  // LowProfileId, is). No terminal number, no API name, no credentials of
-  // any kind returned here — this is a narrower surface than the already-
+  // Embedded OpenFields support (2026-09-24) — proven against real CardCom
+  // via the (now-removed) manual test harness: card+CVV iframes loaded and
+  // rendered correctly for a real LowProfileId. Reused by Checkout V2 (Step
+  // 3). Additive only, opt-in via `embedded`, never changes the response
+  // shape a caller already relies on today. `lowProfileId` is the ONLY thing
+  // the OpenFields postMessage protocol actually consumes (verified directly
+  // against billing/openfields-form.component.ts's own tokenize():
+  // terminalNumber/apiName are stored on that component but never referenced
+  // anywhere in its doTransaction payload — only `lowProfileCode`, i.e. this
+  // same LowProfileId, is). No terminal number, no API name, no credentials
+  // of any kind returned here — this is a narrower surface than the already-
   // proven billing/init-openfields response, not a copy of it. Webhook/
   // ReturnValue/reconciliation are completely unchanged — this only adds a
   // second way for the SAME already-created LowProfile session to reach the
   // donor: driven via CardCom's iframes instead of a full-page redirect to
-  // `url`. Both fields are still returned together — url stays a usable
-  // fallback for as long as embedded mode is unproven.
+  // `url`. Both fields are still returned together — url stays the checkout
+  // fallback for as long as Checkout V2 (CHECKOUT_V2_ENABLED) is off.
   return {
     url:        cardcomData.Url,
     donationId,
@@ -905,10 +933,12 @@ exports.getReceipt = async (receiptId) => {
   const res = await db.query(
     `SELECT r.id, r.receipt_number, r.amount, r.donor_name, r.donor_email, r.issued_at,
             c.title AS campaign_title,
-            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name
+            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name,
+            d.note
      FROM receipts r
      JOIN campaigns c ON c.id = r.campaign_id
      JOIN entities  e ON e.id = r.entity_id
+     JOIN donations d ON d.id = r.donation_id
      WHERE r.id = $1`,
     [receiptId]
   );
@@ -917,7 +947,7 @@ exports.getReceipt = async (receiptId) => {
 
 exports.getMyDonations = async (userId) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous,
+    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
             r.id AS receipt_id
@@ -941,7 +971,8 @@ exports.getLiveDonations = async (slug, since) => {
     `SELECT d.donor_name AS name,
             d.amount::float AS amount,
             d.completed_at,
-            d.is_anonymous
+            d.is_anonymous,
+            d.note
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = c.entity_id
@@ -991,7 +1022,7 @@ exports.getCampaignDonors = async (slug, period) => {
     db.query(
       `WITH camp AS (
          SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount,
-                d.completed_at, d.is_anonymous
+                d.completed_at, d.is_anonymous, d.note
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
          JOIN entities  e ON e.id = c.entity_id
@@ -1008,6 +1039,7 @@ exports.getCampaignDonors = async (slug, period) => {
          camp.amount,
          camp.completed_at,
          camp.is_anonymous,
+         camp.note,
          (camp.id IN (SELECT id FROM first_ids)) AS is_first
        FROM camp
        WHERE TRUE ${periodClause}
@@ -1179,7 +1211,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
   const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock, d.note,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
@@ -1502,6 +1534,19 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
     [campaignId, entityId]
   );
   if (campRes.rows.length === 0) throw new Error('הקמפיין לא נמצא עבור ישות זו');
+
+  // Administrative Status Changes & Notifications policy, Stage 2
+  // (2026-10) — manual entry writes a 'paid' donation directly (no
+  // CardCom round-trip), so it was the one confirmed path with NO
+  // fundraising-eligibility check at all (closed audit finding). Same
+  // helper, same precedence as createDonation above.
+  const entityRes = await db.query(
+    `SELECT first_approved_at, fundraising_restricted_at FROM entities WHERE id = $1`,
+    [entityId]
+  );
+  if (!entityRes.rows[0] || !isFundraisingEligible(entityRes.rows[0])) {
+    throw new Error('העמותה אינה מורשית לגייס תרומות כעת');
+  }
 
   // Fast path — a sequential retry of an already-committed intent. Not
   // sufficient alone for correctness (a concurrent request could still race
