@@ -152,6 +152,13 @@
   font-weight: 700;
   text-align: center;
 }
+/* Collection actually attempted and failed -- a real exception, not a
+   waiting state, so it reads as red/urgent instead of amber. */
+.col-due-banner-failed {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
 
 .col-metrics-method {
   margin-top: 12px;

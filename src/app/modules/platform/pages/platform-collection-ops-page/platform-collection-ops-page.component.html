@@ -32,28 +32,34 @@
              page reload -- the previous month's numbers stay visible,
              gently dimmed, until the new ones arrive (2026-10 UX fix). -->
         <div class="col-overview-content" [class.col-overview-dimmed]="overviewLoading">
-        <!-- Donations + accrued fees -- real for this month regardless of
-             whether a Statement has been calculated yet. -->
-        @if (overview.accrued.donationCount > 0) {
+        <!-- Donations + fees -- real for this month regardless of whether a
+             Statement has been calculated yet, and never drops to 0 once
+             donations get consumed by a real Statement (2026-10). -->
+        @if (overview.periodDonations.donationCount > 0) {
           <!-- Business result, not the calculation that produced it
                (2026-10 simplification) -- fee/VAT math still happens
-               exactly as before in accrued.accruedFee/accruedVat, just not
+               exactly as before (accrued.accruedFee/accruedVat, or the
+               real statements.fee_amount/vat_amount once billed), just not
                spelled out here anymore. -->
           <div class="col-metrics col-metrics-kpi">
             <div class="col-metric">
               <div class="col-metric-label">סך התרומות</div>
-              <div class="col-metric-value">₪{{ fmtMoney(overview.accrued.grossRaised) }}</div>
-              <div class="col-metric-sub">{{ overview.accrued.donationCount }} תרומות</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.periodDonations.grossRaised) }}</div>
+              <div class="col-metric-sub">{{ overview.periodDonations.donationCount }} תרומות</div>
             </div>
             <div class="col-metric">
               <div class="col-metric-label">עמלות לגבייה</div>
-              <div class="col-metric-value">₪{{ fmtMoney(overview.accrued.accruedTotal) }}</div>
-              <div class="col-metric-sub">כולל מע״מ</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.hasStatements ? overview.totalBilled : overview.accrued.accruedTotal) }}</div>
+              <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל מע״מ' : 'כולל מע״מ · הערכה, טרם חויב' }}</div>
             </div>
             <div class="col-metric">
               <div class="col-metric-label">נגבה בפועל</div>
               <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.hasStatements ? overview.paidConfirmed : 0) }}</div>
-              <div class="col-metric-sub">{{ overview.hasStatements && (overview.paidConfirmed ?? 0) > 0 ? 'אושר על ידי הספק' : 'טרם בוצעה גבייה' }}</div>
+              <div class="col-metric-sub">
+                {{ overview.hasStatements && (overview.paidConfirmed ?? 0) > 0
+                  ? 'אושר על ידי הספק'
+                  : (overview.cardCollectionFailed ? 'גביית האשראי נכשלה' : 'טרם בוצעה גבייה') }}
+              </div>
             </div>
           </div>
           @if (overview.accrued.entitiesMissingAccount.length > 0) {
@@ -63,7 +69,9 @@
           <div class="col-empty-ok">אין תרומות בתקופה זו.</div>
         }
 
-        @if (overview.cutoffPassed && !overview.collectionAttempted) {
+        @if (overview.cardCollectionFailed) {
+          <div class="col-due-banner col-due-banner-failed">גביית האשראי נכשלה — נבדקו כל הניסיונות האפשריים, יתרה פתוחה לטיפול</div>
+        } @else if (overview.cutoffPassed && !overview.collectionAttempted) {
           <div class="col-due-banner">מועד הגבייה הגיע — הגבייה טרם בוצעה</div>
         }
 

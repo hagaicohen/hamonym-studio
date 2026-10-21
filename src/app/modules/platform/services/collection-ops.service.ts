@@ -34,12 +34,19 @@ export interface FinancialOverview {
   openBalance: number | null;
   carriedOverFromPriorPeriods: { statementCount: number; outstandingTotal: number };
   accrued: AccruedPreview;
+  // Real donation total for the period, independent of whether a Statement
+  // has since consumed them -- unlike `accrued` (which only ever reflects
+  // UNconsumed donations, by design), this never drops to 0 just because
+  // billing already ran.
+  periodDonations: { donationCount: number; grossRaised: number };
   // 2026-10 FINAL spec: card/MASAV breakdown (routing.resolveCollectionMethod,
   // read-only) + whether the real 28th-20:00-Israel cutoff for this period
-  // has passed yet, and whether collection has been attempted at all --
-  // drives the "מועד הגבייה הגיע — הגבייה טרם בוצעה" distinction.
+  // has passed yet, whether collection has been attempted, and whether a
+  // card attempt actually failed (exhausted retries) -- drives the due/
+  // failed status banners.
   cutoffPassed: boolean;
   collectionAttempted: boolean;
+  cardCollectionFailed: boolean;
   cardCollected: number;
   cardOutstanding: number;
   masavOutstanding: number;
