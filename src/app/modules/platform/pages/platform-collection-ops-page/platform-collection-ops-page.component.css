@@ -52,6 +52,88 @@
   font-weight: 600;
 }
 
+/* Business-time status line (2026-10) -- reads from the EXISTING
+   simulation-clock service, same data the Simulation tab itself shows. */
+.col-clock-status {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+.col-clock-status-sim {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* Compact month navigation (2026-10, replaces the dropdown) -- any month
+   is navigable regardless of whether billing records exist for it. */
+.col-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.col-month-chevron {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  line-height: 1;
+}
+.col-month-chevron:hover { background: #f8f9ff; border-color: #583cd6; color: #583cd6; }
+.col-month-label-wrap {
+  position: relative;
+}
+.col-month-label {
+  display: block;
+  min-width: 140px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b;
+  cursor: pointer;
+}
+/* Native <input type="month"> rendered transparent and stacked exactly over
+   the label -- clicking the label opens the browser's own month/year
+   picker (requirement: "optional picker when clicking the month label"),
+   with zero new dependencies. */
+.col-month-picker-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+
+.col-accrued-box {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid #e0e7ff;
+  border-radius: 10px;
+  background: #f8f9ff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.col-accrued-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.col-accrued-row span { color: #64748b; }
+.col-accrued-row strong { color: #1e293b; }
+
 .col-section {
   margin-bottom: 26px;
 }

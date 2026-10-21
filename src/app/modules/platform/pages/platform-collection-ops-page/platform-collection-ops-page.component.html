@@ -8,13 +8,17 @@
   </div>
 
   @if (tab === 'overview') {
-    <div class="col-period-row">
-      <label for="periodSelect">תקופת חיוב:</label>
-      <select id="periodSelect" [(ngModel)]="selectedPeriodId" (ngModelChange)="onPeriodChange()">
-        @for (p of periods; track p.id) {
-          <option [value]="p.id">{{ fmtPeriodLabel(p) }}</option>
-        }
-      </select>
+    @if (clockStatus) {
+      <div class="col-clock-status" [class.col-clock-status-sim]="clockStatus.overrideActive">{{ businessTimeStatusLabel }}</div>
+    }
+
+    <div class="col-month-nav">
+      <button type="button" class="col-month-chevron" (click)="prevMonth()" aria-label="חודש קודם">›</button>
+      <div class="col-month-label-wrap">
+        <label class="col-month-label" for="monthPicker">{{ selectedMonthLabel }}</label>
+        <input id="monthPicker" type="month" class="col-month-picker-input" [value]="monthPickerValue" (change)="onMonthPicked($any($event.target).value)" />
+      </div>
+      <button type="button" class="col-month-chevron" (click)="nextMonth()" aria-label="חודש הבא">‹</button>
     </div>
 
     <!-- A. תמונת מצב כספית -->
@@ -24,30 +28,58 @@
       } @else if (overviewError) {
         <div class="col-error">{{ overviewError }}</div>
       } @else if (overview) {
-        <div class="col-metrics">
-          <div class="col-metric">
-            <div class="col-metric-label">סך החיובים</div>
-            <div class="col-metric-value">₪{{ fmtMoney(overview.totalBilled) }}</div>
+        <!-- Donations + accrued fees -- real for this month regardless of
+             whether a Statement has been calculated yet. -->
+        @if (overview.accrued.donationCount > 0) {
+          <div class="col-accrued-box">
+            <div class="col-accrued-row">
+              <span>תרומות בתקופה</span>
+              <strong>{{ overview.accrued.donationCount }} · ₪{{ fmtMoney(overview.accrued.grossRaised) }}</strong>
+            </div>
+            <div class="col-accrued-row">
+              <span>עמלת פלטפורמה נצברת (טרם חויב)</span>
+              <strong>₪{{ fmtMoney(overview.accrued.accruedFee) }} + מע״מ ₪{{ fmtMoney(overview.accrued.accruedVat) }} = ₪{{ fmtMoney(overview.accrued.accruedTotal) }}</strong>
+            </div>
+            @if (overview.accrued.entitiesMissingAccount.length > 0) {
+              <p class="col-note">{{ overview.accrued.entitiesMissingAccount.length }} עמותה/ות עם תרומות בתקופה זו ללא חשבון חיוב פעיל — העמלה שלהן לא נכללת בסכום הנצבר.</p>
+            }
           </div>
-          <div class="col-metric">
-            <div class="col-metric-label" title="גבייה שאושרה בפועל על ידי הספק (כרטיס אשראי)">נגבה</div>
-            <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.paidConfirmed) }}</div>
-          </div>
-          <div class="col-metric">
-            <div class="col-metric-label" title="נשלח לגבייה (כרטיס פתוח, או קובץ מס״ב שנשלח לבנק) — התוצאה עדיין לא ידועה">בתהליך</div>
-            <div class="col-metric-value col-metric-process">₪{{ fmtMoney(overview.inProcess) }}</div>
-          </div>
-          <div class="col-metric">
-            <div class="col-metric-label">יתרה פתוחה</div>
-            <div class="col-metric-value col-metric-open">₪{{ fmtMoney(overview.openBalance) }}</div>
-          </div>
-        </div>
-
-        @if (overview.carriedOverFromPriorPeriods.statementCount > 0) {
-          <p class="col-note">+ ₪{{ fmtMoney(overview.carriedOverFromPriorPeriods.outstandingTotal) }} חוב פתוח מתקופות קודמות (לא נכלל בסכומים שלמעלה)</p>
+        } @else {
+          <div class="col-empty-ok">אין תרומות בתקופה זו.</div>
         }
-        @if (draftNotice) {
-          <p class="col-note">{{ draftNotice.count }} חיוב{{ draftNotice.count > 1 ? 'ים' : '' }} בטיוטה בסך ₪{{ fmtMoney(draftNotice.total) }} — חישוב לא מאושר, אינו חוב לגביה, לכן לא נכלל בסכומים שלמעלה</p>
+
+        @if (overview.hasStatements) {
+          <div class="col-metrics">
+            <div class="col-metric">
+              <div class="col-metric-label">סך החיובים</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.totalBilled) }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label" title="גבייה שאושרה בפועל על ידי הספק (כרטיס אשראי)">נגבה</div>
+              <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.paidConfirmed) }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label" title="נשלח לגבייה (כרטיס פתוח, או קובץ מס״ב שנשלח לבנק) — התוצאה עדיין לא ידועה">בתהליך</div>
+              <div class="col-metric-value col-metric-process">₪{{ fmtMoney(overview.inProcess) }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">יתרה פתוחה</div>
+              <div class="col-metric-value col-metric-open">₪{{ fmtMoney(overview.openBalance) }}</div>
+            </div>
+          </div>
+
+          @if (overview.carriedOverFromPriorPeriods.statementCount > 0) {
+            <p class="col-note">+ ₪{{ fmtMoney(overview.carriedOverFromPriorPeriods.outstandingTotal) }} חוב פתוח מתקופות קודמות (לא נכלל בסכומים שלמעלה)</p>
+          }
+          @if (draftNotice) {
+            <p class="col-note">{{ draftNotice.count }} חיוב{{ draftNotice.count > 1 ? 'ים' : '' }} בטיוטה בסך ₪{{ fmtMoney(draftNotice.total) }} — חישוב לא מאושר, אינו חוב לגביה, לכן לא נכלל בסכומים שלמעלה</p>
+          }
+        } @else {
+          <div class="col-empty">
+            {{ overview.accrued.donationCount > 0
+              ? 'טרם חושב חיוב לתקופה זו — הסכומים שלמעלה הם הערכה בלבד, לא חוב בפועל.'
+              : 'אין נתוני חיוב לתקופה זו.' }}
+          </div>
         }
       }
     </section>

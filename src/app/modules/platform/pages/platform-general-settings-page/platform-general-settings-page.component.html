@@ -46,8 +46,8 @@
 
   @if (tab === 'simulation') {
     <!-- A. שעון עסקי -->
-    <div class="plat-card">
-      <div class="gs-card-title">שעון עסקי (Business Clock)</div>
+    <div class="plat-card sim-clock-card">
+      <div class="gs-card-title">שעון עסקי</div>
       @if (clockLoading) {
         <div class="plat-loading">טוען...</div>
       } @else if (clockError) {
@@ -59,36 +59,33 @@
           </div>
         }
 
-        <div class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</div>
-
-        <div class="sim-time-row">
-          <div class="sim-time-field">
-            <span class="sim-time-label">זמן עסקי אפקטיבי</span>
-            <span class="sim-time-value">{{ fmtDateTime(clockStatus.businessNow) }}</span>
-          </div>
-          <div class="sim-time-field">
-            <span class="sim-time-label">זמן אמת</span>
-            <span class="sim-time-value">{{ fmtDateTime(clockStatus.realNow) }}</span>
-          </div>
+        <div class="sim-clock-status-row">
+          <span class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</span>
+          <span class="sim-clock-effective">{{ fmtDateTime(clockStatus.businessNow) }}</span>
         </div>
+        @if (clockStatus.overrideActive) {
+          <p class="sim-clock-realtime-note">זמן אמת בפועל: {{ fmtDateTime(clockStatus.realNow) }}</p>
+        }
 
-        <div class="ba-form">
-          <div class="ba-form-fields">
-            <label class="ba-field">
-              <span>קביעת תאריך ושעה מדומים</span>
-              <input type="datetime-local" [(ngModel)]="fixedDatetimeInput" [disabled]="!clockStatus.simulationEnabled" />
-            </label>
-          </div>
-          <p class="gs-vat-note">קביעת זמן עסקי מדומה משפיעה רק על החלטות עסקיות (למשל מועד חיתוך חיוב, הכנת מס״ב) — לעולם לא על חיובים אמיתיים, שליחת מיילים או פנייה לספק הסליקה.</p>
-          @if (clockActionError) {
-            <div class="ops-action-error">{{ clockActionError }}</div>
-          }
-          <div class="ba-form-actions">
-            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm sim-reset-btn" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" (click)="resetClock()">חזור לזמן אמת</button>
-            <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="!clockStatus.simulationEnabled || clockActionBusy || !fixedDatetimeInput" (click)="setClockFixed()">
-              {{ clockActionBusy ? 'מעדכן...' : 'קבע זמן מדומה' }}
-            </button>
-          </div>
+        <div class="sim-clock-inputs">
+          <label class="ba-field">
+            <span>תאריך עסקי</span>
+            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="!clockStatus.simulationEnabled" />
+          </label>
+          <label class="ba-field">
+            <span>שעה עסקית</span>
+            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="!clockStatus.simulationEnabled" />
+          </label>
+        </div>
+        <p class="gs-vat-note">קביעת זמן עסקי מדומה משפיעה רק על החלטות עסקיות (למשל מועד חיתוך חיוב, הכנת מס״ב) — לעולם לא על חיובים אמיתיים, שליחת מיילים או פנייה לספק הסליקה.</p>
+        @if (clockActionError) {
+          <div class="ops-action-error">{{ clockActionError }}</div>
+        }
+        <div class="ba-form-actions">
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm sim-reset-btn" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" (click)="resetClock()">חזור לזמן אמת</button>
+          <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="!clockStatus.simulationEnabled || clockActionBusy || !fixedDateInput || !fixedTimeInput" (click)="setClockFixed()">
+            {{ setClockButtonLabel }}
+          </button>
         </div>
       }
     </div>

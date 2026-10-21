@@ -8,14 +8,32 @@ function authHeaders(): HttpHeaders {
 }
 
 // Mirrors collection-ops.service.js#getFinancialOverview's exact return shape.
+// 2026-10 (month-nav fix): period is now resolved by calendar month, not a
+// caller-supplied billing_periods id -- a month with no Statement yet is a
+// normal response (hasStatements:false), never an error. The statement-
+// derived fields are null (not 0) in that case so the UI can tell "nothing
+// billed yet" apart from "billed exactly ₪0". `accrued` is always present --
+// a read-only, pre-Statement estimate computed straight from eligible
+// donations using the same fee/VAT math calculation.service.js uses.
+export interface AccruedPreview {
+  donationCount: number;
+  entitiesWithActivity: number;
+  grossRaised: number;
+  accruedFee: number;
+  accruedVat: number;
+  accruedTotal: number;
+  entitiesMissingAccount: string[];
+}
 export interface FinancialOverview {
-  period: { id: string; periodStart: string; periodEnd: string };
-  statementCount: number;
-  totalBilled: number;
-  paidConfirmed: number;
-  inProcess: number;
-  openBalance: number;
+  period: { id: string | null; periodStart: string; periodEnd: string };
+  hasStatements: boolean;
+  statementCount: number | null;
+  totalBilled: number | null;
+  paidConfirmed: number | null;
+  inProcess: number | null;
+  openBalance: number | null;
   carriedOverFromPriorPeriods: { statementCount: number; outstandingTotal: number };
+  accrued: AccruedPreview;
 }
 
 export type NeedsAttentionCategory =
@@ -100,8 +118,8 @@ export class CollectionOpsService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/api/platform/collection-ops`;
 
-  getOverview(periodId: string): Observable<{ overview: FinancialOverview }> {
-    return this.http.get<{ overview: FinancialOverview }>(`${this.base}/overview?periodId=${periodId}`, { headers: authHeaders() });
+  getOverview(year: number, month: number): Observable<{ overview: FinancialOverview }> {
+    return this.http.get<{ overview: FinancialOverview }>(`${this.base}/overview?year=${year}&month=${month}`, { headers: authHeaders() });
   }
 
   getNeedsAttention(): Observable<NeedsAttention> {

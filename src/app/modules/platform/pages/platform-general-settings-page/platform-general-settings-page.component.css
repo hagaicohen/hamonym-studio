@@ -181,7 +181,6 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  margin-bottom: 12px;
   background: #f0fdf4;
   color: #166534;
 }
@@ -189,25 +188,35 @@
   background: #fffbeb;
   color: #92400e;
 }
-.sim-time-row {
+
+/* 2026-10 redesign: status badge + effective date/time read together on
+   one line, modeled on the compact status line now also shown at the top
+   of Collection Ops (same clockStatus data, one source of truth). */
+.sim-clock-status-row {
   display: flex;
-  gap: 24px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
 }
-.sim-time-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.sim-clock-effective {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
 }
-.sim-time-label {
-  font-size: 11px;
+.sim-clock-realtime-note {
+  margin: 0 0 14px;
+  font-size: 12px;
   color: #64748b;
 }
-.sim-time-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1e293b;
+.sim-clock-inputs {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.sim-clock-inputs .ba-field input {
+  height: 38px;
+  min-width: 160px;
 }
 
 /* "חזור לזמן אמת" must be prominent (explicit product requirement) */

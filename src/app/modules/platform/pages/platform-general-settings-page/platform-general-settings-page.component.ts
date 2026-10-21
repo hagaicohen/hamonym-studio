@@ -59,7 +59,11 @@ export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
   clockStatus: SimulationClockStatus | null = null;
   clockLoading = true;
   clockError: string | null = null;
-  fixedDatetimeInput = '';
+  // Split date/time controls (2026-10 redesign) -- a modern native
+  // <input type="date"> + <input type="time"> pair reads far better than a
+  // single combined datetime-local field, with zero new dependencies.
+  fixedDateInput = '';
+  fixedTimeInput = '';
   clockActionBusy = false;
   clockActionError: string | null = null;
 
@@ -94,8 +98,15 @@ export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
   // Clear, single-glance mode label (explicit product requirement #4).
   get clockModeLabel(): string {
     if (!this.clockStatus) return '';
-    if (!this.clockStatus.overrideActive) return 'מצב פעיל: זמן אמת (ברירת מחדל)';
-    return 'מצב פעיל: זמן מדומה';
+    return this.clockStatus.overrideActive ? 'זמן מדומה' : 'זמן אמת';
+  }
+
+  // Primary action label switches once an override is already active
+  // (2026-10 redesign: "הפעל זמן מדומה" the first time, "עדכן זמן מדומה"
+  // to move an already-active simulated clock forward/back).
+  get setClockButtonLabel(): string {
+    if (this.clockActionBusy) return 'מעדכן...';
+    return this.clockStatus?.overrideActive ? 'עדכן זמן מדומה' : 'הפעל זמן מדומה';
   }
 
   fmtDateTime(iso: string): string {
@@ -106,10 +117,10 @@ export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
   }
 
   setClockFixed(): void {
-    if (this.clockActionBusy || !this.fixedDatetimeInput || !this.clockStatus?.simulationEnabled) return;
+    if (this.clockActionBusy || !this.fixedDateInput || !this.fixedTimeInput || !this.clockStatus?.simulationEnabled) return;
     this.clockActionBusy = true;
     this.clockActionError = null;
-    const iso = new Date(this.fixedDatetimeInput).toISOString();
+    const iso = new Date(`${this.fixedDateInput}T${this.fixedTimeInput}`).toISOString();
     this.clockService.setFixed(iso).subscribe({
       next: (res) => { this.clockActionBusy = false; this.clockStatus = res; },
       error: (err) => {
@@ -124,7 +135,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit, OnDestroy {
     this.clockActionBusy = true;
     this.clockActionError = null;
     this.clockService.reset().subscribe({
-      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; this.fixedDatetimeInput = ''; },
+      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; this.fixedDateInput = ''; this.fixedTimeInput = ''; },
       error: (err) => {
         this.clockActionBusy = false;
         this.clockActionError = err?.error?.error || 'האיפוס נכשל';
