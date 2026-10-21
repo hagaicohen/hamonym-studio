@@ -10,6 +10,7 @@
           {{ toast.item.isAnonymous ? 'תורם אנונימי' : toast.item.name }}
         </div>
         <div class="toast-amount">תרם {{ toast.item.amount | number:'1.0-0' }} ₪</div>
+        <div class="toast-note" *ngIf="toast.item.note">{{ toast.item.note }}</div>
         <div class="toast-time">{{ timeAgo(toast.item.completedAt) }}</div>
       </div>
     </div>

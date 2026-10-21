@@ -480,6 +480,13 @@
   color: #94a3b8;
 }
 
+.cv2-dedication-note {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
 .cv2-field-input {
   padding: 13px 14px;
   border: 1.5px solid #e2e8f0;

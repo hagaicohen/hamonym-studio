@@ -45,6 +45,7 @@ interface Donation {
   is_mock:        boolean;
   campaign_title: string;
   campaign_slug:  string;
+  note?: string | null;
 }
 
 type Period = 'month' | 'last_month' | 'quarter' | 'all';

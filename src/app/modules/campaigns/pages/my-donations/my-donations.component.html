@@ -150,6 +150,9 @@
             <div class="md-item-body">
               <div class="md-item-campaign">{{ d.campaign_title }}</div>
               <div class="md-item-entity">{{ d.entity_name }} · {{ fmtDate(d.completed_at) }}</div>
+              @if (d.note) {
+                <div class="md-item-note">{{ d.note }}</div>
+              }
             </div>
             <div class="md-item-amount">{{ fmtMoney(d.amount) }}</div>
             @if (d.receipt_id) {

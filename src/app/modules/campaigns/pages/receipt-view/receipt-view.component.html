@@ -49,6 +49,10 @@
           <span class="receipt-label">סכום התרומה</span>
           <span class="receipt-value receipt-amount">{{ formattedAmount }}</span>
         </div>
+        <div class="receipt-row" *ngIf="receipt.note">
+          <span class="receipt-label">הקדשה</span>
+          <span class="receipt-value">{{ receipt.note }}</span>
+        </div>
       </div>
 
       <p class="receipt-footer-note">

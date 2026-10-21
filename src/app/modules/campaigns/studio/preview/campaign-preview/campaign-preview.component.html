@@ -2063,6 +2063,7 @@
           </div>
           <div class="hm-donor-list-info">
             <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+            <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
             <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
           </div>
           <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
@@ -2088,6 +2089,7 @@
                 <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
                 <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
               </div>
+              <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
               <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
             </div>
           </div>
@@ -2166,6 +2168,7 @@
                     <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
                     <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
                   </div>
+                  <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
                   <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
                 </div>
               </div>
@@ -2186,6 +2189,7 @@
               </div>
               <div class="hm-donor-list-info">
                 <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+                <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
                 <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
               </div>
               <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">

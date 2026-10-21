@@ -9,6 +9,7 @@ export interface Donor {
   completedAt: Date;
   isAnonymous: boolean;
   isFirst: boolean;
+  note?: string | null;
 }
 
 export interface TopDonor {
@@ -23,6 +24,7 @@ export interface DonationToastItem {
   amount: number;
   completedAt: Date;
   isAnonymous: boolean;
+  note?: string | null;
 }
 
 export interface DonationPayload {
@@ -105,6 +107,7 @@ export interface Receipt {
   entity_name: string;
   entity_logo: string | null;
   legal_name: string | null;
+  note?: string | null;
 }
 
 // Checkout V2 OpenFields payment-verification polling (2026-09-27) — the
@@ -130,6 +133,7 @@ export interface MyDonation {
   entity_name: string;
   entity_logo: string | null;
   receipt_id: string | null;
+  note?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -151,6 +155,7 @@ export class DonationService {
         completedAt: new Date(d.completed_at),
         isAnonymous: d.is_anonymous,
         isFirst: d.is_first,
+        note: d.note,
       })),
       topDonors: (r.topDonors ?? []).map((t: any) => ({ name: t.name, total: t.total })),
     })));
@@ -164,6 +169,7 @@ export class DonationService {
       amount: parseFloat(d.amount),
       completedAt: new Date(d.completed_at),
       isAnonymous: d.is_anonymous,
+      note: d.note,
     }))));
   }
 
