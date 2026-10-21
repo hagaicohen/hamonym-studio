@@ -242,6 +242,20 @@ app.use(
 
 /*
 |--------------------------------------------------------------------------
+| TEMPORARY — CardCom OpenFields entity-credentials feasibility POC
+| (2026-09-27). Isolated from all production payment code -- see
+| modules/dev/openfields-poc.controller.js's own header comment. Remove
+| this mount + that module + the frontend dev page together once the
+| investigation closes.
+|--------------------------------------------------------------------------
+*/
+app.use(
+  '/api/dev/openfields-poc',
+  require('./modules/dev/openfields-poc.routes')
+);
+
+/*
+|--------------------------------------------------------------------------
 | START SERVER
 |--------------------------------------------------------------------------
 */
@@ -262,7 +276,17 @@ const server = app.listen(
     // Off by default — see docs/CARDCOM_OPERATIONAL_PROCESSES.md Part י'.
     // No runOnInit: jobs wait for their own next scheduled tick rather than
     // firing on every server start/deploy.
-    if (process.env.ENABLE_JOB_SCHEDULER === 'true') {
+    //
+    // Defense in depth (2026-10, simulation clock activation): never start
+    // the real scheduler in a process where business time is simulated.
+    // Every registered job reads clock.now() for its business-time
+    // decision (Phase A) -- if HAMONYM_SIMULATION_MODE were ever 'on'
+    // together with ENABLE_JOB_SCHEDULER='true' in the same process, a
+    // REAL scheduled tick would make a REAL decision (e.g. "has the 28th
+    // cutoff passed") against a FAKE date, against the real database. This
+    // can never be a legitimate combination -- a simulation deployment has
+    // no business running the real production job schedule at all.
+    if (process.env.ENABLE_JOB_SCHEDULER === 'true' && !require('./lib/clock').isSimulationEnabled()) {
       require('./jobs/scheduler').start();
     }
 

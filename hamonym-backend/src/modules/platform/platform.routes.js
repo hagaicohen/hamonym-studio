@@ -74,4 +74,13 @@ router.use('/billing-settings', require('./billing-settings/billing-settings.rou
 // wiring + MASAV manual flow. See billing-ops.routes.js.
 router.use('/billing-ops', require('./billing-ops/billing-ops.routes'));
 
+// Simulation Clock (2026-10) — Super Admin access to the EXISTING business
+// clock (src/lib/clock.js). GET is always safe; every write is gated by
+// clock.js's own isSimulationEnabled() check, never by this route alone.
+router.use('/simulation-clock', require('./simulation-clock/simulation-clock.routes'));
+
+// Campaign Donations Reset (2026-10) — Super Admin "סימולציה" tab, tool B.
+// See campaign-reset.service.js for the reconciliation logic.
+router.use('/campaign-reset', require('./campaign-reset/campaign-reset.routes'));
+
 module.exports = router;
