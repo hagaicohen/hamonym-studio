@@ -26,6 +26,7 @@ import {
   FinancialReportRow,
 } from '../../services/collection-ops.service';
 import { EntityComboboxComponent, ComboboxEntity } from '../../components/entity-combobox/entity-combobox.component';
+import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
 
 type Tab = 'overview' | 'history' | 'reports';
 type ReportPeriodMode = 'period' | 'range' | 'all';
@@ -49,6 +50,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   private financeOps = inject(FinanceOpsService);
   private collectionOps = inject(CollectionOpsService);
   private billingProvisioning = inject(BillingProvisioningService);
+  private simulationClock = inject(SimulationClockService);
   private router = inject(Router);
 
   // Reused by both the "מס״ב חסום" needs-attention link and the "הגדרות
@@ -66,19 +68,46 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   // --- Period selector (shared by Overview + Reports) ------------------
+  // 2026-10 (month-nav fix): navigation is now driven by selectedYear/
+  // selectedMonth, NOT by which billing_periods rows happen to already
+  // exist -- a month with no Statement yet must stay selectable (see
+  // collection-ops.service.js#getFinancialOverview's own comment). The
+  // Reports tab's own "period mode" dropdown is intentionally left as-is,
+  // still sourced from `periods` (billingOps.listPeriods()) -- a report for
+  // a month with nothing billed isn't a real use case there, out of scope
+  // for this fix.
   periods: BillingPeriod[] = [];
   selectedPeriodId: string | null = null;
+  selectedYear = 0;
+  selectedMonth = 0;
+
+  // Business-time status (reuses the EXISTING simulation-clock service/tab
+  // verbatim -- no new clock) -- drives both the compact status line and
+  // which month this page defaults to on load.
+  clockStatus: SimulationClockStatus | null = null;
 
   ngOnInit(): void {
-    this.billingOps.listPeriods().subscribe({
+    this.billingOps.listPeriods().subscribe({ next: (res) => { this.periods = res.periods; } });
+
+    this.simulationClock.getStatus().subscribe({
       next: (res) => {
-        this.periods = res.periods;
-        if (res.periods.length > 0) {
-          this.selectedPeriodId = res.periods[0].id;
-          this.loadOverviewAndStatements();
-        }
+        this.clockStatus = res;
+        const businessNow = new Date(res.businessNow);
+        this.selectedYear = businessNow.getFullYear();
+        this.selectedMonth = businessNow.getMonth() + 1;
+        this.loadOverviewAndStatements();
+      },
+      error: () => {
+        // Clock status itself failing must not block the page -- fall back
+        // to real wall-clock "now", same default the clock would report in
+        // non-simulated mode anyway.
+        const now = new Date();
+        this.selectedYear = now.getFullYear();
+        this.selectedMonth = now.getMonth() + 1;
+        this.loadOverviewAndStatements();
       },
     });
+
     this.loadNeedsAttention();
     this.loadSystemActivity();
     // Loaded once, eagerly -- reused by "כל העמותות" below AND by the
@@ -89,11 +118,56 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   onPeriodChange(): void {
-    this.loadOverviewAndStatements();
+    // Reports tab's own dropdown still drives Reports directly.
     if (this.tab === 'reports') this.runReportPreview();
   }
 
+  prevMonth(): void {
+    this.selectedMonth--;
+    if (this.selectedMonth < 1) { this.selectedMonth = 12; this.selectedYear--; }
+    this.loadOverviewAndStatements();
+  }
+
+  nextMonth(): void {
+    this.selectedMonth++;
+    if (this.selectedMonth > 12) { this.selectedMonth = 1; this.selectedYear++; }
+    this.loadOverviewAndStatements();
+  }
+
+  // Bound to the optional native <input type="month"> picker the month
+  // label opens -- value is "YYYY-MM".
+  onMonthPicked(value: string): void {
+    if (!value) return;
+    const [y, m] = value.split('-').map(Number);
+    if (!y || !m) return;
+    this.selectedYear = y;
+    this.selectedMonth = m;
+    this.loadOverviewAndStatements();
+  }
+
+  get monthPickerValue(): string {
+    return `${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}`;
+  }
+
   private readonly HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+  get selectedMonthLabel(): string {
+    return `${this.HEBREW_MONTHS[this.selectedMonth - 1]} ${this.selectedYear}`;
+  }
+
+  // Compact business-time status line reused at the top of this page
+  // (2026-10) -- same clockStatus the Simulation tab itself reads, never a
+  // second source of truth for "what time does the system think it is".
+  get businessTimeStatusLabel(): string {
+    if (!this.clockStatus) return '';
+    if (!this.clockStatus.overrideActive) return 'זמן עסקי: זמן אמת';
+    const d = new Date(this.clockStatus.businessNow);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `זמן עסקי: ${dd}.${mm}.${d.getFullYear()} | ${hh}:${min} — סימולציה פעילה`;
+  }
 
   // "ספטמבר 2026", not a raw date range -- a 28-cutoff period's month is
   // approximated by its period_start's calendar month, same as how the
@@ -197,21 +271,42 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   overviewLoading = false;
   overviewError: string | null = null;
 
+  get remainingCollectionBalance(): number {
+    return (this.overview?.openBalance ?? 0) + (this.overview?.inProcess ?? 0);
+  }
+
+  get collectionPercentage(): number | null {
+    const overview = this.overview;
+    if (!overview?.hasStatements || !overview.totalBilled || overview.totalBilled <= 0 || overview.paidConfirmed === null) return null;
+    return overview.paidConfirmed / overview.totalBilled * 100;
+  }
+
   loadOverviewAndStatements(): void {
-    if (!this.selectedPeriodId) return;
+    if (!this.selectedYear || !this.selectedMonth) return;
     this.overviewLoading = true;
     this.overviewError = null;
-    this.collectionOps.getOverview(this.selectedPeriodId).subscribe({
+    const requestedYear = this.selectedYear;
+    const requestedMonth = this.selectedMonth;
+    this.collectionOps.getOverview(requestedYear, requestedMonth).subscribe({
       next: (res) => {
+        // A fast double-navigation (prev/next clicked twice before the
+        // first response lands) must not let the stale response overwrite
+        // the month the admin is actually looking at now.
+        if (requestedYear !== this.selectedYear || requestedMonth !== this.selectedMonth) return;
         this.overview = res.overview;
+        this.selectedPeriodId = res.overview.period.id;
         this.overviewLoading = false;
+        this.loadStatements();
       },
       error: () => {
+        if (requestedYear !== this.selectedYear || requestedMonth !== this.selectedMonth) return;
+        // Never silently change the selected month on a failed call -- the
+        // admin stays on the month they navigated to, with the error shown
+        // and the previous month's data (if any) left visible underneath.
         this.overviewLoading = false;
         this.overviewError = 'שגיאה בטעינת תמונת המצב הכספית';
       },
     });
-    this.loadStatements();
   }
 
   // --- B. דורש טיפולך -----------------------------------------------------
@@ -228,6 +323,16 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   resolutionType: ResolutionType = 'resolve_no_overpayment';
   resolveReason = '';
   resolveEvidenceNotes = '';
+  manualRetryItem: NeedsAttentionItem | null = null;
+  private manualRetryDialog: HTMLDialogElement | null = null;
+  manualRetryReason = '';
+  manualRetryResult: string | null = null;
+  get attemptSummary(): { total: number; failed: number; succeeded: number; unresolved: number } {
+    const attempts = this.selectedStatement?.attempts ?? [];
+    const failed = attempts.filter((a) => ['declined', 'technical_failure'].includes(a.status)).length;
+    const succeeded = attempts.filter((a) => a.status === 'succeeded').length;
+    return { total: attempts.length, failed, succeeded, unresolved: attempts.length - failed - succeeded };
+  }
   attentionActionBusy = false;
   attentionActionError: string | null = null;
 
@@ -247,6 +352,8 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   toggleItem(item: NeedsAttentionItem): void {
+    if (this.attentionActionBusy) return;
+    this.manualRetryReason = '';
     this.openItem = this.openItem === item ? null : item;
     this.approveReason = '';
     this.overrideReason = '';
@@ -254,6 +361,53 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     this.resolveEvidenceNotes = '';
     this.resolutionType = 'resolve_no_overpayment';
     this.attentionActionError = null;
+  }
+
+  openManualRetry(item: NeedsAttentionItem, dialog: HTMLDialogElement): void {
+    if (this.attentionActionBusy || !item.manualRetryEligible || !item.latestAttemptId) return;
+    this.manualRetryItem = item;
+    this.manualRetryReason = '';
+    this.attentionActionError = null;
+    this.manualRetryDialog = dialog;
+    dialog.showModal();
+  }
+
+  closeManualRetry(): void {
+    if (this.attentionActionBusy) return;
+    this.manualRetryDialog?.close();
+    this.manualRetryDialog = null;
+    this.manualRetryItem = null;
+    this.manualRetryReason = '';
+  }
+
+  retryCardManually(item: NeedsAttentionItem): void {
+    if (this.attentionActionBusy || this.manualRetryItem !== item || !item.manualRetryEligible || !item.latestAttemptId) return;
+    const reason = this.manualRetryReason.trim();
+    if (!reason) { this.attentionActionError = 'נדרשת סיבה לניסיון הגבייה הידני'; return; }
+    this.attentionActionBusy = true;
+    this.attentionActionError = null;
+    this.manualRetryResult = null;
+    this.billingOps.retryCardManually(item.statementId, reason, item.latestAttemptId, item.amount).subscribe({
+      next: ({ result }) => {
+        this.attentionActionBusy = false;
+        this.closeManualRetry();
+        this.openItem = null;
+        this.manualRetryResult = result.skipped
+          ? 'לא בוצע חיוב: מצב החוב השתנה או שקיימת חסימת גבייה. יש לבדוק את ההיסטוריה לפני ניסיון נוסף.'
+          : result.outcome === 'succeeded' ? 'הגבייה הצליחה ואושרה על ידי CardCom.'
+          : result.outcome === 'ambiguous' ? 'תוצאת הגבייה אינה ודאית. אין לנסות שוב עד לבירור מול הספק.'
+          : result.outcome === 'declined' ? 'CardCom דחה את ניסיון הגבייה. התוצאה נשמרה בהיסטוריה.'
+          : 'ניסיון הגבייה נכשל טכנית. התוצאה נשמרה בהיסטוריה.';
+        this.refreshDrawer();
+      },
+      error: () => {
+        this.attentionActionBusy = false;
+        this.closeManualRetry();
+        this.manualRetryResult = 'לא ניתן לאשר את תוצאת הבקשה. יש לבדוק את היסטוריית הניסיונות לפני ניסיון נוסף.';
+        this.openItem = null;
+        this.refreshDrawer();
+      },
+    });
   }
 
   // "הצעות מס״ב מחכות לאישור" -- reuses FinanceOpsService#approveMasavProposal verbatim.
@@ -431,7 +585,13 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   statusFilter = '';
 
   loadStatements(): void {
-    if (!this.selectedPeriodId) return;
+    if (!this.selectedPeriodId) {
+      // No billing_periods row for this month yet -- a real, normal state
+      // (see overview.hasStatements), not an error. Clear any stale rows
+      // left over from a previously-selected month.
+      this.statements = [];
+      return;
+    }
     this.statementsLoading = true;
     this.billingOps.listStatements({ periodId: this.selectedPeriodId }).subscribe({
       next: (res) => { this.statements = res.statements; this.statementsLoading = false; },
@@ -447,7 +607,29 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   statementOutstanding(s: StatementListItem): number {
-    return Number(s.total_due) - Number(s.collected);
+    return s.outstanding != null ? Number(s.outstanding) : Number(s.total_due) - Number(s.collected);
+  }
+
+  confirmedCollectionMethod(s: StatementListItem): string {
+    const methods = s.confirmed_collection_methods;
+    if (!methods) return Number(s.collected) > 0 ? 'נתון לא זמין' : 'טרם נגבה';
+    if (methods.includes('card') && methods.includes('masav')) return 'אשראי + מס״ב';
+    if (methods.includes('card')) return 'אשראי';
+    if (methods.includes('masav')) return 'מס״ב';
+    return Number(s.collected) > 0 ? 'נתון לא זמין' : 'טרם נגבה';
+  }
+
+  confirmedCollectionDate(s: StatementListItem): string {
+    if (s.latest_business_collection_at) {
+      const instant = new Date(s.latest_business_collection_at);
+      const date = new Intl.DateTimeFormat('de-DE', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric' }).format(instant);
+      const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
+      return `${date} ${time}`;
+    }
+    if (!s.latest_collection_at) return '—';
+    return new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric',
+    }).format(new Date(s.latest_collection_at));
   }
 
   // "סך החיובים" vs "₪38.90" draft-table mismatch (2026-10 review): drafts
@@ -496,7 +678,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     if (this.selectedStatement) this.openStatement(this.selectedStatement.id);
     this.loadStatements();
     this.loadNeedsAttention();
-    if (this.selectedPeriodId) this.loadOverviewAndStatements();
+    this.loadOverviewAndStatements();
   }
 
   approveStatementAction(): void {

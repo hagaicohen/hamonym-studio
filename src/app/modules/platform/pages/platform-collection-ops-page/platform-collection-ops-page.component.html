@@ -1,3 +1,25 @@
+<dialog #retryDialog class="col-retry-modal" dir="rtl" aria-labelledby="retry-title" aria-describedby="retry-warning"
+  (cancel)="$event.preventDefault(); closeManualRetry()">
+  @if (manualRetryItem; as item) {
+    <h3 id="retry-title">נסה לגבות שוב באשראי</h3>
+    <p class="col-retry-entity">{{ item.entityName }}</p>
+    <dl class="col-retry-summary">
+      <div><dt>יתרה פתוחה</dt><dd>₪{{ fmtMoney(item.amount) }}</dd></div>
+      <div><dt>ניסיונות קודמים</dt><dd>{{ item.previousAttempts }}</dd></div>
+      <div><dt>סכום לחיוב</dt><dd>₪{{ fmtMoney(item.manualRetryAmount ?? item.amount) }}</dd></div>
+    </dl>
+    <p id="retry-warning" class="col-retry-warning">אישור הפעולה ייזום חיוב חדש ב־CardCom.</p>
+    <label for="retry-reason">סיבה לניסיון הגבייה (חובה)</label>
+    <textarea id="retry-reason" autofocus required rows="3" maxlength="1000" [(ngModel)]="manualRetryReason"
+      [disabled]="attentionActionBusy" placeholder="מה הסיבה לניסיון נוסף?"></textarea>
+    @if (attentionActionError) { <p class="col-error" role="alert">{{ attentionActionError }}</p> }
+    <div class="col-retry-actions">
+      <button type="button" class="col-btn" [disabled]="attentionActionBusy" (click)="closeManualRetry()">ביטול</button>
+      <button type="button" class="col-btn col-btn-primary" [disabled]="attentionActionBusy || !manualRetryReason.trim()"
+        (click)="retryCardManually(item)">{{ attentionActionBusy ? 'מעבד בקשה…' : 'אשר גבייה' }}</button>
+    </div>
+  }
+</dialog>
 <div class="col-page">
   <h1 class="col-title">ניהול גבייה</h1>
 
@@ -8,53 +30,135 @@
   </div>
 
   @if (tab === 'overview') {
-    <div class="col-period-row">
-      <label for="periodSelect">תקופת חיוב:</label>
-      <select id="periodSelect" [(ngModel)]="selectedPeriodId" (ngModelChange)="onPeriodChange()">
-        @for (p of periods; track p.id) {
-          <option [value]="p.id">{{ fmtPeriodLabel(p) }}</option>
-        }
-      </select>
+    @if (clockStatus) {
+      <div class="col-clock-status" [class.col-clock-status-sim]="clockStatus.overrideActive">{{ businessTimeStatusLabel }}</div>
+    }
+
+    <div class="col-month-nav">
+      <button type="button" class="col-month-chevron" (click)="prevMonth()" aria-label="חודש קודם">‹</button>
+      <div class="col-month-label-wrap">
+        <label class="col-month-label" for="monthPicker">{{ selectedMonthLabel }}</label>
+        <input id="monthPicker" type="month" class="col-month-picker-input" [value]="monthPickerValue" (change)="onMonthPicked($any($event.target).value)" />
+      </div>
+      <button type="button" class="col-month-chevron" (click)="nextMonth()" aria-label="חודש הבא">›</button>
     </div>
 
     <!-- A. תמונת מצב כספית -->
     <section class="col-section">
-      @if (overviewLoading) {
+      @if (overviewLoading && !overview) {
         <div class="col-empty">טוען...</div>
       } @else if (overviewError) {
         <div class="col-error">{{ overviewError }}</div>
       } @else if (overview) {
-        <div class="col-metrics">
-          <div class="col-metric">
-            <div class="col-metric-label">סך החיובים</div>
-            <div class="col-metric-value">₪{{ fmtMoney(overview.totalBilled) }}</div>
-          </div>
-          <div class="col-metric">
-            <div class="col-metric-label" title="גבייה שאושרה בפועל על ידי הספק (כרטיס אשראי)">נגבה</div>
-            <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.paidConfirmed) }}</div>
-          </div>
-          <div class="col-metric">
-            <div class="col-metric-label" title="נשלח לגבייה (כרטיס פתוח, או קובץ מס״ב שנשלח לבנק) — התוצאה עדיין לא ידועה">בתהליך</div>
-            <div class="col-metric-value col-metric-process">₪{{ fmtMoney(overview.inProcess) }}</div>
-          </div>
-          <div class="col-metric">
-            <div class="col-metric-label">יתרה פתוחה</div>
-            <div class="col-metric-value col-metric-open">₪{{ fmtMoney(overview.openBalance) }}</div>
-          </div>
-        </div>
+        <!-- Switching months re-requests data but must never read as a full
+             page reload -- the previous month's numbers stay visible,
+             gently dimmed, until the new ones arrive (2026-10 UX fix). -->
+        <div class="col-overview-content" [class.col-overview-dimmed]="overviewLoading">
 
-        @if (overview.carriedOverFromPriorPeriods.statementCount > 0) {
-          <p class="col-note">+ ₪{{ fmtMoney(overview.carriedOverFromPriorPeriods.outstandingTotal) }} חוב פתוח מתקופות קודמות (לא נכלל בסכומים שלמעלה)</p>
-        }
-        @if (draftNotice) {
-          <p class="col-note">{{ draftNotice.count }} חיוב{{ draftNotice.count > 1 ? 'ים' : '' }} בטיוטה בסך ₪{{ fmtMoney(draftNotice.total) }} — חישוב לא מאושר, אינו חוב לגביה, לכן לא נכלל בסכומים שלמעלה</p>
-        }
+          <div class="col-metrics" aria-label="סיכום גבייה חודשי">
+            <div class="col-metric">
+              <div class="col-metric-label">סך התרומות</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.periodDonations.grossRaised) }}</div>
+              <div class="col-metric-sub">{{ overview.periodDonations.donationCount }} תרומות</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">עמלות לחיוב</div>
+              <div class="col-metric-value">₪{{ fmtMoney(overview.hasStatements ? overview.totalBilled : overview.accrued.accruedTotal) }}</div>
+              <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל מע״מ' : 'כולל מע״מ · הערכה, טרם חויב' }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">נגבה בפועל</div>
+              <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.hasStatements ? overview.paidConfirmed : 0) }}</div>
+              <div class="col-metric-sub">{{ collectionPercentage === null ? 'אין חיוב מאושר לחישוב אחוז גבייה' : (collectionPercentage | number:'1.0-1') + '% מהחיוב המאושר' }}</div>
+            </div>
+            <div class="col-metric">
+              <div class="col-metric-label">יתרה לגבייה</div>
+              <div class="col-metric-value" [class.col-metric-open]="overview.cardCollectionFailed" [class.col-metric-process]="!overview.cardCollectionFailed && remainingCollectionBalance > 0">{{ overview.hasStatements ? '₪' + fmtMoney(remainingCollectionBalance) : '—' }}</div>
+              <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל סכומים בתהליך' : 'טרם נוצר חוב מאושר' }}</div>
+            </div>
+          </div>
+          <div class="col-secondary-summary" aria-label="פירוט גבייה משני">
+            @if (overview.cardCollected > 0) { <span class="col-metric-paid">נגבה באשראי <strong>₪{{ fmtMoney(overview.cardCollected) }}</strong></span> }
+            @if (overview.masavCollected === undefined) { <span>נגבה במס״ב <strong>נתון לא זמין</strong></span> }
+            @else if (overview.masavCollected > 0) { <span class="col-metric-paid">נגבה במס״ב <strong>₪{{ fmtMoney(overview.masavCollected) }}</strong></span> }
+            @if ((overview.inProcess ?? 0) > 0) { <span class="col-metric-process">בתהליך <strong>₪{{ fmtMoney(overview.inProcess) }}</strong></span> }
+            @if (needsAttentionLoading) { <span>דורש טיפול: טוען…</span> }
+            @else if (needsAttentionError) { <span class="col-metric-open" role="alert">לא ניתן לטעון התראות טיפול</span> }
+            @else if (needsAttention && needsAttention.totalCount > 0) { <a class="col-metric-open" href="#collection-attention">דורש טיפול <strong>{{ needsAttention.totalCount }}</strong><small>כל התקופות</small></a> }
+          </div>
+          @if (overview.cardCollectionFailed) {
+            <p class="col-due-banner col-due-banner-failed">גביית האשראי נכשלה — קיימת יתרה פתוחה לטיפול</p>
+          } @else if (overview.cutoffPassed && !overview.collectionAttempted && remainingCollectionBalance > 0) {
+            <p class="col-due-banner">מועד הגבייה הגיע — הגבייה טרם בוצעה</p>
+          }
+          @if (overview.carriedOverFromPriorPeriods.outstandingTotal > 0) {
+            <p class="col-note col-metric-open">₪{{ fmtMoney(overview.carriedOverFromPriorPeriods.outstandingTotal) }} חוב פתוח מתקופות קודמות (בנוסף לסיכום החודשי)</p>
+          }
+          @if (overview.accrued.entitiesMissingAccount.length > 0) {
+            <p class="col-note col-metric-process">{{ overview.accrued.entitiesMissingAccount.length }} עמותות ללא חשבון חיוב פעיל — העמלות שלהן אינן כלולות בסכום.</p>
+          }
+          @if (draftNotice && draftNotice.count > 0) {
+            <p class="col-note">{{ draftNotice.count }} חיובים בטיוטה בסך ₪{{ fmtMoney(draftNotice.total) }} — אינם חוב מאושר ואינם נכללים בסיכום.</p>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- D. מצב הגבייה מעמותות -->
+    <section class="col-section">
+      <h2 class="col-section-title">מצב הגבייה מעמותות</h2>
+      <div class="col-filter-row">
+        <app-entity-combobox [entities]="entityOptions" [(selectedId)]="overviewEntityId"></app-entity-combobox>
+        <select [(ngModel)]="statusFilter">
+          <option value="">כל הסטטוסים</option>
+          <option value="draft">טיוטה (לא מאושר)</option>
+          <option value="approved">מאושר</option>
+          <option value="open">פתוח</option>
+          <option value="paid">שולם</option>
+        </select>
+      </div>
+      @if (statementsLoading) {
+        <div class="col-empty">טוען...</div>
+      } @else {
+        <div class="col-collection-table-scroll" role="region" aria-label="מצב הגבייה מעמותות" tabindex="0">
+        <table class="col-table">
+          <thead>
+            <tr>
+              <th>עמותה</th>
+              <th>סכום לחיוב</th>
+              <th>נגבה</th>
+              <th>יתרה</th>
+              <th>אמצעי גבייה</th>
+              <th>תאריך גבייה אחרון</th>
+              <th>סטטוס</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of filteredStatements; track s.id) {
+              <tr class="col-row" [class.col-row-draft]="s.status === 'draft'">
+                <td class="col-entity-cell">{{ s.entity_name }}</td>
+                <td>₪{{ fmtMoney(s.total_due) }}@if (s.status === 'draft') {<span class="col-draft-tag"> (לא מאושר)</span>}</td>
+                <td>₪{{ fmtMoney(s.collected) }}</td>
+                <td>₪{{ fmtMoney(statementOutstanding(s)) }}</td>
+                <td>{{ confirmedCollectionMethod(s) }}</td>
+                <td class="col-collection-date" [title]="s.latest_business_collection_at ? 'זמן עסקי בסימולציה; זמן ביצוע אמיתי: ' + s.latest_collection_at : ''">{{ confirmedCollectionDate(s) }}</td>
+                <td>{{ statusLabel(s.status) }}</td>
+                <td><button class="col-btn col-btn-small col-btn-primary" (click)="openStatement(s.id)">ניהול</button></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="col-empty">אין חיובים לתקופה זו</td></tr>
+            }
+          </tbody>
+        </table>
+        </div>
       }
     </section>
 
     <!-- B. דורש טיפולך -->
     <section class="col-section">
-      <h2 class="col-section-title">דורש טיפולך</h2>
+      <h2 id="collection-attention" class="col-section-title">דורש טיפולך</h2>
+      @if (manualRetryResult) { <p class="col-note" role="status">{{ manualRetryResult }}</p> }
       @if (needsAttentionLoading) {
         <div class="col-empty">טוען...</div>
       } @else if (needsAttentionError) {
@@ -66,6 +170,7 @@
         @for (group of needsAttention.categories; track group.category) {
           @for (item of group.items; track item.statementId) {
             <div class="col-attn-item">
+              <div class="col-attn-header">
               <div
                 class="col-attn-item-row"
                 (click)="
@@ -82,6 +187,12 @@
                 <span class="col-attn-next">{{ item.nextAction }} ›</span>
               </div>
 
+              @if (group.category === 'card_attempts_exhausted' && item.manualRetryEligible) {
+                <div class="col-attn-actions">
+                  <button type="button" class="col-btn col-btn-primary" [disabled]="attentionActionBusy" (click)="openManualRetry(item, retryDialog)">נסה לגבות שוב באשראי</button>
+                </div>
+              }
+              </div>
               @if (openItem === item) {
                 <div class="col-attn-form">
                   @if (group.category === 'masav_proposal_awaiting_approval') {
@@ -139,50 +250,7 @@
       }
     </details>
 
-    <!-- D. מצב הגבייה מעמותות -->
-    <section class="col-section">
-      <h2 class="col-section-title">מצב הגבייה מעמותות</h2>
-      <div class="col-filter-row">
-        <app-entity-combobox [entities]="entityOptions" [(selectedId)]="overviewEntityId"></app-entity-combobox>
-        <select [(ngModel)]="statusFilter">
-          <option value="">כל הסטטוסים</option>
-          <option value="draft">טיוטה (לא מאושר)</option>
-          <option value="approved">מאושר</option>
-          <option value="open">פתוח</option>
-          <option value="paid">שולם</option>
-        </select>
-      </div>
-      @if (statementsLoading) {
-        <div class="col-empty">טוען...</div>
-      } @else {
-        <table class="col-table">
-          <thead>
-            <tr>
-              <th>עמותה</th>
-              <th>סכום לחיוב</th>
-              <th>נגבה</th>
-              <th>יתרה</th>
-              <th>מצב</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of filteredStatements; track s.id) {
-              <tr class="col-row" [class.col-row-draft]="s.status === 'draft'">
-                <td class="col-entity-cell">{{ s.entity_name }}</td>
-                <td>₪{{ fmtMoney(s.total_due) }}@if (s.status === 'draft') {<span class="col-draft-tag"> (לא מאושר)</span>}</td>
-                <td>₪{{ fmtMoney(s.collected) }}</td>
-                <td>₪{{ fmtMoney(statementOutstanding(s)) }}</td>
-                <td>{{ statusLabel(s.status) }}</td>
-                <td><button class="col-btn col-btn-small col-btn-primary" (click)="openStatement(s.id)">ניהול</button></td>
-              </tr>
-            } @empty {
-              <tr><td colspan="6" class="col-empty">אין חיובים לתקופה זו</td></tr>
-            }
-          </tbody>
-        </table>
-      }
-    </section>
+
 
     <!-- Payment-settings is a SEPARATE concern from the table above
          (2026-10, product-owner request): how HAMONYM collects its OWN
@@ -283,6 +351,7 @@
 
           <details class="col-drawer-details">
             <summary>ניסיונות גבייה ותשלומים</summary>
+            <p class="col-note">{{ attemptSummary.total }} ניסיונות — {{ attemptSummary.failed }} נכשלו, {{ attemptSummary.succeeded }} הצליחו@if (attemptSummary.unresolved > 0) {, {{ attemptSummary.unresolved }} אחרים / טרם הוכרעו}</p>
             <table class="col-table col-table-small">
               <thead><tr><th>#</th><th>שיטה</th><th>סטטוס</th><th>סכום</th></tr></thead>
               <tbody>
@@ -335,8 +404,11 @@
           </select>
         </div>
         <div class="col-filter-field col-filter-buttons">
-          <button class="col-btn col-btn-primary" (click)="runHistorySearch()">חיפוש</button>
-          <button class="col-btn" (click)="clearHistoryFilters()">נקה סינון</button>
+          <label class="col-filter-label-spacer" aria-hidden="true">&nbsp;</label>
+          <div class="col-filter-buttons-row">
+            <button class="col-btn col-btn-primary" (click)="runHistorySearch()">חיפוש</button>
+            <button class="col-btn" (click)="clearHistoryFilters()">נקה סינון</button>
+          </div>
         </div>
       </div>
       <p class="col-note">הטווח חל על תקופת החיוב של כל חיוב, לא על תאריך תרומה בודדת.</p>

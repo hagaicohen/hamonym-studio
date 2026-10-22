@@ -1,5 +1,5 @@
 .col-page {
-  padding: 24px;
+  padding: 18px;
   direction: rtl;
   /* 2026-10 layout fix: max-width alone (no auto margins) left the block
      hugging the RTL start (right) edge of the main content area, leaving
@@ -52,8 +52,111 @@
   font-weight: 600;
 }
 
+/* Business-time status line (2026-10) -- reads from the EXISTING
+   simulation-clock service, same data the Simulation tab itself shows. */
+.col-clock-status {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+.col-clock-status-sim {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* Compact month navigation (2026-10, replaces the dropdown) -- any month
+   is navigable regardless of whether billing records exist for it. */
+.col-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.col-month-chevron {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  line-height: 1;
+}
+.col-month-chevron:hover { background: #f8f9ff; border-color: #583cd6; color: #583cd6; }
+.col-month-label-wrap {
+  position: relative;
+}
+.col-month-label {
+  display: block;
+  min-width: 140px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b;
+  cursor: pointer;
+}
+/* Native <input type="month"> rendered transparent and stacked exactly over
+   the label -- clicking the label opens the browser's own month/year
+   picker (requirement: "optional picker when clicking the month label"),
+   with zero new dependencies. */
+.col-month-picker-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+
+.col-metric-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Month navigation must never look like a full page reload -- keep the
+   previous month's numbers visible, just gently dimmed, while the next
+   month's data is in flight (2026-10 UX fix). */
+.col-overview-content {
+  transition: opacity 0.15s ease;
+}
+.col-overview-dimmed {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* "מועד הגבייה הגיע — הגבייה טרם בוצעה" (2026-10) -- cutoff passed but
+   nothing attempted yet. Amber, not red: this is an expected waiting
+   state (the collection job genuinely hasn't run), not a failure. */
+.col-due-banner {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+/* Collection actually attempted and failed -- a real exception, not a
+   waiting state, so it reads as red/urgent instead of amber. */
+.col-due-banner-failed {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+
 .col-section {
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
 .col-section-title {
   font-size: 15px;
@@ -64,15 +167,15 @@
 /* A. Financial overview -- the one thing that must read instantly */
 .col-metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 .col-metric {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px;
+  padding: 14px;
   background: #fff;
-  text-align: center;
+  text-align: start;
 }
 .col-metric-label {
   font-size: 12px;
@@ -104,6 +207,7 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  margin-bottom: 16px;
 }
 .col-attn-item {
   border: 1px solid #e5e7eb;
@@ -111,9 +215,49 @@
   margin-bottom: 6px;
   overflow: hidden;
 }
-.col-attn-item-row {
+/* Uses the platform user-action modal's colors, spacing and warning pattern. */
+.col-retry-modal {
+  border: 0;
+  border-radius: 12px;
+  padding: 24px;
+  width: min(440px, calc(100vw - 32px));
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  color: #1e293b;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, .2);
+}
+.col-retry-modal::backdrop { background: rgba(15, 23, 42, .45); }
+.col-retry-modal h3 { margin: 0 0 6px; font-size: 17px; }
+.col-retry-entity { margin: 0 0 16px; color: #64748b; overflow-wrap: anywhere; }
+.col-retry-summary { margin: 0 0 16px; font-size: 14px; }
+.col-retry-summary > div { display: flex; justify-content: space-between; gap: 12px; margin-block: 8px; }
+.col-retry-summary dd { margin: 0; font-weight: 700; }
+.col-retry-warning { padding: 10px 12px; background: #fffbeb; color: #92400e; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.col-retry-modal label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+.col-retry-modal textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; resize: vertical; }
+.col-retry-modal textarea:focus { outline: 2px solid #583cd6; outline-offset: 2px; }
+.col-retry-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.col-retry-actions .col-btn { min-height: 40px; }
+.col-attn-header {
   display: flex;
   align-items: center;
+}
+.col-attn-actions {
+  flex-shrink: 0;
+  padding: 12px 14px;
+  padding-inline-start: 0;
+}
+.col-attn-actions .col-btn {
+  white-space: normal;
+  line-height: 1.5;
+}
+.col-attn-item-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px 14px;
   cursor: pointer;
@@ -246,7 +390,12 @@
 .col-filter-grid {
   display: flex;
   gap: 14px;
-  align-items: flex-end;
+  /* stretch (default), not flex-end -- every field column gets the SAME
+     real height (the row's tallest natural content), so a control that's
+     naturally shorter than the others (the buttons row) can itself stretch
+     to fill it, instead of only having its bottom edge repositioned to
+     match while staying visually shorter (2026-10 structural fix). */
+  align-items: stretch;
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
@@ -267,9 +416,23 @@
   font-size: 13px;
   min-width: 140px;
 }
-.col-filter-buttons {
-  flex-direction: row;
+/* Real structural fix for the חיפוש/נקה סינון alignment (2026-10, not a
+   margin hack): this field carries the SAME invisible-label-then-control
+   shape every other field has, and its control row stretches (flex:1) to
+   fill the SAME real height .col-filter-grid's stretch now gives every
+   field -- proven pattern (native date/select controls here render taller
+   than a plain button's own padding would, same root cause fixed once
+   before on this page's History tab). */
+.col-filter-label-spacer {
+  visibility: hidden;
+}
+.col-filter-buttons-row {
+  display: flex;
   gap: 8px;
+  flex: 1;
+}
+.col-filter-buttons-row .col-btn {
+  flex: 1;
 }
 .col-filter-field-wide {
   flex: 1;
@@ -281,6 +444,9 @@
   border-collapse: collapse;
   font-size: 13px;
 }
+.col-collection-table-scroll { overflow-x: auto; direction: rtl; }
+.col-collection-table-scroll .col-table { min-width: 780px; }
+.col-collection-date { white-space: nowrap; direction: ltr; text-align: right; }
 .col-table th {
   text-align: right;
   padding: 9px 12px;
@@ -476,7 +642,30 @@
 }
 
 @media (max-width: 640px) {
+  .col-attn-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .col-attn-actions {
+    padding: 0 14px 12px;
+  }
+  .col-attn-actions .col-btn {
+    width: 100%;
+  }
+  .col-attn-next {
+    white-space: normal;
+  }
   .col-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.col-secondary-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 10px 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #e5e7eb; }
+.col-secondary-summary strong { margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
+.col-secondary-summary a { text-decoration: none; }
+.col-secondary-summary a:hover { text-decoration: underline; }
+.col-secondary-summary small { margin-inline-start: 6px; color: #64748b; }
+.col-metric-value { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; font-size: clamp(20px, 2.3vw, 28px); }
+.col-metric-sub { color: #64748b; }
+#collection-attention { scroll-margin-top: 20px; }
+@media (max-width: 400px) { .col-page { padding: 12px; } .col-metrics { grid-template-columns: 1fr; } }

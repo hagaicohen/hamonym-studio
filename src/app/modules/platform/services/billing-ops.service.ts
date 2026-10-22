@@ -101,6 +101,10 @@ export interface StatementListItem {
   routed_method: RoutedMethod;
   latest_attempt_status: string | null;
   payment_count: number;
+  confirmed_collection_methods?: ('card' | 'masav')[];
+  latest_collection_at?: string | null;
+  latest_business_collection_at?: string | null;
+  outstanding?: string;
   // Additive (2026-10, unified "ניהול גבייה" page) -- SUM(payments.amount)
   // for this Statement, same ledger statement-balance.service.js#
   // getStatementBalance already treats as authoritative.
@@ -112,6 +116,7 @@ export interface StatementListItem {
 }
 
 export interface CollectionAttempt {
+  business_collection_at?: string | null;
   id: string;
   statement_id: string;
   collection_method: 'card' | 'masav';
@@ -313,6 +318,12 @@ export class BillingOpsService {
 
   abandonStatement(id: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/abandon`, {}, { headers: authHeaders() });
+  }
+
+  retryCardManually(id: string, reason: string, expectedAttemptId: string, expectedOutstanding: number): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {
+      manualRetry: true, confirmed: true, reason, expectedAttemptId, expectedOutstanding,
+    }, { headers: authHeaders() });
   }
 
   triggerCollection(id: string): Observable<{ result: any }> {
