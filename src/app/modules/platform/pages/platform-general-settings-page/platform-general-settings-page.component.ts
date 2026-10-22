@@ -3,9 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BillingSettingsService } from '../../services/billing-settings.service';
 import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
-import { CampaignResetService, CampaignResetPreview, CampaignResetResult } from '../../services/campaign-reset.service';
-import { PlatformService } from '../../services/platform.service';
-import { EntityComboboxComponent, ComboboxEntity } from '../../components/entity-combobox/entity-combobox.component';
 
 type SettingsTab = 'billing' | 'simulation';
 
@@ -22,15 +19,13 @@ type SettingsTab = 'billing' | 'simulation';
 @Component({
   selector: 'app-platform-general-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, EntityComboboxComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './platform-general-settings-page.component.html',
   styleUrl: './platform-general-settings-page.component.css',
 })
 export class PlatformGeneralSettingsPageComponent implements OnInit {
   private settingsService = inject(BillingSettingsService);
   private clockService = inject(SimulationClockService);
-  private campaignResetService = inject(CampaignResetService);
-  private platformService = inject(PlatformService);
 
   tab: SettingsTab = 'billing';
 
@@ -45,17 +40,9 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadVatSetting();
     this.loadClockStatus();
-    this.loadAllCampaigns();
   }
 
-  // --- כלי סימולציה (2026-10) -- Super Admin access to the EXISTING
-  // backend business clock. GET is always safe; every write is
-  // independently refused server-side (403 SIMULATION_DISABLED) unless
-  // HAMONYM_SIMULATION_MODE='on' in THAT backend process -- never true in
-  // production today (see simulation-clock.service.ts's own header). The
-  // controls below render visibly disabled whenever the server reports
-  // simulationEnabled=false, which is every environment this app can
-  // currently reach.
+  // The settings clock is independent of FIN-11 authorization and production time.
   clockStatus: SimulationClockStatus | null = null;
   clockLoading = true;
   clockError: string | null = null;
@@ -82,16 +69,6 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     });
   }
 
-  // 2026-10 FINAL spec supersedes the earlier "hiding the clock resets it"
-  // rule: simulated time must now persist across navigation (this
-  // component used to reset it in ngOnDestroy(), firing on every route
-  // change away from this page -- the exact cause of simulated time
-  // silently reverting to real time whenever the admin navigated to
-  // Collection Ops to check the result). The backend Business Clock itself
-  // is the one persistence boundary now; only the explicit "חזור לזמן אמת"
-  // button (resetClock()) or disabling simulation server-side clears an
-  // override.
-
   // Clear, single-glance mode label (explicit product requirement #4).
   get clockModeLabel(): string {
     if (!this.clockStatus) return '';
@@ -107,10 +84,20 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   }
 
   fmtDateTime(iso: string): string {
-    const d = new Date(iso);
-    const [y, m, day] = iso.slice(0, 10).split('-');
-    const time = d.toTimeString().slice(0, 5);
-    return `${day}/${m}/${y} ${time}`;
+    return new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+  }
+
+  toggleSimulation(): void {
+    if (this.clockActionBusy || !this.clockStatus) return;
+    this.clockActionBusy = true;
+    this.clockActionError = null;
+    this.clockService.setEnabled(!this.clockStatus.simulationEnabled).subscribe({
+      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; },
+      error: (err) => {
+        this.clockActionBusy = false;
+        this.clockActionError = err?.error?.error || 'עדכון מצב הסימולציה נכשל';
+      },
+    });
   }
 
   setClockFixed(): void {
@@ -178,99 +165,6 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
       error: (err) => {
         this.vatSaveBusy = false;
         this.vatSaveError = err?.error?.error || 'שמירת שיעור המע״מ נכשלה';
-      },
-    });
-  }
-
-  // --- B. איפוס תרומות לקמפיין (2026-10) ----------------------------------
-  // Campaign picker reuses the EXISTING EntityComboboxComponent (already
-  // used identically for nonprofits on platform-collection-ops-page) --
-  // click opens a dropdown of ALL loaded campaigns, typing filters it by
-  // name. No new picker UI pattern, no new listing endpoint: the full list
-  // loads once via PlatformService#getCampaigns the same way
-  // collection-ops-page eagerly loads allEntities. Everything destructive
-  // goes through campaign-reset.service.js (backend), which is the one
-  // place that actually reconciles statements; this component only drives
-  // it.
-  allCampaigns: Array<{ id: string; title: string; entity_name: string }> = [];
-  allCampaignsLoading = false;
-  selectedCampaignComboId: string | undefined;
-
-  campaignPreview: CampaignResetPreview | null = null;
-  campaignPreviewLoading = false;
-  campaignPreviewError: string | null = null;
-  campaignResetConfirmOpen = false;
-  campaignResetReason = '';
-  campaignResetBusy = false;
-  campaignResetError: string | null = null;
-  campaignResetResult: CampaignResetResult | null = null;
-
-  private loadAllCampaigns(): void {
-    this.allCampaignsLoading = true;
-    this.platformService.getCampaigns({ limit: 1000 }).subscribe({
-      next: (res: any) => { this.allCampaigns = res.campaigns || []; this.allCampaignsLoading = false; },
-      error: () => { this.allCampaignsLoading = false; },
-    });
-  }
-
-  get campaignComboOptions(): ComboboxEntity[] {
-    return this.allCampaigns.map((c) => ({
-      id: c.id,
-      name: c.entity_name ? `${c.title} — ${c.entity_name}` : c.title,
-    }));
-  }
-
-  onCampaignComboSelect(id: string | undefined): void {
-    this.selectedCampaignComboId = id;
-    if (!id) {
-      this.campaignPreview = null;
-      this.campaignResetConfirmOpen = false;
-      this.campaignResetReason = '';
-      this.campaignResetResult = null;
-      return;
-    }
-    const c = this.allCampaigns.find((x) => x.id === id);
-    if (!c) return;
-    this.selectCampaign(c);
-  }
-
-  selectCampaign(c: { id: string; title: string }): void {
-    this.campaignResetConfirmOpen = false;
-    this.campaignResetReason = '';
-    this.campaignResetResult = null;
-    this.loadCampaignPreview(c.id);
-  }
-
-  private loadCampaignPreview(campaignId: string): void {
-    this.campaignPreviewLoading = true;
-    this.campaignPreviewError = null;
-    this.campaignResetService.getPreview(campaignId).subscribe({
-      next: (res) => { this.campaignPreview = res.preview; this.campaignPreviewLoading = false; },
-      error: (err) => {
-        this.campaignPreviewLoading = false;
-        this.campaignPreviewError = err?.error?.error || 'שגיאה בטעינת פרטי הקמפיין';
-      },
-    });
-  }
-
-  confirmCampaignReset(): void {
-    if (this.campaignResetBusy || !this.campaignPreview || !this.campaignResetReason.trim()) return;
-    this.campaignResetBusy = true;
-    this.campaignResetError = null;
-    const campaignId = this.campaignPreview.campaignId;
-    this.campaignResetService.reset(campaignId, this.campaignResetReason.trim()).subscribe({
-      next: (res) => {
-        this.campaignResetBusy = false;
-        this.campaignResetConfirmOpen = false;
-        this.campaignResetResult = res.result;
-        // Refresh the preview so the shown counts/amount reflect the real
-        // post-reset state (0 donations), without wiping the success
-        // message selectCampaign() would otherwise clear.
-        this.loadCampaignPreview(campaignId);
-      },
-      error: (err) => {
-        this.campaignResetBusy = false;
-        this.campaignResetError = err?.error?.error || 'האיפוס נכשל';
       },
     });
   }

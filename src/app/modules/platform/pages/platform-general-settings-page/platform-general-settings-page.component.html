@@ -53,11 +53,13 @@
       } @else if (clockError) {
         <div class="plat-error">{{ clockError }}</div>
       } @else if (clockStatus) {
-        @if (!clockStatus.simulationEnabled) {
-          <div class="sim-disabled-banner">
-            סימולציה אינה פעילה בסביבה זו. הכלי זמין רק בסביבת סימולציה מבודדת ומאומתת — לעולם לא בייצור. הפקדים למטה מוצגים לידיעה בלבד ואינם פעילים.
-          </div>
-        }
+        <div class="ba-form-actions">
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="clockActionBusy" (click)="toggleSimulation()">
+            {{ clockStatus.simulationEnabled ? 'כבה סימולציה' : 'הפעל סימולציה' }}
+          </button>
+        </div>
+        <p class="gs-vat-note">הפעלת השעון אינה מאשרת גבייה ואינה משנה את זמן משימות הייצור.</p>
+        <p class="gs-vat-note">{{ clockStatus.collectionAuthorized ? 'גביית FIN-11 מורשית לבדיקות: עדכון הזמן עשוי להפעיל בקשת חיוב ב־CardCom Sandbox, רק לישויות המותרות.' : 'גביית FIN-11 אוטומטית כבויה או שאימותי הבטיחות טרם הושלמו. ניתן להשתמש בשעון ללא גבייה.' }}</p>
 
         <div class="sim-clock-status-row">
           <span class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</span>
@@ -70,14 +72,14 @@
         <div class="sim-clock-inputs">
           <label class="ba-field">
             <span>תאריך עסקי</span>
-            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="!clockStatus.simulationEnabled" />
+            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" />
           </label>
           <label class="ba-field">
             <span>שעה עסקית</span>
-            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="!clockStatus.simulationEnabled" />
+            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" />
           </label>
         </div>
-        <p class="gs-vat-note">קביעת זמן עסקי מדומה משפיעה רק על החלטות עסקיות (למשל מועד חיתוך חיוב, הכנת מס״ב) — לעולם לא על חיובים אמיתיים, שליחת מיילים או פנייה לספק הסליקה.</p>
+        <p class="gs-vat-note">הזמן מוצג לפי שעון ישראל. זמני הביצוע והביקורת האמיתיים נשמרים בנפרד.</p>
         @if (clockActionError) {
           <div class="ops-action-error">{{ clockActionError }}</div>
         }
@@ -90,77 +92,9 @@
       }
     </div>
 
-    <!-- B. איפוס תרומות לקמפיין -->
     <div class="plat-card">
       <div class="gs-card-title">איפוס תרומות לקמפיין</div>
-      <p class="gs-vat-note">כלי לשלב הבדיקות בלבד: מאפס את כל התרומות של קמפיין ספציפי אחד (ורק אותו) — לא את הקמפיין, העמותה, או קמפיינים אחרים.</p>
-
-      <div class="ba-form-fields" style="margin: 10px 0;">
-        <label class="ba-field" style="min-width: 260px; flex: 1;">
-          <span>בחירת קמפיין</span>
-          <app-entity-combobox
-            [entities]="campaignComboOptions"
-            [selectedId]="selectedCampaignComboId"
-            placeholder="כל הקמפיינים"
-            (selectedIdChange)="onCampaignComboSelect($event)"
-          ></app-entity-combobox>
-        </label>
-      </div>
-      @if (allCampaignsLoading) {
-        <p class="gs-vat-note">טוען רשימת קמפיינים...</p>
-      }
-
-      @if (campaignPreviewLoading) {
-        <div class="plat-loading">טוען...</div>
-      } @else if (campaignPreviewError) {
-        <div class="plat-error">{{ campaignPreviewError }}</div>
-      } @else if (campaignPreview) {
-        <div class="sim-campaign-preview">
-          <div class="sim-campaign-preview-row"><span>קמפיין:</span><strong>{{ campaignPreview.campaignTitle }}</strong></div>
-          <div class="sim-campaign-preview-row"><span>עמותה:</span><strong>{{ campaignPreview.entityName }}</strong></div>
-          <div class="sim-campaign-preview-row"><span>מספר תרומות:</span><strong>{{ campaignPreview.donationCount }}</strong></div>
-          <div class="sim-campaign-preview-row"><span>סכום כולל:</span><strong>₪{{ fmtMoney(campaignPreview.totalAmount) }}</strong></div>
-        </div>
-
-        @if (campaignPreview.donationCount === 0) {
-          <p class="gs-vat-note">אין תרומות לאיפוס עבור הקמפיין הזה.</p>
-        } @else if (!campaignResetConfirmOpen) {
-          <div class="ba-form-actions" style="justify-content: flex-start;">
-            <button type="button" class="ops-btn sim-danger-btn" (click)="campaignResetConfirmOpen = true">אפס את כל תרומות הקמפיין</button>
-          </div>
-        } @else {
-          <div class="sim-confirm-box">
-            <p>
-              לאשר איפוס מלא של <strong>{{ campaignPreview.donationCount }}</strong> תרומות (₪{{ fmtMoney(campaignPreview.totalAmount) }})
-              עבור הקמפיין <strong>"{{ campaignPreview.campaignTitle }}"</strong> ({{ campaignPreview.entityName }})?
-              הפעולה כוללת מחיקת תרומות, קבלות ורשומות תלויות, ותתוקן בחיובי העמלה הקשורים. הקמפיין והעמותה עצמם לא יימחקו.
-            </p>
-            <label class="ba-field">
-              <span>סיבת האיפוס (נדרש)</span>
-              <input type="text" [(ngModel)]="campaignResetReason" placeholder="לדוגמה: ניקוי נתוני בדיקה" />
-            </label>
-            @if (campaignResetError) {
-              <div class="ops-action-error">{{ campaignResetError }}</div>
-            }
-            <div class="ba-form-actions">
-              <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="campaignResetBusy" (click)="campaignResetConfirmOpen = false">ביטול</button>
-              <button type="button" class="ops-btn sim-danger-btn" [disabled]="campaignResetBusy || !campaignResetReason.trim()" (click)="confirmCampaignReset()">
-                {{ campaignResetBusy ? 'מאפס...' : 'אשר איפוס סופי' }}
-              </button>
-            </div>
-          </div>
-        }
-
-        @if (campaignResetResult) {
-          <div class="sim-result-box">
-            <strong>האיפוס בוצע בהצלחה.</strong>
-            נמחקו {{ campaignResetResult.donationsRemoved }} תרומות בסך ₪{{ fmtMoney(campaignResetResult.totalAmountRemoved) }}.
-            @if (campaignResetResult.statementsAdjusted.length > 0) {
-              <span> {{ campaignResetResult.statementsAdjusted.length }} חיובי עמלה תוקנו בהתאם.</span>
-            }
-          </div>
-        }
-      }
+      <p class="gs-vat-note">איפוס תרומות אינו זמין במסד הנתונים המשותף. המנגנון הישן עקף הגנות פיננסיות ומחק תרומות וקבלות, ולכן לא הוחזר. לבדיקות איפוס נדרשת סביבת נתונים מבודדת. הרשומות והיסטוריית הביקורת נשמרות.</p>
     </div>
   }
 </div>
