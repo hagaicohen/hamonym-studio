@@ -324,6 +324,8 @@ exports.listStatements = async ({ periodId, runId, status, month }) => {
                     JOIN collection_attempts ca ON ca.id = p.collection_attempt_id AND ca.statement_id = p.statement_id
                     WHERE p.statement_id = s.id ORDER BY ca.collection_method) AS confirmed_collection_methods,
               (SELECT MAX(p.received_at) FROM payments p WHERE p.statement_id = s.id) AS latest_collection_at,
+              (SELECT ca.business_collection_at FROM payments p JOIN collection_attempts ca ON ca.id=p.collection_attempt_id
+               WHERE p.statement_id=s.id ORDER BY p.received_at DESC, p.id DESC LIMIT 1) AS latest_business_collection_at,
               s.total_due + COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0)
                 - COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0) AS outstanding
        FROM statements s

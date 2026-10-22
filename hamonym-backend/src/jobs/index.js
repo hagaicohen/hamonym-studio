@@ -18,4 +18,9 @@ jobRunner.register(require('./billing-monthly-cycle.job'));
 jobRunner.register(require('./email-dispatch-recovery.job'));
 jobRunner.register(require('./operational-alerting.job'));
 
+// No production cron activation: simulation-only registrations have no schedule.
+if (require('../lib/fin11-simulation-context').enabled()) {
+  jobRunner.register({ ...require('./fin11-card-collection.job'), schedule: null, simulationOnly: true });
+  jobRunner.register({ ...require('./fin11-card-retry-sweep.job'), schedule: null, simulationOnly: true });
+}
 module.exports = jobRunner;

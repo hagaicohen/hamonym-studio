@@ -10,7 +10,7 @@ function load(file, mocks = {}, extra = {}) {
   const module = { exports: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), {
     module, exports: module.exports, Date, console,
-    require: (name) => { assert.ok(Object.hasOwn(mocks, name), `Blocked import: ${name}`); return mocks[name]; },
+    require: (name) => { if (name.endsWith('/fin11-simulation-context')) return { current: () => undefined, assertEntity() {} }; assert.ok(Object.hasOwn(mocks, name), `Blocked import: ${name}`); return mocks[name]; },
     ...extra,
   }, { filename: file });
   return module.exports;

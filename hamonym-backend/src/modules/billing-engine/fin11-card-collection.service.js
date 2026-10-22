@@ -22,6 +22,7 @@
 // header explicitly warns that changing its behavior would silently affect
 // every Statement's existing single-method route, out of scope for FIN-11.
 const pool = require('../../db/db');
+const simulationScope = require('../../lib/fin11-simulation-context');
 const billingRepository = require('../billing/billing.repository');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
 const { queueAdminNotification, sendAdminNotification } = require('../email/admin-notification.service');
@@ -137,6 +138,7 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
       [statementId]
     );
     const statement = stmtRes.rows[0];
+    if (statement) simulationScope.assertEntity(statement.entity_id);
     if (!statement) {
       const err = new Error('Statement not found');
       err.code = 'STATEMENT_NOT_FOUND';
@@ -174,6 +176,15 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
         await client.query('COMMIT');
         return { skipped: true, reason: 'masav_proposal_exported_unresolved', proposalId: exportedMasav.proposalId };
       }
+    }
+
+    const simulation = simulationScope.current();
+    if (simulation) {
+      simulationScope.assertEntity(statement.entity_id);
+      const sameDay = await client.query(
+        `SELECT id FROM collection_attempts WHERE statement_id=$1 AND (business_collection_at AT TIME ZONE 'Asia/Jerusalem')::date = ($2::timestamptz AT TIME ZONE 'Asia/Jerusalem')::date LIMIT 1`,
+        [statementId, simulation.businessAt]);
+      if (sameDay.rows.length) { await client.query('COMMIT'); return { skipped: true, reason: 'simulation_day_already_attempted' }; }
     }
 
     // 3-attempts-total / confirmed-failure-only retry gate. Checked against
@@ -234,10 +245,10 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
     const attemptNumber = nextAttemptRes.rows[0].next;
 
     const insertRes = await client.query(
-      `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount)
-       VALUES ($1, 'card', $2, $3)
-       RETURNING id, attempt_number`,
-      [statementId, attemptNumber, requestedAmount]
+      simulation
+        ? `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, business_collection_at) VALUES ($1, 'card', $2, $3, $4) RETURNING id, attempt_number`
+        : `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount) VALUES ($1, 'card', $2, $3) RETURNING id, attempt_number`,
+      simulation ? [statementId, attemptNumber, requestedAmount, simulation.businessAt] : [statementId, attemptNumber, requestedAmount]
     );
 
     if (statement.status === 'approved') {

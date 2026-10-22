@@ -1,7 +1,7 @@
 // FIN-11 Stage 4 — confirmed-failure retry sweep (2026-10).
 // docs/finance/FIN11_STAGE4_TECHNICAL_DESIGN.md has the full design.
 //
-// NOT REGISTERED in src/jobs/index.js -- see fin11-card-collection.job.js's
+// NOT REGISTERED for production scheduling (simulation registration has schedule=null) in src/jobs/index.js -- see fin11-card-collection.job.js's
 // header for why, and the same activation warning applies here (this job
 // also calls the real card adapter's charge()).
 //
@@ -40,11 +40,12 @@ const {
 const defaultGetAdapter = require('../modules/collection-engine/adapters/get-adapter');
 const { recordFinding } = require('./reconciliation-findings');
 
-async function findRetryCandidates(db) {
+async function findRetryCandidates(db, entityIds = null) {
   const res = await db.query(
     `SELECT s.id
      FROM statements s
      WHERE s.status = ANY($1::text[])
+       AND ($4::uuid[] IS NULL OR s.billing_account_id IN (SELECT id FROM billing_accounts WHERE entity_id = ANY($4::uuid[])))
        AND EXISTS (
          SELECT 1 FROM collection_attempts ca
          WHERE ca.statement_id = s.id
@@ -59,13 +60,13 @@ async function findRetryCandidates(db) {
          SELECT COUNT(*) FROM collection_attempts
          WHERE statement_id = s.id AND collection_method = 'card'
        ) < $3`,
-    [ACTIONABLE_STATEMENT_STATUSES, CONFIRMED_FAILURE_STATUSES, MAX_CARD_ATTEMPTS]
+    [ACTIONABLE_STATEMENT_STATUSES, CONFIRMED_FAILURE_STATUSES, MAX_CARD_ATTEMPTS, entityIds]
   );
   return res.rows.map((r) => r.id);
 }
 
-async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter } = {}) {
-  const candidateIds = await findRetryCandidates(db);
+async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter, simulation } = {}) {
+  const candidateIds = await findRetryCandidates(db, simulation?.entityIds || null);
 
   const summary = { candidatesFound: candidateIds.length, succeeded: 0, confirmedFailureExhausted: 0, retryNotYetDue: 0, skippedOther: 0, errors: 0 };
 

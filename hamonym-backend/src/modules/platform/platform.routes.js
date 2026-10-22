@@ -84,4 +84,6 @@ router.use('/finance-ops', require('./finance-ops/finance-ops.routes'));
 // cross-period history, basic Excel report). See collection-ops.routes.js.
 router.use('/collection-ops', require('./collection-ops/collection-ops.routes'));
 
+router.use('/simulation-clock', require('./fin11-simulation/fin11-simulation.routes'));
+
 module.exports = router;

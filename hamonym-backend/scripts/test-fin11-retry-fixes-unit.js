@@ -12,6 +12,7 @@ function load(relative, mocks = {}, extra = {}) {
   vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), {
     module, exports: module.exports, Date, Intl, console,
     require(name) {
+      if (name.endsWith('/fin11-simulation-context')) return { current: () => undefined, assertEntity() {} };
       assert.ok(Object.hasOwn(mocks, name), `Blocked unmocked import: ${name}`);
       return mocks[name];
     }, ...extra,

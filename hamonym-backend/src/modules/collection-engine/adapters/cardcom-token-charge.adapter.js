@@ -107,6 +107,8 @@ function extractSanitizedProviderError(err) {
 }
 
 exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
+  const simulation = require('../../../lib/fin11-simulation-context');
+  if (simulation.current()) simulation.configuration();
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
   const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
 

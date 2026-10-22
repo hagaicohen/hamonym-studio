@@ -1,7 +1,7 @@
 // FIN-11 Stage 4 — automated capped card collection (2026-10).
 // docs/finance/FIN11_STAGE4_TECHNICAL_DESIGN.md has the full design.
 //
-// NOT REGISTERED in src/jobs/index.js -- this file exists and is fully
+// NOT REGISTERED for production scheduling (simulation registration has schedule=null) in src/jobs/index.js -- this file exists and is fully
 // testable (via job-runner.run('fin11-card-collection') or by calling
 // `handler` directly), but the scheduler (src/jobs/scheduler.js) only ever
 // wires jobs that index.js registers. Adding the registration line is a
@@ -39,7 +39,7 @@ const { computeMostRecentCycleBoundary } = require('./billing-monthly-cycle.job'
 const defaultGetAdapter = require('../modules/collection-engine/adapters/get-adapter');
 const { recordFinding } = require('./reconciliation-findings');
 
-async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter } = {}) {
+async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter, simulation } = {}) {
   const { periodEnd } = await computeMostRecentCycleBoundary(db, now);
 
   const periodRes = await db.query(
@@ -56,8 +56,9 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
   const periodId = periodRes.rows[0].id;
 
   const statementsRes = await db.query(
-    `SELECT id FROM statements WHERE billing_period_id = $1 AND status = ANY($2::text[])`,
-    [periodId, ACTIONABLE_STATEMENT_STATUSES]
+    `SELECT id FROM statements WHERE billing_period_id = $1 AND status = ANY($2::text[])
+         AND ($3::uuid[] IS NULL OR billing_account_id IN (SELECT id FROM billing_accounts WHERE entity_id = ANY($3::uuid[])))`,
+    [periodId, ACTIONABLE_STATEMENT_STATUSES, simulation?.entityIds || null]
   );
 
   const summary = {
