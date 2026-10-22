@@ -37,6 +37,28 @@
   margin-bottom: 8px;
 }
 
+.gs-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+.gs-tab {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.gs-tab-active {
+  color: #583cd6;
+  border-bottom-color: #583cd6;
+}
+
 .plat-card {
   background: #fff;
   border: 1px solid #e8edf3;
@@ -141,3 +163,130 @@
 .ops-btn-secondary { background: #fff; border-color: #e2e8f0; color: #64748b; }
 .ops-btn-secondary:hover { border-color: #cbd5e1; }
 .ops-btn-sm { padding: 6px 12px; font-size: 11px; flex-shrink: 0; }
+
+/* כלי סימולציה (2026-10) */
+.sim-disabled-banner {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.sim-mode-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f0fdf4;
+  color: #166534;
+}
+.sim-mode-badge-override {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* 2026-10 redesign: status badge + effective date/time read together on
+   one line, modeled on the compact status line now also shown at the top
+   of Collection Ops (same clockStatus data, one source of truth). */
+.sim-clock-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.sim-clock-effective {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+}
+.sim-clock-realtime-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #64748b;
+}
+.sim-clock-inputs {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.sim-clock-inputs .ba-field input {
+  height: 42px;
+  min-width: 170px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sim-clock-inputs .ba-field input:focus {
+  outline: none;
+  border-color: #583cd6;
+  box-shadow: 0 0 0 3px rgba(88, 60, 214, 0.12);
+}
+
+/* "חזור לזמן אמת" must be prominent (explicit product requirement) */
+.sim-reset-btn {
+  border-color: #583cd6;
+  color: #583cd6;
+  font-weight: 700;
+}
+
+/* איפוס תרומות לקמפיין (2026-10) */
+.sim-campaign-preview {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.sim-campaign-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sim-campaign-preview-row span { color: #64748b; }
+
+.sim-danger-btn {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+  font-weight: 700;
+}
+.sim-danger-btn:hover:not(:disabled) { background: #fee2e2; }
+
+.sim-confirm-box {
+  margin: 10px 0;
+  padding: 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sim-confirm-box .ba-field input {
+  width: 100%;
+}
+
+.sim-result-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+  line-height: 1.6;
+}
