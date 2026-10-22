@@ -79,7 +79,8 @@
           </div>
           <div class="col-secondary-summary" aria-label="פירוט גבייה משני">
             @if (overview.cardCollected > 0) { <span class="col-metric-paid">נגבה באשראי <strong>₪{{ fmtMoney(overview.cardCollected) }}</strong></span> }
-            <span title="ה־API אינו מספק סכום נפרד של תשלומי מס״ב מאושרים">נגבה במס״ב <strong>נתון לא זמין</strong></span>
+            @if (overview.masavCollected === undefined) { <span>נגבה במס״ב <strong>נתון לא זמין</strong></span> }
+            @else if (overview.masavCollected > 0) { <span class="col-metric-paid">נגבה במס״ב <strong>₪{{ fmtMoney(overview.masavCollected) }}</strong></span> }
             @if ((overview.inProcess ?? 0) > 0) { <span class="col-metric-process">בתהליך <strong>₪{{ fmtMoney(overview.inProcess) }}</strong></span> }
             @if (needsAttentionLoading) { <span>דורש טיפול: טוען…</span> }
             @else if (needsAttentionError) { <span class="col-metric-open" role="alert">לא ניתן לטעון התראות טיפול</span> }

@@ -607,15 +607,16 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   statementOutstanding(s: StatementListItem): number {
-    return Number(s.total_due) - Number(s.collected);
+    return s.outstanding != null ? Number(s.outstanding) : Number(s.total_due) - Number(s.collected);
   }
 
   confirmedCollectionMethod(s: StatementListItem): string {
-    const methods = s.confirmed_collection_methods ?? [];
+    const methods = s.confirmed_collection_methods;
+    if (!methods) return Number(s.collected) > 0 ? 'נתון לא זמין' : 'טרם נגבה';
     if (methods.includes('card') && methods.includes('masav')) return 'אשראי + מס״ב';
     if (methods.includes('card')) return 'אשראי';
     if (methods.includes('masav')) return 'מס״ב';
-    return 'טרם נגבה';
+    return Number(s.collected) > 0 ? 'נתון לא זמין' : 'טרם נגבה';
   }
 
   confirmedCollectionDate(s: StatementListItem): string {

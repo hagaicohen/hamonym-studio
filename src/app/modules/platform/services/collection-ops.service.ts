@@ -48,6 +48,7 @@ export interface FinancialOverview {
   collectionAttempted: boolean;
   cardCollectionFailed: boolean;
   cardCollected: number;
+  masavCollected?: number;
   cardOutstanding: number;
   masavOutstanding: number;
 }

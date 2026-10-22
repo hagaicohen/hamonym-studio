@@ -103,6 +103,7 @@ export interface StatementListItem {
   payment_count: number;
   confirmed_collection_methods?: ('card' | 'masav')[];
   latest_collection_at?: string | null;
+  outstanding?: string;
   // Additive (2026-10, unified "ניהול גבייה" page) -- SUM(payments.amount)
   // for this Statement, same ledger statement-balance.service.js#
   // getStatementBalance already treats as authoritative.
