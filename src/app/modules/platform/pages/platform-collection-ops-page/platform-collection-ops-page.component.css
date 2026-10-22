@@ -1,5 +1,5 @@
 .col-page {
-  padding: 24px;
+  padding: 18px;
   direction: rtl;
   /* 2026-10 layout fix: max-width alone (no auto margins) left the block
      hugging the RTL start (right) edge of the main content area, leaving
@@ -115,12 +115,6 @@
   width: 100%;
 }
 
-.col-metrics-kpi {
-  /* 3 cards, not 4 -- .col-metrics' own repeat(4,1fr) would leave a blank
-     fourth column and the row wouldn't reach the full width. */
-  grid-template-columns: repeat(3, 1fr);
-  margin-bottom: 14px;
-}
 .col-metric-sub {
   margin-top: 4px;
   font-size: 11px;
@@ -160,17 +154,9 @@
   color: #b91c1c;
 }
 
-.col-metrics-method {
-  /* Same fix as .col-metrics-kpi: 3 cards, not .col-metrics' own
-     repeat(4,1fr) -- otherwise a blank 4th column keeps the row from
-     reaching full width. */
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 18px;
-  margin-bottom: 18px;
-}
 
 .col-section {
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
 .col-section-title {
   font-size: 15px;
@@ -181,15 +167,15 @@
 /* A. Financial overview -- the one thing that must read instantly */
 .col-metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 .col-metric {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px;
+  padding: 14px;
   background: #fff;
-  text-align: center;
+  text-align: start;
 }
 .col-metric-label {
   font-size: 12px;
@@ -458,6 +444,9 @@
   border-collapse: collapse;
   font-size: 13px;
 }
+.col-collection-table-scroll { overflow-x: auto; direction: rtl; }
+.col-collection-table-scroll .col-table { min-width: 780px; }
+.col-collection-date { white-space: nowrap; direction: ltr; text-align: right; }
 .col-table th {
   text-align: right;
   padding: 9px 12px;
@@ -670,3 +659,13 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.col-secondary-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 10px 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #e5e7eb; }
+.col-secondary-summary strong { margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
+.col-secondary-summary a { text-decoration: none; }
+.col-secondary-summary a:hover { text-decoration: underline; }
+.col-secondary-summary small { margin-inline-start: 6px; color: #64748b; }
+.col-metric-value { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; font-size: clamp(20px, 2.3vw, 28px); }
+.col-metric-sub { color: #64748b; }
+#collection-attention { scroll-margin-top: 20px; }
+@media (max-width: 400px) { .col-page { padding: 12px; } .col-metrics { grid-template-columns: 1fr; } }

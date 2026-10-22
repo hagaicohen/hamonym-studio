@@ -91,3 +91,49 @@ test('modal template exposes obligation, required reason, warning, cancel and gu
   const modal = html.slice(0, html.indexOf('</dialog>'));
   for (const value of ['dir="rtl"', 'item.entityName', 'item.amount', 'item.previousAttempts', 'CardCom', 'required', 'ביטול', 'אשר גבייה', 'attentionActionBusy || !manualRetryReason.trim()', 'closeManualRetry()']) assert.ok(modal.includes(value), value);
 });
+
+test('history summary distinguishes four failures and the fifth successful attempt without changing history', () => {
+  const { page } = uiFixture();
+  const attempts = ['declined', 'technical_failure', 'technical_failure', 'declined', 'succeeded'].map(status => ({ status }));
+  page.selectedStatement = { attempts };
+  const summary = page.attemptSummary;
+  assert.equal(summary.total, 5); assert.equal(summary.failed, 4);
+  assert.equal(summary.succeeded, 1); assert.equal(summary.unresolved, 0);
+  assert.equal(page.selectedStatement.attempts, attempts); assert.equal(attempts.length, 5);
+  attempts.push({ status: 'ambiguous' });
+  assert.equal(page.attemptSummary.failed, 4); assert.equal(page.attemptSummary.unresolved, 1);
+});
+
+test('collection columns use confirmed ledger fields, never routing, attempts or MASAV exports', () => {
+  const { page } = uiFixture();
+  for (const [methods, label] of [[[], 'טרם נגבה'], [['card'], 'אשראי'], [['masav'], 'מס״ב'], [['card', 'masav'], 'אשראי + מס״ב']]) {
+    const row = { confirmed_collection_methods: methods, routed_method: 'masav', latest_attempt_status: 'succeeded' };
+    assert.equal(page.confirmedCollectionMethod(row), label);
+  }
+  assert.equal(page.confirmedCollectionMethod({ routed_method: 'card', payment_count: 0 }), 'טרם נגבה');
+  assert.equal(page.confirmedCollectionDate({ latest_collection_at: null }), '—');
+  assert.equal(page.confirmedCollectionDate({ latest_collection_at: '2026-10-22T12:53:11.262Z' }), '22.10.2026');
+  assert.equal(page.confirmedCollectionDate({ latest_collection_at: '2026-10-22T22:30:00Z' }), '23.10.2026');
+});
+
+test('dashboard distinguishes confirmed collection, pending debt and estimates without inventing percentages', () => {
+  const { page } = uiFixture();
+  assert.equal(page.collectionPercentage, null);
+  page.overview = { hasStatements: true, totalBilled: 200, paidConfirmed: 50, openBalance: 100, inProcess: 50 };
+  assert.equal(page.collectionPercentage, 25); assert.equal(page.remainingCollectionBalance, 150);
+  page.overview = { hasStatements: true, totalBilled: 143.37, paidConfirmed: 143.37, openBalance: 0, inProcess: 0 };
+  assert.equal(page.collectionPercentage, 100); assert.equal(page.remainingCollectionBalance, 0);
+  page.overview.totalBilled = 0; assert.equal(page.collectionPercentage, null);
+  page.overview = { hasStatements: false, totalBilled: null, paidConfirmed: null, openBalance: null, inProcess: null };
+  assert.equal(page.collectionPercentage, null);
+});
+
+test('dashboard has four cards, compact secondary indicators and table before attention with preserved warnings', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/app/modules/platform/pages/platform-collection-ops-page/platform-collection-ops-page.component.html'), 'utf8');
+  assert.equal((html.match(/class="col-metric"/g) || []).length, 4);
+  assert.ok(html.includes('col-secondary-summary'));
+  assert.ok(html.indexOf('col-collection-table-scroll') < html.indexOf('id="collection-attention"'));
+  for (const field of ['overview.carriedOverFromPriorPeriods.outstandingTotal', 'overview.accrued.entitiesMissingAccount', 'draftNotice.count', 'needsAttentionError', 'needsAttention.totalCount', 'overview.inProcess', 'נתון לא זמין']) assert.ok(html.includes(field), field);
+  const table = html.slice(html.indexOf('<table class="col-table">'), html.indexOf('</table>', html.indexOf('<table class="col-table">')));
+  for (const label of ['עמותה', 'סכום לחיוב', 'נגבה', 'יתרה', 'אמצעי גבייה', 'תאריך גבייה אחרון', 'סטטוס', 'פעולות']) assert.ok(table.includes('<th>' + label + '</th>'), label);
+});

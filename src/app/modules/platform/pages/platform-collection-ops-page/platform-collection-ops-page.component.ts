@@ -271,6 +271,16 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   overviewLoading = false;
   overviewError: string | null = null;
 
+  get remainingCollectionBalance(): number {
+    return (this.overview?.openBalance ?? 0) + (this.overview?.inProcess ?? 0);
+  }
+
+  get collectionPercentage(): number | null {
+    const overview = this.overview;
+    if (!overview?.hasStatements || !overview.totalBilled || overview.totalBilled <= 0 || overview.paidConfirmed === null) return null;
+    return overview.paidConfirmed / overview.totalBilled * 100;
+  }
+
   loadOverviewAndStatements(): void {
     if (!this.selectedYear || !this.selectedMonth) return;
     this.overviewLoading = true;
@@ -317,6 +327,12 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   private manualRetryDialog: HTMLDialogElement | null = null;
   manualRetryReason = '';
   manualRetryResult: string | null = null;
+  get attemptSummary(): { total: number; failed: number; succeeded: number; unresolved: number } {
+    const attempts = this.selectedStatement?.attempts ?? [];
+    const failed = attempts.filter((a) => ['declined', 'technical_failure'].includes(a.status)).length;
+    const succeeded = attempts.filter((a) => a.status === 'succeeded').length;
+    return { total: attempts.length, failed, succeeded, unresolved: attempts.length - failed - succeeded };
+  }
   attentionActionBusy = false;
   attentionActionError: string | null = null;
 
@@ -592,6 +608,21 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
 
   statementOutstanding(s: StatementListItem): number {
     return Number(s.total_due) - Number(s.collected);
+  }
+
+  confirmedCollectionMethod(s: StatementListItem): string {
+    const methods = s.confirmed_collection_methods ?? [];
+    if (methods.includes('card') && methods.includes('masav')) return 'אשראי + מס״ב';
+    if (methods.includes('card')) return 'אשראי';
+    if (methods.includes('masav')) return 'מס״ב';
+    return 'טרם נגבה';
+  }
+
+  confirmedCollectionDate(s: StatementListItem): string {
+    if (!s.latest_collection_at) return '—';
+    return new Intl.DateTimeFormat('de-DE', {
+      timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric',
+    }).format(new Date(s.latest_collection_at));
   }
 
   // "סך החיובים" vs "₪38.90" draft-table mismatch (2026-10 review): drafts

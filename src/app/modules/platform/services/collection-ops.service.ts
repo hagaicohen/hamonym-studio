@@ -63,6 +63,8 @@ export type NeedsAttentionCategory =
 export interface NeedsAttentionItem {
   manualRetryEligible?: boolean;
   previousAttempts?: number;
+  failedAttempts?: number;
+  successfulAttempts?: number;
   latestAttemptId?: string;
   manualRetryAmount?: number;
   entityName: string;
