@@ -462,7 +462,12 @@ exports.abandonStatement = async ({ statementId, superAdminUserId, ip }) => {
 // collection engine; a card-routed Statement missing a payment instrument
 // is caught the same way. It never fakes success and never falls back to a
 // different rail.
-exports.triggerCollection = async ({ statementId, superAdminUserId, ip }) => {
+exports.triggerCollection = async ({ statementId, superAdminUserId, ip, manualRetry, isSuperAdmin, confirmed, reason, expectedAttemptId, expectedOutstanding }) => {
+  if (manualRetry === true) {
+    return collection.runSuperAdminManualCardRetry(statementId, {
+      superAdminUserId, isSuperAdmin, ip, confirmed, reason, expectedAttemptId, expectedOutstanding,
+    });
+  }
   const stmtRes = await pool.query(
     `SELECT s.total_due, ba.entity_id
      FROM statements s JOIN billing_accounts ba ON ba.id = s.billing_account_id

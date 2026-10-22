@@ -15,6 +15,10 @@ const jobRunner = require('../../../jobs');
 const paymentExceptions = require('../../billing-engine/payment-exceptions.service');
 const masavProposals = require('../../billing-engine/masav-proposal.service');
 const masavCollectionService = require('../../collection-engine/masav-collection.service');
+const platformBillingSettings = require('../../billing-engine/platform-billing-settings.service');
+const billingPeriodUtil = require('../../billing-engine/billing-period.util');
+const routing = require('../../collection-engine/routing');
+const clock = require('../../../lib/clock');
 
 // Statuses that represent a real, committed financial obligation.
 // 'draft' is excluded -- still being calculated, not yet approved, so
@@ -30,20 +34,136 @@ const OVERVIEW_STATEMENT_STATUSES = ['approved', 'open', 'paid'];
 // A. Financial overview -- the four headline numbers, period-scoped, plus
 // visibility into unpaid balances carried over from earlier periods.
 // ---------------------------------------------------------------------------
-exports.getFinancialOverview = async ({ periodId }) => {
-  if (!periodId) {
-    const err = new Error('periodId is required');
-    err.code = 'MISSING_PERIOD_ID';
+// Accrued platform fees for a calendar month BEFORE any Statement exists for
+// it (2026-10, month-nav fix) -- read-only, reuses calculation.service.js's
+// exact eligibility predicate (paid, non-mock, in-window, not yet consumed
+// by a Statement) and per-entity fee_rate/VAT math, never writes anything.
+// A month a billing_periods row already covers still gets this computed (it
+// just won't matter once a real Statement exists for it) -- callers decide
+// which block to show based on whether `period` below is non-null.
+async function getAccruedPreview(periodStart, periodEnd) {
+  const { rows: activity } = await pool.query(
+    `SELECT d.entity_id, COUNT(*)::int AS donation_count, SUM(d.amount) AS gross_raised
+     FROM donations d
+     JOIN entities e ON e.id = d.entity_id AND e.status = 'active'
+     WHERE d.status = 'paid' AND d.is_mock = false
+       AND d.billing_effective_at >= $1 AND d.billing_effective_at < $2
+       AND d.effective_statement_id IS NULL
+     GROUP BY d.entity_id`,
+    [periodStart, periodEnd]
+  );
+
+  if (activity.length === 0) {
+    return { donationCount: 0, entitiesWithActivity: 0, grossRaised: 0, accruedFee: 0, accruedVat: 0, accruedTotal: 0, entitiesMissingAccount: [] };
+  }
+
+  const entityIds = activity.map((r) => r.entity_id);
+  const { rows: accounts } = await pool.query(
+    `SELECT entity_id, fee_rate FROM billing_accounts WHERE entity_id = ANY($1::uuid[]) AND enforcement_status = 'active'`,
+    [entityIds]
+  );
+  const feeRateByEntity = new Map(accounts.map((a) => [a.entity_id, Number(a.fee_rate)]));
+  const vatRate = Number(await platformBillingSettings.getCurrentVatRate());
+
+  let donationCount = 0;
+  let grossRaised = 0;
+  let accruedFee = 0;
+  const entitiesMissingAccount = [];
+  for (const row of activity) {
+    donationCount += row.donation_count;
+    grossRaised += Number(row.gross_raised);
+    const feeRate = feeRateByEntity.get(row.entity_id);
+    if (feeRate == null) { entitiesMissingAccount.push(row.entity_id); continue; }
+    accruedFee += Math.round(Number(row.gross_raised) * feeRate * 100) / 100;
+  }
+  const accruedVat = Math.round(accruedFee * vatRate * 100) / 100;
+
+  return {
+    donationCount,
+    entitiesWithActivity: activity.length,
+    grossRaised,
+    accruedFee,
+    accruedVat,
+    accruedTotal: accruedFee + accruedVat,
+    entitiesMissingAccount,
+  };
+}
+
+exports.getFinancialOverview = async ({ year, month }) => {
+  if (!year || !month) {
+    const err = new Error('year and month are required');
+    err.code = 'MISSING_PERIOD';
     throw err;
   }
 
-  const periodRes = await pool.query(`SELECT id, period_start, period_end FROM billing_periods WHERE id = $1`, [periodId]);
+  // The REAL frozen boundary model (2026-09-18 restoration), not a naive
+  // calendar month -- same function billing-ops' own "בחר חודש" action and
+  // the monthly job use, so this page can never disagree with them about
+  // what "October 2026" means. History through September 2026 stays
+  // calendar-month-shaped; October onward is the 28th-20:00-Israel-time
+  // rolling cutoff (billing-period.util.js's own header explains why).
+  const { periodStart, periodEnd } = await billingPeriodUtil.resolveSelectedMonthBoundary(pool, year, month);
+
+  const accrued = await getAccruedPreview(periodStart, periodEnd);
+
+  // Total donations actually made in this period -- unconditional on
+  // whether a Statement has since consumed them (unlike accrued's
+  // eligibility predicate, which intentionally excludes already-consumed
+  // donations since its whole purpose is previewing an UNBILLED fee). The
+  // "סך התרומות" KPI must keep showing the real total even after a real
+  // Statement exists for the period, not drop to 0 the moment donations
+  // get consumed.
+  const periodDonationsRes = await pool.query(
+    `SELECT COUNT(*)::int AS donation_count, COALESCE(SUM(amount), 0) AS gross_raised
+     FROM donations
+     WHERE status = 'paid' AND is_mock = false
+       AND billing_effective_at >= $1 AND billing_effective_at < $2`,
+    [periodStart, periodEnd]
+  );
+  const periodDonations = {
+    donationCount: periodDonationsRes.rows[0].donation_count,
+    grossRaised: Number(periodDonationsRes.rows[0].gross_raised),
+  };
+
+  // Effective BUSINESS time (clock.js -- real unless Super Admin has an
+  // active simulated override) vs this period's real cutoff instant: tells
+  // the UI whether collection is "not due yet" or "due, but not run".
+  const businessNow = await clock.now(pool);
+  const cutoffPassed = businessNow >= periodEnd;
+
+  const periodRes = await pool.query(
+    `SELECT id, period_start, period_end FROM billing_periods WHERE period_start = $1 AND period_end = $2`,
+    [periodStart, periodEnd]
+  );
   const period = periodRes.rows[0];
+
   if (!period) {
-    const err = new Error('Period not found');
-    err.code = 'PERIOD_NOT_FOUND';
-    throw err;
+    // No Statement has ever been calculated for this month -- a real,
+    // common state (future month, or past month not yet processed), never
+    // an error. Every statement-derived field is explicitly null, not 0,
+    // so the frontend can tell "nothing billed yet" apart from "billed
+    // exactly ₪0" -- the accrued block above is the only real number for
+    // this month so far.
+    return {
+      period: { id: null, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() },
+      hasStatements: false,
+      statementCount: null,
+      totalBilled: null,
+      paidConfirmed: null,
+      inProcess: null,
+      openBalance: null,
+      carriedOverFromPriorPeriods: { statementCount: 0, outstandingTotal: 0 },
+      accrued,
+      periodDonations,
+      cutoffPassed,
+      collectionAttempted: false,
+      cardCollectionFailed: false,
+      cardCollected: 0,
+      cardOutstanding: 0,
+      masavOutstanding: 0,
+    };
   }
+  const periodId = period.id;
 
   // Each Statement's own adjustment total / collected total / "is something
   // already in flight for it" flag -- the exact same three facts
@@ -99,6 +219,51 @@ exports.getFinancialOverview = async ({ periodId }) => {
   );
   const carried = carriedRes.rows[0];
 
+  // Card vs MASAV breakdown (2026-10) -- routing.resolveCollectionMethod is
+  // the ONE authoritative routing decision (collection.service.js#openAttempt
+  // is its only other caller); reused here read-only, per-statement, never
+  // writing a collection_attempts row. A statement already attempted keeps
+  // whatever method it was actually attempted under (collection_attempts.
+  // collection_method) -- routing is deterministic from total_due + the
+  // entity's current MASAV config, so this only ever disagrees with a past
+  // attempt if that config changed afterward, same as the real engine would.
+  const stmtRowsRes = await pool.query(
+    `SELECT s.id, ba.entity_id, s.total_due,
+            COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0) AS adj,
+            COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0) AS collected,
+            (SELECT ca.collection_method FROM collection_attempts ca WHERE ca.statement_id = s.id ORDER BY ca.attempt_number DESC LIMIT 1) AS last_attempt_method,
+            (SELECT ca.status FROM collection_attempts ca WHERE ca.statement_id = s.id ORDER BY ca.attempt_number DESC LIMIT 1) AS last_attempt_status
+     FROM statements s
+     JOIN billing_accounts ba ON ba.id = s.billing_account_id
+     WHERE s.billing_period_id = $1 AND s.status = ANY($2::text[])`,
+    [periodId, OVERVIEW_STATEMENT_STATUSES]
+  );
+  let cardCollected = 0;
+  let cardOutstanding = 0;
+  let masavOutstanding = 0;
+  let anyCardFailed = false;
+  for (const row of stmtRowsRes.rows) {
+    const outstanding = Number(row.total_due) + Number(row.adj) - Number(row.collected);
+    const method = row.last_attempt_method || (await routing.resolveCollectionMethod(pool, row)).method;
+    if (method === 'card' && outstanding > 0 && (row.last_attempt_status === 'technical_failure' || row.last_attempt_status === 'declined')) {
+      anyCardFailed = true;
+    }
+    if (method === 'card') {
+      cardCollected += Number(row.collected);
+      cardOutstanding += outstanding;
+    } else if (method === 'masav') {
+      masavOutstanding += outstanding;
+    }
+    // method === null (masav blocked, nothing set up yet) intentionally
+    // falls into neither bucket -- it already surfaces in "דורש טיפולך"
+    // (getNeedsAttention's masav_blocked category), never silently counted
+    // as collectible by either channel here.
+  }
+  const attemptedRes = await pool.query(
+    `SELECT EXISTS(SELECT 1 FROM collection_attempts ca JOIN statements s ON s.id = ca.statement_id WHERE s.billing_period_id = $1) AS attempted`,
+    [periodId]
+  );
+
   return {
     period: { id: period.id, periodStart: period.period_start, periodEnd: period.period_end },
     statementCount: agg.statement_count,
@@ -126,6 +291,15 @@ exports.getFinancialOverview = async ({ periodId }) => {
       statementCount: carried.statement_count,
       outstandingTotal: Number(carried.outstanding_total),
     },
+    hasStatements: true,
+    accrued,
+    periodDonations,
+    cutoffPassed,
+    collectionAttempted: attemptedRes.rows[0].attempted,
+    cardCollectionFailed: anyCardFailed,
+    cardCollected,
+    cardOutstanding,
+    masavOutstanding,
   };
 };
 
@@ -149,7 +323,18 @@ exports.getNeedsAttention = async () => {
     masavCollectionService.listBlockedStatements(),
     pool.query(
       `SELECT rf.id AS finding_id, rf.subject_id AS statement_id, rf.details, rf.found_at,
-              s.total_due, s.status AS statement_status, e.display_name AS entity_name
+              s.total_due, s.status AS statement_status, e.display_name AS entity_name,
+              s.total_due + COALESCE((SELECT SUM(delta_amount) FROM statement_adjustments WHERE statement_id = s.id), 0)
+                - COALESCE((SELECT SUM(amount) FROM payments WHERE statement_id = s.id), 0) AS outstanding,
+              (SELECT COUNT(*)::int FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card') AS card_attempt_count,
+              (SELECT id FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card' ORDER BY attempt_number DESC LIMIT 1) AS latest_card_attempt_id,
+              (s.total_due <= 3540
+                AND NOT EXISTS (SELECT 1 FROM collection_attempts WHERE statement_id = s.id
+                  AND (status = 'succeeded' OR collection_method = 'masav' AND status IN ('pending', 'ambiguous')
+                    OR collection_method = 'card' AND status NOT IN ('declined', 'technical_failure')))
+                AND NOT EXISTS (SELECT 1 FROM masav_collection_proposals WHERE statement_id = s.id AND status IN ('proposed','approved','exported'))
+                AND NOT EXISTS (SELECT 1 FROM payment_exceptions WHERE entity_id = ba.entity_id AND status = 'open' AND hold_new_collection = true)
+                AND EXISTS (SELECT 1 FROM entity_billing WHERE entity_id = ba.entity_id AND status = 'active' AND is_default = true)) AS manual_retry_safe
        FROM reconciliation_findings rf
        JOIN statements s ON s.id = rf.subject_id
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
@@ -211,8 +396,13 @@ exports.getNeedsAttention = async () => {
       totalAmount: 0,
       items: exhaustedFindings.rows.map((f) => ({
         entityName: f.entity_name,
-        amount: Number(f.total_due),
-        reason: `${f.details?.attemptsSoFar ?? 3} ניסיונות גבייה נכשלו`,
+        amount: Number(f.outstanding),
+        manualRetryEligible: f.manual_retry_safe && ['approved', 'open'].includes(f.statement_status)
+          && Number(f.outstanding) > 0 && Number(f.card_attempt_count) >= 3,
+        previousAttempts: Number(f.card_attempt_count),
+        latestAttemptId: f.latest_card_attempt_id,
+        manualRetryAmount: Math.min(Number(f.outstanding), 3000),
+        reason: `${f.card_attempt_count} ניסיונות גבייה נכשלו`,
         nextAction: 'בדוק את העמותה והחלט על המשך (למשל מעבר למס״ב)',
         statementId: f.statement_id,
         findingId: f.finding_id,

@@ -2,7 +2,7 @@ const axios = require('axios');
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
-exports.send = async ({ to, subject, html, text, from, replyTo }) => {
+exports.send = async ({ to, subject, html, text, from, replyTo, idempotencyKey }) => {
   let response;
   try {
     response = await axios.post(
@@ -19,6 +19,7 @@ exports.send = async ({ to, subject, html, text, from, replyTo }) => {
         headers: {
           Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           'Content-Type': 'application/json',
+          ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
         },
         timeout: 15000,
       }

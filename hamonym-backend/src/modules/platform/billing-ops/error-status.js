@@ -2,6 +2,8 @@
 // "known business error codes map to a specific status, everything else is
 // a logged 500" shape as billing-provisioning.controller.js.
 const STATUS_BY_CODE = {
+  MANUAL_RETRY_FORBIDDEN: 403,
+  INVALID_MANUAL_RETRY_CONFIRMATION: 400,
   STATEMENT_NOT_FOUND: 404,
   ATTEMPT_NOT_FOUND: 404,
   BILLING_PERIOD_NOT_FOUND: 404,

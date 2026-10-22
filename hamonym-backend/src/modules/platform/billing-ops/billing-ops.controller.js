@@ -113,6 +113,9 @@ exports.triggerCollection = async (req, res) => {
   try {
     const result = await service.triggerCollection({
       statementId: req.params.id, superAdminUserId: req.user.id, ip: req.ip,
+      isSuperAdmin: req.user.isSuperAdmin, manualRetry: req.body?.manualRetry,
+      confirmed: req.body?.confirmed, reason: req.body?.reason,
+      expectedAttemptId: req.body?.expectedAttemptId, expectedOutstanding: req.body?.expectedOutstanding,
     });
     res.json({ result });
   } catch (err) {

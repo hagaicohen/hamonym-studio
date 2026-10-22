@@ -29,13 +29,15 @@ const ACTIVE_ATTEMPT_STATUSES = ['pending', 'ambiguous'];
 // past the approved limit on a path FIN-11's own cap never covered.
 const MAX_CARD_ATTEMPTS = 3;
 const CONFIRMED_FAILURE_STATUSES = ['declined', 'technical_failure'];
+// Private capability: ordinary collection callers cannot opt out of the cap.
+const MANUAL_CARD_RETRY = Symbol('super-admin-manual-card-retry');
 
 // Phase A: lock the Statement, decide whether a new attempt should even be
 // opened, and if so open it (INSERT collection_attempts + approved->open),
 // all in one transaction so two concurrent callers on the same Statement
 // can never both pass the "no active attempt" check -- same locking idiom
 // as approval.service.js's SELECT ... FOR UPDATE.
-async function openAttempt(statementId, resolveAdapter) {
+async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: manualRetry } = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -90,6 +92,17 @@ async function openAttempt(statementId, resolveAdapter) {
       return { skipped: true, reason: 'attempt_already_active', attemptId: activeRes.rows[0].id };
     }
 
+    if (manualRetry) {
+      const succeeded = await client.query(
+        `SELECT id FROM collection_attempts WHERE statement_id = $1 AND status = 'succeeded' LIMIT 1`,
+        [statementId]
+      );
+      if (succeeded.rows.length) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'manual_retry_successful_attempt_exists' };
+      }
+    }
+
     // FIN-11 Stage 3, integration-gap fix #3: an 'exported' MASAV proposal
     // means a real instruction already left this system for a human to
     // submit to the bank -- its outcome is not knowable here (no Tranzila
@@ -127,6 +140,10 @@ async function openAttempt(statementId, resolveAdapter) {
     // Never charge zero/negative/already-covered -- this is the one new
     // guard; everything above it (status, active-attempt) is unchanged.
     const balance = await getStatementBalance(statementId, client);
+    if (manualRetry && Math.round(balance.outstanding * 100) !== Math.round(manualRetry.expectedOutstanding * 100)) {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'manual_retry_balance_changed' };
+    }
     if (balance.outstanding <= 0) {
       await client.query('COMMIT');
       return { skipped: true, reason: 'no_outstanding_balance', outstanding: balance.outstanding };
@@ -151,6 +168,18 @@ async function openAttempt(statementId, resolveAdapter) {
       });
       await client.query('COMMIT');
       return { skipped: true, reason: routed.reason };
+    }
+
+    if (manualRetry) {
+      if (routed.method !== 'card' || !await isMasavProposalsSchemaPresent(client)) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'manual_retry_not_card_ready' };
+      }
+      const { hasActiveMasavProposal } = require('../billing-engine/masav-proposal.service');
+      if ((await hasActiveMasavProposal(statementId, client)).exists) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'manual_retry_masav_conflict' };
+      }
     }
 
     const method = routed.method;
@@ -187,17 +216,23 @@ async function openAttempt(statementId, resolveAdapter) {
     // ever actually runs in production.
     if (method === 'card') {
       const cardAttemptsRes = await client.query(
-        `SELECT status FROM collection_attempts WHERE statement_id = $1 AND collection_method = 'card' ORDER BY attempt_number DESC`,
+        `SELECT id, status FROM collection_attempts WHERE statement_id = $1 AND collection_method = 'card' ORDER BY attempt_number DESC`,
         [statementId]
       );
       const cardAttempts = cardAttemptsRes.rows;
+      if (manualRetry && (cardAttempts.length < MAX_CARD_ATTEMPTS
+          || cardAttempts[0]?.id !== manualRetry.expectedAttemptId
+          || !cardAttempts.every((a) => CONFIRMED_FAILURE_STATUSES.includes(a.status)))) {
+        await client.query('COMMIT');
+        return { skipped: true, reason: 'manual_retry_stale_or_ineligible' };
+      }
       if (cardAttempts.length > 0) {
         const latestStatus = cardAttempts[0].status;
         if (!CONFIRMED_FAILURE_STATUSES.includes(latestStatus)) {
           await client.query('COMMIT');
           return { skipped: true, reason: 'latest_attempt_not_a_confirmed_failure', latestStatus };
         }
-        if (cardAttempts.length >= MAX_CARD_ATTEMPTS) {
+        if (cardAttempts.length >= MAX_CARD_ATTEMPTS && !manualRetry) {
           await recordFinding(client, {
             jobName: 'collection-router',
             findingType: 'fin11_card_attempts_exhausted',
@@ -260,6 +295,18 @@ async function openAttempt(statementId, resolveAdapter) {
        RETURNING id, attempt_number`,
       [statementId, method, attemptNumber, requestedAmount]
     );
+
+    if (manualRetry) {
+      // Audit consent and the exact new attempt atomically, before any charge.
+      await client.query(
+        `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes, ip_address)
+         VALUES ($1, $2, 'billing_manual_card_retry', $3, $4)`,
+        [manualRetry.superAdminUserId, statement.entity_id, JSON.stringify({
+          statementId, attemptId: insertRes.rows[0].id, expectedAttemptId: manualRetry.expectedAttemptId,
+          reason: manualRetry.reason, requestedAmount, confirmed: true,
+        }), manualRetry.ip || null]
+      );
+    }
 
     if (statement.status === 'approved') {
       await client.query(`UPDATE statements SET status = 'open' WHERE id = $1`, [statementId]);
@@ -454,6 +501,16 @@ async function resolveAttempt(attemptId, statementId, outcome) {
     // this function never opens a new attempt itself.
 
     await client.query('COMMIT');
+    // Financial truth commits first. Recovery can reconstruct this notification
+    // from the persisted attempt even if this process stops at the next line.
+    if (CONFIRMED_FAILURE_STATUSES.includes(outcome.outcome)) {
+      try {
+        const { notifyExhaustedCardStatement } = require('../billing-engine/fin11-card-collection.service');
+        await notifyExhaustedCardStatement(client, statementId, { attemptId });
+      } catch (err) {
+        console.error('[FIN11 notification] post-commit dispatch failed:', err.message);
+      }
+    }
     return { attemptId, outcome: outcome.outcome, statementStatus, overpayment };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -466,8 +523,8 @@ async function resolveAttempt(attemptId, statementId, outcome) {
 // Full pipeline for one Statement. resolveAdapter is an injection seam for
 // tests only (defaults to the real registry) -- see design doc section 6.1
 // for why both real adapters refuse to actually charge anything today.
-async function runCollectionForStatement(statementId, { resolveAdapter = defaultGetAdapter } = {}) {
-  const opened = await openAttempt(statementId, resolveAdapter);
+async function runCollectionForStatement(statementId, { resolveAdapter = defaultGetAdapter, [MANUAL_CARD_RETRY]: manualRetry } = {}) {
+  const opened = await openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: manualRetry });
   if (opened.skipped) return opened;
 
   const adapter = resolveAdapter(opened.method);
@@ -490,6 +547,25 @@ async function runCollectionForStatement(statementId, { resolveAdapter = default
   }
 
   return resolveAttempt(opened.attemptId, statementId, outcome);
+}
+
+// Explicit, narrow authorization for one new card attempt after exhaustion.
+// expectedAttemptId makes a repeated confirmation stale even after a fast decline.
+async function runSuperAdminManualCardRetry(statementId, authorization, { resolveAdapter = defaultGetAdapter } = {}) {
+  const { isSuperAdmin, superAdminUserId, confirmed, reason, expectedAttemptId, expectedOutstanding, ip } = authorization;
+  if (isSuperAdmin !== true || !superAdminUserId) {
+    const err = new Error('Platform Super Admin required'); err.code = 'MANUAL_RETRY_FORBIDDEN'; throw err;
+  }
+  if (confirmed !== true || typeof reason !== 'string' || !reason.trim() || reason.length > 1000
+      || typeof expectedAttemptId !== 'string' || !expectedAttemptId
+      || !Number.isFinite(expectedOutstanding) || expectedOutstanding <= 0) {
+    const err = new Error('Explicit confirmation, reason and current obligation details are required');
+    err.code = 'INVALID_MANUAL_RETRY_CONFIRMATION'; throw err;
+  }
+  return runCollectionForStatement(statementId, {
+    resolveAdapter,
+    [MANUAL_CARD_RETRY]: { superAdminUserId, reason: reason.trim(), expectedAttemptId, expectedOutstanding, ip },
+  });
 }
 
 // FIN-11 Stage 2A (2026-10, revised after Code Review) — PURE READ proposal
@@ -643,6 +719,7 @@ async function getFin11CappedCardProposal(statementId) {
 }
 
 module.exports = {
+  runSuperAdminManualCardRetry,
   runCollectionForStatement,
   openAttempt,
   resolveAttempt,

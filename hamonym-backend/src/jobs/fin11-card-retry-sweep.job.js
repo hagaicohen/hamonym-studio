@@ -64,17 +64,18 @@ async function findRetryCandidates(db) {
   return res.rows.map((r) => r.id);
 }
 
-async function handler(db, { resolveAdapter = defaultGetAdapter } = {}) {
+async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter } = {}) {
   const candidateIds = await findRetryCandidates(db);
 
-  const summary = { candidatesFound: candidateIds.length, succeeded: 0, confirmedFailureExhausted: 0, skippedOther: 0, errors: 0 };
+  const summary = { candidatesFound: candidateIds.length, succeeded: 0, confirmedFailureExhausted: 0, retryNotYetDue: 0, skippedOther: 0, errors: 0 };
 
   for (const statementId of candidateIds) {
     try {
-      const cycles = await collectWithRetries(statementId, resolveAdapter);
+      const cycles = await collectWithRetries(statementId, resolveAdapter, now);
       const last = cycles[cycles.length - 1];
       if (last?.resolved?.outcome === 'succeeded') summary.succeeded++;
       else if (last?.reason === 'max_attempts_reached') summary.confirmedFailureExhausted++;
+      else if (last?.reason === 'retry_not_yet_due') summary.retryNotYetDue++;
       else summary.skippedOther++;
     } catch (err) {
       summary.errors++;

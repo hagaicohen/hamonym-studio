@@ -16,7 +16,9 @@ function handle(res, label, err) {
 
 exports.getFinancialOverview = async (req, res) => {
   try {
-    res.json({ overview: await service.getFinancialOverview({ periodId: req.query.periodId }) });
+    const year = parseInt(req.query.year, 10);
+    const month = parseInt(req.query.month, 10);
+    res.json({ overview: await service.getFinancialOverview({ year, month }) });
   } catch (err) {
     handle(res, 'getFinancialOverview', err);
   }

@@ -67,6 +67,60 @@ const FINDING_SPEC = {
       { label: 'קמפיין', value: d.campaignId },
     ],
   },
+  // I/J/K/L — FIN-11 scheduled card collection (2026-10 business spec).
+  // "מסך ניהול גבייה" (not generic "מסך התפעול") is the actual place these
+  // get resolved -- opsDashboardUrl() below is still used as the link
+  // target (same Super Admin area), only the button label differs per spec.
+  fin11_card_collection_failed: {
+    subject: 'ניסיון גבייה נכשל — עמלת פלטפורמה',
+    headline: 'ניסיון גבייה באשראי נכשל',
+    summary: 'ניסיון גבייה אוטומטי באשראי עבור עמלת פלטפורמה נכשל. הניסיון הבא (אם נותר במכסה) יתבצע אוטומטית במועד המתוכנן, ללא צורך בפעולה כעת.',
+    action: 'אין צורך בפעולה כעת — הניסיון הבא יתבצע אוטומטית במועד המתוכנן.',
+    facts: (d) => [
+      { label: 'עמותה', value: d.entityName },
+      { label: 'חודש חיוב', value: d.billingMonth },
+      { label: 'יתרה פתוחה', value: d.outstandingDisplay },
+      { label: 'מספר ניסיון', value: d.attemptNumber },
+      { label: 'סיבת כשל', value: d.failureReason },
+      { label: 'ניסיון הבא', value: d.nextAction },
+    ],
+  },
+  fin11_card_attempts_exhausted: {
+    subject: 'דורש טיפול — מוצו ניסיונות הגבייה באשראי',
+    headline: 'גביית אשראי נכשלה סופית — דורש טיפול',
+    summary: 'מוצו ניסיונות הגבייה האוטומטיים באשראי. לא יבוצע ניסיון נוסף אוטומטית — נדרשת החלטת Super Admin.',
+    action: 'לבחור בין "נסה לגבות שוב באשראי" (לאחר טיפול בבעיה) לבין "העבר למס״ב" במסך ניהול גבייה.',
+    facts: (d) => [
+      { label: 'עמותה', value: d.entityName },
+      { label: 'חודש חיוב', value: d.billingMonth },
+      { label: 'יתרה פתוחה', value: d.outstandingDisplay },
+      { label: 'סיבת כשל אחרונה', value: d.failureReason },
+    ],
+  },
+  fin11_card_collection_recovered: {
+    subject: 'גבייה הושלמה בהצלחה (לאחר כשלים קודמים)',
+    headline: 'גבייה הושלמה בהצלחה',
+    summary: 'לאחר ניסיונות כושלים קודמים, הגבייה באשראי הושלמה בהצלחה.',
+    action: 'אין נדרשת פעולה.',
+    facts: (d) => [
+      { label: 'עמותה', value: d.entityName },
+      { label: 'חודש חיוב', value: d.billingMonth },
+      { label: 'סכום שנגבה', value: d.collectedDisplay },
+      { label: 'ניסיונות כושלים קודמים', value: d.priorFailures },
+    ],
+  },
+  fin11_masav_manual_transfer: {
+    subject: 'יתרת כרטיס הועברה למס״ב',
+    headline: 'יתרה הועברה ידנית למס״ב',
+    summary: 'Super Admin העביר יתרה שנכשלה בגביית אשראי להצעת מס״ב. זו אינה גבייה בפועל — נדרשים אישור וייצוא הקובץ במסך ניהול גבייה.',
+    action: 'לאשר ולייצא את קובץ המס״ב במסך ניהול גבייה.',
+    facts: (d) => [
+      { label: 'עמותה', value: d.entityName },
+      { label: 'חודש חיוב', value: d.billingMonth },
+      { label: 'סכום שהועבר', value: d.outstandingDisplay },
+      { label: 'בוצע על ידי', value: d.performedBy },
+    ],
+  },
 };
 
 const GENERIC = {

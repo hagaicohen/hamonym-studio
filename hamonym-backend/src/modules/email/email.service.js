@@ -48,7 +48,7 @@ async function claimKeyedLog(payload, subject, providerName) {
       to, template, subject || null, providerName,
       entityId || null, campaignId || null, donationId || null, userId || null,
       idempotencyKey,
-      JSON.stringify({ template, to, data, entityId: entityId || null, campaignId: campaignId || null, donationId: donationId || null, userId: userId || null }),
+      JSON.stringify({ template, to, data, ...(data.eventType === 'fin11_card_attempts_exhausted' ? { idempotencyKey } : {}), entityId: entityId || null, campaignId: campaignId || null, donationId: donationId || null, userId: userId || null }),
     ]
   );
   return res.rows[0]?.id ?? null;
@@ -68,12 +68,13 @@ async function finalizeKeyedLog(logId, { status, providerMessageId, error, sent 
 // email-dispatch-recovery.job.js, so a recovered send is byte-identical to
 // a first-attempt one (same precedent as webhook-recovery.job.js re-running
 // the very same handler, rather than a parallel recovery implementation).
-async function attemptSend({ to, subject, html, text, template }, providerName) {
+async function attemptSend({ to, subject, html, text, template, idempotencyKey }, providerName) {
   const provider = getProvider();
   const result = await provider.send({
     to, subject, html, text, template,
     from: process.env.EMAIL_FROM,
     replyTo: process.env.EMAIL_REPLY_TO,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
   });
   return {
     status: result.stub ? 'stub' : 'sent',
@@ -138,7 +139,9 @@ async function dispatch(payload) {
   }
 
   try {
-    const { status, providerMessageId } = await attemptSend({ to, subject, html, text, template }, providerName);
+    const { status, providerMessageId } = await attemptSend({ to, subject, html, text, template,
+      ...(data.eventType === 'fin11_card_attempts_exhausted' ? { idempotencyKey } : {}),
+    }, providerName);
     if (logId) await finalizeKeyedLog(logId, { status, providerMessageId, sent: true });
     else {
       await logEmail({
@@ -178,7 +181,10 @@ async function redispatchPending(row) {
 
   try {
     const { status, providerMessageId } = await attemptSend(
-      { to: intent.to, subject, html, text },
+      { to: intent.to, subject, html, text,
+        ...(intent.data?.eventType === 'fin11_card_attempts_exhausted'
+          ? { idempotencyKey: intent.idempotencyKey || row.idempotency_key } : {}),
+      },
       process.env.EMAIL_PROVIDER || 'stub'
     );
     await finalizeKeyedLog(row.id, { status, providerMessageId, sent: true });

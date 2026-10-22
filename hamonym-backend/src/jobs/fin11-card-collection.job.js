@@ -68,18 +68,24 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
     confirmedFailureExhausted: 0,
     collectionHeld: 0,
     maskedByMasavExport: 0,
+    retryNotYetDue: 0,
     skippedOther: 0,
     errors: 0,
   };
 
   for (const row of statementsRes.rows) {
     try {
-      const cycles = await collectWithRetries(row.id, resolveAdapter);
+      const cycles = await collectWithRetries(row.id, resolveAdapter, now);
       const last = cycles[cycles.length - 1];
       if (last?.resolved?.outcome === 'succeeded') summary.succeeded++;
       else if (last?.reason === 'max_attempts_reached') summary.confirmedFailureExhausted++;
       else if (last?.reason === 'entity_collection_held') summary.collectionHeld++;
       else if (last?.reason === 'masav_proposal_exported_unresolved') summary.maskedByMasavExport++;
+      // Scheduled-attempt gate (2026-10): not yet this statement's turn --
+      // the 30th/2nd-of-next-month dates haven't arrived yet. Expected and
+      // frequent (every daily tick between scheduled dates hits this for
+      // any statement mid-retry-cycle), never a real exception.
+      else if (last?.reason === 'retry_not_yet_due') summary.retryNotYetDue++;
       else summary.skippedOther++;
     } catch (err) {
       summary.errors++;

@@ -141,6 +141,30 @@ async function ensurePeriod(db, periodStart, periodEnd) {
   }
 }
 
+// Calendar slots at 20:00 Israel time. Deduplication skips the coincident
+// February 28 slot; the ordinal counts actual attempts, not skipped slots.
+async function computeAttemptDueInstant(db, fromInstant, attemptNumber) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'numeric',
+  }).formatToParts(new Date(fromInstant));
+  const year = Number(parts.find((p) => p.type === 'year').value);
+  const month = Number(parts.find((p) => p.type === 'month').value) - 1;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const days = [...new Set([28, Math.min(30, lastDay)].map((day) =>
+    new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)))];
+  days.push(new Date(Date.UTC(year, month + 1, 2)).toISOString().slice(0, 10));
+  // Keep PostgreSQL's authoritative tzdata conversion, including DST changes.
+  const res = await db.query(
+    `SELECT (day + TIME '20:00') AT TIME ZONE 'Asia/Jerusalem' AS due
+     FROM unnest($1::date[]) AS days(day) ORDER BY day`,
+    [days]
+  );
+  return {
+    dueAt: res.rows[attemptNumber - 1] ? new Date(res.rows[attemptNumber - 1].due) : null,
+    maxAttempts: res.rows.length,
+  };
+}
+
 module.exports = {
   computeCalendarMonthUtcBoundary,
   computeIsraeliCutoffUtcInstant,
@@ -148,4 +172,5 @@ module.exports = {
   resolveSelectedMonthBoundary,
   isBeforeCycleModel,
   ensurePeriod,
+  computeAttemptDueInstant,
 };
