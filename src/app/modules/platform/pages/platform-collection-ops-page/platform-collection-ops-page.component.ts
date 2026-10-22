@@ -313,6 +313,8 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   resolutionType: ResolutionType = 'resolve_no_overpayment';
   resolveReason = '';
   resolveEvidenceNotes = '';
+  manualRetryItem: NeedsAttentionItem | null = null;
+  private manualRetryDialog: HTMLDialogElement | null = null;
   manualRetryReason = '';
   manualRetryResult: string | null = null;
   attentionActionBusy = false;
@@ -345,17 +347,34 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     this.attentionActionError = null;
   }
 
-  retryCardManually(item: NeedsAttentionItem): void {
+  openManualRetry(item: NeedsAttentionItem, dialog: HTMLDialogElement): void {
     if (this.attentionActionBusy || !item.manualRetryEligible || !item.latestAttemptId) return;
+    this.manualRetryItem = item;
+    this.manualRetryReason = '';
+    this.attentionActionError = null;
+    this.manualRetryDialog = dialog;
+    dialog.showModal();
+  }
+
+  closeManualRetry(): void {
+    if (this.attentionActionBusy) return;
+    this.manualRetryDialog?.close();
+    this.manualRetryDialog = null;
+    this.manualRetryItem = null;
+    this.manualRetryReason = '';
+  }
+
+  retryCardManually(item: NeedsAttentionItem): void {
+    if (this.attentionActionBusy || this.manualRetryItem !== item || !item.manualRetryEligible || !item.latestAttemptId) return;
     const reason = this.manualRetryReason.trim();
     if (!reason) { this.attentionActionError = 'נדרשת סיבה לניסיון הגבייה הידני'; return; }
-    if (!window.confirm(`עמותה: ${item.entityName}\nיתרה פתוחה: ₪${this.fmtMoney(item.amount)}\nניסיונות קודמים: ${item.previousAttempts}\nסכום לחיוב: ₪${this.fmtMoney(item.manualRetryAmount ?? item.amount)}\nפעולה זו יוזמת חיוב חדש ב־CardCom. האם לאשר?`)) return;
     this.attentionActionBusy = true;
     this.attentionActionError = null;
     this.manualRetryResult = null;
     this.billingOps.retryCardManually(item.statementId, reason, item.latestAttemptId, item.amount).subscribe({
       next: ({ result }) => {
         this.attentionActionBusy = false;
+        this.closeManualRetry();
         this.openItem = null;
         this.manualRetryResult = result.skipped
           ? 'לא בוצע חיוב: מצב החוב השתנה או שקיימת חסימת גבייה. יש לבדוק את ההיסטוריה לפני ניסיון נוסף.'
@@ -367,6 +386,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
       },
       error: () => {
         this.attentionActionBusy = false;
+        this.closeManualRetry();
         this.manualRetryResult = 'לא ניתן לאשר את תוצאת הבקשה. יש לבדוק את היסטוריית הניסיונות לפני ניסיון נוסף.';
         this.openItem = null;
         this.refreshDrawer();

@@ -229,9 +229,49 @@
   margin-bottom: 6px;
   overflow: hidden;
 }
-.col-attn-item-row {
+/* Uses the platform user-action modal's colors, spacing and warning pattern. */
+.col-retry-modal {
+  border: 0;
+  border-radius: 12px;
+  padding: 24px;
+  width: min(440px, calc(100vw - 32px));
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  color: #1e293b;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, .2);
+}
+.col-retry-modal::backdrop { background: rgba(15, 23, 42, .45); }
+.col-retry-modal h3 { margin: 0 0 6px; font-size: 17px; }
+.col-retry-entity { margin: 0 0 16px; color: #64748b; overflow-wrap: anywhere; }
+.col-retry-summary { margin: 0 0 16px; font-size: 14px; }
+.col-retry-summary > div { display: flex; justify-content: space-between; gap: 12px; margin-block: 8px; }
+.col-retry-summary dd { margin: 0; font-weight: 700; }
+.col-retry-warning { padding: 10px 12px; background: #fffbeb; color: #92400e; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.col-retry-modal label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+.col-retry-modal textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; resize: vertical; }
+.col-retry-modal textarea:focus { outline: 2px solid #583cd6; outline-offset: 2px; }
+.col-retry-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.col-retry-actions .col-btn { min-height: 40px; }
+.col-attn-header {
   display: flex;
   align-items: center;
+}
+.col-attn-actions {
+  flex-shrink: 0;
+  padding: 12px 14px;
+  padding-inline-start: 0;
+}
+.col-attn-actions .col-btn {
+  white-space: normal;
+  line-height: 1.5;
+}
+.col-attn-item-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px 14px;
   cursor: pointer;
@@ -613,6 +653,19 @@
 }
 
 @media (max-width: 640px) {
+  .col-attn-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .col-attn-actions {
+    padding: 0 14px 12px;
+  }
+  .col-attn-actions .col-btn {
+    width: 100%;
+  }
+  .col-attn-next {
+    white-space: normal;
+  }
   .col-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
