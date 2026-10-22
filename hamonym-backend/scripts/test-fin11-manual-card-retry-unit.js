@@ -217,28 +217,29 @@ function uiFixture() {
   const page = new module.exports.PlatformCollectionOpsPageComponent();
   page.refreshDrawer = () => state.refreshes++;
   const item = { statementId: 's1', entityName: 'Mock nonprofit', amount: 143.37, previousAttempts: 3, latestAttemptId: 'a3', manualRetryEligible: true, manualRetryAmount: 143.37 };
-  return { page, state, item };
+  const dialog = { showModal() {}, close() {} };
+  return { page, state, item, dialog };
 }
 test('UI requires reason and confirmation, displays obligation, blocks repeated submissions and refreshes actual result', () => {
-  const { page, state, item } = uiFixture();
+  const { page, state, item, dialog } = uiFixture();
   page.retryCardManually(item); assert.equal(state.calls, 0);
-  page.manualRetryReason = 'block removed'; state.confirmed = false;
+  page.openManualRetry(item, dialog); page.closeManualRetry();
   page.retryCardManually(item); assert.equal(state.calls, 0);
-  state.confirmed = true; page.retryCardManually(item);
-  assert.match(state.prompts.at(-1), /Mock nonprofit/); assert.match(state.prompts.at(-1), /143.37/);
-  assert.match(state.prompts.at(-1), /3/); assert.match(state.prompts.at(-1), /CardCom/);
+  page.openManualRetry(item, dialog); page.manualRetryReason = 'block removed';
+  page.retryCardManually(item); assert.equal(page.manualRetryItem, item);
+  assert.equal(state.prompts.length, 0);
   assert.equal(page.attentionActionBusy, true); page.retryCardManually(item); assert.equal(state.calls, 1);
   state.handlers.next({ result: { outcome: 'succeeded' } });
   assert.equal(page.attentionActionBusy, false); assert.match(page.manualRetryResult, /הצליחה/); assert.equal(state.refreshes, 1);
 });
 test('UI failure/uncertainty never reports success or auto-resubmits', () => {
   for (const result of [{ outcome: 'declined' }, { outcome: 'ambiguous' }, { skipped: true }]) {
-    const { page, state, item } = uiFixture(); page.manualRetryReason = 'confirmed';
+    const { page, state, item, dialog } = uiFixture(); page.openManualRetry(item, dialog); page.manualRetryReason = 'confirmed';
     page.retryCardManually(item); state.handlers.next({ result });
     assert.doesNotMatch(page.manualRetryResult, /הצליחה/); assert.equal(state.calls, 1);
     assert.equal(state.refreshes, 1);
   }
-  const { page, state, item } = uiFixture(); page.manualRetryReason = 'confirmed';
+  const { page, state, item, dialog } = uiFixture(); page.openManualRetry(item, dialog); page.manualRetryReason = 'confirmed';
   page.retryCardManually(item); state.handlers.error({});
   assert.match(page.manualRetryResult, /היסטוריית/); assert.equal(state.calls, 1); assert.equal(state.refreshes, 1);
 });

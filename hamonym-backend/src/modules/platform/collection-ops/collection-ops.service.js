@@ -159,6 +159,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
       collectionAttempted: false,
       cardCollectionFailed: false,
       cardCollected: 0,
+      masavCollected: 0,
       cardOutstanding: 0,
       masavOutstanding: 0,
     };
@@ -231,6 +232,10 @@ exports.getFinancialOverview = async ({ year, month }) => {
     `SELECT s.id, ba.entity_id, s.total_due,
             COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0) AS adj,
             COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0) AS collected,
+            COALESCE((SELECT SUM(p.amount) FROM payments p JOIN collection_attempts ca ON ca.id = p.collection_attempt_id
+                      WHERE p.statement_id = s.id AND ca.collection_method = 'card'), 0) AS confirmed_card_collected,
+            COALESCE((SELECT SUM(p.amount) FROM payments p JOIN collection_attempts ca ON ca.id = p.collection_attempt_id
+                      WHERE p.statement_id = s.id AND ca.collection_method = 'masav'), 0) AS confirmed_masav_collected,
             (SELECT ca.collection_method FROM collection_attempts ca WHERE ca.statement_id = s.id ORDER BY ca.attempt_number DESC LIMIT 1) AS last_attempt_method,
             (SELECT ca.status FROM collection_attempts ca WHERE ca.statement_id = s.id ORDER BY ca.attempt_number DESC LIMIT 1) AS last_attempt_status
      FROM statements s
@@ -239,17 +244,19 @@ exports.getFinancialOverview = async ({ year, month }) => {
     [periodId, OVERVIEW_STATEMENT_STATUSES]
   );
   let cardCollected = 0;
+  let masavCollected = 0;
   let cardOutstanding = 0;
   let masavOutstanding = 0;
   let anyCardFailed = false;
   for (const row of stmtRowsRes.rows) {
     const outstanding = Number(row.total_due) + Number(row.adj) - Number(row.collected);
+    cardCollected += Number(row.confirmed_card_collected);
+    masavCollected += Number(row.confirmed_masav_collected);
     const method = row.last_attempt_method || (await routing.resolveCollectionMethod(pool, row)).method;
     if (method === 'card' && outstanding > 0 && (row.last_attempt_status === 'technical_failure' || row.last_attempt_status === 'declined')) {
       anyCardFailed = true;
     }
     if (method === 'card') {
-      cardCollected += Number(row.collected);
       cardOutstanding += outstanding;
     } else if (method === 'masav') {
       masavOutstanding += outstanding;
@@ -298,6 +305,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
     collectionAttempted: attemptedRes.rows[0].attempted,
     cardCollectionFailed: anyCardFailed,
     cardCollected,
+    masavCollected,
     cardOutstanding,
     masavOutstanding,
   };
@@ -327,6 +335,8 @@ exports.getNeedsAttention = async () => {
               s.total_due + COALESCE((SELECT SUM(delta_amount) FROM statement_adjustments WHERE statement_id = s.id), 0)
                 - COALESCE((SELECT SUM(amount) FROM payments WHERE statement_id = s.id), 0) AS outstanding,
               (SELECT COUNT(*)::int FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card') AS card_attempt_count,
+              (SELECT COUNT(*)::int FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card' AND status IN ('declined', 'technical_failure')) AS failed_card_attempt_count,
+              (SELECT COUNT(*)::int FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card' AND status = 'succeeded') AS successful_card_attempt_count,
               (SELECT id FROM collection_attempts WHERE statement_id = s.id AND collection_method = 'card' ORDER BY attempt_number DESC LIMIT 1) AS latest_card_attempt_id,
               (s.total_due <= 3540
                 AND NOT EXISTS (SELECT 1 FROM collection_attempts WHERE statement_id = s.id
@@ -360,6 +370,10 @@ exports.getNeedsAttention = async () => {
     ),
   ]);
 
+  // Historical findings remain auditable; only collectible debt needs intervention.
+  const activeExhausted = exhaustedFindings.rows.filter((f) =>
+    ['approved', 'open'].includes(f.statement_status) && Number(f.outstanding) > 0);
+
   const categories = [
     {
       category: 'masav_proposal_awaiting_approval',
@@ -392,17 +406,19 @@ exports.getNeedsAttention = async () => {
     {
       category: 'card_attempts_exhausted',
       label: 'כשלי גבייה בכרטיס אחרי 3 ניסיונות',
-      count: exhaustedFindings.rows.length,
-      totalAmount: 0,
-      items: exhaustedFindings.rows.map((f) => ({
+      count: activeExhausted.length,
+      totalAmount: activeExhausted.reduce((sum, f) => sum + Number(f.outstanding), 0),
+      items: activeExhausted.map((f) => ({
         entityName: f.entity_name,
         amount: Number(f.outstanding),
         manualRetryEligible: f.manual_retry_safe && ['approved', 'open'].includes(f.statement_status)
           && Number(f.outstanding) > 0 && Number(f.card_attempt_count) >= 3,
         previousAttempts: Number(f.card_attempt_count),
+        failedAttempts: Number(f.failed_card_attempt_count),
+        successfulAttempts: Number(f.successful_card_attempt_count),
         latestAttemptId: f.latest_card_attempt_id,
         manualRetryAmount: Math.min(Number(f.outstanding), 3000),
-        reason: `${f.card_attempt_count} ניסיונות גבייה נכשלו`,
+        reason: `${f.failed_card_attempt_count} ניסיונות גבייה נכשלו`,
         nextAction: 'בדוק את העמותה והחלט על המשך (למשל מעבר למס״ב)',
         statementId: f.statement_id,
         findingId: f.finding_id,

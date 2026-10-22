@@ -318,7 +318,14 @@ exports.listStatements = async ({ periodId, runId, status, month }) => {
               -- second round trip). Same SUM(payments.amount) statement-
               -- balance.service.js#getStatementBalance already treats as
               -- authoritative -- never recalculated differently here.
-              (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.statement_id = s.id) AS collected
+              (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.statement_id = s.id) AS collected,
+              -- Payment ledger facts only: routing and unconfirmed exports are not collections.
+              ARRAY(SELECT DISTINCT ca.collection_method FROM payments p
+                    JOIN collection_attempts ca ON ca.id = p.collection_attempt_id AND ca.statement_id = p.statement_id
+                    WHERE p.statement_id = s.id ORDER BY ca.collection_method) AS confirmed_collection_methods,
+              (SELECT MAX(p.received_at) FROM payments p WHERE p.statement_id = s.id) AS latest_collection_at,
+              s.total_due + COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0)
+                - COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0) AS outstanding
        FROM statements s
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        JOIN entities e ON e.id = ba.entity_id
