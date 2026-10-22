@@ -315,6 +315,12 @@ export class BillingOpsService {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/abandon`, {}, { headers: authHeaders() });
   }
 
+  retryCardManually(id: string, reason: string, expectedAttemptId: string, expectedOutstanding: number): Observable<{ result: any }> {
+    return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {
+      manualRetry: true, confirmed: true, reason, expectedAttemptId, expectedOutstanding,
+    }, { headers: authHeaders() });
+  }
+
   triggerCollection(id: string): Observable<{ result: any }> {
     return this.http.post<{ result: any }>(`${this.base}/statements/${id}/collect`, {}, { headers: authHeaders() });
   }

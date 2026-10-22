@@ -132,6 +132,7 @@
     <!-- B. דורש טיפולך -->
     <section class="col-section">
       <h2 class="col-section-title">דורש טיפולך</h2>
+      @if (manualRetryResult) { <p class="col-note" role="status">{{ manualRetryResult }}</p> }
       @if (needsAttentionLoading) {
         <div class="col-empty">טוען...</div>
       } @else if (needsAttentionError) {
@@ -159,8 +160,18 @@
                 <span class="col-attn-next">{{ item.nextAction }} ›</span>
               </div>
 
+              @if (group.category === 'card_attempts_exhausted' && item.manualRetryEligible) {
+                <button class="col-btn col-btn-small col-btn-primary" [disabled]="attentionActionBusy" (click)="toggleItem(item)">נסה לגבות שוב באשראי</button>
+              }
               @if (openItem === item) {
                 <div class="col-attn-form">
+                  @if (group.category === 'card_attempts_exhausted' && item.manualRetryEligible) {
+                    <p class="col-note">{{ item.entityName }} · יתרה ₪{{ fmtMoney(item.amount) }} · {{ item.previousAttempts }} ניסיונות קודמים</p>
+                    <p class="col-note">אישור הפעולה יוזם חיוב חדש ב־CardCom.</p>
+                    <textarea [(ngModel)]="manualRetryReason" maxlength="1000" [disabled]="attentionActionBusy" aria-label="סיבה לניסיון גבייה ידני" placeholder="סיבה לניסיון הגבייה הידני"></textarea>
+                    @if (attentionActionError) { <div class="col-error">{{ attentionActionError }}</div> }
+                    <button class="col-btn col-btn-primary" [disabled]="attentionActionBusy || !manualRetryReason.trim()" (click)="retryCardManually(item)">{{ attentionActionBusy ? 'מעבד בקשה…' : 'אישור וניסיון גבייה חדש' }}</button>
+                  }
                   @if (group.category === 'masav_proposal_awaiting_approval') {
                     <textarea [(ngModel)]="approveReason" placeholder="הערה לאישור ההצעה"></textarea>
                     @if (attentionActionError) { <div class="col-error">{{ attentionActionError }}</div> }

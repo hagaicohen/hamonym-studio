@@ -313,6 +313,8 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   resolutionType: ResolutionType = 'resolve_no_overpayment';
   resolveReason = '';
   resolveEvidenceNotes = '';
+  manualRetryReason = '';
+  manualRetryResult: string | null = null;
   attentionActionBusy = false;
   attentionActionError: string | null = null;
 
@@ -332,6 +334,8 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   toggleItem(item: NeedsAttentionItem): void {
+    if (this.attentionActionBusy) return;
+    this.manualRetryReason = '';
     this.openItem = this.openItem === item ? null : item;
     this.approveReason = '';
     this.overrideReason = '';
@@ -339,6 +343,35 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
     this.resolveEvidenceNotes = '';
     this.resolutionType = 'resolve_no_overpayment';
     this.attentionActionError = null;
+  }
+
+  retryCardManually(item: NeedsAttentionItem): void {
+    if (this.attentionActionBusy || !item.manualRetryEligible || !item.latestAttemptId) return;
+    const reason = this.manualRetryReason.trim();
+    if (!reason) { this.attentionActionError = 'נדרשת סיבה לניסיון הגבייה הידני'; return; }
+    if (!window.confirm(`עמותה: ${item.entityName}\nיתרה פתוחה: ₪${this.fmtMoney(item.amount)}\nניסיונות קודמים: ${item.previousAttempts}\nסכום לחיוב: ₪${this.fmtMoney(item.manualRetryAmount ?? item.amount)}\nפעולה זו יוזמת חיוב חדש ב־CardCom. האם לאשר?`)) return;
+    this.attentionActionBusy = true;
+    this.attentionActionError = null;
+    this.manualRetryResult = null;
+    this.billingOps.retryCardManually(item.statementId, reason, item.latestAttemptId, item.amount).subscribe({
+      next: ({ result }) => {
+        this.attentionActionBusy = false;
+        this.openItem = null;
+        this.manualRetryResult = result.skipped
+          ? 'לא בוצע חיוב: מצב החוב השתנה או שקיימת חסימת גבייה. יש לבדוק את ההיסטוריה לפני ניסיון נוסף.'
+          : result.outcome === 'succeeded' ? 'הגבייה הצליחה ואושרה על ידי CardCom.'
+          : result.outcome === 'ambiguous' ? 'תוצאת הגבייה אינה ודאית. אין לנסות שוב עד לבירור מול הספק.'
+          : result.outcome === 'declined' ? 'CardCom דחה את ניסיון הגבייה. התוצאה נשמרה בהיסטוריה.'
+          : 'ניסיון הגבייה נכשל טכנית. התוצאה נשמרה בהיסטוריה.';
+        this.refreshDrawer();
+      },
+      error: () => {
+        this.attentionActionBusy = false;
+        this.manualRetryResult = 'לא ניתן לאשר את תוצאת הבקשה. יש לבדוק את היסטוריית הניסיונות לפני ניסיון נוסף.';
+        this.openItem = null;
+        this.refreshDrawer();
+      },
+    });
   }
 
   // "הצעות מס״ב מחכות לאישור" -- reuses FinanceOpsService#approveMasavProposal verbatim.

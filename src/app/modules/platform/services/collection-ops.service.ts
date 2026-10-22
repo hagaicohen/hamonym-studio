@@ -61,6 +61,10 @@ export type NeedsAttentionCategory =
   | 'statement_auto_approval_failed';
 
 export interface NeedsAttentionItem {
+  manualRetryEligible?: boolean;
+  previousAttempts?: number;
+  latestAttemptId?: string;
+  manualRetryAmount?: number;
   entityName: string;
   amount: number;
   reason: string;
