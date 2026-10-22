@@ -114,6 +114,7 @@ test('collection columns use confirmed ledger fields, never routing, attempts or
   assert.equal(page.confirmedCollectionDate({ latest_collection_at: null }), '—');
   assert.equal(page.confirmedCollectionDate({ latest_collection_at: '2026-10-22T12:53:11.262Z' }), '22.10.2026');
   assert.equal(page.confirmedCollectionDate({ latest_collection_at: '2026-10-22T22:30:00Z' }), '23.10.2026');
+  assert.equal(page.confirmedCollectionDate({ latest_business_collection_at: '2026-10-28T18:00:00Z', latest_collection_at: '2026-10-22T12:53:11Z' }), '28.10.2026 20:00');
   assert.equal(page.confirmedCollectionMethod({ collected: '143.37', status: 'paid' }), 'נתון לא זמין');
   assert.equal(page.confirmedCollectionMethod({ collected: '143.37', confirmed_collection_methods: [] }), 'נתון לא זמין');
   assert.equal(page.confirmedCollectionMethod({ collected: '143.37', confirmed_collection_methods: ['card'] }), 'אשראי');

@@ -142,7 +142,7 @@
                 <td>₪{{ fmtMoney(s.collected) }}</td>
                 <td>₪{{ fmtMoney(statementOutstanding(s)) }}</td>
                 <td>{{ confirmedCollectionMethod(s) }}</td>
-                <td class="col-collection-date">{{ confirmedCollectionDate(s) }}</td>
+                <td class="col-collection-date" [title]="s.latest_business_collection_at ? 'זמן עסקי בסימולציה; זמן ביצוע אמיתי: ' + s.latest_collection_at : ''">{{ confirmedCollectionDate(s) }}</td>
                 <td>{{ statusLabel(s.status) }}</td>
                 <td><button class="col-btn col-btn-small col-btn-primary" (click)="openStatement(s.id)">ניהול</button></td>
               </tr>

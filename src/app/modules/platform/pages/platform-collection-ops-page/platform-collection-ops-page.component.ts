@@ -620,6 +620,12 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   confirmedCollectionDate(s: StatementListItem): string {
+    if (s.latest_business_collection_at) {
+      const instant = new Date(s.latest_business_collection_at);
+      const date = new Intl.DateTimeFormat('de-DE', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric' }).format(instant);
+      const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
+      return `${date} ${time}`;
+    }
     if (!s.latest_collection_at) return '—';
     return new Intl.DateTimeFormat('de-DE', {
       timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric',
