@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BillingSettingsService } from '../../services/billing-settings.service';
 import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
+import { PlatformService } from '../../services/platform.service';
+import { CampaignResetService, CampaignResetStatus } from '../../services/campaign-reset.service';
 
 type SettingsTab = 'billing' | 'simulation';
 
@@ -26,6 +28,8 @@ type SettingsTab = 'billing' | 'simulation';
 export class PlatformGeneralSettingsPageComponent implements OnInit {
   private settingsService = inject(BillingSettingsService);
   private clockService = inject(SimulationClockService);
+  private platformService = inject(PlatformService);
+  private campaignResetService = inject(CampaignResetService);
 
   tab: SettingsTab = 'billing';
 
@@ -40,6 +44,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadVatSetting();
     this.loadClockStatus();
+    this.loadCampaigns();
   }
 
   // The settings clock is independent of FIN-11 authorization and production time.
@@ -60,6 +65,9 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     this.clockService.getStatus().subscribe({
       next: (res) => {
         this.clockStatus = res;
+        const fields = this.israelFields(res.businessNow);
+        this.fixedDateInput = fields.date;
+        this.fixedTimeInput = fields.time;
         this.clockLoading = false;
       },
       error: () => {
@@ -75,36 +83,33 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     return this.clockStatus.overrideActive ? 'זמן מדומה' : 'זמן אמת';
   }
 
-  // Primary action label switches once an override is already active
-  // (2026-10 redesign: "הפעל זמן מדומה" the first time, "עדכן זמן מדומה"
-  // to move an already-active simulated clock forward/back).
   get setClockButtonLabel(): string {
-    if (this.clockActionBusy) return 'מעדכן...';
-    return this.clockStatus?.overrideActive ? 'עדכן זמן מדומה' : 'הפעל זמן מדומה';
+    return this.clockActionBusy ? 'מעדכן...' : 'קבע זמן עסקי';
   }
 
   fmtDateTime(iso: string): string {
     return new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
   }
 
-  toggleSimulation(): void {
-    if (this.clockActionBusy || !this.clockStatus) return;
-    this.clockActionBusy = true;
-    this.clockActionError = null;
-    this.clockService.setEnabled(!this.clockStatus.simulationEnabled).subscribe({
-      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; },
-      error: (err) => {
-        this.clockActionBusy = false;
-        this.clockActionError = err?.error?.error || 'עדכון מצב הסימולציה נכשל';
-      },
-    });
+  private israelFields(iso: string): { date: string; time: string } {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map(p => [p.type, p.value]));
+    return { date: `${parts['year']}-${parts['month']}-${parts['day']}`, time: `${parts['hour']}:${parts['minute']}` };
   }
 
   setClockFixed(): void {
-    if (this.clockActionBusy || !this.fixedDateInput || !this.fixedTimeInput || !this.clockStatus?.simulationEnabled) return;
-    this.clockActionBusy = true;
+    if (this.clockActionBusy || !this.fixedDateInput || !this.fixedTimeInput || !this.clockStatus) return;
     this.clockActionError = null;
-    const iso = new Date(`${this.fixedDateInput}T${this.fixedTimeInput}`).toISOString();
+    const wallTime = Date.parse(`${this.fixedDateInput}T${this.fixedTimeInput}:00Z`);
+    if (!Number.isFinite(wallTime)) { this.clockActionError = 'יש לבחור תאריך ושעה תקינים'; return; }
+    let instant = wallTime;
+    for (let i = 0; i < 2; i++) {
+      const fields = this.israelFields(new Date(instant).toISOString());
+      instant += wallTime - Date.parse(`${fields.date}T${fields.time}:00Z`);
+    }
+    const iso = new Date(instant).toISOString();
+    const fields = this.israelFields(iso);
+    if (fields.date !== this.fixedDateInput || fields.time !== this.fixedTimeInput) { this.clockActionError = 'השעה אינה קיימת בשעון ישראל. יש לבחור שעה אחרת'; return; }
+    this.clockActionBusy = true;
     this.clockService.setFixed(iso).subscribe({
       next: (res) => { this.clockActionBusy = false; this.clockStatus = res; },
       error: (err) => {
@@ -123,6 +128,88 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
       error: (err) => {
         this.clockActionBusy = false;
         this.clockActionError = err?.error?.error || 'האיפוס נכשל';
+      },
+    });
+  }
+
+  campaigns: Array<{ id: string; title: string; entity_name?: string }> = [];
+  campaignsLoading = false;
+  campaignsError: string | null = null;
+  selectedCampaignId = '';
+  campaignResetStatus: CampaignResetStatus | null = null;
+  campaignStatusLoading = false;
+  campaignStatusError: string | null = null;
+
+  loadCampaigns(): void {
+    this.campaignsLoading = true;
+    this.campaignsError = null;
+    this.platformService.getCampaigns({ limit: 1000 }).subscribe({
+      next: (res) => { this.campaigns = res.campaigns || []; this.campaignsLoading = false; },
+      error: () => { this.campaignsLoading = false; this.campaignsError = 'לא ניתן לטעון את רשימת הקמפיינים. ניתן לנסות שוב.'; },
+    });
+  }
+
+  resetConfirmOpen = false;
+  resetReason = '';
+  resetTypedTitle = '';
+  resetBusy = false;
+  resetError: string | null = null;
+  resetResult: string | null = null;
+  readonly resetTableNames: Record<string, string> = {
+    donations: 'תרומות', receipts: 'קבלות', payments: 'תשלומים', collection_attempts: 'ניסיונות גבייה',
+    statements: 'חיובים', statement_components: 'רכיבי חיוב', statement_adjustments: 'התאמות חיוב',
+    billing_runs: 'ריצות חיוב פרטיות', email_logs: 'רישומי דואר', registration_orders: 'הרשמות',
+    registration_participants: 'משתתפים', masav_collection_proposals: 'הצעות מס״ב',
+  };
+  get resetCountRows(): Array<{table: string; name: string; count: number}> {
+    return Object.entries(this.campaignResetStatus?.counts || {}).filter(([,n]) => n > 0)
+      .map(([table,count]) => ({table,name:this.resetTableNames[table] || table,count}));
+  }
+  confirmCampaignReset(): void {
+    const status = this.campaignResetStatus;
+    if (this.resetBusy || !this.resetConfirmOpen || !status?.available || status.campaignId !== this.selectedCampaignId
+      || this.resetTypedTitle !== status.campaignTitle || this.resetReason.trim().length < 3) return;
+    this.resetBusy = true;
+    this.resetError = null;
+    this.campaignResetService.reset(status.campaignId, this.resetReason.trim(), this.resetTypedTitle, status.snapshotHash).subscribe({
+      next: (res) => {
+        this.resetBusy = false;
+        this.resetConfirmOpen = false;
+        this.loadCampaigns();
+        this.selectCampaign(status.campaignId);
+        this.resetResult = res.result.reset ? 'האיפוס הושלם ואומת. מזהה הגיבוי: ' + res.result.backupId : 'לא התקבל אישור להשלמת האיפוס. יש לרענן את המצב.';
+      },
+      error: (err) => {
+        this.resetBusy = false;
+        this.resetConfirmOpen = false;
+        this.selectCampaign(status.campaignId);
+        this.resetError = err?.error?.error || 'לא ניתן לאמת את השלמת האיפוס. יש לבדוק את המצב והגיבוי לפני ניסיון נוסף.';
+      },
+    });
+  }
+
+  selectCampaign(id: string): void {
+    if (this.resetBusy) return;
+    this.resetConfirmOpen = false;
+    this.resetReason = '';
+    this.resetTypedTitle = '';
+    this.resetError = null;
+    this.resetResult = null;
+    this.selectedCampaignId = id;
+    this.campaignResetStatus = null;
+    this.campaignStatusError = null;
+    this.campaignStatusLoading = !!id;
+    if (!id) return;
+    this.campaignResetService.getStatus(id).subscribe({
+      next: (res) => {
+        if (this.selectedCampaignId !== id) return;
+        this.campaignResetStatus = res.status;
+        this.campaignStatusLoading = false;
+      },
+      error: (err) => {
+        if (this.selectedCampaignId !== id) return;
+        this.campaignStatusLoading = false;
+        this.campaignStatusError = err?.error?.error || (err?.status === 404 ? 'בדיקת זמינות האיפוס אינה זמינה בשרת. לא בוצע איפוס.' : 'לא ניתן לבדוק כעת את זמינות האיפוס. לא בוצע איפוס.');
       },
     });
   }

@@ -7,11 +7,19 @@ function authHeaders(): HttpHeaders {
   return new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 }
 
-// Super Admin "סימולציה" tab, tool B -- read/write surface over the
-// EXISTING campaign-reset.service.js. See that file's own header for the
-// full reconciliation design (shared-statement handling, the existing
-// applyStatementAdjustment rules it reuses, the all-or-nothing transaction
-// shape).
+// Reset availability is explicit. No legacy destructive reset is restored.
+export interface CampaignResetStatus {
+  campaignId: string;
+  campaignTitle: string;
+  available: boolean;
+  code: string | null;
+  snapshotHash: string;
+  counts: Record<string, number>;
+  totalRecords: number;
+  recordIds: Record<string, string[]>;
+  message: string;
+}
+
 export interface CampaignResetPreview {
   campaignId: string;
   campaignTitle: string;
@@ -26,14 +34,9 @@ export interface CampaignResetPreview {
 
 export interface CampaignResetResult {
   reset: boolean;
-  reason?: string;
   campaignId: string;
-  campaignTitle: string;
-  donationsRemoved: number;
-  receiptsRemoved?: number;
-  emailLogsRemoved?: number;
-  totalAmountRemoved: number;
-  statementsAdjusted: Array<{ statementId: string; status: string; method: string; oldTotal: number; newTotal: number; delta?: number }>;
+  backupId: string;
+  deleted: Record<string, number>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -41,11 +44,15 @@ export class CampaignResetService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/api/platform/campaign-reset`;
 
+  getStatus(campaignId: string): Observable<{ status: CampaignResetStatus }> {
+    return this.http.get<{ status: CampaignResetStatus }>(`${this.base}/${campaignId}/status`, { headers: authHeaders() });
+  }
+
   getPreview(campaignId: string): Observable<{ preview: CampaignResetPreview }> {
     return this.http.get<{ preview: CampaignResetPreview }>(`${this.base}/${campaignId}/preview`, { headers: authHeaders() });
   }
 
-  reset(campaignId: string, reason: string): Observable<{ result: CampaignResetResult }> {
-    return this.http.post<{ result: CampaignResetResult }>(`${this.base}/${campaignId}/reset`, { reason }, { headers: authHeaders() });
+  reset(campaignId: string, reason: string, campaignTitle: string, expectedSnapshotHash: string): Observable<{ result: CampaignResetResult }> {
+    return this.http.post<{ result: CampaignResetResult }>(`${this.base}/${campaignId}/reset`, { reason, campaignTitle, expectedSnapshotHash, confirmed: true }, { headers: authHeaders() });
   }
 }
