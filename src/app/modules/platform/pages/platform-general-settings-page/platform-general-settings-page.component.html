@@ -121,6 +121,7 @@
               <p>{{ row.name }}: <bdi class="sim-reset-hash">{{ campaignResetStatus.recordIds[row.table].join(', ') }}</bdi></p>
             }
           </details>
+        }
           @if (!resetConfirmOpen) {
             <button type="button" class="ops-btn sim-danger-btn" [disabled]="!campaignResetStatus.available || resetBusy" (click)="resetConfirmOpen = true">אפס נתוני בדיקה</button>
           } @else {
@@ -134,7 +135,6 @@
               </div>
             </div>
           }
-        }
       }
       @if (resetError) { <p class="ops-action-error" role="alert">{{ resetError }}</p> }
       @if (resetResult) { <p class="sim-result-box" role="status">{{ resetResult }}</p> }
