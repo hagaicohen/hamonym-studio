@@ -49,12 +49,13 @@ async function preview(id) {
   const enabled=process.env.CAMPAIGN_TEST_RESET_ENABLED==='true';
   const approved=await approval(pool,id,s.hash);
   let code=empty?'NOTHING_TO_RESET':!enabled?'RESET_DISABLED':!approved?'RESET_APPROVAL_REQUIRED':null;
-  if(!code){try{backupDirectory();}catch(err){code='BACKUP_NOT_CONFIGURED';}}
+  if(!code){try{if(databaseBackupMode())await pool.query('SELECT id FROM campaign_reset_private.backups LIMIT 0');else backupDirectory();}catch(err){code='BACKUP_NOT_CONFIGURED';}}
   return {campaignId:id,campaignTitle:s.data.campaign.title,available:!code,code,message:code?messages[code]:'האיפוס מאושר לרשומות המוצגות בלבד.',
    snapshotHash:s.hash,counts,totalRecords:Object.values(counts).reduce((a,b)=>a+b,0),
    recordIds:Object.fromEntries(Object.entries(s.data.tables).map(([t,rows])=>[t,rows.map(r=>String(r.id))]))};
  }catch(err){throw normalize(err);}
 }
+function databaseBackupMode() { return process.env.CAMPAIGN_TEST_RESET_BACKUP_MODE==='database'; }
 function backupDirectory() {
  const configured=process.env.CAMPAIGN_TEST_RESET_BACKUP_DIR;
  if(!configured||!path.isAbsolute(configured))throw fail('BACKUP_NOT_CONFIGURED');
@@ -64,6 +65,7 @@ function backupDirectory() {
  return dir;
 }
 function backup(s) {
+ if(databaseBackupMode())return 'database:campaign_reset_private.backups/'+s.hash;
  const dir=backupDirectory();
  const file=path.join(dir,'campaign-reset-'+randomUUID()+'.json');
  const fd=fs.openSync(file,'wx',0o600);
@@ -87,6 +89,12 @@ async function reset(id,input,actorId) {
   const {rows}=await client.query('SELECT public.execute_campaign_test_reset($1,$2,$3,$4,$5) AS result',[id,s.hash,actorId,input.reason.trim(),file]);
   const result=rows[0].result;
   if(result?.reset!==true||Object.entries(s.data.tables).some(([t,records])=>result.deleted[t]!==records.length))throw fail('RESET_VERIFICATION_FAILED');
+  if(databaseBackupMode()) {
+   // The existing SQL function writes this durable private snapshot before its first DELETE.
+   // Verify it inside the same transaction; any mismatch rolls back both backup and deletion.
+   const saved=await client.query('SELECT snapshot::text AS snapshot_text FROM campaign_reset_private.backups WHERE id=$1 AND campaign_id=$2 AND actor_id=$3 AND snapshot_sha256=$4',[result.backupId,id,actorId,s.hash]);
+   if(saved.rows.length!==1||createHash('sha256').update(saved.rows[0].snapshot_text,'utf8').digest('hex')!==s.hash)throw fail('BACKUP_VERIFICATION_FAILED');
+  }
   await client.query('COMMIT');return result;
  }catch(err){if(client)await client.query('ROLLBACK').catch(()=>{});throw normalize(err);}
  finally{if(client)client.release();}
