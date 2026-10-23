@@ -1,68 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
-import { PlatformService } from '../../services/platform.service';
-import { relativeTime } from '../../utils/relative-time';
+import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { DashboardOverview, DashboardRange, PlatformDashboardService } from '../../services/platform-dashboard.service';
 
-interface DashboardKpis {
-  totalEntities: number;
-  activeEntities: number;
-  pendingReviewEntities: number;
-  incompleteDraftEntities: number;
-  activeCampaigns: number;
-  donationsToday: number;
-  donationsMonth: number;
-  failedPaymentsThisMonth: number;
-  newDonorsThisMonth: number;
-}
-
-interface Alert {
-  key: string;
-  label: string;
-  count: number;
-  linkQuery: Record<string, string>;
-}
-
-type ActivityType = 'audit' | 'campaign_audit' | 'campaign' | 'donation' | 'user';
-
-interface ActivityItem {
-  type: ActivityType;
-  title: string;
-  subtitle: string | null;
-  timestamp: string;
-}
-
-interface ChartPoint {
-  date: string;
-  value: number;
-}
-
-const ACTIVITY_ICON: Record<ActivityType, string> = {
-  audit: '🛡️',
-  campaign_audit: '🛡️',
-  campaign: '🎯',
-  donation: '💛',
-  user: '👤',
-};
-
-const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
-  audit: 'עמותה',
-  campaign_audit: 'קמפיין',
-  campaign: 'קמפיין חדש',
-  donation: 'תרומה',
-  user: 'משתמש',
-};
-
-type ActivityFilter = 'all' | ActivityType;
-
-const ACTIVITY_FILTERS: { key: ActivityFilter; label: string }[] = [
-  { key: 'all', label: 'הכל' },
-  { key: 'audit', label: 'עמותות' },
-  { key: 'campaign_audit', label: 'ניהול קמפיינים' },
-  { key: 'campaign', label: 'קמפיינים חדשים' },
-  { key: 'donation', label: 'תרומות' },
-  { key: 'user', label: 'משתמשים' },
-];
+interface ChartPoint { date: string; value: number; }
 
 @Component({
   selector: 'app-platform-dashboard-page',
@@ -71,124 +14,139 @@ const ACTIVITY_FILTERS: { key: ActivityFilter; label: string }[] = [
   templateUrl: './platform-dashboard-page.component.html',
   styleUrl: './platform-dashboard-page.component.css',
 })
-export class PlatformDashboardPageComponent implements OnInit {
-  private platformService = inject(PlatformService);
-  private router = inject(Router);
+export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
+  private service = inject(PlatformDashboardService);
+  readonly context = inject(CurrentContextService);
+  @ViewChild('donorDrawer') donorDrawer?: ElementRef<HTMLElement>;
+  @ViewChild('drawerClose') drawerClose?: ElementRef<HTMLButtonElement>;
+  private request?: Subscription;
+  private requestId = 0;
+  private focusTimer?: ReturnType<typeof setTimeout>;
+  private drawerTrigger?: HTMLElement;
 
+  data: DashboardOverview | null = null;
   loading = true;
   error: string | null = null;
-
-  kpis: DashboardKpis | null = null;
-  alerts: Alert[] = [];
-  donationsDaily: ChartPoint[] = [];
-  entitiesWeekly: ChartPoint[] = [];
-
-  readonly activityFilters = ACTIVITY_FILTERS;
-  activity: ActivityItem[] = [];
-  activityTotal = 0;
-  activityPage = 0;
-  activityLimit = 10;
-  activityLoading = false;
-  activityFilter: ActivityFilter = 'all';
-  activitySortDir: 'asc' | 'desc' = 'desc';
-
-  get activityTotalPages(): number {
-    return Math.max(1, Math.ceil(this.activityTotal / this.activityLimit));
-  }
-
-  // Chart geometry (shared viewBox sizing for both inline SVG charts)
+  range: DashboardRange = '30d';
+  readonly ranges: { key: DashboardRange; label: string }[] = [
+    { key: '7d', label: '7 ימים' }, { key: '30d', label: '30 ימים' }, { key: '12m', label: '12 חודשים' },
+  ];
+  attentionPage = 0;
+  donorsOpen = false;
+  donorPage = 0;
+  readonly donorPageSize = 20;
   readonly chartWidth = 560;
   readonly chartHeight = 160;
   private readonly padding = { top: 10, bottom: 20, left: 8, right: 8 };
-
   lineHover: { index: number; x: number; y: number } | null = null;
-  barHover: { index: number; x: number; y: number } | null = null;
 
-  ngOnInit(): void {
-    this.platformService.getDashboard().subscribe({
-      next: (res) => {
-        this.kpis = res.kpis;
-        this.alerts = res.alerts ?? [];
-        this.donationsDaily = res.charts?.donationsDaily ?? [];
-        this.entitiesWeekly = res.charts?.entitiesWeekly ?? [];
+  ngOnInit(): void { this.load(); }
+  ngOnDestroy(): void {
+    this.requestId++;
+    this.request?.unsubscribe();
+    clearTimeout(this.focusTimer);
+  }
+
+  load(range: DashboardRange = this.range): void {
+    this.request?.unsubscribe();
+    const requestId = ++this.requestId;
+    this.loading = true;
+    this.error = null;
+    this.lineHover = null;
+    this.request = this.service.getOverview(range).subscribe({
+      next: (data) => {
+        if (requestId !== this.requestId) return;
+        if (data.version !== 1 || !Array.isArray(data.newDonors) ||
+            (data.kpis.newDonorsThisMonth !== null && data.kpis.newDonorsThisMonth !== data.newDonors.length)) {
+          this.error = 'נתוני הדשבורד אינם תואמים. נסה לטעון מחדש.';
+          this.loading = false;
+          return;
+        }
+        this.data = data;
+        this.range = range;
+        this.attentionPage = 0;
+        this.donorPage = 0;
         this.loading = false;
       },
       error: (err) => {
-        this.error = err.error?.error || 'שגיאה בטעינת נתוני הפלטפורמה';
+        if (requestId !== this.requestId) return;
+        this.error = err.status === 404 ? 'נדרשת גרסת שרת תואמת לדשבורד המעודכן.' : 'לא ניתן לטעון את הדשבורד. נסה שוב.';
         this.loading = false;
       },
     });
-
-    this.loadActivity();
   }
 
-  loadActivity(): void {
-    this.activityLoading = true;
-    this.platformService
-      .getActivity({
-        type: this.activityFilter === 'all' ? undefined : this.activityFilter,
-        sortDir: this.activitySortDir,
-        page: this.activityPage,
-        limit: this.activityLimit,
-      })
-      .subscribe({
-        next: (res) => {
-          this.activity = res.items ?? [];
-          this.activityTotal = res.total ?? 0;
-          this.activityLoading = false;
-        },
-        error: () => {
-          this.activityLoading = false;
-        },
-      });
+  get donationsDaily(): ChartPoint[] { return this.data?.trend?.points ?? []; }
+  get recentActivity() {
+    const seen = new Set<string>();
+    return this.data?.activity.filter(event => {
+      // The record identity denotes the action; matching text or timestamps
+      // alone must never merge genuinely distinct business events.
+      if (!event.id) return true;
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    }) ?? [];
+  }
+  get hasDonations(): boolean { return this.donationsDaily.some(p => p.value > 0); }
+  get comparisonPercent(): number | null {
+    const trend = this.data?.trend;
+    return trend && trend.previousTotal > 0 ? (trend.total - trend.previousTotal) / trend.previousTotal * 100 : null;
+  }
+  get visibleAttention() { return this.data?.attention.slice(this.attentionPage * 5, this.attentionPage * 5 + 5) ?? []; }
+  get attentionPages(): number { return Math.max(1, Math.ceil((this.data?.attention.length ?? 0) / 5)); }
+  get visibleDonors() { return this.data?.newDonors.slice(this.donorPage * this.donorPageSize, (this.donorPage + 1) * this.donorPageSize) ?? []; }
+  get donorPages(): number { return Math.max(1, Math.ceil((this.data?.newDonors.length ?? 0) / this.donorPageSize)); }
+
+  focusAttention(section: HTMLElement): void {
+    this.attentionPage = 0;
+    section.focus({ preventScroll: true });
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  selectActivityFilter(filter: ActivityFilter): void {
-    this.activityFilter = filter;
-    this.activityPage = 0;
-    this.loadActivity();
+  openDonors(trigger: HTMLElement): void {
+    if (!this.context.isSuperAdmin() || !this.data) return;
+    this.drawerTrigger = trigger;
+    this.donorPage = 0;
+    this.donorsOpen = true;
+    clearTimeout(this.focusTimer);
+    this.focusTimer = setTimeout(() => this.drawerClose?.nativeElement.focus());
   }
 
-  toggleActivitySort(): void {
-    this.activitySortDir = this.activitySortDir === 'desc' ? 'asc' : 'desc';
-    this.activityPage = 0;
-    this.loadActivity();
+  closeDonors(): void {
+    this.donorsOpen = false;
+    clearTimeout(this.focusTimer);
+    this.drawerTrigger?.focus();
   }
 
-  prevActivityPage(): void {
-    if (this.activityPage > 0) { this.activityPage--; this.loadActivity(); }
+  @HostListener('document:keydown', ['$event'])
+  onDrawerKey(event: KeyboardEvent): void {
+    if (!this.donorsOpen) return;
+    if (event.key === 'Escape') { event.preventDefault(); this.closeDonors(); return; }
+    if (event.key !== 'Tab') return;
+    const controls = this.donorDrawer?.nativeElement.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]');
+    if (!controls?.length) return;
+    const first = controls[0], last = controls[controls.length - 1];
+    const active = first.ownerDocument.activeElement;
+    if (event.shiftKey && active === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
   }
 
-  nextActivityPage(): void {
-    if (this.activityPage < this.activityTotalPages - 1) { this.activityPage++; this.loadActivity(); }
+  fmtMoney(value: number | null): string {
+    return value === null ? '—' : new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   }
-
-  goToAlert(alert: Alert): void {
-    this.router.navigate(['/platform/organizations'], { queryParams: alert.linkQuery });
+  fmtDate(iso: string, withTime = false): string {
+    const date = new Date(iso);
+    if (!Number.isFinite(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric',
+      ...(withTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
+    }).format(date);
   }
-
-  activityIcon(type: ActivityType): string {
-    return ACTIVITY_ICON[type] ?? '•';
-  }
-
-  activityTypeLabel(type: ActivityType): string {
-    return ACTIVITY_TYPE_LABEL[type] ?? type;
-  }
-
-  relativeTime(iso: string): string {
-    return relativeTime(iso);
-  }
-
-  fmtMoney(n: number): string {
-    return '₪' + Math.round(n || 0).toLocaleString('he-IL');
-  }
-
   fmtDayLabel(iso: string): string {
-    const [, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}`;
+    const [year, month, day] = iso.slice(0, 10).split('-');
+    return this.range === '12m' ? `${month}/${year}` : `${day}/${month}`;
   }
-
-  // ── Line chart geometry (donations, 30 days) ──
+  // Reuse the existing SVG chart geometry for each supported time range.
   get linePoints(): { x: number; y: number; value: number; date: string }[] {
     return this.toPoints(this.donationsDaily);
   }
@@ -244,36 +202,4 @@ export class PlatformDashboardPageComponent implements OnInit {
     }));
   }
 
-  // ── Bar chart geometry (new entities, 8 weeks) ──
-  get barItems(): { x: number; y: number; width: number; height: number; value: number; date: string }[] {
-    const series = this.entitiesWeekly;
-    if (series.length === 0) return [];
-    const max = Math.max(1, ...series.map((p) => p.value));
-    const innerWidth = this.chartWidth - this.padding.left - this.padding.right;
-    const innerHeight = this.chartHeight - this.padding.top - this.padding.bottom;
-    const slot = innerWidth / series.length;
-    const barWidth = Math.min(24, slot * 0.55);
-
-    return series.map((p, i) => {
-      const height = p.value === 0 ? 0 : Math.max(3, innerHeight * (p.value / max));
-      return {
-        x: this.padding.left + slot * i + (slot - barWidth) / 2,
-        y: this.padding.top + innerHeight - height,
-        width: barWidth,
-        height,
-        value: p.value,
-        date: p.date,
-      };
-    });
-  }
-
-  onBarEnter(i: number, evt: MouseEvent): void {
-    const bar = this.barItems[i];
-    if (!bar) return;
-    this.barHover = { index: i, x: bar.x + bar.width / 2, y: bar.y };
-  }
-
-  onBarLeave(): void {
-    this.barHover = null;
-  }
 }

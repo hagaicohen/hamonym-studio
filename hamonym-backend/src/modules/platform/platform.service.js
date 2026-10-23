@@ -21,6 +21,7 @@ const ORG_SORT_COLUMNS = {
   created_at: 'e.created_at',
   campaigns: 'campaigns_count',
   raised: 'total_raised',
+  activity: 'e.updated_at',
 };
 
 const ACTION_LABELS = {
@@ -412,7 +413,10 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
     params.push(status);
   }
   if (search) {
-    where.push(`(e.display_name ILIKE $${idx} OR e.legal_name ILIKE $${idx})`);
+    where.push(`(e.display_name ILIKE $${idx} OR e.legal_name ILIKE $${idx}
+      OR e.registration_number::text ILIKE $${idx}
+      OR EXISTS (SELECT 1 FROM user_entities ue JOIN users u ON u.id = ue.user_id
+                 WHERE ue.entity_id = e.id AND ue.role = 'owner' AND u.full_name ILIKE $${idx}))`);
     params.push(`%${search}%`);
     idx++;
   }
@@ -434,14 +438,22 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
   // noCampaigns filters on the per-row lateral column, applied after the joins below
   const noCampaignsClause = noCampaigns ? `${where.length ? 'AND' : 'WHERE'} COALESCE(camp.campaigns_count, 0) = 0` : '';
 
-  const [listRes, totalRes] = await Promise.all([
+  const [listRes, totalRes, allRes] = await Promise.all([
     db.query(
       `SELECT
-         e.id, e.display_name, e.legal_name, e.logo_url, e.status, e.created_at, e.updated_at,
+         e.id, e.display_name, e.legal_name, e.registration_number, e.logo_url, e.status, e.created_at, e.updated_at,
          e.flagged_for_review, e.flagged_for_review_reason, e.flagged_for_review_at,
          ${PROFILE_COMPLETION_SQL},
+         ARRAY_REMOVE(ARRAY[
+           CASE WHEN NULLIF(e.display_name, '') IS NULL THEN 'שם תצוגה' END,
+           CASE WHEN NULLIF(e.legal_name, '') IS NULL THEN 'שם רשמי' END,
+           CASE WHEN e.association_certificate_name IS NULL THEN 'תעודת התאגדות' END,
+           CASE WHEN NOT (${TAX_DOCUMENT_REQUIRED_SQL}) OR e.tax_document_name IS NOT NULL THEN NULL ELSE 'אישור סעיף 46' END,
+           CASE WHEN e.cardcom_connection_status IS DISTINCT FROM 'success' THEN 'חיבור סליקה' END
+         ], NULL) AS missing_profile_fields,
          owner.full_name AS owner_name, owner.email AS owner_email,
          COALESCE(camp.campaigns_count, 0) AS campaigns_count,
+         COALESCE(camp.active_campaigns_count, 0) AS active_campaigns_count,
          COALESCE(camp.total_raised, 0)::float AS total_raised
        FROM entities e
        LEFT JOIN LATERAL (
@@ -454,13 +466,14 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
        LEFT JOIN LATERAL (
          SELECT
            COUNT(*)::int AS campaigns_count,
+           COUNT(*) FILTER (WHERE c.status = 'published')::int AS active_campaigns_count,
            COALESCE(SUM(c.current_amount), 0) AS total_raised
          FROM campaigns c
          WHERE c.entity_id = e.id AND c.deleted_at IS NULL
        ) camp ON true
        ${whereStr}
        ${noCampaignsClause}
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, e.id
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, page * limit]
     ),
@@ -474,11 +487,15 @@ exports.getOrganizations = async ({ search, status, sortBy, sortDir, page = 0, l
        ${noCampaignsClause}`,
       params
     ),
+    db.query(`SELECT COUNT(*)::int AS total FROM entities e
+      WHERE e.status != 'deleted'
+        AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')`),
   ]);
 
   return {
     organizations: listRes.rows,
     total: totalRes.rows[0].total,
+    unfilteredTotal: allRes.rows[0].total,
     page,
     limit,
   };

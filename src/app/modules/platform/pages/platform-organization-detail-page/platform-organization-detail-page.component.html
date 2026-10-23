@@ -1,7 +1,7 @@
 <div class="plat-page" [class.refreshing]="refreshing">
 
   <div class="plat-back">
-    <a routerLink="/platform/organizations">← כל העמותות</a>
+    <a routerLink="/platform/organizations" [queryParams]="organizationListQuery">← כל העמותות</a>
   </div>
 
   @if (error) {

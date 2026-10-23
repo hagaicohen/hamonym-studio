@@ -49,6 +49,15 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   private router = inject(Router);
   private platformService = inject(PlatformService);
 
+  get organizationListQuery(): Record<string, string> {
+    const query: Record<string, string> = {};
+    for (const key of ['status', 'search', 'missingDocs', 'flaggedForReview', 'noCampaigns', 'newSince', 'sortBy', 'sortDir', 'page']) {
+      const value = this.route.snapshot.queryParamMap.get(key);
+      if (value !== null) query[key] = value;
+    }
+    return query;
+  }
+
   entityId = '';
   loading = true;
   // Set instead of loading once an entity is already on screen (2026-09-16
