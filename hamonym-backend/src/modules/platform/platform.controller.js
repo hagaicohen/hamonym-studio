@@ -24,6 +24,16 @@ exports.getNotificationsCount = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+exports.getDashboardOverview = async (req, res) => {
+  try {
+    const result = await require('./dashboard-read.service').getOverview({
+      range: req.query.range || '30d', isSuperAdmin: req.user?.isSuperAdmin === true,
+      permissions: req.user?.platformPermissions || [],
+    });
+    res.json(result);
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+};
+
 exports.getDashboard = async (req, res) => {
   try {
     const dashboard = await svc.getDashboardData();

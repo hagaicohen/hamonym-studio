@@ -1258,7 +1258,12 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
   const sortCol = SORT_COLUMNS[sortBy] || 'd.created_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-  if (period === 'month') {
+  // Dashboard deep-link only: Israel calendar boundaries, identical to
+  // dashboard-read.service. Preserve all existing period options unchanged.
+  if (period === 'this_month_israel') {
+    where.push(`d.created_at >= (date_trunc('month', NOW() AT TIME ZONE 'Asia/Jerusalem') AT TIME ZONE 'Asia/Jerusalem')`);
+    where.push(`d.created_at < ((date_trunc('month', NOW() AT TIME ZONE 'Asia/Jerusalem') + INTERVAL '1 month') AT TIME ZONE 'Asia/Jerusalem')`);
+  } else if (period === 'month') {
     where.push(`d.created_at >= date_trunc('month', NOW())`);
   } else if (period === 'last_month') {
     where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);

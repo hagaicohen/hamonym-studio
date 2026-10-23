@@ -11,6 +11,7 @@ const requirePermission = require('../../middleware/require-permission');
 router.use(requireAuth, requirePlatformAccess);
 
 router.get('/dashboard', ctrl.getDashboard);
+router.get('/dashboard/overview', ctrl.getDashboardOverview);
 router.get('/notifications-count', ctrl.getNotificationsCount);
 router.get('/activity', ctrl.getActivity);
 
