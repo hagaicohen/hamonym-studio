@@ -290,3 +290,11 @@
   font-size: 13px;
   line-height: 1.6;
 }
+
+.sim-campaign-picker { display: flex; flex-direction: column; gap: 6px; max-width: 520px; }
+.sim-campaign-picker select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1e293b; font: inherit; direction: rtl; }
+
+.sim-reset-counts { display:flex; flex-wrap:wrap; gap:8px 20px; margin:12px 0; }
+.sim-reset-counts div { display:flex; gap:8px; }
+.sim-reset-counts dd { margin:0; font-weight:700; }
+.sim-reset-hash { overflow-wrap:anywhere; font-size:11px; }

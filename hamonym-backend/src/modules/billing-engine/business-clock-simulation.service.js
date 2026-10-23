@@ -49,8 +49,7 @@ async function setFixed(isoDatetime, adminId) {
   const businessAt = new Date(isoDatetime).toISOString();
   let results;
   const state = await change(adminId, async (client, row) => {
-    if (!row?.enabled) throw failure('יש להפעיל תחילה את שעון הסימולציה', 409, 'CLOCK_DISABLED');
-    await client.query('UPDATE admin_simulation_clock SET fixed_at=$1, updated_by=$2, updated_at=NOW() WHERE id=true', [businessAt, adminId]);
+    await client.query('INSERT INTO admin_simulation_clock (enabled, fixed_at, updated_by) VALUES (true,$1,$2) ON CONFLICT (id) DO UPDATE SET enabled=true, fixed_at=$1, updated_by=$2, updated_at=NOW()', [businessAt, adminId]);
     // The existing FIN-11 service owns durable dispatch, retry limits and idempotency.
     // No job dispatch occurs when any independent gate is closed.
     if (collectionAuthorized()) results = await collection.advance(businessAt, adminId);

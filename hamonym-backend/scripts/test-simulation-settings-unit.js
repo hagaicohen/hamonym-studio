@@ -18,7 +18,7 @@ function fixture(options={}) {
     if(sql.includes('pg_try_advisory_lock'))return {rows:[{acquired:state.locked}]};
     if(sql.includes('pg_advisory_unlock'))return {rows:[]};
     if(sql.startsWith('SELECT fixed_at')) {if(options.missing)throw Object.assign(Error('missing'),{code:'42703'});return {rows:row?[{...row}]:[]};}
-    if(sql.startsWith('INSERT')) {row={fixed_at:null,...row,enabled:args[0]};return {rows:[]};}
+    if(sql.startsWith('INSERT')) {row=sql.includes('(enabled, fixed_at')?{fixed_at:args[0],enabled:true}:{fixed_at:null,...row,enabled:args[0]};return {rows:[]};}
     if(sql.startsWith('UPDATE')) {row.fixed_at=sql.includes('fixed_at=NULL')?null:args[0];return {rows:[]};}
     assert.fail('Unexpected query '+sql);
   },release(){state.released++;}};
@@ -55,10 +55,13 @@ test('missing actor, invalid enabled value and invalid time cannot write',async(
   await assert.rejects(f.service.setEnabled('true',7),{code:'INVALID_ENABLED'});
   await assert.rejects(f.service.setFixed('2026-10-28T20:00:00',7),{code:'INVALID_TIME'});assert.equal(f.state.queries.length,0);
 });
-test('disabled clock refuses advance and reset',async()=>{
-  const f=fixture({row:{enabled:false}});
-  await assert.rejects(f.service.setFixed('2026-10-28T18:00:00Z',7),{code:'CLOCK_DISABLED'});
-  await assert.rejects(f.service.reset(7),{code:'CLOCK_DISABLED'});assert.equal(f.state.dispatches.length,0);assert.ok(!f.state.queries.some(s=>s.startsWith('UPDATE')));
+test('set-fixed atomically activates a disabled or absent clock without authorizing collection',async()=>{
+  for(const row of [undefined,{enabled:false}]){
+    const f=fixture({row});const status=await f.service.setFixed('2026-10-28T18:00:00Z',7);
+    assert.equal(status.simulationEnabled,true);assert.equal(status.overrideActive,true);assert.equal(status.collectionAuthorized,false);assert.equal(f.state.dispatches.length,0);
+    const writes=f.state.queries.filter(sql=>sql.startsWith('INSERT')||sql.startsWith('UPDATE'));assert.equal(writes.length,1);assert.match(writes[0],/enabled=true/);
+  }
+  const f=fixture({row:{enabled:false}});await assert.rejects(f.service.reset(7),{code:'CLOCK_DISABLED'});
 });
 test('concurrent clock action and missing migration fail closed',async()=>{
   const busy=fixture({locked:false});await assert.rejects(busy.service.setEnabled(true,7),{code:'CLOCK_BUSY'});assert.equal(busy.state.released,1);

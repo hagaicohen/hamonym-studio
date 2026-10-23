@@ -89,9 +89,12 @@ test('production startup, cron entrypoint and dependencies stay unchanged; only 
   const migrationDiff = execFileSync('git', ['diff', '81d3168', '--name-only', '--', 'hamonym-backend/migrations'], { cwd: root }).toString();
   assert.ok(migrationDiff.trim() === '' || migrationDiff.trim() === 'hamonym-backend/migrations/075_fin11_simulation_business_time.sql');
   for (const file of ['src/modules/billing-engine/campaign-reset.service.js', 'src/lib/simulation-clock-admin.js',
-    'src/modules/platform/campaign-reset/campaign-reset.routes.js', 'src/modules/platform/simulation-clock/simulation-clock.routes.js']) {
+    'src/modules/platform/simulation-clock/simulation-clock.routes.js']) {
     assert.equal(fs.existsSync(path.join(root, file)), false);
   }
+  // A guarded availability endpoint is allowed; the destructive reset engine is not.
+  const resetRoute = fs.readFileSync(path.join(root, 'src/modules/platform/campaign-reset/campaign-reset.routes.js'), 'utf8');
+  assert.doesNotMatch(resetRoute, /campaign-reset\.service|DISABLE\s+TRIGGER|DELETE\s+FROM|INSERT\s+INTO|UPDATE\s+donations/i);
 });
 
 

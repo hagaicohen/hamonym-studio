@@ -85,5 +85,6 @@ router.use('/finance-ops', require('./finance-ops/finance-ops.routes'));
 router.use('/collection-ops', require('./collection-ops/collection-ops.routes'));
 
 router.use('/simulation-clock', require('./fin11-simulation/fin11-simulation.routes'));
+router.use('/campaign-reset', require('./campaign-reset/campaign-reset.routes'));
 
 module.exports = router;

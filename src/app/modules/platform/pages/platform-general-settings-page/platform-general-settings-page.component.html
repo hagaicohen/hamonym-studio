@@ -53,13 +53,7 @@
       } @else if (clockError) {
         <div class="plat-error">{{ clockError }}</div>
       } @else if (clockStatus) {
-        <div class="ba-form-actions">
-          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="clockActionBusy" (click)="toggleSimulation()">
-            {{ clockStatus.simulationEnabled ? 'כבה סימולציה' : 'הפעל סימולציה' }}
-          </button>
-        </div>
-        <p class="gs-vat-note">הפעלת השעון אינה מאשרת גבייה ואינה משנה את זמן משימות הייצור.</p>
-        <p class="gs-vat-note">{{ clockStatus.collectionAuthorized ? 'גביית FIN-11 מורשית לבדיקות: עדכון הזמן עשוי להפעיל בקשת חיוב ב־CardCom Sandbox, רק לישויות המותרות.' : 'גביית FIN-11 אוטומטית כבויה או שאימותי הבטיחות טרם הושלמו. ניתן להשתמש בשעון ללא גבייה.' }}</p>
+        <p class="gs-vat-note">{{ clockStatus.collectionAuthorized ? 'עדכון הזמן עשוי להפעיל גביית בדיקה מורשית ב־CardCom Sandbox.' : 'גבייה אוטומטית אינה מורשית. קביעת הזמן אינה מאפשרת גבייה.' }}</p>
 
         <div class="sim-clock-status-row">
           <span class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</span>
@@ -72,11 +66,11 @@
         <div class="sim-clock-inputs">
           <label class="ba-field">
             <span>תאריך עסקי</span>
-            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" />
+            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="clockActionBusy" />
           </label>
           <label class="ba-field">
             <span>שעה עסקית</span>
-            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" />
+            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="clockActionBusy" />
           </label>
         </div>
         <p class="gs-vat-note">הזמן מוצג לפי שעון ישראל. זמני הביצוע והביקורת האמיתיים נשמרים בנפרד.</p>
@@ -84,8 +78,8 @@
           <div class="ops-action-error">{{ clockActionError }}</div>
         }
         <div class="ba-form-actions">
-          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm sim-reset-btn" [disabled]="!clockStatus.simulationEnabled || clockActionBusy" (click)="resetClock()">חזור לזמן אמת</button>
-          <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="!clockStatus.simulationEnabled || clockActionBusy || !fixedDateInput || !fixedTimeInput" (click)="setClockFixed()">
+          <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm sim-reset-btn" [disabled]="clockActionBusy || !clockStatus.overrideActive" (click)="resetClock()">חזור לזמן אמת</button>
+          <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" [disabled]="clockActionBusy || !fixedDateInput || !fixedTimeInput" (click)="setClockFixed()">
             {{ setClockButtonLabel }}
           </button>
         </div>
@@ -94,7 +88,56 @@
 
     <div class="plat-card">
       <div class="gs-card-title">איפוס תרומות לקמפיין</div>
-      <p class="gs-vat-note">איפוס תרומות אינו זמין במסד הנתונים המשותף. המנגנון הישן עקף הגנות פיננסיות ומחק תרומות וקבלות, ולכן לא הוחזר. לבדיקות איפוס נדרשת סביבת נתונים מבודדת. הרשומות והיסטוריית הביקורת נשמרות.</p>
+      <label class="ba-field sim-campaign-picker">
+        <span>קמפיין</span>
+        <select [ngModel]="selectedCampaignId" (ngModelChange)="selectCampaign($event)" [disabled]="campaignsLoading || !!campaignsError || resetBusy">
+          <option value="">בחר קמפיין</option>
+          @for (campaign of campaigns; track campaign.id) {
+            <option [value]="campaign.id">{{ campaign.title }}{{ campaign.entity_name ? ' — ' + campaign.entity_name : '' }}</option>
+          }
+        </select>
+      </label>
+      @if (campaignsLoading) { <p class="gs-vat-note">טוען קמפיינים...</p> }
+      @if (campaignsError) {
+        <p class="ops-action-error">{{ campaignsError }}</p>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadCampaigns()">נסה שוב</button>
+      } @else if (!campaignsLoading && !campaigns.length) {
+        <p class="gs-vat-note">לא נמצאו קמפיינים.</p>
+      }
+      @if (campaignStatusLoading) { <p class="gs-vat-note">בודק זמינות איפוס...</p> }
+      @if (campaignStatusError) { <p class="ops-action-error">{{ campaignStatusError }}</p> }
+      @if (campaignResetStatus) {
+        <p class="gs-vat-note" role="status">{{ campaignResetStatus.message }}</p>
+        @if (campaignResetStatus.totalRecords > 0) {
+          <p>יימחקו {{ campaignResetStatus.totalRecords }} רשומות עבור <strong>{{ campaignResetStatus.campaignTitle }}</strong>.</p>
+          <dl class="sim-reset-counts">
+            @for (row of resetCountRows; track row.table) { <div><dt>{{ row.name }}</dt><dd>{{ row.count }}</dd></div> }
+          </dl>
+          <details>
+            <summary>הרשומות המדויקות לאישור</summary>
+            <p>קמפיין: <bdi>{{ campaignResetStatus.campaignId }}</bdi></p>
+            <p>חתימת הרשומות: <bdi class="sim-reset-hash">{{ campaignResetStatus.snapshotHash }}</bdi></p>
+            @for (row of resetCountRows; track row.table) {
+              <p>{{ row.name }}: <bdi class="sim-reset-hash">{{ campaignResetStatus.recordIds[row.table].join(', ') }}</bdi></p>
+            }
+          </details>
+          @if (!resetConfirmOpen) {
+            <button type="button" class="ops-btn sim-danger-btn" [disabled]="!campaignResetStatus.available || resetBusy" (click)="resetConfirmOpen = true">אפס נתוני בדיקה</button>
+          } @else {
+            <div class="sim-confirm-box" role="group" aria-label="אישור מחיקת נתוני בדיקה">
+              <p>המחיקה אינה הפיכה מהממשק. יישמר גיבוי לפני המחיקה. הקמפיין, ההגדרות ופרטי התשלום יישמרו. הפעולה אינה מבטלת עסקאות אצל ספק התשלום.</p>
+              <label class="ba-field"><span>הקלד את שם הקמפיין לאישור</span><input [(ngModel)]="resetTypedTitle" [disabled]="resetBusy" autocomplete="off" /></label>
+              <label class="ba-field"><span>סיבת האיפוס</span><input [(ngModel)]="resetReason" [disabled]="resetBusy" /></label>
+              <div class="ba-form-actions">
+                <button type="button" class="ops-btn ops-btn-secondary" [disabled]="resetBusy" (click)="resetConfirmOpen = false">ביטול</button>
+                <button type="button" class="ops-btn sim-danger-btn" [disabled]="resetBusy || resetTypedTitle !== campaignResetStatus.campaignTitle || resetReason.trim().length < 3" (click)="confirmCampaignReset()">{{ resetBusy ? 'מאפס...' : 'אשר מחיקת נתוני בדיקה' }}</button>
+              </div>
+            </div>
+          }
+        }
+      }
+      @if (resetError) { <p class="ops-action-error" role="alert">{{ resetError }}</p> }
+      @if (resetResult) { <p class="sim-result-box" role="status">{{ resetResult }}</p> }
     </div>
   }
 </div>
