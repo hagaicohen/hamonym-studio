@@ -49,7 +49,7 @@ async function preview(id) {
   const enabled=process.env.CAMPAIGN_TEST_RESET_ENABLED==='true';
   const approved=await approval(pool,id,s.hash);
   let code=empty?'NOTHING_TO_RESET':!enabled?'RESET_DISABLED':!approved?'RESET_APPROVAL_REQUIRED':null;
-  if(!code){try{backupDirectory();}catch(err){code='BACKUP_NOT_CONFIGURED';}}
+  if(!code){try{if(process.env.CAMPAIGN_TEST_RESET_BACKUP_BUCKET)await privateStorage();else backupDirectory();}catch(err){code='BACKUP_NOT_CONFIGURED';}}
   return {campaignId:id,campaignTitle:s.data.campaign.title,available:!code,code,message:code?messages[code]:'האיפוס מאושר לרשומות המוצגות בלבד.',
    snapshotHash:s.hash,counts,totalRecords:Object.values(counts).reduce((a,b)=>a+b,0),
    recordIds:Object.fromEntries(Object.entries(s.data.tables).map(([t,rows])=>[t,rows.map(r=>String(r.id))]))};
@@ -63,7 +63,27 @@ function backupDirectory() {
  if(process.platform!=='win32'&&(fs.statSync(dir).mode&0o077)!==0)throw fail('BACKUP_NOT_CONFIGURED');
  return dir;
 }
-function backup(s) {
+async function privateStorage() {
+ const bucket=process.env.CAMPAIGN_TEST_RESET_BACKUP_BUCKET;
+ if(!bucket||!/^[-a-z0-9]{3,63}$/.test(bucket))throw fail('BACKUP_NOT_CONFIGURED');
+ const storage=require('../../lib/supabase').storage;
+ const {data,error}=await storage.getBucket(bucket);
+ if(error||!data||data.public!==false)throw fail('BACKUP_NOT_CONFIGURED');
+ return {storage,bucket};
+}
+async function backup(s) {
+ if(process.env.CAMPAIGN_TEST_RESET_BACKUP_BUCKET){
+  const {storage,bucket}=await privateStorage();const key='campaign-reset-'+randomUUID()+'.json';
+  const target=storage.from(bucket);
+  const uploaded=await target.upload(key,Buffer.from(s.text,'utf8'),{contentType:'application/json',upsert:false,cacheControl:'0'});
+  if(uploaded.error)throw fail('BACKUP_VERIFICATION_FAILED');
+  const downloaded=await target.download(key);
+  if(downloaded.error||!downloaded.data)throw fail('BACKUP_VERIFICATION_FAILED');
+  const bytes=Buffer.from(await downloaded.data.arrayBuffer());
+  if(createHash('sha256').update(bytes).digest('hex')!==s.hash)throw fail('BACKUP_VERIFICATION_FAILED');
+  return 'supabase-private://'+bucket+'/'+key;
+ }
+
  const dir=backupDirectory();
  const file=path.join(dir,'campaign-reset-'+randomUUID()+'.json');
  const fd=fs.openSync(file,'wx',0o600);
@@ -83,7 +103,7 @@ async function reset(id,input,actorId) {
   if(s.hash!==input.expectedSnapshotHash)throw fail('RESET_PREVIEW_STALE');
   if(s.data.campaign.title!==input.campaignTitle)throw fail('RESET_CONFIRMATION_REQUIRED',400);
   if(!await approval(client,id,s.hash))throw fail('RESET_APPROVAL_REQUIRED');
-  const file=backup(s); // fsync + hash verification finish BEFORE any financial DELETE.
+  const file=await backup(s); // fsync + hash verification finish BEFORE any financial DELETE.
   const {rows}=await client.query('SELECT public.execute_campaign_test_reset($1,$2,$3,$4,$5) AS result',[id,s.hash,actorId,input.reason.trim(),file]);
   const result=rows[0].result;
   if(result?.reset!==true||Object.entries(s.data.tables).some(([t,records])=>result.deleted[t]!==records.length))throw fail('RESET_VERIFICATION_FAILED');
