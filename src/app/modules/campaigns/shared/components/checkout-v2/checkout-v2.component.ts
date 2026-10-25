@@ -740,6 +740,18 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     }).subscribe({
       next: (res) => {
         this.creatingDonation = false;
+        if (res.paymentProvider === 'mock') {
+          const target = new URL(res.url, window.location.origin);
+          const session = target.searchParams.get('session');
+          if (target.pathname !== '/mock-payment' || !session?.startsWith('hamonym-mock:')) {
+            this.createDonationError = 'לא ניתן לפתוח את תשלום הבדיקה';
+            return;
+          }
+          void this.router.navigate(['/mock-payment'], {
+            queryParams: { id: res.donationId, amount: this.chargeAmount, session, title: this.draft?.title },
+          });
+          return;
+        }
         if (CHECKOUT_V2_OPENFIELDS_ENABLED) {
           if (!res.lowProfileId) {
             this.createDonationError = 'שגיאה בהכנת התשלום, נסו שוב';

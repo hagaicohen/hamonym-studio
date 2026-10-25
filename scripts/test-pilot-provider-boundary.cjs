@@ -28,5 +28,8 @@ test('mock donor verification cannot replay or invent historical donor payments'
   assert.equal(provider.name, 'mock');
   assert.notEqual((await provider.getLpResult({ lowProfileId: 'historical-provider-id' })).ResponseCode, 0);
   assert.notEqual((await provider.getRecurringPaymentHistory({})).ResponseCode, 0);
-  await assert.rejects(provider.createLowProfile({}), e => e.code === 'MOCK_DONATION_OPERATION_UNAVAILABLE');
+  await assert.rejects(provider.createLowProfile({}), e => e.code === 'INVALID_MOCK_PAYMENT');
+  const session = await provider.createLowProfile({ ReturnValue: 'new-donation', Amount: 50 });
+  assert.match(session.LowProfileId, /^hamonym-mock:/);
+  assert.equal(new URL(session.Url).pathname, '/mock-payment');
 });

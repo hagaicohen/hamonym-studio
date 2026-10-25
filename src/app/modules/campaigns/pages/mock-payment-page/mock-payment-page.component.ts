@@ -25,13 +25,13 @@ export class MockPaymentPageComponent implements OnInit {
   private http   = inject(HttpClient);
 
   donationId  = '';
+  session = '';
   amount      = 0;
   campaignTitle = '';
   slug        = '';
 
   status: 'paid' | 'failed' = 'paid';
   failureReason = FAILURE_REASONS[0];
-  completedAt   = '';
 
   loading  = false;
   errorMsg = '';
@@ -41,16 +41,10 @@ export class MockPaymentPageComponent implements OnInit {
   ngOnInit(): void {
     const p = this.route.snapshot.queryParamMap;
     this.donationId    = p.get('id')     || '';
+    this.session       = p.get('session') || '';
     this.amount        = parseFloat(p.get('amount') || '0');
     this.slug          = p.get('slug')   || '';
     this.campaignTitle = p.get('title')  || '';
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    // Seconds matter here: the live-donation poll filters by `completed_at
-    // > since`, so truncating to the minute (datetime-local's default) can
-    // make a fresh mock donation land at/before an already-passed `since`
-    // cursor and silently never surface.
-    this.completedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   }
 
   get formattedAmount(): string {
@@ -66,9 +60,9 @@ export class MockPaymentPageComponent implements OnInit {
       `${environment.apiUrl}/api/donations/mock-complete`,
       {
         id:            this.donationId,
+        session:       this.session,
         status:        this.status,
         failureReason: this.status === 'failed' ? this.failureReason : null,
-        completedAt:   this.completedAt,
       }
     ).subscribe({
       next: (res) => { window.location.href = res.redirectUrl; },

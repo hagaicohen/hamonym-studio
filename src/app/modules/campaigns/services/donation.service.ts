@@ -86,6 +86,7 @@ export interface DonationPayload {
 }
 
 export interface DonationResult {
+  paymentProvider?: 'mock';
   url:        string;
   donationId: string;
   // Only present when the request set `embedded: true` — see
