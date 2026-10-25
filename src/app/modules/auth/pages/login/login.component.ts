@@ -49,7 +49,7 @@ declare const google: any;
 
   templateUrl: './login.component.html',
 
-  styleUrl: './login.component.scss',
+  styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
