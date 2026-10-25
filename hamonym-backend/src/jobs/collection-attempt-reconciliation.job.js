@@ -37,7 +37,7 @@
 // expected, harmless race outcome -- not a failure, not double-counted
 // money. See scripts/test-collection-attempt-recovery.js.
 const { recordFinding } = require('./reconciliation-findings');
-const defaultCardAdapter = require('../modules/collection-engine/adapters/cardcom-token-charge.adapter');
+const defaultCardAdapter = require('../modules/collection-engine/adapters/fin11-mock.adapter');
 const { resolveAttempt: defaultResolveAttempt } = require('../modules/collection-engine/collection.service');
 
 const STUCK_AFTER_HOURS = 2;

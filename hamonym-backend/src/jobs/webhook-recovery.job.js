@@ -86,6 +86,7 @@ module.exports = {
   // processed_at are real event-audit facts and keep their SQL NOW()
   // untouched, as does notifyUnresolved's attemptedAt.
   handler: async (db, { now = new Date() } = {}) => {
+    if (require('../modules/payment/pilot-provider-boundary').phase === 'test') return { skipped: 'pilot_donor_replay_disabled' };
     const res = await db.query(
       `SELECT id, record_type, raw_payload, received_at
        FROM cardcom_webhook_events

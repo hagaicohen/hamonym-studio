@@ -107,6 +107,7 @@ function extractSanitizedProviderError(err) {
 }
 
 exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
+  throw Object.assign(new Error('Real platform-fee collection is disabled during the pilot'), { code: 'REAL_COLLECTION_DISABLED_DURING_PILOT' });
   const simulation = require('../../../lib/fin11-simulation-context');
   if (simulation.current()) simulation.configuration();
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
@@ -165,6 +166,7 @@ exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
 // Nothing in this codebase invokes this automatically yet -- see that file
 // for why.
 exports.reconcile = async ({ attemptId }) => {
+  throw Object.assign(new Error('Real platform-fee provider access is disabled during the pilot'), { code: 'REAL_COLLECTION_DISABLED_DURING_PILOT' });
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
   const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
 

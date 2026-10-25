@@ -1,3 +1,4 @@
+require('./modules/payment/pilot-provider-boundary').install();
 // src/server.js
 
 require('dotenv').config();
@@ -214,14 +215,20 @@ app.get(
 
   '/',
 
-  (req, res) => {
+  async (req, res) => {
 
+    const billingSchemaReady = await require('./modules/billing-engine/billing-readiness').ready().catch(() => false);
     res.json({
 
       success: true,
 
       message:
-        'Hamonym backend running'
+        'Hamonym backend running',
+
+      commit: process.env.RENDER_GIT_COMMIT || null,
+      paymentPhase: 'test',
+      paymentProvider: 'mock',
+      billingSchemaReady
 
     });
 

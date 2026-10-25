@@ -1,3 +1,4 @@
+require('../modules/payment/pilot-provider-boundary').install();
 // Entry point for a Render Cron Job (docs/CARDCOM_OPERATIONAL_PROCESSES.md,
 // Part י' revised 2026-08-18) — replaces the in-process node-cron scheduler
 // (scheduler.js/server.js's ENABLE_JOB_SCHEDULER), which turned out to be
@@ -57,7 +58,7 @@ function exitCodeFor(summary) {
 }
 
 async function main() {
-  const now = new Date();
+  const now = await require('../lib/clock').now(db);
 
   // Stages of this tick that failed at the infrastructure level (the
   // heartbeat write, a job's due-check). Collected rather than thrown so the

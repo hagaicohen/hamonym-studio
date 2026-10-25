@@ -1,9 +1,6 @@
-// Simulation-only, deterministic provider. No HTTP client or card credentials.
-const scope = require('../../../lib/fin11-simulation-context');
+// Test phase provider. Deterministic, no credentials, HTTP client or external access.
 function result({ attemptId, entityId }) {
-  if (!scope.current()) throw new Error('Simulation scope required');
-  scope.configuration(); scope.assertEntity(entityId);
-  if (!attemptId || !entityId) throw new Error('Scoped attempt required');
+  if (!attemptId || !entityId) throw new Error('Attempt and entity required');
   return { outcome: 'succeeded', providerReference: 'fin11_mock:' + attemptId, providerRawStatus: 'simulated_success' };
 }
 module.exports = { NOT_IMPLEMENTED: false, charge: async args => result(args), reconcile: async args => result(args) };

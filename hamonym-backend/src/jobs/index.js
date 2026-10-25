@@ -19,7 +19,7 @@ jobRunner.register(require('./email-dispatch-recovery.job'));
 jobRunner.register(require('./operational-alerting.job'));
 
 // No production cron activation: simulation-only registrations have no schedule.
-if (require('../lib/fin11-simulation-context').enabled()) {
+{ // Internal steps are always registered; only the shared monthly orchestrator schedules them.
   jobRunner.register({ ...require('./fin11-card-collection.job'), schedule: null, simulationOnly: true });
   jobRunner.register({ ...require('./fin11-card-retry-sweep.job'), schedule: null, simulationOnly: true });
 }

@@ -17,6 +17,7 @@ const documentHandler = require('./handlers/document.handler');
 // only needs to stop failing *silently* in the meantime — see the `default`
 // case below.
 module.exports = async function dispatch(payload) {
+  if (require('./pilot-provider-boundary').phase === 'test') return { routed: false, reason: 'PILOT_REAL_PROVIDER_EVENTS_DISABLED' };
   switch (payload.RecordType) {
     case 'Payment':
       await paymentHandler.handle(payload);

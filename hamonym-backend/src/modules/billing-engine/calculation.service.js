@@ -151,8 +151,7 @@ async function calculateAccountStatement(client, account, { billingRunId, period
 async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
   const scope = require("../../lib/fin11-simulation-context");
   if (options.entityIds) {
-    const config = scope.configuration();
-    if (!scope.current() || options.entityIds.some(id => !config.entityIds.includes(id))) throw new Error("Simulation scope required");
+    if (!scope.current() || options.entityIds.some(id => !scope.current().entityIds.includes(id))) throw new Error("Billing execution context required");
   }
   const periodRes = await pool.query(
     `SELECT period_start, period_end FROM billing_periods WHERE id = $1`,

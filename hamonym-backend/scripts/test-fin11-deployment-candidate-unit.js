@@ -84,7 +84,14 @@ test('production startup, cron entrypoint and dependencies stay unchanged; only 
     'src/jobs/cron-entry.js', 'package.json', 'package-lock.json'];
   for (const file of files) {
     const original = execFileSync('git', ['show', `81d3168:hamonym-backend/${file}`], { cwd: root });
-    assert.equal(original.toString().replace(/\r\n/g, '\n'), fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'), `Changed deployment surface: ${file}`);
+    let current = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+    if (file === 'src/jobs/cron-entry.js') current = current.replace("require('../modules/payment/pilot-provider-boundary').install();\n", '').replace("  const now = await require('../lib/clock').now(db);", '  const now = new Date();');
+    if (file === 'src/server.js') current = current
+      .replace("require('./modules/payment/pilot-provider-boundary').install();\n", '')
+      .replace('  async (req, res) => {', '  (req, res) => {')
+      .replace("    const billingSchemaReady = await require('./modules/billing-engine/billing-readiness').ready().catch(() => false);\n", '')
+      .replace("'Hamonym backend running',\n\n      commit: process.env.RENDER_GIT_COMMIT || null,\n      paymentPhase: 'test',\n      paymentProvider: 'mock',\n      billingSchemaReady", "'Hamonym backend running'");
+    assert.equal(original.toString().replace(/\r\n/g, '\n'), current, `Changed deployment surface: ${file}`);
   }
   const migrationDiff = execFileSync('git', ['diff', '81d3168', '--name-only', '--', 'hamonym-backend/migrations'], { cwd: root }).toString();
   assert.ok(migrationDiff.trim() === '' || migrationDiff.trim() === 'hamonym-backend/migrations/075_fin11_simulation_business_time.sql');

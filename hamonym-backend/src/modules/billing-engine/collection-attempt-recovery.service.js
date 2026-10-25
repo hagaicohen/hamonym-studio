@@ -1,13 +1,10 @@
-// Simulation adapter: shared monthly lifecycle plus mock-provider reconciliation.
+// Shared pilot recovery; time source does not change reconciliation.
 const pool = require('../../db/db');
 const scope = require('../../lib/fin11-simulation-context');
 const { resolveAttempt } = require('../collection-engine/collection.service');
 const mock = require('../collection-engine/adapters/fin11-mock.adapter');
-async function prepare(now, previousAt) {
-  return require('./monthly-billing-orchestrator.service').run({ now, previousAt, simulation: true });
-}
 async function recover() {
-  const config = scope.configuration();
+  const config = scope.current();
   if (!scope.current()) throw new Error('Simulation scope required');
   const rows = (await pool.query(
     `SELECT ca.id,ca.statement_id,ba.entity_id FROM collection_attempts ca
@@ -23,4 +20,4 @@ async function recover() {
   }
   return { recovered: rows.length };
 }
-module.exports = { prepare, recover };
+module.exports = { recover };

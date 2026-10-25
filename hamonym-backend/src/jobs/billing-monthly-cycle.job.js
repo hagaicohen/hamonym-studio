@@ -100,7 +100,7 @@ async function computeMostRecentCycleBoundary(db, now) {
 // themselves take their time parametrically (year/month, asOf) and are not
 // modified here.
 async function handler(db, { now = new Date() } = {}) {
-  return require('../modules/billing-engine/monthly-billing-orchestrator.service').run({ db, now });
+  return require('../modules/billing-engine/monthly-billing-orchestrator.service').execute({ db, triggeredBy: 'scheduler' });
 }
 
 module.exports = {
@@ -118,7 +118,7 @@ module.exports = {
   // cheap idempotent checks/month instead of 1; the existing 40-day
   // schedule-window lookback already comfortably covers the largest gap
   // between two day-28 matches (under 31 days), so no change needed there.
-  schedule: '0 * 28 * *',
+  schedule: '0 * * * *',
   // Explicit staleness policy (2026-10-11). Required because this schedule is
   // dense-within-a-rare-window: schedule-window.js's intervalMsFor() reads the
   // gap to the previous matching MINUTE, which for '0 * 28 * *' is 1 hour, so

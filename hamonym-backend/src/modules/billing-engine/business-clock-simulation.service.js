@@ -1,16 +1,9 @@
 'use strict';
 const pool = require('../../db/db');
 const clock = require('../../lib/clock');
-const scope = require('../../lib/fin11-simulation-context');
 const collection = require('./fin11-simulation.service');
 const LOCK = 117911076;
 function failure(message, status, code) { return Object.assign(new Error(message), { status, code }); }
-function collectionAuthorized() {
-  try { scope.configuration(); return true; } catch (err) {
-    if (err.code === 'FIN11_SIMULATION_FORBIDDEN') return false;
-    throw err;
-  }
-}
 async function read(db) {
   try { return (await db.query('SELECT fixed_at, enabled FROM admin_simulation_clock WHERE id = true')).rows[0]; }
   catch (err) {
@@ -22,9 +15,7 @@ async function status(db = pool) {
   const row = await read(db), realNow = clock.realNow();
   const simulationEnabled = row?.enabled === true;
   const overrideActive = simulationEnabled && !!row.fixed_at;
-  return { simulationEnabled, overrideActive, businessNow: overrideActive ? row.fixed_at : realNow, realNow,
-    collectionAuthorized: collectionAuthorized(),
-    ...(!collectionAuthorized() ? { skipped: 'simulation_collection_not_authorized' } : {}) };
+  return { simulationEnabled, overrideActive, businessNow: overrideActive ? row.fixed_at : realNow, realNow };
 }
 async function change(adminId, action) {
   if (!adminId) throw failure('נדרשת הרשאת מנהל־על', 403, 'SUPER_ADMIN_REQUIRED');
@@ -52,8 +43,7 @@ async function setFixed(isoDatetime, adminId) {
   const state = await change(adminId, async (client, row) => {
     await client.query('INSERT INTO admin_simulation_clock (enabled, fixed_at, updated_by) VALUES (true,$1,$2) ON CONFLICT (id) DO UPDATE SET enabled=true, fixed_at=$1, updated_by=$2, updated_at=NOW()', [businessAt, adminId]);
     // The existing FIN-11 service owns durable dispatch, retry limits and idempotency.
-    // No job dispatch occurs when any independent gate is closed.
-    if (collectionAuthorized()) results = await collection.advance(businessAt, adminId);
+    results = await collection.advance(businessAt, adminId);
   });
   return { ...state, ...(results ? { results: results.results, skipped: results.skipped } : {}) };
 }

@@ -1,3 +1,4 @@
+require('../modules/payment/pilot-provider-boundary').install();
 const db = require('../db/db');
 const clock = require('../lib/clock');
 const simulationScope = require('../lib/fin11-simulation-context');
@@ -99,9 +100,7 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
     // SQL NOW(), `duration_ms` comes from Date.now()) under every
     // configuration, simulation on or off. With simulation off this is a
     // plain `new Date()` and costs no query. See src/lib/clock.js.
-    const businessNow = await clock.now(simulation
-      ? { query: async () => ({ rows: [{ fixed_at: simulation.businessAt }] }) }
-      : db);
+    const businessNow = simulation ? new Date(simulation.businessAt) : await clock.now(db);
 
     try {
       const result = await Promise.race([
