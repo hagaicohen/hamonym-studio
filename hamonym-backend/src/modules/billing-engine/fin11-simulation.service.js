@@ -3,6 +3,7 @@ const pool = require('../../db/db');
 const clock = require('../../lib/clock');
 const scope = require('../../lib/fin11-simulation-context');
 const jobs = require('../../jobs');
+const monthly = require('./fin11-simulation-monthly.service');
 const LOCK = 117911075;
 async function status() {
   const realNow = clock.realNow();
@@ -33,11 +34,24 @@ async function advance(isoDatetime, superAdminUserId) {
       [businessAt, config.entityIds, config.fingerprint, superAdminUserId]);
     const results = await scope.run({ businessAt, entityIds: config.entityIds, fingerprint: config.fingerprint }, async () => {
       const result = [];
-      // Existing services gate each calendar slot; no catch-up loop. The durable day guard prevents a second attempt across these jobs.
-      for (const name of ['fin11-card-collection', 'fin11-card-retry-sweep']) result.push(await jobs.run(name, { triggeredBy: 'fin11-simulation-clock:' + superAdminUserId }));
+      let prepared;
+      try { prepared = await monthly.prepare(new Date(businessAt), previous?.business_at); }
+      catch (err) { prepared = { status: 'blocked', reason: err.code || 'monthly_preparation_failed' }; }
+      result.push({ step: 'monthly_billing', status: prepared.status, result: prepared });
+      if (prepared.status !== 'success') return result;
+      try { result.push({ step: 'recover_mock_attempts', status: 'success', result: await monthly.recover() }); }
+      catch { result.push({ step: 'recover_mock_attempts', status: 'blocked', result: { reason: 'mock_recovery_failed' } }); return result; }
+      // Each existing job retains its date/lock/attempt guards; never loop over missed slots.
+      for (const name of ['fin11-card-collection', 'fin11-card-retry-sweep']) {
+        let outcome;
+        try { outcome = await jobs.run(name, { triggeredBy: 'fin11-simulation-clock:' + superAdminUserId }); }
+        catch { outcome = { status: 'failed', result: { reason: 'simulation_job_failed' } }; }
+        result.push({ step: name, ...outcome });
+        if (outcome.status !== 'success' || outcome.result?.errors) break;
+      }
       return result;
     });
-    if (results.every(r => r.status === 'success' && !r.result?.errors)) await client.query('UPDATE fin11_simulation_clock SET pending=false WHERE id=true');
+    if (results.every(r => (r.status === 'success' || r.status === 'skipped') && !r.result?.errors?.length && !Number(r.result?.errors))) await client.query('UPDATE fin11_simulation_clock SET pending=false WHERE id=true');
     return { ...(await status()), results };
   } finally {
     if (locked) await client.query('SELECT pg_advisory_unlock($1)', [LOCK]);

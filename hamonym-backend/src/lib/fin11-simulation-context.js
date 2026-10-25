@@ -8,12 +8,8 @@ function configuration() {
   if (!enabled()) reject('FIN-11 simulation is disabled');
   const entityIds = (process.env.FIN11_SIMULATION_ENTITY_IDS || '').split(',').map(v => v.trim()).filter(Boolean);
   if (!entityIds.length || entityIds.some(v => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))) reject('Explicit test entity UUID allowlist required');
-  // An operator must verify the identity with CardCom, then pin it. Terminal 1000 alone is insufficient.
-  const terminal = process.env.HAMONYM_CARDCOM_TERMINAL;
-  const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
-  const fingerprint = createHash('sha256').update(String(terminal) + String.fromCharCode(0) + String(apiName)).digest('hex');
-  if (process.env.FIN11_SANDBOX_VERIFIED !== 'true' || terminal !== '1000' || !apiName
-      || fingerprint !== process.env.FIN11_SANDBOX_IDENTITY_SHA256) reject('Verified and pinned CardCom Sandbox identity required');
+  if (process.env.FIN11_SIMULATION_PAYMENT_PROVIDER !== 'mock') reject('Explicit mock payment provider required; CardCom is forbidden');
+  const fingerprint = createHash('sha256').update('fin11_mock:' + [...new Set(entityIds)].sort().join(',')).digest('hex');
   return { entityIds: [...new Set(entityIds)], fingerprint };
 }
 function current() { return context.getStore(); }

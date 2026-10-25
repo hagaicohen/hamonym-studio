@@ -93,6 +93,16 @@ async function now(db) {
   return new Date(Date.now() + Number(row.offset_ms || 0));
 }
 
+// Billing uses the persisted admin clock without shifting unrelated production jobs.
+async function billingNow(db) {
+  if (!isSimulationEnabled()) return realNow();
+  try {
+    const row = (await db.query('SELECT enabled, fixed_at FROM admin_simulation_clock WHERE id=true')).rows[0];
+    if (row?.enabled && row.fixed_at) return new Date(row.fixed_at);
+  } catch (err) { if (err.code !== UNDEFINED_TABLE) throw err; }
+  return now(db);
+}
+
 // Business calendar date as 'YYYY-MM-DD'.
 //
 // Derived with LOCAL calendar getters, not toISOString(). Deliberate, and
@@ -108,4 +118,4 @@ async function today(db) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-module.exports = { now, today, realNow, isSimulationEnabled };
+module.exports = { now, billingNow, today, realNow, isSimulationEnabled };

@@ -40,12 +40,13 @@ const {
 const defaultGetAdapter = require('../modules/collection-engine/adapters/get-adapter');
 const { recordFinding } = require('./reconciliation-findings');
 
-async function findRetryCandidates(db, entityIds = null) {
+async function findRetryCandidates(db, entityIds = null, fingerprint = null) {
   const res = await db.query(
     `SELECT s.id
      FROM statements s
      WHERE s.status = ANY($1::text[])
        AND ($4::uuid[] IS NULL OR s.billing_account_id IN (SELECT id FROM billing_accounts WHERE entity_id = ANY($4::uuid[])))
+       AND ($5::text IS NULL OR s.billing_run_id IN (SELECT id FROM billing_runs WHERE result_summary->>'simulation_provider'='fin11_mock' AND result_summary->>'simulation_identity'=$5))
        AND EXISTS (
          SELECT 1 FROM collection_attempts ca
          WHERE ca.statement_id = s.id
@@ -60,15 +61,17 @@ async function findRetryCandidates(db, entityIds = null) {
          SELECT COUNT(*) FROM collection_attempts
          WHERE statement_id = s.id AND collection_method = 'card'
        ) < $3`,
-    [ACTIONABLE_STATEMENT_STATUSES, CONFIRMED_FAILURE_STATUSES, MAX_CARD_ATTEMPTS, entityIds]
+    [ACTIONABLE_STATEMENT_STATUSES, CONFIRMED_FAILURE_STATUSES, MAX_CARD_ATTEMPTS, entityIds, fingerprint]
   );
   return res.rows.map((r) => r.id);
 }
 
 async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter, simulation } = {}) {
-  const candidateIds = await findRetryCandidates(db, simulation?.entityIds || null);
+  const candidateIds = await findRetryCandidates(db, simulation?.entityIds || null, simulation?.fingerprint || null);
 
   const summary = { candidatesFound: candidateIds.length, succeeded: 0, confirmedFailureExhausted: 0, retryNotYetDue: 0, skippedOther: 0, errors: 0 };
+
+  if (simulation) summary.skippedReasons = {};
 
   for (const statementId of candidateIds) {
     try {
@@ -78,6 +81,7 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
       else if (last?.reason === 'max_attempts_reached') summary.confirmedFailureExhausted++;
       else if (last?.reason === 'retry_not_yet_due') summary.retryNotYetDue++;
       else summary.skippedOther++;
+      if (simulation && last?.reason) summary.skippedReasons[last.reason] = (summary.skippedReasons[last.reason] || 0) + 1;
     } catch (err) {
       summary.errors++;
       await recordFinding(db, {

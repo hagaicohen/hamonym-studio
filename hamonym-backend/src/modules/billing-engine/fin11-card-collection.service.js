@@ -128,7 +128,8 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
     await client.query('BEGIN');
 
     const stmtRes = await client.query(
-      `SELECT s.*, ba.entity_id, bp.period_end, e.display_name AS entity_name
+      `SELECT s.*, ba.entity_id, bp.period_end, e.display_name AS entity_name,
+              (SELECT br.result_summary->>'simulation_provider' FROM billing_runs br WHERE br.id=s.billing_run_id) AS simulation_provider
        FROM statements s
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        JOIN billing_periods bp ON bp.id = s.billing_period_id
@@ -138,6 +139,10 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
       [statementId]
     );
     const statement = stmtRes.rows[0];
+    if (statement?.simulation_provider === 'fin11_mock' && !simulationScope.current()) {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'simulation_statement_requires_simulator' };
+    }
     if (statement) simulationScope.assertEntity(statement.entity_id);
     if (!statement) {
       const err = new Error('Statement not found');
@@ -246,7 +251,7 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
 
     const insertRes = await client.query(
       simulation
-        ? `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, business_collection_at) VALUES ($1, 'card', $2, $3, $4) RETURNING id, attempt_number`
+        ? `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, business_collection_at, provider) VALUES ($1, 'card', $2, $3, $4, 'fin11_mock') RETURNING id, attempt_number`
         : `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount) VALUES ($1, 'card', $2, $3) RETURNING id, attempt_number`,
       simulation ? [statementId, attemptNumber, requestedAmount, simulation.businessAt] : [statementId, attemptNumber, requestedAmount]
     );

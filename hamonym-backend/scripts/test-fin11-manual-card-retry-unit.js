@@ -204,7 +204,7 @@ function uiFixture() {
     require: (name) => {
       if (name === '@angular/core') return { Component: () => () => {}, inject: (token) => token.name === 'BillingOpsService' ? billing : {} };
       const tokens = {
-        '@angular/common': ['CommonModule'], '@angular/forms': ['FormsModule'], '@angular/router': ['Router', 'RouterModule'],
+        '@angular/common': ['CommonModule'], '@angular/forms': ['FormsModule'], '@angular/router': ['ActivatedRoute', 'Router', 'RouterModule'],
         '../../services/billing-ops.service': ['BillingOpsService'], '../../services/finance-ops.service': ['FinanceOpsService'],
         '../../services/collection-ops.service': ['CollectionOpsService'], '../../services/billing-provisioning.service': ['BillingProvisioningService'],
         '../../services/simulation-clock.service': ['SimulationClockService'],

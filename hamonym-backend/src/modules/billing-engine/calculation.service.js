@@ -148,7 +148,12 @@ async function calculateAccountStatement(client, account, { billingRunId, period
 // effective_statement_id IS NULL) — discovery must never see activity that
 // Stage C itself would not also consider eligible, and discovery alone
 // never writes effective_statement_id (only Approval does — unchanged).
-async function runProductionCalculation(billingPeriodId, asOf) {
+async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
+  const scope = require("../../lib/fin11-simulation-context");
+  if (options.entityIds) {
+    const config = scope.configuration();
+    if (!scope.current() || options.entityIds.some(id => !config.entityIds.includes(id))) throw new Error("Simulation scope required");
+  }
   const periodRes = await pool.query(
     `SELECT period_start, period_end FROM billing_periods WHERE id = $1`,
     [billingPeriodId]
@@ -160,11 +165,10 @@ async function runProductionCalculation(billingPeriodId, asOf) {
     throw err;
   }
 
-  const runRes = await pool.query(
-    `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)
-     VALUES ($1, 'production', $2, 'draft', NOW())
-     RETURNING id`,
-    [billingPeriodId, asOf]
+  const runRes = options.billingRunId ? { rows: [{ id: options.billingRunId }] } : await pool.query(
+    `INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at, result_summary)
+     VALUES ($1, 'production', $2, 'draft', NOW(), $3::jsonb) RETURNING id`,
+    [billingPeriodId, asOf, JSON.stringify(options.marker || {})]
   );
   const billingRunId = runRes.rows[0].id;
 
@@ -177,8 +181,9 @@ async function runProductionCalculation(billingPeriodId, asOf) {
      WHERE d.status = 'paid' AND d.is_mock = false
        AND d.billing_effective_at >= $1 AND d.billing_effective_at < $2
        AND d.effective_statement_id IS NULL
+       ${options.entityIds ? 'AND d.entity_id=ANY($3::uuid[])' : ''}
      GROUP BY d.entity_id, e.display_name`,
-    [period.period_start, period.period_end]
+    options.entityIds ? [period.period_start, period.period_end, options.entityIds] : [period.period_start, period.period_end]
   );
 
   const summary = {
@@ -186,6 +191,7 @@ async function runProductionCalculation(billingPeriodId, asOf) {
     statementsCreated: 0,
     zeroActivityAccountIds: [],
     errors: [],
+    reused: 0,
     activityDiscovered: {
       entitiesWithActivity: activityRes.rows.length,
       totalDonations: activityRes.rows.reduce((sum, r) => sum + r.donation_count, 0),
@@ -197,15 +203,29 @@ async function runProductionCalculation(billingPeriodId, asOf) {
   // ---- Stage B/C: unchanged financial path for entities that already
   // have an active billing_account -----------------------------------
   const accountsRes = await pool.query(
-    `SELECT id, entity_id, fee_rate, vat_rate FROM billing_accounts WHERE enforcement_status = 'active'`
+    `SELECT id, entity_id, fee_rate, vat_rate FROM billing_accounts WHERE enforcement_status = 'active' ${options.entityIds ? 'AND entity_id=ANY($1::uuid[])' : ''}`,
+    options.entityIds ? [options.entityIds] : []
   );
 
+  if (options.entityIds && accountsRes.rows.length !== options.entityIds.length) summary.errors.push({ code: 'MISSING_ACTIVE_BILLING_ACCOUNT' });
   const coveredEntityIds = new Set();
   for (const account of accountsRes.rows) {
     coveredEntityIds.add(account.entity_id);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      if (options.resumeSafe) {
+        // Shared account lock and durable reuse protect both paths on recovery.
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['monthly:' + billingPeriodId + ':' + account.id]);
+        const existing = (await client.query(`SELECT id,billing_run_id,status FROM statements WHERE billing_account_id=$1 AND billing_period_id=$2 AND status!='abandoned' ORDER BY created_at`, [account.id, billingPeriodId])).rows;
+        if (existing.length) {
+          if (existing.some(row => row.billing_run_id !== billingRunId)) throw Object.assign(new Error('Existing statement belongs to another run'), { code: 'EXISTING_STATEMENT_OUTSIDE_RUN' });
+          summary.reused += existing.length;
+          await client.query('COMMIT');
+          continue;
+        }
+      }
+      if (options.entityIds) scope.assertEntity(account.entity_id);
       const outcome = await calculateAccountStatement(client, account, {
         billingRunId, periodStart: period.period_start, periodEnd: period.period_end,
       });
@@ -215,7 +235,7 @@ async function runProductionCalculation(billingPeriodId, asOf) {
       else summary.statementsCreated++;
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
-      summary.errors.push({ accountId: account.id, message: err.message });
+      summary.errors.push({ accountId: account.id, code: err.code, message: err.message });
     } finally {
       client.release();
     }
@@ -265,7 +285,7 @@ async function runProductionCalculation(billingPeriodId, asOf) {
   }
 
   await pool.query(
-    `UPDATE billing_runs SET result_summary = $2, completed_at = NOW() WHERE id = $1`,
+    `UPDATE billing_runs SET result_summary = COALESCE(result_summary, '{}'::jsonb) || $2::jsonb, completed_at = NOW() WHERE id = $1`,
     [billingRunId, JSON.stringify(summary)]
   );
 

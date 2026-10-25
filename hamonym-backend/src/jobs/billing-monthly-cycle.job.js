@@ -51,11 +51,7 @@
 //     is a safe no-op, see that function's own header) -- but never
 //     collects, never touches MASAV, never creates a Payment, since this
 //     job still never calls any of those services.
-const calculation = require('../modules/billing-engine/calculation.service');
 const { resolveSelectedMonthBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
-const { autoApproveDraftStatementsForRun } = require('../modules/billing-engine/approval.service');
-const { recordFinding } = require('../jobs/reconciliation-findings');
-const pool = require('../db/db');
 
 // The cycle whose cutoff has MOST RECENTLY passed, at-or-before `now` --
 // the correct target for a real 20:00-Israel-time cutoff run (2026-09-18
@@ -104,89 +100,7 @@ async function computeMostRecentCycleBoundary(db, now) {
 // themselves take their time parametrically (year/month, asOf) and are not
 // modified here.
 async function handler(db, { now = new Date() } = {}) {
-  const { periodStart, periodEnd } = await computeMostRecentCycleBoundary(db, now);
-
-  const { periodId, periodCreated } = await ensurePeriod(db, periodStart, periodEnd);
-
-  const existingRun = await db.query(
-    `SELECT id FROM billing_runs WHERE billing_period_id = $1 LIMIT 1`,
-    [periodId]
-  );
-
-  if (existingRun.rows[0]) {
-    return {
-      periodId,
-      periodStart: periodStart.toISOString(),
-      periodEnd: periodEnd.toISOString(),
-      periodCreated,
-      calculationRan: false,
-      reason: 'already_calculated',
-      existingRunId: existingRun.rows[0].id,
-    };
-  }
-
-  const result = await calculation.runProductionCalculation(periodId, now.toISOString());
-
-  // Automatic eligibility transition (2026-10, FIN-11 closure) -- "routine
-  // monthly Statement approval is NOT part of the intended business
-  // workflow" per the approved contract. Calls the EXACT SAME validated
-  // approveStatement() a human click already used (approval.service.js),
-  // never a parallel/looser check -- so this can only ever auto-approve a
-  // Statement that was already eligible by the existing rules. A Statement
-  // that fails validation stays 'draft' ("calculated but not yet
-  // eligible") and gets ONE recorded finding per statement, surfaced to
-  // the Super Admin as a genuine exception -- never retried blindly, never
-  // forced through. This does NOT write platform_audit_log (unlike the
-  // human-triggered billing-ops.service.js wrapper) -- approval.service.js
-  // #approveStatement never did, by design (see its own header), so there
-  // is no "fake system super admin" audit problem to invent a workaround
-  // for. job_runs.result_summary (below) is this job's own already-
-  // established audit trail for automated actions, same as every other
-  // job in this directory.
-  //
-  // DEPLOYMENT-SAFETY GUARD (2026-10, controlled production deployment) --
-  // billing-monthly-cycle is ALREADY registered and running on its real
-  // schedule in production. Unlike FIN-11's 3 new jobs (safe simply by
-  // staying unregistered), this job's NEXT real tick would otherwise run
-  // the auto-approval logic above immediately once this code is deployed
-  // -- deploying is not the same decision as activating. FIN11_AUTO_
-  // APPROVAL_ENABLED defaults OFF (unset or anything other than the exact
-  // string 'true'): deploying this commit changes NOTHING about what a
-  // real scheduled run does until a SEPARATE, explicit Render env-var
-  // change turns it on -- the smallest possible guard, not a new
-  // architecture. When OFF, this job's behavior is byte-for-byte what it
-  // was before this stage (create period, run calculation, stop).
-  const autoApprovalEnabled = process.env.FIN11_AUTO_APPROVAL_ENABLED === 'true';
-  let autoApproval = { approved: [], failed: [] };
-  if (autoApprovalEnabled) {
-    autoApproval = await autoApproveDraftStatementsForRun(result.billingRunId);
-    for (const failure of autoApproval.failed) {
-      await recordFinding(pool, {
-        jobName: 'billing-monthly-cycle',
-        findingType: 'statement_auto_approval_failed',
-        severity: 'warning',
-        subjectType: 'statement',
-        subjectId: failure.statementId,
-        details: { code: failure.code, message: failure.message },
-      });
-    }
-  }
-
-  return {
-    periodId,
-    periodStart: periodStart.toISOString(),
-    periodEnd: periodEnd.toISOString(),
-    periodCreated,
-    calculationRan: true,
-    billingRunId: result.billingRunId,
-    accountsEvaluated: result.accountsEvaluated,
-    statementsCreated: result.statementsCreated,
-    blockedEntitiesCount: result.blockedEntities.length,
-    activityDiscovered: result.activityDiscovered,
-    autoApprovalEnabled,
-    statementsAutoApproved: autoApproval.approved.length,
-    statementsAutoApprovalFailed: autoApproval.failed.length,
-  };
+  return require('../modules/billing-engine/monthly-billing-orchestrator.service').run({ db, now });
 }
 
 module.exports = {

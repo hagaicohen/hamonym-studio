@@ -105,7 +105,7 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
 
     try {
       const result = await Promise.race([
-        job.handler(db, { now: businessNow, simulation }),
+        job.handler(db, { now: businessNow, simulation, ...(simulation ? { resolveAdapter: method => { simulationScope.configuration(); if (method !== 'card') throw new Error('Only simulated card collection is allowed'); return require('../modules/collection-engine/adapters/fin11-mock.adapter'); } } : {}) }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Job timed out')), job.timeoutMs)),
       ]);
 

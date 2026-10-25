@@ -23,7 +23,8 @@ async function status(db = pool) {
   const simulationEnabled = row?.enabled === true;
   const overrideActive = simulationEnabled && !!row.fixed_at;
   return { simulationEnabled, overrideActive, businessNow: overrideActive ? row.fixed_at : realNow, realNow,
-    collectionAuthorized: collectionAuthorized() };
+    collectionAuthorized: collectionAuthorized(),
+    ...(!collectionAuthorized() ? { skipped: 'simulation_collection_not_authorized' } : {}) };
 }
 async function change(adminId, action) {
   if (!adminId) throw failure('נדרשת הרשאת מנהל־על', 403, 'SUPER_ADMIN_REQUIRED');

@@ -75,7 +75,7 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
   const candidatesRes = await db.query(
     `SELECT id, statement_id, status, collection_method
      FROM collection_attempts
-     WHERE collection_method != 'masav'
+     WHERE collection_method != 'masav' AND provider != 'fin11_mock'
        AND (
          status = 'ambiguous'
          OR (status = 'pending' AND initiated_at < $1::timestamptz - INTERVAL '${STUCK_AFTER_HOURS} hours')

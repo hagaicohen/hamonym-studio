@@ -128,7 +128,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
   // Effective BUSINESS time (clock.js -- real unless Super Admin has an
   // active simulated override) vs this period's real cutoff instant: tells
   // the UI whether collection is "not due yet" or "due, but not run".
-  const businessNow = await clock.now(pool);
+  const businessNow = await (clock.billingNow || clock.now)(pool);
   const cutoffPassed = businessNow >= periodEnd;
 
   const periodRes = await pool.query(

@@ -43,7 +43,8 @@ async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: m
     await client.query('BEGIN');
 
     const stmtRes = await client.query(
-      `SELECT s.*, ba.entity_id, ba.preferred_collection_method
+      `SELECT s.*, ba.entity_id, ba.preferred_collection_method,
+              (SELECT br.result_summary->>'simulation_provider' FROM billing_runs br WHERE br.id=s.billing_run_id) AS simulation_provider
        FROM statements s
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        WHERE s.id = $1
@@ -55,6 +56,11 @@ async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: m
       const err = new Error('Statement not found');
       err.code = 'STATEMENT_NOT_FOUND';
       throw err;
+    }
+
+    if (statement.simulation_provider === 'fin11_mock') {
+      await client.query('COMMIT');
+      return { skipped: true, reason: 'simulation_statement_requires_simulator' };
     }
 
     // FIN-11 Stage 2B, rule 4.9: a verified overpayment holds ALL new
