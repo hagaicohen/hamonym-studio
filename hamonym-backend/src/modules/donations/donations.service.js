@@ -375,19 +375,10 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // separate, manual step for now.
   const donationFallbackCredentials = resolveDonationFallbackCredentials();
   const hasPlatformCardcom = !!donationFallbackCredentials;
-  // is_mock means ONLY "PAYMENT_PROVIDER=mock was explicitly set" — a
-  // deliberate dev/test override, never an inferred fallback (2026-08-21
-  // fix). Missing a real provider is a configuration error, not Mock: it
-  // used to silently redirect real donors into the Mock checkout screen
-  // (`hasVerifiedCardcom`/`hasPlatformCardcom` both false), which is not
-  // just semantically wrong but was also a dead end — `mockComplete`'s own
-  // guard only ever accepted `PAYMENT_PROVIDER==='mock'`, so those
-  // donations could never actually be completed and were stuck 'pending'
-  // forever (confirmed against two real production rows). See
-  // docs/PAYMENTS_ARCHITECTURE_CONTEXT.md and the 2026-08-21 audit.
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
+  // Test providers use the ordinary verified ledger; excluded legacy fixtures remain separate.
+  const provider = getDonationProvider();
 
-  if (!isMock && !hasVerifiedCardcom && !hasPlatformCardcom) {
+  if (provider.name !== 'mock' && !hasVerifiedCardcom && !hasPlatformCardcom) {
     const err = new Error('Payment not configured for this campaign');
     err.status = 400;
     err.code = 'PAYMENT_NOT_CONFIGURED';
@@ -474,7 +465,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       donor.postalCode  || null,
       donor.isAnonymous || false,
       JSON.stringify(authoritativeRewards),
-      isMock,
+      false,
       utmParams  ? JSON.stringify(utmParams) : null,
       ipAddress  || null,
       userAgent  || null,
@@ -489,15 +480,6 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const donationId = donationRes.rows[0].id;
 
   await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
-
-  // 3. Mock provider — skip Cardcom, return mock payment URL
-  if (isMock) {
-    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-    return {
-      url: `${frontBase}/mock-payment?id=${donationId}&amount=${donationAmount}&slug=${campaign.slug}&title=${encodeURIComponent(campaign.title)}`,
-      donationId,
-    };
-  }
 
   // Registration participants get their own Cardcom line items, built from
   // registrationOptionsById (server-validated against registration_options
@@ -555,9 +537,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     // donationFallbackCredentials is guaranteed non-null here when
     // !hasVerifiedCardcom -- the PAYMENT_NOT_CONFIGURED check above already
     // required hasVerifiedCardcom || hasPlatformCardcom before this point.
-    TerminalNumber: hasVerifiedCardcom ? campaign.cardcom_terminal_number : donationFallbackCredentials.terminalNumber,
-    ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : donationFallbackCredentials.apiName,
-    ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : donationFallbackCredentials.apiPassword,
+    TerminalNumber: provider.name === 'mock' ? null : (hasVerifiedCardcom ? campaign.cardcom_terminal_number : donationFallbackCredentials.terminalNumber),
+    ApiName:        provider.name === 'mock' ? null : (hasVerifiedCardcom ? campaign.cardcom_api_username    : donationFallbackCredentials.apiName),
+    ApiPassword:    provider.name === 'mock' ? null : (hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : donationFallbackCredentials.apiPassword),
     Amount:         round2(donationAmount),
     Language:       'he',
     // ChargeAndCreateToken required for recurring signups — verified
@@ -654,7 +636,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   return {
     url:        cardcomData.Url,
     donationId,
-    ...(embedded ? { lowProfileId: cardcomData.LowProfileId } : {}),
+    ...(provider.name === 'mock' ? { paymentProvider: 'mock' } : embedded ? { lowProfileId: cardcomData.LowProfileId } : {}),
   };
 };
 
@@ -737,6 +719,7 @@ async function getDonationForVerification(donationId) {
 exports.getDonationForVerification = getDonationForVerification;
 
 async function resolveCardcomCredentials(donationId) {
+  if (getDonationProvider().name === 'mock') return {};
   const res = await db.query(
     `SELECT e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
             e.cardcom_connection_status
@@ -754,6 +737,7 @@ exports.resolveCardcomCredentials = resolveCardcomCredentials;
 // already carries entity_id itself, no donation to join through (Pause/
 // Resume act on the Master instruction, not any one charge).
 async function resolveCardcomCredentialsForEntity(entityId) {
+  if (getDonationProvider().name === 'mock') return {};
   const res = await db.query(
     `SELECT cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
             cardcom_connection_status
@@ -1034,69 +1018,18 @@ exports.getCampaignDonors = async (slug, period) => {
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE MOCK PAYMENT COMPLETION (dev only)
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.handleMockComplete = async ({ donationId, status, failureReason, completedAt }) => {
-  const success   = status === 'paid';
-  const newStatus = success ? 'paid' : 'failed';
-  const resolvedAt = completedAt ? new Date(completedAt) : new Date();
-
-  const donRes = await db.query(
-    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
-     FROM donations d
-     JOIN campaigns c ON c.id = d.campaign_id
-     WHERE d.id = $1`,
-    [donationId]
-  );
-
-  const row      = donRes.rows[0];
-  const slug     = row?.slug      || '';
-  const amount   = row?.amount    || 0;
-  const entityId = row?.entity_id || null;
-
-  let receipt = null;
-
-  if (success && row?.campaign_id) {
-    // Same atomicity as markDonationPaid — status update, campaign
-    // aggregate, and receipt are one transaction, email queued only after
-    // COMMIT (see withTransaction/queueReceiptEmail above).
-    await withTransaction(async (client) => {
-      await client.query(
-        `UPDATE donations
-         SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
-         WHERE id=$4`,
-        [newStatus, failureReason || null, resolvedAt, donationId]
-      );
-
-      await client.query(
-        `UPDATE campaigns
-         SET current_amount   = current_amount   + $1,
-             supporters_count = supporters_count + 1,
-             updated_at = NOW()
-         WHERE id = $2`,
-        [amount, row.campaign_id]
-      );
-
-      receipt = await finalizePaidDonation(donationId, client);
-    });
-  } else {
-    await db.query(
-      `UPDATE donations
-       SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
-       WHERE id=$4`,
-      [newStatus, failureReason || null, resolvedAt, donationId]
-    );
-  }
-
-  if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
-  if (success) await queueReceiptEmail(receipt, donationId);
-
-  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-  return {
-    redirectUrl: success
-      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
-      : `${frontBase}/campaigns/${slug}/view?payment=failed`,
-  };
+exports.handleMockComplete = async ({ donationId, status, session }) => {
+  const provider = getDonationProvider();
+  if (provider.name !== 'mock') throw Object.assign(new Error('Mock payments disabled'), {status:403});
+  const payload = await provider.confirm({ donationId, session, status });
+  const claim = await require('../payment/idempotency/idempotency.service').claim({provider:'mock',payload});
+  if (status === 'paid') {
+    const outcome = await require('../payment/handlers/payment.handler').handle(payload);
+    if (!['paid','already_paid'].includes(outcome.outcome)) throw Object.assign(new Error('Mock payment verification incomplete'), {status:409});
+  } else await markDonationFailed(donationId, {providerReference:payload.TranzactionId});
+  await require('../payment/audit/audit.service').recordProcessed(claim.eventId);
+  return exports.handleReturn({donationId,status:status==='paid'?'success':'failed'});
 };
-
 
 /* ─────────────────────────────────────────
    ENTITY DONATIONS PAGE (authenticated)
