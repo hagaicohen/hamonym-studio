@@ -7,12 +7,12 @@ function authHeaders(): HttpHeaders {
   return new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 }
 
-// Super Admin clock controls are independent of FIN-11 collection authorization.
-// UI control state is isolated from the shared production job clock.
+// The Admin override and scheduler share the authoritative Hamonym clock.
 export interface SimulationClockStatus {
-  // Persisted Super Admin switch; this does not authorize financial jobs.
+  // Whether the Admin clock override is enabled.
   simulationEnabled: boolean;
-  collectionAuthorized?: boolean;
+  skipped?: string;
+  results?: { step: string; status: string; result?: { reason?: string | null; statementsCreated?: number; approved?: number; succeeded?: number; errors?: number | unknown[]; skippedReasons?: Record<string, number> } }[];
   // True only while the enabled administrative clock has a fixed time.
   overrideActive: boolean;
   businessNow: string;

@@ -58,6 +58,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   fixedTimeInput = '';
   clockActionBusy = false;
   clockActionError: string | null = null;
+  clockActionMessage: string | null = null;
 
   loadClockStatus(): void {
     this.clockLoading = true;
@@ -99,6 +100,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   setClockFixed(): void {
     if (this.clockActionBusy || !this.fixedDateInput || !this.fixedTimeInput || !this.clockStatus) return;
     this.clockActionError = null;
+    this.clockActionMessage = null;
     const wallTime = Date.parse(`${this.fixedDateInput}T${this.fixedTimeInput}:00Z`);
     if (!Number.isFinite(wallTime)) { this.clockActionError = 'יש לבחור תאריך ושעה תקינים'; return; }
     let instant = wallTime;
@@ -111,7 +113,38 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     if (fields.date !== this.fixedDateInput || fields.time !== this.fixedTimeInput) { this.clockActionError = 'השעה אינה קיימת בשעון ישראל. יש לבחור שעה אחרת'; return; }
     this.clockActionBusy = true;
     this.clockService.setFixed(iso).subscribe({
-      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; },
+      next: (res) => {
+        this.clockActionBusy = false; this.clockStatus = res;
+        const reasons: Record<string, string> = {
+          cutoff_not_reached: 'מועד החיוב החודשי טרם הגיע',
+          calculation_incomplete: 'חישוב החיובים לא הושלם; הגבייה נעצרה',
+          approval_failed: 'אישור החיובים נכשל; הגבייה נעצרה',
+          PERIOD_OVERLAP_MISMATCH: 'קיימת תקופת חיוב חופפת; נדרשת בדיקה לפני המשך',
+          no_active_payment_instrument: 'לא מוגדר אמצעי תשלום פעיל וברירת מחדל',
+          retry_not_yet_due: 'מועד הניסיון החוזר טרם הגיע',
+          max_attempts_reached: 'מוצו הניסיונות האוטומטיים',
+          entity_collection_held: 'הגבייה חסומה לטיפול מנהל',
+          masav_proposal_exported_unresolved: 'קיים תהליך מס״ב פתוח',
+          simulation_day_already_attempted: 'כבר בוצע ניסיון ביום העסקי הזה',
+          billing_migrations_required: 'סכמת החיוב חסרה; יש להשלים מיגרציות 075 ו־076 לפני גבייה',
+          billing_already_running: 'מחזור הגבייה כבר מתבצע; לא נוצר חיוב נוסף',
+          billing_job_failed: 'שלב הגבייה נכשל; ניתן לנסות שוב ללא יצירת חיוב כפול',
+        };
+        const summary = res.results?.map(step => {
+          const errors = step.result?.errors;
+          const errorCount = Array.isArray(errors) ? errors.length : errors ?? 0;
+          if (errorCount > 0) return `שלב הגבייה הסתיים עם ${errorCount} שגיאות; יש לבדוק את מרכז הטיפול`;
+          if (step.result?.reason) return reasons[step.result.reason] || 'שלב הסימולציה נעצר; יש לבדוק את דוח ההרצה';
+          if (step.status !== 'success') return 'שלב הסימולציה לא הושלם; לא בוצעה גבייה נוספת';
+          if (step.step === 'monthly_billing') return `נוצרו ${step.result?.statementsCreated ?? 0} חיובים ואושרו ${step.result?.approved ?? 0}`;
+          if (step.step === 'fin11-card-collection' || step.step === 'fin11-card-retry-sweep') {
+            const skipped = Object.entries(step.result?.skippedReasons ?? {}).map(([reason, count]) => `${reasons[reason] || 'הגבייה דולגה בשל תנאי הזכאות הקיימים'} (${count})`).join(', ');
+            return `הושלמו ${step.result?.succeeded ?? 0} גביות מדומות` + (skipped ? '. ' + skipped : '');
+          }
+          return '';
+        }).filter(Boolean).join('. ');
+        this.clockActionMessage = 'הזמן העסקי עודכן. ' + (res.skipped ? reasons[res.skipped] || 'לא בוצעה גבייה' : summary || '');
+      },
       error: (err) => {
         this.clockActionBusy = false;
         this.clockActionError = err?.error?.error || 'קביעת הזמן נכשלה';
@@ -123,8 +156,9 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     if (this.clockActionBusy || !this.clockStatus?.simulationEnabled) return;
     this.clockActionBusy = true;
     this.clockActionError = null;
+    this.clockActionMessage = null;
     this.clockService.reset().subscribe({
-      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; this.fixedDateInput = ''; this.fixedTimeInput = ''; },
+      next: (res) => { this.clockActionBusy = false; this.clockStatus = res; this.fixedDateInput = ''; this.fixedTimeInput = ''; this.clockActionMessage = 'המערכת חזרה לזמן אמת'; },
       error: (err) => {
         this.clockActionBusy = false;
         this.clockActionError = err?.error?.error || 'האיפוס נכשל';
