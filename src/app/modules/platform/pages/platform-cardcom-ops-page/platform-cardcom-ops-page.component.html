@@ -7,6 +7,11 @@
     </div>
   </div>
 
+  @if (donationsPeriod || donationsCampaignId) {
+    <p class="plat-subtitle" role="status">סינון מהדשבורד: {{ donationsPeriod ? 'תרומות החודש' : 'תרומות הקמפיין שנבחר' }} · <button type="button" class="ops-btn-sm" (click)="clearDashboardScope()">הצג את כל התקופות והקמפיינים</button></p>
+  }
+
+  @if (findingsError || error) { <p class="ops-action-error" role="alert">{{ findingsError || error }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="reloadAlerts()">נסה שוב</button></p> }
   @if (actionError) {
     <div class="ops-action-error">{{ actionError }}</div>
   }
@@ -22,55 +27,48 @@
     </button>
   }
 
-  @if (showAnomalies && totalAnomalyCount > 0) {
-    <div class="plat-card ops-anomaly-panel">
-      <div class="ops-group-list">
-        @for (group of findingGroups; track group.findingType) {
-          <div class="ops-group-card">
-            <span class="ops-severity-dot" [class]="'ops-severity-' + group.meta.resolutionKind"></span>
-            <div class="ops-group-body">
-              <span class="ops-group-title">{{ group.meta.title }} — {{ group.items.length }}</span>
-              <span class="ops-group-explanation">{{ group.meta.explanation }}</span>
-              <span class="ops-resolution-badge" [class]="'ops-resolution-' + group.meta.resolutionKind">{{ resolutionLabels[group.meta.resolutionKind] }}</span>
-            </div>
-            <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openGroupDrawer(group.findingType)">
-              הצג פרטים
-            </button>
-          </div>
-        }
-        @for (item of alertActionableItems; track item.id) {
-          <div class="ops-group-card">
-            <span class="ops-severity-dot" [class]="'ops-severity-' + item.severity"></span>
-            <div class="ops-group-body">
-              <span class="ops-group-title">{{ item.title }}</span>
-              <span class="ops-group-explanation">{{ item.subtitle }}</span>
-              <span class="ops-resolution-badge ops-resolution-engineering">{{ resolutionLabels['engineering'] }}</span>
-            </div>
-          </div>
-        }
-      </div>
-    </div>
+  <nav class="ops-center-toggle" aria-label="תצוגת תרומות וחריגות"><button class="ops-btn ops-btn-secondary ops-btn-sm" [attr.aria-expanded]="showAnomalies" (click)="toggleAnomalies()">{{ showAnomalies ? 'סגור מרכז טיפול' : 'מרכז טיפול בחריגות' }}</button></nav>
+  @if (showAnomalies) {
+    <section id="anomalies" class="plat-card exception-center" aria-label="מרכז טיפול בחריגות">
+      <h2 class="plat-section-title">מרכז טיפול בחריגות</h2>
+      <nav class="exception-tabs" aria-label="מצב ממצאים"><button class="ops-btn ops-btn-secondary ops-btn-sm" [class.selected]="centerStatus === 'open'" [attr.aria-pressed]="centerStatus === 'open'" (click)="centerStatus = 'open'; loadExceptionCenter()">פתוחות</button><button class="ops-btn ops-btn-secondary ops-btn-sm" [class.selected]="centerStatus === 'resolved'" [attr.aria-pressed]="centerStatus === 'resolved'" (click)="centerStatus = 'resolved'; loadExceptionCenter()">טופלו והיסטוריות</button></nav>
+      <div class="ops-donations-toolbar"><input class="ops-search-input" aria-label="חיפוש חריגה או עמותה" placeholder="חיפוש חריגה או עמותה" [(ngModel)]="centerSearch" /><select class="ops-status-select" aria-label="חומרה" [(ngModel)]="centerSeverity"><option value="">כל דרגות החומרה</option><option value="critical">דחוף</option><option value="warning">דורש בדיקה</option><option value="info">לידיעה</option></select><select class="ops-status-select" aria-label="סוג חריגה" [(ngModel)]="centerType"><option value="">כל הסוגים</option>@for (type of centerTypes; track type.key) { <option [value]="type.key">{{ type.label }}</option> }</select><label>מיום <input type="date" lang="he-IL" [(ngModel)]="centerDateFrom" /></label><label>עד יום <input type="date" lang="he-IL" [(ngModel)]="centerDateTo" /></label><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="clearCenterFilters()">נקה סינון</button></div>
+      @if (centerError) { <p class="ops-action-error" role="alert">{{ centerError }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadExceptionCenter()">נסה שוב</button></p> }
+      @if (centerFindings.length >= 200) { <p class="summary-note">מוצגים עד 200 הממצאים האחרונים מהמקור. ייתכנו ממצאים נוספים.</p> }
+      @if (centerLoading) { <p class="ops-empty-small" role="status">טוען ממצאים וחריגות…</p> } @else {
+        <div class="ops-donations-table-wrap" role="region" tabindex="0" aria-label="ממצאים וחריגות"><table class="ops-donations-table"><thead><tr><th>מה קרה</th><th>עמותה / מקור</th><th>סכום</th><th>מועד</th><th>חומרה</th><th>מצב</th><th>פעולה</th></tr></thead><tbody>
+          @for (row of filteredCenterRows; track row.key) { <tr><td>{{ row.title }}</td><td>@if (row.entityId) { <a [routerLink]="['/platform/organizations', row.entityId]">{{ row.entityName }}</a> } @else { {{ row.entityName }} }</td><td>{{ money(row.amount) }}</td><td dir="ltr">{{ fmtDateTime(row.date) }}</td><td><span class="exception-severity" [class.urgent]="row.severity === 'critical'">{{ severityLabel(row.severity) }}</span></td><td>{{ row.resolved ? 'טופל' : row.collectionActionable === false ? 'לא נדרשת פעולת גבייה' : 'פתוח' }}</td><td><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openCenterException(row)">פרטים וטיפול</button></td></tr> } @empty { <tr><td colspan="7" class="ops-empty-small">{{ centerError ? 'לא ניתן לאמת את רשימת החריגות' : (centerSearch || centerSeverity || centerType || centerDateFrom || centerDateTo ? 'אין ממצאים התואמים לסינון' : (centerStatus === 'open' ? 'אין ממצאים פתוחים במקורות שנטענו' : 'אין היסטוריית טיפול זמינה')) }}</td></tr> }
+        </tbody></table></div>
+      }
+      <details class="exception-grouped"><summary>ממצאי תרומות מקובצים לפי סוג</summary><div class="ops-group-list">@for (group of findingGroups; track group.findingType) { <div class="ops-group-card"><div class="ops-group-body"><strong class="ops-group-title">{{ group.meta.title }} · {{ group.items.length }}</strong><span class="ops-group-explanation">{{ group.meta.explanation }}</span></div><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openGroupDrawer(group.findingType)">פרטים</button></div> } @for (item of alertActionableItems; track item.id) { <div class="ops-group-card"><div class="ops-group-body"><strong>{{ item.title }}</strong><span class="ops-group-explanation">{{ item.subtitle }}</span></div></div> }</div></details>
+    </section>
   }
 
   <!-- Primary content: cross-entity donations browser -->
-  <div class="plat-card">
-    <h3 class="plat-section-title">כל התרומות</h3>
+  <div class="plat-card" [attr.aria-busy]="donationsLoading || donationsRefreshing">
+    @if (donationSummary; as summary) { <div class="donation-summary" aria-label="סיכום התרומות בהתאם לסינון"><span>סכום ששולם <strong>{{ money(summary.paidAmount) }}</strong></span><span>תרומות ששולמו <strong>{{ summary.paidCount }}</strong></span><span>ניסיונות שנכשלו <strong>{{ summary.failedCount }}</strong></span></div> }
+    @else if (!donationsLoading && !donationsError) { <p class="summary-note">סיכום מלא לפי הסינון אינו זמין מהשרת. הרשימה כוללת {{ donationsTotal }} תרומות.</p> }
 
     <div class="ops-donations-toolbar">
-      <input
+      <label class="sr-only" for="donation-search">חיפוש לפי תורם, עמותה או קמפיין</label><input id="donation-search"
         type="search"
         class="ops-search-input"
-        placeholder="חיפוש לפי שם תורם, עמותה או קמפיין..."
+        [placeholder]="advancedDonationDataAvailable ? 'חיפוש לפי תורם, אימייל, מספר עסקה, עמותה או קמפיין' : 'חיפוש לפי שם תורם, עמותה או קמפיין'"
         [(ngModel)]="donationsSearch"
         (input)="onDonationsSearchInput()"
         (keyup.enter)="onDonationsSearch()"
       />
-      <select class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+      <select aria-label="סטטוס תשלום" class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
         <option value="">כל הסטטוסים</option>
         <option value="paid">שולם</option>
         <option value="pending">ממתין</option>
         <option value="failed">נכשל</option>
       </select>
+      <select aria-label="תקופת התרומות" class="ops-status-select" [(ngModel)]="donationsPeriod" (ngModelChange)="onDonationsSearch()"><option value="">כל התקופות</option><option value="this_month_israel">החודש לפי שעון ישראל</option><option value="last_month">החודש הקודם</option><option value="quarter">שלושת החודשים האחרונים</option></select>
+      <app-entity-combobox [entities]="donationEntityOptions" [(selectedId)]="donationsEntityId" (selectedIdChange)="onDonationsSearch()"></app-entity-combobox>
+      <app-entity-combobox placeholder="כל הקמפיינים" [entities]="donationCampaignOptions" [(selectedId)]="donationsCampaignId" (selectedIdChange)="onDonationsSearch()"></app-entity-combobox>
+      <button class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="exportBusy || donationsLoading || donationsRefreshing || !donationsTotal" (click)="exportDonationsCsv()">{{ exportBusy ? 'מייצא…' : 'ייצוא CSV' }}</button>
+      @if (hasDonationFilters) { <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="clearDonationFilters()">נקה סינון</button> }
       <app-column-picker
         [columns]="donationsColumns"
         storageKey="platformColumns_donations"
@@ -78,14 +76,17 @@
       ></app-column-picker>
     </div>
 
+    @if (advancedDonationDataAvailable) { <div class="ops-donations-toolbar advanced-donation-filters"><label>מתאריך <input type="date" lang="he-IL" [(ngModel)]="donationsDateFrom" (ngModelChange)="onDonationsSearch()" /></label><label>עד תאריך <input type="date" lang="he-IL" [(ngModel)]="donationsDateTo" (ngModelChange)="onDonationsSearch()" /></label><select aria-label="סוג תרומה" class="ops-status-select" [(ngModel)]="donationsRecurring" (ngModelChange)="onDonationsSearch()"><option value="">כל סוגי התרומות</option><option value="false">חד־פעמית</option><option value="true">חודשית</option></select><select aria-label="אמצעי תשלום" class="ops-status-select" [(ngModel)]="donationsPaymentMethod" (ngModelChange)="onDonationsSearch()"><option value="">כל אמצעי התשלום</option><option value="card">אשראי</option><option value="bank_transfer">העברה בנקאית</option><option value="cash">מזומן</option><option value="check">המחאה</option><option value="other">אחר</option></select></div> }
+    @if (donationOptionsError) { <p class="ops-action-error" role="alert">{{ donationOptionsError }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadDonationFilterOptions()">נסה שוב</button></p> }
     @if (donationsError) {
-      <div class="ops-action-error">{{ donationsError }}</div>
-    } @else if (donationsLoading) {
+      <div class="ops-action-error" role="alert">{{ donationsError }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadDonations()">נסה שוב</button></div>
+    }
+    @if (donationsLoading) {
       <div class="ops-empty-small">טוען תרומות...</div>
-    } @else if (donations.length === 0) {
-      <div class="ops-empty-small">לא נמצאו תרומות</div>
-    } @else {
-      <div class="ops-donations-table-wrap" [class.refreshing]="donationsRefreshing">
+    } @else if (donations.length === 0 && !donationsError) {
+      <div class="ops-empty-small">{{ hasDonationFilters ? 'אין תרומות התואמות לסינון' : 'עדיין אין תרומות במערכת' }}</div>
+    } @else if (donations.length) {
+      <div class="ops-donations-table-wrap" tabindex="0" role="region" aria-label="טבלת תרומות; ניתן לגלול לרוחב" [class.refreshing]="donationsRefreshing">
         <table class="ops-donations-table">
           <thead>
             <tr>
@@ -96,6 +97,7 @@
               @if (visibleDonationsColumns.has('amount')) { <th class="sortable" (click)="sortDonationsBy('amount')">סכום{{ donationsSortIndicator('amount') }}</th> }
               @if (visibleDonationsColumns.has('type')) { <th class="sortable" (click)="sortDonationsBy('type')">סוג{{ donationsSortIndicator('type') }}</th> }
               @if (visibleDonationsColumns.has('status')) { <th class="sortable" (click)="sortDonationsBy('status')">סטטוס{{ donationsSortIndicator('status') }}</th> }
+              <th scope="col">אמצעי תשלום</th><th scope="col">פרטים</th>
             </tr>
           </thead>
           <tbody>
@@ -103,16 +105,16 @@
               <tr>
                 <td>{{ fmtDateTime(donation.created_at) }}</td>
                 @if (visibleDonationsColumns.has('donor')) {
-                  <td class="ops-td-truncate">{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || '—') }}</td>
+                  <td class="ops-td-truncate"><button class="donation-link" (click)="openDonation(donation)">{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || 'ללא שם') }}</button></td>
                 }
                 @if (visibleDonationsColumns.has('entity')) {
-                  <td class="ops-td-truncate" [title]="donation.entity_name">{{ donation.entity_name }}</td>
+                  <td class="ops-td-truncate" [title]="donation.entity_name"><a [routerLink]="['/platform/organizations', donation.entity_id]">{{ donation.entity_name }}</a></td>
                 }
                 @if (visibleDonationsColumns.has('campaign')) {
-                  <td class="ops-td-truncate" [title]="donation.campaign_title">{{ donation.campaign_title }}</td>
+                  <td class="ops-td-truncate" [title]="donation.campaign_title"><a [routerLink]="['/platform/campaigns']" [queryParams]="{ search: donation.campaign_title }">{{ donation.campaign_title }}</a></td>
                 }
                 @if (visibleDonationsColumns.has('amount')) {
-                  <td>₪{{ donation.amount }}</td>
+                  <td>{{ money(donation.amount) }}</td>
                 }
                 @if (visibleDonationsColumns.has('type')) {
                   <td>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</td>
@@ -124,6 +126,7 @@
                     </span>
                   </td>
                 }
+                <td>{{ donationPaymentLabel(donation) }}</td><td><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openDonation(donation)">פרטים</button></td>
               </tr>
             }
           </tbody>
@@ -131,12 +134,36 @@
       </div>
 
       <div class="ops-pager">
-        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage === 0" (click)="prevDonationsPage()">הקודם</button>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage === 0 || donationsRefreshing" (click)="prevDonationsPage()">הקודם</button>
         <span class="ops-pager-info">עמוד {{ donationsPage + 1 }} מתוך {{ donationsTotalPages }} · סה"כ {{ donationsTotal }}</span>
-        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage >= donationsTotalPages - 1" (click)="nextDonationsPage()">הבא</button>
+        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage >= donationsTotalPages - 1 || donationsRefreshing" (click)="nextDonationsPage()">הבא</button>
       </div>
     }
   </div>
+
+  @if (selectedDonation; as donation) { <app-admin-details-drawer [heading]="'פרטי תרומה · ' + money(donation.amount)" (closed)="closeDonation()">
+    <dl class="detail-grid"><dt>תורם</dt><dd>{{ donation.is_anonymous ? 'אנונימי' : donation.donor_name || 'ללא שם' }}</dd><dt>עמותה</dt><dd><a [routerLink]="['/platform/organizations', donation.entity_id]">{{ donation.entity_name }}</a></dd><dt>קמפיין</dt><dd><a routerLink="/platform/campaigns" [queryParams]="{ search: donation.campaign_title }">{{ donation.campaign_title }}</a></dd><dt>סכום</dt><dd>{{ money(donation.amount) }}</dd><dt>סוג</dt><dd>{{ donation.is_recurring ? 'חודשית' : 'חד־פעמית' }}</dd><dt>תוצאה</dt><dd>{{ donationStatusLabel(donation.status) }}</dd><dt>מועד יצירה</dt><dd dir="ltr">{{ fmtDateTime(donation.created_at) }}</dd><dt>מועד תשלום מאושר</dt><dd dir="ltr">{{ donation.status === 'paid' ? fmtDateTime(donation.completed_at) : '—' }}</dd><dt>אמצעי תשלום</dt><dd>{{ donation.payment_method ? donationPaymentLabel(donation) : 'לא זמין בנתוני התרומה' }}</dd></dl>
+    @if (donation.status === 'failed') { <section class="detail-section"><h3>סיבת הכישלון</h3><p>{{ failureExplanation(donation) }}</p>@if (donation.failure_diagnostic; as diagnostic) { <p>שלב: אתחול התשלום ב־CardCom</p>@if (diagnostic.failedAt) { <p>מועד הכשל: <bdi>{{ fmtDateTime(diagnostic.failedAt) }}</bdi></p> }@if (diagnostic.providerCode !== null) { <p>קוד ספק: <bdi>{{ diagnostic.providerCode }}</bdi></p> } }</section> }
+    @if (donationDetailLoading) { <p role="status">טוען פרטי קבלה…</p> } @else if (donationDetailError) { <p role="alert">{{ donationDetailError }} <button class="donation-link" (click)="openDonation(donation)">נסה שוב</button></p> } @else if (receiptId) { <p><a [routerLink]="['/receipts', receiptId]" target="_blank" rel="noopener">פתח קבלה ↗</a></p> } @else { <p class="summary-note">לא נמצאה קבלה לתרומה זו.</p> }
+    <section class="detail-section"><h3>היסטוריה זמינה</h3><p>נוצרה: {{ fmtDateTime(donation.created_at) }}</p>@if (donation.completed_at && donation.status === 'paid') { <p>שולמה: {{ fmtDateTime(donation.completed_at) }}</p> }<p class="summary-note">תוצאות הספק והיסטוריית הניסיונות המלאה אינן נכללות ב־API הקיים.</p></section>
+    <details class="detail-section"><summary>פרטים מתקדמים</summary><p>מזהה תרומה: <bdi>{{ donation.id }}</bdi></p></details>
+  </app-admin-details-drawer> }
+
+  @if (centerSelected; as row) { <app-admin-details-drawer [heading]="row.title" (closed)="centerSelected = null">
+    <dl class="detail-grid"><dt>חומרה</dt><dd>{{ severityLabel(row.severity) }}</dd><dt>מצב</dt><dd>{{ row.resolved ? 'טופל' : row.collectionActionable === false ? 'לא נדרשת פעולת גבייה' : 'פתוח' }}</dd><dt>מועד זיהוי</dt><dd dir="ltr">{{ fmtDateTime(row.date) }}</dd><dt>סכום</dt><dd>{{ money(row.amount) }}</dd><dt>עמותה</dt><dd>@if (row.entityId) { <a [routerLink]="['/platform/organizations', row.entityId]">{{ row.entityName }}</a> } @else { {{ row.entityName }} }</dd></dl>
+    @if (row.finding; as finding) {
+      <section class="detail-section"><h3>משמעות הממצא</h3><p>{{ finding.finding_type === 'fin11_card_attempts_exhausted' ? 'הניסיונות האוטומטיים מוצו. יש לבדוק את מצב החיוב העדכני ואת הניסיונות לפני פעולה נוספת.' : finding.finding_type === 'missing_masav_mandate' ? 'חסר אישור מתאים לגבייה במס״ב. יש לבדוק את הגדרות הגבייה של העמותה.' : 'יש לברר את המצב במקור הנתונים. ממצא פתוח אינו מעיד כשלעצמו שהתשלום נכשל.' }}</p>
+      @if (donationContextFor(finding); as donation) { <p>{{ donation.entity_name }} · {{ donation.campaign_title }} · {{ money(donation.amount) }}</p> }
+      @if (campaignContextFor(finding); as campaign) { <p>{{ campaign.title }} · {{ campaign.entity_name }}</p> }
+      <p>זוהה לאחרונה: {{ fmtDateTime(finding.last_seen_at) }}</p>@if (finding.resolved_at) { <p>טופל: {{ fmtDateTime(finding.resolved_at) }}</p> }
+      @if (finding.subject_type === 'donation') { <a routerLink="/platform/donations" (click)="centerSelected = null">חזרה לרשימת התרומות לבדיקה</a> }
+      @if (finding.subject_type === 'campaign') { <a routerLink="/platform/campaigns" [queryParams]="{ search: campaignContextFor(finding)?.title }">פתח רשימת קמפיינים</a> }
+      </section>
+    }
+    @if (centerStatementId(row); as statementId) { <section class="detail-section"><a routerLink="/platform/collection-ops" [queryParams]="{ statementId: statementId }" fragment="collection-attention">פתח את החיוב ומנגנון הטיפול הקיים</a></section> }
+    @if (row.payment) { <section class="detail-section"><h3>היסטוריית טיפול</h3>@if (centerActionsError) { <p role="alert">{{ centerActionsError }}</p> }<ul class="detail-list">@for (action of centerActions; track action.id) { <li>{{ action.action_type === 'override_hold' ? 'עודכנה חסימת גבייה' : 'תועד טיפול בחריגה' }}<span class="cell-secondary">{{ action.admin_name || 'מנהל פלטפורמה' }} · {{ fmtDateTime(action.created_at) }}</span><p>{{ action.reason }}</p></li> } @empty { <li>אין פעולות טיפול טעונות</li> }</ul></section> }
+    <details class="detail-section"><summary>פרטים מתקדמים</summary><p>סוג: {{ row.type }}</p>@if (row.finding) { <p>מזהה ממצא: {{ row.finding.id }}</p><p>מזהה מקור: <bdi>{{ row.finding.subject_id }}</bdi></p> } @if (row.payment) { <p>מזהה חריגה: <bdi>{{ row.payment.id }}</bdi></p> }</details>
+  </app-admin-details-drawer> }
 
   <!-- Focused per-group anomaly drawer -- opened from the anomaly panel
        above. No "סמן כנבדק" here (2026-09-15s): the earlier audit found no

@@ -291,10 +291,14 @@
   line-height: 1.6;
 }
 
-.sim-campaign-picker { display: flex; flex-direction: column; gap: 6px; max-width: 520px; }
+.sim-campaign-picker { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .sim-campaign-picker select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1e293b; font: inherit; direction: rtl; }
 
 .sim-reset-counts { display:flex; flex-wrap:wrap; gap:8px 20px; margin:12px 0; }
 .sim-reset-counts div { display:flex; gap:8px; }
 .sim-reset-counts dd { margin:0; font-weight:700; }
 .sim-reset-hash { overflow-wrap:anywhere; font-size:11px; }
+
+* { box-sizing: border-box; }.plat-page { padding: 24px; max-width: none; }.plat-title { font-size: 26px; }.simulation-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr); gap: 20px; align-items: start; }.simulation-layout .plat-card { min-width: 0; margin: 0; padding: 20px; }.sim-campaign-picker { width: 100%; max-width: none; }.sim-clock-inputs { display: flex; flex-wrap: wrap; gap: 12px; }.sim-clock-inputs .ba-field { flex: 1; min-width: 130px; }.sim-clock-effective { font-variant-numeric: tabular-nums; }.sim-confirm-box { border: 0; padding: 0; margin: 0; background: #fff; }.sim-preview-total { font-size: 13px; color: #475569; line-height: 1.7; }.ba-form-actions { flex-wrap: wrap; }.sim-reset-counts { font-size: 13px; }.ops-action-error { overflow-wrap: anywhere; }button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
+@media(max-width:900px) { .simulation-layout { grid-template-columns: minmax(0,1fr); } }
+@media(max-width:600px) { .plat-page { padding: 16px; }.simulation-layout .plat-card { padding: 16px; }.sim-clock-status-row { flex-wrap: wrap; }.ba-form-actions > button { max-width: 100%; } }

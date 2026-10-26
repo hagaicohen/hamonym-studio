@@ -91,12 +91,20 @@ export interface PlatformDonation {
   created_at: string;
   is_anonymous: boolean;
   failure_reason: string | null;
+  failure_diagnostic?: {
+    stage: 'cardcom_initialization';
+    providerCode: number | null;
+    reason: 'api_user_blocked' | 'recurring_token_unavailable' | 'provider_connection_failed' | 'unknown';
+    failedAt: string | null;
+  } | null;
   is_recurring: boolean;
   campaign_id: string;
   campaign_title: string;
   campaign_slug: string;
   entity_id: string;
   entity_name: string;
+  payment_method?: string | null;
+  receipt_id?: string | null;
 }
 
 export interface PlatformDonationsResponse {
@@ -104,6 +112,8 @@ export interface PlatformDonationsResponse {
   total: number;
   page: number;
   limit: number;
+  adminListVersion?: number;
+  summary?: { paidAmount: number; paidCount: number; failedCount: number };
 }
 
 export interface PlatformDonationsQuery {
@@ -116,6 +126,10 @@ export interface PlatformDonationsQuery {
   sortDir?: string;
   page?: number;
   limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  recurring?: string;
+  paymentMethod?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -132,6 +146,10 @@ export class CardcomOpsService {
     if (query.search) params.set('search', query.search);
     if (query.sortBy) params.set('sortBy', query.sortBy);
     if (query.sortDir) params.set('sortDir', query.sortDir);
+    if (query.dateFrom) params.set('dateFrom', query.dateFrom);
+    if (query.dateTo) params.set('dateTo', query.dateTo);
+    if (query.recurring) params.set('recurring', query.recurring);
+    if (query.paymentMethod) params.set('paymentMethod', query.paymentMethod);
     params.set('page', String(query.page ?? 0));
     params.set('limit', String(query.limit ?? 25));
     return this.http.get<PlatformDonationsResponse>(`${this.base}/donations?${params.toString()}`, { headers: authHeaders() });
@@ -147,9 +165,9 @@ export class CardcomOpsService {
     return this.http.get<{ runs: JobRun[] }>(url, { headers: authHeaders() });
   }
 
-  getFindings(includeResolved = false): Observable<{ findings: ReconciliationFinding[] }> {
+  getFindings(includeResolved = false, limit?: number): Observable<{ findings: ReconciliationFinding[] }> {
     return this.http.get<{ findings: ReconciliationFinding[] }>(
-      `${this.base}/findings?includeResolved=${includeResolved}`,
+      `${this.base}/findings?includeResolved=${includeResolved}${limit === undefined ? '' : '&limit=' + limit}`,
       { headers: authHeaders() },
     );
   }

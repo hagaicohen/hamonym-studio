@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { PlatformUsersPageComponent } from './platform-users-page.component';
 import { PlatformService } from '../../services/platform.service';
@@ -27,11 +28,13 @@ describe('PlatformUsersPageComponent - "⋮" actions menu position clamp (2026-0
 
   async function createComponent() {
     const platformStub = {
+      getRoles: () => of({ roles: [] }),
       getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ users: [user], total: 1 })),
     };
     await TestBed.configureTestingModule({
       imports: [PlatformUsersPageComponent],
       providers: [
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
         { provide: PlatformService, useValue: platformStub },
         { provide: CurrentContextService, useValue: {} },
         { provide: EntitiesService, useValue: { getMyEntities: () => of({ entities: [] }) } },

@@ -1,12 +1,10 @@
 <div class="plat-page">
 
-  @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else {
+  @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
 
   <div class="plat-header">
     <h1 class="plat-title">משתמשים</h1>
-    <button class="btn-primary" (click)="openCreateAdmin()">+ הוסף מנהל פלטפורמה</button>
+    <button class="secondary-button" (click)="openCreateAdmin()">+ הוסף מנהל פלטפורמה</button>
   </div>
 
   @if (actionError) {
@@ -17,38 +15,47 @@
     <input
       class="plat-search"
       type="search"
-      placeholder="חיפוש לפי שם או אימייל..."
+      aria-label="חיפוש לפי שם או אימייל" placeholder="חיפוש לפי שם או אימייל..."
       [(ngModel)]="searchQuery"
       (input)="onSearch()"
     />
+    <label class="sr-only" for="user-role-filter">תפקיד</label><select id="user-role-filter" [(ngModel)]="roleFilter" (ngModelChange)="onRoleChange()"><option value="">כל התפקידים</option>@for (role of roles; track role.id) { <option [value]="role.id">{{ role.name }}</option> }</select>
+    @if (hasFilters) { <button class="text-button" (click)="clearFilters()">נקה סינון</button> }
+    <select aria-label="מיון משתמשים" [ngModel]="sortField" (ngModelChange)="sortBy($event)"><option value="created_at">לפי תאריך הצטרפות</option><option value="name">לפי שם</option><option value="email">לפי אימייל</option><option value="role">לפי תפקיד</option><option value="last_login_at">לפי כניסה אחרונה</option></select>
+    <button class="secondary-button" (click)="sortBy(sortField)" [attr.aria-label]="sortDir === 'asc' ? 'מיון בסדר יורד' : 'מיון בסדר עולה'">{{ sortDir === 'asc' ? '↑' : '↓' }}</button>
+    @if (advancedListAvailable && canViewOrganizations()) { <app-entity-combobox [entities]="organizationOptions" [(selectedId)]="entityFilter" (selectedIdChange)="page = 0; load()"></app-entity-combobox> }
     <app-column-picker [columns]="columns" storageKey="platformColumns_users" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
   </div>
 
-  <div class="plat-chips">
-    @for (chip of chips; track chip.key) {
+  @if (organizationOptionsError) { <p role="alert">{{ organizationOptionsError }} <button class="text-button" (click)="loadOrganizationOptions()">נסה שוב</button></p> }
+  @if (rolesError) { <p role="alert">{{ rolesError }} <button class="text-button" (click)="loadRoles()">נסה שוב</button></p> }
+  <nav class="plat-chips" aria-label="מצב חשבון">
+    <button class="plat-chip" [class.active]="activeChip === 'all'" [attr.aria-pressed]="activeChip === 'all'" (click)="selectChip('all')">הכול</button>
+    @for (chip of chips; track chip.key) { @if (chip.key !== 'super_admin') {
       <button
         class="plat-chip"
         [class.active]="activeChip === chip.key"
-        (click)="selectChip(chip.key)"
+        [attr.aria-pressed]="activeChip === chip.key" (click)="selectChip(chip.key)"
       >
         <span class="plat-chip-dot">{{ chip.dot }}</span>
         {{ chip.label }}
       </button>
-    }
-  </div>
+    } }
+    @if (advancedListAvailable) { <label class="super-admin-filter"><input type="checkbox" [(ngModel)]="superAdminOnly" (ngModelChange)="page = 0; load()" /> מנהלי־על בלבד</label> } @else { <button class="plat-chip" [class.active]="activeChip === 'super_admin'" [attr.aria-pressed]="activeChip === 'super_admin'" (click)="selectChip('super_admin')">הרשאות: מנהלי־על בלבד</button> }
+  </nav>
 
   <div class="plat-card">
     @if (loading) {
       <div class="plat-loading">טוען...</div>
-    } @else if (users.length === 0) {
-      <div class="plat-empty">לא נמצאו משתמשים</div>
-    } @else {
+    } @else if (users.length === 0 && !error) {
+      <div class="plat-empty"><strong>{{ hasFilters ? 'אין משתמשים התואמים לסינון' : 'עדיין אין משתמשים במערכת' }}</strong>@if (hasFilters) { <button class="text-button" (click)="clearFilters()">הצג את כל המשתמשים</button> }</div>
+    } @else if (users.length) {
       <div class="plat-table-wrap" [class.refreshing]="refreshing">
         <table class="plat-table">
           <thead>
             <tr>
-              <th class="sortable" (click)="sortBy('name')">שם</th>
-              @if (visibleColumns.has('email')) { <th class="sortable" (click)="sortBy('email')">אימייל</th> }
+              <th scope="col"><button class="text-button" (click)="sortBy('name')">משתמש</button></th>
+
               @if (visibleColumns.has('role')) { <th class="sortable" (click)="sortBy('role')">תפקיד</th> }
               @if (visibleColumns.has('entities')) { <th>עמותות</th> }
               @if (visibleColumns.has('status')) { <th>סטטוס</th> }
@@ -62,12 +69,12 @@
             @for (u of users; track u.id) {
               <tr class="plat-row" [class.deleted-row]="u.deleted_at">
                 <td data-label="שם">
-                  <div class="user-name">{{ u.full_name || '—' }}</div>
+                  <button class="text-button user-name" (click)="openUser(u)">{{ u.full_name || 'ללא שם' }}</button><span class="cell-secondary" dir="ltr">{{ u.email }}</span>
                   @if (isSelf(u)) { <span class="user-self-tag">(אתה)</span> }
                 </td>
-                @if (visibleColumns.has('email')) { <td data-label="אימייל">{{ u.email }}</td> }
+
                 @if (visibleColumns.has('role')) { <td data-label="תפקיד">{{ u.role_name }}</td> }
-                @if (visibleColumns.has('entities')) { <td data-label="עמותות">{{ u.entities_count }}</td> }
+                @if (visibleColumns.has('entities')) { <td data-label="עמותות">@if (u.entities?.length && canViewOrganizations()) { <div class="user-entity-links">@for (entity of u.entities; track entity.entity_id) { <a [routerLink]="['/platform/organizations', entity.entity_id]">{{ entity.entity_name }}</a> }</div> } @else if (u.entities_count > 0) { <button class="text-button" (click)="openUser(u)">{{ u.entities_count }} שיוכים</button> } @else { <span class="cell-secondary">ללא שיוך</span> }</td> }
                 @if (visibleColumns.has('status')) {
                   <td data-label="סטטוס">
                     <span class="plat-status" [ngClass]="statusBadge(u).cls">{{ statusBadge(u).label }}</span>
@@ -76,17 +83,17 @@
                 @if (visibleColumns.has('permissions')) {
                   <td data-label="הרשאות פלטפורמה">
                     @if (u.is_super_admin) {
-                      <span class="perm-pill perm-full">גישה מלאה</span>
+                      <span class="perm-pill perm-full">מנהל־על · גישה מלאה</span>
                     } @else if (u.platform_permissions?.length) {
                       @for (p of u.platform_permissions; track p) {
-                        <span class="perm-pill">{{ p === 'organizations' ? 'עמותות' : p === 'campaigns' ? 'קמפיינים' : p }}</span>
+                        <span class="perm-pill">{{ p === 'organizations' ? 'עמותות' : p === 'campaigns' ? 'קמפיינים' : 'הרשאה נוספת' }}</span>
                       }
                     } @else {
                       <span class="perm-none">—</span>
                     }
                   </td>
                 }
-                @if (visibleColumns.has('last_login_at')) { <td data-label="כניסה אחרונה">{{ relativeTime(u.last_login_at) }}</td> }
+                @if (visibleColumns.has('last_login_at')) { <td data-label="כניסה אחרונה">@if (u.last_login_at) { <time dir="ltr" [title]="relativeTime(u.last_login_at)" [attr.datetime]="u.last_login_at">{{ fmtDate(u.last_login_at) }}</time> } @else { טרם התחבר }</td> }
                 @if (visibleColumns.has('created_at')) { <td data-label="נרשם">{{ fmtDate(u.created_at) }}</td> }
                 <td data-label="פעולות" class="actions-col">
                   <div class="user-actions">
@@ -98,7 +105,7 @@
                         [class.active]="u.is_active"
                         [disabled]="actionInProgress || isSelf(u)"
                         (click)="toggleActive(u)"
-                      >{{ u.is_active ? 'פעיל' : 'הפעל' }}</button>
+                      >{{ u.is_active ? 'השבת חשבון' : 'הפעל חשבון' }}</button>
 
                       <div class="user-menu-wrap">
                         <button
@@ -113,6 +120,7 @@
                         @if (openMenuUserId === u.id && menuPosition) {
                           <div class="user-menu" [style.top.px]="menuPosition.top" [style.right.px]="menuPosition.right" (click)="$event.stopPropagation()">
                             <button class="user-menu-item" [disabled]="actionInProgress" (click)="closeActionsMenu(); generateResetLink(u)">קישור לאיפוס סיסמה</button>
+                            <button class="user-menu-item" (click)="openUser(u)">פרטי משתמש ושיוכים</button>
 
                             @if (!u.is_super_admin) {
                               <button class="user-menu-item" [disabled]="actionInProgress || isSelf(u)" (click)="closeActionsMenu(); requestImpersonate(u)">התחבר כמשתמש</button>
@@ -151,7 +159,15 @@
     }
   </div>
 
-  }
+  @if (selectedUser; as u) { <app-admin-details-drawer [heading]="u.full_name || u.email" (closed)="closeUser()">
+    <dl class="detail-grid"><dt>אימייל</dt><dd dir="ltr">{{ u.email }}</dd><dt>תפקיד</dt><dd>{{ u.role_name }}</dd><dt>מצב חשבון</dt><dd>{{ statusBadge(u).label }}</dd><dt>הרשאות מיוחדות</dt><dd>{{ u.is_super_admin ? 'מנהל־על · גישה מלאה' : (u.platform_permissions?.length ? 'גישה לאזורי פלטפורמה נבחרים' : 'ללא הרשאות מיוחדות') }}</dd><dt>כניסה אחרונה</dt><dd>{{ u.last_login_at ? fmtDate(u.last_login_at) : 'טרם התחבר' }}</dd><dt>הצטרפות</dt><dd dir="ltr">{{ fmtDate(u.created_at) }}</dd></dl>
+    @if (detailLoading) { <p role="status">טוען שיוכים ופעילות…</p> }
+    @if (detailError) { <p role="alert">{{ detailError }} <button class="text-button" (click)="openUser(u)">נסה שוב</button></p> }
+    @if (userDetail) {
+      <section class="detail-section"><h3>שיוכים</h3><ul class="detail-list">@for (entity of userDetail.entities; track entity.entity_id) { <li>@if (canViewOrganizations()) { <a [routerLink]="['/platform/organizations', entity.entity_id]">{{ entity.entity_name }}</a> } @else { {{ entity.entity_name }} }<span class="cell-secondary">{{ entity.role === 'owner' ? 'בעלים' : entity.role === 'admin' ? 'מנהל' : 'משויך לעמותה' }}</span></li> } @empty { <li>אין שיוכים לעמותות</li> }</ul></section>
+      <section class="detail-section"><h3>פעילות בחשבון</h3><ul class="detail-list">@for (event of userDetail.auditLog; track event.id) { <li><strong>{{ userEventLabel(event.action) }}</strong><span class="cell-secondary">{{ event.super_admin_name || 'מנהל פלטפורמה' }} · {{ fmtDate(event.created_at) }}</span><details><summary>פרטים מתקדמים</summary><p>{{ event.action }}</p><p>{{ event.notes || 'ללא הערה' }}</p></details></li> } @empty { <li>אין פעילות ניהול מתועדת</li> }</ul></section>
+    }
+  </app-admin-details-drawer> }
 
   @if (pendingAction) {
     <div class="plat-modal-backdrop" (click)="cancelPendingAction()">

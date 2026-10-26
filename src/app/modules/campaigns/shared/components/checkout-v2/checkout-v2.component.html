@@ -170,25 +170,20 @@
             <span class="cv2-error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
           </div>
 
-          <!-- 2026-09-27 — always shown in Checkout V2 (not gated behind
-               donorFields.showIdNumber, which has no Campaign Studio UI to
-               enable it and defaults false everywhere) but optional: empty
-               is valid, a non-empty value must pass the checksum. Feeds
-               OpenfieldsFormComponent's cardOwnerId when non-empty, and
-               donor_id_number either way — the same donor.idNumber field
-               the backend already expects for both the hosted flow's
-               CardOwnerIdValue prefill and OpenFields. -->
+          <!-- Required identification reuses the existing donor.idNumber field. -->
           <div class="cv2-field-group">
-            <label class="cv2-field-label">תעודת זהות <span class="cv2-optional">(לא חובה)</span></label>
+            <label class="cv2-field-label" for="cv2-donor-tax-id">מספר תעודת זהות / ח.פ. <span class="cv2-required">*</span></label>
             <div class="cv2-field-input-wrap">
-              <input class="cv2-field-input" type="text" [(ngModel)]="idNumber" name="idNumber" placeholder="000000000"
+              <input id="cv2-donor-tax-id" class="cv2-field-input" type="text" [(ngModel)]="idNumber" name="idNumber" placeholder="000000000" required aria-describedby="cv2-tax-id-help cv2-tax-id-error"
                 inputmode="numeric" maxlength="9" dir="ltr"
-                [class.cv2-field-error]="idLiveState === 'invalid'"
+                [attr.aria-invalid]="(submitted || idLiveState === 'invalid') && !idNumberValid"
+                [class.cv2-field-error]="(submitted || idLiveState === 'invalid') && !idNumberValid"
                 [class.cv2-field-valid]="idLiveState === 'valid'">
               <span class="cv2-field-status-icon" *ngIf="idLiveState === 'valid'">✓</span>
               <span class="cv2-field-status-icon cv2-field-status-icon--bad" *ngIf="idLiveState === 'invalid'">✕</span>
             </div>
-            <span class="cv2-error-msg" *ngIf="idLiveState === 'invalid'">מספר ת.ז אינו תקין</span>
+            <small id="cv2-tax-id-help">כדי לקבל זיכוי מס בגין התרומה יש למלא מספר תעודת זהות תקין / מספר ח.פ. של העמותה או החברה.</small>
+            <span id="cv2-tax-id-error" class="cv2-error-msg" *ngIf="(submitted || idLiveState === 'invalid') && !idNumberValid">נא להזין מספר תעודת זהות / ח.פ. תקין</span>
           </div>
 
           <div class="cv2-field-group" *ngIf="donorFields.showAddress">
@@ -241,7 +236,7 @@
                (see checkout-v2.component.ts's own doc comment on why there is
                no second, Hamonym-side payment button in this branch). -->
           <iframe
-            *ngIf="!CHECKOUT_V2_OPENFIELDS_ENABLED && hostedCheckoutUrl"
+            *ngIf="!CHECKOUT_V2_OPENFIELDS_ENABLED && hostedCheckoutUrl && paymentState === 'idle'"
             [src]="hostedCheckoutUrl"
             class="cv2-cardcom-iframe">
           </iframe>
@@ -273,13 +268,14 @@
             <span class="cv2-spinner cv2-spinner--dark"></span>
             <div class="cv2-payment-status-text">
               <div class="cv2-payment-status-title">מאשרים את התרומה...</div>
-              <div class="cv2-payment-status-subtitle">זה ייקח עוד רגע.</div>
+              <div class="cv2-payment-status-subtitle">התשלום נשלח לבדיקה. עדיין לא התקבל אישור סופי. אין לבצע תשלום נוסף בשלב זה.</div>
             </div>
           </div>
           <div class="cv2-payment-status cv2-payment-status--uncertain" *ngIf="paymentState === 'uncertain'">
             <div class="cv2-payment-status-text">
               <div class="cv2-payment-status-title">התשלום עדיין בתהליך אישור</div>
-              <div class="cv2-payment-status-subtitle">אפשר לסגור את החלון. נשלח את הקבלה למייל מיד עם השלמת התרומה.</div>
+              <div class="cv2-payment-status-subtitle">התשלום נשלח לבדיקה. עדיין לא התקבל אישור סופי. אין לבצע תשלום נוסף בשלב זה.</div>
+              <button type="button" class="cv2-back-btn" [disabled]="statusCheckInProgress" (click)="recheckPaymentStatus()">בדוק מצב תשלום</button>
             </div>
           </div>
         </ng-container>

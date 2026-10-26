@@ -669,3 +669,5 @@
 .col-metric-sub { color: #64748b; }
 #collection-attention { scroll-margin-top: 20px; }
 @media (max-width: 400px) { .col-page { padding: 12px; } .col-metrics { grid-template-columns: 1fr; } }
+
+.col-report-preview { margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px; }.col-report-preview summary { cursor: pointer; color: #583cd6; font-size: 13px; font-weight: 600; margin-bottom: 10px; }.col-collection-table-scroll { max-width: 100%; overflow: auto; }.col-table th { white-space: nowrap; }.col-empty-ok { padding: 10px 14px; font-size: 13px; }.col-table td,.col-table th { padding-block: 9px; }.col-entity-cell a { color: #583cd6; font-weight: 600; text-decoration: none; }.col-entity-cell a:hover { text-decoration: underline; }.col-error { font-size: 13px; } a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }

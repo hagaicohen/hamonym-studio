@@ -1,3 +1,4 @@
+@import '../../styles/admin-list.css';
 :host { display: block; }
 
 .plat-page {
@@ -628,3 +629,12 @@
   color: #94a3b8;
   line-height: 1.6;
 }
+
+.plat-page { padding: 24px; }.plat-title { font-size: 26px; }.ops-donations-toolbar { gap: 8px; padding: 14px 16px; }.ops-donations-table td { height: 52px; padding: 8px 12px; font-size: 13px; }.ops-donations-table th { padding: 10px 12px; position: sticky; top: 0; z-index: 1; background: #f8fafc; }.ops-donations-table-wrap { max-height: 70vh; overflow: auto; }.donation-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px; background: #faf8ff; font-size: 13px; color: #64748b; }.donation-summary strong { color: #1e293b; margin-inline-start: 5px; }.summary-note { color: #64748b; font-size: 12px; padding: 0 16px; }.donation-link { padding: 0; border: 0; background: none; color: #583cd6; font: inherit; font-weight: 600; cursor: pointer; text-align: right; }.donation-link:hover { text-decoration: underline; }.ops-anomaly-bar { padding: 10px 14px; }.ops-group-card { padding: 10px 14px; }.ops-group-explanation { margin-top: 2px; }
+@media(max-width:720px) { .plat-page { padding: 16px; }.ops-donations-toolbar { flex-wrap: wrap; }.ops-donations-toolbar > * { max-width: 100%; }.ops-search-input { flex-basis: 100%; min-width: 0; }.ops-donations-table-wrap { overflow: auto; } }
+
+.ops-center-toggle { display: flex; justify-content: flex-end; margin-bottom: 12px; }.exception-center { margin-bottom: 20px; }.exception-tabs { display: flex; gap: 8px; padding: 0 16px; }.exception-tabs .selected { color: #583cd6; background: #f5f1ff; border-color: #b7a6f0; }.exception-severity { padding: 3px 7px; border-radius: 5px; color: #a16207; background: #fff7e7; font-size: 12px; }.exception-severity.urgent { color: #b91c1c; background: #fef2f2; }.exception-center label { font-size: 12px; color: #64748b; }.exception-center input[type=date] { padding: 7px; border: 1px solid #e2e8f0; border-radius: 6px; font: inherit; }.exception-center .ops-donations-table td:first-child { max-width: 300px; white-space: normal; }
+
+.exception-grouped { padding: 12px 16px; font-size: 13px; border-top: 1px solid #e2e8f0; }.exception-grouped summary { cursor: pointer; color: #583cd6; }
+
+.advanced-donation-filters { padding-top: 0; }.advanced-donation-filters label { font-size: 12px; color: #64748b; }.advanced-donation-filters input { border: 1px solid #e2e8f0; padding: 7px; border-radius: 6px; font: inherit; }

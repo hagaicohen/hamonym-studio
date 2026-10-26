@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   BillingOpsService,
   BillingPeriod,
@@ -52,6 +52,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   private billingProvisioning = inject(BillingProvisioningService);
   private simulationClock = inject(SimulationClockService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   // Reused by both the "מס״ב חסום" needs-attention link and the "הגדרות
   // גבייה" buttons added to the entity table / all-entities list below --
@@ -87,6 +88,13 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   clockStatus: SimulationClockStatus | null = null;
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('tab') === 'reports' && params.get('scope') === 'all') {
+      this.reportPeriodMode = 'all';
+      this.setTab('reports');
+    }
+    const statementId = params.get('statementId');
+    if (statementId && /^[0-9a-f-]{36}$/i.test(statementId)) this.openStatement(statementId);
     this.billingOps.listPeriods().subscribe({ next: (res) => { this.periods = res.periods; } });
 
     this.simulationClock.getStatus().subscribe({
@@ -727,9 +735,16 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   // the real id directly, no name-matching/resolution needed anymore.
   historyRows: StatementHistoryRow[] = [];
   historyLoading = false;
+  historyError: string | null = null;
+  private historyRequestId = 0;
   historyFilters = { entityId: undefined as string | undefined, dateFrom: '', dateTo: '', status: '' };
 
   runHistorySearch(): void {
+    const requestId = ++this.historyRequestId;
+    this.historyError = null;
+    if (this.historyFilters.dateFrom && this.historyFilters.dateTo && this.historyFilters.dateFrom > this.historyFilters.dateTo) {
+      this.historyError = 'תאריך ההתחלה חייב להיות מוקדם מתאריך הסיום.'; this.historyLoading = false; return;
+    }
     this.historyLoading = true;
     this.collectionOps.searchHistory({
       entityId: this.historyFilters.entityId,
@@ -737,8 +752,8 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
       dateTo: this.historyFilters.dateTo || undefined,
       status: this.historyFilters.status || undefined,
     }).subscribe({
-      next: (res) => { this.historyRows = res.statements; this.historyLoading = false; },
-      error: () => { this.historyLoading = false; },
+      next: (res) => { if (requestId !== this.historyRequestId) return; this.historyRows = res.statements; this.historyLoading = false; },
+      error: () => { if (requestId !== this.historyRequestId) return; this.historyLoading = false; this.historyError = 'לא ניתן לטעון את היסטוריית החיובים. נסה שוב.'; },
     });
   }
 
@@ -767,6 +782,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   reportPreviewLoading = false;
   reportBusy = false;
   reportError: string | null = null;
+  private reportRequestId = 0;
 
   private reportScope(): { periodId?: string; dateFrom?: string; dateTo?: string; entityId?: string } {
     const entityId = this.reportEntityId;
@@ -776,16 +792,21 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   runReportPreview(): void {
-    if (this.reportPeriodMode === 'period' && !this.selectedPeriodId) return;
+    const requestId = ++this.reportRequestId;
+    this.reportError = null;
+    if (this.reportPeriodMode === 'period' && !this.selectedPeriodId) { this.reportRows = []; this.reportPreviewLoading = false; return; }
+    if (this.reportPeriodMode === 'range' && this.reportDateFrom && this.reportDateTo && this.reportDateFrom > this.reportDateTo) {
+      this.reportRows = []; this.reportPreviewLoading = false; this.reportError = 'תאריך ההתחלה חייב להיות מוקדם מתאריך הסיום.'; return;
+    }
     this.reportPreviewLoading = true;
     this.collectionOps.getReportPreview(this.reportScope()).subscribe({
-      next: (res) => { this.reportRows = res.rows; this.reportPreviewLoading = false; },
-      error: () => { this.reportPreviewLoading = false; this.reportRows = []; },
+      next: (res) => { if (requestId !== this.reportRequestId) return; this.reportRows = res.rows; this.reportPreviewLoading = false; },
+      error: () => { if (requestId !== this.reportRequestId) return; this.reportPreviewLoading = false; this.reportRows = []; this.reportError = 'לא ניתן לטעון את נתוני הדוח. נסה שוב.'; },
     });
   }
 
   downloadReport(): void {
-    if (this.reportBusy) return;
+    if (this.reportBusy || this.reportPreviewLoading || this.reportError || !this.reportRows.length) return;
     this.reportBusy = true;
     this.reportError = null;
     this.collectionOps.exportReport(this.reportScope()).subscribe({

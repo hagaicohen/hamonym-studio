@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -17,6 +18,12 @@ import {
 } from '../../utils/ops-labels';
 import { environment } from '../../../../../environments/environment';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate, shekels } from '../../utils/admin-display';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { FinanceOpsService, PaymentException, PaymentExceptionAction } from '../../services/finance-ops.service';
+import { EntityComboboxComponent } from '../../components/entity-combobox/entity-combobox.component';
+import { CollectionOpsService } from '../../services/collection-ops.service';
 
 // תאריך is the anchor column (always shown, not in this list) -- same
 // convention as platform-organizations-page's own COLUMNS (שם העמותה is
@@ -175,6 +182,13 @@ export interface ActionableItem {
   findingId?: number;
 }
 
+interface AdminExceptionRow {
+  key: string; type: string; title: string; entityName: string; entityId: string | null;
+  amount: number | null; date: string; severity: string; resolved: boolean;
+  finding?: ReconciliationFinding; payment?: PaymentException;
+  collectionActionable?: boolean;
+}
+
 const DONATION_STATUS_LABELS: Record<string, string> = {
   paid: 'שולם',
   pending: 'ממתין',
@@ -184,14 +198,177 @@ const DONATION_STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })
-export class PlatformCardcomOpsPageComponent implements OnInit {
+export class PlatformCardcomOpsPageComponent implements OnInit, OnDestroy {
   private cardcomOps = inject(CardcomOpsService);
   private http = inject(HttpClient);
   private platformService = inject(PlatformService);
+  private route = inject(ActivatedRoute);
+  private financeOps = inject(FinanceOpsService);
+  private collectionOps = inject(CollectionOpsService);
+  private financialAttentionReady = false;
+  private financialAttentionIds = new Set<string>();
+  centerStatus: 'open' | 'resolved' = 'open';
+  centerSearch = '';
+  centerSeverity = '';
+  centerType = '';
+  centerDateFrom = '';
+  centerDateTo = '';
+  centerLoading = false;
+  centerError: string | null = null;
+  centerFindings: ReconciliationFinding[] = [];
+  centerPayments: PaymentException[] = [];
+  centerSelected: AdminExceptionRow | null = null;
+  centerActions: PaymentExceptionAction[] = [];
+  centerActionsError: string | null = null;
+  private centerRequestId = 0;
+  loadExceptionCenter(): void {
+    const requestId = ++this.centerRequestId;
+    this.centerLoading = true; this.centerError = null; this.financialAttentionReady = false;
+    let remaining = 3;
+    const done = () => { if (requestId === this.centerRequestId && --remaining === 0) this.centerLoading = false; };
+    const fail = () => { if (requestId !== this.centerRequestId) return; this.centerError = 'חלק מנתוני מרכז הטיפול לא נטענו. יש לנסות שוב.'; done(); };
+    this.cardcomOps.getFindings(this.centerStatus === 'resolved', 200).subscribe({ next: res => { if (requestId !== this.centerRequestId) return; this.centerFindings = res.findings; done(); }, error: fail });
+    this.financeOps.listExceptions().subscribe({ next: res => { if (requestId !== this.centerRequestId) return; this.centerPayments = res.exceptions; done(); }, error: fail });
+    this.collectionOps.getNeedsAttention().subscribe({ next: res => {
+      if (requestId !== this.centerRequestId) return;
+      if (!Array.isArray(res.categories)) { fail(); return; }
+      this.financialAttentionIds = new Set(res.categories.filter(group => group.category === 'card_attempts_exhausted').flatMap(group => group.items.map(item => item.statementId)));
+      this.financialAttentionReady = true; done();
+    }, error: fail });
+  }
+  get centerRows(): AdminExceptionRow[] {
+    const rows: AdminExceptionRow[] = this.centerFindings.map(finding => ({
+      key: `finding:${finding.id}`, type: finding.finding_type, title: this.findingTypeLabel(finding.finding_type),
+      entityName: typeof finding.details?.['entityName'] === 'string' ? finding.details['entityName'] : typeof finding.details?.['entity_name'] === 'string' ? finding.details['entity_name'] : 'פרטי הישות זמינים בפירוט',
+      entityId: typeof finding.details?.['entityId'] === 'string' ? finding.details['entityId'] : null,
+      amount: typeof finding.details?.['amount'] === 'number' ? finding.details['amount'] : null,
+      date: finding.found_at, severity: finding.severity, resolved: !!finding.resolved_at, finding,
+      collectionActionable: finding.finding_type === 'fin11_card_attempts_exhausted' && this.financialAttentionReady && finding.subject_type === 'statement' ? this.financialAttentionIds.has(finding.subject_id) : undefined,
+    }));
+    for (const payment of this.centerPayments) rows.push({ key: `payment:${payment.id}`, type: 'payment_exception', title: 'חריגה בגביית עמלת פלטפורמה', entityName: payment.entity_name, entityId: payment.entity_id, amount: Number(payment.overpayment_amount), date: payment.detected_at, severity: payment.hold_new_collection ? 'critical' : 'warning', resolved: payment.status === 'resolved', payment });
+    const seen = new Set<string>();
+    return rows.filter(row => { if (seen.has(row.key)) return false; seen.add(row.key); return true; });
+  }
+  get centerTypes(): { key: string; label: string }[] { return Array.from(new Map(this.centerRows.map(row => [row.type, { key: row.type, label: row.title }])).values()); }
+  get filteredCenterRows(): AdminExceptionRow[] {
+    const search = this.centerSearch.trim().toLocaleLowerCase('he');
+    const weight: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+    return this.centerRows.filter(row => (row.resolved || row.collectionActionable === false) === (this.centerStatus === 'resolved') && (!this.centerSeverity || row.severity === this.centerSeverity) && (!this.centerType || row.type === this.centerType) && (!search || `${row.title} ${row.entityName}`.toLocaleLowerCase('he').includes(search)) && (!this.centerDateFrom || this.centerDateKey(row.date) >= this.centerDateFrom) && (!this.centerDateTo || this.centerDateKey(row.date) <= this.centerDateTo))
+      .sort((a, b) => (weight[a.severity] ?? 3) - (weight[b.severity] ?? 3) || Date.parse(b.date) - Date.parse(a.date));
+  }
+  private centerDateKey(value: string): string { const date = israelDate(value); return date === '—' ? '' : date.slice(6, 10) + '-' + date.slice(3, 5) + '-' + date.slice(0, 2); }
+  clearCenterFilters(): void { this.centerSearch = ''; this.centerSeverity = ''; this.centerType = ''; this.centerDateFrom = ''; this.centerDateTo = ''; }
+  openCenterException(row: AdminExceptionRow): void {
+    this.centerSelected = row; this.centerActions = []; this.centerActionsError = null;
+    if (row.finding) this.loadSubjectContext(row.finding);
+    if (row.payment) this.financeOps.getExceptionActions(row.payment.id).subscribe({
+      next: res => { if (this.centerSelected?.key === row.key) this.centerActions = res.actions; },
+      error: () => { if (this.centerSelected?.key === row.key) this.centerActionsError = 'לא ניתן לטעון את היסטוריית הטיפול.'; },
+    });
+  }
+  centerStatementId(row: AdminExceptionRow): string | null {
+    if (row.payment) return row.payment.statement_id;
+    if (row.finding?.subject_type === 'statement') return row.finding.subject_id;
+    const value = row.finding?.details?.['statementId']; return typeof value === 'string' ? value : null;
+  }
+  severityLabel(value: string): string { return ({ critical: 'דחוף', warning: 'דורש בדיקה', info: 'לידיעה' } as Record<string, string>)[value] || 'דורש בדיקה'; }
+  selectedDonation: PlatformDonation | null = null;
+  receiptId: string | null = null;
+  donationDetailLoading = false;
+  donationDetailError: string | null = null;
+  exportBusy = false;
+  donationsEntityId: string | undefined;
+  advancedDonationDataAvailable = false;
+  donationsDateFrom = '';
+  donationsDateTo = '';
+  donationsRecurring = '';
+  donationsPaymentMethod = '';
+  private serverDonationSummary: { paidAmount: number; paidCount: number; failedCount: number } | null = null;
+  private donationExtraFilters() { return { dateFrom: this.donationsDateFrom || undefined, dateTo: this.donationsDateTo || undefined, recurring: this.donationsRecurring || undefined, paymentMethod: this.donationsPaymentMethod || undefined }; }
+  donationPaymentLabel(donation: PlatformDonation): string {
+    return ({ card: 'אשראי', bank_transfer: 'העברה בנקאית', cash: 'מזומן', check: 'המחאה', other: 'אחר' } as Record<string, string>)[donation.payment_method || ''] || 'לא זמין';
+  }
+  donationEntityOptions: { id: string; name: string }[] = [];
+  donationCampaignOptions: { id: string; name: string }[] = [];
+  donationOptionsError: string | null = null;
+  private entityOptionsRequest?: Subscription;
+  private campaignOptionsRequest?: Subscription;
+  loadDonationFilterOptions(): void {
+    this.donationOptionsError = null;
+    this.entityOptionsRequest?.unsubscribe(); this.campaignOptionsRequest?.unsubscribe();
+    this.entityOptionsRequest = this.platformService.getOrganizationFilterOptions().subscribe({ next: options => { this.donationEntityOptions = options; }, error: () => { this.donationOptionsError = 'לא ניתן לטעון חלק מרשימות הסינון.'; } });
+    this.campaignOptionsRequest = this.platformService.getCampaignFilterOptions().subscribe({ next: options => { this.donationCampaignOptions = options; }, error: () => { this.donationOptionsError = 'לא ניתן לטעון חלק מרשימות הסינון.'; } });
+  }
+  private donationsRequest?: Subscription;
+  private donationDetailRequest?: Subscription;
+  private donationsRequestId = 0;
+  money = shekels;
+  get hasDonationFilters(): boolean { return !!(this.donationsSearch.trim() || this.donationsStatus || this.donationsPeriod || this.donationsCampaignId || this.donationsEntityId || this.donationsDateFrom || this.donationsDateTo || this.donationsRecurring || this.donationsPaymentMethod); }
+  get donationSummary(): { paidAmount: number; paidCount: number; failedCount: number } | null {
+    if (this.donationsError || this.donationsLoading || this.donationsRefreshing) return null;
+    if (this.serverDonationSummary) return this.serverDonationSummary;
+    if (this.donations.length !== this.donationsTotal) return null;
+    return this.donations.reduce((summary, donation) => {
+      if (donation.status === 'paid') { summary.paidAmount += Number(donation.amount); summary.paidCount++; }
+      if (donation.status === 'failed') summary.failedCount++;
+      return summary;
+    }, { paidAmount: 0, paidCount: 0, failedCount: 0 });
+  }
+  clearDonationFilters(): void { this.donationsSearch = ''; this.donationsStatus = ''; this.donationsEntityId = undefined; this.donationsDateFrom = ''; this.donationsDateTo = ''; this.donationsRecurring = ''; this.donationsPaymentMethod = ''; this.clearDashboardScope(); }
+  ngOnDestroy(): void { clearTimeout(this.donationsSearchTimer); this.donationsRequestId++; this.centerRequestId++; this.donationsRequest?.unsubscribe(); this.donationDetailRequest?.unsubscribe(); this.entityOptionsRequest?.unsubscribe(); this.campaignOptionsRequest?.unsubscribe(); }
+  openDonation(donation: PlatformDonation): void {
+    this.donationDetailRequest?.unsubscribe(); this.selectedDonation = donation; this.receiptId = null; this.donationDetailError = null; this.donationDetailLoading = true;
+    if (donation.status === 'failed') {
+      this.donationDetailRequest = this.http.get<{ status: string; receipt_id?: string | null; failure_diagnostic?: PlatformDonation['failure_diagnostic'] }>(`${environment.apiUrl}/api/platform/cardcom-ops/donations/${encodeURIComponent(donation.id)}`).subscribe({
+        next: data => {
+          if (this.selectedDonation?.id !== donation.id) return;
+          this.selectedDonation = { ...donation, status: data.status, failure_reason: null, failure_diagnostic: data.failure_diagnostic ?? null };
+          this.receiptId = data.receipt_id || null; this.donationDetailLoading = false;
+        },
+        error: () => { if (this.selectedDonation?.id !== donation.id) return; this.donationDetailError = 'לא ניתן לטעון את פרטי האבחון.'; this.donationDetailLoading = false; },
+      });
+      return;
+    }
+    if (Object.hasOwn(donation, 'receipt_id')) { this.receiptId = donation.receipt_id || null; this.donationDetailLoading = false; return; }
+    this.donationDetailRequest = this.http.get<{ receipt_id?: string | null }>(`${environment.apiUrl}/api/donations/public/${encodeURIComponent(donation.id)}`).subscribe({
+      next: data => { if (this.selectedDonation?.id !== donation.id) return; this.receiptId = data?.receipt_id || null; this.donationDetailLoading = false; },
+      error: () => { if (this.selectedDonation?.id !== donation.id) return; this.donationDetailError = 'לא ניתן לטעון את פרטי הקבלה.'; this.donationDetailLoading = false; },
+    });
+  }
+  closeDonation(): void { this.donationDetailRequest?.unsubscribe(); this.selectedDonation = null; }
+  failureExplanation(donation: PlatformDonation): string {
+    const diagnostic = donation.failure_diagnostic;
+    if (diagnostic?.providerCode === 605) return 'ספק הסליקה דחה את הבקשה משום שמשתמש ה־API חסום (605).';
+    if (diagnostic?.providerCode === 8500) return 'ספק הסליקה לא הצליח להכין הרשאת תשלום לתרומה המחזורית (8500).';
+    if (diagnostic?.reason === 'provider_connection_failed') return 'אירעה תקלה בתקשורת עם ספק הסליקה בעת הכנת התשלום.';
+    return 'סיבת הכישלון אינה ידועה';
+  }
+  async exportDonationsCsv(): Promise<void> {
+    if (this.exportBusy || this.donationsLoading || this.donationsRefreshing || !this.donationsTotal) return;
+    this.exportBusy = true;
+    const requestId = this.donationsRequestId;
+    const query = { search: this.donationsSearch || undefined, status: this.donationsStatus || undefined, period: this.donationsPeriod || undefined, campaignId: this.donationsCampaignId, entityId: this.donationsEntityId, sortBy: this.donationsSortField, sortDir: this.donationsSortDir, ...this.donationExtraFilters() };
+    try {
+      const rows: PlatformDonation[] = []; const seen = new Set<string>(); let page = 0;
+      while (rows.length < this.donationsTotal) {
+        const res = await firstValueFrom(this.cardcomOps.listDonations({ ...query, page, limit: 25 }));
+        if (requestId !== this.donationsRequestId || res.total !== this.donationsTotal || !res.donations.length) throw new Error('List changed');
+        if ((query.dateFrom || query.dateTo || query.recurring || query.paymentMethod) && res.adminListVersion !== 1) throw new Error('Incompatible Backend');
+        for (const row of res.donations) { if (seen.has(row.id)) throw new Error('List changed'); seen.add(row.id); rows.push(row); }
+        page++;
+      }
+      if (rows.length !== this.donationsTotal) throw new Error('List changed');
+      const escape = (value: unknown) => { let text = String(value ?? ''); if (/^[=+\-@\t\r]/.test(text)) text = "'" + text; return '"' + text.replace(/"/g, '""') + '"'; };
+      const data = [['מועד', 'תורם', 'עמותה', 'קמפיין', 'סכום', 'סוג', 'סטטוס'], ...rows.map(d => [this.fmtDateTime(d.created_at), d.is_anonymous ? 'אנונימי' : d.donor_name, d.entity_name, d.campaign_title, d.amount, d.is_recurring ? 'חודשית' : 'חד־פעמית', this.donationStatusLabel(d.status)])];
+      const url = URL.createObjectURL(new Blob(['\uFEFF' + data.map(row => row.map(escape).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = 'תרומות.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { this.donationsError = 'ייצוא התרומות לא הושלם. רענן את הרשימה ונסה שוב.'; }
+    finally { this.exportBusy = false; }
+  }
 
   private donationContextCache = new Map<string, DonationContext | 'loading' | 'error'>();
   private campaignContextCache = new Map<string, CampaignContext | 'loading' | 'error'>();
@@ -205,6 +382,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   health: HealthResponse | null = null;
   findings: ReconciliationFinding[] = [];
+  findingsError: string | null = null;
+  reloadAlerts(): void { this.loadAll(); }
 
   // ---- Donations browser (2026-09-15s) -----------------------------------
   donations: PlatformDonation[] = [];
@@ -220,6 +399,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   donationsLimit = 25;
   donationsSearch = '';
   donationsStatus = '';
+  donationsPeriod = '';
+  donationsCampaignId: string | undefined;
   private donationsSearchTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly donationsColumns = DONATIONS_COLUMNS;
@@ -236,6 +417,18 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   groupDrawerFindingType: string | null = null;
 
   ngOnInit(): void {
+    this.loadDonationFilterOptions();
+    const params = this.route.snapshot.queryParamMap;
+    const status = params.get('status');
+    if (status && ['paid', 'pending', 'failed'].includes(status)) this.donationsStatus = status;
+    const period = params.get('period');
+    if (period === 'this_month_israel') this.donationsPeriod = period;
+    const campaignId = params.get('campaignId');
+    if (campaignId && /^[0-9a-f-]{36}$/i.test(campaignId)) this.donationsCampaignId = campaignId;
+    const entityId = params.get('entityId');
+    if (entityId && /^[0-9a-f-]{36}$/i.test(entityId)) this.donationsEntityId = entityId;
+    this.showAnomalies = this.route.snapshot.fragment === 'anomalies';
+    if (this.showAnomalies) this.loadExceptionCenter();
     this.loadAll();
     this.loadDonations();
   }
@@ -259,20 +452,28 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   }
 
   private loadFindings(): void {
+    this.findingsError = null;
     this.cardcomOps.getFindings(false).subscribe({
       next: (res) => { this.findings = res.findings; },
-      error: () => { /* the compact anomaly indicator failing quietly is acceptable -- the donations browser is the primary content */ },
+      error: () => { this.findingsError = 'לא ניתן לטעון את התראות התרומות.'; },
     });
   }
 
   loadDonations(): void {
+    clearTimeout(this.donationsSearchTimer); this.donationsRequest?.unsubscribe();
+    const requestId = ++this.donationsRequestId;
+    if (this.donationsDateFrom && this.donationsDateTo && this.donationsDateFrom > this.donationsDateTo) { this.donationsError = 'תאריך ההתחלה חייב להיות מוקדם מתאריך הסיום.'; this.donationsLoading = false; this.donationsRefreshing = false; return; }
     if (this.donations.length === 0) this.donationsLoading = true;
     else this.donationsRefreshing = true;
     this.donationsError = null;
-    this.cardcomOps
+    this.donationsRequest = this.cardcomOps
       .listDonations({
         search: this.donationsSearch || undefined,
         status: this.donationsStatus || undefined,
+        period: this.donationsPeriod || undefined,
+        campaignId: this.donationsCampaignId,
+        entityId: this.donationsEntityId,
+        ...this.donationExtraFilters(),
         sortBy: this.donationsSortField,
         sortDir: this.donationsSortDir,
         page: this.donationsPage,
@@ -280,12 +481,18 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
+          if (requestId !== this.donationsRequestId) return;
+          if ((this.donationsDateFrom || this.donationsDateTo || this.donationsRecurring || this.donationsPaymentMethod) && res.adminListVersion !== 1) { this.donationsError = 'נדרשת גרסת שרת תואמת לסינון שנבחר.'; this.donationsLoading = false; this.donationsRefreshing = false; return; }
+          this.advancedDonationDataAvailable = res.adminListVersion === 1;
+          const summary = res.summary;
+          this.serverDonationSummary = summary && [summary.paidAmount, summary.paidCount, summary.failedCount].every(Number.isFinite) && summary.paidCount >= 0 && summary.failedCount >= 0 && summary.paidCount + summary.failedCount <= res.total ? summary : null;
           this.donations = res.donations;
           this.donationsTotal = res.total;
           this.donationsLoading = false;
           this.donationsRefreshing = false;
         },
         error: () => {
+          if (requestId !== this.donationsRequestId) return;
           this.donationsError = 'שגיאה בטעינת התרומות';
           this.donationsLoading = false;
           this.donationsRefreshing = false;
@@ -303,6 +510,12 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   onDonationsSearchInput(): void {
     clearTimeout(this.donationsSearchTimer);
     this.donationsSearchTimer = setTimeout(() => this.onDonationsSearch(), 400);
+  }
+
+  clearDashboardScope(): void {
+    this.donationsPeriod = '';
+    this.donationsCampaignId = undefined;
+    this.onDonationsSearch();
   }
 
   onDonationsSearch(): void {
@@ -355,10 +568,13 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   }
 
   findingTypeLabel(type: string): string {
-    return sharedFindingTypeLabel(type);
+    const labels: Record<string, string> = { fin11_card_attempts_exhausted: 'ניסיונות הגבייה האוטומטיים מוצו', missing_masav_mandate: 'חסר אישור לחיוב במס״ב' };
+    const label = labels[type] || sharedFindingTypeLabel(type);
+    return label === type ? 'ממצא המחייב בדיקה' : label;
   }
 
   jobArea(jobName: string): 'donations' | 'commission' {
+    if (jobName === 'fin11-card-collection' || jobName === 'fin11-card-retry-sweep') return 'commission';
     return sharedJobArea(jobName);
   }
 
@@ -506,6 +722,7 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   toggleAnomalies(): void {
     this.showAnomalies = !this.showAnomalies;
+    if (this.showAnomalies) this.loadExceptionCenter();
   }
 
   get openGroup(): FindingGroup | null {
@@ -536,7 +753,7 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       if (this.campaignContextCache.has(finding.subject_id)) return;
       this.campaignContextCache.set(finding.subject_id, 'loading');
       this.platformService.getCampaign(finding.subject_id).subscribe({
-        next: (c) => this.campaignContextCache.set(finding.subject_id, { title: c.title, entity_name: c.entity_name }),
+        next: (c) => this.campaignContextCache.set(finding.subject_id, { title: c.campaign?.title, entity_name: c.campaign?.entity_name }),
         error: () => this.campaignContextCache.set(finding.subject_id, 'error'),
       });
     }
@@ -581,25 +798,8 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
     return displayName ? `${displayName} — נראה לאחרונה: ${lastSeen}` : `נראה לאחרונה: ${lastSeen}`;
   }
 
-  fmtDateTime(iso: string | null): string {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hh}:${mm}`;
-  }
-
-  fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
+  fmtDateTime(iso: string | null): string { return israelDate(iso, true); }
+  fmtDate(iso: string | null): string { return israelDate(iso); }
 
   // Human elapsed-time phrasing for a job_stale alert -- still used inside
   // actionableItems() even though job cards no longer render anywhere;

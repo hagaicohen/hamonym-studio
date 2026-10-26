@@ -1,4 +1,4 @@
-<div class="plat-page">
+<div class="plat-page" dir="rtl">
   <div class="plat-header">
     <h1 class="plat-title">הגדרות כלליות</h1>
   </div>
@@ -14,7 +14,7 @@
       @if (vatSettingLoading) {
         <div class="plat-loading">טוען...</div>
       } @else if (vatSettingError) {
-        <div class="plat-error">{{ vatSettingError }}</div>
+        <div class="plat-error" role="alert">{{ vatSettingError }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadVatSetting()">נסה שוב</button></div>
       } @else if (!vatEditOpen) {
         <div class="gs-vat-display">
           <div class="gs-vat-rate">{{ systemVatRatePercent }}%</div>
@@ -45,13 +45,14 @@
   }
 
   @if (tab === 'simulation') {
+    <div class="simulation-layout">
     <!-- A. שעון עסקי -->
     <div class="plat-card sim-clock-card">
       <div class="gs-card-title">שעון עסקי</div>
       @if (clockLoading) {
         <div class="plat-loading">טוען...</div>
       } @else if (clockError) {
-        <div class="plat-error">{{ clockError }}</div>
+        <div class="plat-error" role="alert">{{ clockError }} <button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="loadClockStatus()">נסה שוב</button></div>
       } @else if (clockStatus) {
         <p class="gs-vat-note">שינוי הזמן מפעיל אוטומטית את אירועי החיוב שהגיע זמנם. בשלב הבדיקות הגבייה מדומה בלבד.</p>
 
@@ -66,15 +67,16 @@
         <div class="sim-clock-inputs">
           <label class="ba-field">
             <span>תאריך עסקי</span>
-            <input type="date" [(ngModel)]="fixedDateInput" [disabled]="clockActionBusy" />
+            <input type="date" lang="he-IL" aria-label="תאריך עסקי" [(ngModel)]="fixedDateInput" [disabled]="clockActionBusy" />
           </label>
           <label class="ba-field">
             <span>שעה עסקית</span>
-            <input type="time" [(ngModel)]="fixedTimeInput" [disabled]="clockActionBusy" />
+            <input type="time" lang="he-IL" aria-label="שעה עסקית" [(ngModel)]="fixedTimeInput" [disabled]="clockActionBusy" />
           </label>
         </div>
+        @if (selectedBusinessDateLabel) { <p class="gs-vat-note">התאריך שנבחר: <bdi>{{ selectedBusinessDateLabel }}</bdi> · שעה: <bdi>{{ fixedTimeInput }}</bdi></p> }
+        @if (clockActionMessage) { <p class="sim-result-box" role="status">{{ clockActionMessage }}</p> }
         <p class="gs-vat-note">הזמן מוצג לפי שעון ישראל. זמני הביצוע והביקורת האמיתיים נשמרים בנפרד.</p>
-        @if (clockActionMessage) { <p class="gs-vat-note" role="status">{{ clockActionMessage }}</p> }
         @if (clockActionError) {
           <div class="ops-action-error">{{ clockActionError }}</div>
         }
@@ -88,7 +90,7 @@
     </div>
 
     <div class="plat-card">
-      <div class="gs-card-title">איפוס תרומות לקמפיין</div>
+      <div class="gs-card-title">איפוס נתוני בדיקה לקמפיין</div>
       <label class="ba-field sim-campaign-picker">
         <span>קמפיין</span>
         <select [ngModel]="selectedCampaignId" (ngModelChange)="selectCampaign($event)" [disabled]="campaignsLoading || !!campaignsError || resetBusy">
@@ -107,6 +109,8 @@
       }
       @if (campaignStatusLoading) { <p class="gs-vat-note">בודק זמינות איפוס...</p> }
       @if (campaignStatusError) { <p class="ops-action-error">{{ campaignStatusError }}</p> }
+      @if (campaignPreview; as preview) { <p class="sim-preview-total">סך התרומות בקמפיין: <strong>{{ money(preview.totalAmount) }}</strong> · {{ preview.donationCount }} תרומות, מתוכן {{ preview.paidDonationCount }} ששולמו</p> }
+      @if (campaignPreviewError) { <p class="gs-vat-note" role="status">{{ campaignPreviewError }}</p> }
       @if (campaignResetStatus) {
         <p class="gs-vat-note" role="status">{{ campaignResetStatus.message }}</p>
         @if (campaignResetStatus.totalRecords > 0) {
@@ -126,7 +130,10 @@
           @if (!resetConfirmOpen) {
             <button type="button" class="ops-btn sim-danger-btn" [disabled]="!campaignResetStatus.available || resetBusy" (click)="resetConfirmOpen = true">אפס נתוני בדיקה</button>
           } @else {
-            <div class="sim-confirm-box" role="group" aria-label="אישור מחיקת נתוני בדיקה">
+            <app-admin-details-drawer heading="אישור איפוס נתוני בדיקה" [closeDisabled]="resetBusy" (closed)="closeResetConfirmation()">
+            <div class="sim-confirm-box">
+              <p><strong>{{ campaignResetStatus.campaignTitle }}</strong> · {{ campaignResetStatus.totalRecords }} רשומות למחיקה</p>
+              @if (campaignPreview) { <p>סך תרומות בקמפיין: {{ money(campaignPreview.totalAmount) }}</p> }
               <p>המחיקה אינה הפיכה מהממשק. יישמר גיבוי לפני המחיקה. הקמפיין, ההגדרות ופרטי התשלום יישמרו. הפעולה אינה מבטלת עסקאות אצל ספק התשלום.</p>
               <label class="ba-field"><span>הקלד את שם הקמפיין לאישור</span><input [(ngModel)]="resetTypedTitle" [disabled]="resetBusy" autocomplete="off" /></label>
               <label class="ba-field"><span>סיבת האיפוס</span><input [(ngModel)]="resetReason" [disabled]="resetBusy" /></label>
@@ -134,11 +141,12 @@
                 <button type="button" class="ops-btn ops-btn-secondary" [disabled]="resetBusy" (click)="resetConfirmOpen = false">ביטול</button>
                 <button type="button" class="ops-btn sim-danger-btn" [disabled]="resetBusy || resetTypedTitle !== campaignResetStatus.campaignTitle || resetReason.trim().length < 3" (click)="confirmCampaignReset()">{{ resetBusy ? 'מאפס...' : 'אשר מחיקת נתוני בדיקה' }}</button>
               </div>
-            </div>
+            </div></app-admin-details-drawer>
           }
       }
       @if (resetError) { <p class="ops-action-error" role="alert">{{ resetError }}</p> }
       @if (resetResult) { <p class="sim-result-box" role="status">{{ resetResult }}</p> }
+    </div>
     </div>
   }
 </div>

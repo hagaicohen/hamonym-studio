@@ -4,12 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformService } from '../../services/platform.service';
 import { APPROVAL_REASON_TAGS } from '../../../../shared/config/approval-reason-tags';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate, shekels } from '../../utils/admin-display';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
 
 const NOTE_REQUIRED_ACTIONS = new Set(['reject', 'requestChanges', 'suspend']);
 
 type Tab = 'overview' | 'campaigns' | 'ambassadors' | 'donations' | 'users' | 'audit';
 
 interface TimelineItem {
+  id: string;
+  campaignId?: string;
   icon: string;
   label: string;
   timestamp: string;
@@ -35,12 +40,15 @@ const ACTION_LABELS: Record<string, string> = {
   request_changes: 'התבקשו תיקונים',
   suspend: 'הושעתה',
   reactivate: 'הופעלה מחדש',
+  billing_manual_card_retry: 'התבקש ניסיון גבייה ידני',
+  ai_access_grant: 'הופעלה גישה לכלי AI',
+  ai_access_revoke: 'בוטלה גישה לכלי AI',
 };
 
 @Component({
   selector: 'app-platform-organization-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AdminDetailsDrawerComponent],
   templateUrl: './platform-organization-detail-page.component.html',
   styleUrl: './platform-organization-detail-page.component.css',
 })
@@ -48,6 +56,36 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private platformService = inject(PlatformService);
+  readonly context = inject(CurrentContextService);
+  pendingManagementAction: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate' | null = null;
+  get managementActions(): { key: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate'; label: string }[] {
+    const labels = { approve: 'אישור עמותה', reject: 'דחיית הבקשה', requestChanges: 'בקשת השלמת פרטים', suspend: 'השעיית עמותה', reactivate: 'החזרה לפעילות' };
+    const actions: Record<string, (keyof typeof labels)[]> = { pending_review: ['approve', 'requestChanges', 'reject'], active: ['suspend'], suspended: ['reactivate'], draft: ['requestChanges'], changes_requested: ['requestChanges'], rejected: ['requestChanges'] };
+    if (this.entity?.status === 'active' && this.entity?.flagged_for_review) return [{ key: 'approve', label: 'אישור בדיקה חוזרת' }, { key: 'suspend', label: labels.suspend }];
+    return (actions[this.entity?.status] || []).map(key => ({ key, label: labels[key] }));
+  }
+  get managementActionTitle(): string { return this.managementActions.find(action => action.key === this.pendingManagementAction)?.label || 'פעולת ניהול'; }
+  openManagementAction(action: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate'): void {
+    if (this.actionInProgress || !this.managementActions.some(item => item.key === action)) return;
+    this.pendingManagementAction = action; this.notes = ''; this.selectedReasonTags = []; this.actionError = null; this.noteRequiredError = false;
+  }
+  closeManagementAction(): void { if (!this.actionInProgress) this.pendingManagementAction = null; }
+  confirmManagementAction(): void {
+    if (this.pendingManagementAction && !this.actionInProgress && this.managementActions.some(item => item.key === this.pendingManagementAction)) this.runAction(this.pendingManagementAction);
+  }
+  auditDescription(entry: any): string {
+    const notes = typeof entry.notes === 'string' ? entry.notes.trim() : '';
+    return notes && /[א-ת]/.test(notes) && !/[{\[]|[0-9a-f]{8}-[0-9a-f-]{27}/i.test(notes) ? notes.slice(0, 110) + (notes.length > 110 ? '…' : '') : 'פרטי הפעולה זמינים בהרחבה';
+  }
+
+  get organizationListQuery(): Record<string, string> {
+    const query: Record<string, string> = {};
+    for (const key of ['status', 'search', 'missingDocs', 'flaggedForReview', 'noCampaigns', 'newSince', 'sortBy', 'sortDir', 'page']) {
+      const value = this.route.snapshot.queryParamMap.get(key);
+      if (value !== null) query[key] = value;
+    }
+    return query;
+  }
 
   entityId = '';
   loading = true;
@@ -167,15 +205,18 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   get timeline(): TimelineItem[] {
     if (!this.entity) return [];
     const items: TimelineItem[] = [
-      { icon: '🏗️', label: 'העמותה נוצרה', timestamp: this.entity.created_at },
-      ...this.campaigns.map((c) => ({ icon: '🎯', label: `קמפיין נוצר: ${c.title}`, timestamp: c.created_at })),
-      ...this.auditLog.map((a) => ({
+      { id: `entity:${this.entity.id}`, icon: '🏗️', label: 'העמותה נוצרה', timestamp: this.entity.created_at },
+      ...this.campaigns.map((c) => ({ id: `campaign:${c.id}`, campaignId: c.id, icon: '🎯', label: c.published_at ? `קמפיין פורסם: ${c.title}` : `קמפיין נוצר: ${c.title}`, timestamp: c.published_at || c.created_at })),
+      ...this.auditLog.filter(a => Object.hasOwn(ACTION_LABELS, a.action)).map((a) => ({
+        id: `audit:${a.id}`,
         icon: '🛡️',
-        label: this.actionLabel(a.action) + (a.notes ? ` — ${a.notes}` : ''),
+        label: this.actionLabel(a.action),
         timestamp: a.created_at,
       })),
     ];
-    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const seen = new Set<string>();
+    return items.filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 8);
   }
 
   statusLabel(status: string): string {
@@ -190,7 +231,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   }
 
   actionLabel(action: string): string {
-    return ACTION_LABELS[action] ?? action;
+    return ACTION_LABELS[action] ?? 'פעולת ניהול';
   }
 
   isNoteRequired(action: string): boolean {
@@ -204,6 +245,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   }
 
   private runAction(action: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate'): void {
+    if (this.actionInProgress) return;
     const trimmedNotes = this.notes.trim();
 
     if (this.isNoteRequired(action) && !trimmedNotes) {
@@ -219,6 +261,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
         this.notes = '';
         this.selectedReasonTags = [];
         this.actionInProgress = false;
+        this.pendingManagementAction = null;
         this.load();
       },
       error: (err) => {
@@ -314,21 +357,14 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   }
 
   fmtMoney(n: number): string {
-    return '₪' + Math.round(n || 0).toLocaleString('he-IL');
+    return shekels(n);
   }
 
   fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+    return israelDate(iso);
   }
 
   fmtDateTime(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    const t = new Date(iso);
-    const hh = String(t.getHours()).padStart(2, '0');
-    const mm = String(t.getMinutes()).padStart(2, '0');
-    return `${d}/${m}/${y} ${hh}:${mm}`;
+    return israelDate(iso, true);
   }
 }

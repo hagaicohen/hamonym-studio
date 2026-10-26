@@ -125,7 +125,8 @@
           <thead>
             <tr>
               <th>עמותה</th>
-              <th>סכום לחיוב</th>
+              <th>תרומות בתקופה</th>
+              <th>עמלה לחיוב</th>
               <th>נגבה</th>
               <th>יתרה</th>
               <th>אמצעי גבייה</th>
@@ -137,7 +138,7 @@
           <tbody>
             @for (s of filteredStatements; track s.id) {
               <tr class="col-row" [class.col-row-draft]="s.status === 'draft'">
-                <td class="col-entity-cell">{{ s.entity_name }}</td>
+                <td class="col-entity-cell"><a [routerLink]="['/platform/organizations', s.entity_id]">{{ s.entity_name }}</a></td><td>₪{{ fmtMoney(s.gross_raised) }}</td>
                 <td>₪{{ fmtMoney(s.total_due) }}@if (s.status === 'draft') {<span class="col-draft-tag"> (לא מאושר)</span>}</td>
                 <td>₪{{ fmtMoney(s.collected) }}</td>
                 <td>₪{{ fmtMoney(statementOutstanding(s)) }}</td>
@@ -147,7 +148,7 @@
                 <td><button class="col-btn col-btn-small col-btn-primary" (click)="openStatement(s.id)">ניהול</button></td>
               </tr>
             } @empty {
-              <tr><td colspan="8" class="col-empty">אין חיובים לתקופה זו</td></tr>
+              <tr><td colspan="9" class="col-empty">אין חיובים לתקופה זו</td></tr>
             }
           </tbody>
         </table>
@@ -413,30 +414,33 @@
       </div>
       <p class="col-note">הטווח חל על תקופת החיוב של כל חיוב, לא על תאריך תרומה בודדת.</p>
 
+      @if (historyError) { <div class="col-error" role="alert">{{ historyError }} <button class="col-btn" (click)="runHistorySearch()">נסה שוב</button></div>@if (historyRows.length) { <p class="col-note">מוצגות תוצאות החיפוש האחרון שהצליח.</p> } }
       @if (historyLoading) {
         <div class="col-empty">טוען...</div>
       } @else {
+        <div class="col-collection-table-scroll" role="region" tabindex="0" aria-label="ארכיון חיובים">
         <table class="col-table">
           <thead>
-            <tr><th>עמותה</th><th>תקופה</th><th>סכום לחיוב</th><th>נגבה</th><th>מצב</th></tr>
+            <tr><th>עמותה</th><th>תקופת חיוב</th><th>עמלה לחיוב</th><th>נגבה בפועל</th><th>מצב</th><th>פרטים</th></tr>
           </thead>
           <tbody>
             @for (r of historyRows; track r.id) {
-              <tr><td>{{ r.entity_name }}</td><td>{{ fmtDate(r.period_start) }} – {{ fmtDate(r.period_end) }}</td><td>₪{{ fmtMoney(r.total_due) }}</td><td>₪{{ fmtMoney(r.collected) }}</td><td>{{ statusLabel(r.status) }}</td></tr>
+              <tr><td><a [routerLink]="['/platform/organizations', r.entity_id]">{{ r.entity_name }}</a></td><td>{{ fmtDate(r.period_start) }} – {{ fmtDate(r.period_end) }}</td><td>₪{{ fmtMoney(r.total_due) }}</td><td>₪{{ fmtMoney(r.collected) }}</td><td>{{ statusLabel(r.status) }}</td><td><button class="col-btn col-btn-small" (click)="openStatement(r.id)">פרטי החיוב</button></td></tr>
             } @empty {
-              <tr><td colspan="5" class="col-empty">אין תוצאות לסינון הנוכחי</td></tr>
+              <tr><td colspan="6" class="col-empty">{{ historyError ? 'היסטוריית החיובים אינה זמינה' : 'אין תוצאות לסינון הנוכחי' }}</td></tr>
             }
           </tbody>
-        </table>
+        </table></div>
       }
     </section>
   }
 
   @if (tab === 'reports') {
     <section class="col-section">
-      <p class="col-note">דוח כספי בסיסי: עמותה, סכום לחיוב, נגבה ויתרה. דוח לקריאה בלבד — לא קובץ ייצוא מס״ב לבנק. התצוגה כאן והקובץ המורד תמיד זהים.</p>
+      <h2 class="col-section-title">הפקת דוח גבייה</h2><p class="col-note">דוח כספי בסיסי: עמותה, סכום לחיוב, נגבה ויתרה. דוח לקריאה בלבד — לא קובץ ייצוא מס״ב לבנק. התצוגה כאן והקובץ המורד תמיד זהים.</p>
 
       <div class="col-filter-grid">
+        <div class="col-filter-field"><label for="reportType">סוג דוח</label><select id="reportType"><option>חיובים, גבייה ויתרות</option></select></div>
         <div class="col-filter-field">
           <label>טווח</label>
           <select [(ngModel)]="reportPeriodMode" (ngModelChange)="runReportPreview()">
@@ -474,18 +478,23 @@
         </div>
       </div>
 
-      @if (reportError) { <div class="col-error">{{ reportError }}</div> }
-      <button class="col-btn col-btn-primary" [disabled]="reportBusy || reportRows.length === 0" (click)="downloadReport()">הורד לאקסל</button>
+      @if (reportError) { <div class="col-error" role="alert">{{ reportError }} <button class="col-btn" (click)="runReportPreview()">נסה שוב</button></div> }
+      <button class="col-btn col-btn-primary" [disabled]="reportBusy || reportPreviewLoading || !!reportError || reportRows.length === 0" (click)="downloadReport()">הורד לאקסל</button>
 
       @if (reportPreviewLoading) {
         <div class="col-empty">טוען...</div>
-      } @else {
+      } @else if (!reportError && reportPeriodMode === 'period' && !selectedPeriodId) {
+        <p class="col-note">יש לבחור תקופת חיוב כדי להפיק דוח.</p>
+      } @else if (!reportError) {
+        <p class="col-note" role="status">{{ reportRows.length }} חיובים בדוח בהתאם לסינון</p>
+        <details class="col-report-preview"><summary>תצוגה מקדימה של נתוני הקובץ</summary>
+        <div class="col-collection-table-scroll" tabindex="0" role="region" aria-label="תצוגה מקדימה לדוח">
         <table class="col-table">
           <thead>
             <tr><th>עמותה</th><th>תקופה</th><th>סכום לחיוב</th><th>נגבה</th><th>יתרה</th><th>סטטוס</th></tr>
           </thead>
           <tbody>
-            @for (r of reportRows; track r.entityName) {
+            @for (r of reportRows; track $index) {
               <tr>
                 <td>{{ r.entityName }}</td>
                 <td>{{ fmtDate(r.periodStart) }} – {{ fmtDate(r.periodEnd) }}</td>
@@ -498,7 +507,7 @@
               <tr><td colspan="6" class="col-empty">אין חיובים לטווח/עמותה שנבחרו</td></tr>
             }
           </tbody>
-        </table>
+        </table></div></details>
       }
     </section>
   }

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CheckoutV2Component } from './checkout-v2.component';
 import { CampaignStudioStateService, Offering } from '../../../services/campaign-studio-state.service';
 import { DonationService, DonationResult } from '../../../services/donation.service';
@@ -44,6 +44,53 @@ describe('CheckoutV2Component — Reward Checkout amount fix', () => {
   }
 
   const reward250: Offering = { id: 'r1', title: 'ספר האדם מחפש משמעות', description: '', minimumAmount: 250, stock: null, imageUrl: null };
+
+  for (const status of ['paid', 'failed', 'pending']) {
+    it(`verifies an OpenFields timeout against backend status ${status}, without another payment`, async () => {
+      const { component, fixture } = render({ initialAmount: 100 });
+      const tokenize = jasmine.createSpy().and.resolveTo(false); // Existing OpenFields timeout contract.
+      component.openfieldsForm = { tokenize } as any;
+      (component as any).donationId = 'd1'; component.step = 3;
+      const create = spyOn(donationService, 'create');
+      const getStatus = spyOn(donationService, 'getStatus').and.returnValue(of({ status, receipt_id: null } as any));
+      await component.submitOpenFieldsPayment();
+      expect(getStatus).toHaveBeenCalledWith('d1');
+      expect(component.paymentState).toBe(status === 'paid' ? 'paid' : status === 'failed' ? 'idle' : 'confirming');
+      if (status === 'pending') {
+        expect(component.createDonationError).toBe('');
+        getStatus.and.returnValue(of({ status: 'paid', receipt_id: 'r1' } as any));
+        component.paymentState = 'uncertain'; component.recheckPaymentStatus();
+        expect(component.paymentState).toBe('paid'); expect(component.receiptId).toBe('r1');
+      }
+      if (status === 'failed') expect(component.createDonationError).toContain('התשלום נכשל');
+      expect(tokenize).toHaveBeenCalledTimes(1); expect(create).not.toHaveBeenCalled();
+      fixture.destroy();
+    });
+  }
+
+  it('keeps an unavailable status API uncertain and manual rechecking never charges again', async () => {
+    const { component, fixture } = render();
+    const tokenize = jasmine.createSpy().and.resolveTo(false);
+    component.openfieldsForm = { tokenize } as any; (component as any).donationId = 'd1'; component.step = 3;
+    spyOn(donationService, 'getStatus').and.returnValue(throwError(() => new Error('offline')));
+    await component.submitOpenFieldsPayment();
+    expect(component.paymentState).toBe('confirming'); expect(component.createDonationError).toBe('');
+    component.paymentState = 'uncertain'; fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('אין לבצע תשלום נוסף');
+    component.recheckPaymentStatus(); expect(component.paymentState).not.toBe('idle');
+    expect(tokenize).toHaveBeenCalledTimes(1); fixture.destroy();
+  });
+
+  for (const returnStatus of ['success', 'failed']) {
+    it(`hosted ${returnStatus} is only a signal to verify, not a final payment result`, () => {
+      const { component, fixture } = render(); (component as any).donationId = 'd1'; component.step = 3;
+      spyOn(donationService, 'getStatus').and.returnValue(of({ status: 'pending', receipt_id: null } as any));
+      const success = spyOn(component.paymentSucceeded, 'emit');
+      (component as any).onHostedCheckoutMessage({ origin: window.location.origin, data: { source: 'hamonym-donation-return', status: returnStatus } });
+      expect(component.paymentState).toBe('confirming'); expect(component.createDonationError).toBe('');
+      expect(success).not.toHaveBeenCalled(); fixture.destroy();
+    });
+  }
   const reward500: Offering = { id: 'r2', title: 'חולצת תמיכה', description: '', minimumAmount: 500, stock: null, imageUrl: null };
 
   // ── 1/18/19/20 — normal donation flow is unchanged ──
@@ -132,7 +179,30 @@ describe('CheckoutV2Component — Reward Checkout amount fix', () => {
     component.name = 'ישראל ישראלי';
     component.email = 'test@example.com';
     component.phone = '0501234567';
+    component.idNumber = '123456782';
     component.address = 'רחוב הדוגמה 1'; // DEFAULT_DONOR_FIELDS.showAddress is true
+  }
+
+  for (const frequency of ['one-time', 'monthly'] as const) {
+    it(`requires a valid Tax ID and preserves it in the ${frequency} donation payload`, () => {
+      const { component, fixture } = render({ initialAmount: 100, initialFrequency: frequency });
+      const createSpy = spyOn(donationService, 'create').and.returnValue(of({ url: 'https://pay', donationId: 'd1', lowProfileId: 'lp1' } as DonationResult));
+      fillStep2Required(component);
+      component.idNumber = '';
+      component.goToStep3();
+      expect(createSpy).not.toHaveBeenCalled();
+      component.step = 2; fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('נא להזין מספר תעודת זהות / ח.פ. תקין');
+      expect(fixture.nativeElement.querySelector('#cv2-donor-tax-id').required).toBeTrue();
+      component.idNumber = '123456789'; component.goToStep3();
+      expect(createSpy).not.toHaveBeenCalled();
+      component.idNumber = '123456782'; component.goToStep3();
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(createSpy.calls.mostRecent().args[0].donor.idNumber).toBe('123456782');
+      expect(createSpy.calls.mostRecent().args[0].recurring).toBe(frequency === 'monthly' ? true : undefined);
+      component.goBack();
+      expect(component.idNumber).toBe('123456782');
+    });
   }
 
   it('10/11/12/15. createDonation receives exactly the reward amount, never combined with a stale/default normal amount, with reward identity attached', () => {

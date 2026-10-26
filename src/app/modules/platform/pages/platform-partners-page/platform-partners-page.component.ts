@@ -1,17 +1,20 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PlatformService } from '../../services/platform.service';
 import { relativeTime } from '../../utils/relative-time';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate } from '../../utils/admin-display';
+import { Subscription } from 'rxjs';
 
 const COLUMNS: ColumnDef[] = [
   { key: 'website',    label: 'קישור בקמפיין' },
   { key: 'owner',      label: 'מנהל' },
   { key: 'campaigns',  label: 'קמפיינים' },
   { key: 'created_at', label: 'תאריך הרשמה' },
-  { key: 'activity',   label: 'פעילות אחרונה' },
-  { key: 'hidden',     label: 'מוסתר' },
+  { key: 'activity',   label: 'עדכון פרטים אחרון' },
+  { key: 'hidden',     label: 'נראות' },
 ];
 
 interface Partner {
@@ -43,11 +46,11 @@ type SortDir = 'asc' | 'desc';
 @Component({
   selector: 'app-platform-partners-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent, AdminDetailsDrawerComponent],
   templateUrl: './platform-partners-page.component.html',
   styleUrl: './platform-partners-page.component.css',
 })
-export class PlatformPartnersPageComponent implements OnInit {
+export class PlatformPartnersPageComponent implements OnInit, OnDestroy {
   private platformService = inject(PlatformService);
 
   readonly columns = COLUMNS;
@@ -64,6 +67,12 @@ export class PlatformPartnersPageComponent implements OnInit {
   loading = false;
   refreshing = false;
   error: string | null = null;
+  selectedPartner: Partner | null = null;
+  private request?: Subscription;
+  private requestId = 0;
+  get hasFilters(): boolean { return !!this.activeChip || !!this.searchQuery.trim(); }
+  clearFilters(): void { this.activeChip = null; this.searchQuery = ''; this.page = 0; this.load(); }
+  ngOnDestroy(): void { clearTimeout(this.searchTimer); this.requestId++; this.request?.unsubscribe(); }
 
   activeChip: 'no_campaigns' | 'new_week' | 'hidden' | null = null;
   searchQuery = '';
@@ -79,10 +88,14 @@ export class PlatformPartnersPageComponent implements OnInit {
   }
 
   load(): void {
+    clearTimeout(this.searchTimer);
+    this.request?.unsubscribe();
+    const requestId = ++this.requestId;
+    this.error = null;
     if (this.partners.length === 0) this.loading = true;
     else this.refreshing = true;
 
-    this.platformService
+    this.request = this.platformService
       .getPartners({
         search: this.searchQuery.trim() || undefined,
         sortBy: this.sortField,
@@ -95,13 +108,15 @@ export class PlatformPartnersPageComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
+          if (requestId !== this.requestId) return;
           this.partners = res.partners ?? [];
           this.total = res.total ?? 0;
           this.loading = false;
           this.refreshing = false;
         },
         error: (err) => {
-          this.error = err.error?.error || 'שגיאה בטעינת השותפים';
+          if (requestId !== this.requestId) return;
+          this.error = 'לא ניתן לטעון את השותפים. נסה שוב.';
           this.loading = false;
           this.refreshing = false;
         },
@@ -144,9 +159,7 @@ export class PlatformPartnersPageComponent implements OnInit {
   }
 
   fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+    return israelDate(iso);
   }
 
   // A link into OUR OWN system, not the partner's own external website —

@@ -42,14 +42,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
   private analytics = inject(AnalyticsService);
   private donationService = inject(DonationService);
 
-  // Quiet background status/receipt refresh (2026-09-27) — the donor already
-  // sees "תודה רבה!" the instant this page loads, regardless of
-  // donations.status (CardCom's HandleSubmit succeeding is not the same as
-  // the webhook/GetLpResult pipeline having finished writing 'paid' yet —
-  // see checkout-v2.component.ts's submitOpenFieldsPayment() doc comment).
-  // This never blocks or delays the thank-you message; it only quietly
-  // fills in the receipt link once one exists. Bounded so an donation that
-  // genuinely never finalizes (abandoned webhook) doesn't poll forever.
+  // The return URL alone is not payment confirmation. Poll the backend.
   private statusPollTimer: ReturnType<typeof setTimeout> | null = null;
   private statusPollAttempts = 0;
   private readonly STATUS_POLL_INTERVAL_MS = 3000;
@@ -88,26 +81,40 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
     this.ref    = this.route.snapshot.queryParamMap.get('ref')    || '';
     this.amount = parseFloat(this.route.snapshot.queryParamMap.get('amount') || '0');
 
+    this.loadDonation();
+  }
+
+  recheckPaymentStatus(): void {
+    if (this.loading || !this.ref || this.donation?.status === 'paid') return;
+    if (this.statusPollTimer) clearTimeout(this.statusPollTimer);
+    this.statusPollAttempts = 0;
+    this.loading = true;
+    this.loadDonation();
+  }
+
+  private completionTracked = false;
+  private recordConfirmedSuccess(): void {
+    const d = this.donation;
+    if (!d || d.status !== 'paid' || this.completionTracked) return;
+    this.completionTracked = true;
+    this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
+    this.analytics.init(d.entity_ga_measurement_id);
+    this.analytics.trackEvent('donation_completed', { value: this.amount, currency: 'ILS', campaign_name: d.campaign_title, campaign_id: d.campaign_id, transaction_id: d.id });
+  }
+
+  private loadDonation(): void {
+
     if (this.ref) {
       this.http.get<DonationResult>(`${environment.apiUrl}/api/donations/public/${this.ref}`)
         .subscribe({
           next: (d) => {
             this.donation = d;
             this.amount   = parseFloat(String(d.amount));
-            this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
             this.loading  = false;
             this.loader.hide();
 
-            this.analytics.init(d.entity_ga_measurement_id);
-            this.analytics.trackEvent('donation_completed', {
-              value:         this.amount,
-              currency:      'ILS',
-              campaign_name: d.campaign_title,
-              campaign_id:   d.campaign_id,
-              transaction_id: d.id,
-            });
-
-            if (d.status !== 'paid') this.scheduleQuietStatusPoll();
+            this.recordConfirmedSuccess();
+            if (d.status !== 'paid' && d.status !== 'failed') this.scheduleQuietStatusPoll();
           },
           error: () => { this.loading = false; this.loader.hide(); },
         });
@@ -130,12 +137,11 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
     this.donationService.getStatus(this.ref).subscribe({
       next: (res) => {
         if (this.donation) this.donation = { ...this.donation, status: res.status, receipt_id: res.receipt_id };
-        if (res.status === 'paid') return; // done -- receipt_id is written in the same transaction as 'paid'
+        if (res.status === 'paid') { this.recordConfirmedSuccess(); return; }
+        if (res.status === 'failed') return;
         this.statusPollAttempts++;
         if (this.statusPollAttempts < this.STATUS_POLL_MAX_ATTEMPTS) this.scheduleQuietStatusPoll();
-        // else: quietly give up -- the donor already saw "תודה רבה!" long
-        // ago; the receipt-by-email fallback message covers this case (see
-        // the template).
+        // The waiting state remains visible after automatic polling ends.
       },
       error: () => {
         this.statusPollAttempts++;

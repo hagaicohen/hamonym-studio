@@ -92,6 +92,37 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   // pollLive) can never re-count or re-toast the same donation twice.
   private lastSeenAt = new Date();
 
+  celebratingGoal = false;
+  readonly goalConfetti = Array.from({ length: 240 }, (_, index) => ({
+    left: (index * 37) % 100,
+    delay: (index % 10) * 0.09,
+    drift: ((index % 7) - 3) * 90,
+    color: ['#7c3aed', '#16a34a', '#fbbf24', '#06b6d4', '#ec4899', '#f97316'][index % 6],
+  }));
+  private goalCelebrationTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly celebratedGoals = new Set<string>();
+
+  get goalAchieved(): boolean {
+    const target = this.state.draft.targetAmount ?? 0;
+    return target > 0 && (this.state.draft.currentAmount ?? 0) >= target;
+  }
+
+  private celebrateGoalCrossing(previousAmount: number): void {
+    const draft = this.state.draft;
+    const target = draft.targetAmount ?? 0;
+    if (!draft.id || !this.goalAchieved || previousAmount >= target) return;
+    const key = `hamonym:goal-celebrated:${draft.id}:${target}`;
+    if (this.celebratedGoals.has(key)) return;
+    this.celebratedGoals.add(key);
+    try {
+      if (sessionStorage.getItem(key) === '1') return;
+      sessionStorage.setItem(key, '1');
+    } catch { /* The in-memory guard still works when storage is unavailable. */ }
+    this.celebratingGoal = true;
+    if (this.goalCelebrationTimer) clearTimeout(this.goalCelebrationTimer);
+    this.goalCelebrationTimer = setTimeout(() => { this.celebratingGoal = false; }, 4000);
+  }
+
   @HostListener('window:resize')
   onResize(): void { this.syncDevice(); }
 
@@ -249,7 +280,9 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
         const countable = newItems.filter(item => item.completedAt > this.snapshotTakenAt);
         if (countable.length > 0) {
           const total = countable.reduce((sum, item) => sum + item.amount, 0);
+          const previousAmount = this.state.draft.currentAmount ?? 0;
           this.state.bumpRaisedAmount(total, countable.length);
+          this.celebrateGoalCrossing(previousAmount);
         }
 
         for (const item of newItems) {
@@ -261,6 +294,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollInterval) clearInterval(this.pollInterval);
+    if (this.goalCelebrationTimer) clearTimeout(this.goalCelebrationTimer);
   }
 
   onRetryPayment(): void {

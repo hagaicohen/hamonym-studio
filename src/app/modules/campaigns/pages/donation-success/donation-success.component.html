@@ -1,6 +1,12 @@
 <div class="success-page" dir="rtl">
 
-  <div class="success-card" *ngIf="!loading">
+  <div class="success-card" *ngIf="!loading && donation?.status !== 'paid'" role="status" aria-live="polite">
+    <h1 class="success-title">{{ donation?.status === 'failed' ? 'התשלום לא הושלם' : 'ממתינים לאישור התשלום' }}</h1>
+    <p>{{ donation?.status === 'failed' ? 'התקבל אישור מהמערכת שהתשלום נכשל.' : 'התשלום נשלח לבדיקה. עדיין לא התקבל אישור סופי. אין לבצע תשלום נוסף בשלב זה.' }}</p>
+    <button class="back-btn" *ngIf="ref" (click)="recheckPaymentStatus()" [disabled]="loading">בדוק מצב תשלום</button>
+  </div>
+
+  <div class="success-card" *ngIf="!loading && donation?.status === 'paid'">
 
     <!-- Check icon -->
     <div class="success-icon">

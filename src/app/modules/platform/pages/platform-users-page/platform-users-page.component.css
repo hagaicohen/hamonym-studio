@@ -1,3 +1,4 @@
+@import '../../styles/admin-list.css';
 :host { display: block; }
 
 .plat-page {
@@ -90,13 +91,19 @@
 /* FILTERS */
 .plat-filters {
   display: flex;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
+.plat-filters > select { flex: 0 1 auto; width: auto; min-width: 140px; }
+.plat-filters > app-entity-combobox { flex: 0 1 200px; min-width: 160px; }
+.plat-filters > button, .plat-filters > app-column-picker { flex-shrink: 0; }
+
 .plat-search {
   flex: 1 1 200px;
+  width: auto;
   min-width: 160px;
   padding: 9px 14px;
   border: 1px solid #e2e8f0;
@@ -517,6 +524,7 @@
   .plat-header { flex-wrap: wrap; gap: 10px; }
 
   .plat-filters { flex-direction: column; align-items: stretch; }
+  .plat-filters > .plat-search, .plat-filters > select, .plat-filters > app-entity-combobox { flex: 0 0 auto; width: 100%; min-width: 0; }
 
   .plat-table-wrap { overflow-x: visible; }
 
@@ -560,3 +568,10 @@
 @media (max-width: 560px) {
   .plat-page { padding: 20px; }
 }
+
+.user-name { display: block; }.user-self-tag { font-size: 11px; }.user-actions { flex-wrap: nowrap; }.plat-table td { height: 54px; }.user-menu { max-height: min(420px,70vh); overflow-y: auto; }.plat-modal { max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: auto; }
+@media(max-width:720px) { .plat-table-wrap { overflow: auto; }.plat-table, .plat-table tbody { display: table; width: 100%; }.plat-table tbody { display: table-row-group; }.plat-table thead { display: table-header-group; }.plat-table tr { display: table-row; margin: 0; padding: 0; border: 0; }.plat-table td { display: table-cell; padding: 8px 10px; white-space: nowrap; }.plat-table td::before { content: none; } }
+
+.plat-page { padding: 24px; }.plat-title { font-size: 26px; }.plat-table { font-size: 13px; }.plat-table td { padding: 8px 12px; }.plat-error { padding: 12px 16px; text-align: right; }@media(max-width:720px) { .plat-page { padding: 16px; } }
+
+.super-admin-filter { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; padding: 6px 10px; border-inline-start: 1px solid #e2e8f0; }.user-entity-links { display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 260px; font-size: 12px; }

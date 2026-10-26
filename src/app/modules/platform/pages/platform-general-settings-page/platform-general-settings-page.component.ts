@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { BillingSettingsService } from '../../services/billing-settings.service';
 import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
 import { PlatformService } from '../../services/platform.service';
-import { CampaignResetService, CampaignResetStatus } from '../../services/campaign-reset.service';
+import { CampaignResetService, CampaignResetStatus, CampaignResetPreview } from '../../services/campaign-reset.service';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate, shekels } from '../../utils/admin-display';
 
 type SettingsTab = 'billing' | 'simulation';
 
@@ -21,7 +23,7 @@ type SettingsTab = 'billing' | 'simulation';
 @Component({
   selector: 'app-platform-general-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AdminDetailsDrawerComponent],
   templateUrl: './platform-general-settings-page.component.html',
   styleUrl: './platform-general-settings-page.component.css',
 })
@@ -59,6 +61,14 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   clockActionBusy = false;
   clockActionError: string | null = null;
   clockActionMessage: string | null = null;
+  money = shekels;
+  campaignPreview: CampaignResetPreview | null = null;
+  campaignPreviewError: string | null = null;
+  closeResetConfirmation(): void { if (!this.resetBusy) this.resetConfirmOpen = false; }
+  get selectedBusinessDateLabel(): string {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(this.fixedDateInput)) return '';
+    const [year, month, day] = this.fixedDateInput.split('-'); return `${day}/${month}/${year}`;
+  }
 
   loadClockStatus(): void {
     this.clockLoading = true;
@@ -89,7 +99,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   }
 
   fmtDateTime(iso: string): string {
-    return new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+    return israelDate(iso, true);
   }
 
   private israelFields(iso: string): { date: string; time: string } {
@@ -231,9 +241,14 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     this.resetResult = null;
     this.selectedCampaignId = id;
     this.campaignResetStatus = null;
+    this.campaignPreview = null; this.campaignPreviewError = null;
     this.campaignStatusError = null;
     this.campaignStatusLoading = !!id;
     if (!id) return;
+    this.campaignResetService.getPreview(id).subscribe({
+      next: res => { if (this.selectedCampaignId === id) this.campaignPreview = res.preview; },
+      error: () => { if (this.selectedCampaignId === id) this.campaignPreviewError = 'סיכום סכומי התרומות אינו זמין כעת.'; },
+    });
     this.campaignResetService.getStatus(id).subscribe({
       next: (res) => {
         if (this.selectedCampaignId !== id) return;

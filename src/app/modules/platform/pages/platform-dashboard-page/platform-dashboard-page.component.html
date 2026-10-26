@@ -1,202 +1,110 @@
-<div class="plat-page">
+<main class="plat-page" dir="rtl" [attr.inert]="donorsOpen ? '' : null" [attr.aria-busy]="loading">
+  <header class="plat-header">
+    <div><p class="eyebrow">ניהול הפלטפורמה</p><h1>תמונת מצב</h1><p class="page-subtitle">הפעילות החשובה והנושאים שממתינים לטיפולך</p></div>
+    @if (data) { <span class="updated-at">עודכן <time [attr.datetime]="data.generatedAt" dir="ltr">{{ fmtDate(data.generatedAt, true) }}</time></span> }
+  </header>
 
   @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else if (loading) {
-    <div class="plat-loading">טוען...</div>
-  } @else if (kpis) {
-
-    <div class="plat-header">
-      <h1 class="plat-title">דשבורד פלטפורמה</h1>
-      <a class="plat-link-btn" routerLink="/platform/organizations">כל העמותות ←</a>
+    <div class="error-state" role="alert"><span>{{ error }}</span><button class="text-button" (click)="load()" [disabled]="loading">נסה שוב</button></div>
+  }
+  @if (loading && !data) {
+    <div class="kpi-row" role="status" aria-label="טוען את הדשבורד">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="kpi-card skeleton"><span></span><strong></strong></div> }
     </div>
+    <div class="loading-panel skeleton"><span>טוען נתונים…</span></div>
+  }
+  @if (data; as overview) {
+    <section class="kpi-row" aria-label="מדדים מרכזיים">
+      @if (context.hasPlatformSection('organizations')) {
+        <a class="kpi-card" routerLink="/platform/organizations" [queryParams]="{ status: 'active' }">
+          <span class="kpi-label">עמותות פעילות</span><strong>{{ overview.kpis.activeEntities | number }}</strong><span class="kpi-foot">לעמותות הפעילות <span aria-hidden="true">←</span></span>
+        </a>
+      }
+      @if (context.hasPlatformSection('campaigns')) {
+        <a class="kpi-card" routerLink="/platform/campaigns" [queryParams]="{ status: 'published' }">
+          <span class="kpi-label">קמפיינים פעילים</span><strong>{{ overview.kpis.activeCampaigns | number }}</strong><span class="kpi-foot">לקמפיינים הפעילים <span aria-hidden="true">←</span></span>
+        </a>
+      }
+      @if (context.isSuperAdmin()) {
+        <a class="kpi-card" routerLink="/platform/donations" [queryParams]="{ status: 'paid', period: 'this_month_israel' }">
+          <span class="kpi-label">תרומות החודש</span><strong class="collected">{{ fmtMoney(overview.kpis.donationsMonth) }}</strong><span class="kpi-foot">תרומות ששולמו בלבד <span aria-hidden="true">←</span></span>
+        </a>
+        <button #donorTrigger type="button" class="kpi-card" (click)="openDonors(donorTrigger)" aria-haspopup="dialog" [attr.aria-expanded]="donorsOpen">
+          <span class="kpi-label">תורמים חדשים</span><strong>{{ overview.kpis.newDonorsThisMonth | number }}</strong><span class="kpi-foot">תרומה ראשונה החודש <span aria-hidden="true">←</span></span>
+        </button>
+        <a class="kpi-card" routerLink="/platform/collection-ops" [queryParams]="{ tab: 'reports', scope: 'all' }">
+          <span class="kpi-label">עמלות לגבייה</span><strong [class.attention-value]="(overview.kpis.feesOutstanding ?? 0) > 0">{{ fmtMoney(overview.kpis.feesOutstanding) }}</strong><span class="kpi-foot">יתרת חיובים מאושרים · כל התקופות <span aria-hidden="true">←</span></span>
+        </a>
+      }
+      <button type="button" class="kpi-card" (click)="focusAttention(attentionSection)">
+        <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">למרכז הטיפול <span aria-hidden="true">←</span></span>
+      </button>
+    </section>
 
-    <!-- KPI ROW -->
-    <div class="plat-kpi-row">
-      <div class="plat-kpi-card">
-        <div class="kpi-label">סה"כ עמותות</div>
-        <div class="kpi-value">{{ kpis.totalEntities | number }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">עמותות פעילות</div>
-        <div class="kpi-value primary">{{ kpis.activeEntities | number }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">ממתינות לאישור/פרטים חסרים</div>
-        <div class="kpi-value warn">{{ kpis.pendingReviewEntities + kpis.incompleteDraftEntities | number }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">קמפיינים פעילים</div>
-        <div class="kpi-value">{{ kpis.activeCampaigns | number }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">תרומות היום</div>
-        <div class="kpi-value primary">{{ fmtMoney(kpis.donationsToday) }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">תרומות החודש</div>
-        <div class="kpi-value primary">{{ fmtMoney(kpis.donationsMonth) }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">תשלומים שנכשלו</div>
-        <div class="kpi-value danger">{{ kpis.failedPaymentsThisMonth | number }}</div>
-      </div>
-      <div class="plat-kpi-card">
-        <div class="kpi-label">תורמים חדשים החודש</div>
-        <div class="kpi-value">{{ kpis.newDonorsThisMonth | number }}</div>
-      </div>
-    </div>
-
-    <!-- CHARTS + ACTION CENTER -->
-    <div class="plat-dash-grid">
-
-      <div class="plat-card plat-charts-card">
-        <h3 class="plat-section-title">תרומות ב-30 יום</h3>
-        <svg
-          #lineSvg
-          class="plat-chart-svg"
-          [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
-          (mousemove)="onLineMove($event, lineSvg)"
-          (mouseleave)="onLineLeave()"
-        >
-          <path class="chart-area" [attr.d]="lineAreaPath"></path>
-          <path class="chart-line" [attr.d]="linePath"></path>
-          @if (lineHover) {
-            <line class="chart-guide" [attr.x1]="lineHover.x" [attr.x2]="lineHover.x" y1="10" [attr.y2]="chartHeight - 20"></line>
-            <circle class="chart-dot" [attr.cx]="lineHover.x" [attr.cy]="lineHover.y" r="4"></circle>
-          }
-        </svg>
-        @if (lineHover) {
-          <div class="chart-tooltip" [style.left.%]="(lineHover.x / chartWidth) * 100">
-            <span class="tt-date">{{ fmtDayLabel(linePoints[lineHover.index].date) }}</span>
-            <span class="tt-value">{{ fmtMoney(linePoints[lineHover.index].value) }}</span>
-          </div>
-        }
-
-        <h3 class="plat-section-title plat-section-title-2">עמותות חדשות ב-8 שבועות</h3>
-        <svg class="plat-chart-svg" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight">
-          @for (bar of barItems; track bar.date; let i = $index) {
-            <rect
-              class="chart-bar"
-              [class.hovered]="barHover?.index === i"
-              [attr.x]="bar.x"
-              [attr.y]="bar.y"
-              [attr.width]="bar.width"
-              [attr.height]="bar.height"
-              rx="4"
-              (mouseenter)="onBarEnter(i, $event)"
-              (mouseleave)="onBarLeave()"
-            ></rect>
-          }
-        </svg>
-        @if (barHover) {
-          <div class="chart-tooltip" [style.left.%]="(barHover.x / chartWidth) * 100">
-            <span class="tt-date">{{ fmtDayLabel(entitiesWeekly[barHover.index].date) }}</span>
-            <span class="tt-value">{{ entitiesWeekly[barHover.index].value }} עמותות</span>
-          </div>
-        }
-      </div>
-
-      <div class="plat-card plat-alerts-card">
-        <h3 class="plat-section-title">⚠ מרכז פעולות</h3>
-        @if (alerts.length === 0) {
-          <div class="plat-empty-small">אין פעולות ממתינות 🎉</div>
-        } @else {
-          <div class="plat-alert-list">
-            @for (alert of alerts; track alert.key) {
-              <div class="plat-alert-item" (click)="goToAlert(alert)">
-                <span class="plat-alert-label">{{ alert.label }}</span>
-                <span class="plat-alert-count">{{ alert.count }}</span>
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-    </div>
-
-    <!-- ACTIVITY FEED + QUICK ACTIONS -->
-    <div class="plat-dash-grid">
-
-      <div class="plat-card plat-activity-card">
-        <div class="plat-activity-header">
-          <h3 class="plat-section-title">🕒 פעילות אחרונה</h3>
-          <button class="plat-sort-btn" (click)="toggleActivitySort()">
-            {{ activitySortDir === 'desc' ? 'החדש ביותר' : 'הישן ביותר' }}
-            <span class="plat-sort-arrow">{{ activitySortDir === 'desc' ? '↓' : '↑' }}</span>
-          </button>
-        </div>
-
-        <div class="plat-activity-filters">
-          @for (f of activityFilters; track f.key) {
-            <button
-              class="plat-activity-filter-chip"
-              [class.active]="activityFilter === f.key"
-              (click)="selectActivityFilter(f.key)"
-            >{{ f.label }}</button>
-          }
-        </div>
-
-        <div class="plat-activity-list" [class.refreshing]="activityLoading">
-          @if (activity.length === 0) {
-            <div class="plat-empty-small">אין פעילות להצגה</div>
-          } @else {
-            @for (item of activity; track item.timestamp + item.title) {
-              <div class="plat-activity-item">
-                <span class="plat-activity-icon" [class]="'type-' + item.type">{{ activityIcon(item.type) }}</span>
-                <div class="plat-activity-body">
-                  <div class="plat-activity-top">
-                    <span class="plat-activity-type-tag" [class]="'type-' + item.type">{{ activityTypeLabel(item.type) }}</span>
-                    <span class="plat-activity-time">{{ relativeTime(item.timestamp) }}</span>
-                  </div>
-                  <div class="plat-activity-title">{{ item.title }}</div>
-                  @if (item.subtitle) {
-                    <div class="plat-activity-subtitle">{{ item.subtitle }}</div>
-                  }
-                </div>
-              </div>
-            }
-          }
-        </div>
-
-        @if (activityTotal > 0) {
-          <div class="plat-activity-footer">
-            <span>{{ activityTotal }} פעילויות</span>
-            <div class="plat-pager">
-              <button (click)="prevActivityPage()" [disabled]="activityPage === 0">←</button>
-              <span>{{ activityPage + 1 }} / {{ activityTotalPages }}</span>
-              <button (click)="nextActivityPage()" [disabled]="activityPage >= activityTotalPages - 1">→</button>
+    <div class="dashboard-grid">
+      @if (overview.trend; as trend) {
+        <section class="panel chart-panel" [attr.aria-busy]="loading" aria-labelledby="trend-title">
+          <div class="section-header"><div><h2 id="trend-title">מגמת התרומות</h2><p>תרומות ששולמו בלבד</p></div>
+            <div class="range-switch" role="group" aria-label="טווח הגרף">
+              @for (option of ranges; track option.key) { <button type="button" [class.selected]="range === option.key" [attr.aria-pressed]="range === option.key" [disabled]="loading" (click)="load(option.key)">{{ option.label }}</button> }
             </div>
           </div>
-        }
-      </div>
+          <div class="chart-summary"><strong>{{ fmtMoney(trend.total) }}</strong>
+            @if (comparisonPercent !== null) { <span [class.collected]="comparisonPercent! >= 0">{{ comparisonPercent! >= 0 ? '+' : '' }}{{ comparisonPercent | number:'1.0-1' }}% לעומת התקופה הקודמת</span> }
+            @else { <span>בתקופה הקודמת: {{ fmtMoney(trend.previousTotal) }}</span> }
+            @if (loading) { <span role="status">מעדכן…</span> }
+          </div>
+          @if (hasDonations) {
+            <div class="chart-wrap" dir="ltr">
+              <svg #lineSvg class="chart-svg" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" role="img" aria-labelledby="chart-description" (mousemove)="onLineMove($event, lineSvg)" (mouseleave)="onLineLeave()">
+                <title id="chart-description">סכום התרומות ששולמו לפי תאריך. פירוט נגיש מתחת לגרף.</title>
+                <line x1="8" x2="552" y1="140" y2="140" class="chart-grid" />
+                <line x1="8" x2="552" y1="75" y2="75" class="chart-grid" />
+                <path [attr.d]="lineAreaPath" class="chart-area" /><path [attr.d]="linePath" class="chart-line" />
+                @if (lineHover; as hover) { <line [attr.x1]="hover.x" [attr.x2]="hover.x" y1="10" y2="140" class="chart-guide" /><circle [attr.cx]="hover.x" [attr.cy]="hover.y" r="4" class="chart-dot" /> }
+              </svg>
+              <div class="chart-axis"><span>{{ fmtDayLabel(donationsDaily[0].date) }}</span><span>{{ fmtDayLabel(donationsDaily[donationsDaily.length - 1].date) }}</span></div>
+              @if (lineHover; as hover) { <div class="chart-tooltip" dir="rtl">{{ fmtDayLabel(donationsDaily[hover.index].date) }} · {{ fmtMoney(donationsDaily[hover.index].value) }}</div> }
+            </div>
+            <details class="chart-details"><summary>פירוט לפי תאריך</summary><div class="table-wrap"><table><thead><tr><th>תאריך</th><th>סכום</th></tr></thead><tbody>@for (point of donationsDaily; track point.date) { <tr><td>{{ fmtDayLabel(point.date) }}</td><td>{{ fmtMoney(point.value) }}</td></tr> }</tbody></table></div></details>
+          } @else { <div class="empty-state chart-empty"><span class="empty-mark" aria-hidden="true">↗</span><strong>עדיין אין תרומות ששולמו בתקופה זו</strong></div> }
+        </section>
+      }
+      <section #attentionSection class="panel attention-panel" id="dashboard-attention" tabindex="-1" aria-labelledby="attention-title">
+        <div class="section-header"><h2 id="attention-title">דורש טיפול</h2><span class="count-badge" [class.clear]="!overview.kpis.attentionCount">{{ overview.kpis.attentionCount }}</span></div>
+        @if (visibleAttention.length) {
+          <ul class="attention-list">@for (item of visibleAttention; track item.id) {
+            <li><a class="attention-item" [routerLink]="item.route" [queryParams]="item.query" [fragment]="item.fragment"><strong>{{ item.name }}</strong><span>{{ item.reason }}</span><span class="action-label">{{ item.action }} <span aria-hidden="true">←</span></span></a></li>
+          }</ul>
+          @if (attentionPages > 1) { <nav class="pager" aria-label="דפדוף פריטים הדורשים טיפול"><button (click)="attentionPage = attentionPage - 1" [disabled]="attentionPage === 0" aria-label="פריטים קודמים">→</button><span>{{ attentionPage + 1 }} מתוך {{ attentionPages }}</span><button (click)="attentionPage = attentionPage + 1" [disabled]="attentionPage + 1 >= attentionPages" aria-label="פריטים נוספים">←</button></nav> }
+        } @else { <div class="empty-state attention-empty"><span class="empty-mark success-mark" aria-hidden="true">✓</span><strong>אין פריטים הממתינים לטיפול</strong></div> }
+      </section>
 
-      <div class="plat-card plat-quick-card">
-        <h3 class="plat-section-title">🚀 פעולות מהירות</h3>
-        <div class="plat-quick-actions">
-          <a class="plat-quick-btn" [routerLink]="['/platform/organizations']" [queryParams]="{ status: 'pending_review' }">
-            <svg class="plat-quick-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>אשר עמותה ממתינה</span>
-          </a>
-          <a class="plat-quick-btn" routerLink="/organization-registration">
-            <svg class="plat-quick-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>צור עמותה</span>
-          </a>
-          <a class="plat-quick-btn" routerLink="/platform/organizations">
-            <svg class="plat-quick-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M4.5 6.75h.008v.008H4.5V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM4.5 12h.008v.008H4.5V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.008v.008H4.5v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
-            <span>כל העמותות</span>
-          </a>
-        </div>
-      </div>
-
+      <section class="panel activity-panel" aria-labelledby="activity-title">
+        <div class="section-header"><div><h2 id="activity-title">פעילות אחרונה</h2><p>האירועים העסקיים האחרונים בפלטפורמה</p></div></div>
+        @if (recentActivity.length) { <ul class="activity-list">@for (item of recentActivity; track item.id) {
+          <li><span class="activity-dot" aria-hidden="true"></span><div class="activity-body"><span class="activity-label">{{ item.label }} @if (item.amount !== null) { · {{ fmtMoney(item.amount) }} }</span><a [routerLink]="item.route" [queryParams]="item.query">{{ item.name }}</a></div><time [attr.datetime]="item.timestamp" dir="ltr">{{ fmtDate(item.timestamp, true) }}</time></li>
+        }</ul> } @else { <div class="empty-state"><strong>עדיין אין פעילות להצגה</strong><span>פעילות חדשה תופיע כאן לאחר שתתרחש.</span></div> }
+      </section>
+      <section class="panel quick-panel" aria-labelledby="quick-title"><h2 id="quick-title">פעולות מהירות</h2><div class="quick-actions">
+        @if (context.hasPlatformSection('organizations')) { <a routerLink="/platform/organizations" [queryParams]="{ status: 'pending_review' }"><span>בדיקת עמותות ממתינות</span><span aria-hidden="true">←</span></a><a routerLink="/organization-registration"><span>יצירת עמותה</span><span aria-hidden="true">＋</span></a> }
+        @if (context.isSuperAdmin()) { <a routerLink="/platform/collection-ops" fragment="collection-attention"><span>טיפול בגבייה</span><span aria-hidden="true">←</span></a> }
+      </div></section>
     </div>
-
   }
+</main>
 
-</div>
+@if (donorsOpen && data) {
+  <div class="drawer-backdrop" (click)="closeDonors()">
+    <aside #donorDrawer class="donor-drawer" role="dialog" aria-modal="true" aria-labelledby="donors-title" aria-describedby="donors-period" dir="rtl" (click)="$event.stopPropagation()">
+      <header class="drawer-header"><div><h2 id="donors-title">תורמים חדשים</h2><p id="donors-period">{{ data.kpis.newDonorsThisMonth }} תורמים שתרומתם הראשונה שולמה החודש@if (data.period) { · החל מ־<span dir="ltr">{{ fmtDate(data.period.start) }}</span> }</p></div><button #drawerClose type="button" class="close-button" aria-label="סגירת חלונית התורמים" (click)="closeDonors()">×</button></header>
+      @if (data.newDonors.length) {
+        <p class="drawer-note">הסכום מתייחס לתרומה הראשונה ששולמה, לפי המידע הקיים.</p>
+        <div class="table-wrap"><table><thead><tr><th scope="col">שם התורם</th><th scope="col">תרומה ראשונה</th><th scope="col">סכום</th></tr></thead><tbody>
+          @for (donor of visibleDonors; track $index) { <tr><td>{{ donor.name || 'שם לא זמין' }}</td><td><time [attr.datetime]="donor.firstDonationAt" dir="ltr">{{ fmtDate(donor.firstDonationAt) }}</time></td><td>{{ fmtMoney(donor.firstDonationAmount) }}</td></tr> }
+        </tbody></table></div>
+        @if (donorPages > 1) { <nav class="pager" aria-label="דפדוף תורמים"><button (click)="donorPage = donorPage - 1" [disabled]="donorPage === 0">הקודם</button><span>{{ donorPage + 1 }} מתוך {{ donorPages }}</span><button (click)="donorPage = donorPage + 1" [disabled]="donorPage + 1 >= donorPages">הבא</button></nav> }
+      } @else { <div class="empty-state"><span class="empty-mark" aria-hidden="true">♡</span><strong>אין תורמים חדשים בתקופה זו</strong><span>תורמים יופיעו כאן לאחר שתרומתם הראשונה תשולם.</span></div> }
+    </aside>
+  </div>
+}

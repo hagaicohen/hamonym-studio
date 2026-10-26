@@ -1,102 +1,46 @@
-<div class="plat-page">
-
-  @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else {
-
-  <div class="plat-header">
-    <h1 class="plat-title">שותפים</h1>
-  </div>
-
-  <div class="plat-filters">
-    <input
-      class="plat-search"
-      type="search"
-      placeholder="חיפוש לפי שם שותף..."
-      [(ngModel)]="searchQuery"
-      (input)="onSearch()"
-    />
-    <app-column-picker [columns]="columns" storageKey="platformColumns_partners" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
-  </div>
-
-  <div class="plat-chips">
-    <button class="plat-chip" [class.active]="activeChip === 'no_campaigns'" (click)="selectChip('no_campaigns')">
-      <span class="plat-chip-dot">🔵</span> ללא קמפיינים
-    </button>
-    <button class="plat-chip" [class.active]="activeChip === 'new_week'" (click)="selectChip('new_week')">
-      <span class="plat-chip-dot">🟣</span> חדשים השבוע
-    </button>
-    <button class="plat-chip" [class.active]="activeChip === 'hidden'" (click)="selectChip('hidden')">
-      <span class="plat-chip-dot">⚫</span> מוסתרים
-    </button>
-  </div>
-
-  <div class="plat-card">
-    @if (loading) {
-      <div class="plat-loading">טוען...</div>
-    } @else if (partners.length === 0) {
-      <div class="plat-empty">לא נמצאו שותפים</div>
-    } @else {
-      <div class="plat-table-wrap" [class.refreshing]="refreshing">
-        <table class="plat-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th class="sortable" (click)="sortBy('name')">שם השותף</th>
-              @if (visibleColumns.has('website')) { <th>קישור בקמפיין</th> }
-              @if (visibleColumns.has('owner')) { <th>מנהל</th> }
-              @if (visibleColumns.has('campaigns')) { <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th> }
-              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th> }
-              @if (visibleColumns.has('activity')) { <th>פעילות אחרונה</th> }
-              @if (visibleColumns.has('hidden')) { <th>מוסתר</th> }
-            </tr>
-          </thead>
-          <tbody>
-            @for (p of partners; track p.id) {
-              <tr class="plat-row plat-row--static">
-                <td class="plat-logo-cell">
-                  @if (p.logo_url) {
-                    <img [src]="p.logo_url" class="plat-logo" alt="" />
-                  } @else {
-                    <div class="plat-logo-placeholder">{{ partnerName(p).charAt(0) }}</div>
-                  }
-                </td>
-                <td data-label="שם השותף">{{ partnerName(p) }}</td>
-                @if (visibleColumns.has('website')) {
-                  <td data-label="קישור בקמפיין">
-                    @if (partnerLink(p); as link) {
-                      <a [href]="link" target="_blank" rel="noopener" class="plat-link" dir="ltr" [title]="link" (click)="$event.stopPropagation()">{{ link }}</a>
-                    } @else { — }
-                  </td>
-                }
-                @if (visibleColumns.has('owner')) {
-                  <td data-label="מנהל">{{ p.owner_name || '—' }}</td>
-                }
-                @if (visibleColumns.has('campaigns')) { <td data-label="קמפיינים">{{ p.campaigns_count }}</td> }
-                @if (visibleColumns.has('created_at')) { <td data-label="תאריך הרשמה">{{ fmtDate(p.created_at) }}</td> }
-                @if (visibleColumns.has('activity')) { <td data-label="פעילות אחרונה">{{ relativeTime(p.updated_at) }}</td> }
-                @if (visibleColumns.has('hidden')) {
-                  <td data-label="מוסתר">
-                    @if (p.is_hidden) { <span class="plat-status status-suspended">מוסתר</span> } @else { — }
-                  </td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
+<main class="plat-page" dir="rtl">
+  <header class="plat-header"><div><h1 class="plat-title">שותפים</h1><p class="plat-subtitle">שותפים המשויכים לקמפיינים, מנהלים ונראות</p></div><span class="cell-secondary">{{ total | number }} שותפים</span></header>
+  <div class="plat-filters"><label class="sr-only" for="partner-search">חיפוש שותפים</label><input id="partner-search" class="plat-search" type="search" placeholder="חיפוש לפי שם שותף" [(ngModel)]="searchQuery" (input)="onSearch()" /><app-column-picker [columns]="columns" storageKey="platformColumns_partners" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker></div>
+  <nav class="plat-chips" aria-label="סינון שותפים">
+    <button class="plat-chip" [class.active]="!activeChip" [attr.aria-pressed]="!activeChip" (click)="activeChip = null; page = 0; load()">הכול</button>
+    <button class="plat-chip" [class.active]="activeChip === 'no_campaigns'" [attr.aria-pressed]="activeChip === 'no_campaigns'" (click)="selectChip('no_campaigns')">ללא קמפיינים</button>
+    <button class="plat-chip" [class.active]="activeChip === 'new_week'" [attr.aria-pressed]="activeChip === 'new_week'" (click)="selectChip('new_week')">חדשים השבוע</button>
+    <button class="plat-chip" [class.active]="activeChip === 'hidden'" [attr.aria-pressed]="activeChip === 'hidden'" (click)="selectChip('hidden')">מוסתרים מגילוי ציבורי</button>
+    @if (hasFilters) { <button class="text-button" (click)="clearFilters()">נקה סינון</button> }
+  </nav>
+  @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
+  <section class="plat-card" [attr.aria-busy]="loading || refreshing" aria-label="רשימת שותפים">
+    @if (loading) { <div class="plat-loading" role="status">טוען שותפים…</div> }
+    @else if (partners.length === 0 && !error) { <div class="plat-empty"><strong>{{ hasFilters ? 'אין שותפים התואמים לסינון' : 'עדיין אין שותפים במערכת' }}</strong><span>{{ hasFilters ? 'ניתן לשנות את החיפוש או לנקות את הסינון.' : 'שותפים שייווצרו דרך כלי השותפים הקיימים יוצגו כאן.' }}</span>@if (hasFilters) { <button class="text-button" (click)="clearFilters()">הצג את כל השותפים</button> }</div> }
+    @else if (partners.length) {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing" tabindex="0" aria-label="טבלת שותפים; ניתן לגלול לרוחב">
+        <table class="plat-table"><thead><tr>
+          <th scope="col"><button (click)="sortBy('name')">שם השותף {{ sortField === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th>
+          @if (visibleColumns.has('owner')) { <th scope="col">מנהל</th> }
+          @if (visibleColumns.has('campaigns')) { <th scope="col"><button (click)="sortBy('campaigns')">קמפיינים {{ sortField === 'campaigns' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
+          @if (visibleColumns.has('website')) { <th scope="col">שיוך לקמפיין</th> }
+          @if (visibleColumns.has('hidden')) { <th scope="col">נראות</th> }
+          @if (visibleColumns.has('created_at')) { <th scope="col"><button (click)="sortBy('created_at')">תאריך הרשמה {{ sortField === 'created_at' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
+          @if (visibleColumns.has('activity')) { <th scope="col">עדכון פרטים אחרון</th> }
+          <th scope="col">פעולות</th>
+        </tr></thead><tbody>
+          @for (p of partners; track p.id) { <tr class="plat-row">
+            <td><div class="name-cell">@if (p.logo_url) { <img class="plat-logo" [src]="p.logo_url" alt="" /> } @else { <span class="plat-logo-placeholder" aria-hidden="true">{{ partnerName(p).charAt(0) }}</span> }<button class="text-button" (click)="selectedPartner = p">{{ partnerName(p) }}</button></div></td>
+            @if (visibleColumns.has('owner')) { <td>{{ p.owner_name || '—' }}</td> }
+            @if (visibleColumns.has('campaigns')) { <td class="numeric">{{ p.campaigns_count }}</td> }
+            @if (visibleColumns.has('website')) { <td>@if (partnerLink(p); as link) { <a [href]="link" target="_blank" rel="noopener">צפייה בקמפיין משויך ↗</a> } @else { <span class="cell-secondary">ללא עמוד קמפיין זמין</span> }</td> }
+            @if (visibleColumns.has('hidden')) { <td><span class="plat-status" [class.status-warning]="p.is_hidden">{{ p.is_hidden ? 'מוסתר מגילוי ציבורי' : 'גלוי' }}</span></td> }
+            @if (visibleColumns.has('created_at')) { <td><time dir="ltr" [attr.datetime]="p.created_at">{{ fmtDate(p.created_at) }}</time></td> }
+            @if (visibleColumns.has('activity')) { <td><time dir="ltr" [attr.datetime]="p.updated_at" [title]="relativeTime(p.updated_at)">{{ fmtDate(p.updated_at) }}</time></td> }
+            <td><button class="secondary-button" (click)="selectedPartner = p">פרטים</button></td>
+          </tr> }
+        </tbody></table>
       </div>
-
-      <div class="plat-footer">
-        <span>{{ total }} שותפים</span>
-        <div class="plat-pager">
-          <button (click)="prevPage()" [disabled]="page === 0">←</button>
-          <span>{{ page + 1 }} / {{ totalPages }}</span>
-          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
-        </div>
-      </div>
+      <footer class="plat-footer"><span>{{ total | number }} שותפים</span><nav class="plat-pager" aria-label="דפדוף שותפים"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page >= totalPages - 1 || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
     }
-  </div>
-
-  }
-
-</div>
+  </section>
+  @if (selectedPartner; as partner) { <app-admin-details-drawer [heading]="partnerName(partner)" (closed)="selectedPartner = null">
+    <dl class="detail-grid"><dt>סוג שיוך</dt><dd>שותף בקמפיינים</dd><dt>מנהל</dt><dd>{{ partner.owner_name || '—' }}</dd><dt>אימייל מנהל</dt><dd dir="ltr">{{ partner.owner_email || '—' }}</dd><dt>קמפיינים משויכים</dt><dd>{{ partner.campaigns_count }}</dd><dt>נראות</dt><dd>{{ partner.is_hidden ? 'מוסתר מגילוי ציבורי' : 'גלוי' }}</dd><dt>הצטרפות</dt><dd dir="ltr">{{ fmtDate(partner.created_at) }}</dd><dt>עדכון פרטים אחרון</dt><dd dir="ltr">{{ fmtDate(partner.updated_at) }}</dd></dl>
+    @if (partnerLink(partner); as link) { <div class="detail-section"><a [href]="link" target="_blank" rel="noopener">פתח קמפיין משויך ↗</a></div> }
+  </app-admin-details-drawer> }
+</main>

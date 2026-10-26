@@ -27,6 +27,13 @@
   }
 
   <div class="public-preview-wrap">
+    @if (goalAchieved) {
+      <section class="campaign-goal-success" [class.is-celebrating]="celebratingGoal" dir="rtl" aria-label="יעד הקמפיין הושג">
+        <div class="campaign-goal-title"><span aria-hidden="true">✓</span><strong>הגענו ליעד! בזכותכם!</strong></div>
+        <p>גויסו ₪{{ state.draft.currentAmount | number:'1.0-2' }} מתוך יעד של ₪{{ state.draft.targetAmount | number:'1.0-2' }}</p>
+        <div class="campaign-goal-progress" role="progressbar" aria-label="יעד הגיוס הושג" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span></span></div>
+      </section>
+    }
     @if (isMinimalFormat) {
       <app-minimal-donation-page [ambassador]="currentAmbassador" />
     } @else {
@@ -34,6 +41,15 @@
     }
   </div>
 }
+
+@if (celebratingGoal) {
+  <div class="campaign-goal-confetti" aria-hidden="true">
+    @for (piece of goalConfetti; track $index) {
+      <span [style.left.%]="piece.left" [style.background-color]="piece.color" [style.animation-delay.s]="piece.delay" [style.--goal-confetti-drift]="piece.drift + 'px'"></span>
+    }
+  </div>
+}
+<span class="campaign-goal-announcement" role="status" aria-live="polite">{{ celebratingGoal ? 'הגענו ליעד! בזכותכם!' : '' }}</span>
 
 <app-payment-failed-popup
   *ngIf="showFailedPopup"
