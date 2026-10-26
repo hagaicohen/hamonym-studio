@@ -106,20 +106,6 @@ exports.getRewardCounts = async (req, res) => {
   }
 };
 
-exports.mockComplete = async (req, res) => {
-  if (require('../payment/donation-provider').getDonationProvider().name !== 'mock') {
-    return res.status(403).json({ error: 'Mock payments are disabled' });
-  }
-  try {
-    const { id, status, session } = req.body;
-    if (!id || !status) return res.status(400).json({ error: 'id and status are required' });
-    const result = await donationsService.handleMockComplete({ donationId: id, status, session });
-    res.json({ redirectUrl: result.redirectUrl });
-  } catch (err) {
-    console.error('mockComplete error:', err.message);
-    res.status(err.status || 500).json({ error: err.message });
-  }
-};
 
 
 exports.getEntityDonations = async (req, res) => {
