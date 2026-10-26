@@ -1,3 +1,4 @@
+const { captureInitializationFailure, readFailureDiagnostic } = require('./failure-diagnostics');
 ﻿const db    = require('../../db/db');
 const { getDonationProvider } = require('../payment/donation-provider');
 const emailService = require('../email/email.service');
@@ -599,12 +600,12 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   try {
     cardcomData = await getDonationProvider().createLowProfile(payload);
   } catch (err) {
-    await db.query(`UPDATE donations SET status='failed', updated_at=NOW() WHERE id=$1`, [donationId]);
+    await db.query(`UPDATE donations SET status='failed', failure_reason=$2, updated_at=NOW() WHERE id=$1`, [donationId, captureInitializationFailure({ code: err.response?.data?.ResponseCode, connectionFailure: ['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'ECONNABORTED'].includes(err.code) })]);
     throw new Error(err.response?.data?.Description || 'Cardcom connection failed');
   }
 
   if (cardcomData.ResponseCode !== 0) {
-    await db.query(`UPDATE donations SET status='failed', updated_at=NOW() WHERE id=$1`, [donationId]);
+    await db.query(`UPDATE donations SET status='failed', failure_reason=$2, updated_at=NOW() WHERE id=$1`, [donationId, captureInitializationFailure({ code: cardcomData.ResponseCode })]);
     throw new Error(cardcomData.Description || `Cardcom error ${cardcomData.ResponseCode}`);
   }
 
@@ -1014,6 +1015,7 @@ exports.getCampaignDonors = async (slug, period) => {
    HANDLE MOCK PAYMENT COMPLETION (dev only)
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
 
+
 /* ─────────────────────────────────────────
    ENTITY DONATIONS PAGE (authenticated)
 ───────────────────────────────────────── */
@@ -1166,7 +1168,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
 // exposing every donor's contact info platform-wide is a materially
 // different privacy posture than one entity seeing its own donors -- out of
 // scope for this pass; donor_name is enough to identify a case.
-exports.getPlatformDonations = async ({ status, entityId, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
+exports.getPlatformDonations = async ({ status, entityId, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25, dateFrom, dateTo, recurring, paymentMethod }) => {
   const where  = ['d.is_mock = false'];
   const params = [];
   let idx = 1;
@@ -1201,17 +1203,24 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
     params.push(campaignId);
   }
   if (search) {
-    where.push(`(d.donor_name ILIKE $${idx} OR c.title ILIKE $${idx} OR e.display_name ILIKE $${idx})`);
+    where.push(`(d.donor_name ILIKE $${idx} OR c.title ILIKE $${idx} OR e.display_name ILIKE $${idx} OR d.donor_email ILIKE $${idx} OR d.id::text ILIKE $${idx} OR d.provider_reference::text ILIKE $${idx})`);
     params.push(`%${search}%`);
     idx++;
   }
 
+  const methodSql = "CASE WHEN d.source IS NOT NULL THEN d.source WHEN d.low_profile_id IS NOT NULL OR d.recurring_instruction_id IS NOT NULL THEN 'card' ELSE NULL END";
+  for (const [value, operator] of [[dateFrom, '>='], [dateTo, '<=']]) {
+    if (value) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('תאריך לא תקין'); where.push(`(d.created_at AT TIME ZONE 'Asia/Jerusalem')::date ${operator} $${idx++}::date`); params.push(value); }
+  }
+  if (recurring === 'true' || recurring === 'false') where.push(`d.recurring_instruction_id IS ${recurring === 'true' ? 'NOT ' : ''}NULL`);
+  if (paymentMethod) { where.push(`(${methodSql}) = $${idx++}`); params.push(paymentMethod); }
   const whereStr = where.join(' AND ');
 
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.status, d.completed_at, d.created_at,
-              d.is_anonymous, d.failure_reason,
+              d.is_anonymous, d.failure_reason, (${methodSql}) AS payment_method,
+              (SELECT r.id FROM receipts r WHERE r.donation_id = d.id ORDER BY r.issued_at DESC, r.id LIMIT 1) AS receipt_id,
               (d.recurring_instruction_id IS NOT NULL) AS is_recurring,
               c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
               e.id AS entity_id, e.display_name AS entity_name
@@ -1219,15 +1228,21 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
        JOIN campaigns c ON c.id = d.campaign_id
        JOIN entities  e ON e.id = d.entity_id
        WHERE ${whereStr}
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, d.id
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, page * limit]
     ),
-    db.query(`SELECT count(*)::int AS total FROM donations d JOIN campaigns c ON c.id = d.campaign_id JOIN entities e ON e.id = d.entity_id WHERE ${whereStr}`, params),
+    db.query(`SELECT count(*)::int AS total,
+      COUNT(*) FILTER (WHERE d.status = 'paid')::int AS paid_count,
+      COUNT(*) FILTER (WHERE d.status = 'failed')::int AS failed_count,
+      COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS paid_amount
+      FROM donations d JOIN campaigns c ON c.id = d.campaign_id JOIN entities e ON e.id = d.entity_id WHERE ${whereStr}`, params),
   ]);
 
   return {
-    donations: listRes.rows,
+    adminListVersion: 1,
+    donations: listRes.rows.map(row => ({ ...row, failure_reason: null, failure_diagnostic: row.status === 'failed' ? readFailureDiagnostic(row.failure_reason) : null })),
+    summary: { paidAmount: totalRes.rows[0].paid_amount, paidCount: totalRes.rows[0].paid_count, failedCount: totalRes.rows[0].failed_count },
     total: totalRes.rows[0].total,
     page,
     limit,
@@ -1490,3 +1505,14 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
+
+// Super Admin-only read projection; never return raw legacy failure text.
+exports.getPlatformDonationDiagnostics = async (donationId) => {
+  const result = await db.query(
+    `SELECT d.id, d.status, d.failure_reason,
+            (SELECT r.id FROM receipts r WHERE r.donation_id=d.id LIMIT 1) AS receipt_id
+     FROM donations d WHERE d.id=$1`, [donationId]);
+  const row = result.rows[0];
+  return row ? { id: row.id, status: row.status, receipt_id: row.receipt_id || null,
+    failure_diagnostic: row.status === 'failed' ? readFailureDiagnostic(row.failure_reason) : null } : null;
+};

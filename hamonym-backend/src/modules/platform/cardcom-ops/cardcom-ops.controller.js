@@ -131,8 +131,8 @@ exports.listDonations = async (req, res) => {
   try {
     const page = parseInt(req.query.page || '0', 10);
     const limit = parseInt(req.query.limit || '25', 10);
-    const { status, entityId, campaignId, period, search, sortBy, sortDir } = req.query;
-    const result = await donationsService.getPlatformDonations({ status, entityId, campaignId, period, search, sortBy, sortDir, page, limit });
+    const { status, entityId, campaignId, period, search, sortBy, sortDir, dateFrom, dateTo, recurring, paymentMethod } = req.query;
+    const result = await donationsService.getPlatformDonations({ status, entityId, campaignId, period, search, sortBy, sortDir, page, limit, dateFrom, dateTo, recurring, paymentMethod });
     res.json(result);
   } catch (err) {
     console.error('[cardcom-ops.listDonations]', err.message);
@@ -152,5 +152,18 @@ exports.resolveFinding = async (req, res) => {
   } catch (err) {
     console.error('[cardcom-ops.resolveFinding]', err.message);
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getDonationDetails = async (req, res) => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid donation ID' });
+  }
+  try {
+    const donation = await donationsService.getPlatformDonationDiagnostics(req.params.id);
+    if (!donation) return res.status(404).json({ error: 'Not found' });
+    res.json(donation);
+  } catch {
+    res.status(500).json({ error: 'Unable to load donation details' });
   }
 };

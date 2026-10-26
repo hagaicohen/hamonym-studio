@@ -961,7 +961,7 @@ exports.hardDeleteEntity = async (entityId, superAdminUserId, notes, ip) => {
   return { success: true, entityName: deletedEntityName };
 };
 
-exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page = 0, limit = 25, showDeleted, featuredOnly }) => {
+exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page = 0, limit = 25, showDeleted, featuredOnly, dateFrom, dateTo }) => {
   const where = [];
   const params = [];
   let idx = 1;
@@ -977,7 +977,7 @@ exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page 
     params.push(entityId);
   }
   if (search) {
-    where.push(`c.title ILIKE $${idx}`);
+    where.push(`(c.title ILIKE $${idx} OR e.display_name ILIKE $${idx})`);
     params.push(`%${search}%`);
     idx++;
   }
@@ -985,20 +985,24 @@ exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page 
     where.push(`c.is_featured = true`);
   }
 
+  for (const [value, operator] of [[dateFrom, '>='], [dateTo, '<=']]) {
+    if (value) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('תאריך לא תקין'); where.push(`(c.created_at AT TIME ZONE 'Asia/Jerusalem')::date ${operator} $${idx++}::date`); params.push(value); }
+  }
   const whereStr = `WHERE ${where.join(' AND ')}`;
-  const sortCol = CAMPAIGN_SORT_COLUMNS[sortBy] || 'c.created_at';
+  const readSort = { ...CAMPAIGN_SORT_COLUMNS, end_date: 'c.end_date', progress: 'CASE WHEN c.target_amount > 0 THEN c.current_amount / c.target_amount ELSE 0 END' };
+  const sortCol = readSort[sortBy] || 'c.created_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
          c.id, c.title, c.slug, c.status, c.current_amount, c.target_amount, c.supporters_count,
-         c.is_featured, c.is_locked, c.deleted_at, c.created_at,
+         c.is_featured, c.is_locked, c.deleted_at, c.created_at, c.end_date,
          e.id AS entity_id, e.display_name AS entity_name
        FROM campaigns c
        JOIN entities e ON e.id = c.entity_id
        ${whereStr}
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, c.id
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, page * limit]
     ),
@@ -1009,6 +1013,7 @@ exports.getCampaigns = async ({ search, status, entityId, sortBy, sortDir, page 
   ]);
 
   return {
+    adminListVersion: 1,
     campaigns: listRes.rows,
     total: totalRes.rows[0].total,
     page,
@@ -1200,7 +1205,7 @@ exports.getRoles = async () => {
   return res.rows;
 };
 
-exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, limit = 25 }) => {
+exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, limit = 25, entityId, superAdminOnly }) => {
   const where = [];
   const params = [];
   let idx = 1;
@@ -1224,6 +1229,8 @@ exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, l
     idx++;
   }
 
+  if (entityId) { where.push(`EXISTS (SELECT 1 FROM user_entities ue WHERE ue.user_id = u.id AND ue.entity_id = $${idx++})`); params.push(entityId); }
+  if (superAdminOnly) where.push('u.is_super_admin = true');
   const whereStr = `WHERE ${where.join(' AND ')}`;
   const sortCol = USER_SORT_COLUMNS[sortBy] || 'u.created_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
@@ -1234,14 +1241,17 @@ exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, l
          u.id, u.email, u.full_name, u.phone, u.role_id, r.name AS role_name,
          u.is_active, u.is_super_admin, u.email_verified, u.last_login_at,
          u.created_at, u.deleted_at, u.platform_permissions,
-         COALESCE(ec.entities_count, 0) AS entities_count
+         COALESCE(ec.entities_count, 0) AS entities_count,
+         COALESCE(ec.entities, '[]'::json) AS entities
        FROM users u
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN LATERAL (
-         SELECT COUNT(*)::int AS entities_count FROM user_entities ue WHERE ue.user_id = u.id
+         SELECT COUNT(*)::int AS entities_count,
+           json_agg(json_build_object('entity_id', e.id, 'entity_name', e.display_name, 'role', ue.role) ORDER BY e.display_name, e.id) AS entities
+         FROM user_entities ue JOIN entities e ON e.id = ue.entity_id WHERE ue.user_id = u.id
        ) ec ON true
        ${whereStr}
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, u.id
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, page * limit]
     ),
@@ -1251,7 +1261,7 @@ exports.getUsers = async ({ search, roleId, status, sortBy, sortDir, page = 0, l
     ),
   ]);
 
-  return { users: listRes.rows, total: totalRes.rows[0].total, page, limit };
+  return { adminListVersion: 1, users: listRes.rows, total: totalRes.rows[0].total, page, limit };
 };
 
 exports.getUserDetail = async (userId) => {

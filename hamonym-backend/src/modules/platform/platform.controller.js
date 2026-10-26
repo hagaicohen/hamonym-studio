@@ -164,10 +164,10 @@ exports.getCampaigns = async (req, res) => {
   try {
     const page = parseInt(req.query.page || '0', 10);
     const limit = parseInt(req.query.limit || '25', 10);
-    const { search, status, entityId, sortBy, sortDir } = req.query;
+    const { search, status, entityId, sortBy, sortDir, dateFrom, dateTo } = req.query;
     const showDeleted = req.query.showDeleted === '1' || req.query.showDeleted === 'true';
     const featuredOnly = req.query.featuredOnly === '1' || req.query.featuredOnly === 'true';
-    const result = await svc.getCampaigns({ search, status, entityId, sortBy, sortDir, page, limit, showDeleted, featuredOnly });
+    const result = await svc.getCampaigns({ search, status, entityId, sortBy, sortDir, page, limit, showDeleted, featuredOnly, dateFrom, dateTo });
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -270,9 +270,10 @@ exports.getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page || '0', 10);
     const limit = parseInt(req.query.limit || '25', 10);
-    const { search, status, sortBy, sortDir } = req.query;
+    const { search, status, sortBy, sortDir, entityId } = req.query;
+    const superAdminOnly = req.query.superAdminOnly === '1' || req.query.superAdminOnly === 'true';
     const roleId = req.query.roleId ? parseInt(req.query.roleId, 10) : undefined;
-    const result = await svc.getUsers({ search, roleId, status, sortBy, sortDir, page, limit });
+    const result = await svc.getUsers({ search, roleId, status, sortBy, sortDir, page, limit, entityId, superAdminOnly });
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
