@@ -68,3 +68,20 @@ h1 {
 app-campaign-editor lucide-angular {
   margin-top: 5px;
 }
+
+/* Shared interaction affordances; disabled controls retain their own styling. */
+:is(button, a[href], [role="button"], input[type="button"], input[type="submit"], select, summary):not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(button, a[href], [role="button"], input[type="button"], input[type="submit"], summary):not(:disabled):not([aria-disabled="true"]):hover {
+    filter: brightness(.94);
+  }
+}
+
+:is(button, a[href], [role="button"], input, select, textarea, summary):focus-visible {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 3px;
+}

@@ -26,8 +26,8 @@
       <div class="amounts-grid">
         <div class="amount-chip" *ngFor="let a of draft.suggestedAmounts; let i = index">
           <span class="amount-currency">₪</span>
-          <input type="number" class="amount-input" [value]="a" min="1"
-            (change)="updateAmount(i, +$any($event.target).value)">
+          <input type="text" appMoneyInput class="amount-input" [ngModel]="a" min="1"
+            [ngModelOptions]="{standalone: true, updateOn: 'blur'}" (ngModelChange)="updateAmount(i, $event)">
           <button class="amount-remove" *ngIf="draft.suggestedAmounts.length > 1"
             (click)="removeAmount(i)">✕</button>
         </div>
@@ -66,8 +66,8 @@
       <div class="amounts-grid">
         <div class="amount-chip" *ngFor="let a of draft.monthlyAmounts; let i = index">
           <span class="amount-currency">₪</span>
-          <input type="number" class="amount-input" [value]="a" min="1"
-            (change)="updateMonthlyAmount(i, +$any($event.target).value)">
+          <input type="text" appMoneyInput class="amount-input" [ngModel]="a" min="1"
+            [ngModelOptions]="{standalone: true, updateOn: 'blur'}" (ngModelChange)="updateMonthlyAmount(i, $event)">
           <button class="amount-remove" *ngIf="draft.monthlyAmounts.length > 1"
             (click)="removeMonthlyAmount(i)">✕</button>
         </div>

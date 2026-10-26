@@ -93,6 +93,12 @@ export class CampaignSettingsPageComponent implements OnInit {
     this.persist();
   }
 
+  formatTargetInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/[^0-9]/g, '');
+    input.value = digits ? Number(digits).toLocaleString('he-IL') : '';
+  }
+
   patchTarget(value: string): void {
     if (!this.draft) return;
     const n = Number(value.replace(/[^0-9]/g, '')) || 0;

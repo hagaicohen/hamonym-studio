@@ -917,7 +917,7 @@
               }
 
               <div class="bo-drawer-actions" style="flex-direction: column; align-items: stretch; gap: 8px;">
-                <input type="number" step="0.01" placeholder="סכום תיקון (חיובי להוספה, שלילי לזיכוי)"
+                <input type="text" appMoneyInput placeholder="סכום תיקון (חיובי להוספה, שלילי לזיכוי)"
                        [(ngModel)]="adjustAmount" [disabled]="adjustBusy" />
                 <input type="text" placeholder="הערה (חובה) — הסבר התיקון"
                        [(ngModel)]="adjustReason" [disabled]="adjustBusy" />

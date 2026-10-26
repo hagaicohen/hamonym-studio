@@ -450,6 +450,7 @@
 }
 
 .alert-action-btn {
+  cursor: pointer;
   padding: 5px 12px;
   border-radius: 7px;
   font-size: 12px;
@@ -711,6 +712,10 @@
 }
 
 @media (max-width: 768px) {
+  .alert-row { gap: 12px; flex-wrap: wrap; }
+  .alert-main { flex: 1 1 190px; }
+  .alert-title, .alert-desc { white-space: normal; overflow-wrap: anywhere; }
+  .alert-action-btn { min-height: 44px; min-width: 64px; margin-right: 0; }
   .db               { padding: 20px 16px; }
   .kpi-grid         { grid-template-columns: 1fr; }
   .kpi-value        { font-size: 26px; }

@@ -342,7 +342,7 @@
               @if (showAdjustment) {
                 <div class="col-exceptional-body">
                   <p class="col-note">משנה את הסכום לחיוב בלבד — אינו גובה כסף בעצמו.</p>
-                  <input type="number" [(ngModel)]="adjustAmount" placeholder="סכום (חיובי=הוספה, שלילי=זיכוי)" />
+                  <input type="text" appMoneyInput [(ngModel)]="adjustAmount" placeholder="סכום (חיובי=הוספה, שלילי=זיכוי)" />
                   <textarea [(ngModel)]="adjustReason" placeholder="נדרשת הערה"></textarea>
                   <button class="col-btn" [disabled]="drawerActionBusy || adjustAmount === null" (click)="applyAdjustmentAction()">שמור תיקון</button>
                 </div>

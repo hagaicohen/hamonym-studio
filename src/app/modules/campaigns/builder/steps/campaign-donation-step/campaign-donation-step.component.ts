@@ -1,3 +1,5 @@
+import { FormsModule } from '@angular/forms';
+import { MoneyInputDirective } from '../../../../../shared/directives/money-input.directive';
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -8,7 +10,7 @@ import {
 @Component({
   selector: 'app-campaign-donation-step',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, MoneyInputDirective],
   templateUrl: './campaign-donation-step.component.html',
   styleUrl: './campaign-donation-step.component.css',
 })

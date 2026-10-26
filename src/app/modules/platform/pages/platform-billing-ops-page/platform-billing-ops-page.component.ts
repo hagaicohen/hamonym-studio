@@ -1,3 +1,4 @@
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -188,7 +189,7 @@ const HE_MONTH_NAMES = [
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent, ColumnPickerComponent],
+  imports: [CommonModule, FormsModule, MoneyInputDirective, RouterModule, BillingEntitySetupComponent, ColumnPickerComponent],
   templateUrl: './platform-billing-ops-page.component.html',
   styleUrl: './platform-billing-ops-page.component.css',
 })

@@ -1,3 +1,4 @@
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +13,7 @@ import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador
 @Component({
   selector: 'app-ambassador-studio-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [CommonModule, FormsModule, MoneyInputDirective, HttpClientModule, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './ambassador-studio-page.component.html',
   styleUrls: ['./ambassador-studio-page.component.css'],
 })

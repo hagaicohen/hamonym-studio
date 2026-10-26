@@ -1,3 +1,4 @@
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -41,7 +42,7 @@ type ReportPeriodMode = 'period' | 'range' | 'all';
 @Component({
   selector: 'app-platform-collection-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
+  imports: [CommonModule, FormsModule, MoneyInputDirective, RouterModule, EntityComboboxComponent],
   templateUrl: './platform-collection-ops-page.component.html',
   styleUrl: './platform-collection-ops-page.component.css',
 })
