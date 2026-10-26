@@ -8,19 +8,25 @@ const axios = require('axios');
 // ReturnValue, Document) and still owns every decision about it — this
 // module only puts it on the wire.
 //
-// The axios error is deliberately NOT caught or wrapped here: createDonation
-// marks the donation 'failed' and then reads `err.response?.data?.Description`
-// off the raw axios error. Catching it here would change the error shape
-// business logic already pattern-matches on.
+// Log only diagnostic codes; rethrow the identical error for existing handling.
 const CARDCOM_CREATE_URL = 'https://secure.cardcom.solutions/api/v11/LowProfile/Create';
 
 exports.CARDCOM_CREATE_URL = CARDCOM_CREATE_URL;
 
 exports.createLowProfile = async (payload) => {
-  const response = await axios.post(CARDCOM_CREATE_URL, payload, {
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 15000,
-  });
-
-  return response.data;
+  try {
+    const response = await axios.post(CARDCOM_CREATE_URL, payload, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 15000,
+    });
+    return response.data;
+  } catch (error) {
+    const responseCode = error.response?.data?.ResponseCode;
+    console.error('[CardCom LowProfile/Create] request failed', {
+      code: typeof error.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code) ? error.code : 'UNKNOWN',
+      httpStatus: Number.isInteger(error.response?.status) ? error.response.status : null,
+      providerCode: /^-?\d{1,8}$/.test(String(responseCode)) ? Number(responseCode) : null,
+    });
+    throw error;
+  }
 };
