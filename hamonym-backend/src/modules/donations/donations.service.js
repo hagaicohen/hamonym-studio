@@ -1174,6 +1174,7 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.status, d.completed_at, d.created_at,
               d.is_anonymous, d.failure_reason,
+              (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               (d.recurring_instruction_id IS NOT NULL) AS is_recurring,
               c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
               e.id AS entity_id, e.display_name AS entity_name

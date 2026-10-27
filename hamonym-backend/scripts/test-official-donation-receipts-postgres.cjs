@@ -86,6 +86,13 @@ async function api(method,route,body,token) {
  assert.equal((await api('GET','/api/donations/receipt/'+receipt.id+'/pdf',null,token)).status,404);
  assert.equal((await api('GET','/api/donations/my',null,token)).body.donations.length,0);
  const prior=(await db.query("INSERT INTO donations(campaign_id,entity_id,amount,status,donor_email) VALUES($1,$2,25,'pending',$3) RETURNING id",[campaign.id,campaign.entity_id,emailAddress])).rows[0].id;
+ // Admin list must expose the same receipt as donor history without dropping unreceipted donations.
+ const adminPaid=await donations.getPlatformDonations({campaignId:campaign.id,status:'paid',limit:1000});
+ assert.equal(adminPaid.donations.find(d=>d.id===current.id).receipt_id,receipt.id);
+ assert.equal(new Set(adminPaid.donations.map(d=>d.id)).size,adminPaid.donations.length);
+ const adminPending=await donations.getPlatformDonations({campaignId:campaign.id,status:'pending',limit:1000});
+ assert.equal(adminPending.donations.find(d=>d.id===prior).receipt_id,null);
+ assert.equal(adminPaid.total,(await db.query("SELECT count(*)::int AS n FROM donations WHERE campaign_id=$1 AND status='paid'",[campaign.id])).rows[0].n);
  const request=await api('POST','/auth/me/donation-verification',{},token);assert.equal(request.status,200);
  const verification=new URL(emailed.data.verificationUrl).searchParams.get('verification');
  const stored=(await db.query('SELECT donation_verification_hash FROM users WHERE id=$1',[owner.body.user.id])).rows[0].donation_verification_hash;
@@ -184,7 +191,7 @@ async function api(method,route,body,token) {
  await db.query('UPDATE users SET email=$2 WHERE id=$1',[owner.body.user.id,'changed-'+crypto.randomUUID()+'@example.invalid']);
  assert.equal((await api('GET','/api/donations/my',null,token)).body.donations.length,0);
  assert.equal((await api('GET','/api/donations/receipt/'+receipt.id+'/pdf',null,token)).status,404);
- console.log(JSON.stringify({result:'PASS',database:process.env.DB_NAME,checkoutTerminal:200266,realProviderWithFixtureTransport:true,verifiedPayment:true,officialPdfBytesUnchanged:true,
+ console.log(JSON.stringify({result:'PASS',adminListReceiptAssociation:true,unreceiptedDonationsPreserved:true,database:process.env.DB_NAME,checkoutTerminal:200266,realProviderWithFixtureTransport:true,verifiedPayment:true,officialPdfBytesUnchanged:true,
  donorOwnershipVerification:true,preVerificationSessionsRejected:true,scopedProofRotation:true,passwordHashUnchanged:true,jwtExpiryPreserved:true,currentOwnershipChecked:true,guestHistoryLinked:true,secondPaidDonationInHistory:true,changedEmailRejected:true,singleUseToken:true,wrongAccountRejected:true,donorAndOrganizationAndSuperAdminAuthorization:true,
  duplicateDocumentPrevented:true,recurringIndividualReceipt:true,recurringAmountMismatchRejected:true,cancelledDocumentNotResurrected:true,paymentUnaffectedByDocumentFailure:true,externalPaymentCalls:0}));
 })().catch(error=>{console.error('FAIL',error.code||'',error.message,error.stack);process.exitCode=1;}).finally(async()=>{
