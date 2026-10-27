@@ -408,12 +408,14 @@ function toDateOnlyIsoString(value) {
 // since pauseRecurring/resumeRecurring/cancelRecurring themselves take no
 // donor context at all — that check has never existed anywhere until now
 // because nothing HTTP-reachable called them before.
-exports.verifyOwnership = async (instructionId, userId) => {
+exports.verifyOwnership = async (instructionId, userId, proof = null) => {
   const res = await db.query(
     `SELECT 1 FROM donations
      WHERE recurring_instruction_id = $1 AND donor_user_id = $2
+       AND EXISTS(SELECT 1 FROM users u WHERE u.id=$2 AND u.donation_proof_version::text=$3 AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email)
+         AND LOWER(u.email)=LOWER(donations.donor_email) AND u.is_active=true AND u.deleted_at IS NULL)
      LIMIT 1`,
-    [instructionId, userId]
+    [instructionId, userId, proof]
   );
   return res.rows.length > 0;
 };
@@ -428,7 +430,7 @@ exports.verifyOwnership = async (instructionId, userId) => {
 // with the exact same nextOccurrenceOfAnchorDay used by resumeRecurring
 // itself — one implementation, so the date a paused donor previews here is
 // guaranteed to match what an actual Resume would set.
-exports.getMyRecurringInstructions = async (userId) => {
+exports.getMyRecurringInstructions = async (userId, proof = null) => {
   const res = await db.query(
     `SELECT ri.id, ri.status, ri.amount, ri.next_date_to_bill, ri.total_installments,
             ri.billing_anchor_day, ri.cancelled_at, ri.created_at,
@@ -442,9 +444,11 @@ exports.getMyRecurringInstructions = async (userId) => {
      WHERE ri.id IN (
        SELECT DISTINCT recurring_instruction_id FROM donations
        WHERE donor_user_id = $1 AND recurring_instruction_id IS NOT NULL
+         AND EXISTS(SELECT 1 FROM users u WHERE u.id=$1 AND u.donation_proof_version::text=$2 AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email)
+           AND LOWER(u.email)=LOWER(donations.donor_email) AND u.is_active=true AND u.deleted_at IS NULL)
      )
      ORDER BY ri.created_at DESC`,
-    [userId]
+    [userId, proof]
   );
 
   // Same business instant the real resumeRecurring would use, so the

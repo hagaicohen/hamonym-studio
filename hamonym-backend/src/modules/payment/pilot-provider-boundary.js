@@ -9,9 +9,11 @@ function install(axios = require('axios')) {
       if (host === 'secure.cardcom.solutions' && [
         '/api/v11/LowProfile/Create',
         '/api/v11/LowProfile/GetLpResult',
+        '/api/v11/Documents/CreateDocumentUrl',
         '/interface/RecurringPayment.aspx',
         '/api/v11/RecuringPayments/GetRecurringPaymentHistory',
       ].includes(pathname)) return config;
+      if (host === 'secure.cardcom.solutions' && String(config.method).toLowerCase() === 'get' && /^(\/api\/v11\/documents\/DownloadDoc\/|\/Interface\/GetDocumentPDF.aspx)/i.test(pathname)) return config;
       throw Object.assign(new Error('פנייה אמיתית לקארדקום חסומה בשלב הבדיקות'), { code: 'REAL_PROVIDER_DISABLED_DURING_PILOT' });
     }
     return config;

@@ -24,7 +24,8 @@ async function finalizePaidDonation(donationId, client = db) {
     `UPDATE donations d
      SET donor_user_id = u.id
      FROM users u
-     WHERE d.id = $1 AND d.donor_user_id IS NULL AND LOWER(u.email) = LOWER(d.donor_email)`,
+     WHERE d.id = $1 AND d.donor_user_id IS NULL AND LOWER(u.email) = LOWER(d.donor_email)
+       AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email) AND u.is_active=true AND u.deleted_at IS NULL`,
     [donationId]
   );
 
@@ -78,38 +79,10 @@ async function withTransaction(fn) {
 // entity lookup below, not the send itself — emailService.queue is already
 // fire-and-forget and swallows its own errors, see email.service.js) must
 // not surface as if the payment had failed. Logged, not raised.
-async function queueReceiptEmail(receipt, donationId) {
-  if (!receipt) return;
-
-  try {
-    const detailsRes = await db.query(
-      `SELECT c.title AS campaign_title, e.display_name AS entity_name
-       FROM campaigns c JOIN entities e ON e.id = c.entity_id
-       WHERE c.id = $1`,
-      [receipt.campaign_id]
-    );
-    const details = detailsRes.rows[0] || {};
-    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-
-    emailService.queue({
-      template: 'receipt',
-      to: receipt.donor_email,
-      data: {
-        donorName: receipt.donor_name,
-        receiptNumber: receipt.receipt_number,
-        amount: receipt.amount,
-        campaignTitle: details.campaign_title,
-        entityName: details.entity_name,
-        receiptUrl: `${frontBase}/receipts/${receipt.id}`,
-      },
-      entityId: receipt.entity_id,
-      campaignId: receipt.campaign_id,
-      donationId,
-    });
-  } catch (err) {
-    console.error('[queueReceiptEmail] failed to queue receipt email:', err.message);
-  }
+async function queueReceiptEmail(_receipt, _donationId) {
+  // Historical receipt rows remain audit records. CardCom sends the official document.
 }
+
 exports.queueReceiptEmail = queueReceiptEmail;
 exports.withTransaction = withTransaction;
 
@@ -875,25 +848,11 @@ exports.getDonationPublic = async (donationId) => {
   return res.rows[0] || null;
 };
 
-exports.getReceipt = async (receiptId) => {
-  const res = await db.query(
-    `SELECT r.id, r.receipt_number, r.amount, r.donor_name, r.donor_email, r.issued_at,
-            c.title AS campaign_title,
-            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name,
-            d.note
-     FROM receipts r
-     JOIN campaigns c ON c.id = r.campaign_id
-     JOIN entities  e ON e.id = r.entity_id
-     JOIN donations d ON d.id = r.donation_id
-     WHERE r.id = $1`,
-    [receiptId]
-  );
-  return res.rows[0] || null;
-};
+exports.getReceipt = (receiptId, userId, proof = null) => require('./official-receipt.service').metadata(receiptId, userId, proof);
 
-exports.getMyDonations = async (userId) => {
+exports.getMyDonations = async (userId, proof = null) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note,
+    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note, d.status,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
             r.id AS receipt_id
@@ -901,9 +860,11 @@ exports.getMyDonations = async (userId) => {
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = d.entity_id
      LEFT JOIN receipts r ON r.donation_id = d.id
-     WHERE d.donor_user_id = $1 AND d.status = 'paid'
+     WHERE d.donor_user_id = $1
+       AND EXISTS(SELECT 1 FROM users u WHERE u.id=$1 AND u.donation_proof_version::text=$2 AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email)
+         AND LOWER(u.email)=LOWER(d.donor_email) AND u.is_active=true AND u.deleted_at IS NULL)
      ORDER BY d.completed_at DESC`,
-    [userId]
+    [userId, proof]
   );
   return res.rows;
 };
@@ -1095,6 +1056,7 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
               d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock, d.note,
+              (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id

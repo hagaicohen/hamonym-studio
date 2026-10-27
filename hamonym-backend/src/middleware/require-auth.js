@@ -37,7 +37,9 @@ module.exports =
 
         );
 
+      req.authClaims = decoded;
       req.user = {
+        donationProofVersion: decoded.donationProofVersion || null,
 
         id:
           decoded.userId,
