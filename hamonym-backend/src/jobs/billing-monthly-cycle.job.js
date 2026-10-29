@@ -103,6 +103,20 @@ async function handler(db, { now = new Date() } = {}) {
   return require('../modules/billing-engine/monthly-billing-orchestrator.service').execute({ db, triggeredBy: 'scheduler' });
 }
 
+function validateResult(result) {
+  const steps = result?.results;
+  if (!Array.isArray(steps) || steps.length === 0) {
+    throw Object.assign(new Error('Monthly billing returned no execution results'), { resultSummary: result || {} });
+  }
+  const blocked = steps.find(step => ['blocked', 'failed'].includes(step.status)
+    || (typeof step.result?.errors === 'number' ? step.result.errors > 0 : Array.isArray(step.result?.errors) && step.result.errors.length > 0));
+  if (!blocked) return; // Includes legitimate cutoff/lock/idempotent skips.
+  const reason = blocked.result?.reason || blocked.error || blocked.status;
+  const column = blocked.result?.diagnostic?.missingColumn;
+  throw Object.assign(new Error('Monthly billing ' + blocked.step + ': ' + reason + (column ? ' (missing column: ' + column + ')' : '')),
+    { code: 'MONTHLY_BILLING_BLOCKED', resultSummary: result });
+}
+
 module.exports = {
   name: 'billing-monthly-cycle',
   // Every hour, but only on UTC day-of-month 28 (2026-09-18 28->28
@@ -138,6 +152,7 @@ module.exports = {
   staleAfterMs: 35 * 24 * 60 * 60 * 1000,
   timeoutMs: 5 * 60 * 1000, // same order as the other billing jobs; calculation loops per billing_account
   handler,
+  validateResult,
   // Exported for scripts/test-billing-monthly-cycle.js only.
   computeMostRecentCycleBoundary,
   ensurePeriod,
