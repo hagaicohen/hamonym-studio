@@ -31,6 +31,7 @@ async function prepare({ db, now, previousAt, config }) {
   });
   const report = { periodId, periodStart: boundary.periodStart.toISOString(), periodEnd: boundary.periodEnd.toISOString(), periodCreated,
     calculationRan: true, billingRunId: result.billingRunId, accountsEvaluated: result.accountsEvaluated,
+    carriedForward: result.carriedForward, deferredUnbilled: result.deferredUnbilled,
     statementsCreated: result.statementsCreated, blockedEntitiesCount: result.blockedEntities.length, activityDiscovered: result.activityDiscovered,
     autoApprovalEnabled, statementsAutoApproved: approval.approved.length, statementsAutoApprovalFailed: approval.failed.length };
   return { ...report, runId: result.billingRunId, reused: result.reused, skipped: [], errors: result.errors,

@@ -47,6 +47,8 @@ async function computeAmounts(client, donationIds, feeRate, vatRate) {
   return res.rows[0];
 }
 
+// Includes all older unclaimed paid donations before this cutoff, including
+// closed periods. Original effective timestamps stay immutable in components.
 // Selects eligible donations and, if any exist, creates exactly one draft
 // Statement + its statement_components for this account+period, all inside
 // the caller's transaction (client). Eligibility is `effective_statement_id
@@ -73,11 +75,11 @@ async function calculateAccountStatement(client, account, { billingRunId, period
     `SELECT id, amount, billing_effective_at, completed_at, recurring_instruction_id, source
      FROM donations
      WHERE entity_id = $1
-       AND status = 'paid' AND is_mock = false
-       AND billing_effective_at >= $2 AND billing_effective_at < $3
+       AND status = 'paid'
+       AND billing_effective_at < $2
        AND effective_statement_id IS NULL
      ORDER BY billing_effective_at`,
-    [account.entity_id, periodStart, periodEnd]
+    [account.entity_id, periodEnd]
   );
 
   if (donationsRes.rows.length === 0) {
@@ -177,12 +179,12 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
             COUNT(*)::int AS donation_count, SUM(d.amount) AS gross_amount
      FROM donations d
      JOIN entities e ON e.id = d.entity_id AND e.status = 'active'
-     WHERE d.status = 'paid' AND d.is_mock = false
-       AND d.billing_effective_at >= $1 AND d.billing_effective_at < $2
+     WHERE d.status = 'paid'
+       AND d.billing_effective_at < $1
        AND d.effective_statement_id IS NULL
-       ${options.entityIds ? 'AND d.entity_id=ANY($3::uuid[])' : ''}
+       ${options.entityIds ? 'AND d.entity_id=ANY($2::uuid[])' : ''}
      GROUP BY d.entity_id, e.display_name`,
-    options.entityIds ? [period.period_start, period.period_end, options.entityIds] : [period.period_start, period.period_end]
+    options.entityIds ? [period.period_end, options.entityIds] : [period.period_end]
   );
 
   const summary = {
@@ -191,6 +193,8 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
     zeroActivityAccountIds: [],
     errors: [],
     reused: 0,
+    deferredUnbilled: [],
+    carriedForward: [],
     activityDiscovered: {
       entitiesWithActivity: activityRes.rows.length,
       totalDonations: activityRes.rows.reduce((sum, r) => sum + r.donation_count, 0),
@@ -220,6 +224,18 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
         if (existing.length) {
           if (existing.some(row => row.billing_run_id !== billingRunId)) throw Object.assign(new Error('Existing statement belongs to another run'), { code: 'EXISTING_STATEMENT_OUTSIDE_RUN' });
           summary.reused += existing.length;
+          const pending = await client.query(
+            `SELECT COUNT(*)::int AS donation_count, COALESCE(SUM(amount),0) AS gross
+             FROM donations WHERE entity_id=$1 AND status='paid'
+               AND billing_effective_at < $2 AND effective_statement_id IS NULL
+               AND NOT EXISTS (SELECT 1 FROM statement_components sc
+                 WHERE sc.donation_id=donations.id AND sc.statement_id=ANY($3::uuid[]))`,
+            [account.entity_id, period.period_end, existing.map(row => row.id)]
+          );
+          if (pending.rows[0].donation_count) summary.deferredUnbilled.push({
+            entityId: account.entity_id, donationCount: pending.rows[0].donation_count,
+            grossRaised: pending.rows[0].gross, reason: 'existing_statement_deferred_to_next_cycle'
+          });
           await client.query('COMMIT');
           continue;
         }
@@ -282,6 +298,22 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
       }
     }
   }
+
+  // Rebuild from immutable components on every run, including reuse. This
+  // keeps the carry-forward audit visible after retries without extra records.
+  summary.carriedForward = (await pool.query(
+    `SELECT sc.statement_id, sc.donation_id, sc.amount_snapshot,
+            sc.billing_effective_at_snapshot AS original_billing_effective_at,
+            (SELECT original.id FROM billing_periods original
+             WHERE original.retired=false AND original.period_start <= sc.billing_effective_at_snapshot
+               AND original.period_end > sc.billing_effective_at_snapshot LIMIT 1) AS original_period_id
+     FROM statement_components sc JOIN statements s ON s.id=sc.statement_id
+     JOIN billing_runs br ON br.id=s.billing_run_id
+     JOIN billing_periods bp ON bp.id=br.billing_period_id
+     WHERE s.billing_run_id=$1 AND s.status!='abandoned'
+       AND sc.billing_effective_at_snapshot < bp.period_start
+     ORDER BY sc.statement_id, sc.donation_id`, [billingRunId]
+  )).rows;
 
   await pool.query(
     `UPDATE billing_runs SET result_summary = COALESCE(result_summary, '{}'::jsonb) || $2::jsonb, completed_at = NOW() WHERE id = $1`,

@@ -67,9 +67,9 @@ async function makeBillingAccount(entityId, feeRate = 0.03) {
 
 async function makeDonation(entityId, campId, amount, completedAt, opts = {}) {
   const d = await pool.query(
-    `INSERT INTO donations (campaign_id, entity_id, amount, status, is_mock, completed_at, source, recurring_instruction_id)
-     VALUES ($1,$2,$3,'paid',$4,$5,$6,$7) RETURNING id`,
-    [campId, entityId, amount, opts.isMock || false, completedAt, opts.source || null, opts.recurringInstructionId || null]
+    `INSERT INTO donations (campaign_id, entity_id, amount, status, completed_at, source, recurring_instruction_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [campId, entityId, amount, opts.status || 'paid', completedAt, opts.source || null, opts.recurringInstructionId || null]
   );
   return d.rows[0].id;
 }
@@ -110,10 +110,10 @@ async function main() {
   const s1AfterSecondCall = (await pool.query(`SELECT status FROM statements WHERE id = $1`, [s1.id])).rows[0];
   check('B2. the Statement is still exactly "approved" -- never double-approved, never reverted', s1AfterSecondCall.status === 'approved');
 
-  // === Test C: a donation that fails eligibility (is_mock) is correctly excluded from calculation entirely ===
+  // === Test C: a pending donation that fails eligibility is correctly excluded from calculation entirely ===
   const { entityId: e2, campaignId: c2 } = await makeEntityWithCampaign('ZZZ_TEST_closure_mock_excluded');
   await makeBillingAccount(e2);
-  await makeDonation(e2, c2, '999.00', midWindow, { isMock: true });
+  await makeDonation(e2, c2, '999.00', midWindow, { status: 'pending' });
   const { calculateAccountStatement } = require('../src/modules/billing-engine/calculation.service');
   const client = await pool.connect();
   let mockOutcome;
@@ -125,7 +125,7 @@ async function main() {
   } finally {
     client.release();
   }
-  check('C1. a mock donation produces zeroActivity -- calculation.service.js correctly excludes is_mock=true', mockOutcome.zeroActivity === true, JSON.stringify(mockOutcome));
+  check('C1. a pending donation produces zeroActivity', mockOutcome.zeroActivity === true, JSON.stringify(mockOutcome));
 
   // === Test D: a REAL approval failure (amount drift) stays draft and records a finding, never forced through ===
   const { entityId: e3, campaignId: c3 } = await makeEntityWithCampaign('ZZZ_TEST_closure_drift_fails');

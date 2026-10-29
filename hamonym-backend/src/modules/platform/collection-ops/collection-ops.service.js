@@ -46,7 +46,7 @@ async function getAccruedPreview(periodStart, periodEnd) {
     `SELECT d.entity_id, COUNT(*)::int AS donation_count, SUM(d.amount) AS gross_raised
      FROM donations d
      JOIN entities e ON e.id = d.entity_id AND e.status = 'active'
-     WHERE d.status = 'paid' AND d.is_mock = false
+     WHERE d.status = 'paid'
        AND d.billing_effective_at >= $1 AND d.billing_effective_at < $2
        AND d.effective_statement_id IS NULL
      GROUP BY d.entity_id`,
@@ -116,7 +116,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
   const periodDonationsRes = await pool.query(
     `SELECT COUNT(*)::int AS donation_count, COALESCE(SUM(amount), 0) AS gross_raised
      FROM donations
-     WHERE status = 'paid' AND is_mock = false
+     WHERE status = 'paid'
        AND billing_effective_at >= $1 AND billing_effective_at < $2`,
     [periodStart, periodEnd]
   );

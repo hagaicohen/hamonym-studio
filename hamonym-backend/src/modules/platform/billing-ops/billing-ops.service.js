@@ -17,7 +17,7 @@ const approval = require('../../billing-engine/approval.service');
 const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
 const billingRepository = require('../../billing/billing.repository');
-const getAdapter = require('../../collection-engine/adapters/get-adapter');
+const getReconciliationAdapter = require('../../collection-engine/adapters/get-reconciliation-adapter');
 const { resolveSelectedMonthBoundary, ensurePeriod } = require('../../billing-engine/billing-period.util');
 
 // Read-only collection-readiness projection (Billing Collection UX
@@ -554,7 +554,11 @@ const RECONCILE_UNIQUE_VIOLATION = '23505';
 
 exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip }) => {
   const attemptRes = await pool.query(
-    `SELECT id, statement_id, collection_method, status FROM collection_attempts WHERE id = $1`,
+    `SELECT ca.id, ca.statement_id, ca.collection_method, ca.status, ca.provider, ba.entity_id
+     FROM collection_attempts ca
+     JOIN statements s ON s.id = ca.statement_id
+     JOIN billing_accounts ba ON ba.id = s.billing_account_id
+     WHERE ca.id = $1`,
     [attemptId]
   );
   const attempt = attemptRes.rows[0];
@@ -576,11 +580,14 @@ exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip })
   // Same defensive shape as collection.service.js#runCollectionForStatement's
   // own adapter.charge() try/catch -- never let the adapter's own thrown
   // exception (as opposed to a returned {outcome:'ambiguous', ...}) surface
-  // as an unhandled error; treat it identically to an ambiguous lookup.
+  // as an unhandled error; treat transport failures as an ambiguous lookup.
+  // Pilot/provider configuration rejections fail closed without changing facts.
+  const adapter = getReconciliationAdapter(attempt.provider, { collectionMethod: attempt.collection_method, entityId: attempt.entity_id });
   let outcome;
   try {
-    outcome = await getAdapter('card').reconcile({ attemptId });
+    outcome = await adapter.reconcile({ attemptId, entityId: attempt.entity_id });
   } catch (err) {
+    if (err.code === 'REAL_COLLECTION_DISABLED_DURING_PILOT') throw err;
     outcome = { outcome: 'ambiguous', failureReason: err.message };
   }
 

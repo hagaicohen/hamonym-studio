@@ -32,7 +32,7 @@ exports.listUnprovisionedActiveEntities = async () => {
      LEFT JOIN (
        SELECT entity_id, COUNT(*) AS donation_count, SUM(amount) AS gross_total
        FROM donations
-       WHERE status = 'paid' AND is_mock = false
+       WHERE status = 'paid'
        GROUP BY entity_id
      ) paid ON paid.entity_id = e.id
      WHERE e.status = 'active'
@@ -74,7 +74,7 @@ exports.listBillingReadiness = async () => {
      LEFT JOIN (
        SELECT entity_id, COUNT(*) AS donation_count, SUM(amount) AS gross_total
        FROM donations
-       WHERE status = 'paid' AND is_mock = false
+       WHERE status = 'paid'
        GROUP BY entity_id
      ) paid ON paid.entity_id = e.id
      WHERE e.status = 'active'

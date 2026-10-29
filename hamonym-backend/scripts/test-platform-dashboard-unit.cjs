@@ -55,7 +55,7 @@ if (require.main === module) {
     assert.equal(result.newDonors[0].firstDonationAmount, 100.25);
     assert.equal(result.newDonors[1].firstDonationAmount, null);
     const sql = state.queries.find(q => q.sql.includes('first_donations AS')).sql;
-    assert.match(sql, /DISTINCT ON/); assert.match(sql, /WHERE status = 'paid' AND is_mock = false/);
+    assert.match(sql, /DISTINCT ON/); assert.match(sql, /WHERE status = 'paid'/);
     assert.match(sql, /ORDER BY .*created_at, id/);
     assert.match(sql, /f.created_at >= b.start_at AND f.created_at < b.end_at/);
     assert.equal(result.kpis.donationsMonth, 350.75);
@@ -89,7 +89,7 @@ if (require.main === module) {
     test('trend ' + range + ' uses paid actual records and Israel calendar buckets plus previous period', async () => {
       const { service, state } = fixture(); const result = await service.getOverview({ range, isSuperAdmin: true });
       const sql = state.queries.find(q => q.sql.includes('points AS')).sql;
-      assert.ok(sql.includes(span)); assert.match(sql, /Asia\/Jerusalem/); assert.match(sql, /d.status = 'paid' AND d.is_mock = false/);
+      assert.ok(sql.includes(span)); assert.match(sql, /Asia\/Jerusalem/); assert.match(sql, /d.status = 'paid'/);
       assert.equal(result.trend.total, 100); assert.equal(result.trend.previousTotal, 50); assert.equal(result.trend.points.length, 1);
     });
   }
@@ -107,7 +107,7 @@ if (require.main === module) {
     assert.equal(result.activity[1].amount, 143.37); assert.equal(result.activity[1].query.status, 'paid');
     assert.equal(result.activity[0].route.join('/'), '/platform/organizations/org-1');
     const sql = state.queries.find(q => q.sql.includes(') events')).sql;
-    assert.match(sql, /a.action IN/); assert.match(sql, /LIMIT 8/); assert.match(sql, /d.is_mock = false/);
+    assert.match(sql, /a.action IN/); assert.match(sql, /LIMIT 8/); assert.doesNotMatch(sql, /is_mock/);
   });
   test('Dashboard donation link applies the same Israel month boundaries without payment imports', async () => {
     const queries = [], module = { exports: {} };
@@ -126,7 +126,7 @@ if (require.main === module) {
     const result = await module.exports.getPlatformDonations({ status: 'paid', period: 'this_month_israel' });
     assert.equal(result.total, 0); assert.equal(queries.length, 2);
     for (const q of queries) {
-      assert.match(q.sql, /Asia\/Jerusalem/); assert.match(q.sql, /d.is_mock = false/);
+      assert.match(q.sql, /Asia\/Jerusalem/); assert.doesNotMatch(q.sql, /is_mock/);
       assert.match(q.sql, /d.created_at </); assert.ok(q.args.includes('paid'));
     }
     const donorSql = fixture(); await donorSql.service.getOverview({ isSuperAdmin: true });

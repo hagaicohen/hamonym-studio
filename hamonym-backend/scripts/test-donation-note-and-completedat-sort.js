@@ -132,8 +132,8 @@ async function run() {
   const sortFixtureIds = {};
   for (const spec of rowSpecs) {
     const res = await db.query(
-      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, rewards, is_mock, created_at, completed_at)
-       VALUES ($1,$2,10,$3,'pending','[]'::jsonb,true,$4,$5) RETURNING id`,
+      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, rewards, created_at, completed_at)
+       VALUES ($1,$2,10,$3,'pending','[]'::jsonb,$4,$5) RETURNING id`,
       [campaignId, entityId, `ZZZ Sort ${spec.label}`, spec.created_at, spec.completed_at]
     );
     sortFixtureIds[spec.label] = res.rows[0].id;

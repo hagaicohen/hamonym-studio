@@ -6,7 +6,7 @@
 // production writes.
 process.env.DB_HOST = 'localhost';
 process.env.DB_PORT = '5433';
-process.env.DB_NAME = 'hamonym_test';
+process.env.DB_NAME = process.env.HAMONYM_FIN11_TEST_DB || 'hamonym_test';
 process.env.DB_USER = 'postgres';
 process.env.DB_PASSWORD = 'testpass';
 process.env.DB_SSL = 'false';
@@ -28,7 +28,7 @@ async function seedBase() {
   roleId = role.rows[0].id;
   const user = await pool.query(`INSERT INTO users (role_id, email, is_super_admin) VALUES ($1, 't@isolated.local', true) RETURNING id`, [roleId]);
   userId = user.rows[0].id;
-  await pool.query(`INSERT INTO platform_billing_settings (id, vat_rate) VALUES (1, 0.18)`);
+  await pool.query(`INSERT INTO platform_billing_settings (id, vat_rate) VALUES (1, 0.18) ON CONFLICT(id) DO NOTHING`);
 }
 
 async function makeEntity(name) {

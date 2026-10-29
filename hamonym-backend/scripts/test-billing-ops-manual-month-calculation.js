@@ -19,7 +19,7 @@
 //
 // Moved from 2099-08 to 2098-08 on 2026-09-17: an explicitly authorized
 // real Donation-Engine-to-Billing-calculation E2E test permanently
-// occupies 2099-08 now (one real, is_mock=false donation -> real
+// occupies 2099-08 now (one real, paid donation -> real
 // calculation -> a genuine Statement/statement_component -- deliberately
 // left in place forever, tagged ZZZ_TEST_DONATION_BILLING_E2E_2026-09-17;
 // see that conversation's own report for the full permanent chain and

@@ -14,12 +14,12 @@ async function getDonorsAndTotals() {
              ((date_trunc('month', NOW() AT TIME ZONE 'Asia/Jerusalem') + INTERVAL '1 month') AT TIME ZONE 'Asia/Jerusalem') AS end_at
     ), first_donations AS (
       SELECT DISTINCT ON (${DONOR_KEY}) donor_name, created_at, amount, id
-      FROM donations WHERE status = 'paid' AND is_mock = false
+      FROM donations WHERE status = 'paid'
       ORDER BY ${DONOR_KEY}, created_at, id
     )
     SELECT b.start_at AS month_start, b.end_at AS month_end,
       (SELECT COALESCE(SUM(amount), 0) FROM donations
-       WHERE status = 'paid' AND is_mock = false AND created_at >= b.start_at AND created_at < b.end_at) AS donations_month,
+       WHERE status = 'paid' AND created_at >= b.start_at AND created_at < b.end_at) AS donations_month,
       COALESCE((SELECT json_agg(json_build_object('name', f.donor_name,
          'firstDonationAt', f.created_at, 'firstDonationAmount', f.amount)
          ORDER BY f.created_at DESC, f.id)
@@ -41,7 +41,7 @@ async function getTrend(range) {
       SELECT gs AS bucket, COALESCE(SUM(d.amount), 0)::float AS value
       FROM bounds b CROSS JOIN LATERAL generate_series(b.finish - INTERVAL '${span}' * 2,
            b.finish - INTERVAL '${step}', INTERVAL '${step}') gs
-      LEFT JOIN donations d ON d.status = 'paid' AND d.is_mock = false
+      LEFT JOIN donations d ON d.status = 'paid'
         AND d.created_at >= (gs AT TIME ZONE 'Asia/Jerusalem')
         AND d.created_at < ((gs + INTERVAL '${step}') AT TIME ZONE 'Asia/Jerusalem')
       GROUP BY gs
@@ -117,7 +117,7 @@ async function getBusinessActivity({ isSuperAdmin, organizations, campaigns }) {
       UNION ALL
       SELECT 'donation', d.id::text, d.created_at, d.campaign_id::text, c.title, 'paid', d.amount::text
       FROM donations d JOIN campaigns c ON c.id = d.campaign_id
-      WHERE $3::boolean AND d.status = 'paid' AND d.is_mock = false
+      WHERE $3::boolean AND d.status = 'paid'
       UNION ALL
       SELECT 'user', u.id::text, u.created_at, u.id::text, COALESCE(u.full_name, u.email), 'created', NULL::text
       FROM users u WHERE $3::boolean

@@ -37,17 +37,12 @@
 // expected, harmless race outcome -- not a failure, not double-counted
 // money. See scripts/test-collection-attempt-recovery.js.
 const { recordFinding } = require('./reconciliation-findings');
-const defaultCardAdapter = require('../modules/collection-engine/adapters/fin11-mock.adapter');
+const defaultGetAdapter = require('../modules/collection-engine/adapters/get-reconciliation-adapter');
 const { resolveAttempt: defaultResolveAttempt } = require('../modules/collection-engine/collection.service');
 
 const STUCK_AFTER_HOURS = 2;
 const UNIQUE_VIOLATION = '23505';
 
-function defaultGetAdapter(collectionMethod) {
-  // Only 'card' can reconcile anything today -- masav has no adapter
-  // implementation at all yet (NOT_IMPLEMENTED, see adapters/masav.adapter.js).
-  return collectionMethod === 'card' ? defaultCardAdapter : null;
-}
 
 // Core logic, dependency-injectable for testing (same seam style as
 // collection.service.js's runCollectionForStatement/resolveAdapter) --
@@ -73,14 +68,16 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
   // finding for a state that is not stuck -- it's the intended terminal
   // state. CARD's own stuck/ambiguous detection is completely unaffected.
   const candidatesRes = await db.query(
-    `SELECT id, statement_id, status, collection_method
-     FROM collection_attempts
-     WHERE collection_method != 'masav' AND provider != 'fin11_mock'
+    `SELECT ca.id, ca.statement_id, ca.status, ca.collection_method, ca.provider, ba.entity_id
+     FROM collection_attempts ca
+     JOIN statements s ON s.id = ca.statement_id
+     JOIN billing_accounts ba ON ba.id = s.billing_account_id
+     WHERE ca.collection_method != 'masav'
        AND (
-         status = 'ambiguous'
-         OR (status = 'pending' AND initiated_at < $1::timestamptz - INTERVAL '${STUCK_AFTER_HOURS} hours')
+         ca.status = 'ambiguous'
+         OR (ca.status = 'pending' AND ca.initiated_at < $1::timestamptz - INTERVAL '${STUCK_AFTER_HOURS} hours')
        )
-     ORDER BY initiated_at ASC
+     ORDER BY ca.initiated_at ASC
      LIMIT 50`,
     [now]
   );
@@ -92,16 +89,15 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
   const stuckForFinding = [];
 
   for (const row of candidatesRes.rows) {
-    const adapter = getAdapter(row.collection_method);
-    if (!adapter || typeof adapter.reconcile !== 'function') {
-      stuckForFinding.push(row);
-      continue;
-    }
-
     let outcome;
     try {
-      outcome = await adapter.reconcile({ attemptId: row.id });
+      const adapter = getAdapter(row.provider, { collectionMethod: row.collection_method, entityId: row.entity_id });
+      if (!adapter || typeof adapter.reconcile !== 'function') {
+        throw Object.assign(new Error('Provider reconciliation unavailable'), { code: 'RECONCILE_PROVIDER_UNKNOWN' });
+      }
+      outcome = await adapter.reconcile({ attemptId: row.id, entityId: row.entity_id });
     } catch (err) {
+      row.reconciliation_error = ['RECONCILE_PROVIDER_UNKNOWN', 'RECONCILE_ENTITY_REQUIRED', 'REAL_COLLECTION_DISABLED_DURING_PILOT'].includes(err.code) ? err.code : 'PROVIDER_LOOKUP_FAILED';
       lookupFailed++;
       stuckForFinding.push(row);
       continue;
@@ -142,7 +138,7 @@ async function reconcileStuckAttempts(db, { getAdapter = defaultGetAdapter, reso
       severity: 'critical',
       subjectType: 'collection_attempt',
       subjectId: row.id,
-      details: { statementId: row.statement_id, status: row.status },
+      details: { statementId: row.statement_id, status: row.status, provider: row.provider || null, entityId: row.entity_id, reason: row.reconciliation_error || null },
     });
   }
 

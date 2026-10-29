@@ -8,7 +8,7 @@
 // Deliberately does NOT exercise calculateAccountStatement end-to-end with
 // a real paid donation here -- that would create a real 'paid' donation row,
 // which migration 055's trg_donations_block_paid_delete makes permanently
-// undeletable (no is_mock exception), leaving unwanted permanent residue.
+// undeletable (no test-data exception), leaving unwanted permanent residue.
 // That exact sourcing behavior (a Statement uses the platform rate, not a
 // stale account.vat_rate; a later rate change affects only the next
 // calculation, not an already-created Statement) is proven instead against

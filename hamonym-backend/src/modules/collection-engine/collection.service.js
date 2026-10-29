@@ -296,10 +296,10 @@ async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: m
       : balance.outstanding;
 
     const insertRes = await client.query(
-      `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, provider)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, attempt_number`,
-      [statementId, method, attemptNumber, requestedAmount]
+      [statementId, method, attemptNumber, requestedAmount, adapter.provider || 'cardcom']
     );
 
     if (manualRetry) {

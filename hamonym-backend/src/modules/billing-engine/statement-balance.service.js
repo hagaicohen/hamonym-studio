@@ -327,7 +327,7 @@ exports.foldLateDonationsIntoStatement = async ({ statementId, superAdminUserId,
       `SELECT id, amount, billing_effective_at, completed_at, recurring_instruction_id, source
        FROM donations
        WHERE entity_id = $1
-         AND status = 'paid' AND is_mock = false
+         AND status = 'paid'
          AND effective_statement_id IS NULL
          AND billing_effective_at >= $2 AND billing_effective_at < $3
        ORDER BY billing_effective_at

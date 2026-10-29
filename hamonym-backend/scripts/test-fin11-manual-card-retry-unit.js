@@ -208,6 +208,7 @@ function uiFixture() {
         '../../services/billing-ops.service': ['BillingOpsService'], '../../services/finance-ops.service': ['FinanceOpsService'],
         '../../services/collection-ops.service': ['CollectionOpsService'], '../../services/billing-provisioning.service': ['BillingProvisioningService'],
         '../../services/simulation-clock.service': ['SimulationClockService'],
+        '../../../../shared/directives/money-input.directive': ['MoneyInputDirective'],
         '../../components/entity-combobox/entity-combobox.component': ['EntityComboboxComponent'],
       };
       assert.ok(tokens[name], `Blocked UI import: ${name}`);

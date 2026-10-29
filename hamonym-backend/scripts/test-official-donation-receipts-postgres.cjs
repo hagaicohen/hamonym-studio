@@ -4,9 +4,10 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 for (const key of Object.keys(process.env)) if (/CARDCOM|DATABASE_URL|SUPABASE|DB_|EMAIL_|JWT_SECRET/.test(key)) delete process.env[key];
-Object.assign(process.env, { DB_HOST:'127.0.0.1', DB_PORT:'5433', DB_NAME:'hamonym_receipts_verify_20261027',
+Object.assign(process.env, { DB_HOST:'127.0.0.1', DB_PORT:'5433', DB_NAME:process.env.HAMONYM_RECEIPTS_TEST_DB || 'hamonym_receipts_verify_20261027',
   DB_USER:'postgres', DB_PASSWORD:'testpass', DB_SSL:'false', JWT_SECRET:'isolated-receipts-test-only',
   EMAIL_ENABLED:'true', EMAIL_PROVIDER:'resend', FRONTEND_URL:'http://localhost:4200' });
+assert.match(process.env.DB_NAME, /^hamonym_(receipts|remove_mock)_/);
 require('node:https').request = () => { throw new Error('External HTTPS forbidden'); };
 const axios = require('axios');
 let calls = 0, current = null, pdfFailure = false, emailed, recurringFixture, transactionId=7001, documentOffset=0;
@@ -126,6 +127,19 @@ async function api(method,route,body,token) {
  const superAdmin=await createUser('super-'+crypto.randomUUID()+'@example.invalid','Super');
  await db.query('UPDATE users SET is_super_admin=true WHERE id=$1',[superAdmin.body.user.id]);
  assert.equal((await api('GET','/api/donations/receipt/'+receipt.id+'/pdf',null,superAdmin.body.token)).status,200);
+ // Original unconfirmed donation and a separate manual TEST entry must never be conflated.
+ const beforeManual=(await db.query('SELECT current_amount FROM campaigns WHERE id=$1',[campaign.id])).rows[0].current_amount;
+ const pendingLarge=(await db.query("INSERT INTO donations(campaign_id,entity_id,amount,status,donor_name) VALUES($1,$2,100000,'pending','Pending large fixture') RETURNING id",[campaign.id,campaign.entity_id])).rows[0];
+ const manual=await donations.createManualDonation(campaign.entity_id,{campaignId:campaign.id,amount:99850,source:'other',donorName:'Separate manual TEST fixture',clientSubmissionKey:crypto.randomUUID()},superAdmin.body.user.id);
+ const original=(await api('GET','/api/donations/public/'+pendingLarge.id)).body;
+ assert.equal(original.status,'pending');assert.equal(original.receipt_id,null);
+ const separate=(await api('GET','/api/donations/public/'+manual.donationId)).body;
+ assert.equal(separate.status,'paid');assert(separate.receipt_id);
+ const afterManual=(await db.query('SELECT current_amount FROM campaigns WHERE id=$1',[campaign.id])).rows[0].current_amount;
+ assert.equal(Math.round((Number(afterManual)-Number(beforeManual))*100),9985000);
+ assert.equal((await db.query("SELECT sum(amount) AS paid_total FROM donations WHERE id=ANY($1::uuid[]) AND status='paid'",[[pendingLarge.id,manual.donationId]])).rows[0].paid_total,'99850.00');
+ assert.equal((await db.query("SELECT count(*)::int AS n FROM donations WHERE id=$1 AND status='paid' AND billing_effective_at IS NOT NULL AND effective_statement_id IS NULL",[pendingLarge.id])).rows[0].n,0);
+
  pdfFailure=true;
  const failed=await api('GET','/api/donations/receipt/'+receipt.id+'/pdf',null,token);assert.equal(failed.status,503);assert(!JSON.stringify(failed.body).includes('fixture-private-error'));
  assert.equal((await db.query('SELECT status FROM donations WHERE id=$1',[current.id])).rows[0].status,'paid');
@@ -191,7 +205,7 @@ async function api(method,route,body,token) {
  await db.query('UPDATE users SET email=$2 WHERE id=$1',[owner.body.user.id,'changed-'+crypto.randomUUID()+'@example.invalid']);
  assert.equal((await api('GET','/api/donations/my',null,token)).body.donations.length,0);
  assert.equal((await api('GET','/api/donations/receipt/'+receipt.id+'/pdf',null,token)).status,404);
- console.log(JSON.stringify({result:'PASS',adminListReceiptAssociation:true,unreceiptedDonationsPreserved:true,database:process.env.DB_NAME,checkoutTerminal:200266,realProviderWithFixtureTransport:true,verifiedPayment:true,officialPdfBytesUnchanged:true,
+ console.log(JSON.stringify({result:'PASS',pending100000Excluded:true,manual99850CountedSeparately:true,adminListReceiptAssociation:true,unreceiptedDonationsPreserved:true,database:process.env.DB_NAME,checkoutTerminal:200266,realProviderWithFixtureTransport:true,verifiedPayment:true,officialPdfBytesUnchanged:true,
  donorOwnershipVerification:true,preVerificationSessionsRejected:true,scopedProofRotation:true,passwordHashUnchanged:true,jwtExpiryPreserved:true,currentOwnershipChecked:true,guestHistoryLinked:true,secondPaidDonationInHistory:true,changedEmailRejected:true,singleUseToken:true,wrongAccountRejected:true,donorAndOrganizationAndSuperAdminAuthorization:true,
  duplicateDocumentPrevented:true,recurringIndividualReceipt:true,recurringAmountMismatchRejected:true,cancelledDocumentNotResurrected:true,paymentUnaffectedByDocumentFailure:true,externalPaymentCalls:0}));
 })().catch(error=>{console.error('FAIL',error.code||'',error.message,error.stack);process.exitCode=1;}).finally(async()=>{

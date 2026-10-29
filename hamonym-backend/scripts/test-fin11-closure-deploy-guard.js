@@ -49,7 +49,7 @@ async function main() {
   const entityId = e.rows[0].id;
   const c = await pool.query(`INSERT INTO campaigns (entity_id, slug, title) VALUES ($1, 'deploy-guard-test', 'Test') RETURNING id`, [entityId]);
   const ba = await pool.query(`INSERT INTO billing_accounts (entity_id, fee_rate, vat_rate, preferred_collection_method, enforcement_status) VALUES ($1,0.03,0.18,'card','active') RETURNING id`, [entityId]);
-  await pool.query(`INSERT INTO donations (campaign_id, entity_id, amount, status, is_mock, completed_at) VALUES ($1,$2,'1000.00','paid',false,$3)`, [c.rows[0].id, entityId, midWindow]);
+  await pool.query(`INSERT INTO donations (campaign_id, entity_id, amount, status, completed_at) VALUES ($1,$2,'1000.00','paid',$3)`, [c.rows[0].id, entityId, midWindow]);
 
   const result = await billingMonthlyCycle.handler(pool, { now });
 

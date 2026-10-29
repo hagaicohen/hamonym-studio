@@ -47,6 +47,10 @@ function createFakeState({ statement, attempt, payments, entityBilling } = {}) {
 
     if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };
 
+    if (sql.includes("to_regclass('public.")) return { rows: [{ t: null }] };
+    if (sql === 'SELECT total_due FROM statements WHERE id = $1') return { rows: [state.statements.get(params[0])] };
+    if (sql.includes('SUM(delta_amount)')) return { rows: [{ total: 0 }] };
+    if (sql.startsWith('SELECT COUNT(*)::int AS n FROM collection_attempts') || sql.startsWith('SELECT count(*)::int AS n FROM collection_attempts')) return { rows: [{ n: 1 }] };
     // collection.service.js#openAttempt's own statement lookup (FOR UPDATE)
     // -- needed by the "fresh attempt not blocked" proof below, which calls
     // openAttempt directly after a reconcile resolution.
@@ -55,6 +59,7 @@ function createFakeState({ statement, attempt, payments, entityBilling } = {}) {
       return { rows: st ? [{ ...st }] : [] };
     }
 
+    if (sql.startsWith("SELECT id, status FROM collection_attempts WHERE statement_id = $1 AND collection_method = 'card'")) return { rows: [...state.collectionAttempts.values()].filter(a => a.statement_id === params[0] && a.collection_method === 'card').sort((a,b)=>b.attempt_number-a.attempt_number) };
     // openAttempt's ACTIVE_ATTEMPT_STATUSES guard -- the exact predicate
     // this fix must not leave 'not_found_confirmed' rows blocked by.
     if (sql.startsWith('SELECT id FROM collection_attempts WHERE statement_id = $1 AND status = ANY')) {
@@ -70,11 +75,11 @@ function createFakeState({ statement, attempt, payments, entityBilling } = {}) {
       return { rows: [{ next }] };
     }
 
-    if (sql.startsWith('INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount) VALUES')) {
+    if (sql.startsWith('INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, provider) VALUES')) {
       const id = `attempt-new-${newAttemptSeq++}`;
       const row = {
         id, statement_id: params[0], collection_method: params[1], attempt_number: params[2],
-        requested_amount: params[3], status: 'pending', provider: 'cardcom',
+        requested_amount: params[3], status: 'pending', provider: params[4],
         provider_reference: null, provider_raw_status: null, failure_reason: null, resolved_at: null,
       };
       state.collectionAttempts.set(id, row);
@@ -94,9 +99,9 @@ function createFakeState({ statement, attempt, payments, entityBilling } = {}) {
     }
 
     // reconcileCollectionAttempt's own initial attempt lookup
-    if (sql.startsWith('SELECT id, statement_id, collection_method, status FROM collection_attempts WHERE id = $1')) {
+    if (sql.startsWith('SELECT ca.id, ca.statement_id, ca.collection_method, ca.status, ca.provider, ba.entity_id')) {
       const a = state.collectionAttempts.get(params[0]);
-      return { rows: a ? [{ ...a }] : [] };
+      return { rows: a ? [{ ...a, entity_id: state.statements.get(a.statement_id)?.entity_id }] : [] };
     }
 
     // reconcileCollectionAttempt's post-resolve re-read
@@ -178,6 +183,10 @@ function freshModules(fakePool, fakeCardAdapter) {
   const dbPath = require.resolve('../src/db/db');
   require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: fakePool };
 
+  const reconciliationPath = require.resolve('../src/modules/collection-engine/adapters/get-reconciliation-adapter');
+  delete require.cache[reconciliationPath];
+  if (fakeCardAdapter) require.cache[reconciliationPath] = { id: reconciliationPath, filename: reconciliationPath, loaded: true,
+    exports: (provider, context) => { assert.strictEqual(provider, 'cardcom'); assert.strictEqual(context.entityId, 'entity-1'); return fakeCardAdapter; } };
   const getAdapterPath = require.resolve('../src/modules/collection-engine/adapters/get-adapter');
   if (fakeCardAdapter) {
     require.cache[getAdapterPath] = {
@@ -269,7 +278,7 @@ async function run() {
     assert.strictEqual(state.auditLogs.length, 1);
   });
 
-  await check('after a not_found_confirmed resolution, a fresh openAttempt() call for the SAME Statement is NOT blocked -- opens a brand-new attempt with a new id (proves ACTIVE_ATTEMPT_STATUSES does not include the new status)', async () => {
+  await check('not_found_confirmed reconciliation preserves the existing FIN-11 confirmed-failure-only retry policy', async () => {
     const { fakePool, state } = createFakeState({
       statement: baseStatement(),
       attempt: baseAttempt(),
@@ -295,12 +304,10 @@ async function run() {
       return fakeCardAdapterForNewAttempt;
     });
 
-    assert.strictEqual(opened.skipped, false, `a fresh attempt must open, got skipped: ${opened.reason}`);
-    assert.notStrictEqual(opened.attemptId, 'attempt-1', 'must be a brand-new attempt id, never the old resolved one');
-    assert.strictEqual(opened.attemptNumber, 2);
-    assert.strictEqual(state.collectionAttempts.size, 2, 'the old not_found_confirmed row and the new pending row must both exist');
-    assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'not_found_confirmed', 'the old attempt is left exactly as reconcile resolved it');
-    assert.strictEqual(state.collectionAttempts.get(opened.attemptId).status, 'pending');
+    assert.strictEqual(opened.skipped, true);
+    assert.strictEqual(opened.reason, 'latest_attempt_not_a_confirmed_failure');
+    assert.strictEqual(state.collectionAttempts.size, 1);
+    assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'not_found_confirmed');
   });
 
   // ---- 2. succeeded (CardCom recovery case) --------------------------
@@ -321,7 +328,7 @@ async function run() {
     assert.strictEqual(result.statementStatus, 'paid');
     assert.strictEqual(state.payments.size, 1);
     const payment = [...state.payments.values()][0];
-    assert.strictEqual(payment.amount, '0.28');
+    assert.strictEqual(Number(payment.amount), 0.28);
     assert.strictEqual(payment.provider_reference, 'TRAN-999');
     assert.strictEqual(state.statements.get('stmt-1').status, 'paid');
   });
@@ -418,6 +425,39 @@ async function run() {
     assert.strictEqual(seenAttemptId, 'attempt-1', 'reconcile() must be called with the exact attemptId requested, never a freshly generated id');
   });
 
+  await check('manual action routes stored fin11_mock with entity context and remains idempotent', async () => {
+    const { fakePool, state } = createFakeState({ statement: baseStatement(), attempt: baseAttempt({ provider: 'fin11_mock' }) });
+    const { billingOpsService } = freshModules(fakePool);
+    await billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' });
+    await billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' });
+    assert.strictEqual(state.payments.size, 1);
+    assert.strictEqual([...state.payments.values()][0].provider, 'fin11_mock');
+  });
+  await check('manual action never falls back for missing or unknown providers', async () => {
+    for (const provider of [null, 'unknown']) {
+      const { fakePool, state } = createFakeState({ statement: baseStatement(), attempt: baseAttempt({ provider }) });
+      const { billingOpsService } = freshModules(fakePool);
+      await assert.rejects(() => billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' }), { code: 'RECONCILE_PROVIDER_UNKNOWN' });
+      assert.strictEqual(state.payments.size, 0);
+      assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'technical_failure');
+    }
+  });
+  await check('manual CardCom reconciliation is blocked during pilot without changing financial status', async () => {
+    const { fakePool, state } = createFakeState({ statement: baseStatement(), attempt: baseAttempt() });
+    const { billingOpsService } = freshModules(fakePool);
+    await assert.rejects(() => billingOpsService.reconcileCollectionAttempt({ attemptId: 'attempt-1', superAdminUserId: 'admin-1' }), { code: 'REAL_COLLECTION_DISABLED_DURING_PILOT' });
+    assert.strictEqual(state.payments.size, 0);
+    assert.strictEqual(state.collectionAttempts.get('attempt-1').status, 'technical_failure');
+  });
+  await check('new legacy attempt persists the selected mock provider for later reconciliation', async () => {
+    const { fakePool, state } = createFakeState({ statement: baseStatement(), attempt: baseAttempt({status:'declined'}), entityBilling:{id:'eb-1',provider:'cardcom',token:'tok',last4:'1234',exp_month:9,exp_year:2027} });
+    const { collectionService } = freshModules(fakePool);
+    const selected = require('../src/modules/collection-engine/adapters/fin11-mock.adapter');
+    const opened = await collectionService.openAttempt('stmt-1', () => selected);
+    assert.strictEqual(opened.skipped, false);
+    assert.strictEqual(state.collectionAttempts.get(opened.attemptId).provider, 'fin11_mock');
+    assert.strictEqual(state.collectionAttempts.get('attempt-1').provider, 'cardcom');
+  });
   // ---- error-status.js mapping ------------------------------------------
 
   await check('error-status.js: RECONCILE_NOT_SUPPORTED_FOR_METHOD maps to 409, ATTEMPT_NOT_FOUND maps to 404', async () => {

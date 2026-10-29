@@ -140,9 +140,9 @@ exports.handle = async (payload) => {
   const failedRes = await db.query(
     `INSERT INTO donations (
        campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
-       rewards, status, is_mock, recurring_instruction_id, provider_reference,
+       rewards, status, recurring_instruction_id, provider_reference,
        provider_row_id, provider_status_code, failure_reason, completed_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,'[]','failed',false,$7,$8,$9,$10,$11,NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,'[]','failed',$7,$8,$9,$10,$11,NOW())
      RETURNING id`,
     [
       instruction.campaign_id, instruction.entity_id, amount,
