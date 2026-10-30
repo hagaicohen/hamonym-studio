@@ -61,6 +61,20 @@ export interface MasavProposal {
   statement_status: string;
   period_start: string;
   period_end: string;
+  instruction_id?: string | null;
+  batch_id?: string | null;
+  export_mode?: 'entity' | 'period' | null;
+}
+
+export interface MasavExportPreview {
+  mode: 'entity' | 'period';
+  previewToken: string;
+  totalAmount: string;
+  organizationCount: number;
+  periodCount: number;
+  instructions: { ordinal: number; entityId: string; entityName: string; amount: string; bankLast4: string;
+    components: { proposalId: string; statementId: string; periodId: string; periodStart: string; periodEnd: string; amount: string }[] }[];
+  excluded: { proposalId: string; statementId: string; entityId: string; reason: string }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -114,11 +128,42 @@ export class FinanceOpsService {
   // file and committed the status flip atomically with it, so receiving a
   // blob here always means a real file was generated, never a bare
   // {exported:true} from before the file existed.
-  exportMasavProposals(proposalIds: string[]): Observable<Blob> {
-    return this.http.post(`${this.base}/masav-proposals/export`, { proposalIds }, { headers: authHeaders(), responseType: 'blob' });
+  previewMasavExport(): Observable<{ preview: MasavExportPreview }> {
+    return this.http.post<{ preview: MasavExportPreview }>(`${this.base}/masav-proposals/export-preview`, {}, { headers: authHeaders() });
+  }
+  exportMasavProposals(proposalIds: string[], expectedPreviewToken?: string): Observable<Blob> {
+    return this.http.post(`${this.base}/masav-proposals/export`, { proposalIds, expectedPreviewToken }, { headers: authHeaders(), responseType: 'blob' });
+  }
+
+  listMasavInstructions(): Observable<{ instructions: MasavInstruction[] }> {
+    return this.http.get<{ instructions: MasavInstruction[] }>(`${this.base}/masav-instructions`, { headers: authHeaders() });
+  }
+  finalizeMasavInstruction(id: string, data: { reference: string; confirmedAt: string; confirmed: boolean }): Observable<{ result: unknown }> {
+    return this.http.post<{ result: unknown }>(`${this.base}/masav-instructions/${id}/finalize`, data, { headers: authHeaders() });
+  }
+  prepareMasavRetry(id: string): Observable<{ result: { replayed: boolean; proposals: unknown[] } }> {
+    return this.http.post<{ result: { replayed: boolean; proposals: unknown[] } }>(`${this.base}/masav-instructions/${id}/retry`, { confirmed: true }, { headers: authHeaders() });
+  }
+  recordMasavResult(id: string, data: { amount: string; reference: string; confirmedAt: string; confirmed: boolean }): Observable<{ result: { id: string; allocations: { statementId: string; amount: string }[] } }> {
+    return this.http.post<any>(`${this.base}/masav-instructions/${id}/confirmed-result`, data, { headers: authHeaders() });
   }
 
   getStatementBalance(statementId: string): Observable<{ balance: StatementBalance }> {
     return this.http.get<{ balance: StatementBalance }>(`${this.base}/statements/${statementId}/balance`, { headers: authHeaders() });
   }
+}
+
+export interface MasavInstruction {
+  id: string;
+  entity_name: string;
+  total_amount: string;
+  collected_amount: string;
+  outstanding_amount: string;
+  status: 'pending' | 'partial' | 'failed' | 'completed';
+  finalized: boolean;
+  retry_eligible: boolean;
+  retry_requested: boolean;
+  parent_instruction_ids: string[];
+  components: { statement_id: string; billing_period_id: string; period_start: string; period_end: string; amount: string; collected_amount: string; outstanding_amount: string }[];
+  allocations: { statement_id: string; amount: string; payment_id: string; reference: string; confirmed_at: string }[];
 }

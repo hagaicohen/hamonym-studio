@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/modules/platform/services/billing-period-label.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

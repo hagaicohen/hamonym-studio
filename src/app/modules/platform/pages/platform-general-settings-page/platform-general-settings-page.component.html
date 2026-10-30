@@ -4,11 +4,26 @@
   </div>
 
   <div class="gs-tabs">
-    <button class="gs-tab" [class.gs-tab-active]="tab === 'billing'" (click)="tab = 'billing'">חיוב ומיסוי</button>
+    <button class="gs-tab" [class.gs-tab-active]="tab === 'billing'" (click)="tab = 'billing'">גבייה</button>
     <button class="gs-tab" [class.gs-tab-active]="tab === 'simulation'" (click)="tab = 'simulation'">סימולציה</button>
   </div>
 
   @if (tab === 'billing') {
+    <div class="plat-card">
+      <h2 class="gs-card-title">מס״ב</h2>
+      <label class="ba-field"><span>אופן איחוד חובות למס״ב</span>
+        <select [(ngModel)]="masavMode" [disabled]="vatSettingLoading || masavSaveBusy || masavMode === null" (ngModelChange)="masavSaved = false">
+          <option [ngValue]="null" disabled>ההגדרה טרם נטענה</option>
+          <option value="entity">איחוד לפי עמותה — הוראה אחת לכל העמותה</option>
+          <option value="period">הפרדה לפי תקופת חיוב</option>
+        </select>
+      </label>
+      <p class="gs-vat-note">ברירת המחדל היא איחוד לפי עמותה. ההגדרה חלה רק על ייצוא עתידי. הוראות שכבר יוצאו ושיוכן לחובות המקוריים נשארים ללא שינוי. בכל מצב מופק קובץ Excel אחד.</p>
+      @if (!vatSettingLoading && masavMode === null) { <p class="plat-error">הגדרת האיחוד אינה זמינה בגרסת השרת הנוכחית. יש להשלים פריסה ומיגרציה לפני שינוי ההגדרה.</p> }
+      @if (masavSaveError) { <p class="plat-error" role="alert">{{ masavSaveError }}</p> }
+      @if (masavSaved) { <p class="gs-vat-note" role="status">ההגדרה נשמרה לייצוא הבא.</p> }
+      <button type="button" class="ops-btn ops-btn-primary" [disabled]="masavSaveBusy || !masavMode" (click)="saveMasavMode()">{{ masavSaveBusy ? 'שומר…' : 'שמירת אופן האיחוד' }}</button>
+    </div>
     <div class="plat-card">
       <div class="gs-card-title">שיעור מע״מ נוכחי</div>
       @if (vatSettingLoading) {

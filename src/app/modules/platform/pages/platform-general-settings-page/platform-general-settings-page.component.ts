@@ -42,6 +42,18 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   vatEditPercent = 18;
   vatSaveBusy = false;
   vatSaveError: string | null = null;
+  masavMode: 'entity' | 'period' | null = null;
+  masavSaveBusy = false;
+  masavSaveError = '';
+  masavSaved = false;
+  saveMasavMode(): void {
+    if (!this.masavMode || this.masavSaveBusy) return;
+    this.masavSaveBusy = true; this.masavSaveError = ''; this.masavSaved = false;
+    this.settingsService.updateMasavConsolidation(this.masavMode).subscribe({
+      next: ({ setting }) => { this.masavSaveBusy = false; this.masavMode = setting.masav_consolidation_mode ?? null; this.masavSaved = true; },
+      error: () => { this.masavSaveBusy = false; this.masavSaveError = 'ההגדרה לא נשמרה. יש לוודא שגרסת השרת והמיגרציה מעודכנות.'; },
+    });
+  }
 
   ngOnInit(): void {
     this.loadVatSetting();
@@ -269,6 +281,7 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
     this.settingsService.get().subscribe({
       next: (res) => {
         this.vatSettingLoading = false;
+        this.masavMode = res.setting?.masav_consolidation_mode ?? null;
         if (res.setting) this.systemVatRatePercent = Number(res.setting.vat_rate) * 100;
       },
       error: () => {

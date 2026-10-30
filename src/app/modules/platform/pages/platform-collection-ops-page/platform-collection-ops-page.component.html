@@ -84,7 +84,7 @@
             @if ((overview.inProcess ?? 0) > 0) { <span class="col-metric-process">בתהליך <strong>₪{{ fmtMoney(overview.inProcess) }}</strong></span> }
             @if (needsAttentionLoading) { <span>דורש טיפול: טוען…</span> }
             @else if (needsAttentionError) { <span class="col-metric-open" role="alert">לא ניתן לטעון התראות טיפול</span> }
-            @else if (needsAttention && needsAttention.totalCount > 0) { <a class="col-metric-open" href="#collection-attention">דורש טיפול <strong>{{ needsAttention.totalCount }}</strong><small>כל התקופות</small></a> }
+            @else if (needsAttention && needsAttention.totalCount > 0) { <a class="col-metric-open" [href]="otherAttentionCount > 0 ? '#collection-attention' : '#masav-collection'">דורש טיפול <strong>{{ needsAttention.totalCount }}</strong><small>כל התקופות</small></a> }
           </div>
           @if (overview.cardCollectionFailed) {
             <p class="col-due-banner col-due-banner-failed">גביית האשראי נכשלה — קיימת יתרה פתוחה לטיפול</p>
@@ -103,6 +103,8 @@
         </div>
       }
     </section>
+
+    <app-masav-collection-section #masavSection (changed)="loadNeedsAttention(); loadOverviewAndStatements()"></app-masav-collection-section>
 
     <!-- D. מצב הגבייה מעמותות -->
     <section class="col-section">
@@ -165,10 +167,14 @@
       } @else if (needsAttentionError) {
         <div class="col-error">{{ needsAttentionError }}</div>
       } @else if (needsAttention) {
-        @if (needsAttention.totalCount === 0) {
-          <div class="col-empty-ok">✓ אין פעולות שממתינות לטיפולך</div>
+        @if (otherAttentionCount === 0) {
+          @if (masavSection.requiresFollowUp) {
+            <div class="col-note">אין חריגות נוספות להצגה. מצב הטיפול במס״ב מוצג באזור גביית מס״ב למעלה.</div>
+          } @else {
+            <div class="col-empty-ok">✓ אין פעולות שממתינות לטיפולך</div>
+          }
         }
-        @for (group of needsAttention.categories; track group.category) {
+        @for (group of otherAttentionGroups; track group.category) {
           @for (item of group.items; track item.statementId) {
             <div class="col-attn-item">
               <div class="col-attn-header">

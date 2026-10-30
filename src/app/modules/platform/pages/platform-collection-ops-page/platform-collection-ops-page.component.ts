@@ -1,3 +1,5 @@
+import { MasavCollectionSectionComponent } from '../../components/masav-collection-section/masav-collection-section.component';
+import { billingPeriodLabel } from '../../services/billing-period-label';
 import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -42,7 +44,7 @@ type ReportPeriodMode = 'period' | 'range' | 'all';
 @Component({
   selector: 'app-platform-collection-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MoneyInputDirective, RouterModule, EntityComboboxComponent],
+  imports: [CommonModule, FormsModule, MoneyInputDirective, RouterModule, EntityComboboxComponent, MasavCollectionSectionComponent],
   templateUrl: './platform-collection-ops-page.component.html',
   styleUrl: './platform-collection-ops-page.component.css',
 })
@@ -63,6 +65,11 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   }
 
   tab: Tab = 'overview';
+  // MASAV actions live permanently above the table, rather than being duplicated in exceptions.
+  get otherAttentionGroups() {
+    return this.needsAttention?.categories.filter(group => !['masav_blocked', 'masav_proposal_awaiting_approval', 'masav_proposal_ready_to_export'].includes(group.category)) ?? [];
+  }
+  get otherAttentionCount(): number { return this.otherAttentionGroups.reduce((sum, group) => sum + group.count, 0); }
   setTab(t: Tab): void {
     this.tab = t;
     if (t === 'history' && this.historyRows.length === 0) this.runHistorySearch();
@@ -182,8 +189,7 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   // approximated by its period_start's calendar month, same as how the
   // admin already thinks of "last month's billing" elsewhere in the app.
   fmtPeriodLabel(p: BillingPeriod): string {
-    const d = new Date(p.period_start);
-    return `${this.HEBREW_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+    return billingPeriodLabel(p);
   }
 
   // Hebrew labels for every real statements.status value (enum unchanged on

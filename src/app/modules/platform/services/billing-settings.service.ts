@@ -12,6 +12,7 @@ function authHeaders(): HttpHeaders {
 // this is the read/write surface for that single settings row.
 export interface PlatformBillingSetting {
   vat_rate: string;
+  masav_consolidation_mode?: 'entity' | 'period';
   updated_at: string;
   updated_by: number | null;
 }
@@ -27,5 +28,8 @@ export class BillingSettingsService {
 
   update(vatRate: number): Observable<{ setting: PlatformBillingSetting }> {
     return this.http.put<{ setting: PlatformBillingSetting }>(this.base, { vatRate }, { headers: authHeaders() });
+  }
+  updateMasavConsolidation(mode: 'entity' | 'period'): Observable<{ setting: PlatformBillingSetting }> {
+    return this.http.put<{ setting: PlatformBillingSetting }>(`${this.base}/masav-consolidation`, { mode }, { headers: authHeaders() });
   }
 }

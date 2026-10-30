@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/modules/platform/components/masav-collection-section/masav-collection-section.component.spec.ts",
+    "src/app/modules/platform/services/billing-period-label.spec.ts",
+    "src/app/modules/platform/pages/platform-general-settings-page/masav-consolidation-settings.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}
