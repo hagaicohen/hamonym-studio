@@ -15,6 +15,7 @@ jobRunner.register(require('./billing-provisioning-gap.job'));
 jobRunner.register(require('./collection-attempt-reconciliation.job'));
 jobRunner.register(require('./recurring-payment-reconciliation.job'));
 jobRunner.register(require('./billing-monthly-cycle.job'));
+jobRunner.register(require('./fin11-masav-prepare.job'));
 jobRunner.register(require('./email-dispatch-recovery.job'));
 jobRunner.register(require('./operational-alerting.job'));
 

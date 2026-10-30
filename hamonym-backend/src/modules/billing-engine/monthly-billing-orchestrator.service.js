@@ -56,7 +56,14 @@ async function execute({ db = pool, previousAt, triggeredBy = 'hamonym-clock' } 
       try { prepared = await prepare({ db, now, previousAt, config }); }
       catch (err) { prepared = { status: 'blocked', reason: err.code || 'monthly_preparation_failed' }; }
       results.push({ step: 'monthly_billing', status: prepared.status, result: prepared });
-      if (prepared.status !== 'success') return { results };
+      const prepareMasav = async () => {
+        const outcome = await require('../../jobs').run('fin11-masav-prepare', { triggeredBy });
+        results.push({ step: 'fin11-masav-prepare', ...outcome });
+      };
+      if (prepared.status !== 'success') {
+        if (prepared.status === 'skipped') await prepareMasav();
+        return { results };
+      }
       try { results.push({ step: 'recover_mock_attempts', status: 'success', result: await require('./collection-attempt-recovery.service').recover() }); }
       catch { results.push({ step: 'recover_mock_attempts', status: 'blocked', result: { reason: 'mock_recovery_failed' } }); return { results }; }
       for (const name of ['fin11-card-collection', 'fin11-card-retry-sweep']) {
@@ -66,6 +73,7 @@ async function execute({ db = pool, previousAt, triggeredBy = 'hamonym-clock' } 
         results.push({ step: name, ...outcome });
         if (outcome.status !== 'success' || outcome.result?.errors) break;
       }
+      await prepareMasav();
       return { results };
     });
   } finally {

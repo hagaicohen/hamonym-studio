@@ -89,6 +89,17 @@ async function getAccruedPreview(periodStart, periodEnd) {
   };
 }
 
+// Historical debt stays visible even before a selected month's period exists.
+async function priorOutstanding(periodEnd) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS statement_count,
+      COALESCE(SUM(s.total_due + COALESCE((SELECT SUM(delta_amount) FROM statement_adjustments WHERE statement_id=s.id),0)
+        - COALESCE((SELECT SUM(amount) FROM payments WHERE statement_id=s.id),0)),0) AS outstanding_total
+     FROM statements s JOIN billing_periods bp ON bp.id=s.billing_period_id
+     WHERE bp.period_end < $1 AND bp.retired=false AND s.status IN ('approved','open')`, [periodEnd]);
+  return rows[0];
+}
+
 exports.getFinancialOverview = async ({ year, month }) => {
   if (!year || !month) {
     const err = new Error('year and month are required');
@@ -136,6 +147,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
     [periodStart, periodEnd]
   );
   const period = periodRes.rows[0];
+  const carried = await priorOutstanding(periodEnd);
 
   if (!period) {
     // No Statement has ever been calculated for this month -- a real,
@@ -152,7 +164,7 @@ exports.getFinancialOverview = async ({ year, month }) => {
       paidConfirmed: null,
       inProcess: null,
       openBalance: null,
-      carriedOverFromPriorPeriods: { statementCount: 0, outstandingTotal: 0 },
+      carriedOverFromPriorPeriods: { statementCount: carried.statement_count, outstandingTotal: Number(carried.outstanding_total) },
       accrued,
       periodDonations,
       cutoffPassed,
@@ -210,16 +222,6 @@ exports.getFinancialOverview = async ({ year, month }) => {
   // still 'approved'/'open' (i.e. still owed) right now. 'paid' is excluded
   // on purpose -- it has zero outstanding by definition, including it would
   // add nothing but a slower query.
-  const carriedRes = await pool.query(
-    `SELECT COUNT(*)::int AS statement_count,
-            COALESCE(SUM(s.total_due + COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0)
-                         - COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0)), 0) AS outstanding_total
-     FROM statements s
-     WHERE s.billing_period_id != $1 AND s.status IN ('approved', 'open')`,
-    [periodId]
-  );
-  const carried = carriedRes.rows[0];
-
   // Card vs MASAV breakdown (2026-10) -- routing.resolveCollectionMethod is
   // the ONE authoritative routing decision (collection.service.js#openAttempt
   // is its only other caller); reused here read-only, per-statement, never
@@ -369,6 +371,24 @@ exports.getNeedsAttention = async () => {
        ORDER BY rf.found_at DESC`
     ),
   ]);
+
+  const mandateFindings = await pool.query(
+    `SELECT s.id AS statement_id, ba.entity_id, e.display_name AS entity_name,
+      s.total_due + COALESCE((SELECT SUM(delta_amount) FROM statement_adjustments WHERE statement_id=s.id),0)
+        - COALESCE((SELECT SUM(amount) FROM payments WHERE statement_id=s.id),0) AS total_due,
+      CASE WHEN emd.entity_id IS NULL THEN 'masav_not_configured'
+        WHEN NOT emd.authorized THEN 'masav_not_authorized' ELSE 'masav_incomplete' END AS reason
+     FROM reconciliation_findings rf JOIN statements s ON s.id=rf.subject_id
+     JOIN billing_accounts ba ON ba.id=s.billing_account_id JOIN entities e ON e.id=ba.entity_id
+     LEFT JOIN entity_masav_details emd ON emd.entity_id=ba.entity_id
+     WHERE rf.finding_type='missing_masav_mandate' AND rf.resolved_at IS NULL
+       AND s.status IN ('approved','open')
+       AND (emd.entity_id IS NULL OR NOT emd.authorized OR emd.bank_code IS NULL OR emd.branch_code IS NULL OR emd.account_number IS NULL)`);
+  for (const row of mandateFindings.rows) {
+    if (Number(row.total_due) <= 0) continue;
+    const existing = blocked.findIndex(item => item.statement_id === row.statement_id);
+    if (existing >= 0) blocked[existing] = row; else blocked.push(row);
+  }
 
   // Historical findings remain auditable; only collectible debt needs intervention.
   const activeExhausted = exhaustedFindings.rows.filter((f) =>
