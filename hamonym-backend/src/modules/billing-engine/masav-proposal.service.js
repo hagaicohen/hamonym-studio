@@ -28,7 +28,6 @@
 // statement_id, lock the Statement, THEN lock the proposal row -- Statement
 // always first, with no exception, matching every other write path.
 const pool = require('../../db/db');
-const XLSX = require('xlsx');
 const { getStatementBalance } = require('./statement-balance.service');
 const { hasOpenCollectionHold } = require('./payment-exceptions.service');
 const { ACTIONABLE_STATEMENT_STATUSES, ACTIVE_ATTEMPT_STATUSES } = require('../collection-engine/collection.service');
@@ -78,10 +77,10 @@ async function findUnresolvedAttempt(statementId, client) {
 // an active proposal already exists with the SAME amount, it is left
 // alone; if the real balance changed, the old one is superseded and a
 // fresh one is prepared in the same transaction.
-async function prepareMasavProposal(statementId) {
-  const client = await pool.connect();
+async function prepareMasavProposal(statementId, transactionClient = null) {
+  const client = transactionClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!transactionClient) await client.query('BEGIN');
 
     const stmtRes = await client.query(
       `SELECT s.id, s.status, ba.entity_id
@@ -99,15 +98,23 @@ async function prepareMasavProposal(statementId) {
     }
 
     if (!ACTIONABLE_STATEMENT_STATUSES.includes(statement.status)) {
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: false, reason: 'not_actionable', status: statement.status };
+    }
+
+    // An exported instruction is unresolved exposure, not permission to prepare a second file.
+    // Reuse the existing guard under the same Statement lock used by approval/export.
+    const exported = await hasExportedMasavProposal(statementId, client);
+    if (exported.exists) {
+      if (!transactionClient) await client.query('COMMIT');
+      return { proposed: false, reason: 'awaiting_masav_results', proposalId: exported.proposalId };
     }
 
     // Rule D: respect an open Stage 2B overpayment hold -- entity-wide,
     // same function openAttempt/getFin11CappedCardProposal already call.
     const hold = await hasOpenCollectionHold(statement.entity_id, client);
     if (hold.held) {
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: false, reason: 'collection_held', exceptionId: hold.exceptionId };
     }
 
@@ -125,7 +132,7 @@ async function prepareMasavProposal(statementId) {
         subjectId: statementId,
         details: { entityId: statement.entity_id, attemptId: unresolved.id, attemptMethod: unresolved.collection_method, attemptStatus: unresolved.status },
       });
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: false, reason: 'unresolved_collection_attempt', attemptId: unresolved.id };
     }
 
@@ -141,7 +148,7 @@ async function prepareMasavProposal(statementId) {
         subjectId: statementId,
         details: { entityId: statement.entity_id, reason: mandate.reason },
       });
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: false, reason: mandate.reason };
     }
 
@@ -152,7 +159,7 @@ async function prepareMasavProposal(statementId) {
     // assumption.
     const balance = await getStatementBalance(statementId, client);
     if (balance.outstanding <= 0) {
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: false, reason: 'no_outstanding_balance', outstanding: balance.outstanding };
     }
     const proposedAmount = Math.round(balance.outstanding * 100) / 100;
@@ -165,7 +172,7 @@ async function prepareMasavProposal(statementId) {
 
     if (active && Number(active.proposed_amount) === proposedAmount) {
       // Idempotent re-run, nothing changed -- return the existing proposal.
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { proposed: true, proposalId: active.id, proposedAmount, status: active.status, refreshed: false };
     }
 
@@ -185,13 +192,18 @@ async function prepareMasavProposal(statementId) {
       [statementId, statement.entity_id, proposedAmount]
     );
 
-    await client.query('COMMIT');
+
+    await client.query(`INSERT INTO masav_retry_proposals(proposal_id,original_instruction_id,statement_id)
+      SELECT $1,r.instruction_id,$2 FROM masav_retry_requests r
+      JOIN masav_export_components c ON c.instruction_id=r.instruction_id AND c.statement_id=$2
+      ORDER BY r.created_at DESC,r.instruction_id LIMIT 1 ON CONFLICT DO NOTHING`,[insertRes.rows[0].id,statementId]);
+    if (!transactionClient) await client.query('COMMIT');
     return { proposed: true, proposalId: insertRes.rows[0].id, proposedAmount, status: 'proposed', refreshed: Boolean(active) };
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (!transactionClient) await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
-    client.release();
+    if (!transactionClient) client.release();
   }
 }
 
@@ -219,11 +231,14 @@ async function listMasavProposals({ status } = {}) {
     `SELECT mp.id, mp.statement_id, mp.entity_id, mp.proposed_amount, mp.outstanding_at_proposal,
             mp.status, mp.status_reason, mp.created_at, mp.approved_at, mp.exported_at,
             e.display_name AS entity_name, s.total_due, s.status AS statement_status,
-            bp.period_start, bp.period_end
+            bp.period_start, bp.period_end, ec.instruction_id, ei.batch_id, eb.consolidation_mode AS export_mode
      FROM masav_collection_proposals mp
      JOIN entities e ON e.id = mp.entity_id
      JOIN statements s ON s.id = mp.statement_id
      JOIN billing_periods bp ON bp.id = s.billing_period_id
+     LEFT JOIN masav_export_components ec ON ec.proposal_id=mp.id
+     LEFT JOIN masav_export_instructions ei ON ei.id=ec.instruction_id
+     LEFT JOIN masav_export_batches eb ON eb.id=ei.batch_id
      ${where}
      ORDER BY mp.created_at DESC`,
     params
@@ -279,7 +294,8 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
     const balance = await getStatementBalance(proposal.statement_id, client);
     const currentOutstanding = Math.round(balance.outstanding * 100) / 100;
 
-    const staleReason = hold.held ? 'collection_held'
+    const exported = await hasExportedMasavProposal(proposal.statement_id, client);
+    const staleReason = exported.exists ? 'awaiting_masav_results' : hold.held ? 'collection_held'
       : unresolved ? 'unresolved_collection_attempt'
       : !mandate.valid ? mandate.reason
       : currentOutstanding !== Number(proposal.proposed_amount) ? 'outstanding_changed'
@@ -320,116 +336,11 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
 // never a fixed total/cap assumption) and the join (entity_masav_details
 // for bank details, same as the existing function) are specific to this
 // path.
-async function exportMasavProposals({ proposalIds, superAdminUserId }) {
-  if (!Array.isArray(proposalIds) || proposalIds.length === 0) {
-    const err = new Error('proposalIds is required');
-    err.code = 'MISSING_PROPOSAL_IDS';
-    throw err;
-  }
-  if (!superAdminUserId) {
-    const err = new Error('superAdminUserId is required');
-    err.code = 'MISSING_ADMIN_USER';
-    throw err;
-  }
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const rows = [];
-    for (const proposalId of proposalIds) {
-      // Same lock-order fix as approveMasavProposal: Statement first,
-      // always, peeked via a non-locking read for statement_id.
-      const peekRes = await client.query(`SELECT statement_id FROM masav_collection_proposals WHERE id = $1`, [proposalId]);
-      if (!peekRes.rows[0]) { const err = new Error(`Proposal ${proposalId} not found`); err.code = 'PROPOSAL_NOT_FOUND'; throw err; }
-
-      const stmtLockRes = await client.query(`SELECT s.id FROM statements s WHERE s.id = $1 FOR UPDATE OF s`, [peekRes.rows[0].statement_id]);
-      if (!stmtLockRes.rows[0]) { const err = new Error(`Statement for proposal ${proposalId} not found`); err.code = 'STATEMENT_NOT_FOUND'; throw err; }
-
-      const propRes = await client.query(`SELECT * FROM masav_collection_proposals WHERE id = $1 FOR UPDATE`, [proposalId]);
-      const proposal = propRes.rows[0];
-      if (!proposal) { const err = new Error(`Proposal ${proposalId} not found`); err.code = 'PROPOSAL_NOT_FOUND'; throw err; }
-      if (proposal.status !== 'approved') { const err = new Error(`Proposal ${proposalId} is ${proposal.status}, not approved`); err.code = 'PROPOSAL_NOT_APPROVED'; throw err; }
-
-      // Integration-gap fix #2: revalidate the CURRENT balance, under the
-      // Statement lock just acquired, immediately before export -- never
-      // trust the amount approveMasavProposal froze, no matter how long
-      // ago that was. A changed balance means this proposal must NOT be
-      // exported as-is; it is superseded and the whole export call stops
-      // (the transaction rolls back -- nothing already written in THIS
-      // call is kept either), so the caller can re-prepare/re-approve and
-      // retry with correct, fresh amounts rather than risk exporting a
-      // stale instruction.
-      const freshBalance = await getStatementBalance(proposal.statement_id, client);
-      const freshOutstanding = Math.round(freshBalance.outstanding * 100) / 100;
-      if (freshOutstanding !== Number(proposal.proposed_amount)) {
-        await client.query(`UPDATE masav_collection_proposals SET status = 'superseded', status_reason = $2 WHERE id = $1`, [proposalId, `export blocked: outstanding changed from ${proposal.proposed_amount} to ${freshOutstanding}`]);
-        const err = new Error(`Proposal ${proposalId}'s balance changed since approval (was ${proposal.proposed_amount}, now ${freshOutstanding}) -- superseded, re-prepare and re-approve before exporting`);
-        err.code = 'PROPOSAL_STALE_AT_EXPORT';
-        throw err;
-      }
-
-      const detailRes = await client.query(
-        `SELECT e.display_name AS entity_name, e.contact_full_name, e.contact_email,
-                emd.bank_code, emd.branch_code, emd.account_number, emd.authorized,
-                bp.period_start
-         FROM statements s
-         JOIN billing_accounts ba ON ba.id = s.billing_account_id
-         JOIN entities e ON e.id = ba.entity_id
-         JOIN billing_periods bp ON bp.id = s.billing_period_id
-         LEFT JOIN entity_masav_details emd ON emd.entity_id = ba.entity_id
-         WHERE s.id = $1`,
-        [proposal.statement_id]
-      );
-      const detail = detailRes.rows[0];
-      if (!detail || !detail.authorized) { const err = new Error(`Proposal ${proposalId}'s entity is not MASAV-authorized`); err.code = 'NOT_AUTHORIZED'; throw err; }
-
-      await client.query(
-        `UPDATE masav_collection_proposals SET status = 'exported', exported_at = NOW(), exported_by_user_id = $2 WHERE id = $1`,
-        [proposalId, superAdminUserId]
-      );
-      await client.query(
-        `INSERT INTO platform_audit_log (super_admin_user_id, entity_id, action, notes) VALUES ($1, $2, 'masav_proposal_exported', $3)`,
-        [superAdminUserId, proposal.entity_id, `proposalId=${proposalId} amount=${proposal.proposed_amount}`]
-      );
-
-      rows.push({ ...detail, amount: Number(proposal.proposed_amount) });
-    }
-
-    const header = ['bank', 'branch', 'account', 'sum', 'tranmode', 'currency', 'company', 'contact', 'email', 'pdesc', 'remarks'];
-    const hebrewHeader = ['מספר בנק', 'מספר סניף', 'מספר חשבון בסניף', 'סכום', 'ברירת מחדל', 'מטבע - 1 = ש"ח', 'חברה', 'איש קשר', 'מייל', 'תיאור מוצר', 'הערות'];
-    const mmyyyy = (input) => {
-      const iso = input instanceof Date ? input.toISOString() : String(input);
-      const [y, m] = iso.slice(0, 10).split('-');
-      return `${m}/${y}`;
-    };
-    const data = [hebrewHeader, header, ...rows.map((row) => [
-      row.bank_code, row.branch_code, row.account_number, row.amount, 'T', '1',
-      row.entity_name, row.contact_full_name || '', row.contact_email || '',
-      `עמלת ${mmyyyy(row.period_start)}`, '',
-    ])];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
-    const TEXT_COLUMNS = [0, 1, 2];
-    for (let r = 2; r < data.length; r++) {
-      for (const c of TEXT_COLUMNS) {
-        const ref = XLSX.utils.encode_cell({ r, c });
-        const cell = worksheet[ref];
-        if (cell) { cell.t = 's'; cell.z = '@'; cell.v = String(cell.v); }
-      }
-    }
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'MASAV');
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true });
-
-    await client.query('COMMIT');
-    return buffer;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw err;
-  } finally {
-    client.release();
-  }
+async function exportMasavProposals(options) {
+  return require('./masav-export.service').execute(options,{checkMasavMandate,findUnresolvedAttempt,hasExportedMasavProposal});
+}
+async function previewMasavExport(options={}) {
+  return require('./masav-export.service').execute({...options,previewOnly:true},{checkMasavMandate,findUnresolvedAttempt,hasExportedMasavProposal});
 }
 
 // Integration-gap fix #1: the OLD, pre-FIN-11 masav-collection.service.js
@@ -447,20 +358,18 @@ async function hasActiveMasavProposal(statementId, client = pool) {
   return res.rows.length > 0 ? { exists: true, proposalId: res.rows[0].id, status: res.rows[0].status } : { exists: false };
 }
 
-// Integration-gap fix #3: an 'exported' proposal means a real MASAV
-// instruction left this system for a human to submit to the bank -- its
-// outcome is NOT knowable by this codebase (no Tranzila result-ingestion
-// capability exists, by design -- see the Technical Design doc section 6).
-// While that instruction is outstanding, opening a NEW card attempt for
-// the SAME Statement risks collecting the same debt twice through two
-// different channels. Called from collection.service.js#openAttempt /
-// #getFin11CappedCardProposal via a LAZY (in-function-body) require, to
-// avoid a circular top-level require (this module already requires
-// collection.service.js for ACTIONABLE_STATEMENT_STATUSES/
-// ACTIVE_ATTEMPT_STATUSES).
+// Shared exposure guard: exported instructions remain locked until their
+// actual bank results are explicitly finalized AND a residual-only retry
+// request commits atomically with its new proposals. A legacy export without
+// journal metadata stays locked. Original exported rows are never rewritten.
 async function hasExportedMasavProposal(statementId, client = pool) {
   const res = await client.query(
-    `SELECT id FROM masav_collection_proposals WHERE statement_id = $1 AND status = 'exported' LIMIT 1`,
+    `SELECT p.id FROM masav_collection_proposals p
+ LEFT JOIN masav_export_components c ON c.proposal_id=p.id
+ WHERE p.statement_id=$1 AND p.status='exported'
+ AND NOT EXISTS(SELECT 1 FROM masav_instruction_finalizations f
+   JOIN masav_retry_requests r ON r.instruction_id=f.instruction_id
+   WHERE f.instruction_id=c.instruction_id AND f.outcome IN ('partial','failed')) LIMIT 1`,
     [statementId]
   );
   return res.rows.length > 0 ? { exists: true, proposalId: res.rows[0].id } : { exists: false };
@@ -472,6 +381,7 @@ module.exports = {
   listMasavProposals,
   approveMasavProposal,
   exportMasavProposals,
+  previewMasavExport,
   checkMasavMandate,
   findUnresolvedAttempt,
   hasActiveMasavProposal,

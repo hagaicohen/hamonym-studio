@@ -100,6 +100,7 @@ exports.exportMasavProposals = async (req, res) => {
   try {
     const buffer = await masavProposals.exportMasavProposals({
       proposalIds: req.body.proposalIds,
+      expectedPreviewToken: req.body.expectedPreviewToken,
       superAdminUserId: req.user.id,
     });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -117,3 +118,11 @@ exports.getStatementBalance = async (req, res) => {
     handle(res, 'getStatementBalance', err);
   }
 };
+
+exports.previewMasavExport=async(req,res)=>{try{res.json({preview:await masavProposals.previewMasavExport({proposalIds:req.body.proposalIds})});}catch(e){handle(res,'previewMasavExport',e);}};
+
+exports.recordMasavResult=async(req,res)=>{try{const result=await require('../../billing-engine/masav-result.service').recordConfirmedResult({...req.body,instructionId:req.params.id,superAdminUserId:req.user.id});res.json({result});}catch(e){handle(res,'recordMasavResult',e);}};
+
+exports.listMasavInstructions=async(req,res)=>{try{res.json({instructions:await require('../../billing-engine/masav-recovery.service').listInstructions()});}catch(e){handle(res,'listMasavInstructions',e);}};
+exports.finalizeMasavInstruction=async(req,res)=>{try{res.json({result:await require('../../billing-engine/masav-recovery.service').finalizeInstruction({...req.body,instructionId:req.params.id,superAdminUserId:req.user.id})});}catch(e){handle(res,'finalizeMasavInstruction',e);}};
+exports.prepareMasavRetry=async(req,res)=>{try{res.json({result:await require('../../billing-engine/masav-recovery.service').prepareRetry({instructionId:req.params.id,confirmed:req.body.confirmed,superAdminUserId:req.user.id})});}catch(e){handle(res,'prepareMasavRetry',e);}};

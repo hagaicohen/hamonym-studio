@@ -12,5 +12,6 @@ router.use(requireSuperAdmin);
 
 router.get('/', ctrl.get);
 router.put('/', ctrl.update);
+router.put('/masav-consolidation',ctrl.updateMasavConsolidation);
 
 module.exports = router;

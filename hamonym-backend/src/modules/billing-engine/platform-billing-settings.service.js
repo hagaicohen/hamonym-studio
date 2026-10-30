@@ -27,7 +27,7 @@ exports.getCurrentVatRate = async (client = pool) => {
 
 exports.getSetting = async () => {
   const { rows } = await pool.query(
-    `SELECT vat_rate, updated_at, updated_by FROM platform_billing_settings WHERE id = 1`
+    `SELECT vat_rate, masav_consolidation_mode, updated_at, updated_by FROM platform_billing_settings WHERE id = 1`
   );
   return rows[0] || null;
 };
@@ -71,4 +71,15 @@ exports.setVatRate = async ({ vatRate, superAdminUserId, ip }) => {
   } finally {
     client.release();
   }
+};
+
+exports.setMasavConsolidation = async ({ mode, superAdminUserId, ip }) => {
+  if (!['entity','period'].includes(mode) || !superAdminUserId) throw Object.assign(new Error('Invalid MASAV consolidation setting'), {code:'INVALID_MASAV_MODE'});
+  const client=await pool.connect();try { await client.query('BEGIN');
+    const before=(await client.query('SELECT masav_consolidation_mode FROM platform_billing_settings WHERE id=1 FOR UPDATE')).rows[0];
+    if(!before)throw new Error('Platform billing settings missing');
+    const setting=(await client.query('UPDATE platform_billing_settings SET masav_consolidation_mode=$1,updated_by=$2,updated_at=now() WHERE id=1 RETURNING vat_rate,masav_consolidation_mode,updated_at,updated_by',[mode,superAdminUserId])).rows[0];
+    await client.query("INSERT INTO platform_audit_log(super_admin_user_id,entity_id,action,notes,ip_address) VALUES($1,NULL,'masav_consolidation_update',$2,$3)",[superAdminUserId,JSON.stringify({before:before.masav_consolidation_mode,after:mode}),ip||null]);
+    await client.query('COMMIT');return setting;
+  } catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 };

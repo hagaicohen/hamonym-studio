@@ -397,10 +397,10 @@ async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: m
 // on OUR side since the attempt opened" -- that is a completely separate
 // question, and it is exactly the gap the Statement-lock + balance-
 // recompute below closes.
-async function resolveAttempt(attemptId, statementId, outcome) {
-  const client = await pool.connect();
+async function resolveAttempt(attemptId, statementId, outcome, transactionClient = null) {
+  const client = transactionClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!transactionClient) await client.query('BEGIN');
 
     const stmtRes = await client.query(
       `SELECT s.id, ba.entity_id
@@ -506,10 +506,10 @@ async function resolveAttempt(attemptId, statementId, outcome) {
     // Retrying (a later openAttempt call) is a separate, deliberate action --
     // this function never opens a new attempt itself.
 
-    await client.query('COMMIT');
+    if (!transactionClient) await client.query('COMMIT');
     // Financial truth commits first. Recovery can reconstruct this notification
     // from the persisted attempt even if this process stops at the next line.
-    if (CONFIRMED_FAILURE_STATUSES.includes(outcome.outcome)) {
+    if (!transactionClient && CONFIRMED_FAILURE_STATUSES.includes(outcome.outcome)) {
       try {
         const { notifyExhaustedCardStatement } = require('../billing-engine/fin11-card-collection.service');
         await notifyExhaustedCardStatement(client, statementId, { attemptId });
@@ -519,10 +519,10 @@ async function resolveAttempt(attemptId, statementId, outcome) {
     }
     return { attemptId, outcome: outcome.outcome, statementStatus, overpayment };
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (!transactionClient) await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
-    client.release();
+    if (!transactionClient) client.release();
   }
 }
 

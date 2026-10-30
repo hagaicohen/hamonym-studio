@@ -36,7 +36,7 @@ async function handler(db, { now = new Date() } = {}) {
   const proposalsPrepared = results.filter((r) => r.proposed).length;
 
   return {
-    status: results.some(row => !row.proposed && !['no_outstanding_balance', 'not_actionable'].includes(row.reason)) ? 'blocked' : 'success',
+    status: results.some(row => !row.proposed && !['no_outstanding_balance', 'not_actionable', 'awaiting_masav_results'].includes(row.reason)) ? 'blocked' : 'success',
     results,
     periodEnd: periodEnd.toISOString(),
     statementsConsidered: statementIds.length,

@@ -18,7 +18,12 @@ router.post('/exceptions/:id/resolve', ctrl.resolveException);
 router.get('/masav-proposals', ctrl.listMasavProposals);
 router.post('/masav-proposals/:id/approve', ctrl.approveMasavProposal);
 router.post('/masav-proposals/export', ctrl.exportMasavProposals);
+router.post('/masav-proposals/export-preview',ctrl.previewMasavExport);
 
 router.get('/statements/:id/balance', ctrl.getStatementBalance);
 
+router.post('/masav-instructions/:id/confirmed-result', ctrl.recordMasavResult);
+router.get('/masav-instructions', ctrl.listMasavInstructions);
+router.post('/masav-instructions/:id/finalize', ctrl.finalizeMasavInstruction);
+router.post('/masav-instructions/:id/retry', ctrl.prepareMasavRetry);
 module.exports = router;

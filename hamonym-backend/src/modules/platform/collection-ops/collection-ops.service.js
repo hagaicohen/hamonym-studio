@@ -553,15 +553,18 @@ exports.getSystemActivity = async () => {
     });
   }
 
-  const fin11Planned = FIN11_PLANNED_JOBS.map((job) => ({
-    name: job.name,
-    label: job.label,
-    registered: registered.includes(job.name),
-    // Always 'not_registered' today by design -- explicit per-job check
-    // (not a blanket assumption) so this flips correctly the moment any one
-    // of them is ever actually registered, without needing this file
-    // touched again.
-    status: registered.includes(job.name) ? 'active' : 'not_registered',
+  // Include actual preparation outcomes, not only registry membership.
+  const fin11Planned = await Promise.all(FIN11_PLANNED_JOBS.map(async job => {
+    const isRegistered = registered.includes(job.name);
+    const lastRun = isRegistered ? (await pool.query(
+      `SELECT status, started_at, finished_at, duration_ms, result_summary, error
+       FROM job_runs WHERE job_name = $1 ORDER BY started_at DESC LIMIT 1`, [job.name])).rows[0] : null;
+    return {
+      name: job.name, label: job.label, registered: isRegistered,
+      status: !isRegistered ? 'not_registered' : lastRun?.status || 'never_run',
+      lastRunAt: lastRun?.started_at || null, lastRunDurationMs: lastRun?.duration_ms || null,
+      resultSummary: lastRun?.result_summary || null, lastRunError: lastRun?.error || null,
+    };
   }));
 
   return { automatic, fin11Planned };
