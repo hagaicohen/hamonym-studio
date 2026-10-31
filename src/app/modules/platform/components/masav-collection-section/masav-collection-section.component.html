@@ -1,31 +1,30 @@
-<dialog #approvalDialog class="masav-approval-modal" dir="rtl" aria-labelledby="masav-approval-title" aria-describedby="masav-approval-explanation" [attr.aria-busy]="busy" (cancel)="cancelApproval($event)">
-  @if (approvalRow; as row) {
-    <form (ngSubmit)="approve(row)">
-      <h3 id="masav-approval-title">אישור הצעת מס״ב</h3>
-      <dl class="masav-approval-summary">
-        <div><dt>עמותה</dt><dd>{{ row.statement.entity_name }}</dd></div>
-        <div><dt>תקופת חיוב</dt><dd>{{ periodLabel(row) }}</dd></div>
-        <div><dt>סכום ההצעה</dt><dd class="masav-approval-amount">₪{{ money(+(row.proposal?.proposed_amount ?? 0)) }}</dd></div>
-      </dl>
-      <p id="masav-approval-explanation">האישור מאפשר הכנת קובץ Excel בלבד. הוא אינו יוזם גבייה או שולח הוראות לבנק.</p>
-      <label for="masav-approval-note">הערה לאישור (לא חובה)</label>
-      <textarea id="masav-approval-note" name="approvalNote" [(ngModel)]="approvalReason" [disabled]="busy" rows="3"></textarea>
-      @if (approvalError) { <p class="masav-message error" role="alert">{{ approvalError }}</p> }
-      <div class="masav-approval-actions">
-        <button type="button" class="masav-button secondary" autofocus [disabled]="busy" (click)="closeApproval()">ביטול</button>
-        <button type="submit" class="masav-button primary" [disabled]="busy">{{ busy ? 'מאשר…' : 'אשר הצעה להכנת קובץ' }}</button>
-      </div>
-    </form>
-  }
-</dialog>
-<section id="masav-collection" class="masav-section" dir="rtl" aria-labelledby="masav-heading" [attr.aria-busy]="loading">
-  <header class="masav-heading">
-    <div><h2 id="masav-heading">גביית מס״ב <span>{{ monthLabel }}</span></h2>
-      <p>הכנת הוראות והורדת קובץ בלבד. העברת הקובץ לגבייה מתבצעת ידנית מחוץ למערכת.</p></div>
-    <button type="button" class="masav-button secondary" (click)="refresh()" [disabled]="loading || busy">{{ loading ? 'טוען מצב…' : 'רענון מצב' }}</button>
-  </header>
+<section id="masav-collection" class="masav-section" dir="rtl" aria-labelledby="masav-heading" [attr.aria-busy]="loading || busy">
+  <header class="masav-heading"><div><h2 id="masav-heading">גביית מס״ב</h2><p>הפקת קובץ גבייה להעברה לבנק</p></div><button class="masav-refresh" type="button" [disabled]="loading || busy" (click)="refresh()" aria-label="רענון מצב גביית מס״ב">רענון</button></header>
+  @if (error) { <p class="masav-message error" role="alert">{{ error }}</p> }
+  @if (actionError) { <p class="masav-message error" role="alert">{{ actionError }}</p> }
+  @if (exportNotice) { <p class="masav-message success" role="status">{{ exportNotice }}</p> }
   @if (resultMessage) { <p role="status">{{ resultMessage }}</p> }
-  @if (approvalNotice) { <p class="masav-message success" role="status">{{ approvalNotice }}</p> }
+  @if (loading) { <p role="status">טוענים יתרות והרשאות…</p> }
+  @else if (!error) {
+    @if (readyAmount > 0 || downloadRequest || !pendingInstructions.length) {
+      <div class="masav-export-content"><div><span class="masav-amount-label">סכום מוכן לגבייה</span><strong class="masav-ready-amount">₪{{ money(readyAmount) }}</strong><p class="masav-metadata">{{ exportSummary?.organizationCount ?? 0 }} עמותות <span>·</span> {{ exportSummary?.instructions?.length ?? 0 }} הוראות גבייה <span>·</span> {{ exportSummary?.periodCount ?? 0 }} תקופות חיוב</p></div>
+      <div class="masav-export-action"><button type="button" class="masav-button primary masav-download" [disabled]="busy || (!downloadRequest && (exportBlocked || !readyAmount))" (click)="download()"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg>{{ busy ? 'מכין את הקובץ...' : downloadRequest ? 'ניסיון הורדה חוזר של אותו קובץ' : 'אשר והורד קובץ מס״ב' }}</button><p class="masav-manual-note">הקובץ יישמר במחשב לצורך העברה לבנק. לא מתבצעת גבייה אוטומטית.</p></div></div>
+    }
+    @if (exportBlocked) { <div class="masav-blockers" role="status"><strong>נדרש טיפול לפני הפקת הקובץ</strong>
+      @for (row of rows; track row.statement.id) { @if (!['proposed','approved','exported','partial','failed','completed'].includes(row.state)) { <p>{{ row.statement.entity_name }} · {{ periodLabel(row) }} — {{ labels[row.state] }}. {{ row.explanation }} @if (row.state === 'authorization') { <a [routerLink]="['/platform/billing-setup', row.statement.entity_id]">השלמת פרטי מס״ב</a> }</p> } }
+      @for (blocker of exportSummary?.excluded ?? []; track $index) { <p>{{ blockerDescription(blocker) }}</p> }
+      @if (exportSummary?.excluded?.length) { <p>לא יופק קובץ חלקי עד להסדרת החסימות.</p> }
+    </div> }
+    @if (pendingInstructions.length) { <div class="masav-pending" role="status"><h3>ממתין לתוצאות הגבייה</h3><p>סכום שיוצא לקובץ: <strong>₪{{ money(pendingAmount) }}</strong> · {{ pendingOrganizations }} עמותות @if (latestExport) { · תאריך הפקה: {{ latestExport | date:'dd/MM/yyyy HH:mm' }} }</p><p>יתרה פתוחה כוללת: <strong>₪{{ money(totalOutstanding) }}</strong></p></div> }
+    @if (!pendingInstructions.length && instructions.length && !readyAmount) { <p class="masav-metadata" role="status">{{ summaryStatus }} · יתרה פתוחה כוללת: ₪{{ money(totalOutstanding) }}</p> }
+    @if (!showResults) {
+      @for (instruction of recoverableInstructions; track instruction.id) {
+        <div class="masav-pending"><strong>{{ instruction.entity_name }} — {{ instructionLabels[instruction.status] }}</strong><p>סכום מקורי: ₪{{ money(+instruction.total_amount) }} · נגבה: ₪{{ money(+instruction.collected_amount) }} · יתרה: ₪{{ money(+instruction.outstanding_amount) }}</p><button type="button" class="masav-button secondary" [disabled]="busy" (click)="showResults = true; retryInstruction = instruction.id; resultInstruction = ''">הכן גבייה חוזרת ליתרה</button></div>
+      }
+    }
+    @if (!rows.length && !instructions.length) { <p class="masav-empty">אין יתרות מס״ב פתוחות.</p> }
+    @if (instructions.length) { <button type="button" class="masav-button secondary masav-results-toggle" [attr.aria-expanded]="showResults" [disabled]="busy" (click)="showResults = !showResults">{{ showResults ? 'סגירת תוצאות הגבייה' : 'רישום תוצאות הגבייה' }}</button> }
+  }
   @if (resultInstruction) {
     <form class="masav-result-form" (ngSubmit)="recordResult()">
       <h3>{{ resultAction === 'payment' ? 'רישום תוצאת גבייה שהתקבלה בפועל' : 'סיום רישום תוצאות ההוראה' }}</h3>
@@ -39,25 +38,17 @@
       <button class="masav-button secondary" type="button" [disabled]="busy" (click)="resultInstruction = ''">ביטול</button>
     </form>
   }
-  @if (error) {
-    <div class="masav-message error" role="alert">{{ error }}</div>
-  } @else {
-    <div class="masav-summary">
-      <div class="masav-summary-card"><span>יתרה לגביית מס״ב</span><strong>{{ loading || incomplete ? '—' : '₪' + money(totalOutstanding) }}</strong><small>כולל יתרות פתוחות מתקופות קודמות</small></div>
-      <div class="masav-summary-card"><span>עמותות לגבייה</span><strong>{{ loading || incomplete ? '—' : organizationCount }}</strong><small>{{ loading ? 'מאמתים נתונים…' : summaryStatus }}</small><small>{{ periodCount }} תקופות חיוב</small></div>
-    </div>
-    @if (instructions.length && !loading) {
+
+    @if (showResults && instructions.length && !loading) {
       <div class="masav-instruction-history" aria-label="הוראות מס״ב ותוצאות גבייה">
         <h3>הוראות גבייה ותוצאות</h3>
         <p>הסכומים להלן מתארים כל הוראה בנפרד. יתרה שעברה להוראה חדשה אינה חוב נוסף.</p>
         @for (instruction of instructions; track instruction.id) {
           <article class="masav-instruction" [attr.data-instruction-id]="instruction.id">
             <div class="masav-instruction-heading"><strong>{{ instruction.entity_name }}</strong><span [class]="'masav-badge ' + instruction.status">{{ instructionLabels[instruction.status] }}</span></div>
-            <small>הוראה: <bdi>{{ instruction.id }}</bdi></small>
-            @if (instruction.parent_instruction_ids.length) { <small>גבייה חוזרת להוראות: {{ instruction.parent_instruction_ids.join(', ') }}</small> }
             <div class="masav-instruction-amounts"><span>סכום מקורי <strong>₪{{ money(+instruction.total_amount) }}</strong></span><span>נגבה בהוראה זו <strong>₪{{ money(+instruction.collected_amount) }}</strong></span><span>יתרה עדכנית לחובות המקוריים <strong>₪{{ money(+instruction.outstanding_amount) }}</strong></span></div>
             @for (component of instruction.components; track component.statement_id) {
-              <small>{{ componentPeriod(component.period_start, component.period_end) }} · יתרה ₪{{ money(+component.outstanding_amount) }} · חיוב <bdi>{{ component.statement_id }}</bdi></small>
+              <small>{{ componentPeriod(component.period_start, component.period_end) }} · יתרה ₪{{ money(+component.outstanding_amount) }}</small>
             }
             @if (instruction.allocations.length) {
               <details class="masav-allocation-details"><summary>שיוך התשלומים לחיובים</summary>
@@ -82,56 +73,4 @@
         }
       </div>
     }
-    <div class="masav-export-toolbar">
-      <div><strong>קובץ אחד לכל הוראות הגבייה המאושרות</strong><p>כל העמותות וכל תקופות החיוב. ניתן לבדוק את ההוראות לפני ההפקה.</p></div>
-      <button type="button" class="masav-button primary" [disabled]="loading || busy || previewBusy || !approvedCount" (click)="openExportPreview()">{{ previewBusy ? 'מכין תצוגה…' : 'הפק קובץ Excel למס״ב' }}</button>
-      @if (!loading && !approvedCount) { <small>להפקת קובץ יש לאשר לפחות הצעה אחת. יתרות ללא הצעה מאושרת אינן נכללות.</small> }
-    </div>
-    @if (preview) {
-      <div class="masav-export-preview" aria-label="תצוגה מקדימה של הוראות מס״ב">
-        <h3>בדיקת ההוראות לפני ייצוא</h3>
-        <p>{{ preview.mode === 'entity' ? 'איחוד לפי עמותה' : 'הוראה נפרדת לכל תקופת חיוב' }} · {{ preview.instructions.length }} הוראות · {{ preview.organizationCount }} עמותות · {{ preview.periodCount }} תקופות</p>
-        <strong class="masav-preview-total">סך הקובץ: ₪{{ money(+preview.totalAmount) }}</strong>
-        @for (instruction of preview.instructions; track instruction.ordinal) {
-          <div class="masav-preview-instruction"><strong>{{ instruction.entityName }} — ₪{{ money(+instruction.amount) }}</strong><small>חשבון מסתיים ב־<bdi>{{ instruction.bankLast4 }}</bdi></small>
-            @for (component of instruction.components; track component.proposalId) {
-              <div class="masav-preview-debt"><span>{{ componentPeriod(component.periodStart, component.periodEnd) }}</span><span>₪{{ money(+component.amount) }}</span><small>חיוב: <bdi>{{ component.statementId }}</bdi></small></div>
-            }
-          </div>
-        }
-        @if (preview.excluded.length) { <p class="masav-message error" role="status">{{ preview.excluded.length }} הצעות אינן כשירות לייצוא. יש לבדוק הרשאה, יתרה וחסימות לפני הכנת תצוגה חדשה.</p> }
-        @if (!preview.instructions.length) { <p>אין כרגע הוראות מאושרות וכשירות לייצוא.</p> }
-        <p>האישור יפיק קובץ אחד להורדה בלבד. אין שידור אוטומטי לבנק ואין סימון חובות כשולמו. שינוי ביתרה או בהגדרה יחייב בדיקה מחדש.</p>
-        <div class="masav-preview-actions"><button type="button" class="masav-button primary" [disabled]="busy || !preview.instructions.length" (click)="exportPreview()">{{ busy ? 'מפיק קובץ…' : 'אישור והורדת הקובץ המאוחד' }}</button><button type="button" class="masav-button secondary" [disabled]="busy" (click)="preview = null">סגירת התצוגה</button></div>
-      </div>
-    }
-    @if (actionError) { <div class="masav-message error" role="alert">{{ actionError }}</div> }
-    @if (loading) { <p class="masav-message" role="status">טוענים יתרות, הרשאות והצעות מס״ב…</p> }
-    @else if (!rows.length) { <p class="masav-message empty">אין יתרות מס״ב פתוחות. האזור נשאר זמין גם בחודשים ללא תרומות.</p> }
-    @else {
-      <div class="masav-rows">
-        @for (row of rows; track row.statement.id) {
-          <article class="masav-row" [attr.data-statement-id]="row.statement.id">
-            <div class="masav-organization"><a [routerLink]="['/platform/organizations', row.statement.entity_id]">{{ row.statement.entity_name }}</a><small>תקופת חיוב מקורית: {{ periodLabel(row) }}</small></div>
-            <div class="masav-amount"><small>יתרה פתוחה</small><strong>{{ row.outstanding === null ? 'לא אומתה' : '₪' + money(row.outstanding) }}</strong></div>
-            <div class="masav-state"><span class="masav-badge" [class]="'masav-badge ' + row.state">{{ labels[row.state] }}</span>@if (row.explanation) { <small>{{ row.explanation }}</small> }</div>
-            <div class="masav-action">
-              @switch (row.state) {
-                @case ('authorization') { <a class="masav-button primary" [routerLink]="['/platform/billing-setup', row.statement.entity_id]">השלמת פרטי מס״ב</a> }
-                @case ('proposed') { <button type="button" class="masav-button primary" [disabled]="busy" (click)="beginApproval(row)">אשר הצעה</button> }
-                @case ('approved') { <span class="masav-action-note">מוכן לסקירה ולהפקה בקובץ המאוחד למעלה</span> }
-                @case ('blocked') { <button type="button" class="masav-button secondary" [disabled]="busy" (click)="refresh()">בדיקת מצב מחדש</button> }
-                @case ('error') { <button type="button" class="masav-button secondary" [disabled]="busy" (click)="refresh()">ניסיון טעינה נוסף</button> }
-                @case ('exported') { <span class="masav-action-note">אין לבצע גבייה נוספת ללא בירור התוצאות. רישום התוצאות באזור הוראות הגבייה.</span> }
-                @case ('partial') { <span class="masav-action-note">הכנת יתרה באזור הוראות הגבייה</span> }
-                @case ('failed') { <span class="masav-action-note">הכנת יתרה באזור הוראות הגבייה</span> }
-                @case ('completed') { <span class="masav-action-note">לפי תוצאות הגבייה המאומתות</span> }
-                @default { <button type="button" class="masav-button secondary" disabled aria-label="ממתין להכנה אוטומטית">ההצעה טרם הוכנה</button> }
-              }
-            </div>
-          </article>
-        }
-      </div>
-    }
-  }
 </section>

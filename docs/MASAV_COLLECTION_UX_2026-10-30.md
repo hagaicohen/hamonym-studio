@@ -33,3 +33,6 @@ Backend local files are in `C:/DEV/HamonymStudio-fin11-masav-deploy/hamonym-back
 - Default full test compilation still has the previously documented unrelated `StatementListItem.collected` fixture errors. The focused tsconfig excludes those fixtures; their code was not changed.
 
 No shared clock changes, shared test data creation, actual approvals/exports, external collections, Commit, Push or Deploy are part of this task.
+
+## 2026-10-31 single-action update
+The approval modal and preview/export steps are superseded by [MASAV_ONE_CLICK_EXPORT_2026-10-31.md](MASAV_ONE_CLICK_EXPORT_2026-10-31.md). Backend migration 083 and the matching new API are required; deployment is not part of this local implementation.

@@ -23,8 +23,16 @@ describe('permanent MASAV workflow', () => {
   const text = () => fixture.nativeElement.textContent as string;
   const button = (label: string): HTMLButtonElement => Array.from(fixture.nativeElement.querySelectorAll('button')).find((node: unknown) => (node as HTMLButtonElement).textContent?.trim() === label) as HTMLButtonElement;
   async function render(): Promise<void> { fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges(); }
+  async function waitForDownload(): Promise<void> {
+    for (let attempt = 0; component.busy && attempt < 200; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    expect(component.busy).withContext('asynchronous error body parsing must terminate').toBeFalse();
+    await render();
+  }
 
   beforeEach(async () => {
+    sessionStorage.removeItem('masav-download-request');
     balance = 540; proposals = [];
     statements = [{ id: 'statement-1', billing_account_id: 'account-1', billing_period_id: 'november', billing_run_id: 'run-1',
       gross_raised: '100000', fee_amount: '3000', vat_amount: '540', total_due: '3540', status: 'open', created_at: '', entity_id: 'entity-1',
@@ -36,7 +44,9 @@ describe('permanent MASAV workflow', () => {
       has_authorization_document: false, created_at: '', updated_at: '',
     };
     job = { name: 'fin11-masav-prepare', label: '', registered: true, status: 'success', resultSummary: { results: [] } };
-    finance = jasmine.createSpyObj('FinanceOpsService', ['listMasavProposals', 'getStatementBalance', 'approveMasavProposal', 'exportMasavProposals', 'previewMasavExport', 'recordMasavResult', 'listMasavInstructions', 'finalizeMasavInstruction', 'prepareMasavRetry']);
+    finance = jasmine.createSpyObj('FinanceOpsService', ['getMasavExportSummary', 'approveAndDownloadMasav', 'listMasavProposals', 'getStatementBalance', 'approveMasavProposal', 'exportMasavProposals', 'previewMasavExport', 'recordMasavResult', 'listMasavInstructions', 'finalizeMasavInstruction', 'prepareMasavRetry']);
+    finance.getMasavExportSummary.and.callFake(() => of({ summary: { mode: 'entity', previewToken: 'a'.repeat(64), totalAmount: proposals.filter(p => ['approved','proposed'].includes(p.status)).reduce((n,p) => n + Number(p.proposed_amount),0).toFixed(2), organizationCount: 1, periodCount: 1, excluded: [], instructions: proposals.filter(p => ['approved','proposed'].includes(p.status)).map((p,index) => ({ordinal:index+1,entityId:p.entity_id,entityName:p.entity_name,amount:p.proposed_amount,bankLast4:'1234',components:[]})) } }));
+    finance.approveAndDownloadMasav.and.callFake(() => { proposals = [proposal('exported')]; return of(new Blob(['isolated xlsx'])); });
     finance.listMasavInstructions.and.returnValue(of({ instructions: [] }));
     billing = jasmine.createSpyObj('BillingOpsService', ['listStatements', 'listPeriods', 'getMasavConfig']);
     finance.listMasavProposals.and.callFake(() => of({ proposals }));
@@ -54,7 +64,7 @@ describe('permanent MASAV workflow', () => {
       { provide: CollectionOpsService, useValue: { getSystemActivity: () => of({ automatic: [job], fin11Planned: [] }) } },
       { provide: SimulationClockService, useValue: { getStatus: () => of({ businessNow: '2026-12-06T07:00:00Z' }) } },
     ] }).compileComponents();
-    fixture = TestBed.createComponent(MasavCollectionSectionComponent); component = fixture.componentInstance;
+    fixture = TestBed.createComponent(MasavCollectionSectionComponent); component = fixture.componentInstance; component.showResults = true;
     spyOn(component, 'saveFile');
   });
 
@@ -136,187 +146,101 @@ describe('permanent MASAV workflow', () => {
     const prior = { ...proposal('exported'), instruction_id: 'instruction-1' };
     proposals = [prior, { ...proposal('proposed'), id: 'retry-proposal', proposed_amount: '180', created_at: '2027-01-06T10:00:00Z' }]; balance = 180;
     finance.listMasavInstructions.and.returnValue(of({ instructions: [instructionFixture({ finalized: true, retry_requested: true })] }));
-    await render(); expect(component.rows[0].proposal?.id).toBe('retry-proposal'); expect(button('אשר הצעה')).toBeTruthy();
+    await render(); expect(component.rows[0].proposal?.id).toBe('retry-proposal'); expect(button('אשר והורד קובץ מס״ב')).toBeTruthy();
   });
 
-  it('keeps historical November debt visible in December with no proposal or current donations', async () => {
-    await render();
-    expect(text()).toContain('גביית מס״ב'); expect(text()).toContain('דצמבר 2026'); expect(text()).toContain('נובמבר 2026');
-    expect(text()).toContain('ממתין להכנת הצעה'); expect(component.totalOutstanding).toBe(540); expect(component.organizationCount).toBe(1);
-    expect(billing.listStatements).toHaveBeenCalledWith({}); expect(button('ההצעה טרם הוכנה').disabled).toBeTrue();
-    expect(finance.approveMasavProposal).not.toHaveBeenCalled(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
-  });
-  it('shows a direct settings link for absent or unapproved authorization', async () => {
-    config = null; await render(); expect(text()).toContain('נדרשת השלמת פרטי מס״ב');
-    expect(fixture.nativeElement.querySelector('a.masav-button').getAttribute('href')).toBe('/platform/billing-setup/entity-1');
-    config = { ...config!, authorized: false } as MasavConfig; component.refresh(); await render();
-    expect(component.rows[0].state).toBe('authorization'); expect(button('אשר הצעה')).toBeUndefined();
-  });
-  it('completes explicit approval and Excel export through existing APIs, without marking debt paid', async () => {
-    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
-    expect(button('אשר הצעה להכנת קובץ').disabled).toBeFalse(); component.approvalReason = 'אישור ידני להפקת קובץ'; await render();
-    button('אשר הצעה להכנת קובץ').click(); await render(); expect(finance.approveMasavProposal).toHaveBeenCalledOnceWith('proposal-1', 'אישור ידני להפקת קובץ');
-    expect((fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open).toBeFalse();
-    expect(text()).toContain('ההצעה אושרה להכנת קובץ Excel');
-    expect(text()).toContain('הפק קובץ Excel למס״ב'); button('הפק קובץ Excel למס״ב').click(); await render();
-    expect(finance.exportMasavProposals).not.toHaveBeenCalled(); button('אישור והורדת הקובץ המאוחד').click(); await render();
-    expect(finance.exportMasavProposals).toHaveBeenCalledOnceWith(['proposal-1'], 'test-token'); expect(component.saveFile).toHaveBeenCalledTimes(1);
-    expect(text()).toContain('קובץ הופק — ממתין לתוצאות גבייה'); expect(component.totalOutstanding).toBe(540);
-    expect(statements[0].status).toBe('open'); expect(button('הפק קובץ Excel למס״ב').disabled).toBeTrue();
-  });
-  it('prevents duplicate approval requests while a request is pending', async () => {
-    proposals = [proposal('proposed')]; const pending = new Subject<{ result: unknown }>(); finance.approveMasavProposal.and.returnValue(pending);
-    await render(); const row = component.rows[0]; component.beginApproval(row); component.approvalReason = 'אישור'; component.approve(row); component.approve(row);
-    expect(finance.approveMasavProposal).toHaveBeenCalledTimes(1); expect(component.busy).toBeTrue();
-    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
-    dialog.dispatchEvent(new Event('cancel', { cancelable: true })); expect(dialog.open).toBeTrue();
-    pending.next({ result: { approved: true } }); pending.complete(); expect(component.busy).toBeFalse();
-  });
-  it('opens an accessible RTL modal with exact proposal details and allows approval without a comment', async () => {
+
+  afterEach(() => sessionStorage.removeItem('masav-download-request'));
+  it('renders one action without modal, comment, approval or preview buttons', async () => {
     proposals = [proposal('proposed')]; await render();
-    const trigger = button('אשר הצעה'); trigger.focus(); trigger.click(); await render();
-    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
-    expect(dialog.open).toBeTrue(); expect(dialog.matches(':modal')).toBeTrue(); expect(dialog.dir).toBe('rtl');
-    expect(dialog.getAttribute('aria-labelledby')).toBe('masav-approval-title'); expect(dialog.getAttribute('aria-describedby')).toBe('masav-approval-explanation');
-    expect(dialog.textContent).toContain(statements[0].entity_name); expect(dialog.textContent).toContain('נובמבר 2026'); expect(dialog.textContent).toContain('₪540.00');
-    expect(dialog.textContent).toContain('הערה לאישור (לא חובה)'); expect(dialog.textContent).toContain('אינו יוזם גבייה');
-    expect((dialog.querySelector('textarea') as HTMLTextAreaElement).required).toBeFalse();
-    expect(document.activeElement).toBe(dialog.querySelector('button'));
-    const initialFocus = document.activeElement;
-    (fixture.nativeElement.querySelector('.masav-heading button') as HTMLButtonElement).focus();
-    expect(document.activeElement).toBe(initialFocus); // Native modal keeps background controls inert.
-    expect(fixture.nativeElement.querySelector('.masav-row textarea')).toBeNull();
-    button('אשר הצעה להכנת קובץ').click(); await render();
-    expect(finance.approveMasavProposal).toHaveBeenCalledOnceWith('proposal-1', 'אישור הצעת מס״ב להכנת קובץ Excel');
-    expect(dialog.open).toBeFalse(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
+    expect(text()).toContain('₪540.00'); expect(button('אשר והורד קובץ מס״ב')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('dialog, textarea, .masav-export-preview')).toBeNull();
+    expect(button('אשר הצעה')).toBeUndefined(); expect(finance.approveAndDownloadMasav).not.toHaveBeenCalled();
   });
-  it('cancels with Escape and restores focus without approving', async () => {
-    proposals = [proposal('proposed')]; await render(); const trigger = button('אשר הצעה'); trigger.focus(); trigger.click(); await render();
-    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
-    dialog.dispatchEvent(new Event('cancel', { cancelable: true })); await render();
-    expect(dialog.open).toBeFalse(); expect(document.activeElement).toBe(trigger); expect(finance.approveMasavProposal).not.toHaveBeenCalled();
+  it('uses one atomic API call, downloads immediately and refreshes without marking debt paid', async () => {
+    proposals = [proposal('proposed')]; await render(); const changed = spyOn(component.changed,'emit');
+    button('אשר והורד קובץ מס״ב').click(); await render();
+    expect(finance.approveAndDownloadMasav).toHaveBeenCalledTimes(1); expect(component.saveFile).toHaveBeenCalledTimes(1);
+    expect(finance.approveMasavProposal).not.toHaveBeenCalled(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
+    expect(finance.previewMasavExport).not.toHaveBeenCalled(); expect(finance.recordMasavResult).not.toHaveBeenCalled();
+    expect(text()).toContain('קובץ המס״ב הופק בהצלחה. ממתין לתוצאות הגבייה.');
+    expect(component.totalOutstanding).toBe(540); expect(changed).toHaveBeenCalledTimes(1);
   });
-  it('keeps the approval modal and note available on an API error, then allows retry', async () => {
-    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
-    component.approvalReason = 'הערה שנשמרת'; finance.approveMasavProposal.and.returnValue(throwError(() => ({ status: 503 })));
-    button('אשר הצעה להכנת קובץ').click(); await render();
-    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
-    expect(dialog.open).toBeTrue(); expect(component.approvalReason).toBe('הערה שנשמרת'); expect(component.busy).toBeFalse();
-    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('אישור ההצעה לא אומת');
-    expect(button('אשר הצעה להכנת קובץ').disabled).toBeFalse();
-    finance.approveMasavProposal.and.returnValue(of({ result: { approved: true } }));
-    button('אשר הצעה להכנת קובץ').click(); await render(); expect(dialog.open).toBeFalse(); expect(finance.approveMasavProposal).toHaveBeenCalledTimes(2);
+  it('prevents duplicate clicks and refresh while preparing a file', async () => {
+    proposals = [proposal('proposed')]; const pending = new Subject<Blob>(); finance.approveAndDownloadMasav.and.returnValue(pending); await render();
+    component.download(); component.download(); component.refresh(); await render();
+    expect(finance.approveAndDownloadMasav).toHaveBeenCalledTimes(1); expect(button('מכין את הקובץ...').disabled).toBeTrue();
+    pending.next(new Blob(['xlsx'])); pending.complete(); await render(); expect(component.busy).toBeFalse();
   });
-  it('keeps a rejected stale proposal open without a success notification', async () => {
-    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
-    finance.approveMasavProposal.and.returnValue(of({ result: { approved: false } }));
-    button('אשר הצעה להכנת קובץ').click(); await render();
-    expect((fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open).toBeTrue();
-    expect(component.approvalNotice).toBe(''); expect(component.approvalError).toContain('הנתונים השתנו');
+  it('retries a lost response using exactly the same request identity and token', async () => {
+    proposals = [proposal('proposed')]; finance.approveAndDownloadMasav.and.returnValue(throwError(() => ({ status: 0 })));
+    await render(); component.download(); await render(); const request = finance.approveAndDownloadMasav.calls.mostRecent().args[0];
+    expect(component.busy).toBeFalse(); expect(component.downloadRequest).toEqual(request); expect(component.actionError).toContain('לא התקבל קובץ');
+    proposals = [proposal('exported')]; component.refresh(); await render();
+    finance.approveAndDownloadMasav.and.returnValue(of(new Blob(['same xlsx']))); component.download(); await render();
+    expect(finance.approveAndDownloadMasav.calls.mostRecent().args[0]).toEqual(request); expect(component.downloadRequest).toBeNull();
   });
-  it('fits the approval modal and its controls on mobile and desktop', async () => {
-    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
-    const frame = document.createElement('iframe'); frame.style.border = '0'; frame.style.height = '800px'; document.body.appendChild(frame);
-    try {
-      const styles = Array.from(document.head.querySelectorAll('style')).map(style => style.outerHTML).join('');
-      frame.contentDocument!.open(); frame.contentDocument!.write(`<html dir="rtl"><head>${styles}</head><body style="margin:0">${fixture.nativeElement.outerHTML}</body></html>`); frame.contentDocument!.close();
-      const modal = frame.contentDocument!.querySelector('dialog') as HTMLDialogElement;
-      modal.removeAttribute('open'); modal.showModal();
-      for (const width of [320, 375, 1200]) {
-        frame.style.width = width + 'px';
-        expect(modal.getBoundingClientRect().width).withContext('modal width at ' + width).toBeLessThanOrEqual(width - 32);
-        expect(modal.scrollWidth).withContext('modal content at ' + width).toBeLessThanOrEqual(modal.clientWidth);
-        expect(modal.querySelectorAll('button').length).toBe(2);
-      }
-    } finally { frame.remove(); }
+  it('retains the request after a browser download failure', async () => {
+    proposals = [proposal('proposed')]; (component.saveFile as jasmine.Spy).and.throwError('download blocked'); await render();
+    component.download(); await render(); expect(component.downloadRequest).not.toBeNull(); expect(component.exportNotice).toBe(''); expect(component.busy).toBeFalse();
   });
-  it('prevents duplicate exports and never automatically exports an approved proposal', async () => {
-    proposals = [proposal('approved')]; const pending = new Subject<Blob>(); finance.exportMasavProposals.and.returnValue(pending);
-    await render(); expect(finance.exportMasavProposals).not.toHaveBeenCalled(); const row = component.rows[0]; component.openExportPreview(); component.exportPreview(); component.exportPreview();
-    expect(finance.exportMasavProposals).toHaveBeenCalledTimes(1); proposals = [proposal('exported')]; pending.next(new Blob(['xlsx'])); pending.complete();
-    expect(component.totalOutstanding).toBe(540); expect(component.rows[0].state).toBe('exported');
+  it('retains the same request after an ambiguous proxy 503 for safe file recovery', async () => {
+    proposals = [proposal('proposed')]; finance.approveAndDownloadMasav.and.returnValue(throwError(() => ({ status: 503, error: new Blob(['upstream unavailable']) })));
+    await render(); component.download(); await waitForDownload();
+    const request = finance.approveAndDownloadMasav.calls.mostRecent().args[0];
+    expect(component.downloadRequest).toEqual(request); expect(component.busy).toBeFalse();
+    expect(JSON.parse(sessionStorage.getItem('masav-download-request')!)).toEqual(request);
+    finance.approveAndDownloadMasav.and.returnValue(of(new Blob(['recovered xlsx']))); component.download(); await render();
+    expect(finance.approveAndDownloadMasav.calls.mostRecent().args[0]).toEqual(request);
   });
-  it('shows completion only after paid status and confirmed MASAV collection', async () => {
-    proposals = [proposal('exported')]; statements[0].status = 'paid'; statements[0].confirmed_collection_methods = ['card', 'masav']; balance = 0;
-    await render(); expect(text()).toContain('הגבייה הושלמה'); expect(component.totalOutstanding).toBe(0); expect(component.organizationCount).toBe(0);
+  it('clears a stale request and shows an actionable error without claiming success', async () => {
+    proposals = [proposal('proposed')]; finance.approveAndDownloadMasav.and.returnValue(throwError(() => ({status:409,error:new Blob([JSON.stringify({code:'MASAV_PREVIEW_CHANGED'})])})));
+    await render(); component.download(); await waitForDownload();
+    expect(component.downloadRequest).toBeNull(); expect(component.actionError).toContain('היתרות או אופן האיחוד השתנו'); expect(component.exportNotice).toBe('');
   });
-  it('does not double count repeated statement/proposal records or multiple periods of one organization', async () => {
-    statements = [statements[0], statements[0], { ...statements[0], id: 'older-statement' }]; proposals = [proposal('proposed'), proposal('proposed')];
-    await render(); expect(component.rows.length).toBe(2); expect(component.organizationCount).toBe(1); expect(component.totalOutstanding).toBe(1080);
-    expect(billing.getMasavConfig).toHaveBeenCalledTimes(1);
+  it('blocks the whole export for ineligible instructions and explains the actual blocker', async () => {
+    proposals = [proposal('proposed')]; const summary = finance.getMasavExportSummary().subscribe(); summary.unsubscribe();
+    finance.getMasavExportSummary.and.returnValue(of({summary:{mode:'entity',previewToken:'a'.repeat(64),totalAmount:'540.00',organizationCount:1,periodCount:1,instructions:[],excluded:[{proposalId:'proposal-1',statementId:'statement-1',entityId:'entity-1',reason:'COLLECTION_HELD'}]}}));
+    await render(); expect(text()).toContain('קיימת חסימת גבייה פתוחה'); expect(button('אשר והורד קובץ מס״ב').disabled).toBeTrue();
+    component.download(); expect(finance.approveAndDownloadMasav).not.toHaveBeenCalled();
   });
-  it('shows a real preparation failure and prevents actions while an attempt is unresolved', async () => {
-    job.status = 'failed'; job.resultSummary = { results: [{ statementId: 'statement-1', reason: 'collection_held' }] };
-    await render(); expect(text()).toContain('חסימת גבייה'); expect(component.rows[0].state).toBe('blocked');
-    proposals = [proposal('approved')]; statements[0].latest_attempt_status = 'ambiguous'; component.refresh(); await render();
-    expect(text()).toContain('טרם הוכרע'); expect(button('הפק קובץ Excel למס״ב').disabled).toBeTrue();
+  it('keeps historical debts visible and provides a direct link for missing authorization', async () => {
+    config = null; await render(); expect(text()).toContain('נובמבר 2026'); expect(text()).toContain('נדרשת השלמת פרטי מס״ב');
+    expect(fixture.nativeElement.querySelector('a').getAttribute('href')).toBe('/platform/billing-setup/entity-1'); expect(component.totalOutstanding).toBe(540);
   });
-  it('does not misrepresent an old authorization failure as a currently missing mandate', async () => {
-    job.status = 'failed'; job.resultSummary = { results: [{ statementId: 'statement-1', reason: 'masav_not_authorized' }] };
-    await render(); expect(component.rows[0].state).toBe('waiting'); expect(text()).toContain('ההרשאה מאושרת כעת');
+  it('replaces export with pending-results summary and a separate results action', async () => {
+    proposals = [proposal('exported')]; finance.listMasavInstructions.and.returnValue(of({instructions:[instructionFixture({total_amount:'540',collected_amount:'0',outstanding_amount:'540',created_at:'2026-12-06T07:00:00Z'})]}));
+    component.showResults = false; await render(); expect(button('אשר והורד קובץ מס״ב')).toBeUndefined(); expect(text()).toContain('ממתין לתוצאות הגבייה');
+    expect(text()).toContain('תאריך הפקה'); expect(fixture.nativeElement.querySelector('.masav-instruction-history')).toBeNull();
+    button('רישום תוצאות הגבייה').click(); await render(); expect(fixture.nativeElement.querySelector('.masav-instruction-history')).not.toBeNull();
   });
-  it('does not approve stale amounts and respects a backend rejection of approval', async () => {
-    proposals = [{ ...proposal('proposed'), proposed_amount: '600' }]; await render(); expect(component.rows[0].state).toBe('waiting');
-    proposals = [proposal('proposed')]; component.refresh(); await render(); finance.approveMasavProposal.and.returnValue(of({ result: { approved: false, reason: 'outstanding_changed' } }));
-    const row = component.rows[0]; component.beginApproval(row); component.approvalReason = 'אישור'; component.approve(row); await render();
-    expect(text()).toContain('ההצעה לא אושרה'); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
+  it('fails closed when the new backend summary or schema is unavailable', async () => {
+    finance.getMasavExportSummary.and.returnValue(throwError(() => ({status:503}))); await render(); expect(component.error).toBeTruthy(); expect(button('אשר והורד קובץ מס״ב')).toBeUndefined();
+    expect(finance.approveAndDownloadMasav).not.toHaveBeenCalled();
   });
-  it('shows unknown data as an error, not zero debt or green success', async () => {
-    finance.getStatementBalance.and.returnValue(throwError(() => new Error('unavailable'))); await render();
-    expect(component.incomplete).toBeTrue(); expect(text()).toContain('לא ניתן לאמת'); expect(component.requiresFollowUp).toBeTrue();
-    billing.listStatements.and.returnValue(throwError(() => new Error('unavailable'))); component.refresh(); await render();
-    expect(component.error).toBeTruthy(); expect(text()).not.toContain('אין יתרות מס״ב פתוחות'); expect(component.loading).toBeFalse();
+  it('does not count historic retry instructions twice in the outstanding total', async () => {
+    finance.listMasavInstructions.and.returnValue(of({instructions:[instructionFixture({finalized:true,retry_requested:true}),instructionFixture({id:'retry',total_amount:'720',collected_amount:'0',outstanding_amount:'720'})]}));
+    balance=180; await render(); expect(component.totalOutstanding).toBe(180);
   });
-  it('has a permanent neutral empty state and never starts financial actions on load', async () => {
-    statements = []; await render(); expect(text()).toContain('גביית מס״ב'); expect(text()).toContain('אין יתרות מס״ב פתוחות');
-    expect(component.organizationCount).toBe(0); expect(finance.approveMasavProposal).not.toHaveBeenCalled(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
+  it('makes a finalized partial balance and its confirmed retry accessible from the main card', async () => {
+    proposals=[proposal('exported')]; balance=720;
+    finance.listMasavInstructions.and.returnValue(of({instructions:[instructionFixture({finalized:true,retry_eligible:true})]}));
+    component.showResults=false; await render();
+    expect(text()).toContain('גבייה חלקית'); expect(text()).toContain('720.00');
+    button('הכן גבייה חוזרת ליתרה').click(); await render();
+    expect(component.showResults).toBeTrue(); expect(component.retryInstruction).toBe('instruction-1');
+    expect(button('אישור הכנת הצעה ליתרה')).toBeTruthy(); expect(finance.prepareMasavRetry).not.toHaveBeenCalled();
   });
-  it('keeps export timeout distinct from collection success and reloads the actual status', async () => {
-    proposals = [proposal('approved')]; finance.exportMasavProposals.and.callFake(() => { proposals = [proposal('exported')]; return throwError(() => new Error('timeout')); });
-    await render(); const row = component.rows[0]; component.openExportPreview(); component.exportPreview(); await render();
-    expect(text()).toContain('לא התקבל קובץ Excel'); expect(component.rows[0].state).toBe('exported'); expect(component.busy).toBeFalse(); expect(component.saveFile).not.toHaveBeenCalled();
+  it('keeps a neutral empty state without financial writes', async () => {
+    statements=[]; await render(); expect(text()).toContain('אין יתרות מס״ב פתוחות'); expect(button('אשר והורד קובץ מס״ב').disabled).toBeTrue(); expect(component.requiresFollowUp).toBeFalse();
   });
-  it('never offers approval of a newer duplicate while an earlier exported instruction is unresolved', async () => {
-    proposals = [{ ...proposal('proposed'), id: 'newer', created_at: '2026-10-30T10:00:00Z' }, proposal('exported')];
-    await render(); expect(component.rows[0].state).toBe('exported'); expect(button('אשר הצעה')).toBeUndefined();
-  });
-  it('keeps rows and actions readable without horizontal overflow at mobile and desktop widths', async () => {
-    proposals = [proposal('approved')];
-    finance.listMasavInstructions.and.returnValue(of({ instructions: [instructionFixture({ id: '12345678-1234-1234-1234-123456789012' })] }));
-    await render(); component.beginResult(component.instructions[0], 'finalize'); await render();
-    const frame = document.createElement('iframe'); frame.style.border = '0'; document.body.appendChild(frame);
-    try {
-      const styles = Array.from(document.head.querySelectorAll('style')).map(style => style.outerHTML).join('');
-      frame.contentDocument!.open(); frame.contentDocument!.write(`<html dir="rtl"><head>${styles}</head><body style="margin:0">${fixture.nativeElement.outerHTML}</body></html>`); frame.contentDocument!.close();
-      for (const width of [375, 1200]) {
-        frame.style.width = width + 'px';
-        const section = frame.contentDocument!.querySelector('.masav-section') as HTMLElement;
-        expect(section.scrollWidth).withContext('MASAV section at width ' + width).toBeLessThanOrEqual(width);
-        const action = frame.contentDocument!.querySelector('button.primary') as HTMLElement;
-        expect(action.getBoundingClientRect().width).toBeGreaterThan(100);
-      }
-    } finally { frame.remove(); }
-  });
-  it('previews and exports all reviewed organizations and periods together in one request', async () => {
-    proposals = [proposal('approved')];
-    finance.previewMasavExport.and.returnValue(of({ preview: { mode: 'entity', previewToken: 'all-debts-token', totalAmount: '2160.00', organizationCount: 2, periodCount: 3, excluded: [], instructions: [
-      { ordinal: 1, entityId: 'entity-1', entityName: 'עמותה ראשונה', amount: '1620', bankLast4: '1234', components: ['nov', 'dec', 'jan'].map((id, index) => ({ proposalId: id, statementId: id, periodId: id, periodStart: `2026-${index + 8}-28T18:00:00Z`, periodEnd: '2026-11-28T18:00:00Z', amount: '540' })) },
-      { ordinal: 2, entityId: 'entity-2', entityName: 'עמותה שנייה', amount: '540', bankLast4: '5678', components: [{ proposalId: 'second', statementId: 'second', periodId: 'nov', periodStart: period.period_start, periodEnd: period.period_end, amount: '540' }] },
-    ] } }));
-    await render(); component.openExportPreview(); await render();
-    expect(text()).toContain('2,160.00'); expect(text()).toContain('עמותה שנייה'); expect(text()).toContain('1,620.00');
-    expect(finance.exportMasavProposals).not.toHaveBeenCalled(); component.exportPreview();
-    expect(finance.exportMasavProposals).toHaveBeenCalledOnceWith(['nov', 'dec', 'jan', 'second'], 'all-debts-token');
-  });
-  it('does not fabricate a preview if its API is unavailable', async () => {
-    proposals = [proposal('approved')]; finance.previewMasavExport.and.returnValue(throwError(() => new Error('unavailable')));
-    await render(); component.openExportPreview(); await render();
-    expect(component.preview).toBeNull(); expect(component.previewBusy).toBeFalse(); expect(text()).toContain('לא ניתן להכין תצוגה מקדימה');
-    component.exportPreview(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
-  });
-  it('requires a new review if the backend detects a changed consolidation mode or balance', async () => {
-    proposals = [proposal('approved')]; finance.exportMasavProposals.and.returnValue(throwError(() => ({ error: { code: 'MASAV_PREVIEW_CHANGED' } })));
-    await render(); component.openExportPreview(); component.exportPreview(); await render();
-    expect(component.preview).toBeNull(); expect(text()).toContain('יש להכין תצוגה מקדימה חדשה'); expect(component.saveFile).not.toHaveBeenCalled();
+  it('fits desktop and mobile widths in RTL', async () => {
+    proposals=[proposal('proposed')]; await render();
+    for(const width of [320,375,1200]) {
+      const frame=document.createElement('iframe'); frame.style.width=width+'px'; frame.style.height='700px'; document.body.append(frame);
+      const doc=frame.contentDocument!; doc.head.innerHTML=Array.from(document.querySelectorAll('style')).map(s=>s.outerHTML).join(''); doc.body.style.margin='0'; doc.body.innerHTML=fixture.nativeElement.outerHTML;
+      await new Promise(resolve=>setTimeout(resolve,10)); const section=doc.querySelector('section')!;
+      expect(section.scrollWidth).toBeLessThanOrEqual(width); expect(frame.contentWindow!.getComputedStyle(section).direction).toBe('rtl'); frame.remove();
+    }
   });
 });

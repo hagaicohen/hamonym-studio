@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { StatementBalance } from './billing-ops.service';
 
@@ -112,6 +112,12 @@ export class FinanceOpsService {
     );
   }
 
+  getMasavExportSummary(): Observable<{ summary: MasavExportPreview }> {
+    return this.http.get<{ summary: MasavExportPreview }>(`${this.base}/masav-export/summary`, { headers: authHeaders() });
+  }
+  approveAndDownloadMasav(request: { requestId: string; expectedPreviewToken: string }): Observable<Blob> {
+    return this.http.post(`${this.base}/masav-export/approve-and-download`, request, { headers: authHeaders(), responseType: 'blob' }).pipe(timeout(120000));
+  }
   listMasavProposals(status?: MasavProposal['status']): Observable<{ proposals: MasavProposal[] }> {
     const url = status ? `${this.base}/masav-proposals?status=${status}` : `${this.base}/masav-proposals`;
     return this.http.get<{ proposals: MasavProposal[] }>(url, { headers: authHeaders() });
@@ -154,6 +160,8 @@ export class FinanceOpsService {
 }
 
 export interface MasavInstruction {
+  entity_id?: string;
+  created_at?: string;
   id: string;
   entity_name: string;
   total_amount: string;

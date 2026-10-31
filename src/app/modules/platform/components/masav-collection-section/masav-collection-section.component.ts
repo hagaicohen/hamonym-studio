@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, ElementRef, EventEmitter, OnInit, Output, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -33,9 +33,6 @@ export class MasavCollectionSectionComponent implements OnInit {
   private collection = inject(CollectionOpsService);
   private clock = inject(SimulationClockService);
   private destroyRef = inject(DestroyRef);
-  private changeDetector = inject(ChangeDetectorRef);
-  private host = inject<ElementRef<HTMLElement>>(ElementRef);
-  @ViewChild('approvalDialog', { static: true }) private approvalDialog!: ElementRef<HTMLDialogElement>;
   @Output() changed = new EventEmitter<void>();
   rows: MasavRow[] = [];
   loading = false;
@@ -43,14 +40,10 @@ export class MasavCollectionSectionComponent implements OnInit {
   actionError = '';
   busy = false;
   monthLabel = '';
-  approvalId: string | null = null;
-  approvalReason = '';
-  approvalRow: MasavRow | null = null;
-  approvalError = '';
-  approvalNotice = '';
-  private approvalTrigger: HTMLElement | null = null;
-  preview: MasavExportPreview | null = null;
-  previewBusy = false;
+  exportSummary: MasavExportPreview | null = null;
+  exportNotice = '';
+  showResults = false;
+  downloadRequest: { requestId: string; expectedPreviewToken: string } | null = this.restoreDownload();
   resultInstruction = '';
   resultAmount = '';
   resultReference = '';
@@ -136,7 +129,6 @@ export class MasavCollectionSectionComponent implements OnInit {
   get totalOutstanding(): number { return this.rows.reduce((sum, row) => sum + (row.outstanding ?? 0), 0); }
   get organizationCount(): number { return new Set(this.rows.filter(row => (row.outstanding ?? 0) > 0).map(row => row.statement.entity_id)).size; }
   get periodCount(): number { return new Set(this.rows.filter(row => (row.outstanding ?? 0) > 0).map(row => row.statement.billing_period_id)).size; }
-  get approvedCount(): number { return this.rows.filter(row => row.state === 'approved').length; }
   get incomplete(): boolean { return this.rows.some(row => row.outstanding === null); }
   get requiresFollowUp(): boolean { return this.loading || !!this.error || this.rows.some(row => row.state !== 'completed') || this.instructions.some(i => !i.finalized || i.retry_eligible); }
   get summaryStatus(): string {
@@ -152,16 +144,15 @@ export class MasavCollectionSectionComponent implements OnInit {
   }
 
   refresh(): void {
-    if (this.busy || this.previewBusy || this.approvalRow) return;
+    if (this.busy) return;
     const id = ++this.requestId;
     this.loading = true;
     this.error = '';
-    this.approvalId = null;
-    this.preview = null;
     forkJoin({
-      statements: this.billing.listStatements({}), proposals: this.finance.listMasavProposals(),
+      summary: this.finance.getMasavExportSummary(), statements: this.billing.listStatements({}), proposals: this.finance.listMasavProposals(),
       periods: this.billing.listPeriods(), clock: this.clock.getStatus(), activity: this.collection.getSystemActivity(), instructions: this.finance.listMasavInstructions(),
     }).pipe(switchMap(data => {
+      this.exportSummary = data.summary.summary;
       this.instructions = data.instructions.instructions;
       this.monthLabel = new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', month: 'long', year: 'numeric' }).format(new Date(data.clock.businessNow));
       const proposals = [...data.proposals.proposals].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
@@ -192,7 +183,7 @@ export class MasavCollectionSectionComponent implements OnInit {
         this.rows = rows.filter(row => row.outstanding === null || row.outstanding > 0 || row.state === 'completed');
         this.loading = false;
       },
-      error: () => { if (id === this.requestId) { this.error = 'לא ניתן לטעון את נתוני מס״ב. המצב לא אומת; יש לנסות לרענן.'; this.loading = false; } },
+      error: error => { if (id === this.requestId) { this.error = error?.status === 503 ? 'הפקת מס״ב אינה זמינה בגרסת השרת הנוכחית. נדרש עדכון השרת לפני שימוש בפעולה החדשה.' : 'לא ניתן לטעון את נתוני מס״ב. המצב לא אומת; יש לנסות לרענן.'; this.loading = false; } },
     });
   }
 
@@ -243,64 +234,57 @@ export class MasavCollectionSectionComponent implements OnInit {
 
   periodLabel(row: MasavRow): string { return row.period ? billingPeriodLabel(row.period) : 'תקופת החיוב אינה זמינה'; }
   money(amount: number): string { return amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  beginApproval(row: MasavRow): void {
-    if (this.busy || this.loading || this.approvalRow || row.state !== 'proposed' || !row.proposal) return;
-    this.approvalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    this.approvalId = row.statement.id; this.approvalRow = row;
-    this.approvalReason = ''; this.approvalError = ''; this.approvalNotice = ''; this.actionError = '';
-    this.changeDetector.detectChanges();
-    this.approvalDialog.nativeElement.showModal();
+  get readyAmount(): number { return Number(this.exportSummary?.totalAmount ?? 0); }
+  get exportBlocked(): boolean { return !!this.error || this.incomplete || !!this.exportSummary?.excluded.length || this.rows.some(r => !['proposed','approved','exported','partial','failed','completed'].includes(r.state)); }
+  get pendingInstructions(): MasavInstruction[] { return this.instructions.filter(i => !i.finalized); }
+  get recoverableInstructions(): MasavInstruction[] { return this.instructions.filter(i => i.retry_eligible); }
+  get pendingAmount(): number { return this.pendingInstructions.reduce((sum,i) => sum + Number(i.total_amount),0); }
+  get pendingOrganizations(): number { return new Set(this.pendingInstructions.map(i => i.entity_id ?? i.entity_name)).size; }
+  get latestExport(): string { return this.pendingInstructions.map(i => i.created_at ?? '').sort().at(-1) ?? ''; }
+  private restoreDownload(): { requestId: string; expectedPreviewToken: string } | null {
+    try { const value = JSON.parse(sessionStorage.getItem('masav-download-request') ?? 'null'); return value && typeof value.requestId === 'string' && typeof value.expectedPreviewToken === 'string' ? value : null; } catch { return null; }
   }
-  closeApproval(): void {
-    if (this.busy) return;
-    this.approvalDialog.nativeElement.close();
-    this.approvalRow = null; this.approvalId = null; this.approvalReason = ''; this.approvalError = '';
-    if (this.approvalTrigger?.isConnected) this.approvalTrigger.focus();
-    this.approvalTrigger = null;
+  private rememberDownload(): void { try { if (this.downloadRequest) sessionStorage.setItem('masav-download-request', JSON.stringify(this.downloadRequest)); else sessionStorage.removeItem('masav-download-request'); } catch { /* Server idempotency still protects this tab. */ } }
+  blockerDescription(blocker: MasavExportPreview['excluded'][number]): string {
+    const row = this.rows.find(r => r.statement.id === blocker.statementId);
+    const reasons: Record<string, string> = {
+      MASAV_PREPARATION_REQUIRED: 'ממתין להכנת הצעה לפי היתרה העדכנית',
+      COLLECTION_HELD: 'קיימת חסימת גבייה פתוחה',
+      UNRESOLVED_COLLECTION_ATTEMPT: 'קיים ניסיון גבייה שטרם הוכרע',
+      masav_not_configured: 'יש להשלים פרטי מס״ב', masav_not_authorized: 'נדרשת הרשאת מס״ב מאושרת',
+      masav_incomplete: 'פרטי חשבון הבנק אינם מלאים', NOT_AUTHORIZED: 'פרטי מס״ב אינם מאושרים',
+      MASAV_ALREADY_EXPORTED: 'קיים קובץ שהופק; יש להשלים את רישום תוצאותיו',
+      PROPOSAL_STALE_AT_EXPORT: 'היתרה השתנתה; ממתין להכנת הצעה מעודכנת',
+      STATEMENT_NOT_ACTIONABLE: 'החיוב אינו במצב המאפשר הפקה',
+      PROPOSAL_NOT_APPROVED: 'ההצעה אינה כשירה לאישור', NO_OUTSTANDING_BALANCE: 'לא נותרה יתרה לגבייה',
+    };
+    return [row?.statement.entity_name, row ? this.periodLabel(row) : '', reasons[blocker.reason] ?? 'לא ניתן לאמת כשירות. יש לרענן ולבדוק את מצב הגבייה'].filter(Boolean).join(' · ');
   }
-  cancelApproval(event: Event): void { event.preventDefault(); this.closeApproval(); }
-  approve(row: MasavRow): void {
-    if (this.busy || this.loading || row !== this.approvalRow || row.state !== 'proposed' || !row.proposal || this.approvalId !== row.statement.id) return;
-    const reason = this.approvalReason.trim() || 'אישור הצעת מס״ב להכנת קובץ Excel';
-    this.busy = true; this.approvalError = '';
-    this.finance.approveMasavProposal(row.proposal.id, reason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ result }) => {
-        this.busy = false;
-        if (!result?.approved) {
-          this.approvalError = 'ההצעה לא אושרה: הנתונים השתנו. יש לבטל ולרענן את היתרה וההרשאה לפני אישור נוסף.';
-          return;
-        }
-        this.closeApproval();
-        this.approvalNotice = 'ההצעה אושרה להכנת קובץ Excel. לא בוצעה גבייה.';
+  download(): void {
+    if (this.busy || this.loading || (!this.downloadRequest && (this.exportBlocked || !this.readyAmount))) return;
+    this.downloadRequest ??= { requestId: crypto.randomUUID(), expectedPreviewToken: this.exportSummary!.previewToken };
+    this.rememberDownload(); this.busy = true; this.actionError = ''; this.exportNotice = '';
+    this.finance.approveAndDownloadMasav(this.downloadRequest).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => {
+        try { this.saveFile(blob); } catch { this.busy = false; this.actionError = 'הקובץ הופק אך ההורדה לא הושלמה. ניסיון נוסף יוריד את אותו קובץ בלבד.'; return; }
+        this.downloadRequest = null; this.rememberDownload(); this.busy = false;
+        this.exportNotice = 'קובץ המס״ב הופק בהצלחה. ממתין לתוצאות הגבייה.';
         this.refresh(); this.changed.emit();
-        setTimeout(() => this.host.nativeElement.querySelector<HTMLButtonElement>('.masav-heading button')?.focus());
       },
-      error: error => {
+      error: async error => {
+        let data = error?.error;
+        if (data instanceof Blob) { try { data = JSON.parse(await data.text()); } catch { data = {}; } }
+        // A proxy can return 503 after the transaction committed. Only a known
+        // application rejection proves that this request did not create a file.
+        const rejectedCodes = ['MASAV_PREVIEW_CHANGED', 'MASAV_EXPORT_BLOCKED', 'INVALID_MASAV_EXPORT_REQUEST',
+          'MASAV_EXPORT_REQUEST_CONFLICT', 'MASAV_ONE_CLICK_SCHEMA_REQUIRED', 'MASAV_EXPORT_SCHEMA_REQUIRED',
+          'MASAV_DUPLICATE_ACTIVE_PROPOSALS', 'MISSING_PROPOSAL_IDS', 'NO_ELIGIBLE_INSTRUCTIONS'];
+        if (rejectedCodes.includes(data?.code)) { this.downloadRequest = null; this.rememberDownload(); }
         this.busy = false;
-        this.approvalError = error?.status === 403 ? 'אין הרשאה לאשר את ההצעה.'
-          : 'אישור ההצעה לא אומת. ההערה נשמרה; ניתן לנסות שוב או לבטל ולרענן את המצב.';
-      },
-    });
-  }
-  openExportPreview(): void {
-    if (this.busy || this.loading || this.previewBusy || !this.approvedCount) return;
-    this.previewBusy = true; this.actionError = ''; this.approvalId = null;
-    this.finance.previewMasavExport().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ preview }) => { this.previewBusy = false; this.preview = preview; },
-      error: () => { this.previewBusy = false; this.actionError = 'לא ניתן להכין תצוגה מקדימה. יש לוודא שגרסת השרת וסכמת הייצוא מעודכנות ושההרשאות בתוקף.'; },
-    });
-  }
-  exportPreview(): void {
-    if (this.busy || this.loading || this.previewBusy || !this.preview?.instructions.length) return;
-    const ids = this.preview.instructions.flatMap(row => row.components.map(component => component.proposalId));
-    this.busy = true; this.actionError = '';
-    this.finance.exportMasavProposals(ids, this.preview.previewToken).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: blob => { this.saveFile(blob); this.busy = false; this.refresh(); this.changed.emit(); },
-      error: error => {
-        this.busy = false;
-        this.actionError = ['MASAV_PREVIEW_CHANGED', 'PROPOSAL_STALE_AT_EXPORT'].includes(error?.error?.code)
-          ? 'היתרות או אופן האיחוד השתנו מאז הסקירה. יש להכין תצוגה מקדימה חדשה לפני ייצוא.'
-          : 'לא התקבל קובץ Excel. יש לבדוק את המצב המעודכן לפני ניסיון נוסף; אין להסיק שבוצעה גבייה.';
+        this.actionError = error?.status === 403 ? 'אין הרשאה לאישור ולהפקת קובץ מס״ב.'
+          : data?.code === 'MASAV_PREVIEW_CHANGED' ? 'היתרות או אופן האיחוד השתנו. הנתונים רועננו; יש לבדוק אותם לפני ניסיון נוסף.'
+          : data?.code === 'MASAV_EXPORT_BLOCKED' ? 'ההפקה נעצרה בגלל הוראות שאינן כשירות. לא אושרו הצעות ולא הופק קובץ; יש לטפל בחסימות המוצגות.'
+          : 'לא התקבל קובץ. ניתן לנסות שוב בבטחה; אותה בקשה לא תיצור ייצוא נוסף. לא בוצעה גבייה.';
         this.refresh();
       },
     });
