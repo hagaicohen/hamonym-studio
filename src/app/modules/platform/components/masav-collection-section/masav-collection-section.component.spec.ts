@@ -154,8 +154,10 @@ describe('permanent MASAV workflow', () => {
   });
   it('completes explicit approval and Excel export through existing APIs, without marking debt paid', async () => {
     proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
-    expect(button('אישור הצעה').disabled).toBeTrue(); component.approvalReason = 'אישור ידני להפקת קובץ'; await render();
-    button('אישור הצעה').click(); await render(); expect(finance.approveMasavProposal).toHaveBeenCalledOnceWith('proposal-1', component.approvalReason);
+    expect(button('אשר הצעה להכנת קובץ').disabled).toBeFalse(); component.approvalReason = 'אישור ידני להפקת קובץ'; await render();
+    button('אשר הצעה להכנת קובץ').click(); await render(); expect(finance.approveMasavProposal).toHaveBeenCalledOnceWith('proposal-1', 'אישור ידני להפקת קובץ');
+    expect((fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open).toBeFalse();
+    expect(text()).toContain('ההצעה אושרה להכנת קובץ Excel');
     expect(text()).toContain('הפק קובץ Excel למס״ב'); button('הפק קובץ Excel למס״ב').click(); await render();
     expect(finance.exportMasavProposals).not.toHaveBeenCalled(); button('אישור והורדת הקובץ המאוחד').click(); await render();
     expect(finance.exportMasavProposals).toHaveBeenCalledOnceWith(['proposal-1'], 'test-token'); expect(component.saveFile).toHaveBeenCalledTimes(1);
@@ -166,7 +168,67 @@ describe('permanent MASAV workflow', () => {
     proposals = [proposal('proposed')]; const pending = new Subject<{ result: unknown }>(); finance.approveMasavProposal.and.returnValue(pending);
     await render(); const row = component.rows[0]; component.beginApproval(row); component.approvalReason = 'אישור'; component.approve(row); component.approve(row);
     expect(finance.approveMasavProposal).toHaveBeenCalledTimes(1); expect(component.busy).toBeTrue();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    dialog.dispatchEvent(new Event('cancel', { cancelable: true })); expect(dialog.open).toBeTrue();
     pending.next({ result: { approved: true } }); pending.complete(); expect(component.busy).toBeFalse();
+  });
+  it('opens an accessible RTL modal with exact proposal details and allows approval without a comment', async () => {
+    proposals = [proposal('proposed')]; await render();
+    const trigger = button('אשר הצעה'); trigger.focus(); trigger.click(); await render();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBeTrue(); expect(dialog.matches(':modal')).toBeTrue(); expect(dialog.dir).toBe('rtl');
+    expect(dialog.getAttribute('aria-labelledby')).toBe('masav-approval-title'); expect(dialog.getAttribute('aria-describedby')).toBe('masav-approval-explanation');
+    expect(dialog.textContent).toContain(statements[0].entity_name); expect(dialog.textContent).toContain('נובמבר 2026'); expect(dialog.textContent).toContain('₪540.00');
+    expect(dialog.textContent).toContain('הערה לאישור (לא חובה)'); expect(dialog.textContent).toContain('אינו יוזם גבייה');
+    expect((dialog.querySelector('textarea') as HTMLTextAreaElement).required).toBeFalse();
+    expect(document.activeElement).toBe(dialog.querySelector('button'));
+    const initialFocus = document.activeElement;
+    (fixture.nativeElement.querySelector('.masav-heading button') as HTMLButtonElement).focus();
+    expect(document.activeElement).toBe(initialFocus); // Native modal keeps background controls inert.
+    expect(fixture.nativeElement.querySelector('.masav-row textarea')).toBeNull();
+    button('אשר הצעה להכנת קובץ').click(); await render();
+    expect(finance.approveMasavProposal).toHaveBeenCalledOnceWith('proposal-1', 'אישור הצעת מס״ב להכנת קובץ Excel');
+    expect(dialog.open).toBeFalse(); expect(finance.exportMasavProposals).not.toHaveBeenCalled();
+  });
+  it('cancels with Escape and restores focus without approving', async () => {
+    proposals = [proposal('proposed')]; await render(); const trigger = button('אשר הצעה'); trigger.focus(); trigger.click(); await render();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    dialog.dispatchEvent(new Event('cancel', { cancelable: true })); await render();
+    expect(dialog.open).toBeFalse(); expect(document.activeElement).toBe(trigger); expect(finance.approveMasavProposal).not.toHaveBeenCalled();
+  });
+  it('keeps the approval modal and note available on an API error, then allows retry', async () => {
+    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
+    component.approvalReason = 'הערה שנשמרת'; finance.approveMasavProposal.and.returnValue(throwError(() => ({ status: 503 })));
+    button('אשר הצעה להכנת קובץ').click(); await render();
+    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.open).toBeTrue(); expect(component.approvalReason).toBe('הערה שנשמרת'); expect(component.busy).toBeFalse();
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('אישור ההצעה לא אומת');
+    expect(button('אשר הצעה להכנת קובץ').disabled).toBeFalse();
+    finance.approveMasavProposal.and.returnValue(of({ result: { approved: true } }));
+    button('אשר הצעה להכנת קובץ').click(); await render(); expect(dialog.open).toBeFalse(); expect(finance.approveMasavProposal).toHaveBeenCalledTimes(2);
+  });
+  it('keeps a rejected stale proposal open without a success notification', async () => {
+    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
+    finance.approveMasavProposal.and.returnValue(of({ result: { approved: false } }));
+    button('אשר הצעה להכנת קובץ').click(); await render();
+    expect((fixture.nativeElement.querySelector('dialog') as HTMLDialogElement).open).toBeTrue();
+    expect(component.approvalNotice).toBe(''); expect(component.approvalError).toContain('הנתונים השתנו');
+  });
+  it('fits the approval modal and its controls on mobile and desktop', async () => {
+    proposals = [proposal('proposed')]; await render(); button('אשר הצעה').click(); await render();
+    const frame = document.createElement('iframe'); frame.style.border = '0'; frame.style.height = '800px'; document.body.appendChild(frame);
+    try {
+      const styles = Array.from(document.head.querySelectorAll('style')).map(style => style.outerHTML).join('');
+      frame.contentDocument!.open(); frame.contentDocument!.write(`<html dir="rtl"><head>${styles}</head><body style="margin:0">${fixture.nativeElement.outerHTML}</body></html>`); frame.contentDocument!.close();
+      const modal = frame.contentDocument!.querySelector('dialog') as HTMLDialogElement;
+      modal.removeAttribute('open'); modal.showModal();
+      for (const width of [320, 375, 1200]) {
+        frame.style.width = width + 'px';
+        expect(modal.getBoundingClientRect().width).withContext('modal width at ' + width).toBeLessThanOrEqual(width - 32);
+        expect(modal.scrollWidth).withContext('modal content at ' + width).toBeLessThanOrEqual(modal.clientWidth);
+        expect(modal.querySelectorAll('button').length).toBe(2);
+      }
+    } finally { frame.remove(); }
   });
   it('prevents duplicate exports and never automatically exports an approved proposal', async () => {
     proposals = [proposal('approved')]; const pending = new Subject<Blob>(); finance.exportMasavProposals.and.returnValue(pending);

@@ -1,3 +1,23 @@
+<dialog #approvalDialog class="masav-approval-modal" dir="rtl" aria-labelledby="masav-approval-title" aria-describedby="masav-approval-explanation" [attr.aria-busy]="busy" (cancel)="cancelApproval($event)">
+  @if (approvalRow; as row) {
+    <form (ngSubmit)="approve(row)">
+      <h3 id="masav-approval-title">אישור הצעת מס״ב</h3>
+      <dl class="masav-approval-summary">
+        <div><dt>עמותה</dt><dd>{{ row.statement.entity_name }}</dd></div>
+        <div><dt>תקופת חיוב</dt><dd>{{ periodLabel(row) }}</dd></div>
+        <div><dt>סכום ההצעה</dt><dd class="masav-approval-amount">₪{{ money(+(row.proposal?.proposed_amount ?? 0)) }}</dd></div>
+      </dl>
+      <p id="masav-approval-explanation">האישור מאפשר הכנת קובץ Excel בלבד. הוא אינו יוזם גבייה או שולח הוראות לבנק.</p>
+      <label for="masav-approval-note">הערה לאישור (לא חובה)</label>
+      <textarea id="masav-approval-note" name="approvalNote" [(ngModel)]="approvalReason" [disabled]="busy" rows="3"></textarea>
+      @if (approvalError) { <p class="masav-message error" role="alert">{{ approvalError }}</p> }
+      <div class="masav-approval-actions">
+        <button type="button" class="masav-button secondary" autofocus [disabled]="busy" (click)="closeApproval()">ביטול</button>
+        <button type="submit" class="masav-button primary" [disabled]="busy">{{ busy ? 'מאשר…' : 'אשר הצעה להכנת קובץ' }}</button>
+      </div>
+    </form>
+  }
+</dialog>
 <section id="masav-collection" class="masav-section" dir="rtl" aria-labelledby="masav-heading" [attr.aria-busy]="loading">
   <header class="masav-heading">
     <div><h2 id="masav-heading">גביית מס״ב <span>{{ monthLabel }}</span></h2>
@@ -5,6 +25,7 @@
     <button type="button" class="masav-button secondary" (click)="refresh()" [disabled]="loading || busy">{{ loading ? 'טוען מצב…' : 'רענון מצב' }}</button>
   </header>
   @if (resultMessage) { <p role="status">{{ resultMessage }}</p> }
+  @if (approvalNotice) { <p class="masav-message success" role="status">{{ approvalNotice }}</p> }
   @if (resultInstruction) {
     <form class="masav-result-form" (ngSubmit)="recordResult()">
       <h3>{{ resultAction === 'payment' ? 'רישום תוצאת גבייה שהתקבלה בפועל' : 'סיום רישום תוצאות ההוראה' }}</h3>
@@ -108,14 +129,6 @@
                 @default { <button type="button" class="masav-button secondary" disabled aria-label="ממתין להכנה אוטומטית">ההצעה טרם הוכנה</button> }
               }
             </div>
-            @if (approvalId === row.statement.id && row.state === 'proposed') {
-              <div class="masav-inline">
-                <label [for]="'masav-reason-' + row.statement.id">הערה לאישור ההצעה</label>
-                <textarea [id]="'masav-reason-' + row.statement.id" [(ngModel)]="approvalReason" [disabled]="busy" rows="2" placeholder="סיבת אישור ההצעה להפקת קובץ"></textarea>
-                <p>האישור מאפשר הפקת קובץ בלבד ואינו שולח הוראות לבנק.</p>
-                <div><button type="button" class="masav-button primary" [disabled]="busy || !approvalReason.trim()" (click)="approve(row)">{{ busy ? 'מאשר…' : 'אישור הצעה' }}</button><button type="button" class="masav-button secondary" [disabled]="busy" (click)="approvalId = null">ביטול</button></div>
-              </div>
-            }
           </article>
         }
       </div>

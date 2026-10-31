@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, EventEmitter, OnInit, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -33,6 +33,9 @@ export class MasavCollectionSectionComponent implements OnInit {
   private collection = inject(CollectionOpsService);
   private clock = inject(SimulationClockService);
   private destroyRef = inject(DestroyRef);
+  private changeDetector = inject(ChangeDetectorRef);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  @ViewChild('approvalDialog', { static: true }) private approvalDialog!: ElementRef<HTMLDialogElement>;
   @Output() changed = new EventEmitter<void>();
   rows: MasavRow[] = [];
   loading = false;
@@ -42,6 +45,10 @@ export class MasavCollectionSectionComponent implements OnInit {
   monthLabel = '';
   approvalId: string | null = null;
   approvalReason = '';
+  approvalRow: MasavRow | null = null;
+  approvalError = '';
+  approvalNotice = '';
+  private approvalTrigger: HTMLElement | null = null;
   preview: MasavExportPreview | null = null;
   previewBusy = false;
   resultInstruction = '';
@@ -145,7 +152,7 @@ export class MasavCollectionSectionComponent implements OnInit {
   }
 
   refresh(): void {
-    if (this.busy || this.previewBusy) return;
+    if (this.busy || this.previewBusy || this.approvalRow) return;
     const id = ++this.requestId;
     this.loading = true;
     this.error = '';
@@ -236,18 +243,43 @@ export class MasavCollectionSectionComponent implements OnInit {
 
   periodLabel(row: MasavRow): string { return row.period ? billingPeriodLabel(row.period) : 'תקופת החיוב אינה זמינה'; }
   money(amount: number): string { return amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  beginApproval(row: MasavRow): void { if (this.busy || this.loading || row.state !== 'proposed') return; this.approvalId = row.statement.id; this.approvalReason = ''; this.actionError = ''; }
+  beginApproval(row: MasavRow): void {
+    if (this.busy || this.loading || this.approvalRow || row.state !== 'proposed' || !row.proposal) return;
+    this.approvalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.approvalId = row.statement.id; this.approvalRow = row;
+    this.approvalReason = ''; this.approvalError = ''; this.approvalNotice = ''; this.actionError = '';
+    this.changeDetector.detectChanges();
+    this.approvalDialog.nativeElement.showModal();
+  }
+  closeApproval(): void {
+    if (this.busy) return;
+    this.approvalDialog.nativeElement.close();
+    this.approvalRow = null; this.approvalId = null; this.approvalReason = ''; this.approvalError = '';
+    if (this.approvalTrigger?.isConnected) this.approvalTrigger.focus();
+    this.approvalTrigger = null;
+  }
+  cancelApproval(event: Event): void { event.preventDefault(); this.closeApproval(); }
   approve(row: MasavRow): void {
-    if (this.busy || this.loading || row.state !== 'proposed' || !row.proposal || this.approvalId !== row.statement.id) return;
-    if (!this.approvalReason.trim()) { this.actionError = 'יש להזין הערה לאישור ההצעה.'; return; }
-    this.busy = true; this.actionError = '';
-    this.finance.approveMasavProposal(row.proposal.id, this.approvalReason.trim()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    if (this.busy || this.loading || row !== this.approvalRow || row.state !== 'proposed' || !row.proposal || this.approvalId !== row.statement.id) return;
+    const reason = this.approvalReason.trim() || 'אישור הצעת מס״ב להכנת קובץ Excel';
+    this.busy = true; this.approvalError = '';
+    this.finance.approveMasavProposal(row.proposal.id, reason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ result }) => {
         this.busy = false;
-        if (!result?.approved) this.actionError = 'ההצעה לא אושרה: המצב השתנה. הנתונים נטענו מחדש; יש לבדוק את היתרה וההרשאה.';
+        if (!result?.approved) {
+          this.approvalError = 'ההצעה לא אושרה: הנתונים השתנו. יש לבטל ולרענן את היתרה וההרשאה לפני אישור נוסף.';
+          return;
+        }
+        this.closeApproval();
+        this.approvalNotice = 'ההצעה אושרה להכנת קובץ Excel. לא בוצעה גבייה.';
         this.refresh(); this.changed.emit();
+        setTimeout(() => this.host.nativeElement.querySelector<HTMLButtonElement>('.masav-heading button')?.focus());
       },
-      error: () => { this.busy = false; this.actionError = 'אישור ההצעה לא אומת. יש לרענן את המצב לפני ניסיון נוסף.'; this.refresh(); },
+      error: error => {
+        this.busy = false;
+        this.approvalError = error?.status === 403 ? 'אין הרשאה לאשר את ההצעה.'
+          : 'אישור ההצעה לא אומת. ההערה נשמרה; ניתן לנסות שוב או לבטל ולרענן את המצב.';
+      },
     });
   }
   openExportPreview(): void {

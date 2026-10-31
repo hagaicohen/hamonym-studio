@@ -38,3 +38,14 @@ small { display: block; font-size: 12px; color: #64748b; line-height: 1.65; }
 .masav-result-form input:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
 .masav-result-form .masav-button { margin-inline-end: 8px; margin-block: 4px; }
 .masav-allocation-details { margin-block: 12px; font-size: 13px; }.masav-allocation-details summary { cursor: pointer; color: #655b7c; }.masav-allocation-details small { margin-top: 8px; }
+.masav-approval-modal { box-sizing: border-box; width: 480px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; margin: auto; padding: 24px; border: 1px solid #e5e2f1; border-radius: 16px; background: white; color: #17233b; font: inherit; box-shadow: 0 20px 60px #17233b30; }
+.masav-approval-modal::backdrop { background: #17233b80; }
+.masav-approval-modal h3 { font-size: 20px; margin: 0 0 20px; }
+.masav-approval-summary { padding: 16px; border: 1px solid #eeebf9; border-radius: 10px; background: #faf9ff; margin: 0 0 16px; }
+.masav-approval-summary > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; align-items: baseline; margin-block: 8px; }
+.masav-approval-summary dt { font-size: 13px; color: #64748b; }.masav-approval-summary dd { margin: 0; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }.masav-approval-summary .masav-approval-amount { font-size: 23px; font-variant-numeric: tabular-nums; color: #583cd6; }
+.masav-approval-modal label { display: block; margin: 20px 0 8px; font-size: 13px; font-weight: 600; }
+.masav-approval-modal textarea { box-sizing: border-box; display: block; width: 100%; padding: 10px; border: 1px solid #d8d3e8; border-radius: 8px; resize: vertical; font: inherit; font-size: 14px; }
+.masav-approval-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.masav-message.success { background: #e7f7ef; color: #187347; }
+@media (max-width: 480px) { .masav-approval-modal { padding: 20px 16px; }.masav-approval-actions .masav-button { flex: 1 1 auto; }.masav-approval-summary > div { grid-template-columns: 75px minmax(0, 1fr); gap: 8px; } }
