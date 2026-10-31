@@ -250,7 +250,7 @@ async function listMasavProposals({ status } = {}) {
 // freshness at the moment of approval -- never approves a stale number.
 // If anything changed since prepare, this proposal is superseded instead
 // of approved, and the caller is told to re-prepare.
-async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
+async function approveMasavProposal({ proposalId, superAdminUserId, reason }, transactionClient = null) {
   if (!superAdminUserId) {
     const err = new Error('superAdminUserId is required');
     err.code = 'MISSING_ADMIN_USER';
@@ -263,9 +263,9 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
     throw err;
   }
 
-  const client = await pool.connect();
+  const client = transactionClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!transactionClient) await client.query('BEGIN');
 
     // Lock order fix (2026-10, integration-gap review): the Statement must
     // ALWAYS be locked first, same as prepareMasavProposal and every other
@@ -303,7 +303,7 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
 
     if (staleReason) {
       await client.query(`UPDATE masav_collection_proposals SET status = 'superseded', status_reason = $2 WHERE id = $1`, [proposalId, `approval blocked: ${staleReason}`]);
-      await client.query('COMMIT');
+      if (!transactionClient) await client.query('COMMIT');
       return { approved: false, reason: staleReason, proposalId, needsRePrepare: true };
     }
 
@@ -316,13 +316,13 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }) {
       [superAdminUserId, statement.entity_id, `proposalId=${proposalId} amount=${proposal.proposed_amount} reason=${trimmedReason}`]
     );
 
-    await client.query('COMMIT');
+    if (!transactionClient) await client.query('COMMIT');
     return { approved: true, proposalId, proposedAmount: Number(proposal.proposed_amount) };
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (!transactionClient) await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
-    client.release();
+    if (!transactionClient) client.release();
   }
 }
 

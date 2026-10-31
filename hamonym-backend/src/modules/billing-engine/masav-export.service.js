@@ -16,24 +16,43 @@ function periodDescription(component){
 }
 function publicManifest(m,excluded){return {...m,instructions:m.instructions.map((g,index)=>({ordinal:index+1,entityId:g.entityId,entityName:g.entityName,amount:money(g.amountCents),bankLast4:String(g.bank.account_number).slice(-4),components:g.components})),excluded};}
 async function execute(options,guards){
- const {superAdminUserId,previewOnly=false,expectedPreviewToken}=options;if(!previewOnly&&!superAdminUserId)throw fail('MISSING_ADMIN_USER');
+ const {superAdminUserId,previewOnly=false,expectedPreviewToken,oneClick=false,requestId}=options;if(!previewOnly&&!superAdminUserId)throw fail('MISSING_ADMIN_USER');
+ if(oneClick&&!previewOnly&&(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId||'')||!/^[0-9a-f]{64}$/.test(expectedPreviewToken||'')))throw fail('INVALID_MASAV_EXPORT_REQUEST');
  const client=await pool.connect();try{await client.query(previewOnly?'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY':'BEGIN');
+ if(oneClick && !(await client.query("SELECT to_regclass('public.masav_export_requests') AS ready")).rows[0].ready)throw fail('MASAV_ONE_CLICK_SCHEMA_REQUIRED');
+ if(oneClick&&!previewOnly){
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['masav-export:'+requestId]);
+  const old=(await client.query('SELECT * FROM masav_export_requests WHERE request_id=$1',[requestId])).rows[0];
+  if(old){if(String(old.requested_by)!==String(superAdminUserId)||old.expected_token!==expectedPreviewToken)throw fail('MASAV_EXPORT_REQUEST_CONFLICT');await client.query('COMMIT');return old.file_bytes;}
+ }
  const setting=(await client.query('SELECT masav_consolidation_mode FROM platform_billing_settings WHERE id=1'+(previewOnly?'':' FOR SHARE'))).rows[0];
  const mode=setting?.masav_consolidation_mode;if(!['entity','period'].includes(mode))throw fail('MASAV_EXPORT_SCHEMA_REQUIRED');
- let ids=options.proposalIds;if(ids===undefined)ids=(await client.query("SELECT id FROM masav_collection_proposals WHERE status='approved' ORDER BY statement_id,id")).rows.map(row=>row.id);
+ let ids=oneClick?undefined:options.proposalIds;if(ids===undefined)ids=(await client.query(oneClick?"SELECT id FROM masav_collection_proposals WHERE status IN ('proposed','approved') ORDER BY statement_id,id":"SELECT id FROM masav_collection_proposals WHERE status='approved' ORDER BY statement_id,id")).rows.map(row=>row.id);
  if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string'||! /^[0-9a-f-]{36}$/i.test(id)))throw fail('INVALID_PROPOSAL_IDS');if(new Set(ids).size!==ids.length)throw fail('DUPLICATE_PROPOSAL_IDS');
  if(!ids.length&&!previewOnly)throw fail('MISSING_PROPOSAL_IDS');
  const peeks=ids.length?(await client.query('SELECT id,statement_id FROM masav_collection_proposals WHERE id=ANY($1::uuid[]) ORDER BY statement_id,id',[ids])).rows:[];
  if(peeks.length!==ids.length)throw fail('PROPOSAL_NOT_FOUND');
  const rows=[],excluded=[];
+ if(oneClick&&new Set(peeks.map(p=>p.statement_id)).size!==peeks.length)throw fail('MASAV_DUPLICATE_ACTIVE_PROPOSALS');
+ if(oneClick){
+  // Serialize against collection/preparation using their existing Statement lock order.
+  const statements=(await client.query("SELECT s.id,ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id=s.billing_account_id WHERE s.status IN ('approved','open') ORDER BY s.id"+(previewOnly?'':' FOR UPDATE OF s'))).rows;
+  for(const statement of statements){
+   if(peeks.some(p=>p.statement_id===statement.id))continue;
+   const balance=await getStatementBalance(statement.id,client);if(balance.outstanding<=0)continue;
+   const exported=await guards.hasExportedMasavProposal(statement.id,client);
+   if(!exported.exists)excluded.push({statementId:statement.id,entityId:statement.entity_id,reason:'MASAV_PREPARATION_REQUIRED'});
+  }
+ }
+
  for(const peek of peeks){
   const statement=(await client.query('SELECT s.id,s.status,s.billing_period_id,ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id=s.billing_account_id WHERE s.id=$1'+(previewOnly?'':' FOR UPDATE OF s'),[peek.statement_id])).rows[0];
   const proposal=(await client.query('SELECT * FROM masav_collection_proposals WHERE id=$1'+(previewOnly?'':' FOR UPDATE'),[peek.id])).rows[0];
-  let reason=proposal.status!=='approved'?'PROPOSAL_NOT_APPROVED':!['approved','open'].includes(statement.status)?'STATEMENT_NOT_ACTIONABLE':null;
+  let reason=!(oneClick?['proposed','approved']:['approved']).includes(proposal.status)?'PROPOSAL_NOT_APPROVED':!['approved','open'].includes(statement.status)?'STATEMENT_NOT_ACTIONABLE':null;
   const balance=await getStatementBalance(statement.id,client);const mandate=await guards.checkMasavMandate(statement.entity_id,client);
   const exported=await guards.hasExportedMasavProposal(statement.id,client),hold=await hasOpenCollectionHold(statement.entity_id,client),unresolved=await guards.findUnresolvedAttempt(statement.id,client);
   reason=reason|| (exported.exists?'MASAV_ALREADY_EXPORTED':hold.held?'COLLECTION_HELD':unresolved?'UNRESOLVED_COLLECTION_ATTEMPT':!mandate.valid?mandate.reason:balance.outstanding<=0?'NO_OUTSTANDING_BALANCE':cents(balance.outstanding)!==cents(proposal.proposed_amount)?'PROPOSAL_STALE_AT_EXPORT':null);
-  if(reason){if(!previewOnly)throw fail(reason);excluded.push({proposalId:proposal.id,statementId:statement.id,entityId:statement.entity_id,reason});continue;}
+  if(reason){if(!previewOnly&&!oneClick)throw fail(reason);excluded.push({proposalId:proposal.id,statementId:statement.id,entityId:statement.entity_id,reason});continue;}
   const detail=(await client.query(`SELECT e.display_name AS entity_name,e.contact_full_name,e.contact_email,emd.bank_code,emd.branch_code,emd.account_number,emd.authorized,bp.period_start,bp.period_end
     FROM statements s JOIN billing_accounts ba ON ba.id=s.billing_account_id JOIN entities e ON e.id=ba.entity_id JOIN billing_periods bp ON bp.id=s.billing_period_id
     JOIN entity_masav_details emd ON emd.entity_id=ba.entity_id WHERE s.id=$1`+(previewOnly?'':' FOR SHARE OF emd'),[statement.id])).rows[0];
@@ -41,8 +60,18 @@ async function execute(options,guards){
   rows.push({...detail,entity_id:statement.entity_id,billing_period_id:statement.billing_period_id,proposal_id:proposal.id,statement_id:statement.id,amount:proposal.proposed_amount});
  }
  const m=manifest(rows,mode);if(previewOnly){await client.query('COMMIT');return publicManifest(m,excluded);}
+ if(oneClick&&excluded.length)throw Object.assign(fail('MASAV_EXPORT_BLOCKED'),{blockers:excluded});
  if(expectedPreviewToken&&expectedPreviewToken!==m.previewToken)throw fail('MASAV_PREVIEW_CHANGED');
  if(!rows.length)throw fail('NO_ELIGIBLE_INSTRUCTIONS');
+ if(oneClick){
+  for(const row of rows){
+   const status=(await client.query('SELECT status FROM masav_collection_proposals WHERE id=$1',[row.proposal_id])).rows[0].status;
+   if(status==='proposed'){
+    const approved=await require('./masav-proposal.service').approveMasavProposal({proposalId:row.proposal_id,superAdminUserId,reason:'Single-action approval and manual Excel download'},client);
+    if(!approved.approved)throw fail('MASAV_PREVIEW_CHANGED');
+   }
+  }
+ }
  const batch=(await client.query('INSERT INTO masav_export_batches(consolidation_mode,total_amount,created_by) VALUES($1,$2,$3) RETURNING id',[mode,m.totalAmount,superAdminUserId])).rows[0].id;
  const fileRows=[],trace=[];
  for(let index=0;index<m.instructions.length;index++){
@@ -64,7 +93,9 @@ async function execute(options,guards){
   ['bank','branch','account','sum','tranmode','currency','company','contact','email','pdesc','remarks'],...fileRows]);
  for(let row=2;row<fileRows.length+2;row++)for(const col of [0,1,2]){const cell=sheet[XLSX.utils.encode_cell({r:row,c:col})];cell.t='s';cell.z='@';cell.v=String(cell.v);}
  XLSX.utils.book_append_sheet(book,sheet,'MASAV');XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Instruction','Organization','Statement','Proposal','Billing period','Period start','Period end','Amount','Original instruction'],...trace]),'Debt allocations');
- const buffer=XLSX.write(book,{type:'buffer',bookType:'xlsx',cellStyles:true});await client.query('COMMIT');return buffer;
+ const buffer=XLSX.write(book,{type:'buffer',bookType:'xlsx',cellStyles:true});
+ if(oneClick)await client.query('INSERT INTO masav_export_requests(request_id,requested_by,expected_token,batch_id,file_bytes) VALUES($1,$2,$3,$4,$5)',[requestId,superAdminUserId,expectedPreviewToken,batch,buffer]);
+ await client.query('COMMIT');return buffer;
  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e;}finally{client.release();}
 }
 module.exports={execute};

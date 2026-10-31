@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict');assert.match(process.env.DB_NAME,/^hamonym_masav_ux_export_20261030(?:_v[2-3])?$/);assert.equal(process.env.DB_HOST,'127.0.0.1');
+const assert=require('node:assert/strict');assert.match(process.env.DB_NAME,/^hamonym_masav_ux_export_20261030(?:_v[2-9])?$/);assert.equal(process.env.DB_HOST,'127.0.0.1');
 for(const mod of ['node:http','node:https'])require(mod).request=()=>{throw Error('External provider forbidden')};
 const timer=global.setTimeout;global.setTimeout=(...args)=>{const t=timer(...args);t.unref();return t};
 const n=require.resolve('../src/modules/email/admin-notification.service');require.cache[n]={id:n,filename:n,loaded:true,exports:{queueAdminNotification:()=>{}}};

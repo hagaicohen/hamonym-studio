@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict'),crypto=require('node:crypto');assert.match(process.env.DB_NAME,/^hamonym_masav_consolidation_20261030(?:_v[2-5])?$/);assert.equal(process.env.DB_HOST,'127.0.0.1');
+const assert=require('node:assert/strict'),crypto=require('node:crypto');assert.match(process.env.DB_NAME,/^hamonym_masav_consolidation_20261030(?:_v[2-9])?$/);assert.equal(process.env.DB_HOST,'127.0.0.1');
 for(const name of ['node:http','node:https'])require(name).request=()=>{throw Error('External provider forbidden')};
 const db=require('../src/db/db'),masav=require('../src/modules/billing-engine/masav-proposal.service'),settings=require('../src/modules/billing-engine/platform-billing-settings.service'),collection=require('../src/modules/collection-engine/collection.service'),XLSX=require('xlsx');
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s)};

@@ -15,6 +15,8 @@ router.get('/exceptions/:id/actions', ctrl.getExceptionActions);
 router.post('/exceptions/:id/override-hold', ctrl.overrideExceptionHold);
 router.post('/exceptions/:id/resolve', ctrl.resolveException);
 
+router.get('/masav-export/summary', ctrl.masavExportSummary);
+router.post('/masav-export/approve-and-download', ctrl.approveAndDownloadMasav);
 router.get('/masav-proposals', ctrl.listMasavProposals);
 router.post('/masav-proposals/:id/approve', ctrl.approveMasavProposal);
 router.post('/masav-proposals/export', ctrl.exportMasavProposals);

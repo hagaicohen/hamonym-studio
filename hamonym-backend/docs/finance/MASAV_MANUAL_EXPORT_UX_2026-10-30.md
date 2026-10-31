@@ -9,3 +9,7 @@ Isolated real XLSX verification exposed a duplicate-instruction gap: preparation
 Tests: scripts/test-masav-manual-export-isolated.cjs and scripts/test-fin11-masav-clock-integration.cjs require their explicitly named disconnected fixture databases. They must never target shared pilot data.
 
 No shared financial data, mandate, proposal or clock was modified by this task. No financial jobs ran against shared data. No commit, push, deploy or external provider operation.
+
+
+## 2026-10-31 single-action update
+The main UI now uses atomic approval and download. See [MASAV_ONE_CLICK_EXPORT_2026-10-31.md](MASAV_ONE_CLICK_EXPORT_2026-10-31.md). Legacy endpoints remain compatible; the old approval/preview UI is superseded. Migration 083 is local-only pending deployment approval.
