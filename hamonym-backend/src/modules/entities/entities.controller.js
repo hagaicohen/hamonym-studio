@@ -512,6 +512,7 @@ exports.removeAssociationDocument =
 // =========================================================
 
 function statusForApproval(err) {
+  if (err.status) return err.status;
   switch (err.message) {
     case 'Unauthorized': return 403;
     case 'Invalid transition': return 409;
@@ -551,7 +552,7 @@ exports.requestReview = async (req, res) => {
     const entity = await service.requestReview(req.params.id, req.user.id);
     res.json({ entity });
   } catch (err) {
-    res.status(statusForApproval(err)).json({ error: err.message });
+    res.status(statusForApproval(err)).json({ error: err.message, code: err.code, missingFields: err.missingFields });
   }
 };
 

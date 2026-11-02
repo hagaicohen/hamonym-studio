@@ -1,3 +1,4 @@
+const { missingProfileFields, lifecycleError } = require('./organization-lifecycle');
 const db =
   require('../../db/db');
 
@@ -175,13 +176,11 @@ exports.createEntity =
 
             6,
 
-            data.is_profile_complete
-              ? 'pending_review'
-              : 'draft',
+            'draft',
 
             userId,
 
-            data.is_profile_complete || false,
+            missingProfileFields(data).length === 0,
 
             data.primary_category,
 
@@ -866,20 +865,9 @@ exports.updateEntity =
           ga_measurement_id = $30,
 
           entity_type = COALESCE($32, entity_type),
-          -- $33 is NULL for ordinary entity-settings edits (which never send
-          -- is_profile_complete at all) — COALESCE leaves the existing value
-          -- alone in that case, rather than forcing it back to false.
-          is_profile_complete = COALESCE($33, is_profile_complete),
-
-          -- A draft entity that just became fully filled-in graduates to
-          -- pending_review on its own — this is the same rule createEntity
-          -- uses at creation time, applied here too so "save draft" and
-          -- "finish registration" can be the exact same call. Only ever
-          -- touches rows still in 'draft'; every other status (pending_review,
-          -- active, changes_requested, rejected, suspended) is untouched, so
-          -- this is safe for the ordinary post-approval entity-settings edits
-          -- that also go through this same function.
-          status = CASE WHEN status = 'draft' AND COALESCE($33, is_profile_complete) THEN 'pending_review' ELSE status END,
+          -- Recompute the existing onboarding flag from values actually saved,
+          -- never from a client-supplied boolean. Saving never submits a draft.
+          is_profile_complete = $33,
 
           -- see computeReapprovalFlag above — only ever flips true here, never
           -- resets to false (that only happens via admin approve/reactivate)
@@ -956,7 +944,7 @@ exports.updateEntity =
           entityId,
 
           data.entity_type || null,
-          data.is_profile_complete === undefined ? null : !!data.is_profile_complete,
+          missingProfileFields(data).length === 0,
 
           reapproval.flag,
           reapproval.reason
@@ -1193,30 +1181,30 @@ exports.acknowledgeNotifications = async (entityId, userId) => {
 };
 
 exports.requestReview = async (entityId, userId) => {
-  await checkOwnership(userId, entityId);
-
-  const result = await db.query(
-    `UPDATE entities SET status = 'pending_review', updated_at = NOW()
-     WHERE id = $1 AND status = 'changes_requested'
-     RETURNING
-       id, entity_type, display_name, legal_name, registration_number, description,
-       logo_url, website, city, address, contact_full_name, contact_email, contact_phone,
-       cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
-       cardcom_clearing_company, cardcom_invoice_name, cardcom_invoice_email, cardcom_is_production,
-       cardcom_connection_status, cardcom_last_verified_at, cardcom_last_error,
-       association_certificate_url, bank_document_url, identity_document_url, tax_document_url,
-       requires_completion, missing_fields, onboarding_completed_at, created_by_user_id,
-       created_at, updated_at, created_by, status, is_profile_complete, type, email, phone,
-       onboarding_completed, onboarding_step, association_certificate_name, tax_document_name,
-       primary_category, secondary_categories, registration_document_name, registration_document_mime,
-       association_certificate_mime, tax_document_mime, logo_mime, campaign_types, monthly_goal,
-       yearly_goal, billing_method, billing_masav_file_name, cardcom_terminal, cardcom_api_name,
-       cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden`,
-    [entityId]
-  );
-
-  if (!result.rows[0]) throw new Error('Invalid transition');
-  return stripBlobs(result.rows[0]);
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const membership = await client.query('SELECT 1 FROM user_entities WHERE user_id = $1 AND entity_id = $2', [userId, entityId]);
+    if (!membership.rows.length) throw lifecycleError('Unauthorized', 403, 'UNAUTHORIZED');
+    const result = await client.query('SELECT * FROM entities WHERE id = $1 FOR UPDATE', [entityId]);
+    const entity = result.rows[0];
+    if (!entity || entity.deleted_at) throw lifecycleError('Entity not found', 404, 'ENTITY_NOT_FOUND');
+    // Serialize repeated/concurrent clicks without creating another submission.
+    if (entity.status === 'pending_review') {
+      await client.query('COMMIT');
+      return stripBlobs(entity);
+    }
+    if (!['draft', 'changes_requested'].includes(entity.status)) throw lifecycleError('Invalid transition', 409, 'INVALID_TRANSITION');
+    const missing = missingProfileFields(entity);
+    if (missing.length) throw lifecycleError('יש להשלים את פרטי החובה לפני הגשה לבדיקה', 400, 'PROFILE_INCOMPLETE', missing);
+    const updated = await client.query(
+      "UPDATE entities SET status = 'pending_review', is_profile_complete = true, updated_at = NOW() WHERE id = $1 RETURNING *", [entityId]);
+    await client.query('COMMIT');
+    return stripBlobs(updated.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally { client.release(); }
 };
 
 // Entity manager's own "delete entity" — soft delete. All the entity's
