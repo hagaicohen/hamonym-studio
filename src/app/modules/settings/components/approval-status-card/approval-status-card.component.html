@@ -1,18 +1,18 @@
-<div class="approval-card" *ngIf="!loading && data && needsAttention">
+<div class="approval-card" [class.approval-card-compact]="compact" *ngIf="!loading && data && needsAttention">
 
-  <div class="approval-header">
+  <div class="approval-header" *ngIf="!compact">
     <span class="approval-icon">{{ meta(data.status).icon }}</span>
     <span class="approval-label">סטטוס העמותה: {{ meta(data.status).label }}</span>
   </div>
 
-  <div *ngIf="data.comment" class="approval-body">
-    <div class="approval-issues-title">יש להשלים את הדברים הבאים:</div>
+  <div *ngIf="data.comment || data.reasonTags.length" class="approval-body">
+    <div class="approval-issues-title">הערות מנהל הפלטפורמה:</div>
 
     <ul class="approval-tags" *ngIf="data.reasonTags.length">
       <li *ngFor="let tag of data.reasonTags">{{ reasonLabel(tag) }}</li>
     </ul>
 
-    <p class="approval-comment">{{ data.comment }}</p>
+    <p *ngIf="data.comment" class="approval-comment">{{ data.comment }}</p>
 
     <div class="approval-meta">
       <span *ngIf="data.actionBy">נבדק ע"י {{ data.actionBy }}</span>
@@ -20,15 +20,18 @@
     </div>
   </div>
 
+  <p *ngIf="data.status === 'rejected'" class="approval-comment approval-next-step">דחיית הבקשה לא מחקה את העמותה או את הנתונים שלה. קראו את הסיבה. כדי להגיש מחדש, מנהל הפלטפורמה צריך להעביר תחילה את הבקשה להשלמת פרטים.</p>
+  <p *ngIf="data.status === 'changes_requested'" class="approval-comment approval-next-step">השלימו את הפרטים או המסמכים בהגדרות העמותה ושמרו. לאחר השלמת התיקונים לחצו על ״שלח לבדיקה מחדש״.</p>
+
   <button
-    *ngIf="data.status === 'changes_requested'"
+    *ngIf="showResubmit && (data.status === 'changes_requested' || data.status === 'draft')"
     class="approval-resubmit-btn"
-    [disabled]="resubmitting"
+    [disabled]="resubmitting || !canSubmit"
     (click)="resubmit()"
   >
-    {{ resubmitting ? 'שולח...' : 'שלח לבדיקה מחדש' }}
+    {{ resubmitting ? 'שולח...' : data.status === 'draft' ? 'הגשה לבדיקה' : 'שלח לבדיקה מחדש' }}
   </button>
-
-  <div *ngIf="error" class="approval-error">{{ error }}</div>
+  <p *ngIf="showResubmit && !canSubmit && (data.status === 'changes_requested' || data.status === 'draft')" class="approval-meta">יש לשמור את השינויים לפני הגשה לבדיקה.</p>
 
 </div>
+<div *ngIf="error" class="approval-error" role="alert">{{ error }} <button type="button" (click)="load()">ניסיון נוסף</button></div>

@@ -1,7 +1,11 @@
 import {
-  Component, OnInit, AfterViewInit,
+  Component, OnInit, OnDestroy,
   ElementRef, ViewChild, inject, effect, untracked,
 } from '@angular/core';
+import { forkJoin } from 'rxjs';
+import { OtherOrganizationsComponent } from './other-organizations.component';
+import { OrganizationEntryService } from '../../../../core/services/organization-entry.service';
+import { organizationNextAction } from '../../../../shared/utils/organization-next-action';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -12,7 +16,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { AnalyticsRangeService } from '../../../../core/services/analytics-range.service';
-import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
+import { OrganizationStatusCardComponent } from './organization-status-card.component';
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -51,13 +55,20 @@ interface DashboardData {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, LucideAngularModule, ApprovalStatusCardComponent, DateRangePickerComponent],
+  imports: [CommonModule, RouterLink, LucideAngularModule, OrganizationStatusCardComponent, DateRangePickerComponent, OtherOrganizationsComponent],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css',
+  styleUrls: ['./dashboard.component.css', './organization-card-heading.css', '../../../../shared/styles/new-campaign-button.css'],
 })
-export class DashboardComponent implements OnInit, AfterViewInit {
-  @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
+export class DashboardComponent implements OnInit, OnDestroy {
+  chartCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('chartCanvas') set canvas(value: ElementRef<HTMLCanvasElement> | undefined) {
+    this.chartCanvas = value;
+    if (value && this.data) this.buildChart(this.data.chartData);
+    else { this.chart?.destroy(); this.chart = null; }
+  }
 
+  private entry = inject(OrganizationEntryService);
+  private requestVersion = 0;
   private http            = inject(HttpClient);
   currentEntity           = inject(CurrentEntityService);
   readonly ctx            = inject(CurrentContextService);
@@ -77,8 +88,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   entityLogoUrl  = '';
 
   private chart: Chart | null = null;
-  private chartPending: DashboardData['chartData'] | null = null;
-  private viewReady = false;
   private lastLoadedKey: string | null = null;
 
   constructor() {
@@ -112,6 +121,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   private loadDashboard(): void {
+    const version = ++this.requestVersion;
     const entity = this.currentEntity.currentEntity();
     if (!entity?.id) { this.error = 'לא נמצאה ישות'; this.loader.hide(); return; }
 
@@ -127,17 +137,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       ? (raw.startsWith('http') || raw.startsWith('data:') ? raw : `${environment.apiUrl}${raw}`)
       : '';
 
-    // רענון entity — מעדכן את ה-signal כך שה-allAlerts getter יקבל נתונים עדכניים
-    this.entitiesService.getEntityById(entity.id).subscribe({
-      next: (fresh) => {
-        this.currentEntity.setEntity(fresh);
-        const freshRaw: string = fresh.logo_url || '';
-        this.entityLogoUrl = freshRaw
-          ? (freshRaw.startsWith('http') || freshRaw.startsWith('data:') ? freshRaw : `${environment.apiUrl}${freshRaw}`)
-          : '';
-      },
-      error: () => {},
-    });
 
     this.data = null;
     this.error = null;
@@ -147,30 +146,42 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const range = this.analyticsRange.activeRange();
     const params = new HttpParams().set('from', range.from).set('to', range.to);
 
-    this.http
-      .get<DashboardData>(`${environment.apiUrl}/api/entities/${entity.id}/dashboard`, { headers, params })
-      .subscribe({
-        next: (res) => {
-          this.data = res;
-          this.loader.hide();
-          if (this.viewReady) this.buildChart(res.chartData);
-          else this.chartPending = res.chartData;
-        },
-        error: (err) => {
-          this.error = err.error?.error || 'שגיאה בטעינה';
-          this.loader.hide();
-        },
-      });
+    forkJoin({
+      entity: this.entitiesService.getEntityById(entity.id),
+      dashboard: this.http.get<DashboardData>(`${environment.apiUrl}/api/entities/${entity.id}/dashboard`, { headers, params }),
+    }).subscribe({
+      next: ({ entity: fresh, dashboard: res }) => {
+        if (version !== this.requestVersion || this.ctx.active()?.context?.id !== entity.id) return;
+        this.currentEntity.setEntity(fresh);
+        this.entityName = fresh.display_name || '';
+        const raw = fresh.logo_url || '';
+        this.entityLogoUrl = raw && !raw.startsWith('http') && !raw.startsWith('data:') ? `${environment.apiUrl}${raw}` : raw;
+        this.data = res;
+        this.alertPage = 0;
+        this.loader.hide();
+        const entering = this.entry.consume(entity.id);
+        if (entering && this.nextAction.createFirstCampaign) {
+          this.router.navigate(['/campaigns/create'], { replaceUrl: true });
+        }
+        if (this.chartCanvas) this.buildChart(res.chartData);
+      },
+      error: (err) => {
+        if (version !== this.requestVersion || this.ctx.active()?.context?.id !== entity.id) return;
+        this.entry.consume(entity.id);
+        this.error = err.error?.error || 'לא ניתן לטעון את נתוני העמותה. יש לנסות לרענן.';
+        this.loader.hide();
+      },
+    });
   }
 
-  ngAfterViewInit(): void {
-    this.viewReady = true;
-    if (this.chartPending) { this.buildChart(this.chartPending); this.chartPending = null; }
+  get nextAction() {
+    return organizationNextAction(this.currentEntity.currentEntity(), this.data?.kpi.activeCampaigns.total ?? -1);
   }
+  get noCampaigns(): boolean { return this.data?.kpi.activeCampaigns.total === 0; }
+  ngOnDestroy(): void { ++this.requestVersion; this.chart?.destroy(); }
 
   private buildChart(rows: DashboardData['chartData']): void {
     if (!this.chartCanvas?.nativeElement) {
-      setTimeout(() => this.buildChart(rows), 0);
       return;
     }
     if (this.chart) { this.chart.destroy(); this.chart = null; }
@@ -263,28 +274,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   get allAlerts(): DashboardData['alerts'] {
-    const base = this.data?.alerts ?? [];
-    const e = this.currentEntity.currentEntity();
-    const critical: DashboardData['alerts'] = [];
-    if (e) {
-      if (e.status === 'pending_review')
-        critical.push({ type: 'entity_pending', ref_id: null, severity: 'critical',
-          title: 'העמותה ממתינה לאישור',
-          description: 'לא ניתן להעלות קמפיינים עד לאישור העמותה' });
-      if (!e.cardcom_terminal_number)
-        critical.push({ type: 'missing_cardcom', ref_id: null, severity: 'critical',
-          title: 'לא הוגדר אמצעי סליקה',
-          description: 'יש להגדיר מסוף Cardcom כדי לקבל תשלומים' });
-      if (!e.tax_document_name)
-        critical.push({ type: 'missing_tax_doc', ref_id: null, severity: 'critical',
-          title: 'חסר אישור סעיף 46',
-          description: 'יש להעלות אישור פטור ממס כדי לאפשר גיוס כספים' });
-      if (!e.association_certificate_name)
-        critical.push({ type: 'missing_association_cert', ref_id: null, severity: 'critical',
-          title: 'חסרה תעודת התאגדות',
-          description: 'יש להעלות תעודת התאגדות כדי לאמת את הגוף' });
-    }
-    return [...critical, ...base];
+    // Organization guidance is presented once above; keep operational alerts.
+    const covered = ['entity_pending', 'missing_cardcom', 'missing_tax_doc', 'missing_association_cert'];
+    return (this.data?.alerts ?? []).filter(alert => !covered.includes(alert.type) && !(this.noCampaigns && alert.type === 'no_active_campaigns'));
   }
 
   alertSeverity(a: DashboardData['alerts'][0]): 'critical' | 'warning' | 'info' {
@@ -390,7 +382,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ambProgressPct(amb: { raised_total: number; goal_amount?: number }): number {
     if (!amb.goal_amount) return 0;
-    return Math.min(100, Math.round(amb.raised_total / amb.goal_amount * 100));
+    return Math.round(amb.raised_total / amb.goal_amount * 100);
   }
 
   initials(name: string): string {

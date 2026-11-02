@@ -29,8 +29,8 @@
         [class.error]="saveState.saveFailed"
         class="save-btn"
         type="button"
-        [disabled]="saveState.isSaving"
-        (click)="save.emit()"
+        [disabled]="saveState.isSaving || identityCheck.status === 'duplicate'"
+        (click)="identityCheck.status !== 'duplicate' && save.emit()"
       >
         @if (
           !saveState.isSaving &&
@@ -91,8 +91,13 @@
         <input
           type="text"
           [ngModel]="entity?.registration_number"
+          [attr.aria-invalid]="identityCheck.status === 'duplicate' ? 'true' : null"
+          aria-describedby="edit-registration-identity-feedback"
           (ngModelChange)="updateField('registration_number', $event)"
         />
+        <app-registration-identity-check id="edit-registration-identity-feedback"
+          [entityType]="entity?.entity_type" [registrationNumber]="entity?.registration_number" [excludeEntityId]="entity?.id"
+          (stateChange)="identityCheck = $event"></app-registration-identity-check>
       </div>
 
       <!-- PRIMARY CATEGORY -->

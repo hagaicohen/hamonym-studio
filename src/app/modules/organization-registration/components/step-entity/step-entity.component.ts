@@ -12,15 +12,23 @@ import {
   EntityType,
 } from '../../config/entity-config';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
+import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../../../shared/components/registration-identity-check/registration-identity-check.component';
 
 @Component({
   selector: 'app-step-entity',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RegistrationIdentityCheckComponent],
   templateUrl: './step-entity.component.html',
   styleUrls: ['./step-entity.component.css'],
 })
 export class StepEntityComponent {
+  identityCheck:IdentityCheckState={status:'idle'};
+  onIdentityCheck(state:IdentityCheckState):void {
+    this.identityCheck=state;
+    if (state.status==='duplicate') this.stateService.identityDuplicate.set(true);
+    if (state.status==='available') this.stateService.identityDuplicate.set(false);
+  }
+  get identityEntityId():string|undefined { return this.stateService.state().entityId || undefined; }
   @Output()
   continue = new EventEmitter<void>();
 
@@ -52,6 +60,7 @@ export class StepEntityComponent {
   }
 
   set entityType(value: string) {
+    this.identityCheck={status:'idle'};
     this.updateState({
       entityType: value,
     });
@@ -72,6 +81,7 @@ export class StepEntityComponent {
   }
 
   set organizationNumber(value: string) {
+    this.identityCheck={status:'idle'};
     this.updateState({
       organizationNumber: value,
     });
@@ -292,6 +302,7 @@ export class StepEntityComponent {
 
   get canContinue(): boolean {
     return !!(
+      !this.stateService.identityDuplicate() &&
       this.entityType &&
       this.organizationName.trim() &&
       this.organizationNumber.trim() &&

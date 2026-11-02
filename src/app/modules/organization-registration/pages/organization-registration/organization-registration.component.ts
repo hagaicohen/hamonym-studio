@@ -9,10 +9,12 @@ import { StepReviewComponent } from '../../components/step-review/step-review.co
 import { StepBillingMethodComponent } from '../../components/step-billing-method/step-billing-method.component';
 import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-organization-registration',
   standalone: true,
+  providers: [OrganizationRegistrationStateService],
   imports: [
     CommonModule,
     StepEntityComponent,
@@ -28,6 +30,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 export class OrganizationRegistrationComponent implements OnInit {
   protected stateService = inject(OrganizationRegistrationStateService);
   private entitiesService = inject(EntitiesService);
+  private route = inject(ActivatedRoute);
 
   currentStep = 1;
 
@@ -41,6 +44,9 @@ export class OrganizationRegistrationComponent implements OnInit {
   draftSaveError = signal('');
 
   ngOnInit(): void {
+    // Explicit creation never resumes another organization. State is scoped to
+    // this wizard instance, including all existing child steps.
+    if (this.route.snapshot.queryParamMap.get('mode') === 'new') return;
     // Only offer to resume if this wizard instance hasn't already picked up
     // an entity (e.g. a draft just saved a moment ago in this same visit).
     if (this.stateService.state().entityId) return;

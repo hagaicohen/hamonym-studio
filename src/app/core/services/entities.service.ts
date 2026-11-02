@@ -3,6 +3,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+import { OrganizationLifecycleEventsService } from './organization-lifecycle-events.service';
 import { environment } from '../../../environments/environment';
 
 export interface EntityNotification {
@@ -18,7 +20,16 @@ export interface EntityNotification {
   providedIn: 'root',
 })
 export class EntitiesService {
+  private lifecycle = inject(OrganizationLifecycleEventsService);
   public http = inject(HttpClient);
+
+  checkRegistrationAvailability(entityType: string, registrationNumber: string, excludeEntityId?: string): Observable<{available:boolean;existingEntityId?:string;managementScope?:'entity'|'platform'}> {
+    return this.http.post<{available:boolean;existingEntityId?:string;managementScope?:'entity'|'platform'}>(
+      `${environment.apiUrl}/api/entities/registration-availability`,
+      {entityType,registrationNumber,excludeEntityId},
+      {headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}},
+    );
+  }
 
   createEntity(data: any): Observable<any> {
     return this.http.post(
@@ -363,7 +374,7 @@ export class EntitiesService {
       `${environment.apiUrl}/api/entities/${entityId}/request-review`,
       {},
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
-    );
+    ).pipe(tap(() => this.lifecycle.changed(entityId)));
   }
 
   // Soft delete — the entity and all its campaigns disappear immediately

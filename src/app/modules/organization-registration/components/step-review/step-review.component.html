@@ -44,6 +44,12 @@
     <p>סקירה אחרונה לפני שליחה לאישור</p>
   </div>
 
+  <section class="summary-card" aria-labelledby="completion-title">
+    <h3 id="completion-title">מה הושלם ומה נשאר להשלמה?</h3>
+    <p class="completion-help">הרשימה מסכמת את הפרטים וההגדרות הקיימים. פריטים שניתן להשלים בהמשך אינם חוסמים את שליחת הבקשה.</p>
+    <app-organization-checklist [checks]="completionChecks" />
+  </section>
+
   <!-- ===================================================== -->
   <!-- ORGANIZATION -->
   <!-- ===================================================== -->
@@ -506,7 +512,7 @@
           </div>
         </div>
 
-        @if (paymentMethod === "credit-card") {
+        @if (paymentMethod === "credit-card" && state().cardcomInternalDealNumber) {
           <div class="summary-item">
             <div class="summary-label">ספק</div>
 
@@ -538,6 +544,9 @@
           </div>
         }
 
+        @if (paymentMethod === "credit-card" && !state().cardcomInternalDealNumber) {
+          <p class="completion-help">לא התקבל אישור לשמירת כרטיס. יש להשלים את אמצעי הגבייה בהגדרות העמותה.</p>
+        }
         @if (paymentMethod === "masav") {
           <div class="summary-item full-width">
             <div class="summary-label">הרשאת בנק (מס"ב)</div>
@@ -604,8 +613,8 @@
       חזרה
     </button>
 
-    <button type="button" class="continue-btn" (click)="submitApplication()">
-      סיום
+    <button type="button" class="continue-btn" [disabled]="loading" (click)="submitApplication()">
+      {{ loading ? 'שולח...' : 'הגשה לבדיקה' }}
     </button>
   </div>
 </div>

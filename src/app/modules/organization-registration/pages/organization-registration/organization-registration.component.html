@@ -21,7 +21,7 @@
     <button
       type="button"
       class="save-draft-btn"
-      [disabled]="!stateService.canSaveDraft || savingDraft()"
+      [disabled]="!stateService.canSaveDraft || savingDraft() || stateService.saving()"
       [title]="!stateService.canSaveDraft ? 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה' : ''"
       (click)="saveDraft()"
     >

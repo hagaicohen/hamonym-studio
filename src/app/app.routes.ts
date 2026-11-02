@@ -8,6 +8,7 @@ import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { welcomeGuard } from './core/guards/welcome.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
 import { devOnlyGuard } from './core/guards/dev-only.guard';
 
@@ -190,8 +191,12 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'login',
         pathMatch: 'full',
+        canActivate: [welcomeGuard],
+        loadComponent: () =>
+          import('./modules/onboarding/pages/welcome/welcome.component').then(
+            (m) => m.WelcomeComponent,
+          ),
       },
       {
         path: 'login',
@@ -226,6 +231,7 @@ export const routes: Routes = [
       },
       {
         path: 'welcome',
+        canActivate: [welcomeGuard],
         loadComponent: () =>
           import('./modules/onboarding/pages/welcome/welcome.component').then(
             (m) => m.WelcomeComponent,

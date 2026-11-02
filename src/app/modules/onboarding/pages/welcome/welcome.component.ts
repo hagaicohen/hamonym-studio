@@ -1,18 +1,22 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { TopbarComponent } from '../../../../core/layout/topbar/topbar.component';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-welcome',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TopbarComponent],
   templateUrl: './welcome.component.html',
   styleUrls: ['./welcome.component.css'],
 })
 export class WelcomeComponent {
   private router = inject(Router);
-
-  readonly userName = this._loadUserName();
+  private auth = inject(AuthService);
+  get authenticated(): boolean { return !!this.auth.getToken(); }
+  get fullName(): string { return this.authenticated ? this.auth.currentUser()?.full_name || this._loadUserName() : ''; }
+  get userName(): string { return this.fullName.split(' ')[0]; }
 
   readonly cards = [
     {
@@ -48,7 +52,7 @@ export class WelcomeComponent {
   private _loadUserName(): string {
     try {
       const raw = localStorage.getItem('user');
-      return raw ? JSON.parse(raw)?.full_name?.split(' ')[0] ?? '' : '';
+      return raw ? JSON.parse(raw)?.full_name ?? '' : '';
     } catch {
       return '';
     }

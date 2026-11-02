@@ -1,3 +1,5 @@
+import { organizationHealthChecks } from '../../../../shared/utils/organization-health';
+import { OrganizationChecklistComponent } from '../../../../shared/components/organization-checklist/organization-checklist.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -48,7 +50,7 @@ const ACTION_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-organization-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AdminDetailsDrawerComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AdminDetailsDrawerComponent, OrganizationChecklistComponent],
   templateUrl: './platform-organization-detail-page.component.html',
   styleUrl: './platform-organization-detail-page.component.css',
 })
@@ -58,16 +60,36 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   private platformService = inject(PlatformService);
   readonly context = inject(CurrentContextService);
   pendingManagementAction: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate' | null = null;
+  managementNotice = '';
+  managementActionDescription(action: string): string {
+    const descriptions: Record<string, string> = {
+      approve: 'אישור העמותה לפעילות במערכת, בהתאם להגדרות ולכללים הקיימים.',
+      requestChanges: 'החזרת הבקשה לעמותה להשלמת פרטים ולהגשה חוזרת לבדיקה.',
+      reject: 'דחיית בקשת האישור. העמותה והנתונים שלה נשמרים — אין מחיקה.',
+      suspend: 'השהיית פעילות העמותה במערכת. הנתונים נשמרים.',
+      reactivate: 'החזרת עמותה מושעית לפעילות, בהתאם לכללים הקיימים.',
+    };
+    return descriptions[action] || '';
+  }
+  get managementConfirmLabel(): string {
+    const labels: Record<string, string> = { approve: 'אשר את העמותה', requestChanges: 'שלח להשלמת פרטים', reject: 'דחה את הבקשה', suspend: 'השהה את העמותה', reactivate: 'החזר לפעילות' };
+    return labels[this.pendingManagementAction || ''] || '';
+  }
+  get managementTargetLabel(): string {
+    const statuses: Record<string, string> = { approve: 'active', requestChanges: 'changes_requested', reject: 'rejected', suspend: 'suspended', reactivate: 'active' };
+    return this.statusLabel(statuses[this.pendingManagementAction || '']);
+  }
   get managementActions(): { key: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate'; label: string }[] {
-    const labels = { approve: 'אישור עמותה', reject: 'דחיית הבקשה', requestChanges: 'בקשת השלמת פרטים', suspend: 'השעיית עמותה', reactivate: 'החזרה לפעילות' };
+    if (this.entity?.status === 'rejected' && !this.context.isSuperAdmin()) return [];
+    const labels = { approve: 'אישור עמותה', reject: 'דחיית הבקשה', requestChanges: 'החזרה להשלמת פרטים', suspend: 'השעיית עמותה', reactivate: 'החזרה לפעילות' };
     const actions: Record<string, (keyof typeof labels)[]> = { pending_review: ['approve', 'requestChanges', 'reject'], active: ['suspend'], suspended: ['reactivate'], draft: ['requestChanges'], changes_requested: ['requestChanges'], rejected: ['requestChanges'] };
     if (this.entity?.status === 'active' && this.entity?.flagged_for_review) return [{ key: 'approve', label: 'אישור בדיקה חוזרת' }, { key: 'suspend', label: labels.suspend }];
     return (actions[this.entity?.status] || []).map(key => ({ key, label: labels[key] }));
   }
   get managementActionTitle(): string { return this.managementActions.find(action => action.key === this.pendingManagementAction)?.label || 'פעולת ניהול'; }
   openManagementAction(action: 'approve' | 'reject' | 'requestChanges' | 'suspend' | 'reactivate'): void {
-    if (this.actionInProgress || !this.managementActions.some(item => item.key === action)) return;
-    this.pendingManagementAction = action; this.notes = ''; this.selectedReasonTags = []; this.actionError = null; this.noteRequiredError = false;
+    if (this.actionInProgress || this.refreshing || !this.managementActions.some(item => item.key === action)) return;
+    this.pendingManagementAction = action; this.notes = ''; this.selectedReasonTags = []; this.actionError = null; this.noteRequiredError = false; this.managementNotice = '';
   }
   closeManagementAction(): void { if (!this.actionInProgress) this.pendingManagementAction = null; }
   confirmManagementAction(): void {
@@ -172,22 +194,7 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   }
 
   get healthChecks(): HealthCheck[] {
-    if (!this.entity) return [];
-    const checks: HealthCheck[] = [
-      { label: 'מסמכי רישום', ok: !!this.entity.association_certificate_name },
-    ];
-    // אישור מס (סעיף 46) רלוונטי רק לעמותה — חל״צ/מפלגה/עוסק פטור/עוסק
-    // מורשה לא מעלים את המסמך הזה בכלל באשף ההרשמה (entity-config.ts,
-    // showSection46), אז זה לא "חסר" אצלם — זה פשוט לא רלוונטי.
-    if (this.entity.entity_type === 'association') {
-      checks.push({ label: 'אישור מס', ok: !!this.entity.tax_document_name });
-    }
-    checks.push(
-      { label: 'סליקה מחוברת', ok: this.entity.cardcom_connection_status === 'success' },
-      { label: 'איש קשר מוגדר', ok: !!this.entity.contact_full_name },
-      { label: 'קמפיין קיים', ok: this.campaigns.length > 0 },
-    );
-    return checks;
+    return organizationHealthChecks(this.entity, this.campaigns.length);
   }
 
   get healthScore(): number {
@@ -258,6 +265,8 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
     this.actionError = null;
     this.platformService[action](this.entityId, trimmedNotes || undefined, this.selectedReasonTags).subscribe({
       next: () => {
+        const messages = { approve: 'העמותה אושרה בהצלחה.', requestChanges: 'הבקשה הוחזרה להשלמת פרטים.', reject: 'הבקשה נדחתה. העמותה והנתונים שלה נשמרו.', suspend: 'פעילות העמותה הושהתה.', reactivate: 'העמותה הוחזרה לפעילות.' };
+        this.managementNotice = messages[action];
         this.notes = '';
         this.selectedReasonTags = [];
         this.actionInProgress = false;

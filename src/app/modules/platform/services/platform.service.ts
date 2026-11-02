@@ -1,8 +1,9 @@
+import { OrganizationLifecycleEventsService } from '../../../core/services/organization-lifecycle-events.service';
 // src/app/modules/platform/services/platform.service.ts
 
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { EMPTY, Observable, expand, map, toArray } from 'rxjs';
+import { EMPTY, Observable, expand, map, toArray, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 function authHeaders(): HttpHeaders {
@@ -12,6 +13,7 @@ function authHeaders(): HttpHeaders {
 @Injectable({ providedIn: 'root' })
 export class PlatformService {
   private http = inject(HttpClient);
+  private lifecycle = inject(OrganizationLifecycleEventsService);
 
   getOrganizationFilterOptions(): Observable<{ id: string; name: string }[]> {
     return this.readFilterOptions(page => this.getOrganizations({ page, limit: 100 }), 'organizations', 'display_name');
@@ -111,23 +113,23 @@ export class PlatformService {
   }
 
   approve(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/approve`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/approve`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   reject(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reject`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reject`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   requestChanges(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/request-changes`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/request-changes`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   suspend(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/suspend`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/suspend`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   reactivate(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reactivate`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reactivate`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   // Permanent, irreversible removal — everything under this entity is erased.

@@ -1,15 +1,16 @@
-import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component.js';
+import { OrganizationEntryService } from '../../../../core/services/organization-entry.service';
+import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
-import { Component, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit } from '@angular/core';
 
-import { environment } from '../../../../../environments/environment.js';
+import { environment } from '../../../../../environments/environment';
 
 import { CommonModule } from '@angular/common';
 
 import { inject } from '@angular/core';
 
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, finalize, timeout } from 'rxjs/operators';
 
 import { EntitiesService } from '../../../../core/services/entities.service';
 
@@ -52,6 +53,8 @@ declare const google: any;
   styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit {
+  private readonly zone = inject(NgZone);
+  private organizationEntry = inject(OrganizationEntryService);
   loginForm: FormGroup;
 
   showPassword = false;
@@ -91,6 +94,12 @@ export class LoginComponent implements OnInit {
 
   private donationService = inject(DonationService);
 
+  private loadDonorRole(token: string): void {
+    this.donationService.getMyDonations().pipe(catchError(() => of([]))).subscribe(donations => {
+      if (localStorage.getItem('token') === token && donations.length) this.currentContextService.ensureDonorRole();
+    });
+  }
+
   ngOnInit(): void {
     this._initGoogle();
 
@@ -115,7 +124,8 @@ export class LoginComponent implements OnInit {
     google.accounts.id.initialize({
       client_id: environment.googleClientId,
       callback: (response: any) => {
-        this.handleGoogleLogin(response.credential);
+        // Google invokes this callback outside Angular's event handling.
+        this.zone.run(() => this.handleGoogleLogin(response?.credential));
       },
     });
 
@@ -126,6 +136,11 @@ export class LoginComponent implements OnInit {
   }
 
   handleGoogleLogin(credential: string): void {
+    if (this.loading) return;
+    if (!credential) {
+      this.errorMessage = 'לא התקבל אישור התחברות מ־Google. נסו לבחור את החשבון שוב.';
+      return;
+    }
     this.loading = true;
 
     this.errorMessage = '';
@@ -138,6 +153,7 @@ export class LoginComponent implements OnInit {
           credential,
         },
       )
+      .pipe(timeout(30000))
       .subscribe({
         next: (res) => {
           localStorage.setItem('token', res.token);
@@ -150,36 +166,24 @@ export class LoginComponent implements OnInit {
           this.currentContextService.setAdminMode(false);
 
           forkJoin({
-            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
+            entitiesRes: this.entitiesService.getMyEntities(),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
-            donations: this.donationService.getMyDonations().pipe(catchError(() => of([]))),
-          }).subscribe({
-            next: ({ entitiesRes, ambassadorCampaigns, donations }) => {
+          }).pipe(timeout(15000), finalize(() => { this.loading = false; })).subscribe({
+            next: ({ entitiesRes, ambassadorCampaigns }) => {
               const entities = entitiesRes.entities || [];
 
-              if (entities.length > 0) {
-                const entity = entities[0];
-
-                localStorage.setItem(
-                  'currentEntity',
-
-                  JSON.stringify({
-                    id: entity.id,
-
-                    display_name: entity.display_name,
-
-                    entity_type: entity.entity_type,
-
-                    status: entity.status,
-                  }),
-                );
-
-                this.currentEntityService.currentEntity.set(entity);
-
-                this.currentEntityService.setRole(entity.role);
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+              const selected = entities.find((entity: any) => entity.id === this.currentContextService.active()?.context?.id);
+              if (selected) {
+                this.currentEntityService.currentEntity.set(selected);
+                localStorage.setItem('currentEntity', JSON.stringify(selected));
+                this.currentEntityService.setRole(selected.role);
+              } else {
+                this.currentEntityService.currentEntity.set(null);
+                localStorage.removeItem('currentEntity');
               }
-
-              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
+              this.loadDonorRole(res.token);
+              this.loading = false;
 
               // =========================
               // NAVIGATION FLOW
@@ -191,7 +195,14 @@ export class LoginComponent implements OnInit {
                 return;
               }
 
-              if (res.hasEntities || ambassadorCampaigns?.length) {
+              if (entities.length > 0) {
+                const selectedId = this.currentContextService.active()?.role === 'entity-manager' ? this.currentContextService.active()?.context?.id : null;
+                if (selectedId) this.organizationEntry.enter(selectedId);
+                this.router.navigate(['/dashboard']);
+                return;
+              }
+
+              if (ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;
@@ -199,13 +210,16 @@ export class LoginComponent implements OnInit {
 
               this.router.navigate(['/welcome']);
             },
+            error: () => {
+              this.errorMessage = 'ההתחברות הצליחה, אך טעינת נתוני החשבון נכשלה. נסו להתחבר שוב.';
+            },
           });
         },
 
         error: (err) => {
-          console.error(err);
-
-          this.errorMessage = 'אירעה שגיאה בהתחברות עם Google';
+          this.errorMessage = err?.name === 'TimeoutError'
+            ? 'שרת ההתחברות לא השיב בזמן. נסו להתחבר שוב.'
+            : 'לא ניתן להשלים את ההתחברות עם Google. נסו שוב.';
 
           this.loading = false;
         },
@@ -217,6 +231,7 @@ export class LoginComponent implements OnInit {
   }
 
   submit(): void {
+    if (this.loading) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
 
@@ -233,6 +248,7 @@ export class LoginComponent implements OnInit {
 
         this.loginForm.value,
       )
+      .pipe(timeout(30000))
       .subscribe({
         next: (res) => {
           localStorage.setItem('token', res.token);
@@ -245,36 +261,24 @@ export class LoginComponent implements OnInit {
           this.currentContextService.setAdminMode(false);
 
           forkJoin({
-            entitiesRes: this.entitiesService.getMyEntities().pipe(catchError(() => of({ entities: [] }))),
+            entitiesRes: this.entitiesService.getMyEntities(),
             ambassadorCampaigns: this.ambassadorService.getMyCampaigns(),
-            donations: this.donationService.getMyDonations().pipe(catchError(() => of([]))),
-          }).subscribe({
-            next: ({ entitiesRes, ambassadorCampaigns, donations }) => {
+          }).pipe(timeout(15000), finalize(() => { this.loading = false; })).subscribe({
+            next: ({ entitiesRes, ambassadorCampaigns }) => {
               const entities = entitiesRes.entities || [];
 
-              if (entities.length > 0) {
-                const entity = entities[0];
-
-                localStorage.setItem(
-                  'currentEntity',
-
-                  JSON.stringify({
-                    id: entity.id,
-
-                    display_name: entity.display_name,
-
-                    entity_type: entity.entity_type,
-
-                    status: entity.status,
-                  }),
-                );
-
-                this.currentEntityService.currentEntity.set(entity);
-
-                this.currentEntityService.setRole(entity.role);
+              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns });
+              const selected = entities.find((entity: any) => entity.id === this.currentContextService.active()?.context?.id);
+              if (selected) {
+                this.currentEntityService.currentEntity.set(selected);
+                localStorage.setItem('currentEntity', JSON.stringify(selected));
+                this.currentEntityService.setRole(selected.role);
+              } else {
+                this.currentEntityService.currentEntity.set(null);
+                localStorage.removeItem('currentEntity');
               }
-
-              this.currentContextService.initFromLogin({ entities, ambassadorCampaigns, isDonor: donations.length > 0 });
+              this.loadDonorRole(res.token);
+              this.loading = false;
 
               // =========================
               // NAVIGATION FLOW
@@ -286,7 +290,14 @@ export class LoginComponent implements OnInit {
                 return;
               }
 
-              if (res.hasEntities || ambassadorCampaigns?.length) {
+              if (entities.length > 0) {
+                const selectedId = this.currentContextService.active()?.role === 'entity-manager' ? this.currentContextService.active()?.context?.id : null;
+                if (selectedId) this.organizationEntry.enter(selectedId);
+                this.router.navigate(['/dashboard']);
+                return;
+              }
+
+              if (ambassadorCampaigns?.length) {
                 this.router.navigate(['/campaigns']);
 
                 return;
@@ -294,12 +305,13 @@ export class LoginComponent implements OnInit {
 
               this.router.navigate(['/welcome']);
             },
+            error: () => {
+              this.errorMessage = 'ההתחברות הצליחה, אך טעינת נתוני החשבון נכשלה. נסו להתחבר שוב.';
+            },
           });
         },
 
         error: (err) => {
-          console.error(err);
-
           const backendError = err?.error?.error;
 
           switch (backendError) {
@@ -314,7 +326,9 @@ export class LoginComponent implements OnInit {
               break;
 
             default:
-              this.errorMessage = 'אירעה שגיאה בהתחברות';
+              this.errorMessage = err?.name === 'TimeoutError'
+                ? 'שרת ההתחברות לא השיב בזמן. נסו להתחבר שוב.'
+                : 'אירעה שגיאה בהתחברות';
           }
 
           this.loading = false;

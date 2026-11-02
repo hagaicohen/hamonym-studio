@@ -53,6 +53,7 @@
       <h2>חיבור מסוף אשראי</h2>
 
       <p>התחברות למסוף הסליקה שלכם</p>
+      <p class="provider-notice">בשלב זה המונים תומכת בסליקת תרומות באמצעות CardCom (קארדקום) בלבד. אפשר לחבר את המסוף כעת או להשלים את החיבור בהמשך.</p>
     </div>
 
     <!-- SKIP -->
@@ -81,7 +82,7 @@
           <select [(ngModel)]="provider" class="base-input">
             <option value="cardcom">קארדקום</option>
 
-            <option value="tranzila">טרנזילה</option>
+            <option value="tranzila" disabled>טרנזילה — אינה נתמכת כעת</option>
           </select>
         </div>
       </div>

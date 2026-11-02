@@ -1,7 +1,10 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CurrentContextService } from '../../../../../core/services/current-context.service';
 // entity-billing-section-edit.component.ts
 
 import {
   Component,
+  DestroyRef,
   Input,
   inject,
   OnInit,
@@ -69,6 +72,10 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
   private entitiesService = inject(EntitiesService);
 
   private currentEntityService = inject(CurrentEntityService);
+  private currentContextService = inject(CurrentContextService);
+  private destroyRef = inject(DestroyRef);
+  private destroyed = false;
+  constructor() { this.destroyRef.onDestroy(() => { this.destroyed = true; }); }
 
   private route = inject(ActivatedRoute);
 
@@ -166,11 +173,13 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
   masavFormError: string | null = null;
 
   ngOnInit(): void {
+    const entityId = this.entity.id;
     this.entitiesService
-      .getEntityById(this.entity.id)
+      .getEntityById(entityId)
 
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res: any) => {
+          if (this.entity?.id !== entityId) return;
           const refreshedEntity = res.entity || res;
 
           this.entity = refreshedEntity;
@@ -192,7 +201,7 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
 
     this.billingService
       .createEntityBilling({
-        entityId: this.entity.id,
+        entityId,
 
         provider: 'cardcom',
 
@@ -201,18 +210,22 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
         internalDealNumber,
       })
 
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
+          if (this.entity?.id !== entityId) return;
           this.entitiesService
-            .getEntityById(this.entity.id)
+            .getEntityById(entityId)
 
-            .subscribe({
+            .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
               next: (entityRes: any) => {
+                if (this.entity?.id !== entityId) return;
                 const refreshedEntity = entityRes.entity || entityRes;
 
                 this.entity = refreshedEntity;
 
-                this.currentEntityService.setEntity(refreshedEntity);
+                const active = this.currentContextService.active();
+                const activeId = active ? (active.role === 'entity-manager' ? active.context?.id : null) : this.currentEntityService.currentEntity()?.id;
+                if (activeId === entityId) this.currentEntityService.setEntity(refreshedEntity);
               },
 
               error: (err: any) => {
@@ -287,15 +300,19 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
       return { ok: false, error: 'יש למלא את כל פרטי חשבון הבנק (בנק, סניף, מספר חשבון, שם בעל החשבון)' };
     }
 
+    const entityId = this.entity.id;
+    const documentFile = this.masavDocFile;
+
     try {
       const res: any = await firstValueFrom(
-        this.billingService.upsertMasavConfig(this.entity.id, {
+        this.billingService.upsertMasavConfig(entityId, {
           bankCode: this.masavBankCode,
           branchCode: this.masavBranchCode,
           accountNumber: this.masavAccountNumber,
           accountHolderName: this.masavAccountHolderName || undefined,
         }),
       );
+      if (this.destroyed || this.entity?.id !== entityId) return {ok: false};
       this.masavConfig = res.config;
       this.masavConfigChange.emit(this.masavConfig);
     } catch (err: any) {
@@ -304,12 +321,13 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
 
     // No new file chosen -- an existing uploaded document (if any) is left
     // exactly as-is, never re-uploaded unnecessarily.
-    if (!this.masavDocFile) return { ok: true };
+    if (!documentFile) return { ok: true };
 
     try {
       const res: any = await firstValueFrom(
-        this.billingService.uploadMasavAuthorizationDocument(this.entity.id, this.masavDocFile),
+        this.billingService.uploadMasavAuthorizationDocument(entityId, documentFile!),
       );
+      if (this.destroyed || this.entity?.id !== entityId) return {ok: false};
       this.masavConfig = res.config;
       this.masavConfigChange.emit(this.masavConfig);
       this.masavDocFile = null;
@@ -336,6 +354,7 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
   // success does the generic entity save (billing_method etc.) proceed --
   // a MASAV failure must never look like the card silently saved anyway.
   async onSaveClick(): Promise<void> {
+    const entityId = this.entity?.id;
     if (this.saveState.isSaving || this.masavSubmitBusy) return;
 
     if (this.isMasav) {
@@ -343,6 +362,7 @@ export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
       this.masavFormError = null;
 
       const result = await this.saveMasavIfNeeded();
+      if (this.destroyed || this.entity?.id !== entityId) return;
 
       this.masavSubmitBusy = false;
 

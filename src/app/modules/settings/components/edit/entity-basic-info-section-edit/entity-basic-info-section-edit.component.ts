@@ -22,19 +22,22 @@ import { EntitiesService } from '../../../../../core/services/entities.service';
 import { LucideAngularModule, Building2 } from 'lucide-angular';
 
 import { SectionSaveState } from '../../../models/section-save-state.model';
+import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../../../../shared/components/registration-identity-check/registration-identity-check.component';
 
 @Component({
   selector: 'app-entity-basic-info-section-edit',
 
   standalone: true,
 
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RegistrationIdentityCheckComponent],
 
   templateUrl: './entity-basic-info-section-edit.component.html',
 
   styleUrl: './entity-basic-info-section-edit.component.css',
 })
 export class EntityBasicInfoSectionEditComponent implements OnChanges {
+  identityCheck:IdentityCheckState={status:'idle'};
+  private identityKey='';
   private entitiesService = inject(EntitiesService);
 
   private sanitizer = inject(DomSanitizer);
@@ -77,6 +80,8 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
   taxDocumentUrl?: SafeResourceUrl;
 
   ngOnChanges(): void {
+    const key=`${this.entity?.id}:${this.entity?.entity_type}:${this.entity?.registration_number}`;
+    if(key!==this.identityKey) {this.identityKey=key;this.identityCheck={status:'idle'};}
     if (!this.entity?.id) {
       return;
     }
@@ -91,6 +96,7 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
   }
 
   updateField(field: string, value: any) {
+    if (field==='registration_number') this.identityCheck={status:'idle'};
     this.entityChange.emit({
       [field]: value,
     });

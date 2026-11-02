@@ -64,7 +64,7 @@ const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.css'],
+  styleUrls: ['./sidebar.component.css', '../../../shared/styles/new-campaign-button.css'],
 })
 export class SidebarComponent {
   @Input() mobileOpen = false;

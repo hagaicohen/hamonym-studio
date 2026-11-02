@@ -10,9 +10,12 @@ import {
 
 import { CommonModule } from '@angular/common';
 
-import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
+import { buildPayload, OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
+import { organizationHealthChecks, OrganizationCheck } from '../../../../shared/utils/organization-health';
+import { OrganizationChecklistComponent } from '../../../../shared/components/organization-checklist/organization-checklist.component';
 
 import { CAMPAIGN_TYPES } from '../../constants/campaign-types';
+import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
 import { Router } from '@angular/router';
 
@@ -35,7 +38,7 @@ import { sanitizeRichHtml } from '../../../../shared/utils/sanitize-rich-html';
 @Component({
   selector: 'app-step-review',
   standalone: true,
-  imports: [CommonModule, LoadingOverlayComponent],
+  imports: [CommonModule, LoadingOverlayComponent, OrganizationChecklistComponent],
   templateUrl: './step-review.component.html',
   styleUrls: ['./step-review.component.css'],
 })
@@ -59,6 +62,20 @@ export class StepReviewComponent {
   private readonly stateService = inject(OrganizationRegistrationStateService);
 
   protected readonly state = this.stateService.state;
+
+  get completionChecks(): OrganizationCheck[] {
+    const state = this.state();
+    return [
+      { label: 'פרטי העמותה', ok: this.stateService.isProfileComplete },
+      { label: 'לוגו', ok: !!(state.logoFile || state.logoPreview), detail: 'ניתן להשלים בהמשך בהגדרות העמותה.' },
+      ...organizationHealthChecks(buildPayload(state), 0)
+        .filter(check => check.label !== 'קמפיין קיים')
+        .map(check => check.label === 'אישור מס' ? { ...check, detail: 'רלוונטי לעמותה בעלת אישור סעיף 46 בלבד. העלאה אינה אימות האישור.' } : check),
+      state.paymentMethod === 'credit-card'
+        ? { label: 'כרטיס אשראי לגביית עמלות', ok: !!state.cardcomInternalDealNumber }
+        : { label: 'הרשאת מס״ב', ok: false, detail: 'יש להשלים בהגדרות העמותה לאחר ההרשמה.' },
+    ];
+  }
 
   get entityConfig(): EntityConfig {
     return (
@@ -122,7 +139,10 @@ export class StepReviewComponent {
   }
 
   get selectedCategories(): string[] {
-    return this.state().selectedCategories || [];
+    const state = this.state();
+    return [...new Set([state.primaryCategory, ...(state.selectedCategories || [])].filter(Boolean))].map(
+      id => ENTITY_CATEGORIES.find(category => category.id === id)?.label || id,
+    );
   }
 
   // =========================================================
@@ -251,12 +271,12 @@ export class StepReviewComponent {
     this.loading = true;
     this.submitError = '';
 
-    this.stateService.save({ includeBilling: true }).subscribe({
+    this.stateService.submitForReview().subscribe({
       next: (entity) => this.finishRegistration(entity),
       error: (err) => {
         console.error('SUBMIT APPLICATION ERROR', err);
         this.loading = false;
-        this.submitError = err?.error?.error || 'שגיאה בשליחת הבקשה. נסו שוב.';
+        this.submitError = err?.error?.error || err?.message || 'שגיאה בשליחת הבקשה. נסו שוב.';
       },
     });
   }
@@ -273,7 +293,8 @@ export class StepReviewComponent {
     // CurrentContextService.active()) have no context to show, and a
     // freshly-registered owner lands on an empty shell until they log out
     // and back in.
-    this.currentContextService.initFromLogin({ entities: [entity] });
+    this.currentContextService.addEntityContext(entity);
+    this.currentContextService.switchContext('entity-manager', entity.id);
 
     this.loading = false;
 

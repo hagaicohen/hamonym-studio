@@ -21,22 +21,18 @@
     </div>
 
     <div class="db-header-actions">
-      <div class="dh-bell" (click)="scrollToAlerts()" title="לתראות">
+      <button type="button" class="dh-bell" (click)="scrollToAlerts()" title="להתראות" aria-label="מעבר להתראות">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
         </svg>
-        @if (allAlerts.length > 0) {
+          @if (allAlerts.length > 0) {
           <span class="dh-badge">{{ allAlerts.length }}</span>
         }
-      </div>
-      <app-date-range-picker></app-date-range-picker>
+      </button>
+      <app-date-range-picker class="dashboard-date-picker"></app-date-range-picker>
     </div>
   </div>
-
-  @if (currentEntity.currentEntity()?.id) {
-    <app-approval-status-card [entityId]="currentEntity.currentEntity()!.id"></app-approval-status-card>
-  }
 
   <!-- ══ KPI GRID ══ -->
   <section class="kpi-grid">
@@ -50,10 +46,17 @@
       </div>
       <div class="kpi-value kpi-centered">{{ fmt(data.kpi.fundraisingThisMonth.total) }}</div>
       <div class="kpi-trend kpi-centered"
+           [class.trend-neutral]="pctAbs(data.kpi.fundraisingThisMonth.pctChange) === '0'"
            [class.trend-negative]="!pctIsUp(data.kpi.fundraisingThisMonth.pctChange)">
+        @if (data.kpi.fundraisingThisMonth.pctChange === null) {
+          <span class="trend-label">אין נתון להשוואה</span>
+        } @else if (pctAbs(data.kpi.fundraisingThisMonth.pctChange) === '0') {
+          <span class="trend-pct">0% ללא שינוי</span>
+        } @else {
         <span class="trend-arrow">{{ pctIsUp(data.kpi.fundraisingThisMonth.pctChange) ? '▲' : '▼' }}</span>
         <span class="trend-pct">{{ pctAbs(data.kpi.fundraisingThisMonth.pctChange) }}%</span>
         <span class="trend-label"> לעומת התקופה הקודמת</span>
+        }
       </div>
     </div>
 
@@ -66,10 +69,17 @@
       </div>
       <div class="kpi-value kpi-centered">{{ data.kpi.donationsThisMonth.count }}</div>
       <div class="kpi-trend kpi-centered"
+           [class.trend-neutral]="pctAbs(data.kpi.donationsThisMonth.pctChange) === '0'"
            [class.trend-negative]="!pctIsUp(data.kpi.donationsThisMonth.pctChange)">
+        @if (data.kpi.donationsThisMonth.pctChange === null) {
+          <span class="trend-label">אין נתון להשוואה</span>
+        } @else if (pctAbs(data.kpi.donationsThisMonth.pctChange) === '0') {
+          <span class="trend-pct">0% ללא שינוי</span>
+        } @else {
         <span class="trend-arrow">{{ pctIsUp(data.kpi.donationsThisMonth.pctChange) ? '▲' : '▼' }}</span>
         <span class="trend-pct">{{ pctAbs(data.kpi.donationsThisMonth.pctChange) }}%</span>
         <span class="trend-label"> לעומת התקופה הקודמת</span>
+        }
       </div>
     </div>
 
@@ -84,7 +94,7 @@
       <div class="kpi-trend kpi-centered kpi-sub">מתוך {{ data.kpi.activeCampaigns.total }} קמפיינים</div>
     </div>
 
-    <div class="kpi-card danger">
+    <div class="kpi-card" [class.danger]="data.kpi.failedPayments.count > 0" [class.neutral]="data.kpi.failedPayments.count === 0">
       <div class="kpi-header kpi-h-centered">
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -108,6 +118,27 @@
   </section>
 
   <!-- ══ ALERTS ══ -->
+  <section class="organization-status-area" aria-labelledby="organization-status-title">
+    <div class="organization-status-area-heading">
+      <h2 id="organization-status-title">סטטוס העמותות</h2>
+      <p>מצב האישור, הערות המנהל והשלמות נדרשות לכל עמותה.</p>
+    </div>
+  <app-organization-status-card [entity]="currentEntity.currentEntity()!" [selected]="true" [campaignCount]="data.kpi.activeCampaigns.total"></app-organization-status-card>
+
+  <app-other-organizations [selectedId]="currentEntity.currentEntity()!.id"></app-other-organizations>
+
+  @if (noCampaigns) {
+    <section class="organization-first-campaign">
+      <h2>הקמפיין הראשון שלכם מתחיל כאן</h2>
+      <p>כאן תופיע הפעילות לאחר יצירת קמפיין. אפשר להכין טיוטה כבר עכשיו; הפרסום וקבלת התרומות כפופים לאישורים ולהגדרות הקיימים.</p>
+      @if (!nextAction.ready && !['rejected', 'suspended'].includes(currentEntity.currentEntity()?.status)) {
+        <a class="btn-new-campaign first-campaign-action" routerLink="/campaigns/create">+ קמפיין חדש</a>
+      }
+    </section>
+  }
+
+  </section>
+
   @if (allAlerts.length > 0) {
   <section class="alerts-section" id="alerts-section">
     <div class="alerts-card">
@@ -219,7 +250,7 @@
             @if (amb.goal_amount) {
               <div class="amb-progress-row">
                 <div class="amb-progress-bar">
-                  <div class="amb-progress-fill" [style.width.%]="ambProgressPct(amb)"></div>
+                  <div class="amb-progress-fill" [style.width.%]="ambProgressPct(amb) > 100 ? 100 : ambProgressPct(amb)"></div>
                 </div>
                 <span class="amb-progress-pct">{{ ambProgressPct(amb) }}%</span>
               </div>
@@ -235,8 +266,11 @@
     <div id="failed-payments-section" class="table-card">
       <div class="card-header-flex">
         <h3>תשלומים שנכשלו</h3>
-        <a class="view-all-link" routerLink="/campaigns">לכל התשלומים שנכשלו</a>
+        @if (displayFailedPayments.length > 0) {
+          <a class="view-all-link" routerLink="/campaigns">לכל התשלומים שנכשלו</a>
+        }
       </div>
+      @if (displayFailedPayments.length > 0) {
       <div class="sub-alert-box">
         <div class="sub-alert-text">
           <span class="sub-alert-count">{{ displayFailedPayments.length }} תשלומים נכשלו השבוע</span>
@@ -265,6 +299,9 @@
           }
         </tbody>
       </table>
+      } @else {
+        <div class="failed-payments-empty">אין תשלומים שנכשלו בתקופה המוצגת</div>
+      }
     </div>
 
     <!-- תרומות אחרונות -->

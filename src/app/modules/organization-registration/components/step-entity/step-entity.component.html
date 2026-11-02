@@ -137,12 +137,17 @@
               inputmode="numeric"
               autocomplete="off"
               [value]="organizationNumber"
+              [attr.aria-invalid]="identityCheck.status === 'duplicate' ? 'true' : null"
+              aria-describedby="registration-identity-feedback"
               (input)="onOrganizationNumberInput($event)"
               maxlength="9"
               placeholder="הקלד מספר רישום{{
                 entityConfig.type === 'association' ? ' (580123456)' : ''
               }}"
             />
+            <app-registration-identity-check id="registration-identity-feedback"
+              [entityType]="entityType" [registrationNumber]="organizationNumber" [excludeEntityId]="identityEntityId"
+              (stateChange)="onIdentityCheck($event)"></app-registration-identity-check>
           </div>
         }
       </div>
@@ -306,7 +311,7 @@
 
         <div class="document-upload">
           <label class="document-label">
-            {{ entityConfig.labels.registrationDocument }} *
+            {{ entityConfig.labels.registrationDocument }} — ניתן להשלים בהמשך
           </label>
 
           <p class="document-description">
@@ -314,6 +319,8 @@
             (PDF, JPG, PNG - עד 10MB). ניתן גם להשלים זאת בהמשך, בהגדרות העמותה —
             זה לא יעצור אתכם מלהשלים את הקמת העמותה עכשיו.
           </p>
+
+          <p class="document-notice">אפשר להמשיך ולהשלים את הקמת העמותה גם ללא המסמך כעת. את המסמך ניתן להעלות בהמשך בהגדרות העמותה, לצורך בדיקת הבקשה.</p>
 
           <input
             #certificateInput
@@ -366,6 +373,7 @@
               אופציונלי — מאפשר הצגת תרומות מוכרות למס בדף הקמפיין (PDF, JPG,
               PNG - עד 10MB)
             </p>
+            <p class="document-notice tax-notice">אם לעמותה יש אישור לפי סעיף 46, יש להעלות אותו ולהשלים את אימותו. עד להשלמת העלאת האישור ואימותו, התורמים לא יוכלו לקבל את הטבת המס באמצעות המערכת. העלאת קובץ לבדה אינה אישור שהמסמך אומת.</p>
 
             <input
               #section46Input
