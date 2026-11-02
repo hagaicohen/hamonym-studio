@@ -203,20 +203,6 @@ router.post(
   controller.acknowledgeNotifications
 );
 
-router.get(
-  '/:id/first-campaign-intro',
-  requireAuth,
-  requireEntityOwnership('id'),
-  controller.getFirstCampaignIntro
-);
-
-router.post(
-  '/:id/first-campaign-intro/seen',
-  requireAuth,
-  requireEntityOwnership('id'),
-  controller.markFirstCampaignIntroSeen
-);
-
 router.delete(
   '/:id',
   requireAuth,
