@@ -680,3 +680,19 @@ exports.checkRegistrationAvailability = async (req,res) => {
  try { res.json(await service.checkRegistrationAvailability({userId:req.user.id,canManagePlatform:!!req.user.isSuperAdmin || (Array.isArray(req.user.platformPermissions) && req.user.platformPermissions.includes('organizations')),entityType:req.body.entityType,registrationNumber:req.body.registrationNumber,excludeEntityId:req.body.excludeEntityId})); }
  catch(error) { res.status(error.status || 500).json({error:error.status ? error.message : 'Registration availability check failed',code:error.code}); }
 };
+
+exports.getFirstCampaignIntro = async (req, res) => {
+  try {
+    res.json(await service.getFirstCampaignIntro(req.params.id, req.user.id));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load first campaign intro state' });
+  }
+};
+
+exports.markFirstCampaignIntroSeen = async (req, res) => {
+  try {
+    res.json(await service.markFirstCampaignIntroSeen(req.params.id, req.user.id));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save first campaign intro state' });
+  }
+};

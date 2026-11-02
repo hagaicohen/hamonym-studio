@@ -1468,3 +1468,23 @@ exports.getMyPartners = async (userId) => {
 };
 
 exports.checkRegistrationAvailability = args => entityIdentity.availability(db, args);
+
+// Per user + organization UI state; a user may hold several user_entities rows for one entity.
+exports.getFirstCampaignIntro = async (entityId, userId) => {
+  const { rows } = await db.query(
+    `SELECT MIN(first_campaign_intro_seen_at) AS seen_at
+     FROM user_entities WHERE entity_id = $1 AND user_id = $2`,
+    [entityId, userId]
+  );
+  return { seen: !!rows[0]?.seen_at };
+};
+
+exports.markFirstCampaignIntroSeen = async (entityId, userId) => {
+  await db.query(
+    `UPDATE user_entities
+     SET first_campaign_intro_seen_at = COALESCE(first_campaign_intro_seen_at, NOW())
+     WHERE entity_id = $1 AND user_id = $2`,
+    [entityId, userId]
+  );
+  return { seen: true };
+};
