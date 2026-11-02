@@ -23,7 +23,7 @@ const pool=require(root+'/src/db/db');
  const campaign=(await pool.query("INSERT INTO campaigns(entity_id,slug,title) VALUES($1,$2,'Isolated simulator') RETURNING id",[entity,tag])).rows[0].id;
  await pool.query("INSERT INTO billing_accounts(entity_id,fee_rate,vat_rate,preferred_collection_method,enforcement_status) VALUES($1,.03,.18,'card','active')",[entity]);
  await pool.query("INSERT INTO entity_billing(entity_id,token,exp_month,exp_year,is_default,status) VALUES($1,'FIN11_MOCK_NOT_A_PROVIDER_TOKEN','12','2030',true,'active')",[entity]);
- await pool.query("INSERT INTO donations(campaign_id,entity_id,amount,status,is_mock,completed_at) VALUES($1,$2,5100,'paid',false,'2026-10-20T10:00Z')",[campaign,entity]);
+ await pool.query("INSERT INTO donations(campaign_id,entity_id,amount,status,completed_at) VALUES($1,$2,5100,'paid','2026-10-20T10:00Z')",[campaign,entity]);
  await pool.query('INSERT INTO platform_billing_settings(id,vat_rate) VALUES(1,.18) ON CONFLICT(id) DO NOTHING');
  // Load the actual Hamonym clock with a controlled wall clock, not an Admin override.
  const fs=require('node:fs'),vm=require('node:vm');let wallAt='2026-10-28T17:59:00Z';

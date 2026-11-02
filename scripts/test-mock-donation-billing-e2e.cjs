@@ -30,7 +30,7 @@ const post=(path,body)=>new Promise((resolve,reject)=>{const data=JSON.stringify
  const complete=()=>post('/api/donations/mock-complete',{id,session,status:'paid'});
  const [one,two]=await Promise.all([complete(),complete()]);assert.equal(one.status,200,JSON.stringify(one.body));assert.equal(two.status,200,JSON.stringify(two.body));
  assert.equal((await db.query('SELECT count(*)::int AS n FROM receipts WHERE donation_id=$1',[id])).rows[0].n,1);
- const paid=(await db.query('SELECT status,is_mock,provider_reference,provider_charged_at,completed_at FROM donations WHERE id=$1',[id])).rows[0];assert.equal(paid.status,'paid');assert.equal(paid.is_mock,false);assert.match(paid.provider_reference,/^mock:paid:hamonym-mock:/);assert.equal(paid.provider_charged_at.toISOString(),'2026-10-28T17:59:00.000Z');assert.notEqual(paid.completed_at.toISOString(),paid.provider_charged_at.toISOString());
+ const paid=(await db.query('SELECT status,provider_reference,provider_charged_at,completed_at FROM donations WHERE id=$1',[id])).rows[0];assert.equal(paid.status,'paid');assert.match(paid.provider_reference,/^mock:paid:hamonym-mock:/);assert.equal(paid.provider_charged_at.toISOString(),'2026-10-28T17:59:00.000Z');assert.notEqual(paid.completed_at.toISOString(),paid.provider_charged_at.toISOString());
  assert.equal(Number((await db.query('SELECT current_amount FROM campaigns WHERE id=$1',[campaign])).rows[0].current_amount),5100);
  assert.equal((await post('/api/donations/mock-complete',{id,session,status:'failed'})).status,409);
  const history=(await db.query("INSERT INTO donations(campaign_id,entity_id,amount,status,low_profile_id) VALUES($1,$2,50,'pending','historical-real-session') RETURNING id",[campaign,entity])).rows[0].id;

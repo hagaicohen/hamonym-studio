@@ -18,7 +18,7 @@ test('donation read API returns a full filtered paid-only summary independent of
   assert.equal(result.adminListVersion, 1); assert.equal(result.total, 5); assert.equal(result.donations.length, 1);
   assert.equal(result.summary.paidAmount, 143.37); assert.equal(result.summary.paidCount, 1); assert.equal(result.summary.failedCount, 4);
   assert.equal(queries.length, 2); assert.match(queries[1].sql, /SUM\(d.amount\) FILTER \(WHERE d.status = 'paid'\)/);
-  assert.doesNotMatch(queries[1].sql, /LIMIT|OFFSET/); assert.match(queries[0].sql, /d.is_mock = false/);
+  assert.doesNotMatch(queries[1].sql, /LIMIT|OFFSET/); assert.doesNotMatch(queries[0].sql, /is_mock/);
 });
 test('donation filters bind dates and payment method; recurring filter is validated, never interpolated from input', async () => {
   const { api, queries } = service('src/modules/donations/donations.service.js', sql => sql.includes('AS paid_count') ? [{ total: 0, paid_count: 0, failed_count: 0, paid_amount: 0 }] : []);

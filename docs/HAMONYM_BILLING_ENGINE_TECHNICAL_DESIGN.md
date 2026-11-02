@@ -1,3 +1,5 @@
+> Update 2026-10-29: donation-level `is_mock` exclusion below is historical and superseded by the approved one-flow model. Verified paid status is authoritative; migration 080 removes the flag. The platform-fee `fin11_mock` provider is unchanged. See Backend `docs/finance/DONATION_MODEL_NO_IS_MOCK.md`.
+
 # HAMONYM_BILLING_ENGINE_TECHNICAL_DESIGN.md — Domain Model
 
 **סטטוס:** **Frozen v1 — Domain Model + Billing Calculation Pipeline + DB Schema, כולם ברמה עקרונית.** אין כאן migrations בפועל, API Contracts, UI או קוד יישומי — ואין ניסיון לפתור שאלות שלא הוכרעו. השלב הבא (לא במסמך זה): migration ראשון ל-Phase 1 בלבד (הליבה החשבונאית — Calculate/Statement, בלי Collection).

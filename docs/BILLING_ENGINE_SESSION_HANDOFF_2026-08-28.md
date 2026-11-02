@@ -1,3 +1,5 @@
+> Update 2026-10-29: donation-level `is_mock` exclusion below is historical and superseded by the approved one-flow model. Verified paid status is authoritative; migration 080 removes the flag. The platform-fee `fin11_mock` provider is unchanged. See Backend `docs/finance/DONATION_MODEL_NO_IS_MOCK.md`.
+
 # Hamonym Billing Engine — Session Handoff (2026-08-28)
 
 Point-in-time snapshot for picking up in a **new chat**. Not a frozen design doc — see `HAMONYM_BILLING_ENGINE_TECHNICAL_DESIGN.md` for that. This file just says: what exists, what was decided, what's still open, what's next.

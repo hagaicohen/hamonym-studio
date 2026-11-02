@@ -64,7 +64,7 @@ async function start() {
       const campaign = (await client.query("INSERT INTO campaigns(entity_id,slug,title) VALUES($1,'local-fin11-simulation','קמפיין בדיקת גבייה מקומית') RETURNING id", [entity])).rows[0].id;
       await client.query("INSERT INTO billing_accounts(entity_id,fee_rate,vat_rate,preferred_collection_method,enforcement_status) VALUES($1,.03,.18,'card','active')", [entity]);
       await client.query("INSERT INTO entity_billing(entity_id,token,exp_month,exp_year,is_default,status) VALUES($1,'LOCAL_MOCK_ONLY','12','2030',true,'active')", [entity]);
-      await client.query("INSERT INTO donations(campaign_id,entity_id,amount,status,is_mock,completed_at) VALUES($1,$2,5100,'paid',false,'2026-10-20T10:00Z')", [campaign, entity]);
+      await client.query("INSERT INTO donations(campaign_id,entity_id,amount,status,completed_at) VALUES($1,$2,5100,'paid','2026-10-20T10:00Z')", [campaign, entity]);
       await client.query('INSERT INTO platform_billing_settings(id,vat_rate) VALUES(1,.18) ON CONFLICT(id) DO NOTHING');
       await client.query("INSERT INTO admin_simulation_clock(enabled,fixed_at,updated_by) VALUES(true,'2026-10-28T17:59Z',$1)", [admin]);
       await client.query('COMMIT');
