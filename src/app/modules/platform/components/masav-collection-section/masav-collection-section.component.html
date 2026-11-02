@@ -33,7 +33,7 @@
       @if (resultAction === 'payment') { <label>סכום שנגבה בפועל <input name="resultAmount" inputmode="decimal" required [(ngModel)]="resultAmount" [disabled]="busy"></label> }
       <label>אסמכתה ייחודית מהבנק <input name="resultReference" required [(ngModel)]="resultReference"></label>
       <label>מועד אישור הגבייה <input name="resultConfirmedAt" type="datetime-local" required [(ngModel)]="resultConfirmedAt"></label>
-      <label><input name="resultConfirmed" type="checkbox" required [(ngModel)]="resultConfirmed"> {{ resultAction === 'payment' ? 'קיבלתי אישור שהסכום נגבה בפועל' : 'קיבלתי תוצאות סופיות וכל הסכומים שנגבו נרשמו במערכת' }}</label>
+      <label class="masav-result-confirmation"><input name="resultConfirmed" type="checkbox" required [(ngModel)]="resultConfirmed"><span>{{ resultAction === 'payment' ? 'קיבלתי אישור שהסכום נגבה בפועל' : 'קיבלתי תוצאות סופיות וכל הסכומים שנגבו נרשמו במערכת' }}</span></label>
       <button class="masav-button primary" type="submit" [disabled]="busy || !resultConfirmed || (resultAction === 'payment' && !resultAmount) || !resultReference || !resultConfirmedAt">{{ resultAction === 'payment' ? 'שמירת תוצאה ושיוך לחובות' : 'אישור סיום התוצאות' }}</button>
       <button class="masav-button secondary" type="button" [disabled]="busy" (click)="resultInstruction = ''">ביטול</button>
     </form>

@@ -39,12 +39,12 @@
 .cdf-form { display: flex; flex-direction: column; gap: 14px; }
 .cdf-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; color: #475569; }
 .cdf-field input, .cdf-field select, .cdf-field textarea {
-  font-family: inherit; font-size: 14px; font-weight: 400; color: #1e293b;
-  border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px;
+  font-family: inherit; font-size: var(--hm-control-font-size); font-weight: 400; color: #1e293b;
+  border: 1px solid #cbd5e1; border-radius: var(--hm-control-radius); padding: 8px 10px;
   resize: vertical;
 }
 .cdf-field input:focus, .cdf-field select:focus, .cdf-field textarea:focus {
-  outline: none; border-color: #d97706;
+  outline: none; border-color: var(--hm-control-focus);
 }
 
 .cdf-declare {

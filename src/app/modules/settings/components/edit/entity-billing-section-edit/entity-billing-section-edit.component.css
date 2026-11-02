@@ -536,12 +536,12 @@
 
 .masav-field input,
 .masav-field select {
-  height: 48px;
+  height: var(--hm-control-height);
   padding: 0 14px;
   border: 1px solid #d1d5db;
-  border-radius: 14px;
+  border-radius: var(--hm-control-radius);
   background: #ffffff;
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
   color: #111827;
   box-sizing: border-box;
   outline: none;
@@ -551,8 +551,8 @@
 
 .masav-field input:focus,
 .masav-field select:focus {
-  border-color: #6D5DF6;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  border-color: var(--hm-control-focus);
+  box-shadow: none;
 }
 
 .masav-header-error {

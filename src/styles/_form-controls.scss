@@ -1,0 +1,125 @@
+/* Native HAMONYM controls. Provider-owned fields and specialized editors are
+   deliberately excluded. These tokens are also available to local components. */
+:root {
+  --hm-control-border: #cbd5e1;
+  --hm-control-focus: #6d28d9;
+  --hm-control-error: #b91c1c;
+  --hm-control-text: #17213b;
+  --hm-control-muted: #64748b;
+  --hm-control-surface: #fff;
+  --hm-control-disabled: #f1f5f9;
+  --hm-control-readonly: #f8fafc;
+  --hm-control-height: 48px;
+  --hm-control-radius: 10px;
+  --hm-control-font-size: 14px;
+}
+
+$native: ':is(input, textarea, select):not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"]):not([hidden]):not(:where(app-openfields-form *, [data-form-style="custom"], .url-input, .asf-input, .cv2-custom-amount, .amount-chip input, .editor-toolbar *, .tse-toolbar *, .cp-hex-input, .cp-search))';
+$invalid: ':is(.invalid, .is-invalid, .input-error, .field-invalid, .field-error, .field-error-input, .cv2-field-error, [aria-invalid="true"], .ng-invalid.ng-touched, .ng-invalid.ng-dirty, .ng-submitted .ng-invalid)';
+
+html body #{$native} {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  height: var(--hm-control-height);
+  border: 1px solid var(--hm-control-border);
+  border-radius: var(--hm-control-radius);
+  padding-block: 10px;
+  font-family: inherit;
+  font-size: var(--hm-control-font-size);
+  line-height: 1.5;
+  color: var(--hm-control-text);
+  background-color: var(--hm-control-surface);
+  transition: border-color .15s ease, background-color .15s ease;
+
+  /* Three narrowly scoped cascade guarantees replace the old universal
+     !important reset. Lazy component styles cannot add a second focus ring,
+     or override the invalid+focus precedence. No provider fields are targeted. */
+  border-color: var(--hm-control-state-border, var(--hm-control-border)) !important;
+  outline: none !important;
+  box-shadow: none !important;
+
+  &::placeholder { color: var(--hm-control-muted); opacity: 1; }
+  &:focus { --hm-control-state-border: var(--hm-control-focus); border-width: 2px; }
+  &#{$invalid}:not(:disabled):not([readonly]) { --hm-control-state-border: var(--hm-control-error); }
+  &:disabled {
+    --hm-control-state-border: var(--hm-control-border);
+    color: var(--hm-control-muted);
+    background-color: var(--hm-control-disabled);
+    cursor: not-allowed;
+    opacity: 1;
+  }
+  &[readonly] { background-color: var(--hm-control-readonly); color: var(--hm-control-text); }
+}
+
+html body textarea:not(:where(app-openfields-form *, [data-form-style="custom"])) {
+  height: auto;
+  min-height: 96px;
+  padding: 10px 14px;
+  resize: vertical;
+}
+
+/* The enclosing row owns the single border of a composite URL field. */
+html body :is(.url-field-wrapper, .asf-input-row) {
+  border: 1px solid var(--hm-control-border);
+  border-radius: var(--hm-control-radius);
+  box-shadow: none;
+  &:focus-within { border-color: var(--hm-control-focus); }
+  &:is(.invalid, .asf-input-row--taken, [aria-invalid="true"]) { border-color: var(--hm-control-error); }
+  :is(input, input:focus, input:focus-visible) {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+/* Accessible keyboard focus for actions, choices and custom widgets. Text
+   inputs use their single purple/red border instead of a competing outline. */
+html body :is(button, a[href], [role="button"], [role="combobox"], summary, input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"], input[type="file"]):not(:where(app-openfields-form *)):focus-visible {
+  outline: 2px solid var(--hm-control-focus);
+  outline-offset: 3px;
+}
+html body :is(input[type="checkbox"], input[type="radio"]):not(:where(app-openfields-form *)) {
+  accent-color: var(--hm-control-focus);
+  flex-shrink: 0;
+}
+html body :is(input[type="checkbox"], input[type="radio"])#{$invalid}:not(:disabled):not(:where(app-openfields-form *)) {
+  accent-color: var(--hm-control-error);
+  outline: 2px solid var(--hm-control-error);
+  outline-offset: 3px;
+}
+html body :is(.rf-switch, .rs-switch, .tse-switch) input:focus-visible + span {
+  outline: 2px solid var(--hm-control-focus);
+  outline-offset: 3px;
+}
+:where(input[type="radio"]) { width: 16px; height: 16px; padding: 0; margin: 0; vertical-align: middle; }
+:where(input[type="file"]):not([hidden]) { max-width: 100%; font: inherit; color: var(--hm-control-text); }
+input[type="file"]::file-selector-button {
+  border: 1px solid var(--hm-control-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-inline-end: 10px;
+  font: inherit;
+  color: var(--hm-control-focus);
+  background: #faf8ff;
+  cursor: pointer;
+}
+
+:where(.field-label, .form-label) { color: var(--hm-control-text); font-size: 14px; font-weight: 600; }
+:where(.field-error, .error-text, .validation-error, .cv2-error-msg, .field-error-msg, .slug-error) {
+  color: var(--hm-control-error);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-block-start: 6px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  :root { --hm-control-font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body #{$native} { transition: none; }
+}
+@media (forced-colors: active) {
+  html body #{$native}:focus { outline: 2px solid Highlight !important; outline-offset: 2px; }
+}

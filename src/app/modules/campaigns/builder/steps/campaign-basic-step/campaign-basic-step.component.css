@@ -50,16 +50,16 @@
 .field-hint    { font-size: 12px; color: #94a3b8; margin: 0; }
 .required      { color: #ef4444; margin-right: 2px; }
 .char-counter  { font-size: 11px; color: #94a3b8; }
-.field-error   { font-size: 12px; color: #ef4444; font-weight: 600; }
+.field-error   { font-size: 12px; color: var(--hm-control-error); font-weight: 600; }
 
 .field-input {
   width: 100%; box-sizing: border-box;
-  border: 1.5px solid #e2e8f0; border-radius: 10px;
-  padding: 11px 14px; font-size: 14px; font-family: inherit;
+  border: 1.5px solid #e2e8f0; border-radius: var(--hm-control-radius);
+  padding: 11px 14px; font-size: var(--hm-control-font-size); font-family: inherit;
   color: #0f172a; background: #fff; outline: none;
   transition: border-color 0.15s;
 }
-.field-input:focus { border-color: #7c3aed; }
+.field-input:focus { border-color: var(--hm-control-focus); }
 .field-input--lg { font-size: 16px; font-weight: 600; }
 .field-select { appearance: auto; cursor: pointer; }
 
@@ -141,7 +141,7 @@
   direction: ltr;
 }
 .url-field-wrapper.focused { border-color: #7c3aed; }
-.url-field-wrapper.invalid { border-color: #ef4444; }
+.url-field-wrapper.invalid { border-color: var(--hm-control-error); }
 .url-prefix {
   padding: 11px 10px 11px 0; background: #f8fafc;
   font-size: 11px; color: #94a3b8;
@@ -155,7 +155,7 @@
   min-width: 0; text-align: left;
 }
 .slug-success  { font-size: 12px; color: #16a34a; font-weight: 600; }
-.slug-error    { font-size: 12px; color: #ef4444; font-weight: 600; }
+.slug-error    { font-size: 12px; color: var(--hm-control-error); font-weight: 600; }
 .slug-checking { font-size: 12px; color: #94a3b8; }
 
 /* ── ADVANCED TOGGLE ── */

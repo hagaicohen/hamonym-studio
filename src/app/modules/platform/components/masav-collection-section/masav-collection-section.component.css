@@ -7,6 +7,8 @@
 .masav-badge.partial { background: #fff4dc; color: #8f5c09; }.masav-badge.failed { background: #fff0ed; color: #a13d2d; }
 .masav-result-form { border: 1px solid #c9bfee; background: #faf9ff; border-radius: 12px; padding: 16px; margin-block: 16px; }
 .masav-result-form label { display: block; font-size: 13px; margin-block: 12px; }
+.masav-result-form .masav-result-confirmation { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.masav-result-form .masav-result-confirmation input[type="checkbox"] { appearance: auto; display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; min-width: 16px; min-height: 16px; max-width: 16px; max-height: 16px; margin: 2px 0 0; padding: 0; accent-color: #583cd6; cursor: pointer; }
 .masav-result-form input:not([type=checkbox]) { display: block; width: 100%; max-width: 360px; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d8d3e8; border-radius: 8px; font: inherit; }
 .masav-result-form input:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
 .masav-result-form .masav-button { margin-inline-end: 8px; margin-block: 4px; }

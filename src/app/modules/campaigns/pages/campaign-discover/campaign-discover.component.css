@@ -65,7 +65,7 @@
   direction: rtl;
 }
 
-.disc-search:focus { border-color: #583cd6; }
+.disc-search:focus { border-color: var(--hm-control-focus); }
 
 .disc-sort {
   display: flex;
@@ -228,6 +228,8 @@
 
 .disc-card-stats {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   align-items: baseline;
   justify-content: space-between;
   font-size: 13px;
@@ -235,6 +237,7 @@
 }
 
 .disc-card-raised { font-weight: 700; color: #1e293b; }
+.disc-card-percent { font-weight: 700; color: #583cd6; }
 .disc-card-of { font-weight: 400; color: #94a3b8; font-size: 11px; }
 .disc-card-supporters { color: #64748b; font-size: 12px; white-space: nowrap; }
 

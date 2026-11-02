@@ -273,7 +273,7 @@
 
 /* INPUTS */
 
-input,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]),
 select {
   width: 100%;
 
@@ -324,22 +324,22 @@ select option {
   background: white;
 }
 
-input:hover,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]):hover,
 select:hover {
   border-color: #cbd5e1;
 }
 
-input:focus,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]):focus,
 select:focus {
-  border-color: #14b8a6;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
+  box-shadow: none;
 }
 
 /* VALIDATION */
 
 .invalid {
-  border-color: #ef4444 !important;
+  border-color: var(--hm-control-error);
 
   background: #fef2f2;
 }
@@ -403,7 +403,7 @@ select:focus {
 }
 
 .chip:hover {
-  border-color: #14b8a6;
+  border-color: var(--hm-control-focus);
 
   color: #14b8a6;
 
@@ -413,7 +413,7 @@ select:focus {
 .chip.active {
   background: #14b8a6;
 
-  border-color: #14b8a6;
+  border-color: var(--hm-control-focus);
 
   color: white;
 }

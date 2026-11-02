@@ -100,14 +100,14 @@
   background: #fff;
   transition: border-color 0.15s;
 }
-.tse-input:focus { border-color: #7c3aed; }
+.tse-input:focus { border-color: var(--hm-control-focus); }
 
 .tse-divider { height: 1px; background: #e2e8f0; margin: 2px 0; }
 
 .tse-switch {
   position: relative; width: 44px; height: 24px; flex-shrink: 0;
 }
-.tse-switch input { display: none; }
+.tse-switch input { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; clip-path: inset(50%); }
 .tse-switch-slider {
   position: absolute; inset: 0;
   background: #cbd5e1;

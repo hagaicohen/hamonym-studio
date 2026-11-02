@@ -6,13 +6,13 @@
 .plat-subtitle { color: #64748b; font-size: 13px; margin: 4px 0 0; }
 .plat-filters, .plat-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
 .plat-search { flex: 1 1 240px; min-width: 0; }
-.plat-search, .plat-filters select, .plat-filters input { padding: 9px 12px; border: 1px solid #dde3ed; border-radius: 8px; background: #fff; color: #334155; font: inherit; font-size: 13px; }
+.plat-search, .plat-filters select, .plat-filters input { padding: 9px 12px; border: 1px solid #dde3ed; border-radius: var(--hm-control-radius); background: #fff; color: #334155; font: inherit; font-size: var(--hm-control-font-size); }
 .plat-chip, .secondary-button { padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #64748b; font: inherit; font-size: 13px; cursor: pointer; }
 .plat-chip.active { color: #583cd6; border-color: #b7a6f0; background: #f5f1ff; }
 a, .text-button { color: #583cd6; text-decoration: none; }
 a:hover, .text-button:hover { text-decoration: underline; }
 .text-button { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; cursor: pointer; text-align: right; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
 button:disabled { opacity: .45; cursor: default; }
 .plat-card { background: #fff; border: 1px solid #e5e9f1; border-radius: 12px; overflow: hidden; }
 .plat-table-wrap { width: 100%; max-height: 72vh; overflow: auto; scrollbar-width: thin; }

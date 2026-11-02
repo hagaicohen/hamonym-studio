@@ -85,15 +85,15 @@
 }
 
 .form-group input {
-  height: 52px;
+  height: var(--hm-control-height);
 
-  border-radius: 14px;
+  border-radius: var(--hm-control-radius);
 
   border: 1px solid #dbe3ee;
 
   padding: 0 52px 0 16px;
 
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
 
   outline: none;
 
@@ -105,9 +105,9 @@
 }
 
 .form-group input:focus {
-  border-color: #6366f1;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+  box-shadow: none;
 }
 
 .form-group input.ng-invalid.ng-touched {
@@ -284,9 +284,9 @@ button[type="submit"]:disabled {
   }
 
   .form-group input {
-    height: 48px;
+    height: var(--hm-control-height);
 
-    font-size: 16px;
+    font-size: var(--hm-control-font-size);
   }
 
   button[type="submit"] {

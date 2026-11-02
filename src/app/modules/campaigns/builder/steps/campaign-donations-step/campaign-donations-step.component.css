@@ -239,16 +239,9 @@
 
   outline: none;
 
-  border-color: #7c3aed;
+  border-color: var(--hm-control-focus);
 
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      124,
-      58,
-      237,
-      0.08
-    );
+  box-shadow: none;
 
 }
 

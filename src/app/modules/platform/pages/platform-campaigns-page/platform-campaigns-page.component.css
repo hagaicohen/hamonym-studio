@@ -5,7 +5,7 @@
 .raised-progress-track { height: 5px; width: 95px; overflow: hidden; border-radius: 4px; background: #ede9f8; }
 .raised-progress-fill { height: 100%; border-radius: inherit; background: #7655d7; }
 .deleted-row { opacity: .7; }.feedback { color: #15803d; font-size: 13px; }.plat-action-error { color: #b91c1c; padding: 10px; background: #fef2f2; margin-bottom: 12px; }
-.campaign-actions-menu { display: grid; gap: 10px; }.campaign-actions-menu .secondary-button { text-align: right; }.campaign-actions-menu label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #64748b; }.campaign-actions-menu select { font: inherit; padding: 6px; border: 1px solid #e2e8f0; border-radius: 6px; }.danger-action { color: #b91c1c; }
+.campaign-actions-menu { display: grid; gap: 10px; }.campaign-actions-menu .secondary-button { text-align: right; }.campaign-actions-menu label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #64748b; }.campaign-actions-menu select { font: inherit; padding: 6px; border: 1px solid #e2e8f0; border-radius: var(--hm-control-radius); }.danger-action { color: #b91c1c; }
 .plat-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -78,14 +78,14 @@
   width: 100%;
   padding: 9px 12px;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   font-family: inherit;
   box-sizing: border-box;
 }
 
 .plat-modal-select:focus,
-.plat-modal-input:focus { outline: none; border-color: #583cd6; }
+.plat-modal-input:focus { outline: none; border-color: var(--hm-control-focus); }
 
 .plat-modal-loading { font-size: 13px; color: #94a3b8; }
 

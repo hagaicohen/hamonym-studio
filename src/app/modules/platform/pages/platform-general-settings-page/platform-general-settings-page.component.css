@@ -106,12 +106,12 @@
 }
 
 .ba-field input {
-  height: 36px;
+  height: var(--hm-control-height);
   box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid #dbe2ea;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
 }
 
 .ba-form {
@@ -215,19 +215,19 @@
   margin-bottom: 10px;
 }
 .sim-clock-inputs .ba-field input {
-  height: 42px;
+  height: var(--hm-control-height);
   min-width: 170px;
-  border-radius: 10px;
+  border-radius: var(--hm-control-radius);
   border-color: #cbd5e1;
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
   font-weight: 700;
   color: #1e293b;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .sim-clock-inputs .ba-field input:focus {
   outline: none;
-  border-color: #583cd6;
-  box-shadow: 0 0 0 3px rgba(88, 60, 214, 0.12);
+  border-color: var(--hm-control-focus);
+  box-shadow: none;
 }
 
 /* "חזור לזמן אמת" must be prominent (explicit product requirement) */
@@ -292,7 +292,7 @@
 }
 
 .sim-campaign-picker { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.sim-campaign-picker select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1e293b; font: inherit; direction: rtl; }
+.sim-campaign-picker select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: var(--hm-control-radius); background: #fff; color: #1e293b; font: inherit; direction: rtl; }
 
 .sim-reset-counts { display:flex; flex-wrap:wrap; gap:8px 20px; margin:12px 0; }
 .sim-reset-counts div { display:flex; gap:8px; }

@@ -51,7 +51,7 @@
   font-size: 14px; font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
-.sf-input:focus { border-color: #7c3aed; }
+.sf-input:focus { border-color: var(--hm-control-focus); }
 
 .sf-logo-area {
   border: 2px dashed #c4b5fd; border-radius: 12px; background: #faf5ff;

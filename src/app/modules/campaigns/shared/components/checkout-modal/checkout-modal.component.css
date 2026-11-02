@@ -362,8 +362,8 @@
 .field-input {
   padding: 14px 16px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -372,8 +372,8 @@
 }
 
 .field-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  border-color: var(--hm-control-focus);
+  box-shadow: none;
   background-color: #fff;
 }
 
@@ -416,14 +416,13 @@
   background-color: #fff;
 }
 .field-input.field-valid {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
-  background-color: #f0fdf4;
+  /* Valid data keeps the neutral shared control appearance. */
+  background-color: var(--hm-control-surface, #fff);
 }
 
 .error-msg {
   font-size: 12px;
-  color: #ef4444;
+  color: var(--hm-control-error);
 }
 
 .field-hint {
@@ -875,7 +874,7 @@
   .form-header { margin-bottom: 24px; }
   .form-title  { font-size: 24px; font-weight: 800; }
 
-  .field-input { padding: 13px 14px; font-size: 16px; }
+  .field-input { padding: 13px 14px; font-size: var(--hm-control-font-size); }
 
   .pay-btn { font-size: 16px; padding: 16px 20px; }
 

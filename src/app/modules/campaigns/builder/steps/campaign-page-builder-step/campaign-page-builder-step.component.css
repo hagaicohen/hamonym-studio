@@ -174,7 +174,7 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.editor-input:focus { border-color: #7c3aed; }
+.editor-input:focus { border-color: var(--hm-control-focus); }
 
 .color-row { display: flex; align-items: center; gap: 10px; }
 .color-picker {
@@ -210,7 +210,7 @@
   cursor: pointer;
   transition: border-color 0.15s;
 }
-.editor-select:focus { border-color: #7c3aed; }
+.editor-select:focus { border-color: var(--hm-control-focus); }
 
 /* IMAGE BLOCK */
 .image-preview-box {
@@ -432,7 +432,7 @@
   color: #0f172a; background: #fff; outline: none; resize: vertical;
   transition: border-color 0.15s;
 }
-.editor-textarea:focus { border-color: #7c3aed; }
+.editor-textarea:focus { border-color: var(--hm-control-focus); }
 
 /* CONTAINER DESIGN PANEL — collapsible wrapper around the container's own
    settings (colors/borders/spacing), same visual language as the page-level

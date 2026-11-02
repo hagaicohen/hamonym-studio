@@ -25,9 +25,9 @@
 }
 
 .editor-shell:focus-within {
-  border-color: #6366f1;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+  box-shadow: none;
 }
 
 /* =========================================================
@@ -139,7 +139,7 @@
 }
 
 .toolbar-select:focus {
-  border-color: #6366f1;
+  border-color: var(--hm-control-focus);
 }
 
 /* =========================================================

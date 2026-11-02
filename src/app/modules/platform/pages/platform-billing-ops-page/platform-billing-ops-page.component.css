@@ -141,12 +141,12 @@
 
 .ba-field input,
 .ba-field select {
-  height: 36px;
+  height: var(--hm-control-height);
   box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid #dbe2ea;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
 }
 
 .ba-field-btn > span {
@@ -296,13 +296,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
+  height: var(--hm-control-height);
   box-sizing: border-box;
   padding: 0 12px;
   border: 1px solid #dbe2ea;
-  border-radius: 8px;
+  border-radius: var(--hm-control-radius);
   background: #f8fafc;
-  font-size: 13px;
+  font-size: var(--hm-control-font-size);
   font-weight: 700;
   color: #1e293b;
   cursor: pointer;

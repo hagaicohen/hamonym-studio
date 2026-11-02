@@ -117,21 +117,21 @@
 .date-input:focus {
   outline: none;
 
-  border-color: #7c3aed;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  box-shadow: none;
 }
 
 .invalid {
-  border-color: #ef4444 !important;
+  border-color: var(--hm-control-error);
 
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+  box-shadow: none;
 }
 
 .field-error {
   margin-top: 8px;
 
-  color: #dc2626;
+  color: var(--hm-control-error);
 
   font-size: 13px;
 }

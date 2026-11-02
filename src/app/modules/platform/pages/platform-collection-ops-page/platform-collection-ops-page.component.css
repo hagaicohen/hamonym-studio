@@ -47,8 +47,8 @@
 .col-period-row select {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   font-weight: 600;
 }
 
@@ -235,7 +235,7 @@
 .col-retry-summary dd { margin: 0; font-weight: 700; }
 .col-retry-warning { padding: 10px 12px; background: #fffbeb; color: #92400e; border-radius: 8px; font-size: 13px; line-height: 1.5; }
 .col-retry-modal label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
-.col-retry-modal textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; resize: vertical; }
+.col-retry-modal textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: var(--hm-control-radius); font: inherit; resize: vertical; }
 .col-retry-modal textarea:focus { outline: 2px solid #583cd6; outline-offset: 2px; }
 .col-retry-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .col-retry-actions .col-btn { min-height: 40px; }
@@ -296,8 +296,8 @@
   box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   margin-bottom: 8px;
   font-family: inherit;
 }
@@ -383,8 +383,8 @@
 .col-filter-row select {
   padding: 7px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
 }
 
 .col-filter-grid {
@@ -412,8 +412,8 @@
 .col-filter-field select {
   padding: 7px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   min-width: 140px;
 }
 /* Real structural fix for the חיפוש/נקה סינון alignment (2026-10, not a
@@ -613,8 +613,8 @@
   box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   margin-bottom: 8px;
   font-family: inherit;
 }

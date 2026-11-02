@@ -10,6 +10,7 @@
 @use './app/modules/campaigns/styles/preview-progress-section';
 @use './app/modules/campaigns/styles/preview-story-section';
 @use './app/modules/campaigns/styles/preview-donation-section';
+@use './styles/form-controls';
 @import "./styles/onboarding.css";
 
 /* You can add global styles to this file, and also import other style files */
@@ -59,14 +60,19 @@ h1 {
 
 }
 
-*:focus,
-*:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
 app-campaign-editor lucide-angular {
   margin-top: 5px;
+}
+
+/* AI-labelled actions remain visible but unavailable in the current UI. */
+html body button.ai-unavailable[disabled]:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  opacity: 1;
+  filter: grayscale(1);
+  cursor: not-allowed;
 }
 
 /* Shared interaction affordances; disabled controls retain their own styling. */
@@ -81,7 +87,16 @@ app-campaign-editor lucide-angular {
   }
 }
 
-:is(button, a[href], [role="button"], input, select, textarea, summary):focus-visible {
-  outline: 2px solid #7c3aed !important;
-  outline-offset: 3px;
+/* Native checkbox fallback. Deliberately low specificity: component-level
+   compact sizes and custom switches (including hidden inputs) keep their design. */
+:where(input[type="checkbox"]) {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  vertical-align: middle;
+  accent-color: #583cd6;
+  cursor: pointer;
 }
+:where(input[type="checkbox"]:disabled) { cursor: default; }

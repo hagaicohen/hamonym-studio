@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.organization-lifecycle.spec.json",
+  "include": [
+    "src/app/shared/form-controls.spec.ts",
+    "src/app/shared/ui-interactions.spec.ts",
+    "src/app/checkbox-sizing.spec.ts",
+    "src/app/modules/organization-registration/*spec.ts",
+    "src/app/modules/settings/components/entity-settings/*spec.ts",
+    "src/app/modules/dashboard/pages/dashboard/*spec.ts",
+    "src/app/modules/platform/pages/platform-organization-detail-page/organization-decision-ux.spec.ts",
+    "src/app/core/guards/welcome.guard.spec.ts",
+    "src/app/core/layout/topbar/topbar.component.spec.ts",
+    "src/app/core/services/organization-switcher.spec.ts",
+    "src/app/modules/auth/pages/login/login-performance.spec.ts",
+    "src/app/organization-warning-ux.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}
