@@ -111,6 +111,7 @@ async function getBusinessActivity({ isSuperAdmin, organizations, campaigns }) {
              e.id::text AS subject_id, e.display_name AS name, a.action, NULL::text AS detail
       FROM platform_audit_log a JOIN entities e ON e.id = a.entity_id
       WHERE $1::boolean AND a.action IN ('approve', 'reject', 'request_changes', 'suspend', 'reactivate')
+        AND e.deleted_at IS NULL
       UNION ALL
       SELECT 'campaign', c.id::text, c.created_at, c.id::text, c.title, 'created', e.display_name
       FROM campaigns c JOIN entities e ON e.id = c.entity_id WHERE $2::boolean AND c.deleted_at IS NULL
