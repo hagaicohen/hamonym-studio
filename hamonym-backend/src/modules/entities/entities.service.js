@@ -1,3 +1,4 @@
+const entityIdentity = require('./entity-identity');
 const { missingProfileFields, lifecycleError } = require('./organization-lifecycle');
 const db =
   require('../../db/db');
@@ -63,6 +64,7 @@ exports.createEntity =
     try {
 
       await client.query('BEGIN');
+      await entityIdentity.assertAvailable(client, {userId, entityType:data.entity_type, registrationNumber:data.registration_number});
 
       const entityResult =
         await client.query(
@@ -781,6 +783,9 @@ exports.updateEntity =
       throw new Error('Unauthorized');
     }
 
+    const identityRow = (await db.query('SELECT entity_type, registration_number FROM entities WHERE id=$1', [entityId])).rows[0];
+    await entityIdentity.assertAvailable(db, {userId, entityType:data.entity_type || identityRow.entity_type, registrationNumber:data.registration_number === undefined ? identityRow.registration_number : data.registration_number, excludeEntityId:entityId});
+
     const reapproval = await computeReapprovalFlag(entityId, data);
 
     /*
@@ -1114,6 +1119,7 @@ const APPROVAL_DECISION_ACTIONS = ['approve', 'reject', 'request_changes', 'susp
 
 exports.getApprovalStatus = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
+
 
   const [entityRes, auditRes] = await Promise.all([
     db.query(`SELECT status, updated_at FROM entities WHERE id = $1`, [entityId]),
@@ -1460,3 +1466,5 @@ exports.getMyPartners = async (userId) => {
   );
   return rows;
 };
+
+exports.checkRegistrationAvailability = args => entityIdentity.availability(db, args);

@@ -16,3 +16,6 @@ Run `node scripts/test-organization-submission-postgres.cjs` from this backend
 with dependencies installed and the existing local `hamonym-test-db` Docker
 container running. The test creates and drops a disposable database on that
 container only; it never uses the shared application database configuration.
+
+The identity-aware version also requires migration 084. Its isolated regression
+runner applies 084 only to the disposable local test database.

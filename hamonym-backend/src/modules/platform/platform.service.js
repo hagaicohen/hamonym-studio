@@ -1,3 +1,4 @@
+const { assertAdminTransition, lifecycleError } = require('../entities/organization-lifecycle');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -650,6 +651,14 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   let updatedEntity = null;
   try {
     await client.query('BEGIN');
+    const locked = await client.query('SELECT status, flagged_for_review, deleted_at FROM entities WHERE id = $1 FOR UPDATE', [entityId]);
+    if (!locked.rows[0] || locked.rows[0].deleted_at) throw lifecycleError('Entity not found', 404, 'ENTITY_NOT_FOUND');
+    assertAdminTransition(locked.rows[0], action);
+    if (locked.rows[0].status === 'rejected' && action === 'request_changes') {
+      const actor = await client.query('SELECT is_super_admin FROM users WHERE id = $1', [superAdminUserId]);
+      if (!actor.rows[0]?.is_super_admin) throw lifecycleError('Forbidden', 403, 'SUPER_ADMIN_REQUIRED');
+    }
+
 
     // Approving/reactivating is the admin's sign-off on the entity as it
     // currently stands, so it also clears any reapproval flag raised by
@@ -659,6 +668,7 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
       `UPDATE entities
        SET status = $1,
            updated_at = NOW(),
+           requires_completion = CASE WHEN $3 THEN false ELSE requires_completion END,
            flagged_for_review = CASE WHEN $3 THEN false ELSE flagged_for_review END,
            flagged_for_review_reason = CASE WHEN $3 THEN NULL ELSE flagged_for_review_reason END,
            flagged_for_review_at = CASE WHEN $3 THEN NULL ELSE flagged_for_review_at END

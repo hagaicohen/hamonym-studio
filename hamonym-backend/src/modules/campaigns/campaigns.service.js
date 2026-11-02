@@ -363,7 +363,8 @@ exports.createCampaign =
 
             data.entity_id,
 
-            data.status || 'draft',
+            // New campaigns are drafts; publication uses the existing guarded update path.
+            'draft',
             data.slug,
 
             data.title,

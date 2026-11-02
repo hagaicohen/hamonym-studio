@@ -2,6 +2,7 @@ const svc = require('./platform.service');
 const approvalAgent = require('../../agents/approval/approval.agent');
 
 function statusFor(err) {
+  if (['INVALID_TRANSITION', 'ENTITY_NOT_FOUND', 'SUPER_ADMIN_REQUIRED'].includes(err.code)) return err.status;
   switch (err.message) {
     case 'Entity not found': return 404;
     case 'Campaign not found': return 404;

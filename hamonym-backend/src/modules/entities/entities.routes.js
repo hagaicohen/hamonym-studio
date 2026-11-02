@@ -22,6 +22,8 @@ const upload = multer({
 
 });
 
+router.post('/registration-availability', requireAuth, controller.checkRegistrationAvailability);
+
 router.post(
 
   '/',

@@ -8,4 +8,14 @@ function lifecycleError(message, status, code, missingFields) {
   return Object.assign(new Error(message), { status, code, missingFields });
 }
 
-module.exports = { PROFILE_FIELDS, missingProfileFields, lifecycleError };
+function assertAdminTransition(entity, action) {
+  const sources = {
+    approve: ['pending_review'], reject: ['pending_review'],
+    request_changes: ['draft', 'pending_review', 'changes_requested', 'rejected'],
+    suspend: ['active'], reactivate: ['suspended'],
+  };
+  if (action === 'approve' && entity.status === 'active' && entity.flagged_for_review) return;
+  if (!sources[action]?.includes(entity.status)) throw lifecycleError('Invalid transition', 409, 'INVALID_TRANSITION');
+}
+
+module.exports = { PROFILE_FIELDS, missingProfileFields, lifecycleError, assertAdminTransition };

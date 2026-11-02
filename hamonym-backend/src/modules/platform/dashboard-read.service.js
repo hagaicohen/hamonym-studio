@@ -68,9 +68,9 @@ async function getOrganizationAttention() {
              (e.entity_type = 'association' AND e.tax_document_name IS NULL) THEN 'חסרים מסמכים'
            ELSE 'החיבור לסליקה אינו תקין' END AS reason
     FROM entities e
-    WHERE e.status != 'deleted'
+    WHERE e.deleted_at IS NULL AND e.status != 'deleted'
       AND NOT EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner')
-      AND (e.status IN ('draft', 'pending_review') OR e.status = 'active' AND
+      AND (e.status = 'pending_review' OR e.status = 'active' AND
         (e.flagged_for_review OR e.association_certificate_name IS NULL OR
          (e.entity_type = 'association' AND e.tax_document_name IS NULL) OR
          e.cardcom_connection_status IS DISTINCT FROM 'success'))

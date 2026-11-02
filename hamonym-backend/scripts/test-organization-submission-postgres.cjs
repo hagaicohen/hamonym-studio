@@ -23,12 +23,13 @@ async function check(name,fn){await fn();assertions++;console.log(`PASS ${name}`
  const timestamps=new Set(['updated_at','created_at','flagged_for_review_at','deleted_at','onboarding_completed_at','cardcom_last_verified_at']);
  const columns=[...new Set([...cols].map(x=>x.trim()).filter(Boolean))].map(c=>{assert.match(c,/^[a-z_]+$/);return `"${c}" `+(c==='id'?"text PRIMARY KEY DEFAULT md5(random()::text)":booleans.has(c)?'boolean DEFAULT false':timestamps.has(c)?'timestamptz DEFAULT NULL':['secondary_categories','campaign_types'].includes(c)?'text[]':c==='missing_fields'?"jsonb DEFAULT '[]'::jsonb":c.endsWith('_data')?'bytea':c==='onboarding_step'?'integer':'text');});
  await pool.query(`CREATE TABLE entities (${columns.join(',')}); CREATE TABLE users(id int PRIMARY KEY,full_name text,is_super_admin boolean); INSERT INTO users VALUES(9,'Admin',true),(10,'Owner',false),(11,'Other',false); CREATE TABLE user_entities(user_id int REFERENCES users(id),entity_id text REFERENCES entities(id),role text); CREATE TABLE platform_audit_log(id bigserial PRIMARY KEY,super_admin_user_id int REFERENCES users(id),entity_id text REFERENCES entities(id),action text,notes text,reason_tags text[],ip_address text,created_at timestamptz DEFAULT now(),acknowledged_at timestamptz);`);
+ await pool.query(fs.readFileSync(path.join(backend,'migrations/084_entity_legal_identity.sql'),'utf8'));
  const db={connect:()=>pool.connect(),query:(sql,args)=>{if(failAudit&&/INSERT INTO platform_audit_log/.test(sql))throw new Error('simulated audit failure');return pool.query(sql,args);}};
  // Wrap transaction queries too: rollback must restore the status when audit fails.
  db.connect=async()=>{const client=await pool.connect();return {release:()=>client.release(),query:(sql,args)=>{if(failAudit&&/INSERT INTO platform_audit_log/.test(sql))return Promise.reject(new Error('simulated audit failure'));return client.query(sql,args);}};};
  const ownership=load('src/middleware/entity-permission.middleware.js',{'../db/db':db});
  const lifecycle=require(path.join(backend,'src/modules/entities/organization-lifecycle'));
- const entities=load('src/modules/entities/entities.service.js',{'../../db/db':db,'../../lib/supabase':{},'../../middleware/entity-permission.middleware':ownership,'../email/email.service':{queue:()=>{}},'./organization-lifecycle':lifecycle});
+ const entities=load('src/modules/entities/entities.service.js',{'../../db/db':db,'../../lib/supabase':{},'../../middleware/entity-permission.middleware':ownership,'../email/email.service':{queue:()=>{}},'./organization-lifecycle':lifecycle,'./entity-identity':require(path.join(backend,'src/modules/entities/entity-identity'))});
  let a,b;
  await check('complete draft creation never submits, even with a client completion flag',async()=>{a=await entities.createEntity({userId:10,data:{...profile,is_profile_complete:true}});assert.equal(a.status,'draft');assert.equal(a.is_profile_complete,true);});
  await check('saving complete profile remains a draft',async()=>{a=await entities.updateEntity({entityId:a.id,userId:10,data:{...profile,...a,description:'Saved description'}});assert.equal(a.status,'draft');});
@@ -47,7 +48,7 @@ async function check(name,fn){await fn();assertions++;console.log(`PASS ${name}`
   }
  });
  await check('controller returns useful validation and transition errors',async()=>{
-  const controller=load('src/modules/entities/entities.controller.js',{'./entities.service':entities});
+  const controller=load('src/modules/entities/entities.controller.js',{'./entities.service':entities,'./entity-identity':require(path.join(backend,'src/modules/entities/entity-identity'))});
   const response=()=>({statusCode:200,status(code){this.statusCode=code;return this;},json(body){this.body=body;}});
   let res=response();await controller.requestReview({params:{id:a.id},user:{id:11}},res);assert.equal(res.statusCode,403);
   res=response();await controller.requestReview({params:{id:b.id},user:{id:10}},res);assert.equal(res.statusCode,400);assert.equal(res.body.code,'PROFILE_INCOMPLETE');
