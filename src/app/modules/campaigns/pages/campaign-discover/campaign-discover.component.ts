@@ -140,7 +140,7 @@ export class CampaignDiscoverComponent implements OnInit {
     const target = Number(c.target_amount) || 0;
     if (target <= 0) return 0;
     const current = Number(c.current_amount) || 0;
-    return Math.min(100, Math.round((current / target) * 100));
+    return Math.round((current / target) * 100);
   }
 
   daysLeft(endDate: string | null): number | null {

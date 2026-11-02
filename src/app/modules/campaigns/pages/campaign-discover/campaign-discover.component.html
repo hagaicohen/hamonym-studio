@@ -61,9 +61,10 @@
               <p class="disc-card-desc">{{ c.short_description }}</p>
             }
             <div class="disc-card-progress-track">
-              <div class="disc-card-progress-fill" [style.width.%]="progressPct(c)"></div>
+              <div class="disc-card-progress-fill" [style.width.%]="progressPct(c) > 100 ? 100 : progressPct(c)"></div>
             </div>
             <div class="disc-card-stats">
+              <span class="disc-card-percent">{{ progressPct(c) }}%</span>
               <span class="disc-card-raised">{{ fmtMoney(c.current_amount) }} <span class="disc-card-of">מתוך {{ fmtMoney(c.target_amount) }}</span></span>
               <span class="disc-card-supporters">{{ c.supporters_count }} תומכים</span>
             </div>

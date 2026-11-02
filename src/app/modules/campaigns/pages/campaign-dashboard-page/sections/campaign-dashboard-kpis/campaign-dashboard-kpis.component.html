@@ -3,7 +3,7 @@
     <span class="ckp-amount">{{ formatMoney(draft.currentAmount) }}</span>
     <span class="ckp-of">מתוך {{ formatMoney(draft.targetAmount) }} יעד</span>
     <div class="ckp-progress">
-      <div class="ckp-progress-fill" [style.width.%]="progressPct"></div>
+      <div class="ckp-progress-fill" [style.width.%]="progressPct > 100 ? 100 : progressPct"></div>
     </div>
     <div class="ckp-progress-row">
       <span class="ckp-pct">{{ progressPct }}%</span>

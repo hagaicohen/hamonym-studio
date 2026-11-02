@@ -69,17 +69,17 @@
       <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
     <div class="header-actions">
-      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
-        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+      <button class="btn-new btn-ai btn-ai--disabled ai-unavailable" disabled
+        title="כלי AI אינם זמינים כרגע"
         (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   </div>
 
   <!-- PENDING APPROVAL NOTICE -->
-  @if (currentEntity.currentEntity()?.status === 'pending_review') {
+  @if (['draft', 'pending_review', 'changes_requested'].includes(currentEntity.currentEntity()?.status)) {
     <div class="campaigns-alert campaigns-alert--pending">
-      העמותה ממתינה לאישור. ניתן להכין ולערוך קמפיינים, אך ניתן יהיה לפרסם אותם לאחר אישור העמותה.
+      אפשר כבר ליצור ולערוך קמפיינים. הקמפיינים נשמרים כטיוטות ואינם חשופים לציבור. פרסום וקבלת תרומות יתאפשרו רק לאחר אישור העמותה והשלמת תנאי הפרסום והסליקה.
     </div>
   }
 
@@ -157,8 +157,8 @@
     <div class="campaigns-empty">
       <div class="empty-icon">📋</div>
       <p>אין קמפיינים עדיין</p>
-      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
-        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+      <button class="btn-new btn-ai btn-ai--disabled ai-unavailable" disabled
+        title="כלי AI אינם זמינים כרגע"
         (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
@@ -210,7 +210,7 @@
                       <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
                     </div>
                     <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                      <div class="progress-fill" [style.width.%]="progressPercent(c) > 100 ? 100 : progressPercent(c)"></div>
                     </div>
                     <div class="progress-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</div>
                   </div>
@@ -291,7 +291,7 @@
                       <span class="list-pct">{{ progressPercent(c) | number:'1.0-0' }}%</span>
                     </div>
                     <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                      <div class="progress-fill" [style.width.%]="progressPercent(c) > 100 ? 100 : progressPercent(c)"></div>
                     </div>
                   </div>
                   <div class="card-meta">

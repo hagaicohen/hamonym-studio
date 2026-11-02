@@ -196,6 +196,6 @@ export class AmbassadorStudioPageComponent implements OnInit {
 
   goalPct(amb: Ambassador): number {
     if (!this.draft.goalAmount || !amb.raisedTotal) return 0;
-    return Math.min(100, Math.round((amb.raisedTotal / this.draft.goalAmount) * 100));
+    return Math.round((amb.raisedTotal / this.draft.goalAmount) * 100);
   }
 }

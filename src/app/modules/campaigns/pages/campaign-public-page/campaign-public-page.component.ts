@@ -107,6 +107,11 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     return target > 0 && (this.state.draft.currentAmount ?? 0) >= target;
   }
 
+  get goalProgressPct(): number {
+    const target = this.state.draft.targetAmount ?? 0;
+    return target > 0 ? Math.round(((this.state.draft.currentAmount ?? 0) / target) * 100) : 0;
+  }
+
   private celebrateGoalCrossing(previousAmount: number): void {
     const draft = this.state.draft;
     const target = draft.targetAmount ?? 0;

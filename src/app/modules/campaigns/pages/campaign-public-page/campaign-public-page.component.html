@@ -31,7 +31,8 @@
       <section class="campaign-goal-success" [class.is-celebrating]="celebratingGoal" dir="rtl" aria-label="יעד הקמפיין הושג">
         <div class="campaign-goal-title"><span aria-hidden="true">✓</span><strong>הגענו ליעד! בזכותכם!</strong></div>
         <p>גויסו ₪{{ state.draft.currentAmount | number:'1.0-2' }} מתוך יעד של ₪{{ state.draft.targetAmount | number:'1.0-2' }}</p>
-        <div class="campaign-goal-progress" role="progressbar" aria-label="יעד הגיוס הושג" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span></span></div>
+        <strong>{{ goalProgressPct }}%</strong>
+        <div class="campaign-goal-progress" role="progressbar" aria-label="יעד הגיוס הושג" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" [attr.aria-valuetext]="goalProgressPct + '% מהיעד'"><span></span></div>
       </section>
     }
     @if (isMinimalFormat) {

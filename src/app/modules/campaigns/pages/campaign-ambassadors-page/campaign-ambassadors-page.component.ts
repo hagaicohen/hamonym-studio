@@ -187,7 +187,7 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
 
   progressPct(a: Ambassador): number {
     if (!a.goalAmount) return 0;
-    return Math.min(100, Math.round((a.raisedTotal / a.goalAmount) * 100));
+    return Math.round((a.raisedTotal / a.goalAmount) * 100);
   }
 
   // ── Add / edit ambassador — same drawer form for both; editingId set

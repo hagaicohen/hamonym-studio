@@ -110,8 +110,8 @@
       <div class="ai-actions">
         <button
           type="button"
-          class="btn-primary"
-          [disabled]="!canSubmit()"
+          class="btn-primary ai-unavailable"
+          disabled title="כלי AI אינם זמינים כרגע"
           (click)="submit()"
         >{{ submitting() ? 'עובדים על זה...' : 'צור הצעה עם AI' }}</button>
         <button type="button" class="btn-link" (click)="goToQuickStudio()">

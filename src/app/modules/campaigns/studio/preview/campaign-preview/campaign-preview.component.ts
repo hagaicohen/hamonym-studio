@@ -319,7 +319,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   ambPct(a: AmbassadorPublicInfo): number {
     if (!a.goalAmount) return 0;
-    return Math.min(100, Math.round((a.raisedTotal / a.goalAmount) * 100));
+    return Math.round((a.raisedTotal / a.goalAmount) * 100);
   }
 
   viewAmbassador(slug: string, draft: { slug: string }): void {
@@ -1202,7 +1202,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   ambassadorPct(): number {
     if (!this.ambassador?.goalAmount) return 0;
-    return Math.min(100, Math.round((this.ambassador.raisedTotal / this.ambassador.goalAmount) * 100));
+    return Math.round((this.ambassador.raisedTotal / this.ambassador.goalAmount) * 100);
   }
 
   daysRemaining(draft: CampaignDraft): string {
@@ -2346,12 +2346,12 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   raisedPct(draft: CampaignDraft): number {
     const target = draft.targetAmount ?? 0;
     const raised = draft.currentAmount ?? 0;
-    return target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+    return target > 0 ? Math.round((raised / target) * 100) : 0;
   }
 
   ringDash(draft: CampaignDraft): string {
     const circumference = 94.25; // 2π×15
-    const fill = (this.raisedPct(draft) / 100) * circumference;
+    const fill = (Math.min(100, this.raisedPct(draft)) / 100) * circumference;
     return `${fill.toFixed(2)} ${circumference}`;
   }
 
@@ -2359,7 +2359,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     const raised     = draft.currentAmount   ?? 0;
     const supporters = draft.supportersCount ?? 0;
     const target     = draft.targetAmount    ?? 0;
-    const pct        = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+    const pct        = target > 0 ? Math.round((raised / target) * 100) : 0;
 
     switch (key) {
       case 'target':         return target    ? this.formatAmount(target) : '—';

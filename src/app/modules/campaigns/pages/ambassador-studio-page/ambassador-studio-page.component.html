@@ -133,7 +133,7 @@
               <div class="preview-goal-label">היעד שלי</div>
               <div class="preview-goal-amount">₪{{ draft.goalAmount | number }}</div>
               <div class="preview-bar">
-                <div class="preview-bar-fill" [style.width.%]="goalPct(amb)"></div>
+                <div class="preview-bar-fill" [style.width.%]="goalPct(amb) > 100 ? 100 : goalPct(amb)"></div>
               </div>
               <div class="preview-goal-pct">{{ goalPct(amb) }}% הושג</div>
             </div>
