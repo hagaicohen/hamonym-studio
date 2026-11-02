@@ -99,8 +99,56 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   initError = false;
 
   private transactionStarted = false;
+  validationError = '';
+  submissionBlocked = false;
+  private fieldValidation: { cardNumber: boolean | null; cvv: boolean | null; finish: (valid: boolean) => void } | null = null;
+
+  private isCardcomMessage(event: MessageEvent): boolean {
+    return event.origin === 'https://secure.cardcom.solutions' &&
+      ['CardComMasterFrame', 'CardComCardNumber', 'CardComCvv'].some(id =>
+        (document.getElementById(id) as HTMLIFrameElement | null)?.contentWindow === event.source);
+  }
+
+  private validateSecureFields(master: Window): Promise<boolean> {
+    this.validationError = '';
+    return new Promise(resolve => {
+      const finish = (valid: boolean) => {
+        clearTimeout(timer); this.fieldValidation = null; resolve(valid);
+      };
+      const timer = setTimeout(() => {
+        this.validationError = 'לא ניתן לאמת את פרטי הכרטיס כרגע. נסו שוב.';
+        finish(false);
+      }, 3000);
+      this.fieldValidation = { cardNumber: null, cvv: null, finish };
+      master.postMessage({ action: 'validateCardNumber' }, 'https://secure.cardcom.solutions');
+      master.postMessage({ action: 'validateCvv' }, 'https://secure.cardcom.solutions');
+    });
+  }
 
   private boundMessageHandler = this.onMessage.bind(this);
+
+  // Only provider-classified input errors and exact SDK rejection messages
+  // unlock retry. Never render raw provider text (it can contain sensitive data).
+  private applyProviderFailure(msg: any): void {
+    const current = !msg.lowProfileCode || msg.lowProfileCode === this.lowProfileId;
+    const messages = Array.isArray(msg.message) ? msg.message : [msg.message ?? msg.Description];
+    const text = messages.length === 1 && typeof messages[0] === 'string'
+      ? messages[0].trim().toLowerCase() : '';
+    const inputMessages: Record<string, string> = {
+      'מספר כרטיס לא תקין': 'מספר הכרטיס אינו מלא או אינו תקין. יש להשלים את כל הספרות ולבדוק את המספר.',
+      'invalid card number': 'מספר הכרטיס אינו מלא או אינו תקין. יש להשלים את כל הספרות ולבדוק את המספר.',
+      'תאריך תוקף שגוי': 'תוקף הכרטיס אינו תקין. בדקו את החודש והשנה ונסו שוב.',
+      'שם בעל הכרטיס - שדה חובה': 'יש למלא את שם בעל הכרטיס ולנסות שוב.',
+    };
+    const knownInput = current && Number(msg.ResponseCode) === 400 ? inputMessages[text] : undefined;
+    const authenticationRejected = current && Number(msg.ResponseCode) === 333 && text === '3ds אימות נכשל';
+    this.submissionBlocked = !!knownInput || authenticationRejected || (current && msg.IsInputError === true);
+    this.validationError = knownInput || (authenticationRejected
+      ? 'אימות התשלום נדחה. אפשר לבדוק את פרטי הכרטיס ולנסות שוב.'
+      : current && msg.IsInputError === true
+      ? 'פרטי האשראי אינם תקינים. בדקו את מספר הכרטיס, התוקף וה־CVV.'
+      : 'לא התקבל אישור סופי לתשלום. בודקים את מצב העסקה; אין לשלם שוב בשלב זה.');
+  }
 
   // ── Explicit lifecycle (Stage 1 hardening, 2026-09-27) ──────────────────
   // Carries over the fix proven in the isolated OpenFields POC. Root cause,
@@ -200,6 +248,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
+    this.fieldValidation?.finish(false);
     // Invalidates every in-flight callback/timer belonging to this
     // instance (iframe load handlers, postMessage handler checks, the fail
     // timer) so a destroyed instance can never mutate state a future
@@ -351,9 +400,14 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
       return false;
     }
 
-    if (this.transactionStarted) {
+    if (this.transactionStarted || this.fieldValidation) {
       return false;
     }
+
+    this.submissionBlocked = true;
+    const secureMaster = (document.getElementById('CardComMasterFrame') as HTMLIFrameElement | null)?.contentWindow;
+    if (!secureMaster || !await this.validateSecureFields(secureMaster)) return false;
+    this.submissionBlocked = false;
 
     return new Promise((resolve) => {
       const expirationMonth = (
@@ -387,7 +441,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
       }, 15000);
 
       const listener = (event: MessageEvent) => {
-        if (!event?.data) {
+        if (!event?.data || !this.isCardcomMessage(event)) {
           return;
         }
 
@@ -401,6 +455,13 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
           window.removeEventListener('message', listener);
 
           const result = msg.data;
+          if (result?.IsSuccess !== true) {
+            this.applyProviderFailure({ ...result, lowProfileCode: msg.lowProfileCode });
+            // A rejected submission must never save a billing token or
+            // advance the registration wizard as though it succeeded.
+            resolve(false);
+            return;
+          }
 
           const internalDealNumber =
             result?.InternalDealNumber || result?.TranzactionId || null;
@@ -458,14 +519,15 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
           return;
         }
 
-        if (msg?.action === 'HandleEror') {
+        if (msg?.action === 'HandleEror' || msg?.action === 'HandleError') {
           clearTimeout(timeout);
 
           this.transactionStarted = false;
 
           window.removeEventListener('message', listener);
 
-          console.error('CARDCOM ERROR', msg);
+          this.applyProviderFailure(msg);
+          console.error('CARDCOM ERROR', { isInputError: msg.IsInputError === true });
 
           resolve(false);
 
@@ -510,6 +572,26 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   // all go through startInit() instead of touching this listener).
   private onMessage(event: MessageEvent): void {
     const action = event?.data?.action;
+
+    if (action === 'handleValidations' && this.isCardcomMessage(event)) {
+      if (event.data.lowProfileCode && event.data.lowProfileCode !== this.lowProfileId) return;
+      const pending = this.fieldValidation;
+      const field: unknown = event.data.field;
+      const isValid: unknown = event.data.isValid;
+      if ((field !== 'cardNumber' && field !== 'cvv') || typeof isValid !== 'boolean') return;
+      // OpenFields also sends validation on blur, outside tokenize(). Do
+      // not discard that feedback, or the donor never sees the field error.
+      // Once a transaction is in flight, field events cannot unlock payment.
+      if (this.transactionStarted) return;
+      if (pending) pending[field] = isValid;
+      if (!isValid) {
+        this.validationError = field === 'cardNumber'
+          ? 'מספר הכרטיס אינו מלא או אינו תקין. יש להשלים את כל הספרות ולבדוק את המספר.'
+          : 'קוד ה־CVV אינו מלא או אינו תקין.';
+        pending?.finish(false);
+      } else if (pending?.cardNumber === true && pending.cvv === true) pending.finish(true);
+      return;
+    }
 
     if (action === 'ready') {
       this.masterReady = true;

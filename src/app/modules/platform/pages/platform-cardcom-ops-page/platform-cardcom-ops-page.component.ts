@@ -1,3 +1,4 @@
+import { OfficialReceiptActionComponent } from '../../../campaigns/shared/components/official-receipt-action/official-receipt-action.component';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -198,7 +199,7 @@ const DONATION_STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
+  imports: [OfficialReceiptActionComponent, CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })

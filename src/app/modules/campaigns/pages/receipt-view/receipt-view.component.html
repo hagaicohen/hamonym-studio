@@ -1,65 +1,13 @@
-<div class="receipt-page" dir="rtl">
-
-  @if (loading) {
-    <div class="receipt-loading">
-      <div class="loading-spinner"></div>
-    </div>
-  } @else if (notFound) {
-    <div class="receipt-card receipt-not-found">
-      <p>אישור התרומה לא נמצא</p>
-      <a routerLink="/">חזרה לעמוד הבית</a>
-    </div>
-  } @else if (receipt) {
-    <div class="receipt-card">
-
-      <div class="receipt-actions no-print">
-        <button class="print-btn" (click)="print()">🖨 הדפסה / שמירה כ-PDF</button>
-      </div>
-
-      <div class="receipt-header">
-        @if (receipt.entity_logo) {
-          <img class="receipt-logo" [src]="receipt.entity_logo" [alt]="receipt.entity_name" />
-        }
-        <div class="receipt-entity-name">{{ receipt.legal_name || receipt.entity_name }}</div>
-      </div>
-
-      <div class="receipt-title-row">
-        <h1>אישור תרומה</h1>
-        <span class="receipt-number">מס' {{ receipt.receipt_number }}</span>
-      </div>
-
-      <div class="receipt-details">
-        <div class="receipt-row">
-          <span class="receipt-label">תאריך</span>
-          <span class="receipt-value">{{ formattedDate }}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">שם התורם/ת</span>
-          <span class="receipt-value">{{ receipt.donor_name }}</span>
-        </div>
-        <div class="receipt-row" *ngIf="receipt.donor_email">
-          <span class="receipt-label">אימייל</span>
-          <span class="receipt-value">{{ receipt.donor_email }}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">קמפיין</span>
-          <span class="receipt-value">{{ receipt.campaign_title }}</span>
-        </div>
-        <div class="receipt-row receipt-row--amount">
-          <span class="receipt-label">סכום התרומה</span>
-          <span class="receipt-value receipt-amount">{{ formattedAmount }}</span>
-        </div>
-        <div class="receipt-row" *ngIf="receipt.note">
-          <span class="receipt-label">הקדשה</span>
-          <span class="receipt-value">{{ receipt.note }}</span>
-        </div>
-      </div>
-
-      <p class="receipt-footer-note">
-        מסמך זה מהווה אישור על קבלת תרומה במערכת המונים, ואינו קבלה או מסמך חשבונאי רשמי.
-      </p>
-
-    </div>
+<main class="official-receipt" dir="rtl">
+  <h1>קבלה רשמית</h1>
+  @if (loading) { <p role="status">טוען קבלה…</p> }
+  @else if (pdfUrl) {
+    <a [href]="downloadUrl" download="cardcom-receipt.pdf">הורדת הקבלה</a>
+    <iframe [src]="pdfUrl" title="הקבלה הרשמית של CardCom"></iframe>
+  } @else {
+    <p role="status">{{ loginRequired ? 'יש להתחבר לחשבון ולאמת בעלות על הדוא״ל כדי לצפות בקבלה.' : 'הקבלה טרם זמינה' }}</p>
+    @if (loginRequired) { <a routerLink="/login" [queryParams]="{returnUrl: returnUrl}">כניסה להמונים</a> }
+    @else { <button type="button" (click)="load()">בדוק שוב</button> }
   }
-
-</div>
+  <a routerLink="/my-donations">התרומות שלי</a>
+</main>

@@ -101,6 +101,7 @@
                   קמפיין<span class="sort-arrow">{{ sortField === 'campaign' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
+              <th>קבלה</th>
               <th class="sortable" [class.active]="sortField === 'amount'" (click)="sortBy('amount')">
                 סכום<span class="sort-arrow">{{ sortField === 'amount' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
               </th>
@@ -121,9 +122,9 @@
               <tr class="don-row" (click)="openDrawer(d)">
                 <td class="don-name">
                   {{ donorDisplay(d) }}
-                  @if (d.is_mock) { <span class="badge-test">TEST</span> }
                 </td>
                 @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ d.campaign_title }}</td> }
+                <td><app-official-receipt-action [receiptId]="d.receipt_id" /></td>
                 <td class="don-amount">{{ fmtMoney(d.amount) }}</td>
                 @if (isColVisible('date'))   { <td class="don-date ltr-col">{{ fmtDate(d.completed_at ?? d.created_at) }}</td> }
                 @if (isColVisible('status')) { <td class="col-secondary"><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td> }
@@ -164,6 +165,7 @@
     </div>
 
     <div class="drawer-body">
+      <app-official-receipt-action [receiptId]="selected.receipt_id" />
 
       <div class="drawer-section">
         <div class="drawer-row">
@@ -226,12 +228,6 @@
           <div class="drawer-row">
             <span class="dr-label">סיבת כישלון</span>
             <span class="dr-value danger">{{ selected.failure_reason }}</span>
-          </div>
-        }
-        @if (selected.is_mock) {
-          <div class="drawer-row">
-            <span class="dr-label">סוג</span>
-            <span class="dr-value"><span class="badge-test">תשלום TEST</span></span>
           </div>
         }
       </div>

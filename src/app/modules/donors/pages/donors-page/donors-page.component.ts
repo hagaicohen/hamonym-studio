@@ -20,7 +20,6 @@ interface DonorRow {
   phone:            string | null;
   display_name:     string;
   has_anonymous:    boolean;
-  has_mock:         boolean;
   total_donated:    number;
   donation_count:   number;
   first_donation_at: string;

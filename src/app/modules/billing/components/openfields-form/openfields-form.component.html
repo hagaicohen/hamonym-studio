@@ -1,4 +1,7 @@
 <div class="billing-form">
+  @if (validationError) {
+    <div class="openfields-init-error" role="alert" aria-live="polite"><p>{{ validationError }}</p></div>
+  }
   <!-- MASTER -->
 
   <iframe

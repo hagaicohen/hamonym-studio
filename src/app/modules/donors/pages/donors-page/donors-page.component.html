@@ -101,7 +101,6 @@
               <tr class="don-row" (click)="openDrawer(d)">
                 <td class="don-name">
                   {{ d.display_name }}
-                  @if (d.has_mock) { <span class="badge-test">TEST</span> }
                 </td>
                 @if (isColVisible('email')) { <td class="don-campaign ltr-col col-secondary">{{ d.email || '—' }}</td> }
                 @if (isColVisible('phone')) { <td class="don-campaign ltr-col col-secondary">{{ d.phone || '—' }}</td> }
@@ -194,12 +193,6 @@
           <span class="dr-label">תרומה אחרונה</span>
           <span class="dr-value">{{ fmtDate(selected.last_donation_at) }}</span>
         </div>
-        @if (selected.has_mock) {
-          <div class="drawer-row">
-            <span class="dr-label">סוג</span>
-            <span class="dr-value"><span class="badge-test">כולל תשלום TEST</span></span>
-          </div>
-        }
       </div>
 
     </div>

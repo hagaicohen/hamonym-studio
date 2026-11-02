@@ -1,5 +1,48 @@
 :host { display: block; }
 
+.md-page .md-header, .md-page .md-hero, .md-page .md-kpi-row,
+.md-page .md-recurring-list, .md-page .md-section-title { max-width: 1120px; }
+.md-donations-panel {max-width:1120px;margin:0 auto;background:white;border:1px solid #e8edf3;border-radius:14px;overflow:hidden;}
+.md-table-heading {display:flex;align-items:center;justify-content:space-between;padding:18px 22px 8px;gap:12px;}
+.md-table-heading h2 {margin:0;font-size:18px;color:#17213b;}
+.md-row-number {width:40px;text-align:center!important;color:#94a0b3;font-size:12px;font-variant-numeric:tabular-nums;}
+.md-status-filter {min-width:150px;}
+.md-select-wrap {position:relative;display:block;}
+.md-status-filter select {appearance:none;cursor:pointer;padding-inline-end:36px!important;font-weight:500;background:#fcfbff!important;border-color:var(--hm-control-border);transition:border-color .15s,background-color .15s;}
+.md-status-filter select:hover {border-color:var(--hm-control-focus);background:#f7f4ff!important;}
+.md-select-wrap svg {position:absolute;inset-inline-end:12px;top:13px;color:#9486b5;pointer-events:none;}
+.md-donations-table .md-status-badge {display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:64px;padding:6px 11px;border:1px solid transparent;border-radius:8px;font-size:12px;font-weight:600;line-height:1.2;}
+.md-donations-table .md-status-badge::before {content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.md-donations-table .md-paid {border-color:#c7ebd9;}
+.md-donations-table .md-pending {border-color:#f1e6bb;}
+.md-donations-table .md-failed {border-color:#f4d5da;}
+.md-filters {display:flex;align-items:end;gap:12px;padding:12px 22px 20px;}
+.md-filters label {display:flex;flex-direction:column;gap:6px;font-size:12px;color:#64748b;}
+.md-search {flex:1;}
+.md-filters input,.md-filters select {box-sizing:border-box;width:100%;height: var(--hm-control-height);padding:8px 12px;border:1px solid #dde4ef;border-radius: var(--hm-control-radius);background:#fff;color:#26324b;font:inherit;}
+
+.md-clear {height:40px;border:0;background:transparent;color:#7d7195;font:inherit;font-size:12px;cursor:pointer;}
+.md-clear:disabled {opacity:.45;cursor:default;}
+.md-table-scroll {overflow-x:auto;}
+.md-donations-table {width:100%;border-collapse:collapse;text-align:right;font-size:13px;}
+.md-donations-table th {background:#f8f9fd;color:#78859b;font-weight:600;padding:13px 18px;white-space:nowrap;}
+.md-donations-table th button {border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:0;}
+.md-donations-table td {padding:14px 18px;border-top:1px solid #eef1f7;vertical-align:middle;}
+.md-donations-table a {color:#583cd6;text-decoration:none;font-weight:600;}
+.md-donations-table a:hover {text-decoration:underline;}
+.md-donations-table small {display:block;margin-top:4px;color:#8490a4;max-width:260px;overflow-wrap:anywhere;}
+.md-amount {white-space:nowrap;font-weight:700;color:#26324b;}
+.md-date {white-space:nowrap;color:#74819a;}
+.md-paid {background:#dcfce7!important;color:#168453!important;}
+.md-failed {background:#fff0f1!important;color:#db4558!important;}
+.md-pending {background:#fff8dc!important;color:#a07612!important;}
+.md-no-results {text-align:center;padding:32px!important;color:#7b879e;}
+.md-pagination {display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid #eef1f7;color:#8490a4;font-size:12px;}
+.md-pagination button {margin-inline-start:8px;padding:7px 13px;border:1px solid #e1e7f0;border-radius:7px;background:#fff;color:#583cd6;cursor:pointer;}
+.md-pagination button:disabled {color:#abb3c0;cursor:default;}
+.md-verification-message {max-width:1120px;margin:0 auto 16px;font-size:13px;color:#64748b;}
+@media(max-width:640px) {:host .md-page {padding:18px 12px 40px;}.md-filters {flex-wrap:wrap;padding:12px;}.md-search {flex-basis:100%;}.md-table-heading {padding:16px 12px 8px;}.md-donations-table {min-width:720px;}.md-pagination {padding:12px;}.md-donations-table td,.md-donations-table th {padding:12px;}}
+
 .md-page {
   min-height: 100vh;
   background: #f8f9ff;

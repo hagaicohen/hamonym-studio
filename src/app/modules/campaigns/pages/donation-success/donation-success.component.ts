@@ -1,8 +1,10 @@
+import { DonorRegistrationInviteComponent } from '../../shared/components/donor-registration-invite/donor-registration-invite.component';
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
+import { timeout } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
@@ -28,7 +30,7 @@ interface DonationResult {
 @Component({
   selector: 'app-donation-success',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [DonorRegistrationInviteComponent, CommonModule, RouterModule],
   templateUrl: './donation-success.component.html',
   styleUrls: ['./donation-success.component.css'],
 })
@@ -106,6 +108,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
 
     if (this.ref) {
       this.http.get<DonationResult>(`${environment.apiUrl}/api/donations/public/${this.ref}`)
+        .pipe(timeout(15000))
         .subscribe({
           next: (d) => {
             this.donation = d;
@@ -134,7 +137,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
 
   private pollQuietStatus(): void {
     if (!this.ref) return;
-    this.donationService.getStatus(this.ref).subscribe({
+    this.donationService.getStatus(this.ref).pipe(timeout(15000)).subscribe({
       next: (res) => {
         if (this.donation) this.donation = { ...this.donation, status: res.status, receipt_id: res.receipt_id };
         if (res.status === 'paid') { this.recordConfirmedSuccess(); return; }

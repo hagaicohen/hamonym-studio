@@ -97,17 +97,9 @@ export interface DonationResult {
 }
 
 export interface Receipt {
+  available: boolean;
+  documents: Array<{ id: string; document_number: number; document_type: string; document_status: string; issued_at: string | null }>;
   id: string;
-  receipt_number: string;
-  amount: string | number;
-  donor_name: string;
-  donor_email: string;
-  issued_at: string;
-  campaign_title: string;
-  entity_name: string;
-  entity_logo: string | null;
-  legal_name: string | null;
-  note?: string | null;
 }
 
 // Checkout V2 OpenFields payment-verification polling (2026-09-27) — the
@@ -122,6 +114,7 @@ export interface DonationStatusResult {
 }
 
 export interface MyDonation {
+  status: string;
   id: string;
   amount: string | number;
   completed_at: string;
@@ -183,7 +176,13 @@ export class DonationService {
   }
 
   getReceipt(id: string): Observable<Receipt> {
-    return this.http.get<Receipt>(`${this.apiUrl}/receipt/${id}`);
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    return this.http.get<Receipt>(`${this.apiUrl}/receipt/${encodeURIComponent(id)}`, { headers });
+  }
+
+  getReceiptPdf(id: string): Observable<Blob> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    return this.http.get(`${this.apiUrl}/receipt/${encodeURIComponent(id)}/pdf`, { headers, responseType: 'blob' });
   }
 
   getMyDonations(): Observable<MyDonation[]> {

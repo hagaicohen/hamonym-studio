@@ -289,10 +289,7 @@
             <div class="cv2-success-icon">❤️</div>
             <h2 class="cv2-success-title">תודה רבה!</h2>
             <p class="cv2-success-text">{{ successMessage }}</p>
-            <a class="cv2-success-receipt-link" *ngIf="receiptId" [routerLink]="'/receipts/' + receiptId">
-              🧾 צפייה בקבלה
-            </a>
-            <p class="cv2-success-receipt-note" *ngIf="!receiptId">הקבלה תישלח אליך למייל.</p>
+            <app-donor-registration-invite [email]="email" [name]="name" />
           </div>
         </ng-template>
       </ng-container>

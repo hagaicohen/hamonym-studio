@@ -97,7 +97,7 @@
               @if (visibleDonationsColumns.has('amount')) { <th class="sortable" (click)="sortDonationsBy('amount')">סכום{{ donationsSortIndicator('amount') }}</th> }
               @if (visibleDonationsColumns.has('type')) { <th class="sortable" (click)="sortDonationsBy('type')">סוג{{ donationsSortIndicator('type') }}</th> }
               @if (visibleDonationsColumns.has('status')) { <th class="sortable" (click)="sortDonationsBy('status')">סטטוס{{ donationsSortIndicator('status') }}</th> }
-              <th scope="col">אמצעי תשלום</th><th scope="col">פרטים</th>
+              <th scope="col">אמצעי תשלום</th><th scope="col">קבלה</th><th scope="col">פרטים</th>
             </tr>
           </thead>
           <tbody>
@@ -126,7 +126,7 @@
                     </span>
                   </td>
                 }
-                <td>{{ donationPaymentLabel(donation) }}</td><td><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openDonation(donation)">פרטים</button></td>
+                <td>{{ donationPaymentLabel(donation) }}</td><td><app-official-receipt-action [receiptId]="donation.receipt_id" [buttonMode]="true" /></td><td><button class="ops-btn ops-btn-secondary ops-btn-sm" (click)="openDonation(donation)">פרטים</button></td>
               </tr>
             }
           </tbody>
@@ -144,7 +144,7 @@
   @if (selectedDonation; as donation) { <app-admin-details-drawer [heading]="'פרטי תרומה · ' + money(donation.amount)" (closed)="closeDonation()">
     <dl class="detail-grid"><dt>תורם</dt><dd>{{ donation.is_anonymous ? 'אנונימי' : donation.donor_name || 'ללא שם' }}</dd><dt>עמותה</dt><dd><a [routerLink]="['/platform/organizations', donation.entity_id]">{{ donation.entity_name }}</a></dd><dt>קמפיין</dt><dd><a routerLink="/platform/campaigns" [queryParams]="{ search: donation.campaign_title }">{{ donation.campaign_title }}</a></dd><dt>סכום</dt><dd>{{ money(donation.amount) }}</dd><dt>סוג</dt><dd>{{ donation.is_recurring ? 'חודשית' : 'חד־פעמית' }}</dd><dt>תוצאה</dt><dd>{{ donationStatusLabel(donation.status) }}</dd><dt>מועד יצירה</dt><dd dir="ltr">{{ fmtDateTime(donation.created_at) }}</dd><dt>מועד תשלום מאושר</dt><dd dir="ltr">{{ donation.status === 'paid' ? fmtDateTime(donation.completed_at) : '—' }}</dd><dt>אמצעי תשלום</dt><dd>{{ donation.payment_method ? donationPaymentLabel(donation) : 'לא זמין בנתוני התרומה' }}</dd></dl>
     @if (donation.status === 'failed') { <section class="detail-section"><h3>סיבת הכישלון</h3><p>{{ failureExplanation(donation) }}</p>@if (donation.failure_diagnostic; as diagnostic) { <p>שלב: אתחול התשלום ב־CardCom</p>@if (diagnostic.failedAt) { <p>מועד הכשל: <bdi>{{ fmtDateTime(diagnostic.failedAt) }}</bdi></p> }@if (diagnostic.providerCode !== null) { <p>קוד ספק: <bdi>{{ diagnostic.providerCode }}</bdi></p> } }</section> }
-    @if (donationDetailLoading) { <p role="status">טוען פרטי קבלה…</p> } @else if (donationDetailError) { <p role="alert">{{ donationDetailError }} <button class="donation-link" (click)="openDonation(donation)">נסה שוב</button></p> } @else if (receiptId) { <p><a [routerLink]="['/receipts', receiptId]" target="_blank" rel="noopener">פתח קבלה ↗</a></p> } @else { <p class="summary-note">לא נמצאה קבלה לתרומה זו.</p> }
+    @if (donationDetailLoading) { <p role="status">טוען פרטי קבלה…</p> } @else if (donationDetailError) { <p role="alert">{{ donationDetailError }} <button class="donation-link" (click)="openDonation(donation)">נסה שוב</button></p> } @else { <app-official-receipt-action [receiptId]="receiptId" /> }
     <section class="detail-section"><h3>היסטוריה זמינה</h3><p>נוצרה: {{ fmtDateTime(donation.created_at) }}</p>@if (donation.completed_at && donation.status === 'paid') { <p>שולמה: {{ fmtDateTime(donation.completed_at) }}</p> }<p class="summary-note">תוצאות הספק והיסטוריית הניסיונות המלאה אינן נכללות ב־API הקיים.</p></section>
     <details class="detail-section"><summary>פרטים מתקדמים</summary><p>מזהה תרומה: <bdi>{{ donation.id }}</bdi></p></details>
   </app-admin-details-drawer> }

@@ -1,3 +1,4 @@
+import { OfficialReceiptActionComponent } from '../../../campaigns/shared/components/official-receipt-action/official-receipt-action.component';
 import { Component, OnInit, OnDestroy, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -32,6 +33,7 @@ interface Kpi {
 interface Campaign { id: string; title: string; }
 
 interface Donation {
+  receipt_id?: string | null;
   id:             string;
   amount:         number;
   donor_name:     string;
@@ -42,7 +44,6 @@ interface Donation {
   created_at:     string;
   is_anonymous:   boolean;
   failure_reason: string | null;
-  is_mock:        boolean;
   campaign_title: string;
   campaign_slug:  string;
   note?: string | null;
@@ -63,7 +64,7 @@ const COLUMNS_STORAGE_KEY = 'donations-hidden-columns';
 @Component({
   selector: 'app-donations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [OfficialReceiptActionComponent, CommonModule, FormsModule],
   templateUrl: './donations-page.component.html',
   styleUrl: './donations-page.component.css',
 })

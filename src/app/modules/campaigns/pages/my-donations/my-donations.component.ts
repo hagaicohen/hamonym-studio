@@ -1,6 +1,8 @@
+import { OfficialReceiptActionComponent } from '../../shared/components/official-receipt-action/official-receipt-action.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DonationService, MyDonation } from '../../services/donation.service';
 import {
   RecurringService,
@@ -9,11 +11,12 @@ import {
   recurringStatusLabel,
 } from '../../services/recurring.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { TopbarComponent } from '../../../../core/layout/topbar/topbar.component';
 
 @Component({
   selector: 'app-my-donations',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [OfficialReceiptActionComponent, CommonModule, FormsModule, RouterLink, TopbarComponent],
   templateUrl: './my-donations.component.html',
   styleUrl: './my-donations.component.css',
 })
@@ -22,6 +25,25 @@ export class MyDonationsComponent implements OnInit {
   private recurringService = inject(RecurringService);
   private router = inject(Router);
   private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  verificationBusy = false;
+  verificationMessage = '';
+
+  requestVerification(): void {
+    if (this.verificationBusy) return;
+    this.verificationBusy = true;
+    this.auth.requestDonationVerification().subscribe({
+      next: () => { this.verificationBusy = false; this.verificationMessage = 'שלחנו קישור אימות לדוא״ל של החשבון. לאחר האימות יופיעו התרומות המשויכות.'; },
+      error: error => {
+        this.verificationBusy = false;
+        this.verificationMessage = error.status === 429 ? 'יש להמתין דקה לפני שליחה נוספת.' : 'לא ניתן לשלוח דוא״ל אימות כרגע. נסו שוב מאוחר יותר.';
+      },
+    });
+  }
+
+  donationStatusLabel(status: string): string {
+    return ({ paid: 'שולם', pending: 'ממתין', failed: 'נכשל' } as Record<string, string>)[status] || status;
+  }
 
   get greetingFirstName(): string | null {
     const fullName = this.auth.currentUser()?.full_name?.trim();
@@ -29,6 +51,30 @@ export class MyDonationsComponent implements OnInit {
   }
 
   donations: MyDonation[] = [];
+  search = '';
+  statusFilter = '';
+  sortField: 'date' | 'amount' | 'campaign' = 'date';
+  sortDescending = true;
+  page = 1;
+  readonly pageSize = 10;
+  get filteredDonations(): MyDonation[] {
+    const query = this.search.trim().toLocaleLowerCase('he');
+    const rows = this.donations.filter(d => (!this.statusFilter || d.status === this.statusFilter) &&
+      (!query || `${d.campaign_title} ${d.entity_name} ${d.amount} ${d.note || ''}`.toLocaleLowerCase('he').includes(query)));
+    return rows.sort((a, b) => {
+      const diff = this.sortField === 'amount' ? Number(a.amount) - Number(b.amount)
+        : this.sortField === 'campaign' ? a.campaign_title.localeCompare(b.campaign_title, 'he')
+        : Date.parse(a.completed_at || a.created_at) - Date.parse(b.completed_at || b.created_at);
+      return this.sortDescending ? -diff : diff;
+    });
+  }
+  get pageCount(): number { return Math.max(1, Math.ceil(this.filteredDonations.length / this.pageSize)); }
+  get visibleDonations(): MyDonation[] { return this.filteredDonations.slice((this.page - 1) * this.pageSize, this.page * this.pageSize); }
+  sortBy(field: 'date' | 'amount' | 'campaign'): void {
+    this.sortDescending = this.sortField === field ? !this.sortDescending : field !== 'campaign';
+    this.sortField = field; this.page = 1;
+  }
+  sortIndicator(field: string): string { return this.sortField === field ? (this.sortDescending ? ' ↓' : ' ↑') : ''; }
   loading = true;
   error: string | null = null;
 
@@ -51,14 +97,36 @@ export class MyDonationsComponent implements OnInit {
   actionError: string | null = null;
 
   get totalDonated(): number {
-    return this.donations.reduce((sum, d) => sum + Number(d.amount), 0);
+    return this.donations.filter(d => d.status === 'paid').reduce((sum, d) => sum + Number(d.amount), 0);
   }
 
   get campaignsSupported(): number {
-    return new Set(this.donations.map((d) => d.campaign_slug)).size;
+    return new Set(this.donations.filter(d => d.status === 'paid').map((d) => d.campaign_slug)).size;
   }
 
   ngOnInit(): void {
+    const token = this.route.snapshot.queryParamMap.get('verification');
+    if (token && !this.auth.getToken()) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/my-donations?verification=' + encodeURIComponent(token) } });
+      return;
+    }
+    const requestEmail = this.route.snapshot.queryParamMap.get('verifyEmail') === '1';
+    if (token || requestEmail) {
+      void this.router.navigate([], { relativeTo: this.route, queryParams: { verification: null, verifyEmail: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
+    if (token) {
+      this.verificationBusy = true;
+      this.auth.verifyDonationOwnership(token).subscribe({
+        next: () => { this.verificationBusy = false; this.verificationMessage = 'הדוא״ל אומת והתרומות שויכו לחשבון.'; this.loadDonations(); this.loadRecurring(); },
+        error: () => { this.verificationBusy = false; this.verificationMessage = 'קישור האימות אינו תקף או פג תוקפו. אפשר לבקש קישור חדש.'; this.loadDonations(); this.loadRecurring(); },
+      });
+      return;
+    }
+    this.loadDonations(); this.loadRecurring();
+    if (requestEmail) this.requestVerification();
+  }
+
+  private loadDonations(): void {
     this.donationService.getMyDonations().subscribe({
       next: (donations) => {
         this.donations = donations;
@@ -74,7 +142,6 @@ export class MyDonationsComponent implements OnInit {
       },
     });
 
-    this.loadRecurring();
   }
 
   private loadRecurring(): void {
@@ -168,7 +235,7 @@ export class MyDonationsComponent implements OnInit {
   }
 
   fmtMoney(n: string | number): string {
-    return '₪' + Math.round(Number(n) || 0).toLocaleString('he-IL');
+    return '₪' + (Number(n) || 0).toLocaleString('he-IL', { maximumFractionDigits: 2 });
   }
 
   fmtDate(iso: string): string {

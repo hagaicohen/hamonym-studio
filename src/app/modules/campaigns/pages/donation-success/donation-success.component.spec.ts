@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
@@ -32,6 +32,16 @@ describe('Hosted donation return – verified result only', () => {
     });
   });
   afterEach(() => TestBed.inject(HttpTestingController).verify());
+  it('stops loading when the status API never responds, without claiming success', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DonationSuccessComponent); fixture.detectChanges();
+    const request = TestBed.inject(HttpTestingController).expectOne(`${environment.apiUrl}/api/donations/public/d1`);
+    tick(15000); fixture.detectChanges();
+    expect(request.cancelled).toBeTrue();
+    expect(fixture.componentInstance.loading).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('אין לבצע תשלום נוסף');
+    expect(track).not.toHaveBeenCalled();
+    fixture.destroy();
+  }));
   for (const state of ['paid', 'failed', 'pending']) {
     it(`renders ${state} based on the backend, not the success URL`, () => {
       const fixture = TestBed.createComponent(DonationSuccessComponent); fixture.detectChanges();

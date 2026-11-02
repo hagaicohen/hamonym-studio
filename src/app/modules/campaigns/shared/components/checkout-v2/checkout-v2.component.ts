@@ -1,6 +1,8 @@
+import { DonorRegistrationInviteComponent } from '../donor-registration-invite/donor-registration-invite.component';
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostBinding, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { timeout } from 'rxjs';
 import { Router, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import {
@@ -66,7 +68,7 @@ import { OpenfieldsFormComponent } from '../../../../billing/components/openfiel
 @Component({
   selector: 'app-checkout-v2',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
+  imports: [DonorRegistrationInviteComponent, CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
   templateUrl: './checkout-v2.component.html',
   styleUrl: './checkout-v2.component.css',
 })
@@ -578,7 +580,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     if (!this.donationId || this.statusCheckInProgress || this.paymentState === 'paid') return;
     const donationId = this.donationId;
     this.statusCheckInProgress = true;
-    this.donationService.getStatus(donationId).subscribe({
+    this.donationService.getStatus(donationId).pipe(timeout(15000)).subscribe({
       next: (res) => {
         this.statusCheckInProgress = false;
         // Stale response for a donation this component has already moved
@@ -781,6 +783,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     // The boolean also represents timeout/transport errors. It cannot prove
     // a decline; only the backend's verified status determines the result.
     try { await this.openfieldsForm.tokenize(); } catch { /* Verify unknown outcomes below. */ }
+    if (this.openfieldsForm.submissionBlocked) {
+      this.paymentState = 'idle';
+      return;
+    }
     if (!this.donationId) return;
     this.startPaymentConfirmation();
   }

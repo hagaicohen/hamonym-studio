@@ -1,9 +1,6 @@
+<app-topbar [publicPage]="true" />
 <div class="md-page">
 
-  <div class="md-header">
-    <img src="/logo.png" alt="Hamonym" class="md-logo" />
-    <button class="md-logout" (click)="logout()">התנתקות</button>
-  </div>
 
   <div class="md-hero">
     @if (greetingFirstName) {
@@ -19,6 +16,8 @@
   } @else if (error) {
     <div class="md-error">{{ error }}</div>
   } @else {
+
+    @if (verificationMessage) { <p class="md-verification-message" role="status">{{ verificationMessage }}</p> }
 
     <div class="md-kpi-row">
       <div class="md-kpi-card">
@@ -119,9 +118,7 @@
                     <div class="md-recurring-charge-row">
                       <span class="md-charge-date">{{ fmtDate(charge.completed_at) }}</span>
                       <span class="md-charge-amount">{{ fmtMoney(charge.amount) }}</span>
-                      @if (charge.receipt_id) {
-                        <a class="md-charge-receipt" [routerLink]="['/receipts', charge.receipt_id]">קבלה</a>
-                      }
+                      <app-official-receipt-action [receiptId]="charge.receipt_id" [buttonMode]="true" />
                     </div>
                   }
                 }
@@ -139,28 +136,40 @@
         <a routerLink="/campaigns/discover">מצאו קמפיין לתרומה →</a>
       </div>
     } @else {
-      <div class="md-list">
-        @for (d of donations; track d.id) {
-          <div class="md-item">
-            @if (d.entity_logo) {
-              <img class="md-item-logo" [src]="d.entity_logo" alt="" />
-            } @else {
-              <div class="md-item-logo-placeholder">{{ d.entity_name.charAt(0) }}</div>
-            }
-            <div class="md-item-body">
-              <div class="md-item-campaign">{{ d.campaign_title }}</div>
-              <div class="md-item-entity">{{ d.entity_name }} · {{ fmtDate(d.completed_at) }}</div>
-              @if (d.note) {
-                <div class="md-item-note">{{ d.note }}</div>
-              }
-            </div>
-            <div class="md-item-amount">{{ fmtMoney(d.amount) }}</div>
-            @if (d.receipt_id) {
-              <a class="md-item-receipt" [routerLink]="['/receipts', d.receipt_id]">קבלה</a>
-            }
-          </div>
-        }
-      </div>
+      <section class="md-donations-panel" aria-label="התרומות שלי">
+        <div class="md-table-heading"><h2>התרומות שלי</h2></div>
+        <div class="md-filters">
+          <label class="md-search">חיפוש<input type="search" placeholder="חיפוש קמפיין, עמותה או סכום" [(ngModel)]="search" (ngModelChange)="page = 1" /></label>
+          <label class="md-status-filter">סטטוס<span class="md-select-wrap"><select [(ngModel)]="statusFilter" (ngModelChange)="page = 1"><option value="">כל הסטטוסים</option><option value="paid">שולם</option><option value="pending">ממתין</option><option value="failed">נכשל</option></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></label>
+          <button type="button" class="md-clear" (click)="search = ''; statusFilter = ''; page = 1" [disabled]="!search && !statusFilter">נקה סינון</button>
+        </div>
+        <div class="md-table-scroll" tabindex="0" role="region" aria-label="טבלת תרומות">
+          <table class="md-donations-table">
+            <thead><tr>
+              <th scope="col" class="md-row-number" aria-label="מספר שורה">#</th>
+              <th scope="col" [attr.aria-sort]="sortField === 'date' ? (sortDescending ? 'descending' : 'ascending') : 'none'"><button (click)="sortBy('date')">תאריך{{ sortIndicator('date') }}</button></th>
+              <th scope="col" [attr.aria-sort]="sortField === 'campaign' ? (sortDescending ? 'descending' : 'ascending') : 'none'"><button (click)="sortBy('campaign')">קמפיין{{ sortIndicator('campaign') }}</button></th>
+              <th scope="col">עמותה</th>
+              <th scope="col" [attr.aria-sort]="sortField === 'amount' ? (sortDescending ? 'descending' : 'ascending') : 'none'"><button (click)="sortBy('amount')">סכום{{ sortIndicator('amount') }}</button></th>
+              <th scope="col">סטטוס</th><th scope="col">קבלה</th>
+            </tr></thead>
+            <tbody>
+              @for (d of visibleDonations; track d.id; let rowIndex = $index) {
+                <tr>
+                  <td class="md-row-number">{{ (page - 1) * pageSize + rowIndex + 1 }}</td>
+                  <td class="md-date"><bdi>{{ fmtDate(d.completed_at || d.created_at) }}</bdi></td>
+                  <td><a [routerLink]="['/campaigns', d.campaign_slug, 'view']">{{ d.campaign_title }}</a>@if (d.note) { <small>{{ d.note }}</small> }</td>
+                  <td>{{ d.entity_name }}</td>
+                  <td class="md-amount">{{ fmtMoney(d.amount) }}</td>
+                  <td><span class="md-status-badge" [class.md-paid]="d.status === 'paid'" [class.md-failed]="d.status === 'failed'" [class.md-pending]="d.status === 'pending'">{{ donationStatusLabel(d.status) }}</span></td>
+                  <td><app-official-receipt-action [receiptId]="d.receipt_id" [buttonMode]="true" /></td>
+                </tr>
+              } @empty { <tr><td colspan="7" class="md-no-results">לא נמצאו תרומות התואמות לחיפוש</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        <div class="md-pagination"><span>עמוד {{ page }} מתוך {{ pageCount }}</span><div><button type="button" [disabled]="page <= 1" (click)="page = page - 1">הקודם</button><button type="button" [disabled]="page >= pageCount" (click)="page = page + 1">הבא</button></div></div>
+      </section>
     }
   }
 
