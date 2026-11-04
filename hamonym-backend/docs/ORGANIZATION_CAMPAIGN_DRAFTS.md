@@ -37,3 +37,32 @@ HTTP. Run `scripts/test-organization-campaign-drafts-postgres.cjs` with
 `HAMONYM_ORG_LIFECYCLE_BACKEND` pointing to that worktree, plus the existing
 lifecycle PostgreSQL runner and Angular organization lifecycle specs. Shared
 pilot access was read-only; no financial provider or live job was invoked.
+
+## Incomplete registrations are not organizations (2026-11-04)
+
+This supersedes the paragraph above for status `draft` only.
+
+- `entities.status = 'draft'` means the registration is incomplete. Such an
+  entity cannot have campaigns, not even campaign drafts.
+  `campaigns.service#createCampaign` refuses it with 409
+  `ORGANIZATION_REGISTRATION_INCOMPLETE` after the membership check. Creating
+  and editing campaign drafts starts once the registration is submitted
+  (`pending_review` and later statuses). Publication and donations keep their
+  existing approval and activation checks.
+- Frontend (`core/utils/organization-registration-status.ts`):
+  - Drafts are never selectable contexts. `initFromLogin` filters them, and
+    `addEntityContext` ignores them.
+  - The dashboard's other-organization list and "הארגונים שלי" show drafts only
+    in the compact `app-incomplete-registrations` section ("רישומים שלא הושלמו").
+  - Each draft links to `/organization-registration?draft=<id>`, which loads
+    that draft by id, with the wizard's save/switch protections.
+  - Login and the welcome guard send a user who has only drafts to the wizard.
+- AI creation: the "new organization + campaign" mode was removed. "New
+  organization" saves a registration draft and opens it in the wizard by id.
+- The database was clean at this change, so there is no legacy handling.
+- Tests:
+  - Backend: `scripts/test-organization-campaign-drafts-postgres.cjs`, run
+    against a disposable database.
+  - Frontend: `organization-registration-status.spec.ts`,
+    `welcome.guard.spec.ts`, `other-organizations.component.spec.ts` and
+    `registration-drafts.spec.ts`.

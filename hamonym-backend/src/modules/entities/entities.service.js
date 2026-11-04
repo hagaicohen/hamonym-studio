@@ -1220,6 +1220,49 @@ exports.requestReview = async (entityId, userId) => {
 // it out of the public campaign/donation queries that filter on
 // e.status = 'active'. Permanent removal is a platform-admin-only action
 // (see platform.service.js hardDeleteEntity).
+// Discards an unsubmitted registration draft. Narrower than softDeleteEntity
+// on purpose: only the creator, only while still 'draft', never a partner
+// entity and never once any campaign (even a deleted one) exists. Touches the
+// entities row only; documents, members and billing rows are left as they are.
+function draftError(message, status, code) {
+  return Object.assign(new Error(message), { status, code });
+}
+
+exports.deleteRegistrationDraft = async (entityId, userId) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT e.id, e.status, e.created_by_user_id,
+              EXISTS (SELECT 1 FROM campaigns c WHERE c.entity_id = e.id) AS has_campaigns,
+              EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner') AS is_partner
+       FROM entities e
+       WHERE e.id = $1 AND e.deleted_at IS NULL
+       FOR UPDATE OF e`,
+      [entityId]
+    );
+    const entity = rows[0];
+    if (!entity || entity.is_partner) throw draftError('Draft not found', 404, 'DRAFT_NOT_FOUND');
+    if (String(entity.created_by_user_id) !== String(userId)) throw draftError('Unauthorized', 403, 'NOT_DRAFT_CREATOR');
+    if (entity.status !== 'draft') throw draftError('Only drafts can be deleted', 409, 'NOT_A_DRAFT');
+    if (entity.has_campaigns) throw draftError('Draft has campaigns', 409, 'DRAFT_HAS_CAMPAIGNS');
+
+    const result = await client.query(
+      `UPDATE entities SET deleted_at = NOW(), deleted_by = $1, status = 'deleted', updated_at = NOW()
+       WHERE id = $2 AND status = 'draft' AND deleted_at IS NULL
+       RETURNING id`,
+      [userId, entityId]
+    );
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 exports.softDeleteEntity = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 

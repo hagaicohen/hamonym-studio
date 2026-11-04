@@ -42,7 +42,16 @@ async function check(name,fn){await fn();count++;console.log('PASS '+name);}
   assert.equal((await attention.getOverview({permissions:['organizations']})).attention.length,1);
  });
  let campaign;
- for(const status of ['draft','pending_review','changes_requested','rejected','suspended','active']){
+ await check('draft (incomplete registration): campaign creation is refused and nothing is written',async()=>{
+  await pool.query("UPDATE entities SET status='draft' WHERE id='pending'");
+  await assert.rejects(campaigns.createCampaign({userId:9,data:{entity_id:'pending',title:'Draft',slug:'test-incomplete',target_amount:100,layout:{pageFormat:'minimal'}}}),e=>e.code==='ORGANIZATION_REGISTRATION_INCOMPLETE');
+  await assert.rejects(campaigns.createCampaign({userId:9,data:{entity_id:'abandoned',title:'Draft',slug:'test-abandoned'}}),/Organization registration is incomplete/);
+  assert.equal((await pool.query('SELECT count(*)::int n FROM campaigns')).rows[0].n,0);
+ });
+ await check('a non-member still gets Unauthorized before the registration check',async()=>{
+  await assert.rejects(campaigns.createCampaign({userId:99,data:{entity_id:'abandoned',slug:'test-other'}}),/Unauthorized/);
+ });
+ for(const status of ['pending_review','changes_requested','rejected','suspended','active']){
   await check(status+': creation ignores forged published status and saves a draft',async()=>{
    await pool.query('UPDATE entities SET status=$1 WHERE id=$2',[status,'pending']);
    campaign=await campaigns.createCampaign({userId:9,data:{entity_id:'pending',status:'published',title:'Draft',slug:'test-'+status,target_amount:100,layout:{pageFormat:'minimal'}}});assert.equal(campaign.status,'draft');
