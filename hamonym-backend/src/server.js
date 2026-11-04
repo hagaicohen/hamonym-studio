@@ -64,6 +64,9 @@ const commentsRoutes =
 const campaignCreationRoutes =
   require('./modules/campaign-creation/campaign-creation.routes');
 
+const categorySuggestionsRoutes =
+  require('./modules/category-suggestions/category-suggestions.routes');
+
 const campaignPartnersRoutes =
   require('./modules/campaign-partners/campaign-partners.routes');
 
@@ -174,6 +177,11 @@ app.use(
 app.use(
   '/api/campaign-creation',
   campaignCreationRoutes
+);
+
+app.use(
+  '/api/category-suggestions',
+  categorySuggestionsRoutes
 );
 
 app.use(

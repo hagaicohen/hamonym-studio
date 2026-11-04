@@ -6,12 +6,16 @@
 // onto that whitelist regardless of what the model actually returns — this
 // prompt describes the contract, it doesn't enforce it.
 
+
+const { categoryPromptList } = require('../../modules/campaigns/entity-categories');
+
 // Bump this string any time BRIEF_SYSTEM_PROMPT's rules change meaningfully
 // (not for typo fixes) — logged verbatim into campaign_ai_generations
 // (2026-07-23) so a future "why did results change" question has a real
 // answer instead of a guess. Plain "YYYY-MM-DD.N" — no build tooling
 // needed, just bump N (or the date) by hand when you touch the rules.
-exports.PROMPT_VERSION = '2026-07-24.1';
+// 2026-11-03.1: category list now generated from entity-categories.js (14 added).
+exports.PROMPT_VERSION = '2026-11-03.1';
 
 const SYSTEM_PROMPT = `אתה עוזר לחלץ עובדות אובייקטיביות מטקסט חופשי שכתב מנהל עמותה, לצורך הקמת עמותה וקמפיין גיוס בפלטפורמת "המונים".
 
@@ -25,7 +29,7 @@ const SYSTEM_PROMPT = `אתה עוזר לחלץ עובדות אובייקטיב�
 7. suggestedTitle עד 80 תווים, suggestedShortDescription עד 160 תווים.
 8. socialLinks: כלול אך ורק כתובות URL מפורשות שמופיעות ממש כטקסט רציף בטקסט (מתחילות ב-http/https/www — למשל "https://example.org" או "www.example.org"). אסור בשום מקרה לבנות/להרכיב/לנחש כתובת URL משם עמוד, שם ארגון, או כל טקסט אחר שאינו כתובת מלאה כפי שהיא. דוגמה שגויה (אל תעשה זאת): הטקסט אומר "יש לנו עמוד פייסבוק בשם 'כנפיים של תקווה'" ← זו **לא** כתובת URL, ולכן socialLinks צריך להישאר [] — גם אם נדמה לך שאתה יכול לנחש/להרכיב כתובת פייסבוק סבירה מהשם. דוגמה נכונה: הטקסט אומר "האתר שלנו: https://example.org" ← socialLinks: ["https://example.org"].
 9. categoryGuess: בחר 1 עד 3 קטגוריות **רק** מתוך הרשימה הסגורה הבאה, והחזר אותן בדיוק לפי הקוד (באנגלית, לא התרגום או ניסוח משלך):
-aid-support (סיוע לנזקקים), animals (בעלי חיים), art (אמנות), content-creators (יוצרי תוכן), culture (תרבות), education (חינוך), environment (סביבה), entrepreneurship (יזמות), foreign-security (ביטחון חוץ), health (בריאות), history (היסטוריה), holocaust-memory (שואה וזיכרון), human-rights (זכויות אדם), independent-creators (יוצרים עצמאיים), independent-journalism (עיתונאות עצמאית), judaism (יהדות), law-justice (משפט וצדק), lifestyle (אורח חיים), literature-books (ספרות וספרים), mental-health (בריאות הנפש), military-security (צבא וכוחות ביטחון), nature (טבע), politics-government (פוליטיקה וממשל), political-system (מערכת פוליטית), public-policy (מדיניות ציבורית), quality-of-life (איכות חיים), religion (דת), rescue-memory (הצלה וזיכרון), science-technology (מדע וטכנולוגיה), social-change (שינוי חברתי), sports (ספורט), other (אחר).
+${categoryPromptList()}.
 בחר קטגוריה גם כשההתאמה **ברורה מההקשר הכללי** של הטקסט, לא רק כשמילת המפתח המדויקת (כמו "בריאות") מופיעה מילולית — לדוגמה: טקסט שמתאר מחנה קיץ לילדים המתמודדים עם מחלת סרטן ← health מתאים בבירור, גם בלי שהמילה "בריאות" נכתבה. לעומת זאת אל תבחר קטגוריה על בסיס ניחוש חלש/עקיף מדי (למשל אל תוסיף education רק כי מדובר בילדים, אם אין שום תוכן חינוכי ממשי בטקסט). אם שום קטגוריה מהרשימה לא מתאימה בבירור — החזר מערך ריק.
 10. organizationName: מלא כל שם ספציפי שמופיע בטקסט לעמותה/ארגון/מוסד — כולל שם בתוך מירכאות שמופיע אחרי מילת קטגוריה כללית כמו "עמותת X", "בית הכנסת X", "עמותה בשם X". דוגמאות נכונות: "עמותת לב אחד" ← organizationName: "לב אחד". 'בית הכנסת "אוהל יעקב"' ← organizationName: "אוהל יעקב" (או "בית הכנסת אוהל יעקב" — השם המלא כפי שמופיע). מלא null **רק** כשאין שום שם קונקרטי בטקסט בכלל — הטקסט מתאר את הארגון תיאור כללי בלבד ("אנחנו עמותה ש...", "אנחנו קבוצת מתנדבים ש...") בלי לתת שם בשום צורה. במקרה כזה אל תחזיר את המילה הכללית "עמותה"/"ארגון" עצמה כאילו היא שם. **חשוב: הכלל הזה חל אך ורק על שדה organizationName עצמו. המשך למלא את שאר השדות (organizationDescription, categoryGuess, suggestedTitle וכו') כרגיל מכל מידע אמיתי שכן קיים בטקסט, גם כשאין שם ספציפי לעמותה.** חוסר בשם אחד אינו סיבה להחזיר null בשדות אחרים שיש להם תוכן ממשי בטקסט.
 11. לעיתים תצורף גם תמונה אחת או יותר (למשל לוגו, תמונות פעילות, צילום של מסמך) — אותם כללים בדיוק חלים גם עליהן: מלא רק מה שבאמת רואים בתמונה (למשל: אם רואים בתמונה טקסט עם שם עמותה — זה תימוכין תקף לorganizationName, בדיוק כמו שם שמופיע בטקסט). לעולם אל תמציא פרטים שלא רואים בבירור בתמונה.
