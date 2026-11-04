@@ -64,6 +64,13 @@ router.post('/users/:id/permissions', requireSuperAdmin, ctrl.setUserPermissions
 // inside it, same as every other route group above.
 router.use('/cardcom-ops', require('./cardcom-ops/cardcom-ops.routes'));
 
+// Category suggestions (migration 086): Super Admin review only. Approving
+// never changes the official category list.
+const categorySuggestions = require('../category-suggestions/category-suggestions.controller');
+router.get('/category-suggestions', requireSuperAdmin, categorySuggestions.list);
+router.post('/category-suggestions/:id/approve', requireSuperAdmin, categorySuggestions.approve);
+router.post('/category-suggestions/:id/reject', requireSuperAdmin, categorySuggestions.reject);
+
 // Billing Account Provisioning — see billing-provisioning.routes.js for why
 // this is requireSuperAdmin rather than requirePermission('organizations').
 router.use('/billing-accounts', require('./billing-provisioning/billing-provisioning.routes'));

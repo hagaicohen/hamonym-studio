@@ -20,3 +20,10 @@ Records migration numbers whose production history differs from the files in
   Row count unchanged (5).
 
 **085 is used and must not be reused. The next migration is 086.**
+
+## 086 — prepared, not applied (2026-11-03)
+
+- `086_category_suggestions.sql` adds `category_suggestions` (see docs/CATEGORY_SUGGESTIONS.md).
+  Additive only. Rollback: `scripts/rollback-086-category-suggestions.sql`.
+- Applied and rolled back only on an isolated local test database. Not applied
+  to production; that needs explicit approval.
