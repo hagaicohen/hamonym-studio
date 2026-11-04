@@ -40,4 +40,9 @@ CREATE INDEX category_suggestions_status_created_idx
 CREATE INDEX category_suggestions_user_created_idx
   ON public.category_suggestions (suggested_by_user_id, created_at DESC);
 
+-- Same as every public table: no Supabase REST (anon/authenticated) access.
+-- The backend connects as the table owner, which RLS does not restrict.
+ALTER TABLE public.category_suggestions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.category_suggestions FROM PUBLIC, anon, authenticated;
+
 COMMIT;
