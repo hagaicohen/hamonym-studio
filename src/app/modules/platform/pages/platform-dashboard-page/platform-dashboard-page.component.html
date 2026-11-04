@@ -36,9 +36,15 @@
           <span class="kpi-label">עמלות לגבייה</span><strong [class.attention-value]="(overview.kpis.feesOutstanding ?? 0) > 0">{{ fmtMoney(overview.kpis.feesOutstanding) }}</strong><span class="kpi-foot">יתרת חיובים מאושרים · כל התקופות <span aria-hidden="true">←</span></span>
         </a>
       }
-      <button type="button" class="kpi-card" (click)="focusAttention(attentionSection)">
-        <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">למרכז הטיפול <span aria-hidden="true">←</span></span>
-      </button>
+      @if (context.hasPlatformSection('organizations')) {
+        <a class="kpi-card attention-kpi" routerLink="/platform/organizations" [queryParams]="{ status: 'pending_review' }">
+          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">לתור העמותות הממתינות <span aria-hidden="true">←</span></span>
+        </a>
+      } @else {
+        <button type="button" class="kpi-card attention-kpi" (click)="focusAttention(attentionSection)">
+          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">למרכז הטיפול <span aria-hidden="true">←</span></span>
+        </button>
+      }
     </section>
 
     <div class="dashboard-grid">

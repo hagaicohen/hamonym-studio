@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/modules/dashboard/pages/dashboard/organization-status-card.component.spec.ts",
+    "src/app/modules/dashboard/pages/dashboard/other-organizations.component.spec.ts",
+    "src/app/modules/dashboard/pages/dashboard/dashboard-next-action.spec.ts",
+    "src/app/core/guards/welcome.guard.spec.ts",
+    "src/app/core/layout/topbar/topbar.component.spec.ts",
+    "src/app/modules/auth/pages/login/login-performance.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

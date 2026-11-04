@@ -1,8 +1,14 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PlatformService } from '../../services/platform.service';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate, shekels } from '../../utils/admin-display';
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { Subscription } from 'rxjs';
+import { EntityComboboxComponent } from '../../components/entity-combobox/entity-combobox.component';
 
 const COLUMNS: ColumnDef[] = [
   { key: 'entity',      label: 'עמותה' },
@@ -25,11 +31,12 @@ interface Campaign {
   is_locked: boolean;
   deleted_at: string | null;
   created_at: string;
+  end_date?: string | null;
   entity_id: string;
   entity_name: string;
 }
 
-type SortField = 'title' | 'status' | 'created_at' | 'raised' | 'entity';
+type SortField = 'title' | 'status' | 'created_at' | 'raised' | 'entity' | 'progress' | 'end_date';
 type SortDir = 'asc' | 'desc';
 
 type ChipKey = 'all' | 'published' | 'paused' | 'draft' | 'ended' | 'featured' | 'deleted';
@@ -50,9 +57,8 @@ const STATUS_LABELS: Record<string, string> = {
   ended: 'הסתיים',
 };
 
-const NOTES_REQUIRED_STATUSES = new Set(['paused', 'ended']);
 
-type PendingActionType = 'status' | 'lock' | 'delete' | 'slug';
+type PendingActionType = 'status' | 'lock' | 'delete' | 'slug' | 'duplicate';
 
 interface PendingAction {
   type: PendingActionType;
@@ -63,15 +69,59 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-campaigns-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-campaigns-page.component.html',
   styleUrl: './platform-campaigns-page.component.css',
 })
-export class PlatformCampaignsPageComponent implements OnInit {
+export class PlatformCampaignsPageComponent implements OnInit, OnDestroy {
   private platformService = inject(PlatformService);
+  private route = inject(ActivatedRoute);
+  readonly context = inject(CurrentContextService);
+  selectedCampaign: Campaign | null = null;
+  campaignDetail: any = null;
+  detailLoading = false;
+  detailError: string | null = null;
+  feedback: string | null = null;
+  entityFilter = '';
+  advancedListAvailable = false;
+  dateFrom = '';
+  dateTo = '';
+  organizationOptions: { id: string; name: string }[] = [];
+  organizationOptionsError: string | null = null;
+  private optionsRequest?: Subscription;
+  loadOrganizationOptions(): void {
+    this.organizationOptionsError = null;
+    this.optionsRequest?.unsubscribe();
+    this.optionsRequest = this.platformService.getOrganizationFilterOptions().subscribe({ next: options => { this.organizationOptions = options; }, error: () => { this.organizationOptionsError = 'לא ניתן לטעון את העמותות לסינון.'; } });
+  }
+  private request?: Subscription;
+  private detailRequest?: Subscription;
+  private requestId = 0;
+  get hasFilters(): boolean { return this.activeChip !== 'all' || !!this.searchQuery.trim() || !!this.entityFilter || !!this.dateFrom || !!this.dateTo; }
+  clearFilters(): void { this.activeChip = 'all'; this.searchQuery = ''; this.entityFilter = ''; this.dateFrom = ''; this.dateTo = ''; this.page = 0; this.load(); }
+  ngOnDestroy(): void { clearTimeout(this.searchTimer); this.requestId++; this.request?.unsubscribe(); this.detailRequest?.unsubscribe(); this.optionsRequest?.unsubscribe(); }
+  openCampaign(campaign: Campaign): void {
+    this.detailRequest?.unsubscribe();
+    this.selectedCampaign = campaign; this.campaignDetail = null; this.detailError = null; this.detailLoading = true;
+    this.detailRequest = this.platformService.getCampaign(campaign.id).subscribe({
+      next: res => { if (this.selectedCampaign?.id !== campaign.id) return; this.campaignDetail = res.campaign; this.detailLoading = false; },
+      error: () => { if (this.selectedCampaign?.id !== campaign.id) return; this.detailError = 'לא ניתן לטעון את פרטי הקמפיין.'; this.detailLoading = false; },
+    });
+  }
+  closeCampaign(): void { this.detailRequest?.unsubscribe(); this.selectedCampaign = null; }
+  campaignUrl(campaign: Campaign): string { return `${window.location.origin}/campaigns/${encodeURIComponent(campaign.slug)}`; }
+  async copyCampaignLink(campaign: Campaign): Promise<void> {
+    try { await navigator.clipboard.writeText(this.campaignUrl(campaign)); this.feedback = 'הקישור הועתק'; }
+    catch { this.actionError = 'לא ניתן להעתיק את הקישור. אפשר לפתוח את עמוד התרומה ולהעתיק את כתובתו.'; }
+  }
 
   readonly chips = CHIPS;
   readonly statusOptions = Object.keys(STATUS_LABELS);
+
+  availableStatuses(campaign: Campaign): string[] {
+    if (campaign.deleted_at || !this.context.hasPlatformSection('campaigns')) return [];
+    return this.statusOptions.filter(status => status !== campaign.status);
+  }
   readonly columns = COLUMNS;
   visibleColumns = new Set(COLUMNS.map((c) => c.key));
 
@@ -94,6 +144,9 @@ export class PlatformCampaignsPageComponent implements OnInit {
   sortDir: SortDir = 'desc';
 
   pendingAction: PendingAction | null = null;
+  get pendingActionRequiresNote(): boolean {
+    return !!this.pendingAction && (this.pendingAction.type === 'status' ? ['paused', 'ended'].includes(this.pendingAction.status || '') : this.pendingAction.type !== 'duplicate');
+  }
   notesInput = '';
   noteRequiredError = false;
   actionInProgress = false;
@@ -111,18 +164,39 @@ export class PlatformCampaignsPageComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    this.searchQuery = params.get('search') || '';
+    this.entityFilter = params.get('entityId') || '';
+    if (this.context.hasPlatformSection('organizations')) this.loadOrganizationOptions();
+    const campaignId = params.get('campaignId');
+    if (campaignId && /^[0-9a-f-]{36}$/i.test(campaignId)) {
+      this.detailLoading = true;
+      this.detailRequest = this.platformService.getCampaign(campaignId).subscribe({
+        next: res => { this.selectedCampaign = res.campaign; this.campaignDetail = res.campaign; this.detailLoading = false; },
+        error: () => { this.detailLoading = false; this.actionError = 'הקמפיין המבוקש אינו זמין או שאין הרשאה לצפות בו.'; },
+      });
+    }
+    const status = params.get('status');
+    if (status && Object.hasOwn(STATUS_LABELS, status)) this.activeChip = status as ChipKey;
     this.load();
   }
 
   load(): void {
+    clearTimeout(this.searchTimer); this.request?.unsubscribe();
+    const requestId = ++this.requestId;
+    this.error = null;
+    if (this.dateFrom && this.dateTo && this.dateFrom > this.dateTo) { this.error = 'תאריך ההתחלה חייב להיות מוקדם מתאריך הסיום.'; this.loading = false; this.refreshing = false; return; }
     if (this.campaigns.length === 0) this.loading = true;
     else this.refreshing = true;
 
     const chipParams = this.chipToParams(this.activeChip);
 
-    this.platformService
+    this.request = this.platformService
       .getCampaigns({
         search: this.searchQuery.trim() || undefined,
+        entityId: this.entityFilter || undefined,
+        dateFrom: this.dateFrom || undefined,
+        dateTo: this.dateTo || undefined,
         sortBy: this.sortField,
         sortDir: this.sortDir,
         page: this.page,
@@ -131,13 +205,17 @@ export class PlatformCampaignsPageComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
+          if (requestId !== this.requestId) return;
+          if ((this.dateFrom || this.dateTo || this.sortField === 'progress' || this.sortField === 'end_date') && res.adminListVersion !== 1) { this.error = 'נדרשת גרסת שרת תואמת לסינון ולמיון שנבחרו.'; this.loading = false; this.refreshing = false; return; }
+          this.advancedListAvailable = res.adminListVersion === 1;
           this.campaigns = res.campaigns ?? [];
           this.total = res.total ?? 0;
           this.loading = false;
           this.refreshing = false;
         },
         error: (err) => {
-          this.error = err.error?.error || 'שגיאה בטעינת הקמפיינים';
+          if (requestId !== this.requestId) return;
+          this.error = 'לא ניתן לטעון את הקמפיינים. נסה שוב.';
           this.loading = false;
           this.refreshing = false;
         },
@@ -186,27 +264,25 @@ export class PlatformCampaignsPageComponent implements OnInit {
   }
 
   fmtMoney(n: number): string {
-    return '₪' + Math.round(n || 0).toLocaleString('he-IL');
+    return shekels(n);
   }
 
   progressPct(campaign: Campaign): number {
     const target = Number(campaign.target_amount) || 0;
     if (target <= 0) return 0;
     const current = Number(campaign.current_amount) || 0;
-    return Math.min(100, Math.round((current / target) * 100));
+    return Math.max(0, Math.round((current / target) * 100));
   }
 
   fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+    return israelDate(iso);
   }
 
   onStatusChange(campaign: Campaign, newStatus: string): void {
     this.actionError = null;
-    if (newStatus === campaign.status) return;
+    if (newStatus === campaign.status || this.actionInProgress || !Object.hasOwn(STATUS_LABELS, newStatus)) return;
 
-    if (NOTES_REQUIRED_STATUSES.has(newStatus)) {
+    if (Object.hasOwn(STATUS_LABELS, newStatus)) {
       this.pendingAction = { type: 'status', campaign, status: newStatus };
       this.notesInput = '';
       this.noteRequiredError = false;
@@ -286,18 +362,13 @@ export class PlatformCampaignsPageComponent implements OnInit {
   }
 
   duplicate(campaign: Campaign): void {
-    this.actionError = null;
-    this.actionInProgress = true;
-    this.platformService.duplicateCampaign(campaign.id).subscribe({
-      next: () => { this.actionInProgress = false; this.load(); },
-      error: (err) => {
-        this.actionInProgress = false;
-        this.actionError = err.error?.error || 'הפעולה נכשלה';
-      },
-    });
+    if (this.actionInProgress) return;
+    this.pendingAction = { type: 'duplicate', campaign };
+    this.notesInput = ''; this.noteRequiredError = false; this.pendingActionError = null;
   }
 
   cancelPendingAction(): void {
+    if (this.actionInProgress) return;
     this.pendingAction = null;
     this.notesInput = '';
     this.noteRequiredError = false;
@@ -306,9 +377,9 @@ export class PlatformCampaignsPageComponent implements OnInit {
   }
 
   confirmPendingAction(): void {
-    if (!this.pendingAction) return;
+    if (!this.pendingAction || this.actionInProgress) return;
     const trimmedNotes = this.notesInput.trim();
-    if (!trimmedNotes) {
+    if (!trimmedNotes && this.pendingActionRequiresNote) {
       this.noteRequiredError = true;
       return;
     }
@@ -350,6 +421,8 @@ export class PlatformCampaignsPageComponent implements OnInit {
       this.platformService.deleteCampaign(campaign.id, trimmedNotes).subscribe({ next: done, error: fail });
     } else if (type === 'slug') {
       this.platformService.setCampaignSlug(campaign.id, this.slugInput.trim(), trimmedNotes).subscribe({ next: done, error: fail });
+    } else if (type === 'duplicate') {
+      this.platformService.duplicateCampaign(campaign.id, trimmedNotes).subscribe({ next: done, error: fail });
     }
   }
 
@@ -360,6 +433,7 @@ export class PlatformCampaignsPageComponent implements OnInit {
       case 'lock': return 'נעילת קמפיין לעריכה';
       case 'delete': return 'מחיקת קמפיין';
       case 'slug': return 'שינוי כתובת URL של הקמפיין';
+      case 'duplicate': return 'שכפול קמפיין לטיוטה חדשה';
       default: return '';
     }
   }

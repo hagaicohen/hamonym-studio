@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { ActiveContext, RoleType, UserContext, UserRoleGroup } from '../models/user-context.model';
+import { isRegistrationDraft, registeredOrganizations } from '../utils/organization-registration-status';
 
 // entity-manager's group can hold both nonprofits and businesses (a Partner
 // entity, or any entity registered as עוסק פטור/מורשה) — 'מנהל עמותה' is
@@ -40,6 +41,7 @@ const ROLE_PRIORITY: RoleType[] = [
 ];
 
 const STORAGE_KEY = 'currentContext_v1';
+export const ENTITY_PREFERENCES_KEY = 'organizationPreferences_v1';
 const ROLES_KEY   = 'userRoles_v1';
 const SUPER_ADMIN_KEY = 'isSuperAdmin';
 const ADMIN_MODE_KEY = 'adminMode';
@@ -125,18 +127,30 @@ export class CurrentContextService {
     return a.role === role && (a.context?.id ?? null) === contextId;
   }
 
+  // Donation history may arrive after login navigation; enrich roles without
+  // resetting the selected organization or other identities.
+  ensureDonorRole(): void {
+    if (this.roles().some(group => group.role === 'donor')) return;
+    const groups: UserRoleGroup[] = [...this.roles(), { role: 'donor', ...ROLE_META.donor, contexts: [] }];
+    this.roles.set(groups);
+    localStorage.setItem(ROLES_KEY, JSON.stringify(groups));
+    if (!this.active()) this._setDefault(groups);
+  }
+
   /**
    * Called after login. Builds role groups from real API data.
    * entities: result of getMyEntities() — the user's entity-manager contexts.
    * Future: ambassadorCampaigns, campaignManagerCampaigns, isDonor.
    */
   initFromLogin(params: {
-    entities?: Array<{ id: string; display_name: string; legal_name?: string; entity_type?: string }>;
+    entities?: Array<{ id: string; display_name: string; legal_name?: string; entity_type?: string; status?: string }>;
     ambassadorCampaigns?: Array<{ id: string; name: string }>;
     campaignManagerCampaigns?: Array<{ id: string; name: string }>;
     isDonor?: boolean;
   }): void {
     const groups: UserRoleGroup[] = [];
+    // Incomplete registrations are never selectable contexts.
+    params = { ...params, entities: registeredOrganizations(params.entities ?? []) };
 
     if (params.entities?.length) {
       const m = ROLE_META['entity-manager'];
@@ -193,11 +207,20 @@ export class CurrentContextService {
     // a dead id that every entity-scoped page/service (CurrentEntityService,
     // dashboard, donations, reports...) then queried forever, since nothing
     // else ever re-validates it against the server.
-    const saved = this._loadSaved();
-    const savedGroup = saved ? groups.find((g) => g.role === saved.role) : undefined;
-    const savedContextStillValid = !saved?.context || !!savedGroup?.contexts.some((c) => c.id === saved.context!.id);
+    let saved = this._loadSaved();
+    const preferred = this.preferredEntityId();
+    const preferredContext = groups.find(g => g.role === 'entity-manager')?.contexts.find(c => c.id === preferred);
+    if (preferredContext && (!saved || saved.role === 'entity-manager')) {
+      saved = { role: 'entity-manager', roleLabel: entityManagerLabel(preferredContext.entityType), roleIcon: ROLE_META['entity-manager'].icon, context: preferredContext };
+    }
+    const savedRole = saved?.role;
+    const savedId = saved?.context?.id;
+    const savedGroup = groups.find((g) => g.role === savedRole);
+    const savedContextStillValid = !savedId || !!savedGroup?.contexts.some((c) => c.id === savedId);
     if (saved && savedGroup && savedContextStillValid) {
+      if (saved.context) saved = { ...saved, context: savedGroup.contexts.find(c => c.id === saved!.context!.id)! };
       this.active.set(saved);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     } else {
       this.active.set(null);
       localStorage.removeItem(STORAGE_KEY);
@@ -233,13 +256,14 @@ export class CurrentContextService {
   // created mid-session (e.g. AI campaign-creation flow creating an
   // organization on the fly) and has to become switchable/active immediately,
   // without waiting for the next full login to re-fetch getMyEntities().
-  addEntityContext(entity: { id: string; display_name?: string; legal_name?: string; entity_type?: string }): void {
+  addEntityContext(entity: { id: string; display_name?: string; legal_name?: string; entity_type?: string; status?: string }): void {
+    if (isRegistrationDraft(entity)) return;
     const groups = this.roles();
     const idx = groups.findIndex((g) => g.role === 'entity-manager');
     const contextEntry = { id: entity.id, name: entity.display_name || entity.legal_name || 'ללא שם', entityType: entity.entity_type };
 
     const next = idx >= 0
-      ? groups.map((g, i) => (i === idx ? { ...g, contexts: [...g.contexts, contextEntry] } : g))
+      ? groups.map((g, i) => (i === idx ? { ...g, contexts: [...g.contexts.filter(c => c.id !== entity.id), contextEntry] } : g))
       : [...groups, { role: 'entity-manager' as RoleType, ...ROLE_META['entity-manager'], contexts: [contextEntry] }];
 
     this.roles.set(next);
@@ -252,11 +276,30 @@ export class CurrentContextService {
     const context = contextId
       ? (group.contexts.find((c) => c.id === contextId) ?? null)
       : null;
+    if (contextId && !context) return;
+    if (role === 'entity-manager' && !context) return;
     const m = ROLE_META[role];
     const roleLabel = role === 'entity-manager' ? entityManagerLabel(context?.entityType) : m.label;
     const next: ActiveContext = { role, roleLabel, roleIcon: m.icon, context };
     this.active.set(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    if (role === 'entity-manager' && context) {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (user?.id != null) {
+          const preferences = JSON.parse(localStorage.getItem(ENTITY_PREFERENCES_KEY) || '{}');
+          preferences[String(user.id)] = context.id;
+          localStorage.setItem(ENTITY_PREFERENCES_KEY, JSON.stringify(preferences));
+        }
+      } catch { /* A corrupt preference never prevents an authorized switch. */ }
+    }
+  }
+
+  private preferredEntityId(): string | null {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      return user?.id != null ? JSON.parse(localStorage.getItem(ENTITY_PREFERENCES_KEY) || '{}')[String(user.id)] ?? null : null;
+    } catch { return null; }
   }
 
   private _setDefault(groups: UserRoleGroup[]): void {

@@ -4,6 +4,8 @@ import { Component, computed, EventEmitter, Input, Output, inject } from '@angul
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CurrentContextService } from '../../services/current-context.service';
+import { CATEGORY_SUGGESTIONS_ENABLED } from '../../../shared/config/category-suggestions';
+import { CampaignsWelcomeService } from '../../services/campaigns-welcome.service';
 import { RoleType } from '../../models/user-context.model';
 
 interface NavItem {
@@ -50,6 +52,7 @@ const PLATFORM_COLLECTION_OPS: NavItem = { route: '/platform/collection-ops', la
 // "הגדרות כלליות" (2026-09-14j) -- platform-wide settings that aren't about
 // any one association or billing operation (currently: system VAT rate).
 const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'הגדרות כלליות', icon: 'settings' };
+const PLATFORM_CATEGORY_SUGGESTIONS: NavItem = { route: '/platform/category-suggestions', label: 'הצעות קטגוריה', icon: 'reports' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, ENTITIES, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
@@ -64,13 +67,14 @@ const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.css'],
+  styleUrls: ['./sidebar.component.css', '../../../shared/styles/new-campaign-button.css'],
 })
 export class SidebarComponent {
   @Input() mobileOpen = false;
   @Output() closeMobile = new EventEmitter<void>();
 
   protected readonly ctx = inject(CurrentContextService);
+  private readonly campaignsWelcome = inject(CampaignsWelcomeService);
   private readonly router = inject(Router);
 
   // Entered via the dedicated /admin login — shows only the platform section,
@@ -91,12 +95,12 @@ export class SidebarComponent {
     const items = [PLATFORM_DASHBOARD];
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, PLATFORM_GENERAL_SETTINGS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, ...(CATEGORY_SUGGESTIONS_ENABLED ? [PLATFORM_CATEGORY_SUGGESTIONS] : []), PLATFORM_GENERAL_SETTINGS);
     return items;
   });
 
   readonly showNewCampaignBtn = computed(() => {
-    if (this.ctx.adminMode()) return false;
+    if (this.ctx.adminMode() || this.campaignsWelcome.visible()) return false;
     const a = this.ctx.active();
     if (!a) return false;
     return a.role === 'entity-manager' || a.role === 'campaign-manager';

@@ -1,0 +1,37 @@
+<div class="hm-cat-suggest">
+  @if (!open) {
+    <button #link type="button" class="hm-cat-suggest-link" [attr.aria-expanded]="false" [attr.aria-controls]="uid" (click)="toggle()">
+      חסרה קטגוריה? הציעו קטגוריה חדשה
+    </button>
+  } @else {
+    <div class="hm-cat-suggest-form" role="group" [attr.aria-labelledby]="uid + '-label'" [id]="uid">
+      <label class="hm-cat-suggest-label" [id]="uid + '-label'" [for]="uid + '-input'">שם הקטגוריה המוצעת</label>
+      <div class="hm-cat-suggest-row">
+        <input
+          #field
+          type="text"
+          class="hm-cat-suggest-input"
+          autocomplete="off"
+          [id]="uid + '-input'"
+          [value]="label"
+          [attr.maxlength]="maxLength"
+          [attr.aria-invalid]="error ? true : null"
+          [attr.aria-describedby]="error ? uid + '-error' : uid + '-hint'"
+          (input)="onInput($event)"
+          (keydown.enter)="submit($event)"
+          (keydown.escape)="toggle()"
+        />
+        <button type="button" class="hm-cat-suggest-send" [disabled]="sending" (click)="submit()">{{ sending ? 'שולח…' : 'שליחה' }}</button>
+        <button type="button" class="hm-cat-suggest-cancel" [disabled]="sending" (click)="toggle()">ביטול</button>
+      </div>
+      @if (error) {
+        <p class="hm-cat-suggest-error" role="alert" [id]="uid + '-error'">{{ error }}</p>
+      } @else {
+        <p class="hm-cat-suggest-hint" [id]="uid + '-hint'">ההצעה תיבדק על ידי צוות Hamonym.</p>
+      }
+    </div>
+  }
+  @if (message) {
+    <p class="hm-cat-suggest-done" role="status">{{ message }}</p>
+  }
+</div>

@@ -6,6 +6,8 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { routes } from './app.routes';
 
+import { provideHmIconDefaults } from './shared/ui/design-system/icons';
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({
@@ -23,5 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
 
     provideHttpClient(),
+
+    provideHmIconDefaults(),
   ],
 };

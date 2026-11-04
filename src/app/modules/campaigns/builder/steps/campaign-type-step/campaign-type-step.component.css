@@ -65,7 +65,7 @@
   font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
-.tg-amount-input:focus { border-color: #7c3aed; }
+.tg-amount-input:focus { border-color: var(--hm-control-focus); }
 .tg-amount-input.invalid { border-color: #ef4444; }
 
 .tg-insight {
@@ -84,7 +84,7 @@
   font-size: 14px; font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
-.tg-date-input:focus { border-color: #7c3aed; }
+.tg-date-input:focus { border-color: var(--hm-control-focus); }
 
 .tg-duration { font-size: 13px; color: #475569; }
 .tg-duration strong { color: #7c3aed; }

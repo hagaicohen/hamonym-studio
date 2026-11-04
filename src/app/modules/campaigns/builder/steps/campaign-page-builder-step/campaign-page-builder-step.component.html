@@ -1881,6 +1881,7 @@
         [class.theme-palette-swatch--selected]="isActiveThemePalette(p, draft.layout.theme)"
         [style.background]="p.base"
         [title]="p.name"
+        [attr.aria-label]="p.name"
         (click)="applyThemePalette(p)">
       </button>
     </div>

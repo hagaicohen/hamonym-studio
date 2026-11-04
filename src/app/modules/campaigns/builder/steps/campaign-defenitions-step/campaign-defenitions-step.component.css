@@ -557,7 +557,7 @@
 
   outline: none;
 
-  border-color: #c4b5fd;
+  border-color: var(--hm-control-focus);
 
 }
 

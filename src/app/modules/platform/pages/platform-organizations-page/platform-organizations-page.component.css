@@ -15,7 +15,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-vis
 .plat-filters { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
 .search-field { flex: 1; min-width: 0; }
 .plat-search { width: 100%; padding: 10px 14px; border: 1px solid #dde3ed; border-radius: 8px; font-size: 14px; background: #fff; color: #1e293b; }
-.plat-search:focus { border-color: #8b71de; }
+.plat-search:focus { border-color: var(--hm-control-focus); }
 .export-button { flex-shrink: 0; border: 1px solid #ddd5f4; border-radius: 8px; background: #faf8ff; color: #583cd6; padding: 9px 12px; font-size: 13px; font-weight: 600; }
 .export-button:hover:not(:disabled) { background: #f0ebfc; }
 .plat-tabs { display: flex; flex-wrap: wrap; gap: 4px 16px; border-bottom: 1px solid #e2e8f0; margin-bottom: 14px; }
@@ -78,4 +78,4 @@ time { font-size: 12px; font-variant-numeric: tabular-nums; color: #64748b; }
 .filter-count { display: inline-block; margin-inline-start: 4px; padding: 0 5px; border-radius: 10px; background: #f0ebfc; }
 .filter-panel { position: absolute; inset-inline-start: 0; top: calc(100% + 6px); z-index: 10; width: min(360px, calc(100vw - 48px)); padding: 12px; border: 1px solid #e1e5ee; border-radius: 9px; background: #fff; box-shadow: 0 6px 24px #0f172a14; }
 .sort-control { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: #64748b; }
-.sort-control select { min-width: 0; flex: 1; padding: 5px; border: 1px solid #e1e5ee; border-radius: 6px; background: #fff; color: #334155; font: inherit; }
+.sort-control select { min-width: 0; flex: 1; padding: 5px; border: 1px solid #e1e5ee; border-radius: var(--hm-control-radius); background: #fff; color: #334155; font: inherit; }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CampaignApiService } from '../../services/campaign-api.service';
+import { CampaignsWelcomeService } from '../../../../core/services/campaigns-welcome.service';
 import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/ambassador.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
@@ -25,6 +26,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   hidingId:   string | null = null;
 
   private dataSub?: Subscription;
+  private readonly welcome = inject(CampaignsWelcomeService);
 
   readonly TrashIcon  = Trash2;
   readonly EyeIcon    = Eye;
@@ -81,6 +83,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
       const entityId = active?.role === 'entity-manager' ? active.context?.id : undefined;
       untracked(() => {
         this.dataSub?.unsubscribe();
+        this.welcome.visible.set(false);
         this.isLoading          = true;
         this.ambassadorCampaigns = [];
         this.campaigns           = [];
@@ -93,7 +96,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
           });
         } else {
           this.dataSub = this.campaignApi.list(entityId).subscribe({
-            next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); },
+            next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); this.welcome.visible.set(this.showWelcome); },
             error: ()    => { this.isLoading = false; this.loader.hide(); },
           });
         }
@@ -120,7 +123,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {}
 
-  ngOnDestroy(): void { this.dataSub?.unsubscribe(); }
+  ngOnDestroy(): void { this.dataSub?.unsubscribe(); this.welcome.visible.set(false); }
 
   get drafts(): any[] {
     return this.campaigns.filter(c => c.status === 'draft');
@@ -128,6 +131,14 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
 
   get activeCampaigns(): any[] {
     return this.campaigns.filter(c => c.status !== 'draft');
+  }
+
+  get showWelcome(): boolean {
+    return !this.isLoading && !this.isAmbassadorMode && this.campaigns.length === 0;
+  }
+
+  get entityAwaitingApproval(): boolean {
+    return ['draft', 'pending_review', 'changes_requested'].includes(this.currentEntity.currentEntity()?.status);
   }
 
   // Minimal donation pages have no Hero image/video at all — showing the
@@ -268,7 +279,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
 
   progressPercent(campaign: any): number {
     if (!campaign.targetAmount) return 0;
-    return Math.min(100, Math.round(((campaign.currentAmount ?? 0) / campaign.targetAmount) * 100));
+    return Math.round(((campaign.currentAmount ?? 0) / campaign.targetAmount) * 100);
   }
 
   daysRemaining(endDate: string): number {

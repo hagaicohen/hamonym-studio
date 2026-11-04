@@ -88,11 +88,11 @@
 }
 
 .custom-panel input[type='date'] {
-  height: 34px;
+  height: var(--hm-control-height);
   padding: 0 8px;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   color: #1e293b;
 }
 
@@ -123,3 +123,61 @@
 }
 
 .custom-cancel:hover { background: #f8fafc; }
+.range-picker-wrap, :host { min-width: 0; max-width: 100%; }
+:host { display: block; }
+
+@media (max-width: 768px) {
+  .range-picker-wrap { width: 100%; align-items: stretch; }
+  .range-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; overflow: visible; }
+  .range-btn { min-height: 44px; height: auto; padding: 6px 4px; font-size: 12px; white-space: normal; line-height: 1.4; }
+  .range-btn-custom { border: 0; margin: 0; }
+  .range-display { font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; text-align: start; }
+  .custom-panel { inset-inline: 0; box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+  .custom-panel label, .custom-panel input { min-width: 0; max-width: 100%; }
+  .custom-apply, .custom-cancel { height: 44px; }
+}
+
+/* Dashboard period chips: one clear button per period, one compact row. */
+:host(.dashboard-date-picker) .range-picker-wrap { align-items: stretch; gap: 6px; }
+:host(.dashboard-date-picker) .range-picker {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 6px;
+  background: transparent;
+  border-radius: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+:host(.dashboard-date-picker) .range-picker::-webkit-scrollbar { display: block; height: 4px; }
+:host(.dashboard-date-picker) .range-picker::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+:host(.dashboard-date-picker) .range-btn {
+  flex: 0 0 auto;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 14px;
+  margin: 0;
+  border: 1px solid #dbe1ea;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+  box-shadow: none;
+}
+:host(.dashboard-date-picker) .range-btn.active {
+  background: #f3efff;
+  border-color: #cbbaf9;
+  color: #6236ed;
+  font-weight: 600;
+}
+:host(.dashboard-date-picker) .range-calendar-icon { display: inline-flex; align-items: center; margin-inline-end: 5px; vertical-align: middle; }
+:host(.dashboard-date-picker) .range-display { text-align: start; padding-inline: 6px; color: #475569; font-size: 13px; line-height: 1.6; }
+@media (max-width: 768px) {
+  :host(.dashboard-date-picker) .range-btn { height: 44px; min-height: 44px; }
+}

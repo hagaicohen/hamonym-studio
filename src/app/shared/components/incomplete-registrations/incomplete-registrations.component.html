@@ -1,0 +1,27 @@
+@if (drafts.length) {
+  <section class="ir-card" aria-labelledby="ir-title">
+    <div class="ir-head">
+      <lucide-icon class="ir-head-icon" [img]="FileClock" [size]="18" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon>
+      <div>
+        <h2 id="ir-title" class="ir-title">רישומים שלא הושלמו</h2>
+        <p class="ir-hint">אלה עדיין אינם ארגונים פעילים. ניתן ליצור קמפיין רק לאחר השלמת הרישום ושליחתו לבדיקה.</p>
+      </div>
+    </div>
+    <ul class="ir-list">
+      @for (draft of drafts; track draft.id) {
+        <li class="ir-row">
+          <div class="ir-info">
+            <span class="ir-name">{{ name(draft) }}</span>
+            @if (draft.updated_at) {
+              <span class="ir-date">נשמרה {{ date(draft) }}</span>
+            }
+          </div>
+          <a class="ir-action" routerLink="/organization-registration" [queryParams]="{ draft: draft.id }" [attr.aria-label]="'השלם רישום: ' + name(draft)">
+            השלם רישום
+            <lucide-icon [img]="ChevronLeft" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+}

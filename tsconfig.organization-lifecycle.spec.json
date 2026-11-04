@@ -1,0 +1,19 @@
+{
+ "extends": "./tsconfig.spec.json",
+ "include": [
+  "src/app/modules/organization-registration/organization-lifecycle.spec.ts",
+  "src/app/modules/organization-registration/onboarding-ux.spec.ts",
+  "src/app/modules/organization-registration/campaign-draft-access.spec.ts",
+  "src/app/modules/organization-registration/registration-identity.spec.ts",
+  "src/app/modules/organization-registration/personal-menu-entry.spec.ts",
+  "src/app/modules/platform/pages/platform-organization-detail-page/organization-decision-ux.spec.ts",
+  "src/app/modules/settings/components/entity-settings/*spec.ts",
+  "src/app/modules/dashboard/pages/dashboard/*spec.ts",
+  "src/app/core/guards/welcome.guard.spec.ts",
+  "src/app/core/layout/topbar/topbar.component.spec.ts",
+  "src/app/core/services/organization-switcher.spec.ts",
+  "src/app/modules/auth/pages/login/login-performance.spec.ts",
+  "src/app/organization-warning-ux.spec.ts",
+  "src/**/*.d.ts"
+ ]
+}

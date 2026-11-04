@@ -35,7 +35,7 @@
   width: 100%; font-family: inherit; font-size: 14px; color: #0f172a;
   padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
 }
-.rf-input:focus { outline: none; border-color: #7c3aed; }
+.rf-input:focus { outline: none; border-color: var(--hm-control-focus); }
 .rf-textarea { min-height: 70px; resize: vertical; }
 
 /* Toggle + its own label sit together (gap, not space-between) so the
@@ -102,7 +102,7 @@
   font-family: inherit; font-size: 13px; color: #0f172a; min-width: 200px;
   padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
 }
-.rw-search:focus { outline: none; border-color: #7c3aed; }
+.rw-search:focus { outline: none; border-color: var(--hm-control-focus); }
 
 .rw-carousel-wrap { display: flex; align-items: center; gap: 8px; }
 .rw-arrow {

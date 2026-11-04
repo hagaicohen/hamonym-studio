@@ -92,7 +92,7 @@
   display: inline-block; flex-shrink: 0;
   direction: ltr; /* always LTR so thumb behaves consistently */
 }
-.rs-switch input { display: none; }
+.rs-switch input { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; clip-path: inset(50%); }
 .rs-slider {
   position: absolute; inset: 0;
   background: #cbd5e1; border-radius: 999px; cursor: pointer;
@@ -140,7 +140,7 @@
   color: #0f172a; background: #fff; outline: none;
   transition: border-color 0.15s;
 }
-.rf-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.rf-input:focus { border-color: var(--hm-control-focus); box-shadow: none; }
 
 .rf-textarea { resize: none; height: 90px; line-height: 1.6; }
 

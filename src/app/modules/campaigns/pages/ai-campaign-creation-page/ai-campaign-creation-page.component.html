@@ -81,15 +81,6 @@
               <span class="mode-option-desc">רק עמותה, בלי קמפיין בינתיים</span>
             </span>
           </label>
-
-          <label class="mode-option" [class.selected]="creationMode() === 'org-and-campaign'" (click)="creationMode.set('org-and-campaign')">
-            <input type="radio" name="creationMode" [checked]="creationMode() === 'org-and-campaign'" />
-            <span class="mode-option-icon">🏢🎯</span>
-            <span class="mode-option-text">
-              <span class="mode-option-title">עמותה חדשה + קמפיין</span>
-              <span class="mode-option-desc">עמותה חדשה, ומיד קמפיין תחתיה</span>
-            </span>
-          </label>
         </div>
       </div>
       }
@@ -110,8 +101,8 @@
       <div class="ai-actions">
         <button
           type="button"
-          class="btn-primary"
-          [disabled]="!canSubmit()"
+          class="btn-primary ai-unavailable"
+          disabled title="כלי AI אינם זמינים כרגע"
           (click)="submit()"
         >{{ submitting() ? 'עובדים על זה...' : 'צור הצעה עם AI' }}</button>
         <button type="button" class="btn-link" (click)="goToQuickStudio()">
@@ -284,10 +275,8 @@
         <p class="brief-note">
           @if (isPartnerMode()) {
             זו הצעה של ה-AI — לחיצה על "אשר וצור דף שותף" תיצור דף שותף עסקי אמיתי עם הפרטים שלמעלה, ותעביר אתכם לעריכה מלאה בבילדר. אפשר לשנות כל שדה שם.
-          } @else if (createNewOrg() && orgOnly()) {
-            זו הצעה של ה-AI — לחיצה על "אשר וצור עמותה" תיצור עמותה חדשה עם הפרטים שלמעלה ותעביר אתכם לניהול שלה. לא ייווצר קמפיין — אפשר ליצור אחד בנפרד בכל שלב.
           } @else if (createNewOrg()) {
-            זו הצעה של ה-AI — לחיצה על "אשר וצור" תיצור עמותה חדשה עם הפרטים שלמעלה, תעביר אתכם לניהול שלה, ותיצור תחתיה קמפיין אמיתי, עם מעבר לעריכה מלאה בסטודיו.
+            זו הצעה של ה-AI — לחיצה על "אשר וצור עמותה" תשמור טיוטת רישום עם הפרטים שלמעלה ותעביר אתכם להשלמת הרישום. קמפיין אפשר ליצור לאחר שליחת הרישום לבדיקה.
           } @else {
             זו הצעה של ה-AI — לחיצה על "אשר וצור קמפיין" תיצור קמפיין אמיתי תחת העמותה שלכם, ותעביר אתכם לעריכה מלאה בסטודיו. אפשר לשנות שם כל שדה.
           }
@@ -305,10 +294,8 @@
               יוצרים...
             } @else if (isPartnerMode()) {
               אשר וצור דף שותף ←
-            } @else if (createNewOrg() && orgOnly()) {
-              אשר וצור עמותה ←
             } @else if (createNewOrg()) {
-              אשר וצור עמותה + קמפיין ←
+              אשר וצור עמותה ←
             } @else {
               אשר וצור קמפיין ←
             }

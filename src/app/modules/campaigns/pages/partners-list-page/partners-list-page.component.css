@@ -46,19 +46,6 @@
 .pl-error { color: #dc2626; font-size: 13px; margin-top: 8px; }
 
 .pl-loading { color: #64748b; font-size: 14px; }
-.pl-empty {
-  text-align: center;
-  padding: 80px 24px;
-  color: #94a3b8;
-  font-size: 15px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-.pl-empty-icon { font-size: 48px; }
-.pl-empty-actions { display: flex; gap: 10px; }
-
 .pl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

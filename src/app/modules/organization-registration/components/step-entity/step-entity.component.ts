@@ -12,21 +12,35 @@ import {
   EntityType,
 } from '../../config/entity-config';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
+import { CategorySelectorComponent } from '../../../../shared/ui/category-picker/category-selector.component';
+import { joinCategories, splitCategories } from '../../../../shared/ui/category-picker/category-selection';
+import { CategorySuggestComponent } from '../../../../shared/ui/category-picker/category-suggest.component';
+import { CATEGORY_SUGGESTIONS_ENABLED } from '../../../../shared/config/category-suggestions';
+import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../../../shared/components/registration-identity-check/registration-identity-check.component';
 
 @Component({
   selector: 'app-step-entity',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
   templateUrl: './step-entity.component.html',
   styleUrls: ['./step-entity.component.css'],
 })
 export class StepEntityComponent {
+  identityCheck:IdentityCheckState={status:'idle'};
+  onIdentityCheck(state:IdentityCheckState):void {
+    this.identityCheck=state;
+    if (state.status==='duplicate') this.stateService.identityDuplicate.set(true);
+    if (state.status==='available') this.stateService.identityDuplicate.set(false);
+  }
+  get identityEntityId():string|undefined { return this.stateService.state().entityId || undefined; }
   @Output()
   continue = new EventEmitter<void>();
 
   entityConfigs = ENTITY_CONFIGS;
 
   categories = ENTITY_CATEGORIES;
+
+  readonly categorySuggestionsEnabled = CATEGORY_SUGGESTIONS_ENABLED;
 
   constructor(
     private readonly stateService: OrganizationRegistrationStateService,
@@ -52,6 +66,7 @@ export class StepEntityComponent {
   }
 
   set entityType(value: string) {
+    this.identityCheck={status:'idle'};
     this.updateState({
       entityType: value,
     });
@@ -72,6 +87,7 @@ export class StepEntityComponent {
   }
 
   set organizationNumber(value: string) {
+    this.identityCheck={status:'idle'};
     this.updateState({
       organizationNumber: value,
     });
@@ -81,10 +97,13 @@ export class StepEntityComponent {
     return this.stateService.state().primaryCategory;
   }
 
-  set primaryCategory(value: string) {
-    this.updateState({
-      primaryCategory: value,
-    });
+  get categoryList(): string[] {
+    return joinCategories(this.primaryCategory, this.selectedCategories);
+  }
+
+  setCategories(list: string[]): void {
+    const { primary, secondary } = splitCategories(list);
+    this.updateState({ primaryCategory: primary, selectedCategories: secondary });
   }
 
   get fullName(): string {
@@ -161,12 +180,6 @@ export class StepEntityComponent {
     return this.stateService.state().selectedCategories;
   }
 
-  set selectedCategories(value: string[]) {
-    this.updateState({
-      selectedCategories: value,
-    });
-  }
-
   get certificateFile(): File | null {
     return this.stateService.state().certificateFile;
   }
@@ -185,33 +198,6 @@ export class StepEntityComponent {
     this.updateState({
       section46File: value,
     });
-  }
-
-  clearPrimaryCategory(): void {
-    this.primaryCategory = '';
-  }
-
-  toggleCategory(categoryId: string): void {
-    // No primary category chosen yet — a click on a chip picks it as the
-    // primary category (fills the dropdown) instead of toggling it as a
-    // secondary one, so the chips work as a second way to answer the same
-    // required question, not just an "extra categories" add-on.
-    if (!this.primaryCategory) {
-      this.primaryCategory = categoryId;
-      return;
-    }
-
-    const exists = this.selectedCategories.includes(categoryId);
-
-    if (exists) {
-      this.selectedCategories = this.selectedCategories.filter(
-        (c) => c !== categoryId,
-      );
-
-      return;
-    }
-
-    this.selectedCategories = [...this.selectedCategories, categoryId];
   }
 
   onPhoneInput(event: Event): void {
@@ -292,6 +278,7 @@ export class StepEntityComponent {
 
   get canContinue(): boolean {
     return !!(
+      !this.stateService.identityDuplicate() &&
       this.entityType &&
       this.organizationName.trim() &&
       this.organizationNumber.trim() &&

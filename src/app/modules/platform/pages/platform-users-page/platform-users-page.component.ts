@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { PlatformService } from '../../services/platform.service';
 import { relativeTime } from '../../utils/relative-time';
@@ -10,9 +11,11 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AmbassadorService } from '../../../campaigns/services/ambassador.service';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { israelDate } from '../../utils/admin-display';
+import { EntityComboboxComponent } from '../../components/entity-combobox/entity-combobox.component';
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'email',        label: 'אימייל' },
   { key: 'role',         label: 'תפקיד' },
   { key: 'entities',     label: 'עמותות' },
   { key: 'status',       label: 'סטטוס' },
@@ -35,6 +38,7 @@ interface PlatformUser {
   created_at: string;
   deleted_at: string | null;
   entities_count: number;
+  entities?: { entity_id: string; entity_name: string; role: string }[];
   platform_permissions: string[] | null;
 }
 
@@ -65,13 +69,57 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-users-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-users-page.component.html',
   styleUrl: './platform-users-page.component.css',
 })
-export class PlatformUsersPageComponent implements OnInit {
+export class PlatformUsersPageComponent implements OnInit, OnDestroy {
   private platformService = inject(PlatformService);
+  private route = inject(ActivatedRoute);
   private ctx = inject(CurrentContextService);
+  canViewOrganizations(): boolean { return this.ctx.hasPlatformSection('organizations'); }
+  roles: { id: number; name: string }[] = [];
+  rolesError: string | null = null;
+  roleFilter = '';
+  entityFilter: string | undefined;
+  superAdminOnly = false;
+  advancedListAvailable = false;
+  organizationOptions: { id: string; name: string }[] = [];
+  organizationOptionsError: string | null = null;
+  private optionsRequest?: Subscription;
+  private optionsLoaded = false;
+  loadOrganizationOptions(): void {
+    this.organizationOptionsError = null; this.optionsRequest?.unsubscribe();
+    this.optionsRequest = this.platformService.getOrganizationFilterOptions().subscribe({ next: options => { this.organizationOptions = options; this.optionsLoaded = true; }, error: () => { this.organizationOptionsError = 'לא ניתן לטעון את העמותות לסינון.'; } });
+  }
+  selectedUser: PlatformUser | null = null;
+  userDetail: any = null;
+  detailLoading = false;
+  detailError: string | null = null;
+  private request?: Subscription;
+  private detailRequest?: Subscription;
+  private rolesRequest?: Subscription;
+  private requestId = 0;
+  get hasFilters(): boolean { return this.activeChip !== 'all' || !!this.searchQuery.trim() || !!this.roleFilter || !!this.entityFilter || this.superAdminOnly; }
+  clearFilters(): void { this.activeChip = 'all'; this.searchQuery = ''; this.roleFilter = ''; this.entityFilter = undefined; this.superAdminOnly = false; this.page = 0; this.load(); }
+  onRoleChange(): void { this.page = 0; this.load(); }
+  loadRoles(): void {
+    this.rolesError = null;
+    this.rolesRequest?.unsubscribe();
+    this.rolesRequest = this.platformService.getRoles().subscribe({ next: res => { this.roles = res.roles || []; }, error: () => { this.rolesError = 'לא ניתן לטעון את רשימת התפקידים.'; } });
+  }
+  ngOnDestroy(): void { clearTimeout(this.searchTimer); this.requestId++; this.request?.unsubscribe(); this.detailRequest?.unsubscribe(); this.rolesRequest?.unsubscribe(); this.optionsRequest?.unsubscribe(); }
+  openUser(user: PlatformUser): void {
+    this.detailRequest?.unsubscribe(); this.selectedUser = user; this.userDetail = null; this.detailLoading = true; this.detailError = null; this.closeActionsMenu();
+    this.detailRequest = this.platformService.getUser(user.id).subscribe({
+      next: res => { if (this.selectedUser?.id !== user.id) return; this.userDetail = res; this.detailLoading = false; },
+      error: () => { if (this.selectedUser?.id !== user.id) return; this.detailLoading = false; this.detailError = 'לא ניתן לטעון את פרטי המשתמש.'; },
+    });
+  }
+  closeUser(): void { this.detailRequest?.unsubscribe(); this.selectedUser = null; }
+  userEventLabel(action: string): string {
+    return ({ enable: 'החשבון הופעל', disable: 'החשבון הושבת', delete: 'החשבון נמחק', restore: 'החשבון שוחזר', grant_super_admin: 'ניתנה הרשאת מנהל־על', revoke_super_admin: 'הוסרה הרשאת מנהל־על', set_permissions: 'הרשאות עודכנו', impersonate: 'התחברות בשם המשתמש', reset_password_link: 'נוצר קישור לאיפוס סיסמה' } as Record<string, string>)[action] || 'פעולת ניהול בחשבון';
+  }
   private entitiesService = inject(EntitiesService);
   private currentEntityService = inject(CurrentEntityService);
   readonly columns = COLUMNS;
@@ -191,17 +239,34 @@ export class PlatformUsersPageComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    this.searchQuery = params.get('search') || '';
+    const roleId = params.get('roleId');
+    if (roleId && /^\d+$/.test(roleId)) this.roleFilter = roleId;
+    const userId = params.get('userId');
+    if (userId && (/^[0-9a-f-]{36}$/i.test(userId) || /^\d+$/.test(userId))) {
+      this.detailRequest = this.platformService.getUser(userId).subscribe({
+        next: res => { this.selectedUser = { ...res.user, entities_count: res.entities?.length || 0 }; this.userDetail = res; this.detailLoading = false; },
+        error: () => { this.actionError = 'המשתמש המבוקש אינו זמין או שאין הרשאה לצפות בו.'; },
+      });
+    }
+    this.loadRoles();
     this.load();
   }
 
   load(): void {
+    clearTimeout(this.searchTimer); this.request?.unsubscribe();
+    const requestId = ++this.requestId; this.error = null;
     if (this.users.length === 0) this.loading = true;
     else this.refreshing = true;
 
-    this.platformService
+    this.request = this.platformService
       .getUsers({
         search: this.searchQuery.trim() || undefined,
         status: this.activeChip === 'all' ? undefined : this.activeChip,
+        roleId: this.roleFilter ? Number(this.roleFilter) : undefined,
+        entityId: this.entityFilter,
+        superAdminOnly: this.superAdminOnly,
         sortBy: this.sortField,
         sortDir: this.sortDir,
         page: this.page,
@@ -209,13 +274,19 @@ export class PlatformUsersPageComponent implements OnInit {
       })
       .subscribe({
         next: (res) => {
+          if (requestId !== this.requestId) return;
+          if ((this.entityFilter || this.superAdminOnly) && res.adminListVersion !== 1) { this.error = 'נדרשת גרסת שרת תואמת לסינון שנבחר.'; this.loading = false; this.refreshing = false; return; }
+          this.advancedListAvailable = res.adminListVersion === 1;
+          if (this.advancedListAvailable && this.activeChip === 'super_admin') { this.activeChip = 'all'; this.superAdminOnly = true; }
+          if (this.advancedListAvailable && !this.optionsLoaded && this.canViewOrganizations()) this.loadOrganizationOptions();
           this.users = res.users ?? [];
           this.total = res.total ?? 0;
           this.loading = false;
           this.refreshing = false;
         },
         error: (err) => {
-          this.error = err.error?.error || 'שגיאה בטעינת המשתמשים';
+          if (requestId !== this.requestId) return;
+          this.error = 'לא ניתן לטעון את המשתמשים. נסה שוב.';
           this.loading = false;
           this.refreshing = false;
         },
@@ -254,18 +325,15 @@ export class PlatformUsersPageComponent implements OnInit {
   statusBadge(user: PlatformUser): { label: string; cls: string } {
     if (user.deleted_at) return { label: 'נמחק', cls: 'status-deleted' };
     if (!user.is_active) return { label: 'מושבת', cls: 'status-disabled' };
-    if (user.is_super_admin) return { label: 'סופר אדמין', cls: 'status-super-admin' };
     return { label: 'פעיל', cls: 'status-active' };
   }
 
   relativeTime(iso: string | null): string {
-    return iso ? relativeTime(iso) : 'מעולם לא';
+    return iso ? relativeTime(iso) : 'טרם התחבר';
   }
 
   fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+    return israelDate(iso);
   }
 
   toggleActive(user: PlatformUser): void {
@@ -363,13 +431,14 @@ export class PlatformUsersPageComponent implements OnInit {
   }
 
   cancelPendingAction(): void {
+    if (this.actionInProgress) return;
     this.pendingAction = null;
     this.notesInput = '';
     this.noteRequiredError = false;
   }
 
   confirmPendingAction(): void {
-    if (!this.pendingAction) return;
+    if (!this.pendingAction || this.actionInProgress) return;
     const trimmedNotes = this.notesInput.trim();
     if (!trimmedNotes) {
       this.noteRequiredError = true;

@@ -119,13 +119,9 @@
 
   </div>
 
-  <div class="pl-empty" *ngIf="!loading && partners.length === 0">
-    <div class="pl-empty-icon">🤝</div>
-    <p>אין שותפים עדיין</p>
-    <div class="pl-empty-actions">
-      <button class="pl-new-btn" type="button" (click)="createMode = 'choose'">+ שותף חדש</button>
-    </div>
-  </div>
+  <hm-empty-state *ngIf="!loading && partners.length === 0" [icon]="Handshake" title="אין שותפים עדיין">
+    <button class="pl-new-btn" type="button" (click)="createMode = 'choose'">+ שותף חדש</button>
+  </hm-empty-state>
 </div>
 
 <!-- Duplicate Partner — copies the Profile (blocks/layout) as a starting

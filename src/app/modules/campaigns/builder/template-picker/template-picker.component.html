@@ -13,6 +13,7 @@
         [class.tp-swatch--selected]="selectedPalette.id === p.id"
         [style.background]="p.base"
         [title]="p.name"
+        [attr.aria-label]="p.name"
         (click)="selectPalette(p)">
       </button>
     </div>

@@ -17,17 +17,17 @@
 .text-input {
   width: 100%;
 
-  height: 52px;
+  height: var(--hm-control-height);
 
   padding-inline: 18px;
 
-  border-radius: 14px;
+  border-radius: var(--hm-control-radius);
 
   border: 1px solid var(--campaign-border);
 
   background: white;
 
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
 
   transition: all 0.2s ease;
 }
@@ -37,7 +37,7 @@
 
   border-color: var(--campaign-primary);
 
-  box-shadow: 0 0 0 4px rgba(15, 157, 138, 0.08);
+  box-shadow: none;
 }
 
 .text-area {
@@ -47,13 +47,13 @@
 
   padding: 16px;
 
-  border-radius: 14px;
+  border-radius: var(--hm-control-radius);
 
   border: 1px solid var(--campaign-border);
 
   resize: vertical;
 
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
 
   transition: all 0.2s ease;
 }
@@ -63,5 +63,5 @@
 
   border-color: var(--campaign-primary);
 
-  box-shadow: 0 0 0 4px rgba(15, 157, 138, 0.08);
+  box-shadow: none;
 }

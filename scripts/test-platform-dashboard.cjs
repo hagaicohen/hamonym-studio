@@ -146,7 +146,7 @@ function destination(pageName, query = {}, fragment = null) {
   const js = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, experimentalDecorators: true } }).outputText;
   vm.runInNewContext(js, { module, exports: module.exports, Date, Intl, setTimeout, clearTimeout, localStorage: { getItem: () => null },
     require(name) {
-      if (name === '@angular/core') return { Component: decorators, HostListener: decorators, inject: t => t.name === 'ActivatedRoute' ? route : api(t.name) };
+      if (name === '@angular/core') return { Component: decorators, HostListener: decorators, inject: t => t.name === 'ActivatedRoute' ? route : t.name === 'CurrentContextService' ? { hasPlatformSection: () => false } : api(t.name) };
       if (name.endsWith('/environment')) return { environment: { apiUrl: 'http://isolated.invalid' } };
       return new Proxy({}, { get: (_, key) => token(key) });
     },

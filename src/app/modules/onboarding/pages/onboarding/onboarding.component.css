@@ -83,9 +83,23 @@
 }
 
 .type-card .icon {
-  font-size: 42px;
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: var(--hm-icon-box-lg);
+
+  height: var(--hm-icon-box-lg);
 
   margin-bottom: 18px;
+
+  border-radius: var(--hm-radius-lg);
+
+  background: var(--hm-brand-50);
+
+  color: var(--hm-brand-600);
 }
 
 .type-card h3 {
@@ -183,10 +197,6 @@
 
   .type-card {
     padding: 22px;
-  }
-
-  .type-card .icon {
-    font-size: 36px;
   }
 
   .continue-btn {

@@ -990,7 +990,7 @@ function createInitialDraft(): CampaignDraft {
           visible: true,
           spacingTop: 0,
           spacingBottom: 0,
-          label: 'על המיזם',
+          label: '',
           data: { content: '', lineHeight: 1.6 } as RichTextBlockData,
         },
         {
