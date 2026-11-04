@@ -422,7 +422,8 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   onTemplateSelected(selection: TemplateSelection): void {
     const { template, palette } = selection;
-    this.state.applyTemplate(template.createBlocks(palette), template.buildTheme(palette), template.layoutMode, template.id, template.heroPlacement);
+    // Non-destructive: the campaign keeps its identity, fields and blocks.
+    this.state.switchTemplate(template, palette);
     this.showTemplatePicker = false;
   }
 

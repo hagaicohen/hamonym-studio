@@ -3,7 +3,11 @@
 
     <div class="tp-header">
       <h1 class="tp-title">בחרו עיצוב לדף הקמפיין</h1>
-      <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+      @if (mode === 'switch') {
+        <p class="tp-subtitle">התוכן, הבלוקים והגדרות הקמפיין נשמרים. התבנית משנה את הפריסה, את סדר המקטעים ואת הצבעים שלא שיניתם ידנית.</p>
+      } @else {
+        <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+      }
     </div>
 
     <div class="tp-palette-row">
@@ -56,7 +60,7 @@
     </div>
 
     <div class="tp-footer">
-      <button class="tp-skip-btn" (click)="skip()">דלגו — אתחיל ידנית</button>
+      <button class="tp-skip-btn" (click)="skip()">{{ mode === 'switch' ? 'ביטול' : 'דלגו — אתחיל ידנית' }}</button>
     </div>
 
   </div>

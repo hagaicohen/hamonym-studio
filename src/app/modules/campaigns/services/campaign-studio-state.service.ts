@@ -7,6 +7,8 @@ export { SurfaceStyle, ButtonStyle, ProgressStyle } from '../../../shared/models
 import { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
 export { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
 import { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, resolveTheme } from '../builder/styles/campaign-styles';
+import type { CampaignTemplate, TemplatePalette } from '../builder/templates/campaign-templates';
+import { isUntouchedStarter, mergePaletteTheme, reorderForTemplate } from '../builder/templates/template-switch';
 export { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
 
 export type CampaignFundingType =
@@ -1363,6 +1365,44 @@ export class CampaignStudioStateService {
       theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });
+  }
+
+  // Template switching for an existing page (Step 9's "שנה תבנית"). Unlike
+  // applyTemplate() it never rebuilds the draft: identity, every top-level
+  // field and every block (ids, content, visibility, nesting) are kept.
+  // What changes:
+  // - layoutMode / templateId / heroPlacement;
+  // - the order of top-level blocks, re-sequenced by the template's sections
+  //   (reorderForTemplate) -- no block is added, removed, hidden or merged;
+  // - palette fields that still hold a template value (customized colors are
+  //   kept); a chosen Campaign Style and its overrides still win.
+  // An unsaved campaign whose blocks are still untouched starter blocks gets
+  // the new template's starter blocks instead. Minimal and full pages are
+  // different page types, so switching between them is refused.
+  switchTemplate(template: CampaignTemplate, palette: TemplatePalette): boolean {
+    const draft = this.draft;
+    const layout = draft.layout;
+    if ((layout.pageFormat ?? 'full') !== (template.pageFormat ?? 'full')) return false;
+    const initial = createInitialDraft();
+    const starter = template.createBlocks(palette);
+    const blocks = !draft.id && isUntouchedStarter(draft.blocks, initial.blocks)
+      ? starter
+      : reorderForTemplate(draft.blocks, starter);
+    const isSidebar = template.layoutMode === 'sidebar-right' || template.layoutMode === 'sidebar-left';
+    const theme = resolveTheme(mergePaletteTheme(layout.theme, palette, initial.layout.theme), layout.campaignStyleId, layout.styleOverrides);
+    this.patch({
+      blocks,
+      layout: {
+        ...layout,
+        layoutMode: template.layoutMode,
+        templateId: template.id,
+        // 'main-column' only renders inside the sidebar layouts; elsewhere it
+        // would hide the Hero on desktop.
+        heroPlacement: isSidebar ? template.heroPlacement : undefined,
+        theme,
+      },
+    });
+    return true;
   }
 
   // Sidebar section placement — shared by every step editor whose section
