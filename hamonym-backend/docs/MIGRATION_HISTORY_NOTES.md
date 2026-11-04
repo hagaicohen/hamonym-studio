@@ -21,9 +21,16 @@ Records migration numbers whose production history differs from the files in
 
 **085 is used and must not be reused. The next migration is 086.**
 
-## 086 — prepared, not applied (2026-11-03)
+## 086 — applied to production (2026-11-04)
 
 - `086_category_suggestions.sql` adds `category_suggestions` (see docs/CATEGORY_SUGGESTIONS.md).
   Additive only. Rollback: `scripts/rollback-086-category-suggestions.sql`.
-- Applied and rolled back only on an isolated local test database. Not applied
-  to production; that needs explicit approval.
+- Enables RLS and revokes PUBLIC/anon/authenticated, like every public table.
+- Before applying: full backup `pre-086-20261104T195353590Z` (sha256 6632258495f0…),
+  restored into a network-isolated container; 101 tables, counts and hashes matched.
+- Applied 2026-11-04 20:01 UTC, before the backend that uses it was deployed.
+  Verified: table, 3 indexes + primary key, RLS on, no REST grants, 0 rows.
+  The other 100 tables were unchanged apart from `job_runs`, written by
+  scheduled jobs in the same minute.
+
+**086 is used and must not be reused. The next migration is 087.**
