@@ -540,6 +540,15 @@ exports.requestReview = async (req, res) => {
   }
 };
 
+exports.deleteRegistrationDraft = async (req, res) => {
+  try {
+    const entity = await service.deleteRegistrationDraft(req.params.id, req.user.id);
+    res.json({ success: true, entity });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Draft deletion failed', code: err.code });
+  }
+};
+
 exports.softDeleteEntity = async (req, res) => {
   try {
     const entity = await service.softDeleteEntity(req.params.id, req.user.id);

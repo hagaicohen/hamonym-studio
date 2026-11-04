@@ -204,6 +204,12 @@ router.post(
 );
 
 router.delete(
+  '/:id/draft-registration',
+  requireAuth,
+  controller.deleteRegistrationDraft
+);
+
+router.delete(
   '/:id',
   requireAuth,
   controller.softDeleteEntity
