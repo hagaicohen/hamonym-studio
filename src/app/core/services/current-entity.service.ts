@@ -1,6 +1,7 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { Injectable, signal, computed, inject, effect, untracked } from '@angular/core';
 import { CurrentContextService } from './current-context.service';
 import { EntitiesService } from './entities.service';
+import { defer, map, Observable, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -19,39 +20,52 @@ export class CurrentEntityService {
     const savedRole = localStorage.getItem('currentRole');
 
     if (savedEntity) {
-      this.currentEntity.set(JSON.parse(savedEntity));
+      try { this.currentEntity.set(JSON.parse(savedEntity)); }
+      catch { localStorage.removeItem('currentEntity'); }
     }
 
     if (savedRole) {
       this.currentRole.set(savedRole);
     }
 
-    // CurrentContextService.active() is the real source of truth for "which
-    // entity is the topbar switcher pointing at" — it updates on every
-    // switchContext() call. This signal used to only be set once at login and
-    // then go stale after switching, so every entity-scoped page (reports,
-    // donors, donations, ambassadors, dashboard...) kept querying the old
-    // entity. Keep it synced whenever the active entity-manager context changes.
-    effect(() => {
+    effect((onCleanup) => {
       const active = this.ctx.active();
-      if (!active || active.role !== 'entity-manager' || !active.context) {
-        // The active context stopped being (or never was) a valid
-        // entity-manager pointing at a real entity — most commonly because
-        // CurrentContextService just discovered the previously-active
-        // entity no longer exists (hard-deleted, or — as found during the
-        // 2026-09-23 pre-pilot DB cleanup — wiped entirely) and reset
-        // `active` accordingly. Without this, a stale entity from an
-        // earlier session/localStorage would keep being treated as "the"
-        // current entity by every page that reads currentEntity()?.id
-        // (per CLAUDE.md's own documented pattern), even after it's gone.
-        if (this.currentEntity()) this.clear();
-        return;
-      }
-      if (this.currentEntity()?.id === active.context.id) return;
-
-      this.entitiesApi.getEntityById(active.context.id).subscribe({
-        next: (entity) => this.setEntity(entity),
+      untracked(() => {
+        if (active?.role !== 'entity-manager' || !active.context) {
+          this.clear();
+          return;
+        }
+        if (this.currentEntity()?.id === active.context.id) return;
+        // Do not expose data from the preceding organization while loading.
+        this.clear();
+        const subscription = this.entitiesApi.getEntityById(active.context.id).subscribe({
+          next: entity => {
+            if (this.ctx.isActiveContext('entity-manager', active.context!.id) && entity.id === active.context!.id) {
+              this.setEntity(entity);
+              this.setRole(entity.role || 'member');
+            }
+          },
+          error: () => this.clear(),
+        });
+        onCleanup(() => subscription.unsubscribe());
       });
+    }, { allowSignalWrites: true });
+  }
+
+  /** Server authorization precedes changing either of the shared contexts. */
+  selectEntity(entityId: string): Observable<any> {
+    return defer(() => {
+      if (!this.ctx.roles().some(g => g.role === 'entity-manager' && g.contexts.some(c => c.id === entityId))) {
+        return throwError(() => new Error('Entity access denied'));
+      }
+      return this.entitiesApi.getEntityById(entityId).pipe(map(entity => {
+        if (entity.id !== entityId) throw new Error('Entity response mismatch');
+        this.ctx.addEntityContext(entity);
+        this.ctx.switchContext('entity-manager', entityId);
+        this.setEntity(entity);
+        this.setRole(entity.role || 'member');
+        return entity;
+      }));
     });
   }
 

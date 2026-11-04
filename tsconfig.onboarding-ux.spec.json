@@ -1,0 +1,12 @@
+﻿{
+ "extends": "./tsconfig.spec.json",
+ "include": [
+  "src/app/public-landing-routing.spec.ts",
+  "src/app/core/guards/welcome.guard.spec.ts",
+  "src/app/modules/onboarding/pages/welcome/welcome.component.spec.ts",
+  "src/app/core/layout/topbar/topbar.component.spec.ts",
+  "src/app/modules/organization-registration/onboarding-ux.spec.ts",
+  "src/app/modules/auth/pages/login/login-performance.spec.ts",
+  "src/**/*.d.ts"
+ ]
+}

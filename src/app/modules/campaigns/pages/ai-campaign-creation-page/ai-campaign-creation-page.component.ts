@@ -8,7 +8,6 @@ import { timeout, map, tap, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
-import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignStudioStateService, createInitialPartnerDraft, CampaignBlock } from '../../services/campaign-studio-state.service';
@@ -112,7 +111,6 @@ export class AiCampaignCreationPageComponent implements OnInit {
   private loader         = inject(AppLoaderService);
   private router         = inject(Router);
   private currentEntity  = inject(CurrentEntityService);
-  private currentContext = inject(CurrentContextService);
   private entitiesApi    = inject(EntitiesService);
   private uploadService  = inject(UploadService);
   private campaignState  = inject(CampaignStudioStateService);
@@ -131,15 +129,16 @@ export class AiCampaignCreationPageComponent implements OnInit {
   // Partner is a much simpler entity (see createPartnerAndBuildPage()) with
   // no org registration wizard at all, and always starts on this route
   // (partners/create/ai) rather than being selectable from campaign mode.
-  creationMode = signal<'campaign' | 'org-only' | 'org-and-campaign' | 'partner'>('campaign');
-  createNewOrg = computed(() => this.creationMode() === 'org-only' || this.creationMode() === 'org-and-campaign');
+  // No "new organization + campaign" mode: a new organization is a
+  // registration draft, and campaigns start only once it is submitted.
+  creationMode = signal<'campaign' | 'org-only' | 'partner'>('campaign');
+  createNewOrg = computed(() => this.creationMode() === 'org-only');
   orgOnly = computed(() => this.creationMode() === 'org-only');
   isPartnerMode = computed(() => this.creationMode() === 'partner');
 
   pageTitle = computed(() => {
     switch (this.creationMode()) {
       case 'org-only': return '✨ יצירת עמותה עם AI';
-      case 'org-and-campaign': return '✨ יצירת עמותה וקמפיין עם AI';
       case 'partner': return '✨ יצירת דף שותף עם AI';
       default: return '✨ יצירת קמפיין עם AI';
     }
@@ -395,36 +394,15 @@ export class AiCampaignCreationPageComponent implements OnInit {
       this.loader.show('יוצרים את העמותה...');
       this.createOrganization().subscribe({
         next: (entity) => {
-          // Upload files, THEN explicitly re-fetch + cache the entity,
-          // THEN switch context/navigate — in that order, all awaited.
-          // Found live: switchContext() alone triggers CurrentEntityService's
-          // own effect(), which fetches the entity asynchronously in the
-          // background — navigating to /settings/entities/:id right after
-          // (entity-settings.component.ts reads the cached signal ONCE in
-          // ngOnInit, not reactively) could easily win that race and show a
-          // pre-upload snapshot with no logo/certificate, even though both
-          // were correctly saved to the DB moments later. Fetching and
-          // calling setEntity() directly here, before navigating, removes
-          // the race instead of just narrowing it.
+          // The new entity is a registration draft, not an organization yet:
+          // it is not a selectable context and cannot have campaigns. Upload
+          // the files, then continue the registration in the wizard by id.
           this.uploadOrganizationFiles(entity.id).pipe(
-            switchMap(() => this.entitiesApi.getEntityById(entity.id)),
-            catchError(() => of(entity)), // fall back to the pre-upload snapshot rather than block navigation entirely
-          ).subscribe((freshEntity) => {
-            this.currentEntity.setEntity(freshEntity);
-            this.currentContext.addEntityContext(freshEntity);
-            this.currentContext.switchContext('entity-manager', freshEntity.id);
-
-            if (this.orgOnly()) {
-              // Explicit request (2026-07-23): "create ONLY the org, don't
-              // create a campaign" — stop here instead of always chaining
-              // into createCampaignUnder().
-              this.creatingCampaign.set(false);
-              this.loader.hide();
-              this.router.navigate(['/settings/entities', freshEntity.id]);
-              return;
-            }
-
-            this.createCampaignUnder(freshEntity.id, brief);
+            catchError(() => of(null)), // the wizard shows what was uploaded; don't block navigation
+          ).subscribe(() => {
+            this.creatingCampaign.set(false);
+            this.loader.hide();
+            this.router.navigate(['/organization-registration'], { queryParams: { draft: entity.id } });
           });
         },
         error: (err) => {

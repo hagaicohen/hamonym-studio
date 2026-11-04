@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
+import { joinCategories } from '../../../../../shared/ui/category-picker/category-selection';
 
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
@@ -88,6 +89,10 @@ export class EntityBasicInfoSectionViewComponent implements OnChanges {
       default:
         return 'יישות';
     }
+  }
+
+  get categoryList(): string[] {
+    return joinCategories(this.entity?.primary_category, this.entity?.secondary_categories);
   }
 
   getCategoryLabel(categoryId: string): string {

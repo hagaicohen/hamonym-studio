@@ -1,0 +1,110 @@
+<main class="ds" dir="rtl">
+  <header class="ds-head">
+    <h1>מערכת העיצוב של HAMONYM</h1>
+    <p>תצוגה מקומית לפיתוח בלבד. משתנים מ-<code>src/styles/_tokens.scss</code>, רכיב <code>hm-empty-state</code>.</p>
+  </header>
+
+  <section class="ds-section" aria-labelledby="ds-empty">
+    <h2 id="ds-empty">מצבים ריקים</h2>
+    <div class="ds-grid ds-grid--2">
+      <div class="ds-card">
+        <span class="ds-label">ברירת מחדל, עם פעולה</span>
+        <hm-empty-state [icon]="Handshake" title="אין שותפים עדיין" [headingLevel]="3">
+          <button type="button" class="ds-btn">+ שותף חדש</button>
+        </hm-empty-state>
+      </div>
+      <div class="ds-card">
+        <span class="ds-label">ברירת מחדל, עם הסבר</span>
+        <hm-empty-state [icon]="Megaphone" title="עדיין אין קמפיינים" [headingLevel]="3"
+          description="קמפיין הוא דף גיוס עם יעד, סיפור ואפשרויות תרומה."></hm-empty-state>
+      </div>
+      <div class="ds-card">
+        <span class="ds-label">קומפקטי, בתוך טבלה</span>
+        <hm-empty-state size="compact" [icon]="HandCoins" title="לא נמצאו תרומות" [headingLevel]="3"></hm-empty-state>
+      </div>
+      <div class="ds-card">
+        <span class="ds-label">קומפקטי, עם הסבר</span>
+        <hm-empty-state size="compact" [icon]="SearchX" title="אין תוצאות לסינון" [headingLevel]="3"
+          description="נסו לשנות את הסינון או את טווח התאריכים."></hm-empty-state>
+      </div>
+    </div>
+    <span class="ds-label">רוחב נייד (360px)</span>
+    <div class="ds-card ds-phone">
+      <hm-empty-state [icon]="Users" title="אין תורמים עדיין" [headingLevel]="3"
+        description="תורמים יופיעו כאן אחרי התרומה הראשונה.">
+        <button type="button" class="ds-btn">שיתוף הקמפיין</button>
+      </hm-empty-state>
+    </div>
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-categories">
+    <h2 id="ds-categories">בחירת קטגוריות</h2>
+    <div class="ds-card ds-categories">
+      <div class="ds-field-label">קטגוריות</div>
+      <app-category-selector inputId="ds-category-search" [categories]="categories" [(selected)]="selectedCategories"></app-category-selector>
+    </div>
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-icons">
+    <h2 id="ds-icons">אייקונים (Lucide, עובי {{ stroke }})</h2>
+    <div class="ds-row">
+      @for (s of iconSizes; track s.name) {
+        <div class="ds-icon-cell">
+          <lucide-icon [img]="Inbox" [size]="s.px" [strokeWidth]="stroke" aria-hidden="true"></lucide-icon>
+          <span>{{ s.name }} · {{ s.px }}px</span>
+        </div>
+      }
+    </div>
+    <div class="ds-row">
+      <div class="ds-icon-cell"><span class="ds-icon-box ds-icon-box--md"><lucide-icon [img]="Handshake" [size]="20" [strokeWidth]="stroke" aria-hidden="true"></lucide-icon></span><span>תיבה 44px</span></div>
+      <div class="ds-icon-cell"><span class="ds-icon-box ds-icon-box--lg"><lucide-icon [img]="Handshake" [size]="24" [strokeWidth]="stroke" aria-hidden="true"></lucide-icon></span><span>תיבה 56px</span></div>
+    </div>
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-type">
+    <h2 id="ds-type">טיפוגרפיה</h2>
+    @for (t of type; track t.token) {
+      <div class="ds-type-row">
+        <code class="ds-token">--hm-text-{{ t.token }}</code>
+        <span [style.font-size]="'var(--hm-text-' + t.token + ')'" [style.font-weight]="'var(--hm-weight-' + t.weight + ')'">גיוס המונים לעמותות</span>
+      </div>
+    }
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-space">
+    <h2 id="ds-space">ריווח (רשת 4px)</h2>
+    @for (s of spaces; track s) {
+      <div class="ds-space-row">
+        <code class="ds-token">--hm-space-{{ s }}</code>
+        <span class="ds-space-bar" [style.inline-size]="'var(--hm-space-' + s + ')'"></span>
+      </div>
+    }
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-color">
+    <h2 id="ds-color">צבעים</h2>
+    <div class="ds-row">
+      @for (c of brand; track c) {
+        <div class="ds-swatch"><span [style.background]="'var(--hm-brand-' + c + ')'"></span><code>brand-{{ c }}</code></div>
+      }
+      <div class="ds-swatch"><span style="background: var(--hm-brand-secondary)"></span><code>secondary</code></div>
+    </div>
+    <div class="ds-row">
+      @for (c of semantic; track c) {
+        <div class="ds-semantic" [style.background]="'var(--hm-' + c + '-bg)'" [style.border-color]="'var(--hm-' + c + '-border)'" [style.color]="'var(--hm-' + c + ')'">{{ c }}</div>
+      }
+    </div>
+  </section>
+
+  <section class="ds-section" aria-labelledby="ds-shape">
+    <h2 id="ds-shape">פינות וצללים</h2>
+    <div class="ds-row">
+      @for (r of radii; track r) {
+        <div class="ds-shape" [style.border-radius]="'var(--hm-radius-' + r + ')'">radius-{{ r }}</div>
+      }
+      @for (s of shadows; track s) {
+        <div class="ds-shape ds-shape--shadow" [style.box-shadow]="'var(--hm-shadow-' + s + ')'">shadow-{{ s }}</div>
+      }
+    </div>
+  </section>
+</main>

@@ -126,10 +126,7 @@
   </div>
 
   <!-- EMPTY STATE -->
-  <div class="ss-empty" *ngIf="draft.sponsors.length === 0">
-    <div class="ss-empty-icon">🤝</div>
-    <div class="ss-empty-text">טרם נוספו חסויות</div>
-    <div class="ss-empty-hint">חסויות הן רשות — ניתן לדלג</div>
-  </div>
+  <hm-empty-state *ngIf="draft.sponsors.length === 0" size="compact" [headingLevel]="3"
+    [icon]="HandshakeIcon" title="טרם נוספו חסויות" description="חסויות הן רשות — ניתן לדלג"></hm-empty-state>
 
 </div>

@@ -1,166 +1,62 @@
-<div class="plat-page">
-
-  @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else {
-
-  <div class="plat-header">
-    <h1 class="plat-title">קמפיינים</h1>
-  </div>
-
-  @if (actionError) {
-    <div class="plat-action-error">{{ actionError }}</div>
-  }
-
-  <div class="plat-filters">
-    <input
-      class="plat-search"
-      type="search"
-      placeholder="חיפוש לפי שם קמפיין..."
-      [(ngModel)]="searchQuery"
-      (input)="onSearch()"
-    />
-    <app-column-picker [columns]="columns" storageKey="platformColumns_campaigns" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
-  </div>
-
-  <div class="plat-chips">
-    @for (chip of chips; track chip.key) {
-      <button
-        class="plat-chip"
-        [class.active]="activeChip === chip.key"
-        (click)="selectChip(chip.key)"
-      >
-        <span class="plat-chip-dot">{{ chip.dot }}</span>
-        {{ chip.label }}
-      </button>
-    }
-  </div>
-
-  <div class="plat-card">
-    @if (loading) {
-      <div class="plat-loading">טוען...</div>
-    } @else if (campaigns.length === 0) {
-      <div class="plat-empty">לא נמצאו קמפיינים</div>
-    } @else {
-      <div class="plat-table-wrap" [class.refreshing]="refreshing">
-        <table class="plat-table">
-          <thead>
-            <tr>
-              <th class="sortable" (click)="sortBy('title')">קמפיין</th>
-              @if (visibleColumns.has('entity')) { <th class="sortable" (click)="sortBy('entity')">עמותה</th> }
-              @if (visibleColumns.has('status')) { <th class="sortable" (click)="sortBy('status')">סטטוס</th> }
-              @if (visibleColumns.has('raised')) { <th class="sortable" (click)="sortBy('raised')">גיוס</th> }
-              @if (visibleColumns.has('featured')) { <th>מומלץ</th> }
-              @if (visibleColumns.has('locked')) { <th>נעילה</th> }
-              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">נוצר</th> }
-              <th class="actions-col">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of campaigns; track c.id) {
-              <tr class="plat-row" [class.deleted-row]="c.deleted_at">
-                <td data-label="קמפיין">
-                  <div class="camp-title">{{ c.title }}</div>
-                  <div class="camp-slug">/{{ c.slug }}</div>
-                </td>
-                @if (visibleColumns.has('entity')) { <td data-label="עמותה">{{ c.entity_name }}</td> }
-                @if (visibleColumns.has('status')) {
-                  <td data-label="סטטוס">
-                    @if (c.deleted_at) {
-                      <span class="plat-status status-deleted">נמחק</span>
-                    } @else {
-                      <div class="status-select-wrap">
-                        <select class="status-select" [ngModel]="c.status" (ngModelChange)="onStatusChange(c, $event)" [disabled]="actionInProgress">
-                          @for (s of statusOptions; track s) {
-                            <option [value]="s">{{ statusLabel(s) }}</option>
-                          }
-                        </select>
-                      </div>
-                    }
-                  </td>
-                }
-                @if (visibleColumns.has('raised')) {
-                  <td data-label="גיוס">
-                    <div class="raised-wrap">
-                      <div class="raised-amounts">
-                        {{ fmtMoney(c.current_amount) }}
-                        @if (c.target_amount) {
-                          <span class="camp-target"> / {{ fmtMoney(c.target_amount) }}</span>
-                        }
-                      </div>
-                      @if (c.target_amount) {
-                        <div class="raised-progress-track">
-                          <div class="raised-progress-fill" [style.width.%]="progressPct(c)"></div>
-                        </div>
-                      }
-                    </div>
-                  </td>
-                }
-                @if (visibleColumns.has('featured')) {
-                  <td data-label="מומלץ">
-                    <button
-                      class="toggle-chip"
-                      [class.active]="c.is_featured"
-                      [disabled]="!!c.deleted_at || actionInProgress"
-                      (click)="toggleFeatured(c)"
-                      [title]="c.is_featured ? 'הסר סימון מומלץ' : 'סמן כמומלץ'"
-                    ><span class="toggle-chip-icon">⭐</span>{{ c.is_featured ? 'מומלץ' : 'סמן' }}</button>
-                  </td>
-                }
-                @if (visibleColumns.has('locked')) {
-                  <td data-label="נעילה">
-                    <button
-                      class="toggle-chip"
-                      [class.active]="c.is_locked"
-                      [disabled]="!!c.deleted_at || actionInProgress"
-                      (click)="toggleLock(c)"
-                      [title]="c.is_locked ? 'פתח נעילה' : 'נעל לעריכה'"
-                    ><span class="toggle-chip-icon">{{ c.is_locked ? '🔒' : '🔓' }}</span>{{ c.is_locked ? 'נעול' : 'פתוח' }}</button>
-                  </td>
-                }
-                @if (visibleColumns.has('created_at')) { <td data-label="נוצר">{{ fmtDate(c.created_at) }}</td> }
-                <td data-label="פעולות" class="actions-col">
-                  @if (c.deleted_at) {
-                    <button class="btn-restore" [disabled]="actionInProgress" (click)="restore(c)">שחזור</button>
-                  } @else {
-                    <div class="camp-actions">
-                      <button class="icon-btn icon-btn-secondary" [disabled]="actionInProgress" (click)="requestSlugChange(c)" title="שינוי כתובת URL">
-                        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                        </svg>
-                      </button>
-                      <button class="icon-btn icon-btn-secondary" [disabled]="actionInProgress" (click)="duplicate(c)" title="שכפול">
-                        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                      <button class="icon-btn icon-btn-delete" [disabled]="actionInProgress" (click)="requestDelete(c)" title="מחיקה">
-                        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9M19.228 5.79c.342.052.682.107 1.022.166M19.228 5.79L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397M4.772 5.79c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                      </button>
-                    </div>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+<div class="plat-page" dir="rtl">
+  <header class="plat-header"><div><h1 class="plat-title">קמפיינים</h1><p class="plat-subtitle">מצב הקמפיינים, גיוס ופעולות ניהול</p></div><span class="cell-secondary">{{ total | number }} קמפיינים</span></header>
+  @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
+  @if (actionError) { <div class="plat-action-error" role="alert">{{ actionError }}</div> }
+  @if (feedback) { <p class="feedback" role="status">{{ feedback }}</p> }
+  <div class="plat-filters"><label class="sr-only" for="campaign-search">חיפוש קמפיין</label><input id="campaign-search" class="plat-search" type="search" [placeholder]="advancedListAvailable ? 'חיפוש לפי קמפיין או עמותה' : 'חיפוש לפי שם קמפיין'" [(ngModel)]="searchQuery" (input)="onSearch()" />@if (context.hasPlatformSection('organizations')) { <app-entity-combobox [entities]="organizationOptions" [selectedId]="entityFilter || undefined" (selectedIdChange)="entityFilter = $event || ''; page = 0; load()"></app-entity-combobox> }<app-column-picker [columns]="columns" storageKey="platformColumns_campaigns" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>@if (hasFilters) { <button class="text-button" (click)="clearFilters()">נקה סינון</button> }</div>
+  @if (organizationOptionsError) { <p class="plat-error" role="alert">{{ organizationOptionsError }} <button class="secondary-button" (click)="loadOrganizationOptions()">נסה שוב</button></p> }
+  @if (advancedListAvailable) { <div class="plat-filters campaign-dates"><label>נוצר מתאריך <input type="date" lang="he-IL" [(ngModel)]="dateFrom" (ngModelChange)="page = 0; load()" /></label><label>עד תאריך <input type="date" lang="he-IL" [(ngModel)]="dateTo" (ngModelChange)="page = 0; load()" /></label><button class="secondary-button" (click)="sortBy('end_date')">מיון לפי מועד סיום</button></div> }
+  <nav class="plat-chips" aria-label="סינון קמפיינים"><button class="plat-chip" [class.active]="activeChip === 'all'" [attr.aria-pressed]="activeChip === 'all'" (click)="selectChip('all')">הכול</button>
+    @for (chip of chips; track chip.key) { <button class="plat-chip" [class.active]="activeChip === chip.key" [attr.aria-pressed]="activeChip === chip.key" (click)="selectChip(chip.key)">{{ chip.label }}</button> }
+  </nav>
+  <section class="plat-card" aria-label="רשימת קמפיינים" [attr.aria-busy]="loading || refreshing">
+    @if (loading) { <div class="plat-loading" role="status">טוען קמפיינים…</div> }
+    @else if (campaigns.length === 0 && !error) { <div class="plat-empty"><strong>{{ hasFilters ? 'אין קמפיינים התואמים לסינון' : 'עדיין אין קמפיינים במערכת' }}</strong>@if (hasFilters) { <button class="text-button" (click)="clearFilters()">הצג את כל הקמפיינים</button> }</div> }
+    @else if (campaigns.length) {
+      <div class="plat-table-wrap" [class.refreshing]="refreshing" tabindex="0" aria-label="טבלת קמפיינים; ניתן לגלול לרוחב">
+        <table class="plat-table"><thead><tr>
+          <th scope="col"><button (click)="sortBy('title')">קמפיין {{ sortField === 'title' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th>
+          @if (visibleColumns.has('entity')) { <th scope="col"><button (click)="sortBy('entity')">עמותה {{ sortField === 'entity' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
+          @if (visibleColumns.has('status')) { <th scope="col"><button (click)="sortBy('status')">סטטוס</button></th> }
+          @if (visibleColumns.has('raised')) { <th scope="col"><button (click)="sortBy('raised')">גויס מתוך היעד</button>@if (advancedListAvailable) { <button class="progress-sort" (click)="sortBy('progress')" title="מיון לפי אחוז הגיוס מתוך היעד" aria-label="מיון לפי אחוז הגיוס">אחוז {{ sortField === 'progress' ? (sortDir === 'asc' ? '↑' : '↓') : '↕' }}</button> }</th> }
+          @if (visibleColumns.has('featured')) { <th scope="col">המלצת פלטפורמה</th> }
+          @if (visibleColumns.has('locked')) { <th scope="col">הרשאת עריכה</th> }
+          @if (visibleColumns.has('created_at')) { <th scope="col"><button (click)="sortBy('created_at')">יצירה וסיום</button></th> }
+          <th scope="col">פעולות</th>
+        </tr></thead><tbody>
+          @for (c of campaigns; track c.id) { <tr class="plat-row" [class.deleted-row]="c.deleted_at">
+            <td><button class="text-button" (click)="openCampaign(c)">{{ c.title }}</button><span class="cell-secondary">{{ c.supporters_count | number }} תורמים</span></td>
+            @if (visibleColumns.has('entity')) { <td>@if (context.hasPlatformSection('organizations')) { <a [routerLink]="['/platform/organizations', c.entity_id]">{{ c.entity_name }}</a> } @else { {{ c.entity_name }} }</td> }
+            @if (visibleColumns.has('status')) { <td><span class="plat-status" [ngClass]="'status-' + (c.deleted_at ? 'deleted' : c.status)">{{ c.deleted_at ? 'נמחק' : statusLabel(c.status) }}</span></td> }
+            @if (visibleColumns.has('raised')) { <td><div class="raised-wrap"><span class="numeric">{{ fmtMoney(c.current_amount) }} <span class="cell-secondary">{{ c.target_amount > 0 ? 'מתוך ' + fmtMoney(c.target_amount) : 'ללא יעד כספי' }}</span></span>@if (c.target_amount > 0) { <div class="progress-line"><div class="raised-progress-track" aria-hidden="true"><div class="raised-progress-fill" [style.width.%]="progressPct(c) > 100 ? 100 : progressPct(c)"></div></div><span class="numeric">{{ progressPct(c) }}%</span></div> }</div></td> }
+            @if (visibleColumns.has('featured')) { <td><span class="cell-secondary" title="סימון קמפיין כמומלץ על ידי הפלטפורמה">{{ c.is_featured ? 'מומלץ' : 'ללא המלצה' }}</span></td> }
+            @if (visibleColumns.has('locked')) { <td><span class="cell-secondary" title="נעילה מונעת עריכה של הקמפיין; מצב הפרסום מופיע בנפרד">{{ c.is_locked ? 'נעול לעריכה' : 'ללא נעילת עריכה' }}</span></td> }
+            @if (visibleColumns.has('created_at')) { <td><time dir="ltr" [attr.datetime]="c.created_at">{{ fmtDate(c.created_at) }}</time>@if (advancedListAvailable) { <span class="cell-secondary">סיום: <bdi>{{ c.end_date ? fmtDate(c.end_date) : 'לא נקבע' }}</bdi></span> }</td> }
+            <td><button class="campaign-more-button" [disabled]="actionInProgress" (click)="openCampaign(c)" [attr.aria-label]="'ניהול ופעולות עבור ' + c.title" title="ניהול ופעולות" aria-haspopup="dialog">⋯</button></td>
+          </tr> }
+        </tbody></table>
       </div>
-
-      <div class="plat-footer">
-        <span>{{ total }} קמפיינים</span>
-        <div class="plat-pager">
-          <button (click)="prevPage()" [disabled]="page === 0">←</button>
-          <span>{{ page + 1 }} / {{ totalPages }}</span>
-          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
-        </div>
-      </div>
+      <footer class="plat-footer"><span>{{ total | number }} קמפיינים</span><nav class="plat-pager" aria-label="דפדוף קמפיינים"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page >= totalPages - 1 || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
     }
-  </div>
-
-  }
-
+  </section>
+  @if (selectedCampaign; as c) { <app-admin-details-drawer [heading]="c.title" (closed)="closeCampaign()">
+    <dl class="detail-grid"><dt>עמותה</dt><dd>@if (context.hasPlatformSection('organizations')) { <a [routerLink]="['/platform/organizations', c.entity_id]">{{ c.entity_name }}</a> } @else { {{ c.entity_name }} }</dd><dt>סטטוס</dt><dd>{{ c.deleted_at ? 'נמחק' : statusLabel(c.status) }}</dd><dt>גויס</dt><dd>{{ fmtMoney(c.current_amount) }}</dd><dt>יעד</dt><dd>{{ c.target_amount > 0 ? fmtMoney(c.target_amount) : 'ללא יעד' }}</dd><dt>יצירה</dt><dd dir="ltr">{{ fmtDate(c.created_at) }}</dd>@if (campaignDetail) { <dt>מועד סיום</dt><dd dir="ltr">{{ fmtDate(campaignDetail.end_date) }}</dd> }</dl>
+    @if (detailLoading) { <p role="status">טוען פרטים נוספים…</p> } @if (detailError) { <p role="alert">{{ detailError }} <button class="text-button" (click)="openCampaign(c)">נסה שוב</button></p> }
+    <section class="detail-section"><h3>פעולות קמפיין</h3><div class="campaign-actions-menu">
+      @if (!c.deleted_at) {
+        <a [href]="campaignUrl(c)" target="_blank" rel="noopener">צפייה בעמוד התרומה ↗</a>
+        <button class="secondary-button" (click)="copyCampaignLink(c)">העתקת קישור לתרומה</button>
+        @if (context.hasPlatformSection('campaigns')) {
+        <label>שינוי סטטוס <select [ngModel]="c.status" (ngModelChange)="closeCampaign(); onStatusChange(c, $event)" [disabled]="actionInProgress"><option [value]="c.status" disabled>{{ statusLabel(c.status) }} — מצב נוכחי</option>@for (s of availableStatuses(c); track s) { <option [value]="s">{{ statusLabel(s) }}</option> }</select></label>
+        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); toggleFeatured(c)">{{ c.is_featured ? 'הסר המלצת פלטפורמה' : 'סמן כמומלץ על ידי הפלטפורמה' }}</button>
+        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); toggleLock(c)">{{ c.is_locked ? 'אפשר עריכת הקמפיין' : 'נעל את הקמפיין לעריכה' }}</button>
+        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); requestSlugChange(c)">שינוי כתובת הקמפיין</button>
+        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); duplicate(c)">שכפול לטיוטה חדשה</button>
+        <button class="secondary-button danger-action" [disabled]="actionInProgress" (click)="closeCampaign(); requestDelete(c)">מחיקת קמפיין</button>
+        }
+      } @else if (context.hasPlatformSection('campaigns')) { <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); restore(c)">שחזור קמפיין</button> }
+    </div></section>
+  </app-admin-details-drawer> }
   @if (pendingAction) {
     <div class="plat-modal-backdrop" (click)="cancelPendingAction()">
       <div class="plat-modal" (click)="$event.stopPropagation()">
@@ -187,11 +83,11 @@
         }
 
         <div class="plat-modal-field">
-          <label>הערה (חובה) *</label>
+            <label>הערה {{ pendingActionRequiresNote ? '(חובה)' : '(רשות)' }}</label>
           <textarea
             class="plat-modal-notes"
             rows="3"
-            placeholder="נדרשת הערה לפעולה זו..."
+            [placeholder]="pendingActionRequiresNote ? 'נדרשת הערה לפעולה זו' : 'ניתן להוסיף הערה לתיעוד'"
             [(ngModel)]="notesInput"
           ></textarea>
           @if (noteRequiredError) {

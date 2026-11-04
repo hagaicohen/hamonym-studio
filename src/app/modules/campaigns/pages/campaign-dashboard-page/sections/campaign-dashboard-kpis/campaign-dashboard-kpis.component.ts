@@ -19,7 +19,7 @@ export class CampaignDashboardKpisComponent {
   get progressPct(): number {
     const target = this.draft.targetAmount || 0;
     if (!target) return 0;
-    return Math.min(100, Math.round(((this.draft.currentAmount ?? 0) / target) * 100));
+    return Math.round(((this.draft.currentAmount ?? 0) / target) * 100);
   }
 
   get remaining(): number {

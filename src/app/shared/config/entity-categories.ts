@@ -35,10 +35,27 @@ const RAW_ENTITY_CATEGORIES: EntityCategory[] = [
   { id: 'science-technology',    label: 'מדע וטכנולוגיה' },
   { id: 'social-change',         label: 'שינוי חברתי' },
   { id: 'sports',                label: 'ספורט' },
+  // Added 2026-11-03; mirrored in hamonym-backend entity-categories.js.
+  { id: 'settlement',                 label: 'התיישבות' },
+  { id: 'agriculture',                label: 'חקלאות' },
+  { id: 'youth-movements',            label: 'תנועות נוער' },
+  { id: 'security-rescue',            label: 'ביטחון והצלה' },
+  { id: 'soldiers-reservists',        label: 'חיילים ומילואים' },
+  { id: 'bereaved-families',          label: 'משפחות שכולות' },
+  { id: 'heritage-commemoration',     label: 'מורשת והנצחה' },
+  { id: 'communities',                label: 'קהילות ויישובים' },
+  { id: 'employment-training',        label: 'תעסוקה והכשרה מקצועית' },
+  { id: 'immigrant-absorption',       label: 'קליטת עלייה' },
+  { id: 'disabilities-accessibility', label: 'מוגבלויות ונגישות' },
+  { id: 'food-security',              label: 'מזון וביטחון תזונתי' },
+  { id: 'housing',                    label: 'דיור' },
+  { id: 'research-development',       label: 'מחקר ופיתוח' },
   { id: 'other',                 label: 'אחר' },
 ];
 
-// Sorted alphabetically (Hebrew locale) by label — every consumer (dropdown
+const HEBREW_COLLATOR = new Intl.Collator('he-IL', { sensitivity: 'base' });
+
+// Sorted alphabetically (he-IL collation) by label — every consumer (dropdown
 // and chip pickers alike) imports this single ordered array, so sorting it
 // once here keeps them all in sync automatically. "אחר" (Other) is pinned
 // last regardless — it starts with א like several real categories, and
@@ -47,6 +64,6 @@ const RAW_ENTITY_CATEGORIES: EntityCategory[] = [
 export const ENTITY_CATEGORIES: EntityCategory[] = [
   ...RAW_ENTITY_CATEGORIES
     .filter((c) => c.id !== 'other')
-    .sort((a, b) => a.label.localeCompare(b.label, 'he')),
+    .sort((a, b) => HEBREW_COLLATOR.compare(a.label, b.label)),
   ...RAW_ENTITY_CATEGORIES.filter((c) => c.id === 'other'),
 ];

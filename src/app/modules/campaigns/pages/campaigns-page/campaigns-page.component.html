@@ -62,6 +62,29 @@
 
   } @else {
 
+  @if (showWelcome) {
+  <section class="first-campaign" aria-labelledby="first-campaign-title">
+    <span class="fc-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="23" fill="#f5f3ff"/>
+        <path d="M15 31.5c3.2-1.6 5.2-4.4 6.4-8.4M33 31.5c-3.2-1.6-5.2-4.4-6.4-8.4" stroke="#c4b5fd" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M24 13.5v17" stroke="#583cd6" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="24" cy="13.5" r="2.6" fill="#583cd6"/>
+        <path d="M14 34.5h20" stroke="#ddd6fe" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <h1 id="first-campaign-title" class="fc-title">הסיפור שלכם מתחיל כאן</h1>
+    <p class="fc-subtitle">כל שינוי משמעותי מתחיל בצעד אחד. צרו את הקמפיין הראשון שלכם, ספרו על המטרה וצרפו אנשים לדרך.</p>
+    <button type="button" class="fc-cta" (click)="createCampaign()">יצירת הקמפיין הראשון</button>
+    @if (entityAwaitingApproval) { <p class="fc-reassure">הקמפיין יישמר כטיוטה, ויוכל להתפרסם לאחר אישור העמותה.</p> }
+    <ol class="fc-steps" aria-label="שלבי יצירת קמפיין">
+      <li><span class="fc-step-num" aria-hidden="true">1</span><span><strong>מספרים את הסיפור</strong> מה המטרה שלכם?</span></li>
+      <li><span class="fc-step-num" aria-hidden="true">2</span><span><strong>מגדירים יעד</strong> כמה רוצים לגייס?</span></li>
+      <li><span class="fc-step-num" aria-hidden="true">3</span><span><strong>יוצאים לדרך</strong> משתפים ומגייסים.</span></li>
+    </ol>
+  </section>
+  } @else {
+
   <!-- HEADER -->
   <div class="campaigns-header">
     <div class="header-text">
@@ -69,17 +92,17 @@
       <p class="campaigns-description">נהל את קמפיינים הגיוס שלך</p>
     </div>
     <div class="header-actions">
-      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
-        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
+      <button class="btn-new btn-ai btn-ai--disabled ai-unavailable" disabled
+        title="כלי AI אינם זמינים כרגע"
         (click)="createCampaignWithAi()">✨ צור עם AI</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   </div>
 
   <!-- PENDING APPROVAL NOTICE -->
-  @if (currentEntity.currentEntity()?.status === 'pending_review') {
+  @if (['draft', 'pending_review', 'changes_requested'].includes(currentEntity.currentEntity()?.status)) {
     <div class="campaigns-alert campaigns-alert--pending">
-      העמותה ממתינה לאישור. ניתן להכין ולערוך קמפיינים, אך ניתן יהיה לפרסם אותם לאחר אישור העמותה.
+      אפשר כבר ליצור ולערוך קמפיינים. הקמפיינים נשמרים כטיוטות ואינם חשופים לציבור. פרסום וקבלת תרומות יתאפשרו רק לאחר אישור העמותה והשלמת תנאי הפרסום והסליקה.
     </div>
   }
 
@@ -88,6 +111,16 @@
     <strong>שים לב:</strong> כל קמפיין דורש מסוף סליקה ייעודי.
     אם אתה רוצה לפתוח קמפיין נוסף (למשל גיוס קבוע + קמפיין חד-פעמי), תצטרך להגדיר מסוף נוסף בספק הסליקה שלך.
   </div>
+
+  @if (activeCampaigns.length === 0 && drafts.length > 0) {
+    <div class="fc-continue">
+      <div>
+        <strong>הקמפיין שלכם כבר בדרך</strong>
+        <span>יש לכם טיוטה שמחכה להשלמה, ממשיכים מאיפה שעצרתם.</span>
+      </div>
+      <button type="button" class="fc-continue-btn" (click)="editCampaign(drafts[0].id)">ממשיכים לערוך</button>
+    </div>
+  }
 
   <!-- ══ DRAFTS — no spinner, always visible ══ -->
   @if (drafts.length > 0) {
@@ -153,17 +186,6 @@
   }
 
   <!-- ══ CAMPAIGNS ══ -->
-  @if (!isLoading && activeCampaigns.length === 0 && drafts.length === 0) {
-    <div class="campaigns-empty">
-      <div class="empty-icon">📋</div>
-      <p>אין קמפיינים עדיין</p>
-      <button class="btn-new btn-ai" [class.btn-ai--disabled]="!aiEnabled" [disabled]="!aiEnabled"
-        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
-        (click)="createCampaignWithAi()">✨ צור עם AI</button>
-      <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
-    </div>
-  } @else {
-
     <!-- ══ CAMPAIGNS ══ -->
     @if (activeCampaigns.length > 0) {
       <section class="section-block">
@@ -210,7 +232,7 @@
                       <span class="progress-target">מתוך ₪{{ c.targetAmount | number }}</span>
                     </div>
                     <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                      <div class="progress-fill" [style.width.%]="progressPercent(c) > 100 ? 100 : progressPercent(c)"></div>
                     </div>
                     <div class="progress-pct">{{ progressPercent(c) | number:'1.1-1' }}% הושג</div>
                   </div>
@@ -291,7 +313,7 @@
                       <span class="list-pct">{{ progressPercent(c) | number:'1.0-0' }}%</span>
                     </div>
                     <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPercent(c)"></div>
+                      <div class="progress-fill" [style.width.%]="progressPercent(c) > 100 ? 100 : progressPercent(c)"></div>
                     </div>
                   </div>
                   <div class="card-meta">

@@ -1,4 +1,5 @@
 :host { display: block; }
+.approval-card.approval-card-compact { padding: 0; margin: 12px 0 0; border: 0; box-shadow: none; border-radius: 0; }
 
 .approval-card {
   background: #fff;
@@ -78,4 +79,11 @@
   margin-top: 10px;
   font-size: 12px;
   color: #ef4444;
+}
+
+.approval-comment { overflow-wrap: anywhere; white-space: pre-line; line-height: 1.7; }
+@media (max-width: 768px) {
+  .approval-meta { flex-wrap: wrap; gap: 4px 10px; line-height: 1.6; }
+  .approval-comment { padding: 10px 12px; font-size: 12px; }
+  .approval-next-step { border: 0; background: transparent; padding: 0; margin-block: 10px 0; color: #64748b; }
 }

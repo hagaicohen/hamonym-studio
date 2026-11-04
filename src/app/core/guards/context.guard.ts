@@ -1,12 +1,12 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-export const contextGuard: CanActivateFn = () => {
+export const contextGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
 
   const token = localStorage.getItem('token');
   if (!token) {
-    return router.createUrlTree(['/login']);
+    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
   }
 
   // User is authenticated but has no active context yet.

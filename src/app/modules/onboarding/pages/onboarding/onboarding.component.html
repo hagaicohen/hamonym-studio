@@ -14,7 +14,7 @@
         [class.active]="selectedType === 'organization'"
         (click)="selectType('organization')"
       >
-        <div class="icon">🏛️</div>
+        <div class="icon" aria-hidden="true"><lucide-icon [img]="icons.organization" [size]="iconSize" [strokeWidth]="iconStroke"></lucide-icon></div>
 
         <h3>עמותה / גוף מגייס</h3>
 
@@ -28,7 +28,7 @@
         [class.active]="selectedType === 'campaigner'"
         (click)="selectType('campaigner')"
       >
-        <div class="icon">🚀</div>
+        <div class="icon" aria-hidden="true"><lucide-icon [img]="icons.campaigner" [size]="iconSize" [strokeWidth]="iconStroke"></lucide-icon></div>
 
         <h3>קמפיינר</h3>
 
@@ -42,7 +42,7 @@
         [class.active]="selectedType === 'business'"
         (click)="selectType('business')"
       >
-        <div class="icon">💼</div>
+        <div class="icon" aria-hidden="true"><lucide-icon [img]="icons.business" [size]="iconSize" [strokeWidth]="iconStroke"></lucide-icon></div>
 
         <h3>עסק שותף</h3>
 
@@ -56,7 +56,7 @@
         [class.active]="selectedType === 'donor'"
         (click)="selectType('donor')"
       >
-        <div class="icon">❤️</div>
+        <div class="icon" aria-hidden="true"><lucide-icon [img]="icons.donor" [size]="iconSize" [strokeWidth]="iconStroke"></lucide-icon></div>
 
         <h3>רק תורם</h3>
 

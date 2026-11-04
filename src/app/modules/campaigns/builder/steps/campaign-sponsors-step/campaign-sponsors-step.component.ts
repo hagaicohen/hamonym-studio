@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Handshake, Eye, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
+import { EmptyStateComponent } from '../../../../../shared/ui/empty-state/empty-state.component';
 import { CampaignStudioStateService, CampaignSponsor } from '../../../services/campaign-studio-state.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { UploadService } from '../../../../../core/services/upload.service';
@@ -9,7 +10,7 @@ import { UploadService } from '../../../../../core/services/upload.service';
 @Component({
   selector: 'app-campaign-sponsors-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, EmptyStateComponent],
   templateUrl: './campaign-sponsors-step.component.html',
   styleUrl: './campaign-sponsors-step.component.css',
 })

@@ -1,0 +1,62 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict'),{execFileSync}=require('child_process');
+const pg=require(require.resolve('pg',{paths:['C:/DEV/HamonymStudio/hamonym-backend']}));
+if (!process.env.HAMONYM_ORG_LIFECYCLE_BACKEND) throw new Error('Set HAMONYM_ORG_LIFECYCLE_BACKEND to the updated backend worktree');
+const backend=path.resolve(process.env.HAMONYM_ORG_LIFECYCLE_BACKEND);
+const container='hamonym-test-db';
+const env=JSON.parse(execFileSync('docker',['inspect',container,'--format','{{json .Config.Env}}'],{encoding:'utf8'}));
+const values=Object.fromEntries(env.map(v=>{const i=v.indexOf('=');return [v.slice(0,i),v.slice(i+1)];}));
+const portText=execFileSync('docker',['port',container,'5432'],{encoding:'utf8'});
+const port=Number(portText.match(/:(\d+)/)[1]);
+const config={host:'127.0.0.1',port,user:values.POSTGRES_USER||'postgres',password:values.POSTGRES_PASSWORD};
+const database=`hamonym_org_lifecycle_${Date.now()}`;assert.match(database,/^hamonym_org_lifecycle_\d+$/);
+const admin=new pg.Pool({...config,database:'postgres'});let pool;let createdDatabase=false;let assertions=0,published=0,provisioned=0,failAudit=false;
+function load(relative,deps){const file=path.join(backend,relative);const module={exports:{}};vm.runInNewContext(fs.readFileSync(file,'utf8'),{module,exports:module.exports,require:id=>Object.hasOwn(deps,id)?deps[id]:{},console,process:{env:{}},Date,Buffer,Set,Map,Object,JSON,Number,String,Array,Error},{filename:file});return module.exports;}
+const profile={entity_type:'association',legal_name:'Test org',registration_number:'123456',display_name:'Test',email:'owner@example.test',phone:'0500000000',description:'Test purpose'};
+async function check(name,fn){await fn();assertions++;console.log(`PASS ${name}`);}
+(async()=>{
+ await admin.query(`CREATE DATABASE "${database}"`);createdDatabase=true;pool=new pg.Pool({...config,database,max:8});
+ const source=fs.readFileSync(path.join(backend,'src/modules/entities/entities.service.js'),'utf8');
+ const insert=source.match(/INSERT INTO entities\s*\(([\s\S]*?)\)\s*VALUES/)[1];
+ const update=source.slice(source.indexOf('exports.updateEntity'));
+ const returning=update.match(/RETURNING\s*\n\s*id,([\s\S]*?)`/)[1];
+ const cols=new Set([...insert.split(','),...('id,'+returning).split(','),'flagged_for_review','flagged_for_review_reason','flagged_for_review_at','deleted_at','updated_at','created_at','requires_completion','missing_fields','association_certificate_data','tax_document_data','logo_data','registration_document_data']);
+ const booleans=new Set(['is_profile_complete','onboarding_completed','cardcom_is_production','flagged_for_review','requires_completion','is_hidden']);
+ const timestamps=new Set(['updated_at','created_at','flagged_for_review_at','deleted_at','onboarding_completed_at','cardcom_last_verified_at']);
+ const columns=[...new Set([...cols].map(x=>x.trim()).filter(Boolean))].map(c=>{assert.match(c,/^[a-z_]+$/);return `"${c}" `+(c==='id'?"text PRIMARY KEY DEFAULT md5(random()::text)":booleans.has(c)?'boolean DEFAULT false':timestamps.has(c)?'timestamptz DEFAULT NULL':['secondary_categories','campaign_types'].includes(c)?'text[]':c==='missing_fields'?"jsonb DEFAULT '[]'::jsonb":c.endsWith('_data')?'bytea':c==='onboarding_step'?'integer':'text');});
+ await pool.query(`CREATE TABLE entities (${columns.join(',')}); CREATE TABLE users(id int PRIMARY KEY,full_name text,is_super_admin boolean); INSERT INTO users VALUES(9,'Admin',true),(10,'Owner',false),(11,'Other',false); CREATE TABLE user_entities(user_id int REFERENCES users(id),entity_id text REFERENCES entities(id),role text); CREATE TABLE platform_audit_log(id bigserial PRIMARY KEY,super_admin_user_id int REFERENCES users(id),entity_id text REFERENCES entities(id),action text,notes text,reason_tags text[],ip_address text,created_at timestamptz DEFAULT now(),acknowledged_at timestamptz);`);
+ await pool.query(fs.readFileSync(path.join(backend,'migrations/084_entity_legal_identity.sql'),'utf8'));
+ const db={connect:()=>pool.connect(),query:(sql,args)=>{if(failAudit&&/INSERT INTO platform_audit_log/.test(sql))throw new Error('simulated audit failure');return pool.query(sql,args);}};
+ // Wrap transaction queries too: rollback must restore the status when audit fails.
+ db.connect=async()=>{const client=await pool.connect();return {release:()=>client.release(),query:(sql,args)=>{if(failAudit&&/INSERT INTO platform_audit_log/.test(sql))return Promise.reject(new Error('simulated audit failure'));return client.query(sql,args);}};};
+ const ownership=load('src/middleware/entity-permission.middleware.js',{'../db/db':db});
+ const lifecycle=require(path.join(backend,'src/modules/entities/organization-lifecycle'));
+ const entities=load('src/modules/entities/entities.service.js',{'../../db/db':db,'../../lib/supabase':{},'../../middleware/entity-permission.middleware':ownership,'../email/email.service':{queue:()=>{}},'./organization-lifecycle':lifecycle,'./entity-identity':require(path.join(backend,'src/modules/entities/entity-identity'))});
+ const platform=load('src/modules/platform/platform.service.js',{'../../db/db':db,'../entities/entities.service':entities,'../entities/organization-lifecycle':lifecycle,'../email/email.service':{queue:()=>{}},'../billing-engine/billing-setup-notification.service':{resolveEntityAdmins:async()=>[]},'../billing-engine/provisioning.service':{createBillingAccount:async()=>{provisioned++;}},'../campaigns/campaigns.service':{publishRequestedCampaigns:async()=>{published++;return [];}}});
+ let a,b;
+ await check('complete draft creation never submits, even with a client completion flag',async()=>{a=await entities.createEntity({userId:10,data:{...profile,is_profile_complete:true}});assert.equal(a.status,'draft');assert.equal(a.is_profile_complete,true);});
+ await check('saving complete profile remains a draft',async()=>{a=await entities.updateEntity({entityId:a.id,userId:10,data:{...profile,...a,description:'Saved description'}});assert.equal(a.status,'draft');});
+ await check('incomplete/whitespace profiles cannot submit and rollback safely',async()=>{b=await entities.createEntity({userId:10,data:{...profile,registration_number:'other',description:'  ',is_profile_complete:true}});assert.equal(b.is_profile_complete,false);await assert.rejects(entities.requestReview(b.id,10),e=>e.code==='PROFILE_INCOMPLETE');assert.equal((await pool.query('SELECT status FROM entities WHERE id=$1',[b.id])).rows[0].status,'draft');});
+ await check('another user cannot submit or edit this organization',async()=>{await assert.rejects(entities.requestReview(a.id,11),e=>e.status===403);await assert.rejects(entities.updateEntity({entityId:a.id,userId:11,data:profile}),/Unauthorized/);});
+ await check('concurrent explicit submissions serialize and return the same pending state',async()=>{const rows=await Promise.all([entities.requestReview(a.id,10),entities.requestReview(a.id,10)]);assert.equal(rows[0].status,'pending_review');assert.equal(rows[1].status,'pending_review');assert.equal(rows[0].updated_at.getTime(),rows[1].updated_at.getTime());});
+ await check('request corrections preserves exact admin notes',async()=>{await platform.requestChanges(a.id,9,'Please correct the description',['wrong_details']);const status=await entities.getApprovalStatus(a.id,10);assert.equal(status.status,'changes_requested');assert.equal(status.comment,'Please correct the description');});
+ await check('saving corrections is not a resubmission',async()=>{a=await entities.updateEntity({entityId:a.id,userId:10,data:{...a,...profile,description:'Corrected'}});assert.equal(a.status,'changes_requested');});
+ await check('owner can explicitly resubmit corrected application',async()=>{a=await entities.requestReview(a.id,10);assert.equal(a.status,'pending_review');});
+ await check('rejection retains data and owner cannot reopen',async()=>{await platform.reject(a.id,9,'Rejected with explanation',['other']);await assert.rejects(entities.requestReview(a.id,10),e=>e.code==='INVALID_TRANSITION');assert.equal((await entities.getApprovalStatus(a.id,10)).comment,'Rejected with explanation');assert.equal((await pool.query('SELECT count(*) FROM entities WHERE id=$1',[a.id])).rows[0].count,'1');});
+ await check('scoped non-super-admin cannot reopen rejected application',async()=>{await assert.rejects(platform.requestChanges(a.id,11,'Reopen',['other']),e=>e.status===403);});
+ await check('Super Admin can reopen for corrections; explicit owner submission remains required',async()=>{await platform.requestChanges(a.id,9,'Reopened',['other']);assert.equal((await entities.getApprovalStatus(a.id,10)).status,'changes_requested');await entities.requestReview(a.id,10);});
+ await check('failed audit insertion rolls the decision back',async()=>{failAudit=true;await assert.rejects(platform.reject(a.id,9,'Must rollback',['other']),/audit failure/);failAudit=false;assert.equal((await entities.getApprovalStatus(a.id,10)).status,'pending_review');});
+ await check('approval preserves existing campaign publication/provisioning hooks',async()=>{await pool.query('UPDATE entities SET requires_completion=true WHERE id=$1',[a.id]);await platform.approve(a.id,9,'Approved');const row=(await pool.query('SELECT * FROM entities WHERE id=$1',[a.id])).rows[0];assert.equal(row.status,'active');assert.equal(row.requires_completion,false);assert.equal(published,1);assert.equal(provisioned,1);});
+ await check('duplicate/illegal decisions cannot create duplicate audit rows',async()=>{const before=(await pool.query('SELECT count(*) FROM platform_audit_log')).rows[0].count;await assert.rejects(platform.approve(a.id,9,'Duplicate'),e=>e.status===409);await assert.rejects(platform.reject(a.id,9,'Invalid',['other']),e=>e.status===409);assert.equal((await pool.query('SELECT count(*) FROM platform_audit_log')).rows[0].count,before);assert.equal(published,1);});
+ await check('suspend/reactivate never invokes approval publication',async()=>{await platform.suspend(a.id,9,'Pause',['other']);await platform.reactivate(a.id,9,'Resume');assert.equal(published,1);assert.equal(provisioned,1);});
+ await check('other organizations are unchanged throughout the lifecycle',async()=>{const row=(await pool.query('SELECT status,description FROM entities WHERE id=$1',[b.id])).rows[0];assert.equal(row.status,'draft');assert.equal(row.description,'  ');});
+ await check('controllers expose permission, validation and transition failures as 403/400/409',async()=>{
+  const controller=load('src/modules/entities/entities.controller.js',{'./entities.service':entities,'./entity-identity':require(path.join(backend,'src/modules/entities/entity-identity'))});
+  const platformController=load('src/modules/platform/platform.controller.js',{'./platform.service':platform});
+  const response=()=>({statusCode:200,status(code){this.statusCode=code;return this;},json(body){this.body=body;}});
+  let res=response();await controller.requestReview({params:{id:a.id},user:{id:11}},res);assert.equal(res.statusCode,403);
+  res=response();await controller.requestReview({params:{id:b.id},user:{id:10}},res);assert.equal(res.statusCode,400);assert.equal(res.body.code,'PROFILE_INCOMPLETE');
+  res=response();await controller.requestReview({params:{id:a.id},user:{id:10}},res);assert.equal(res.statusCode,409);
+  res=response();await platformController.approve({params:{id:a.id},user:{id:9},body:{notes:'Duplicate'}},res);assert.equal(res.statusCode,409);
+ });
+ console.log(`${assertions} PostgreSQL lifecycle integration checks PASS; isolated local database only; external providers mocked.`);
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(pool)await pool.end();if(createdDatabase)await admin.query(`DROP DATABASE IF EXISTS "${database}"`);await admin.end();});

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/modules/settings/components/entity-settings/entity-settings-billing-context.spec.ts",
+    "src/app/modules/settings/components/entity-settings/entity-settings-routing.spec.ts",
+    "src/app/modules/dashboard/pages/dashboard/other-organizations.component.spec.ts",
+    "src/app/organization-warning-ux.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

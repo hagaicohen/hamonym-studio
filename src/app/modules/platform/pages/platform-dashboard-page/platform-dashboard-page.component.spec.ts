@@ -1,6 +1,9 @@
+import { Component } from '@angular/core';
+import { Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { NavigationEnd, Router, provideRouter } from '@angular/router';
+import { filter, firstValueFrom, of, throwError } from 'rxjs';
 import { PlatformDashboardPageComponent } from './platform-dashboard-page.component';
 import { DashboardOverview, PlatformDashboardService } from '../../services/platform-dashboard.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
@@ -152,5 +155,72 @@ describe('Platform Dashboard — actual Angular rendering with isolated read fix
     const { element } = await setup(data);
     expect(element.querySelectorAll('.activity-list > li').length).toBe(2);
     expect(data.activity.length).toBe(3);
+  });
+});
+
+@Component({ standalone: true, template: '' })
+class StubPageComponent {}
+
+describe('Platform Dashboard — attention navigation', () => {
+  const ORG_ID = '7f1c2b9e-0000-4000-8000-00000000e1ad';
+
+  async function setup(organizations = true) {
+    const data = overview();
+    data.kpis.attentionCount = 1;
+    data.attention = [{ id: 'organization:' + ORG_ID, name: 'אלעד', reason: 'ממתינה לאישור', action: 'בדוק עמותה', route: ['/platform/organizations', ORG_ID], query: {} }];
+    await TestBed.configureTestingModule({
+      imports: [PlatformDashboardPageComponent],
+      providers: [
+        provideRouter([
+          { path: 'platform', component: PlatformDashboardPageComponent },
+          { path: 'platform/organizations', component: StubPageComponent },
+          { path: 'platform/organizations/:id', component: StubPageComponent },
+        ]),
+        provideLocationMocks(),
+        { provide: PlatformDashboardService, useValue: { getOverview: () => of(data) } },
+        { provide: CurrentContextService, useValue: { isSuperAdmin: () => true, hasPlatformSection: () => organizations } },
+      ],
+    }).compileComponents();
+    const router = TestBed.inject(Router);
+    const location = TestBed.inject(Location);
+    router.initialNavigation();
+    await router.navigateByUrl('/platform');
+    const fixture = TestBed.createComponent(PlatformDashboardPageComponent);
+    fixture.detectChanges();
+    return { fixture, router, location, element: fixture.nativeElement as HTMLElement };
+  }
+
+  async function click(link: HTMLElement, fixture: { whenStable(): Promise<unknown> }) {
+    link.click();
+    await fixture.whenStable();
+  }
+
+  it('the attention KPI navigates to the pending-review queue and survives Back/Forward', async () => {
+    const { element, fixture, router, location } = await setup();
+    const kpi = element.querySelector('a.attention-kpi') as HTMLAnchorElement;
+    expect(kpi.getAttribute('href')).toBe('/platform/organizations?status=pending_review');
+    await click(kpi, fixture);
+    expect(router.url).toBe('/platform/organizations?status=pending_review');
+    const settled = () => firstValueFrom(router.events.pipe(filter(e => e instanceof NavigationEnd)));
+    let done = settled(); location.back(); await done;
+    expect(router.url).toBe('/platform');
+    done = settled(); location.forward(); await done;
+    expect(router.url).toBe('/platform/organizations?status=pending_review');
+  });
+
+  it('an organization in the attention queue opens its own review screen by ID', async () => {
+    const { element, fixture, router } = await setup();
+    const item = element.querySelector('.attention-item') as HTMLAnchorElement;
+    expect(item.textContent).toContain('אלעד');
+    expect(item.getAttribute('href')).toBe('/platform/organizations/' + ORG_ID);
+    await click(item, fixture);
+    expect(router.url).toBe('/platform/organizations/' + ORG_ID);
+    expect(router.routerState.snapshot.root.firstChild!.paramMap.get('id')).toBe(ORG_ID);
+  });
+
+  it('without the organizations section the KPI keeps the in-page attention focus', async () => {
+    const { element } = await setup(false);
+    expect(element.querySelector('a.attention-kpi')).toBeNull();
+    expect(element.querySelector('button.attention-kpi')).not.toBeNull();
   });
 });

@@ -1,13 +1,10 @@
+<app-topbar [publicPage]="true" />
 <div class="welcome-page">
-
-  <div class="welcome-logo">
-    <img src="/logo.png" alt="המונים" />
-  </div>
 
   <div class="welcome-content">
 
     <h1 class="welcome-title">
-      ברוכים הבאים{{ userName ? ' ' + userName : '' }} 👋
+      ברוכים הבאים{{ userName ? ' ' + userName : '' }}
     </h1>
     <p class="welcome-subtitle">מה תרצה לעשות?</p>
 
@@ -17,14 +14,14 @@
         class="welcome-card"
         (click)="select(card)"
       >
-        <span class="card-icon">{{ card.icon }}</span>
+        <span class="card-icon" aria-hidden="true">
+          <lucide-icon [img]="card.icon" [size]="iconSize" [strokeWidth]="iconStroke"></lucide-icon>
+        </span>
         <div class="card-text">
           <span class="card-title">{{ card.title }}</span>
           <span class="card-description">{{ card.description }}</span>
         </div>
-        <svg class="card-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
+        <lucide-icon class="card-arrow" [img]="ChevronLeft" [size]="arrowSize" [strokeWidth]="iconStroke" aria-hidden="true"></lucide-icon>
       </button>
     </div>
 

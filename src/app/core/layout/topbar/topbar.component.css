@@ -190,6 +190,11 @@
 
 /* Individual context item */
 .ctx-context-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -200,6 +205,8 @@
   color: #1e293b;
 }
 .ctx-context-item:hover { background: #f8fafc; }
+.ctx-context-item:focus-visible { outline: 2px solid #583cd6; outline-offset: -2px; }
+.ctx-switch-error { color: #b91c1c; padding: 8px 16px; font-size: 12px; }
 .ctx-context-item.is-active { background: #f5f3ff; padding-right: 16px; }
 
 .ctx-check {
@@ -214,6 +221,12 @@
 
 /* Action items (purple, create/join new roles) */
 .ctx-action-item {
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: start;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -332,3 +345,21 @@
     border-radius: 12px;
   }
 }
+
+:host { display: block; }
+.topbar { box-sizing: border-box; font-family: inherit; }
+.ctx-btn { min-height: 48px; }
+.ctx-btn-inner { min-width: 0; }
+.ctx-user-line { overflow: hidden; text-overflow: ellipsis; }
+.ctx-dropdown { max-height: calc(100dvh - 88px); overflow-y: auto; }
+button.ctx-manage-row { width: 100%; border: 0; background: transparent; text-align: right; font-family: inherit; }
+button.ctx-manage-row:hover { background: #f8fafc; }
+.ctx-logout-row { display: flex; }
+.topbar-avatar { border: 0; padding: 0; }
+.header-login { min-height: 40px; padding: 8px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: white; color: #583cd6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.header-login:hover { border-color: #583cd6; background: #f5f3ff; }
+.topbar button:focus-visible { outline: 2px solid #583cd6; outline-offset: 2px; }
+@media (max-width: 768px) {
+  button.ctx-action-item, button.ctx-manage-row { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .ctx-dropdown { animation: none; } }

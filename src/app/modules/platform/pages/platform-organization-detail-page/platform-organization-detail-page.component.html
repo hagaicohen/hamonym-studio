@@ -5,7 +5,7 @@
   </div>
 
   @if (error) {
-    <div class="plat-error">{{ error }}</div>
+    <div class="plat-error" role="alert">{{ error }} <button class="btn" (click)="load()">נסה שוב</button></div>
   } @else if (loading) {
     <div class="plat-loading">טוען...</div>
   } @else if (entity) {
@@ -31,7 +31,7 @@
           <div class="plat-flagged-banner-title">עמותה זו דורשת בדיקה חוזרת</div>
           <div class="plat-flagged-banner-text">
             {{ entity.flagged_for_review_reason }} — לאחר האישור המקורי, ב-{{ fmtDate(entity.flagged_for_review_at) }}.
-            לחצו "אישור עמותה" בלשונית "סקירה ואישור" כדי להסיר את הסימון.
+            ניתן לפתוח את פעולת "אישור בדיקה חוזרת" בלשונית הסקירה לאחר בדיקת השינוי.
           </div>
         </div>
       </div>
@@ -40,7 +40,7 @@
     <div class="plat-hero-kpi-row">
       <div class="plat-hero-kpi">
         <div class="kpi-label">סה"כ תרומות</div>
-        <div class="kpi-value primary">{{ fmtMoney(donationsKpi?.totalRaised || 0) }}</div>
+        <div class="kpi-value primary">{{ donationsKpi ? fmtMoney(donationsKpi.totalRaised) : '—' }}</div>
       </div>
       <div class="plat-hero-kpi">
         <div class="kpi-label">תורמים</div>
@@ -52,7 +52,7 @@
       </div>
       <div class="plat-hero-kpi">
         <div class="kpi-label">אחוז הצלחה</div>
-        <div class="kpi-value">{{ successRate }}%</div>
+        <div class="kpi-value">{{ donationsKpi ? successRate + '%' : '—' }}</div>
       </div>
     </div>
 
@@ -64,6 +64,8 @@
       <button [class.active]="tab === 'users'" (click)="setTab('users')">משתמשים ({{ users.length }})</button>
       <button [class.active]="tab === 'audit'" (click)="setTab('audit')">יומן פעולות</button>
     </div>
+
+    @if (managementNotice) { <div class="management-success" role="status">✓ {{ managementNotice }}</div> }
 
     <div class="plat-card">
 
@@ -79,41 +81,39 @@
             <div><span class="lbl">כתובת</span><span>{{ entity.address || '—' }}</span></div>
           </div>
 
-          <div class="plat-health-row">
-            <div class="plat-health-score" [ngClass]="'health-' + healthScoreLevel">
-              <div class="plat-health-score-value">{{ healthScore }}%</div>
-              <div class="plat-health-score-label">Health Score</div>
+          <app-organization-checklist [checks]="healthChecks" [showScore]="true" />
+
+          <section class="management-panel" aria-labelledby="management-title">
+            <div class="management-panel-heading">
+              <div><h3 id="management-title">החלטה בבקשה</h3><p>בדקו את הפרטים והמסמכים, בחרו פעולה ואשרו אותה.</p></div>
+              <span class="plat-status" [ngClass]="'status-' + entity.status">{{ statusLabel(entity.status) }}</span>
             </div>
-            <div class="plat-checklist">
-              @for (check of healthChecks; track check.label) {
-                <div class="plat-check-item">
-                  <span [class.ok]="check.ok" [class.missing]="!check.ok">{{ check.ok ? '✅' : '⬜' }}</span>
-                  <span>{{ check.label }}</span>
-                </div>
-              }
+            <div class="management-choices">
+              @for (action of managementActions; track action.key) {
+                <button type="button" class="management-choice" [class.primary]="action.key === 'approve' || action.key === 'reactivate'" [class.danger]="action.key === 'reject' || action.key === 'suspend'" [disabled]="actionInProgress || refreshing" (click)="openManagementAction(action.key)">
+                  <strong>{{ action.label }} <span aria-hidden="true">←</span></strong>
+                  <span>{{ managementActionDescription(action.key) }}</span>
+                </button>
+              } @empty { <p class="management-empty">אין פעולות ניהול זמינות במצב הנוכחי.</p> }
             </div>
-          </div>
+            @if (actionError && !pendingManagementAction) { <p class="plat-note-error" role="alert">{{ actionError }}</p> }
+          </section>
 
           <h3 class="plat-section-title">ציר הזמן</h3>
           <div class="plat-timeline">
-            @for (item of timeline; track item.timestamp + item.label) {
+            @for (item of timeline; track item.id) {
               <div class="plat-timeline-item">
                 <span class="plat-timeline-date">{{ fmtDate(item.timestamp) }}</span>
                 <span class="plat-timeline-event">
                   <span class="plat-timeline-icon">{{ item.icon }}</span>
-                  <span class="plat-timeline-label">{{ item.label }}</span>
+                  @if (item.campaignId && context.hasPlatformSection('campaigns')) { <a class="plat-timeline-label" routerLink="/platform/campaigns" [queryParams]="{ campaignId: item.campaignId }">{{ item.label }}</a> } @else { <span class="plat-timeline-label">{{ item.label }}</span> }
                 </span>
               </div>
             }
           </div>
 
-          <h3 class="plat-section-title">פעולות</h3>
-          <p class="plat-section-hint">
-            סיבה והערה (למטה) מצורפות לפעולה שתבחרו בסוף — זו פעולה אחת, לא כמה שלבים נפרדים.
-          </p>
-
           <div class="plat-ai-tool-row">
-            <button class="btn-ai-tool" [disabled]="actionInProgress || analyzing" (click)="recommendOrganization()">
+            <button class="btn-ai-tool ai-unavailable" disabled title="כלי AI אינם זמינים כרגע" (click)="recommendOrganization()">
               <span class="ai-tool-icon">✨</span>
               קבלת המלצת AI לפני החלטה
               <span class="ai-tool-note">(כלי עזר בלבד, לא פעולה)</span>
@@ -126,64 +126,6 @@
           @if (recommendationError) {
             <div class="plat-note-error">{{ recommendationError }}</div>
           }
-
-          <div class="plat-step">
-            <div class="plat-step-label"><span class="plat-step-num">1</span> סיבה <span class="plat-step-tag">לא חובה</span></div>
-            <div class="plat-reason-tags">
-              @for (tag of reasonTagOptions; track tag.key) {
-                <label class="plat-reason-tag" [class.checked]="selectedReasonTags.includes(tag.key)">
-                  <input
-                    type="checkbox"
-                    [checked]="selectedReasonTags.includes(tag.key)"
-                    (change)="toggleReasonTag(tag.key)"
-                  />
-                  {{ tag.label }}
-                </label>
-              }
-            </div>
-          </div>
-
-          <div class="plat-step">
-            <div class="plat-step-label"><span class="plat-step-num">2</span> הערה <span class="plat-step-tag">חובה לדחייה / בקשת השלמות / השעיה</span></div>
-            <textarea
-              class="plat-notes"
-              rows="2"
-              placeholder="לדוגמה: חסר אישור ניהול תקין בתוקף"
-              [(ngModel)]="notes"
-            ></textarea>
-            @if (noteRequiredError) {
-              <div class="plat-note-error">יש להזין הערה לפני ביצוע פעולה זו</div>
-            }
-          </div>
-
-          <div class="plat-step">
-            <div class="plat-step-label"><span class="plat-step-num">3</span> פעולה <span class="plat-step-tag">בחרו אחת</span></div>
-
-            <div class="plat-actions-group">
-              <span class="plat-actions-group-label">מאשר / משחזר גישה</span>
-              <div class="plat-actions">
-                <button class="btn btn-approve" [disabled]="actionInProgress" (click)="approve()">אישור עמותה</button>
-                @if (entity.status === 'suspended') {
-                  <button class="btn btn-reactivate" [disabled]="actionInProgress" (click)="reactivate()">הפעלה מחדש</button>
-                }
-              </div>
-            </div>
-
-            <div class="plat-actions-group">
-              <span class="plat-actions-group-label">דורש הערה למעלה</span>
-              <div class="plat-actions">
-                <button class="btn btn-request" [disabled]="actionInProgress" (click)="requestChanges()">בקשת השלמת מסמכים</button>
-                @if (entity.status !== 'suspended') {
-                  <button class="btn btn-suspend" [disabled]="actionInProgress" (click)="suspend()">השעיה</button>
-                }
-                <button class="btn btn-reject" [disabled]="actionInProgress" (click)="reject()">דחייה</button>
-              </div>
-            </div>
-
-            @if (actionError) {
-              <div class="plat-note-error">{{ actionError }}</div>
-            }
-          </div>
 
           <!-- AI Visibility Gate — separate from the approval workflow above:
                a persistent per-entity toggle, not a one-time review action. -->
@@ -269,8 +211,8 @@
               <tbody>
                 @for (c of campaigns; track c.id) {
                   <tr>
-                    <td>{{ c.title }}</td>
-                    <td>{{ c.status }}</td>
+                    <td>@if (context.hasPlatformSection('campaigns')) { <a routerLink="/platform/campaigns" [queryParams]="{ campaignId: c.id }">{{ c.title }}</a> } @else { {{ c.title }} }</td>
+                    <td>{{ c.status === 'published' ? 'פעיל' : c.status === 'draft' ? 'טיוטה' : c.status === 'paused' ? 'מושהה' : c.status === 'ended' ? 'הסתיים' : 'מצב נוסף' }}</td>
                     <td>{{ fmtMoney(c.current_amount) }}</td>
                     <td>{{ fmtMoney(c.target_amount) }}</td>
                     <td>{{ c.supporters_count }}</td>
@@ -340,7 +282,7 @@
                     <td>{{ d.is_anonymous ? 'אנונימי' : (d.donor_name || '—') }}</td>
                     <td>{{ d.campaign_title }}</td>
                     <td>{{ fmtMoney(d.amount) }}</td>
-                    <td>{{ d.status }}</td>
+                    <td>{{ d.status === 'paid' ? 'שולם' : d.status === 'pending' ? 'ממתין' : d.status === 'failed' ? 'נכשל' : 'מצב נוסף' }}</td>
                     <td>{{ fmtDate(d.created_at) }}</td>
                   </tr>
                 }
@@ -368,7 +310,7 @@
                   <tr>
                     <td>{{ u.full_name }}</td>
                     <td>{{ u.email }}</td>
-                    <td>{{ u.role }}</td>
+                    <td>{{ u.role === 'owner' ? 'בעלים' : u.role === 'admin' ? 'מנהל' : 'משויך לעמותה' }}</td>
                   </tr>
                 }
               </tbody>
@@ -386,18 +328,18 @@
               <thead>
                 <tr>
                   <th>פעולה</th>
-                  <th>הערות</th>
-                  <th>ע"י</th>
-                  <th>תאריך</th>
+                  <th>תיאור</th>
+                  <th>מבצע</th>
+                  <th>מועד</th><th>פרטים</th>
                 </tr>
               </thead>
               <tbody>
                 @for (a of auditLog; track a.id) {
                   <tr>
                     <td>{{ actionLabel(a.action) }}</td>
-                    <td>{{ a.notes || '—' }}</td>
+                    <td class="audit-description">{{ auditDescription(a) }}</td>
                     <td>{{ a.super_admin_name }}</td>
-                    <td>{{ fmtDateTime(a.created_at) }}</td>
+                    <td><time dir="ltr">{{ fmtDateTime(a.created_at) }}</time></td><td><details class="audit-details"><summary>פרטים מתקדמים</summary><p>סוג הפעולה: {{ a.action }}</p><p>{{ a.notes || 'ללא הערה' }}</p></details></td>
                   </tr>
                 }
               </tbody>
@@ -411,6 +353,66 @@
   }
 
 </div>
+
+@if (pendingManagementAction) {
+  <app-admin-details-drawer [heading]="managementActionTitle" [closeDisabled]="actionInProgress" (closed)="closeManagementAction()">
+    <form class="management-form" (ngSubmit)="confirmManagementAction()" [attr.aria-busy]="actionInProgress">
+      @if (pendingManagementAction === 'approve') {
+      <div class="approve-summary">
+        <strong>{{ orgName }}</strong>
+        <p>אישור העמותה יאפשר לה לפעול במערכת, בכפוף להשלמת הדרישות הרלוונטיות לכל פעולה.</p>
+      </div>
+      <section class="approve-missing" aria-labelledby="approve-missing-title">
+        <h4 id="approve-missing-title">פריטים שעדיין חסרים בעמותה</h4>
+        @if (missingItems.length) {
+          <ul>
+            @for (item of missingItems; track item.key) {
+              <li class="approve-missing-item" [attr.data-severity]="item.severity">
+                <span class="approve-missing-icon" aria-hidden="true">{{ item.severity === 'recommendation' ? 'i' : '!' }}</span>
+                <div><strong>{{ item.title }}</strong><span>{{ item.detail }}</span></div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="approve-missing-none"><span aria-hidden="true">✓</span> לא נמצאו פרטים חסרים בבדיקות המוכנות.</p>
+        }
+      </section>
+      <label class="approve-note" for="organization-action-note">הערה לאישור (לא חובה)
+        <textarea id="organization-action-note" name="approvalNote" rows="3" [(ngModel)]="notes" [disabled]="actionInProgress" placeholder="הערה שתישמר בתיעוד ההחלטה"></textarea>
+      </label>
+      @if (actionError) { <p class="plat-note-error" role="alert">{{ actionError }}</p> }
+      <div class="management-footer approve-footer">
+        <button type="button" class="btn approve-cancel" [disabled]="actionInProgress" (click)="closeManagementAction()">ביטול</button>
+        <button type="submit" class="btn management-confirm" [disabled]="actionInProgress">{{ actionInProgress ? 'מאשר…' : 'אשר עמותה' }}</button>
+      </div>
+      } @else {
+      <div class="management-summary">
+        <strong>{{ orgName }}</strong>
+        <p>{{ managementActionDescription(pendingManagementAction) }}</p>
+        <div class="management-transition"><span>{{ statusLabel(entity.status) }}</span><span aria-hidden="true">←</span><strong>{{ managementTargetLabel }}</strong></div>
+      </div>
+      @if (pendingManagementAction === 'reject') {
+        <p class="management-explanation">הבקשה תסומן כנדחתה. העמותה והנתונים שלה לא יימחקו. מחיקה לצמיתות מתבצעת רק בפעולת המחיקה הנפרדת ובאישור מפורש.</p>
+      }
+      <label class="management-notes" for="organization-action-note">הערה להחלטה {{ isNoteRequired(pendingManagementAction) ? '(חובה)' : '(לא חובה)' }}
+        <textarea id="organization-action-note" name="approvalNote" class="plat-notes" rows="4" [(ngModel)]="notes" [disabled]="actionInProgress" [required]="isNoteRequired(pendingManagementAction)" aria-describedby="management-note-help" [attr.aria-invalid]="noteRequiredError ? 'true' : null" placeholder="כתבו הסבר קצר וברור להחלטה"></textarea>
+      </label>
+      <p id="management-note-help" class="management-help">{{ isNoteRequired(pendingManagementAction) ? 'יש למלא הערה לפני אישור הפעולה.' : 'אפשר להוסיף הערה לתיעוד ההחלטה.' }} ההחלטה תתועד ביומן הניהול.</p>
+      <fieldset class="management-reasons"><legend>סיבות להחלטה <span>(לא חובה)</span></legend>
+        @for (tag of reasonTagOptions; track tag.key) {
+          <label [class.selected]="selectedReasonTags.includes(tag.key)"><input type="checkbox" [disabled]="actionInProgress" [checked]="selectedReasonTags.includes(tag.key)" (change)="toggleReasonTag(tag.key)" /><span>{{ tag.label }}</span></label>
+        }
+      </fieldset>
+      @if (noteRequiredError) { <p class="plat-note-error" role="alert">יש להזין הערה כדי לבצע את הפעולה</p> }
+      @if (actionError) { <p class="plat-note-error" role="alert">{{ actionError }}</p> }
+      <div class="management-footer">
+        <button type="button" class="btn" [disabled]="actionInProgress" (click)="closeManagementAction()">ביטול</button>
+        <button type="submit" class="btn management-confirm" [class.destructive]="pendingManagementAction === 'reject' || pendingManagementAction === 'suspend'" [disabled]="actionInProgress || (isNoteRequired(pendingManagementAction) && !notes.trim())">{{ actionInProgress ? 'שומר החלטה…' : managementConfirmLabel }}</button>
+      </div>
+      }
+    </form>
+  </app-admin-details-drawer>
+}
 
 <!-- HARD DELETE CONFIRM MODAL -->
 @if (hardDeleteConfirmOpen) {

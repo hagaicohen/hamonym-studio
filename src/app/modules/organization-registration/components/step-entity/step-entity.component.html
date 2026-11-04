@@ -137,12 +137,17 @@
               inputmode="numeric"
               autocomplete="off"
               [value]="organizationNumber"
+              [attr.aria-invalid]="identityCheck.status === 'duplicate' ? 'true' : null"
+              aria-describedby="registration-identity-feedback"
               (input)="onOrganizationNumberInput($event)"
               maxlength="9"
               placeholder="הקלד מספר רישום{{
                 entityConfig.type === 'association' ? ' (580123456)' : ''
               }}"
             />
+            <app-registration-identity-check id="registration-identity-feedback"
+              [entityType]="entityType" [registrationNumber]="organizationNumber" [excludeEntityId]="identityEntityId"
+              (stateChange)="onIdentityCheck($event)"></app-registration-identity-check>
           </div>
         }
       </div>
@@ -173,47 +178,16 @@
           <div class="section-title">קטגוריות</div>
         </div>
 
-        <div class="field-label-row">
-          <label class="field-label"> קטגוריה ראשית * </label>
+        <app-category-selector
+          inputId="category-search"
+          [categories]="categories"
+          [selected]="categoryList"
+          (selectedChange)="setCategories($event)"
+        ></app-category-selector>
 
-          @if (primaryCategory) {
-            <button type="button" class="clear-selection-btn" (click)="clearPrimaryCategory()">
-              נקה בחירה
-            </button>
-          }
-        </div>
-
-        <select
-          [(ngModel)]="primaryCategory"
-          [class.placeholder]="!primaryCategory"
-        >
-          <option value="" disabled>בחר קטגוריה ראשית</option>
-
-          @for (category of categories; track category) {
-            <option [value]="category.id">
-              {{ category.label }}
-            </option>
-          }
-        </select>
-
-        <!-- CHIPS -->
-
-        <div class="chips-title">קטגוריות נוספות (אופציונלי)</div>
-
-        <div class="chips">
-          @for (category of categories; track category.id) {
-            @if (category.id !== primaryCategory) {
-              <button
-                type="button"
-                class="chip"
-                [class.active]="selectedCategories.includes(category.id)"
-                (click)="toggleCategory(category.id)"
-              >
-                {{ category.label }}
-              </button>
-            }
-          }
-        </div>
+        @if (categorySuggestionsEnabled) {
+          <app-category-suggest [entityId]="identityEntityId"></app-category-suggest>
+        }
       </div>
 
       <!-- CONTACT -->
@@ -306,7 +280,7 @@
 
         <div class="document-upload">
           <label class="document-label">
-            {{ entityConfig.labels.registrationDocument }} *
+            {{ entityConfig.labels.registrationDocument }} — ניתן להשלים בהמשך
           </label>
 
           <p class="document-description">
@@ -314,6 +288,8 @@
             (PDF, JPG, PNG - עד 10MB). ניתן גם להשלים זאת בהמשך, בהגדרות העמותה —
             זה לא יעצור אתכם מלהשלים את הקמת העמותה עכשיו.
           </p>
+
+          <p class="document-notice">אפשר להמשיך ולהשלים את הקמת העמותה גם ללא המסמך כעת. את המסמך ניתן להעלות בהמשך בהגדרות העמותה, לצורך בדיקת הבקשה.</p>
 
           <input
             #certificateInput
@@ -366,6 +342,7 @@
               אופציונלי — מאפשר הצגת תרומות מוכרות למס בדף הקמפיין (PDF, JPG,
               PNG - עד 10MB)
             </p>
+            <p class="document-notice tax-notice">אם לעמותה יש אישור לפי סעיף 46, יש להעלות אותו ולהשלים את אימותו. עד להשלמת העלאת האישור ואימותו, התורמים לא יוכלו לקבל את הטבת המס באמצעות המערכת. העלאת קובץ לבדה אינה אישור שהמסמך אומת.</p>
 
             <input
               #section46Input

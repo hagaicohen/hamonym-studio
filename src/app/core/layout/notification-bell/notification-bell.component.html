@@ -1,4 +1,4 @@
-<div class="bell-wrapper" *ngIf="count > 0 || dropdownOpen">
+<div class="bell-wrapper">
   <div class="bell-btn-wrap">
     <button class="bell-btn" type="button" title="הודעות" (click)="toggle($event)">
       <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
@@ -22,13 +22,6 @@
           </div>
         </div>
 
-        <div class="bell-item bell-item--link" *ngIf="incompleteDraftsCount > 0" (click)="goToOrganizations('draft', $event)">
-          <span class="bell-item-icon">📝</span>
-          <div class="bell-item-body">
-            <div class="bell-item-title">{{ incompleteDraftsCount }} עמותות עם פרטים חסרים</div>
-          </div>
-        </div>
-
         <div class="bell-item bell-item--link" *ngIf="flaggedForReviewCount > 0" (click)="goToFlaggedOrganizations($event)">
           <span class="bell-item-icon">⚠️</span>
           <div class="bell-item-body">
@@ -46,6 +39,9 @@
           <div class="bell-item-body">
             <div class="bell-item-title">{{ actionLabels[n.action] }}</div>
             <div class="bell-item-notes" *ngIf="n.notes">{{ n.notes }}</div>
+            <p class="bell-item-notes" *ngIf="n.action === 'reject'">העמותה והנתונים שלה נשמרו. קראו את סיבת הדחייה. להגשה חוזרת נדרשת תחילה העברה להשלמת פרטים על ידי מנהל הפלטפורמה.</p>
+            <p class="bell-item-notes" *ngIf="n.action === 'request_changes'">השלימו את הפרטים לפי הערות המנהל בהגדרות העמותה, שמרו ולחצו על ״שלח לבדיקה מחדש״.</p>
+            <p class="bell-item-notes" *ngIf="n.action === 'approve' || n.action === 'reactivate'">אפשר להמשיך לניהול הקמפיינים. פרסום וגיוס כפופים להגדרות ולכללים הקיימים.</p>
             <div class="bell-item-meta">{{ n.actorName }} · {{ n.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
           </div>
         </div>

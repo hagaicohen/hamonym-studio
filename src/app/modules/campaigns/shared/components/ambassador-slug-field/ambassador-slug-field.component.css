@@ -13,8 +13,8 @@
   background: #fff;
   transition: border-color 0.15s;
 }
-.asf-input-row--available { border-color: #16a34a; }
-.asf-input-row--taken { border-color: #dc2626; }
+.asf-input-row--available { border-color: var(--hm-control-border); }
+.asf-input-row--taken { border-color: var(--hm-control-error); }
 
 .asf-prefix {
   padding: 9px 4px 9px 10px;

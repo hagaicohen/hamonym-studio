@@ -67,16 +67,16 @@
 .field input {
   padding: 10px 14px;
   border: 1px solid #334155;
-  border-radius: 8px;
+  border-radius: var(--hm-control-radius);
   background: #0f172a;
   color: #f8fafc;
-  font-size: 14px;
+  font-size: var(--hm-control-font-size);
   outline: none;
   direction: ltr;
   text-align: left;
 }
 
-.field input:focus { border-color: #583cd6; }
+.field input:focus { border-color: var(--hm-control-focus); }
 
 .password-input-wrap {
   position: relative;
@@ -146,7 +146,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   background: #450a0a;
-  color: #fca5a5;
+  color: var(--hm-control-error);
   font-size: 13px;
   text-align: center;
 }

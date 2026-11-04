@@ -1,66 +1,158 @@
 <div class="wizard-page">
 
-  @if (draftToResume()) {
-    <!-- Nothing forces resolving this before touching the form below (the
-         user can just start typing and ignore it), so "שמור טיוטה" stays
-         available the whole time — hiding it here left users with an
-         in-progress draft and no way to save it. -->
-    <div class="draft-resume-banner">
-      <div class="draft-resume-text">
-        <strong>נמצאה טיוטה קודמת</strong> — "{{ draftToResume().legal_name || draftToResume().display_name || 'ללא שם' }}",
-        נשמרה לאחרונה ב-{{ draftToResume().updated_at | date:'dd/MM/yyyy HH:mm' }}.
-      </div>
-      <div class="draft-resume-actions">
-        <button type="button" class="draft-resume-btn draft-resume-btn--primary" (click)="resumeDraft()">המשך מהטיוטה</button>
-        <button type="button" class="draft-resume-btn" (click)="dismissDraftPrompt()">התחל טיוטה חדשה</button>
-      </div>
+  <!-- Saving is only possible from the open draft's own row, or from the footer
+       while the registration is new and unsaved, so it can never target another draft. -->
+  <section class="drafts-card" aria-labelledby="drafts-title">
+    <div class="drafts-head">
+      <h2 id="drafts-title" class="drafts-title">טיוטות הרשמה שמורות</h2>
+      <span class="drafts-count">{{ drafts().length }} {{ drafts().length === 1 ? 'טיוטה' : 'טיוטות' }}</span>
     </div>
-  }
 
-  <div class="draft-save-bar">
-    <button
-      type="button"
-      class="save-draft-btn"
-      [disabled]="!stateService.canSaveDraft || savingDraft()"
-      [title]="!stateService.canSaveDraft ? 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה' : ''"
-      (click)="saveDraft()"
-    >
-      {{ savingDraft() ? 'שומר...' : '💾 שמור טיוטה' }}
-    </button>
+    <ul class="drafts-list" [class.is-scrollable]="rows.length > 2" tabindex="-1">
+      @for (row of rows; track row.id) {
+        <li class="draft-row" [class.is-current]="isCurrent(row)" [class.is-loading]="isLoadingRow(row)" [attr.aria-current]="isCurrent(row) ? 'true' : null">
+          <div class="draft-info">
+            <div class="draft-name-line">
+              <span class="draft-name">{{ isCurrent(row) ? currentName : draftName(row) }}</span>
+              @if (isNewRow(row)) {
+                <span class="draft-badge">בעריכה</span>
+              }
+            </div>
+            <div class="draft-date">
+              @if (row.updated_at) { {{ draftDate(row) }} } @else { טרם נשמרה }
+              @if (isCurrent(row) && row.id && isDirty()) { <span class="draft-unsaved">· שינויים שלא נשמרו</span> }
+            </div>
+          </div>
+          <!-- RTL: DOM order trash, pencil, save renders save leftmost. -->
+          <div class="draft-actions">
+            <button
+              type="button"
+              class="draft-icon-btn draft-delete-btn"
+              [disabled]="busy"
+              title="מחק טיוטה"
+              [attr.aria-label]="'מחק טיוטה: ' + (isCurrent(row) ? currentName : draftName(row))"
+              (click)="askDeleteDraft(row)"
+            >
+              <lucide-icon [img]="Trash2" [size]="15" [strokeWidth]="iconStroke" aria-hidden="true"></lucide-icon>
+            </button>
+            <button
+              type="button"
+              class="draft-icon-btn draft-resume-btn"
+              [disabled]="busy || isCurrent(row)"
+              [title]="isCurrent(row) ? 'הטיוטה פתוחה לעריכה' : 'המשך עריכה'"
+              [attr.aria-label]="'המשך עריכה: ' + (isCurrent(row) ? currentName : draftName(row))"
+              (click)="resumeDraft(row.id)"
+            >
+              @if (isLoadingRow(row)) {
+                <span class="draft-spinner" aria-hidden="true"></span>
+              } @else {
+                <lucide-icon [img]="Pencil" [size]="15" [strokeWidth]="iconStroke" aria-hidden="true"></lucide-icon>
+              }
+            </button>
+            <button
+              type="button"
+              class="draft-icon-btn draft-save-btn"
+              [disabled]="!canSaveRow(row)"
+              [title]="saveTitle(row)"
+              [attr.aria-label]="'שמור שינויים: ' + (isCurrent(row) ? currentName : draftName(row))"
+              (click)="saveDraft()"
+            >
+              <lucide-icon [img]="Save" [size]="15" [strokeWidth]="iconStroke" aria-hidden="true"></lucide-icon>
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
 
     @if (draftSaved()) {
-      <span class="draft-save-status draft-save-status--ok">הטיוטה נשמרה — אפשר לחזור אליה בכל שלב</span>
+      <p class="draft-save-status draft-save-status--ok" role="status">הטיוטה נשמרה — אפשר לחזור אליה בכל שלב</p>
     }
-    @if (draftSaveError()) {
-      <span class="draft-save-status draft-save-status--error">{{ draftSaveError() }}</span>
+    @if (draftSaveError() && !pendingSwitch()) {
+      <p class="draft-save-status draft-save-status--error" role="alert">{{ draftSaveError() }}</p>
+    }
+
+    <button type="button" class="draft-new-btn" [disabled]="!canStartNew" (click)="startNewRegistration()">
+      <lucide-icon [img]="Plus" [size]="16" [strokeWidth]="iconStroke" aria-hidden="true"></lucide-icon>
+      התחלת הרשמה חדשה
+    </button>
+  </section>
+
+  <dialog #deleteDialog class="draft-dialog" aria-labelledby="draft-dialog-title" (cancel)="$event.preventDefault(); cancelDeleteDraft()">
+    @if (draftToDelete(); as draft) {
+      <h2 id="draft-dialog-title" class="draft-dialog-title">למחוק את הטיוטה?</h2>
+      <p class="draft-dialog-text">הטיוטה "{{ isCurrent(draft) ? currentName : draftName(draft) }}" תוסר מהרשימה. לא ניתן לבטל פעולה זו.</p>
+      @if (draftDeleteError()) {
+        <p class="draft-dialog-error" role="alert">{{ draftDeleteError() }}</p>
+      }
+      <div class="draft-dialog-actions">
+        <button type="button" class="draft-dialog-cancel" [disabled]="deletingDraft()" (click)="cancelDeleteDraft()">ביטול</button>
+        <button type="button" class="draft-dialog-confirm" [disabled]="deletingDraft()" (click)="confirmDeleteDraft()">
+          {{ deletingDraft() ? 'מוחק...' : 'מחק טיוטה' }}
+        </button>
+      </div>
+    }
+  </dialog>
+
+  <dialog #switchDialog class="draft-dialog" aria-labelledby="switch-dialog-title" (cancel)="$event.preventDefault(); cancelSwitch()">
+    @if (pendingSwitch()) {
+      @if (switchingFromNew) {
+        <h2 id="switch-dialog-title" class="draft-dialog-title">לשמור את הטיוטה החדשה?</h2>
+        <p class="draft-dialog-text">"{{ currentName }}" עדיין לא נשמרה. אם לא תשמרו אותה, היא תימחק.</p>
+      } @else {
+        <h2 id="switch-dialog-title" class="draft-dialog-title">יש שינויים שלא נשמרו</h2>
+        <p class="draft-dialog-text">השינויים ב"{{ currentName }}" עדיין לא נשמרו. מה לעשות לפני המעבר?</p>
+      }
+      @if (draftSaveError()) {
+        <p class="draft-dialog-error" role="alert">{{ draftSaveError() }}</p>
+      }
+      <div class="draft-dialog-actions">
+        <button type="button" class="draft-dialog-cancel" [disabled]="busy" (click)="cancelSwitch()">ביטול</button>
+        <button type="button" class="draft-dialog-cancel" [disabled]="busy" (click)="discardAndSwitch()">{{ switchingFromNew ? 'מחק טיוטה' : 'עבור בלי לשמור' }}</button>
+        @if (stateService.canSaveDraft) {
+          <button type="button" class="draft-dialog-primary" [disabled]="busy" (click)="saveAndSwitch()">
+            {{ savingDraft() ? 'שומר...' : switchingFromNew ? 'שמור' : 'שמור ועבור' }}
+          </button>
+        }
+      </div>
+    }
+  </dialog>
+
+  <!-- While another draft loads, the form is dimmed and inert so nothing can be
+       typed into the registration that is about to be replaced. -->
+  <div class="wizard-steps" [class.is-loading]="!!loadingDraftId()" [attr.inert]="loadingDraftId() ? '' : null" [attr.aria-busy]="!!loadingDraftId()">
+    @if (currentStep === 1) {
+      <app-step-entity (continue)="nextStep()"> </app-step-entity>
+    }
+
+    @if (currentStep === 2) {
+      <app-step-profile (back)="previousStep()" (continue)="nextStep()">
+      </app-step-profile>
+    }
+
+    @if (currentStep === 3) {
+      <app-step-goals (back)="previousStep()" (continue)="nextStep()">
+      </app-step-goals>
+    }
+
+    @if (currentStep === 4) {
+      <app-step-payment (back)="previousStep()" (continue)="nextStep()">
+      </app-step-payment>
+    }
+
+    @if (currentStep === 5) {
+      <app-step-billing-method (back)="previousStep()" (continue)="nextStep()">
+      </app-step-billing-method>
+    }
+
+    @if (currentStep === 6) {
+      <app-step-review (back)="previousStep()"> </app-step-review>
     }
   </div>
 
-  @if (currentStep === 1) {
-    <app-step-entity (continue)="nextStep()"> </app-step-entity>
-  }
-
-  @if (currentStep === 2) {
-    <app-step-profile (back)="previousStep()" (continue)="nextStep()">
-    </app-step-profile>
-  }
-
-  @if (currentStep === 3) {
-    <app-step-goals (back)="previousStep()" (continue)="nextStep()">
-    </app-step-goals>
-  }
-
-  @if (currentStep === 4) {
-    <app-step-payment (back)="previousStep()" (continue)="nextStep()">
-    </app-step-payment>
-  }
-
-  @if (currentStep === 5) {
-    <app-step-billing-method (back)="previousStep()" (continue)="nextStep()">
-    </app-step-billing-method>
-  }
-
-  @if (currentStep === 6) {
-    <app-step-review (back)="previousStep()"> </app-step-review>
+  @if (loadingDraftId()) {
+    <div class="draft-loading" role="status" aria-live="polite">
+      <span class="draft-spinner draft-spinner--lg" aria-hidden="true"></span>
+      <span>טוען את הטיוטה "{{ loadingName() }}"...</span>
+    </div>
   }
 </div>

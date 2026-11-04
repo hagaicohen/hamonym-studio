@@ -1,8 +1,8 @@
-<header class="topbar">
+<header class="topbar" dir="rtl">
 
   <!-- RIGHT: mobile menu + logo -->
   <div class="topbar-right">
-    <button class="topbar-icon-btn mobile-menu-btn" (click)="menuClick.emit()">
+    <button *ngIf="!publicPage" type="button" aria-label="פתיחת תפריט ניווט" class="topbar-icon-btn mobile-menu-btn" (click)="menuClick.emit()">
       <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5" />
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5" />
@@ -10,24 +10,24 @@
       </svg>
     </button>
     <div class="brand">
-      <img src="./logo.png" alt="Hamonym Logo" class="brand-logo" />
+      <img src="/logo.png" alt="Hamonym Logo" class="brand-logo" />
     </div>
   </div>
 
   <!-- LEFT: notifications + identity switcher + avatar -->
-  <div class="topbar-left">
+  <div class="topbar-left" *ngIf="authenticated; else guest">
 
-    <app-notification-bell></app-notification-bell>
+    <app-notification-bell *ngIf="!publicPage"></app-notification-bell>
 
     <!-- IDENTITY SWITCHER — hidden in admin-only mode, since role/entity switching is irrelevant there -->
-    <ng-container *ngIf="!ctx.adminMode(); else adminIdentity">
-    <div class="ctx-wrapper" (click)="toggleDropdown($event)">
+    <ng-container>
+    <div class="ctx-wrapper" (focusout)="closeOnFocusOut($event)">
 
       <!-- 3-LINE BUTTON -->
-      <button class="ctx-btn" [class.open]="dropdownOpen">
+      <button #profileToggle type="button" class="ctx-btn" [class.open]="dropdownOpen" [attr.aria-expanded]="dropdownOpen" aria-controls="header-user-dropdown" (click)="toggleDropdown($event)">
         <div class="ctx-btn-inner">
 
-          <ng-container *ngIf="ctx.active() as active; else noRole">
+          <ng-container *ngIf="!publicPage && !ctx.adminMode() && ctx.active() as active; else noRole">
             <!-- Line 1: role icon + label (small gray) -->
             <span class="ctx-role-line">
               <span class="ctx-role-icon">{{ active.roleIcon }}</span>
@@ -47,7 +47,7 @@
           <!-- No active role -->
           <ng-template #noRole>
             <span class="ctx-user-line ctx-no-role">
-              👤 בחר תפקיד
+              {{ userFullName() || 'החשבון שלי' }}
               <svg class="ctx-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
               </svg>
@@ -58,7 +58,10 @@
       </button>
 
       <!-- IDENTITY CENTER DROPDOWN -->
-      <div class="ctx-dropdown" *ngIf="dropdownOpen">
+      <div id="header-user-dropdown" class="ctx-dropdown" *ngIf="dropdownOpen">
+        <p *ngIf="switchError" class="ctx-switch-error" role="alert">{{ switchError }}</p>
+        <button type="button" class="ctx-manage-row" (click)="navigateTo('/my-donations', $event)">האזור האישי</button>
+        <ng-container *ngIf="!publicPage && !ctx.adminMode()">
 
         <!-- Header -->
         <div class="ctx-dropdown-title">התפקידים שלי</div>
@@ -72,9 +75,11 @@
             </div>
 
             <!-- Contexts under this role -->
-            <div
+            <button type="button"
               *ngFor="let context of group.contexts"
               class="ctx-context-item"
+              [attr.aria-current]="ctx.isActiveContext(group.role, context.id) ? 'true' : null"
+              [attr.aria-busy]="switchingId === context.id"
               [class.is-active]="ctx.isActiveContext(group.role, context.id)"
               (click)="switchContext(group.role, context.id, $event)"
             >
@@ -82,12 +87,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
               <span class="ctx-context-name">{{ context.name }}</span>
-            </div>
+            </button>
 
             <!-- Contextless role (donor today — no named sub-entities to pick
                  between) — the group header itself is the one selectable row,
                  same visual pattern as a normal context item. -->
-            <div
+            <button type="button"
               *ngIf="group.contexts.length === 0"
               class="ctx-context-item"
               [class.is-active]="ctx.isActiveContext(group.role, null)"
@@ -97,21 +102,21 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
               <span class="ctx-context-name">{{ group.label }}</span>
-            </div>
+            </button>
           </ng-container>
           <!-- single divider only when there are roles above the actions -->
           <div class="ctx-divider"></div>
         </ng-container>
 
-        <div class="ctx-action-item" (click)="navigateTo('/organization-registration', $event)">
+        <button type="button" class="ctx-action-item" (click)="navigateTo('/organization-registration', $event, { mode: 'new' })">
           <span class="ctx-action-icon">🏗️</span>
           <span>הקמת עמותה חדשה</span>
-        </div>
+        </button>
 
-        <div class="ctx-action-item" (click)="navigateTo('/campaigns/discover', $event)">
+        <button type="button" class="ctx-action-item" (click)="navigateTo('/campaigns/discover', $event, { mode: 'ambassador' })">
           <span class="ctx-action-icon">🤝</span>
           <span>הצטרפות כשגריר</span>
-        </div>
+        </button>
 
         <div class="ctx-action-item" (click)="navigateTo('/company-registration', $event)">
           <span class="ctx-action-icon">🏭</span>
@@ -121,46 +126,32 @@
         <div class="ctx-divider"></div>
 
         <!-- Manage identities -->
-        <div class="ctx-manage-row" (click)="navigateTo('/settings', $event)">
+        <button type="button" class="ctx-manage-row" (click)="navigateTo('/settings', $event)">
           <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span>ניהול תפקידים</span>
-        </div>
+        </button>
 
-        <!-- Logout — visible in dropdown on mobile -->
-        <div class="ctx-manage-row ctx-logout-row" (click)="logout()">
+        </ng-container>
+        <!-- Shared logout action -->
+        <button type="button" class="ctx-manage-row ctx-logout-row" (click)="logout()">
           <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" x2="9" y1="12" y2="12"></line>
           </svg>
-          <span>יציאה</span>
-        </div>
+          <span>התנתקות</span>
+        </button>
 
       </div>
 
     </div>
     </ng-container>
 
-    <!-- ADMIN-ONLY IDENTITY — static, no role switching -->
-    <ng-template #adminIdentity>
-      <div class="ctx-wrapper">
-        <div class="ctx-btn admin-static">
-          <div class="ctx-btn-inner">
-            <span class="ctx-role-line">
-              <span class="ctx-role-icon">🛠️</span>
-              מנהל פלטפורמה
-            </span>
-            <span class="ctx-user-line">{{ userFullName() }}</span>
-          </div>
-        </div>
-      </div>
-    </ng-template>
-
     <!-- AVATAR: real photo if available, else default person icon -->
-    <div class="topbar-avatar" [title]="userFullName()">
+    <button type="button" class="topbar-avatar" [title]="userFullName()" aria-label="פתיחת תפריט משתמש" [attr.aria-expanded]="dropdownOpen" aria-controls="header-user-dropdown" (click)="toggleDropdown($event)">
       <img *ngIf="userPhoto() && !photoFailed; else initialsAvatar"
            [src]="userPhoto()"
            [alt]="userFullName()"
@@ -169,16 +160,8 @@
       <ng-template #initialsAvatar>
         <span class="avatar-initials">{{ userInitials() }}</span>
       </ng-template>
-    </div>
-
-    <!-- LOGOUT -->
-    <button class="logout-btn" (click)="logout()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-        <polyline points="16 17 21 12 16 7"></polyline>
-        <line x1="21" x2="9" y1="12" y2="12"></line>
-      </svg>
     </button>
 
   </div>
+  <ng-template #guest><button type="button" class="header-login" (click)="login()">התחברות</button></ng-template>
 </header>

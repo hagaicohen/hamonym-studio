@@ -1,0 +1,10 @@
+<div class="hm-es" [class.hm-es--compact]="size === 'compact'">
+  <span class="hm-es-icon" aria-hidden="true">
+    <lucide-icon [img]="icon" [size]="iconSize" [strokeWidth]="stroke"></lucide-icon>
+  </span>
+  <p class="hm-es-title" role="heading" [attr.aria-level]="headingLevel">{{ title }}</p>
+  @if (description) {
+    <p class="hm-es-text">{{ description }}</p>
+  }
+  <div class="hm-es-actions"><ng-content></ng-content></div>
+</div>

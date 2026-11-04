@@ -174,7 +174,7 @@
           </div>
           <div class="amb-progress-bar">
             <div class="amb-progress-fill"
-                 [style.width.%]="ambassadorPct()"
+                 [style.width.%]="ambassadorPct() > 100 ? 100 : ambassadorPct()"
                  [style.background]="primaryColor(draft)"></div>
           </div>
         </div>
@@ -430,7 +430,7 @@
             <span class="hm-opening-pct">{{ statValue('percent', draft) }}</span>
           </div>
           <div class="hm-opening-progress-wrap">
-            <div class="hm-opening-progress-fill" [style.width.%]="raisedPct(draft)"></div>
+            <div class="hm-opening-progress-fill" [style.width.%]="raisedPct(draft) > 100 ? 100 : raisedPct(draft)"></div>
           </div>
         </div>
         <!-- CTA precedence (2026-09-30 fix) -- explicit user choice wins over
@@ -783,7 +783,7 @@
         <span class="hm-sticky-pct">{{ statValue('percent', draft) }} גויס</span>
       </div>
       <div class="hm-sticky-progress-wrap">
-        <div class="hm-sticky-progress-fill" [style.width.%]="raisedPct(draft)"></div>
+        <div class="hm-sticky-progress-fill" [style.width.%]="raisedPct(draft) > 100 ? 100 : raisedPct(draft)"></div>
       </div>
       <!-- Same method the in-page CTA calls (openCheckout(draft), not
            scrollToDonation()) — both CTAs must trigger the identical
@@ -1800,7 +1800,7 @@
                 </div>
               </div>
               <div class="hm-lb-bar" *ngIf="a.goalAmount">
-                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a) > 100 ? 100 : ambPct(a)" [style.background]="primaryColor(draft)"></div>
               </div>
               <button class="hm-amb-list-btn" data-style-role="viewButton"
                 [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
@@ -1835,7 +1835,7 @@
                   <span class="hm-lb-pct-tag" [style.color]="primaryColor(draft)" *ngIf="a.goalAmount">{{ ambPct(a) }}%</span>
                 </div>
                 <div class="hm-lb-bar">
-                  <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+                  <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a) > 100 ? 100 : ambPct(a)" [style.background]="primaryColor(draft)"></div>
                 </div>
               </div>
               <div class="hm-lb-card-footer">
@@ -1949,7 +1949,7 @@
                 <span class="hm-lb-pct-tag" [style.color]="primaryColor(draft)" *ngIf="a.goalAmount">{{ ambPct(a) }}%</span>
               </div>
               <div class="hm-lb-bar">
-                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+                <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a) > 100 ? 100 : ambPct(a)" [style.background]="primaryColor(draft)"></div>
               </div>
             </div>
 
@@ -1989,7 +1989,7 @@
               </div>
             </div>
             <div class="hm-lb-bar" *ngIf="a.goalAmount">
-              <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a)" [style.background]="primaryColor(draft)"></div>
+              <div class="hm-lb-bar-fill" [style.width.%]="ambPct(a) > 100 ? 100 : ambPct(a)" [style.background]="primaryColor(draft)"></div>
             </div>
             <button class="hm-amb-list-btn" data-style-role="viewButton"
               [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
@@ -2063,6 +2063,7 @@
           </div>
           <div class="hm-donor-list-info">
             <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+            <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
             <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
           </div>
           <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">
@@ -2088,6 +2089,7 @@
                 <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
                 <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
               </div>
+              <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
               <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
             </div>
           </div>
@@ -2166,6 +2168,7 @@
                     <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">בעילום שם</span>
                     <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">תרומה ראשונה</span>
                   </div>
+                  <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
                   <span class="hm-donor-v2-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
                 </div>
               </div>
@@ -2186,6 +2189,7 @@
               </div>
               <div class="hm-donor-list-info">
                 <span class="hm-donor-list-name" data-text-role="donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+                <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
                 <span class="hm-donor-list-time" data-text-role="donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
               </div>
               <div class="hm-donor-list-amount" data-text-role="donorAmount" [style.color]="donorAmountColor(draft, asDonors(block.data))">

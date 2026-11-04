@@ -1,5 +1,7 @@
 import { Component, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Users } from 'lucide-angular';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -20,7 +22,6 @@ interface DonorRow {
   phone:            string | null;
   display_name:     string;
   has_anonymous:    boolean;
-  has_mock:         boolean;
   total_donated:    number;
   donation_count:   number;
   first_donation_at: string;
@@ -44,11 +45,12 @@ const COLUMNS_STORAGE_KEY = 'donors-hidden-columns';
 @Component({
   selector: 'app-donors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, EmptyStateComponent],
   templateUrl: './donors-page.component.html',
   styleUrl: './donors-page.component.css',
 })
 export class DonorsPageComponent implements OnInit {
+  readonly Users = Users;
   private http          = inject(HttpClient);
   private currentEntity = inject(CurrentEntityService);
   private loader        = inject(AppLoaderService);

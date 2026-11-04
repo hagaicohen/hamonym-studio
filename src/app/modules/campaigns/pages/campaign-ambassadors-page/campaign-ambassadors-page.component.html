@@ -109,7 +109,7 @@
           </div>
           <div class="amb-progress-row" *ngIf="a.goalAmount">
             <div class="amb-progress-bar">
-              <div class="amb-progress-fill" [style.width.%]="progressPct(a)"></div>
+              <div class="amb-progress-fill" [style.width.%]="progressPct(a) > 100 ? 100 : progressPct(a)"></div>
             </div>
             <span class="amb-progress-pct">{{ progressPct(a) }}%</span>
           </div>
