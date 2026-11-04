@@ -65,7 +65,7 @@
         (input)="onDonationsSearchInput()"
         (keyup.enter)="onDonationsSearch()"
       />
-      <select class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+      <select class="ops-status-select" data-form-style="custom" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
         <option value="">כל הסטטוסים</option>
         <option value="paid">שולם</option>
         <option value="pending">ממתין</option>

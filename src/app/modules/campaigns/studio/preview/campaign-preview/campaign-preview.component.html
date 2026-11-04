@@ -1520,7 +1520,7 @@
            every card markup below consumes the SAME filtered/sorted
            collection instead of the raw draft.offerings. -->
       <div class="hm-reward-filters" [class.hm-reward-filters--compact]="inSidebarSection(draft, 'rewards')">
-        <input type="text" class="hm-reward-filter-search" [(ngModel)]="rewardsSearch" placeholder="חיפוש תשורה...">
+        <input type="text" class="hm-reward-filter-search" data-form-style="custom" [(ngModel)]="rewardsSearch" placeholder="חיפוש תשורה...">
         <select class="hm-reward-filter-select" [(ngModel)]="rewardsSortBy">
           <option value="featured">מומלצים קודם</option>
           <option value="price-asc">מחיר: מהנמוך לגבוה</option>
