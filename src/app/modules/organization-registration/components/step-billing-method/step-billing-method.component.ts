@@ -15,6 +15,8 @@ import { OrganizationRegistrationStateService } from '../../services/organizatio
 
 import { OpenfieldsFormComponent } from '../../../billing/components/openfields-form/openfields-form.component';
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { BillingService } from '../../services/billing.service';
+import { MASAV_PENDING_STATUS_LABEL } from '../../../../shared/constants/masav.constants';
 
 type PaymentMethod = 'credit-card' | 'masav';
 
@@ -70,14 +72,56 @@ export class StepBillingMethodComponent implements OnInit {
     this.continueLater = state.continueLater;
   }
 
+  private readonly billingService = inject(BillingService);
+
+  // The real entity_masav_details row -- the same document-only upload
+  // endpoint Settings uses (entity-billing-section-edit), so the signed
+  // mandate uploaded here shows up there and survives a reload.
+  masavConfig: any = null;
+  masavUploading = false;
+  masavUploadError: string | null = null;
+  readonly masavPendingStatusLabel = MASAV_PENDING_STATUS_LABEL;
+
   ngOnInit(): void {
-    if (this.stateService.state().entityId) return;
+    if (this.stateService.state().entityId) {
+      this.loadMasavConfig();
+      return;
+    }
     this.ensuringEntity = true;
     this.stateService.save({ includeBilling: false }).subscribe({
-      next: () => { this.ensuringEntity = false; },
+      next: () => { this.ensuringEntity = false; this.loadMasavConfig(); },
       error: (err) => {
         this.ensuringEntity = false;
         this.ensureEntityError = err?.error?.error || 'לא ניתן היה לשמור את פרטי העמותה. נסו לחזור לשלב הקודם ולהמשיך שוב.';
+      },
+    });
+  }
+
+  private loadMasavConfig(): void {
+    const entityId = this.stateService.state().entityId;
+    if (!entityId) return;
+    this.billingService.getMasavConfig(entityId).subscribe({
+      next: (res) => { this.masavConfig = res?.config ?? null; },
+      error: () => {},
+    });
+  }
+
+  onMasavFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    const entityId = this.stateService.state().entityId;
+    if (!file || !entityId || this.masavUploading) return;
+    this.masavUploading = true;
+    this.masavUploadError = null;
+    this.billingService.uploadMasavAuthorizationDocument(entityId, file).subscribe({
+      next: (res) => {
+        this.masavUploading = false;
+        this.masavConfig = res.config;
+      },
+      error: (err) => {
+        this.masavUploading = false;
+        this.masavUploadError = err?.error?.error || 'העלאת הקובץ נכשלה. נסו שוב.';
       },
     });
   }
@@ -98,13 +142,11 @@ export class StepBillingMethodComponent implements OnInit {
     return this.paymentMethod === 'masav';
   }
 
-  // MASAV bank authorization is completed in Association Settings after
-  // registration (see entity-billing-section-edit.component.ts -- the one
-  // real, persisted MASAV implementation) -- there is nothing left to
-  // require at this step once MASAV is selected. 2026-09-10: this step
-  // used to require a local file "upload" first, but that file was never
-  // actually sent to the backend -- it only set local component state, so
-  // the step claimed a save that never happened.
+  // The signed mandate is optional here: bank details and the rest of the
+  // MASAV setup are completed in Association Settings after registration
+  // (entity-billing-section-edit.component.ts). 2026-09-10: an earlier
+  // version required a local-only file "upload" that never reached the
+  // backend; the upload above now persists through the real endpoint.
   get canContinue(): boolean {
     return true;
   }

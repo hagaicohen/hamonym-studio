@@ -212,6 +212,45 @@ export function canSaveDraft(state: OrganizationRegistrationState): boolean {
   );
 }
 
+// The same gates as each step's canContinue (steps 3 and 5 have none).
+export function stepGatePasses(step: number, state: OrganizationRegistrationState): boolean {
+  switch (step) {
+    case 1:
+      return !!(
+        state.entityType &&
+        state.organizationName.trim() &&
+        state.organizationNumber.trim() &&
+        state.primaryCategory &&
+        state.fullName.trim() &&
+        /^05\d-\d{7}$/.test(state.phone) &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)
+      );
+    case 2:
+      return !!(
+        state.selectedCampaignTypes.length &&
+        state.displayName.trim().length > 1 &&
+        state.organizationDescription.trim().length > 10
+      );
+    case 4:
+      return state.useExistingTerminal || !!(
+        state.provider &&
+        state.terminalNumber.trim() &&
+        state.apiUsername.trim() &&
+        state.apiPassword.trim()
+      );
+    default:
+      return true;
+  }
+}
+
+// The step a resumed draft opens on: always the step it was saved on, even if
+// earlier steps are incomplete -- their gates still apply to "המשך" and submit.
+export const LAST_REGISTRATION_STEP = 6;
+export function resumeStep(savedStep: unknown): number {
+  const step = savedStep === null || savedStep === '' ? NaN : Number(savedStep);
+  return Number.isInteger(step) && step >= 1 && step <= LAST_REGISTRATION_STEP ? step : 1;
+}
+
 // Exported so the AI campaign-creation flow (ai-campaign-creation-page) can
 // build a real createEntity payload from Brief-derived data without
 // duplicating this field mapping — same reasoning as reusing
@@ -293,7 +332,7 @@ export class OrganizationRegistrationStateService {
   // final review-step submit — the only difference is includeBilling, since
   // re-running the platform-commission billing creation on every draft save
   // would create a duplicate entity_billing row each time.
-  save(options: { includeBilling: boolean }): Observable<any> {
+  save(options: { includeBilling: boolean; onboardingStep?: number }): Observable<any> {
     return this.runExclusive(() => this.persist(options));
   }
 
@@ -315,10 +354,10 @@ export class OrganizationRegistrationStateService {
     });
   }
 
-  private persist(options: { includeBilling: boolean }): Observable<any> {
+  private persist(options: { includeBilling: boolean; onboardingStep?: number }): Observable<any> {
     if (this.identityDuplicate()) return throwError(() => new Error('מספר הזיהוי הזה כבר רשום במערכת. לא ניתן ליצור גוף נוסף עם אותו מספר.'));
     const s = this.state();
-    const payload = buildPayload(s);
+    const payload = { ...buildPayload(s), ...(options.onboardingStep ? { onboarding_step: options.onboardingStep } : {}) };
 
     const create$ = s.entityId
       ? this.entitiesService.updateEntity(s.entityId, payload)

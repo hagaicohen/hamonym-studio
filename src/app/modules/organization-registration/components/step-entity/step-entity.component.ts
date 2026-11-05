@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 
-import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
+import { OrganizationRegistrationStateService, stepGatePasses } from '../../services/organization-registration-state.service';
 
 import {
   ENTITY_CONFIGS,
@@ -277,15 +277,6 @@ export class StepEntityComponent {
   }
 
   get canContinue(): boolean {
-    return !!(
-      !this.stateService.identityDuplicate() &&
-      this.entityType &&
-      this.organizationName.trim() &&
-      this.organizationNumber.trim() &&
-      this.primaryCategory &&
-      this.fullName.trim() &&
-      this.isPhoneValid &&
-      this.isEmailValid
-    );
+    return !this.stateService.identityDuplicate() && stepGatePasses(1, this.stateService.state());
   }
 }

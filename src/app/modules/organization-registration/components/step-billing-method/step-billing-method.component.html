@@ -120,8 +120,8 @@
           <div class="masav-title">הוראת קבע - מס״ב</div>
 
           <p>
-            את הרשאת הבנק להוראת הקבע ניתן להוריד, לחתום ולהעלות בהגדרות
-            העמותה, בסיום תהליך ההרשמה.
+            יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת. את פרטי
+            חשבון הבנק משלימים בהגדרות העמותה, בסיום תהליך ההרשמה.
           </p>
 
           <div class="plan-id">קוד מוסד פלנויד: 25788</div>
@@ -130,6 +130,31 @@
             הורד טופס הוראת קבע
           </a>
         </div>
+
+        @if (masavConfig?.has_authorization_document) {
+          <div class="upload-box">
+            <div class="upload-success"><app-icon name="check" /> {{ masavConfig?.authorization_document_name }}</div>
+            <div class="masav-doc-status">
+              <app-icon name="dot" [tone]="masavConfig?.authorized ? 'success' : 'warning'" />
+              {{ masavConfig?.authorized ? 'ההרשאה אושרה' : masavPendingStatusLabel }}
+            </div>
+          </div>
+        }
+
+        <label class="upload-button" [class.disabled]="ensuringEntity || masavUploading || !stateService.state().entityId">
+          {{ masavUploading ? 'מעלה...' : (masavConfig?.has_authorization_document ? 'החלפת הטופס החתום' : 'העלה טופס חתום') }}
+          <input
+            type="file"
+            hidden
+            accept=".pdf,image/*"
+            [disabled]="ensuringEntity || masavUploading || !stateService.state().entityId"
+            (change)="onMasavFileSelected($event)"
+          />
+        </label>
+
+        @if (masavUploadError) {
+          <div class="ensure-entity-error">{{ masavUploadError }}</div>
+        }
       </div>
     }
 
