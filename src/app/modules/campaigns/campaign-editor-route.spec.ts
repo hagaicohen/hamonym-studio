@@ -160,10 +160,10 @@ describe('Default campaign editor — Studio by campaign type', () => {
     page.history.stop();
   });
 
-  it('the Studio keeps a link to the classic editor for existing campaigns', async () => {
+  it('the Studio does not link to the classic Wizard (rollback routes stay reachable by URL only)', async () => {
     const { el, page } = await open(() => ({}));
-    const link = Array.from(el.querySelectorAll<HTMLAnchorElement>('.studio-tools a')).find(a => a.textContent!.includes('עורך קלאסי'));
-    expect(link?.getAttribute('href')).toContain('/campaigns/c-1/edit');
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('a')).map(a => a.getAttribute('href') ?? '');
+    expect(links.filter(h => /\/campaigns\/[^/]+\/edit|\/campaigns\/create(\?|$)/.test(h))).toEqual([]);
     page.history.stop();
   });
 });

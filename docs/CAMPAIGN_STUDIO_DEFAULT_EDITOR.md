@@ -37,7 +37,7 @@ The Studio now reads `?returnStep=<step>` like the Wizard: `10` opens the publis
 
 ## What does not change
 
-- The classic Wizard and its routes `/campaigns/create` and `/campaigns/:id/edit` — same component, guard and behavior. The Studio's toolbar still links to it ("עורך קלאסי").
+- The classic Wizard and its routes `/campaigns/create` and `/campaigns/:id/edit` — same component, guard and behavior. They are not linked from the app (reachable by URL only, as the rollback path); partner-owned pages still link to the classic editor from the Studio.
 - Partner pages (`/partners/...`, partner builder, campaign-partner builder) and partner-owned drafts: the Studio shows a link to the classic editor for them.
 - The ambassador studio (`/campaigns/:id/ambassador-studio`).
 - Campaign data: no migration, nothing rewritten on open (the Studio does not run the sidebar migration).

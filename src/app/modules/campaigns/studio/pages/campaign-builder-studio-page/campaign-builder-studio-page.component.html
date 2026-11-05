@@ -42,9 +42,6 @@
             <span>תבנית</span>
           </button>
           }
-          @if (!isNew) {
-            <a class="tool-btn tool-btn--text" [routerLink]="['/campaigns', campaignId, 'edit']" [queryParams]="{ returnStep: 9 }" title="מעבר לעורך הקלאסי">עורך קלאסי</a>
-          }
           <span class="tool-divider" aria-hidden="true"></span>
         </span>
       </app-campaign-studio-topbar>
@@ -192,7 +189,7 @@
                     </div>
                   }
                   @case ('workspace') {
-                    <p class="props-note">בקמפיין שפורסם, ההגדרות האלה מנוהלות בעמוד הניהול של הקמפיין ונשמרות שם מיד, כמו בעורך הקלאסי.</p>
+                    <p class="props-note">בקמפיין שפורסם, ההגדרות האלה מנוהלות בעמוד הניהול של הקמפיין ונשמרות שם מיד.</p>
                     <a class="props-link" [routerLink]="['/campaigns', campaignId, area.workspacePath]" [fragment]="area.workspaceFragment">
                       <lucide-icon [img]="icons.ExternalLink" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" /> מעבר לעמוד הניהול
                     </a>
