@@ -8,8 +8,6 @@ import { BillingApiService } from '../../services/billing-api.service';
 
 import { BillingService } from '../../../organization-registration/services/billing.service';
 
-import { OrganizationRegistrationStateService } from '../../../organization-registration/services/organization-registration-state.service';
-
 // Explicit lifecycle states (Stage 1 hardening, 2026-09-27) -- replaces the
 // old implicit "contentWindow exists == ready" + fixed-350ms-timer
 // assumptions. See initState's own doc comment below for why.
@@ -75,8 +73,6 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   private billingApi = inject(BillingApiService);
 
   private billingService = inject(BillingService);
-
-  private stateService = inject(OrganizationRegistrationStateService);
 
   terminalNumber = '';
 
@@ -416,44 +412,36 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
             return;
           }
 
-          if (window.location.pathname.includes('/settings/entities/')) {
-            this.billingService
-              .createEntityBilling({
-                entityId: this.entityId,
+          // Settings and the registration wizard both save the card here, so
+          // the backend (GetLpResult) confirms it before anyone reports
+          // success. In CreateTokenOnly mode CardCom returns no deal number,
+          // so nothing below may depend on internalDealNumber being set.
+          this.billingService
+            .createEntityBilling({
+              entityId: this.entityId,
 
-                provider: 'cardcom',
+              provider: 'cardcom',
 
-                lowProfileId: this.lowProfileId,
+              lowProfileId: this.lowProfileId,
 
-                internalDealNumber,
+              internalDealNumber,
 
-                expMonth: expirationMonth,
+              expMonth: expirationMonth,
 
-                expYear: expirationYear,
-              })
+              expYear: expirationYear,
+            })
 
-              .subscribe({
-                next: () => {
-                  resolve(true);
-                },
+            .subscribe({
+              next: () => {
+                resolve(true);
+              },
 
-                error: (err: any) => {
-                  console.error(err);
+              error: (err: any) => {
+                console.error(err);
 
-                  resolve(false);
-                },
-              });
-
-            return;
-          }
-
-          this.stateService.updateState({
-            cardcomLowProfileId: this.lowProfileId,
-
-            cardcomInternalDealNumber: internalDealNumber,
-          });
-
-          resolve(result?.IsSuccess === true);
+                resolve(false);
+              },
+            });
 
           return;
         }
