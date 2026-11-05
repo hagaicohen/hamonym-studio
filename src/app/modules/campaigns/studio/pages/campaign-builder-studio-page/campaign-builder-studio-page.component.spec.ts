@@ -298,15 +298,13 @@ describe('Campaign Builder Studio — new, unsaved campaign', () => {
 });
 
 describe('Campaign Builder Studio — entry point', () => {
-  it('the campaigns page offers the Studio next to the existing create flow', () => {
+  it('the campaigns page creates new campaigns in the Studio (campaign-editor-route.spec.ts covers the rest)', () => {
     TestBed.configureTestingModule({ imports: [HttpClientTestingModule], providers: [provideRouter([])] });
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate');
     const page = TestBed.runInInjectionContext(() => new CampaignsPageComponent());
-    page.createCampaignInStudio();
-    expect(router.navigate).toHaveBeenCalledWith(['/campaigns/create/studio']);
     page.createCampaign();
-    expect(router.navigate).toHaveBeenCalledWith(['/campaigns/create']);
+    expect(router.navigate).toHaveBeenCalledWith(['/campaigns/create/studio']);
   });
 });
 

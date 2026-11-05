@@ -11,6 +11,7 @@ import { CampaignPartnersService } from '../../../services/campaign-partners.ser
 import { StudioUiService } from '../../services/studio-ui.service';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { campaignEditPath } from '../../../campaign-editor-route';
 // Phase 3 — Page Builder Owner Context. Minimal host page proving the SAME
 // Builder/Renderer (CampaignPageBuilderStepComponent / CampaignPreviewComponent)
 // work unmodified against a Partner entity's own draft instead of a
@@ -129,7 +130,7 @@ export class PartnerBuilderPageComponent implements OnInit {
           rewardId: this.returnRewardId || null,
         }).subscribe({
           next: () => {
-            this.router.navigate(['/campaigns', this.returnCampaignId, 'edit'], {
+            this.router.navigate(campaignEditPath(this.returnCampaignId!), {
               queryParams: this.returnStep ? { returnStep: this.returnStep } : undefined,
             });
           },

@@ -39,11 +39,13 @@ import { PresetId } from '../../../services/campaign-studio-state.service';
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { BLOCK_GROUPS, BLOCK_LABELS, SINGLE_INSTANCE, blockLucideIcon } from '../../../builder/block-catalog';
 import { isSectionAvailableFor } from '../../../services/owner-registry';
+import { PUBLISH_STEP } from '../../../campaign-editor-route';
 
-// Campaign Builder Studio (Phase 1 shell, 2026-11-04): component tree, the real
-// campaign renderer as canvas, and a properties panel. Every change goes
-// through CampaignStudioStateService, exactly like Step 9; the classic editor
-// at /campaigns/:id/edit stays the full-featured path.
+// Campaign Builder Studio — the default campaign editor since 2026-11-05
+// (campaign-editor-route.ts). Component tree, the real campaign renderer as
+// canvas, and a properties panel hosting the Wizard's own steps; every change
+// goes through CampaignStudioStateService. The classic Wizard stays at
+// /campaigns/:id/edit as the rollback path.
 
 export interface StudioNode {
   key: string;                 // block id, or 'area:<name>' for page areas
@@ -251,6 +253,7 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
         this.state.loadDraft(data);
         this.history.start();
         this.loaded = true;
+        this.openReturnStep(Number(this.route.snapshot.queryParamMap.get('returnStep')));
       },
       error: () => { this.loader.hide(); this.loadError = 'לא ניתן היה לטעון את הקמפיין. נסו שוב.'; },
     });
@@ -290,6 +293,16 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
     if (key === 'area:footer') return '[data-studio-area="footer"]';
     if (key.startsWith('area:')) return null;
     return `[data-block-id="${CSS.escape(key)}"]`;
+  }
+
+  // ?returnStep=<wizard step>, as links into the Wizard use it: publishing
+  // opens the publish dialog, a step with its own area selects that area.
+  private openReturnStep(step: number): void {
+    if (!step) return;
+    if (step === PUBLISH_STEP) { this.showPublish = true; return; }
+    if (step === 1) { this.selectedKey = this.openingKey; return; }
+    const area = this.stepAreas.find(a => a.step === step && wizardStepAccess(this.state.draft, a.step) !== 'hidden');
+    if (area) this.selectedKey = area.key;
   }
 
   // Full and minimal campaign pages open here; partner pages keep their editor.

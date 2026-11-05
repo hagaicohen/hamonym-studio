@@ -12,6 +12,8 @@ import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles
 import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { campaignCreatePath, campaignEditPath } from '../../campaign-editor-route';
+
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
@@ -225,13 +227,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   }
 
   createCampaign(): void {
-    this.router.navigate(['/campaigns/create']);
-  }
-
-  // Campaign Builder Studio (beta) for a new, unsaved campaign; same guard and
-  // save flow as /campaigns/create.
-  createCampaignInStudio(): void {
-    this.router.navigate(['/campaigns/create/studio']);
+    this.router.navigate(campaignCreatePath());
   }
 
   createCampaignWithAi(): void {
@@ -246,7 +242,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     if (!this.hasEntityManagerRole() && this.ambassadorCampaignIds().has(id)) {
       this.router.navigate(['/campaigns', id, 'ambassador-studio']);
     } else {
-      this.router.navigate(['/campaigns', id, 'edit']);
+      this.router.navigate(campaignEditPath(id));
     }
   }
 

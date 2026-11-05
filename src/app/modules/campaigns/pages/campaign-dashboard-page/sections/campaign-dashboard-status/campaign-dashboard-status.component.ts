@@ -5,6 +5,7 @@ import { CampaignDraft, CampaignStatus } from '../../../../services/campaign-stu
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 
 import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
+import { PUBLISH_STEP, campaignEditPath } from '../../../../campaign-editor-route';
 const STATUS_LABELS: Record<CampaignStatus, string> = {
   draft: 'טיוטה', published: 'פעיל', paused: 'מושהה', ended: 'הסתיים',
 };
@@ -43,12 +44,15 @@ export class CampaignDashboardStatusComponent {
   get isDraft(): boolean { return this.draft.status === 'draft'; }
   get entityApproved(): boolean { return this.currentEntity.currentEntity()?.status === 'active'; }
 
+  get editLink(): string[] { return campaignEditPath(this.campaignId); }
+  readonly publishStep = PUBLISH_STEP;
+
   // Reuses the Builder's own publish step (returnStep=10) rather than
   // duplicating its isReady/missingFields validation here — this bar only
   // ever offers to take the manager there, it never claims publish will
   // succeed on its own.
   get publishStepLink(): any[] {
-    return ['/campaigns', this.campaignId, 'edit'];
+    return campaignEditPath(this.campaignId);
   }
 
   formatDate(iso: string): string {

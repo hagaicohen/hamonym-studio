@@ -16,6 +16,7 @@ import { buildPayload as buildOrgPayload, initialState as initialOrgState, Organ
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { campaignCreatePath, campaignEditPath } from '../../campaign-editor-route';
 // Website extraction alone can take ~12s (real-world test); LLM calls add
 // more on top. 45s is generous slack, not a "should normally take this
 // long" figure — this exists purely so a stuck/slow backend call can never
@@ -561,7 +562,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
                 if (created.id) this.linkGenerationToCampaign(created.id);
                 this.creatingCampaign.set(false);
                 this.loader.hide();
-                this.router.navigate(['/campaigns', created.id, 'edit']);
+                this.router.navigate(campaignEditPath(created.id!));
               },
               error: (err) => {
                 this.creatingCampaign.set(false);
@@ -858,7 +859,7 @@ export class AiCampaignCreationPageComponent implements OnInit {
     // proven manual flow (ADR decision 1: one Studio, multiple doors in).
     // Partner mode has no equivalent "manual builder" route of its own —
     // /partners (the list page) is where "+ שותף חדש" already lives.
-    this.router.navigate([this.isPartnerMode() ? '/partners' : '/campaigns/create']);
+    this.router.navigate(this.isPartnerMode() ? ['/partners'] : campaignCreatePath());
   }
 }
 

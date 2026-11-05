@@ -320,8 +320,8 @@ export const routes: Routes = [
       ).then((m) => m.CampaignStudioPageComponent),
   },
 
-  // Campaign Builder Studio: separate route next to the classic editor above,
-  // same guard.
+  // Campaign Builder Studio: the default campaign editor; the classic Wizard
+  // routes above stay as the rollback (modules/campaigns/campaign-editor-route.ts).
   {
     path: 'campaigns/:id/studio',
     canActivate: [campaignEditorGuard],

@@ -19,6 +19,7 @@ import { AnalyticsRangeService } from '../../../../core/services/analytics-range
 import { OrganizationStatusCardComponent } from './organization-status-card.component';
 import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { LucideAngularModule } from 'lucide-angular';
+import { campaignCreatePath, campaignEditPath } from '../../../campaigns/campaign-editor-route';
 
 Chart.register(...registerables);
 
@@ -60,6 +61,7 @@ interface DashboardData {
   styleUrls: ['./dashboard.component.css', './organization-card-heading.css', '../../../../shared/styles/new-campaign-button.css'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  readonly createCampaignPath = campaignCreatePath();
   chartCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('chartCanvas') set canvas(value: ElementRef<HTMLCanvasElement> | undefined) {
     this.chartCanvas = value;
@@ -366,7 +368,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.router.navigate(['/campaigns']);
         break;
       case 'draft_unpublished':
-        this.router.navigate(a.ref_id ? ['/campaigns', a.ref_id, 'edit'] : ['/campaigns']);
+        this.router.navigate(a.ref_id ? campaignEditPath(a.ref_id) : ['/campaigns']);
         break;
     }
   }

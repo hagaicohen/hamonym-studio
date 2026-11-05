@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
 import { organizationNextAction } from '../../../../shared/utils/organization-next-action';
+import { campaignCreatePath } from '../../../campaigns/campaign-editor-route';
 
 @Component({
   selector: 'app-organization-status-card',
@@ -55,7 +56,7 @@ export class OrganizationStatusCardComponent {
       case 'suspended':
       case 'pending_review': return {label:'צפייה בפרטים',route:settings,edit:false};
     }
-    if (this.selected && this.guidance.ready) return {label:this.campaignCount === 0 ? 'יצירת קמפיין ראשון' : 'ניהול הקמפיינים',route:[this.campaignCount === 0 ? '/campaigns/create' : '/campaigns'],edit:false};
+    if (this.selected && this.guidance.ready) return {label:this.campaignCount === 0 ? 'יצירת קמפיין ראשון' : 'ניהול הקמפיינים',route:this.campaignCount === 0 ? campaignCreatePath() : ['/campaigns'],edit:false};
     return {label:this.guidance.needsCompletion ? 'השלמת פרטים' : 'צפייה בפרטים',route:settings,edit:this.guidance.needsCompletion};
   }
   get recommendations(): string[] {

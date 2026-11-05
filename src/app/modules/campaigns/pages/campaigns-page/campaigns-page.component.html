@@ -76,7 +76,6 @@
     <h1 id="first-campaign-title" class="fc-title">הסיפור שלכם מתחיל כאן</h1>
     <p class="fc-subtitle">כל שינוי משמעותי מתחיל בצעד אחד. צרו את הקמפיין הראשון שלכם, ספרו על המטרה וצרפו אנשים לדרך.</p>
     <button type="button" class="fc-cta" (click)="createCampaign()">יצירת הקמפיין הראשון</button>
-    <button type="button" class="fc-studio" (click)="createCampaignInStudio()">או יצירה בסטודיו החדש (בטא)</button>
     @if (entityAwaitingApproval) { <p class="fc-reassure">הקמפיין יישמר כטיוטה, ויוכל להתפרסם לאחר אישור העמותה.</p> }
     <ol class="fc-steps" aria-label="שלבי יצירת קמפיין">
       <li><span class="fc-step-num" aria-hidden="true">1</span><span><strong>מספרים את הסיפור</strong> מה המטרה שלכם?</span></li>
@@ -96,7 +95,6 @@
       <button class="btn-new btn-ai btn-ai--disabled ai-unavailable" disabled
         title="כלי AI אינם זמינים כרגע"
         (click)="createCampaignWithAi()"><app-icon name="sparkles" /> צור עם AI</button>
-      <button type="button" class="btn-studio" (click)="createCampaignInStudio()">יצירה בסטודיו (בטא)</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   </div>
