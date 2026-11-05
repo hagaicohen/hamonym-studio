@@ -1017,6 +1017,9 @@ exports.getEntityById =
 
           eb.last4 AS billing_last4,
 
+          -- A card counts as saved only with a reusable token (never exposed).
+          (eb.token IS NOT NULL) AS billing_card_ready,
+
           eb.card_holder_name,
 
           eb.exp_month,

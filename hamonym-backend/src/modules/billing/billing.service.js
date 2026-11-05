@@ -155,6 +155,16 @@ const expYear =
 
       null;
 
+    // No reusable token = no card we can ever charge. Fail before touching
+    // the entity's current card, so a bad attempt never replaces a good one.
+    if (!token) {
+
+      throw new Error(
+        'CardCom did not return a reusable card token'
+      );
+
+    }
+
     /* =========================
        REPLACE EXISTING TOKEN
     ========================= */
