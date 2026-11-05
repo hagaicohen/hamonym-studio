@@ -212,7 +212,8 @@ export class PlatformOrganizationsPageComponent implements OnInit, OnDestroy {
   }
   @HostListener('document:click') closeMenu(): void { this.actionOrganization = null; }
   @HostListener('document:keydown.escape') escapeMenu(): void { if (this.actionOrganization) { this.closeMenu(); this.menuTrigger?.focus(); } }
-  @HostListener('document:keydown.tab', ['$event']) focusMenuAction(event: KeyboardEvent): void {
+  @HostListener('document:keydown.tab', ['$event']) focusMenuAction(event: Event): void {
+    if (!(event instanceof KeyboardEvent)) return;
     if (this.actionOrganization && !event.shiftKey && event.target === this.menuTrigger) {
       const action = document.getElementById('organization-row-action');
       if (action) { event.preventDefault(); action.focus(); }
