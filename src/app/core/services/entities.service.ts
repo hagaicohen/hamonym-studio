@@ -124,6 +124,8 @@ export class EntitiesService {
         tax_document_url: data.tax_document_url,
 
         tax_document_name: data.tax_document_name,
+
+        onboarding_step: data.onboarding_step,
       },
 
       {

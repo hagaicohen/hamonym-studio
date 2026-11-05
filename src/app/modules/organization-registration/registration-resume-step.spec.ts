@@ -56,12 +56,38 @@ describe('Registration draft — resume at the saved step', () => {
     expect(open({ ...complete, onboarding_step: null }).currentStep).toBe(1);
   });
 
+  it('moving to another step without edits can still be saved, and saves that step', () => {
+    const page = open({ ...complete, onboarding_step: 1 });
+    const row = { id: 'd1' };
+    expect(page.canSaveRow(row)).toBeFalse();
+    page.nextStep();
+    page.nextStep();
+    expect(page.canSaveRow(row)).toBeTrue();
+    page.saveDraft();
+    const req = http.expectOne((r) => r.method === 'PATCH' && r.url.endsWith('/api/entities/d1'));
+    expect(req.request.body.onboarding_step).toBe(3);
+    req.flush({ ...complete, onboarding_step: 3 });
+    expect(page.canSaveRow(row)).toBeFalse();
+  });
+
   it('"שמור טיוטה" sends the current step with the draft', () => {
     const page = open({ ...complete, onboarding_step: 3 });
     page.currentStep = 3;
     TestBed.inject(OrganizationRegistrationStateService).updateState({ displayName: 'שם חדש' });
     page.saveDraft();
     const req = http.expectOne((r) => r.method === 'PATCH' && r.url.endsWith('/api/entities/d1'));
+    expect(req.request.body.onboarding_step).toBe(3);
+  });
+});
+
+describe('Registration draft — first save (create) carries the step', () => {
+  it('a new registration saved on step 3 sends onboarding_step 3 in the create request', () => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpTestingController);
+    const state = TestBed.inject(OrganizationRegistrationStateService);
+    state.loadFromEntity({ ...complete, id: null });
+    state.save({ includeBilling: false, onboardingStep: 3 }).subscribe();
+    const req = http.expectOne((r) => r.method === 'POST' && r.url.endsWith('/api/entities'));
     expect(req.request.body.onboarding_step).toBe(3);
   });
 });
