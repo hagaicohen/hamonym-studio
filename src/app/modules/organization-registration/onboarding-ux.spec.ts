@@ -67,7 +67,7 @@ describe('Organization onboarding completion indicators', () => {
   });
   it('uses actual existing connection and card confirmation values for completed rows', () => {
     const state = TestBed.inject(OrganizationRegistrationStateService);
-    state.updateState({ entityType: 'association', logoPreview: '/logo.png', certificateFileName: 'registration.pdf', section46FileName: 'tax.pdf', connectionSuccess: true, useExistingTerminal: false, fullName: 'Owner', cardcomInternalDealNumber: 123 });
+    state.updateState({ entityType: 'association', logoPreview: '/logo.png', certificateFileName: 'registration.pdf', section46FileName: 'tax.pdf', connectionSuccess: true, useExistingTerminal: false, fullName: 'Owner', billingCard: { last4: "1234", expMonth: "12", expYear: "2030" } });
     const fixture = TestBed.createComponent(StepReviewComponent); fixture.detectChanges();
     const checks = fixture.componentInstance.completionChecks;
     for (const label of ['לוגו', 'מסמכי רישום', 'סליקה מחוברת', 'כרטיס אשראי לגביית עמלות']) expect(checks.find(check => check.label === label)?.ok).toBeTrue();

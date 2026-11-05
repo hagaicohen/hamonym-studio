@@ -3,6 +3,7 @@
 import {
   Component,
   EventEmitter,
+  OnInit,
   Output,
   computed,
   inject,
@@ -44,7 +45,7 @@ import { sanitizeRichHtml } from '../../../../shared/utils/sanitize-rich-html';
   templateUrl: './step-review.component.html',
   styleUrls: ['./step-review.component.css'],
 })
-export class StepReviewComponent {
+export class StepReviewComponent implements OnInit {
   readonly Check = Check;
   readonly successIconSize = HM_ICON_SIZE.xl;
   readonly iconStroke = HM_ICON_STROKE;
@@ -69,6 +70,12 @@ export class StepReviewComponent {
 
   protected readonly state = this.stateService.state;
 
+  // The summary trusts only the card the backend has saved, also when a
+  // resumed draft opens straight on this step.
+  ngOnInit(): void {
+    this.stateService.refreshBilling().subscribe({ error: () => {} });
+  }
+
   get completionChecks(): OrganizationCheck[] {
     const state = this.state();
     return [
@@ -78,7 +85,7 @@ export class StepReviewComponent {
         .filter(check => check.label !== 'קמפיין קיים')
         .map(check => check.label === 'אישור מס' ? { ...check, detail: 'רלוונטי לעמותה בעלת אישור סעיף 46 בלבד. העלאה אינה אימות האישור.' } : check),
       state.paymentMethod === 'credit-card'
-        ? { label: 'כרטיס אשראי לגביית עמלות', ok: !!state.cardcomInternalDealNumber }
+        ? { label: 'כרטיס אשראי לגביית עמלות', ok: !!state.billingCard }
         : { label: 'הרשאת מס״ב', ok: false, detail: 'יש להשלים בהגדרות העמותה לאחר ההרשמה.' },
     ];
   }

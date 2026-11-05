@@ -99,15 +99,23 @@
           <div class="hosted-info">טוען טופס תשלום מאובטח...</div>
         } @else if (ensureEntityError) {
           <div class="ensure-entity-error">{{ ensureEntityError }}</div>
-        } @else {
+        } @else if (showCardForm) {
           <app-openfields-form
             [entityId]="stateService.state().entityId ?? undefined"
           >
           </app-openfields-form>
         }
 
-        @if (stateService.state().cardcomInternalDealNumber) {
-          <div class="token-success"><app-icon name="check" /> אמצעי החיוב נשמר בהצלחה</div>
+        @if (savedCard && !replacingCard) {
+          <div class="token-success">
+            <app-icon name="check" /> אמצעי החיוב נשמר בהצלחה
+            @if (savedCard.last4) { · כרטיס המסתיים ב-{{ savedCard.last4 }} }
+          </div>
+          <button type="button" class="secondary-btn" (click)="replacingCard = true">החלפת כרטיס</button>
+        }
+
+        @if (cardError) {
+          <div class="ensure-entity-error">{{ cardError }}</div>
         }
       </div>
     }

@@ -15,7 +15,7 @@ describe('StepBillingMethodComponent — MASAV signed mandate', () => {
       imports: [StepBillingMethodComponent],
       providers: [
         { provide: BillingService, useValue: billing },
-        { provide: OrganizationRegistrationStateService, useValue: { state: () => state, updateState: () => {}, save: () => of({}) } },
+        { provide: OrganizationRegistrationStateService, useValue: { state: () => state, updateState: () => {}, save: () => of({}), refreshBilling: () => of(null) } },
       ],
     });
     const fixture = TestBed.createComponent(StepBillingMethodComponent);

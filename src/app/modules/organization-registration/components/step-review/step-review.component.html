@@ -512,7 +512,7 @@
           </div>
         </div>
 
-        @if (paymentMethod === "credit-card" && state().cardcomInternalDealNumber) {
+        @if (paymentMethod === "credit-card" && state().billingCard) {
           <div class="summary-item">
             <div class="summary-label">ספק</div>
 
@@ -544,7 +544,7 @@
           </div>
         }
 
-        @if (paymentMethod === "credit-card" && !state().cardcomInternalDealNumber) {
+        @if (paymentMethod === "credit-card" && !state().billingCard) {
           <p class="completion-help">לא התקבל אישור לשמירת כרטיס. יש להשלים את אמצעי הגבייה בהגדרות העמותה.</p>
         }
         @if (paymentMethod === "masav") {

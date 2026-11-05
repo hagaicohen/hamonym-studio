@@ -2,7 +2,6 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, defer, forkJoin, of, throwError } from 'rxjs';
 import { finalize, map, switchMap, tap } from 'rxjs/operators';
 import { EntitiesService } from '../../../core/services/entities.service';
-import { BillingService } from './billing.service';
 
 export type BillingPaymentMethod = 'credit-card' | 'masav';
 
@@ -92,9 +91,27 @@ export interface OrganizationRegistrationState {
 
   continueLater: boolean;
 
-  cardcomLowProfileId?: string;
+  // The entity's active fee-collection card as the backend reports it
+  // (GET /api/entities/:id -> entity_billing). Never card data the visitor
+  // typed: the number and CVV stay inside CardCom's OpenFields iframe.
+  billingCard: BillingCard | null;
+}
 
-  cardcomInternalDealNumber?: number;
+export interface BillingCard {
+  last4: string | null;
+  expMonth: string | null;
+  expYear: string | null;
+}
+
+// Only a card the backend confirms holds a reusable CardCom token counts; an
+// entity_billing row on its own is not enough.
+export function billingCardFrom(entity: any): BillingCard | null {
+  if (entity?.billing_card_ready !== true) return null;
+  return {
+    last4: entity.billing_last4 ?? null,
+    expMonth: entity.exp_month != null ? String(entity.exp_month) : null,
+    expYear: entity.exp_year != null ? String(entity.exp_year) : null,
+  };
 }
 
 export const initialState: OrganizationRegistrationState = {
@@ -180,9 +197,7 @@ export const initialState: OrganizationRegistrationState = {
 
   continueLater: false,
 
-  cardcomLowProfileId: '',
-
-  cardcomInternalDealNumber: 0,
+  billingCard: null,
 };
 
 // The same "is this registration actually finishable" rule createEntity used
@@ -275,6 +290,9 @@ export function buildPayload(state: OrganizationRegistrationState) {
     yearly_goal: state.yearlyGoal,
     billing_provider: state.provider,
     billing_skip_setup: state.useExistingTerminal,
+    // Only a confirmed card or the MASAV choice is a billing method; a
+    // credit-card choice without a saved card stays unset, as before.
+    billing_method: state.paymentMethod === 'masav' ? 'masav' : state.billingCard ? 'credit-card' : null,
     cardcom_terminal_number: state.terminalNumber,
     cardcom_api_username: state.apiUsername,
     cardcom_api_password_encrypted: state.apiPassword,
@@ -300,10 +318,8 @@ export class OrganizationRegistrationStateService {
   readonly state = signal<OrganizationRegistrationState>(initialState);
   readonly saving = signal(false);
   readonly identityDuplicate = signal(false);
-  private savedBillingReference: string | null = null;
 
   private entitiesService = inject(EntitiesService);
-  private billingService = inject(BillingService);
 
   updateState(partial: Partial<OrganizationRegistrationState>): void {
     if ((partial.organizationNumber !== undefined && partial.organizationNumber !== this.state().organizationNumber) ||
@@ -329,9 +345,9 @@ export class OrganizationRegistrationStateService {
   }
 
   // Single save path shared by the "שמור טיוטה" button (any step) and the
-  // final review-step submit — the only difference is includeBilling, since
-  // re-running the platform-commission billing creation on every draft save
-  // would create a duplicate entity_billing row each time.
+  // final review-step submit. The fee-collection card is not part of it: the
+  // billing step saves it through POST /api/billing as soon as CardCom
+  // returns (see OpenfieldsFormComponent), and refreshBilling() reads it back.
   save(options: { includeBilling: boolean; onboardingStep?: number }): Observable<any> {
     return this.runExclusive(() => this.persist(options));
   }
@@ -390,17 +406,6 @@ export class OrganizationRegistrationStateService {
             if (this.state().logoFile === s.logoFile) this.updateState({logoFile: null});
           })));
         }
-        const reference = `${id}:${s.cardcomInternalDealNumber}`;
-        if (options.includeBilling && s.cardcomInternalDealNumber && this.savedBillingReference !== reference) {
-          uploads.push(
-            this.billingService.createEntityBilling({
-              entityId: id,
-              provider: 'cardcom',
-              lowProfileId: s.cardcomLowProfileId,
-              internalDealNumber: s.cardcomInternalDealNumber,
-            }).pipe(tap(() => { this.savedBillingReference = reference; })),
-          );
-        }
 
         if (!uploads.length) return of(entity);
 
@@ -417,6 +422,16 @@ export class OrganizationRegistrationStateService {
           })),
         );
       }),
+    );
+  }
+
+  // Re-reads the saved fee-collection card from the backend.
+  refreshBilling(): Observable<BillingCard | null> {
+    const id = this.state().entityId;
+    if (!id) return of(null);
+    return this.entitiesService.getEntityById(id).pipe(
+      map((entity) => billingCardFrom(entity)),
+      tap((billingCard) => { if (this.state().entityId === id) this.updateState({ billingCard }); }),
     );
   }
 
@@ -452,6 +467,8 @@ export class OrganizationRegistrationStateService {
       connectionSuccess: entity.cardcom_connection_status === 'success',
       connectionAttempted: entity.cardcom_connection_status && entity.cardcom_connection_status !== 'not_tested',
       useExistingTerminal: entity.cardcom_connection_status === 'skipped',
+      paymentMethod: entity.billing_method === 'masav' ? 'masav' : 'credit-card',
+      billingCard: billingCardFrom(entity),
     });
   }
 }

@@ -17,6 +17,7 @@ import { OpenfieldsFormComponent } from '../../../billing/components/openfields-
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 import { BillingService } from '../../services/billing.service';
 import { MASAV_PENDING_STATUS_LABEL } from '../../../../shared/constants/masav.constants';
+import { firstValueFrom } from 'rxjs';
 
 type PaymentMethod = 'credit-card' | 'masav';
 
@@ -82,19 +83,37 @@ export class StepBillingMethodComponent implements OnInit {
   masavUploadError: string | null = null;
   readonly masavPendingStatusLabel = MASAV_PENDING_STATUS_LABEL;
 
+  // A saved card is shown instead of the CardCom form until the visitor
+  // asks to replace it.
+  replacingCard = false;
+  cardError: string | null = null;
+
+  get savedCard() {
+    return this.stateService.state().billingCard;
+  }
+
+  get showCardForm(): boolean {
+    return !this.savedCard || this.replacingCard;
+  }
+
   ngOnInit(): void {
     if (this.stateService.state().entityId) {
-      this.loadMasavConfig();
+      this.loadSavedBilling();
       return;
     }
     this.ensuringEntity = true;
     this.stateService.save({ includeBilling: false }).subscribe({
-      next: () => { this.ensuringEntity = false; this.loadMasavConfig(); },
+      next: () => { this.ensuringEntity = false; this.loadSavedBilling(); },
       error: (err) => {
         this.ensuringEntity = false;
         this.ensureEntityError = err?.error?.error || 'לא ניתן היה לשמור את פרטי העמותה. נסו לחזור לשלב הקודם ולהמשיך שוב.';
       },
     });
+  }
+
+  private loadSavedBilling(): void {
+    this.stateService.refreshBilling().subscribe({ error: () => {} });
+    this.loadMasavConfig();
   }
 
   private loadMasavConfig(): void {
@@ -178,14 +197,19 @@ export class StepBillingMethodComponent implements OnInit {
 
     this.isSaving = true;
 
-    if (this.isCreditCard && !this.continueLater) {
+    if (this.isCreditCard && !this.continueLater && this.showCardForm) {
+      this.cardError = null;
       const success = await this.openfieldsForm?.tokenize();
+      // Only the backend's saved card counts, never CardCom's reply alone.
+      const card = success ? await firstValueFrom(this.stateService.refreshBilling()).catch(() => null) : null;
 
-      if (!success) {
+      if (!card) {
         this.isSaving = false;
+        this.cardError = 'שמירת הכרטיס לא אושרה. בדקו את הפרטים ונסו שוב.';
 
         return;
       }
+      this.replacingCard = false;
     }
 
     this.isSaving = false;
