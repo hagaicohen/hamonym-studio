@@ -51,7 +51,7 @@
         placeholder="https://www.youtube.com/watch?v=...">
       <div class="video-thumb-preview" *ngIf="getYoutubeThumbnail(draft.videoUrl) as thumb">
         <img [src]="thumb" class="video-thumb-img" alt="">
-        <span class="video-play-badge">▶</span>
+        <span class="video-play-badge"><app-icon name="play" /></span>
       </div>
     </ng-container>
   </div>
@@ -89,7 +89,7 @@
        open on a wall of empty editors. ── -->
   <div class="step-collapse-section">
     <div class="step-collapse-header" (click)="toggleSection('story')">
-      <span class="step-collapse-title">📝 תיאור מורחב וסיפור הקמפיין</span>
+      <span class="step-collapse-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תיאור מורחב וסיפור הקמפיין</span>
       <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('story')">›</span>
     </div>
 
@@ -187,7 +187,7 @@
       (input)="setLocationLabel($any($event.target).value)"
       [placeholder]="campaignLocation?.type === 'region' ? 'לדוגמה: בית שמש והסביבה' : 'לדוגמה: יישובי עוטף עזה'">
     <button *ngIf="campaignLocation" type="button" class="location-clear-btn" (click)="clearLocation()">
-      ✕ ללא מיקום
+      <lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> ללא מיקום
     </button>
   </div>
 
@@ -203,7 +203,7 @@
   <!-- ── HERO VISIBILITY ── -->
   <div class="step-collapse-section">
     <div class="step-collapse-header" (click)="toggleSection('hero-display')">
-      <span class="step-collapse-title">🎯 תצוגת Hero — כותרת ותת-כותרת</span>
+      <span class="step-collapse-title"><lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תצוגת Hero — כותרת ותת-כותרת</span>
       <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('hero-display')">›</span>
     </div>
     <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">בחרו היכן יוצגו הכותרת ותת-הכותרת</p>
@@ -274,9 +274,9 @@
         (ngModelChange)="onSlugChange($event)"
         placeholder="campaign-name">
     </div>
-    <p class="field-hint" *ngIf="isSlugLocked">🔒 לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
-    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true">✓ הכתובת זמינה</div>
-    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false">✕ הכתובת כבר בשימוש</div>
+    <p class="field-hint" *ngIf="isSlugLocked"><lucide-icon [img]="ui.Lock" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
+    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הכתובת זמינה</div>
+    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הכתובת כבר בשימוש</div>
     <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">בודק זמינות...</div>
   </div>
 
@@ -310,7 +310,7 @@
       <div class="logo-preview-row">
         <div class="logo-circle-preview">
           <img *ngIf="entityLogoUrl" [src]="entityLogoUrl" alt="">
-          <span *ngIf="!entityLogoUrl">🏢</span>
+          <span *ngIf="!entityLogoUrl"><lucide-icon [img]="ui.Building2" [size]="20" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
         </div>
         <span class="logo-entity-name" *ngIf="entityName">{{ entityName }}</span>
       </div>

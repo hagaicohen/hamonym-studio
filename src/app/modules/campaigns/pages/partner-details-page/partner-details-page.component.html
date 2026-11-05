@@ -1,7 +1,7 @@
 <div class="pd-page">
 
   <div class="pd-load-state" *ngIf="loading">טוען את פרטי השותף...</div>
-  <div class="pd-load-state pd-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+  <div class="pd-load-state pd-load-state--error" *ngIf="loadError"><app-icon name="alert" /> {{ loadError }}</div>
 
   <ng-container *ngIf="!loading && !loadError && fullEntity">
     <div class="pd-header">
@@ -13,11 +13,11 @@
     <div class="pd-card">
       <div class="pd-logo-row">
         <img *ngIf="fullEntity.logo_url" [src]="fullEntity.logo_url" class="pd-logo" alt="">
-        <div class="pd-logo pd-logo--empty" *ngIf="!fullEntity.logo_url">🏢</div>
+        <div class="pd-logo pd-logo--empty" *ngIf="!fullEntity.logo_url"><app-icon name="building" /></div>
         <div class="pd-logo-actions">
           <input id="pd-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
           <label for="pd-logo-input" class="pd-logo-btn" [class.pd-logo-btn--busy]="logoUploading">
-            {{ logoUploading ? 'מעלה...' : (fullEntity.logo_url ? 'החלפת לוגו' : '📷 העלאת לוגו') }}
+            <app-icon name="camera" /> {{ logoUploading ? 'מעלה...' : (fullEntity.logo_url ? 'החלפת לוגו' : 'העלאת לוגו') }}
           </label>
         </div>
       </div>
@@ -45,11 +45,11 @@
         <button type="button" class="pd-save-btn" [disabled]="saving" (click)="save()">
           {{ saving ? 'שומר...' : (saved ? '✓ נשמר' : 'שמירה') }}
         </button>
-        <span class="pd-error" *ngIf="saveError">⚠ {{ saveError }}</span>
+        <span class="pd-error" *ngIf="saveError"><app-icon name="alert" /> {{ saveError }}</span>
       </div>
     </div>
 
-    <a class="pd-builder-link" [routerLink]="['/partners', entityId, 'builder']">✏ עריכת תוכן דף העסק ←</a>
+    <a class="pd-builder-link" [routerLink]="['/partners', entityId, 'builder']"><app-icon name="pencil" /> עריכת תוכן דף העסק ←</a>
   </ng-container>
 
 </div>

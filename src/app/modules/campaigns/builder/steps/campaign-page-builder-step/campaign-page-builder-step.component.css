@@ -1282,3 +1282,11 @@
   .theme-palette-row { max-width: 228px; gap: 12px; }
   .theme-palette-label { flex-basis: 100%; margin: 0; }
 }
+
+/* Studio single-block mode: the editor sits directly in the Studio's
+   properties panel, without the classic block box. */
+.block-editor--studio { padding: 0; border-top: 0; background: transparent; }
+
+/* Studio design mode: the design sections sit directly in the properties
+   panel, so they need their own spacing. */
+.builder-zone--studio { display: flex; flex-direction: column; gap: 12px; }

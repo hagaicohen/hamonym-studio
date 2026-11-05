@@ -6,7 +6,8 @@ import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 import { ReportChartComponent, ReportChartDataset } from '../../../../shared/report-chart/report-chart.component';
-
+
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 interface Kpi {
   failedCount: number;
   failedAmount: number;
@@ -40,7 +41,7 @@ const COLUMNS_STORAGE_KEY = 'reports-failures-hidden-columns';
 @Component({
   selector: 'app-failures-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReportChartComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, ReportChartComponent],
   templateUrl: './failures-report.component.html',
   styleUrls: ['./failures-report.component.css', '../../../../shared/reports-shared.css'],
 })

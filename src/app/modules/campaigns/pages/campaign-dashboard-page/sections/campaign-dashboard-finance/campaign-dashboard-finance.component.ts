@@ -5,6 +5,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CampaignDraft } from '../../../../services/campaign-studio-state.service';
 
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 type ManualSource = 'bank_transfer' | 'check' | 'cash' | 'other';
 
 // Real (2026-08-07) — replaces the old two-mock-card layout. Donations/
@@ -18,7 +19,7 @@ type ManualSource = 'bank_transfer' | 'check' | 'cash' | 'other';
 @Component({
   selector: 'app-campaign-dashboard-finance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-dashboard-finance.component.html',
   styleUrl: './campaign-dashboard-finance.component.css',
 })

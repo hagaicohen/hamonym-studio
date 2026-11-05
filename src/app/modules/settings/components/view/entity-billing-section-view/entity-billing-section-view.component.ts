@@ -5,13 +5,14 @@ import { CommonModule } from '@angular/common';
 import { LucideAngularModule, CreditCard, Pencil, TriangleAlert } from 'lucide-angular';
 
 import { ISRAELI_BANKS } from '../../../../../shared/constants/israeli-banks.constants';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-entity-billing-section-view',
 
   standalone: true,
 
-  imports: [CommonModule, LucideAngularModule],
+  imports: [HmIconComponent, CommonModule, LucideAngularModule],
 
   templateUrl: './entity-billing-section-view.component.html',
 

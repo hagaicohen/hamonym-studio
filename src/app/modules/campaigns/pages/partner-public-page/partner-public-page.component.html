@@ -2,13 +2,13 @@
 
 <div class="ppp-load-state" *ngIf="loading">טוען...</div>
 
-<div class="ppp-load-state ppp-load-state--error" *ngIf="loadErrorMessage">⚠ {{ loadErrorMessage }}</div>
+<div class="ppp-load-state ppp-load-state--error" *ngIf="loadErrorMessage"><app-icon name="alert" /> {{ loadErrorMessage }}</div>
 
 <ng-container *ngIf="!loading && !loadErrorMessage">
 
   <div class="ppp-edit-bar" *ngIf="canEdit">
     <span class="ppp-edit-label">אתה צופה בדף הציבורי של השותף שלך</span>
-    <button class="ppp-edit-btn" type="button" (click)="goToEdit()">✏️ חזרה לעריכה</button>
+    <button class="ppp-edit-btn" type="button" (click)="goToEdit()"><app-icon name="pencil" /> חזרה לעריכה</button>
   </div>
 
   <div class="ppp-back-bar" *ngIf="campaignSlug">

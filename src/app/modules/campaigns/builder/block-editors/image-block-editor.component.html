@@ -1,0 +1,61 @@
+<div class="editor-field">
+  <input #imgInput type="file" accept="image/*" hidden (change)="onImageFileSelected(block.id, $event)">
+
+  <div class="image-preview-box"
+    [class.image-preview-box--empty]="!asImage(block.data).url"
+    (click)="!asImage(block.data).url && imgInput.click()">
+    <img *ngIf="asImage(block.data).url" [src]="asImage(block.data).url" class="image-preview-img" alt="">
+    <div class="image-preview-empty" *ngIf="!asImage(block.data).url">
+      <lucide-icon [img]="ui.ImageIcon" [size]="28" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span>לחצו להעלאת תמונה</span>
+    </div>
+  </div>
+
+  <div class="image-actions" *ngIf="asImage(block.data).url">
+    <button class="editor-btn" type="button" (click)="imgInput.click()">החלף תמונה</button>
+    <button class="editor-btn editor-btn--danger" type="button" (click)="updateImageField(block.id, 'url', '')">הסר</button>
+  </div>
+
+  <div class="editor-row">
+    <label class="editor-label">כיתוב (רשות)</label>
+    <input class="editor-input" type="text"
+      [value]="asImage(block.data).caption || ''"
+      (input)="updateImageField(block.id, 'caption', $any($event.target).value)"
+      placeholder="תיאור התמונה...">
+  </div>
+
+  <div class="spacing-row" style="margin-top:10px">
+    <span class="spacing-label">רוחב התמונה</span>
+    <input type="range" class="split-slider" min="20" max="100" step="5"
+      [value]="asImage(block.data).widthPercent ?? 100"
+      (input)="updateImageWidth(block.id, +$any($event.target).value)">
+    <span>{{ asImage(block.data).widthPercent ?? 100 }}%</span>
+  </div>
+
+  <div class="editor-row" *ngIf="(asImage(block.data).widthPercent ?? 100) < 100">
+    <label class="editor-label">מיקום</label>
+    <div class="direction-toggle">
+      <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'right'"
+        (click)="updateImageField(block.id, 'align', 'right')">ימין</button>
+      <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'center'"
+        (click)="updateImageField(block.id, 'align', 'center')">מרכז</button>
+      <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'left'"
+        (click)="updateImageField(block.id, 'align', 'left')">שמאל</button>
+    </div>
+  </div>
+
+  <!-- Independent height — "רוחב התמונה" above still scales both
+       width AND height together (browser's natural aspect ratio,
+       unchanged). This lets the manager set an exact height on its
+       own; the image gets cropped (object-fit: cover) to fill it,
+       so width and height become two separate controls instead of
+       always moving together. See DECISIONS.md (2026-07-31). -->
+  <div class="spacing-row" style="margin-top:10px">
+    <span class="spacing-label">גובה התמונה</span>
+    <input type="range" class="split-slider" min="80" max="600" step="10"
+      [value]="asImage(block.data).heightPx || 240"
+      (input)="updateImageHeight(block.id, +$any($event.target).value)">
+    <span>{{ asImage(block.data).heightPx ? (asImage(block.data).heightPx + 'px') : 'אוטומטי' }}</span>
+  </div>
+  <button class="editor-btn" type="button" *ngIf="asImage(block.data).heightPx"
+    (click)="resetImageHeight(block.id)" style="margin-top:6px">↺ גובה אוטומטי (לפי התמונה)</button>
+</div>

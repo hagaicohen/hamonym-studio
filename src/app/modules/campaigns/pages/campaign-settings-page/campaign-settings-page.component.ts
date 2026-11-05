@@ -7,7 +7,8 @@ import { CampaignWorkspaceContextService } from '../../services/campaign-workspa
 import { CampaignDraft, CampaignLocation, CampaignLocationType } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset) — CONTENT/setup fields
 // only, no Design (no colors/layout/placement — those stay in the Builder).
 // Saves per field on (change), same full-draft round trip
@@ -19,7 +20,7 @@ import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
 @Component({
   selector: 'app-campaign-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-settings-page.component.html',
   styleUrl: './campaign-settings-page.component.css',
 })

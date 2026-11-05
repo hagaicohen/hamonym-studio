@@ -7,13 +7,15 @@ import {
   FileText, Heart, Settings, Gift, Info, CreditCard, Check, CircleAlert, Rocket, Loader, Users,
 } from 'lucide-angular';
 import { CampaignStudioStateService, FUNDING_TYPE_LABELS } from '../../../../campaigns/services/campaign-studio-state.service';
+import { publishEntityApproved, publishHasHero, publishMissingFields } from './publish-readiness';
 import { CampaignApiService }         from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService }       from '../../../../../core/services/current-entity.service';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-publish-step',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, LucideAngularModule, RouterLink],
   templateUrl: './campaign-publish-step.component.html',
   styleUrl: './campaign-publish-step.component.css',
 })
@@ -127,9 +129,7 @@ export class CampaignPublishStepComponent implements OnInit {
   }
 
   get hasHero(): boolean {
-    return this.draft.heroType === 'image'
-      ? !!this.draft.coverImageUrl
-      : !!this.draft.videoUrl;
+    return publishHasHero(this.draft);
   }
 
   // MinimalDonationPageComponent never renders a hero image/video — requiring
@@ -153,22 +153,7 @@ export class CampaignPublishStepComponent implements OnInit {
   // but the title is the campaign's identity, shown everywhere (lists,
   // admin, browser tab), not just optionally on the Hero.
   get missingFields(): string[] {
-    const d = this.draft;
-    const missing: string[] = [];
-    if (!d.title?.trim())            missing.push('שם הקמפיין');
-    if (!d.slug?.trim())             missing.push('כתובת הקמפיין');
-    if (!this.hasHero && !this.isMinimalFormat) missing.push('תמונה / וידאו ראשי');
-    // Step 2 ("סוג ויעד") is reachable for minimal-format campaigns too
-    // (2026-09-24 decision) — target amount is a real, settable field there
-    // again, so it's required the same as full format.
-    if (!d.targetAmount) missing.push('יעד גיוס');
-    // Dates are meaningless for an ongoing campaign (hidden entirely in
-    // campaign-type-step) — only enforce the range for a one-time campaign,
-    // where they're real user-entered values.
-    if (!this.isOngoing && d.startDate && d.endDate && new Date(d.endDate) < new Date(d.startDate)) {
-      missing.push('טווח תאריכים תקין');
-    }
-    return missing;
+    return publishMissingFields(this.draft);
   }
 
   get isReady(): boolean {
@@ -180,7 +165,7 @@ export class CampaignPublishStepComponent implements OnInit {
   // but may not fundraise yet (backend is the actual authority, see
   // campaigns.service.js#updateCampaign; this is UX only).
   get entityApproved(): boolean {
-    return this.currentEntity.currentEntity()?.status === 'active';
+    return publishEntityApproved(this.currentEntity.currentEntity());
   }
 
   get canPublish(): boolean {

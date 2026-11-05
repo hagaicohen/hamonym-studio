@@ -1,9 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   LucideAngularModule,
-  Monitor, Smartphone, X, Maximize2, Minimize2, ArrowRight,
+  Monitor, Smartphone, X, Maximize2, Minimize2, ArrowRight, Sparkles, LayoutDashboard, Eye, Check, CircleAlert,
 } from 'lucide-angular';
 import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
 import { CampaignApiService }         from '../../../services/campaign-api.service';
@@ -20,6 +20,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
   styleUrls: ['./campaign-studio-topbar.component.css'],
 })
 export class CampaignStudioTopbarComponent {
+  readonly icons = { Sparkles, LayoutDashboard, Eye, Check, CircleAlert, X };
   readonly Monitor    = Monitor;
   readonly Smartphone = Smartphone;
   readonly X          = X;
@@ -32,6 +33,10 @@ export class CampaignStudioTopbarComponent {
   private api    = inject(CampaignApiService);
   private entity = inject(CurrentEntityService);
   private router = inject(Router);
+
+  // Where the first save of a new campaign continues: the classic editor
+  // ('edit') or the Studio ('studio'), at /campaigns/:id/<editorPath>.
+  @Input() editorPath: 'edit' | 'studio' = 'edit';
 
   saveState: SaveState = 'idle';
 
@@ -112,7 +117,7 @@ export class CampaignStudioTopbarComponent {
       next: (res) => {
         if (!draft.id && res?.id) {
           this.campaignState.patch({ id: res.id });
-          this.router.navigate(['/campaigns', res.id, 'edit'], { replaceUrl: true });
+          this.router.navigate(['/campaigns', res.id, this.editorPath], { replaceUrl: true });
         }
         this.saveState = 'saved';
         setTimeout(() => { this.saveState = 'idle'; }, 2000);

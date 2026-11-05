@@ -1,3 +1,4 @@
+import type { HmIconName, HmIconTone } from '../../../../shared/ui/design-system/icon.component';
 import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -14,6 +15,7 @@ import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker
 import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
 import { israelDate } from '../../utils/admin-display';
 import { EntityComboboxComponent } from '../../components/entity-combobox/entity-combobox.component';
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 
 const COLUMNS: ColumnDef[] = [
   { key: 'role',         label: 'תפקיד' },
@@ -52,11 +54,11 @@ type SortDir = 'asc' | 'desc';
 
 type ChipKey = 'all' | 'active' | 'disabled' | 'super_admin' | 'deleted';
 
-const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
-  { key: 'active',      label: 'פעילים',       dot: '🟢' },
-  { key: 'disabled',    label: 'מושבתים',      dot: '⚫' },
-  { key: 'super_admin', label: 'סופר אדמין',   dot: '🛡️' },
-  { key: 'deleted',     label: 'נמחקו',        dot: '🗑️' },
+const CHIPS: { key: ChipKey; label: string; icon: HmIconName; tone: HmIconTone }[] = [
+  { key: 'active',      label: 'פעילים',       icon: 'dot',    tone: 'success' },
+  { key: 'disabled',    label: 'מושבתים',      icon: 'dot',    tone: 'dark' },
+  { key: 'super_admin', label: 'סופר אדמין',   icon: 'shield', tone: 'brand' },
+  { key: 'deleted',     label: 'נמחקו',        icon: 'trash',  tone: 'muted' },
 ];
 
 type PendingActionType = 'disable' | 'delete' | 'impersonate' | 'grantSuperAdmin' | 'revokeSuperAdmin' | 'setPermissions';
@@ -69,7 +71,7 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-users-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-users-page.component.html',
   styleUrl: './platform-users-page.component.css',
 })

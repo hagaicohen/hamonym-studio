@@ -49,7 +49,7 @@
                   [disabled]="creatingPeriod"
                   (click)="toggleMonthPicker($event)"
                 >
-                  <span class="bo-month-picker-icon">📅</span>
+                  <span class="bo-month-picker-icon"><app-icon name="calendar" /></span>
                   {{ creatingPeriod ? 'טוען...' : selectedMonthLabel }}
                 </button>
                 @if (monthPickerOpen) {
@@ -143,7 +143,7 @@
               @if (periodStage(period) === 3 && !periodCollectionComplete(period.id) && periodMasavCount(period.id) > 0) {
                 <div class="bo-stage3-breakdown">
                   <span class="bo-stage3-route">
-                    🏦 {{ periodMasavCount(period.id) }} במס"ב —
+                    <app-icon name="landmark" /> {{ periodMasavCount(period.id) }} במס"ב —
                     <button type="button" class="bo-inline-link" (click)="setTab('masav')">מעבר ללשונית מס״ב</button>
                   </span>
                 </div>
@@ -158,7 +158,7 @@
 
             @if (periodBlockedEntities(period).length > 0) {
               <button type="button" class="bo-blocked-summary-toggle" (click)="showBlockedEntities = !showBlockedEntities">
-                ⚠ {{ periodBlockedEntities(period).length }} {{ periodBlockedEntities(period).length === 1 ? 'עמותה חסרה הגדרות חיוב' : 'עמותות חסרות הגדרות חיוב' }} — {{ showBlockedEntities ? 'הסתר' : 'הצג' }}
+                <app-icon name="alert" /> {{ periodBlockedEntities(period).length }} {{ periodBlockedEntities(period).length === 1 ? 'עמותה חסרה הגדרות חיוב' : 'עמותות חסרות הגדרות חיוב' }} — {{ showBlockedEntities ? 'הסתר' : 'הצג' }}
               </button>
             }
             @if (showBlockedEntities && periodBlockedEntities(period).length > 0) {
@@ -359,7 +359,7 @@
                   [disabled]="creatingPeriod"
                   (click)="toggleMonthPicker($event)"
                 >
-                  <span class="bo-month-picker-icon">📅</span>
+                  <span class="bo-month-picker-icon"><app-icon name="calendar" /></span>
                   {{ creatingPeriod ? 'טוען...' : selectedMonthLabel }}
                 </button>
                 @if (monthPickerOpen) {
@@ -401,7 +401,7 @@
            informational row, unchanged. -->
       @if (commissionIssues.length > 0) {
         <div class="plat-card bo-issues-card">
-          <div class="bo-card-title">🔴 דורש טיפול</div>
+          <div class="bo-card-title"><app-icon name="dot" tone="danger" /> דורש טיפול</div>
           @for (issue of commissionIssues; track issue.id) {
             <div class="bo-issue-row">
               <span class="ops-severity-dot" [class]="'ops-severity-' + issue.severity"></span>
@@ -681,7 +681,7 @@
                   @if (visibleReadinessColumns.has('masav')) {
                     <td>
                       @if (masavDisplayState(entity).icon) {
-                        {{ masavDisplayState(entity).icon }} {{ masavDisplayState(entity).label }}
+                        @if (masavDisplayState(entity).icon === '⚠') { <app-icon name="alert" tone="warning" /> } @else { {{ masavDisplayState(entity).icon }} } {{ masavDisplayState(entity).label }}
                       } @else {
                         {{ masavDisplayState(entity).label }}
                       }
@@ -692,7 +692,7 @@
                       @if (entityReadiness(entity).ready) {
                         <span class="bo-badge bo-badge-ready">✓ {{ entityReadiness(entity).label }}</span>
                       } @else {
-                        <span class="bo-badge bo-badge-warning">⚠ {{ entityReadiness(entity).label }}</span>
+                        <span class="bo-badge bo-badge-warning"><app-icon name="alert" /> {{ entityReadiness(entity).label }}</span>
                       }
                     </td>
                   }

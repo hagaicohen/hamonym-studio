@@ -11,10 +11,11 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
 import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [HmIconComponent, CommonModule, LucideAngularModule],
   templateUrl: './campaigns-page.component.html',
   styleUrls: ['./campaigns-page.component.css'],
 })
@@ -225,6 +226,12 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
 
   createCampaign(): void {
     this.router.navigate(['/campaigns/create']);
+  }
+
+  // Campaign Builder Studio (beta) for a new, unsaved campaign; same guard and
+  // save flow as /campaigns/create.
+  createCampaignInStudio(): void {
+    this.router.navigate(['/campaigns/create/studio']);
   }
 
   createCampaignWithAi(): void {

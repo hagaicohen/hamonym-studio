@@ -6,7 +6,8 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft, RegistrationOption } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset). The Builder's own
 // campaign-registration-step was already content-only (no design controls
 // to strip) — this is a direct port to the self-sufficient
@@ -14,7 +15,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-registration-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-registration-page.component.html',
   styleUrl: './campaign-registration-page.component.css',
 })

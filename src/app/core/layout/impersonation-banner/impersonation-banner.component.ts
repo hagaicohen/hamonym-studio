@@ -4,10 +4,11 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CurrentContextService } from '../../services/current-context.service';
 
+import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-impersonation-banner',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './impersonation-banner.component.html',
   styleUrl: './impersonation-banner.component.css',
 })

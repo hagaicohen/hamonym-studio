@@ -1,10 +1,10 @@
 <div class="cda-panel" *ngIf="hasAnything">
   <div class="cda-header">
-    <span class="cda-title">🔔 דורש תשומת לב</span>
+    <span class="cda-title"><app-icon name="bell" /> דורש תשומת לב</span>
   </div>
   <div class="cda-grid">
     <a class="cda-card" *ngIf="outOfStockCount > 0" [routerLink]="['/campaigns', campaignId, 'rewards']">
-      <span class="cda-icon">🎁</span>
+      <span class="cda-icon"><app-icon name="gift" /></span>
       <strong>{{ outOfStockCount }}</strong>
       <span class="cda-label">תשורות אזלו</span>
       <span class="cda-action">צפה עכשיו ←</span>

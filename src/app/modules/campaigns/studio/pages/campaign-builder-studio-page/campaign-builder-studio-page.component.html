@@ -1,0 +1,336 @@
+@if (loadError) {
+  <div class="studio-message" role="alert">
+    <p>{{ loadError }}</p>
+    <a routerLink="/campaigns" class="studio-link">לרשימת הקמפיינים</a>
+  </div>
+}
+@if (!loadError && loaded) { @if (draft$ | async; as draft) {
+  @if (!isSupported(draft)) {
+    <div class="studio-message">
+      <p>דפי שותפים נערכים בעורך הקיים.</p>
+      <a [routerLink]="classicEditorLink" class="studio-link">פתיחה בעורך הקיים</a>
+    </div>
+  } @else {
+    <div class="studio" dir="rtl" [class.studio--fullscreen]="ui.isFullscreen">
+      <!-- One toolbar: the classic editor's topbar (title, devices, fullscreen,
+           save) with the Studio's status and editing tools placed into it. -->
+      <app-campaign-studio-topbar editorPath="studio">
+        <span topbarStatus class="status-chip" [attr.data-status]="draft.status">{{ isNew ? 'חדש — טרם נשמר' : statusLabel(draft) }}</span>
+        <span topbarTools class="studio-tools" role="group" aria-label="כלי עריכה">
+          <button type="button" class="tool-btn" [disabled]="!history.canUndo" (click)="undo()" title="ביטול פעולה (Ctrl+Z)" aria-label="ביטול פעולה">
+            <lucide-icon [img]="icons.Undo2" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+          </button>
+          <button type="button" class="tool-btn" [disabled]="!history.canRedo" (click)="redo()" title="ביצוע מחדש (Ctrl+Y)" aria-label="ביצוע מחדש">
+            <lucide-icon [img]="icons.Redo2" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+          </button>
+          <span class="tool-divider" aria-hidden="true"></span>
+          @if (readiness(draft); as r) {
+            <button type="button" class="readiness-chip" [attr.data-tone]="r.tone" [title]="readinessTitle(draft)"
+              (click)="showPublish = true" [attr.aria-label]="r.label + '. ' + readinessTitle(draft)">
+              <lucide-icon [img]="r.tone === 'ready' ? icons.CircleCheck : icons.CircleAlert" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              <span>{{ r.label }}</span>
+            </button>
+          }
+          <button type="button" class="tool-btn tool-btn--publish" (click)="showPublish = true" title="סיכום ופרסום הקמפיין">
+            <lucide-icon [img]="icons.Rocket" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+            <span>פרסום</span>
+          </button>
+          <span class="tool-divider" aria-hidden="true"></span>
+          @if (!isMinimal(draft)) {
+          <button type="button" class="tool-btn tool-btn--text" (click)="showTemplatePicker = true">
+            <lucide-icon [img]="icons.LayoutTemplate" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+            <span>תבנית</span>
+          </button>
+          }
+          @if (!isNew) {
+            <a class="tool-btn tool-btn--text" [routerLink]="['/campaigns', campaignId, 'edit']" [queryParams]="{ returnStep: 9 }" title="מעבר לעורך הקלאסי">עורך קלאסי</a>
+          }
+          <span class="tool-divider" aria-hidden="true"></span>
+        </span>
+      </app-campaign-studio-topbar>
+
+      <div class="studio-workspace" [style.grid-template-columns]="gridColumns">
+        <!-- RIGHT: component tree -->
+        <aside class="panel tree-panel" [class.panel--collapsed]="treeCollapsed" aria-label="רכיבי העמוד">
+          <div class="panel-header">
+            @if (!treeCollapsed) { <h2>רכיבי העמוד</h2> }
+            <button type="button" class="panel-toggle" (click)="toggleTree()" [attr.aria-label]="treeCollapsed ? 'הצגת רכיבי העמוד' : 'כיווץ רכיבי העמוד'" [attr.aria-expanded]="!treeCollapsed">
+              <lucide-icon [img]="treeCollapsed ? icons.PanelRightOpen : icons.PanelRightClose" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+            </button>
+          </div>
+          @if (!treeCollapsed) {
+            <div class="panel-body">
+              <div class="tree-group-label">אזורי העמוד</div>
+              <ul class="tree" role="tree" aria-label="אזורי העמוד">
+                <li role="treeitem" [attr.aria-selected]="selectedKey === openingKey">
+                  <div class="tree-row tree-row--area" [class.is-selected]="selectedKey === openingKey"
+                    tabindex="0" (click)="select(openingKey)" (keydown.enter)="select(openingKey)">
+                    <span class="tree-icon"><lucide-icon [img]="icons.PanelTop" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+                    <span class="tree-label">{{ isMinimal(draft) ? 'פרטי דף התרומה' : 'פתיחה: תמונה, כותרת ותיאור' }}</span>
+                  </div>
+                </li>
+                @for (area of (isMinimal(draft) ? [] : designAreas); track area.key) {
+                  <li role="treeitem" [attr.aria-selected]="selectedKey === area.key">
+                    <div class="tree-row tree-row--area" [class.is-selected]="selectedKey === area.key"
+                      tabindex="0" (click)="select(area.key)" (keydown.enter)="select(area.key)">
+                      <span class="tree-icon"><lucide-icon [img]="area.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+                      <span class="tree-label">{{ area.label }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+              <div class="tree-group-label">הגדרות הקמפיין</div>
+              <ul class="tree" role="tree" aria-label="הגדרות הקמפיין">
+                @for (area of visibleStepAreas(draft); track area.key) {
+                  <li role="treeitem" [attr.aria-selected]="selectedKey === area.key">
+                    <div class="tree-row tree-row--area" [class.is-selected]="selectedKey === area.key"
+                      tabindex="0" (click)="select(area.key)" (keydown.enter)="select(area.key)">
+                      <span class="tree-icon"><lucide-icon [img]="area.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+                      <span class="tree-label">{{ area.label }}</span>
+                      @if (stepAccess(draft, area.step) === 'workspace') {
+                        <span class="tree-workspace" title="מנוהל בסביבת ניהול הקמפיין"><lucide-icon [img]="icons.ExternalLink" [size]="13" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+              @if (!isMinimal(draft)) {
+              <div class="tree-group-label">רכיבים</div>
+              <ul class="tree" role="tree" aria-label="רכיבי העמוד">
+                <ng-container *ngTemplateOutlet="nodes; context: { $implicit: tree(draft), depth: 0, draft: draft }" />
+              </ul>
+              }
+            </div>
+            @if (!isMinimal(draft)) {
+            <div class="panel-footer">
+              <button type="button" class="add-btn" (click)="showAddMenu && !addTarget ? (showAddMenu = false) : openAddMenu(null)" [attr.aria-expanded]="showAddMenu">
+                <lucide-icon [img]="icons.Plus" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>רכיב</span>
+              </button>
+              @if (showAddMenu) {
+                <div class="add-menu" role="menu" [attr.aria-label]="addTargetLabel(draft.blocks)">
+                  <div class="add-menu-head">
+                    <span>{{ addTargetLabel(draft.blocks) }}</span>
+                    <button type="button" class="add-menu-close" (click)="showAddMenu = false; addTarget = null" aria-label="סגירה">×</button>
+                  </div>
+                  <p class="add-menu-hint">לחיצה מוסיפה. אפשר גם לגרור לעץ או לתצוגה.</p>
+                  @for (group of addGroupsFor(draft.blocks); track group.label) {
+                    <div class="add-group-label">{{ group.label }}</div>
+                    @for (type of group.types; track type) {
+                      <button type="button" role="menuitem" class="add-item" [disabled]="isAlreadyAdded(type, draft.blocks)"
+                        [attr.draggable]="!isAlreadyAdded(type, draft.blocks)"
+                        (dragstart)="onCatalogDragStart(type, draft.blocks, $event)" (dragend)="onDragEnd()"
+                        (click)="addBlock(type, draft.blocks)">
+                        <lucide-icon [img]="blockIcon(type)" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+                        <span>{{ blockLabel(type) }}</span>
+                        @if (isAlreadyAdded(type, draft.blocks)) { <span class="add-added">כבר בעמוד</span> }
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
+            }
+          }
+        </aside>
+        <div class="resize-handle" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב רכיבי העמוד"
+          [class.resize-handle--off]="treeCollapsed" (pointerdown)="startResize('tree', $event)"></div>
+
+        <!-- CENTER: the real campaign renderer -->
+        <main class="canvas-area preview-inner" aria-label="תצוגה חיה">
+          @if (usesPlaceholders(draft)) {
+            <div class="canvas-hint" role="note">
+              <lucide-icon [img]="icons.Info" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+              <span>טקסטים ותמונות לדוגמה מוצגים רק בתצוגה ואינם נשמרים בקמפיין.</span>
+            </div>
+          }
+          <div class="canvas-frame" #canvas [class.canvas-frame--mobile]="ui.device === 'mobile'">
+            <app-platform-top-strip />
+            @if (isMinimal(draft)) {
+              <app-minimal-donation-page [embedded]="true" />
+            } @else {
+              <app-campaign-preview [studioPlaceholders]="true" />
+            }
+          </div>
+        </main>
+
+        <div class="resize-handle" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב מאפייני רכיב"
+          [class.resize-handle--off]="propsCollapsed" (pointerdown)="startResize('props', $event)"></div>
+        <!-- LEFT: properties -->
+        <aside class="panel props-panel" [class.panel--collapsed]="propsCollapsed" aria-label="מאפייני רכיב">
+          <div class="panel-header">
+            <button type="button" class="panel-toggle" (click)="toggleProps()" [attr.aria-label]="propsCollapsed ? 'הצגת מאפייני רכיב' : 'כיווץ מאפייני רכיב'" [attr.aria-expanded]="!propsCollapsed">
+              <lucide-icon [img]="propsCollapsed ? icons.PanelLeftOpen : icons.PanelLeftClose" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
+            </button>
+            @if (!propsCollapsed) { <h2>מאפייני רכיב</h2> }
+          </div>
+          @if (!propsCollapsed) {
+            <div class="panel-body">
+              @if (selectedKey === openingKey) {
+                <h3 class="props-title"><lucide-icon [img]="icons.PanelTop" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>פתיחה ופרטי הקמפיין</span></h3>
+                <p class="props-note">הכותרת, התיאור, תמונת הפתיחה ושאר פרטי הקמפיין. כל שינוי מופיע מיד בתצוגה.</p>
+                <!-- The classic editor's own step 1, reused as-is. -->
+                @if (isMinimal(draft)) {
+                  <div class="props-embed"><app-campaign-minimal-details-step /></div>
+                } @else {
+                  <div class="props-embed"><app-campaign-basic-step /></div>
+                }
+              } @else if (stepArea(selectedKey)) { @if (stepArea(selectedKey); as area) {
+                <h3 class="props-title"><lucide-icon [img]="area.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>{{ area.title }}</span></h3>
+                @switch (stepAccess(draft, area.step)) {
+                  @case ('edit') {
+                    <!-- The classic wizard step, reused as-is (fields, defaults and rules). -->
+                    <div class="props-embed props-step">
+                      @switch (area.step) {
+                        @case (2) { <app-campaign-type-step /> }
+                        @case (3) { <app-campaign-donation-step /> }
+                        @case (4) { <app-campaign-offerings-step [afterCreate]="onCampaignCreated" /> }
+                        @case (5) { <app-campaign-registration-step /> }
+                        @case (6) { <app-campaign-sponsors-step /> }
+                        @case (7) { <app-campaign-ambassadors-step /> }
+                        @case (8) { <app-campaign-updates-step /> }
+                      }
+                    </div>
+                  }
+                  @case ('workspace') {
+                    <p class="props-note">בקמפיין שפורסם, ההגדרות האלה מנוהלות בעמוד הניהול של הקמפיין ונשמרות שם מיד, כמו בעורך הקלאסי.</p>
+                    <a class="props-link" [routerLink]="['/campaigns', campaignId, area.workspacePath]" [fragment]="area.workspaceFragment">
+                      <lucide-icon [img]="icons.ExternalLink" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" /> מעבר לעמוד הניהול
+                    </a>
+                  }
+                }
+              } } @else if (designArea(selectedKey)) {
+                <h3 class="props-title"><lucide-icon [img]="designArea(selectedKey)!.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>{{ designArea(selectedKey)!.title }}</span></h3>
+                <!-- Classic Step 9's own design area, with this area's section open. -->
+                <div class="props-host">
+                  @for (d of [designArea(selectedKey)!.design]; track d) { <app-campaign-page-builder-step [studioDesign]="d" /> }
+                </div>
+              } @else { @if (selectedBlock(draft); as block) {
+                <h3 class="props-title"><lucide-icon [img]="typeIcon(block)" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>{{ typeLabel(block) }}</span></h3>
+
+                @if (block.type === 'container') {
+                  <!-- In the classic builder the container name sits outside its editor. -->
+                  <label class="field-label" for="studio-block-label">שם הבלוק (לצורך זיהוי)</label>
+                  <input id="studio-block-label" class="field-input" type="text" [value]="block.label"
+                    (input)="updateLabel(block, $any($event.target).value)" placeholder="למשל: סיפור, תמונה ראשית...">
+                }
+                <div class="props-actions" role="group" aria-label="פעולות רכיב">
+                  @for (action of actionsFor(block); track action.id) {
+                    <button type="button" class="props-action" [class.props-action--danger]="action.danger" (click)="runAction(action.id, block)">
+                      @if (action.id === 'delete') { <lucide-icon [img]="icons.Trash2" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" /> }
+                      @if (action.id === 'duplicate') { <lucide-icon [img]="icons.Copy" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" /> }
+                      <span>{{ action.label }}</span>
+                    </button>
+                  }
+                </div>
+                <label class="toggle-row">
+                  <input type="checkbox" [checked]="block.visible" (change)="state.toggleBlockVisibility(block.id)">
+                  <span>מוצג בעמוד</span>
+                </label>
+                <!-- Step 9's own editor for this block: every control, validation and advanced setting. -->
+                <div class="props-host">
+                  @for (id of [block.id]; track id) { <app-campaign-page-builder-step [studioBlockId]="id" /> }
+                </div>
+              } @else {
+                <p class="props-empty">בחרו רכיב בעץ או בתצוגה החיה כדי לערוך אותו.</p>
+              } }
+            </div>
+          }
+        </aside>
+      </div>
+    </div>
+
+    <ng-template #nodes let-list let-depth="depth" let-draft="draft">
+      @for (node of list; track node.key) {
+        <li role="treeitem" [attr.aria-selected]="selectedKey === node.key" [attr.aria-expanded]="node.children.length ? !collapsed.has(node.key) : null">
+          <div class="tree-row" [class.is-selected]="selectedKey === node.key" [class.is-hidden]="!node.block!.visible"
+            [class.tree-row--parent]="node.children.length > 0"
+            [class.is-dragging]="dragKey === node.key"
+            [class.drop-before]="dropHint?.key === node.key && dropHint?.pos === 'before'"
+            [class.drop-after]="dropHint?.key === node.key && dropHint?.pos === 'after'"
+            [class.drop-inside]="dropHint?.key === node.key && dropHint?.pos === 'inside'"
+            tabindex="0" draggable="true"
+            (click)="select(node.key)" (keydown.enter)="select(node.key)"
+            (contextmenu)="openMenu(node, $event)" (keydown.shift.f10)="openMenu(node, $any($event))"
+            (dragstart)="onRowDragStart(node, $event)" (dragend)="onDragEnd()"
+            (dragover)="onRowDragOver(node, $event, draft.blocks)" (drop)="onRowDrop(node, $event, draft.blocks)"
+            (mouseenter)="hover(node.key)" (mouseleave)="hover(null)">
+            @if (node.children.length) {
+              <button type="button" class="tree-toggle" (click)="toggleCollapsed(node.key, $event)"
+                [attr.aria-label]="collapsed.has(node.key) ? 'הרחבה' : 'כיווץ'">
+                <lucide-icon [img]="collapsed.has(node.key) ? icons.ChevronLeft : icons.ChevronDown" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              </button>
+            } @else { <span class="tree-toggle-placeholder"></span> }
+            <span class="tree-icon"><lucide-icon [img]="node.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+            <span class="tree-label">{{ node.label }}</span>
+            @if (node.block!.importReview?.needsReview) { <span class="tree-review" title="נוצר מייבוא אתר — כדאי לבדוק">לבדיקה</span> }
+            @if (node.children.length) { <span class="tree-count">{{ node.children.length }}</span> }
+            <span class="tree-actions">
+              <button type="button" class="tree-action" (click)="move(node, 'up', $event)" [disabled]="node.scopeIds[0] === node.key" title="הזזה למעלה" aria-label="הזזה למעלה">
+                <lucide-icon [img]="icons.ArrowUp" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              </button>
+              <button type="button" class="tree-action" (click)="move(node, 'down', $event)" [disabled]="node.scopeIds[node.scopeIds.length - 1] === node.key" title="הזזה למטה" aria-label="הזזה למטה">
+                <lucide-icon [img]="icons.ArrowDown" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              </button>
+              <button type="button" class="tree-action" (click)="openMenu(node, $event)" title="פעולות נוספות" aria-label="פעולות נוספות" aria-haspopup="menu">
+                <lucide-icon [img]="icons.Ellipsis" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              </button>
+              <button type="button" class="tree-action" (click)="toggleVisibility(node, $event)" [title]="node.block!.visible ? 'הסתרה' : 'הצגה'" [attr.aria-label]="node.block!.visible ? 'הסתרה' : 'הצגה'">
+                <lucide-icon [img]="node.block!.visible ? icons.Eye : icons.EyeOff" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" />
+              </button>
+            </span>
+          </div>
+          @if (node.children.length && !collapsed.has(node.key)) {
+            <ul role="group" class="tree tree--nested">
+              <ng-container *ngTemplateOutlet="nodes; context: { $implicit: node.children, depth: depth + 1, draft: draft }" />
+            </ul>
+          }
+        </li>
+      }
+    </ng-template>
+
+    @if (menuBlock(draft); as block) {
+      <div class="menu-backdrop" (click)="menu = null" (contextmenu)="$event.preventDefault(); menu = null"></div>
+      <div class="context-menu" role="menu" [style.top.px]="menu!.top" [style.left.px]="menu!.left" (keydown.escape)="menu = null">
+        @for (action of actionsFor(block); track action.id) {
+          <button type="button" role="menuitem" class="context-item" [class.context-item--danger]="action.danger" (click)="runAction(action.id, block)">{{ action.label }}</button>
+        }
+      </div>
+    }
+    @if (pendingDelete; as pd) {
+      <div class="dialog-backdrop" (click)="cancelDelete()"></div>
+      <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-desc" (keydown.escape)="cancelDelete()">
+        <h2 id="delete-title">למחוק את "{{ pd.label }}"?</h2>
+        <p id="delete-desc">
+          @if (pd.nested > 0) { יימחקו גם {{ pd.nested }} רכיבים שבתוכו. }
+          הרכיב יוסר מדף הקמפיין. השינוי יישמר רק כשתלחצו על שמירה.
+        </p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-btn confirm-btn--danger" (click)="confirmDelete()">מחיקה</button>
+          <button type="button" class="confirm-btn" (click)="cancelDelete()" autofocus>ביטול</button>
+        </div>
+      </div>
+    }
+    @if (showPublish) {
+      <div class="dialog-backdrop" (click)="showPublish = false"></div>
+      <div class="publish-dialog" role="dialog" aria-modal="true" aria-label="סיכום ופרסום" (keydown.escape)="showPublish = false">
+        <div class="publish-dialog-head">
+          <span>סיכום ופרסום</span>
+          <button type="button" class="add-menu-close" (click)="showPublish = false" aria-label="סגירה">×</button>
+        </div>
+        <div class="publish-dialog-body">
+          <!-- The wizard's own step 10: summary, AI suggestions, publish and publish request. -->
+          <app-campaign-publish-step />
+        </div>
+      </div>
+    }
+    @if (showPresetPicker) {
+      <app-campaign-preset-picker (presetSelected)="onPresetSelected($event)" (minimalSelected)="onMinimalSelected()" (closed)="leave()" />
+    }
+    @if (showStartTemplatePicker) {
+      <app-template-picker (templateSelected)="onStartTemplateSelected($event)" (skipped)="showStartTemplatePicker = false" />
+    }
+    @if (showTemplatePicker) {
+      <app-template-picker mode="switch" (templateSelected)="onTemplateSelected($event)" (skipped)="showTemplatePicker = false" />
+    }
+  }
+} }

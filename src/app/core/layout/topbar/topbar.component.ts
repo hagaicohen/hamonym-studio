@@ -5,18 +5,20 @@ import { CurrentEntityService } from '../../services/current-entity.service';
 import { CommonModule } from '@angular/common';
 import { Params, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { CurrentContextService } from '../../services/current-context.service';
+import { CurrentContextService, roleIconName } from '../../services/current-context.service';
 import { RoleType } from '../../models/user-context.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
-
+
+import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, NotificationBellComponent],
+  imports: [HmIconComponent, CommonModule, NotificationBellComponent],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.css'],
 })
 export class TopbarComponent implements OnDestroy {
+  readonly roleIcon = roleIconName;
   private currentEntity = inject(CurrentEntityService);
   private selection?: Subscription;
   switchError = '';

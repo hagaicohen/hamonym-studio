@@ -32,7 +32,7 @@
     <div class="disc-loading">טוען קמפיינים...</div>
   } @else if (campaigns.length === 0) {
     <div class="disc-empty">
-      <div class="disc-empty-icon">{{ searchQuery.trim() ? '🔍' : '🌱' }}</div>
+      <div class="disc-empty-icon"><app-icon [name]="searchQuery.trim() ? 'search' : 'sprout'" /></div>
       <p class="disc-empty-title">{{ emptyStateTitle }}</p>
       <p class="disc-empty-subtitle">{{ emptyStateSubtitle }}</p>
     </div>
@@ -72,7 +72,7 @@
               <div class="disc-card-days">{{ daysLeft(c.end_date) }} ימים נותרו</div>
             }
             @if (mode === 'ambassador') {
-              <div class="disc-card-cta">🤝 הצטרפו כשגרירים</div>
+              <div class="disc-card-cta"><app-icon name="handshake" /> הצטרפו כשגרירים</div>
             }
           </div>
         </div>

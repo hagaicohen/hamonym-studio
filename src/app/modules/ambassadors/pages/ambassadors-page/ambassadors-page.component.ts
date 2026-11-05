@@ -5,7 +5,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Kpi {
   totalAmbassadors:  number;
   activeAmbassadors: number;
@@ -53,7 +54,7 @@ const COLUMNS_STORAGE_KEY = 'ambassadors-hidden-columns';
 @Component({
   selector: 'app-ambassadors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './ambassadors-page.component.html',
   styleUrl: './ambassadors-page.component.css',
 })

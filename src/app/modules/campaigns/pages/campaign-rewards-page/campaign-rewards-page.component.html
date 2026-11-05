@@ -4,7 +4,7 @@
   <ng-container *ngIf="!loading && draft as d">
     <div class="rw-main">
       <button type="button" class="rw-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="rw-title">🎁 תשורות</h1>
+      <h1 class="rw-title"><app-icon name="gift" /> תשורות</h1>
       <p class="rw-subtitle">{{ d.title }} · {{ d.offerings.length }} תשורות</p>
       <p class="rw-save-error" *ngIf="saveError">{{ saveError }}</p>
 
@@ -43,7 +43,7 @@
             <label class="rf-label">תמונה (אופציונלי)</label>
             <input id="rw-img-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
             <label for="rw-img-input" class="rf-upload" *ngIf="!offering.imageUrl">
-              <span class="rf-upload-icon">☁️</span>
+              <span class="rf-upload-icon"><app-icon name="cloud-upload" /></span>
               <span class="rf-upload-label">{{ isUploadingImage ? 'מעלה…' : 'לחצו להעלאת תמונה' }}</span>
             </label>
             <div class="rf-img-preview" *ngIf="offering.imageUrl">
@@ -58,11 +58,11 @@
           <div class="rf-field">
             <label class="rf-label">עסק שמספק את התשורה (אופציונלי)</label>
             <div class="rf-partner-linked" *ngIf="linkedPartnerFor(offering.id) as cp; else pickPartner">
-              <span>🤝 {{ cp.partnerDisplayName }}</span>
+              <span><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</span>
               <button type="button" class="rf-link-btn" (click)="unlinkPartner(cp)">הסר קישור</button>
             </div>
             <ng-template #pickPartner>
-              <button type="button" class="rf-partner-btn" [disabled]="!isFormValid" (click)="openPartnerPicker()">🤝 בחר עסק</button>
+              <button type="button" class="rf-partner-btn" [disabled]="!isFormValid" (click)="openPartnerPicker()"><app-icon name="handshake" /> בחר עסק</button>
               <p class="rf-hint" *ngIf="!isFormValid">מלאו כותרת לתשורה קודם</p>
             </ng-template>
           </div>
@@ -72,12 +72,12 @@
               <input type="checkbox" [(ngModel)]="offering.featured">
               <span class="rf-slider"></span>
             </label>
-            <span>⭐ תשורה מומלצת</span>
+            <span><app-icon name="star" /> תשורה מומלצת</span>
           </div>
 
           <div class="rf-actions">
-            <button type="button" class="rf-btn-clear" (click)="clearForm()">🗑 נקה</button>
-            <button type="button" class="rf-btn-save" [disabled]="!isFormValid" (click)="save()">💾 {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}</button>
+            <button type="button" class="rf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
+            <button type="button" class="rf-btn-save" [disabled]="!isFormValid" (click)="save()"><app-icon name="save" /> {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}</button>
           </div>
         </div>
       </div>
@@ -91,7 +91,7 @@
       <div class="rw-list-section" *ngIf="d.offerings.length">
         <div class="rw-list-header">
           <h2 class="rw-list-title">תשורות בקמפיין ({{ filteredOfferings(d).length }})</h2>
-          <input class="rw-search" type="text" [(ngModel)]="searchTerm" placeholder="🔍 חיפוש תשורה…">
+          <input class="rw-search" type="text" [(ngModel)]="searchTerm" placeholder="חיפוש תשורה…">
         </div>
 
         <div class="rw-carousel-wrap" *ngIf="filteredOfferings(d).length">
@@ -102,21 +102,21 @@
                 <div class="rw-reward-top">
                   <div class="rw-reward-icon-wrap">
                     <img *ngIf="o.imageUrl" [src]="o.imageUrl" alt="">
-                    <span *ngIf="!o.imageUrl" class="rw-reward-icon">🎁</span>
+                    <span *ngIf="!o.imageUrl" class="rw-reward-icon"><app-icon name="gift" /></span>
                   </div>
                   <div class="rw-reward-price">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</div>
                 </div>
-                <span class="rw-reward-badge" *ngIf="o.featured">⭐ מומלץ</span>
+                <span class="rw-reward-badge" *ngIf="o.featured"><app-icon name="star" /> מומלץ</span>
                 <div class="rw-reward-body">
                   <div class="rw-reward-title">{{ o.title }}</div>
                   <p class="rw-reward-desc" *ngIf="o.description">{{ o.description }}</p>
                   <span class="rw-reward-out" *ngIf="o.stock === 0">אזל המלאי</span>
-                  <div class="rw-reward-partner" *ngIf="linkedPartnerFor(o.id) as cp">🤝 {{ cp.partnerDisplayName }}</div>
+                  <div class="rw-reward-partner" *ngIf="linkedPartnerFor(o.id) as cp"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</div>
                 </div>
                 <div class="rw-reward-actions">
-                  <button type="button" class="rw-icon-btn" (click)="editOffering(o)" title="עריכה">✏️</button>
-                  <button type="button" class="rw-icon-btn" (click)="duplicateOffering(o)" title="שכפל">📋</button>
-                  <button type="button" class="rw-icon-btn rw-icon-btn--danger" (click)="deleteOffering(o.id)" title="מחיקה">🗑</button>
+                  <button type="button" class="rw-icon-btn" (click)="editOffering(o)" title="עריכה"><app-icon name="pencil" /></button>
+                  <button type="button" class="rw-icon-btn" (click)="duplicateOffering(o)" title="שכפל"><app-icon name="copy" /></button>
+                  <button type="button" class="rw-icon-btn rw-icon-btn--danger" (click)="deleteOffering(o.id)" title="מחיקה"><app-icon name="trash" /></button>
                 </div>
               </article>
             </div>

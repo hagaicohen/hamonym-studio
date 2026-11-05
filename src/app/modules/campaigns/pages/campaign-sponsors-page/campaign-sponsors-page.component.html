@@ -4,7 +4,7 @@
   <ng-container *ngIf="!loading && draft as d">
     <div class="sp-main">
       <button type="button" class="sp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="sp-title">🤝 חסויות</h1>
+      <h1 class="sp-title"><app-icon name="handshake" /> חסויות</h1>
       <p class="sp-subtitle">{{ d.title }} · {{ d.sponsors.length }} חסויות</p>
       <p class="sp-save-error" *ngIf="saveError">{{ saveError }}</p>
 
@@ -15,7 +15,7 @@
           <label class="sf-label">לוגו</label>
           <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
           <div class="sf-logo-area" *ngIf="!form.logoUrl">
-            <label for="sp-logo-input" class="sf-upload-label">{{ isUploadingLogo ? 'מעלה…' : '☁️ לחץ להעלאת לוגו' }}</label>
+            <label for="sp-logo-input" class="sf-upload-label"><app-icon name="cloud-upload" /> {{ isUploadingLogo ? 'מעלה…' : 'לחץ להעלאת לוגו' }}</label>
           </div>
           <div class="sf-logo-preview" *ngIf="form.logoUrl">
             <img [src]="form.logoUrl" alt="">
@@ -34,9 +34,9 @@
         </div>
 
         <div class="sf-actions">
-          <button type="button" class="sf-btn-clear" (click)="clearForm()">🗑 נקה</button>
+          <button type="button" class="sf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
           <button type="button" class="sf-btn-save" [disabled]="!form.name.trim()" (click)="save()">
-            💾 {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
+            <app-icon name="save" /> {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
           </button>
         </div>
       </div>
@@ -44,13 +44,13 @@
       <div class="sp-list" *ngIf="d.sponsors.length">
         <div class="sp-card" *ngFor="let s of d.sponsors">
           <div class="sp-card-logo" *ngIf="s.logoUrl"><img [src]="s.logoUrl" alt=""></div>
-          <div class="sp-card-logo sp-card-logo--empty" *ngIf="!s.logoUrl">🏢</div>
+          <div class="sp-card-logo sp-card-logo--empty" *ngIf="!s.logoUrl"><app-icon name="building" /></div>
           <div class="sp-card-body">
             <div class="sp-card-name">{{ s.name }}</div>
             <div class="sp-card-link" *ngIf="s.link">{{ s.link }}</div>
             <div class="sp-card-actions">
-              <button type="button" class="sp-icon-btn" (click)="editSponsor(s)">✏ עריכה</button>
-              <button type="button" class="sp-icon-btn sp-icon-btn--danger" (click)="deleteSponsor(s.id)">🗑 מחיקה</button>
+              <button type="button" class="sp-icon-btn" (click)="editSponsor(s)"><app-icon name="pencil" /> עריכה</button>
+              <button type="button" class="sp-icon-btn sp-icon-btn--danger" (click)="deleteSponsor(s.id)"><app-icon name="trash" /> מחיקה</button>
             </div>
           </div>
         </div>

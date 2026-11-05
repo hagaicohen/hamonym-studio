@@ -12,7 +12,7 @@
 
     @if (!isLoading && ambassadorCampaigns.length === 0) {
       <div class="campaigns-empty">
-        <div class="empty-icon">🤝</div>
+        <div class="empty-icon"><app-icon name="handshake" /></div>
         <p>לא נמצאו קמפיינים שאתה שגריר בהם</p>
       </div>
     } @else {
@@ -76,6 +76,7 @@
     <h1 id="first-campaign-title" class="fc-title">הסיפור שלכם מתחיל כאן</h1>
     <p class="fc-subtitle">כל שינוי משמעותי מתחיל בצעד אחד. צרו את הקמפיין הראשון שלכם, ספרו על המטרה וצרפו אנשים לדרך.</p>
     <button type="button" class="fc-cta" (click)="createCampaign()">יצירת הקמפיין הראשון</button>
+    <button type="button" class="fc-studio" (click)="createCampaignInStudio()">או יצירה בסטודיו החדש (בטא)</button>
     @if (entityAwaitingApproval) { <p class="fc-reassure">הקמפיין יישמר כטיוטה, ויוכל להתפרסם לאחר אישור העמותה.</p> }
     <ol class="fc-steps" aria-label="שלבי יצירת קמפיין">
       <li><span class="fc-step-num" aria-hidden="true">1</span><span><strong>מספרים את הסיפור</strong> מה המטרה שלכם?</span></li>
@@ -94,7 +95,8 @@
     <div class="header-actions">
       <button class="btn-new btn-ai btn-ai--disabled ai-unavailable" disabled
         title="כלי AI אינם זמינים כרגע"
-        (click)="createCampaignWithAi()">✨ צור עם AI</button>
+        (click)="createCampaignWithAi()"><app-icon name="sparkles" /> צור עם AI</button>
+      <button type="button" class="btn-studio" (click)="createCampaignInStudio()">יצירה בסטודיו (בטא)</button>
       <button class="btn-new" (click)="createCampaign()">+ קמפיין חדש</button>
     </div>
   </div>
@@ -137,7 +139,7 @@
                 @if (minimalLogoFor(c)) {
                   <img [src]="minimalLogoFor(c)" [alt]="c.title" class="draft-cover-logo" />
                 } @else {
-                  <div class="draft-cover-logo-fallback">🏢</div>
+                  <div class="draft-cover-logo-fallback"><app-icon name="building" /></div>
                 }
               } @else if (c.coverImageUrl) {
                 <img [src]="c.coverImageUrl" [alt]="c.title" class="draft-cover-img" />
@@ -158,7 +160,7 @@
                    available either way (see "המשך עריכה" below), this is
                    just the framing shown up front. -->
               @if (c.publishRequestedAt) {
-                <span class="draft-status-badge draft-status-badge--pending">⏳ ממתין לאישור העמותה</span>
+                <span class="draft-status-badge draft-status-badge--pending"><app-icon name="hourglass" /> ממתין לאישור העמותה</span>
               }
               @if (c.createdAt) {
                 <span class="draft-date">נוצרה {{ fmtDate(c.createdAt) }}</span>
@@ -193,7 +195,7 @@
           <h2 class="section-title">קמפיינים</h2>
           <div class="view-switch">
             <button class="view-icon" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">⊞</button>
-            <button class="view-icon" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">☰</button>
+            <button class="view-icon" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'"><app-icon name="list" /></button>
           </div>
         </div>
 
@@ -211,7 +213,7 @@
                     @if (minimalLogoFor(c)) {
                       <img [src]="minimalLogoFor(c)" [alt]="c.title" class="card-cover-logo" />
                     } @else {
-                      <div class="card-cover-logo-fallback">🏢</div>
+                      <div class="card-cover-logo-fallback"><app-icon name="building" /></div>
                     }
                   }
                   <span class="card-status-badge" [class]="'badge-' + c.status">
@@ -238,8 +240,8 @@
                   </div>
 
                   <div class="card-meta">
-                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'">📅 {{ daysRemaining(c.endDate) }} ימים</span>
-                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'">🔁 מתמשך</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'"><app-icon name="calendar" /> {{ daysRemaining(c.endDate) }} ימים</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'"><app-icon name="repeat" /> מתמשך</span>
                     <span class="meta-item">↗ {{ c.supportersCount ?? 0 }} תורמים</span>
                   </div>
 
@@ -256,7 +258,7 @@
                           <button class="card-menu-item" (click)="editCampaign(c.id); closeMenu()">
                             <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular> עריכת עיצוב
                           </button>
-                          <button class="card-menu-item" (click)="openReports(c.id); closeMenu()">📊 דוחות</button>
+                          <button class="card-menu-item" (click)="openReports(c.id); closeMenu()"><app-icon name="chart" /> דוחות</button>
                           @if (!isAmbassador) {
                             @if (c.isHidden) {
                               <button class="card-menu-item" [disabled]="hidingId === c.id" (click)="unhide($event, c); closeMenu()">
@@ -292,7 +294,7 @@
                     @if (minimalLogoFor(c)) {
                       <img [src]="minimalLogoFor(c)" [alt]="c.title" class="list-cover-logo" />
                     } @else {
-                      <div class="list-cover-logo-fallback">🏢</div>
+                      <div class="list-cover-logo-fallback"><app-icon name="building" /></div>
                     }
                   }
                 </div>
@@ -317,8 +319,8 @@
                     </div>
                   </div>
                   <div class="card-meta">
-                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'">📅 {{ daysRemaining(c.endDate) }}י׳</span>
-                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'">🔁 מתמשך</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle !== 'ongoing'"><app-icon name="calendar" /> {{ daysRemaining(c.endDate) }}י׳</span>
+                    <span class="meta-item" *ngIf="c.campaignLifecycle === 'ongoing'"><app-icon name="repeat" /> מתמשך</span>
                     <span class="meta-item">↗ {{ c.supportersCount ?? 0 }}</span>
                   </div>
                 </div>
@@ -336,7 +338,7 @@
                         <button class="card-menu-item" (click)="editCampaign(c.id); closeMenu()">
                           <lucide-angular [img]="EditIcon" [size]="14"></lucide-angular> עריכת עיצוב
                         </button>
-                        <button class="card-menu-item" (click)="openReports(c.id); closeMenu()">📊 דוחות</button>
+                        <button class="card-menu-item" (click)="openReports(c.id); closeMenu()"><app-icon name="chart" /> דוחות</button>
                         @if (!isAmbassador) {
                           @if (c.isHidden) {
                             <button class="card-menu-item" [disabled]="hidingId === c.id" (click)="unhide($event, c); closeMenu()">
@@ -423,7 +425,7 @@
   <div class="advisor-overlay" (click)="closeAdvisor()">
     <div class="advisor-modal" (click)="$event.stopPropagation()">
       <div class="advisor-modal-header">
-        <div class="advisor-modal-title">✨ המלצות לשיפור — {{ advisorCampaignTitle }}</div>
+        <div class="advisor-modal-title"><app-icon name="sparkles" /> המלצות לשיפור — {{ advisorCampaignTitle }}</div>
         <button class="advisor-close" (click)="closeAdvisor()">✕</button>
       </div>
 

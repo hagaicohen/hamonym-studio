@@ -4,7 +4,7 @@
     <p class="ai-loading" *ngIf="loading">טוען הזמנה...</p>
 
     <ng-container *ngIf="!loading && loadError">
-      <p class="ai-error">⚠ {{ loadError }}</p>
+      <p class="ai-error"><app-icon name="alert" /> {{ loadError }}</p>
     </ng-container>
 
     <ng-container *ngIf="!loading && !loadError">
@@ -18,7 +18,7 @@
           <button class="ai-accept-btn" type="button" [disabled]="accepting" (click)="accept()">
             {{ accepting ? 'מאשר...' : 'קבלת ההזמנה' }}
           </button>
-          <p class="ai-error" *ngIf="acceptError">⚠ {{ acceptError }}</p>
+          <p class="ai-error" *ngIf="acceptError"><app-icon name="alert" /> {{ acceptError }}</p>
         </ng-container>
 
         <ng-template #notLoggedIn>

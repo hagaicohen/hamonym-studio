@@ -1,8 +1,13 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Layers, GripVertical } from 'lucide-angular';
+import {
+  LucideAngularModule, Layers, GripVertical, LayoutTemplate, Blocks, FileText, Palette, Lightbulb, Check, Rows3,
+  ListCollapse, Eye, EyeOff, X, PanelTop, SlidersHorizontal, Type, TriangleAlert, Wrench, Handshake, Gift, Star,
+  Megaphone, MessageCircle, Link, Mail, Twitter, Facebook, Sparkles, Compass, Image as ImageIcon, Building2, PenLine,
+  LucideIconData, Target, Coins, TrendingUp, Users, Calendar, AlarmClock,
+} from 'lucide-angular';
 import {
   CampaignStudioStateService,
   CampaignBlock,
@@ -40,7 +45,9 @@ import {
   CampaignDraft,
   CampaignTheme,
 } from '../../../services/campaign-studio-state.service';
-import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
+import { BLOCK_LABELS, SINGLE_INSTANCE, BLOCK_GROUPS, blockLucideIcon } from '../../block-catalog';
+import { RichTextBlockEditorComponent } from '../../block-editors/rich-text-block-editor.component';
+import { ImageBlockEditorComponent } from '../../block-editors/image-block-editor.component';
 import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
 import { TextRoleEditorComponent } from '../../../../../shared/ui/text-role-editor/text-role-editor.component';
 import { StyleRoleEditorComponent, StyleRoleOverride } from '../../../../../shared/ui/style-role-editor/style-role-editor.component';
@@ -65,75 +72,9 @@ import { environment } from '../../../../../../environments/environment';
 import {
   LogoAppearanceEditorComponent, LogoShape, LogoSize,
 } from '../../../../../shared/ui/logo-appearance-editor/logo-appearance-editor.component';
-
-const BLOCK_LABELS: Record<BlockType, string> = {
-  'rich-text':   'טקסט',
-  'image':       'תמונה',
-  'video':       'וידאו',
-  'gallery':     'גלריה',
-  'split':       'עמודות',
-  'cta':         'קריאה לפעולה',
-  'divider':     'מרווח / קו',
-  'container':       'טבלת פריסה',
-  'stats':           'פס נתונים',
-  'donation-widget': 'תיבת תרומה',
-  'rewards':         'תשורות',
-  'sponsors':    'חסויות',
-  'ambassadors': 'שגרירים',
-  'donors':      'תורמים',
-  'updates':     'עדכונים',
-  'hero':        'Hero (תמונה ראשית)',
-  'tabs':        'טאבים',
-  'accordion':   'פאנלים',
-  'share':       'שיתוף',
-  'comments':    'תגובות',
-  'coupons':       'קופון',
-  'map':           'מפה / מיקום',
-  'opening-hours': 'שעות פתיחה',
-};
-
-const BLOCK_ICONS: Record<BlockType, string> = {
-  'rich-text':   '✍️',
-  'image':       '🖼️',
-  'video':       '🎬',
-  'gallery':     '📸',
-  'split':       '⬛⬜',
-  'cta':         '🟢',
-  'divider':     '↕',
-  'container':       '▣',
-  'stats':           '📊',
-  'donation-widget': '💳',
-  'rewards':         '🎁',
-  'sponsors':    '🤝',
-  'ambassadors': '⭐',
-  'donors':      '💛',
-  'updates':     '📢',
-  'hero':        '🌄',
-  'tabs':        '📑',
-  'accordion':   '🗂️',
-  'share':       '🔗',
-  'comments':    '💬',
-  'coupons':       '🏷️',
-  'map':           '📍',
-  'opening-hours': '🕒',
-};
-
-const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments', 'map', 'opening-hours'];
-
-// Block groups for the picker UI. Groups/types are filtered per Owner Type
-// (see blockGroups() below) — a group whose types are all unavailable for
-// the current owner simply disappears, it's never listed empty. Every
-// existing type here already includes 'campaign' in SECTION_REGISTRY, so
-// this filtering is a no-op for ownerType 'campaign' (today's only owner).
-export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'תוכן',    types: ['rich-text', 'image', 'video', 'gallery'] },
-  { label: 'פריסה',   types: ['container', 'hero', 'tabs', 'accordion'] },
-  { label: 'גיוס',    types: ['donation-widget', 'cta', 'rewards', 'share'] },
-  { label: 'נתונים',  types: ['stats', 'donors'] },
-  { label: 'קהילה',   types: ['sponsors', 'ambassadors', 'updates', 'comments'] },
-  { label: 'עסק',     types: ['map', 'opening-hours', 'coupons'] },
-  { label: 'עיצוב',   types: ['divider'] },
-];
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+export { BLOCK_GROUPS } from '../../block-catalog';
 
 const ADDABLE_BLOCKS: BlockType[] = [
   'rich-text', 'image', 'video', 'gallery', 'container', 'hero', 'tabs', 'accordion',
@@ -145,15 +86,26 @@ const ADDABLE_BLOCKS: BlockType[] = [
 @Component({
   selector: 'app-campaign-page-builder-step',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule, LucideAngularModule, RichTextEditorComponent, TextStyleEditorComponent,
+  imports: [HmIconComponent, 
+    CommonModule, FormsModule, LucideAngularModule, TextStyleEditorComponent,
     TextRoleEditorComponent, StyleRoleEditorComponent,
     ColorPickerComponent, TemplatePickerComponent, LogoAppearanceEditorComponent, SectionPresentationPickerComponent,
+    RichTextBlockEditorComponent, ImageBlockEditorComponent,
   ],
   templateUrl: './campaign-page-builder-step.component.html',
   styleUrl: './campaign-page-builder-step.component.css',
 })
 export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
+  // Studio single-block mode: render only this block's editor. The Studio
+  // owns canvas selection, so the page-builder mode, focus handling and the
+  // one-time sidebar migration below are left to it.
+  @Input() studioBlockId: string | null = null;
+  // Studio design mode: render only the campaign design area, with the
+  // section for this page area open (logo, footer, or style for the page).
+  @Input() studioDesign: 'page' | 'logo' | 'footer' | null = null;
+
+  private get inStudio(): boolean { return !!(this.studioBlockId || this.studioDesign); }
+
   protected state       = inject(CampaignStudioStateService);
   private uploadService = inject(UploadService);
   private entityService = inject(CurrentEntityService);
@@ -226,8 +178,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'builder'); }
 
   ngOnInit(): void {
-    this.state.migrateSidebarToContainers();
-    this.state.setPageBuilderActive(true);
+    if (this.studioDesign) {
+      this.expandedSections.add({ page: 'design-style', logo: 'campaign-logo', footer: 'footer' }[this.studioDesign]);
+      if (this.studioDesign === 'logo') this.logoDesignOpen = true;
+    }
+    if (!this.inStudio) {
+      this.state.migrateSidebarToContainers();
+      this.state.setPageBuilderActive(true);
+    }
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
     });
@@ -235,9 +193,11 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     // inserted by the preview component itself (it owns the drop-target
     // hit-testing) — it then asks US to open/focus the new block's editor,
     // since editingBlockId/containerViewState are private to this panel.
-    this.state.focusBlockRequest$.pipe(takeUntil(this._destroy$)).subscribe(({ id, type }) => {
-      this.openNewBlockEditor(id, type);
-    });
+    if (!this.inStudio) {
+      this.state.focusBlockRequest$.pipe(takeUntil(this._destroy$)).subscribe(({ id, type }) => {
+        this.openNewBlockEditor(id, type);
+      });
+    }
 
     // Entity logo preview only (moved from campaign-basic-step, 2026-09-30) —
     // shown as the fallback preview when no campaign-specific logo is set;
@@ -257,7 +217,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.state.setPageBuilderActive(false);
+    if (!this.inStudio) this.state.setPageBuilderActive(false);
     this._destroy$.next();
     this._destroy$.complete();
   }
@@ -285,7 +245,13 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   readonly blockLabels = BLOCK_LABELS;
-  readonly blockIcons = BLOCK_ICONS;
+  // Interface icons (design system: Lucide, no decorative emoji).
+  readonly ui = {
+    LayoutTemplate, Blocks, FileText, Palette, Lightbulb, Check, Rows3, ListCollapse, Eye, EyeOff, X, PanelTop,
+    SlidersHorizontal, Type, TriangleAlert, Wrench, Handshake, Gift, Star, Megaphone, MessageCircle, Link, Mail,
+    Twitter, Facebook, Sparkles, Compass, ImageIcon, Building2, PenLine,
+  };
+  readonly lucideIcon = blockLucideIcon;
 
   // Hero is a single top-of-page section — nesting it inside a container/tab
   // makes no sense and only confuses the "+ הוסף לכאן" picker, so it's
@@ -447,79 +413,11 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   updateLabel(id: string, label: string): void {
-    const blocks = this.state.draft.blocks.map(b => b.id === id ? { ...b, label } : b);
-    this.state.patch({ blocks });
+    this.state.updateBlockLabel(id, label);
   }
 
   clearImportReview(id: string): void {
-    const blocks = this.state.draft.blocks.map(b => {
-      if (b.id !== id) return b;
-      const { importReview, ...rest } = b;
-      return rest as CampaignBlock;
-    });
-    this.state.patch({ blocks });
-  }
-
-  updateRichText(id: string, content: string): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    const prev = block?.data as RichTextBlockData;
-    this.state.updateBlockData(id, { ...prev, content } as RichTextBlockData);
-  }
-
-  updateRichTextLineHeight(id: string, lineHeight: number): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    const prev = block?.data as RichTextBlockData;
-    this.state.updateBlockData(id, { ...prev, lineHeight } as RichTextBlockData);
-  }
-
-  // Default look matches what .section-heading already renders today for a
-  // block with no headingStyle set (empty color = fall back to
-  // primaryColor in the preview) — so picking a style here never causes an
-  // unexpected jump for an existing heading.
-  private readonly DEFAULT_HEADING_STYLE: TextStyle = { align: 'center', color: '', fontSize: 'lg', position: 'top' };
-
-  richTextHeadingStyle(block: CampaignBlock): TextStyle {
-    return (block.data as RichTextBlockData).headingStyle ?? this.DEFAULT_HEADING_STYLE;
-  }
-
-  updateRichTextHeadingStyle(id: string, style: TextStyle): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    const prev = block?.data as RichTextBlockData;
-    this.state.updateBlockData(id, { ...prev, headingStyle: style } as RichTextBlockData);
-  }
-
-  updateImageField(id: string, field: keyof ImageBlockData, value: string): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    if (!block) return;
-    this.state.updateBlockData(id, { ...block.data, [field]: value } as ImageBlockData);
-  }
-
-  updateImageWidth(id: string, widthPercent: number): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    if (!block) return;
-    this.state.updateBlockData(id, { ...block.data, widthPercent } as ImageBlockData);
-  }
-
-  updateImageHeight(id: string, heightPx: number): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    if (!block) return;
-    this.state.updateBlockData(id, { ...block.data, heightPx } as ImageBlockData);
-  }
-
-  resetImageHeight(id: string): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    if (!block) return;
-    const data = { ...(block.data as ImageBlockData) };
-    delete data.heightPx;
-    this.state.updateBlockData(id, data);
-  }
-
-  onImageFileSelected(id: string, event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.uploadService.upload(file, 'campaigns/blocks').subscribe({
-      next: url => this.updateImageField(id, 'url', url),
-    });
+    this.state.clearImportReview(id);
   }
 
   updateVideoUrl(id: string, url: string): void {
@@ -640,18 +538,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // just gives the new tab a nicer default label than "מסגרת". See
   // DECISIONS.md (2026-07-17).
   addTab(tabsBlockId: string, blocks: CampaignBlock[]): void {
-    const tabCount = this.containerChildren(blocks.find(b => b.id === tabsBlockId)!, blocks).length;
-    const newId = this.state.addBlockToContainer(tabsBlockId, 'container');
-    if (newId) this.updateLabel(newId, `טאב ${tabCount + 1}`);
+    this.state.addTab(tabsBlockId);
   }
 
   // Panels — same reasoning as addTab above. New panels start closed
   // (panelDefaultOpen defaults to falsy/undefined) so adding one doesn't
   // suddenly expand something the manager didn't ask to open.
   addPanel(accordionBlockId: string, blocks: CampaignBlock[]): void {
-    const panelCount = this.containerChildren(blocks.find(b => b.id === accordionBlockId)!, blocks).length;
-    const newId = this.state.addBlockToContainer(accordionBlockId, 'container');
-    if (newId) this.updateLabel(newId, `פאנל ${panelCount + 1}`);
+    this.state.addPanel(accordionBlockId);
   }
 
   convertTabsAccordionType(id: string): void { this.state.convertTabsAccordionType(id); }
@@ -683,20 +577,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   }
 
   swapContainerChildren(id: string): void {
-    const block = this.state.draft.blocks.find(b => b.id === id);
-    if (!block) return;
-    const data = block.data as ContainerBlockData;
-    if (data.childBlockIds.length < 2) return;
-    const children = data.childBlockIds
-      .map(cid => this.state.draft.blocks.find(b => b.id === cid))
-      .filter((b): b is CampaignBlock => !!b)
-      .sort((a, b) => a.order - b.order);
-    if (children.length < 2) return;
-    const blocks = this.state.draft.blocks.map(b => ({ ...b }));
-    const a = blocks.find(b => b.id === children[0].id)!;
-    const bBlock = blocks.find(b => b.id === children[1].id)!;
-    [a.order, bBlock.order] = [bBlock.order, a.order];
-    this.state.patch({ blocks });
+    this.state.swapContainerChildren(id);
   }
 
   onCampaignBgImageSelected(event: Event, draft: any): void {
@@ -721,10 +602,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   // Per-block spacing
   updateSpacing(id: string, field: 'spacingTop' | 'spacingBottom', value: number): void {
-    const blocks = this.state.draft.blocks.map(b =>
-      b.id === id ? { ...b, [field]: value } : b
-    );
-    this.state.patch({ blocks });
+    this.state.updateBlockSpacing(id, field, value);
   }
 
   // Stats
@@ -734,9 +612,9 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     end_date: 'תאריך סיום', days_remaining: 'ימים נותרו', ambassadors: 'שגרירים',
   };
 
-  readonly statIcons: Record<string, string> = {
-    target: '🎯', raised: '💰', percent: '📈', supporters: '👥',
-    start_date: '📅', end_date: '📅', days_remaining: '⏰', ambassadors: '⭐',
+  readonly statIcons: Record<string, LucideIconData> = {
+    target: Target, raised: Coins, percent: TrendingUp, supporters: Users,
+    start_date: Calendar, end_date: Calendar, days_remaining: AlarmClock, ambassadors: Star,
   };
 
   sortedStatItems(data: StatsBlockData): StatItem[] {
@@ -1302,7 +1180,6 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     img.src = url;
   }
 
-  blockIcon(block: CampaignBlock): string  { return BLOCK_ICONS[block.type] ?? ''; }
   blockLabel(block: CampaignBlock): string { return this.blockTypeLabel(block.type); }
 
   // 'hero' is the one block type genuinely reused across all three owners
@@ -1316,6 +1193,16 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
       return BLOCK_LABELS[type];
     }
     return BLOCK_LABELS[type] ?? type;
+  }
+
+  studioBlock(draft: CampaignDraft): CampaignBlock | undefined {
+    return draft.blocks.find(b => b.id === this.studioBlockId);
+  }
+
+  // The container / tabs / panels block that holds this block, if any.
+  studioParent(draft: CampaignDraft, block: CampaignBlock): CampaignBlock | null {
+    return draft.blocks.find(b => ['container', 'tabs', 'accordion'].includes(b.type)
+      && ((b.data as ContainerBlockData).childBlockIds ?? []).includes(block.id)) ?? null;
   }
 
   asRichText(data: unknown): RichTextBlockData       { return data as RichTextBlockData; }

@@ -110,7 +110,7 @@
           @for (donor of visibleDonors; track $index) { <tr><td>{{ donor.name || 'שם לא זמין' }}</td><td><time [attr.datetime]="donor.firstDonationAt" dir="ltr">{{ fmtDate(donor.firstDonationAt) }}</time></td><td>{{ fmtMoney(donor.firstDonationAmount) }}</td></tr> }
         </tbody></table></div>
         @if (donorPages > 1) { <nav class="pager" aria-label="דפדוף תורמים"><button (click)="donorPage = donorPage - 1" [disabled]="donorPage === 0">הקודם</button><span>{{ donorPage + 1 }} מתוך {{ donorPages }}</span><button (click)="donorPage = donorPage + 1" [disabled]="donorPage + 1 >= donorPages">הבא</button></nav> }
-      } @else { <div class="empty-state"><span class="empty-mark" aria-hidden="true">♡</span><strong>אין תורמים חדשים בתקופה זו</strong><span>תורמים יופיעו כאן לאחר שתרומתם הראשונה תשולם.</span></div> }
+      } @else { <div class="empty-state"><span class="empty-mark" aria-hidden="true"><app-icon name="heart" /></span><strong>אין תורמים חדשים בתקופה זו</strong><span>תורמים יופיעו כאן לאחר שתרומתם הראשונה תשולם.</span></div> }
     </aside>
   </div>
 }

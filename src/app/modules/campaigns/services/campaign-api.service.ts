@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { CampaignDraft } from './campaign-studio-state.service';
+import { CampaignDraft, CampaignStudioStateService } from './campaign-studio-state.service';
 import { resolveTheme } from '../builder/styles/campaign-styles';
 
 export interface DiscoverCampaign {
@@ -51,6 +51,7 @@ const DEFAULT_BLOCK_LABELS: Record<string, string> = {
 @Injectable({ providedIn: 'root' })
 export class CampaignApiService {
   private http = inject(HttpClient);
+  private studioState = inject(CampaignStudioStateService);
   private apiUrl = `${environment.apiUrl}/api/campaigns`;
 
   private headers() {
@@ -252,13 +253,13 @@ export class CampaignApiService {
   create(entityId: string, draft: CampaignDraft): Observable<CampaignDraft> {
     return this.http.post<any>(this.apiUrl, this.toSnake(draft, entityId), {
       headers: this.headers(),
-    }).pipe(map(r => this.fromSnake(r)));
+    }).pipe(tap(() => this.studioState.markSaved(draft)), map(r => this.fromSnake(r)));
   }
 
   update(campaignId: string, draft: CampaignDraft): Observable<CampaignDraft> {
     return this.http.patch<any>(`${this.apiUrl}/${campaignId}`, this.toSnake(draft), {
       headers: this.headers(),
-    }).pipe(map(r => this.fromSnake(r)));
+    }).pipe(tap(() => this.studioState.markSaved(draft)), map(r => this.fromSnake(r)));
   }
 
   getById(campaignId: string): Observable<CampaignDraft> {

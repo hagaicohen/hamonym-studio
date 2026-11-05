@@ -37,7 +37,7 @@
     </div>
 
     <a *ngIf="receiptUrl" class="receipt-link-btn" [routerLink]="receiptUrl">
-      🧾 צפייה בקבלה
+      <app-icon name="receipt" /> צפייה בקבלה
     </a>
     <p class="receipt-pending-note" *ngIf="!receiptUrl">הקבלה תישלח אליך למייל עם הפקתה.</p>
 
@@ -51,13 +51,13 @@
       <p class="share-label">שתפו את הקמפיין</p>
       <div class="share-buttons">
         <button class="share-btn share-btn--wa" (click)="shareWhatsApp()">
-          <span class="share-icon">💬</span> WhatsApp
+          <span class="share-icon"><app-icon name="message" /></span> WhatsApp
         </button>
         <button class="share-btn share-btn--fb" (click)="shareFacebook()">
-          <span class="share-icon">📘</span> Facebook
+          <span class="share-icon"><app-icon name="facebook" /></span> Facebook
         </button>
         <button class="share-btn share-btn--link" (click)="copyLink()">
-          <span class="share-icon">🔗</span>
+          <span class="share-icon"><app-icon name="link" /></span>
           {{ linkCopied ? 'הועתק!' : 'העתק קישור' }}
         </button>
       </div>

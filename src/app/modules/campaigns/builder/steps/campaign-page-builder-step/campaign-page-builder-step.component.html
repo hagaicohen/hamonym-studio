@@ -1,4 +1,4 @@
-<div class="step-container" *ngIf="draft$ | async as draft">
+<div class="step-container" *ngIf="!studioBlockId && !studioDesign && (draft$ | async) as draft">
 
   <div class="step-header_campaign">
     <div class="step-title-row">
@@ -14,7 +14,7 @@
          until there's actually more than one option. See DECISIONS.md
          (2026-08-02). -->
     <button class="btn-change-template" type="button" *ngIf="isCampaign" (click)="showTemplatePicker = true">
-      ✦ שנה תבנית
+      <lucide-icon [img]="ui.LayoutTemplate" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> שנה תבנית
     </button>
   </div>
 
@@ -34,12 +34,12 @@
        control). See DECISIONS.md (2026-07-31 — three-zone Builder layout). ══ -->
   <div class="builder-zone builder-zone--store">
     <div class="builder-zone-header" (click)="showBlockPicker = !showBlockPicker">
-      <span class="section-icon-box section-icon-box--store">🧱</span>
+      <span class="section-icon-box section-icon-box--store"><lucide-icon [img]="ui.Blocks" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
       <span class="builder-zone-title">הוסיפו בלוקים לדף</span>
       <span class="section-chevron" [class.open]="showBlockPicker">›</span>
     </div>
     <ng-container *ngIf="showBlockPicker">
-      <p class="picker-hint">💡 גררו בלוק ישירות למיקום הרצוי בתצוגה שמימין, או פשוט לחצו עליו כדי להוסיף אותו בסוף הדף</p>
+      <p class="picker-hint"><lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> גררו בלוק ישירות למיקום הרצוי בתצוגה שמימין, או פשוט לחצו עליו כדי להוסיף אותו בסוף הדף</p>
       <div class="block-picker block-picker--grouped">
         <div class="picker-group" *ngFor="let group of blockGroups">
           <div class="picker-group-label">{{ group.label }}</div>
@@ -52,9 +52,9 @@
               (dragstart)="onPickerDragStart($event, type, draft.blocks)"
               (dragend)="onPickerDragEnd()"
               (click)="addBlock(type, draft.blocks)">
-              <span class="picker-icon">{{ blockIcons[type] }}</span>
+              <span class="picker-icon"><lucide-icon [img]="lucideIcon(type)" [size]="18" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
               <span class="picker-label">{{ blockTypeLabel(type) }}</span>
-              <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+              <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
             </button>
           </div>
         </div>
@@ -82,7 +82,7 @@
           (click)="$event.stopPropagation()"
           (dragstart)="onBlockDragStart($event, block.id)"
           (dragend)="onBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
-        <span class="block-icon">{{ parentBlock?.type === 'tabs' ? '📑' : parentBlock?.type === 'accordion' ? '🗂️' : blockIcon(block) }}</span>
+        <span class="block-icon"><lucide-icon [img]="parentBlock?.type === 'tabs' ? ui.Rows3 : parentBlock?.type === 'accordion' ? ui.ListCollapse : lucideIcon(block.type)" [size]="16" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
         <div class="block-header-info">
           <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}
             <span class="block-closed-count"
@@ -91,11 +91,11 @@
             </span>
           </span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
-          <span class="block-import-review-chip" *ngIf="block.importReview?.needsReview" title="נוצר אוטומטית מייבוא אתר, ברמת ביטחון בינונית — כדאי לבדוק">לבדיקה ⚠</span>
+          <span class="block-import-review-chip" *ngIf="block.importReview?.needsReview" title="נוצר אוטומטית מייבוא אתר, ברמת ביטחון בינונית — כדאי לבדוק"><lucide-icon [img]="ui.TriangleAlert" [size]="12" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לבדיקה</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
           <button class="action-btn" *ngIf="block.importReview?.needsReview"
-            (click)="clearImportReview(block.id)" title="סמן כנבדק">✓ נבדק</button>
+            (click)="clearImportReview(block.id)" title="סמן כנבדק"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> נבדק</button>
           <button class="action-btn"
             (click)="moveInScope(block.id, parentBlock, draft.blocks, -1)"
             [disabled]="isFirstInScopeOf(block, parentBlock, draft.blocks)" title="למעלה">↑</button>
@@ -107,8 +107,8 @@
             (click)="swapContainerChildren(block.id)"
             title="החלף ימין ↔ שמאל">⇄</button>
           <button class="action-btn" [class.action-btn--muted]="!block.visible"
-            (click)="toggleVisibility(block.id)">{{ block.visible ? '👁' : '🙈' }}</button>
-          <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)">✕</button>
+            (click)="toggleVisibility(block.id)"><lucide-icon [img]="block.visible ? ui.Eye : ui.EyeOff" [size]="15" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></button>
+          <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)" aria-label="מחיקה"><lucide-icon [img]="ui.X" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
         </div>
         <span class="block-chevron"
           [class.open]="editingBlockId === block.id"
@@ -186,9 +186,9 @@
                 (dragstart)="onPickerDragStart($event, type, draft.blocks)"
                 (dragend)="onPickerDragEnd()"
                 (click)="addBlockInsideContainer(block.id, type, draft.blocks)">
-                <span class="picker-icon">{{ blockIcons[type] }}</span>
+                <span class="picker-icon"><lucide-icon [img]="lucideIcon(type)" [size]="18" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
                 <span class="picker-label">{{ blockTypeLabel(type) }}</span>
-                <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)">✓</span>
+                <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
               </button>
             </div>
           </div>
@@ -208,6 +208,121 @@
 
       <!-- Block Editor -->
       <div class="block-editor" *ngIf="editingBlockId === block.id">
+        <ng-container *ngTemplateOutlet="blockEditorBody; context: { block: block, parentBlock: parentBlock, draft: draft }"></ng-container>
+      </div>
+
+      <!-- ── TABS CHILDREN — each tab is a real 'container' block, so it
+           already gets full label-editing/reorder/remove/nested-content-
+           editing for free via blockItem, exactly like a container's own
+           children. Only "+ הוסף טאב" is bespoke (always creates a
+           container, not an arbitrary block-type picker). ── -->
+      <div class="container-children-tree" *ngIf="block.type === 'tabs' && getContainerViewState(block.id) !== 'closed'">
+        <div class="container-tree-header">
+          <span class="container-tree-label">
+            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ containerChildren(block, draft.blocks).length }} טאבים
+          </span>
+          <button class="container-add-btn" type="button" (click)="addTab(block.id, draft.blocks)">
+            + הוסף טאב
+          </button>
+        </div>
+
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyTabsTpl">
+          <ng-container *ngFor="let tab of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: tab, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyTabsTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף טאב" כדי להתחיל</div>
+        </ng-template>
+      </div>
+
+      <!-- ── ACCORDION CHILDREN — same reasoning as TABS CHILDREN above,
+           each panel is a real 'container' block. ── -->
+      <div class="container-children-tree" *ngIf="block.type === 'accordion' && getContainerViewState(block.id) !== 'closed'">
+        <div class="container-tree-header">
+          <span class="container-tree-label">
+            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ containerChildren(block, draft.blocks).length }} פאנלים
+          </span>
+          <button class="container-add-btn" type="button" (click)="addPanel(block.id, draft.blocks)">
+            + הוסף פאנל
+          </button>
+        </div>
+
+        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyAccordionTpl">
+          <ng-container *ngFor="let panel of containerChildren(block, draft.blocks); trackBy: trackById">
+            <ng-container *ngTemplateOutlet="blockItem; context: { block: panel, parentBlock: block }">
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #emptyAccordionTpl>
+          <div class="container-empty-hint">לחצו על "+ הוסף פאנל" כדי להתחיל</div>
+        </ng-template>
+      </div>
+
+    </div>
+  </ng-template>
+  <!-- ════ END BLOCK TREE TEMPLATE ════ -->
+
+  <!-- ══ ZONE 2 — THE PAGE ITSELF: blocks already ON the page, in the exact
+       order they'll render. Starts OPEN by default (seeded in
+       expandedSections, see ngOnInit) — unlike Zone 1/Zone 3, this is the
+       main thing a manager is here to look at. See DECISIONS.md
+       (2026-07-31). ══ -->
+  <div class="builder-zone builder-zone--content">
+    <div class="builder-zone-header" (click)="toggleSection('zone-content')">
+      <span class="section-icon-box section-icon-box--content"><lucide-icon [img]="ui.FileText" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
+      <span class="builder-zone-title">תוכן הדף</span>
+      <span class="builder-zone-count" *ngIf="topLevelBlocks(draft.blocks).length">{{ topLevelBlocks(draft.blocks).length }} בלוקים</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-content')">›</span>
+    </div>
+    <ng-container *ngIf="!isSectionCollapsed('zone-content')">
+      <div class="blocks-list" *ngIf="topLevelBlocks(draft.blocks).length > 0; else zoneContentEmptyTpl">
+        <ng-container *ngFor="let block of topLevelBlocks(draft.blocks); trackBy: trackById">
+          <ng-container *ngTemplateOutlet="blockItem; context: { block: block, parentBlock: null }">
+          </ng-container>
+        </ng-container>
+      </div>
+      <ng-template #zoneContentEmptyTpl>
+        <p class="zone-content-empty">עדיין אין בלוקים בדף — הוסיפו את הראשון מהחנות שמעל <app-icon name="arrow-up" /></p>
+      </ng-template>
+    </ng-container>
+  </div>
+
+  <!-- ══ ZONE 3 — CAMPAIGN DESIGN (renamed 2026-10-01 from "עיצוב כללי",
+       UX reorg): Campaign Style, Opening structure, Colors and Logo as one
+       coherent "how does my campaign look" area, plus secondary site-wide
+       settings (Hero text position, page background, footer) that aren't
+       part of that primary 4-part decision. Closed by default, same
+       reasoning as Zone 1 — opt-in, not the main thing a manager looks at
+       on every visit. ══ -->
+  <div class="builder-zone builder-zone--design">
+    <div class="builder-zone-header" (click)="toggleSection('zone-design')">
+      <span class="section-icon-box section-icon-box--design"><lucide-icon [img]="ui.Palette" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
+      <span class="builder-zone-title">עיצוב הקמפיין</span>
+      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-design')">›</span>
+    </div>
+    <ng-container *ngIf="!isSectionCollapsed('zone-design')">
+      <ng-container *ngTemplateOutlet="designBody; context: { draft: draft }"></ng-container>
+  </ng-container>
+  </div>
+
+</div>
+
+<!-- Studio single-block mode (studioBlockId): only the selected block's
+     editor, the same body Step 9 renders below each block. -->
+@if (studioBlockId) {
+  @if (draft$ | async; as draft) {
+    @if (studioBlock(draft); as block) {
+      <div class="block-editor block-editor--studio">
+        <ng-container *ngTemplateOutlet="blockEditorBody; context: { block: block, parentBlock: studioParent(draft, block), draft: draft }"></ng-container>
+      </div>
+    }
+  }
+}
+
+<!-- The editor body of one block, shared by Step 9 and the Studio. -->
+<ng-template #blockEditorBody let-block="block" let-parentBlock="parentBlock" let-draft="draft">
 
         <!-- LABEL — for rich-text/video/gallery this is genuinely rendered
              as a visible heading on the page (see campaign-preview.component
@@ -226,15 +341,7 @@
                it styles exactly that text. Collapsed by default (the
                editor's own "עיצוב מתקדם" toggle). See DECISIONS.md
                (2026-07-31). -->
-          <div class="editor-row" *ngIf="block.type === 'rich-text' && block.label" style="margin-top:10px">
-            <label class="editor-label">עיצוב הכותרת</label>
-            <app-text-style-editor
-              [textStyle]="richTextHeadingStyle(block)"
-              (textStyleChange)="updateRichTextHeadingStyle(block.id, $event)"
-              [showPosition]="false"
-              [showCta]="false">
-            </app-text-style-editor>
-          </div>
+          <app-rich-text-block-editor *ngIf="block.type === 'rich-text' && block.label" part="headingStyle" [block]="block" />
         </div>
 
         <div class="editor-divider" *ngIf="block.type !== 'container'"></div>
@@ -242,88 +349,15 @@
         <!-- ── HERO (positional marker only) ── -->
         <div class="editor-field" *ngIf="block.type === 'hero'">
           <p class="system-note">
-            🌄 תוכן ה-Hero — כותרת, תמונה, טקסט — נערך בשלב "פרטי בסיס". הבלוק הזה קובע רק את המיקום שלו בדף — אפשר להזיז אותו ↑↓ או להכניס אותו לתוך מסגרת, כמו כל בלוק אחר.
+            <lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן ה-Hero — כותרת, תמונה, טקסט — נערך בשלב "פרטי בסיס". הבלוק הזה קובע רק את המיקום שלו בדף — אפשר להזיז אותו ↑↓ או להכניס אותו לתוך מסגרת, כמו כל בלוק אחר.
           </p>
         </div>
 
         <!-- ── RICH TEXT ── -->
-        <div class="editor-field" *ngIf="block.type === 'rich-text'">
-          <app-rich-text-editor
-            [ngModel]="asRichText(block.data).content"
-            (ngModelChange)="updateRichText(block.id, $event)"
-            placeholder="כתבו כאן...">
-          </app-rich-text-editor>
-          <div class="spacing-row" style="margin-top:10px">
-            <span class="spacing-label">מרווח שורות</span>
-            <input type="range" class="split-slider" min="1" max="3" step="0.1"
-              [value]="asRichText(block.data).lineHeight || 1.6"
-              (input)="updateRichTextLineHeight(block.id, +$any($event.target).value)">
-            <span class="spacing-val">{{ (asRichText(block.data).lineHeight || 1.6) | number:'1.1-1' }}</span>
-          </div>
-        </div>
+        <app-rich-text-block-editor *ngIf="block.type === 'rich-text'" [block]="block" />
 
         <!-- ── IMAGE ── -->
-        <div class="editor-field" *ngIf="block.type === 'image'">
-          <input #imgInput type="file" accept="image/*" hidden (change)="onImageFileSelected(block.id, $event)">
-
-          <div class="image-preview-box"
-            [class.image-preview-box--empty]="!asImage(block.data).url"
-            (click)="!asImage(block.data).url && imgInput.click()">
-            <img *ngIf="asImage(block.data).url" [src]="asImage(block.data).url" class="image-preview-img" alt="">
-            <div class="image-preview-empty" *ngIf="!asImage(block.data).url">
-              <span>🖼️</span><span>לחצו להעלאת תמונה</span>
-            </div>
-          </div>
-
-          <div class="image-actions" *ngIf="asImage(block.data).url">
-            <button class="editor-btn" type="button" (click)="imgInput.click()">החלף תמונה</button>
-            <button class="editor-btn editor-btn--danger" type="button" (click)="updateImageField(block.id, 'url', '')">הסר</button>
-          </div>
-
-          <div class="editor-row">
-            <label class="editor-label">כיתוב (רשות)</label>
-            <input class="editor-input" type="text"
-              [value]="asImage(block.data).caption || ''"
-              (input)="updateImageField(block.id, 'caption', $any($event.target).value)"
-              placeholder="תיאור התמונה...">
-          </div>
-
-          <div class="spacing-row" style="margin-top:10px">
-            <span class="spacing-label">רוחב התמונה</span>
-            <input type="range" class="split-slider" min="20" max="100" step="5"
-              [value]="asImage(block.data).widthPercent ?? 100"
-              (input)="updateImageWidth(block.id, +$any($event.target).value)">
-            <span>{{ asImage(block.data).widthPercent ?? 100 }}%</span>
-          </div>
-
-          <div class="editor-row" *ngIf="(asImage(block.data).widthPercent ?? 100) < 100">
-            <label class="editor-label">מיקום</label>
-            <div class="direction-toggle">
-              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'right'"
-                (click)="updateImageField(block.id, 'align', 'right')">ימין</button>
-              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'center'"
-                (click)="updateImageField(block.id, 'align', 'center')">מרכז</button>
-              <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'left'"
-                (click)="updateImageField(block.id, 'align', 'left')">שמאל</button>
-            </div>
-          </div>
-
-          <!-- Independent height — "רוחב התמונה" above still scales both
-               width AND height together (browser's natural aspect ratio,
-               unchanged). This lets the manager set an exact height on its
-               own; the image gets cropped (object-fit: cover) to fill it,
-               so width and height become two separate controls instead of
-               always moving together. See DECISIONS.md (2026-07-31). -->
-          <div class="spacing-row" style="margin-top:10px">
-            <span class="spacing-label">גובה התמונה</span>
-            <input type="range" class="split-slider" min="80" max="600" step="10"
-              [value]="asImage(block.data).heightPx || 240"
-              (input)="updateImageHeight(block.id, +$any($event.target).value)">
-            <span>{{ asImage(block.data).heightPx ? (asImage(block.data).heightPx + 'px') : 'אוטומטי' }}</span>
-          </div>
-          <button class="editor-btn" type="button" *ngIf="asImage(block.data).heightPx"
-            (click)="resetImageHeight(block.id)" style="margin-top:6px">↺ גובה אוטומטי (לפי התמונה)</button>
-        </div>
+        <app-image-block-editor *ngIf="block.type === 'image'" [block]="block" />
 
         <!-- ── VIDEO ── -->
         <div class="editor-field" *ngIf="block.type === 'video'">
@@ -345,7 +379,7 @@
               <div class="gallery-item-actions">
                 <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, -1)" [disabled]="i === 0">←</button>
                 <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, 1)"  [disabled]="i === asGallery(block.data).items.length - 1">→</button>
-                <button class="gallery-btn gallery-btn--danger" (click)="removeGalleryItem(block.id, i)">✕</button>
+                <button class="gallery-btn gallery-btn--danger" (click)="removeGalleryItem(block.id, i)" aria-label="הסרה"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
               </div>
               <input class="gallery-caption" type="text"
                 [value]="item.caption || ''"
@@ -366,7 +400,7 @@
               <button class="gallery-mode-btn"
                 [class.active]="asGallery(block.data).style !== 'grid'"
                 (click)="updateGalleryStyle(block.id, 'style', 'slider')">
-                ◀▶ סליידר
+                <app-icon name="slider" /> סליידר
               </button>
               <button class="gallery-mode-btn"
                 [class.active]="asGallery(block.data).style === 'grid'"
@@ -475,7 +509,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('cta-design')">
-              <span class="container-design-title">🎨 עיצוב הכפתור</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב הכפתור</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('cta-design')">
@@ -492,7 +526,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('cta-texts')">
-              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('cta-texts')">
@@ -526,7 +560,7 @@
              page. See DECISIONS.md (2026-07-30). -->
         <div class="container-design-section" *ngIf="block.type === 'container'">
           <div class="container-design-header" (click)="toggleSection('container-design-' + block.id)">
-            <span class="container-design-title">🎨 עיצוב</span>
+            <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
             <span class="section-chevron" [class.open]="!isSectionCollapsed('container-design-' + block.id)">›</span>
           </div>
 
@@ -694,7 +728,7 @@
             <div class="bg-image-preview"
               *ngIf="asContainer(block.data).backgroundImageUrl"
               [style.backgroundImage]="'url(' + asContainer(block.data).backgroundImageUrl + ')'">
-              <button class="bg-image-remove" (click)="updateContainerField(block.id, 'backgroundImageUrl', '')">✕</button>
+              <button class="bg-image-remove" (click)="updateContainerField(block.id, 'backgroundImageUrl', '')" aria-label="הסרת תמונת רקע"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
             </div>
             <button class="upload-area-btn" type="button" (click)="containerBgInput.click()">
               {{ asContainer(block.data).backgroundImageUrl ? 'החלף תמונת רקע' : '+ תמונת רקע / GIF' }}
@@ -775,12 +809,12 @@
                 (click)="updateTabsField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
               <button class="direction-btn"
                 [class.active]="asTabs(block.data).mobileLayout === 'accordion'"
-                (click)="updateTabsField(block.id, 'mobileLayout', 'accordion')">🗂️ פאנלים</button>
+                (click)="updateTabsField(block.id, 'mobileLayout', 'accordion')"><lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> פאנלים</button>
             </div>
           </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
-            🗂️ הפוך לפאנלים (נפתחים/נסגרים)
+            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הפוך לפאנלים (נפתחים/נסגרים)
           </button>
 
           <!-- Advanced tab colors/border — collapsed by default, same
@@ -788,7 +822,7 @@
                containers etc., keyed per-block. -->
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('tabs-advanced-' + block.id)">
-              <span class="container-design-title">🎨 מתקדם</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> מתקדם</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('tabs-advanced-' + block.id)">›</span>
             </div>
 
@@ -874,12 +908,12 @@
                 (click)="updateAccordionField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
               <button class="direction-btn"
                 [class.active]="asAccordion(block.data).mobileLayout === 'tabs'"
-                (click)="updateAccordionField(block.id, 'mobileLayout', 'tabs')">📑 טאבים</button>
+                (click)="updateAccordionField(block.id, 'mobileLayout', 'tabs')"><lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טאבים</button>
             </div>
           </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
-            📑 הפוך לטאבים
+            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הפוך לטאבים
           </button>
         </div>
 
@@ -891,7 +925,7 @@
             <span class="stats-mini-item"
               *ngFor="let item of sortedStatItems(asStats(block.data))"
               [class.stats-mini-item--hidden]="!item.visible">
-              {{ statIcons[item.key] }} {{ statLabels[item.key] }}
+              <lucide-icon [img]="statIcons[item.key]" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ statLabels[item.key] }}
             </span>
           </div>
 
@@ -951,7 +985,7 @@
                one heading instead of sitting loose in the config grid. -->
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('stats-design')">
-              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-design')">
@@ -992,7 +1026,7 @@
               </div>
 
               <p class="stats-contrast-warning" *ngIf="statsLowContrast(asStats(block.data))">
-                ⚠ צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
+                <lucide-icon [img]="ui.TriangleAlert" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
               </p>
 
               <div class="editor-row">
@@ -1014,7 +1048,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('stats-texts')">
-              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-texts')">
@@ -1045,7 +1079,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('stats-progress')">
-              <span class="container-design-title">⭕ טבעת ההתקדמות</span>
+              <span class="container-design-title"><app-icon name="ring" /> טבעת ההתקדמות</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-progress')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-progress')">
@@ -1068,7 +1102,7 @@
                 <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, 1)"  title="הזז שמאלה">→</button>
               </div>
               <label class="stats-item-label">
-                <span class="stats-item-icon">{{ statIcons[item.key] }}</span>
+                <span class="stats-item-icon"><lucide-icon [img]="statIcons[item.key]" [size]="16" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
                 <span class="stats-item-name">{{ statLabels[item.key] }}</span>
               </label>
               <input type="checkbox" class="stats-checkbox"
@@ -1155,7 +1189,7 @@
           </div>
 
           <div class="system-note">
-            <span>💡</span> סכומי התרומה נלקחים מהגדרות בשלב "הגדרות תרומה".
+            <lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> סכומי התרומה נלקחים מהגדרות בשלב "הגדרות תרומה".
           </div>
 
           <!-- Universal Local Styling Phase B1 (2026-10) -- "עיצוב": the
@@ -1169,7 +1203,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('donation-design')">
-              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donation-design')">
@@ -1236,7 +1270,7 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('donation-texts')">
-              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donation-texts')">
@@ -1284,12 +1318,12 @@
 
         <!-- SYSTEM: rewards/donors — auto -->
         <div class="system-note" *ngIf="['rewards','donors'].includes(block.type)">
-          <span>🔧</span> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
+          <lucide-icon [img]="ui.Wrench" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
         </div>
 
         <!-- SPONSORS — managed in step 6 -->
         <div class="system-note" *ngIf="block.type === 'sponsors'">
-          <span>🤝</span> החסויות מנוהלות בצעד 6 — חסויות
+          <lucide-icon [img]="ui.Handshake" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> החסויות מנוהלות בצעד 6 — חסויות
         </div>
 
         <!-- REWARDS — item content managed in step 4; placement + Section
@@ -1299,7 +1333,7 @@
              _OPTIONS in the .ts. -->
         <div class="editor-field" *ngIf="block.type === 'rewards'">
           <div class="system-note" style="margin-bottom:10px">
-            <span>🎁</span> תוכן התשורות מנוהל בצעד 4 — תשורות
+            <lucide-icon [img]="ui.Gift" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן התשורות מנוהל בצעד 4 — תשורות
           </div>
           <app-section-presentation-picker
             label="תצוגת התשורות"
@@ -1347,7 +1381,7 @@
         <div class="editor-field" *ngIf="block.type === 'rewards'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('rewards-advanced')">
-              <span class="container-design-title">🎨 עיצוב מתקדם</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב מתקדם</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('rewards-advanced')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('rewards-advanced')">
@@ -1389,7 +1423,7 @@
              Section Presentation live here (2026-10-04 fix, same reasoning
              as Rewards above). -->
         <div class="system-note" *ngIf="block.type === 'ambassadors'">
-          <span>⭐</span> השגרירים מנוהלים בצעד 7 — שגרירים
+          <lucide-icon [img]="ui.Star" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> השגרירים מנוהלים בצעד 7 — שגרירים
         </div>
         <div class="editor-field" *ngIf="block.type === 'ambassadors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
           <label class="editor-label">מיקום השגרירים</label>
@@ -1419,7 +1453,7 @@
         <div class="editor-field" *ngIf="block.type === 'ambassadors'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('ambassadors-design')">
-              <span class="container-design-title">🎨 עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-design')">
@@ -1447,7 +1481,7 @@
         <div class="editor-field" *ngIf="block.type === 'ambassadors'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('ambassadors-texts')">
-              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-texts')">
@@ -1509,7 +1543,7 @@
         <div class="editor-field" *ngIf="block.type === 'donors'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('donors-texts')">
-              <span class="container-design-title">🔤 טקסטים</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donors-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donors-texts')">
@@ -1555,7 +1589,7 @@
         </div>
         <div class="editor-field" *ngIf="block.type === 'updates'">
           <div class="system-note" style="margin-bottom:10px">
-            <span>📢</span> תוכן העדכונים מנוהל בצעד 8 — עדכונים
+            <lucide-icon [img]="ui.Megaphone" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן העדכונים מנוהל בצעד 8 — עדכונים
           </div>
           <app-section-presentation-picker
             label="תצוגת העדכונים"
@@ -1569,7 +1603,7 @@
 
         <!-- COMMENTS — public, unmoderated; posted directly by site visitors -->
         <div class="system-note" *ngIf="block.type === 'comments'">
-          <span>💬</span> כל מבקר באתר יכול להוסיף תגובה (שם + אימייל, ללא הרשמה). התגובות מוצגות כאן לפי סדר כרונולוגי.
+          <lucide-icon [img]="ui.MessageCircle" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> כל מבקר באתר יכול להוסיף תגובה (שם + אימייל, ללא הרשמה). התגובות מוצגות כאן לפי סדר כרונולוגי.
         </div>
 
         <!-- ── SPACER / DIVIDER ── -->
@@ -1601,35 +1635,35 @@
           <label class="editor-label">אילו אפשרויות שיתוף להציג</label>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'link')">
-            <span class="donation-toggle-text">🔗 העתקת קישור</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Link" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> העתקת קישור</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.link">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'email')">
-            <span class="donation-toggle-text">✉️ אימייל</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Mail" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> אימייל</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.email">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'x')">
-            <span class="donation-toggle-text">𝕏 X (טוויטר)</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Twitter" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> X (טוויטר)</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.x">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'facebook')">
-            <span class="donation-toggle-text">📘 Facebook</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Facebook" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> Facebook</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.facebook">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'whatsapp')">
-            <span class="donation-toggle-text">💬 WhatsApp</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.MessageCircle" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> WhatsApp</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.whatsapp">
               <span class="toggle-pill-dot"></span>
             </span>
@@ -1702,100 +1736,19 @@
           </div>
         </div>
 
-      </div>
+</ng-template>
 
-      <!-- ── TABS CHILDREN — each tab is a real 'container' block, so it
-           already gets full label-editing/reorder/remove/nested-content-
-           editing for free via blockItem, exactly like a container's own
-           children. Only "+ הוסף טאב" is bespoke (always creates a
-           container, not an arbitrary block-type picker). ── -->
-      <div class="container-children-tree" *ngIf="block.type === 'tabs' && getContainerViewState(block.id) !== 'closed'">
-        <div class="container-tree-header">
-          <span class="container-tree-label">
-            📑 {{ containerChildren(block, draft.blocks).length }} טאבים
-          </span>
-          <button class="container-add-btn" type="button" (click)="addTab(block.id, draft.blocks)">
-            + הוסף טאב
-          </button>
-        </div>
-
-        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyTabsTpl">
-          <ng-container *ngFor="let tab of containerChildren(block, draft.blocks); trackBy: trackById">
-            <ng-container *ngTemplateOutlet="blockItem; context: { block: tab, parentBlock: block }">
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <ng-template #emptyTabsTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף טאב" כדי להתחיל</div>
-        </ng-template>
-      </div>
-
-      <!-- ── ACCORDION CHILDREN — same reasoning as TABS CHILDREN above,
-           each panel is a real 'container' block. ── -->
-      <div class="container-children-tree" *ngIf="block.type === 'accordion' && getContainerViewState(block.id) !== 'closed'">
-        <div class="container-tree-header">
-          <span class="container-tree-label">
-            🗂️ {{ containerChildren(block, draft.blocks).length }} פאנלים
-          </span>
-          <button class="container-add-btn" type="button" (click)="addPanel(block.id, draft.blocks)">
-            + הוסף פאנל
-          </button>
-        </div>
-
-        <ng-container *ngIf="containerChildren(block, draft.blocks).length > 0; else emptyAccordionTpl">
-          <ng-container *ngFor="let panel of containerChildren(block, draft.blocks); trackBy: trackById">
-            <ng-container *ngTemplateOutlet="blockItem; context: { block: panel, parentBlock: block }">
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <ng-template #emptyAccordionTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף פאנל" כדי להתחיל</div>
-        </ng-template>
-      </div>
-
+<!-- Studio design mode (studioDesign): the campaign design area only. -->
+@if (studioDesign && !studioBlockId) {
+  @if (draft$ | async; as draft) {
+    <div class="builder-zone--studio">
+      <ng-container *ngTemplateOutlet="designBody; context: { draft: draft }"></ng-container>
     </div>
-  </ng-template>
-  <!-- ════ END BLOCK TREE TEMPLATE ════ -->
+  }
+}
 
-  <!-- ══ ZONE 2 — THE PAGE ITSELF: blocks already ON the page, in the exact
-       order they'll render. Starts OPEN by default (seeded in
-       expandedSections, see ngOnInit) — unlike Zone 1/Zone 3, this is the
-       main thing a manager is here to look at. See DECISIONS.md
-       (2026-07-31). ══ -->
-  <div class="builder-zone builder-zone--content">
-    <div class="builder-zone-header" (click)="toggleSection('zone-content')">
-      <span class="section-icon-box section-icon-box--content">📄</span>
-      <span class="builder-zone-title">תוכן הדף</span>
-      <span class="builder-zone-count" *ngIf="topLevelBlocks(draft.blocks).length">{{ topLevelBlocks(draft.blocks).length }} בלוקים</span>
-      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-content')">›</span>
-    </div>
-    <ng-container *ngIf="!isSectionCollapsed('zone-content')">
-      <div class="blocks-list" *ngIf="topLevelBlocks(draft.blocks).length > 0; else zoneContentEmptyTpl">
-        <ng-container *ngFor="let block of topLevelBlocks(draft.blocks); trackBy: trackById">
-          <ng-container *ngTemplateOutlet="blockItem; context: { block: block, parentBlock: null }">
-          </ng-container>
-        </ng-container>
-      </div>
-      <ng-template #zoneContentEmptyTpl>
-        <p class="zone-content-empty">עדיין אין בלוקים בדף — הוסיפו את הראשון מהחנות שמעל ⬆️</p>
-      </ng-template>
-    </ng-container>
-  </div>
-
-  <!-- ══ ZONE 3 — CAMPAIGN DESIGN (renamed 2026-10-01 from "עיצוב כללי",
-       UX reorg): Campaign Style, Opening structure, Colors and Logo as one
-       coherent "how does my campaign look" area, plus secondary site-wide
-       settings (Hero text position, page background, footer) that aren't
-       part of that primary 4-part decision. Closed by default, same
-       reasoning as Zone 1 — opt-in, not the main thing a manager looks at
-       on every visit. ══ -->
-  <div class="builder-zone builder-zone--design">
-    <div class="builder-zone-header" (click)="toggleSection('zone-design')">
-      <span class="section-icon-box section-icon-box--design">🎨</span>
-      <span class="builder-zone-title">עיצוב הקמפיין</span>
-      <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-design')">›</span>
-    </div>
-    <ng-container *ngIf="!isSectionCollapsed('zone-design')">
+<!-- Campaign design (Zone 3) content, shared by Step 9 and the Studio. -->
+<ng-template #designBody let-draft="draft">
 
   <!-- ══ CAMPAIGN DESIGN REORGANIZATION (2026-10-01, UX only) ══
        Pure presentation reorganization -- the Style × Opening Composition
@@ -1813,7 +1766,7 @@
        surface/Opening default -- far more than "colors" alone). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('design-style')">
-      <span class="campaign-bg-title">✨ סגנון עיצובי</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Sparkles" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> סגנון עיצובי</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('design-style')">›</span>
     </div>
     <ng-container *ngIf="!isSectionCollapsed('design-style')">
@@ -1833,7 +1786,7 @@
        OpeningComposition values/resolver/state untouched). -->
   <div class="campaign-theme-section" *ngIf="isCampaign">
     <div class="campaign-bg-header" (click)="toggleSection('opening-composition')">
-      <span class="campaign-bg-title">🧭 מבנה הפתיחה</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Compass" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> מבנה הפתיחה</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('opening-composition')">›</span>
     </div>
 
@@ -1864,7 +1817,7 @@
        the same controls/bindings as before). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('theme-colors')">
-      <span class="campaign-bg-title">🎨 צבעים</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> צבעים</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('theme-colors')">›</span>
     </div>
 
@@ -2015,7 +1968,7 @@
        Hero itself. -->
   <div class="campaign-theme-section" *ngIf="isCampaign">
     <div class="campaign-bg-header" (click)="toggleSection('campaign-logo')">
-      <span class="campaign-bg-title">🖼️ לוגו</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לוגו</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('campaign-logo')">›</span>
     </div>
 
@@ -2033,7 +1986,7 @@
           <div class="logo-source-row">
             <div class="logo-source-preview">
               <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-              <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl">🏢</span>
+              <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl"><lucide-icon [img]="ui.Building2" [size]="20" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
             </div>
             <input #campaignLogoInput type="file" accept="image/*" (change)="onCampaignLogoChange($event)" hidden>
             <button class="logo-upload-btn" type="button" [disabled]="isUploadingLogo" (click)="campaignLogoInput.click()">
@@ -2109,7 +2062,7 @@
        EVERY structured composition, so only those are conditioned here. -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
-      <span class="campaign-bg-title">📝 {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
     </div>
 
@@ -2171,7 +2124,7 @@
   <!-- CAMPAIGN BACKGROUND -->
   <div class="campaign-bg-section">
     <div class="campaign-bg-header" (click)="toggleSection('background')">
-      <span class="campaign-bg-title">🖼️ {{ isCampaign ? 'רקע הקמפיין' : 'רקע הדף' }}</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? 'רקע הקמפיין' : 'רקע הדף' }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('background')">›</span>
     </div>
 
@@ -2204,7 +2157,7 @@
       <div class="bg-image-preview"
         *ngIf="draft.layout.backgroundImageUrl"
         [style.backgroundImage]="'url(' + draft.layout.backgroundImageUrl + ')'">
-        <button class="bg-image-remove" (click)="updateLayoutBg('backgroundImageUrl', '', draft)">✕</button>
+        <button class="bg-image-remove" (click)="updateLayoutBg('backgroundImageUrl', '', draft)" aria-label="הסרת תמונת רקע"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
       </div>
       <button class="upload-area-btn" type="button" (click)="campaignBgInput.click()">
         {{ draft.layout.backgroundImageUrl ? 'החלף תמונת רקע' : '+ הוסף תמונת רקע / GIF' }}
@@ -2312,7 +2265,4 @@
     </ng-container>
   </div>
   <!-- ══ END ZONE 3 ══ -->
-  </ng-container>
-  </div>
-
-</div>
+</ng-template>

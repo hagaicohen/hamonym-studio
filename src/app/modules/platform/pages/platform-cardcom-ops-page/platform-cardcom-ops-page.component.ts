@@ -17,7 +17,8 @@ import {
 } from '../../utils/ops-labels';
 import { environment } from '../../../../../environments/environment';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // תאריך is the anchor column (always shown, not in this list) -- same
 // convention as platform-organizations-page's own COLUMNS (שם העמותה is
 // the one always-visible identifying column there too).
@@ -184,7 +185,7 @@ const DONATION_STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })

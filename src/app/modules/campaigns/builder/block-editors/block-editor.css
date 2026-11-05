@@ -1,0 +1,88 @@
+/* Block editor controls. Copied from campaign-page-builder-step.component.css so
+   the extracted editors look identical in Step 9 and in the Studio. */
+.editor-field { display: flex; flex-direction: column; gap: 6px; }
+.editor-row   { display: flex; flex-direction: column; gap: 5px; }
+.editor-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.editor-input {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.editor-input:focus { border-color: var(--hm-control-focus); }
+.image-preview-box {
+  width: 100%;
+  min-height: 160px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.image-preview-box--empty:hover { border-color: #7c3aed; background: #faf5ff; }
+.image-preview-img { width: 100%; height: 100%; object-fit: cover; min-height: 160px; display: block; }
+.image-preview-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #94a3b8; font-size: 13px; }
+.image-preview-empty span:first-child { font-size: 32px; }
+
+.image-actions { display: flex; gap: 8px; }
+.editor-btn {
+  padding: 7px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+  color: #374151;
+}
+.editor-btn:hover { border-color: #7c3aed; color: #7c3aed; }
+.editor-btn--danger { color: #ef4444; }
+.editor-btn--danger:hover { border-color: #ef4444; background: #fff5f5; }
+.split-slider { width: 100%; accent-color: #7c3aed; }
+.spacing-row { display: flex; align-items: center; gap: 10px; }
+.spacing-label { font-size: 12px; font-weight: 600; color: #64748b; min-width: 44px; }
+.spacing-val { font-size: 11px; color: #94a3b8; min-width: 36px; text-align: left; }
+.direction-toggle {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.direction-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.18s;
+}
+.direction-btn:hover { color: #475569; }
+.direction-btn.active {
+  background: #fff;
+  color: #7c3aed;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}

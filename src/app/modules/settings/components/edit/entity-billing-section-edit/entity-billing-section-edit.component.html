@@ -291,7 +291,7 @@
       <div class="masav-subtitle">סטטוס ההרשאה</div>
       <div class="masav-status" [class.masav-status-ready]="masavConfig?.authorized" [class.masav-status-blocked]="!masavConfig?.authorized">
         <span class="masav-status-label">
-          {{ masavConfig?.authorized ? '🟢 ההרשאה אושרה' : '🟡 ' + masavPendingStatusLabel }}
+          <app-icon name="dot" [tone]="masavConfig?.authorized ? 'success' : 'warning'" /> {{ masavConfig?.authorized ? 'ההרשאה אושרה' : masavPendingStatusLabel }}
         </span>
         <span class="masav-status-sublabel">
           {{ masavConfig?.authorized

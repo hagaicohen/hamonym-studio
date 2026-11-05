@@ -14,8 +14,7 @@ import { CampaignUpdatesStepComponent } from '../../../builder/steps/campaign-up
 import { CampaignPageBuilderStepComponent } from '../../../builder/steps/campaign-page-builder-step/campaign-page-builder-step.component';
 import { CampaignPublishStepComponent } from '../../../builder/steps/campaign-publish-step/campaign-publish-step.component';
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
-const TOTAL_STEPS = 10;
-const REGISTRATION_STEP = 5;
+import { TOTAL_STEPS, disabledWizardSteps } from '../../../builder/wizard-steps';
 
 // Every content-management step now has a real, working equivalent in the
 // Campaign Workspace (Settings/Donation/Rewards/Registration/Sponsors/
@@ -40,7 +39,6 @@ const REGISTRATION_STEP = 5;
 // cannot change post-publish (slug) enforces that at the FIELD level via
 // isSlugLocked (readonly input, campaign-basic-step.component.ts), not by
 // disabling the whole step — exactly the granularity this decision asks for.
-const PUBLISHED_GATED_STEPS = [3, 4, 5, 6, 7, 8];
 
 // layout.pageFormat === 'minimal' (see campaign-studio-state.service.ts) —
 // Basic/Details (1), Type/Goal (2), Donation amounts (3) and Publish (10)
@@ -60,7 +58,6 @@ const PUBLISHED_GATED_STEPS = [3, 4, 5, 6, 7, 8];
 // disabledSteps mechanism as isOngoing/isPublished below) never touches the
 // underlying draft data — switching pageFormat back to 'full' later just
 // un-gates these steps again with whatever was already there.
-const MINIMAL_FORMAT_GATED_STEPS = [4, 5, 6, 7, 8, 9];
 
 @Component({
   selector: 'app-campaign-editor',
@@ -142,11 +139,7 @@ export class CampaignEditorComponent implements OnInit {
   }
 
   get disabledSteps(): number[] {
-    const gated = new Set<number>();
-    if (this.isOngoing) gated.add(REGISTRATION_STEP);
-    if (this.isMinimalFormat) MINIMAL_FORMAT_GATED_STEPS.forEach(s => gated.add(s));
-    if (this.isPublished) PUBLISHED_GATED_STEPS.forEach(s => gated.add(s));
-    return [...gated];
+    return disabledWizardSteps(this.state.draft);
   }
 
   private nearestEnabledStep(from: number, direction: 1 | -1): number {

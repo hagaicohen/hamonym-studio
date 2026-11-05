@@ -10,7 +10,7 @@
     <button class="plm-tab" [class.plm-tab--active]="mode === 'create'" type="button" (click)="mode = 'create'">יצירת שותף חדש</button>
     <button class="plm-tab" [class.plm-tab--active]="mode === 'import'" [class.plm-tab--disabled]="!aiEnabled"
       type="button" [disabled]="!aiEnabled" [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : ''"
-      (click)="mode = 'import'">ייבוא מאתר 🤖</button>
+      (click)="mode = 'import'">ייבוא מאתר <app-icon name="bot" /></button>
   </div>
 
   <div class="plm-body">
@@ -21,7 +21,7 @@
       <div class="plm-results" *ngIf="!searching">
         <div class="plm-result-row" *ngFor="let p of results">
           <img *ngIf="p.logo_url" [src]="p.logo_url" class="plm-result-logo" alt="">
-          <div class="plm-result-logo plm-result-logo--empty" *ngIf="!p.logo_url">🏢</div>
+          <div class="plm-result-logo plm-result-logo--empty" *ngIf="!p.logo_url"><app-icon name="building" /></div>
           <div class="plm-result-name">{{ p.display_name }}</div>
           <button class="plm-select-btn" type="button" [disabled]="linking" (click)="selectExisting(p)">בחירה</button>
         </div>
@@ -60,12 +60,12 @@
         <div class="plm-signals" *ngIf="extractResult">
           <p class="plm-signals-title">מצאנו בדף "{{ extractResult.pageTitle }}":</p>
           <div class="plm-signals-grid">
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.businessName">{{ extractResult.foundSignals.businessName ? '✔' : '⚠' }} שם העסק</span>
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.gallery">{{ extractResult.foundSignals.gallery ? '✔' : '⚠' }} גלריית תמונות</span>
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.contact">{{ extractResult.foundSignals.contact ? '✔' : '⚠' }} פרטי קשר</span>
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.address">{{ extractResult.foundSignals.address ? '✔' : '⚠' }} כתובת</span>
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.openingHours">{{ extractResult.foundSignals.openingHours ? '✔' : '⚠' }} שעות פתיחה</span>
-            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.offerLanguage">{{ extractResult.foundSignals.offerLanguage ? '✔' : '⚠' }} הטבה לקמפיין</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.businessName"><app-icon [name]="extractResult.foundSignals.businessName ? 'check' : 'alert'" /> שם העסק</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.gallery"><app-icon [name]="extractResult.foundSignals.gallery ? 'check' : 'alert'" /> גלריית תמונות</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.contact"><app-icon [name]="extractResult.foundSignals.contact ? 'check' : 'alert'" /> פרטי קשר</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.address"><app-icon [name]="extractResult.foundSignals.address ? 'check' : 'alert'" /> כתובת</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.openingHours"><app-icon [name]="extractResult.foundSignals.openingHours ? 'check' : 'alert'" /> שעות פתיחה</span>
+            <span class="plm-signal" [class.plm-signal--ok]="extractResult.foundSignals.offerLanguage"><app-icon [name]="extractResult.foundSignals.offerLanguage ? 'check' : 'alert'" /> הטבה לקמפיין</span>
           </div>
           <button class="plm-create-btn" type="button" [disabled]="classifying" (click)="continueToClassify()">
             {{ classifying ? 'מסווגים תוכן...' : 'המשך לסיווג' }}
@@ -90,7 +90,7 @@
         <div class="plm-review-section">
           <p class="plm-review-title">פרופיל השותף (יופיע בכל הקמפיינים)</p>
           <div class="plm-review-item plm-review-item--auto" *ngFor="let e of profileAuto">{{ e.value }}</div>
-          <div class="plm-review-item plm-review-item--review" *ngFor="let e of profileReview">⚠ לבדיקה: {{ e.value }}</div>
+          <div class="plm-review-item plm-review-item--review" *ngFor="let e of profileReview"><app-icon name="alert" /> לבדיקה: {{ e.value }}</div>
           <ng-container *ngIf="profileSuggestions.length">
             <p class="plm-suggestions-title">הצעות נוספות:</p>
             <div class="plm-suggestion-row" *ngFor="let e of profileSuggestions">
@@ -105,7 +105,7 @@
         <div class="plm-review-section">
           <p class="plm-review-title">השתתפות בקמפיין הזה</p>
           <div class="plm-review-item plm-review-item--auto" *ngFor="let e of participationAuto">{{ e.value }}</div>
-          <div class="plm-review-item plm-review-item--review" *ngFor="let e of participationReview">⚠ לבדיקה: {{ e.value }}</div>
+          <div class="plm-review-item plm-review-item--review" *ngFor="let e of participationReview"><app-icon name="alert" /> לבדיקה: {{ e.value }}</div>
           <ng-container *ngIf="participationSuggestions.length">
             <p class="plm-suggestions-title">הצעות נוספות:</p>
             <div class="plm-suggestion-row" *ngFor="let e of participationSuggestions">
@@ -124,6 +124,6 @@
       </ng-container>
     </ng-container>
 
-    <p class="plm-error" *ngIf="error">⚠ {{ error }}</p>
+    <p class="plm-error" *ngIf="error"><app-icon name="alert" /> {{ error }}</p>
   </div>
 </div>

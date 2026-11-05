@@ -27,7 +27,8 @@ import {
 } from '../../services/collection-ops.service';
 import { EntityComboboxComponent, ComboboxEntity } from '../../components/entity-combobox/entity-combobox.component';
 import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 type Tab = 'overview' | 'history' | 'reports';
 type ReportPeriodMode = 'period' | 'range' | 'all';
 
@@ -41,7 +42,7 @@ type ReportPeriodMode = 'period' | 'range' | 'all';
 @Component({
   selector: 'app-platform-collection-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
   templateUrl: './platform-collection-ops-page.component.html',
   styleUrl: './platform-collection-ops-page.component.css',
 })

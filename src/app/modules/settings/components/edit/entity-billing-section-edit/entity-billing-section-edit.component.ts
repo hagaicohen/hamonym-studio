@@ -44,6 +44,7 @@ import {
 } from '../../../../../shared/constants/masav.constants';
 
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../../shared/constants/israeli-banks.constants';
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 
 type BillingMethod = 'credit-card' | 'masav';
 
@@ -52,7 +53,7 @@ type BillingMethod = 'credit-card' | 'masav';
 
   standalone: true,
 
-  imports: [
+  imports: [HmIconComponent, 
     CommonModule,
     FormsModule,
     LucideAngularModule,

@@ -30,7 +30,8 @@ import {
   jobArea as sharedJobArea,
   PROVIDER_FINDING_TYPES,
 } from '../../utils/ops-labels';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Internal tab keys unchanged from before this pass ('entities' is the only
 // new one, for "הגדרות עמותות") -- only the operator-facing LABELS change
 // (see the template): "periods" reads "החודש", "statements" reads "כל
@@ -188,7 +189,7 @@ const HE_MONTH_NAMES = [
 @Component({
   selector: 'app-platform-billing-ops-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent, ColumnPickerComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterModule, BillingEntitySetupComponent, ColumnPickerComponent],
   templateUrl: './platform-billing-ops-page.component.html',
   styleUrl: './platform-billing-ops-page.component.css',
 })

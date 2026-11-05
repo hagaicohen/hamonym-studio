@@ -5,7 +5,8 @@ import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
 import { ReportChartComponent, ReportChartDataset } from '../../../../shared/report-chart/report-chart.component';
-
+
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 const CHANNEL_COLORS = ['#583cd6', '#1baf7a', '#eda100', '#008300', '#e34948', '#e87ba4', '#eb6834', '#2a78d6'];
 
 interface Channel { channel: string; count: number; total: number; }
@@ -20,7 +21,7 @@ interface Kpi {
 @Component({
   selector: 'app-marketing-report',
   standalone: true,
-  imports: [CommonModule, ReportChartComponent],
+  imports: [HmIconComponent, CommonModule, ReportChartComponent],
   templateUrl: './marketing-report.component.html',
   styleUrls: ['./marketing-report.component.css', '../../../../shared/reports-shared.css'],
 })

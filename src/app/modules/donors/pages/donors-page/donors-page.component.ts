@@ -9,7 +9,8 @@ import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Kpi {
   donorCount:  number;
   totalRaised: number;
@@ -45,7 +46,7 @@ const COLUMNS_STORAGE_KEY = 'donors-hidden-columns';
 @Component({
   selector: 'app-donors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, EmptyStateComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, EmptyStateComponent],
   templateUrl: './donors-page.component.html',
   styleUrl: './donors-page.component.css',
 })

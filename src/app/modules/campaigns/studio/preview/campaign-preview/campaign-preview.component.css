@@ -1185,6 +1185,10 @@
      other columns and throw off the equal spacing between icons. */
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
+  /* Narrow columns (a sidebar rail): wrap onto more rows instead of
+     squeezing every box until its value and date are cut off. */
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  grid-auto-flow: row;
   border-top: 1px solid var(--line, #e2e8f0);
   margin-top: auto;
   direction: ltr

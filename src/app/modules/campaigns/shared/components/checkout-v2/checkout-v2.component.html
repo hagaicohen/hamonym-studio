@@ -136,7 +136,7 @@
                   [value]="customInstallmentsInput" (input)="onCustomInstallmentsInput($event)">
               </div>
             </div>
-            <p class="cv2-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
+            <p class="cv2-installments-hint"><app-icon name="lock" /> ללא תפיסת מסגרת לכל התקופה</p>
           </div>
         </ng-template>
       </ng-container>
@@ -144,7 +144,7 @@
       <!-- ── STEP 2 — פרטים אישיים ── -->
       <ng-container *ngIf="step === 2">
         <div class="cv2-referral-chip" *ngIf="ambassador">
-          <span class="cv2-referral-icon">🤝</span>
+          <span class="cv2-referral-icon"><app-icon name="handshake" /></span>
           <span>תרמתם דרך <strong>{{ ambassador.fullName }}</strong></span>
         </div>
 
@@ -289,11 +289,11 @@
              once the backend itself confirmed 'paid' — see paymentState. -->
         <ng-template #cv2PaidBlock>
           <div class="cv2-success">
-            <div class="cv2-success-icon">❤️</div>
+            <div class="cv2-success-icon"><app-icon name="heart" /></div>
             <h2 class="cv2-success-title">תודה רבה!</h2>
             <p class="cv2-success-text">{{ successMessage }}</p>
             <a class="cv2-success-receipt-link" *ngIf="receiptId" [routerLink]="'/receipts/' + receiptId">
-              🧾 צפייה בקבלה
+              <app-icon name="receipt" /> צפייה בקבלה
             </a>
             <p class="cv2-success-receipt-note" *ngIf="!receiptId">הקבלה תישלח אליך למייל.</p>
           </div>
@@ -365,7 +365,7 @@
       </div>
 
       <div class="cv2-footer">
-        <p class="cv2-trust-line">🔒 הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong></p>
+        <p class="cv2-trust-line"><app-icon name="lock" /> הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong></p>
       </div>
     </div>
 

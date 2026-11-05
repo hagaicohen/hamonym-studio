@@ -27,6 +27,12 @@
         *ngFor="let t of templates"
         [class.tp-card--hovered]="hoveredId === t.id"
         [style.--accent]="selectedPalette.base"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="'בחירת עיצוב ' + t.name"
+        (click)="select(t)"
+        (keydown.enter)="select(t)"
+        (keydown.space)="$event.preventDefault(); select(t)"
         (mouseenter)="hoveredId = t.id"
         (mouseleave)="hoveredId = null">
 
@@ -51,9 +57,7 @@
         <div class="tp-card-body">
           <div class="tp-card-name">{{ t.name }}</div>
           <div class="tp-card-desc">{{ t.description }}</div>
-          <button class="tp-btn" (click)="select(t)">
-            בחרו עיצוב זה
-          </button>
+          <span class="tp-btn" aria-hidden="true">בחרו עיצוב זה</span>
         </div>
 
       </div>

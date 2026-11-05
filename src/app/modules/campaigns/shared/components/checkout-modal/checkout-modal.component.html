@@ -107,7 +107,7 @@
       </ng-container>
 
       <div class="summary-secure-note">
-        <span class="secure-icon">🔒</span>
+        <span class="secure-icon"><app-icon name="lock" /></span>
         תשלום מאובטח ומוצפן
       </div>
     </div>
@@ -151,7 +151,7 @@
            regardless, see onSubmit(); this just makes that visible to the
            donor, matching the pattern of showing who referred them). -->
       <div class="referral-chip" *ngIf="ambassador">
-        <span class="referral-icon">🤝</span>
+        <span class="referral-icon"><app-icon name="handshake" /></span>
         <span>תרמתם דרך <strong>{{ ambassador.fullName }}</strong></span>
       </div>
 
@@ -212,7 +212,7 @@
             <button type="button" class="add-participant-btn" (click)="addParticipant()">+ הוסף משתתף</button>
 
             <div class="participants-footer-actions">
-              <button type="button" class="rf-btn-clear" (click)="clearForm()">🗑 נקה טופס</button>
+              <button type="button" class="rf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה טופס</button>
               <button type="button" class="rf-btn-clear" (click)="close()">✕ סגור</button>
             </div>
           </div>
@@ -325,7 +325,7 @@
           <div class="api-error" *ngIf="errorMsg">{{ errorMsg }}</div>
           <button class="pay-btn" type="submit" [disabled]="loading">
             <span class="pay-btn-inner" [class.pay-btn-inner--hidden]="loading">
-              <span class="pay-lock">🔒</span>
+              <span class="pay-lock"><app-icon name="lock" /></span>
               מעבר לתשלום מאובטח — {{ payButtonLabel }}
             </span>
             <span class="pay-spinner" *ngIf="loading"></span>

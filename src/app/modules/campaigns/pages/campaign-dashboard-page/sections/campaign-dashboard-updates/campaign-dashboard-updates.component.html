@@ -1,6 +1,6 @@
 <div class="cdu-panel">
   <div class="cdu-header">
-    <span class="cdu-title">📰 עדכונים</span>
+    <span class="cdu-title"><app-icon name="megaphone" /> עדכונים</span>
     <button type="button" class="cdu-add-btn" *ngIf="!loading && !loadError" (click)="openComposer()">+ הוסף עדכון חדש</button>
   </div>
 
@@ -60,7 +60,7 @@
 
           <div class="cdu-composer-actions">
             <input id="cdu-image-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
-            <label for="cdu-image-input" class="cdu-photo-btn">{{ isUploadingImage ? '⏳ מעלה…' : '📷 הוסף תמונה' }}</label>
+            <label for="cdu-image-input" class="cdu-photo-btn"><app-icon [name]="isUploadingImage ? 'hourglass' : 'camera'" /> {{ isUploadingImage ? 'מעלה…' : 'הוסף תמונה' }}</label>
 
             <div class="cdu-composer-buttons">
               <button type="button" class="cdu-cancel-btn" (click)="cancelEdit()">ביטול</button>
@@ -75,7 +75,7 @@
         <!-- Live preview — same card markup as the real feed, always
              expanded and in sync with the composer while typing. -->
         <div class="cdu-preview-section" *ngIf="hasPreviewContent">
-          <span class="cdu-preview-label">👁 תצוגה מקדימה</span>
+          <span class="cdu-preview-label"><app-icon name="eye" /> תצוגה מקדימה</span>
           <ng-container *ngTemplateOutlet="cardTpl; context: { u: previewUpdate, preview: true, expanded: true }"></ng-container>
         </div>
       </div>
@@ -92,13 +92,13 @@
         <div class="cdu-card-media" *ngIf="u.mediaUrl">
           <img class="cdu-card-image" [src]="u.mediaUrl" alt="">
           <span class="cdu-badge cdu-badge--floating" *ngIf="!preview" [class.cdu-badge--draft]="!isPublished(u)">
-            {{ isPublished(u) ? '✔ פורסם' : '✎ טיוטה' }}
+            <app-icon [name]="isPublished(u) ? 'check' : 'pencil-line'" /> {{ isPublished(u) ? 'פורסם' : 'טיוטה' }}
           </span>
         </div>
         <div class="cdu-card-body">
           <div class="cdu-card-top">
             <span class="cdu-badge" *ngIf="!preview && !u.mediaUrl" [class.cdu-badge--draft]="!isPublished(u)">
-              {{ isPublished(u) ? '✔ פורסם' : '✎ טיוטה' }}
+              <app-icon [name]="isPublished(u) ? 'check' : 'pencil-line'" /> {{ isPublished(u) ? 'פורסם' : 'טיוטה' }}
             </span>
             <span class="cdu-card-date">{{ formatDate(u.date) }}</span>
             <span class="cdu-card-chevron" *ngIf="!preview">{{ expanded ? '▲' : '▼' }}</span>
@@ -107,12 +107,12 @@
           <ng-container *ngIf="expanded">
             <div class="cdu-card-desc" *ngIf="u.description" [innerHTML]="safeHtml(u.description)"></div>
             <div class="cdu-card-actions" *ngIf="!preview" (click)="$event.stopPropagation()">
-              <button type="button" class="cdu-icon-btn" (click)="edit(u)" title="עריכה">✏️</button>
+              <button type="button" class="cdu-icon-btn" (click)="edit(u)" title="עריכה"><app-icon name="pencil" /></button>
               <button type="button" class="cdu-icon-btn" (click)="togglePublish(u)"
                 [title]="isPublished(u) ? 'הסתרה מחדש' : 'פרסום'">
-                {{ isPublished(u) ? '📥' : '📤' }}
+                <app-icon [name]="isPublished(u) ? 'eye-off' : 'send'" />
               </button>
-              <button type="button" class="cdu-icon-btn cdu-icon-btn--danger" (click)="delete(u.id)" title="מחיקה">🗑</button>
+              <button type="button" class="cdu-icon-btn cdu-icon-btn--danger" (click)="delete(u.id)" title="מחיקה"><app-icon name="trash" /></button>
             </div>
           </ng-container>
         </div>

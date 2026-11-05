@@ -4,11 +4,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { DonationService, Receipt } from '../../services/donation.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-receipt-view',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './receipt-view.component.html',
   styleUrl: './receipt-view.component.css',
 })

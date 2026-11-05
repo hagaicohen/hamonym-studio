@@ -6,6 +6,7 @@ import {
 } from '../../../../campaigns/services/campaign-studio-state.service';
 import { getPreset } from '../../presets/campaign-presets';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Registration Options step — a race/event participant category or price
 // tier (e.g. "10 ק"מ VIP", "תורם כבוד - מבוגר"). Deliberately separate from
 // the Offerings step (gifts) and not a Page Builder block — Registration is
@@ -15,7 +16,7 @@ import { getPreset } from '../../presets/campaign-presets';
 @Component({
   selector: 'app-campaign-registration-step',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './campaign-registration-step.component.html',
   styleUrl: './campaign-registration-step.component.css',
 })

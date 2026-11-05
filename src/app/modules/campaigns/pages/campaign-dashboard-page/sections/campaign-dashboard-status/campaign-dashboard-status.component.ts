@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { CampaignDraft, CampaignStatus } from '../../../../services/campaign-studio-state.service';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 const STATUS_LABELS: Record<CampaignStatus, string> = {
   draft: 'טיוטה', published: 'פעיל', paused: 'מושהה', ended: 'הסתיים',
 };
@@ -17,7 +18,7 @@ const STATUS_LABELS: Record<CampaignStatus, string> = {
 @Component({
   selector: 'app-campaign-dashboard-status',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './campaign-dashboard-status.component.html',
   styleUrl: './campaign-dashboard-status.component.css',
 })

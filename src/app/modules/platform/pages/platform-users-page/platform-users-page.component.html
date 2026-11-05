@@ -37,7 +37,7 @@
         [class.active]="activeChip === chip.key"
         [attr.aria-pressed]="activeChip === chip.key" (click)="selectChip(chip.key)"
       >
-        <span class="plat-chip-dot">{{ chip.dot }}</span>
+        <span class="plat-chip-dot"><app-icon [name]="chip.icon" [tone]="chip.tone" /></span>
         {{ chip.label }}
       </button>
     } }

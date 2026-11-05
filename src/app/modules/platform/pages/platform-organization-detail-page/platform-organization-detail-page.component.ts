@@ -11,7 +11,8 @@ import { APPROVAL_REASON_TAGS } from '../../../../shared/config/approval-reason-
 import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
 import { israelDate, shekels } from '../../utils/admin-display';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 const NOTE_REQUIRED_ACTIONS = new Set(['reject', 'requestChanges', 'suspend']);
 
 type Tab = 'overview' | 'campaigns' | 'ambassadors' | 'donations' | 'users' | 'audit';
@@ -52,7 +53,7 @@ const ACTION_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-organization-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AdminDetailsDrawerComponent, OrganizationChecklistComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, AdminDetailsDrawerComponent, OrganizationChecklistComponent],
   templateUrl: './platform-organization-detail-page.component.html',
   styleUrl: './platform-organization-detail-page.component.css',
 })
@@ -227,11 +228,11 @@ export class PlatformOrganizationDetailPageComponent implements OnInit {
   get timeline(): TimelineItem[] {
     if (!this.entity) return [];
     const items: TimelineItem[] = [
-      { id: `entity:${this.entity.id}`, icon: '🏗️', label: 'העמותה נוצרה', timestamp: this.entity.created_at },
-      ...this.campaigns.map((c) => ({ id: `campaign:${c.id}`, campaignId: c.id, icon: '🎯', label: c.published_at ? `קמפיין פורסם: ${c.title}` : `קמפיין נוצר: ${c.title}`, timestamp: c.published_at || c.created_at })),
+      { id: `entity:${this.entity.id}`, icon: 'construction', label: 'העמותה נוצרה', timestamp: this.entity.created_at },
+      ...this.campaigns.map((c) => ({ id: `campaign:${c.id}`, campaignId: c.id, icon: 'target', label: c.published_at ? `קמפיין פורסם: ${c.title}` : `קמפיין נוצר: ${c.title}`, timestamp: c.published_at || c.created_at })),
       ...this.auditLog.filter(a => Object.hasOwn(ACTION_LABELS, a.action)).map((a) => ({
         id: `audit:${a.id}`,
-        icon: '🛡️',
+        icon: 'shield',
         label: this.actionLabel(a.action),
         timestamp: a.created_at,
       })),

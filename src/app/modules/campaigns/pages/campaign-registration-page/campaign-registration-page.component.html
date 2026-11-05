@@ -4,7 +4,7 @@
   <ng-container *ngIf="!loading && draft as d">
     <div class="rg-main">
       <button type="button" class="rg-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="rg-title">📝 הרשמה</h1>
+      <h1 class="rg-title"><app-icon name="ticket" /> הרשמה</h1>
       <p class="rg-subtitle">{{ d.title }} · {{ d.registrationOptions.length }} קטגוריות</p>
 
       <div class="rg-form-panel">
@@ -26,9 +26,9 @@
         </div>
 
         <div class="rgf-actions">
-          <button type="button" class="rgf-btn-clear" (click)="clearForm()">🗑 נקה</button>
+          <button type="button" class="rgf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
           <button type="button" class="rgf-btn-save" [disabled]="!isFormValid" (click)="save()">
-            💾 {{ isEditing ? 'עדכן' : 'שמור' }}
+            <app-icon name="save" /> {{ isEditing ? 'עדכן' : 'שמור' }}
           </button>
         </div>
       </div>
@@ -39,8 +39,8 @@
           <div class="rg-card-title">{{ o.title }}</div>
           <p class="rg-card-desc" *ngIf="o.description">{{ o.description }}</p>
           <div class="rg-card-actions">
-            <button type="button" class="rg-icon-btn" (click)="editOption(o)">✏ עריכה</button>
-            <button type="button" class="rg-icon-btn rg-icon-btn--danger" (click)="deleteOption(o.id)">🗑 מחיקה</button>
+            <button type="button" class="rg-icon-btn" (click)="editOption(o)"><app-icon name="pencil" /> עריכה</button>
+            <button type="button" class="rg-icon-btn rg-icon-btn--danger" (click)="deleteOption(o.id)"><app-icon name="trash" /> מחיקה</button>
           </div>
         </div>
       </div>

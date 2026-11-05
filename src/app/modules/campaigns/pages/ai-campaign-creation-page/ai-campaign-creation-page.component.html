@@ -1,6 +1,6 @@
 <div class="ai-page">
   <div class="ai-card">
-    <h1 class="ai-title">{{ pageTitle() }}</h1>
+    <h1 class="ai-title"><app-icon name="sparkles" /> {{ pageTitle() }}</h1>
     <p class="ai-subtitle">
       @if (isPartnerMode()) {
         ספרו לנו על העסק שלכם — בכמה מילים, קישור לאתר, קבצים (לוגו, תמונות), או כל שילוב — ונכין לכם הצעה ראשונית לדף השותף, לבדיקה.
@@ -11,7 +11,7 @@
 
     @if (!brief()) {
       <div class="intake-section">
-        <label class="intake-label">✍️ ספרו לנו בכמה מילים <span class="optional">(לא חובה)</span></label>
+        <label class="intake-label"><app-icon name="pen-line" /> ספרו לנו בכמה מילים <span class="optional">(לא חובה)</span></label>
         <textarea
           class="ai-input"
           rows="4"
@@ -22,7 +22,7 @@
       </div>
 
       <div class="intake-section">
-        <label class="intake-label">🌐 קישור לאתר שלכם <span class="optional">(לא חובה)</span></label>
+        <label class="intake-label"><app-icon name="globe" /> קישור לאתר שלכם <span class="optional">(לא חובה)</span></label>
         <input
           type="url"
           class="ai-input ai-input-url"
@@ -33,10 +33,10 @@
       </div>
 
       <div class="intake-section">
-        <label class="intake-label">📄 קבצים <span class="optional">(לא חובה)</span></label>
+        <label class="intake-label"><app-icon name="file" /> קבצים <span class="optional">(לא חובה)</span></label>
         <div class="files-zone">
           <label class="file-picker-btn">
-            📎 בחר קבצים (לוגו, PDF, Word, תמונות)
+            <app-icon name="paperclip" /> בחר קבצים (לוגו, PDF, Word, תמונות)
             <input type="file" multiple hidden
               accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               (change)="onFilesSelected($event)" />
@@ -66,7 +66,7 @@
         <div class="mode-options">
           <label class="mode-option" [class.selected]="creationMode() === 'campaign'" (click)="creationMode.set('campaign')">
             <input type="radio" name="creationMode" [checked]="creationMode() === 'campaign'" />
-            <span class="mode-option-icon">🎯</span>
+            <span class="mode-option-icon"><app-icon name="target" /></span>
             <span class="mode-option-text">
               <span class="mode-option-title">קמפיין</span>
               <span class="mode-option-desc">מתבסס על העמותה הקיימת שלי</span>
@@ -75,7 +75,7 @@
 
           <label class="mode-option" [class.selected]="creationMode() === 'org-only'" (click)="creationMode.set('org-only')">
             <input type="radio" name="creationMode" [checked]="creationMode() === 'org-only'" />
-            <span class="mode-option-icon">🏢</span>
+            <span class="mode-option-icon"><app-icon name="building" /></span>
             <span class="mode-option-text">
               <span class="mode-option-title">עמותה חדשה</span>
               <span class="mode-option-desc">רק עמותה, בלי קמפיין בינתיים</span>
@@ -88,7 +88,7 @@
       <div class="intake-section intake-toggle">
         <label class="toggle-label">
           <input type="checkbox" class="toggle-checkbox" [ngModel]="enableWebResearch()" (ngModelChange)="enableWebResearch.set($event)" />
-          <span>✨ העשר את התוכן במידע ציבורי על העמותה <span class="optional">(עשוי להוסיף כמה שניות)</span></span>
+          <span><app-icon name="sparkles" /> העשר את התוכן במידע ציבורי על העמותה <span class="optional">(עשוי להוסיף כמה שניות)</span></span>
         </label>
       </div>
 
@@ -171,7 +171,7 @@
                   @if (f.typeLabel === 'לוגו' && logoPreviewUrl()) {
                     <img [src]="logoPreviewUrl()" class="file-summary-thumb" alt="לוגו" />
                   } @else {
-                    <span class="file-summary-thumb file-summary-thumb--placeholder">📄</span>
+                    <span class="file-summary-thumb file-summary-thumb--placeholder"><app-icon name="file" /></span>
                   }
                   <span class="file-summary-name">{{ f.file.name }}</span>
                   <span class="file-summary-type">{{ f.typeLabel }}</span>
@@ -209,7 +209,7 @@
 
             @if (clarifyingAnswers().length) {
               <div class="clarifying-questions">
-                <p class="clarifying-questions-intro">✨ כמה פרטים שרק אתם יודעים יעזרו לנו לכתוב טקסט הרבה יותר טוב <span class="optional">(לא חובה)</span>:</p>
+                <p class="clarifying-questions-intro"><app-icon name="sparkles" /> כמה פרטים שרק אתם יודעים יעזרו לנו לכתוב טקסט הרבה יותר טוב <span class="optional">(לא חובה)</span>:</p>
                 @for (qa of clarifyingAnswers(); track qa.question; let i = $index) {
                   <label class="clarifying-question-label">{{ qa.question }}</label>
                   <input class="ai-input" type="text" [ngModel]="qa.answer" (ngModelChange)="updateClarifyingAnswer(i, $event)" />

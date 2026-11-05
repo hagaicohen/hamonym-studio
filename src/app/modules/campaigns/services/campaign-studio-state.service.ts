@@ -1272,6 +1272,70 @@ export class CampaignStudioStateService {
   readonly focusBlockRequest$ = this._focusBlockRequest.asObservable();
   requestFocusBlock(id: string, type: BlockType): void { this._focusBlockRequest.next({ id, type }); }
 
+  // Page areas clicked on the canvas (Studio): the opening (Hero), the campaign
+  // navigation bar and the footer.
+  private _focusAreaRequest = new Subject<'opening' | 'nav' | 'footer'>();
+  readonly focusAreaRequest$ = this._focusAreaRequest.asObservable();
+  requestFocusArea(area: 'opening' | 'nav' | 'footer'): void { this._focusAreaRequest.next(area); }
+
+  // Replaces the draft without touching edit mode or anything else (Studio
+  // undo/redo restores a snapshot through this).
+  replaceDraft(draft: CampaignDraft): void { this.draftSubject.next(draft); }
+
+  // Last draft the server accepted (create/update), for the Studio's
+  // unsaved-changes warning. Server-owned fields are ignored when comparing.
+  private savedFingerprint: string | null = null;
+  private static readonly SERVER_FIELDS = ['id', 'entityId', 'status', 'currentAmount', 'supportersCount', 'isHidden',
+    'createdAt', 'updatedAt', 'publishedAt', 'publishRequestedAt', 'entityGaMeasurementId', 'entityName', 'entityLogo'] as const;
+  draftFingerprint(draft: CampaignDraft): string {
+    const copy: Record<string, unknown> = { ...draft };
+    for (const k of CampaignStudioStateService.SERVER_FIELDS) delete copy[k];
+    return JSON.stringify(copy);
+  }
+  markSaved(draft: CampaignDraft = this.draft): void { this.savedFingerprint = this.draftFingerprint(draft); }
+  hasUnsavedChanges(): boolean {
+    return this.savedFingerprint !== null && this.savedFingerprint !== this.draftFingerprint(this.draft);
+  }
+
+  // Duplicates a block (and everything nested in it, with new ids) right after
+  // the original, in the same container. Types that may appear once per page
+  // are not duplicated.
+  duplicateBlock(id: string, singleInstance: BlockType[]): string | null {
+    const blocks = this.draft.blocks;
+    const original = blocks.find(b => b.id === id);
+    if (!original || singleInstance.includes(original.type)) return null;
+    const isParent = (b: CampaignBlock) => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion';
+    const idMap = new Map<string, string>();
+    const collect = (b: CampaignBlock): CampaignBlock[] => {
+      idMap.set(b.id, generateId());
+      const kids = isParent(b) ? (b.data as ContainerBlockData).childBlockIds.map(cid => blocks.find(x => x.id === cid)).filter((x): x is CampaignBlock => !!x) : [];
+      return [b, ...kids.flatMap(collect)];
+    };
+    const copies = collect(original).map(b => {
+      const copy: CampaignBlock = structuredClone(b);
+      copy.id = idMap.get(b.id)!;
+      if (isParent(copy)) {
+        const data = copy.data as ContainerBlockData;
+        copy.data = { ...data, childBlockIds: data.childBlockIds.filter(c => idMap.has(c)).map(c => idMap.get(c)!) } as ContainerBlockData;
+      }
+      return copy;
+    });
+    const newId = idMap.get(id)!;
+    const parent = blocks.find(b => isParent(b) && (b.data as ContainerBlockData).childBlockIds.includes(id)) ?? null;
+    const scope = this.scopeIdsFor(parent?.id ?? null, blocks);
+    const newScope = [...scope];
+    newScope.splice(scope.indexOf(id) + 1, 0, newId);
+    const orderById = new Map(newScope.map((bid, i) => [bid, i + 1]));
+    let next = [...blocks, ...copies].map(b => orderById.has(b.id) ? { ...b, order: orderById.get(b.id)! } : b);
+    if (parent) {
+      next = next.map(b => b.id === parent.id
+        ? { ...b, data: { ...(b.data as ContainerBlockData), childBlockIds: [...(b.data as ContainerBlockData).childBlockIds, newId] } as ContainerBlockData }
+        : b);
+    }
+    this.patch({ blocks: next });
+    return newId;
+  }
+
   get draft(): CampaignDraft {
     return this.draftSubject.value;
   }
@@ -1365,6 +1429,16 @@ export class CampaignStudioStateService {
       theme: { ...base.layout.theme, ...themeOverride },
     };
     this.draftSubject.next({ ...base, blocks, layout });
+  }
+
+  // Initial creation from a template (new, unsaved campaign): a fresh draft
+  // built from the template starter blocks. Shared by the classic editor and
+  // the Studio so both start a campaign the same way.
+  startFromTemplate(template: CampaignTemplate, palette: TemplatePalette): void {
+    this.applyTemplate(
+      template.createBlocks(palette), template.buildTheme(palette), template.layoutMode,
+      template.id, template.heroPlacement, template.pageFormat,
+    );
   }
 
   // Template switching for an existing page (Step 9's "שנה תבנית"). Unlike
@@ -1466,6 +1540,7 @@ export class CampaignStudioStateService {
   loadDraft(data: CampaignDraft): void {
     this.editModeSubject.next(true);
     this.draftSubject.next(data);
+    this.markSaved(data);
   }
 
   // Applies newly-polled live donations to the displayed totals without a
@@ -1578,6 +1653,50 @@ export class CampaignStudioStateService {
   // Tabs and accordion share the exact same data shape (childBlockIds +
   // styleVariant + accentColor) — converting between them is just swapping
   // `type`, no data transformation. See BlockType's 'accordion' doc comment.
+  // Swaps the order of a container's first two children (the right/left
+  // columns of a row container). Moved from Step 9 so the Studio shares it.
+  swapContainerChildren(id: string): void {
+    const block = this.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as ContainerBlockData;
+    if (data.childBlockIds.length < 2) return;
+    const children = data.childBlockIds
+      .map(cid => this.draft.blocks.find(b => b.id === cid))
+      .filter((b): b is CampaignBlock => !!b)
+      .sort((a, b) => a.order - b.order);
+    if (children.length < 2) return;
+    const blocks = this.draft.blocks.map(b => ({ ...b }));
+    const a = blocks.find(b => b.id === children[0].id)!;
+    const bBlock = blocks.find(b => b.id === children[1].id)!;
+    [a.order, bBlock.order] = [bBlock.order, a.order];
+    this.patch({ blocks });
+  }
+
+  // A tab / a panel is a container child of the tabs / accordion block,
+  // named by its position ("טאב 3", "פאנל 3").
+  addTab(tabsBlockId: string): string | null { return this.addNamedChildContainer(tabsBlockId, 'טאב'); }
+  addPanel(accordionBlockId: string): string | null { return this.addNamedChildContainer(accordionBlockId, 'פאנל'); }
+
+  private addNamedChildContainer(parentId: string, noun: string): string | null {
+    const parent = this.draft.blocks.find(b => b.id === parentId);
+    if (!parent) return null;
+    const count = ((parent.data as ContainerBlockData).childBlockIds ?? [])
+      .filter(cid => this.draft.blocks.some(b => b.id === cid)).length;
+    const newId = this.addBlockToContainer(parentId, 'container');
+    if (newId) this.updateBlockLabel(newId, `${noun} ${count + 1}`);
+    return newId;
+  }
+
+  // Marks a block created by the website import as reviewed.
+  clearImportReview(id: string): void {
+    const blocks = this.draft.blocks.map(b => {
+      if (b.id !== id) return b;
+      const { importReview, ...rest } = b;
+      return rest as CampaignBlock;
+    });
+    this.patch({ blocks });
+  }
+
   convertTabsAccordionType(id: string): void {
     const block = this.draft.blocks.find(b => b.id === id);
     if (!block || (block.type !== 'tabs' && block.type !== 'accordion')) return;
@@ -1869,6 +1988,14 @@ export class CampaignStudioStateService {
     }
 
     this.patch({ blocks });
+  }
+
+  updateBlockLabel(id: string, label: string): void {
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, label } : b) });
+  }
+
+  updateBlockSpacing(id: string, field: 'spacingTop' | 'spacingBottom', value: number): void {
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, [field]: value } : b) });
   }
 
   toggleBlockVisibility(id: string): void {

@@ -9,6 +9,7 @@ import { DonationService } from '../../../services/donation.service';
 import { AnalyticsService } from '../../../../../core/services/analytics.service';
 import { Ambassador } from '../../../services/ambassador.service';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // One entry in the Registration participant repeater. Deliberately just
 // these 3 fields (name/option/shirtSize) — no Schema/Rules engine, each
 // participant picks exactly one Registration Option. See DECISIONS.md
@@ -34,7 +35,7 @@ export interface PendingRegistration {
 @Component({
   selector: 'app-checkout-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './checkout-modal.component.html',
   styleUrls: ['./checkout-modal.component.css'],
 })

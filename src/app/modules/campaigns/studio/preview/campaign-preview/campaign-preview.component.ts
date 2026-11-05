@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, OnDestroy, AfterViewInit, Input, HostListener } from '@angular/core';
+import { withStudioPlaceholders } from '../../canvas/studio-placeholders';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -57,11 +58,12 @@ import { CommentsService, CampaignComment } from '../../../services/comments.ser
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { AmbassadorSlugFieldComponent } from '../../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-preview.component.html',
   styleUrl: './campaign-preview.component.css',
 })
@@ -104,6 +106,16 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // (follow a link, submit a donation amount, open a video lightbox, etc.),
   // never get hijacked into "open this block's editor" just because that
   // control happens to live inside a Page Builder block.
+  // The opening (Hero), navigation bar and footer are page areas, not blocks;
+  // a click on them asks the Studio to open that area. A Hero rendered by a
+  // Hero block is left to the block's own click.
+  onAreaClick(event: MouseEvent, area: 'opening' | 'nav' | 'footer'): void {
+    if (!this.pageBuilderActive || this.isInteractiveClickTarget(event)) return;
+    if (area === 'opening' && (event.currentTarget as HTMLElement).parentElement?.closest('[data-block-id]')) return;
+    event.stopPropagation();
+    this.state.requestFocusArea(area);
+  }
+
   private isInteractiveClickTarget(event: Event): boolean {
     const el = event.target as HTMLElement | null;
     return !!el?.closest('a, button, input, textarea, select, video, audio, iframe, [role="button"], [contenteditable="true"]');
@@ -162,6 +174,18 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // pane), which is what keeps every section visible with its Builder-facing
   // empty state there regardless of content. See shouldRenderBlock().
   @Input() isPublicPage = false;
+  // Studio canvas only: render a copy of the draft with preview-only
+  // placeholders in empty fields (see studio-placeholders.ts). The state and
+  // the saved campaign are never changed. Off everywhere else.
+  @Input() studioPlaceholders = false;
+  private viewIn: CampaignDraft | null = null;
+  private viewOut: CampaignDraft | null = null;
+
+  viewDraft(draft: CampaignDraft | null): CampaignDraft | null {
+    if (!this.studioPlaceholders || !draft) return draft;
+    if (draft !== this.viewIn) { this.viewIn = draft; this.viewOut = withStudioPlaceholders(draft).draft; }
+    return this.viewOut;
+  }
   private autoOpenJoinTriggered = false;
   private ambassadorSvc = inject(AmbassadorService);
   private router        = inject(Router);
@@ -1186,8 +1210,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   // ── Stats ──
   readonly statIcons: Record<string, string> = {
-    target: '🎯', raised: '💰', percent: '📈', supporters: '👥',
-    start_date: '📅', end_date: '📅', days_remaining: '⏰', ambassadors: '⭐',
+    target: 'target', raised: 'coins', percent: 'trending-up', supporters: 'users',
+    start_date: 'calendar', end_date: 'calendar', days_remaining: 'alarm-clock', ambassadors: 'star',
   };
   readonly statLabels: Record<string, string> = {
     target: 'יעד הגיוס', raised: 'גויס עד כה', percent: 'מדד הגיוס',

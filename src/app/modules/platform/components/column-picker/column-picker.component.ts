@@ -1,6 +1,7 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 export interface ColumnDef {
   key: string;
   label: string;
@@ -9,7 +10,7 @@ export interface ColumnDef {
 @Component({
   selector: 'app-column-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './column-picker.component.html',
   styleUrl: './column-picker.component.css',
 })

@@ -385,3 +385,7 @@
     justify-content: center;
   }
 }
+
+/* Center the X exactly inside the square (an inline icon adds line space below it). */
+.exit-button { padding: 0; }
+.exit-button lucide-icon { display: flex; }

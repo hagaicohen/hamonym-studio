@@ -9,11 +9,12 @@ import {
   recurringStatusLabel,
 } from '../../services/recurring.service';
 import { AuthService } from '../../../../core/services/auth.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-my-donations',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './my-donations.component.html',
   styleUrl: './my-donations.component.css',
 })

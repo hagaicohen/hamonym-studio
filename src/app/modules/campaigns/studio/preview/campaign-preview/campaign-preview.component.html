@@ -1,4 +1,4 @@
-<ng-container *ngIf="{ draft: draft$ | async, mobile: (isMobile$ | async) === 'mobile' } as vm">
+<ng-container *ngIf="{ draft: viewDraft(draft$ | async), mobile: (isMobile$ | async) === 'mobile' } as vm">
 <ng-container *ngIf="vm.draft as draft">
 
 <div class="campaign-page"
@@ -53,7 +53,7 @@
 
   <!-- ── EMPTY STATE ── -->
   <div class="empty-state" *ngIf="isEmpty(draft)">
-    <div class="empty-icon">👁️</div>
+    <div class="empty-icon"><app-icon name="eye" /></div>
     <div class="empty-title">תצוגה מקדימה חיה</div>
     <div class="empty-desc" *ngIf="isCampaign(draft)">הזינו כותרת ותמונה<br>הדף יופיע כאן בזמן אמת</div>
     <div class="empty-desc" *ngIf="!isCampaign(draft)">הוסיפו בלוק ראשון מהעריכה שמימין<br>הדף יופיע כאן בזמן אמת</div>
@@ -73,7 +73,8 @@
          link is pointless clutter on what's meant to be a short,
          single-scroll page. -->
     <div class="hm-sticky-header">
-      <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile">
+      <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile"
+        [attr.data-studio-area]="pageBuilderActive ? 'nav' : null" (click)="onAreaClick($event, 'nav')">
         <!-- Inner content is constrained to the SAME container the campaign
              content below (Hero/sidebar) already uses (.page-content-outer,
              max-width:1200px) — 2026-09-28, so the header reads as one
@@ -108,7 +109,7 @@
                       [style.color]="themePrimaryColor(draft)"
                       [style.borderColor]="themePrimaryColor(draft)"
                       (click)="openJoinModal()">
-                <span>🚀 הצטרפו כשגרירים</span>
+                <span><app-icon name="rocket" /> הצטרפו כשגרירים</span>
               </button>
               <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
                 תרמו עכשיו
@@ -138,7 +139,7 @@
           [class.nav-link--faded]="item.faded"
           [style.color]="primaryColor(draft)" (click)="onNavItemClick(item)">{{ item.label }}</a>
         <a class="nav-drawer-link" *ngIf="hasAmbassadorsSection(draft)"
-          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false">🚀 הצטרפו כשגרירים</a>
+          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false"><app-icon name="rocket" /> הצטרפו כשגרירים</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="goToAccount(); navOpen=false">כניסה / אזור אישי</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
       </div>
@@ -191,13 +192,13 @@
         <button class="amb-donate-btn"
                 [style.background]="primaryColor(draft)"
                 (click)="scrollTo('section-donate')">
-          ❤ תרמו דרך {{ ambassador.fullName.split(' ')[0] }}
+          <app-icon name="heart" /> תרמו דרך {{ ambassador.fullName.split(' ')[0] }}
         </button>
         <button class="amb-donors-btn"
                 [style.color]="primaryColor(draft)"
                 [style.borderColor]="primaryColor(draft)"
                 (click)="scrollTo('section-donors')">
-          👥 צפו ברשימת התורמים
+          <app-icon name="users" /> צפו ברשימת התורמים
         </button>
       </div>
 
@@ -222,7 +223,7 @@
           <img *ngIf="resolvedEntityLogo(draft)"
                class="hm-logo-above-img"
                [src]="resolvedEntityLogo(draft)" alt="">
-          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
         </div>
       </div>
     </ng-template>
@@ -250,6 +251,7 @@
 
     <!-- ══ HERO ══ -->
     <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile"
+      [attr.data-studio-area]="pageBuilderActive ? 'opening' : null" (click)="onAreaClick($event, 'opening')"
       [class.hm-hero--in-column]="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
 
       <!-- Background image layer (separate div to avoid Angular [style] parsing issues) -->
@@ -306,7 +308,7 @@
              [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
              [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'">
           <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="">
-          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
         </div>
 
       </div>
@@ -715,7 +717,8 @@
     </div>
 
     <!-- ══ FOOTER ══ -->
-    <footer class="hm-footer" *ngIf="draft.layout.showFooter !== false">
+    <footer class="hm-footer" *ngIf="draft.layout.showFooter !== false"
+      [attr.data-studio-area]="pageBuilderActive ? 'footer' : null" (click)="onAreaClick($event, 'footer')">
 
       <!-- Brand -->
       <div class="hm-footer-brand">
@@ -858,7 +861,7 @@
                 [style.background]="primaryColor(draft)"
                 [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable"
                 (click)="submitJoin(draft)">
-          <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי 🚀</span>
+          <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי <app-icon name="rocket" /></span>
           <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
         </button>
       </div>
@@ -1202,7 +1205,7 @@
   <!-- SHARE -->
   <div class="hm-share-row" *ngIf="block.type === 'share'">
     <button class="hm-share-btn hm-share-btn--link" type="button" *ngIf="asShare(block.data).platforms.link" (click)="copyShareLink(draft)" [attr.aria-label]="linkCopied ? 'הועתק!' : 'העתקת קישור'" [title]="linkCopied ? 'הועתק!' : 'העתקת קישור'">
-      <span class="hm-share-icon">🔗</span>
+      <span class="hm-share-icon"><app-icon name="link" /></span>
     </button>
     <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)" aria-label="שיתוף באימייל" title="אימייל">
       <lucide-icon [img]="Mail" [size]="16" class="hm-share-icon"></lucide-icon>
@@ -1237,7 +1240,7 @@
 
   <!-- MAP / LOCATION (Partner-only, Phase 3) -->
   <div class="hm-map-block" *ngIf="block.type === 'map' && (asMap(block.data).address || (asMap(block.data).lat && asMap(block.data).lng))">
-    <p class="hm-map-address" *ngIf="asMap(block.data).address">📍 {{ asMap(block.data).address }}</p>
+    <p class="hm-map-address" *ngIf="asMap(block.data).address"><app-icon name="map-pin" /> {{ asMap(block.data).address }}</p>
     <iframe class="hm-map-embed"
       [src]="mapEmbedUrl(asMap(block.data))"
       loading="lazy" referrerpolicy="no-referrer-when-downgrade">
@@ -1353,10 +1356,10 @@
         (input)="onCustomAmountInput($event)">
     </div>
     <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode !== 'fixed_installments'">
-      🔁 חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
+      <app-icon name="repeat" /> חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
     </p>
     <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode === 'fixed_installments'">
-      🔁 חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
+      <app-icon name="repeat" /> חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
     </p>
 
     <!-- Total breakdown -->
@@ -1412,7 +1415,7 @@
          that. `!== false` treats an absent field (older campaigns) as the
          current always-shown default. -->
     <p class="hm-security-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="asDonationWidget(block.data).showSecurityBadge !== false">
-      🔒 תשלום מאובטח באמצעות קארדקום בע״מ
+      <app-icon name="lock" /> תשלום מאובטח באמצעות קארדקום בע״מ
     </p>
     <!-- showPaymentLogos (2026-09-28) -- wired, but deliberately renders
          only the one genuinely-real badge (generic card acceptance via
@@ -1546,7 +1549,7 @@
           [class.is-selected]="isOfferingInCart(offering.id)"
           [class.hm-reward-soldout]="isSoldOut(offering)"
           (click)="selectOffering(offering, draft)">
-          <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+          <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
 
           <!-- Fixed order: price → title (+ small icon when there's no
                separate full-image row) → full image row (default mode) →
@@ -1565,7 +1568,7 @@
           <div class="hm-reward-list-icon-row" *ngIf="rewardsImagePosition(draft) === 'inline'">
             <div class="hm-reward-icon-wrap hm-reward-icon-wrap--center">
               <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
-              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon"><app-icon name="gift" /></span>
             </div>
           </div>
           <div class="hm-reward-list-img" *ngIf="offering.imageUrl && rewardsImagePosition(draft) === 'full'"
@@ -1617,11 +1620,11 @@
                 [class.is-selected]="isOfferingInCart(offering.id)"
                 [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
-                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
                 <div class="hm-reward-card-top">
                   <div class="hm-reward-icon-wrap">
                     <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
-                    <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+                    <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon"><app-icon name="gift" /></span>
                   </div>
                   <div class="hm-reward-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 </div>
@@ -1664,11 +1667,11 @@
                 [class.is-selected]="isOfferingInCart(offering.id)"
                 [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
-                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
                 <div class="hm-reward-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 <div class="hm-reward-img-hero">
                   <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title">
-                  <span *ngIf="!offering.imageUrl" class="hm-reward-img-hero-placeholder">🎁</span>
+                  <span *ngIf="!offering.imageUrl" class="hm-reward-img-hero-placeholder"><app-icon name="gift" /></span>
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
@@ -1717,7 +1720,7 @@
 
     <ng-template #rewardsEmpty>
       <div class="hm-rewards-empty">
-        <span class="hm-rewards-empty-icon">🎁</span>
+        <span class="hm-rewards-empty-icon"><app-icon name="gift" /></span>
         <p>התשורות יוצגו כאן לאחר הגדרתן בשלב התשורות</p>
       </div>
     </ng-template>
@@ -1743,7 +1746,7 @@
     </ng-container>
     <ng-template #sponsorsEmpty>
       <div class="hm-section-placeholder">
-        <span>🤝</span><p>נותני חסות יוצגו כאן לאחר הגדרתם בבונה הדף</p>
+        <span><app-icon name="handshake" /></span><p>נותני חסות יוצגו כאן לאחר הגדרתם בבונה הדף</p>
       </div>
     </ng-template>
   </section>
@@ -1859,10 +1862,10 @@
         </ng-container>
         <ng-template #ambassadorsEmptySidebar>
           <div class="hm-lb-empty">
-            <div class="hm-lb-empty-icon">🤝</div>
+            <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
             <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
             <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-              🚀 הצטרפו כשגרירים
+              <app-icon name="rocket" /> הצטרפו כשגרירים
             </button>
           </div>
         </ng-template>
@@ -1879,13 +1882,13 @@
       <div class="hm-lb-section-header" [class.hm-lb-section-header--center]="ambEffective.length === 0">
         <h2 class="hm-lb-section-title" data-text-role="sectionTitle" [style.color]="ambassadorsSectionTitleColor(draft, asAmbassadorsBlock(block.data))">שגרירים</h2>
         <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-          🚀 הצטרפו כשגרירים
+          <app-icon name="rocket" /> הצטרפו כשגרירים
         </button>
       </div>
 
       <!-- ── Social proof ── -->
       <div class="hm-lb-proof" *ngIf="ambEffective.length > 0">
-        💡 כבר <strong>{{ ambEffective.length | number }}</strong> שגרירים הצטרפו
+        <app-icon name="lightbulb" /> כבר <strong>{{ ambEffective.length | number }}</strong> שגרירים הצטרפו
         <ng-container *ngIf="ambTotalRaised > 0"> וגייסו <strong>₪{{ ambTotalRaised | number }}</strong></ng-container>
       </div>
 
@@ -2014,11 +2017,11 @@
       </ng-container>
       <ng-template #ambassadorsEmpty>
         <div class="hm-lb-empty">
-          <div class="hm-lb-empty-icon">🤝</div>
+          <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
           <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
           <div class="hm-lb-empty-sub">עזרו לנו להפיץ ותקבלו קישור אישי לשיתוף</div>
           <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-            🚀 הצטרפו כשגרירים
+            <app-icon name="rocket" /> הצטרפו כשגרירים
           </button>
         </div>
       </ng-template>
@@ -2035,7 +2038,7 @@
          item markup itself follows Section Presentation, independent of
          placement. ── -->
     <ng-container *ngIf="inSidebarSection(draft, 'donors')">
-      <h2 class="hm-donor-list-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
+      <h2 class="hm-donor-list-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו <app-icon name="heart" /></h2>
 
       <!-- Compact filtering (2026-10-04) -- same donorPeriod/donorSort
            state + setters as the main-content controls below, just a
@@ -2105,7 +2108,7 @@
 
     <!-- ── Below-sidebar placement (default): unchanged ── -->
     <ng-container *ngIf="!inSidebarSection(draft, 'donors')">
-      <h2 class="hm-section-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
+      <h2 class="hm-section-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו <app-icon name="heart" /></h2>
 
       <!-- Stats row -->
       <div class="hm-donors-stats">
@@ -2362,7 +2365,7 @@
     </ng-container>
     <ng-template #updatesEmpty>
       <div class="hm-section-placeholder">
-        <span>📢</span><p>עדכוני הקמפיין יוצגו כאן לאחר הוספתם בבונה הדף</p>
+        <span><app-icon name="megaphone" /></span><p>עדכוני הקמפיין יוצגו כאן לאחר הוספתם בבונה הדף</p>
       </div>
     </ng-template>
 
@@ -2406,7 +2409,7 @@
     </div>
     <ng-template #commentsEmpty>
       <div class="hm-section-placeholder">
-        <span>💬</span><p>{{ commentSearchTerm ? 'לא נמצאו תגובות תואמות' : 'אין עדיין תגובות — היו הראשונים להגיב' }}</p>
+        <span><app-icon name="message" /></span><p>{{ commentSearchTerm ? 'לא נמצאו תגובות תואמות' : 'אין עדיין תגובות — היו הראשונים להגיב' }}</p>
       </div>
     </ng-template>
 

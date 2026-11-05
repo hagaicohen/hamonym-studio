@@ -283,7 +283,7 @@
         קובץ Excel (.xlsx) או CSV, עמודה ראשונה = שם מלא (חובה), אח"כ טלפון, אימייל, יעד אישי.
         השורה הראשונה נחשבת כותרת ומדולגת.
       </p>
-      <button type="button" class="template-link" (click)="downloadTemplate()">⬇ הורדת קובץ לדוגמה</button>
+      <button type="button" class="template-link" (click)="downloadTemplate()"><app-icon name="download" /> הורדת קובץ לדוגמה</button>
 
       <label for="amb-import-input" class="import-dropzone">
         <lucide-angular [img]="UploadIcon" [size]="28" color="#c4b5fd"></lucide-angular>
@@ -294,7 +294,7 @@
 
     <ng-container *ngIf="importRows.length">
       <div class="import-summary">
-        <span class="import-summary-ok">✔ {{ validImportCount }} תקינים</span>
+        <span class="import-summary-ok"><app-icon name="check" /> {{ validImportCount }} תקינים</span>
         <span class="import-summary-bad" *ngIf="invalidImportCount">✕ {{ invalidImportCount }} עם שגיאה</span>
       </div>
 
@@ -303,7 +303,7 @@
           <span class="import-row-name">{{ r.fullName || '—' }}</span>
           <span class="import-row-detail">{{ r.phone || r.email || '' }}</span>
           <span class="import-row-status">
-            <ng-container *ngIf="r.valid">✔</ng-container>
+            <ng-container *ngIf="r.valid"><app-icon name="check" /></ng-container>
             <ng-container *ngIf="!r.valid">{{ r.error }}</ng-container>
           </span>
         </div>

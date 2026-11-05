@@ -8,11 +8,12 @@ import { CurrentContextService } from '../../services/current-context.service';
 import { CurrentEntityService } from '../../services/current-entity.service';
 import { EntitiesService, EntityNotification } from '../../services/entities.service';
 import { PlatformService } from '../../../modules/platform/services/platform.service';
-
+
+import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
 const POLL_MS = 20000;
 
 const ACTION_LABELS: Record<EntityNotification['action'], string> = {
-  approve: 'העמותה שלכם אושרה 🎉',
+  approve: 'העמותה שלכם אושרה',
   reject: 'הבקשה שלכם נדחתה',
   request_changes: 'נדרשים תיקונים בפרטי העמותה',
   suspend: 'העמותה הושעתה',
@@ -22,7 +23,7 @@ const ACTION_LABELS: Record<EntityNotification['action'], string> = {
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.css',
 })

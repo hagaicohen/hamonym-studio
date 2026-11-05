@@ -1,7 +1,7 @@
 import { Component, inject, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp } from 'lucide-angular';
+import { LucideAngularModule, Image, Video, Settings2, ChevronDown, ChevronUp, PenLine, X, PanelTop, Lock, Check, Building2 } from 'lucide-angular';
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import {
@@ -14,11 +14,12 @@ import { EntitiesService } from '../../../../../core/services/entities.service';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-basic-step',
   standalone: true,
-  imports: [
+  imports: [HmIconComponent, 
     CommonModule, FormsModule, LucideAngularModule,
     RichTextEditorComponent, ColorPickerComponent,
   ],
@@ -26,6 +27,7 @@ import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categorie
   styleUrl: './campaign-basic-step.component.css',
 })
 export class CampaignBasicStepComponent implements OnInit {
+  readonly ui = { PenLine, X, PanelTop, Lock, Check, Building2 };
   protected state       = inject(CampaignStudioStateService);
   private entityService = inject(CurrentEntityService);
   private uploadService = inject(UploadService);

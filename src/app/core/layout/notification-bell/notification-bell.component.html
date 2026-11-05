@@ -1,7 +1,7 @@
 <div class="bell-wrapper">
   <div class="bell-btn-wrap">
     <button class="bell-btn" type="button" title="הודעות" (click)="toggle($event)">
-      <span class="bell-icon" [class.bell-icon--ring]="count > 0">🔔</span>
+      <span class="bell-icon" [class.bell-icon--ring]="count > 0"><app-icon name="bell" /></span>
       <span class="bell-badge" *ngIf="count > 0">{{ count }}</span>
     </button>
 
@@ -16,14 +16,14 @@
         <div class="bell-empty" *ngIf="count === 0">אין הודעות חדשות</div>
 
         <div class="bell-item bell-item--link" *ngIf="pendingReviewCount > 0" (click)="goToOrganizations('pending_review', $event)">
-          <span class="bell-item-icon">🕒</span>
+          <span class="bell-item-icon"><app-icon name="clock" /></span>
           <div class="bell-item-body">
             <div class="bell-item-title">{{ pendingReviewCount }} עמותות ממתינות לאישור</div>
           </div>
         </div>
 
         <div class="bell-item bell-item--link" *ngIf="flaggedForReviewCount > 0" (click)="goToFlaggedOrganizations($event)">
-          <span class="bell-item-icon">⚠️</span>
+          <span class="bell-item-icon"><app-icon name="alert" /></span>
           <div class="bell-item-body">
             <div class="bell-item-title">{{ flaggedForReviewCount }} עמותות פעילות דורשות בדיקה חוזרת</div>
           </div>
@@ -35,7 +35,7 @@
         <div class="bell-empty" *ngIf="notifications.length === 0">אין הודעות חדשות</div>
 
         <div class="bell-item" *ngFor="let n of notifications">
-          <span class="bell-item-icon">✉️</span>
+          <span class="bell-item-icon"><app-icon name="mail" /></span>
           <div class="bell-item-body">
             <div class="bell-item-title">{{ actionLabels[n.action] }}</div>
             <div class="bell-item-notes" *ngIf="n.notes">{{ n.notes }}</div>

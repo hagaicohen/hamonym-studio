@@ -30,7 +30,7 @@
           <ng-container *ngIf="!publicPage && !ctx.adminMode() && ctx.active() as active; else noRole">
             <!-- Line 1: role icon + label (small gray) -->
             <span class="ctx-role-line">
-              <span class="ctx-role-icon">{{ active.roleIcon }}</span>
+              <span class="ctx-role-icon"><app-icon [name]="roleIcon(active.role)" /></span>
               {{ active.roleLabel }}
             </span>
             <!-- Line 2: USER NAME — hero element + chevron -->
@@ -70,7 +70,7 @@
         <ng-container *ngIf="ctx.roles().length > 0">
           <ng-container *ngFor="let group of ctx.roles()">
             <div class="ctx-group-header">
-              <span class="ctx-group-icon">{{ group.icon }}</span>
+              <span class="ctx-group-icon"><app-icon [name]="roleIcon(group.role)" /></span>
               <span class="ctx-group-label">{{ group.label }}</span>
             </div>
 
@@ -109,17 +109,17 @@
         </ng-container>
 
         <button type="button" class="ctx-action-item" (click)="navigateTo('/organization-registration', $event, { mode: 'new' })">
-          <span class="ctx-action-icon">🏗️</span>
+          <span class="ctx-action-icon"><app-icon name="construction" /></span>
           <span>הקמת עמותה חדשה</span>
         </button>
 
         <button type="button" class="ctx-action-item" (click)="navigateTo('/campaigns/discover', $event, { mode: 'ambassador' })">
-          <span class="ctx-action-icon">🤝</span>
+          <span class="ctx-action-icon"><app-icon name="handshake" /></span>
           <span>הצטרפות כשגריר</span>
         </button>
 
         <div class="ctx-action-item" (click)="navigateTo('/company-registration', $event)">
-          <span class="ctx-action-icon">🏭</span>
+          <span class="ctx-action-icon"><app-icon name="factory" /></span>
           <span>רישום חברה</span>
         </div>
 

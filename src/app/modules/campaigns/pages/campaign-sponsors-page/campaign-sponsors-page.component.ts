@@ -7,14 +7,15 @@ import { CampaignWorkspaceContextService } from '../../services/campaign-workspa
 import { CampaignDraft, CampaignSponsor } from '../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../core/services/upload.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset) — CONTENT only: name,
 // logo, link. No placement/sidebar-position control — that stayed in the
 // Builder's own campaign-sponsors-step (Design).
 @Component({
   selector: 'app-campaign-sponsors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-sponsors-page.component.html',
   styleUrl: './campaign-sponsors-page.component.css',
 })

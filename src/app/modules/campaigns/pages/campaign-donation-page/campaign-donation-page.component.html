@@ -4,7 +4,7 @@
   <ng-container *ngIf="!loading && draft as d">
     <div class="dp-main">
       <button type="button" class="dp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="dp-title">💳 טופס תרומה</h1>
+      <h1 class="dp-title"><app-icon name="card" /> טופס תרומה</h1>
       <p class="dp-subtitle">{{ d.title }}</p>
       <p class="dp-save-error" *ngIf="saveError">{{ saveError }}</p>
 

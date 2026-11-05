@@ -9,7 +9,8 @@ import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Background auto-refresh (2026-09-27) — same interval-polling pattern
 // already used by notification-bell.component.ts. Without this, a donation
 // that transitions pending -> paid server-side (e.g. Checkout V2's OpenFields
@@ -62,7 +63,7 @@ const COLUMNS_STORAGE_KEY = 'donations-hidden-columns';
 @Component({
   selector: 'app-donations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './donations-page.component.html',
   styleUrl: './donations-page.component.css',
 })

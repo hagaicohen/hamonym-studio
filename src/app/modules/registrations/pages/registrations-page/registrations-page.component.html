@@ -11,8 +11,8 @@
   <div class="reg-header">
     <h1 class="reg-title">הרשמות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
     <div class="reg-header-actions" *ngIf="campaignId">
-      <button type="button" class="reg-header-btn" (click)="openImport()">📥 ייבוא מקובץ</button>
-      <button type="button" class="reg-header-btn reg-header-btn--primary" (click)="openAdd()">➕ הוספת משתתף</button>
+      <button type="button" class="reg-header-btn" (click)="openImport()"><app-icon name="file-up" /> ייבוא מקובץ</button>
+      <button type="button" class="reg-header-btn reg-header-btn--primary" (click)="openAdd()"><app-icon name="plus" /> הוספת משתתף</button>
     </div>
   </div>
 
@@ -33,7 +33,7 @@
       (input)="onSearch()"
     />
     <button class="reg-export-btn" (click)="exportCsv()" [disabled]="exporting">
-      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+      <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}
     </button>
   </div>
 
@@ -180,7 +180,7 @@
         השורה הראשונה נחשבת כותרת ומדולגת.
       </p>
       <p class="reg-field-hint"><strong>קטגוריות זמינות:</strong> {{ availableCategoriesLabel }}</p>
-      <button type="button" class="reg-template-link" (click)="downloadTemplate()">⬇ הורדת קובץ לדוגמה</button>
+      <button type="button" class="reg-template-link" (click)="downloadTemplate()"><app-icon name="download" /> הורדת קובץ לדוגמה</button>
 
       <label class="reg-field">
         <span>מקור התשלום עבור כל השורות *</span>
@@ -190,14 +190,14 @@
       </label>
 
       <label for="reg-import-input" class="reg-dropzone">
-        <span>📥 לחצו לבחירת קובץ (.xlsx / .csv)</span>
+        <span><app-icon name="file-up" /> לחצו לבחירת קובץ (.xlsx / .csv)</span>
       </label>
       <input id="reg-import-input" type="file" accept=".csv,.xlsx,.xls" style="display:none" (change)="onImportFile($event)">
     </ng-container>
 
     <ng-container *ngIf="importRows.length">
       <div class="reg-import-summary">
-        <span class="reg-import-ok">✔ {{ validImportCount }} תקינים</span>
+        <span class="reg-import-ok"><app-icon name="check" /> {{ validImportCount }} תקינים</span>
         <span class="reg-import-bad" *ngIf="invalidImportCount">✕ {{ invalidImportCount }} עם שגיאה</span>
       </div>
 
@@ -206,7 +206,7 @@
           <span class="reg-import-name">{{ r.participantName || '—' }}</span>
           <span class="reg-import-detail">{{ r.categoryTitle }}</span>
           <span class="reg-import-status">
-            <ng-container *ngIf="r.valid">✔</ng-container>
+            <ng-container *ngIf="r.valid"><app-icon name="check" /></ng-container>
             <ng-container *ngIf="!r.valid">{{ r.error }}</ng-container>
           </span>
         </div>

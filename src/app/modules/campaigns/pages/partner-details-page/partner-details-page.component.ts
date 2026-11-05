@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EntitiesService } from '../../../../core/services/entities.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page for a Partner's own identity/contact details (name, phone,
 // email, website, logo) — deliberately separate from the Partner Builder
 // (partner-builder-page), which is purely about the public PAGE's content
@@ -22,7 +23,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 @Component({
   selector: 'app-partner-details-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './partner-details-page.component.html',
   styleUrl: './partner-details-page.component.css',
 })

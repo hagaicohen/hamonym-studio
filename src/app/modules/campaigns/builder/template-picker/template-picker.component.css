@@ -207,3 +207,7 @@
   .tp-palette-row { max-width: 228px; margin-inline: auto; gap: 12px; }
   .tp-palette-label { flex-basis: 100%; margin: 0; text-align: center; }
 }
+
+/* The whole card selects the template; the label is a visual cue only. */
+span.tp-btn { display: block; box-sizing: border-box; text-align: center; }
+.tp-card:focus-visible { outline: 3px solid var(--accent, #7c3aed); outline-offset: 2px; }

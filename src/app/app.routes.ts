@@ -10,6 +10,9 @@ import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin
 import { authGuard } from './core/guards/auth.guard';
 import { welcomeGuard } from './core/guards/welcome.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
+
+// Campaign Builder Studio: leaving with unsaved edits asks first.
+const studioLeaveGuard = (page: { canLeave?: () => boolean } | null) => page?.canLeave ? page.canLeave() : true;
 import { devOnlyGuard } from './core/guards/dev-only.guard';
 import { DEV_ONLY_ROUTES } from './modules/dev/dev-only.routes';
 
@@ -266,6 +269,19 @@ export const routes: Routes = [
       ).then((m) => m.CampaignStudioPageComponent),
   },
 
+  // New, unsaved campaign in the Campaign Builder Studio. Same guard as
+  // campaigns/create; declared before campaigns/:id/studio so 'create' is
+  // never read as a campaign id.
+  {
+    path: 'campaigns/create/studio',
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [studioLeaveGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-builder-studio-page/campaign-builder-studio-page.component'
+      ).then((m) => m.CampaignBuilderStudioPageComponent),
+  },
+
   {
     path: 'campaigns/create/ai',
     canActivate: [campaignEditorGuard, aiFeatureGuard],
@@ -302,6 +318,18 @@ export const routes: Routes = [
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
       ).then((m) => m.CampaignStudioPageComponent),
+  },
+
+  // Campaign Builder Studio: separate route next to the classic editor above,
+  // same guard.
+  {
+    path: 'campaigns/:id/studio',
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [studioLeaveGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-builder-studio-page/campaign-builder-studio-page.component'
+      ).then((m) => m.CampaignBuilderStudioPageComponent),
   },
 
   // Phase 3 — Page Builder Owner Context. Same Builder/Renderer as

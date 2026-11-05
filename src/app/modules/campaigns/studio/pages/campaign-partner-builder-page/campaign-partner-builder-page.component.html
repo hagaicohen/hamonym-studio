@@ -1,6 +1,6 @@
 <div class="cpb-load-state" *ngIf="loading">טוען את תוכן ההשתתפות...</div>
 
-<div class="cpb-load-state cpb-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+<div class="cpb-load-state cpb-load-state--error" *ngIf="loadError"><app-icon name="alert" /> {{ loadError }}</div>
 
 <ng-container *ngIf="ui.state$ | async as s">
 <div class="cpb-page" [class.cpb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">

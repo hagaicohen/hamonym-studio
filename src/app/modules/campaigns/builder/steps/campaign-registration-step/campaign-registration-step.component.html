@@ -61,10 +61,10 @@
 
       <!-- Actions -->
       <div class="rf-actions">
-        <button class="rf-btn-clear" type="button" (click)="clearForm()" [disabled]="isSaving">🗑 נקה טופס</button>
+        <button class="rf-btn-clear" type="button" (click)="clearForm()" [disabled]="isSaving"><app-icon name="trash" /> נקה טופס</button>
         <button class="rf-btn-save" type="button" (click)="save()" [disabled]="!isFormValid || isSaving">
           <span *ngIf="isSaving" class="rf-btn-spinner"></span>
-          <ng-container *ngIf="!isSaving">💾 {{ isEditing ? 'עדכן' : 'שמור' }}</ng-container>
+          <ng-container *ngIf="!isSaving"><app-icon name="save" /> {{ isEditing ? 'עדכן' : 'שמור' }}</ng-container>
         </button>
       </div>
 
@@ -99,9 +99,9 @@
         <div class="rgo-card-title">{{ o.title }}</div>
         <p class="rgo-card-desc" *ngIf="o.description">{{ o.description }}</p>
         <div class="rgo-card-actions">
-          <button class="rgo-card-btn rgo-card-btn--delete" type="button" (click)="deleteOption(o.id)">🗑 מחיקה</button>
-          <button class="rgo-card-btn rgo-card-btn--duplicate" type="button" (click)="duplicateOption(o)">📋 שכפל</button>
-          <button class="rgo-card-btn rgo-card-btn--edit" type="button" (click)="editOption(o)">✏ עריכה</button>
+          <button class="rgo-card-btn rgo-card-btn--delete" type="button" (click)="deleteOption(o.id)"><app-icon name="trash" /> מחיקה</button>
+          <button class="rgo-card-btn rgo-card-btn--duplicate" type="button" (click)="duplicateOption(o)"><app-icon name="copy" /> שכפל</button>
+          <button class="rgo-card-btn rgo-card-btn--edit" type="button" (click)="editOption(o)"><app-icon name="pencil" /> עריכה</button>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { startWith, switchMap, takeUntil, catchError, tap } from 'rxjs/operators
 import { environment } from '../../../../environments/environment';
 import { CurrentEntityService } from '../../services/current-entity.service';
 
+import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
 const POLL_MS = 3000;
 const PAGE_LIMIT = 10;
 const VISIBLE_MS = 6000;
@@ -46,7 +47,7 @@ interface ToastItem {
 @Component({
   selector: 'app-paid-donation-toast',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './paid-donation-toast.component.html',
   styleUrl: './paid-donation-toast.component.css',
 })
