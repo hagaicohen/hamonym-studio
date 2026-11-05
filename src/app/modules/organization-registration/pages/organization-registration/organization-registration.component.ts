@@ -13,6 +13,7 @@ import {
   OrganizationRegistrationState,
   OrganizationRegistrationStateService,
   buildPayload,
+  resumeStep,
 } from '../../services/organization-registration-state.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { ActivatedRoute } from '@angular/router';
@@ -138,7 +139,7 @@ export class OrganizationRegistrationComponent implements OnInit {
         this.stateService.resetState();
         this.stateService.loadFromEntity(entity);
         this.drafts.update((list) => list.map((d) => (d.id === entity.id ? { ...d, ...entity } : d)));
-        this.afterSwitch();
+        this.afterSwitch(resumeStep(entity.onboarding_step));
       },
       error: () => {
         this.loadingDraftId.set(null);
@@ -152,8 +153,8 @@ export class OrganizationRegistrationComponent implements OnInit {
     return draft ? this.draftName(draft) : '';
   }
 
-  private afterSwitch(): void {
-    this.currentStep = 1;
+  private afterSwitch(step = 1): void {
+    this.currentStep = step;
     this.draftSaveError.set('');
     this.draftSaved.set(false);
     this.markClean();
@@ -308,7 +309,7 @@ export class OrganizationRegistrationComponent implements OnInit {
     this.draftSaveError.set('');
     const sent = this.stateService.state();
 
-    this.stateService.save({ includeBilling: false }).subscribe({
+    this.stateService.save({ includeBilling: false, onboardingStep: this.currentStep }).subscribe({
       next: (entity) => {
         this.savingDraft.set(false);
         // Uploads clear the pending File fields after a save; edits typed
