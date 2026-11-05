@@ -52,6 +52,12 @@ function stripBlobs(row) {
   return row;
 }
 
+// Registration wizard step (1-6) a draft was saved on; anything else is ignored.
+function wizardStep(value) {
+  const step = Number(value);
+  return Number.isInteger(step) && step >= 1 && step <= 6 ? step : null;
+}
+
 exports.createEntity =
   async ({
     userId,
@@ -176,7 +182,7 @@ exports.createEntity =
 
             true,
 
-            6,
+            wizardStep(data.onboarding_step) ?? 6,
 
             'draft',
 
@@ -880,6 +886,9 @@ exports.updateEntity =
           flagged_for_review_reason = CASE WHEN $34 THEN $35 ELSE flagged_for_review_reason END,
           flagged_for_review_at = CASE WHEN $34 THEN NOW() ELSE flagged_for_review_at END,
 
+          -- The registration wizard's resume step; only a draft remembers it.
+          onboarding_step = CASE WHEN status = 'draft' AND $36::int IS NOT NULL THEN $36::int ELSE onboarding_step END,
+
           updated_at = NOW()
 
         WHERE id = $31
@@ -952,7 +961,9 @@ exports.updateEntity =
           missingProfileFields(data).length === 0,
 
           reapproval.flag,
-          reapproval.reason
+          reapproval.reason,
+
+          wizardStep(data.onboarding_step)
 
         ]
 
