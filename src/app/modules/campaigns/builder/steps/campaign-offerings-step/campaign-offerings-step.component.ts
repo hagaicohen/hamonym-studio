@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Gift, Eye, Building2, X } from 'lucide-angular';
@@ -13,10 +13,11 @@ import { CampaignPartnersService, CampaignPartner } from '../../../services/camp
 import { PartnerLinkModalComponent } from '../../../shared/components/partner-link-modal/partner-link-modal.component';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-offerings-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, PartnerLinkModalComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, RouterLink, PartnerLinkModalComponent],
   templateUrl: './campaign-offerings-step.component.html',
   styleUrl: './campaign-offerings-step.component.css',
 })
@@ -34,6 +35,11 @@ export class CampaignOfferingsStepComponent implements OnInit {
   // CampaignPartner rows reference campaigns.id, which doesn't exist yet for
   // a brand-new unsaved draft, so picking a partner transparently saves the
   // campaign first if needed (mirrors campaign-studio-topbar's "שמור טיוטה").
+  // Called after linking a partner created the unsaved campaign. Unset (the
+  // classic wizard) navigates to its edit URL as before; the Studio passes a
+  // handler that only updates its address, so the page, the draft and the
+  // link dialog stay in place.
+  @Input() afterCreate: ((id: string) => void) | null = null;
   campaignPartners: CampaignPartner[] = [];
   linkModalRewardId: string | null = null;
   linkModalRewardTitle = '';
@@ -81,7 +87,8 @@ export class CampaignOfferingsStepComponent implements OnInit {
         this.savingCampaignForLink = false;
         if (res?.id) {
           this.state.patch({ id: res.id });
-          this.router.navigate(['/campaigns', res.id, 'edit'], { replaceUrl: true });
+          if (this.afterCreate) this.afterCreate(res.id);
+          else this.router.navigate(['/campaigns', res.id, 'edit'], { replaceUrl: true });
           this.loadCampaignPartners();
           this.openLinkModal(this.offering);
         }
@@ -130,7 +137,7 @@ export class CampaignOfferingsStepComponent implements OnInit {
   };
 
   readonly copy = {
-    icon: '🎁',
+    icon: 'gift' as const,
     titleLabel: 'כותרת התשורה',
     descLabel: 'תיאור התשורה',
     priceLabel: 'סכום מינימלי (₪)',

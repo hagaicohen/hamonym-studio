@@ -94,7 +94,7 @@
 
 .ai-input:focus {
   outline: none;
-  border-color: #583cd6;
+  border-color: var(--hm-control-focus);
 }
 
 .ai-input-url {

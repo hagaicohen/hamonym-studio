@@ -7,7 +7,7 @@ const recurringService = require('./recurring.service');
 // verifyOwnership for why that check has to live here, not there).
 exports.getMyRecurring = async (req, res) => {
   try {
-    const instructions = await recurringService.getMyRecurringInstructions(req.user.id);
+    const instructions = await recurringService.getMyRecurringInstructions(req.user.id, req.user.donationProofVersion);
     res.json({ instructions });
   } catch (err) {
     console.error('[recurring.controller.getMyRecurring]', err.message);
@@ -17,7 +17,7 @@ exports.getMyRecurring = async (req, res) => {
 
 exports.getHistory = async (req, res) => {
   try {
-    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id);
+    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id, req.user.donationProofVersion);
     if (!owns) return res.status(404).json({ error: 'הוראת הקבע לא נמצאה' });
 
     const history = await recurringService.getRecurringDonationHistory(req.params.id);
@@ -38,7 +38,7 @@ exports.getHistory = async (req, res) => {
 // layer, not here).
 exports.pause = async (req, res) => {
   try {
-    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id);
+    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id, req.user.donationProofVersion);
     if (!owns) return res.status(404).json({ error: 'הוראת הקבע לא נמצאה' });
 
     const result = await recurringService.pauseRecurring(req.params.id);
@@ -51,7 +51,7 @@ exports.pause = async (req, res) => {
 
 exports.resume = async (req, res) => {
   try {
-    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id);
+    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id, req.user.donationProofVersion);
     if (!owns) return res.status(404).json({ error: 'הוראת הקבע לא נמצאה' });
 
     const result = await recurringService.resumeRecurring(req.params.id);
@@ -64,7 +64,7 @@ exports.resume = async (req, res) => {
 
 exports.cancel = async (req, res) => {
   try {
-    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id);
+    const owns = await recurringService.verifyOwnership(req.params.id, req.user.id, req.user.donationProofVersion);
     if (!owns) return res.status(404).json({ error: 'הוראת הקבע לא נמצאה' });
 
     const result = await recurringService.cancelRecurring(req.params.id);

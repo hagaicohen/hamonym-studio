@@ -47,11 +47,11 @@
     }
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || campaigns.length === 0">
-      {{ exporting ? 'מייצא...' : '⬇ ייצוא CSV' }}
+      <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}
     </button>
 
     <div class="don-col-menu-wrap">
-      <button class="don-export-btn" (click)="toggleColumnsMenu()">☰ עמודות</button>
+      <button class="don-export-btn" (click)="toggleColumnsMenu()"><app-icon name="columns" /> עמודות</button>
       @if (columnsMenuOpen) {
         <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
         <div class="don-col-panel">

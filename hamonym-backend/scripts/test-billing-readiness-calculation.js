@@ -64,20 +64,20 @@ function buildFakePool(state) {
       return { rows: p ? [{ ...p }] : [] };
     }
 
-    if (sql.startsWith('INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at)')) {
+    if (sql.startsWith('INSERT INTO billing_runs (billing_period_id, mode, as_of, status, started_at, result_summary)')) {
       const id = `run-${state.seq.run++}`;
       state.runs.set(id, { id, billing_period_id: params[0], result_summary: null });
       return { rows: [{ id }] };
     }
 
     if (sql.startsWith('SELECT d.entity_id, e.display_name, COUNT(*)::int AS donation_count')) {
-      const [start, end] = params;
+      const [end] = params;
       const byEntity = new Map();
       for (const d of state.donations.values()) {
         const e = state.entities.get(d.entity_id);
         if (!e || e.status !== 'active') continue;
-        if (d.status !== 'paid' || d.is_mock) continue;
-        if (!(d.billing_effective_at >= start && d.billing_effective_at < end)) continue;
+        if (d.status !== 'paid') continue;
+        if (!(d.billing_effective_at < end)) continue;
         if (d.effective_statement_id !== null) continue;
         const cur = byEntity.get(d.entity_id) || { entity_id: d.entity_id, display_name: e.display_name, donation_count: 0, grossNum: 0 };
         cur.donation_count += 1;
@@ -103,10 +103,10 @@ function buildFakePool(state) {
     }
 
     if (sql.startsWith('SELECT id, amount, billing_effective_at, completed_at, recurring_instruction_id, source FROM donations')) {
-      const [entityId, start, end] = params;
+      const [entityId, end] = params;
       const rows = [...state.donations.values()]
-        .filter((d) => d.entity_id === entityId && d.status === 'paid' && !d.is_mock
-          && d.billing_effective_at >= start && d.billing_effective_at < end
+        .filter((d) => d.entity_id === entityId && d.status === 'paid'
+          && d.billing_effective_at < end
           && d.effective_statement_id === null)
         .sort((a, b) => a.billing_effective_at.localeCompare(b.billing_effective_at))
         .map((d) => ({
@@ -184,6 +184,15 @@ function buildFakePool(state) {
       return { rows: [] };
     }
 
+    if (sql.startsWith('SELECT sc.statement_id, sc.donation_id, sc.amount_snapshot')) {
+      const rows = state.components.filter(c => {
+        const st=state.statements.get(c.statement_id), d=state.donations.get(c.donation_id);
+        const run=state.runs.get(st.billing_run_id), period=state.periods.get(run.billing_period_id);
+        return st.billing_run_id===params[0] && st.status!=='abandoned' && d.billing_effective_at < period.period_start;
+      }).map(c => ({statement_id:c.statement_id,donation_id:c.donation_id,amount_snapshot:c.amount_snapshot,original_billing_effective_at:state.donations.get(c.donation_id).billing_effective_at}));
+      return {rows};
+    }
+
     if (sql.startsWith('UPDATE billing_runs SET result_summary')) {
       const [id, summaryJson] = params;
       const run = state.runs.get(id);
@@ -210,7 +219,7 @@ function buildFakePool(state) {
           const d = state.donations.get(c.donation_id);
           return {
             donation_id: c.donation_id, amount_snapshot: c.amount_snapshot,
-            donation_status: d.status, is_mock: d.is_mock, amount: d.amount,
+            donation_status: d.status, amount: d.amount,
             entity_id: d.entity_id, effective_statement_id: d.effective_statement_id,
           };
         });
@@ -274,7 +283,7 @@ function addDonation(state, id, entityId, amount, billingEffectiveAt) {
     id, entity_id: entityId, amount: Number(amount).toFixed(2),
     billing_effective_at: billingEffectiveAt, completed_at: billingEffectiveAt,
     recurring_instruction_id: null, source: null,
-    status: 'paid', is_mock: false, effective_statement_id: null,
+    status: 'paid', effective_statement_id: null,
   });
 }
 

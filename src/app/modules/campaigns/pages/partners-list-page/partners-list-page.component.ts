@@ -2,13 +2,15 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideAngularModule, Eye, Pencil, Copy, Trash2, CircleUserRound } from 'lucide-angular';
+import { LucideAngularModule, Eye, Pencil, Copy, Trash2, CircleUserRound, Handshake } from 'lucide-angular';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { defaultPartnerLayoutBlocks } from '../../services/campaign-studio-state.service';
 import { PartnerImportService } from '../../services/partner-import.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface PartnerRow {
   id: string;
   display_name: string;
@@ -25,7 +27,7 @@ interface PartnerRow {
 @Component({
   selector: 'app-partners-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, LucideAngularModule, EmptyStateComponent],
   templateUrl: './partners-list-page.component.html',
   styleUrl: './partners-list-page.component.css',
 })
@@ -34,6 +36,7 @@ export class PartnersListPageComponent implements OnInit {
   // throughout the Builder topbars) — replaced full-color emoji per explicit
   // feedback: emoji can't be recolored to match a simple gray/purple style.
   readonly Eye = Eye;
+  readonly Handshake = Handshake;
   readonly Pencil = Pencil;
   readonly Copy = Copy;
   readonly Trash2 = Trash2;

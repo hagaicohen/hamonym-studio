@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, Users, Plus, Upload, Download, Search, Pencil, Trash2, X, CircleCheck, ExternalLink } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { AmbassadorService } from '../../../services/ambassador.service';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Hebrew-preserving (2026-10-01) -- same normalization rule as the live
 // backend/admin flows (ambassadors.service.js#normalizeSlug), replacing the
 // old ASCII-transliterating map so a Hebrew name's DEFAULT suggestion is
@@ -68,7 +69,7 @@ const EMPTY_FORM: FormModel = {
 @Component({
   selector: 'app-campaign-ambassadors-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-ambassadors-step.component.html',
   styleUrl: './campaign-ambassadors-step.component.css',
 })

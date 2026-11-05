@@ -233,47 +233,9 @@
   color: #0f172a;
 }
 
-.field-label-row {
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 12px;
-}
-
-.field-label-row .field-label {
-  margin-bottom: 8px;
-}
-
-.clear-selection-btn {
-  border: none;
-
-  background: transparent;
-
-  cursor: pointer;
-
-  font-size: 13px;
-
-  font-weight: 500;
-
-  color: #64748b;
-
-  margin-bottom: 8px;
-
-  transition: color 0.2s ease;
-}
-
-.clear-selection-btn:hover {
-  color: #14b8a6;
-
-  text-decoration: underline;
-}
-
 /* INPUTS */
 
-input,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]),
 select {
   width: 100%;
 
@@ -324,22 +286,22 @@ select option {
   background: white;
 }
 
-input:hover,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]):hover,
 select:hover {
   border-color: #cbd5e1;
 }
 
-input:focus,
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]):focus,
 select:focus {
-  border-color: #14b8a6;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
+  box-shadow: none;
 }
 
 /* VALIDATION */
 
 .invalid {
-  border-color: #ef4444 !important;
+  border-color: var(--hm-control-error);
 
   background: #fef2f2;
 }
@@ -356,67 +318,6 @@ select:focus {
   text-align: right;
 }
 
-/* CHIPS */
-
-.chips-title {
-  margin-top: 18px;
-
-  margin-bottom: 14px;
-
-  font-size: 14px;
-
-  font-weight: 700;
-
-  color: #0f172a;
-}
-
-.chips {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 10px;
-}
-
-.chip {
-  height: 34px;
-
-  padding: 0 14px;
-
-  border: 1px solid #b7e4dc;
-
-  border-radius: 999px;
-
-  background: white;
-
-  font-size: 13px;
-
-  color: #0f172a;
-
-  cursor: pointer;
-
-  transition:
-    border-color 0.2s ease,
-    color 0.2s ease,
-    background 0.2s ease,
-    transform 0.15s ease;
-}
-
-.chip:hover {
-  border-color: #14b8a6;
-
-  color: #14b8a6;
-
-  transform: translateY(-1px);
-}
-
-.chip.active {
-  background: #14b8a6;
-
-  border-color: #14b8a6;
-
-  color: white;
-}
 
 /* GRID */
 
@@ -788,16 +689,6 @@ select:focus {
 
   .contact-grid {
     grid-template-columns: 1fr;
-  }
-
-  .chips {
-    gap: 8px;
-  }
-
-  .chip {
-    font-size: 12px;
-
-    padding: 0 12px;
   }
 
   .document-description {

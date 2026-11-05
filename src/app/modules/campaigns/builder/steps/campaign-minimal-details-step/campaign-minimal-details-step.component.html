@@ -21,7 +21,7 @@
         [class.auto-logo-preview--none]="logoShape === 'none'"
         [style.background]="logoShape === 'none' ? 'transparent' : (draft.layout.theme.logoBg || 'transparent')">
         <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
-        <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="auto-logo-emoji">🏢</span>
+        <span *ngIf="!draft.campaignLogoUrl && !entityLogoUrl" class="auto-logo-emoji"><app-icon name="building" /></span>
       </div>
       <div class="auto-logo-actions">
         <p class="field-hint" *ngIf="!draft.campaignLogoUrl">כברירת מחדל נלקח מפרטי {{ entityName || 'העמותה' }}</p>
@@ -170,7 +170,7 @@
         (ngModelChange)="onSlugChange($event)"
         placeholder="donation-page">
     </div>
-    <p class="field-hint" *ngIf="isSlugLocked">🔒 לא ניתן לשינוי — הכתובת כבר משותפת.</p>
+    <p class="field-hint" *ngIf="isSlugLocked"><app-icon name="lock" /> לא ניתן לשינוי — הכתובת כבר משותפת.</p>
     <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true">✓ הכתובת זמינה</div>
     <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false">✕ הכתובת כבר בשימוש</div>
     <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">בודק זמינות...</div>

@@ -1,12 +1,13 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule, LucideIconData, HandHeart, Footprints, FileText, Zap } from 'lucide-angular';
 import { CAMPAIGN_PRESETS, CampaignPreset } from '../presets/campaign-presets';
 import { PresetId } from '../../services/campaign-studio-state.service';
 
 @Component({
   selector: 'app-campaign-preset-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './campaign-preset-picker.component.html',
   styleUrl: './campaign-preset-picker.component.css',
 })
@@ -29,6 +30,10 @@ export class CampaignPresetPickerComponent {
   @Output() minimalSelected = new EventEmitter<void>();
 
   readonly presets = CAMPAIGN_PRESETS;
+  readonly ui = { Zap };
+  // Card icons for the presets (design system: Lucide, no decorative emoji).
+  private readonly PRESET_ICONS: Record<PresetId, LucideIconData> = { donation: HandHeart, race: Footprints, general: FileText };
+  presetIcon(id: PresetId): LucideIconData { return this.PRESET_ICONS[id] ?? FileText; }
 
   select(preset: CampaignPreset): void {
     this.presetSelected.emit(preset.id);

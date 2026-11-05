@@ -12,6 +12,7 @@
   import TextAlign from '@tiptap/extension-text-align';
   import { TextStyle } from '@tiptap/extension-text-style';
   import Highlight from '@tiptap/extension-highlight';
+  import { HmIconComponent } from '../design-system/icon.component';
 
   // Single TextStyle extension carrying both color and fontSize as inline marks
   const CustomTextStyle = TextStyle.extend({
@@ -37,7 +38,7 @@
   @Component({
     selector: 'app-rich-text-editor',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, HmIconComponent],
     templateUrl: './rich-text-editor.component.html',
     styleUrls: ['./rich-text-editor.component.css'],
     providers: [{

@@ -88,7 +88,7 @@
   color: #0f172a; background: #fff; box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.amb-search:focus { border-color: #2563eb; }
+.amb-search:focus { border-color: var(--hm-control-focus); }
 
 .amb-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -243,12 +243,12 @@
   font-size: 14px; font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
-.adf-input:focus { border-color: #2563eb; }
+.adf-input:focus { border-color: var(--hm-control-focus); }
 .adf-textarea {
   padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
   font-size: 14px; font-family: inherit; color: #0f172a; outline: none; resize: vertical;
 }
-.adf-textarea:focus { border-color: #2563eb; }
+.adf-textarea:focus { border-color: var(--hm-control-focus); }
 .adf-money-wrap {
   position: relative; display: flex; align-items: center;
 }

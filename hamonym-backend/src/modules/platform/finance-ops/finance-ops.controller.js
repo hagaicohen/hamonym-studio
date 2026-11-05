@@ -15,7 +15,7 @@ const { statusFor } = require('./error-status');
 function handle(res, label, err) {
   const status = statusFor(err);
   if (status === 500) console.error(`[finance-ops] ${label} error:`, err.message);
-  res.status(status).json({ error: err.message, code: err.code });
+  res.status(status).json({ error: err.message, code: err.code, ...(err.blockers ? { blockers: err.blockers } : {}) });
 }
 
 exports.listExceptions = async (req, res) => {
@@ -100,6 +100,7 @@ exports.exportMasavProposals = async (req, res) => {
   try {
     const buffer = await masavProposals.exportMasavProposals({
       proposalIds: req.body.proposalIds,
+      expectedPreviewToken: req.body.expectedPreviewToken,
       superAdminUserId: req.user.id,
     });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -117,3 +118,18 @@ exports.getStatementBalance = async (req, res) => {
     handle(res, 'getStatementBalance', err);
   }
 };
+
+exports.previewMasavExport=async(req,res)=>{try{res.json({preview:await masavProposals.previewMasavExport({proposalIds:req.body.proposalIds})});}catch(e){handle(res,'previewMasavExport',e);}};
+
+exports.recordMasavResult=async(req,res)=>{try{const result=await require('../../billing-engine/masav-result.service').recordConfirmedResult({...req.body,instructionId:req.params.id,superAdminUserId:req.user.id});res.json({result});}catch(e){handle(res,'recordMasavResult',e);}};
+
+exports.listMasavInstructions=async(req,res)=>{try{res.json({instructions:await require('../../billing-engine/masav-recovery.service').listInstructions()});}catch(e){handle(res,'listMasavInstructions',e);}};
+exports.finalizeMasavInstruction=async(req,res)=>{try{res.json({result:await require('../../billing-engine/masav-recovery.service').finalizeInstruction({...req.body,instructionId:req.params.id,superAdminUserId:req.user.id})});}catch(e){handle(res,'finalizeMasavInstruction',e);}};
+exports.prepareMasavRetry=async(req,res)=>{try{res.json({result:await require('../../billing-engine/masav-recovery.service').prepareRetry({instructionId:req.params.id,confirmed:req.body.confirmed,superAdminUserId:req.user.id})});}catch(e){handle(res,'prepareMasavRetry',e);}};
+
+exports.masavExportSummary=async(req,res)=>{try{res.json({summary:await require('../../billing-engine/masav-one-click.service').summary()});}catch(err){handle(res,'masavExportSummary',err);}};
+exports.approveAndDownloadMasav=async(req,res)=>{try{
+ const buffer=await require('../../billing-engine/masav-one-click.service').approveAndDownload({requestId:req.body.requestId,expectedPreviewToken:req.body.expectedPreviewToken,superAdminUserId:req.user.id});
+ res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+ res.setHeader('Content-Disposition','attachment; filename="masav-collection.xlsx"');res.send(buffer);
+}catch(err){handle(res,'approveAndDownloadMasav',err);}};

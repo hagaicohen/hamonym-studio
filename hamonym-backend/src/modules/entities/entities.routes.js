@@ -22,6 +22,8 @@ const upload = multer({
 
 });
 
+router.post('/registration-availability', requireAuth, controller.checkRegistrationAvailability);
+
 router.post(
 
   '/',
@@ -199,6 +201,12 @@ router.post(
   '/:id/notifications/acknowledge',
   requireAuth,
   controller.acknowledgeNotifications
+);
+
+router.delete(
+  '/:id/draft-registration',
+  requireAuth,
+  controller.deleteRegistrationDraft
 );
 
 router.delete(

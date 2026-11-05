@@ -11,6 +11,7 @@ const requirePermission = require('../../middleware/require-permission');
 router.use(requireAuth, requirePlatformAccess);
 
 router.get('/dashboard', ctrl.getDashboard);
+router.get('/dashboard/overview', ctrl.getDashboardOverview);
 router.get('/notifications-count', ctrl.getNotificationsCount);
 router.get('/activity', ctrl.getActivity);
 
@@ -63,6 +64,13 @@ router.post('/users/:id/permissions', requireSuperAdmin, ctrl.setUserPermissions
 // inside it, same as every other route group above.
 router.use('/cardcom-ops', require('./cardcom-ops/cardcom-ops.routes'));
 
+// Category suggestions (migration 086): Super Admin review only. Approving
+// never changes the official category list.
+const categorySuggestions = require('../category-suggestions/category-suggestions.controller');
+router.get('/category-suggestions', requireSuperAdmin, categorySuggestions.list);
+router.post('/category-suggestions/:id/approve', requireSuperAdmin, categorySuggestions.approve);
+router.post('/category-suggestions/:id/reject', requireSuperAdmin, categorySuggestions.reject);
+
 // Billing Account Provisioning — see billing-provisioning.routes.js for why
 // this is requireSuperAdmin rather than requirePermission('organizations').
 router.use('/billing-accounts', require('./billing-provisioning/billing-provisioning.routes'));
@@ -83,5 +91,8 @@ router.use('/finance-ops', require('./finance-ops/finance-ops.routes'));
 // גבייה" page (financial overview, needs-attention, system activity,
 // cross-period history, basic Excel report). See collection-ops.routes.js.
 router.use('/collection-ops', require('./collection-ops/collection-ops.routes'));
+
+router.use('/simulation-clock', require('./fin11-simulation/fin11-simulation.routes'));
+router.use('/campaign-reset', require('./campaign-reset/campaign-reset.routes'));
 
 module.exports = router;

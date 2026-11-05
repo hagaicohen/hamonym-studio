@@ -1,6 +1,7 @@
 import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DonationToastItem } from '../../../services/donation.service';
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 
 interface ActiveToast {
   id: number;
@@ -11,7 +12,7 @@ interface ActiveToast {
 @Component({
   selector: 'app-donation-toast',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './donation-toast.component.html',
   styleUrls: ['./donation-toast.component.css'],
 })

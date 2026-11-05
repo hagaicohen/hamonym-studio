@@ -17,7 +17,7 @@ const approval = require('../../billing-engine/approval.service');
 const collection = require('../../collection-engine/collection.service');
 const routing = require('../../collection-engine/routing');
 const billingRepository = require('../../billing/billing.repository');
-const getAdapter = require('../../collection-engine/adapters/get-adapter');
+const getReconciliationAdapter = require('../../collection-engine/adapters/get-reconciliation-adapter');
 const { resolveSelectedMonthBoundary, ensurePeriod } = require('../../billing-engine/billing-period.util');
 
 // Read-only collection-readiness projection (Billing Collection UX
@@ -318,7 +318,16 @@ exports.listStatements = async ({ periodId, runId, status, month }) => {
               -- second round trip). Same SUM(payments.amount) statement-
               -- balance.service.js#getStatementBalance already treats as
               -- authoritative -- never recalculated differently here.
-              (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.statement_id = s.id) AS collected
+              (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.statement_id = s.id) AS collected,
+              -- Payment ledger facts only: routing and unconfirmed exports are not collections.
+              ARRAY(SELECT DISTINCT ca.collection_method FROM payments p
+                    JOIN collection_attempts ca ON ca.id = p.collection_attempt_id AND ca.statement_id = p.statement_id
+                    WHERE p.statement_id = s.id ORDER BY ca.collection_method) AS confirmed_collection_methods,
+              (SELECT MAX(p.received_at) FROM payments p WHERE p.statement_id = s.id) AS latest_collection_at,
+              (SELECT ca.business_collection_at FROM payments p JOIN collection_attempts ca ON ca.id=p.collection_attempt_id
+               WHERE p.statement_id=s.id ORDER BY p.received_at DESC, p.id DESC LIMIT 1) AS latest_business_collection_at,
+              s.total_due + COALESCE((SELECT SUM(sa.delta_amount) FROM statement_adjustments sa WHERE sa.statement_id = s.id), 0)
+                - COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.statement_id = s.id), 0) AS outstanding
        FROM statements s
        JOIN billing_accounts ba ON ba.id = s.billing_account_id
        JOIN entities e ON e.id = ba.entity_id
@@ -462,7 +471,12 @@ exports.abandonStatement = async ({ statementId, superAdminUserId, ip }) => {
 // collection engine; a card-routed Statement missing a payment instrument
 // is caught the same way. It never fakes success and never falls back to a
 // different rail.
-exports.triggerCollection = async ({ statementId, superAdminUserId, ip }) => {
+exports.triggerCollection = async ({ statementId, superAdminUserId, ip, manualRetry, isSuperAdmin, confirmed, reason, expectedAttemptId, expectedOutstanding }) => {
+  if (manualRetry === true) {
+    return collection.runSuperAdminManualCardRetry(statementId, {
+      superAdminUserId, isSuperAdmin, ip, confirmed, reason, expectedAttemptId, expectedOutstanding,
+    });
+  }
   const stmtRes = await pool.query(
     `SELECT s.total_due, ba.entity_id
      FROM statements s JOIN billing_accounts ba ON ba.id = s.billing_account_id
@@ -540,7 +554,11 @@ const RECONCILE_UNIQUE_VIOLATION = '23505';
 
 exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip }) => {
   const attemptRes = await pool.query(
-    `SELECT id, statement_id, collection_method, status FROM collection_attempts WHERE id = $1`,
+    `SELECT ca.id, ca.statement_id, ca.collection_method, ca.status, ca.provider, ba.entity_id
+     FROM collection_attempts ca
+     JOIN statements s ON s.id = ca.statement_id
+     JOIN billing_accounts ba ON ba.id = s.billing_account_id
+     WHERE ca.id = $1`,
     [attemptId]
   );
   const attempt = attemptRes.rows[0];
@@ -562,11 +580,14 @@ exports.reconcileCollectionAttempt = async ({ attemptId, superAdminUserId, ip })
   // Same defensive shape as collection.service.js#runCollectionForStatement's
   // own adapter.charge() try/catch -- never let the adapter's own thrown
   // exception (as opposed to a returned {outcome:'ambiguous', ...}) surface
-  // as an unhandled error; treat it identically to an ambiguous lookup.
+  // as an unhandled error; treat transport failures as an ambiguous lookup.
+  // Pilot/provider configuration rejections fail closed without changing facts.
+  const adapter = getReconciliationAdapter(attempt.provider, { collectionMethod: attempt.collection_method, entityId: attempt.entity_id });
   let outcome;
   try {
-    outcome = await getAdapter('card').reconcile({ attemptId });
+    outcome = await adapter.reconcile({ attemptId, entityId: attempt.entity_id });
   } catch (err) {
+    if (err.code === 'REAL_COLLECTION_DISABLED_DURING_PILOT') throw err;
     outcome = { outcome: 'ambiguous', failureReason: err.message };
   }
 

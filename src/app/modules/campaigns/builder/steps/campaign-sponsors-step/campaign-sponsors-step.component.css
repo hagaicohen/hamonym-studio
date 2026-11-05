@@ -51,7 +51,7 @@
   font-size: 14px; font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
-.sf-input:focus { border-color: #7c3aed; }
+.sf-input:focus { border-color: var(--hm-control-focus); }
 
 .sf-logo-area {
   border: 2px dashed #c4b5fd; border-radius: 12px; background: #faf5ff;
@@ -136,10 +136,6 @@
 .ss-card-btn--delete { background: #fee2e2; color: #dc2626; }
 .ss-card-btn--edit   { background: #ede9fe; color: #7c3aed; }
 
-.ss-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; }
-.ss-empty-icon { font-size: 40px; opacity: 0.3; }
-.ss-empty-text { font-size: 15px; font-weight: 700; color: #64748b; }
-.ss-empty-hint { font-size: 13px; color: #94a3b8; }
 
 @media (max-width: 768px) {
   .sponsor-preview-panel {

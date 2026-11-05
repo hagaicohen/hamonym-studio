@@ -1,4 +1,6 @@
-<!--<app-loading-overlay *ngIf="isSaving"> </app-loading-overlay>-->
+@if (loadingEntity) { <app-loading-overlay role="status" aria-label="טוען את פרטי העמותה"></app-loading-overlay> }
+@if (loadError) { <p role="alert">{{ loadError }}</p> }
+@if (!loadingEntity && !loadError && draftEntity) {
 
 <div class="settings-page">
   <!-- HERO -->
@@ -74,7 +76,7 @@
     </div>
   </div>
 
-  <app-approval-status-card *ngIf="draftEntity?.id" [entityId]="draftEntity!.id"></app-approval-status-card>
+  <app-approval-status-card *ngIf="draftEntity?.id" [entityId]="draftEntity!.id" [refreshKey]="draftEntity.status + ':' + draftEntity.updated_at" [canSubmit]="!editMode && !saveState.isSaving && !saveError && dirtySections.size === 0" (entityUpdated)="onReviewSubmitted($event)"></app-approval-status-card>
 
   <!-- INTERNAL NAVIGATION -->
 
@@ -344,4 +346,6 @@
       </div>
     </div>
   </div>
+}
+
 }

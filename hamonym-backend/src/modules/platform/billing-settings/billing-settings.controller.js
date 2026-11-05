@@ -24,3 +24,5 @@ exports.update = async (req, res) => {
     res.status(status).json({ error: err.message });
   }
 };
+
+exports.updateMasavConsolidation=async(req,res)=>{try{res.json({setting:await service.setMasavConsolidation({mode:req.body.mode,superAdminUserId:req.user.id,ip:req.ip})});}catch(e){res.status(e.code==='INVALID_MASAV_MODE'?400:500).json({error:e.message,code:e.code});}};

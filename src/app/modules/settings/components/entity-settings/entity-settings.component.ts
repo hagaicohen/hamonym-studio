@@ -1,8 +1,8 @@
 // entity-settings.component.ts
 
-import { Component, OnInit, inject, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
 
-import { finalize, firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject, Subscription, takeUntil } from 'rxjs';
 
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -49,6 +49,7 @@ import { BillingService } from '../../../organization-registration/services/bill
 import { ApprovalStatusCardComponent } from '../approval-status-card/approval-status-card.component';
 
 import { SectionSaveState } from '../../models/section-save-state.model';
+import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
 
 @Component({
   selector: 'app-entity-settings',
@@ -59,6 +60,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
     CommonModule,
     FormsModule,
     LucideAngularModule,
+    LoadingOverlayComponent,
 
     EntityBasicInfoSectionViewComponent,
     EntityBasicInfoSectionEditComponent,
@@ -82,7 +84,7 @@ import { SectionSaveState } from '../../models/section-save-state.model';
 
   styleUrls: ['./entity-settings.component.css'],
 })
-export class EntitySettingsComponent implements OnInit {
+export class EntitySettingsComponent implements OnInit, OnDestroy {
   constructor() {}
 
   readonly Building2 = Building2;
@@ -140,27 +142,79 @@ export class EntitySettingsComponent implements OnInit {
 
   apiUrl = environment.apiUrl;
 
+  loadingEntity = false;
+  loadError = '';
+  private scopeVersion = 0;
+  private scopeChanged = new Subject<void>();
+  private routeSubscription?: Subscription;
+
   ngOnInit(): void {
-    this.entity = this.currentEntityService.currentEntity();
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
+      const version = ++this.scopeVersion;
+      this.scopeChanged.next();
+      this.entity = this.draftEntity = null;
+      this.masavConfig = null;
+      this.editMode = false;
+      this.editingSection = null;
+      this.dirtySections.clear();
+      this.saveError = this.loadError = this.visibilityError = this.deleteError = '';
+      this.deleteConfirmOpen = false;
+      this.isDeletingEntity = this.isTogglingVisibility = this.isCheckingBillingConnection = false;
+      this.saveState = {isSaving: false, saveCompleted: false, saveFailed: false};
+      const id = params.get('id') || this.currentEntityService.currentEntity()?.id;
+      if (!id) { this.loadingEntity = false; this.loadError = 'לא נבחרה עמותה'; return; }
+      this.loadingEntity = true;
+      this.entitiesService.getEntityById(id).pipe(takeUntil(this.scopeChanged)).subscribe({
+        next: result => {
+          if (version !== this.scopeVersion) return;
+          const entity = result.entity || result;
+          if (entity.id !== id) { this.loadingEntity = false; this.loadError = 'נתוני העמותה אינם תואמים לכתובת המבוקשת'; return; }
+          this.entity = entity;
+          this.draftEntity = structuredClone(entity);
+          this.loadingEntity = false;
+          this.loadMasavConfig();
+          if (this.route.snapshot.queryParamMap.get('edit') === 'true') this.startEdit();
+        },
+        error: err => {
+          if (version !== this.scopeVersion) return;
+          this.loadingEntity = false;
+          this.loadError = err?.error?.error || 'לא ניתן לטעון את העמותה או שאין הרשאה לצפות בה';
+        },
+      });
+    });
+  }
 
-    this.draftEntity = structuredClone(this.entity);
+  ngOnDestroy(): void {
+    ++this.scopeVersion;
+    this.scopeChanged.next();
+    this.scopeChanged.complete();
+    this.routeSubscription?.unsubscribe();
+  }
 
-    this.loadMasavConfig();
+  private syncActiveEntity(entity: any): void {
+    const active = this.currentContextService.active();
+    const activeId = active ? (active.role === 'entity-manager' ? active.context?.id : null) : this.currentEntityService.currentEntity()?.id;
+    if (activeId === entity.id) this.currentEntityService.setEntity(entity);
+  }
 
-    if (this.route.snapshot.queryParamMap.get('edit') === 'true') {
-      this.startEdit();
-    }
+  onReviewSubmitted(entity:any): void {
+    if (entity.id !== this.entity?.id) return;
+    this.entity = structuredClone(entity);
+    this.draftEntity = structuredClone(entity);
+    this.syncActiveEntity(entity);
   }
 
   private loadMasavConfig(): void {
     if (!this.entity?.id) return;
-    this.billingService.getMasavConfig(this.entity.id).subscribe({
-      next: (res: any) => { this.masavConfig = res.config; },
+    const version = this.scopeVersion;
+    this.billingService.getMasavConfig(this.entity.id).pipe(takeUntil(this.scopeChanged)).subscribe({
+      next: (res: any) => { if (version === this.scopeVersion) this.masavConfig = res.config; },
       error: () => {},
     });
   }
 
   onEntityChange(partial: any): void {
+    if (!this.entity || (partial?.id && partial.id !== this.entity.id)) return;
     this.draftEntity = {
       ...this.draftEntity,
 
@@ -172,7 +226,13 @@ export class EntitySettingsComponent implements OnInit {
     return JSON.stringify(this.draftEntity) !== JSON.stringify(this.entity);
   }
 
+  private failUpload(message: string): void {
+    this.saveError = message;
+    this.saveState = {isSaving:false, saveCompleted:false, saveFailed:true};
+  }
+
   startEdit(section?: string): void {
+    if (!this.entity || this.loadingEntity) return;
     this.saveError = '';
 
     if (
@@ -222,6 +282,11 @@ export class EntitySettingsComponent implements OnInit {
       return;
     }
 
+    const version = this.scopeVersion;
+    let draft = structuredClone(this.draftEntity);
+    const original = structuredClone(this.entity);
+    const entityId = original.id;
+    if (draft.id !== entityId) return;
     this.saveState.isSaving = true;
 
     const billingComponent = document.querySelector(
@@ -234,6 +299,10 @@ export class EntitySettingsComponent implements OnInit {
 
     if (isReplacingCard && this.billingSection?.openfieldsForm) {
       const tokenized = await this.billingSection.openfieldsForm.tokenize();
+      if (version !== this.scopeVersion) return;
+      // Tokenization may emit updated fields through the existing child output.
+      draft = structuredClone(this.draftEntity);
+      if (draft.id !== entityId) return;
 
       if (!tokenized) {
         this.saveError = 'שמירת כרטיס האשראי נכשלה';
@@ -243,6 +312,7 @@ export class EntitySettingsComponent implements OnInit {
         this.saveState.isSaving = false;
 
         setTimeout(() => {
+            if (version !== this.scopeVersion) return;
           this.showInlineError = false;
         }, 2500);
 
@@ -255,20 +325,32 @@ export class EntitySettingsComponent implements OnInit {
     explicit tax document delete flow
   */
 
-    const hadTaxDocument = !!this.entity?.tax_document_name;
-    const removedTaxDocument = hadTaxDocument && !this.draftEntity?.tax_document_name;
+    const hadTaxDocument = !!original?.tax_document_name;
+    const removedTaxDocument = hadTaxDocument && !draft?.tax_document_name;
     if (removedTaxDocument) {
       try {
-        await firstValueFrom(this.entitiesService.removeTaxDocument(this.draftEntity.id));
-      } catch (err) { console.error(err); }
+        await firstValueFrom(this.entitiesService.removeTaxDocument(draft.id));
+        if (version !== this.scopeVersion) return;
+      } catch (err) {
+        if (version !== this.scopeVersion) return;
+        console.error(err);
+        this.failUpload('הסרת אישור המס נכשלה. יש לנסות שוב לפני הגשה.');
+        return;
+      }
     }
 
-    const hadAssociationCert = !!this.entity?.association_certificate_name;
-    const removedAssociationCert = hadAssociationCert && !this.draftEntity?.association_certificate_name;
+    const hadAssociationCert = !!original?.association_certificate_name;
+    const removedAssociationCert = hadAssociationCert && !draft?.association_certificate_name;
     if (removedAssociationCert) {
       try {
-        await firstValueFrom(this.entitiesService.removeAssociationDocument(this.draftEntity.id));
-      } catch (err) { console.error(err); }
+        await firstValueFrom(this.entitiesService.removeAssociationDocument(draft.id));
+        if (version !== this.scopeVersion) return;
+      } catch (err) {
+        if (version !== this.scopeVersion) return;
+        console.error(err);
+        this.failUpload('הסרת תעודת ההתאגדות נכשלה. יש לנסות שוב לפני הגשה.');
+        return;
+      }
     }
 
     /*
@@ -279,41 +361,50 @@ export class EntitySettingsComponent implements OnInit {
     on a later unrelated save.
   */
 
-    const newTaxDocumentFile = this.draftEntity?.tax_document_file;
+    const newTaxDocumentFile = draft?.tax_document_file;
     if (newTaxDocumentFile instanceof File) {
       try {
-        await firstValueFrom(this.entitiesService.uploadTaxDocument(this.draftEntity.id, newTaxDocumentFile));
+        await firstValueFrom(this.entitiesService.uploadTaxDocument(draft.id, newTaxDocumentFile));
+        if (version !== this.scopeVersion) return;
       } catch (err) {
+        if (version !== this.scopeVersion) return;
         console.error(err);
-        this.saveError = 'העלאת אישור המס נכשלה';
+        this.failUpload('העלאת אישור המס נכשלה. הקובץ נשמר בטופס לניסיון נוסף.');
+        return;
       }
-      this.draftEntity.tax_document_file = null;
+      draft.tax_document_file = null;
     }
 
-    const newAssociationCertFile = this.draftEntity?.association_certificate_file;
+    const newAssociationCertFile = draft?.association_certificate_file;
     if (newAssociationCertFile instanceof File) {
       try {
-        await firstValueFrom(this.entitiesService.uploadAssociationDocument(this.draftEntity.id, newAssociationCertFile));
+        await firstValueFrom(this.entitiesService.uploadAssociationDocument(draft.id, newAssociationCertFile));
+        if (version !== this.scopeVersion) return;
       } catch (err) {
+        if (version !== this.scopeVersion) return;
         console.error(err);
-        this.saveError = 'העלאת תעודת ההתאגדות נכשלה';
+        this.failUpload('העלאת תעודת ההתאגדות נכשלה. הקובץ נשמר בטופס לניסיון נוסף.');
+        return;
       }
-      this.draftEntity.association_certificate_file = null;
+      draft.association_certificate_file = null;
     }
 
-    const newLogoFile = this.draftEntity?.logo_file;
+    const newLogoFile = draft?.logo_file;
     if (newLogoFile instanceof File) {
       try {
-        const res: any = await firstValueFrom(this.entitiesService.uploadLogo(this.draftEntity.id, newLogoFile));
-        this.draftEntity.logo_url = res?.result?.logo_url || this.draftEntity.logo_url;
+        const res: any = await firstValueFrom(this.entitiesService.uploadLogo(draft.id, newLogoFile));
+        if (version !== this.scopeVersion) return;
+        draft.logo_url = res?.result?.logo_url || draft.logo_url;
       } catch (err) {
+        if (version !== this.scopeVersion) return;
         console.error(err);
-        this.saveError = 'העלאת הלוגו נכשלה';
+        this.failUpload('העלאת הלוגו נכשלה. הקובץ נשמר בטופס לניסיון נוסף.');
+        return;
       }
-      this.draftEntity.logo_file = null;
+      draft.logo_file = null;
     }
 
-    const optimisticEntity = structuredClone(this.draftEntity);
+    const optimisticEntity = structuredClone(draft);
 
     /*
     IMPORTANT:
@@ -321,21 +412,21 @@ export class EntitySettingsComponent implements OnInit {
   */
 
     if (this.editingSection === 'billing') {
-      optimisticEntity.billing_method = this.draftEntity.billing_method;
+      optimisticEntity.billing_method = draft.billing_method;
     }
 
     this.entity = optimisticEntity;
 
-    this.currentEntityService.setEntity(optimisticEntity);
+    // Active context is refreshed only after a successful authorized save.
 
-    if (this.draftEntity?.billing_card_number) {
-      this.draftEntity.billing_card_last4 = this.draftEntity.billing_card_number
+    if (draft?.billing_card_number) {
+      draft.billing_card_last4 = draft.billing_card_number
         .replace(/\s/g, '')
         .slice(-4);
     }
 
     const payload = {
-      ...this.draftEntity,
+      ...draft,
 
       /*
       IMPORTANT:
@@ -343,7 +434,7 @@ export class EntitySettingsComponent implements OnInit {
       must clear old credit card data
     */
 
-      ...(this.draftEntity?.billing_method === 'masav'
+      ...(draft?.billing_method === 'masav'
         ? {
             billing_last4: null,
 
@@ -365,13 +456,14 @@ export class EntitySettingsComponent implements OnInit {
 
     this.entitiesService
       .updateEntity(
-        this.draftEntity.id,
+        draft.id,
 
         payload,
       )
 
-      .subscribe({
+      .pipe(takeUntil(this.scopeChanged)).subscribe({
         next: (updatedEntity) => {
+          if (version !== this.scopeVersion) return;
           this.saveState.isSaving = false;
 
           this.saveState.saveFailed = false;
@@ -392,16 +484,17 @@ export class EntitySettingsComponent implements OnInit {
           const mergedEntity = {
             ...updatedEntity,
 
-            billing_method: this.draftEntity?.billing_method,
+            billing_method: draft?.billing_method,
           };
 
           this.entity = structuredClone(mergedEntity);
 
           this.draftEntity = structuredClone(mergedEntity);
 
-          this.currentEntityService.setEntity(mergedEntity);
+          this.syncActiveEntity(mergedEntity);
 
           setTimeout(() => {
+            if (version !== this.scopeVersion) return;
             this.saveState.saveCompleted = false;
 
             this.editMode = false;
@@ -412,24 +505,27 @@ export class EntitySettingsComponent implements OnInit {
           this.entitiesService
             .getEntityById(updatedEntity.id)
 
-            .subscribe({
+            .pipe(takeUntil(this.scopeChanged)).subscribe({
               next: (fullEntity: any) => {
+                if (version !== this.scopeVersion) return;
                 const entity = fullEntity.entity || fullEntity;
 
                 this.entity = structuredClone(entity);
 
                 this.draftEntity = structuredClone(entity);
 
-                this.currentEntityService.setEntity(entity);
+                this.syncActiveEntity(entity);
               },
 
               error: (err) => {
+          if (version !== this.scopeVersion) return;
                 console.error(err);
               },
             });
         },
 
         error: (err) => {
+          if (version !== this.scopeVersion) return;
           console.error(err);
 
           this.saveState.isSaving = false;
@@ -446,13 +542,14 @@ export class EntitySettingsComponent implements OnInit {
 
           if (this.editingSection === 'billing') {
             this.draftEntity = {
-              ...this.draftEntity,
+              ...draft,
 
-              billing_method: this.draftEntity?.billing_method || 'credit-card',
+              billing_method: draft?.billing_method || 'credit-card',
             };
           }
 
           setTimeout(() => {
+            if (version !== this.scopeVersion) return;
             this.saveState.saveFailed = false;
           }, 2000);
         },
@@ -469,6 +566,8 @@ export class EntitySettingsComponent implements OnInit {
   isCheckingBillingConnection = false;
 
   testBillingConnection(): void {
+    if (!this.draftEntity?.id) return;
+    const version = this.scopeVersion;
     const start = Date.now();
 
     this.isCheckingBillingConnection = true;
@@ -495,13 +594,15 @@ export class EntitySettingsComponent implements OnInit {
           environment: 'sandbox',
         },
       )
-      .subscribe({
+      .pipe(takeUntil(this.scopeChanged)).subscribe({
         next: (res) => {
+          if (version !== this.scopeVersion) return;
           const elapsed = Date.now() - start;
 
           const remaining = Math.max(0, 2000 - elapsed);
 
           setTimeout(() => {
+            if (version !== this.scopeVersion) return;
             this.isCheckingBillingConnection = false;
 
             this.draftEntity = {
@@ -519,11 +620,13 @@ export class EntitySettingsComponent implements OnInit {
         },
 
         error: (err) => {
+        if (version !== this.scopeVersion) return;
           const elapsed = Date.now() - start;
 
           const remaining = Math.max(0, 2000 - elapsed);
 
           setTimeout(() => {
+            if (version !== this.scopeVersion) return;
             this.isCheckingBillingConnection = false;
 
             this.draftEntity = {
@@ -550,18 +653,21 @@ export class EntitySettingsComponent implements OnInit {
   toggleEntityVisibility(): void {
     if (this.isTogglingVisibility || !this.draftEntity?.id) return;
 
+    const version = this.scopeVersion;
     const nextHidden = !this.draftEntity.is_hidden;
     this.isTogglingVisibility = true;
     this.visibilityError = '';
 
-    this.entitiesService.setVisibility(this.draftEntity.id, nextHidden).subscribe({
+    this.entitiesService.setVisibility(this.draftEntity.id, nextHidden).pipe(takeUntil(this.scopeChanged)).subscribe({
       next: () => {
+        if (version !== this.scopeVersion) return;
         this.isTogglingVisibility = false;
         this.draftEntity = { ...this.draftEntity, is_hidden: nextHidden };
         this.entity = { ...this.entity, is_hidden: nextHidden };
-        this.currentEntityService.setEntity(this.entity);
+        this.syncActiveEntity(this.entity);
       },
       error: (err) => {
+        if (version !== this.scopeVersion) return;
         this.isTogglingVisibility = false;
         this.visibilityError = err?.error?.error || 'שגיאה בעדכון הנראות';
       },
@@ -598,18 +704,21 @@ export class EntitySettingsComponent implements OnInit {
   confirmDeleteEntity(): void {
     if (!this.deleteConfirmValid || this.isDeletingEntity || !this.draftEntity?.id) return;
 
+    const version = this.scopeVersion;
     this.isDeletingEntity = true;
     const entityId = this.draftEntity.id;
-    this.entitiesService.deleteEntity(entityId).subscribe({
+    this.entitiesService.deleteEntity(entityId).pipe(takeUntil(this.scopeChanged)).subscribe({
       next: () => {
+        if (version !== this.scopeVersion) return;
         this.currentContextService.removeEntityContext(entityId);
-        this.currentEntityService.setEntity(null);
+        if (this.currentEntityService.currentEntity()?.id === entityId) this.currentEntityService.clear();
         // 2026-09-28 — the entities list moved from /settings to its own
         // /entities route (MyOrganizationsPageComponent); this is the one
         // internal link that pointed back to it.
         this.router.navigate(['/entities']);
       },
       error: (err) => {
+        if (version !== this.scopeVersion) return;
         this.isDeletingEntity = false;
         this.deleteError = err?.error?.error || 'שגיאה במחיקת העמותה';
       },

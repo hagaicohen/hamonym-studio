@@ -64,31 +64,20 @@
         {{ entity?.registration_number || "-" }}
       </div>
     </div>
-
-    <!-- PRIMARY CATEGORY -->
-
-    <div class="field">
-      <label> קטגוריה ראשית </label>
-
-      <div class="readonly-value">
-        {{ getCategoryLabel(entity?.primary_category) }}
-      </div>
-    </div>
   </div>
 
-  <!-- SECONDARY CATEGORIES -->
+  <!-- CATEGORIES -->
 
   <div class="field categories-field">
-    <label> קטגוריות משניות </label>
+    <label> קטגוריות </label>
 
     <div class="tags">
-      @for (
-        categoryId of entity?.secondary_categories || [];
-        track categoryId
-      ) {
+      @for (categoryId of categoryList; track categoryId) {
         <div class="tag selected">
           {{ getCategoryLabel(categoryId) }}
         </div>
+      } @empty {
+        <div class="readonly-value">-</div>
       }
     </div>
   </div>

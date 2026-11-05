@@ -15,7 +15,8 @@ import {
   MASAV_PENDING_STATUS_SUBLABEL,
 } from '../../../../shared/constants/masav.constants';
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Hamonym's standard default fee rate for a newly provisioned organization
 // (product decision, 2026-09-20) -- pre-fills the field below, always
 // editable per-entity before the Super Admin saves.
@@ -39,7 +40,7 @@ const DEFAULT_FEE_RATE = 0.03;
 @Component({
   selector: 'app-billing-entity-setup',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './billing-entity-setup.component.html',
   styleUrl: './billing-entity-setup.component.css',
 })

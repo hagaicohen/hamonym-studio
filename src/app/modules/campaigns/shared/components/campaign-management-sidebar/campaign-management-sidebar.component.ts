@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Shared across the Dashboard ("סקירה כללית") and every dedicated
 // management page (Rewards/Sponsors/Registration/Settings/Visibility) — see
 // the 2026-08-06 architecture reset: Dashboard is a navigation/control
@@ -23,7 +24,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 @Component({
   selector: 'app-campaign-management-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [HmIconComponent, CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './campaign-management-sidebar.component.html',
   styleUrl: './campaign-management-sidebar.component.css',
 })

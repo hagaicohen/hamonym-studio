@@ -24,15 +24,21 @@ export interface TemplatePalette {
   base: string;
 }
 
+// Ordered by color family (purple/pink/red, warm, green/teal, blue, neutral).
+// Purple must stay first: it is the default selection (TEMPLATE_PALETTES[0]).
 export const TEMPLATE_PALETTES: TemplatePalette[] = [
-  { id: 'purple', name: 'סגול',     base: '#7c3aed' },
-  { id: 'blue',   name: 'כחול',     base: '#0ea5e9' },
-  { id: 'green',  name: 'ירוק',     base: '#22c55e' },
-  { id: 'teal',   name: 'טורקיז',   base: '#10b981' },
-  { id: 'orange', name: 'כתום',     base: '#f59e0b' },
-  { id: 'red',    name: 'אדום',     base: '#ef4444' },
-  { id: 'pink',   name: 'ורוד',     base: '#ec4899' },
-  { id: 'slate',  name: 'אפור כהה', base: '#475569' },
+  { id: 'purple',    name: 'סגול',         base: '#7c3aed' },
+  { id: 'pink',      name: 'ורוד',         base: '#ec4899' },
+  { id: 'burgundy',  name: 'בורדו',        base: '#9F1239' },
+  { id: 'red',       name: 'אדום',         base: '#ef4444' },
+  { id: 'orange',    name: 'כתום',         base: '#f59e0b' },
+  { id: 'gold',      name: 'זהב',          base: '#CA8A04' },
+  { id: 'green',     name: 'ירוק',         base: '#22c55e' },
+  { id: 'teal',      name: 'טורקיז',       base: '#10b981' },
+  { id: 'deep-teal', name: 'טורקיז כהה',   base: '#0D9488' },
+  { id: 'blue',      name: 'כחול',         base: '#0ea5e9' },
+  { id: 'dark-blue', name: 'כחול כהה',     base: '#1E40AF' },
+  { id: 'slate',     name: 'אפור כהה',     base: '#475569' },
 ];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -187,7 +193,7 @@ function classicBlocks(palette: TemplatePalette): CampaignBlock[] {
       data: { childBlockIds: [statsId, donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 16, direction: 'row', splitPercent: 55 } as ContainerBlockData },
     statsBlock(statsId, 1, 'cards', 'md', ''),
     donationBlock(donationId, 2, { ctaColor: '' }),
-    { id: gid(), type: 'rich-text', order: 2, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
+    { id: gid(), type: 'rich-text', order: 2, visible: true, label: '', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'rewards',   order: 3, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 4, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',    order: 5, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -215,7 +221,7 @@ function largeHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
   return [
     statsBlock(statsId, 1, 'inline', 'lg', '', s.paleBg, s.pale),
     donationBlock(donationId, 2, { ctaColor: '' }),
-    { id: gid(), type: 'rich-text', order: 3, visible: true, label: 'על המיזם', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
+    { id: gid(), type: 'rich-text', order: 3, visible: true, label: '', spacingTop: 16, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'gallery',   order: 4, visible: true, label: 'גלריה',    spacingTop: 0, spacingBottom: 0, data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',   order: 5, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',    order: 6, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -261,7 +267,7 @@ function sidebarRightBlocks(palette: TemplatePalette): CampaignBlock[] {
               backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column' } as ContainerBlockData },
     statsBlock(statsId, 1, 'cards', 'sm', ''),
     donationBlock(donationId, 2, { ctaColor: '' }),
-    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
+    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: '',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 3, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
@@ -308,7 +314,7 @@ function sidebarLeftBlocks(palette: TemplatePalette): CampaignBlock[] {
               backgroundImageUrl: '', padding: 0, gap: 16, direction: 'column' } as ContainerBlockData },
     statsBlock(statsId, 1, 'cards', 'sm', ''),
     donationBlock(donationId, 2, { ctaColor: '' }),
-    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: 'על המיזם',
+    { id: richTextId, type: 'rich-text', order: 1, visible: true, label: '',
       spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 2, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 3, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
@@ -358,7 +364,7 @@ function sidebarFullHeightBlocks(palette: TemplatePalette): CampaignBlock[] {
               backgroundImageUrl: '', padding: 0, gap: 24, direction: 'column',
               railZone: 'main' } as ContainerBlockData },
     { id: heroId, type: 'hero', order: 1, visible: true, label: 'Hero', spacingTop: 0, spacingBottom: 0, data: {} },
-    { id: richTextId, type: 'rich-text', order: 2, visible: true, label: 'על המיזם', spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
+    { id: richTextId, type: 'rich-text', order: 2, visible: true, label: '', spacingTop: 0, spacingBottom: 0, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'rewards',     order: 3, visible: true, label: 'תשורות',   spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'ambassadors', order: 4, visible: true, label: 'שגרירים',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',      order: 5, visible: true, label: 'תורמים',   spacingTop: 0, spacingBottom: 0, data: {} },
@@ -401,7 +407,7 @@ function donationFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
       data: { childBlockIds: [donationId, statsId], backgroundColor: s.paleBg, borderColor: '', backgroundImageUrl: '', padding: 24, gap: 16, direction: 'row', splitPercent: 60 } as ContainerBlockData },
     donationBlock(donationId, 1, { ctaColor: '', ctaLabel: 'תרמו עכשיו', title: 'תמכו במיזם' }),
     statsBlock(statsId, 2, 'cards', 'sm', ''),
-    { id: gid(), type: 'rich-text',   order: 2, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
+    { id: gid(), type: 'rich-text',   order: 2, visible: true, label: '', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.7 } },
     { id: gid(), type: 'cta',         order: 3, visible: true, label: 'קריאה לפעולה', spacingTop: 0, spacingBottom: 0,
       data: { title: 'כל תרומה עושה את ההבדל', text: '', backgroundColor: s.accent, textStyle: { align: 'center', color: '#ffffff', fontSize: 'lg', position: 'center' }, ctaConfig: { visible: true, label: 'תרמו עכשיו', color: '#ffffff', align: 'center', icon: '' } } },
     { id: gid(), type: 'rewards',     order: 4, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -428,7 +434,7 @@ function storyFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
   const s = shadesOf(palette.base);
   const statsId = gid(), donationId = gid(), ctId = gid();
   return [
-    { id: gid(), type: 'rich-text', order: 1, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 24, data: { content: '', lineHeight: 1.8 } },
+    { id: gid(), type: 'rich-text', order: 1, visible: true, label: '', spacingTop: 24, spacingBottom: 24, data: { content: '', lineHeight: 1.8 } },
     { id: gid(), type: 'image',     order: 2, visible: true, label: 'תמונה',    spacingTop: 0,  spacingBottom: 0,  data: { url: '', caption: '' } },
     statsBlock(statsId, 3, 'inline', 'lg', '', s.paleBg, s.pale),
     { id: ctId, type: 'container', order: 4, visible: true, label: 'אזור תרומה',
@@ -462,7 +468,7 @@ function ambassadorsFirstBlocks(palette: TemplatePalette): CampaignBlock[] {
   return [
     statsBlock(statsId, 1, 'inline', 'lg', '', s.paleBg, s.pale, true),
     { id: gid(), type: 'ambassadors', order: 2, visible: true, label: 'שגרירים', spacingTop: 0, spacingBottom: 0, data: {} },
-    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
+    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: '', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     donationBlock(donationId, 4, { ctaColor: '', ctaLabel: 'הצטרפו לקהילה' }),
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',  spacingTop: 0, spacingBottom: 0, data: {} },
     { id: gid(), type: 'donors',      order: 6, visible: true, label: 'תורמים',  spacingTop: 0, spacingBottom: 0, data: {} },
@@ -522,7 +528,7 @@ function videoHeroBlocks(palette: TemplatePalette): CampaignBlock[] {
       spacingTop: 0, spacingBottom: 0,
       data: { childBlockIds: [donationId], backgroundColor: '', borderColor: '', backgroundImageUrl: '', padding: 0, gap: 0, direction: 'column' } as ContainerBlockData },
     donationBlock(donationId, 1, { ctaColor: '', ctaLabel: 'תמכו עכשיו' }),
-    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: 'על המיזם', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
+    { id: gid(), type: 'rich-text',   order: 3, visible: true, label: '', spacingTop: 24, spacingBottom: 16, data: { content: '', lineHeight: 1.6 } },
     { id: gid(), type: 'gallery',     order: 4, visible: true, label: 'גלריה',    spacingTop: 0,  spacingBottom: 0,  data: { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: false, showDots: true, showArrows: true, autoPlay: false } },
     { id: gid(), type: 'rewards',     order: 5, visible: true, label: 'תשורות',   spacingTop: 0,  spacingBottom: 0,  data: {} },
     { id: gid(), type: 'ambassadors', order: 6, visible: true, label: 'שגרירים',  spacingTop: 0,  spacingBottom: 0,  data: {} },

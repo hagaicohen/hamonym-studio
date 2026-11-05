@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, forkJoin, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, defer, forkJoin, of, throwError } from 'rxjs';
+import { finalize, map, switchMap, tap } from 'rxjs/operators';
 import { EntitiesService } from '../../../core/services/entities.service';
 import { BillingService } from './billing.service';
 
@@ -187,17 +187,16 @@ export const initialState: OrganizationRegistrationState = {
 
 // The same "is this registration actually finishable" rule createEntity used
 // to apply only at final submit — pulled out so a mid-wizard draft save can
-// use it too. A draft graduates to pending_review automatically the moment
-// this turns true (see entities.service.js updateEntity).
+// use it too. Completion does not submit a draft; submission is explicit.
 export function isProfileComplete(state: OrganizationRegistrationState): boolean {
   return !!(
-    state.entityType &&
-    state.organizationName &&
-    state.organizationNumber &&
-    state.displayName &&
-    state.email &&
-    state.phone &&
-    state.organizationDescription
+    state.entityType?.trim() &&
+    state.organizationName?.trim() &&
+    state.organizationNumber?.trim() &&
+    state.displayName?.trim() &&
+    state.email?.trim() &&
+    state.phone?.trim() &&
+    state.organizationDescription?.trim()
   );
 }
 
@@ -260,11 +259,16 @@ export function buildPayload(state: OrganizationRegistrationState) {
 })
 export class OrganizationRegistrationStateService {
   readonly state = signal<OrganizationRegistrationState>(initialState);
+  readonly saving = signal(false);
+  readonly identityDuplicate = signal(false);
+  private savedBillingReference: string | null = null;
 
   private entitiesService = inject(EntitiesService);
   private billingService = inject(BillingService);
 
   updateState(partial: Partial<OrganizationRegistrationState>): void {
+    if ((partial.organizationNumber !== undefined && partial.organizationNumber !== this.state().organizationNumber) ||
+        (partial.entityType !== undefined && partial.entityType !== this.state().entityType)) this.identityDuplicate.set(false);
     this.state.update((current) => ({
       ...current,
 
@@ -273,6 +277,7 @@ export class OrganizationRegistrationStateService {
   }
 
   resetState(): void {
+    this.identityDuplicate.set(false);
     this.state.set(initialState);
   }
 
@@ -281,7 +286,7 @@ export class OrganizationRegistrationStateService {
   }
 
   get canSaveDraft(): boolean {
-    return canSaveDraft(this.state());
+    return !this.identityDuplicate() && canSaveDraft(this.state());
   }
 
   // Single save path shared by the "שמור טיוטה" button (any step) and the
@@ -289,6 +294,29 @@ export class OrganizationRegistrationStateService {
   // re-running the platform-commission billing creation on every draft save
   // would create a duplicate entity_billing row each time.
   save(options: { includeBilling: boolean }): Observable<any> {
+    return this.runExclusive(() => this.persist(options));
+  }
+
+  submitForReview(): Observable<any> {
+    return this.runExclusive(() => {
+      if (!this.isProfileComplete) return throwError(() => new Error('יש להשלים סוג גוף, שם רשמי, מספר רישום, שם לתצוגה, דוא״ל, טלפון ותיאור לפני ההגשה.'));
+      return this.persist({includeBilling: true}).pipe(
+        switchMap(entity => this.entitiesService.requestReview(entity.id)),
+        map(result => result.entity || result),
+      );
+    });
+  }
+
+  private runExclusive(work: () => Observable<any>): Observable<any> {
+    return defer(() => {
+      if (this.saving()) return throwError(() => new Error('שמירת העמותה כבר מתבצעת. יש להמתין לסיום.'));
+      this.saving.set(true);
+      return defer(work).pipe(finalize(() => this.saving.set(false)));
+    });
+  }
+
+  private persist(options: { includeBilling: boolean }): Observable<any> {
+    if (this.identityDuplicate()) return throwError(() => new Error('מספר הזיהוי הזה כבר רשום במערכת. לא ניתן ליצור גוף נוסף עם אותו מספר.'));
     const s = this.state();
     const payload = buildPayload(s);
 
@@ -299,6 +327,9 @@ export class OrganizationRegistrationStateService {
         );
 
     return create$.pipe(
+      tap({error: error => {
+        if (error?.error?.code === 'DUPLICATE_LEGAL_IDENTIFIER') this.identityDuplicate.set(true);
+      }}),
       switchMap((entity) => {
         const id = entity.id ?? s.entityId;
         if (!s.entityId) this.updateState({ entityId: id });
@@ -306,22 +337,29 @@ export class OrganizationRegistrationStateService {
         const uploads: Observable<any>[] = [];
 
         if (s.certificateFile) {
-          uploads.push(this.entitiesService.uploadAssociationDocument(id, s.certificateFile));
+          uploads.push(this.entitiesService.uploadAssociationDocument(id, s.certificateFile).pipe(tap(() => {
+            if (this.state().certificateFile === s.certificateFile) this.updateState({certificateFile: null});
+          })));
         }
         if (s.section46File) {
-          uploads.push(this.entitiesService.uploadTaxDocument(id, s.section46File));
+          uploads.push(this.entitiesService.uploadTaxDocument(id, s.section46File).pipe(tap(() => {
+            if (this.state().section46File === s.section46File) this.updateState({section46File: null});
+          })));
         }
         if (s.logoFile) {
-          uploads.push(this.entitiesService.uploadLogo(id, s.logoFile));
+          uploads.push(this.entitiesService.uploadLogo(id, s.logoFile).pipe(tap(() => {
+            if (this.state().logoFile === s.logoFile) this.updateState({logoFile: null});
+          })));
         }
-        if (options.includeBilling && s.cardcomInternalDealNumber) {
+        const reference = `${id}:${s.cardcomInternalDealNumber}`;
+        if (options.includeBilling && s.cardcomInternalDealNumber && this.savedBillingReference !== reference) {
           uploads.push(
             this.billingService.createEntityBilling({
               entityId: id,
               provider: 'cardcom',
               lowProfileId: s.cardcomLowProfileId,
               internalDealNumber: s.cardcomInternalDealNumber,
-            }),
+            }).pipe(tap(() => { this.savedBillingReference = reference; })),
           );
         }
 

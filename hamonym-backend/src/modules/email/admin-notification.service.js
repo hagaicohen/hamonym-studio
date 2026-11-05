@@ -119,6 +119,26 @@ const EVENT_POLICY = {
     enabled: true, severity: 'administrative', deliveryMode: 'immediate',
     recipientRole: 'SUPER_ADMIN', template: 'admin-entity-hard-deleted',
   },
+  // I/J/K/L — FIN-11 scheduled card collection (2026-10 business spec).
+  // incidentKey is per-attempt (fin11-card-collection.service.js) or
+  // per-statement-per-action (manual actions) -- each real event sends
+  // exactly once, re-checking the same statement/date never re-sends.
+  fin11_card_collection_failed: {
+    enabled: true, severity: 'warning', deliveryMode: 'immediate',
+    recipientRole: 'SUPER_ADMIN', template: 'admin-operational-finding',
+  },
+  fin11_card_attempts_exhausted: {
+    enabled: true, severity: 'critical', deliveryMode: 'immediate',
+    recipientRole: 'SUPER_ADMIN', template: 'admin-operational-finding',
+  },
+  fin11_card_collection_recovered: {
+    enabled: true, severity: 'administrative', deliveryMode: 'immediate',
+    recipientRole: 'SUPER_ADMIN', template: 'admin-operational-finding',
+  },
+  fin11_masav_manual_transfer: {
+    enabled: true, severity: 'administrative', deliveryMode: 'immediate',
+    recipientRole: 'SUPER_ADMIN', template: 'admin-operational-finding',
+  },
 };
 
 async function resolveRecipients(recipientRole) {

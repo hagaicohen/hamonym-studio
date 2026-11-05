@@ -1,0 +1,83 @@
+/* HAMONYM design tokens. Additive: existing hard-coded colors and the
+   --hm-control-* form tokens (_form-controls.scss) are intentionally left as
+   they are. Shared components and screens migrated to the design system use
+   these. See docs/DESIGN_SYSTEM.md. */
+:root {
+  /* Brand. 600 is the primary purple; #7c3aed stays available as secondary. */
+  --hm-brand-50: #f4f2fd;
+  --hm-brand-100: #ebe7fb;
+  --hm-brand-200: #d5cdf6;
+  --hm-brand-300: #b3a5ee;
+  --hm-brand-400: #8a75e3;
+  --hm-brand-600: #583cd6;
+  --hm-brand-700: #4730b0;
+  --hm-brand-800: #3a2790;
+  --hm-brand-secondary: #7c3aed;
+  --hm-color-primary: var(--hm-brand-600);
+  --hm-color-primary-hover: var(--hm-brand-700);
+
+  /* Neutrals. */
+  --hm-text-strong: #0f172a;
+  --hm-text: #334155;
+  --hm-text-muted: #64748b;
+  --hm-text-subtle: #94a3b8;
+  --hm-border: #e2e8f0;
+  --hm-border-strong: #cbd5e1;
+  --hm-surface: #ffffff;
+  --hm-surface-muted: #f8fafc;
+  --hm-surface-sunken: #f1f5f9;
+  --hm-page-bg: #f5f7fb;
+
+  /* Semantic. Text shades meet WCAG AA on their own background. */
+  --hm-success: #15803d;
+  --hm-success-bg: #f0fdf4;
+  --hm-success-border: #bbf7d0;
+  --hm-warning: #b45309;
+  --hm-warning-bg: #fffbeb;
+  --hm-warning-border: #fde68a;
+  --hm-danger: #b91c1c;
+  --hm-danger-bg: #fef2f2;
+  --hm-danger-border: #fecaca;
+  --hm-info: #1d4ed8;
+  --hm-info-bg: #eff6ff;
+  --hm-info-border: #bfdbfe;
+
+  /* Shape and depth. */
+  --hm-radius-sm: 6px;
+  --hm-radius-md: 10px;
+  --hm-radius-lg: 14px;
+  --hm-radius-full: 999px;
+  --hm-shadow-sm: 0 1px 2px rgba(15, 23, 42, .06);
+  --hm-shadow-md: 0 4px 12px rgba(15, 23, 42, .08);
+  --hm-shadow-lg: 0 12px 32px rgba(15, 23, 42, .12), 0 2px 6px rgba(15, 23, 42, .06);
+
+  /* Spacing, 4px grid. */
+  --hm-space-1: 4px;
+  --hm-space-2: 8px;
+  --hm-space-3: 12px;
+  --hm-space-4: 16px;
+  --hm-space-5: 20px;
+  --hm-space-6: 24px;
+  --hm-space-8: 32px;
+  --hm-space-10: 40px;
+  --hm-space-12: 48px;
+
+  /* Typography. */
+  --hm-text-xs: 12px;
+  --hm-text-sm: 13px;
+  --hm-text-md: 14px;
+  --hm-text-base: 16px;
+  --hm-text-lg: 18px;
+  --hm-text-xl: 22px;
+  --hm-text-2xl: 28px;
+  --hm-weight-regular: 400;
+  --hm-weight-medium: 500;
+  --hm-weight-semibold: 600;
+  --hm-weight-bold: 700;
+  --hm-leading-tight: 1.3;
+  --hm-leading-normal: 1.6;
+
+  /* Icon boxes; Lucide sizes themselves come from HM_ICON_SIZE. */
+  --hm-icon-box-md: 44px;
+  --hm-icon-box-lg: 56px;
+}

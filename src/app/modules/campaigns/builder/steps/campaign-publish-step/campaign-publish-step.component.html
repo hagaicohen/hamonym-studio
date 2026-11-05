@@ -87,15 +87,15 @@
 
       @if (!draft.title.trim()) {
         @if (isLoadingSuggestion) {
-          <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לכותרת על בסיס התוכן שכתבת...</div>
+          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> יוצרים עבורך הצעה לכותרת על בסיס התוכן שכתבת...</div>
         } @else {
           @if (metadataSuggestion; as suggestion) {
             @if (suggestion.suggestedTitle && !dismissedTitle) {
               <div class="ai-suggestion-card">
-                <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-label"><app-icon name="sparkles" /> יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
                 <div class="ai-suggestion-value">"{{ suggestion.suggestedTitle }}"</div>
                 <div class="ai-suggestion-actions">
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()">✨ אמץ והצג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()"><app-icon name="sparkles" /> אמץ והצג ב-Hero</button>
                   <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptTitle(false)">אמץ בלי להציג ב-Hero</button>
                   <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
                 </div>
@@ -118,15 +118,15 @@
 
       @if (!draft.shortDescription.trim()) {
         @if (isLoadingSuggestion) {
-          <div class="ai-suggestion-loading">✨ יוצרים עבורך הצעה לתיאור קצר על בסיס התוכן שכתבת...</div>
+          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> יוצרים עבורך הצעה לתיאור קצר על בסיס התוכן שכתבת...</div>
         } @else {
           @if (metadataSuggestion; as suggestion) {
             @if (suggestion.suggestedShortDescription && !dismissedShortDescription) {
               <div class="ai-suggestion-card">
-                <div class="ai-suggestion-label">✨ יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-label"><app-icon name="sparkles" /> יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
                 <div class="ai-suggestion-value">"{{ suggestion.suggestedShortDescription }}"</div>
                 <div class="ai-suggestion-actions">
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()">✨ אמץ והצג ב-Hero</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()"><app-icon name="sparkles" /> אמץ והצג ב-Hero</button>
                   <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptShortDescription(false)">אמץ בלי להציג ב-Hero</button>
                   <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
                 </div>
@@ -141,7 +141,7 @@
       }
 
       @if (metadataSuggestion && (!draft.title.trim() || !draft.shortDescription.trim())) {
-        <button type="button" class="ai-suggestion-regenerate" (click)="regenerateSuggestion()">🔄 צור מחדש</button>
+        <button type="button" class="ai-suggestion-regenerate" (click)="regenerateSuggestion()"><app-icon name="refresh" /> צור מחדש</button>
       }
 
       <ng-container *ngIf="!isMinimalFormat">
@@ -440,7 +440,7 @@
           הקמפיין זמין עכשיו באזור שלך ותוכל להמשיך לנהל ולערוך אותו בכל עת.
         </div>
       } @else {
-        <div class="cta-title">🎉 הקמפיין מוכן לפרסום!</div>
+        <div class="cta-title"><app-icon name="party" /> הקמפיין מוכן לפרסום!</div>
         <div class="cta-description">
           כל השלבים הושלמו בהצלחה. לאחר הפרסום הקמפיין יהיה זמין לציבור ויתחיל לקבל תרומות.
         </div>
@@ -478,7 +478,7 @@
         </a>
         <!-- Status footnote, not the screen's subject — no publish button
              exists in this state at all, not even disabled. -->
-        <p class="approval-status-note">🔒 העמותה נמצאת בתהליך אישור. לאחר האישור ניתן יהיה לפרסם את הקמפיין לציבור.</p>
+        <p class="approval-status-note"><app-icon name="lock" /> העמותה נמצאת בתהליך אישור. לאחר האישור ניתן יהיה לפרסם את הקמפיין לציבור.</p>
       } @else if (canPublish) {
         <button class="publish-button" (click)="publishCampaign()" [disabled]="isPublishing" type="button">
           @if (isPublishing) {

@@ -101,8 +101,8 @@ async function main() {
     fixture.campaignUnverifiedId = campaignU.rows[0].id;
 
     const donationU = await pool.query(
-      `INSERT INTO donations (campaign_id, entity_id, amount, status, is_mock)
-       VALUES ($1, $2, 1, 'pending', false) RETURNING id`,
+      `INSERT INTO donations (campaign_id, entity_id, amount, status)
+       VALUES ($1, $2, 1, 'pending') RETURNING id`,
       [fixture.campaignUnverifiedId, fixture.entityUnverifiedId]
     );
     fixture.donationUnverifiedId = donationU.rows[0].id;
@@ -160,8 +160,8 @@ async function main() {
     fixture.campaignVerifiedId = campaignV.rows[0].id;
 
     const donationV = await pool.query(
-      `INSERT INTO donations (campaign_id, entity_id, amount, status, is_mock)
-       VALUES ($1, $2, 1, 'pending', false) RETURNING id`,
+      `INSERT INTO donations (campaign_id, entity_id, amount, status)
+       VALUES ($1, $2, 1, 'pending') RETURNING id`,
       [fixture.campaignVerifiedId, fixture.entityVerifiedId]
     );
     fixture.donationVerifiedId = donationV.rows[0].id;

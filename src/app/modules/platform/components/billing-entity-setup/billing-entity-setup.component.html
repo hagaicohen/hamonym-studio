@@ -6,11 +6,11 @@
 
   <div class="bes-badge" [class.bes-badge-ok]="isBillable" [class.bes-badge-bad]="isSuspended" [class.bes-badge-pending]="!billingAccount">
     @if (isBillable) {
-      🟢 חשבון חיוב פעיל
+      <app-icon name="dot" tone="success" /> חשבון חיוב פעיל
     } @else if (isSuspended) {
-      🔴 חשבון חיוב מושהה — נדרש טיפול ידני
+      <app-icon name="dot" tone="danger" /> חשבון חיוב מושהה — נדרש טיפול ידני
     } @else {
-      🟠 טרם הופעל חשבון חיוב
+      <app-icon name="dot" tone="caution" /> טרם הופעל חשבון חיוב
     }
   </div>
   @if (donationCount !== null) {

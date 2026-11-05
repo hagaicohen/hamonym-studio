@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict');assert.match(process.env.DB_NAME,/^hamonym_masav_oneclick_/);assert.equal(process.env.DB_HOST,'127.0.0.1');
+const db=require('../src/db/db');db.connect=()=>{throw Error('API contract test must not access database')};db.query=db.connect;
+const express=require('express'),service=require('../src/modules/billing-engine/masav-one-click.service');
+let calls=0,input,problem=null;
+service.summary=async()=>({totalAmount:'540.00',instructions:[],excluded:[]});
+service.approveAndDownload=async options=>{calls++;input=options;if(problem)throw problem;return Buffer.from('isolated file fixture')};
+const app=express();app.use(express.json());app.use((req,res,next)=>{if(req.headers['x-isolated-admin']==='yes')req.user={id:123,isSuperAdmin:true};next()});app.use('/api/platform/finance-ops',require('../src/modules/platform/finance-ops/finance-ops.routes'));
+const server=app.listen(0,'127.0.0.1');let checks=0;const pass=s=>{checks++;console.log('PASS '+s)};
+(async()=>{try{await new Promise(resolve=>server.listening?resolve():server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port+'/api/platform/finance-ops';
+const send=(body,admin=true)=>fetch(base+'/masav-export/approve-and-download',{method:'POST',headers:{'Content-Type':'application/json',...(admin?{'x-isolated-admin':'yes'}:{})},body:JSON.stringify(body)});
+assert.equal((await send({},false)).status,403);assert.equal(calls,0);assert.equal((await fetch(base+'/masav-export/summary')).status,403);pass('Both new endpoints deny non-Super Admin requests before calling services');
+const read=await fetch(base+'/masav-export/summary',{headers:{'x-isolated-admin':'yes'}});assert.equal(read.status,200);assert.equal((await read.json()).summary.totalAmount,'540.00');assert.equal(calls,0);pass('Summary uses a read-only service and does not invoke export');
+const result=await send({requestId:'test-request',expectedPreviewToken:'token',superAdminUserId:999,proposalIds:['untrusted']});assert.equal(result.status,200);assert.deepEqual(input,{requestId:'test-request',expectedPreviewToken:'token',superAdminUserId:123});assert.match(result.headers.get('Content-Type'),/spreadsheetml/);assert.match(result.headers.get('Content-Disposition'),/attachment; filename="masav-collection.xlsx"/);assert.equal(result.headers.get('Cache-Control'),'no-store');pass('One download response uses authenticated actor, ignores client proposal subsets and never caches bank details');
+problem=Object.assign(Error('MASAV_EXPORT_BLOCKED'),{code:'MASAV_EXPORT_BLOCKED',blockers:[{reason:'COLLECTION_HELD',statementId:'fixture'}]});const denied=await send({});assert.equal(denied.status,409);assert.equal((await denied.json()).blockers[0].reason,'COLLECTION_HELD');pass('Atomic validation failure returns explicit safe blockers, not success or partial file');
+problem=Object.assign(Error('MASAV_ONE_CLICK_SCHEMA_REQUIRED'),{code:'MASAV_ONE_CLICK_SCHEMA_REQUIRED'});assert.equal((await send({})).status,503);pass('Missing additive migration is reported as unavailable, without attempting legacy fallback');
+console.log(JSON.stringify({result:'PASS',checks,databaseQueries:0,externalProviderCalls:0}));
+}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await db.end()}})().catch(e=>{console.error(e);process.exitCode=1});

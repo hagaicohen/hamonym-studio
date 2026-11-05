@@ -6,6 +6,8 @@ import { RouterModule } from '@angular/router';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { IncompleteRegistrationsComponent } from '../../../../shared/components/incomplete-registrations/incomplete-registrations.component';
+import { registeredOrganizations, registrationDrafts } from '../../../../core/utils/organization-registration-status';
 
 import { LucideAngularModule, Flag, Users, Settings, Eye, EyeOff, Trash2 } from 'lucide-angular';
 
@@ -19,7 +21,7 @@ import { LucideAngularModule, Flag, Users, Settings, Eye, EyeOff, Trash2 } from 
 @Component({
   selector: 'app-my-organizations-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, RouterModule, FormsModule, LucideAngularModule, IncompleteRegistrationsComponent],
   templateUrl: './my-organizations-page.component.html',
   styleUrls: ['./my-organizations-page.component.css'],
 })
@@ -36,6 +38,7 @@ export class MyOrganizationsPageComponent implements OnInit {
   readonly TrashIcon = Trash2;
 
   entities: any[] = [];
+  drafts: any[] = [];
   loading = true;
 
   ngOnInit(): void {
@@ -48,7 +51,8 @@ export class MyOrganizationsPageComponent implements OnInit {
 
     this.entitiesService.getMyEntities().subscribe({
       next: (res) => {
-        this.entities = res.entities || [];
+        this.entities = registeredOrganizations(res.entities || []);
+        this.drafts = registrationDrafts(res.entities || []);
         this.loading = false;
       },
       error: (err) => {

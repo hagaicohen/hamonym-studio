@@ -9,7 +9,8 @@ import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignPartnersService, CampaignPartner } from '../../services/campaign-partners.service';
 import { PartnerLinkModalComponent } from '../../shared/components/partner-link-modal/partner-link-modal.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset) — CONTENT only: title,
 // price, description, stock, image, featured flag, partner link. No
 // layout/placement/image-position/color controls — those stayed in the
@@ -22,7 +23,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-rewards-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, PartnerLinkModalComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, PartnerLinkModalComponent],
   templateUrl: './campaign-rewards-page.component.html',
   styleUrl: './campaign-rewards-page.component.css',
 })

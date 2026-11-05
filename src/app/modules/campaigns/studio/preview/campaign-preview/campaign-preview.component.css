@@ -1185,6 +1185,10 @@
      other columns and throw off the equal spacing between icons. */
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
+  /* Narrow columns (a sidebar rail): wrap onto more rows instead of
+     squeezing every box until its value and date are cut off. */
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  grid-auto-flow: row;
   border-top: 1px solid var(--line, #e2e8f0);
   margin-top: auto;
   direction: ltr
@@ -2142,6 +2146,8 @@
 .hm-reward-filter-search::placeholder { color: rgba(255,255,255,0.5); }
 .hm-reward-filter-select { flex: 0 0 auto; }
 .hm-reward-filter-select option { color: #0f172a; }
+/* Dropdown panels follow the campaign theme rather than the studio purple. */
+select { --hm-select-accent: var(--hm-primary); }
 /* margin-right: auto pushes this item to the strip's far end (left, given
    the inherited RTL flex direction -- first DOM child/search renders on the
    right) so "הצג רק זמינות" reads as a distinct toggle, not just a third

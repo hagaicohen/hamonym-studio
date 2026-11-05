@@ -1,8 +1,9 @@
+import { OrganizationLifecycleEventsService } from '../../../core/services/organization-lifecycle-events.service';
 // src/app/modules/platform/services/platform.service.ts
 
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable, expand, map, toArray, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 function authHeaders(): HttpHeaders {
@@ -12,6 +13,27 @@ function authHeaders(): HttpHeaders {
 @Injectable({ providedIn: 'root' })
 export class PlatformService {
   private http = inject(HttpClient);
+  private lifecycle = inject(OrganizationLifecycleEventsService);
+
+  getOrganizationFilterOptions(): Observable<{ id: string; name: string }[]> {
+    return this.readFilterOptions(page => this.getOrganizations({ page, limit: 100 }), 'organizations', 'display_name');
+  }
+
+  getCampaignFilterOptions(): Observable<{ id: string; name: string }[]> {
+    return this.readFilterOptions(page => this.getCampaigns({ page, limit: 100 }), 'campaigns', 'title');
+  }
+
+  private readFilterOptions(request: (page: number) => Observable<any>, key: string, name: string): Observable<{ id: string; name: string }[]> {
+    return request(0).pipe(
+      expand(res => res[key]?.length && (res.page + 1) * res.limit < res.total ? request(res.page + 1) : EMPTY),
+      toArray(),
+      map(pages => {
+        const rows = pages.flatMap(page => page[key] || []);
+        if (pages.some(page => page.total !== pages[0].total) || rows.length !== pages[0].total || new Set(rows.map(row => row.id)).size !== rows.length) throw new Error('Filter options changed during loading');
+        return rows.map(row => ({ id: row.id, name: row[name] || row.legal_name || 'ללא שם' }));
+      }),
+    );
+  }
 
   getDashboard(): Observable<any> {
     return this.http.get(`${environment.apiUrl}/api/platform/dashboard`, { headers: authHeaders() });
@@ -91,23 +113,23 @@ export class PlatformService {
   }
 
   approve(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/approve`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/approve`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   reject(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reject`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reject`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   requestChanges(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/request-changes`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/request-changes`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   suspend(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/suspend`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/suspend`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   reactivate(id: string, notes?: string, reasonTags?: string[]): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reactivate`, { notes, reasonTags }, { headers: authHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/platform/organizations/${id}/reactivate`, { notes, reasonTags }, { headers: authHeaders() }).pipe(tap(() => this.lifecycle.changed(id)));
   }
 
   // Permanent, irreversible removal — everything under this entity is erased.
@@ -139,6 +161,8 @@ export class PlatformService {
     limit?: number;
     showDeleted?: boolean;
     featuredOnly?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
   }): Observable<any> {
     let params = new HttpParams()
       .set('page', String(query.page ?? 0))
@@ -151,6 +175,8 @@ export class PlatformService {
     if (query.sortDir) params = params.set('sortDir', query.sortDir);
     if (query.showDeleted) params = params.set('showDeleted', '1');
     if (query.featuredOnly) params = params.set('featuredOnly', '1');
+    if (query.dateFrom) params = params.set('dateFrom', query.dateFrom);
+    if (query.dateTo) params = params.set('dateTo', query.dateTo);
 
     return this.http.get(`${environment.apiUrl}/api/platform/campaigns`, { headers: authHeaders(), params });
   }
@@ -199,6 +225,8 @@ export class PlatformService {
     search?: string;
     status?: string;
     roleId?: number;
+    entityId?: string;
+    superAdminOnly?: boolean;
     sortBy?: string;
     sortDir?: string;
     page?: number;
@@ -211,6 +239,8 @@ export class PlatformService {
     if (query.search) params = params.set('search', query.search);
     if (query.status) params = params.set('status', query.status);
     if (query.roleId) params = params.set('roleId', String(query.roleId));
+    if (query.entityId) params = params.set('entityId', query.entityId);
+    if (query.superAdminOnly) params = params.set('superAdminOnly', '1');
     if (query.sortBy) params = params.set('sortBy', query.sortBy);
     if (query.sortDir) params = params.set('sortDir', query.sortDir);
 

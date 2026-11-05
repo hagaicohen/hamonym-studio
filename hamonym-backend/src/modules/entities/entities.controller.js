@@ -1,3 +1,4 @@
+const entityIdentity = require('./entity-identity');
 // src/modules/entities/entities.controller.js
 
 const service =
@@ -35,22 +36,8 @@ exports.createEntity =
         // DUPLICATE REGISTRATION NUMBER
         // ========================================
 
-        if (
-          err.code === '23505'
-        ) {
-
-          return res
-            .status(409)
-            .json({
-
-              success: false,
-
-              error:
-                'מספר רישום כבר קיים במערכת'
-
-            });
-
-        }
+        if (entityIdentity.isDuplicate(err)) return res.status(409).json(entityIdentity.duplicateResponse(err));
+        if (err.status) return res.status(err.status).json({error:err.message,code:err.code});
 
         res.status(500).json({
 
@@ -448,12 +435,9 @@ exports.updateEntity =
 
       console.error(err);
 
-      if (err.code === '23505') {
-        res.status(409).json({ error: 'מספר רישום כבר קיים במערכת' });
-        return;
-      }
+      if (entityIdentity.isDuplicate(err)) return res.status(409).json(entityIdentity.duplicateResponse(err));
 
-      const status = err.message === 'Unauthorized' ? 403 : 500;
+      const status = err.status || (err.message === 'Unauthorized' ? 403 : 500);
       res.status(status).json({
         error:
           status === 403 ? err.message : 'Failed to update entity'
@@ -512,6 +496,7 @@ exports.removeAssociationDocument =
 // =========================================================
 
 function statusForApproval(err) {
+  if (err.status) return err.status;
   switch (err.message) {
     case 'Unauthorized': return 403;
     case 'Invalid transition': return 409;
@@ -524,7 +509,7 @@ exports.getApprovalStatus = async (req, res) => {
     const result = await service.getApprovalStatus(req.params.id, req.user.id);
     res.json(result);
   } catch (err) {
-    res.status(statusForApproval(err)).json({ error: err.message });
+    res.status(statusForApproval(err)).json({ error: err.message, code: err.code, missingFields: err.missingFields });
   }
 };
 
@@ -533,7 +518,7 @@ exports.getNotifications = async (req, res) => {
     const notifications = await service.getNotifications(req.params.id, req.user.id);
     res.json({ notifications });
   } catch (err) {
-    res.status(statusForApproval(err)).json({ error: err.message });
+    res.status(statusForApproval(err)).json({ error: err.message, code: err.code, missingFields: err.missingFields });
   }
 };
 
@@ -542,7 +527,7 @@ exports.acknowledgeNotifications = async (req, res) => {
     await service.acknowledgeNotifications(req.params.id, req.user.id);
     res.json({ success: true });
   } catch (err) {
-    res.status(statusForApproval(err)).json({ error: err.message });
+    res.status(statusForApproval(err)).json({ error: err.message, code: err.code, missingFields: err.missingFields });
   }
 };
 
@@ -551,7 +536,16 @@ exports.requestReview = async (req, res) => {
     const entity = await service.requestReview(req.params.id, req.user.id);
     res.json({ entity });
   } catch (err) {
-    res.status(statusForApproval(err)).json({ error: err.message });
+    res.status(statusForApproval(err)).json({ error: err.message, code: err.code, missingFields: err.missingFields });
+  }
+};
+
+exports.deleteRegistrationDraft = async (req, res) => {
+  try {
+    const entity = await service.deleteRegistrationDraft(req.params.id, req.user.id);
+    res.json({ success: true, entity });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Draft deletion failed', code: err.code });
   }
 };
 
@@ -689,4 +683,9 @@ exports.getMyPartners = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+
+exports.checkRegistrationAvailability = async (req,res) => {
+ try { res.json(await service.checkRegistrationAvailability({userId:req.user.id,canManagePlatform:!!req.user.isSuperAdmin || (Array.isArray(req.user.platformPermissions) && req.user.platformPermissions.includes('organizations')),entityType:req.body.entityType,registrationNumber:req.body.registrationNumber,excludeEntityId:req.body.excludeEntityId})); }
+ catch(error) { res.status(error.status || 500).json({error:error.status ? error.message : 'Registration availability check failed',code:error.code}); }
 };

@@ -4,8 +4,8 @@ import { CanActivateFn, Router } from '@angular/router';
 // Requires a logged-in user but not a role/entity context — for pages a pure
 // donor (no entities, no ambassador campaigns) can reach, unlike contextGuard
 // which redirects anyone without a saved context to /welcome.
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
-  if (!localStorage.getItem('token')) return router.createUrlTree(['/login']);
+  if (!localStorage.getItem('token')) return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
   return true;
 };

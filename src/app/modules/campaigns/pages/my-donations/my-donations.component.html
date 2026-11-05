@@ -7,9 +7,9 @@
 
   <div class="md-hero">
     @if (greetingFirstName) {
-      <h1 class="md-title">שלום {{ greetingFirstName }} 💛</h1>
+      <h1 class="md-title">שלום {{ greetingFirstName }} <app-icon name="heart" /></h1>
     } @else {
-      <h1 class="md-title">הפרופיל שלי 💛</h1>
+      <h1 class="md-title">הפרופיל שלי <app-icon name="heart" /></h1>
     }
     <p class="md-subtitle">כל התרומות שלך במקום אחד</p>
   </div>
@@ -134,7 +134,7 @@
 
     @if (donations.length === 0) {
       <div class="md-empty">
-        <div class="md-empty-icon">💛</div>
+        <div class="md-empty-icon"><app-icon name="heart" /></div>
         <p>עדיין לא נמצאו תרומות משויכות לחשבון שלך</p>
         <a routerLink="/campaigns/discover">מצאו קמפיין לתרומה →</a>
       </div>

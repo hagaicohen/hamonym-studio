@@ -39,18 +39,21 @@ exports.getDonationPublic = async (req, res) => {
 };
 
 exports.getReceipt = async (req, res) => {
+  try { res.set('Cache-Control', 'no-store'); res.json(await donationsService.getReceipt(req.params.id, req.user.id, req.user.donationProofVersion)); }
+  catch (error) { res.status(error.status || 503).json({ error: 'Official receipt unavailable' }); }
+};
+exports.getReceiptPdf = async (req, res) => {
   try {
-    const receipt = await donationsService.getReceipt(req.params.id);
-    if (!receipt) return res.status(404).json({ error: 'קבלה לא נמצאה' });
-    res.json(receipt);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    const pdf = await require('./official-receipt.service').pdf(req.params.id, req.user.id, req.user.donationProofVersion);
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="receipt.pdf"',
+      'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
+    res.send(pdf);
+  } catch (error) { res.status(error.status || 503).json({ error: 'Official receipt unavailable' }); }
 };
 
 exports.getMyDonations = async (req, res) => {
   try {
-    const donations = await donationsService.getMyDonations(req.user.id);
+    const donations = await donationsService.getMyDonations(req.user.id, req.user.donationProofVersion);
     res.json({ donations });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -106,20 +109,6 @@ exports.getRewardCounts = async (req, res) => {
   }
 };
 
-exports.mockComplete = async (req, res) => {
-  if (process.env.PAYMENT_PROVIDER !== 'mock') {
-    return res.status(403).json({ error: 'Mock payments are disabled' });
-  }
-  try {
-    const { id, status, failureReason, completedAt } = req.body;
-    if (!id || !status) return res.status(400).json({ error: 'id and status are required' });
-    const result = await donationsService.handleMockComplete({ donationId: id, status, failureReason, completedAt });
-    res.json({ redirectUrl: result.redirectUrl });
-  } catch (err) {
-    console.error('mockComplete error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-};
 
 
 exports.getEntityDonations = async (req, res) => {

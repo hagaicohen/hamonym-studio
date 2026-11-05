@@ -134,8 +134,8 @@ async function main() {
       const res = await client.query(
         `INSERT INTO donations (
            campaign_id, entity_id, amount, donor_name, is_anonymous, rewards,
-           status, is_mock, completed_at
-         ) VALUES ($1, $2, $3, $4, false, '[]', 'paid', false, $5)
+           status, completed_at
+         ) VALUES ($1, $2, $3, $4, false, '[]', 'paid', $5)
          RETURNING id`,
         [campaignId, entityId, AMOUNT, `${FIXTURE_TAG}-${label}`, ts.toISOString()]
       );

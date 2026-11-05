@@ -52,7 +52,7 @@ async function loadComponentsForUpdate(client, statementId) {
   // described above. Locks the donation rows, not just reads them.
   const res = await client.query(
     `SELECT sc.donation_id, sc.amount_snapshot,
-            d.status AS donation_status, d.is_mock, d.amount, d.entity_id, d.effective_statement_id
+            d.status AS donation_status, d.amount, d.entity_id, d.effective_statement_id
      FROM statement_components sc
      JOIN donations d ON d.id = sc.donation_id
      WHERE sc.statement_id = $1
@@ -79,9 +79,6 @@ function validateForApproval(statement, components) {
   for (const c of components) {
     if (c.donation_status !== 'paid') {
       fail('DONATION_NOT_PAID', `donation ${c.donation_id} is not paid`, { donationId: c.donation_id });
-    }
-    if (c.is_mock) {
-      fail('DONATION_IS_MOCK', `donation ${c.donation_id} is a mock donation`, { donationId: c.donation_id });
     }
     if (String(c.amount) !== String(c.amount_snapshot)) {
       fail('AMOUNT_DRIFT', `donation ${c.donation_id} amount no longer matches its frozen snapshot`, {

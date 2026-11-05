@@ -1,4 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
@@ -7,6 +8,7 @@ import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
+import { ENTITY_PREFERENCES_KEY } from './current-context.service';
 
 declare const google: any;
 
@@ -29,6 +31,7 @@ export interface CurrentUser {
   providedIn: 'root',
 })
 export class AuthService {
+  private readonly document = inject(DOCUMENT);
   private apiUrl = environment.apiUrl;
 
   // Shared across every component that needs the logged-in user's name/email/
@@ -57,6 +60,15 @@ export class AuthService {
 
       payload,
     );
+  }
+
+  requestDonationVerification(): Observable<{ sent: boolean }> {
+    return this.http.post<{ sent: boolean }>(`${this.apiUrl}/auth/me/donation-verification`, {}, this.authHeaders());
+  }
+
+  verifyDonationOwnership(token: string): Observable<{ verified: boolean; token: string }> {
+    return this.http.post<{ verified: boolean; token: string }>(`${this.apiUrl}/auth/me/verify-donations`, { token }, this.authHeaders())
+      .pipe(tap(result => this.saveToken(result.token)));
   }
 
   private authHeaders(): { headers: HttpHeaders } {
@@ -92,13 +104,17 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
-  logout(): void {
+  logout(returnUrl = '/login'): void {
+    const preferences = localStorage.getItem(ENTITY_PREFERENCES_KEY);
     localStorage.clear();
+    // Non-sensitive UI preference only; tokens, user and authorization are cleared.
+    if (preferences) localStorage.setItem(ENTITY_PREFERENCES_KEY, preferences);
+    this.currentUser.set(null);
 
     try {
       google.accounts.id.disableAutoSelect();
     } catch (e) {}
 
-    window.location.href = '/login';
+    this.document.location.href = returnUrl;
   }
 }

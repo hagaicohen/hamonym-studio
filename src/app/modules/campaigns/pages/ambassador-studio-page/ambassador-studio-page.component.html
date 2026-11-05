@@ -102,7 +102,7 @@
 
         <div class="field-group field-group--narrow">
           <label class="field-label">יעד גיוס אישי (₪)</label>
-          <input class="field-input" type="number" min="0"
+          <input class="field-input" type="text" appMoneyInput min="0"
                  [(ngModel)]="draft.goalAmount"
                  placeholder="25000" />
           <span class="field-hint">השאר ריק אם אין לך יעד אישי</span>
@@ -133,7 +133,7 @@
               <div class="preview-goal-label">היעד שלי</div>
               <div class="preview-goal-amount">₪{{ draft.goalAmount | number }}</div>
               <div class="preview-bar">
-                <div class="preview-bar-fill" [style.width.%]="goalPct(amb)"></div>
+                <div class="preview-bar-fill" [style.width.%]="goalPct(amb) > 100 ? 100 : goalPct(amb)"></div>
               </div>
               <div class="preview-goal-pct">{{ goalPct(amb) }}% הושג</div>
             </div>

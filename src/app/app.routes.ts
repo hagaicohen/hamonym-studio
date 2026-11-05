@@ -8,8 +8,13 @@ import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
 import { superAdminGuard, platformSectionGuard } from './core/guards/super-admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { welcomeGuard } from './core/guards/welcome.guard';
 import { aiFeatureGuard } from './core/guards/ai-feature.guard';
+
+// Campaign Builder Studio: leaving with unsaved edits asks first.
+const studioLeaveGuard = (page: { canLeave?: () => boolean } | null) => page?.canLeave ? page.canLeave() : true;
 import { devOnlyGuard } from './core/guards/dev-only.guard';
+import { DEV_ONLY_ROUTES } from './modules/dev/dev-only.routes';
 
 // These must be declared above campaigns/:slug/:ambassadorSlug to avoid being swallowed by the wildcard
 const AMBASSADOR_STUDIO_ROUTE = {
@@ -202,8 +207,12 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'login',
         pathMatch: 'full',
+        canActivate: [welcomeGuard],
+        loadComponent: () =>
+          import('./modules/onboarding/pages/welcome/welcome.component').then(
+            (m) => m.WelcomeComponent,
+          ),
       },
       {
         path: 'login',
@@ -238,6 +247,7 @@ export const routes: Routes = [
       },
       {
         path: 'welcome',
+        canActivate: [welcomeGuard],
         loadComponent: () =>
           import('./modules/onboarding/pages/welcome/welcome.component').then(
             (m) => m.WelcomeComponent,
@@ -257,6 +267,19 @@ export const routes: Routes = [
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
       ).then((m) => m.CampaignStudioPageComponent),
+  },
+
+  // New, unsaved campaign in the Campaign Builder Studio. Same guard as
+  // campaigns/create; declared before campaigns/:id/studio so 'create' is
+  // never read as a campaign id.
+  {
+    path: 'campaigns/create/studio',
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [studioLeaveGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-builder-studio-page/campaign-builder-studio-page.component'
+      ).then((m) => m.CampaignBuilderStudioPageComponent),
   },
 
   {
@@ -295,6 +318,18 @@ export const routes: Routes = [
       import(
         './modules/campaigns/studio/pages/campaign-studio-page/campaign-studio-page.component'
       ).then((m) => m.CampaignStudioPageComponent),
+  },
+
+  // Campaign Builder Studio: the default campaign editor; the classic Wizard
+  // routes above stay as the rollback (modules/campaigns/campaign-editor-route.ts).
+  {
+    path: 'campaigns/:id/studio',
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [studioLeaveGuard],
+    loadComponent: () =>
+      import(
+        './modules/campaigns/studio/pages/campaign-builder-studio-page/campaign-builder-studio-page.component'
+      ).then((m) => m.CampaignBuilderStudioPageComponent),
   },
 
   // Phase 3 — Page Builder Owner Context. Same Builder/Renderer as
@@ -406,6 +441,9 @@ export const routes: Routes = [
       import('./modules/dev/pages/openfields-poc/openfields-poc-page.component')
         .then((m) => m.OpenfieldsPocPageComponent),
   },
+
+  /* Design-system showcase and other local-only pages; empty in production. */
+  ...DEV_ONLY_ROUTES,
 
   /* ========================================
      PUBLIC AUTHENTICATED — ללא context
@@ -586,6 +624,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/platform/pages/platform-campaigns-page/platform-campaigns-page.component').then(
             (m) => m.PlatformCampaignsPageComponent,
+          ),
+      },
+      {
+        // Super Admin only, matching the backend (requireSuperAdmin).
+        path: 'platform/category-suggestions',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('./modules/platform/pages/platform-category-suggestions-page/platform-category-suggestions-page.component').then(
+            (m) => m.PlatformCategorySuggestionsPageComponent,
           ),
       },
       {

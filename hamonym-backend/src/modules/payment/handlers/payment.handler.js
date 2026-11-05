@@ -110,6 +110,11 @@ exports.handle = async (payload) => {
     providerReference: result?.TranzactionId || result?.LowProfileId || null,
   });
 
+  // Document persistence is independent of the committed payment result.
+  try {
+    await require('../../donations/official-receipt.service').captureVerified(donationId, result, credentials);
+  } catch (_) { console.error('[payment.handler] official document metadata unavailable'); }
+
   // Recurring signup completion — no-ops for ordinary donations (no
   // recurring_instruction_id) and is itself idempotent (no-ops if a
   // RecurringId was already created by a previous delivery of this same

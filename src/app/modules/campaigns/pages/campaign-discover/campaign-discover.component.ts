@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService, DiscoverCampaign } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 type Mode = 'donate' | 'ambassador';
 type SortBy = 'newest' | 'popular' | 'ending_soon';
 
@@ -17,7 +18,7 @@ const SORT_OPTIONS: { key: SortBy; label: string }[] = [
 @Component({
   selector: 'app-campaign-discover',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-discover.component.html',
   styleUrl: './campaign-discover.component.css',
 })
@@ -140,7 +141,7 @@ export class CampaignDiscoverComponent implements OnInit {
     const target = Number(c.target_amount) || 0;
     if (target <= 0) return 0;
     const current = Number(c.current_amount) || 0;
-    return Math.min(100, Math.round((current / target) * 100));
+    return Math.round((current / target) * 100);
   }
 
   daysLeft(endDate: string | null): number | null {

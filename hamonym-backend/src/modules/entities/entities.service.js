@@ -1,3 +1,5 @@
+const entityIdentity = require('./entity-identity');
+const { missingProfileFields, lifecycleError } = require('./organization-lifecycle');
 const db =
   require('../../db/db');
 
@@ -62,6 +64,7 @@ exports.createEntity =
     try {
 
       await client.query('BEGIN');
+      await entityIdentity.assertAvailable(client, {userId, entityType:data.entity_type, registrationNumber:data.registration_number});
 
       const entityResult =
         await client.query(
@@ -175,13 +178,11 @@ exports.createEntity =
 
             6,
 
-            data.is_profile_complete
-              ? 'pending_review'
-              : 'draft',
+            'draft',
 
             userId,
 
-            data.is_profile_complete || false,
+            missingProfileFields(data).length === 0,
 
             data.primary_category,
 
@@ -782,6 +783,9 @@ exports.updateEntity =
       throw new Error('Unauthorized');
     }
 
+    const identityRow = (await db.query('SELECT entity_type, registration_number FROM entities WHERE id=$1', [entityId])).rows[0];
+    await entityIdentity.assertAvailable(db, {userId, entityType:data.entity_type || identityRow.entity_type, registrationNumber:data.registration_number === undefined ? identityRow.registration_number : data.registration_number, excludeEntityId:entityId});
+
     const reapproval = await computeReapprovalFlag(entityId, data);
 
     /*
@@ -866,20 +870,9 @@ exports.updateEntity =
           ga_measurement_id = $30,
 
           entity_type = COALESCE($32, entity_type),
-          -- $33 is NULL for ordinary entity-settings edits (which never send
-          -- is_profile_complete at all) — COALESCE leaves the existing value
-          -- alone in that case, rather than forcing it back to false.
-          is_profile_complete = COALESCE($33, is_profile_complete),
-
-          -- A draft entity that just became fully filled-in graduates to
-          -- pending_review on its own — this is the same rule createEntity
-          -- uses at creation time, applied here too so "save draft" and
-          -- "finish registration" can be the exact same call. Only ever
-          -- touches rows still in 'draft'; every other status (pending_review,
-          -- active, changes_requested, rejected, suspended) is untouched, so
-          -- this is safe for the ordinary post-approval entity-settings edits
-          -- that also go through this same function.
-          status = CASE WHEN status = 'draft' AND COALESCE($33, is_profile_complete) THEN 'pending_review' ELSE status END,
+          -- Recompute the existing onboarding flag from values actually saved,
+          -- never from a client-supplied boolean. Saving never submits a draft.
+          is_profile_complete = $33,
 
           -- see computeReapprovalFlag above — only ever flips true here, never
           -- resets to false (that only happens via admin approve/reactivate)
@@ -956,7 +949,7 @@ exports.updateEntity =
           entityId,
 
           data.entity_type || null,
-          data.is_profile_complete === undefined ? null : !!data.is_profile_complete,
+          missingProfileFields(data).length === 0,
 
           reapproval.flag,
           reapproval.reason
@@ -1127,6 +1120,7 @@ const APPROVAL_DECISION_ACTIONS = ['approve', 'reject', 'request_changes', 'susp
 exports.getApprovalStatus = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 
+
   const [entityRes, auditRes] = await Promise.all([
     db.query(`SELECT status, updated_at FROM entities WHERE id = $1`, [entityId]),
     db.query(
@@ -1193,30 +1187,30 @@ exports.acknowledgeNotifications = async (entityId, userId) => {
 };
 
 exports.requestReview = async (entityId, userId) => {
-  await checkOwnership(userId, entityId);
-
-  const result = await db.query(
-    `UPDATE entities SET status = 'pending_review', updated_at = NOW()
-     WHERE id = $1 AND status = 'changes_requested'
-     RETURNING
-       id, entity_type, display_name, legal_name, registration_number, description,
-       logo_url, website, city, address, contact_full_name, contact_email, contact_phone,
-       cardcom_terminal_number, cardcom_api_username, cardcom_api_password_encrypted,
-       cardcom_clearing_company, cardcom_invoice_name, cardcom_invoice_email, cardcom_is_production,
-       cardcom_connection_status, cardcom_last_verified_at, cardcom_last_error,
-       association_certificate_url, bank_document_url, identity_document_url, tax_document_url,
-       requires_completion, missing_fields, onboarding_completed_at, created_by_user_id,
-       created_at, updated_at, created_by, status, is_profile_complete, type, email, phone,
-       onboarding_completed, onboarding_step, association_certificate_name, tax_document_name,
-       primary_category, secondary_categories, registration_document_name, registration_document_mime,
-       association_certificate_mime, tax_document_mime, logo_mime, campaign_types, monthly_goal,
-       yearly_goal, billing_method, billing_masav_file_name, cardcom_terminal, cardcom_api_name,
-       cardcom_api_password, ga_measurement_id, deleted_at, deleted_by, is_hidden`,
-    [entityId]
-  );
-
-  if (!result.rows[0]) throw new Error('Invalid transition');
-  return stripBlobs(result.rows[0]);
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const membership = await client.query('SELECT 1 FROM user_entities WHERE user_id = $1 AND entity_id = $2', [userId, entityId]);
+    if (!membership.rows.length) throw lifecycleError('Unauthorized', 403, 'UNAUTHORIZED');
+    const result = await client.query('SELECT * FROM entities WHERE id = $1 FOR UPDATE', [entityId]);
+    const entity = result.rows[0];
+    if (!entity || entity.deleted_at) throw lifecycleError('Entity not found', 404, 'ENTITY_NOT_FOUND');
+    // Serialize repeated/concurrent clicks without creating another submission.
+    if (entity.status === 'pending_review') {
+      await client.query('COMMIT');
+      return stripBlobs(entity);
+    }
+    if (!['draft', 'changes_requested'].includes(entity.status)) throw lifecycleError('Invalid transition', 409, 'INVALID_TRANSITION');
+    const missing = missingProfileFields(entity);
+    if (missing.length) throw lifecycleError('יש להשלים את פרטי החובה לפני הגשה לבדיקה', 400, 'PROFILE_INCOMPLETE', missing);
+    const updated = await client.query(
+      "UPDATE entities SET status = 'pending_review', is_profile_complete = true, updated_at = NOW() WHERE id = $1 RETURNING *", [entityId]);
+    await client.query('COMMIT');
+    return stripBlobs(updated.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally { client.release(); }
 };
 
 // Entity manager's own "delete entity" — soft delete. All the entity's
@@ -1226,6 +1220,49 @@ exports.requestReview = async (entityId, userId) => {
 // it out of the public campaign/donation queries that filter on
 // e.status = 'active'. Permanent removal is a platform-admin-only action
 // (see platform.service.js hardDeleteEntity).
+// Discards an unsubmitted registration draft. Narrower than softDeleteEntity
+// on purpose: only the creator, only while still 'draft', never a partner
+// entity and never once any campaign (even a deleted one) exists. Touches the
+// entities row only; documents, members and billing rows are left as they are.
+function draftError(message, status, code) {
+  return Object.assign(new Error(message), { status, code });
+}
+
+exports.deleteRegistrationDraft = async (entityId, userId) => {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT e.id, e.status, e.created_by_user_id,
+              EXISTS (SELECT 1 FROM campaigns c WHERE c.entity_id = e.id) AS has_campaigns,
+              EXISTS (SELECT 1 FROM entity_roles er WHERE er.entity_id = e.id AND er.role = 'partner') AS is_partner
+       FROM entities e
+       WHERE e.id = $1 AND e.deleted_at IS NULL
+       FOR UPDATE OF e`,
+      [entityId]
+    );
+    const entity = rows[0];
+    if (!entity || entity.is_partner) throw draftError('Draft not found', 404, 'DRAFT_NOT_FOUND');
+    if (String(entity.created_by_user_id) !== String(userId)) throw draftError('Unauthorized', 403, 'NOT_DRAFT_CREATOR');
+    if (entity.status !== 'draft') throw draftError('Only drafts can be deleted', 409, 'NOT_A_DRAFT');
+    if (entity.has_campaigns) throw draftError('Draft has campaigns', 409, 'DRAFT_HAS_CAMPAIGNS');
+
+    const result = await client.query(
+      `UPDATE entities SET deleted_at = NOW(), deleted_by = $1, status = 'deleted', updated_at = NOW()
+       WHERE id = $2 AND status = 'draft' AND deleted_at IS NULL
+       RETURNING id`,
+      [userId, entityId]
+    );
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 exports.softDeleteEntity = async (entityId, userId) => {
   await checkOwnership(userId, entityId);
 
@@ -1472,3 +1509,5 @@ exports.getMyPartners = async (userId) => {
   );
   return rows;
 };
+
+exports.checkRegistrationAvailability = args => entityIdentity.availability(db, args);

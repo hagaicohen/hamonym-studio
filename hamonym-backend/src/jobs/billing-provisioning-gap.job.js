@@ -30,7 +30,7 @@ module.exports = {
               COUNT(d.id)::int AS paid_donation_count,
               SUM(d.amount) AS paid_gross_total
        FROM entities e
-       JOIN donations d ON d.entity_id = e.id AND d.status = 'paid' AND d.is_mock = false
+       JOIN donations d ON d.entity_id = e.id AND d.status = 'paid'
        WHERE e.status = 'active'
          AND NOT EXISTS (SELECT 1 FROM billing_accounts ba WHERE ba.entity_id = e.id)
        GROUP BY e.id, e.display_name`

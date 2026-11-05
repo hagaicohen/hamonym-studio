@@ -10,11 +10,12 @@ import {
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [
+  imports: [HmIconComponent, 
     CommonModule,
     RouterLink,
     ReactiveFormsModule,

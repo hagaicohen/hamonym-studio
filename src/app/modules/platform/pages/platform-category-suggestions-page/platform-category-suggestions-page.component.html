@@ -1,0 +1,96 @@
+<main class="plat-page" dir="rtl">
+  <header class="plat-header">
+    <div>
+      <h1 class="plat-title">הצעות קטגוריה</h1>
+      <p class="plat-subtitle">קטגוריות שהציעו עמותות. אישור הצעה אינו מוסיף אותה לרשימה הרשמית.</p>
+    </div>
+  </header>
+
+  <nav class="plat-chips" aria-label="סינון לפי סטטוס">
+    @for (s of statuses; track s) {
+      <button type="button" class="plat-chip" [class.active]="status === s" [attr.aria-pressed]="status === s" (click)="setStatus(s)">
+        {{ statusLabels[s] }} <span class="cs-count">{{ counts[s] }}</span>
+      </button>
+    }
+  </nav>
+
+  @if (notice) { <div class="cs-notice" role="status">{{ notice }}</div> }
+  @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
+
+  <section class="plat-card" [attr.aria-busy]="loading" aria-label="רשימת הצעות קטגוריה">
+    @if (loading) {
+      <div class="plat-loading" role="status">טוען הצעות…</div>
+    } @else if (!suggestions.length && !error) {
+      <div class="plat-empty">
+        <strong>{{ status === 'pending' ? 'אין הצעות שממתינות לבדיקה' : 'אין הצעות בסטטוס זה' }}</strong>
+        <span>הצעות חדשות מעמותות יופיעו כאן.</span>
+      </div>
+    } @else if (suggestions.length) {
+      <div class="plat-table-wrap" tabindex="0" aria-label="טבלת הצעות קטגוריה; ניתן לגלול לרוחב">
+        <table class="plat-table">
+          <thead>
+            <tr>
+              <th scope="col">קטגוריה מוצעת</th>
+              <th scope="col">עמותה</th>
+              <th scope="col">הוצע על ידי</th>
+              <th scope="col">תאריך</th>
+              <th scope="col">סטטוס</th>
+              @if (status === 'pending') { <th scope="col">פעולות</th> } @else { <th scope="col">הערת בדיקה</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of suggestions; track s.id) {
+              <tr class="plat-row">
+                <td><strong>{{ s.label }}</strong></td>
+                <td>{{ s.entity_name || '—' }}</td>
+                <td>
+                  <div>{{ s.suggested_by_name || '—' }}</div>
+                  @if (s.suggested_by_email) { <div class="cell-secondary" dir="ltr">{{ s.suggested_by_email }}</div> }
+                </td>
+                <td><time dir="ltr" [attr.datetime]="s.created_at">{{ fmtDate(s.created_at) }}</time></td>
+                <td>
+                  <span class="plat-status" [class.status-active]="s.status === 'approved'" [class.status-deleted]="s.status === 'rejected'" [class.status-warning]="s.status === 'pending'">
+                    {{ s.status === 'pending' ? 'ממתינה' : s.status === 'approved' ? 'אושרה' : 'נדחתה' }}
+                  </span>
+                  @if (s.reviewed_at) { <div class="cell-secondary">{{ s.reviewed_by_name || '' }} · <span dir="ltr">{{ fmtDate(s.reviewed_at) }}</span></div> }
+                </td>
+                @if (status === 'pending') {
+                  <td>
+                    <div class="cs-actions">
+                      <button type="button" class="secondary-button cs-approve" (click)="openReview(s, 'approve')">אישור</button>
+                      <button type="button" class="secondary-button cs-reject" (click)="openReview(s, 'reject')">דחייה</button>
+                    </div>
+                  </td>
+                } @else {
+                  <td>{{ s.review_note || '—' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  @if (reviewing; as r) {
+    <div class="cs-overlay" (click)="closeReview()">
+      <div class="cs-dialog" role="dialog" aria-modal="true" aria-labelledby="cs-dialog-title" (click)="$event.stopPropagation()" (keydown.escape)="closeReview()">
+        <h2 id="cs-dialog-title">{{ r.decision === 'approve' ? 'אישור הצעה' : 'דחיית הצעה' }}: „{{ r.item.label }}”</h2>
+        <p class="cs-dialog-text">
+          {{ r.decision === 'approve'
+            ? 'האישור מתעד שההצעה מתאימה. הקטגוריה לא תתווסף לרשימה באופן אוטומטי, ושיוכי העמותות לא ישתנו.'
+            : 'ההצעה תסומן כנדחתה. אפשר יהיה להציע אותה שוב בעתיד.' }}
+        </p>
+        <label class="cs-note-label" for="cs-note">הערה (לא חובה)</label>
+        <textarea id="cs-note" class="cs-note" maxlength="500" [value]="note" (input)="onNote($event)"></textarea>
+        @if (reviewError) { <p class="cs-dialog-error" role="alert">{{ reviewError }}</p> }
+        <div class="cs-dialog-actions">
+          <button type="button" class="secondary-button" [disabled]="saving" (click)="closeReview()">ביטול</button>
+          <button type="button" class="cs-confirm" [class.cs-confirm--reject]="r.decision === 'reject'" [disabled]="saving" (click)="confirm()">
+            {{ saving ? 'שומר…' : r.decision === 'approve' ? 'אשר הצעה' : 'דחה הצעה' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</main>

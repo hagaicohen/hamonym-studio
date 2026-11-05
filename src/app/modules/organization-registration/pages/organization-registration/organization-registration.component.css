@@ -4,119 +4,256 @@
    derived from a step-billing-method-only LOCAL override of .step-card that
    has since been removed — see that component's own CSS comment,
    2026-09-23 — so 734 no longer corresponds to any real card on any step.) */
-.draft-resume-banner {
+.drafts-card {
   box-sizing: border-box;
   max-width: 760px;
-  margin: 20px auto 0;
-  padding: 16px 20px;
-  background: #f0fdfa;
-  border: 1px solid #99f6e4;
-  border-radius: 14px;
+  margin: 16px auto 0;
+  padding: 14px 14px 12px;
+  background: var(--hm-surface);
+  border: 1px solid var(--hm-border);
+  border-radius: 12px;
 }
 
-.draft-resume-text {
-  font-size: 14px;
-  color: #0f172a;
-  line-height: 1.5;
-  margin-bottom: 12px;
-}
-
-.draft-resume-actions {
+.drafts-head {
   display: flex;
-  justify-content: right;
-  gap: 10px;
-}
-
-.draft-resume-btn {
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: white;
-  color: #0f172a;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.draft-resume-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-}
-
-.draft-resume-btn--primary {
-  background: #14b8a6;
-  border-color: #14b8a6;
-  color: white;
-}
-
-.draft-resume-btn--primary:hover {
-  background: #0f9f90;
-}
-
-.draft-save-bar {
-  max-width: 760px; /* see .draft-resume-banner comment */
-  margin: 20px auto 0;
-  display: flex;
-  justify-content: left;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
-/* Tighter gap when it's grouped directly under the resume banner instead
-   of standing alone at the top of the page. */
-.draft-resume-banner + .draft-save-bar {
-  margin-top: 12px;
-}
-
-@media (max-width: 768px) {
-  .draft-resume-banner,
-  .draft-save-bar {
-    max-width: none;
-    margin-left: 12px;
-    margin-right: 12px;
-  }
-}
-
-.save-draft-btn {
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 10px;
-  border: 1px solid #dbe2ea;
-  background: white;
-  color: #0f172a;
-  font-size: 13px;
+.drafts-title {
+  margin: 0;
+  font-size: 16px;
   font-weight: 700;
+  color: var(--hm-text-strong);
+}
+
+.drafts-count {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--hm-surface-muted);
+  color: var(--hm-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.drafts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two rows fit naturally; a third or more scrolls inside the card so the
+   "new registration" action never moves out of view. */
+.drafts-list.is-scrollable {
+  max-height: 170px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 4px;
+}
+
+.draft-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--hm-border);
+  border-radius: 8px;
+}
+
+.draft-row.is-current { background: var(--hm-brand-50); }
+
+.draft-info { flex: 1; min-width: 0; }
+
+.draft-name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--hm-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.draft-badge {
+  flex-shrink: 0;
+  padding: 0 8px;
+  border: 1px solid var(--hm-success-border);
+  border-radius: 999px;
+  background: var(--hm-success-bg);
+  color: var(--hm-success);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.draft-date {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--hm-text-muted);
+}
+
+.draft-unsaved { color: var(--hm-warning); }
+
+.draft-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0;
+}
+
+.draft-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--hm-text);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
-.save-draft-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
+.draft-icon-btn lucide-icon { display: inline-flex; }
+.draft-icon-btn:hover:not(:disabled) { background: var(--hm-brand-100); color: var(--hm-brand-700); }
+.draft-delete-btn { color: var(--hm-danger); }
+.draft-delete-btn:hover:not(:disabled) { background: #fef2f2; color: var(--hm-danger); }
 
-.save-draft-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.draft-icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+.draft-new-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .draft-save-status {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 6px 12px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  font-size: 13px;
+  margin: 4px 0 0;
+  font-size: 12px;
   font-weight: 500;
 }
 
-.draft-save-status--ok {
-  color: #14b8a6;
+.draft-save-status--ok { color: var(--hm-success); }
+.draft-save-status--error { color: var(--hm-danger); }
+
+.draft-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 32px;
+  margin-top: 16px;
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  background: var(--hm-surface);
+  color: var(--hm-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.draft-save-status--error {
-  color: #ef4444;
+.draft-new-btn:hover:not(:disabled) { border-color: var(--hm-brand-300); color: var(--hm-brand-700); }
+
+.draft-icon-btn:focus-visible,
+.draft-new-btn:focus-visible,
+.draft-dialog button:focus-visible { outline: 2px solid var(--hm-brand-600); outline-offset: 2px; }
+
+.draft-dialog {
+  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 20px;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, .2);
+  direction: rtl;
+}
+
+.draft-dialog::backdrop { background: rgba(15, 23, 42, .4); }
+
+.draft-dialog-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--hm-text-strong); }
+.draft-dialog-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--hm-text); }
+.draft-dialog-error { margin: 10px 0 0; font-size: 13px; color: var(--hm-danger); }
+
+.draft-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.draft-dialog-cancel,
+.draft-dialog-confirm,
+.draft-dialog-primary {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.draft-dialog-cancel { border: 1px solid var(--hm-border-strong); background: #fff; color: var(--hm-text); }
+.draft-dialog-confirm { border: 0; background: var(--hm-danger); color: #fff; }
+.draft-dialog-primary { border: 0; background: var(--hm-color-primary); color: #fff; }
+.draft-dialog-cancel:disabled,
+.draft-dialog-confirm:disabled,
+.draft-dialog-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .drafts-card { max-width: none; margin-left: 12px; margin-right: 12px; }
+}
+
+/* ---- Loading another draft ---- */
+.wizard-steps { position: relative; transition: opacity .15s ease; }
+.wizard-steps.is-loading { opacity: .35; pointer-events: none; user-select: none; }
+.draft-row.is-loading { background: var(--hm-brand-50); }
+
+.draft-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border: 1px solid var(--hm-border);
+  border-radius: 12px;
+  background: var(--hm-surface);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .12);
+  color: var(--hm-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  transform: translate(-50%, -50%);
+}
+
+.draft-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--hm-brand-100);
+  border-top-color: var(--hm-color-primary);
+  border-radius: 50%;
+  animation: draft-spin .7s linear infinite;
+}
+
+.draft-spinner--lg { width: 20px; height: 20px; }
+
+@keyframes draft-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .draft-spinner { animation-duration: 1.6s; }
+  .wizard-steps { transition: none; }
 }

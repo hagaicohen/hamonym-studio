@@ -65,9 +65,9 @@
             class="toggle-password"
             (click)="togglePassword()"
           >
-            <span *ngIf="!showPassword"> 👁 </span>
+            <span *ngIf="!showPassword"> <app-icon name="eye" /> </span>
 
-            <span *ngIf="showPassword" class="eye-off"> 👁 </span>
+            <span *ngIf="showPassword" class="eye-off"> <app-icon name="eye-off" /> </span>
           </button>
         </div>
 
@@ -97,9 +97,9 @@
             class="toggle-password"
             (click)="toggleConfirmPassword()"
           >
-            <span *ngIf="!showConfirmPassword"> 👁 </span>
+            <span *ngIf="!showConfirmPassword"> <app-icon name="eye" /> </span>
 
-            <span *ngIf="showConfirmPassword" class="eye-off"> 👁 </span>
+            <span *ngIf="showConfirmPassword" class="eye-off"> <app-icon name="eye-off" /> </span>
           </button>
         </div>
 

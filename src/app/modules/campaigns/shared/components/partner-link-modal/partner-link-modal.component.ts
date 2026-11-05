@@ -10,6 +10,7 @@ import { PartnerImportService, ExtractResult, ClassifyResult, ApplyPayload } fro
 import { ResolvedEntry, tierOf, buildProfileDraft, buildParticipationDraft, acceptSuggestion, draftPayload } from '../../../services/partner-import-mapper';
 import { CampaignStudioStateService, BlockType } from '../../../services/campaign-studio-state.service';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Matches CampaignEditorComponent's step order (Basic/Type/Donation/
 // Offerings/...) — see campaign-editor.component.ts's imports list.
 const OFFERINGS_STEP_INDEX = 4;
@@ -28,7 +29,7 @@ interface PartnerResult {
 @Component({
   selector: 'app-partner-link-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './partner-link-modal.component.html',
   styleUrl: './partner-link-modal.component.css',
 })

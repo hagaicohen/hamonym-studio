@@ -32,7 +32,7 @@
     <div class="disc-loading">טוען קמפיינים...</div>
   } @else if (campaigns.length === 0) {
     <div class="disc-empty">
-      <div class="disc-empty-icon">{{ searchQuery.trim() ? '🔍' : '🌱' }}</div>
+      <div class="disc-empty-icon"><app-icon [name]="searchQuery.trim() ? 'search' : 'sprout'" /></div>
       <p class="disc-empty-title">{{ emptyStateTitle }}</p>
       <p class="disc-empty-subtitle">{{ emptyStateSubtitle }}</p>
     </div>
@@ -61,9 +61,10 @@
               <p class="disc-card-desc">{{ c.short_description }}</p>
             }
             <div class="disc-card-progress-track">
-              <div class="disc-card-progress-fill" [style.width.%]="progressPct(c)"></div>
+              <div class="disc-card-progress-fill" [style.width.%]="progressPct(c) > 100 ? 100 : progressPct(c)"></div>
             </div>
             <div class="disc-card-stats">
+              <span class="disc-card-percent">{{ progressPct(c) }}%</span>
               <span class="disc-card-raised">{{ fmtMoney(c.current_amount) }} <span class="disc-card-of">מתוך {{ fmtMoney(c.target_amount) }}</span></span>
               <span class="disc-card-supporters">{{ c.supporters_count }} תומכים</span>
             </div>
@@ -71,7 +72,7 @@
               <div class="disc-card-days">{{ daysLeft(c.end_date) }} ימים נותרו</div>
             }
             @if (mode === 'ambassador') {
-              <div class="disc-card-cta">🤝 הצטרפו כשגרירים</div>
+              <div class="disc-card-cta"><app-icon name="handshake" /> הצטרפו כשגרירים</div>
             }
           </div>
         </div>

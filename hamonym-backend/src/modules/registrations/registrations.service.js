@@ -154,9 +154,9 @@ async function insertPaidRegistration(entityId, campaignId, option, { participan
         const donationRes = await client.query(
           `INSERT INTO donations (
              campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
-             rewards, status, is_mock, source, supporters_count, entered_by, note, completed_at,
+             rewards, status, source, supporters_count, entered_by, note, completed_at,
              client_submission_key
-           ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,1,$8,$9,NOW(),$10)
+           ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',$7,1,$8,$9,NOW(),$10)
            RETURNING id`,
           [campaignId, entityId, option.price, payerName || participantName, payerEmail || null, payerPhone || null, source, enteredByUserId, note || null, key]
         );

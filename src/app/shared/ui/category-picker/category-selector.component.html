@@ -1,0 +1,66 @@
+<div class="hm-cat">
+  <label class="hm-cat-label" [for]="inputId">חיפוש ובחירת קטגוריות</label>
+  <div class="hm-cat-search">
+    <lucide-icon class="hm-cat-search-icon" [img]="Search" [size]="18" aria-hidden="true"></lucide-icon>
+    <input
+      #search
+      type="search"
+      class="hm-cat-search-input"
+      [id]="inputId"
+      placeholder="חפש קטגוריה להוספה..."
+      autocomplete="off"
+      [attr.aria-controls]="inputId + '-all'"
+      [value]="query()"
+      (input)="onSearch($event)"
+      (keydown.escape)="clearSearch(search)"
+    />
+  </div>
+
+  <div class="hm-cat-group">
+    <div class="hm-cat-heading" [id]="inputId + '-selected'" aria-live="polite">
+      קטגוריות שנבחרו ({{ selectedIds.length }})
+    </div>
+    @if (selectedIds.length) {
+      <ul class="hm-chip-list" [attr.aria-labelledby]="inputId + '-selected'">
+        @for (id of selectedIds; track id) {
+          <li class="hm-chip hm-chip--picked">
+            <span>{{ labelOf(id) }}</span>
+            <button type="button" class="hm-chip-remove" [attr.aria-label]="'הסר ' + labelOf(id)" (click)="remove(id)">
+              <lucide-icon [img]="X" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="hm-cat-empty">עדיין לא נבחרו קטגוריות</p>
+    }
+  </div>
+
+  <hr class="hm-cat-divider" />
+
+  <div class="hm-cat-group">
+    <div class="hm-cat-heading" [id]="inputId + '-all-title'">כל הקטגוריות</div>
+    @if (visible.length) {
+      <ul class="hm-chip-list" [id]="inputId + '-all'" [attr.aria-labelledby]="inputId + '-all-title'">
+        @for (category of visible; track category.id) {
+          <li>
+            <button
+              type="button"
+              class="hm-chip"
+              [class.is-selected]="isSelected(category.id)"
+              [attr.aria-pressed]="isSelected(category.id)"
+              (click)="toggle(category.id)"
+            >
+              @if (isSelected(category.id)) {
+                <lucide-icon [img]="Check" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+              }
+              <span>{{ category.label }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="hm-cat-empty" [id]="inputId + '-all'" role="status">לא נמצאו קטגוריות התואמות לחיפוש</p>
+    }
+  </div>
+</div>

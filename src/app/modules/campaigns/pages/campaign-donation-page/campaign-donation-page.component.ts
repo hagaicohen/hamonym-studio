@@ -5,7 +5,8 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset). Was briefly embedded in
 // the old accordion "Management" section (now removed) — re-homed here as
 // its own page, same self-sufficient fetch→mutate→save pattern as the rest
@@ -14,7 +15,7 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 @Component({
   selector: 'app-campaign-donation-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './campaign-donation-page.component.html',
   styleUrl: './campaign-donation-page.component.css',
 })

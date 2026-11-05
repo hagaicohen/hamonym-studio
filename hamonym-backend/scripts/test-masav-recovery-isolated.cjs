@@ -1,0 +1,79 @@
+'use strict';
+const assert=require('node:assert/strict'),crypto=require('node:crypto');
+assert.match(process.env.DB_NAME,/^hamonym_masav_recovery_20261030(?:_v[2-9])?$/);assert.equal(process.env.DB_HOST,'127.0.0.1');
+for(const name of ['node:http','node:https']) require(name).request=()=>{throw Error('External provider forbidden')};
+const db=require('../src/db/db'),masav=require('../src/modules/billing-engine/masav-proposal.service'),settings=require('../src/modules/billing-engine/platform-billing-settings.service'),collection=require('../src/modules/collection-engine/collection.service'),results=require('../src/modules/billing-engine/masav-result.service'),recovery=require('../src/modules/billing-engine/masav-recovery.service'),XLSX=require('xlsx');
+let checks=0;const pass=name=>{checks++;console.log('PASS '+name)};
+(async()=>{try{
+const user=(await db.query('SELECT id FROM users ORDER BY id LIMIT 1')).rows[0].id;
+const original=(await db.query('SELECT * FROM statements')).rows[0];
+const org=(await db.query('SELECT entity_id FROM billing_accounts WHERE id=$1',[original.billing_account_id])).rows[0].entity_id;
+async function pay(id,amount){const attempt=(await db.query("INSERT INTO collection_attempts(statement_id,collection_method,attempt_number,status,provider,requested_amount) SELECT $1,'card',COALESCE(MAX(attempt_number),0)+1,'pending','fin11_mock',$2 FROM collection_attempts WHERE statement_id=$1 RETURNING id",[id,amount])).rows[0].id;await collection.resolveAttempt(attempt,id,{outcome:'succeeded',providerReference:'fixture-'+crypto.randomUUID()});}
+async function statement(account,year,month){const start=new Date(Date.UTC(year,month-2,28,18)),end=new Date(Date.UTC(year,month-1,28,18));const period=(await db.query('INSERT INTO billing_periods(period_start,period_end) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING id',[start,end])).rows[0]||(await db.query('SELECT id FROM billing_periods WHERE period_end=$1',[end])).rows[0];const run=(await db.query("INSERT INTO billing_runs(billing_period_id,mode,as_of,status) VALUES($1,'production',$2,'draft') RETURNING id",[period.id,end])).rows[0].id;const id=(await db.query("INSERT INTO statements(billing_account_id,billing_period_id,billing_run_id,gross_raised,fee_rate,vat_rate,fee_amount,vat_amount,total_due,status) VALUES($1,$2,$3,100000,.03,.18,3000,540,3540,'open') RETURNING id",[account,period.id,run])).rows[0].id;await pay(id,3000);return id;}
+async function approve(id){const p=await masav.prepareMasavProposal(id);assert.equal(p.proposed,true,JSON.stringify(p));await masav.approveMasavProposal({proposalId:p.proposalId,superAdminUserId:user,reason:'Isolated manual review'});return p.proposalId;}
+const december=await statement(original.billing_account_id,2026,12),january=await statement(original.billing_account_id,2027,1);
+const second=(await db.query("INSERT INTO entities(display_name,created_by_user_id,status) VALUES('Isolated recovery organization',$1,'active') RETURNING id",[user])).rows[0].id;
+const secondAccount=(await db.query('INSERT INTO billing_accounts(entity_id,fee_rate,vat_rate) VALUES($1,.03,.18) RETURNING id',[second])).rows[0].id;
+await db.query("INSERT INTO entity_masav_details(entity_id,bank_code,branch_code,account_number,authorized,authorized_by,authorized_at) VALUES($1,'12','345','00001234',true,$2,now())",[second,user]);
+const secondNov=await statement(secondAccount,2026,11),secondDec=await statement(secondAccount,2026,12);
+for(const id of [original.id,december,january,secondNov,secondDec])await approve(id);
+const preview=await masav.previewMasavExport();assert.equal(preview.totalAmount,'2700.00');assert.equal(preview.instructions.length,2);
+await masav.exportMasavProposals({proposalIds:preview.instructions.flatMap(i=>i.components.map(c=>c.proposalId)),expectedPreviewToken:preview.previewToken,superAdminUserId:user});
+const initial=await recovery.listInstructions(),parent=initial.find(i=>i.entity_id===org),failed=initial.find(i=>i.entity_id===second);
+assert.equal(parent.total_amount,'1620.00');assert.equal(parent.outstanding_amount,'1620.00');assert.equal(parent.finalized,false);
+const snapshot=(await db.query('SELECT row_to_json(i)::text snapshot FROM masav_export_instructions i WHERE id=$1',[parent.id])).rows[0].snapshot;
+await assert.rejects(recovery.prepareRetry({instructionId:parent.id,confirmed:true,superAdminUserId:user}),e=>e.code==='MASAV_RESULTS_NOT_FINALIZED');pass('Export remains locked before final results; no payment recorded by Excel');
+const input={instructionId:parent.id,reference:'bank-partial-900',amount:'900',confirmedAt:'2027-02-06T09:00:00Z',confirmed:true,superAdminUserId:user};
+const concurrent=await Promise.all([results.recordConfirmedResult(input),results.recordConfirmedResult(input)]);assert.equal(concurrent.filter(i=>i.replayed).length,1);assert.deepEqual(concurrent[0].allocations.map(a=>a.amount),['540.00','360.00']);
+await assert.rejects(recovery.prepareRetry({instructionId:parent.id,confirmed:true,superAdminUserId:user}),e=>e.code==='MASAV_RESULTS_NOT_FINALIZED');assert.equal((await masav.hasExportedMasavProposal(december)).exists,true);pass('Confirmed partial payment is FIFO and retry stays locked until explicit finalization');
+const fin={instructionId:parent.id,reference:'bank-final-900',confirmedAt:'2027-02-06T10:00:00Z',confirmed:true,superAdminUserId:user};
+const finalized=await Promise.all([recovery.finalizeInstruction(fin),recovery.finalizeInstruction(fin)]);assert.equal(finalized.filter(i=>i.replayed).length,1);assert.equal(finalized[0].outcome,'partial');assert.equal(finalized[0].original_remaining,'720.00');
+await assert.rejects(results.recordConfirmedResult({...input,reference:'late-bank-result',amount:'1'}),e=>e.code==='MASAV_INSTRUCTION_FINALIZED');
+await assert.rejects(recovery.finalizeInstruction({...fin,reference:'changed-final'}),e=>e.code==='MASAV_RESULT_REFERENCE_CONFLICT');
+await assert.rejects(results.recordConfirmedResult({...input,instructionId:failed.id,reference:fin.reference,amount:'1'}),e=>e.code==='MASAV_RESULT_REFERENCE_CONFLICT');pass('Finalization is immutable/idempotent and rejects late results or reused references');
+const failedFinal=await recovery.finalizeInstruction({...fin,instructionId:failed.id,reference:'bank-failed'});assert.equal(failedFinal.outcome,'failed');assert.equal(failedFinal.collected_amount,'0.00');assert.equal(failedFinal.original_remaining,'1080.00');pass('Finalized failure records no payment and retains full unpaid balance');
+await assert.rejects(recovery.prepareRetry({instructionId:parent.id,confirmed:false,superAdminUserId:user}),e=>e.code==='INVALID_MASAV_RESULT');
+const retry=await Promise.all([recovery.prepareRetry({instructionId:parent.id,confirmed:true,superAdminUserId:user}),recovery.prepareRetry({instructionId:parent.id,confirmed:true,superAdminUserId:user})]);assert.equal(retry.filter(i=>i.replayed).length,1);assert.equal(retry[0].proposals.length,2);assert.equal(retry[0].proposals.reduce((n,p)=>n+Number(p.proposed_amount),0),720);pass('Concurrent partial retry creates exactly two proposals, only 180 + 540 unpaid');
+await db.query('UPDATE entity_masav_details SET authorized=false,authorized_by=NULL,authorized_at=NULL WHERE entity_id=$1',[second]);
+await assert.rejects(recovery.prepareRetry({instructionId:failed.id,confirmed:true,superAdminUserId:user}),e=>e.code==='MASAV_RETRY_BLOCKED_masav_not_authorized');assert.equal((await db.query('SELECT 1 FROM masav_retry_requests WHERE instruction_id=$1',[failed.id])).rowCount,0);pass('Revoked authorization blocks retry atomically, including request and proposals');
+await db.query('UPDATE entity_masav_details SET authorized=true,authorized_by=$2,authorized_at=now() WHERE entity_id=$1',[second,user]);
+const oldCount=(await db.query('SELECT count(*)::int n FROM masav_collection_proposals')).rows[0].n;
+const lastStatement=[secondNov,secondDec].sort()[1];
+await db.query(`CREATE FUNCTION isolated_retry_fail() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN IF NEW.statement_id='${lastStatement}'::uuid THEN RAISE EXCEPTION 'injected retry failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER isolated_retry_fail BEFORE INSERT ON masav_retry_proposals FOR EACH ROW EXECUTE FUNCTION isolated_retry_fail()`);
+try{await assert.rejects(recovery.prepareRetry({instructionId:failed.id,confirmed:true,superAdminUserId:user}),/injected retry failure/);}finally{await db.query('DROP TRIGGER isolated_retry_fail ON masav_retry_proposals; DROP FUNCTION isolated_retry_fail()');}
+assert.equal((await db.query('SELECT count(*)::int n FROM masav_collection_proposals')).rows[0].n,oldCount);assert.equal((await db.query('SELECT 1 FROM masav_retry_requests WHERE instruction_id=$1',[failed.id])).rowCount,0);pass('Failure during second retry component rolls back every proposal, lineage and request');
+const failedRetry=await recovery.prepareRetry({instructionId:failed.id,confirmed:true,superAdminUserId:user});assert.equal(failedRetry.proposals.reduce((n,p)=>n+Number(p.proposed_amount),0),1080);
+for(const p of [...retry[0].proposals,...failedRetry.proposals])await masav.approveMasavProposal({proposalId:p.id,superAdminUserId:user,reason:'Explicit retry approval'});
+const entityPreview=await masav.previewMasavExport();assert.equal(entityPreview.totalAmount,'1800.00');assert.equal(entityPreview.instructions.length,2);assert.deepEqual(entityPreview.instructions.map(i=>Number(i.amount)).sort((a,b)=>a-b),[720,1080]);pass('Organization mode consolidates only retry residuals into the next unified file preview');
+await settings.setMasavConsolidation({mode:'period',superAdminUserId:user});const periodPreview=await masav.previewMasavExport();assert.equal(periodPreview.totalAmount,'1800.00');assert.equal(periodPreview.instructions.length,4);
+const exportArgs={proposalIds:periodPreview.instructions.flatMap(i=>i.components.map(c=>c.proposalId)),expectedPreviewToken:periodPreview.previewToken,superAdminUserId:user};const exports=await Promise.allSettled([masav.exportMasavProposals(exportArgs),masav.exportMasavProposals(exportArgs)]);assert.equal(exports.filter(i=>i.status==='fulfilled').length,1);
+const workbook=XLSX.read(exports.find(i=>i.status==='fulfilled').value,{type:'buffer'}),rows=XLSX.utils.sheet_to_json(workbook.Sheets.MASAV,{header:1}),trace=XLSX.utils.sheet_to_json(workbook.Sheets['Debt allocations'],{header:1});assert.equal(rows.length,6);assert.equal(trace.length,5);assert.equal(rows.slice(2).reduce((n,r)=>n+Number(r[3]),0),1800);pass('Period mode exports four instructions in ONE actual XLSX; concurrent export creates one batch');
+assert.equal((await db.query('SELECT row_to_json(i)::text snapshot FROM masav_export_instructions i WHERE id=$1',[parent.id])).rows[0].snapshot,snapshot);
+const afterExport=await recovery.listInstructions(),child=afterExport.find(i=>i.parent_instruction_ids.includes(parent.id));assert.ok(child);assert.equal(child.finalized,false);assert.equal(Number(child.collected_amount),0);assert.equal(child.status,'pending');assert.equal((await db.query("SELECT SUM(amount)::text amount FROM payments WHERE provider='masav'")).rows[0].amount,'900.00');pass('Original instruction unchanged, retry export is not payment, child-to-parent/debt trace is exact');
+await assert.rejects(recovery.prepareRetry({instructionId:child.id,confirmed:true,superAdminUserId:user}),e=>e.code==='MASAV_RESULTS_NOT_FINALIZED');
+const childPayment={...input,instructionId:child.id,reference:'retry-bank-complete',amount:child.total_amount};await results.recordConfirmedResult(childPayment);await recovery.finalizeInstruction({...fin,instructionId:child.id,reference:'retry-final-complete'});
+await assert.rejects(recovery.prepareRetry({instructionId:child.id,confirmed:true,superAdminUserId:user}),e=>e.code==='MASAV_NO_RETRY_BALANCE');pass('Confirmed retry payment closes its original debt; finalized completed instruction cannot retry');
+const otherChild=afterExport.find(i=>i.parent_instruction_ids.includes(parent.id)&&i.id!==child.id);
+await assert.rejects(results.recordConfirmedResult({...input,instructionId:otherChild.id,reference:'excess-result',amount:String(Number(otherChild.total_amount)+1)}),e=>e.code==='MASAV_RESULT_EXCEEDS_OUTSTANDING');
+assert.equal((await db.query('SELECT 1 FROM payments p JOIN masav_result_allocations a ON a.payment_id=p.id WHERE p.amount<>a.amount OR p.statement_id<>a.statement_id')).rowCount,0);
+await assert.rejects(db.query('UPDATE masav_instruction_finalizations SET outcome=outcome'),/append-only/);await assert.rejects(db.query('UPDATE masav_retry_proposals SET statement_id=statement_id'),/append-only/);pass('Overcollection rejected; payment allocations, original periods and append-only history preserved');
+
+// Reverse-mode recovery: original period instructions become one consolidated retry.
+const third=(await db.query("INSERT INTO entities(display_name,created_by_user_id,status) VALUES('Isolated reverse-mode recovery',$1,'active') RETURNING id",[user])).rows[0].id;
+const thirdAccount=(await db.query('INSERT INTO billing_accounts(entity_id,fee_rate,vat_rate) VALUES($1,.03,.18) RETURNING id',[third])).rows[0].id;
+await db.query("INSERT INTO entity_masav_details(entity_id,bank_code,branch_code,account_number,authorized,authorized_by,authorized_at) VALUES($1,'12','345','00009999',true,$2,now())",[third,user]);
+for(const month of [2,3]) await approve(await statement(thirdAccount,2027,month));
+let manifest=await masav.previewMasavExport();assert.equal(manifest.instructions.length,2);
+await masav.exportMasavProposals({proposalIds:manifest.instructions.flatMap(i=>i.components.map(c=>c.proposalId)),expectedPreviewToken:manifest.previewToken,superAdminUserId:user});
+const periodParents=(await recovery.listInstructions()).filter(i=>i.entity_id===third);
+for(const old of periodParents){await recovery.finalizeInstruction({...fin,instructionId:old.id,reference:'reverse-failed-'+old.id});const prepared=await recovery.prepareRetry({instructionId:old.id,confirmed:true,superAdminUserId:user});for(const proposal of prepared.proposals)await masav.approveMasavProposal({proposalId:proposal.id,superAdminUserId:user,reason:'Explicit reverse-mode retry'});}
+await settings.setMasavConsolidation({mode:'entity',superAdminUserId:user});manifest=await masav.previewMasavExport();assert.equal(manifest.instructions.length,1);assert.equal(manifest.totalAmount,'1080.00');
+const reverseBook=XLSX.read(await masav.exportMasavProposals({proposalIds:manifest.instructions.flatMap(i=>i.components.map(c=>c.proposalId)),expectedPreviewToken:manifest.previewToken,superAdminUserId:user}),{type:'buffer'});
+const reverseTrace=XLSX.utils.sheet_to_json(reverseBook.Sheets['Debt allocations'],{header:1});assert.deepEqual(reverseTrace.slice(1).map(r=>r[8]).sort(),periodParents.map(i=>i.id).sort());
+const combined=(await recovery.listInstructions()).find(i=>i.entity_id===third&&i.parent_instruction_ids.length===2);assert.ok(combined);assert.equal(combined.total_amount,'1080.00');
+const combinedResult=await results.recordConfirmedResult({...input,instructionId:combined.id,reference:'reverse-partial-700',amount:'700'});assert.deepEqual(combinedResult.allocations.map(a=>a.amount),['540.00','160.00']);
+await recovery.finalizeInstruction({...fin,instructionId:combined.id,reference:'reverse-final-700'});
+const thirdRetry=await recovery.prepareRetry({instructionId:combined.id,confirmed:true,superAdminUserId:user});assert.equal(thirdRetry.proposals.length,1);assert.equal(Number(thirdRetry.proposals[0].proposed_amount),380);
+pass('Period-to-organization recovery creates one real XLSX instruction; audit sheet traces both original instructions and repeated FIFO recovery leaves only 380');
+console.log(JSON.stringify({result:'PASS',checks,sharedDatabaseAccess:false,externalProviderCalls:0}));
+}finally{await db.end()}})().catch(e=>{console.error(e);process.exitCode=1});

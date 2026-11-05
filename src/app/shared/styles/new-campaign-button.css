@@ -1,0 +1,27 @@
+.btn-new-campaign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 20px;
+  width: 100%;
+  padding: 14px;
+  background: #583cd6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(88, 60, 214, 0.25);
+  transition: background 0.15s ease, transform 0.15s ease;
+  margin-top: 16px;
+}
+
+.btn-new-campaign:hover {
+  background: #4b2fc0;
+  transform: translateY(-1px);
+}
+

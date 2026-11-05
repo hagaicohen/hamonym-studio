@@ -8,7 +8,8 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
 import { RegistrationOption } from '../../../campaigns/services/campaign-studio-state.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Participant {
   id:              string;
   name:            string;
@@ -50,7 +51,7 @@ const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 @Component({
   selector: 'app-registrations-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './registrations-page.component.html',
   styleUrl: './registrations-page.component.css',
 })

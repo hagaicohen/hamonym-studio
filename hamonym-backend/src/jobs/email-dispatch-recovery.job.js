@@ -16,18 +16,12 @@
 // Redis, no BullMQ, no broker. This is a 15-line SQL scan wired to the
 // existing job-runner advisory lock.
 //
-// What this does NOT cover, on purpose: the window between a business
-// COMMIT and setImmediate actually running dispatch(). No row exists yet in
-// that window, so there is nothing to recover from — a hard kill inside
-// those few milliseconds loses the notification. Accepted known limitation
-// at pilot scale; closing it would mean writing the send intent inside the
-// business transaction (a real outbox), which is a larger change than
-// these three emails justify today.
-//
-// Only retries rows younger than 1 day — same coarse safety valve as
-// webhook-recovery, so a genuinely unsendable intent is not retried
-// forever. `pending` older than that is left visible in email_logs for
-// support rather than silently rewritten.
+// FIN-11 final failures are also reconstructed from committed card attempts:
+// no email row (or even finding) needs to exist before a process crash.
+// Existing emails keep the original pending-only, one-day recovery policy;
+// FIN-11 final-failure intents additionally retry failed/old rows.
+const { notifyExhaustedCardStatement } = require('../modules/billing-engine/fin11-card-collection.service');
+
 const emailService = require('../modules/email/email.service');
 
 module.exports = {
@@ -44,12 +38,14 @@ module.exports = {
   // untouched here.
   handler: async (db, { now = new Date() } = {}) => {
     const res = await db.query(
-      `SELECT id, payload
+      `SELECT id, payload, idempotency_key
        FROM email_logs
-       WHERE status = 'pending'
-         AND payload IS NOT NULL
+       WHERE payload IS NOT NULL
          AND created_at < $1::timestamptz - INTERVAL '5 minutes'
-         AND created_at > $1::timestamptz - INTERVAL '1 day'
+         AND ((status = 'pending' AND created_at > $1::timestamptz - INTERVAL '1 day')
+           OR (status IN ('pending', 'failed')
+             AND idempotency_key LIKE 'fin11_card_exhausted:%'
+             AND payload->'data'->>'eventType' = 'fin11_card_attempts_exhausted'))
        ORDER BY created_at ASC
        LIMIT 50`,
       [now]
@@ -68,6 +64,35 @@ module.exports = {
       else failed++;
     }
 
-    return { examined: res.rows.length, sent, stub, disabled, failed };
+    // The attempt itself is durable evidence: this covers both a crash before
+    // queueing and notification SQL failure. Missing per-recipient email keys
+    // are retried until persisted, without modifying any financial record.
+    const missing = await db.query(
+      `SELECT ca.statement_id
+       FROM collection_attempts ca
+       JOIN statements s ON s.id = ca.statement_id
+       JOIN billing_periods bp ON bp.id = s.billing_period_id
+       WHERE ca.collection_method = 'card'
+         AND EXISTS (
+           SELECT 1 FROM users u
+           WHERE u.is_super_admin = true AND u.is_active = true
+             AND u.email IS NOT NULL AND u.email <> ''
+             AND NOT EXISTS (SELECT 1 FROM email_logs el
+               WHERE el.idempotency_key = 'fin11_card_exhausted:' || ca.statement_id::text || ':' || u.id::text)
+         )
+       GROUP BY ca.statement_id, bp.period_end
+       HAVING bool_and(ca.status IN ('declined', 'technical_failure'))
+         AND COUNT(*) >= CASE
+           WHEN EXTRACT(MONTH FROM bp.period_end AT TIME ZONE 'Asia/Jerusalem') = 2
+             AND EXTRACT(DAY FROM date_trunc('month', bp.period_end AT TIME ZONE 'Asia/Jerusalem')
+               + INTERVAL '1 month' - INTERVAL '1 day') = 28 THEN 2 ELSE 3 END
+       ORDER BY MAX(ca.resolved_at), ca.statement_id
+       LIMIT 50`
+    );
+    for (const row of missing.rows) {
+      await notifyExhaustedCardStatement(db, row.statement_id, { recovery: true });
+    }
+
+    return { examined: res.rows.length, sent, stub, disabled, failed, reconstructed: missing.rows.length };
   },
 };

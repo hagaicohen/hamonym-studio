@@ -1,5 +1,7 @@
-import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { TestBed, fakeAsync, tick, flush } from '@angular/core/testing';
+import { of } from 'rxjs';
+import { DonationService } from '../../services/donation.service';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { CampaignPublicPageComponent } from './campaign-public-page.component';
@@ -17,6 +19,7 @@ import { CurrentContextService } from '../../../../core/services/current-context
 // DOM-level regression pattern already used elsewhere in this codebase for
 // template/CSS wiring concerns.
 describe('CampaignPublicPageComponent — Platform Navigation Cleanup', () => {
+  beforeEach(() => sessionStorage.removeItem('hamonym:goal-celebrated:goal-test:100'));
   function render(opts: {
     canEdit: boolean;
     ownerPreview: boolean;
@@ -41,6 +44,7 @@ describe('CampaignPublicPageComponent — Platform Navigation Cleanup', () => {
       ],
     });
 
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const state = TestBed.inject(CampaignStudioStateService);
     const ctx   = TestBed.inject(CurrentContextService);
     if (opts.ambassadorMode) {
@@ -97,6 +101,75 @@ describe('CampaignPublicPageComponent — Platform Navigation Cleanup', () => {
     expect(bar).not.toBeNull();
     expect(bar.textContent).toContain('תצוגה מקדימה');
     expect(bar.querySelector('button')).toBeNull();
+  });
+
+  function goalFixture(currentAmount: number, targetAmount = 100) {
+    const fixture = render({ canEdit: false, ownerPreview: false });
+    const component = fixture.componentInstance;
+    component.state.patch({ id: 'goal-test', currentAmount, targetAmount });
+    (component as any).snapshotTakenAt = new Date(0);
+    (component as any).lastSeenAt = new Date(0);
+    (component as any).toast = { add() {} };
+    const live = spyOn(TestBed.inject(DonationService), 'getLive');
+    fixture.detectChanges();
+    return { fixture, component, live };
+  }
+
+  for (const donationAmount of [10, 25]) {
+    it(`celebrates a confirmed donation reaching/crossing the goal by ${donationAmount}, once for four seconds`, fakeAsync(() => {
+      const { fixture, component, live } = goalFixture(90);
+      live.and.returnValue(of([{ amount: donationAmount, completedAt: new Date(1000) }] as any));
+      (component as any).pollLive(); fixture.detectChanges();
+      expect(component.celebratingGoal).toBeTrue(); expect(component.goalAchieved).toBeTrue();
+      expect(component.state.draft.currentAmount).toBe(90 + donationAmount);
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.campaign-goal-success')!.textContent).toContain(String(90 + donationAmount));
+      expect(element.querySelector('.campaign-goal-progress')!.getAttribute('aria-valuenow')).toBe('100');
+      const confetti = element.querySelector('.campaign-goal-confetti')!;
+      expect(getComputedStyle(confetti).pointerEvents).toBe('none');
+      expect(Number(getComputedStyle(confetti).zIndex)).toBeGreaterThan(9999);
+      expect(confetti.querySelectorAll('span').length).toBe(240);
+      const visiblePieces = Array.from(confetti.querySelectorAll('span')).filter(piece => getComputedStyle(piece).display !== 'none');
+      expect(visiblePieces.length).toBeGreaterThanOrEqual(120);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      expect(getComputedStyle(confetti).display).toBe(reduced ? 'none' : 'block');
+      if (reduced) expect(getComputedStyle(element.querySelector('.campaign-goal-progress > span')!).animationName).toBe('none');
+      tick(3999); expect(component.celebratingGoal).toBeTrue();
+      tick(1); fixture.detectChanges(); expect(component.celebratingGoal).toBeFalse();
+      expect(element.querySelector('.campaign-goal-confetti')).toBeNull();
+      expect(element.querySelector('.campaign-goal-success')).not.toBeNull();
+      live.and.returnValue(of([{ amount: 7, completedAt: new Date(2000) }] as any));
+      (component as any).pollLive(); expect(component.celebratingGoal).toBeFalse();
+      expect(component.state.draft.currentAmount).toBe(97 + donationAmount);
+      fixture.destroy();
+      flush(); // Drain the existing preview's deferred UI work after teardown.
+    }));
+  }
+
+  it('loading/refeshing an already achieved campaign shows success without replaying confetti', () => {
+    const { fixture, component, live } = goalFixture(125);
+    expect(component.goalAchieved).toBeTrue(); expect(component.celebratingGoal).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.campaign-goal-success').textContent).toContain('125');
+    expect(fixture.nativeElement.querySelector('.campaign-goal-confetti')).toBeNull();
+    live.and.returnValue(of([{ amount: 10, completedAt: new Date(1000) }] as any));
+    (component as any).pollLive(); expect(component.celebratingGoal).toBeFalse(); fixture.destroy();
+  });
+
+  it('does not celebrate historical/duplicate donations or a campaign without a positive target', () => {
+    const { fixture, component, live } = goalFixture(90);
+    (component as any).snapshotTakenAt = new Date(2000);
+    live.and.returnValue(of([{ amount: 25, completedAt: new Date(1000) }] as any));
+    (component as any).pollLive(); expect(component.celebratingGoal).toBeFalse(); expect(component.state.draft.currentAmount).toBe(90);
+    component.state.patch({ targetAmount: 0 });
+    live.and.returnValue(of([{ amount: 25, completedAt: new Date(3000) }] as any));
+    (component as any).pollLive(); expect(component.goalAchieved).toBeFalse(); expect(component.celebratingGoal).toBeFalse(); fixture.destroy();
+  });
+
+  it('respects the saved once-per-campaign-goal celebration marker', () => {
+    const { fixture, component, live } = goalFixture(90);
+    sessionStorage.setItem('hamonym:goal-celebrated:goal-test:100', '1');
+    live.and.returnValue(of([{ amount: 10, completedAt: new Date(1000) }] as any));
+    (component as any).pollLive(); expect(component.goalAchieved).toBeTrue(); expect(component.celebratingGoal).toBeFalse(); fixture.destroy();
   });
 
   it('manager public view still renders normal campaign content (campaign-preview mounted)', () => {

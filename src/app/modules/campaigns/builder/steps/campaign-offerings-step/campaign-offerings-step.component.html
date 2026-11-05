@@ -28,7 +28,7 @@
          which matters because this step is gated/unreachable once the
          campaign is published, while the Page Builder step never is. -->
     <div class="rs-layout-note">
-      🎨 עיצוב התצוגה (כרטיסים/רשימה/תמונה, מיקום, צבעים) נמצא בשלב "בניית דף".
+      <app-icon name="palette" /> עיצוב התצוגה (כרטיסים/רשימה/תמונה, מיקום, צבעים) נמצא בשלב "בניית דף".
     </div>
 
     <!-- ── BUILDER: Form + Preview ── -->
@@ -41,7 +41,7 @@
         <div class="rf-field">
           <div class="rf-label-row">
             <label class="rf-label">{{ copy.titleLabel }} <span class="rf-req">*</span></label>
-            <span class="rf-icon">{{ copy.icon }}</span>
+            <span class="rf-icon"><app-icon [name]="copy.icon" /></span>
           </div>
           <input class="rf-input" type="text" [(ngModel)]="offering.title"
             placeholder="ספר חתום על ידי המחבר">
@@ -51,7 +51,7 @@
         <div class="rf-field">
           <div class="rf-label-row">
             <label class="rf-label">{{ copy.priceLabel }} <span class="rf-req">*</span></label>
-            <span class="rf-icon">💳</span>
+            <span class="rf-icon"><app-icon name="card" /></span>
           </div>
           <div class="rf-currency-wrap">
             <span class="rf-currency-symbol">₪</span>
@@ -77,7 +77,7 @@
           <div class="rf-field">
             <div class="rf-label-row">
               <label class="rf-label">כמות (אופציונלי)</label>
-              <span class="rf-icon">👥</span>
+              <span class="rf-icon"><app-icon name="users" /></span>
             </div>
             <div class="rf-stock-toggle-row">
               <span class="rf-stock-toggle-label">{{ offering.stock === null ? 'ללא הגבלה' : 'הגבלת כמות' }}</span>
@@ -98,18 +98,18 @@
           <div class="rf-field">
             <div class="rf-label-row">
               <label class="rf-label">עסק שמספק את התשורה (אופציונלי)</label>
-              <span class="rf-icon">🤝</span>
+              <span class="rf-icon"><app-icon name="handshake" /></span>
             </div>
 
             <div class="rf-partner-linked" *ngIf="linkedPartnerFor(offering.id) as cp; else pickPartner">
-              <span class="rf-partner-name">🤝 {{ cp.partnerDisplayName }}</span>
+              <span class="rf-partner-name"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</span>
               <button type="button" class="rf-partner-unlink" (click)="unlinkPartner(cp)">הסר</button>
             </div>
             <ng-template #pickPartner>
               <button type="button" class="rf-partner-pick-btn"
                 [disabled]="!isFormValid || savingCampaignForLink"
                 (click)="openPartnerPickerForCurrentOffering()">
-                {{ savingCampaignForLink ? 'שומר קמפיין...' : '🤝 בחר עסק' }}
+                <app-icon name="handshake" /> {{ savingCampaignForLink ? 'שומר קמפיין...' : 'בחר עסק' }}
               </button>
               <p class="rf-partner-hint" *ngIf="!isFormValid">מלאו כותרת לתשורה קודם</p>
               <p class="rf-partner-hint rf-partner-hint--error" *ngIf="linkPartnerError">{{ linkPartnerError }}</p>
@@ -126,13 +126,13 @@
               style="display:none" (change)="onImageSelected($event)">
 
             <div class="rf-upload-area" *ngIf="!offering.imageUrl">
-              <div class="rf-upload-icon">☁️</div>
+              <div class="rf-upload-icon"><app-icon name="cloud-upload" /></div>
               <p class="rf-upload-title">גרור תמונה לכאן או
                 <label for="reward-img-input" class="rf-upload-link">לחץ להעלאה</label>
               </p>
               <p class="rf-upload-hint">מומלץ להעלות תמונה ברזולוציה של 1200×800 פיקסלים (יחס 3:2)</p>
               <label for="reward-img-input" class="rf-library-btn">
-                🖼 בחר מהספריה
+                <app-icon name="image" /> בחר מהספריה
               </label>
             </div>
 
@@ -148,7 +148,7 @@
           <!-- מומלץ toggle -->
           <div class="rf-featured-row">
             <div class="rf-featured-text">
-              <span class="rf-featured-star">⭐</span>
+              <span class="rf-featured-star"><app-icon name="star" /></span>
               <div>
                 <div class="rf-featured-title">{{ copy.featuredTitle }}</div>
                 <div class="rf-featured-desc">{{ copy.featuredDesc }}</div>
@@ -163,11 +163,11 @@
         <!-- Actions -->
         <div class="rf-actions">
           <button class="rf-btn-clear" type="button" (click)="clearForm()">
-            🗑 נקה טופס
+            <app-icon name="trash" /> נקה טופס
           </button>
           <button class="rf-btn-save" type="button" (click)="save()"
             [disabled]="!isFormValid">
-            💾 {{ isEditing ? copy.updateBtn : copy.saveBtn }}
+            <app-icon name="save" /> {{ isEditing ? copy.updateBtn : copy.saveBtn }}
           </button>
         </div>
 
@@ -183,11 +183,11 @@
         <!-- Standard layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
           <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
             <div class="rp-card-top">
               <div class="rp-icon-wrap">
                 <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" class="rp-img" alt="">
-                <span *ngIf="!offering.imageUrl" class="rp-img-icon">🎁</span>
+                <span *ngIf="!offering.imageUrl" class="rp-img-icon"><app-icon name="gift" /></span>
               </div>
               <div class="rp-price" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
                 ₪{{ offering.minimumAmount ? offering.minimumAmount.toLocaleString('he-IL') : '0' }}
@@ -208,13 +208,13 @@
         <!-- Image layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
           <div class="rp-card rp-card--img" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
             <div class="rp-price-top" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
               ₪{{ offering.minimumAmount ? offering.minimumAmount.toLocaleString('he-IL') : '0' }}
             </div>
             <div class="rp-img-hero">
               <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" alt="">
-              <span *ngIf="!offering.imageUrl" class="rp-img-hero-placeholder">🖼</span>
+              <span *ngIf="!offering.imageUrl" class="rp-img-hero-placeholder"><app-icon name="image" /></span>
             </div>
             <div class="rp-body rp-body--img">
               <div class="rp-title rp-title--center">{{ offering.title || 'כותרת התשורה' }}</div>
@@ -247,11 +247,11 @@
           <!-- Image thumb -->
           <div class="rs-card-img" *ngIf="o.imageUrl">
             <img [src]="o.imageUrl" alt="">
-            <div class="rs-card-badge" *ngIf="o.featured === true">★</div>
+            <div class="rs-card-badge" *ngIf="o.featured === true"><app-icon name="star" /></div>
           </div>
           <div class="rs-card-img rs-card-img--empty" *ngIf="!o.imageUrl">
-            <span>{{ copy.icon }}</span>
-            <div class="rs-card-badge" *ngIf="o.featured === true">★</div>
+            <span><app-icon [name]="copy.icon" /></span>
+            <div class="rs-card-badge" *ngIf="o.featured === true"><app-icon name="star" /></div>
           </div>
           <!-- Content -->
           <div class="rs-card-body">
@@ -268,7 +268,7 @@
                  Small icon buttons (not full-text pills) — the card is only
                  ~280px wide and long Hebrew labels wrapped into a mess. -->
             <div class="rs-card-partner" *ngIf="linkedPartnerFor(o.id) as cp">
-              <span class="rs-card-partner-label">🤝 {{ cp.partnerDisplayName }}</span>
+              <span class="rs-card-partner-label"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</span>
               <div class="rs-card-partner-icons">
                 <a class="rs-card-icon-btn" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener" title="פרופיל השותף">
                   <lucide-angular [img]="Building2" [size]="13"></lucide-angular>
@@ -284,13 +284,13 @@
 
             <div class="rs-card-actions">
               <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteOffering(o.id)">
-                🗑 מחיקה
+                <app-icon name="trash" /> מחיקה
               </button>
               <button class="rs-card-btn rs-card-btn--duplicate" type="button" (click)="duplicateOffering(o)">
-                📋 שכפל
+                <app-icon name="copy" /> שכפל
               </button>
               <button class="rs-card-btn rs-card-btn--edit" type="button" (click)="editOffering(o)">
-                ✏ עריכה
+                <app-icon name="pencil" /> עריכה
               </button>
             </div>
           </div>

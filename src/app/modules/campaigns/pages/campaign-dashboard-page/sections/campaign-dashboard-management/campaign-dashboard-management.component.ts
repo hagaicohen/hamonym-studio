@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { CampaignDraft } from '../../../../services/campaign-studio-state.service';
 import { AmbassadorService } from '../../../../services/ambassador.service';
 
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 // Architecture reset (2026-08-06) — this used to embed the Builder's own
 // step components directly (Offerings/Sponsors/Ambassadors/Registration) in
 // an accordion. Per explicit product direction: "Dashboard הוא המקום שבו
@@ -13,7 +14,7 @@ import { AmbassadorService } from '../../../../services/ambassador.service';
 @Component({
   selector: 'app-campaign-dashboard-management',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './campaign-dashboard-management.component.html',
   styleUrl: './campaign-dashboard-management.component.css',
 })

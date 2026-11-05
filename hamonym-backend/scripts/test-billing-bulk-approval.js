@@ -46,10 +46,10 @@ function addStatement(state, id, { billingAccountId, entityId, grossRaised, stat
   state.statements.set(id, { id, status, gross_raised: grossRaised, billing_account_id: billingAccountId, run_mode: runMode });
 }
 
-function addComponent(state, statementId, donationId, { amount, amountSnapshot, entityId, status = 'paid', isMock = false, effectiveStatementId = null }) {
+function addComponent(state, statementId, donationId, { amount, amountSnapshot, entityId, status = 'paid', effectiveStatementId = null }) {
   state.components.push({ statement_id: statementId, donation_id: donationId, amount_snapshot: amountSnapshot });
   state.donations.set(donationId, {
-    id: donationId, amount, entity_id: entityId, status, is_mock: isMock, effective_statement_id: effectiveStatementId,
+    id: donationId, amount, entity_id: entityId, status, effective_statement_id: effectiveStatementId,
   });
 }
 
@@ -78,7 +78,7 @@ function buildFakePool(state) {
           const d = state.donations.get(c.donation_id);
           return {
             donation_id: c.donation_id, amount_snapshot: c.amount_snapshot,
-            donation_status: d.status, is_mock: d.is_mock, amount: d.amount,
+            donation_status: d.status, amount: d.amount,
             entity_id: d.entity_id, effective_statement_id: d.effective_statement_id,
           };
         });

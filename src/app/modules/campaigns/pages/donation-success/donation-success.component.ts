@@ -7,7 +7,8 @@ import { environment } from '../../../../../environments/environment';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
 import { DonationService } from '../../services/donation.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface DonationResult {
   id:             string;
   amount:         number;
@@ -28,7 +29,7 @@ interface DonationResult {
 @Component({
   selector: 'app-donation-success',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [HmIconComponent, CommonModule, RouterModule],
   templateUrl: './donation-success.component.html',
   styleUrls: ['./donation-success.component.css'],
 })

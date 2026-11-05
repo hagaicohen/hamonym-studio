@@ -119,15 +119,6 @@ router.post(
       const user =
         result.rows[0];
 
-      // Retroactively link any past guest donations made with this email —
-      // so a donor who registers after donating immediately sees their history.
-      await pool.query(
-        `UPDATE donations
-         SET donor_user_id = $1
-         WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
-        [user.id, email]
-      );
-
       const token =
         jwt.sign(
 
@@ -253,7 +244,8 @@ router.post(
         __sub('link guest donations', pool.query(
           `UPDATE donations
            SET donor_user_id = $1
-           WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL`,
+           WHERE LOWER(donor_email) = LOWER($2) AND donor_user_id IS NULL
+             AND EXISTS(SELECT 1 FROM users u WHERE u.id=$1 AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email))`,
           [user.id, user.email]
         )),
         __sub('check user_entities', pool.query(
@@ -472,6 +464,8 @@ router.post(
       const payload =
         ticket.getPayload();
 
+      if (payload.email_verified !== true) return res.status(403).json({ error: 'Email ownership not verified' });
+
       const email =
         payload.email;
 
@@ -561,6 +555,9 @@ router.post(
 
       }
 
+      const donorProof = await pool.query('UPDATE users SET email_verified=true, email_verified_at=COALESCE(email_verified_at,NOW()), donation_verified_email=email, donation_proof_version=gen_random_uuid() WHERE id=$1 RETURNING donation_proof_version', [user.id]);
+      await pool.query(`UPDATE donations SET donor_user_id=$1 WHERE donor_user_id IS NULL AND LOWER(donor_email)=LOWER($2)`, [user.id, user.email]);
+
       /* UPDATE LAST LOGIN + sync picture, and CHECK ENTITIES — independent, run together */
 
       const [, entities] = await Promise.all([
@@ -595,6 +592,8 @@ router.post(
 
             isSuperAdmin:
               user.is_super_admin,
+
+            donationProofVersion: donorProof.rows[0].donation_proof_version,
 
             platformPermissions:
               user.platform_permissions || []
@@ -657,6 +656,20 @@ router.post(
 
   }
 );
+
+router.post('/me/donation-verification', requireAuth, async (req,res) => {
+  try { await require('../modules/donations/donor-ownership.service').requestVerification(req.user.id); res.json({ sent:true }); }
+  catch(error) { res.status(error.status || 503).json({ error: error.status===429 ? 'Please wait before requesting another email' : 'Email delivery unavailable' }); }
+});
+router.post('/me/verify-donations', requireAuth, async (req,res) => {
+  try {
+    const result = await require('../modules/donations/donor-ownership.service').verify(req.user.id,req.body.token);
+    // Preserve the existing claims and expiry; refresh only donor-access authorization.
+    const token = jwt.sign({ ...req.authClaims, donationProofVersion: result.donationProofVersion }, process.env.JWT_SECRET);
+    res.json({ verified: true, token });
+  }
+  catch(error) { res.status(error.status || 503).json({ error: 'Invalid or expired verification link' }); }
+});
 
 module.exports =
   router;

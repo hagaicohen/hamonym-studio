@@ -12,6 +12,7 @@ import { LogoAppearanceEditorComponent } from '../../../../../shared/ui/logo-app
 import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { environment } from '../../../../../../environments/environment';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Step 1 for layout.pageFormat === 'minimal' — replaces campaign-basic-step
 // entirely (not a stripped-down reuse of it) for this format. That step's
 // hero upload/category/manager-name/story fields all describe a full
@@ -24,7 +25,7 @@ import { environment } from '../../../../../../environments/environment';
 @Component({
   selector: 'app-campaign-minimal-details-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent, LogoAppearanceEditorComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent, LogoAppearanceEditorComponent],
   templateUrl: './campaign-minimal-details-step.component.html',
   styleUrl: './campaign-minimal-details-step.component.css',
 })

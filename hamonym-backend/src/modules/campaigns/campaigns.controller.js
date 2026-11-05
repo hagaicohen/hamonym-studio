@@ -34,6 +34,7 @@ function getStatusCode(
 
     case 'Campaign slug already exists':
     case 'Slug taken':
+    case 'Organization registration is incomplete':
       return 409;
 
     case 'Campaign is locked':
@@ -66,6 +67,9 @@ function getErrorMessage(
 
     case 'Entity ID is required':
       return 'יש לבחור עמותה';
+
+    case 'Organization registration is incomplete':
+      return 'יש להשלים את רישום הארגון ולשלוח אותו לבדיקה לפני יצירת קמפיין';
 
     case 'No fields supplied':
       return 'לא נשלחו נתונים לעדכון';

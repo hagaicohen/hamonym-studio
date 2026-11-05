@@ -1,3 +1,4 @@
+require('./modules/payment/pilot-provider-boundary').install();
 // src/server.js
 
 require('dotenv').config();
@@ -62,6 +63,9 @@ const commentsRoutes =
 
 const campaignCreationRoutes =
   require('./modules/campaign-creation/campaign-creation.routes');
+
+const categorySuggestionsRoutes =
+  require('./modules/category-suggestions/category-suggestions.routes');
 
 const campaignPartnersRoutes =
   require('./modules/campaign-partners/campaign-partners.routes');
@@ -176,6 +180,11 @@ app.use(
 );
 
 app.use(
+  '/api/category-suggestions',
+  categorySuggestionsRoutes
+);
+
+app.use(
   '/api/campaign-partners',
   campaignPartnersRoutes
 );
@@ -214,14 +223,20 @@ app.get(
 
   '/',
 
-  (req, res) => {
+  async (req, res) => {
 
+    const billingSchemaReady = await require('./modules/billing-engine/billing-readiness').ready().catch(() => false);
     res.json({
 
       success: true,
 
       message:
-        'Hamonym backend running'
+        'Hamonym backend running',
+
+      commit: process.env.RENDER_GIT_COMMIT || null,
+      paymentPhase: 'test',
+      paymentProvider: 'mock',
+      billingSchemaReady
 
     });
 

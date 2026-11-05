@@ -1,4 +1,5 @@
 module.exports = {
+  'verify-donor-email': require('./verify-donor-email'),
   receipt: require('./receipt'),
   'reset-password': require('./reset-password'),
   'invite-admin': require('./invite-admin'),

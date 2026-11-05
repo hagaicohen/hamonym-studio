@@ -38,7 +38,7 @@
       [class.mdp-logo--lg]="draft.layout.minimalLogoSize === 'lg'"
       [style.background]="draft.layout.minimalLogoShape === 'none' ? 'transparent' : (draft.layout.theme.logoBg || 'transparent')">
       <img *ngIf="logoUrl(draft)" [src]="logoUrl(draft)" alt="">
-      <span *ngIf="!logoUrl(draft)" class="mdp-logo-emoji">🏢</span>
+      <span *ngIf="!logoUrl(draft)" class="mdp-logo-emoji"><app-icon name="building" /></span>
     </div>
 
     <ng-container *ngIf="draft.layout.minimalAdvancedText; else simpleTitle">
@@ -105,7 +105,7 @@
             (input)="onCustomInstallmentsInput($event)">
         </div>
       </div>
-      <p class="mdp-installments-hint">🔒 ללא תפיסת מסגרת לכל התקופה</p>
+      <p class="mdp-installments-hint"><app-icon name="lock" /> ללא תפיסת מסגרת לכל התקופה</p>
       <p class="mdp-installments-explain" *ngIf="hasValidInstallments && explicitAmount > 0">
         {{ explicitAmount.toLocaleString('he-IL') }} ₪ יחויבו פעם בחודש, למשך {{ selectedInstallments }} חודשים.
         החיוב מתבצע בכל חודש בנפרד ואינו תופס מסגרת אשראי עבור מלוא התקופה.
@@ -113,7 +113,7 @@
     </div>
 
     <button class="mdp-donate-btn" type="button" (click)="openCheckout()">
-      <span class="mdp-lock-icon">🔒</span>
+      <span class="mdp-lock-icon"><app-icon name="lock" /></span>
       <span>לתמיכה מאובטחת</span>
     </button>
   </div>

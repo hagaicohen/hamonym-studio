@@ -1,7 +1,7 @@
 // FIN-11 Stage 4 — automated capped card collection (2026-10).
 // docs/finance/FIN11_STAGE4_TECHNICAL_DESIGN.md has the full design.
 //
-// NOT REGISTERED in src/jobs/index.js -- this file exists and is fully
+// NOT REGISTERED for production scheduling (simulation registration has schedule=null) in src/jobs/index.js -- this file exists and is fully
 // testable (via job-runner.run('fin11-card-collection') or by calling
 // `handler` directly), but the scheduler (src/jobs/scheduler.js) only ever
 // wires jobs that index.js registers. Adding the registration line is a
@@ -39,7 +39,7 @@ const { computeMostRecentCycleBoundary } = require('./billing-monthly-cycle.job'
 const defaultGetAdapter = require('../modules/collection-engine/adapters/get-adapter');
 const { recordFinding } = require('./reconciliation-findings');
 
-async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter } = {}) {
+async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapter, simulation } = {}) {
   const { periodEnd } = await computeMostRecentCycleBoundary(db, now);
 
   const periodRes = await db.query(
@@ -56,8 +56,10 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
   const periodId = periodRes.rows[0].id;
 
   const statementsRes = await db.query(
-    `SELECT id FROM statements WHERE billing_period_id = $1 AND status = ANY($2::text[])`,
-    [periodId, ACTIONABLE_STATEMENT_STATUSES]
+    `SELECT id FROM statements WHERE billing_period_id = $1 AND status = ANY($2::text[])
+         AND ($3::uuid[] IS NULL OR billing_account_id IN (SELECT id FROM billing_accounts WHERE entity_id = ANY($3::uuid[])))
+         AND ($4::text IS NULL OR billing_run_id IN (SELECT id FROM billing_runs WHERE result_summary->>'simulation_provider'='fin11_mock' AND result_summary->>'simulation_identity'=$4))`,
+    [periodId, ACTIONABLE_STATEMENT_STATUSES, simulation?.entityIds || null, simulation?.fingerprint || null]
   );
 
   const summary = {
@@ -68,19 +70,28 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
     confirmedFailureExhausted: 0,
     collectionHeld: 0,
     maskedByMasavExport: 0,
+    retryNotYetDue: 0,
     skippedOther: 0,
     errors: 0,
   };
 
+  if (simulation) summary.skippedReasons = {};
+
   for (const row of statementsRes.rows) {
     try {
-      const cycles = await collectWithRetries(row.id, resolveAdapter);
+      const cycles = await collectWithRetries(row.id, resolveAdapter, now);
       const last = cycles[cycles.length - 1];
       if (last?.resolved?.outcome === 'succeeded') summary.succeeded++;
       else if (last?.reason === 'max_attempts_reached') summary.confirmedFailureExhausted++;
       else if (last?.reason === 'entity_collection_held') summary.collectionHeld++;
       else if (last?.reason === 'masav_proposal_exported_unresolved') summary.maskedByMasavExport++;
+      // Scheduled-attempt gate (2026-10): not yet this statement's turn --
+      // the 30th/2nd-of-next-month dates haven't arrived yet. Expected and
+      // frequent (every daily tick between scheduled dates hits this for
+      // any statement mid-retry-cycle), never a real exception.
+      else if (last?.reason === 'retry_not_yet_due') summary.retryNotYetDue++;
       else summary.skippedOther++;
+      if (simulation && last?.reason) summary.skippedReasons[last.reason] = (summary.skippedReasons[last.reason] || 0) + 1;
     } catch (err) {
       summary.errors++;
       await recordFinding(db, {

@@ -1,5 +1,7 @@
+require('../modules/payment/pilot-provider-boundary').install();
 const db = require('../db/db');
 const clock = require('../lib/clock');
+const simulationScope = require('../lib/fin11-simulation-context');
 const adminNotifications = require('../modules/email/admin-notification.service');
 
 // Generic scheduled-job core — not Cardcom-specific. See
@@ -63,6 +65,9 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
   const job = registry.get(jobName);
   if (!job) throw new Error(`Unknown job: ${jobName}`);
 
+  const simulation = simulationScope.current();
+  if (job.simulationOnly && !simulation) throw new Error('FIN-11 simulation scope required');
+  if (simulation) simulationScope.configuration();
   const lockKey = lockKeyFor(jobName);
   const lockClient = await db.connect();
 
@@ -95,13 +100,15 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
     // SQL NOW(), `duration_ms` comes from Date.now()) under every
     // configuration, simulation on or off. With simulation off this is a
     // plain `new Date()` and costs no query. See src/lib/clock.js.
-    const businessNow = await clock.now(db);
+    const businessNow = simulation ? new Date(simulation.businessAt) : await clock.now(db);
 
     try {
       const result = await Promise.race([
-        job.handler(db, { now: businessNow }),
+        job.handler(db, { now: businessNow, simulation, ...(simulation ? { resolveAdapter: method => { simulationScope.configuration(); if (method !== 'card') throw new Error('Only simulated card collection is allowed'); return require('../modules/collection-engine/adapters/fin11-mock.adapter'); } } : {}) }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Job timed out')), job.timeoutMs)),
       ]);
+
+      if (typeof job.validateResult === 'function') await job.validateResult(result);
 
       const durationMs = Date.now() - new Date(startedAt).getTime();
       await db.query(
@@ -112,8 +119,8 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
     } catch (err) {
       const durationMs = Date.now() - new Date(startedAt).getTime();
       await db.query(
-        `UPDATE job_runs SET status='failed', finished_at=NOW(), duration_ms=$1, error=$2 WHERE id=$3`,
-        [durationMs, err.message, runId]
+        `UPDATE job_runs SET status='failed', finished_at=NOW(), duration_ms=$1, error=$2, result_summary=$4 WHERE id=$3`,
+        [durationMs, err.message, runId, JSON.stringify(err.resultSummary ?? {})]
       );
 
       // Admin/ops notification (event A, 2026-10-07) — fired only AFTER the
@@ -138,7 +145,7 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
         },
       });
 
-      return { runId, status: 'failed', error: err.message };
+      return { runId, status: 'failed', error: err.message, ...(err.resultSummary ? { result: err.resultSummary } : {}) };
     } finally {
       await lockClient.query('COMMIT'); // releases the xact lock
     }

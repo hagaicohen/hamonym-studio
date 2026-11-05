@@ -76,7 +76,7 @@
 .tse-switch {
   position: relative; width: 44px; height: 24px; flex-shrink: 0;
 }
-.tse-switch input { display: none; }
+.tse-switch input { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; clip-path: inset(50%); }
 .tse-switch-slider {
   position: absolute; inset: 0;
   background: #cbd5e1;

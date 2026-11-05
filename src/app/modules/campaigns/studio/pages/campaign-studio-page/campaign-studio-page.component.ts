@@ -14,11 +14,12 @@ import { CampaignApiService }            from '../../../services/campaign-api.se
 import { CampaignStudioStateService, PresetId } from '../../../services/campaign-studio-state.service';
 import { AppLoaderService }              from '../../../../../core/services/app-loader.service';
 import { PlatformTopStripComponent }     from '../../../../../core/layout/platform-top-strip/platform-top-strip.component';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-studio-page',
   standalone: true,
-  imports: [
+  imports: [HmIconComponent, 
     CommonModule,
     CampaignStudioTopbarComponent,
     CampaignEditorComponent,
@@ -105,27 +106,12 @@ export class CampaignStudioPageComponent implements OnInit {
     const template = CAMPAIGN_TEMPLATES.find(t => t.id === 'minimal-donation');
     if (!template) return;
     const palette = TEMPLATE_PALETTES.find(p => p.id === template.defaultPaletteId) ?? TEMPLATE_PALETTES[0];
-    this.stateService.applyTemplate(
-      template.createBlocks(palette),
-      template.buildTheme(palette),
-      template.layoutMode,
-      template.id,
-      template.heroPlacement,
-      template.pageFormat,
-    );
+    this.stateService.startFromTemplate(template, palette);
     this.showPresetPicker = false;
   }
 
   onTemplateSelected(selection: TemplateSelection): void {
-    const { template, palette } = selection;
-    this.stateService.applyTemplate(
-      template.createBlocks(palette),
-      template.buildTheme(palette),
-      template.layoutMode,
-      template.id,
-      template.heroPlacement,
-      template.pageFormat,
-    );
+    this.stateService.startFromTemplate(selection.template, selection.palette);
     this.showTemplatePicker = false;
   }
 

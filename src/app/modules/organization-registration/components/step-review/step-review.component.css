@@ -681,10 +681,6 @@
   align-items: center;
 
   justify-content: center;
-
-  font-size: 42px;
-
-  font-weight: 700;
 }
 
 .success-card h2 {
@@ -735,8 +731,6 @@
 
     height: 72px;
 
-    font-size: 36px;
-
     margin-bottom: 18px;
   }
 
@@ -754,3 +748,5 @@
     line-height: 1.6;
   }
 }
+
+.completion-help { color: #64748b; font-size: 13px; line-height: 1.8; margin-bottom: 18px; }

@@ -120,6 +120,7 @@ async function runTick({
 
   db.query = async (text, params) => {
     sql.push({ text, params });
+    if (text.includes('FROM admin_simulation_clock')) return { rows: [] }; // Existing effective clock, real-time mode.
 
     if (text.includes("'scheduler-heartbeat'")) {
       if (heartbeatFails) throw new Error('simulated heartbeat DB failure');
@@ -423,6 +424,24 @@ async function main() {
     assert.deepStrictEqual(handlerCalls, [FIRST_JOB, SECOND_JOB]);
     assert.strictEqual(tick.exitCode, 0);
   });
+
+  for (const status of ['blocked', 'failed', 'skipped']) {
+    await check('I: resolved monthly ' + status + ' result persists the correct outer status', async () => {
+      const job = jobRunner.get(FIRST_JOB);
+      const originalHandler = job.handler, originalValidator = job.validateResult;
+      const result = { results: [{ step: 'monthly_billing', status, result: { reason: status === 'skipped' ? 'already_processed' : '42703' } }] };
+      try {
+        job.handler = async () => result;
+        job.validateResult = require('../src/jobs/billing-monthly-cycle.job').validateResult;
+        const tick = await runTick({ dueJobs: [FIRST_JOB] });
+        const expected = status === 'skipped' ? 'success' : 'failed';
+        const update = tick.sql.find(row => row.text.includes("UPDATE job_runs SET status='" + expected + "'"));
+        assert(update, 'expected persisted status ' + expected);
+        assert.deepStrictEqual(JSON.parse(update.params[expected === 'failed' ? 3 : 1]), result);
+        assert(!tick.sql.some(row => row.text.includes("UPDATE job_runs SET status='" + (expected === 'failed' ? 'success' : 'failed') + "'")));
+      } finally { job.handler = originalHandler; job.validateResult = originalValidator; }
+    });
+  }
 
   realLog(`\n${passed} passed, ${failures} failed`);
   process.exit(failures > 0 ? 1 : 0);

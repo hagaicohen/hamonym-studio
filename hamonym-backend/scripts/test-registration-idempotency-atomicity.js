@@ -77,8 +77,8 @@ async function run() {
     // 'pending' (deletable) -- never call the real paid-creation path for
     // this fixture, so nothing permanent is ever created here.
     const fakeExistingRes = await db.query(
-      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, is_mock, rewards, client_submission_key)
-       VALUES ($1, $2, $3, 'Existing Donor', 'pending', false, '[]', $4) RETURNING id`,
+      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, rewards, client_submission_key)
+       VALUES ($1, $2, $3, 'Existing Donor', 'pending', '[]', $4) RETURNING id`,
       [campaignId, entityId, option.price, key]
     );
     const fakeDonationId = fakeExistingRes.rows[0].id;
@@ -113,8 +113,8 @@ async function run() {
     const otherOption = otherOptionRes.rows[0];
 
     const fakeExistingRes = await db.query(
-      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, is_mock, rewards, client_submission_key)
-       VALUES ($1, $2, $3, 'Existing Donor 2', 'pending', false, '[]', $4) RETURNING id`,
+      `INSERT INTO donations (campaign_id, entity_id, amount, donor_name, status, rewards, client_submission_key)
+       VALUES ($1, $2, $3, 'Existing Donor 2', 'pending', '[]', $4) RETURNING id`,
       [campaignId, entityId, otherOption.price, key]
     );
     const fakeDonationId = fakeExistingRes.rows[0].id;

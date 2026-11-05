@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CAMPAIGN_TEMPLATES, CampaignTemplate, TEMPLATE_PALETTES, TemplatePalette } from '../templates/campaign-templates';
 
@@ -15,10 +15,15 @@ export interface TemplateSelection {
   styleUrl: './template-picker.component.css',
 })
 export class TemplatePickerComponent {
+  // 'switch' = changing the template of a page that already has content: the
+  // minimal format is a different page type, so it is not offered there.
+  @Input() mode: 'create' | 'switch' = 'create';
   @Output() templateSelected = new EventEmitter<TemplateSelection>();
   @Output() skipped = new EventEmitter<void>();
 
-  readonly templates = CAMPAIGN_TEMPLATES;
+  get templates(): CampaignTemplate[] {
+    return this.mode === 'switch' ? CAMPAIGN_TEMPLATES.filter(t => t.pageFormat !== 'minimal') : CAMPAIGN_TEMPLATES;
+  }
   readonly palettes = TEMPLATE_PALETTES;
   hoveredId: string | null = null;
   selectedPalette: TemplatePalette = TEMPLATE_PALETTES[0];

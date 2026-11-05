@@ -189,7 +189,7 @@
 
         @if (connectionSuccess) {
           <div class="connection-success">
-            <span class="status-icon success-icon"> ✓ </span>
+            <span class="status-icon success-icon"> <app-icon name="check" /> </span>
 
             <span> החיבור הצליח </span>
           </div>
@@ -197,7 +197,7 @@
 
         @if (!connectionSuccess && connectionError && !isCheckingConnection) {
           <div class="connection-error">
-            <span class="status-icon error-icon"> ✕ </span>
+            <span class="status-icon error-icon"> <app-icon name="x" /> </span>
 
             <span>
               {{ connectionError }}

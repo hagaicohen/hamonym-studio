@@ -277,9 +277,9 @@
 }
 
 .profile-input:focus {
-  border-color: #6D5DF6;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  box-shadow: none;
 }
 
 /* DESCRIPTION */
@@ -343,7 +343,7 @@
 
   font-weight: 600;
 
-  color: #dc2626;
+  color: var(--hm-control-error);
 }
 
 /* MOBILE */

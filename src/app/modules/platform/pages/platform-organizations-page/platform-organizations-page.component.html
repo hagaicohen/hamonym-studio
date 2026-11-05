@@ -1,137 +1,56 @@
-<div class="plat-page">
-
-  @if (error) {
-    <div class="plat-error">{{ error }}</div>
-  } @else {
-
-  <div class="plat-header">
-    <h1 class="plat-title">עמותות</h1>
-  </div>
-
+<main class="plat-page" dir="rtl">
+  <header class="plat-header"><div><h1 class="plat-title">עמותות</h1><p class="plat-subtitle">איתור עמותות, בדיקת השלמות וכניסה לניהול</p></div>@if (!loading) { <span class="results-count">{{ total | number }} עמותות{{ hasFilters ? ' בתצוגה זו' : '' }}</span> }</header>
   <div class="plat-filters">
-    <input
-      class="plat-search"
-      type="search"
-      placeholder="חיפוש לפי שם עמותה..."
-      [(ngModel)]="searchQuery"
-      (input)="onSearch()"
-    />
+    <label class="search-field"><span class="sr-only">חיפוש עמותה</span><input class="plat-search" type="search" [placeholder]="extendedOrganizationDataAvailable ? 'חיפוש לפי שם עמותה, מספר עמותה או מנהל' : 'חיפוש לפי שם עמותה'" [(ngModel)]="searchQuery" (input)="onSearch()" /></label>
     <app-column-picker [columns]="columns" storageKey="platformColumns_organizations" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
+    <button class="export-button" (click)="exportExcel()" [disabled]="loading || refreshing || exportBusy || total === 0">{{ exportBusy ? 'מייצא…' : 'ייצוא Excel' }}</button>
   </div>
-
-  <!-- Status — a tab bar, not chips: an organization has exactly one status,
-       so this is a mutually-exclusive choice ("pick a state to view"). -->
-  <div class="plat-tabs">
-    <button class="plat-tab" [class.active]="!isStatusChipActive()" (click)="selectAllStatuses()">
-      הכל
-    </button>
-    @for (chip of statusChips; track chip.key) {
-      <button class="plat-tab" [class.active]="activeChip === chip.key" (click)="selectChip(chip.key)">
-        <span class="plat-dot" [class]="'plat-dot--' + chip.dot"></span>
-        {{ chip.label }}
-      </button>
-    }
-  </div>
-
-  <!-- Filters — independent attributes layered on top of whichever status
-       tab is active (missing docs, flagged, etc.), styled lighter than the
-       status tabs so the two don't visually compete. -->
-  <div class="plat-filters-row">
-    <span class="plat-filters-label">סינון נוסף:</span>
-    <div class="plat-chips">
-      @for (chip of filterChips; track chip.key) {
-        <button
-          class="plat-chip"
-          [class.active]="activeChip === chip.key"
-          (click)="selectChip(chip.key)"
-        >
-          <span class="plat-dot" [class]="'plat-dot--' + chip.dot"></span>
-          {{ chip.label }}
-        </button>
-      }
-    </div>
-  </div>
-
-  <div class="plat-card">
+  <nav class="plat-tabs" aria-label="סטטוס עמותה">
+    <button class="plat-tab" [class.active]="activeStatus === 'all'" [attr.aria-pressed]="activeStatus === 'all'" (click)="selectStatus('all')">הכל</button>
+    @for (chip of statusChips; track chip.key) { <button class="plat-tab" [class.active]="activeStatus === chip.key" [attr.aria-pressed]="activeStatus === chip.key" (click)="selectStatus(chip.key)"><span class="plat-dot" [class]="'plat-dot plat-dot--' + chip.dot" aria-hidden="true"></span>{{ chip.label }}</button> }
+  </nav>
+  <div class="plat-filters-row"><details class="additional-filters"><summary>סינון נוסף @if (selectedFilters.size) { <span class="filter-count">{{ selectedFilters.size }}</span> }</summary><div class="filter-panel"><div class="plat-chips">
+    @for (chip of filterChips; track chip.key) { <button class="plat-chip" [class.active]="selectedFilters.has(chip.key)" [attr.aria-pressed]="selectedFilters.has(chip.key)" (click)="toggleFilter(chip.key)">{{ chip.label }}</button> }
+  </div><label class="sort-control">מיון לפי <select [ngModel]="sortField" (ngModelChange)="sortBy($event)"><option value="created_at">תאריך הרשמה</option><option value="name">שם העמותה</option><option value="status">סטטוס</option><option value="campaigns">קמפיינים</option><option value="raised">סכום שגויס</option><option value="activity" [disabled]="!extendedOrganizationDataAvailable">עדכון פרטים אחרון</option></select><button class="clear-filters" (click)="sortBy(sortField)" [attr.aria-label]="sortDir === 'asc' ? 'מיון בסדר יורד' : 'מיון בסדר עולה'">{{ sortDir === 'asc' ? '↑' : '↓' }}</button></label></div></details>@if (hasFilters) { <button class="clear-filters" (click)="clearFilters()">נקה סינון</button> }</div>
+  @if (error) { <div class="plat-error" role="alert"><span>{{ error }}</span><button (click)="load()" [disabled]="loading || refreshing">נסה שוב</button></div> }
+  <section class="plat-card" aria-label="רשימת עמותות" [attr.aria-busy]="loading || refreshing">
     @if (loading) {
-      <div class="plat-loading">טוען...</div>
-    } @else if (organizations.length === 0) {
-      <div class="plat-empty">לא נמצאו עמותות</div>
-    } @else {
-      <div class="plat-table-wrap" [class.refreshing]="refreshing">
-        <table class="plat-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th class="sortable" (click)="sortBy('name')">שם העמותה</th>
-              @if (visibleColumns.has('status')) { <th class="sortable" (click)="sortBy('status')">סטטוס</th> }
-              @if (visibleColumns.has('owner')) { <th>מנהל</th> }
-              @if (visibleColumns.has('completion')) { <th>שלמות פרופיל</th> }
-              @if (visibleColumns.has('campaigns')) { <th class="sortable" (click)="sortBy('campaigns')">קמפיינים</th> }
-              @if (visibleColumns.has('raised')) { <th class="sortable" (click)="sortBy('raised')">סכום שגויס</th> }
-              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">תאריך הרשמה</th> }
-              @if (visibleColumns.has('activity')) { <th>פעילות אחרונה</th> }
-            </tr>
-          </thead>
-          <tbody>
-            @for (org of organizations; track org.id) {
-              <tr class="plat-row" (click)="openOrganization(org)">
-                <td class="plat-logo-cell">
-                  @if (org.logo_url) {
-                    <img [src]="org.logo_url" class="plat-logo" alt="" />
-                  } @else {
-                    <div class="plat-logo-placeholder">{{ orgName(org).charAt(0) }}</div>
-                  }
-                </td>
-                <td data-label="שם העמותה">{{ orgName(org) }}</td>
-                @if (visibleColumns.has('status')) {
-                  <td data-label="סטטוס">
-                    <span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span>
-                    @if (org.flagged_for_review) {
-                      <span class="plat-flagged-badge" title="{{ org.flagged_for_review_reason }}">⚠️ דורש בדיקה</span>
-                    }
-                  </td>
-                }
-                @if (visibleColumns.has('owner')) {
-                  <td data-label="מנהל">
-                    @if (org.owner_name) {
-                      {{ org.owner_name }}
-                    } @else {
-                      —
-                    }
-                  </td>
-                }
-                @if (visibleColumns.has('completion')) {
-                  <td data-label="שלמות פרופיל">
-                    <div class="plat-progress-wrap" [title]="org.profile_completion + '%'">
-                      <div class="plat-progress-track">
-                        <div class="plat-progress-fill" [style.width.%]="org.profile_completion"></div>
-                      </div>
-                      <span class="plat-progress-label">{{ org.profile_completion }}%</span>
-                    </div>
-                  </td>
-                }
-                @if (visibleColumns.has('campaigns')) { <td data-label="קמפיינים">{{ org.campaigns_count }}</td> }
-                @if (visibleColumns.has('raised')) { <td data-label="סכום שגויס">{{ fmtMoney(org.total_raised) }}</td> }
-                @if (visibleColumns.has('created_at')) { <td data-label="תאריך הרשמה">{{ fmtDate(org.created_at) }}</td> }
-                @if (visibleColumns.has('activity')) { <td data-label="פעילות אחרונה">{{ relativeTime(org.updated_at) }}</td> }
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="loading-rows" role="status" aria-label="טוען עמותות">@for (i of [1,2,3,4,5]; track i) { <div class="loading-row"><span></span><span></span><span></span></div> }</div>
+    } @else if (organizations.length === 0 && !error) {
+      <div class="plat-empty">@if (unfilteredTotal === 0 || !hasFilters) { <strong>עדיין אין עמותות במערכת</strong><span>עמותות חדשות יוצגו כאן לאחר ההרשמה.</span> } @else { <strong>לא נמצאו עמותות התואמות לסינון</strong><span>נסה לשנות את החיפוש או לנקות את הסינון.</span><button class="clear-filters" (click)="clearFilters()">הצג את כל העמותות</button> }</div>
+    } @else if (organizations.length) {
+      @if (refreshing) { <div class="refresh-note" role="status">מעדכן את הרשימה…</div> }
+      <div class="plat-table-wrap" [class.refreshing]="refreshing" tabindex="0" aria-label="טבלת עמותות; במסך צר ניתן לגלול לרוחב">
+        <table class="plat-table"><thead><tr>
+          <th scope="col" class="org-cell" [attr.aria-sort]="sortAria('name')"><button class="sort-button" (click)="sortBy('name')">שם העמותה <span aria-hidden="true">{{ sortMark('name') }}</span></button></th>
+          @if (visibleColumns.has('status')) { <th scope="col" [attr.aria-sort]="sortAria('status')"><button class="sort-button" (click)="sortBy('status')">סטטוס <span aria-hidden="true">{{ sortMark('status') }}</span></button></th> }
+          @if (visibleColumns.has('owner')) { <th scope="col">מנהל</th> }
+          @if (visibleColumns.has('completion')) { <th scope="col">השלמות מהותיות</th> }
+          @if (visibleColumns.has('campaigns')) { <th scope="col" [attr.aria-sort]="sortAria('campaigns')"><button class="sort-button" (click)="sortBy('campaigns')">קמפיינים <span aria-hidden="true">{{ sortMark('campaigns') }}</span></button><small>פעילים מתוך סך הכול</small></th> }
+          @if (visibleColumns.has('raised')) { <th scope="col" [attr.aria-sort]="sortAria('raised')"><button class="sort-button" (click)="sortBy('raised')">סכום מצטבר שגויס <span aria-hidden="true">{{ sortMark('raised') }}</span></button></th> }
+          @if (visibleColumns.has('activity')) { <th scope="col" [attr.aria-sort]="sortAria('activity')"><button class="sort-button" [disabled]="!extendedOrganizationDataAvailable" (click)="sortBy('activity')">עדכון פרטים אחרון <span aria-hidden="true">{{ sortMark('activity') }}</span></button></th> }
+          <th scope="col" class="actions-heading">פעולות</th>
+        </tr></thead><tbody>
+          @for (org of organizations; track org.id) { <tr class="plat-row" (click)="openOrganization(org)">
+            <td class="org-cell"><a class="org-link" [routerLink]="['/platform/organizations', org.id]" [queryParams]="listQuery" (click)="$event.stopPropagation()">
+              @if (org.logo_url) { <img [src]="org.logo_url" class="plat-logo" alt="" /> } @else { <span class="plat-logo-placeholder" aria-hidden="true">{{ orgName(org).charAt(0) }}</span> }
+              <span class="org-name"><strong>{{ orgName(org) }}</strong>@if (org.registration_number) { <small>{{ org.registration_number }}</small> }</span>
+            </a></td>
+            @if (visibleColumns.has('status')) { <td><span class="plat-status" [ngClass]="'status-' + org.status">{{ statusLabel(org.status) }}</span>@if (org.flagged_for_review) { <small class="review-note" [title]="org.flagged_for_review_reason || ''">דורשת בדיקה חוזרת</small> }</td> }
+            @if (visibleColumns.has('owner')) { <td class="owner-cell">@if (org.owner_name && context.isSuperAdmin()) { <a routerLink="/platform/users" [queryParams]="{ search: org.owner_name }" (click)="$event.stopPropagation()">{{ org.owner_name }}</a> } @else { {{ org.owner_name || '—' }} }</td> }
+            @if (visibleColumns.has('completion')) { <td>
+              @if (org.missing_profile_fields) { @if (org.missing_profile_fields.length === 0) { <span class="complete-label">הפרטים מלאים</span> } @else { <a class="missing-link" [routerLink]="['/platform/organizations', org.id]" [queryParams]="listQuery" [title]="org.missing_profile_fields.join(', ')" (click)="$event.stopPropagation()">{{ org.missing_profile_fields[0] }}<span class="missing-count">{{ org.missing_profile_fields.length }} להשלמה</span></a> } }
+              @else if (org.profile_completion === 100) { <span class="complete-label">הפרטים מלאים</span> }
+              @else { <a class="missing-link" [routerLink]="['/platform/organizations', org.id]" [queryParams]="listQuery" (click)="$event.stopPropagation()">לבדיקת פרטים חסרים ←</a> }
+            </td> }
+            @if (visibleColumns.has('campaigns')) { <td class="numeric"><span [title]="org.active_campaigns_count === undefined ? 'מספר הקמפיינים הפעילים אינו זמין' : 'קמפיינים פעילים'">פעילים: {{ org.active_campaigns_count ?? '—' }}</span><span class="muted"> מתוך {{ org.campaigns_count }} בסך הכול</span></td> }
+            @if (visibleColumns.has('raised')) { <td class="numeric">{{ fmtMoney(org.total_raised) }}</td> }
+            @if (visibleColumns.has('activity')) { <td><time [attr.datetime]="org.updated_at" [title]="relativeTime(org.updated_at)" dir="ltr">{{ fmtDate(org.updated_at) }}</time></td> }
+            <td class="actions-cell"><button class="row-menu-trigger" [attr.aria-label]="'פעולות עבור ' + orgName(org)" aria-haspopup="true" [attr.aria-expanded]="actionOrganization?.id === org.id" (click)="openActionMenu(org, $event)">⋯</button></td>
+          </tr>}</tbody></table>
       </div>
-
-      <div class="plat-footer">
-        <span>{{ total }} עמותות</span>
-        <div class="plat-pager">
-          <button (click)="prevPage()" [disabled]="page === 0">←</button>
-          <span>{{ page + 1 }} / {{ totalPages }}</span>
-          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
-        </div>
-      </div>
+      <footer class="plat-footer"><span>{{ total | number }} עמותות{{ hasFilters ? ' בתצוגה זו' : '' }}</span><nav class="plat-pager" aria-label="דפדוף עמותות"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page + 1 >= totalPages || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
     }
-  </div>
-
-  }
-
-</div>
+  </section>
+  @if (actionOrganization; as org) { <div class="row-menu" [style.top.px]="menuPosition.top" [style.right.px]="menuPosition.right" (click)="$event.stopPropagation()"><a id="organization-row-action" [routerLink]="['/platform/organizations', org.id]" [queryParams]="listQuery" (click)="closeMenu()">{{ actionLabel(org) }} ←</a></div> }
+</main>

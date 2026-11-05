@@ -51,11 +51,7 @@
 //     is a safe no-op, see that function's own header) -- but never
 //     collects, never touches MASAV, never creates a Payment, since this
 //     job still never calls any of those services.
-const calculation = require('../modules/billing-engine/calculation.service');
 const { resolveSelectedMonthBoundary, ensurePeriod } = require('../modules/billing-engine/billing-period.util');
-const { autoApproveDraftStatementsForRun } = require('../modules/billing-engine/approval.service');
-const { recordFinding } = require('../jobs/reconciliation-findings');
-const pool = require('../db/db');
 
 // The cycle whose cutoff has MOST RECENTLY passed, at-or-before `now` --
 // the correct target for a real 20:00-Israel-time cutoff run (2026-09-18
@@ -104,89 +100,21 @@ async function computeMostRecentCycleBoundary(db, now) {
 // themselves take their time parametrically (year/month, asOf) and are not
 // modified here.
 async function handler(db, { now = new Date() } = {}) {
-  const { periodStart, periodEnd } = await computeMostRecentCycleBoundary(db, now);
+  return require('../modules/billing-engine/monthly-billing-orchestrator.service').execute({ db, triggeredBy: 'scheduler' });
+}
 
-  const { periodId, periodCreated } = await ensurePeriod(db, periodStart, periodEnd);
-
-  const existingRun = await db.query(
-    `SELECT id FROM billing_runs WHERE billing_period_id = $1 LIMIT 1`,
-    [periodId]
-  );
-
-  if (existingRun.rows[0]) {
-    return {
-      periodId,
-      periodStart: periodStart.toISOString(),
-      periodEnd: periodEnd.toISOString(),
-      periodCreated,
-      calculationRan: false,
-      reason: 'already_calculated',
-      existingRunId: existingRun.rows[0].id,
-    };
+function validateResult(result) {
+  const steps = result?.results;
+  if (!Array.isArray(steps) || steps.length === 0) {
+    throw Object.assign(new Error('Monthly billing returned no execution results'), { resultSummary: result || {} });
   }
-
-  const result = await calculation.runProductionCalculation(periodId, now.toISOString());
-
-  // Automatic eligibility transition (2026-10, FIN-11 closure) -- "routine
-  // monthly Statement approval is NOT part of the intended business
-  // workflow" per the approved contract. Calls the EXACT SAME validated
-  // approveStatement() a human click already used (approval.service.js),
-  // never a parallel/looser check -- so this can only ever auto-approve a
-  // Statement that was already eligible by the existing rules. A Statement
-  // that fails validation stays 'draft' ("calculated but not yet
-  // eligible") and gets ONE recorded finding per statement, surfaced to
-  // the Super Admin as a genuine exception -- never retried blindly, never
-  // forced through. This does NOT write platform_audit_log (unlike the
-  // human-triggered billing-ops.service.js wrapper) -- approval.service.js
-  // #approveStatement never did, by design (see its own header), so there
-  // is no "fake system super admin" audit problem to invent a workaround
-  // for. job_runs.result_summary (below) is this job's own already-
-  // established audit trail for automated actions, same as every other
-  // job in this directory.
-  //
-  // DEPLOYMENT-SAFETY GUARD (2026-10, controlled production deployment) --
-  // billing-monthly-cycle is ALREADY registered and running on its real
-  // schedule in production. Unlike FIN-11's 3 new jobs (safe simply by
-  // staying unregistered), this job's NEXT real tick would otherwise run
-  // the auto-approval logic above immediately once this code is deployed
-  // -- deploying is not the same decision as activating. FIN11_AUTO_
-  // APPROVAL_ENABLED defaults OFF (unset or anything other than the exact
-  // string 'true'): deploying this commit changes NOTHING about what a
-  // real scheduled run does until a SEPARATE, explicit Render env-var
-  // change turns it on -- the smallest possible guard, not a new
-  // architecture. When OFF, this job's behavior is byte-for-byte what it
-  // was before this stage (create period, run calculation, stop).
-  const autoApprovalEnabled = process.env.FIN11_AUTO_APPROVAL_ENABLED === 'true';
-  let autoApproval = { approved: [], failed: [] };
-  if (autoApprovalEnabled) {
-    autoApproval = await autoApproveDraftStatementsForRun(result.billingRunId);
-    for (const failure of autoApproval.failed) {
-      await recordFinding(pool, {
-        jobName: 'billing-monthly-cycle',
-        findingType: 'statement_auto_approval_failed',
-        severity: 'warning',
-        subjectType: 'statement',
-        subjectId: failure.statementId,
-        details: { code: failure.code, message: failure.message },
-      });
-    }
-  }
-
-  return {
-    periodId,
-    periodStart: periodStart.toISOString(),
-    periodEnd: periodEnd.toISOString(),
-    periodCreated,
-    calculationRan: true,
-    billingRunId: result.billingRunId,
-    accountsEvaluated: result.accountsEvaluated,
-    statementsCreated: result.statementsCreated,
-    blockedEntitiesCount: result.blockedEntities.length,
-    activityDiscovered: result.activityDiscovered,
-    autoApprovalEnabled,
-    statementsAutoApproved: autoApproval.approved.length,
-    statementsAutoApprovalFailed: autoApproval.failed.length,
-  };
+  const blocked = steps.find(step => ['blocked', 'failed'].includes(step.status)
+    || (typeof step.result?.errors === 'number' ? step.result.errors > 0 : Array.isArray(step.result?.errors) && step.result.errors.length > 0));
+  if (!blocked) return; // Includes legitimate cutoff/lock/idempotent skips.
+  const reason = blocked.result?.reason || blocked.error || blocked.status;
+  const column = blocked.result?.diagnostic?.missingColumn;
+  throw Object.assign(new Error('Monthly billing ' + blocked.step + ': ' + reason + (column ? ' (missing column: ' + column + ')' : '')),
+    { code: 'MONTHLY_BILLING_BLOCKED', resultSummary: result });
 }
 
 module.exports = {
@@ -204,7 +132,7 @@ module.exports = {
   // cheap idempotent checks/month instead of 1; the existing 40-day
   // schedule-window lookback already comfortably covers the largest gap
   // between two day-28 matches (under 31 days), so no change needed there.
-  schedule: '0 * 28 * *',
+  schedule: '0 * * * *',
   // Explicit staleness policy (2026-10-11). Required because this schedule is
   // dense-within-a-rare-window: schedule-window.js's intervalMsFor() reads the
   // gap to the previous matching MINUTE, which for '0 * 28 * *' is 1 hour, so
@@ -224,6 +152,7 @@ module.exports = {
   staleAfterMs: 35 * 24 * 60 * 60 * 1000,
   timeoutMs: 5 * 60 * 1000, // same order as the other billing jobs; calculation loops per billing_account
   handler,
+  validateResult,
   // Exported for scripts/test-billing-monthly-cycle.js only.
   computeMostRecentCycleBoundary,
   ensurePeriod,

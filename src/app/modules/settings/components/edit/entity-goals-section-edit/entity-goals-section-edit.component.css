@@ -82,17 +82,17 @@
 .money-input {
   width: 100%;
 
-  height: 54px;
+  height: var(--hm-control-height);
 
   padding: 0 44px 0 14px;
 
   border: 1px solid #d1d5db;
 
-  border-radius: 14px;
+  border-radius: var(--hm-control-radius);
 
   background: white;
 
-  font-size: 15px;
+  font-size: var(--hm-control-font-size);
 
   color: #111827;
 
@@ -104,9 +104,9 @@
 }
 
 .money-input:focus {
-  border-color: #6D5DF6;
+  border-color: var(--hm-control-focus);
 
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  box-shadow: none;
 }
 
 .field-error {
@@ -116,7 +116,7 @@
 
   font-weight: 600;
 
-  color: #dc2626;
+  color: var(--hm-control-error);
 
   direction: rtl;
 

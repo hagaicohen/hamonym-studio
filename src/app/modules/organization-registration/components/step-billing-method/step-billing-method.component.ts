@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 
 import { OpenfieldsFormComponent } from '../../../billing/components/openfields-form/openfields-form.component';
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 
 type PaymentMethod = 'credit-card' | 'masav';
 
@@ -22,7 +23,7 @@ type PaymentMethod = 'credit-card' | 'masav';
 
   standalone: true,
 
-  imports: [CommonModule, FormsModule, OpenfieldsFormComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, OpenfieldsFormComponent],
 
   templateUrl: './step-billing-method.component.html',
 

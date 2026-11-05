@@ -13,7 +13,7 @@
 // DEVIATION FROM A LITERAL "call the real approveStatement()" step, flagged
 // explicitly rather than silently worked around: approval.service.js's
 // validateForApproval() requires every statement_components row's donation
-// to be status='paid' AND is_mock=false, and migration 054's
+// to be status='paid', and migration 054's
 // trg_statement_components_no_update/no_delete triggers make ANY
 // statement_components row permanently unconditionally undeletable forever
 // (no exception for test data, no exception based on the referenced

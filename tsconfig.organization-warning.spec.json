@@ -1,0 +1,9 @@
+﻿{
+ "extends": "./tsconfig.spec.json",
+ "include": [
+ "src/app/modules/platform/pages/platform-organization-detail-page/organization-decision-ux.spec.ts",
+ "src/app/checkbox-sizing.spec.ts",
+ "src/app/organization-warning-ux.spec.ts",
+ "src/**/*.d.ts"
+ ]
+}

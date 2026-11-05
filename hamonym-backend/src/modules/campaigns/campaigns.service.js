@@ -251,6 +251,20 @@ exports.createCampaign =
 
     }
 
+    // A registration still in 'draft' is not an organization yet: campaigns
+    // (even campaign drafts) start once it is submitted (pending_review on).
+    // Publication and donations keep their own approval/activation checks.
+    const { rows: [entity] } = await db.query(
+      'SELECT status FROM entities WHERE id = $1 AND deleted_at IS NULL',
+      [data.entity_id]
+    );
+    if (!entity) throw new Error('Unauthorized');
+    if (entity.status === 'draft') {
+      const err = new Error('Organization registration is incomplete');
+      err.code = 'ORGANIZATION_REGISTRATION_INCOMPLETE';
+      throw err;
+    }
+
     try {
 
       const result =
@@ -363,7 +377,8 @@ exports.createCampaign =
 
             data.entity_id,
 
-            data.status || 'draft',
+            // New campaigns are drafts; publication uses the existing guarded update path.
+            'draft',
             data.slug,
 
             data.title,

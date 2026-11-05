@@ -2,6 +2,7 @@ const svc = require('./platform.service');
 const approvalAgent = require('../../agents/approval/approval.agent');
 
 function statusFor(err) {
+  if (['INVALID_TRANSITION', 'ENTITY_NOT_FOUND', 'SUPER_ADMIN_REQUIRED'].includes(err.code)) return err.status;
   switch (err.message) {
     case 'Entity not found': return 404;
     case 'Campaign not found': return 404;
@@ -22,6 +23,16 @@ exports.getNotificationsCount = async (req, res) => {
     const result = await svc.getNotificationsCount();
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+exports.getDashboardOverview = async (req, res) => {
+  try {
+    const result = await require('./dashboard-read.service').getOverview({
+      range: req.query.range || '30d', isSuperAdmin: req.user?.isSuperAdmin === true,
+      permissions: req.user?.platformPermissions || [],
+    });
+    res.json(result);
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 };
 
 exports.getDashboard = async (req, res) => {

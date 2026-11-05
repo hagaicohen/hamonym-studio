@@ -14,6 +14,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
+import { CategorySelectorComponent } from '../../../../../shared/ui/category-picker/category-selector.component';
+import { joinCategories, splitCategories } from '../../../../../shared/ui/category-picker/category-selection';
+import { CategorySuggestComponent } from '../../../../../shared/ui/category-picker/category-suggest.component';
+import { CATEGORY_SUGGESTIONS_ENABLED } from '../../../../../shared/config/category-suggestions';
 
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
@@ -22,19 +26,22 @@ import { EntitiesService } from '../../../../../core/services/entities.service';
 import { LucideAngularModule, Building2 } from 'lucide-angular';
 
 import { SectionSaveState } from '../../../models/section-save-state.model';
+import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../../../../shared/components/registration-identity-check/registration-identity-check.component';
 
 @Component({
   selector: 'app-entity-basic-info-section-edit',
 
   standalone: true,
 
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
 
   templateUrl: './entity-basic-info-section-edit.component.html',
 
   styleUrl: './entity-basic-info-section-edit.component.css',
 })
 export class EntityBasicInfoSectionEditComponent implements OnChanges {
+  identityCheck:IdentityCheckState={status:'idle'};
+  private identityKey='';
   private entitiesService = inject(EntitiesService);
 
   private sanitizer = inject(DomSanitizer);
@@ -70,6 +77,8 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
 
   categories = ENTITY_CATEGORIES;
 
+  readonly categorySuggestionsEnabled = CATEGORY_SUGGESTIONS_ENABLED;
+
   readonly Building2 = Building2;
 
   associationDocumentUrl?: SafeResourceUrl;
@@ -77,6 +86,8 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
   taxDocumentUrl?: SafeResourceUrl;
 
   ngOnChanges(): void {
+    const key=`${this.entity?.id}:${this.entity?.entity_type}:${this.entity?.registration_number}`;
+    if(key!==this.identityKey) {this.identityKey=key;this.identityCheck={status:'idle'};}
     if (!this.entity?.id) {
       return;
     }
@@ -91,29 +102,19 @@ export class EntityBasicInfoSectionEditComponent implements OnChanges {
   }
 
   updateField(field: string, value: any) {
+    if (field==='registration_number') this.identityCheck={status:'idle'};
     this.entityChange.emit({
       [field]: value,
     });
   }
 
-  toggleSecondaryCategory(categoryId: string) {
-    // No primary category chosen yet — a click on a chip picks it as the
-    // primary category (fills the dropdown) instead of toggling it as a
-    // secondary one, matching the same behavior in the registration wizard.
-    if (!this.entity?.primary_category) {
-      this.updateField('primary_category', categoryId);
-      return;
-    }
+  get categoryList(): string[] {
+    return joinCategories(this.entity?.primary_category, this.entity?.secondary_categories);
+  }
 
-    const current = this.entity?.secondary_categories || [];
-
-    const exists = current.includes(categoryId);
-
-    const updated = exists
-      ? current.filter((c: string) => c !== categoryId)
-      : [...current, categoryId];
-
-    this.updateField('secondary_categories', updated);
+  setCategories(list: string[]) {
+    const { primary, secondary } = splitCategories(list);
+    this.entityChange.emit({ primary_category: primary || null, secondary_categories: secondary });
   }
 
   onAssociationCertificateSelected(event: Event): void {

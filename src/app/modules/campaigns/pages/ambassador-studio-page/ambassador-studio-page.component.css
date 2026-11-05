@@ -199,8 +199,8 @@
   width: 100%;
   padding: 10px 14px;
   border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: var(--hm-control-radius);
+  font-size: var(--hm-control-font-size);
   color: #0f172a;
   background: white;
   outline: none;
@@ -210,7 +210,7 @@
 }
 
 .field-input:focus,
-.field-textarea:focus { border-color: #6D5DF6; box-shadow: 0 0 0 3px rgba(109,93,246,.1); }
+.field-textarea:focus { border-color: var(--hm-control-focus); box-shadow: none; }
 
 .field-textarea { resize: vertical; }
 

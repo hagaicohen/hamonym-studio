@@ -1,5 +1,5 @@
 <div class="load-error-state" *ngIf="loadErrorMessage">
-  <p class="load-error-text">⚠ {{ loadErrorMessage }}</p>
+  <p class="load-error-text"><app-icon name="alert" /> {{ loadErrorMessage }}</p>
   <button type="button" class="load-error-btn" (click)="goBack()">לרשימת הקמפיינים</button>
 </div>
 

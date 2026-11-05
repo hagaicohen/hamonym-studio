@@ -24,7 +24,7 @@
          which matters because this step is gated/unreachable once the
          campaign is published, while the Page Builder step never is. -->
     <div class="upd-design-note">
-      🎨 עיצוב התצוגה (כרטיסים/רשימה, מיקום) נמצא בשלב "בניית דף".
+      <app-icon name="palette" /> עיצוב התצוגה (כרטיסים/רשימה, מיקום) נמצא בשלב "בניית דף".
     </div>
   </div>
 
@@ -39,7 +39,7 @@
         <input id="upd-media-input" type="file" accept="image/*,video/*" style="display:none" (change)="onMediaSelected($event)">
         <div class="uf-media-area" *ngIf="!form.mediaUrl">
           <label for="upd-media-input" class="uf-upload-label">
-            <span class="uf-upload-icon">🖼</span>
+            <span class="uf-upload-icon"><app-icon name="image" /></span>
             <span>לחץ להעלאת תמונה / וידאו</span>
             <span class="uf-upload-hint">מומלץ יחס 16:9</span>
           </label>
@@ -81,9 +81,9 @@
       </div>
 
       <div class="uf-actions">
-        <button class="uf-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
+        <button class="uf-btn-clear" type="button" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
         <button class="uf-btn-save"  type="button" (click)="save()" [disabled]="!form.title.trim()">
-          💾 {{ isEditing ? 'עדכן' : 'שמור עדכון' }}
+          <app-icon name="save" /> {{ isEditing ? 'עדכן' : 'שמור עדכון' }}
         </button>
       </div>
     </div>
@@ -123,15 +123,15 @@
       <div class="upd-card" *ngFor="let u of draft.updates" [class.upd-card--editing]="editingId === u.id">
         <div class="upd-card-media">
           <img *ngIf="u.mediaUrl && u.mediaType === 'image'" [src]="u.mediaUrl" alt="">
-          <div *ngIf="!u.mediaUrl" class="upd-card-media-empty">📢</div>
+          <div *ngIf="!u.mediaUrl" class="upd-card-media-empty"><app-icon name="megaphone" /></div>
         </div>
         <div class="upd-card-body">
           <span class="upd-date-badge">{{ formatDate(u.date) }}</span>
           <div class="upd-card-title">{{ u.title }}</div>
           <p class="upd-card-desc">{{ u.description }}</p>
           <div class="upd-card-actions">
-            <button class="upd-card-btn upd-card-btn--delete" (click)="delete(u.id)">🗑 מחיקה</button>
-            <button class="upd-card-btn upd-card-btn--edit"   (click)="edit(u)">✏ עריכה</button>
+            <button class="upd-card-btn upd-card-btn--delete" (click)="delete(u.id)"><app-icon name="trash" /> מחיקה</button>
+            <button class="upd-card-btn upd-card-btn--edit"   (click)="edit(u)"><app-icon name="pencil" /> עריכה</button>
           </div>
         </div>
       </div>
@@ -139,7 +139,7 @@
   </div>
 
   <div class="upd-empty" *ngIf="draft.updates.length === 0">
-    <div class="upd-empty-icon">📢</div>
+    <div class="upd-empty-icon"><app-icon name="megaphone" /></div>
     <div class="upd-empty-text">טרם נוספו עדכונים</div>
     <div class="upd-empty-hint">ניתן להוסיף עדכונים גם לאחר פרסום הקמפיין</div>
   </div>

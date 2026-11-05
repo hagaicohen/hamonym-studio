@@ -1,0 +1,62 @@
+@import '../../styles/admin-list.css';
+
+.cs-count {
+  margin-inline-start: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--hm-surface-sunken);
+  color: var(--hm-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.plat-chip.active .cs-count { background: var(--hm-brand-100); color: var(--hm-brand-700); }
+
+.cs-notice {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--hm-success-border);
+  border-radius: var(--hm-radius-md);
+  background: var(--hm-success-bg);
+  color: var(--hm-success);
+  font-size: 13px;
+}
+
+.cs-actions { display: flex; gap: 8px; }
+.cs-approve { color: var(--hm-success); }
+.cs-reject { color: var(--hm-danger); }
+
+.cs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, .45);
+}
+.cs-dialog {
+  box-sizing: border-box;
+  width: min(480px, 100%);
+  padding: 20px;
+  border-radius: var(--hm-radius-lg);
+  background: var(--hm-surface);
+  box-shadow: var(--hm-shadow-lg);
+}
+.cs-dialog h2 { margin: 0 0 8px; font-size: var(--hm-text-lg); color: var(--hm-text-strong); }
+.cs-dialog-text { margin: 0 0 14px; font-size: 13px; line-height: 1.6; color: var(--hm-text-muted); }
+.cs-note-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+.cs-note { width: 100%; min-height: 80px; }
+.cs-dialog-error { margin: 8px 0 0; color: var(--hm-danger); font-size: 13px; }
+.cs-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.cs-confirm {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--hm-radius-md);
+  background: var(--hm-color-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cs-confirm--reject { background: var(--hm-danger); }
+.cs-confirm:disabled { opacity: .6; cursor: not-allowed; }

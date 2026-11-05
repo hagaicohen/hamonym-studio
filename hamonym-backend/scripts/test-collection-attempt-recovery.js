@@ -38,8 +38,8 @@ function fakeDb(candidateRows) {
   const db = {
     calls,
     query: async (sql, params) => {
-      if (sql.includes('FROM collection_attempts') && sql.includes("status = 'ambiguous'")) {
-        const rows = sql.includes("collection_method != 'masav'")
+      if (sql.includes('FROM collection_attempts') && (sql.includes("status = 'ambiguous'") || sql.includes("ca.status = 'ambiguous'"))) {
+        const rows = sql.includes("collection_method != 'masav'") || sql.includes("ca.collection_method != 'masav'")
           ? candidateRows.filter((r) => r.collection_method !== 'masav')
           : candidateRows;
         return { rows };

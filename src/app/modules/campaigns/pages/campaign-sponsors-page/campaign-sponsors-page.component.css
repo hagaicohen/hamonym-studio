@@ -27,7 +27,7 @@
   width: 100%; font-family: inherit; font-size: 14px; color: #0f172a;
   padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff;
 }
-.sf-input:focus { outline: none; border-color: #7c3aed; }
+.sf-input:focus { outline: none; border-color: var(--hm-control-focus); }
 .sf-upload-label { font-size: 13px; color: #7c3aed; cursor: pointer; font-weight: 700; }
 .sf-logo-preview { display: flex; align-items: center; gap: 12px; }
 .sf-logo-preview img { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: #f8fafc; }

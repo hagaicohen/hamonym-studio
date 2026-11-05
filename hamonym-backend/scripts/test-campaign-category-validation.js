@@ -25,7 +25,7 @@ const path = require('path');
 const assert = require('assert');
 const pool = require('../src/db/db');
 const { updateCampaign } = require('../src/modules/campaigns/campaigns.service');
-const { ENTITY_CATEGORY_IDS, isValidCategoryId } = require('../src/modules/campaigns/entity-categories');
+const { ENTITY_CATEGORIES, ENTITY_CATEGORY_IDS, isValidCategoryId } = require('../src/modules/campaigns/entity-categories');
 
 let failures = 0;
 let passed = 0;
@@ -109,16 +109,24 @@ async function main() {
     }
   });
 
-  await check('F. backend canonical id list matches the frontend source of truth (no drift)', async () => {
-    const frontendPath = path.resolve(__dirname, '../../hamonym-app/src/app/shared/config/entity-categories.ts');
-    const src = fs.readFileSync(frontendPath, 'utf8');
-    const ids = [...src.matchAll(/id:\s*'([a-z-]+)'/g)].map((m) => m[1]);
-    assert.ok(ids.length > 0, 'must have actually parsed ids out of the frontend file');
+  await check('F. backend canonical list (ids and labels) matches the frontend source of truth (no drift)', async () => {
+    // HAMONYM_APP_DIR: the frontend checkout to compare against, when it is
+    // not the sibling hamonym-app directory (e.g. running from a worktree).
+    const appDir = process.env.HAMONYM_APP_DIR || path.resolve(__dirname, '../../hamonym-app');
+    const src = fs.readFileSync(path.join(appDir, 'src/app/shared/config/entity-categories.ts'), 'utf8');
+    const pairs = [...src.matchAll(/\{\s*id:\s*'([a-z-]+)',\s*label:\s*'([^']+)'\s*\}/g)].map((m) => `${m[1]}=${m[2]}`);
+    assert.ok(pairs.length > 0, 'must have actually parsed categories out of the frontend file');
     assert.deepStrictEqual(
-      [...ENTITY_CATEGORY_IDS].sort(),
-      [...ids].sort(),
+      ENTITY_CATEGORIES.map((c) => `${c.id}=${c.label}`).sort(),
+      [...pairs].sort(),
       'backend entity-categories.js has drifted from hamonym-app/.../entity-categories.ts -- keep them in sync'
     );
+  });
+
+  await check('G. the AI campaign-creation prompt offers exactly the canonical categories', async () => {
+    const { SYSTEM_PROMPT } = require('../src/agents/campaign-creation/campaign-creation.prompt');
+    for (const c of ENTITY_CATEGORIES) assert.ok(SYSTEM_PROMPT.includes(`${c.id} (${c.label})`), `prompt is missing ${c.id}`);
+    for (const id of ['settlement', 'housing', 'research-development']) assert.ok(isValidCategoryId(id), `${id} should be valid`);
   });
 
   await cleanup();

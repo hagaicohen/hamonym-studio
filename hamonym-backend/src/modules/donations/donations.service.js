@@ -24,7 +24,8 @@ async function finalizePaidDonation(donationId, client = db) {
     `UPDATE donations d
      SET donor_user_id = u.id
      FROM users u
-     WHERE d.id = $1 AND d.donor_user_id IS NULL AND LOWER(u.email) = LOWER(d.donor_email)`,
+     WHERE d.id = $1 AND d.donor_user_id IS NULL AND LOWER(u.email) = LOWER(d.donor_email)
+       AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email) AND u.is_active=true AND u.deleted_at IS NULL`,
     [donationId]
   );
 
@@ -78,38 +79,10 @@ async function withTransaction(fn) {
 // entity lookup below, not the send itself — emailService.queue is already
 // fire-and-forget and swallows its own errors, see email.service.js) must
 // not surface as if the payment had failed. Logged, not raised.
-async function queueReceiptEmail(receipt, donationId) {
-  if (!receipt) return;
-
-  try {
-    const detailsRes = await db.query(
-      `SELECT c.title AS campaign_title, e.display_name AS entity_name
-       FROM campaigns c JOIN entities e ON e.id = c.entity_id
-       WHERE c.id = $1`,
-      [receipt.campaign_id]
-    );
-    const details = detailsRes.rows[0] || {};
-    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-
-    emailService.queue({
-      template: 'receipt',
-      to: receipt.donor_email,
-      data: {
-        donorName: receipt.donor_name,
-        receiptNumber: receipt.receipt_number,
-        amount: receipt.amount,
-        campaignTitle: details.campaign_title,
-        entityName: details.entity_name,
-        receiptUrl: `${frontBase}/receipts/${receipt.id}`,
-      },
-      entityId: receipt.entity_id,
-      campaignId: receipt.campaign_id,
-      donationId,
-    });
-  } catch (err) {
-    console.error('[queueReceiptEmail] failed to queue receipt email:', err.message);
-  }
+async function queueReceiptEmail(_receipt, _donationId) {
+  // Historical receipt rows remain audit records. CardCom sends the official document.
 }
+
 exports.queueReceiptEmail = queueReceiptEmail;
 exports.withTransaction = withTransaction;
 
@@ -137,9 +110,9 @@ async function finalizeSuccessfulRecurringCharge(instruction, { amount, provider
     const donationRes = await client.query(
       `INSERT INTO donations (
          campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
-         rewards, status, is_mock, recurring_instruction_id, provider_reference,
+         rewards, status, recurring_instruction_id, provider_reference,
          provider_row_id, provider_status_code, completed_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',false,$7,$8,$9,$10,NOW())
+       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',$7,$8,$9,$10,NOW())
        RETURNING id`,
       [
         instruction.campaign_id, instruction.entity_id, amount,
@@ -375,19 +348,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   // separate, manual step for now.
   const donationFallbackCredentials = resolveDonationFallbackCredentials();
   const hasPlatformCardcom = !!donationFallbackCredentials;
-  // is_mock means ONLY "PAYMENT_PROVIDER=mock was explicitly set" — a
-  // deliberate dev/test override, never an inferred fallback (2026-08-21
-  // fix). Missing a real provider is a configuration error, not Mock: it
-  // used to silently redirect real donors into the Mock checkout screen
-  // (`hasVerifiedCardcom`/`hasPlatformCardcom` both false), which is not
-  // just semantically wrong but was also a dead end — `mockComplete`'s own
-  // guard only ever accepted `PAYMENT_PROVIDER==='mock'`, so those
-  // donations could never actually be completed and were stuck 'pending'
-  // forever (confirmed against two real production rows). See
-  // docs/PAYMENTS_ARCHITECTURE_CONTEXT.md and the 2026-08-21 audit.
-  const isMock = process.env.PAYMENT_PROVIDER === 'mock';
-
-  if (!isMock && !hasVerifiedCardcom && !hasPlatformCardcom) {
+  if (!hasVerifiedCardcom && !hasPlatformCardcom) {
     const err = new Error('Payment not configured for this campaign');
     err.status = 400;
     err.code = 'PAYMENT_NOT_CONFIGURED';
@@ -458,9 +419,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        campaign_id, entity_id, amount,
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
-       rewards, status, is_mock,
+       rewards, status,
        utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id, note
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17,$18)
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17)
      RETURNING id`,
     [
       campaignId,
@@ -474,7 +435,6 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       donor.postalCode  || null,
       donor.isAnonymous || false,
       JSON.stringify(authoritativeRewards),
-      isMock,
       utmParams  ? JSON.stringify(utmParams) : null,
       ipAddress  || null,
       userAgent  || null,
@@ -489,15 +449,6 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
   const donationId = donationRes.rows[0].id;
 
   await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
-
-  // 3. Mock provider — skip Cardcom, return mock payment URL
-  if (isMock) {
-    const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-    return {
-      url: `${frontBase}/mock-payment?id=${donationId}&amount=${donationAmount}&slug=${campaign.slug}&title=${encodeURIComponent(campaign.title)}`,
-      donationId,
-    };
-  }
 
   // Registration participants get their own Cardcom line items, built from
   // registrationOptionsById (server-validated against registration_options
@@ -896,23 +847,11 @@ exports.getDonationPublic = async (donationId) => {
   return res.rows[0] || null;
 };
 
-exports.getReceipt = async (receiptId) => {
-  const res = await db.query(
-    `SELECT r.id, r.receipt_number, r.amount, r.donor_name, r.donor_email, r.issued_at,
-            c.title AS campaign_title,
-            e.display_name AS entity_name, e.logo_url AS entity_logo, e.legal_name
-     FROM receipts r
-     JOIN campaigns c ON c.id = r.campaign_id
-     JOIN entities  e ON e.id = r.entity_id
-     WHERE r.id = $1`,
-    [receiptId]
-  );
-  return res.rows[0] || null;
-};
+exports.getReceipt = (receiptId, userId, proof = null) => require('./official-receipt.service').metadata(receiptId, userId, proof);
 
-exports.getMyDonations = async (userId) => {
+exports.getMyDonations = async (userId, proof = null) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous,
+    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note, d.status,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
             r.id AS receipt_id
@@ -920,9 +859,11 @@ exports.getMyDonations = async (userId) => {
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = d.entity_id
      LEFT JOIN receipts r ON r.donation_id = d.id
-     WHERE d.donor_user_id = $1 AND d.status = 'paid'
+     WHERE d.donor_user_id = $1
+       AND EXISTS(SELECT 1 FROM users u WHERE u.id=$1 AND u.donation_proof_version::text=$2 AND u.email_verified_at IS NOT NULL AND LOWER(u.donation_verified_email)=LOWER(u.email)
+         AND LOWER(u.email)=LOWER(d.donor_email) AND u.is_active=true AND u.deleted_at IS NULL)
      ORDER BY d.completed_at DESC`,
-    [userId]
+    [userId, proof]
   );
   return res.rows;
 };
@@ -936,7 +877,8 @@ exports.getLiveDonations = async (slug, since) => {
     `SELECT d.donor_name AS name,
             d.amount::float AS amount,
             d.completed_at,
-            d.is_anonymous
+            d.is_anonymous,
+            d.note
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = c.entity_id
@@ -986,7 +928,7 @@ exports.getCampaignDonors = async (slug, period) => {
     db.query(
       `WITH camp AS (
          SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount,
-                d.completed_at, d.is_anonymous
+                d.completed_at, d.is_anonymous, d.note
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
          JOIN entities  e ON e.id = c.entity_id
@@ -1003,6 +945,7 @@ exports.getCampaignDonors = async (slug, period) => {
          camp.amount,
          camp.completed_at,
          camp.is_anonymous,
+         camp.note,
          (camp.id IN (SELECT id FROM first_ids)) AS is_first
        FROM camp
        WHERE TRUE ${periodClause}
@@ -1030,69 +973,6 @@ exports.getCampaignDonors = async (slug, period) => {
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    HANDLE MOCK PAYMENT COMPLETION (dev only)
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.handleMockComplete = async ({ donationId, status, failureReason, completedAt }) => {
-  const success   = status === 'paid';
-  const newStatus = success ? 'paid' : 'failed';
-  const resolvedAt = completedAt ? new Date(completedAt) : new Date();
-
-  const donRes = await db.query(
-    `SELECT d.amount, d.campaign_id, c.slug, c.entity_id
-     FROM donations d
-     JOIN campaigns c ON c.id = d.campaign_id
-     WHERE d.id = $1`,
-    [donationId]
-  );
-
-  const row      = donRes.rows[0];
-  const slug     = row?.slug      || '';
-  const amount   = row?.amount    || 0;
-  const entityId = row?.entity_id || null;
-
-  let receipt = null;
-
-  if (success && row?.campaign_id) {
-    // Same atomicity as markDonationPaid — status update, campaign
-    // aggregate, and receipt are one transaction, email queued only after
-    // COMMIT (see withTransaction/queueReceiptEmail above).
-    await withTransaction(async (client) => {
-      await client.query(
-        `UPDATE donations
-         SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
-         WHERE id=$4`,
-        [newStatus, failureReason || null, resolvedAt, donationId]
-      );
-
-      await client.query(
-        `UPDATE campaigns
-         SET current_amount   = current_amount   + $1,
-             supporters_count = supporters_count + 1,
-             updated_at = NOW()
-         WHERE id = $2`,
-        [amount, row.campaign_id]
-      );
-
-      receipt = await finalizePaidDonation(donationId, client);
-    });
-  } else {
-    await db.query(
-      `UPDATE donations
-       SET status=$1, failure_reason=$2, completed_at=$3, updated_at=NOW()
-       WHERE id=$4`,
-      [newStatus, failureReason || null, resolvedAt, donationId]
-    );
-  }
-
-  if (entityId) require('../dashboard/dashboard.service').invalidateDashboard(entityId);
-  if (success) await queueReceiptEmail(receipt, donationId);
-
-  const frontBase = process.env.FRONTEND_URL || 'http://localhost:4200';
-  return {
-    redirectUrl: success
-      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
-      : `${frontBase}/campaigns/${slug}/view?payment=failed`,
-  };
-};
-
 
 /* ─────────────────────────────────────────
    ENTITY DONATIONS PAGE (authenticated)
@@ -1174,7 +1054,8 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
   const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.note,
+              (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
@@ -1235,10 +1116,8 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
 // conventions: same SORT_COLUMNS, same status/period semantics, same
 // {rows,total,page,limit} envelope every other Platform Admin list uses.
 //
-// is_mock is always excluded -- same convention as every other financial
-// aggregate in this codebase (aggregate-consistency.job.js, billing
-// calculation): a dev/testing-only donation must never look like real
-// platform activity to an operator browsing "what donations happened".
+// All donation records are visible. Only verified paid status contributes
+// to paid totals; the provider terminal does not classify a donation.
 //
 // Privacy: donor_email/donor_phone are deliberately NOT selected here, even
 // though getEntityDonations (a different, entity-owner-scoped endpoint)
@@ -1247,14 +1126,19 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
 // different privacy posture than one entity seeing its own donors -- out of
 // scope for this pass; donor_name is enough to identify a case.
 exports.getPlatformDonations = async ({ status, entityId, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
-  const where  = ['d.is_mock = false'];
+  const where  = ['TRUE'];
   const params = [];
   let idx = 1;
 
   const sortCol = SORT_COLUMNS[sortBy] || 'd.created_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-  if (period === 'month') {
+  // Dashboard deep-link only: Israel calendar boundaries, identical to
+  // dashboard-read.service. Preserve all existing period options unchanged.
+  if (period === 'this_month_israel') {
+    where.push(`d.created_at >= (date_trunc('month', NOW() AT TIME ZONE 'Asia/Jerusalem') AT TIME ZONE 'Asia/Jerusalem')`);
+    where.push(`d.created_at < ((date_trunc('month', NOW() AT TIME ZONE 'Asia/Jerusalem') + INTERVAL '1 month') AT TIME ZONE 'Asia/Jerusalem')`);
+  } else if (period === 'month') {
     where.push(`d.created_at >= date_trunc('month', NOW())`);
   } else if (period === 'last_month') {
     where.push(`d.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')`);
@@ -1287,6 +1171,7 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.status, d.completed_at, d.created_at,
               d.is_anonymous, d.failure_reason,
+              (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               (d.recurring_instruction_id IS NOT NULL) AS is_recurring,
               c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
               e.id AS entity_id, e.display_name AS entity_name
@@ -1316,7 +1201,7 @@ exports.getEntityDonationsSummary = async (entityId, { limit = 25, page = 0 } = 
   const [listRes, aggRes] = await Promise.all([
     db.query(
       `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.is_mock,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
@@ -1393,7 +1278,7 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
          SELECT
            COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name) AS donor_key,
            d.donor_name, d.donor_email, d.donor_phone, d.amount, d.completed_at,
-           d.campaign_id, d.is_anonymous, d.is_mock
+           d.campaign_id, d.is_anonymous
          FROM donations d
          WHERE ${whereStr}
        )
@@ -1403,7 +1288,6 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
          MAX(donor_phone) AS phone,
          COALESCE(MAX(CASE WHEN NOT is_anonymous THEN donor_name END), 'תורם/ת אנונימי/ת') AS display_name,
          BOOL_OR(is_anonymous)                AS has_anonymous,
-         BOOL_OR(is_mock)                     AS has_mock,
          SUM(amount)::float                   AS total_donated,
          COUNT(*)::int                        AS donation_count,
          MIN(completed_at)                    AS first_donation_at,
@@ -1521,9 +1405,9 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
       const donationRes = await client.query(
         `INSERT INTO donations (
            campaign_id, entity_id, amount, donor_name, donor_email, donor_phone, is_anonymous,
-           rewards, status, is_mock, source, supporters_count, entered_by, note,
+           rewards, status, source, supporters_count, entered_by, note,
            completed_at, client_submission_key
-         ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',false,$7,$8,$9,$10,NOW(),$11)
+         ) VALUES ($1,$2,$3,$4,$5,$6,false,'[]','paid',$7,$8,$9,$10,NOW(),$11)
          RETURNING id`,
         [campaignId, entityId, amt, donorName || null, donorEmail || null, donorPhone || null, source, count, enteredByUserId, note || null, key]
       );

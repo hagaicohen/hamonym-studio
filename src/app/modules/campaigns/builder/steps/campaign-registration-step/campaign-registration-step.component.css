@@ -46,7 +46,7 @@
   color: #0f172a; background: #fff; outline: none;
   transition: border-color 0.15s;
 }
-.rf-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.rf-input:focus { border-color: var(--hm-control-focus); box-shadow: none; }
 .rf-textarea { resize: none; height: 90px; line-height: 1.6; }
 
 .rf-currency-wrap { position: relative; }

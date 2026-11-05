@@ -13,7 +13,8 @@ import { Ambassador } from '../../../services/ambassador.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { CHECKOUT_V2_OPENFIELDS_ENABLED } from '../../config/checkout-v2.config';
 import { OpenfieldsFormComponent } from '../../../../billing/components/openfields-form/openfields-form.component';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Checkout V2 (2026-09-24) — the real, continuous 3-step donation checkout
 // (סכום → פרטים אישיים → תשלום) behind CHECKOUT_V2_ENABLED. Deliberately a
 // brand-new, self-contained component that never imports or modifies
@@ -66,7 +67,7 @@ import { OpenfieldsFormComponent } from '../../../../billing/components/openfiel
 @Component({
   selector: 'app-checkout-v2',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
   templateUrl: './checkout-v2.component.html',
   styleUrl: './checkout-v2.component.css',
 })

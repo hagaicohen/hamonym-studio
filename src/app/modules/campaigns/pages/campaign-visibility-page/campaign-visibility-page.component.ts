@@ -11,7 +11,8 @@ import {
   StatKey,
 } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
 
 // Dedicated page (2026-08-06 architecture reset) — was a Dashboard section
@@ -25,7 +26,7 @@ type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
 @Component({
   selector: 'app-campaign-visibility-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './campaign-visibility-page.component.html',
   styleUrl: './campaign-visibility-page.component.css',
 })
