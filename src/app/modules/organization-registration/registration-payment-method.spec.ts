@@ -97,6 +97,58 @@ describe('Registration payment method — card entered, then the summary', () =>
     expect(patch.request.body.billing_method).toBe('masav');
   });
 
+  it('a rejected card save shows the reason the backend gave', async () => {
+    const fixture = openBillingStep();
+    const step = fixture.componentInstance;
+    spyOn(step.openfieldsForm!, 'tokenize').and.callFake(async () => {
+      step.openfieldsForm!.lastError = 'עסקה ממתינה או לא הושלמה';
+      return false;
+    });
+    await step.savePaymentMethod();
+    expect(step.cardError).toContain('עסקה ממתינה או לא הושלמה');
+  });
+
+  it('Credit Card → MASAV → Credit Card keeps the same CardCom form, saves nothing and tokenizes nothing', () => {
+    state.updateState({ billingCard: { last4: '4242', expMonth: '12', expYear: '2030' } });
+    const fixture = TestBed.createComponent(StepBillingMethodComponent);
+    fixture.detectChanges();
+    for (const r of entityLoad()) r.flush(savedCardEntity);
+    const step = fixture.componentInstance;
+    step.replacingCard = true;
+    fixture.detectChanges();
+    const form = step.openfieldsForm!;
+    const formEl = (fixture.nativeElement as HTMLElement).querySelector('app-openfields-form');
+    const tokenize = spyOn(form, 'tokenize');
+    const destroyed = spyOn(form, 'ngOnDestroy').and.callThrough();
+    const panel = () => (fixture.nativeElement as HTMLElement).querySelector('.credit-card-panel') as HTMLElement;
+    const opening = http.match(() => true);
+    expect(opening.some((r) => r.request.url.includes('/init-openfields'))).toBeTrue();
+
+    step.selectPaymentMethod('masav');
+    fixture.detectChanges();
+    expect(panel().hidden).toBeTrue();
+    expect(fixture.nativeElement.querySelector('app-openfields-form')).toBe(formEl);
+
+    step.selectPaymentMethod('credit-card');
+    fixture.detectChanges();
+    expect(panel().hidden).toBeFalse();
+    expect(step.openfieldsForm).toBe(form);
+    expect(fixture.nativeElement.querySelector('app-openfields-form')).toBe(formEl);
+    expect(destroyed).not.toHaveBeenCalled();
+    expect(tokenize).not.toHaveBeenCalled();
+    http.expectNone((r) => r.method !== 'GET');
+    expect(state.state().billingCard?.last4).toBe('4242');
+  });
+
+  it('starting on MASAV does not open a CardCom form until Credit Card is chosen', () => {
+    state.updateState({ paymentMethod: 'masav' });
+    const fixture = openBillingStep();
+    expect(fixture.nativeElement.querySelector('app-openfields-form')).toBeNull();
+    fixture.componentInstance.selectPaymentMethod('credit-card');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-openfields-form')).not.toBeNull();
+  });
+
   it('CardCom success without a card saved by the backend does not continue', async () => {
     const fixture = openBillingStep();
     const step = fixture.componentInstance;

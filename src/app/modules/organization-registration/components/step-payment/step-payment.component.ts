@@ -150,7 +150,7 @@ export class StepPaymentComponent {
           }, remaining);
         },
 
-        error: () => {
+        error: (err) => {
           const elapsed = Date.now() - start;
 
           const remaining = Math.max(0, 1200 - elapsed);
@@ -160,7 +160,7 @@ export class StepPaymentComponent {
 
             this.connectionSuccess = false;
 
-            this.connectionError = 'שגיאת שרת';
+            this.connectionError = err?.error?.message || 'שגיאת שרת';
 
             this.saveState();
           }, remaining);

@@ -82,7 +82,10 @@
 
     <!-- CREDIT CARD -->
 
-    @if (isCreditCard) {
+    <!-- Hidden, not removed: removing it destroys the CardCom iframes and
+         whatever the visitor already typed into them. -->
+    @if (cardPanelOpened) {
+    <div class="credit-card-panel" [hidden]="!isCreditCard">
       <div class="payment-section">
         <div class="section-title">פרטי כרטיס אשראי</div>
 
@@ -118,6 +121,7 @@
           <div class="ensure-entity-error">{{ cardError }}</div>
         }
       </div>
+    </div>
     }
 
     <!-- MASAV -->
