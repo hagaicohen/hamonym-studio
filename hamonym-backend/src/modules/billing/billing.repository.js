@@ -54,7 +54,7 @@ exports.create =
 
     console.log(
       'CREATE BILLING START',
-      data
+      { entity_id: data.entity_id, provider: data.provider, has_token: !!data.token }
     );
 
     const query = `
@@ -120,7 +120,7 @@ exports.create =
 
     console.log(
       'CREATE VALUES',
-      values
+      { entity_id: values[0], provider: values[1], has_token: !!values[2] }
     );
 
     const result =
