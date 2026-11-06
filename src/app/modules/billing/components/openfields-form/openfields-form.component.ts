@@ -142,6 +142,10 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   // also why opening DevTools "fixed" it: the added overhead happened to
   // make the HTTP call resolve BEFORE the iframe events instead of after.
   initState: InitState = 'idle';
+
+  // Why the last card save failed, as the backend reported it (a CardCom
+  // description or our own validation message -- never card data).
+  lastError: string | null = null;
   private generation = 0;
   private initMessageSent = false;
   private masterReady = false;
@@ -351,6 +355,8 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
       return false;
     }
 
+    this.lastError = null;
+
     return new Promise((resolve) => {
       const expirationMonth = (
         document.getElementById('expirationMonth') as HTMLInputElement
@@ -438,6 +444,8 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
 
               error: (err: any) => {
                 console.error(err);
+
+                this.lastError = err?.error?.error || null;
 
                 resolve(false);
               },

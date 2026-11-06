@@ -71,7 +71,13 @@ export class StepBillingMethodComponent implements OnInit {
     this.paymentMethod = state.paymentMethod as PaymentMethod;
 
     this.continueLater = state.continueLater;
+
+    this.cardPanelOpened = this.isCreditCard;
   }
+
+  // The card panel is created the first time it is shown (so MASAV-only
+  // visitors never open a CardCom session) and then kept alive.
+  cardPanelOpened = false;
 
   private readonly billingService = inject(BillingService);
 
@@ -181,6 +187,8 @@ export class StepBillingMethodComponent implements OnInit {
   selectPaymentMethod(method: PaymentMethod): void {
     this.paymentMethod = method;
 
+    this.cardPanelOpened ||= this.isCreditCard;
+
     this.syncState();
 
     this.resetState();
@@ -205,7 +213,8 @@ export class StepBillingMethodComponent implements OnInit {
 
       if (!card) {
         this.isSaving = false;
-        this.cardError = 'שמירת הכרטיס לא אושרה. בדקו את הפרטים ונסו שוב.';
+        const reason = this.openfieldsForm?.lastError;
+        this.cardError = 'שמירת הכרטיס לא אושרה. בדקו את הפרטים ונסו שוב.' + (reason ? ` (${reason})` : '');
 
         return;
       }
