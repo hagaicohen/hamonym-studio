@@ -67,7 +67,7 @@ describe('Campaign Builder Studio — shell', () => {
     expect(el.querySelector('.tree-panel')).not.toBeNull();
     expect(el.querySelector('.props-panel')).not.toBeNull();
     expect(el.querySelector('.canvas-frame app-campaign-preview')).not.toBeNull();
-    expect(rowLabels(el)).toEqual(['פתיחה: תמונה, כותרת ותיאור', 'עיצוב העמוד: סגנון, צבעים ורקע', 'לוגו', 'פוטר', 'סוג, יעד ותאריכים', 'הגדרות תרומה', 'רשימת התשורות', 'אפשרויות הרשמה', 'רשימת החסויות', 'רשימת השגרירים', 'רשימת העדכונים', 'Hero (תמונה ראשית)', 'מסגרת', 'הסיפור שלנו', 'תמונה', 'תשורות']);
+    expect(rowLabels(el)).toEqual(['פתיחה: תמונה, כותרת ותיאור', 'כותרת', 'תת-כותרת', 'כפתור ב-Hero', 'עיצוב העמוד: סגנון, צבעים ורקע', 'לוגו', 'פוטר', 'סוג, יעד ותאריכים', 'הגדרות תרומה', 'רשימת התשורות', 'אפשרויות הרשמה', 'רשימת החסויות', 'רשימת השגרירים', 'רשימת העדכונים', 'Hero (תמונה ראשית)', 'מסגרת', 'הסיפור שלנו', 'תמונה', 'תשורות']);
     expect(getComputedStyle(el.querySelector('.studio')!).direction).toBe('rtl');
   });
 

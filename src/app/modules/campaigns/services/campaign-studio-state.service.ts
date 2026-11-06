@@ -584,6 +584,8 @@ export interface CampaignLocation {
   city?:  string;
 }
 
+export type StudioCanvasArea = 'opening' | 'nav' | 'footer' | 'title' | 'subtitle' | 'logo' | 'hero-cta';
+
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
@@ -1276,10 +1278,11 @@ export class CampaignStudioStateService {
   requestFocusBlock(id: string, type: BlockType): void { this._focusBlockRequest.next({ id, type }); }
 
   // Page areas clicked on the canvas (Studio): the opening (Hero), the campaign
-  // navigation bar and the footer.
-  private _focusAreaRequest = new Subject<'opening' | 'nav' | 'footer'>();
+  // navigation bar, the footer, and the opening's own parts (title, subtitle,
+  // logo, Hero button) so each opens its own editor.
+  private _focusAreaRequest = new Subject<StudioCanvasArea>();
   readonly focusAreaRequest$ = this._focusAreaRequest.asObservable();
-  requestFocusArea(area: 'opening' | 'nav' | 'footer'): void { this._focusAreaRequest.next(area); }
+  requestFocusArea(area: StudioCanvasArea): void { this._focusAreaRequest.next(area); }
 
   // Replaces the draft without touching edit mode or anything else (Studio
   // undo/redo restores a snapshot through this).

@@ -221,7 +221,7 @@
           [class.hm-logo-above-badge--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
           [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'"
           [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-          (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
+          [attr.data-studio-part]="pageBuilderActive ? 'logo' : null" (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
           <img *ngIf="resolvedEntityLogo(draft)"
                class="hm-logo-above-img"
                [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
@@ -262,12 +262,12 @@
     <h1 *ngIf="draft.layout.heroTitlePosition === 'above'" class="hm-hero-title-external"
       [style.textAlign]="heroTextAlign(draft, 'title', false)"
       [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-      (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
       [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'above' && draft.shortDescription" class="hm-hero-subtitle-external"
       [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
       [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-      (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
       [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'above' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
@@ -287,7 +287,7 @@
           <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title"
             [style.textAlign]="heroTextAlign(draft, 'title', true)" [style.alignSelf]="heroTextAlign(draft, 'title', true) ? 'stretch' : null"
             [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-            (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+            [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
             [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', true)">
             {{ draft.title }}
             <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
@@ -295,7 +295,7 @@
           <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription"
             [style.textAlign]="heroTextAlign(draft, 'subtitle', true)" [style.alignSelf]="heroTextAlign(draft, 'subtitle', true) ? 'stretch' : null"
             [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-            (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+            [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
             [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', true)">
             {{ draft.shortDescription }}
             <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
@@ -317,7 +317,7 @@
                has no ctaAction field (unlike the generic cta block), so it's
                always donation-oriented by design. `?.` guards campaigns
                saved before this field existed. -->
-          <div class="hm-hero-cta-wrap cta-btn-wrap" *ngIf="draft.heroCtaConfig?.visible"
+          <div class="hm-hero-cta-wrap cta-btn-wrap" *ngIf="draft.heroCtaConfig?.visible" [attr.data-studio-part]="pageBuilderActive ? 'hero-cta' : null"
             [style.justifyContent]="ctaAlignStyle(draft.heroCtaConfig.align)">
             <button class="cta-btn" type="button" [style.background]="draft.heroCtaConfig.color"
               (click)="scrollToDonation()">
@@ -341,7 +341,7 @@
              [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
              [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'"
              [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-             (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
+             [attr.data-studio-part]="pageBuilderActive ? 'logo' : null" (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
           <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
           <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
           <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הלוגו" title="הסתרה" (click)="hideHeroPart($event, 'logo')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
@@ -394,12 +394,12 @@
     <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
       [style.textAlign]="heroTextAlign(draft, 'title', false)"
       [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-      (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
       [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
       [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
       [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
-      (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
       [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'below' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>

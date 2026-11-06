@@ -128,6 +128,7 @@
 }
 .canvas-hint lucide-icon { color: var(--hm-brand-600, #6236ed); }
 .canvas-frame {
+  position: relative;
   width: 100%; max-width: 1200px; flex-shrink: 0;
   background: #fff; border-radius: 12px; overflow: hidden;
   box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 12px 32px rgba(15,23,42,.10);
@@ -285,3 +286,33 @@
 .studio--fullscreen .tool-btn--text { background: #1e293b; border-color: #334155; }
 .studio--fullscreen .tool-btn:not(.tool-btn--publish):hover:not(:disabled) { background: #334155; color: #c4b5fd; }
 .studio--fullscreen .tool-divider { background: #334155; }
+
+/* Opening parts listed under the opening in the tree. */
+.tree-row--part { padding-inline-start: 28px; }
+
+/* Text, size and position of one opening part (properties panel). */
+.part-row { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.part-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.part-chip {
+  height: 28px; padding: 0 10px; border: 1px solid var(--hm-border, #e2e8f0); border-radius: 6px;
+  background: #fff; color: #334155; font: inherit; font-size: 13px; cursor: pointer;
+}
+.part-chip.is-active { background: var(--primary-color, #583cd6); border-color: var(--primary-color, #583cd6); color: #fff; }
+
+/* Floating toolbar next to the selected canvas element (placed by placeFloatBar). */
+.float-bar {
+  position: absolute; z-index: 20; visibility: hidden;
+  display: flex; gap: 2px; padding: 3px;
+  background: #0f172a; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, .25);
+  direction: rtl;
+}
+.float-btn {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: none; border-radius: 6px; background: transparent; color: #e2e8f0; cursor: pointer;
+}
+.float-btn:hover:not(:disabled) { background: #334155; }
+.float-btn.is-active { background: var(--hm-brand-600, #6236ed); color: #fff; }
+.float-btn:disabled { opacity: .35; cursor: default; }
+.float-btn--danger:hover:not(:disabled) { background: #b91c1c; }
+.canvas-frame ::ng-deep [data-studio-part="hero-cta"] { cursor: pointer; }

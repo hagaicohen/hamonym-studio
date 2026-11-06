@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, AfterViewInit, Input, HostListener } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, OnDestroy, AfterViewInit, Input, HostListener } from '@angular/core';
 import { withStudioPlaceholders } from '../../canvas/studio-placeholders';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
@@ -19,6 +19,7 @@ import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposit
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 import {
   CampaignStudioStateService,
+  StudioCanvasArea,
   CampaignDraft,
   CampaignBlock,
   BlockType,
@@ -62,6 +63,10 @@ import { AmbassadorSlugFieldComponent } from '../../../shared/components/ambassa
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 
+// Clicks that keep their own behavior in the Studio canvas (see
+// onCanvasClickCapture): the Studio's controls and in-place previews.
+const STUDIO_CANVAS_CONTROLS = '[data-studio-control], .hm-hero-part-hide, .preview-drag-handle, .tabs-header-btn, .accordion-panel-header';
+
 type HeroPart = 'logo' | 'title' | 'subtitle';
 type HeroPartPlace = 'above' | 'hero' | 'below';
 
@@ -75,7 +80,18 @@ const HERO_TEXT_SIZES: Record<'title' | 'subtitle', Record<'desktop' | 'mobile',
   standalone: true,
   imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-preview.component.html',
-  styleUrl: './campaign-preview.component.css',
+  // One stylesheet split by page area, in the original cascade order (the
+  // Studio-only canvas rules last; their classes appear nowhere else).
+  styleUrls: [
+    './campaign-preview.component.css',
+    './campaign-preview.hero.css',
+    './campaign-preview.donation.css',
+    './campaign-preview.blocks.css',
+    './campaign-preview.rewards.css',
+    './campaign-preview.sections.css',
+    './campaign-preview.page-end.css',
+    './campaign-preview.studio.css',
+  ],
 })
 export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestroy {
   private state           = inject(CampaignStudioStateService);
@@ -688,6 +704,45 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   ngAfterViewInit(): void {
     this.setupStickyObserver();
+    this.host.nativeElement.addEventListener('click', this.onCanvasClickCapture, true);
+  }
+
+  // ── Studio direct editing: a click anywhere on the canvas selects what was
+  // clicked (an opening part, a block or a page area) instead of running it,
+  // so the donate button never opens the real checkout and links never
+  // navigate. Capture phase, so the element's own handler never sees the
+  // click. The Studio's own canvas controls and in-place previews (tabs,
+  // accordion panels) keep working.
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly onCanvasClickCapture = (event: MouseEvent): void => {
+    if (!this.pageBuilderActive) return;
+    const target = event.target as HTMLElement | null;
+    if (!target || target.closest(STUDIO_CANVAS_CONTROLS)) return;
+    const selected = this.selectFromCanvas(target);
+    if (selected || this.isInteractiveClickTarget(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  // Innermost wins: an opening part, then a page area unless it sits inside a
+  // block (a Hero block is edited as that block), then the block.
+  private selectFromCanvas(target: HTMLElement): boolean {
+    const part = target.closest<HTMLElement>('[data-studio-part]');
+    if (part) {
+      this.state.requestFocusArea(part.dataset['studioPart'] as StudioCanvasArea);
+      return true;
+    }
+    const blockEl = target.closest<HTMLElement>('[data-block-id]');
+    const areaEl = target.closest<HTMLElement>('[data-studio-area]');
+    if (areaEl && !(blockEl && areaEl.contains(blockEl)) && !areaEl.parentElement?.closest('[data-block-id]')) {
+      this.state.requestFocusArea(areaEl.dataset['studioArea'] as StudioCanvasArea);
+      return true;
+    }
+    const block = blockEl && this.state.draft.blocks.find(b => b.id === blockEl.dataset['blockId']);
+    if (!block) return false;
+    this.state.requestFocusBlock(block.id, block.type);
+    return true;
   }
 
   // .hm-donate-btn only exists once the async draft$ has resolved and the
@@ -710,6 +765,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngOnDestroy(): void {
+    this.host.nativeElement.removeEventListener('click', this.onCanvasClickCapture, true);
     this.stickyObserver?.disconnect();
     this._destroy$.next();
     this._destroy$.complete();
@@ -878,7 +934,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     let blocks: CampaignBlock[];
     if (railId) {
       const container = draft.blocks.find(b => b.id === railId);
-      blocks = container ? this.childBlocks(container, draft) : [];
+      blocks = [...(container ? this.childBlocks(container, draft) : []), ...this.railOrphans(draft, 'sidebar')];
     } else {
       const childIds = this.topLevelChildIds(draft);
       blocks = draft.blocks
@@ -918,7 +974,21 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     const railId = this.railZoneContainerId(draft, 'main');
     if (!railId) return [];
     const container = draft.blocks.find(b => b.id === railId);
-    return container ? this.childBlocks(container, draft) : [];
+    return [...(container ? this.childBlocks(container, draft) : []), ...this.railOrphans(draft, 'main')];
+  }
+
+  // A visible block left at the page's top level in a railZone layout (e.g.
+  // dropped there before railZoneDropTarget existed) would otherwise render
+  // nowhere: the donation box and stats go to the rail, any other non-full-
+  // width block to the main column, after that column's own blocks.
+  private railOrphans(draft: CampaignDraft, zone: 'sidebar' | 'main'): CampaignBlock[] {
+    if (!this.railZoneContainerId(draft, 'sidebar') || !this.railZoneContainerId(draft, 'main')) return [];
+    const childIds = this.topLevelChildIds(draft);
+    return draft.blocks
+      .filter(b => b.visible && !childIds.has(b.id) && !(b.type === 'container' && (b.data as ContainerBlockData).railZone)
+        && !this.FULL_WIDTH_TYPES.includes(b.type)
+        && (zone === 'sidebar') === this.SIDEBAR_TYPES.includes(b.type))
+      .sort((a, b) => a.order - b.order);
   }
 
   hasMainContainer(draft: CampaignDraft): boolean {
@@ -1043,7 +1113,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     const hitEl = el.closest('[data-block-id]') as HTMLElement | null;
-    if (!hitEl) return null;
+    if (!hitEl) return this.railZoneDropTarget(el, clientX, clientY, draft);
 
     const blockId = hitEl.getAttribute('data-block-id')!;
     const block = draft.blocks.find(b => b.id === blockId);
@@ -1098,6 +1168,33 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       indicatorRect: { top: lineY - 1, left: rect.left, width: rect.width, height: 2 },
       mode: 'line-h',
     };
+  }
+
+  // Sidebar layouts whose columns are railZone containers render only those
+  // containers' children, never the page's top level. A drop on a column's
+  // empty space (below its last block, or the gap under the shorter column)
+  // appends to that column; the top-level fallback would make the block
+  // vanish from the page. The column containing the point wins; in the gap
+  // under the shorter column (desktop) it's the one under the cursor's x.
+  private railZoneDropTarget(el: HTMLElement, clientX: number, clientY: number, draft: CampaignDraft):
+    { parentId: string | null; index: number; indicatorRect: { top: number; left: number; width: number; height: number }; mode: 'line-h' | 'line-v' | 'box' } | null {
+    const layout = el.closest('.page-layout-sidebar');
+    if (!layout) return null;
+    const columns = ([['sidebar', '.sidebar-rail'], ['main', '.sidebar-main']] as const)
+      .map(([zone, selector]) => ({ column: layout.querySelector<HTMLElement>(`:scope > ${selector}`), containerId: this.railZoneContainerId(draft, zone) }))
+      .filter((c): c is { column: HTMLElement; containerId: string } => !!c.column && !!c.containerId)
+      .map(c => ({ ...c, rect: c.column.getBoundingClientRect() }));
+    const inX = (r: DOMRect) => clientX >= r.left && clientX <= r.right;
+    const hit = columns.find(c => inX(c.rect) && clientY >= c.rect.top && clientY <= c.rect.bottom)
+      ?? (columns.filter(c => inX(c.rect)).length === 1 ? columns.find(c => inX(c.rect)) : undefined);
+    if (hit) {
+      const { column, containerId, rect } = hit;
+      const children = this.scopeBlocksAll(containerId, draft);
+      const last = children.length ? column.querySelector(`[data-block-id="${CSS.escape(children[children.length - 1].id)}"]`) : null;
+      const bottom = (last ?? column).getBoundingClientRect().bottom;
+      return { parentId: containerId, index: children.length, indicatorRect: { top: bottom - 1, left: rect.left, width: rect.width, height: 2 }, mode: 'line-h' };
+    }
+    return null;
   }
 
   // The scroll wrapper is named differently per host page — .preview-inner
@@ -1157,15 +1254,19 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     // or the empty-state hint on a brand-new page) — append at the very
     // end of the flat top-level scope instead of showing no feedback at all.
     if (!target) {
-      const scope = this.scopeBlocksAll(null, draft);
+      // Into the main column when the page has one (see railZoneDropTarget);
+      // full-width sections still render from the top level below it.
+      const draggedType = this.draggingType ?? draft.blocks.find(b => b.id === this.draggingExistingId)?.type;
+      const fallbackParent = draggedType && !this.FULL_WIDTH_TYPES.includes(draggedType) ? this.railZoneContainerId(draft, 'main') : null;
+      const scope = this.scopeBlocksAll(fallbackParent, draft);
       const lastEl = scope.length
         ? document.querySelector(`[data-block-id="${scope[scope.length - 1].id}"]`)
         : document.querySelector('.empty-state, .campaign-page');
       const rect = lastEl?.getBoundingClientRect();
       if (rect) {
         target = scope.length
-          ? { parentId: null, index: scope.length, indicatorRect: { top: rect.bottom - 1, left: rect.left, width: rect.width, height: 2 }, mode: 'line-h' }
-          : { parentId: null, index: 0, indicatorRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, mode: 'box' };
+          ? { parentId: fallbackParent, index: scope.length, indicatorRect: { top: rect.bottom - 1, left: rect.left, width: rect.width, height: 2 }, mode: 'line-h' }
+          : { parentId: fallbackParent, index: 0, indicatorRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, mode: 'box' };
       }
     }
 

@@ -1,0 +1,750 @@
+/* Campaign preview — rewards section and cards. */
+
+/* ══ REWARDS SECTION ══ */
+.hm-rewards {
+  background: var(--hm-rewards-bg, #06351f);
+  color: #fff;
+  padding: 40px clamp(16px, 5vw, 48px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  /* Phase 3A -- same Assistant note as .hm-stats/.hm-donate above (never
+     actually loaded, so this fallback already renders as Heebo today). */
+  font-family: var(--hm-font-family, 'Assistant', 'Heebo', sans-serif);
+}
+.hm-rewards h2 {
+  color: #fff;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 900;
+  text-align: center;
+  margin: 0 0 36px;
+}
+
+/* Empty state */
+.hm-rewards-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+.hm-rewards-empty-icon { font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.5; }
+.hm-rewards-empty p {
+  color: rgba(255,255,255,0.55);
+  font-size: 14px; margin: 0;
+}
+
+/* Rewards browsing controls (2026-10-04, tidied 2026-10-06) -- light-on-dark,
+   matching this section's own always-dark background (.hm-rewards above) and
+   the semi-transparent-white treatment .hm-reward-card already uses. Grouped
+   inside one visible "toolbar" surface (background+border+radius below) so
+   the three controls read as one coherent filter bar instead of three loose
+   floating elements; all three share the same height/padding rhythm for the
+   same reason. */
+.hm-reward-filters {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  max-width: 1200px; margin: 0 auto 16px; padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.hm-reward-filters--compact { gap: 8px; flex-direction: column; align-items: stretch; padding: 10px; }
+.hm-reward-filter-search,
+.hm-reward-filter-select {
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px; font-size: 13px; font-family: inherit;
+  background: rgba(255,255,255,0.08); color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.2); border-radius: 8px;
+}
+.hm-reward-filter-search { flex: 1 1 160px; min-width: 140px; }
+.hm-reward-filter-search::placeholder { color: rgba(255,255,255,0.5); }
+.hm-reward-filter-select { flex: 0 0 auto; }
+.hm-reward-filter-select option { color: #0f172a; }
+/* Dropdown panels follow the campaign theme rather than the studio purple. */
+select { --hm-select-accent: var(--hm-primary); }
+/* margin-right: auto pushes this item to the strip's far end (left, given
+   the inherited RTL flex direction -- first DOM child/search renders on the
+   right) so "הצג רק זמינות" reads as a distinct toggle, not just a third
+   item crowded against the sort dropdown. */
+.hm-reward-filter-toggle {
+  display: flex; align-items: center; gap: 6px; font-size: 13px;
+  color: rgba(255,255,255,0.85); cursor: pointer;
+  height: 36px; margin-right: auto; flex: 0 0 auto;
+}
+/* Native checkboxes have no reliable intrinsic size across browsers/zoom
+   levels once nothing else on the page constrains them -- pin it explicitly
+   rather than leaving it to render at whatever size the UA/zoom happens to
+   pick (reported as "huge and illogical" at default size here). */
+.hm-reward-filter-toggle input[type="checkbox"] {
+  width: 16px; height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #fff;
+  cursor: pointer;
+}
+.hm-reward-filters--compact .hm-reward-filter-select,
+.hm-reward-filters--compact .hm-reward-filter-search { width: 100%; box-sizing: border-box; min-width: 0; }
+/* .hm-reward-filter-search's own `flex: 1 1 160px` (above) is written for
+   the MAIN (non-compact) row layout, where flex-basis/grow act on WIDTH.
+   .hm-reward-filters--compact switches to flex-direction:column, which
+   makes the main axis VERTICAL -- the same `flex: 1 1 160px` then sets
+   flex-basis on HEIGHT instead and lets the input grow to fill the
+   column's remaining space, ballooning it to 160px+ tall (reported as "the
+   search field is too large"). Reset to the select's own flex:0 0 auto so
+   it just takes its natural 36px height here, same as every other compact
+   control. */
+.hm-reward-filters--compact .hm-reward-filter-search { flex: 0 0 auto; }
+.hm-reward-filters--compact .hm-reward-filter-toggle { margin-right: 0; }
+/* Light-theme override for the sidebar placement (2026-10-06) -- the
+   defaults above are light-on-dark, built for .hm-rewards's own always-dark
+   background; once Rewards sits in the sidebar it now renders on a white
+   card (.hm-rewards--sidebar-list, see its own comment), so white text on a
+   barely-there white-tinted border/background would be close to invisible
+   there. Matches the existing light-theme compact controls already used by
+   Ambassadors/Donors in the sidebar (.hm-amb-compact-search etc.). */
+.hm-reward-filters--compact {
+  background: transparent;
+  border: none;
+}
+.hm-reward-filters--compact .hm-reward-filter-search,
+.hm-reward-filters--compact .hm-reward-filter-select {
+  background: #ffffff;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.hm-reward-filters--compact .hm-reward-filter-search::placeholder { color: #94a3b8; }
+.hm-reward-filters--compact .hm-reward-filter-toggle { color: #334155; }
+.hm-reward-filters--compact .hm-reward-filter-toggle input[type="checkbox"] { accent-color: var(--hm-primary, #583cd6); }
+.hm-rewards--sidebar-list .hm-reward-filter-empty { color: #94a3b8; }
+.hm-reward-filter-empty {
+  text-align: center; padding: 24px 16px; color: rgba(255,255,255,0.6); font-size: 14px;
+}
+.hm-reward-filter-empty button {
+  display: block; margin: 8px auto 0; background: none; border: none;
+  color: #fff; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0;
+}
+.hm-rewards--sidebar-list .hm-reward-filter-empty button { color: var(--hm-primary, #583cd6); }
+.hm-reward-stock-badge--sold-out { color: #fca5a5; font-weight: 700; }
+
+/* ── Rewards: sidebar placement (compact vertical list, no carousel) ──
+   Sits inside .sidebar-rail-inner alongside .hm-stats/.hm-donate — matches
+   their white-card look (background/border/radius/shadow, see their own
+   shared rule) instead of the full-width dark-green section styling above.
+   See DECISIONS.md (2026-07-26). Previously went fully transparent with
+   padding:0, relying only on .sidebar-rail-inner's 16px gap for separation
+   from whatever sidebar section sits next to it -- with no visible boundary
+   of its own, stacking it next to Ambassadors/Donors read as one continuous
+   list rather than distinct sections (2026-10-06 visual QA). */
+.hm-rewards--sidebar-list {
+  background: #ffffff;
+  color: inherit;
+  border-radius: var(--hm-card-radius, 8px);
+  box-shadow: var(--hm-card-shadow, none);
+  border: 1px solid var(--line, #e2e8f0);
+  padding: 20px 18px;
+}
+.hm-rewards--sidebar-list h2 {
+  color: #0f2747;
+  font-size: 16px;
+  text-align: center;
+  margin: 0 0 14px;
+}
+/* .hm-rewards-empty's own p/icon were styled for the dark main-section
+   background (white text at reduced opacity) -- need a dark-on-light
+   equivalent now that the sidebar placement is a white card. */
+.hm-rewards--sidebar-list .hm-rewards-empty p { color: #94a3b8; }
+.hm-rewards--sidebar-list .hm-rewards-empty-icon { opacity: 0.6; }
+.hm-reward-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hm-reward-list-card {
+  background: #ffffff;
+  border: 1.5px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.hm-reward-list-card.is-selected { border-color: var(--hm-reward-border-active, #6fc9eb); border-width: 2px; }
+/* Hover — swap the card's and button's colors (card takes the "נבחר/Hover"
+   theme color, button flips to white) instead of just outlining, per the
+   reference design. Skipped while the "added to cart" overlay covers the
+   card (.is-selected) — that state already has its own green treatment. */
+.hm-reward-list-card:not(.is-selected):hover {
+  background: var(--hm-reward-border-active, #6fc9eb);
+  border-color: var(--hm-reward-border-active, #6fc9eb);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-list-title-row h3,
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-list-price-top,
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-list-desc,
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-list-more {
+  color: #ffffff;
+}
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-icon-wrap {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.5);
+  color: #ffffff;
+}
+.hm-reward-list-card:not(.is-selected):hover .hm-reward-list-btn {
+  background: #ffffff;
+  color: var(--hm-reward-border-active, #6fc9eb);
+}
+.hm-reward-list-card .hm-reward-badge { top: -12px; font-size: 10px; padding: 3px 10px; }
+
+/* Fixed order: price → title(+icon) → image → description */
+.hm-reward-list-price-top {
+  font-size: 16px; font-weight: 900; color: var(--hm-secondary, #6fc9eb);
+  line-height: 1.2; margin-bottom: 4px;
+}
+.hm-reward-list-title-row {
+  margin-bottom: 10px;
+}
+.hm-reward-list-title-row h3 {
+  font-size: 14px; font-weight: 800; color: var(--hm-reward-title, #0f2747);
+  line-height: 1.35;
+  margin: 0;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.hm-reward-list-icon-row {
+  display: flex; justify-content: center;
+  margin-bottom: 10px;
+}
+.hm-reward-list-card .hm-reward-icon-wrap--center {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: #f8fafc;
+  border: 1px solid var(--line, #e2e8f0);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+.hm-reward-list-card .hm-reward-icon-wrap--center .hm-reward-avatar-icon { font-size: 26px; }
+.hm-reward-list-desc {
+  font-size: 12px; color: var(--hm-reward-desc, #64748b); line-height: 1.5;
+  margin: 0 0 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hm-reward-list-more {
+  display: block;
+  background: none; border: none; padding: 0; margin: 0 0 12px;
+  font-size: 11px; font-weight: 700; color: var(--hm-secondary, #6fc9eb);
+  cursor: pointer; font-family: inherit; text-decoration: underline;
+}
+.hm-reward-list-card .hm-reward-partner-link {
+  margin-top: 0;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+/* Full image row ('full' mode, the default) — height comes from
+   rewardsImageSize via an inline style, deliberately modest by default
+   (120px) rather than a large fixed banner. */
+.hm-reward-list-img {
+  width: 100%; border-radius: 8px; overflow: hidden;
+  margin-bottom: 10px;
+}
+.hm-reward-list-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hm-reward-list-btn {
+  width: 100%; padding: 9px; border: none; border-radius: 8px;
+  background: var(--hm-reward-button, var(--hm-secondary, #6fc9eb)); color: #fff;
+  font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
+}
+.hm-reward-list-card.is-selected .hm-reward-list-btn { background: #16a34a; }
+
+/* ── Reward details modal (opened from "לפרטים נוספים") — reuses the
+   ambassador join-modal's overlay/panel/header/body/footer shell. ── */
+.hm-reward-details-img {
+  width: 100%; aspect-ratio: 16/9; border-radius: 12px; object-fit: cover;
+  margin-bottom: 4px;
+}
+.hm-reward-details-price {
+  font-size: 20px; font-weight: 900; color: var(--hm-secondary, #6fc9eb);
+}
+.hm-reward-details-desc {
+  font-size: 14px; color: #374151; line-height: 1.6; margin: 0;
+}
+.hm-reward-details-list {
+  margin: 0; padding-inline-start: 20px;
+  font-size: 14px; color: #374151; line-height: 1.8;
+}
+.hm-reward-details-list li { margin-bottom: 4px; }
+
+/* The "added to cart" overlay (.hm-reward-overlay etc.) is sized for the
+   much taller carousel card (~216px of padding+content) — the compact
+   sidebar card is only ~150px tall, so it needs its own smaller version or
+   the content overflows/looks clipped. */
+.hm-reward-list-card { min-height: 160px; }
+.hm-reward-list-card .hm-reward-overlay { padding: 14px 12px; gap: 6px; }
+.hm-reward-list-card .hm-reward-overlay-check { width: 34px; height: 34px; font-size: 16px; box-shadow: 0 0 0 5px rgba(34,197,94,0.18); }
+.hm-reward-list-card .hm-reward-overlay-title { font-size: 13px; }
+.hm-reward-list-card .hm-reward-overlay-sub { font-size: 11px; }
+.hm-reward-list-card .hm-overlay-continue-btn,
+.hm-reward-list-card .hm-overlay-cancel-btn { padding: 8px 6px; font-size: 11px; border-radius: 8px; }
+
+/* Slider outer */
+.hm-slider-outer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hm-slider-arrow {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 22px; line-height: 1;
+  display: grid; place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.hm-slider-arrow:hover { background: rgba(255,255,255,0.25); }
+
+.hm-reward-slider {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none; -ms-overflow-style: none;
+  padding: 24px 4px 16px;
+}
+.hm-reward-slider::-webkit-scrollbar { display: none; }
+
+.hm-slider-track {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 20px;
+  padding: 0 2px;
+  direction: rtl;
+  min-width: 100%;
+  justify-content: center;
+}
+@supports (justify-content: safe center) {
+  .hm-slider-track { justify-content: safe center; }
+}
+
+/* Section Presentation (2026-10-03) -- Cards/Image presentation placed in
+   the sidebar: same .hm-reward-card/.hm-reward-card--img markup, but
+   stacked vertically full-width instead of a horizontal scroll-slider (too
+   narrow a column to scroll sideways through 3-up cards). The slider's own
+   prev/next arrows are hidden via *ngIf in the template for this case. */
+.hm-rewards--sidebar-list .hm-reward-slider { overflow: visible; padding: 0; }
+.hm-rewards--sidebar-list .hm-slider-track { flex-direction: column; min-width: 0; }
+.hm-rewards--sidebar-list .hm-reward-card { flex: none; width: 100%; min-width: 0; }
+
+/* ── Reward card ── */
+.hm-reward-card {
+  flex: 0 0 calc((100% - 40px) / 3);
+  min-width: 240px;
+  align-self: stretch;
+  scroll-snap-align: start;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid var(--hm-reward-border, rgba(255,255,255,.15));
+  /* Phase 3A -- the third of the three high-visibility card surfaces this
+     phase connects. box-shadow here is the RESTING state only; :hover
+     below already has its own distinct interaction shadow (focus ring +
+     lift) and is untouched. */
+  border-radius: var(--hm-card-radius, 20px);
+  box-shadow: var(--hm-card-shadow, none);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.hm-reward-card:hover {
+  border-color: var(--hm-reward-border-active, #7DD3FC);
+  box-shadow: 0 0 0 1px var(--hm-reward-border-active, #7DD3FC), 0 8px 32px rgba(0,0,0,0.3);
+  transform: translateY(-3px);
+}
+.hm-reward-card.is-featured {
+  border-color: var(--hm-reward-border-active, #7DD3FC);
+  box-shadow: 0 0 0 1px var(--hm-reward-border-active, #7DD3FC), 0 12px 40px rgba(0,0,0,0.35);
+}
+
+/* Featured badge */
+.hm-reward-badge {
+  position: absolute;
+  top: -15px;
+  right: 50%;
+  transform: translateX(50%);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(217,119,6,0.5);
+}
+
+/* ── Image-layout reward card ── */
+.hm-reward-card--img {
+  flex: 0 0 320px;
+  min-width: 320px;
+  padding: 0;
+  overflow: visible;   /* keep badge visible above card */
+}
+.hm-reward-price-top {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--hm-secondary, #7DD3FC);
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--hm-reward-border, rgba(255,255,255,.15));
+  border-radius: 20px 20px 0 0;
+}
+.hm-reward-img-hero {
+  width: 100%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.hm-reward-img-hero img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.hm-reward-img-hero-placeholder { font-size: 52px; opacity: 0.5; }
+
+/* Image-layout body: centered title, justified description, compact padding */
+.hm-reward-card--img .hm-reward-body {
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+  padding-top: 10px;
+  padding-bottom: 14px;
+}
+.hm-reward-card--img .hm-reward-body h3 {
+  text-align: center;
+}
+.hm-reward-card--img .hm-reward-body p {
+  text-align: justify;
+}
+
+/* Mobile: image cards also scroll nicely */
+.campaign-page--mobile .hm-reward-card--img { flex: 0 0 82vw; min-width: 82vw; }
+
+/* Card top: icon + price */
+.hm-reward-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 20px 12px;
+  gap: 8px;
+  flex-direction: row-reverse;
+
+}
+.hm-reward-icon-wrap {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.hm-reward-img-small {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.hm-reward-avatar-icon { font-size: 26px; }
+
+.hm-reward-price {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--hm-secondary, #7DD3FC);
+  line-height: 1;
+  direction: rtl;
+}
+
+/* Card body */
+.hm-reward-body {
+  padding: 4px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.hm-reward-body h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hm-reward-title, #fff);
+  margin: 0 0 10px;
+  line-height: 1.4;
+  text-align: right;
+}
+.hm-reward-body p {
+  font-size: 13px;
+  color: var(--hm-reward-desc, rgba(255,255,255,0.6));
+  line-height: 1.65;
+  margin: 0 0 8px;
+}
+.hm-reward-desc--clamped {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.hm-reward-more-btn {
+  background: none;
+  border: none;
+  color: var(--hm-reward-border-active, #7DD3FC);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 14px;
+  font-family: inherit;
+  direction: rtl;
+  text-align: right;
+  display: block;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.hm-reward-more-btn:hover { opacity: 1; }
+/* ── Select hint (unselected state) ── */
+.hm-reward-select-hint {
+  margin-top: auto;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.55);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+.hm-reward-card:hover .hm-reward-select-hint {
+  border-color: var(--hm-reward-border-active, #7DD3FC);
+  color: var(--hm-reward-border-active, #7DD3FC);
+}
+
+/* "🤝 בשיתוף עם X" — reward → Partner public page (Sprint 5.2). Distinct
+   from "לפרטים נוספים" on purpose — one is about the reward, this is about
+   who's behind it (§12: two separate questions, two separate entry points). */
+.hm-reward-partner-link {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-primary, #7c3aed);
+  text-decoration: underline;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+/* "X רכשו מתוך Y" — live purchase count against a reward's optional
+   quantity limit (offering.stock). */
+.hm-reward-stock-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-muted-text, #94a3b8);
+  background: var(--hm-reward-stock-bg, rgba(148, 163, 184, 0.15));
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin: 4px 0;
+}
+
+/* ── Sold-out visual treatment (2026-10-06) ── dims every other direct
+   child of the card via the :not() exception below, while this overlay
+   itself stays full-color/crisp on top of that dimmed content -- a `filter`
+   set directly on the card element would instead rasterize the WHOLE
+   subtree including this overlay, making the "הפריט אזל" label itself go
+   gray too, so each real content child is targeted directly via this
+   sibling selector instead of filtering the card as a whole. Covers all
+   three reward card markups (.hm-reward-card, its --img variant, and
+   .hm-reward-list-card) since they all share the same direct-children
+   shape: badge/price/image/body-ish content siblings + this overlay. */
+.hm-reward-card.hm-reward-soldout > *:not(.hm-reward-soldout-overlay),
+.hm-reward-list-card.hm-reward-soldout > *:not(.hm-reward-soldout-overlay) {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.hm-reward-card.hm-reward-soldout,
+.hm-reward-list-card.hm-reward-soldout {
+  cursor: default;
+}
+.hm-reward-soldout-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Informational only -- selectOffering() already no-ops for a sold-out
+     offering regardless of where the click lands, so this never needs to
+     intercept clicks itself. */
+  pointer-events: none;
+}
+.hm-reward-soldout-pill {
+  background: #fff;
+  color: #0f2747;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 22px;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+/* ── Selection overlay ── */
+.hm-reward-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: inherit;
+  background: rgba(0, 18, 10, 0.9);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 20px;
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.hm-reward-overlay-check {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 8px rgba(34,197,94,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  font-weight: 900;
+}
+
+.hm-reward-overlay-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  text-align: center;
+}
+
+.hm-reward-overlay-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  margin: 0;
+  text-align: center;
+}
+
+.hm-reward-overlay-btns {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.hm-overlay-continue-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border: none;
+  border-radius: 10px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  direction: rtl;
+}
+.hm-overlay-continue-btn:hover { background: #16a34a; }
+
+.hm-overlay-cancel-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  direction: rtl;
+}
+.hm-overlay-cancel-btn:hover {
+  border-color: rgba(255,255,255,0.6);
+  color: #fff;
+}
+
+.hm-reward-select-btn {
+  margin-top: auto;
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: transparent;
+  color: rgba(255,255,255,0.9);
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.hm-reward-select-btn.selected {
+  background: rgba(255,255,255,0.18);
+  border-color: #fff;
+  color: #fff;
+}
+.hm-reward-card.is-selected {
+  border-color: #fff !important;
+  box-shadow: 0 0 0 2px #fff, 0 12px 40px rgba(0,0,0,0.35) !important;
+}
+.hm-reward-card:hover .hm-reward-select-btn {
+  border-color: var(--hm-reward-border-active, #7DD3FC);
+  color: var(--hm-reward-border-active, #7DD3FC);
+}
+.hm-reward-card.is-featured .hm-reward-select-btn {
+  background: var(--hm-reward-border-active, #7DD3FC);
+  border-color: transparent;
+  color: #014737;
+  font-weight: 900;
+}
+
+/* ── MOBILE ── */
+.campaign-page--mobile .hm-rewards {
+  padding: 40px 0 32px;
+}
+.campaign-page--mobile .hm-rewards h2 {
+  padding: 0 16px;
+}
+.campaign-page--mobile .hm-slider-outer {
+  max-width: 100%;
+  padding: 0 4px;
+  gap: 8px;
+}
+.campaign-page--mobile .hm-reward-slider {
+  padding: 20px 0 16px;
+}
+.campaign-page--mobile .hm-slider-track {
+  gap: 12px;
+}
+.campaign-page--mobile .hm-reward-card {
+  flex: 0 0 88%;
+  min-width: 88%;
+  border-radius: 16px;
+}
