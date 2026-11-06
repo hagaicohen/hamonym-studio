@@ -57,32 +57,20 @@ exports.createBilling =
 
       );
 
+    // Outcome only: the response carries the reusable card token, which must
+    // never reach the logs.
     console.log(
-
       'GET LP RESULT',
-
-      JSON.stringify(
-        response.data,
-        null,
-        2
-      )
-
+      JSON.stringify({
+        responseCode: response.data?.ResponseCode,
+        description: response.data?.Description,
+        operation: response.data?.Operation,
+        hasToken: !!(response.data?.TokenInfo?.Token || response.data?.TranzactionInfo?.Token),
+      })
     );
 
     const result =
       response.data;
-
-    console.log(
-
-      'FULL RESULT',
-
-      JSON.stringify(
-        result,
-        null,
-        2
-      )
-
-    );
 
     /* =========================
        VALIDATION

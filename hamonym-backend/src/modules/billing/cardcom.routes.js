@@ -52,8 +52,6 @@ router.post(
 
         terminalNumber,
 
-        apiName,
-
         environment
       });
 
@@ -129,7 +127,10 @@ router.post(
 
       console.log(
         'CARDCOM RESPONSE',
-        response.data
+        {
+          responseCode: response.data?.ResponseCode,
+          description: response.data?.Description
+        }
       );
 
       /* =========================
@@ -167,10 +168,43 @@ router.post(
 
     } catch (err) {
 
+      // CardCom answers a rejected login (e.g. 603) with HTTP 401, which
+      // axios throws. Only the code and description are logged: the axios
+      // error itself carries the request body, including ApiPassword.
+      const cardcomError =
+        err?.response?.data;
+
       console.error(
         'CARDCOM TEST ERROR',
-        err?.response?.data || err
+        {
+          status: err?.response?.status,
+          code: err?.code,
+          responseCode: cardcomError?.ResponseCode,
+          description: cardcomError?.Description
+        }
       );
+
+      if (cardcomError?.Description) {
+
+        return res.json({
+
+          success: false,
+
+          message:
+            `${cardcomError.Description} (קוד ${cardcomError.ResponseCode})`
+        });
+      }
+
+      if (err?.response || err?.code) {
+
+        return res.status(502).json({
+
+          success: false,
+
+          message:
+            'לא ניתן להתחבר לקארדקום כרגע. נסו שוב בעוד מספר דקות.'
+        });
+      }
 
       return res.status(500).json({
 
