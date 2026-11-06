@@ -638,7 +638,11 @@ export function resolveSectionSurfaceColors(
 // (campaign-studio-state.service.ts) -- declared again here rather than
 // imported, so this file (already imported BY that service) never needs a
 // circular reference just for one type name.
-export type ConversionWidgetLayout = 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
+export type ConversionWidgetLayout = 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal' | 'compact-bar' | 'conversion-first' | 'modern';
+
+// The donation card itself carries the progress summary in these, so the
+// separate stats block is not rendered on its own. Never a Style default.
+export const MERGED_DONATION_LAYOUTS: readonly ConversionWidgetLayout[] = ['compact-bar', 'conversion-first', 'modern'];
 
 // Render-time resolution ONLY -- verified in the actual code before this was
 // approved (2026-09-29): conversionWidgetLayout is optional, no template or

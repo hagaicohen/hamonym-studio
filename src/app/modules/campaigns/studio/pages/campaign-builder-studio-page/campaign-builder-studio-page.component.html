@@ -36,12 +36,10 @@
             <span>פרסום</span>
           </button>
           <span class="tool-divider" aria-hidden="true"></span>
-          @if (!isMinimal(draft)) {
           <button type="button" class="tool-btn tool-btn--text" (click)="showTemplatePicker = true">
             <lucide-icon [img]="icons.LayoutTemplate" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" />
             <span>תבנית</span>
           </button>
-          }
           <span class="tool-divider" aria-hidden="true"></span>
         </span>
       </app-campaign-studio-topbar>
@@ -327,7 +325,7 @@
       <app-template-picker (templateSelected)="onStartTemplateSelected($event)" (skipped)="showStartTemplatePicker = false" />
     }
     @if (showTemplatePicker) {
-      <app-template-picker mode="switch" (templateSelected)="onTemplateSelected($event)" (skipped)="showTemplatePicker = false" />
+      <app-template-picker mode="switch" [offerQuickDonation]="true" [currentTemplateId]="draft.layout.templateId ?? null" (templateSelected)="onTemplateSelected($event)" (skipped)="showTemplatePicker = false" />
     }
   }
 } }

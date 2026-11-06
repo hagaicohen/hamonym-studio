@@ -219,12 +219,28 @@
           [class.hm-logo-above-badge--square]="draft.heroLogoShape === 'square'"
           [class.hm-logo-above-badge--none]="draft.heroLogoShape === 'none'"
           [class.hm-logo-above-badge--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
-          [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'">
+          [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'"
+          [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+          (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
           <img *ngIf="resolvedEntityLogo(draft)"
                class="hm-logo-above-img"
-               [src]="resolvedEntityLogo(draft)" alt="">
+               [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
           <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
+          <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הלוגו" title="הסתרה" (click)="hideHeroPart($event, 'logo')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         </div>
+      </div>
+    </ng-template>
+
+    <!-- Studio only: drop zones shown while a Hero part (logo, title,
+         subtitle) is being dragged; see onHeroPartDragStart(). -->
+    <ng-template #heroDropStripTpl let-place="place" let-label="label">
+      <div class="hm-hero-dropstrip" [class.hm-hero-dropstrip--on-hero]="place === 'hero'">
+        <div *ngFor="let z of heroDropAligns" class="hm-hero-dropzone"
+          [attr.data-drop-zone]="place + '-' + z.align"
+          [class.hm-hero-dropzone--active]="heroDropZone === place + '-' + z.align"
+          (dragover)="onHeroZoneDragOver($event, place + '-' + z.align)"
+          (dragleave)="heroDropZone = null"
+          (drop)="onHeroZoneDrop($event, place, z.align)">{{ label }} · {{ z.label }}</div>
       </div>
     </ng-template>
 
@@ -238,14 +254,21 @@
 
     <!-- Title/subtitle rendered outside the Hero — independent per-field
          position (heroTitlePosition/heroSubtitlePosition), NOT the Hero's own
-         overlay style (heroTextStyle.color is tuned for legibility over a
-         photo and would be invisible on the plain page background here) —
-         only text-align carries over, since that's still meaningful outside
-         the Hero. See CampaignLayout's doc comment. -->
+         overlay style. Align always carries over; size and color only when the
+         manager set the title/subtitle ones explicitly (the legacy shared
+         color is tuned for a photo and is white by default). See
+         heroTextSize()/heroTextColor() and CampaignLayout's doc comment. -->
+    <ng-container *ngIf="heroPartDrag" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'above', label: 'מעל ה-Hero' }"></ng-container>
     <h1 *ngIf="draft.layout.heroTitlePosition === 'above'" class="hm-hero-title-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+      [style.textAlign]="heroTextAlign(draft, 'title', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'above' && draft.shortDescription" class="hm-hero-subtitle-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+      [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'above' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
 
@@ -261,11 +284,21 @@
 
         <!-- Title, subtitle, play button -->
         <div class="hm-hero-copy">
-          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title" [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title"
+            [style.textAlign]="heroTextAlign(draft, 'title', true)" [style.alignSelf]="heroTextAlign(draft, 'title', true) ? 'stretch' : null"
+            [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+            (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+            [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', true)">
             {{ draft.title }}
+            <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
           </h1>
-          <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
+          <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription"
+            [style.textAlign]="heroTextAlign(draft, 'subtitle', true)" [style.alignSelf]="heroTextAlign(draft, 'subtitle', true) ? 'stretch' : null"
+            [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+            (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+            [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', true)">
             {{ draft.shortDescription }}
+            <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
           </p>
           <div class="hm-project-description hm-project-description--in-hero"
             *ngIf="draft.layout.projectDescriptionPosition === 'hero' && draft.layout.projectDescription"
@@ -306,12 +339,17 @@
              [class.hm-hero-org-logo--square]="draft.heroLogoShape === 'square'"
              [class.hm-hero-org-logo--none]="draft.heroLogoShape === 'none'"
              [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
-             [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'">
-          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="">
+             [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'"
+             [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+             (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
+          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
           <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
+          <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הלוגו" title="הסתרה" (click)="hideHeroPart($event, 'logo')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         </div>
 
       </div>
+
+      <ng-container *ngIf="heroPartDrag" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'hero', label: 'ב-Hero' }"></ng-container>
 
       <!-- Meta chips — always visible at the absolute bottom center. Pure
            campaign metadata (end date/category/manager) — meaningless on a
@@ -352,10 +390,17 @@
 
     </section>
 
+    <ng-container *ngIf="heroPartDrag && heroPartDrag !== 'logo'" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'below', label: 'מתחת ל-Hero' }"></ng-container>
     <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+      [style.textAlign]="heroTextAlign(draft, 'title', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+      [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'below' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
 
@@ -1284,10 +1329,49 @@
     [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
     [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
     [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'"
+    [class.conv-merged]="isMergedDonationLayout(draft)"
+    [class.conv-compact-bar]="effectiveDonationComposition(draft) === 'compact-bar'"
+    [class.conv-conversion-first]="effectiveDonationComposition(draft) === 'conversion-first'"
+    [class.conv-modern]="effectiveDonationComposition(draft) === 'modern'"
     data-style-role="container"
     [style.background]="donationContainerBackground(asDonationWidget(block.data))"
     [style.borderColor]="donationContainerBorderColor(asDonationWidget(block.data))"
     [style.borderRadius.px]="donationContainerBorderRadius(asDonationWidget(block.data))">
+    <!-- Merged layouts (compact-bar / conversion-first / modern): the same
+         figures the stats block shows, inside this card. Where it sits and
+         how much weight it gets is CSS (.hm-donate is a flex column):
+         first and condensed, last and secondary, or a header band. -->
+    <div class="hm-donate-progress" *ngIf="isMergedDonationLayout(draft)">
+      <div class="hm-dp-summary">
+        <div class="hm-ring-wrapper hm-dp-ring" *ngIf="effectiveDonationComposition(draft) === 'modern'">
+          <svg class="hm-ring-svg" viewBox="0 0 36 36">
+            <circle class="hm-ring-bg" cx="18" cy="18" r="15" stroke-width="5"/>
+            <circle class="hm-ring-fill" cx="18" cy="18" r="15" stroke-width="5" [attr.stroke-dasharray]="ringDash(draft)" stroke-linecap="round"/>
+          </svg>
+          <div class="hm-ring-text"><strong>{{ raisedPct(draft) }}%</strong><span>מהיעד</span></div>
+        </div>
+        <div class="hm-dp-raised">
+          <span class="hm-dp-label">גויס עד כה</span>
+          <strong class="hm-dp-amount">{{ formatAmount(draft.currentAmount ?? 0) }}</strong>
+          <span class="hm-dp-goal">מתוך {{ formatAmount(draft.targetAmount) }}</span>
+        </div>
+        <span class="hm-dp-pct" *ngIf="effectiveDonationComposition(draft) !== 'modern'">{{ raisedPct(draft) }}%</span>
+      </div>
+      <div class="hm-dp-bar" *ngIf="effectiveDonationComposition(draft) !== 'modern'"
+        role="progressbar" aria-label="התקדמות הגיוס" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="Math.min(100, raisedPct(draft))">
+        <span [style.width.%]="Math.min(100, raisedPct(draft))"></span>
+      </div>
+      <div class="hm-dp-stats">
+        <div class="hm-dp-stat">
+          <strong>{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
+          <span>נותר ליעד</span>
+        </div>
+        <div class="hm-dp-stat" *ngFor="let item of mergedStatItems(draft)">
+          <strong>{{ statValue(item.key, draft) }}</strong>
+          <span>{{ statLabels[item.key] }}</span>
+        </div>
+      </div>
+    </div>
     <!-- "תרמו סכום חופשי לקמפיין" only when a free/custom amount is actually
          allowed (allowCustomAmount) -- this used to key off registrationOptions
          alone, so with custom amount turned off it kept promising a "free
@@ -1435,7 +1519,10 @@
   </div>
 
   <!-- STATS BLOCK -->
-  <div class="hm-stats" *ngIf="block.type === 'stats'"
+  <!-- In a merged donation layout the donation card shows these figures;
+       the marker lets CSS drop this block's now-empty wrapper too. -->
+  <span class="hm-stats-merged" hidden *ngIf="block.type === 'stats' && statsMergedIntoDonation(draft)"></span>
+  <div class="hm-stats" *ngIf="block.type === 'stats' && !statsMergedIntoDonation(draft)"
     [class.conv-unified]="effectiveDonationComposition(draft) === 'unified'"
     [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
     [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"

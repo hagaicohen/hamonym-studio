@@ -43,7 +43,10 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 };
 
 
-export const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments', 'map', 'opening-hours'];
+// 'stats' / 'donation-widget' (2026-11): a page has one donation box and one
+// stats bar; a second copy has no meaning (and the merged donation layouts
+// read the single stats block).
+export const SINGLE_INSTANCE: BlockType[] = ['rewards', 'sponsors', 'ambassadors', 'donors', 'updates', 'hero', 'share', 'comments', 'map', 'opening-hours', 'stats', 'donation-widget'];
 
 // Block groups for the picker UI. Groups/types are filtered per Owner Type
 // (see blockGroups() below) — a group whose types are all unavailable for

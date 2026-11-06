@@ -182,9 +182,8 @@ describe('CampaignPageBuilderStepComponent — Typography Phase A role overrides
     expect(data.textStyles.ambassadorName).toEqual({ color: '#111111', fontWeight: 900 });
   });
 
-  // 11. Two-instance-no-collision — two different blocks of genuinely
-  // repeatable types ('stats'/'donation-widget' are not in SINGLE_INSTANCE)
-  // never share state through the generic updater.
+  // 11. Two-instance-no-collision — two different blocks never share state
+  // through the generic updater.
   it('11. two different block instances keep fully independent textStyles', () => {
     component.updateTextStyleRole('stats1', 'value', { color: '#111111' });
     const data = state.draft.blocks.find(b => b.id === 'stats1')!.data as any;

@@ -702,7 +702,10 @@ export interface CampaignLayout {
   // all three, only markup/CSS differs. Absent/'classic' = today's stacked
   // look for every existing campaign — no migration needed, same pattern as
   // heroPlacement above. See DECISIONS.md (2026-07-26).
-  conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
+  // 'compact-bar' / 'conversion-first' / 'modern' (2026-11) are the merged
+  // layouts: the donation card renders the progress summary itself (see
+  // CampaignPreviewComponent.isMergedDonationLayout).
+  conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal' | 'compact-bar' | 'conversion-first' | 'modern';
   // Campaign Design Evolution Phase 1 (2026-09-29) — see campaign-styles.ts.
   // Both absent = legacy campaign, `theme` below is the one and only source
   // of truth exactly as before. Once campaignStyleId is set, `theme`'s 4
@@ -1300,6 +1303,15 @@ export class CampaignStudioStateService {
   // Duplicates a block (and everything nested in it, with new ids) right after
   // the original, in the same container. Types that may appear once per page
   // are not duplicated.
+  canDuplicateBlock(id: string, singleInstance: BlockType[]): boolean {
+    const blocks = this.draft.blocks;
+    const isParent = (b: CampaignBlock) => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion';
+    const hasSingle = (b: CampaignBlock | undefined): boolean => !!b && (singleInstance.includes(b.type)
+      || (isParent(b) && (b.data as ContainerBlockData).childBlockIds.some(cid => hasSingle(blocks.find(x => x.id === cid)))));
+    const block = blocks.find(b => b.id === id);
+    return !!block && !hasSingle(block);
+  }
+
   duplicateBlock(id: string, singleInstance: BlockType[]): string | null {
     const blocks = this.draft.blocks;
     const original = blocks.find(b => b.id === id);
@@ -1311,7 +1323,10 @@ export class CampaignStudioStateService {
       const kids = isParent(b) ? (b.data as ContainerBlockData).childBlockIds.map(cid => blocks.find(x => x.id === cid)).filter((x): x is CampaignBlock => !!x) : [];
       return [b, ...kids.flatMap(collect)];
     };
-    const copies = collect(original).map(b => {
+    const subtree = collect(original);
+    // Copying a container must not sneak in a second single-instance block.
+    if (subtree.some(b => singleInstance.includes(b.type))) return null;
+    const copies = subtree.map(b => {
       const copy: CampaignBlock = structuredClone(b);
       copy.id = idMap.get(b.id)!;
       if (isParent(copy)) {
@@ -1451,23 +1466,36 @@ export class CampaignStudioStateService {
   // - palette fields that still hold a template value (customized colors are
   //   kept); a chosen Campaign Style and its overrides still win.
   // An unsaved campaign whose blocks are still untouched starter blocks gets
-  // the new template's starter blocks instead. Minimal and full pages are
-  // different page types, so switching between them is refused.
+  // the new template's starter blocks instead.
+  //
+  // The quick donation page ('minimal-donation', pageFormat 'minimal') is one
+  // of these templates. Choosing it sets pageFormat and leaves every block and
+  // the regular layout settings in the draft (the minimal page just doesn't
+  // render them); choosing a regular template again drops pageFormat and
+  // shows those blocks as they were, in their saved order. A page created as
+  // minimal has no blocks yet and gets the chosen template's starter blocks.
   switchTemplate(template: CampaignTemplate, palette: TemplatePalette): boolean {
     const draft = this.draft;
     const layout = draft.layout;
-    if ((layout.pageFormat ?? 'full') !== (template.pageFormat ?? 'full')) return false;
     const initial = createInitialDraft();
-    const starter = template.createBlocks(palette);
-    const blocks = !draft.id && isUntouchedStarter(draft.blocks, initial.blocks)
-      ? starter
-      : reorderForTemplate(draft.blocks, starter);
-    const isSidebar = template.layoutMode === 'sidebar-right' || template.layoutMode === 'sidebar-left';
     const theme = resolveTheme(mergePaletteTheme(layout.theme, palette, initial.layout.theme), layout.campaignStyleId, layout.styleOverrides);
+    if (template.pageFormat === 'minimal') {
+      this.patch({ layout: { ...layout, pageFormat: 'minimal', templateId: template.id, theme } });
+      return true;
+    }
+    const fromMinimal = layout.pageFormat === 'minimal';
+    const starter = template.createBlocks(palette);
+    const blocks = fromMinimal
+      ? (draft.blocks.length ? draft.blocks : starter)
+      : !draft.id && isUntouchedStarter(draft.blocks, initial.blocks)
+        ? starter
+        : reorderForTemplate(draft.blocks, starter);
+    const isSidebar = template.layoutMode === 'sidebar-right' || template.layoutMode === 'sidebar-left';
+    const { pageFormat: _minimal, ...regularLayout } = layout;
     this.patch({
       blocks,
       layout: {
-        ...layout,
+        ...regularLayout,
         layoutMode: template.layoutMode,
         templateId: template.id,
         // 'main-column' only renders inside the sidebar layouts; elsewhere it

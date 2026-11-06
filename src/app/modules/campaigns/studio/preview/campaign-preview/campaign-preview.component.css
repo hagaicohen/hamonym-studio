@@ -680,20 +680,20 @@
   color: #ffffff; line-height: 1.15; margin: 0;
   text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
-.hm-hero--mobile .hm-hero-title { font-size: calc(26px * var(--hm-heading-scale, 1)); }
+.hm-hero--mobile .hm-hero-title { font-size: var(--hm-hero-title-size-m, calc(26px * var(--hm-heading-scale, 1))); }
 
 .hm-hero-subtitle {
-  font-size: 17px; line-height: 1.4;
+  font-size: var(--hm-hero-subtitle-size, 17px); line-height: 1.4;
   margin: 0;
   /* no special background — plain text */
 }
-.hm-hero--mobile .hm-hero-subtitle { font-size: 14px; }
+.hm-hero--mobile .hm-hero-subtitle { font-size: var(--hm-hero-subtitle-size-m, 14px); }
 
 /* Title/subtitle placed above/below the Hero instead of inside it — plain
    page text, not the Hero's photo-overlay style (dark, not white/shadowed).
    Sized/spaced like .hm-section-title so it reads as a normal page heading. */
 .hm-hero-title-external {
-  font-size: clamp(22px, 2.5vw, 32px);
+  font-size: var(--hm-hero-title-size, clamp(22px, 2.5vw, 32px));
   font-weight: 900;
   color: var(--hm-body, #0f172a);
   line-height: 1.2;
@@ -701,13 +701,17 @@
   text-align: center;
 }
 .hm-hero-subtitle-external {
-  font-size: 16px;
+  font-size: var(--hm-hero-subtitle-size, 16px);
   font-weight: 400;
   color: #475569;
   line-height: 1.5;
   margin: 0 clamp(16px, 5vw, 48px) 20px;
   text-align: center;
 }
+/* Mobile sizes apply only when the manager picked one (the -m vars are
+   unset otherwise), so existing campaigns keep their current look. */
+.campaign-page--mobile .hm-hero-title-external { font-size: var(--hm-hero-title-size-m, clamp(22px, 2.5vw, 32px)); }
+.campaign-page--mobile .hm-hero-subtitle-external { font-size: var(--hm-hero-subtitle-size-m, 16px); }
 
 /* Short rich-text project description — reading text, not a heading, so
    normal paragraph flow (not centered) like .block-rich-text. */
@@ -969,6 +973,84 @@
 }
 .hm-logo-above-badge--sm { width: 84px; height: 84px; }
 .hm-logo-above-badge--lg { width: 140px; height: 140px; }
+
+/* ── Studio only: the logo, title and subtitle can be dragged onto a drop
+   zone and hidden with their × (see onHeroPartDragStart()). The logos keep
+   their own positioning; overflow is opened so the × isn't clipped by the
+   round badge (the image itself is 78%, so nothing else spills out). ── */
+.hm-hero-part { cursor: grab; }
+.hm-hero-part:hover { outline: 2px dashed rgba(88, 60, 214, 0.75); outline-offset: 4px; }
+.hm-hero-title.hm-hero-part,
+.hm-hero-subtitle.hm-hero-part,
+.hm-hero-title-external.hm-hero-part,
+.hm-hero-subtitle-external.hm-hero-part,
+.hm-logo-above-badge.hm-hero-part { position: relative; }
+.hm-hero-org-logo.hm-hero-part,
+.hm-logo-above-badge.hm-hero-part { overflow: visible; }
+.hm-hero-part-hide {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 3;
+  width: 22px; height: 22px;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font: 700 14px/18px system-ui, sans-serif;
+  text-shadow: none;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.hm-hero-part-hide::before { content: '×'; }
+/* Same grip (⠿) as the block drag handle, opposite the × */
+.hm-hero-part-grip {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 3;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  background: rgba(109, 40, 217, 0.9);
+  color: #ffffff;
+  pointer-events: none;
+  opacity: 0.8;
+}
+.hm-hero-part-grip lucide-icon { display: flex; }
+.hm-hero-part:active { cursor: grabbing; }
+.hm-hero-part:hover > .hm-hero-part-hide,
+.hm-hero-part:hover > .hm-hero-part-grip,
+.hm-hero-part-hide:focus-visible { opacity: 1; }
+
+.hm-hero-dropstrip {
+  display: flex;
+  direction: rtl;
+  gap: 8px;
+  padding: 8px clamp(16px, 5vw, 48px);
+}
+.hm-hero-dropstrip--on-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.25);
+}
+.hm-hero-dropzone {
+  flex: 1;
+  min-height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed #a5b4fc;
+  border-radius: 10px;
+  background: rgba(238, 242, 255, 0.9);
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.hm-hero-dropzone--active { background: #583cd6; border-color: #583cd6; color: #ffffff; }
 .hero-logo-emoji { font-size: 52px; }
 
 /* ══ SUPPORT ROW — floats over hero bottom ══ */
@@ -1141,6 +1223,103 @@
 .hm-stats.conv-split .hm-stat-icon { margin: 0; flex-shrink: 0; }
 .hm-stats.conv-split .hm-stat-box strong,
 .hm-stats.conv-split .hm-stat-box > span:not(.hm-stat-icon) { display: inline; margin: 0; }
+
+/* ══ MERGED DONATION LAYOUTS (2026-11) — compact-bar / conversion-first / modern ══
+   One card holds both the progress summary and the donation form; the
+   separate stats block steps aside (its wrapper is dropped via the marker
+   below). Same elements, data and handlers as Classic — these rules only
+   change order, weight and arrangement. .hm-donate is a flex column, so
+   `order` moves the progress section without touching the markup. */
+/* !important: a row container's own `.container-child { display: flex }`
+   is just as specific; an emptied wrapper must never take up space. */
+.block-wrap:has(> .hm-stats-merged),
+.container-child:has(> .hm-stats-merged) { display: none !important; }
+
+.hm-donate-progress { display: flex; flex-direction: column; gap: 10px; }
+.hm-dp-summary { display: flex; align-items: center; gap: 12px; }
+.hm-dp-raised  { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.hm-dp-label   { font-size: 12px; font-weight: 700; color: #62728d; }
+.hm-dp-amount  { font-size: 26px; font-weight: 900; line-height: 1.1; color: var(--hm-secondary, #6fc9eb); }
+.hm-dp-goal    { font-size: 12px; font-weight: 600; color: #62728d; }
+.hm-dp-pct     { font-size: 15px; font-weight: 800; color: var(--hm-primary, #583cd6); flex-shrink: 0; }
+.hm-dp-bar {
+  height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--line, #e2e8f0);
+}
+/* Block-level child: in RTL it fills from the right, like the reading direction. */
+.hm-dp-bar > span {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--hm-primary, #583cd6);
+  transition: width 0.6s ease;
+}
+.hm-dp-stats { display: flex; flex-wrap: wrap; row-gap: 8px; }
+.hm-dp-stat {
+  flex: 1 1 0; min-width: 72px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 2px 6px;
+}
+.hm-dp-stat + .hm-dp-stat { border-inline-start: 1px solid var(--line, #e2e8f0); }
+.hm-dp-stat strong { font-size: 15px; font-weight: 800; color: #0f2747; }
+.hm-dp-stat span   { font-size: 11px; font-weight: 600; color: #62728d; }
+
+/* Compact — condensed summary + horizontal bar on top, tighter form right below. */
+.hm-donate.conv-compact-bar { padding: 18px 16px; }
+.hm-donate.conv-compact-bar .hm-donate-progress {
+  gap: 8px; padding-bottom: 14px; margin-bottom: 14px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+.hm-donate.conv-compact-bar .hm-dp-amount { font-size: 22px; }
+.hm-donate.conv-compact-bar h2 { font-size: 16px; margin-bottom: 8px; }
+.hm-donate.conv-compact-bar .hm-amounts { gap: 6px; margin-bottom: 10px; }
+.hm-donate.conv-compact-bar .hm-amount-preset { padding: 8px 4px; font-size: 13px; }
+.hm-donate.conv-compact-bar .hm-custom-amount-wrap { margin-bottom: 10px; }
+.hm-donate.conv-compact-bar .hm-donate-btn { padding: 12px; font-size: 15px; }
+
+/* Conversion-focused — amounts and CTA lead and are larger; progress moves
+   to a quieter section at the bottom of the card. */
+.hm-donate.conv-conversion-first h2 { font-size: 24px; margin-bottom: 16px; }
+.hm-donate.conv-conversion-first .hm-amounts {
+  grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px;
+}
+.hm-donate.conv-conversion-first .hm-amount-preset { padding: 16px 4px; font-size: 18px; }
+.hm-donate.conv-conversion-first .hm-donate-btn { padding: 18px; font-size: 19px; }
+.hm-donate.conv-conversion-first .hm-donate-progress {
+  order: 10; gap: 8px;
+  margin-top: 18px; padding-top: 16px;
+  border-top: 1px dashed var(--line, #e2e8f0);
+}
+.hm-donate.conv-conversion-first .hm-dp-amount { font-size: 18px; }
+.hm-donate.conv-conversion-first .hm-dp-bar { height: 6px; }
+
+/* Modern — progress is a colored header band of the same card (ring +
+   amount + stats strip), the form continues underneath it. Extra class in
+   the padding selector so the mobile/container padding rules further down
+   don't flatten the band. */
+.hm-donate.conv-modern.conv-merged { padding: 0 0 20px; overflow: hidden; }
+.hm-donate.conv-modern > * { margin-inline: 20px; }
+.hm-donate.conv-modern > .hm-donate-progress {
+  margin: 0 0 20px; padding: 22px 20px 16px; gap: 16px;
+  background: var(--hm-primary, #583cd6);
+  background: linear-gradient(150deg, var(--hm-primary, #583cd6), color-mix(in srgb, var(--hm-primary, #583cd6) 70%, #000));
+}
+.hm-donate.conv-modern .hm-dp-summary { gap: 16px; }
+.hm-donate.conv-modern .hm-dp-ring { width: 76px; height: 76px; }
+.hm-donate.conv-modern .hm-ring-bg   { stroke: rgba(255,255,255,0.25); }
+.hm-donate.conv-modern .hm-ring-fill { stroke: #ffffff; }
+.hm-donate.conv-modern .hm-ring-text strong { font-size: 17px; color: #ffffff; }
+.hm-donate.conv-modern .hm-ring-text span,
+.hm-donate.conv-modern .hm-dp-label,
+.hm-donate.conv-modern .hm-dp-goal,
+.hm-donate.conv-modern .hm-dp-stat span { color: rgba(255,255,255,0.8); }
+.hm-donate.conv-modern .hm-dp-amount,
+.hm-donate.conv-modern .hm-dp-stat strong { color: #ffffff; }
+.hm-donate.conv-modern .hm-dp-amount { font-size: 30px; }
+.hm-donate.conv-modern .hm-dp-stats { background: rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 4px; }
+.hm-donate.conv-modern .hm-dp-stat + .hm-dp-stat { border-color: rgba(255,255,255,0.25); }
+.container-child .hm-donate.conv-modern.conv-merged,
+.campaign-page--mobile .hm-donate.conv-modern.conv-merged { padding: 0 0 16px; }
+.campaign-page--mobile .hm-donate.conv-modern > * { margin-inline: 14px; }
+.campaign-page--mobile .hm-donate.conv-modern > .hm-donate-progress { margin-inline: 0; padding: 18px 14px 14px; }
 
 /* ── STATS CARD ── */
 .hm-stats-top {
@@ -4010,8 +4189,10 @@ select { --hm-select-accent: var(--hm-primary); }
 
   /* HERO */
   .hm-hero { min-height: 480px; }
-  .hm-hero-title { font-size: calc(26px * var(--hm-heading-scale, 1)); }
-  .hm-hero-subtitle { font-size: 14px; }
+  .hm-hero-title { font-size: var(--hm-hero-title-size-m, calc(26px * var(--hm-heading-scale, 1))); }
+  .hm-hero-subtitle { font-size: var(--hm-hero-subtitle-size-m, 14px); }
+  .hm-hero-title-external { font-size: var(--hm-hero-title-size-m, clamp(22px, 2.5vw, 32px)); }
+  .hm-hero-subtitle-external { font-size: var(--hm-hero-subtitle-size-m, 16px); }
   .hm-hero-container {
     flex-direction: column;
     padding: 110px 16px 80px;

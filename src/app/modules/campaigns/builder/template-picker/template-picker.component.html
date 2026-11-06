@@ -26,6 +26,8 @@
       <div class="tp-card"
         *ngFor="let t of templates"
         [class.tp-card--hovered]="hoveredId === t.id"
+        [class.tp-card--current]="t.id === currentTemplateId"
+        [attr.aria-current]="t.id === currentTemplateId ? 'true' : null"
         [style.--accent]="selectedPalette.base"
         role="button"
         tabindex="0"
@@ -55,8 +57,11 @@
 
         <!-- Info -->
         <div class="tp-card-body">
-          <div class="tp-card-name">{{ t.name }}</div>
+          <div class="tp-card-name">{{ t.name }}@if (t.id === currentTemplateId) { <span class="tp-current">התבנית הנוכחית</span> }</div>
           <div class="tp-card-desc">{{ t.description }}</div>
+          @if (mode === 'switch' && t.pageFormat === 'minimal') {
+            <div class="tp-card-note">תוכן הדף הרגיל נשמר ומוסתר, ויחזור בבחירת תבנית רגילה.</div>
+          }
           <span class="tp-btn" aria-hidden="true">בחרו עיצוב זה</span>
         </div>
 

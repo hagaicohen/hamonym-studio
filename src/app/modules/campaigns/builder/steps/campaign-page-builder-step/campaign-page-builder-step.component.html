@@ -960,21 +960,7 @@
               </div>
             </div>
 
-            <div class="editor-row">
-              <label class="editor-label">פריסת אזור ההמרה (נתונים + תרומה)</label>
-              <div class="direction-toggle">
-                <button class="direction-btn" [class.active]="(draft.layout.conversionWidgetLayout ?? 'classic') === 'classic'"
-                  (click)="setConversionWidgetLayout('classic')">קלאסי</button>
-                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'unified'"
-                  (click)="setConversionWidgetLayout('unified')">מאוחד</button>
-                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'compact'"
-                  (click)="setConversionWidgetLayout('compact')">קומפקטי</button>
-                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'hero'"
-                  (click)="setConversionWidgetLayout('hero')">כרטיס Hero</button>
-                <button class="direction-btn" [class.active]="draft.layout.conversionWidgetLayout === 'split-horizontal'"
-                  (click)="setConversionWidgetLayout('split-horizontal')">פיצול אופקי</button>
-              </div>
-            </div>
+            <ng-container [ngTemplateOutlet]="donationLayoutPicker"></ng-container>
 
           </div>
 
@@ -1130,6 +1116,8 @@
               (input)="updateDonationWidgetField(block.id, 'subtitle', $any($event.target).value)"
               placeholder="כל תרומה מקרבת אותנו ליעד">
           </div>
+
+          <ng-container [ngTemplateOutlet]="donationLayoutPicker"></ng-container>
 
           <div class="editor-divider"></div>
 
@@ -2111,7 +2099,7 @@
     </div>
 
     <app-text-style-editor
-      [textStyle]="draft.heroTextStyle"
+      [textStyle]="draft.heroTextStyle" [splitTitleSubtitle]="true"
       (textStyleChange)="onHeroTextStyleChange($event)"
       [ctaConfig]="draft.heroCtaConfig"
       (ctaConfigChange)="onHeroCtaConfigChange($event)"
@@ -2265,4 +2253,23 @@
     </ng-container>
   </div>
   <!-- ══ END ZONE 3 ══ -->
+</ng-template>
+
+<!-- Donation layout (layout.conversionWidgetLayout) — one page-level choice,
+     offered from both the donation and the stats block. -->
+<ng-template #donationLayoutPicker>
+  <div class="editor-row">
+    <label class="editor-label">פריסת התרומה (נתונים + טופס)</label>
+    <div class="direction-toggle donation-layout-options">
+      <button *ngFor="let opt of donationLayoutOptions" type="button" class="direction-btn"
+        [class.active]="effectiveDonationLayout() === opt.value"
+        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label }}</button>
+    </div>
+    <div class="direction-toggle donation-layout-more">
+      <span class="editor-hint">עוד:</span>
+      <button *ngFor="let opt of moreDonationLayoutOptions" type="button" class="direction-btn"
+        [class.active]="effectiveDonationLayout() === opt.value"
+        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label }}</button>
+    </div>
+  </div>
 </ng-template>

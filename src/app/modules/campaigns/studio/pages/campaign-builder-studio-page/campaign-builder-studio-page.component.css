@@ -271,12 +271,14 @@
 .props-step ::ng-deep .reward-preview-panel,
 .props-step ::ng-deep .rgo-preview-panel,
 .props-step ::ng-deep .sponsor-preview-panel,
-.props-step ::ng-deep .upd-preview-panel { order: -1; position: static; width: 100%; max-width: 100%; min-width: 0; }
+.props-step ::ng-deep .upd-preview-panel { order: -1; position: static; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+/* border-box: the form panels carry their own padding, which on top of
+   width:100% pushed them past the panel's left edge (RTL). */
 .props-step ::ng-deep .reward-form-panel,
 .props-step ::ng-deep .rgo-form-panel,
 .props-step ::ng-deep .ss-form-panel,
 .props-step ::ng-deep .sponsor-form-panel,
-.props-step ::ng-deep .upd-form-panel { width: 100%; max-width: 100%; min-width: 0; }
+.props-step ::ng-deep .upd-form-panel { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 16px; }
 
 /* Fullscreen turns the topbar dark: the tools follow its Save button colors. */
 .studio--fullscreen .tool-btn:not(.tool-btn--publish) { color: #e2e8f0; }

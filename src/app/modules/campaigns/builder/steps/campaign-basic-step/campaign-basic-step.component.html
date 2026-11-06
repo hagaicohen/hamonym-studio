@@ -294,7 +294,7 @@
     <div class="field-section">
       <label class="field-label">עיצוב טקסט ה-Hero</label>
       <app-text-style-editor
-        [textStyle]="draft.heroTextStyle"
+        [textStyle]="draft.heroTextStyle" [splitTitleSubtitle]="true"
         (textStyleChange)="onTextStyleChange($event)"
         [ctaConfig]="draft.heroCtaConfig"
         (ctaConfigChange)="onCtaConfigChange($event)"
