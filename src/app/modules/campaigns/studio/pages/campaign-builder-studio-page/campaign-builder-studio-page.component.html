@@ -64,6 +64,17 @@
                     <span class="tree-label">{{ isMinimal(draft) ? 'פרטי דף התרומה' : 'פתיחה: תמונה, כותרת ותיאור' }}</span>
                   </div>
                 </li>
+                @if (!isMinimal(draft)) {
+                  @for (p of openingParts; track p.key) {
+                    <li role="treeitem" [attr.aria-selected]="selectedKey === p.key">
+                      <div class="tree-row tree-row--area tree-row--part" [class.is-selected]="selectedKey === p.key"
+                        tabindex="0" (click)="select(p.key)" (keydown.enter)="select(p.key)">
+                        <span class="tree-icon"><lucide-icon [img]="p.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /></span>
+                        <span class="tree-label">{{ p.label }}</span>
+                      </div>
+                    </li>
+                  }
+                }
                 @for (area of (isMinimal(draft) ? [] : designAreas); track area.key) {
                   <li role="treeitem" [attr.aria-selected]="selectedKey === area.key">
                     <div class="tree-row tree-row--area" [class.is-selected]="selectedKey === area.key"
@@ -145,6 +156,17 @@
             } @else {
               <app-campaign-preview [studioPlaceholders]="true" />
             }
+            @if (floatActions(draft); as actions) { @if (actions.length) {
+              <div #floatBar class="float-bar" role="toolbar" aria-label="פעולות מהירות על הרכיב הנבחר" data-studio-control>
+                @for (a of actions; track a.id) {
+                  <button type="button" class="float-btn" [class.is-active]="a.active" [class.float-btn--danger]="a.danger"
+                    [disabled]="a.disabled" [attr.aria-pressed]="a.align ? !!a.active : null"
+                    [title]="a.label" [attr.aria-label]="a.label" (click)="runFloat(a, draft)">
+                    <lucide-icon [img]="a.icon" [size]="16" [strokeWidth]="iconStroke" aria-hidden="true" />
+                  </button>
+                }
+              </div>
+            } }
           </div>
         </main>
 
@@ -192,6 +214,39 @@
                       <lucide-icon [img]="icons.ExternalLink" [size]="14" [strokeWidth]="iconStroke" aria-hidden="true" /> מעבר לעמוד הניהול
                     </a>
                   }
+                }
+              } } @else if (openingPart(selectedKey)) { @if (openingPart(selectedKey); as op) {
+                <h3 class="props-title"><lucide-icon [img]="op.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>{{ op.label }}</span></h3>
+                @if (op.part === 'hero-cta') {
+                  <p class="props-note">הכפתור שבתוך ה-Hero. לחיצה עליו בדף מובילה לתיבת התרומה.</p>
+                  <app-text-style-editor part="cta" [showCta]="true" [textStyle]="draft.heroTextStyle"
+                    [ctaConfig]="draft.heroCtaConfig" (ctaConfigChange)="state.patch({ heroCtaConfig: $event })" />
+                } @else {
+                  <label class="field-label" [for]="'studio-part-text-' + op.part">טקסט</label>
+                  @if (op.part === 'title') {
+                    <input id="studio-part-text-title" class="field-input" type="text" maxlength="80" [value]="draft.title"
+                      (input)="state.patch({ title: $any($event.target).value })" placeholder="שם הקמפיין שיופיע כותרת ה-Hero">
+                  } @else {
+                    <input id="studio-part-text-subtitle" class="field-input" type="text" maxlength="160" [value]="draft.shortDescription"
+                      (input)="state.patch({ shortDescription: $any($event.target).value })" placeholder="משפט קצר שמתאר את המיזם">
+                  }
+                  @if (hasClassicOpening(draft)) {
+                    <div class="part-row">
+                      <span class="field-label">מיקום</span>
+                      <div class="part-chips" role="group" aria-label="מיקום">
+                        @for (pos of heroPositions; track pos.value) {
+                          <button type="button" class="part-chip" [class.is-active]="heroPosition(draft, op.part) === pos.value"
+                            [attr.aria-pressed]="heroPosition(draft, op.part) === pos.value"
+                            (click)="setHeroPosition(op.part, pos.value)">{{ pos.label }}</button>
+                        }
+                      </div>
+                    </div>
+                  } @else {
+                    <p class="props-note">מבנה הפתיחה של הסגנון הנוכחי קובע איפה הטקסט מופיע.</p>
+                  }
+                  <app-text-style-editor [part]="op.part" [textStyle]="draft.heroTextStyle"
+                    [partAlignFallback]="partAlignFallback(draft, op.part)"
+                    (textStyleChange)="state.patch({ heroTextStyle: $event })" />
                 }
               } } @else if (designArea(selectedKey)) {
                 <h3 class="props-title"><lucide-icon [img]="designArea(selectedKey)!.icon" [size]="iconSize" [strokeWidth]="iconStroke" aria-hidden="true" /><span>{{ designArea(selectedKey)!.title }}</span></h3>

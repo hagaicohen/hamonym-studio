@@ -1,0 +1,414 @@
+/* Campaign preview — mobile polish, bottom banner, footer, responsive rules, sticky bar. */
+
+/* ══════════════════════════════════════
+   MOBILE PREVIEW — comprehensive polish
+══════════════════════════════════════ */
+
+/* Page-level: horizontal padding for all block content */
+.campaign-page--mobile .page-blocks {
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* Sections: tighter vertical padding, full centering */
+.campaign-page--mobile .hm-section {
+  /* Dampened rhythm on mobile (half the desktop boost, not the full 1.6x --
+     "airy" would be ~45px here instead of a blind 64px). balanced still
+     equals today's exact 28px. */
+  padding: calc(28px * (1 + (var(--hm-section-rhythm, 1) - 1) * 0.5)) 16px;
+}
+.campaign-page--mobile .hm-section-title {
+  font-size: calc(20px * var(--hm-heading-scale, 1));
+  margin-bottom: 20px;
+}
+
+/* Donors: single column, tighter cards */
+.campaign-page--mobile .hm-donors-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.campaign-page--mobile .hm-donor-card-v2 {
+  padding: 12px 14px;
+}
+.campaign-page--mobile .hm-donor-v2-name  { font-size: 13px; }
+.campaign-page--mobile .hm-donor-v2-amount { font-size: 15px; }
+.campaign-page--mobile .hm-donor-v2-avatar { width: 34px; height: 34px; font-size: 12px; }
+
+/* Ambassadors: narrower cards */
+.campaign-page--mobile .hm-amb-outer { padding: 0; }
+.campaign-page--mobile .hm-amb-card  { flex: 0 0 120px; padding: 16px 8px 12px; }
+.campaign-page--mobile .hm-amb-avatar { width: 56px; height: 56px; }
+.campaign-page--mobile .hm-amb-name  { font-size: 12px; }
+
+/* Updates */
+.campaign-page--mobile .hm-updates-outer { padding: 0; }
+.campaign-page--mobile .hm-update-list-item { border-radius: 10px; }
+.campaign-page--mobile .hm-update-list-item .hm-update-content { padding: 14px 14px 14px 0; }
+
+/* Rewards: edge-to-edge on mobile preview */
+.campaign-page--mobile .hm-rewards { padding: 28px 0 20px; }
+.campaign-page--mobile .hm-rewards h2 { padding: 0 16px; font-size: 18px; }
+
+/* Rich text: comfortable reading width */
+.campaign-page--mobile .block-rich-text {
+  padding: 0 4px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Donation widget: button full width */
+.campaign-page--mobile .hm-donate-btn { width: 100%; justify-content: center; }
+
+/* Section placeholder: centered */
+.campaign-page--mobile .hm-section-placeholder { padding: 20px 16px; }
+
+/* Bottom banner: tighter on mobile preview */
+.campaign-page--mobile .hm-bottom-banner { padding: 16px 8px; gap: 0; }
+.campaign-page--mobile .hm-bottom-stat strong { font-size: 20px; }
+
+/* Block wrap: full width, no overflow */
+.campaign-page--mobile .block-wrap {
+  overflow-x: hidden;
+}
+
+/* ══ BOTTOM CAMPAIGN BANNER ══ */
+.hm-bottom-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 28px 24px;
+  background: #ffffff;
+  border-top: 1px solid var(--hm-section-divider, #e2e8f0);
+  direction: rtl;
+}
+.hm-bottom-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 160px;
+  text-align: center;
+}
+.hm-bottom-stat strong {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+.hm-bottom-stat span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.hm-bottom-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--hm-section-divider, #e2e8f0);
+  flex-shrink: 0;
+}
+.campaign-page--mobile .hm-bottom-stat strong { font-size: 22px; }
+.campaign-page--mobile .hm-bottom-banner { padding: 20px 8px; gap: 0; }
+@media (max-width: 768px) {
+  .hm-bottom-stat strong { font-size: 22px; }
+  .hm-bottom-banner { padding: 20px 8px; }
+}
+
+/* ══ FOOTER ══ */
+.hm-footer {
+  background: var(--hm-footer-bg, #030712);
+  color: var(--hm-footer-text, rgba(255,255,255,0.85));
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr 1fr;
+  gap: 40px;
+  padding: 64px clamp(20px, 6vw, 80px) 36px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  direction: rtl;
+  font-family: 'Heebo', sans-serif;
+}
+.hm-footer-logo { margin-bottom: 14px; }
+.hm-footer-logo img { max-height: 48px; width: auto; display: block; }
+.hm-footer-logo-name { font-size: 22px; font-weight: 900; color: #fff; }
+.hm-footer-brand p { font-size: 13px; line-height: 1.65; color: inherit; opacity: 0.6; margin: 0 0 20px; }
+.hm-footer-social { display: flex; gap: 10px; }
+.hm-footer-social a {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.hm-footer-social a:hover { background: var(--hm-secondary, #6fc9eb); color: #fff; }
+
+.hm-footer-links h3,
+.hm-footer-newsletter h3,
+.hm-footer-contact h3 {
+  color: #fff; font-size: 16px; font-weight: 800; margin: 0 0 18px;
+}
+.hm-footer-links a {
+  display: block; color: inherit; opacity: 0.6; font-size: 14px;
+  margin-bottom: 10px; text-decoration: none; cursor: pointer;
+  transition: color 0.15s, padding-right 0.15s;
+}
+.hm-footer-links a:hover { color: #fff; padding-right: 4px; }
+
+.hm-footer-newsletter p { font-size: 13px; color: inherit; opacity: 0.6; line-height: 1.55; margin: 0 0 14px; }
+.hm-newsletter-form { display: flex; flex-direction: column; gap: 8px; }
+.hm-newsletter-form input {
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #fff; border-radius: 8px; font-size: 13px;
+  font-family: inherit; outline: none;
+}
+.hm-newsletter-form input::placeholder { color: rgba(255,255,255,0.35); }
+.hm-newsletter-form button {
+  padding: 11px; border: none; border-radius: 8px;
+  color: #fff; font-weight: 800; font-size: 14px;
+  font-family: inherit; cursor: default;
+}
+
+.hm-footer-contact p { font-size: 13px; color: inherit; opacity: 0.6; line-height: 1.9; margin: 0; }
+.hm-footer-contact strong { opacity: 0.85; font-weight: 700; }
+
+.hm-footer-bottom {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 24px; margin-top: 8px;
+  text-align: center; font-size: 12px; color: #6b7280;
+}
+.hm-footer-bottom p { margin: 0; }
+
+/* footer mobile */
+.campaign-page--mobile .hm-footer {
+  grid-template-columns: 1fr;
+  gap: 28px;
+  padding: 40px 20px 28px;
+}
+@media (max-width: 768px) {
+  .hm-footer { grid-template-columns: 1fr; gap: 28px; padding: 40px 20px 28px; }
+}
+
+/* ══ RESPONSIVE — mirrors all .campaign-page--mobile rules ══ */
+@media (max-width: 768px) {
+
+  /* NAV */
+  .nav-desktop { display: none; }
+  .nav-mobile  { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: space-between; }
+
+  /* HERO */
+  .hm-hero { min-height: 480px; }
+  .hm-hero-title { font-size: var(--hm-hero-title-size-m, calc(26px * var(--hm-heading-scale, 1))); }
+  .hm-hero-subtitle { font-size: var(--hm-hero-subtitle-size-m, 14px); }
+  .hm-hero-title-external { font-size: var(--hm-hero-title-size-m, clamp(22px, 2.5vw, 32px)); }
+  .hm-hero-subtitle-external { font-size: var(--hm-hero-subtitle-size-m, 16px); }
+  .hm-hero-container {
+    flex-direction: column;
+    padding: 110px 16px 80px;
+    gap: 16px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .hm-hero-copy { max-width: 340px; }
+  .hm-hero-org-logo { width: 56px; height: 56px; left: 50%; transform: translateX(-50%); top: 24px; }
+
+  /* SUPPORT ROW */
+  .hm-support-row { margin-top: -48px; padding-bottom: 24px; }
+  .hm-support-container { grid-template-columns: 1fr; }
+
+  /* STATS */
+  .hm-raised-info { flex: 1; align-items: flex-start; }
+  .hm-ring-wrapper { width: 110px; height: 110px; }
+  .hm-ring-svg { width: 110px; height: 110px; }
+
+  /* CONTAINER BLOCKS — stack + reduce padding */
+  .block-container { padding: 12px !important; gap: 12px !important; }
+  .block-container--row { flex-direction: column !important; max-width: 100%; }
+  .block-container--row .container-child { flex: none !important; width: 100% !important; }
+  .block-container--row .container-child > .hm-stats,
+  .block-container--row .container-child > .hm-donate { height: auto; }
+
+  /* TABS — tighter side padding, header scrolls horizontally if it overflows */
+  .block-tabs--underline .tabs-header,
+  .block-tabs--pills .tabs-header { padding-left: 12px; padding-right: 12px; }
+  .block-tabs--boxed .tabs-header { margin-left: 12px; margin-right: 12px; max-width: calc(100% - 24px); }
+
+  /* STATS + DONATE — compact on small screens */
+  .hm-stats, .hm-donate { padding: 16px 12px; }
+  .hm-stats-top { gap: 16px; margin-bottom: 16px; }
+  .hm-ring-wrapper { width: 80px; height: 80px; }
+  .hm-ring-svg    { width: 80px; height: 80px; }
+  .hm-ring-text strong { font-size: 16px; }
+  .hm-raised-amount { font-size: 22px; }
+  .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hm-stat-box  { padding: 10px 4px 0; }
+  .hm-stat-box:nth-child(2n+1) { border-left: none; }
+  .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+  .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+
+  /* REWARDS */
+  .hm-rewards { padding: 28px 0 20px; }
+  .hm-rewards h2 { padding: 0 16px; font-size: 18px; }
+  .hm-slider-outer { max-width: 100%; padding: 0 4px; gap: 8px; }
+
+  /* SECTIONS */
+  .hm-section { padding: calc(28px * (1 + (var(--hm-section-rhythm, 1) - 1) * 0.5)) 16px; }
+  .hm-section-title { font-size: calc(20px * var(--hm-heading-scale, 1)); margin-bottom: 20px; }
+
+  /* DONORS */
+  .hm-donors-grid { grid-template-columns: 1fr; gap: 8px; }
+  .hm-donor-card-v2 { padding: 12px 14px; }
+
+  /* RICH TEXT */
+  .block-rich-text { font-size: 15px; line-height: 1.7; }
+
+  /* DONATE button */
+  .hm-donate-btn { width: 100%; justify-content: center; }
+
+  /* PAGE BLOCKS */
+  .page-blocks { padding: 0 16px; box-sizing: border-box; }
+  .block-wrap { overflow-x: hidden; }
+
+  /* SIDEBAR layout on small screens */
+  .page-content-outer { padding: 0; }
+  .page-layout-sidebar {
+    flex-direction: column !important;
+    gap: 0;
+    padding: 0;
+  }
+  .sidebar-rail {
+    width: 100%;
+    min-width: unset;
+    position: static;
+    border-radius: 0;
+    box-shadow: none;
+    order: -1;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .sidebar-rail-inner { padding: 16px; }
+  .sidebar-main { width: 100%; }
+  .hm-reward-slider { padding: 20px 0 16px; }
+  .hm-slider-track { gap: 12px; }
+  .hm-reward-card { flex: 0 0 88%; min-width: 88%; border-radius: var(--hm-card-radius, 16px); }
+}
+
+
+/* ══════════════════════════════════════
+   STICKY BOTTOM BAR
+══════════════════════════════════════ */
+.hm-sticky-bar {
+  /* was `position: sticky` — placed right before the page's closing tag
+     (near the very end of the flow, after the footer), a sticky element
+     there has almost no room to actually stick through: it only ever
+     appeared once you'd already scrolled past nearly everything, not while
+     scrolling through the campaign content it's meant to shadow. `fixed`
+     pins it to the true viewport bottom regardless of scroll depth, which
+     is what the IntersectionObserver toggling `showStickyBar` (see
+     campaign-preview.component.ts) actually needs. Found + fixed 2026-09-23. */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: #0f172a;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  padding-right: 48px;
+  padding-left: 48px;
+  direction: rtl;
+}
+
+.hm-sticky-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hm-sticky-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hm-sticky-amount {
+  font-size: 18px;
+  font-weight: 900;
+  color: #7dd3fc;
+}
+
+.hm-sticky-pct {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+}
+
+.hm-sticky-progress-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hm-sticky-progress-fill {
+  height: 100%;
+  background: #7dd3fc;
+  border-radius: 2px;
+}
+
+.hm-sticky-cta {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  background: #1e293b;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  border-radius: 24px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  direction: rtl;
+}
+.hm-sticky-cta:hover { background: #334155; }
+
+.hm-sticky-close {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.hm-sticky-close:hover { color: rgba(255,255,255,0.65); }
+
+/* Mobile sticky bar */
+.campaign-page--mobile .hm-sticky-bar {
+  padding-right: 16px;
+  padding-left: 40px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 56px;
+}
+.campaign-page--mobile .hm-sticky-amount { font-size: 16px; }
+.campaign-page--mobile .hm-sticky-stats { gap: 6px; }
+.campaign-page--mobile .hm-sticky-cta {
+  padding: 9px 16px;
+  font-size: 13px;
+}
+

@@ -1,7 +1,35 @@
 <div class="tse">
 
+  <!-- ONE PART (Studio direct editing): its own controls, always open. -->
+  <div class="tse-body tse-body--part" *ngIf="part">
+    <ng-container *ngIf="part !== 'cta'">
+      <div class="tse-row">
+        <span class="tse-label">יישור</span>
+        <div class="tse-chips">
+          <button *ngFor="let opt of alignOptions" class="tse-chip"
+            [class.active]="partAlign() === opt.value"
+            (click)="setPartAlign(opt.value)">{{ opt.label }}</button>
+        </div>
+      </div>
+      <div class="tse-row">
+        <span class="tse-label">גודל</span>
+        <div class="tse-chips">
+          <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
+            [class.active]="(part === 'title' ? (textStyle.titleFontSize || textStyle.fontSize) : (textStyle.subtitleFontSize || 'md')) === opt.value"
+            (click)="part === 'title' ? patchStyle({ fontSize: opt.value, titleFontSize: opt.value }) : patchStyle({ subtitleFontSize: opt.value })">{{ opt.label }}</button>
+        </div>
+      </div>
+      <div class="tse-row">
+        <span class="tse-label">צבע</span>
+        <app-color-picker *ngIf="part === 'title'" [value]="textStyle.titleColor || textStyle.color" (valueChange)="patchStyle({ titleColor: $event })"></app-color-picker>
+        <app-color-picker *ngIf="part === 'subtitle'" [value]="textStyle.subtitleColor || textStyle.color" (valueChange)="patchStyle({ subtitleColor: $event })"></app-color-picker>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="part === 'cta'" [ngTemplateOutlet]="ctaRows"></ng-container>
+  </div>
+
   <!-- TOGGLE ROW -->
-  <div class="tse-toggle-row" (click)="expanded = !expanded">
+  <div class="tse-toggle-row" *ngIf="!part" (click)="expanded = !expanded">
     <div class="tse-toggle-left">
       <span class="tse-advanced-label">עיצוב מתקדם</span>
       <span class="tse-summary" *ngIf="!expanded">{{ summary }}</span>
@@ -13,7 +41,7 @@
   </div>
 
   <!-- EXPANDED CONTENT -->
-  <div class="tse-body" *ngIf="expanded">
+  <div class="tse-body" *ngIf="expanded && !part">
 
     <!-- POSITION -->
     <div class="tse-row" *ngIf="showPosition">
@@ -86,6 +114,14 @@
     <!-- CTA -->
     <ng-container *ngIf="showCta && ctaConfig">
       <div class="tse-divider"></div>
+      <ng-container [ngTemplateOutlet]="ctaRows"></ng-container>
+    </ng-container>
+
+  </div>
+</div>
+
+<ng-template #ctaRows>
+    <ng-container *ngIf="ctaConfig">
 
       <div class="tse-row tse-row--toggle">
         <span class="tse-label">כפתור CTA</span>
@@ -132,6 +168,4 @@
 
       </ng-container>
     </ng-container>
-
-  </div>
-</div>
+</ng-template>

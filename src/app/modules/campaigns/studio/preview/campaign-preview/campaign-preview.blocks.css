@@ -1,0 +1,644 @@
+/* Campaign preview — page blocks, sidebar layouts, containers, tabs, accordion, share, CTA. */
+
+/* ══ PAGE BLOCKS ══ */
+.page-blocks { display: flex; flex-direction: column; }
+.block-wrap  { width: 100%; position: relative; }
+
+.block-wrap--hovered {
+  outline: 2px solid #7c3aed;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Click-to-edit affordance (2026-09-30) -- deliberately subtle and separate
+   from .block-wrap--hovered above (that one reflects hoveredBlockId, i.e.
+   "selected in the Builder's own list"; this is a plain CSS :hover, i.e.
+   "you can click this in the preview itself"). Dashed + low-opacity so the
+   two states read as visually distinct, not competing. Only applied while
+   pageBuilderActive -- zero effect on the real public/donor-facing page. */
+.block-wrap--editable { cursor: pointer; }
+.block-wrap--editable:hover {
+  outline: 1.5px dashed rgba(124, 58, 237, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Containers get a stronger "selected"-looking treatment than the plain
+   hover outline above — a filled tint + solid border around the whole
+   container, not just a thin ring, so its full extent reads clearly at a
+   glance (a container can wrap a lot of varied content). */
+/* !important — this class is also applied to structural wrapper elements
+   (.sidebar-rail, .sidebar-main) that already set their own background/
+   border-radius/box-shadow; without it those rules (same specificity, later
+   in this file) silently win and the highlight becomes invisible. */
+.block-wrap--hovered-container {
+  outline: 2px solid #7c3aed;
+  outline-offset: 0;
+  border-radius: 10px !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12) !important;
+}
+
+/* Magazine layout — two-column masonry-like */
+.page-blocks--magazine {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 0;
+  padding: 0;
+}
+.page-blocks--magazine .block-wrap { width: 100%; }
+
+/* ── Centering wrapper for sidebar layouts ── */
+.page-content-outer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Sidebar layouts */
+.page-layout-sidebar {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  min-height: 400px;
+  padding: 24px 0;
+}
+/* RTL: row-reverse → rail (2nd DOM element) ends up on the RIGHT */
+.page-layout-sidebar--right { flex-direction: row-reverse; }
+.page-layout-sidebar--left  { flex-direction: row; }
+
+.sidebar-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-rail {
+  width: min(380px, 44%);
+  min-width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
+  background: #f8fafc;
+  border-radius: 16px;
+  overflow-x: hidden;
+  /* Natural page scroll (2026-10-05) -- supersedes the 2026-08-04 "independent
+     scroll pane" below, which fixed this column's height to the viewport and
+     scrolled it internally. That made sense when the rail only ever held a
+     small donate/stats widget, but Section Placement now lets Ambassadors/
+     Donors/Rewards/Updates live here too -- real visual QA found that extra
+     content was silently trapped below the fold of that internal scroller,
+     read as those sections "missing entirely" rather than just unscrolled-to.
+     No height/overflow-y constraint now -- the rail grows with its content
+     like any normal column, and the PAGE'S own scroll reaches all of it.
+     `position: sticky` is kept (not the whole fix, just the donate card's
+     reasonable-accessibility ask) -- a sticky column taller than the
+     viewport behaves exactly like any ordinary sticky sidebar: pinned at
+     `top: 16px` while the main column scrolls past it, then it scrolls away
+     normally once its own bottom edge is reached. That's standard sticky
+     behavior, not a re-introduction of the trapped-content problem --
+     nothing below the fold is ever hidden from page scroll anymore. */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+.sidebar-rail-inner {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* Vertical-alignment fix (2026-09-29): the rail's own 20px top inset above
+   pushes its first card ~20px below the Hero's top edge even though both
+   columns share the same flex row start (align-items:flex-start) — the Hero
+   itself has no such inset when it renders as .sidebar-main's first child.
+   Scoped narrowly via :has() (same technique as .conv-split above) to the
+   one case that's actually misaligned, so every other sidebar-rail context
+   (Hero not in main-column) keeps its normal 20px inset on all sides. */
+.sidebar-main:has(.hm-hero--in-column) ~ .sidebar-rail .sidebar-rail-inner {
+  padding-top: 0;
+}
+
+/* Mobile: stack sidebar on top */
+.campaign-page--mobile .page-content-outer { padding: 0 12px; }
+.campaign-page--mobile .page-layout-sidebar {
+  flex-direction: column !important;
+  gap: 0;
+  padding: 0;
+}
+.campaign-page--mobile .sidebar-rail {
+  width: 100%;
+  min-width: unset;
+  position: static;
+  border-radius: 0;
+  box-shadow: none;
+  order: -1; /* rail on top on mobile */
+  height: auto; /* not sticky here — no need for an independent scroll pane */
+  overflow-y: visible;
+}
+.campaign-page--mobile .sidebar-rail-inner { padding: 16px; overflow-y: visible; height: auto; }
+.campaign-page--mobile .sidebar-main { width: 100%; }
+
+/* Section heading */
+.section-heading {
+  font-size: 22px; font-weight: 900;
+  text-align: center;
+  padding: 28px 24px 8px;
+}
+
+/* RICH TEXT */
+.block-rich-text {
+  padding: 8px 24px 20px;
+  font-size: 15px;
+  color: var(--hm-body);
+  text-align: justify;
+  /* Phase 3B content.width -- deliberately NOT applied to
+     .page-content-outer (1200px), which participates in wider page/
+     sidebar/grid structure and stays untouched. */
+  max-width: var(--hm-content-width, 900px);
+  margin-inline: auto;
+  line-height: 1.5;
+}
+.block-rich-text ::ng-deep p  { margin-bottom: 10px; line-height: 1.5; }
+.block-rich-text ::ng-deep h1,
+.block-rich-text ::ng-deep h2,
+.block-rich-text ::ng-deep h3 { font-weight: 700; color: var(--hm-heading); margin: 14px 0 6px; }
+.block-rich-text ::ng-deep a  { color: var(--hm-link); }
+.block-rich-text ::ng-deep ul,
+.block-rich-text ::ng-deep ol { padding-right: 20px; margin-bottom: 10px; }
+
+/* IMAGE */
+/* max-width/margin-inline match .block-rich-text's own column exactly —
+   without this, an image block (no width constraint at all) rendered wider
+   than the text column beside it, found live on a cloned partner page. Only
+   a ceiling, not a forced size: any image already inside a narrower
+   container (e.g. a sidebar column) is unaffected. The one real behavior
+   change is for a page that deliberately used a full-bleed image WIDER than
+   900px as a hero-style break-out — that now caps at 900px too. */
+.block-image { padding: 0; display: flex; flex-direction: column; max-width: var(--hm-content-width, 900px); margin-inline: auto; }
+/* Section-presentation audit (2026-09-30) -- in-content media now consumes
+   the same generic cards.radius/shadow tokens Rewards already did; Hero/
+   Opening's own media stays untouched (deliberately immersive/full-bleed,
+   a different treatment by design, not an oversight). */
+.block-image img { display: block; object-fit: cover; border-radius: var(--hm-card-radius, 0); box-shadow: var(--hm-card-shadow, none); }
+.block-caption { font-size: 12px; color: #94a3b8; text-align: center; padding: 6px; }
+
+/* VIDEO */
+.block-video { position: relative; width: 100%; aspect-ratio: 16/9; background: #0f172a; border-radius: var(--hm-card-radius, 0); box-shadow: var(--hm-card-shadow, none); overflow: hidden; }
+.block-video-iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ── GALLERY BLOCK — hm-gal- prefix avoids collision with rewards ── */
+.hm-gallery-block { padding: 12px 0; }
+
+/* Outer: identical to .hm-slider-outer */
+.hm-gal-outer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Nav arrows: same size as rewards arrows, light-bg variant */
+.hm-gal-nav {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 22px; line-height: 1;
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+.hm-gal-nav:hover { background: #f1f5f9; }
+
+/* Scrollable strip: identical to .hm-reward-slider */
+.hm-gal-slider {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none; -ms-overflow-style: none;
+  padding: 16px 4px;
+}
+.hm-gal-slider::-webkit-scrollbar { display: none; }
+
+/* Track: identical to .hm-slider-track */
+.hm-gal-track {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 16px;
+  direction: rtl;
+  min-width: 100%;
+  justify-content: center;
+}
+@supports (justify-content: safe center) {
+  .hm-gal-track { justify-content: safe center; }
+}
+
+/* Image card: same size formula as reward cards */
+.hm-gal-card {
+  flex: 0 0 calc((100% - 32px) / 3);
+  min-width: 200px;
+  position: relative;
+  border-radius: var(--hm-card-radius, 10px);
+  box-shadow: var(--hm-card-shadow, none);
+  overflow: hidden;
+  background: #e2e8f0;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s ease;
+}
+.hm-gal-card:hover {
+  transform: scale(1.035);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.hm-gal-card img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+  /* aspect-ratio set via [style.aspect-ratio] binding */
+}
+.hm-gal-card:hover img {
+  transform: scale(1.04);
+}
+
+/* Caption overlay */
+.hm-gal-caption {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 8px 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
+  color: #fff; font-size: 12px;
+  direction: rtl; text-align: right;
+}
+
+/* GRID mode */
+.hm-gal-grid-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.hm-gal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+.hm-gal-card--grid {
+  flex: none;
+  border-radius: 8px;
+  min-width: 0;
+}
+
+/* Empty placeholder */
+.hm-gal-empty {
+  max-width: 1200px; margin: 0 auto;
+  padding: 32px 16px;
+  text-align: center; color: #94a3b8; font-size: 13px;
+  border: 2px dashed #e2e8f0; border-radius: 10px;
+}
+
+/* SPLIT */
+.block-split { display: grid; }
+.split-side  { overflow: hidden; }
+
+/* CONTAINER */
+.block-container {
+  display: flex; flex-direction: column;
+  background-size: cover; background-position: center;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  box-sizing: border-box;
+  width: 100%;
+}
+.block-container--row {
+  flex-direction: row;
+  align-items: stretch;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Builder-only visual cue ("טבלת פריסה") — a real visitor never sees this
+   (gated on pageBuilderActive). outline (not border) so it never fights
+   with a manager's own chosen border color/width on the SAME element —
+   outline sits outside the box model entirely and doesn't affect layout.
+   Always visible while in the Builder, not just while dragging: the whole
+   point is that a manager recognizes "this is a container I can drop
+   things into" even before they've picked anything up. See DECISIONS.md
+   (2026-07-31). */
+.block-container--zone {
+  outline: 1.5px dashed #c4b5fd;
+  outline-offset: -1px;
+}
+
+.container-child { width: 100%; position: relative; }
+
+.container-child--hovered {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Same "selected"-looking treatment as .block-wrap--hovered-container,
+   for a container nested inside another container/tab/panel. */
+.container-child--hovered-container {
+  outline: 2px solid #7c3aed;
+  outline-offset: 0;
+  border-radius: 8px !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12) !important;
+}
+.block-container--row .container-child {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Nested containers inside a row container: no separator border */
+.block-container--row .container-child > .block-container { border-bottom: none; }
+
+/* TABS — accent color is a CSS custom property (set per-instance inline via
+   --tabs-accent) so all 3 variants share one color mechanism instead of
+   duplicating [style.*] bindings per variant. */
+.block-tabs { width: 100%; box-sizing: border-box; }
+.tabs-header {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-header::-webkit-scrollbar { display: none; }
+.tabs-header-btn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+/* Underline variant — flat row, active tab gets a colored bottom border.
+   Top padding matches the pills/boxed variants (they already had breathing
+   room above the header; this one didn't, so it read as crowded against
+   whatever block sits above it) — independent of the block's own
+   configurable spacingTop, which still applies additively on top of this. */
+.block-tabs--underline .tabs-header { border-bottom: 1.5px solid var(--line, #e2e8f0); padding: 16px clamp(16px, 5vw, 48px) 0; }
+.block-tabs--underline .tabs-header-btn { padding: 12px 16px; color: var(--tabs-label, #64748b); background: var(--tabs-bg, transparent); font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1.5px; border-radius: 6px 6px 0 0; }
+.block-tabs--underline .tabs-header-btn.active { color: var(--tabs-accent); font-weight: 800; border-bottom-color: var(--tabs-accent); }
+.block-tabs--underline .tabs-header-btn:hover:not(.active) { color: #334155; background: rgba(15, 23, 42, 0.04); }
+
+/* Pills variant — rounded buttons, active one filled */
+.block-tabs--pills .tabs-header { padding: 16px clamp(16px, 5vw, 48px) 8px; }
+.block-tabs--pills .tabs-header-btn { padding: 9px 18px; border-radius: 999px; color: var(--tabs-label, #475569); background: var(--tabs-bg, #f1f5f9); }
+.block-tabs--pills .tabs-header-btn.active { color: #fff; background: var(--tabs-accent); }
+.block-tabs--pills .tabs-header-btn:hover:not(.active) { filter: brightness(0.96); }
+
+/* Boxed variant — segmented control, active tab elevated on white */
+.block-tabs--boxed .tabs-header {
+  margin: 16px clamp(16px, 5vw, 48px) 8px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: calc(100% - 2 * clamp(16px, 5vw, 48px));
+}
+.block-tabs--boxed .tabs-header-btn { padding: 8px 18px; border-radius: 9px; color: var(--tabs-label, #64748b); background: var(--tabs-bg, transparent); }
+.block-tabs--boxed .tabs-header-btn.active { color: var(--tabs-accent); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.10); }
+
+/* Optional border around the active tab's content panel — off by default
+   (contentBorder), style/color controllable from "מתקדם". */
+.tabs-panel--bordered { border-width: 1.5px; border-radius: 12px; padding: 16px; }
+
+.tabs-panel { width: 100%; }
+
+/* ACCORDION (panels) */
+.block-accordion { width: 100%; box-sizing: border-box; padding: 0 clamp(16px, 5vw, 48px); display: flex; flex-direction: column; gap: 10px; }
+.accordion-panel-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: right;
+  transition: all 0.15s;
+}
+.accordion-panel-icon { font-size: 18px; flex-shrink: 0; }
+.accordion-panel-title { flex: 1; }
+.accordion-panel-chevron { flex-shrink: 0; transform: rotate(90deg); transition: transform 0.2s; color: #94a3b8; }
+.accordion-panel-chevron.open { transform: rotate(-90deg); color: var(--accordion-accent); }
+.accordion-panel-body { padding-top: 10px; }
+
+/* Underline variant — flat rows, thin separators */
+.block-accordion--underline .accordion-panel { border-bottom: 1.5px solid var(--line, #e2e8f0); padding-bottom: 14px; }
+.block-accordion--underline .accordion-panel:last-child { border-bottom: none; }
+.block-accordion--underline .accordion-panel-header { color: #1e293b; padding: 4px 0; }
+.block-accordion--underline .accordion-panel-header.open { color: var(--accordion-accent); }
+
+/* Pills variant — each panel a rounded card */
+.block-accordion--pills .accordion-panel { background: #f1f5f9; border-radius: 14px; padding: 4px 16px; }
+.block-accordion--pills .accordion-panel-header { padding: 12px 0; color: #334155; }
+.block-accordion--pills .accordion-panel-header.open { color: var(--accordion-accent); }
+.block-accordion--pills .accordion-panel-body { padding-bottom: 12px; }
+
+/* Boxed variant — bordered card, elevated when open */
+.block-accordion--boxed .accordion-panel { border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 4px 16px; transition: box-shadow 0.15s; }
+.block-accordion--boxed .accordion-panel:has(.accordion-panel-header.open) { box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-color: var(--accordion-accent); }
+.block-accordion--boxed .accordion-panel-header { padding: 12px 0; color: #334155; }
+.block-accordion--boxed .accordion-panel-header.open { color: var(--accordion-accent); }
+.block-accordion--boxed .accordion-panel-body { padding-bottom: 12px; }
+
+/* Mobile: stats + donate cards — compact */
+.campaign-page--mobile .hm-stats,
+.campaign-page--mobile .hm-donate {
+  padding: 16px 12px;
+}
+.campaign-page--mobile .hm-stats-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.campaign-page--mobile .hm-raised-info {
+  flex: 1;
+  align-items: flex-start;
+  text-align: left;
+}
+.campaign-page--mobile .hm-ring-wrapper { width: 80px; height: 80px; }
+.campaign-page--mobile .hm-ring-svg    { width: 80px; height: 80px; }
+.campaign-page--mobile .hm-ring-text strong { font-size: 16px; }
+.campaign-page--mobile .hm-raised-amount { font-size: 22px; }
+/* 2-column stat grid on mobile — back to row-major wrapping (base grid
+   is column-flow so it can size to however many boxes are visible). */
+.campaign-page--mobile .hm-stat-grid {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.campaign-page--mobile .hm-stat-box { padding: 10px 4px 0; }
+.campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-left: none; }
+.campaign-page--mobile .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+/* 3-column amounts on mobile */
+.campaign-page--mobile .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+
+/* Mobile: always stack vertically + cap container padding */
+.campaign-page--mobile .block-container {
+  padding: 12px !important;
+  gap: 12px !important;
+}
+.campaign-page--mobile .block-container--row {
+  flex-direction: column;
+  max-width: 100%;
+}
+.campaign-page--mobile .block-container--row .container-child {
+  flex: none;
+  width: 100%;
+}
+
+/* ─── Inside a container-child (sidebar context) — compact stats regardless of breakpoint ─── */
+.container-child .hm-stats,
+.container-child .hm-donate {
+  padding: 20px 16px;
+}
+.container-child .hm-stats-top {
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.container-child .hm-ring-wrapper { width: 80px; height: 80px; }
+.container-child .hm-ring-svg    { width: 80px; height: 80px; }
+.container-child .hm-ring-text strong { font-size: 16px; }
+.container-child .hm-raised-amount   { font-size: 22px; }
+/* 2-column stat grid inside any container — row-major wrapping */
+.container-child .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.container-child .hm-stat-box { padding: 12px 6px 0; }
+.container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
+.container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+/* 3-column amounts inside container */
+.container-child .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+/* Both cards fill their container-child height equally */
+.block-container--row .container-child > .hm-stats,
+.block-container--row .container-child > .hm-donate {
+  flex: 1;
+  height: 100%;
+}
+
+/* SHARE ROW — small, icon-only, delicate circular buttons (not bold brand-
+   color pills) — see DECISIONS.md (2026-08-02). */
+.hm-share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+}
+.hm-share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e5e9f0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+.hm-share-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, .1);
+  border-color: #cbd5e1;
+}
+.hm-share-icon { font-size: 14px; line-height: 1; color: #0f172a; }
+.hm-share-icon--x { font-size: 13px; font-weight: 700; color: #0f172a; }
+
+/* Real brand colors for the icon itself, and on hover the button fills with
+   that same color (icon flips to white) — same treatment already used for
+   the footer's social icons (.hm-footer-social a:hover), just per-platform
+   here instead of one shared theme color. */
+.hm-share-btn--whatsapp .hm-share-icon { color: #25d366; }
+.hm-share-btn--whatsapp:hover { background: #25d366; border-color: #25d366; }
+.hm-share-btn--whatsapp:hover .hm-share-icon { color: #fff; }
+
+.hm-share-btn--facebook .hm-share-icon { color: #1877f2; }
+.hm-share-btn--facebook:hover { background: #1877f2; border-color: #1877f2; }
+.hm-share-btn--facebook:hover .hm-share-icon { color: #fff; }
+
+.hm-share-btn--x:hover { background: #000; border-color: #000; }
+.hm-share-btn--x:hover .hm-share-icon--x { color: #fff; }
+
+@media (max-width: 768px) {
+  .hm-share-row { gap: 6px; padding: 12px 16px; }
+  .hm-share-btn { width: 30px; height: 30px; }
+  .hm-share-icon { font-size: 13px; }
+}
+
+/* Partner-only blocks (Phase 3) — coupons / map / opening-hours */
+.hm-coupon-card {
+  margin: 16px 24px;
+  padding: 18px 20px;
+  border: 2px dashed var(--hm-secondary, #6fc9eb);
+  border-radius: 12px;
+  text-align: center;
+  background: #fff;
+}
+.hm-coupon-label { font-size: 13px; font-weight: 700; color: var(--hm-secondary, #6fc9eb); margin-bottom: 6px; }
+.hm-coupon-code { font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #1e293b; }
+.hm-coupon-desc { font-size: 13px; color: #64748b; margin-top: 8px; }
+.hm-coupon-expiry { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+.hm-map-block { margin: 16px 24px; }
+.hm-map-address { font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 8px; }
+.hm-map-embed { width: 100%; height: 280px; border: 0; border-radius: 12px; }
+
+.hm-hours-block { margin: 16px 24px; }
+.hm-hours-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+.hm-hours-row:last-child { border-bottom: none; }
+.hm-hours-day { font-weight: 700; color: #1e293b; }
+.hm-hours-value { color: #64748b; }
+
+/* CTA */
+.block-cta { padding: 32px 24px; display: flex; flex-direction: column; gap: 12px; }
+.cta-title  { font-size: 22px; font-weight: 900; margin: 0; }
+.cta-text   { font-size: 14px; margin: 0; opacity: 0.85; }
+.cta-btn-wrap { display: flex; }
+/* Hero CTA (2026-09-28) — same .cta-btn-wrap/.cta-btn as the generic cta
+   block, plus full width so justifyContent (from heroCtaConfig.align)
+   actually positions the button instead of being centered by .hm-hero-copy's
+   own align-items:center regardless of the chosen alignment. */
+.hm-hero-cta-wrap { width: 100%; }
+.cta-btn {
+  padding: 11px 24px; border-radius: var(--hm-btn-radius, 10px); border: none;
+  box-shadow: var(--hm-btn-shadow, none);
+  color: #fff; font-size: 14px; font-weight: var(--hm-btn-weight, 700);
+  cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: filter 0.15s;
+}
+.cta-btn:hover { filter: brightness(1.1); }
+

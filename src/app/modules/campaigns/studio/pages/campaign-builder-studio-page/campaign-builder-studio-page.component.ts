@@ -7,10 +7,14 @@ import {
   ChartColumn, HandCoins, Gift, Handshake, Star, Heart, Megaphone, PanelTop, Rows3, ListCollapse, Share2, MessageCircle,
   Ticket, MapPin, Clock, Eye, EyeOff, ArrowUp, ArrowDown, ChevronDown, ChevronLeft, Plus, Undo2, Redo2, Layers, Box,
   LayoutTemplate, Info, PanelRightOpen, PanelRightClose, PanelLeftOpen, PanelLeftClose, Ellipsis, Trash2, Palette, PanelBottom, SlidersHorizontal, ExternalLink, Rocket, CircleCheck, CircleAlert, Copy,
+  AlignRight, AlignCenter, AlignLeft, AArrowUp, AArrowDown, Heading,
 } from 'lucide-angular';
+import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
+import { TextAlign, TextFontSize } from '../../../../../shared/models/text-style.model';
+import { resolveOpeningComposition } from '../../../builder/styles/campaign-styles';
 import { HM_ICON_SIZE, HM_ICON_STROKE } from '../../../../../shared/ui/design-system/icons';
 import { CampaignApiService } from '../../../services/campaign-api.service';
-import { BlockType, CampaignBlock, CampaignDraft, CampaignStatus, CampaignStudioStateService, ContainerBlockData } from '../../../services/campaign-studio-state.service';
+import { BlockType, CampaignBlock, CampaignDraft, CampaignStatus, CampaignStudioStateService, ContainerBlockData, StudioCanvasArea } from '../../../services/campaign-studio-state.service';
 import { StudioUiService } from '../../services/studio-ui.service';
 import { CampaignStudioTopbarComponent } from '../../topbar/campaign-studio-topbar/campaign-studio-topbar.component';
 import { CampaignPreviewComponent } from '../../preview/campaign-preview/campaign-preview.component';
@@ -57,6 +61,25 @@ export interface StudioNode {
   parentId: string | null;     // container / tabs / panels holding it
   children: StudioNode[];
 }
+
+type OpeningPart = 'title' | 'subtitle' | 'hero-cta';
+
+export interface FloatAction {
+  id: 'align-right' | 'align-center' | 'align-left' | 'smaller' | 'larger' | 'hide' | 'up' | 'down' | 'duplicate' | 'delete';
+  icon: LucideIconData;
+  label: string;
+  align?: TextAlign;
+  active?: boolean;
+  disabled?: boolean;
+  danger?: boolean;
+}
+
+const ALIGN_ACTIONS: FloatAction[] = [
+  { id: 'align-right', icon: AlignRight, label: 'יישור לימין', align: 'right' },
+  { id: 'align-center', icon: AlignCenter, label: 'יישור למרכז', align: 'center' },
+  { id: 'align-left', icon: AlignLeft, label: 'יישור לשמאל', align: 'left' },
+];
+const TEXT_SIZES: TextFontSize[] = ['sm', 'md', 'lg', 'xl'];
 
 const STATUS_LABELS: Record<CampaignStatus, string> = {
   draft: 'טיוטה', published: 'פורסם', paused: 'מושהה', ended: 'הסתיים',
@@ -130,7 +153,7 @@ export function blockActions(block: CampaignBlock, canDuplicate = !SINGLE_INSTAN
     TemplatePickerComponent, CampaignPresetPickerComponent, CampaignBasicStepComponent, CampaignPageBuilderStepComponent, CampaignTypeStepComponent, CampaignDonationStepComponent,
     CampaignOfferingsStepComponent, CampaignRegistrationStepComponent, CampaignSponsorsStepComponent,
     CampaignAmbassadorsStepComponent, CampaignUpdatesStepComponent, CampaignPublishStepComponent,
-    CampaignMinimalDetailsStepComponent, MinimalDonationPageComponent,
+    CampaignMinimalDetailsStepComponent, MinimalDonationPageComponent, TextStyleEditorComponent,
   ],
   templateUrl: './campaign-builder-studio-page.component.html',
   styleUrl: './campaign-builder-studio-page.component.css',
@@ -145,6 +168,7 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
   readonly state = inject(CampaignStudioStateService);
   readonly ui = inject(StudioUiService);
   @ViewChild('canvas') canvas?: ElementRef<HTMLElement>;
+  @ViewChild('floatBar') floatBar?: ElementRef<HTMLElement>;
 
   readonly draft$ = this.state.draft$;
   readonly icons = {
@@ -162,6 +186,18 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
     { key: 'area:footer', label: 'פוטר', design: 'footer', icon: PanelBottom, title: 'פוטר' },
   ];
   designArea(key: string | null) { return this.designAreas.find(a => a.key === key); }
+
+  // The opening's own parts, each selectable from the canvas or the tree and
+  // edited directly (no detour through the page design area).
+  readonly openingParts: { key: string; part: OpeningPart; label: string; icon: LucideIconData }[] = [
+    { key: 'part:title', part: 'title', label: 'כותרת', icon: Heading },
+    { key: 'part:subtitle', part: 'subtitle', label: 'תת-כותרת', icon: Type },
+    { key: 'part:hero-cta', part: 'hero-cta', label: 'כפתור ב-Hero', icon: MousePointerClick },
+  ];
+  openingPart(key: string | null) { return this.openingParts.find(p => p.key === key); }
+  readonly heroPositions: { value: 'above' | 'hero' | 'below' | 'hidden'; label: string }[] = [
+    { value: 'above', label: 'מעל' }, { value: 'hero', label: 'ב-Hero' }, { value: 'below', label: 'מתחת' }, { value: 'hidden', label: 'מוסתר' },
+  ];
 
   // Page areas that host a classic wizard step as-is. Whether a step is edited
   // here, managed in the Workspace (published campaigns, steps 3–8), or not
@@ -226,7 +262,10 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
   // Undo/redo of campaign edits in this session (studio-history.ts).
   readonly history = new StudioHistory(this.state);
   // Page areas clicked in the canvas, and where they open in the tree.
-  private readonly canvasAreas: Record<'opening' | 'nav' | 'footer', string> = { opening: 'area:opening', nav: 'area:design', footer: 'area:footer' };
+  private readonly canvasAreas: Record<StudioCanvasArea, string> = {
+    opening: 'area:opening', nav: 'area:design', footer: 'area:footer',
+    title: 'part:title', subtitle: 'part:subtitle', logo: 'area:logo', 'hero-cta': 'part:hero-cta',
+  };
 
   ngOnInit(): void {
     this.restoreLayout();
@@ -277,6 +316,7 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
     const id = this.canvasSelector(this.selectedKey);
     const current = root.querySelectorAll<HTMLElement>('.studio-selected');
     const targets = id ? Array.from(root.querySelectorAll<HTMLElement>(id)) : [];
+    this.placeFloatBar(root, targets[0]);
     if (this.highlighted === id && targets.every(t => t.classList.contains('studio-selected')) && current.length === targets.length) return;
     current.forEach(el => el.classList.remove('studio-selected'));
     targets.forEach(el => el.classList.add('studio-selected'));
@@ -288,11 +328,139 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
   // The canvas element(s) showing the selection: a block, or the opening /
   // footer area. The design area covers the whole page and is not outlined.
   private canvasSelector(key: string | null): string | null {
-    if (!key || key === 'area:design' || key === 'area:logo') return null;
+    if (key === 'area:logo') return '[data-studio-part="logo"]';
+    const part = this.openingPart(key);
+    if (part) return `[data-studio-part="${part.part}"]`;
+    if (!key || key === 'area:design') return null;
     if (key === 'area:opening') return '[data-studio-area="opening"]';
     if (key === 'area:footer') return '[data-studio-area="footer"]';
     if (key.startsWith('area:')) return null;
     return `[data-block-id="${CSS.escape(key)}"]`;
+  }
+
+  // Floating toolbar above the selected element (below it when there is no
+  // room). Positioned straight on the element: this runs after every check,
+  // where a bound property would change mid-check.
+  private placeFloatBar(root: HTMLElement, target: HTMLElement | undefined): void {
+    const bar = this.floatBar?.nativeElement;
+    if (!bar) return;
+    if (!target) { bar.style.visibility = 'hidden'; return; }
+    const frame = root.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    const above = rect.top - frame.top - bar.offsetHeight - 8;
+    bar.style.top = `${above >= 4 ? above : rect.bottom - frame.top + 8}px`;
+    bar.style.right = `${Math.max(4, frame.right - rect.right)}px`;
+    bar.style.visibility = 'visible';
+  }
+
+  hasClassicOpening(draft: CampaignDraft): boolean {
+    return resolveOpeningComposition(draft.layout.openingComposition, draft.layout.campaignStyleId) === 'classic';
+  }
+
+  heroPosition(draft: CampaignDraft, part: OpeningPart): string {
+    return (part === 'title' ? draft.layout.heroTitlePosition : draft.layout.heroSubtitlePosition) ?? 'hero';
+  }
+
+  setHeroPosition(part: OpeningPart, pos: 'above' | 'hero' | 'below' | 'hidden'): void {
+    if (part === 'title') this.state.setHeroTitlePosition(pos);
+    else this.state.setHeroSubtitlePosition(pos);
+  }
+
+  // On the Hero the copy is centered unless a part has its own alignment;
+  // above/below it follows the shared alignment (see the preview's heroTextAlign).
+  partAlignFallback(draft: CampaignDraft, part: OpeningPart): TextAlign {
+    return this.heroPosition(draft, part) === 'hero' ? 'center' : draft.heroTextStyle.align;
+  }
+
+  // The few actions used most often on the selected element, next to it on
+  // the canvas. Everything else stays in the properties panel.
+  floatActions(draft: CampaignDraft): FloatAction[] {
+    const key = this.selectedKey;
+    if (!key) return [];
+    const part = this.openingPart(key)?.part;
+    if (part === 'title' || part === 'subtitle') {
+      const style = draft.heroTextStyle;
+      const align = (part === 'title' ? style.titleAlign : style.subtitleAlign) ?? this.partAlignFallback(draft, part);
+      const size = part === 'title' ? (style.titleFontSize || style.fontSize) : (style.subtitleFontSize || 'md');
+      return [
+        ...ALIGN_ACTIONS.map(a => ({ ...a, active: align === a.align })),
+        { id: 'smaller', icon: AArrowDown, label: 'הקטנת הטקסט', disabled: size === TEXT_SIZES[0] },
+        { id: 'larger', icon: AArrowUp, label: 'הגדלת הטקסט', disabled: size === TEXT_SIZES[TEXT_SIZES.length - 1] },
+        { id: 'hide', icon: EyeOff, label: 'הסתרה' },
+      ];
+    }
+    if (part === 'hero-cta') {
+      return [
+        ...ALIGN_ACTIONS.map(a => ({ ...a, active: draft.heroCtaConfig.align === a.align })),
+        { id: 'hide', icon: EyeOff, label: 'הסתרה' },
+      ];
+    }
+    if (key === 'area:logo') {
+      const align = draft.heroLogoPosition === 'above' ? draft.logoStripAlign : draft.heroLogoPosition;
+      return [
+        ...ALIGN_ACTIONS.map(a => ({ ...a, active: align === a.align })),
+        { id: 'hide', icon: EyeOff, label: 'הסתרה' },
+      ];
+    }
+    const block = draft.blocks.find(b => b.id === key);
+    const node = block && this.findNode(this.tree(draft), key);
+    if (!block || !node) return [];
+    return [
+      { id: 'up', icon: ArrowUp, label: 'הזזה למעלה', disabled: node.scopeIds[0] === key },
+      { id: 'down', icon: ArrowDown, label: 'הזזה למטה', disabled: node.scopeIds[node.scopeIds.length - 1] === key },
+      ...(this.state.canDuplicateBlock(key, SINGLE_INSTANCE) ? [{ id: 'duplicate' as const, icon: Copy, label: 'שכפול' }] : []),
+      { id: 'hide', icon: EyeOff, label: 'הסתרה' },
+      { id: 'delete', icon: Trash2, label: 'מחיקה', danger: true },
+    ];
+  }
+
+  runFloat(action: FloatAction, draft: CampaignDraft): void {
+    const key = this.selectedKey;
+    if (!key || action.disabled) return;
+    const part = this.openingPart(key)?.part;
+    if (part === 'title' || part === 'subtitle') {
+      const style = draft.heroTextStyle;
+      if (action.align) {
+        this.state.patch({ heroTextStyle: { ...style, [part === 'title' ? 'titleAlign' : 'subtitleAlign']: action.align } });
+      } else if (action.id === 'smaller' || action.id === 'larger') {
+        const current = part === 'title' ? (style.titleFontSize || style.fontSize) : (style.subtitleFontSize || 'md');
+        const next = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, TEXT_SIZES.indexOf(current) + (action.id === 'larger' ? 1 : -1)))];
+        this.state.patch({ heroTextStyle: part === 'title' ? { ...style, fontSize: next, titleFontSize: next } : { ...style, subtitleFontSize: next } });
+      } else if (action.id === 'hide') {
+        this.setHeroPosition(part, 'hidden');
+        this.select(this.openingKey, false);
+      }
+      return;
+    }
+    if (part === 'hero-cta') {
+      this.state.patch({ heroCtaConfig: { ...draft.heroCtaConfig, ...(action.align ? { align: action.align } : { visible: false }) } });
+      if (!action.align) this.select(this.openingKey, false);
+      return;
+    }
+    if (key === 'area:logo') {
+      if (action.align) this.state.patch(draft.heroLogoPosition === 'above' ? { logoStripAlign: action.align } : { heroLogoPosition: action.align });
+      else { this.state.patch({ showLogo: false }); this.select(this.openingKey, false); }
+      return;
+    }
+    const block = draft.blocks.find(b => b.id === key);
+    const node = block && this.findNode(this.tree(draft), key);
+    if (!block || !node) return;
+    switch (action.id) {
+      case 'up': this.state.moveBlockUpInScope(key, node.scopeIds); break;
+      case 'down': this.state.moveBlockDownInScope(key, node.scopeIds); break;
+      case 'duplicate': this.runAction('duplicate', block); break;
+      case 'hide': this.state.toggleBlockVisibility(key); break;
+      case 'delete': this.askDelete(block); break;
+    }
+  }
+
+  private findNode(list: StudioNode[], key: string): StudioNode | undefined {
+    for (const node of list) {
+      if (node.key === key) return node;
+      const found = this.findNode(node.children, key);
+      if (found) return found;
+    }
+    return undefined;
   }
 
   // ?returnStep=<wizard step>, as links into the Wizard use it: publishing
