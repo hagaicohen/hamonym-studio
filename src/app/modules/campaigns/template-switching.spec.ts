@@ -228,17 +228,25 @@ describe('Template switching — page formats', () => {
   let state: CampaignStudioStateService;
   beforeEach(() => { state = TestBed.inject(CampaignStudioStateService); state.loadDraft(structuredClone(existingCampaign(state))); });
 
-  it('refuses to switch a full page to the minimal donation format, leaving the draft untouched', () => {
+  it('the minimal donation template only changes the page type: blocks and regular layout settings stay', () => {
     const before = structuredClone(state.draft);
-    expect(apply(state, 'minimal-donation')).toBeFalse();
-    expect(state.draft).toEqual(before);
+    expect(apply(state, 'minimal-donation')).toBeTrue();
+    expect(state.draft.layout.pageFormat).toBe('minimal');
+    expect(state.draft.layout.templateId).toBe('minimal-donation');
+    expect(state.draft.blocks).toEqual(before.blocks);
+    expect(state.draft.layout.layoutMode).toBe(before.layout.layoutMode);
+    expect(state.draft.layout.heroPlacement).toBe(before.layout.heroPlacement);
+    expect(state.draft.id).toBe(before.id);
   });
 
-  it('refuses to switch a minimal donation page to a full template, leaving the draft untouched', () => {
-    state.patch({ layout: { ...state.draft.layout, pageFormat: 'minimal' } });
+  it('a regular template on a minimal page drops pageFormat and keeps the blocks in their saved order', () => {
     const before = structuredClone(state.draft);
-    expect(apply(state, 'classic')).toBeFalse();
-    expect(state.draft).toEqual(before);
+    apply(state, 'minimal-donation');
+    expect(apply(state, 'magazine')).toBeTrue();
+    expect(state.draft.layout.pageFormat).toBeUndefined();
+    expect('pageFormat' in state.draft.layout).toBeFalse();
+    expect(state.draft.blocks).toEqual(before.blocks);
+    expect(state.draft.layout.templateId).toBe('magazine');
   });
 });
 
@@ -280,11 +288,13 @@ describe('Template switching — Step 9 and saving', () => {
 });
 
 describe('Template switching — template picker', () => {
-  it('switch mode hides the minimal page format; create mode lists every template', () => {
+  it('create mode lists every template; switch mode offers the minimal page only where the editor asks for it', () => {
     const picker = new TemplatePickerComponent();
     expect(picker.templates.length).toBe(CAMPAIGN_TEMPLATES.length);
     picker.mode = 'switch';
-    expect(picker.templates.some(t => t.pageFormat === 'minimal')).toBeFalse();
+    expect(picker.templates.some(t => t.pageFormat === 'minimal')).withContext('classic wizard step 9').toBeFalse();
     expect(picker.templates.length).toBe(CAMPAIGN_TEMPLATES.length - 1);
+    picker.offerQuickDonation = true;
+    expect(picker.templates.length).withContext('Studio').toBe(CAMPAIGN_TEMPLATES.length);
   });
 });

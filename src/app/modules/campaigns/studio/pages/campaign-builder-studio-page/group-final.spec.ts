@@ -156,6 +156,29 @@ describe('Studio final sprint — duplicate block', () => {
     expect(blockActions(state.draft.blocks.find(b => b.id === 'hero-1')!).some(a => a.id === 'duplicate')).toBeFalse();
     expect(blockActions(state.draft.blocks.find(b => b.id === 'story-1')!).some(a => a.id === 'duplicate')).toBeTrue();
   });
+
+  it('the donation box and the stats bar cannot be duplicated, directly or through their container', async () => {
+    const block = (id: string, type: string, extra: any = {}) =>
+      ({ id, type, order: 3, visible: true, label: '', spacingTop: 0, spacingBottom: 0, data: {}, ...extra }) as CampaignBlock;
+    const { state, page } = await setup({
+      blocks: [
+        ...blocks(),
+        block('rail-1', 'container', { data: { childBlockIds: ['stats-1', 'donate-1'], direction: 'row' } }),
+        block('stats-1', 'stats', { data: { items: [] } }),
+        block('donate-1', 'donation-widget'),
+      ],
+    });
+    const count = state.draft.blocks.length;
+    for (const id of ['stats-1', 'donate-1', 'rail-1']) {
+      const b = state.draft.blocks.find(x => x.id === id)!;
+      expect(page.actionsFor(b).some(a => a.id === 'duplicate')).withContext(id).toBeFalse();
+      expect(state.duplicateBlock(id, SINGLE_INSTANCE)).withContext(id).toBeNull();
+    }
+    expect(state.draft.blocks.length).toBe(count);
+    expect(page.actionsFor(state.draft.blocks.find(b => b.id === 'inner-1')!).some(a => a.id === 'duplicate')).toBeTrue();
+    expect(page.isAlreadyAdded('donation-widget', state.draft.blocks)).toBeTrue();
+    expect(page.isAlreadyAdded('stats', state.draft.blocks)).toBeTrue();
+  });
 });
 
 describe('Studio final sprint — unsaved changes', () => {

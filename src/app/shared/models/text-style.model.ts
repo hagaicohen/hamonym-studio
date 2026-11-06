@@ -14,6 +14,19 @@ export interface TextStyle {
   // these.
   fontFamily?: string;
   fontWeight?: number;
+  // Hero only -- separate title/subtitle styling that applies wherever the
+  // text sits (above, on or below the Hero). Absent on campaigns saved
+  // before 2026-11: on the Hero they fall back to color/fontSize, and
+  // above/below they keep the plain page-text look, since the legacy
+  // color (white by default) was only ever applied on the photo.
+  titleColor?:       string;
+  subtitleColor?:    string;
+  titleFontSize?:    TextFontSize;
+  subtitleFontSize?: TextFontSize;
+  // Set by dragging the title/subtitle in the Studio canvas. Absent = the
+  // shared `align` above/below the Hero, and the centered Hero copy on it.
+  titleAlign?:       TextAlign;
+  subtitleAlign?:    TextAlign;
 }
 
 export interface CtaConfig {

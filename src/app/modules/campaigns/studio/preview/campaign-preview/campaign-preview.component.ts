@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { LucideAngularModule, GripVertical, Mail, Facebook } from 'lucide-angular';
-import { TextStyle } from '../../../../../shared/models/text-style.model';
+import { TextStyle, TextAlign } from '../../../../../shared/models/text-style.model';
 import { resolveRoleColor, resolveRoleFontWeight, resolveRoleBorderRadius, LEGACY_THEME_COLOR } from '../../../utils/text-role-resolver';
 import { AMOUNT_BUTTON_PRESETS, AmountButtonPresetTokens } from '../../../utils/donation-amount-button-presets';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
@@ -15,7 +15,7 @@ import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { environment } from '../../../../../../environments/environment';
 import { StudioUiService } from '../../services/studio-ui.service';
-import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposition, ConversionWidgetLayout, resolveOpeningComposition, resolveSectionSurfaceColors, OpeningComposition, resolveSectionPresentation, SectionPresentation, PresentableSection } from '../../../builder/styles/campaign-styles';
+import { resolveVisualTokens, CampaignStyleVisualTokens, resolveDonationComposition, ConversionWidgetLayout, MERGED_DONATION_LAYOUTS, resolveOpeningComposition, resolveSectionSurfaceColors, OpeningComposition, resolveSectionPresentation, SectionPresentation, PresentableSection } from '../../../builder/styles/campaign-styles';
 import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
 import {
   CampaignStudioStateService,
@@ -33,6 +33,7 @@ import {
   AccordionBlockData,
   StatsBlockData,
   StatKey,
+  StatItem,
   DonationWidgetBlockData,
   CtaBlockData,
   DividerBlockData,
@@ -58,8 +59,17 @@ import { CommentsService, CampaignComment } from '../../../services/comments.ser
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { AmbassadorSlugFieldComponent } from '../../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
-
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+
+type HeroPart = 'logo' | 'title' | 'subtitle';
+type HeroPartPlace = 'above' | 'hero' | 'below';
+
+const HERO_TEXT_SIZES: Record<'title' | 'subtitle', Record<'desktop' | 'mobile', Record<string, string>>> = {
+  title:    { desktop: { sm: '24px', md: '32px', lg: '40px', xl: '48px' }, mobile: { sm: '20px', md: '24px', lg: '28px', xl: '32px' } },
+  subtitle: { desktop: { sm: '14px', md: '17px', lg: '20px', xl: '24px' }, mobile: { sm: '13px', md: '14px', lg: '16px', xl: '18px' } },
+};
+
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
@@ -138,6 +148,71 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   onExistingBlockDragEnd(): void {
     this.state.setDraggedExistingBlockId(null);
+  }
+
+  // ── Hero parts (logo, title, subtitle) dragged onto a drop zone above, on
+  // or below the Hero. Kept apart from block dragging: the document-level
+  // dragover/drop handlers ignore it, since neither draggingType nor
+  // draggingExistingId is set.
+  heroPartDrag: HeroPart | null = null;
+  heroDropZone: string | null = null;
+  readonly heroDropAligns: { align: TextAlign; label: string }[] = [
+    { align: 'right', label: 'ימין' },
+    { align: 'center', label: 'מרכז' },
+    { align: 'left', label: 'שמאל' },
+  ];
+
+  onHeroPartDragStart(event: DragEvent, part: HeroPart): void {
+    if (!this.pageBuilderActive) return;
+    event.stopPropagation();
+    event.dataTransfer?.setData('text/plain', part);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    // Deferred: changing the DOM during dragstart makes Chrome cancel the drag.
+    setTimeout(() => (this.heroPartDrag = part));
+  }
+
+  onHeroPartDragEnd(): void {
+    this.heroPartDrag = null;
+    this.heroDropZone = null;
+  }
+
+  onHeroZoneDragOver(event: DragEvent, zone: string): void {
+    if (!this.heroPartDrag) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    this.heroDropZone = zone;
+  }
+
+  onHeroZoneDrop(event: DragEvent, place: HeroPartPlace, align: TextAlign): void {
+    const part = this.heroPartDrag;
+    if (!part) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.onHeroPartDragEnd();
+    this.moveHeroPart(part, place, align);
+  }
+
+  moveHeroPart(part: HeroPart, place: HeroPartPlace, align: TextAlign): void {
+    const draft = this.state.draft;
+    if (part === 'logo') {
+      if (place === 'below') return;
+      this.state.patch(place === 'above'
+        ? { showLogo: true, heroLogoPosition: 'above', logoStripAlign: align }
+        : { showLogo: true, heroLogoPosition: align });
+      return;
+    }
+    this.state.patch({
+      heroTextStyle: { ...draft.heroTextStyle, [part === 'title' ? 'titleAlign' : 'subtitleAlign']: align },
+      layout: { ...draft.layout, [part === 'title' ? 'heroTitlePosition' : 'heroSubtitlePosition']: place },
+    });
+  }
+
+  hideHeroPart(event: MouseEvent, part: HeroPart): void {
+    event.stopPropagation();
+    if (part === 'logo') this.state.patch({ showLogo: false });
+    else if (part === 'title') this.state.setHeroTitlePosition('hidden');
+    else this.state.setHeroSubtitlePosition('hidden');
   }
 
   // ── Drag-and-drop (block picker → live preview, and existing-block
@@ -684,7 +759,32 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     const sizes: Record<string, string> = {
       sm: '24px', md: '32px', lg: '40px', xl: '48px',
     };
-    return sizes[draft.heroTextStyle?.fontSize] || '40px';
+    const style = draft.heroTextStyle;
+    return sizes[style?.titleFontSize || style?.fontSize] || '40px';
+  }
+
+  // Only an explicitly chosen title/subtitle size is returned (null = no
+  // binding), so campaigns saved before these controls keep their CSS
+  // defaults: above/below the Hero, and on mobile everywhere.
+  heroTextSize(draft: CampaignDraft, part: 'title' | 'subtitle', screen: 'desktop' | 'mobile'): string | null {
+    const size = part === 'title' ? draft.heroTextStyle?.titleFontSize : draft.heroTextStyle?.subtitleFontSize;
+    return size ? HERO_TEXT_SIZES[part][screen][size] ?? null : null;
+  }
+
+  // On the Hero the legacy shared color stays the fallback; off the Hero
+  // only an explicit color applies (the legacy white was never shown there).
+  heroTextColor(draft: CampaignDraft, part: 'title' | 'subtitle', onHero: boolean): string | null {
+    const style = draft.heroTextStyle;
+    const color = part === 'title' ? style?.titleColor : style?.subtitleColor;
+    return color || (onHero ? style?.color ?? null : null);
+  }
+
+  // On the Hero the copy stays centered unless a part was dragged to a side;
+  // above/below the shared alignment stays the fallback.
+  heroTextAlign(draft: CampaignDraft, part: 'title' | 'subtitle', onHero: boolean): TextAlign | null {
+    const style = draft.heroTextStyle;
+    const align = part === 'title' ? style?.titleAlign : style?.subtitleAlign;
+    return align || (onHero ? null : style?.align ?? null);
   }
 
   fundingTypeLabel(type: string): string {
@@ -1904,6 +2004,27 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       draft.layout?.conversionWidgetLayout as ConversionWidgetLayout | undefined,
       draft.layout?.campaignStyleId,
     );
+  }
+
+  // Merged donation layouts render the progress summary inside the donation
+  // card, reading the stats block's own KPI selection when there is one.
+  isMergedDonationLayout(draft: CampaignDraft): boolean {
+    return MERGED_DONATION_LAYOUTS.includes(this.effectiveDonationComposition(draft));
+  }
+
+  // The stats block steps aside only when a donation card is there to carry
+  // its figures; otherwise it keeps rendering on its own.
+  statsMergedIntoDonation(draft: CampaignDraft): boolean {
+    return this.isMergedDonationLayout(draft) && draft.blocks.some(b => b.type === 'donation-widget' && b.visible);
+  }
+
+  mergedStatItems(draft: CampaignDraft): StatItem[] {
+    const stats = draft.blocks.find(b => b.type === 'stats' && b.visible);
+    if (stats) return this.visibleGridStats(stats);
+    return [
+      { key: 'supporters', visible: true, order: 0 },
+      { key: 'days_remaining', visible: true, order: 1 },
+    ];
   }
 
   // Opening Composition — Phase A, generic (2026-10-01) -- see

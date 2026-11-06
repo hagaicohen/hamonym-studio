@@ -107,7 +107,7 @@ export interface StudioAction { id: StudioActionId; label: string; danger?: bool
 
 // Block actions offered in the tree context menu and the properties panel;
 // the same conditions as the classic Step 9 block row.
-export function blockActions(block: CampaignBlock): StudioAction[] {
+export function blockActions(block: CampaignBlock, canDuplicate = !SINGLE_INSTANCE.includes(block.type)): StudioAction[] {
   const data = block.data as ContainerBlockData;
   const actions: StudioAction[] = [];
   if (block.type === 'container') actions.push({ id: 'add-inside', label: 'הוספת רכיב לתוך המסגרת' });
@@ -116,7 +116,7 @@ export function blockActions(block: CampaignBlock): StudioAction[] {
   if (block.type === 'container' && data.direction === 'row' && (data.childBlockIds ?? []).length >= 2) {
     actions.push({ id: 'swap', label: 'החלפת צדדים (ימין ↔ שמאל)' });
   }
-  if (!SINGLE_INSTANCE.includes(block.type)) actions.push({ id: 'duplicate', label: 'שכפול' });
+  if (canDuplicate) actions.push({ id: 'duplicate', label: 'שכפול' });
   if (block.importReview?.needsReview) actions.push({ id: 'review', label: 'סימון כנבדק (ייבוא אתר)' });
   actions.push({ id: 'delete', label: 'מחיקה', danger: true });
   return actions;
@@ -314,6 +314,7 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
   // its own details step and the wizard steps the wizard keeps for it.
   isMinimal(draft: CampaignDraft): boolean { return draft.layout.pageFormat === 'minimal'; }
 
+
   // Leaving with edits that were not saved asks first (route guard + tab close).
   canLeave(): boolean {
     return !this.state.hasUnsavedChanges() || confirm('יש שינויים שלא נשמרו. לצאת בלי לשמור?');
@@ -479,7 +480,7 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
     return parent ? 'הוספה לתוך: ' + (parent.label?.trim() || BLOCK_LABELS[parent.type]) : 'הוספה לעמוד';
   }
 
-  actionsFor(block: CampaignBlock): StudioAction[] { return blockActions(block); }
+  actionsFor(block: CampaignBlock): StudioAction[] { return blockActions(block, this.state.canDuplicateBlock(block.id, SINGLE_INSTANCE)); }
 
   openMenu(node: StudioNode, event: MouseEvent): void {
     event.preventDefault();
@@ -593,9 +594,25 @@ export class CampaignBuilderStudioPageComponent implements OnInit, OnDestroy, Af
     this.onDragEnd();
   }
 
+  // A template that changes the page type (regular ↔ quick donation page) on a
+  // campaign donors can already see needs an explicit confirmation, and is
+  // refused when the saved details couldn't be published in the new type (the
+  // server checks this only when publishing).
   onTemplateSelected(selection: TemplateSelection): void {
+    const draft = this.state.draft;
+    const format = selection.template.pageFormat ?? 'full';
+    const changesType = (draft.layout.pageFormat ?? 'full') !== format;
+    if (changesType && draft.status !== 'draft') {
+      const missing = publishMissingFields({ ...draft, layout: { ...draft.layout, pageFormat: format } });
+      if (missing.length) {
+        alert(`לא ניתן לעבור לתבנית "${selection.template.name}" כל עוד חסר: ${missing.join(', ')}. יש להשלים את הפרטים ולנסות שוב.`);
+        return;
+      }
+      if (!confirm(`הקמפיין כבר גלוי לתורמים. לעבור לתבנית "${selection.template.name}"?\nהשינוי יוצג לתורמים לאחר השמירה. התוכן, התרומות והכתובת לא משתנים.`)) return;
+    }
     this.state.switchTemplate(selection.template, selection.palette);
     this.showTemplatePicker = false;
+    if (changesType) this.selectedKey = this.openingKey;
   }
 
   onPresetSelected(presetId: PresetId): void {

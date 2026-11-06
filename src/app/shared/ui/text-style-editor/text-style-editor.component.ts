@@ -23,6 +23,8 @@ export class TextStyleEditorComponent {
 
   @Input() showPosition = false;
   @Input() showCta = false;
+  // Hero: separate size and color for the title and the subtitle.
+  @Input() splitTitleSubtitle = false;
 
   expanded = false;
 
@@ -50,6 +52,12 @@ export class TextStyleEditorComponent {
 
   patchStyle(partial: Partial<TextStyle>): void {
     this.textStyleChange.emit({ ...this.textStyle, ...partial });
+  }
+
+  // The shared alignment also resets the per-part alignment set by dragging,
+  // so it keeps controlling both lines.
+  setAlign(align: TextAlign): void {
+    this.patchStyle(this.splitTitleSubtitle ? { align, titleAlign: undefined, subtitleAlign: undefined } : { align });
   }
 
   patchCta(partial: Partial<CtaConfig>): void {

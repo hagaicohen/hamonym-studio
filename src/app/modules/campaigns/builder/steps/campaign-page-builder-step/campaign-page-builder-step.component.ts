@@ -63,6 +63,7 @@ import { TEMPLATE_PALETTES, TemplatePalette, buildTheme } from '../../templates/
 import {
   CAMPAIGN_STYLES, CAMPAIGN_STYLE_MAP, CampaignStyleId, StyleColorField, OpeningComposition, resolveOpeningComposition,
   resolveSectionPresentation, SectionPresentation, PresentableSection, resolveVisualTokens,
+  ConversionWidgetLayout, resolveDonationComposition,
 } from '../../styles/campaign-styles';
 import { SectionPresentationPickerComponent } from '../../../shared/components/section-presentation-picker/section-presentation-picker.component';
 import { OwnerType, isSectionAvailableFor } from '../../../services/owner-registry';
@@ -684,8 +685,30 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   // Conversion Widget layout — how 'stats' + 'donation-widget' present
   // together. Layout-level (like rewardsLayout), not per-block.
-  setConversionWidgetLayout(value: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal'): void {
+  setConversionWidgetLayout(value: ConversionWidgetLayout): void {
     this.state.patch({ layout: { ...this.state.draft.layout, conversionWidgetLayout: value } });
+  }
+
+  // The four main donation layouts; the earlier visual variants stay
+  // selectable (and keep rendering exactly as before) under "more".
+  readonly donationLayoutOptions: { value: ConversionWidgetLayout; label: string }[] = [
+    { value: 'classic',          label: 'קלאסי' },
+    { value: 'compact-bar',      label: 'קומפקטי' },
+    { value: 'conversion-first', label: 'ממוקד המרה' },
+    { value: 'modern',           label: 'מודרני' },
+  ];
+  readonly moreDonationLayoutOptions: { value: ConversionWidgetLayout; label: string }[] = [
+    { value: 'unified',          label: 'מאוחד' },
+    { value: 'compact',          label: 'צפוף' },
+    { value: 'hero',             label: 'כרטיס Hero' },
+    { value: 'split-horizontal', label: 'פיצול אופקי' },
+  ];
+
+  // What the page actually renders, Style default included, so the
+  // highlighted chip matches the canvas.
+  effectiveDonationLayout(): ConversionWidgetLayout {
+    const layout = this.state.draft.layout;
+    return resolveDonationComposition(layout.conversionWidgetLayout, layout.campaignStyleId);
   }
 
   // Donation widget
@@ -871,8 +894,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   // Second entry point for the exact same field, surfaced in the global
   // "צבעי תמה" panel (2026-09-29) — not a second donation widget, and not a
-  // synced copy: donation-widget blocks aren't SINGLE_INSTANCE-enforced, but
-  // in practice a campaign has at most one, so this simply finds it and
+  // synced copy: donation-widget is SINGLE_INSTANCE, so this simply finds it and
   // reuses the same mutator methods the per-block panel already calls. A
   // change from either location is the same write to the same block.
   get donationWidgetBlock(): CampaignBlock | undefined {
