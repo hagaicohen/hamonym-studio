@@ -7,6 +7,9 @@ const { isEntityMember } =
 const { isValidCategoryId } =
   require('./entity-categories');
 
+const { validateContentI18n, publicContentI18n, hasContentI18nColumn, hasOptionUidColumn, cleanOptionUid } =
+  require('./content-i18n');
+
 // Reused only for the ambassador personal-link slug rules, so that the
 // Ambassador Studio self-edit path (updateMyAmbassadorRecord) and the
 // Campaign Builder draft path (syncAmbassadors) share exactly ONE
@@ -57,6 +60,8 @@ const UPDATABLE_CAMPAIGN_COLUMNS = new Set([
   'recurring_billing_mode', 'recurring_installments_count', 'rewards_enabled',
   'rewards', 'registration_field_label', 'registration_field_icon',
   'sponsors', 'ambassadors', 'updates', 'blocks', 'layout',
+  // Bilingual campaign content (migration 088) -- validated in updateCampaign.
+  'content_i18n',
 ]);
 
 function sanitizeUpdateData(
@@ -84,6 +89,7 @@ const JSON_COLUMNS = new Set([
   'updates',
   'blocks',
   'layout',
+  'content_i18n',
 ]);
 
 function buildUpdateQuery(
@@ -593,20 +599,31 @@ async function syncRegistrationOptions(campaignId, options) {
 
   if (!Array.isArray(options) || options.length === 0) return;
 
+  // client_uid (migration 088): the stable identity English translations attach to.
+  const withUid = await hasOptionUidColumn();
   for (let i = 0; i < options.length; i++) {
     const o = options[i];
     if (!o || !o.title || o.price == null) continue;
-    await db.query(
-      `INSERT INTO registration_options (campaign_id, key, title, description, price, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [campaignId, o.key || null, o.title, o.description || null, o.price, i]
-    );
+    if (withUid) {
+      await db.query(
+        `INSERT INTO registration_options (campaign_id, key, title, description, price, sort_order, client_uid)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [campaignId, o.key || null, o.title, o.description || null, o.price, i, cleanOptionUid(o.uid)]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO registration_options (campaign_id, key, title, description, price, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [campaignId, o.key || null, o.title, o.description || null, o.price, i]
+      );
+    }
   }
 }
 
 async function getRegistrationOptions(campaignId) {
+  const uid = (await hasOptionUidColumn()) ? ', client_uid' : '';
   const { rows } = await db.query(
-    `SELECT id, key, title, description, price, sort_order
+    `SELECT id, key, title, description, price, sort_order${uid}
      FROM registration_options
      WHERE campaign_id = $1
      ORDER BY sort_order`,
@@ -843,6 +860,18 @@ exports.updateCampaign =
       }
     }
 
+    // Bilingual campaign content (migration 088): shape and size checked here;
+    // dropped (not failed) while the column does not exist yet, so the rest
+    // of the save still goes through.
+    if (data.content_i18n !== undefined) {
+      if (await hasContentI18nColumn()) {
+        data = { ...data, content_i18n: validateContentI18n(data.content_i18n) };
+      } else {
+        data = { ...data };
+        delete data.content_i18n;
+      }
+    }
+
     // registration_options isn't a campaigns column — it's synced into its
     // own table separately, below.
     const registrationOptions = data.registration_options;
@@ -991,6 +1020,8 @@ exports.getCampaignBySlugPublic = async (slug) => {
     delete campaign.is_featured;
     delete campaign.deleted_by;
     delete campaign.hidden_by_entity_cascade;
+    // An English version that is not published never leaves the server.
+    if ('content_i18n' in campaign) campaign.content_i18n = publicContentI18n(campaign.content_i18n);
     campaign.registration_options = await getRegistrationOptions(campaign.id);
   }
   return campaign;
@@ -1021,12 +1052,18 @@ exports.discoverCampaigns = async ({ search, category, sortBy, page = 0, limit =
   const sortCol = DISCOVER_SORT_COLUMNS[sortBy] || 'c.created_at';
   const sortOrd = sortBy === 'ending_soon' ? 'ASC NULLS LAST' : 'DESC';
 
+  // The published English title/description (migration 088), never an unpublished one.
+  const english = (await hasContentI18nColumn())
+    ? `, CASE WHEN c.content_i18n->'en'->>'published' = 'true' THEN c.content_i18n->'en'->'values'->>'title' END AS title_en,
+         CASE WHEN c.content_i18n->'en'->>'published' = 'true' THEN c.content_i18n->'en'->'values'->>'shortDescription' END AS short_description_en`
+    : '';
+
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
          c.id, c.title, c.slug, c.short_description, c.category, c.cover_image_url, c.video_url,
          c.current_amount, c.target_amount, c.supporters_count, c.end_date, c.created_at,
-         e.display_name AS entity_name, e.logo_url AS entity_logo
+         e.display_name AS entity_name, e.logo_url AS entity_logo${english}
        FROM campaigns c
        JOIN entities e ON e.id = c.entity_id
        ${whereStr}

@@ -27,6 +27,8 @@ function getStatusCode(
     case 'End date must be on or after the start date to publish':
     case 'Cannot change slug after publishing':
     case 'Invalid campaign category':
+    case 'Invalid campaign translations':
+    case 'English title is required to publish the English version':
     // Raised by syncAmbassadors when a Builder draft carries an
     // ambassador personal link that fails canonical validation.
     case 'Slug too short':
@@ -106,6 +108,12 @@ function getErrorMessage(
 
     case 'Invalid campaign category':
       return 'יש לבחור קטגוריה מהרשימה הקיימת';
+
+    case 'Invalid campaign translations':
+      return 'נתוני התרגום של הקמפיין אינם תקינים';
+
+    case 'English title is required to publish the English version':
+      return 'לא ניתן לפרסם את הגרסה האנגלית בלי שם קמפיין באנגלית';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';

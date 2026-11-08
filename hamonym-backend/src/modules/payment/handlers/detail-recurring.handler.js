@@ -43,13 +43,18 @@ async function queueRecurringFailureEmail({ instruction, donationId, rawStatus, 
       [instruction.campaign_id]
     );
     const details = detailsRes.rows[0] || {};
+    // Message language only (migration 089); Hebrew when unknown.
+    const donorLanguage = require('../../donations/donor-language');
+    const lang = await donorLanguage.languageOfRecurringInstruction(instruction.id);
+    const campaignTitle = await donorLanguage.campaignTitleIn(instruction.campaign_id, lang, details.campaign_title);
 
     emailService.queue({
       template: 'recurring-payment-failed',
       to: instruction.donor_email,
       data: {
+        lang,
         donorName: instruction.donor_name,
-        campaignTitle: details.campaign_title || 'הקמפיין',
+        campaignTitle: campaignTitle || (lang === 'en' ? 'the campaign' : 'הקמפיין'),
         entityName: details.entity_name || null,
         amount,
         failedAtDisplay: formatDateDDMMYYYY(Date.now()),

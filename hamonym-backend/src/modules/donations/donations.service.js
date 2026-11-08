@@ -212,7 +212,7 @@ async function processRegistrationDonation(donationId, campaignId, participants,
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note }) => {
+exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note, language }) => {
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -447,6 +447,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     ]
   );
   const donationId = donationRes.rows[0].id;
+  // The donor's campaign language (migration 089) — messages only, never money.
+  await require('./donor-language').recordDonorLanguage(donationId, language);
 
   await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
 
@@ -510,7 +512,9 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : donationFallbackCredentials.apiName,
     ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : donationFallbackCredentials.apiPassword,
     Amount:         round2(donationAmount),
-    Language:       'he',
+    // English provider pages only behind CARDCOM_ENGLISH_PAGES_ENABLED (off until
+    // verified on a test terminal, bilingual roadmap D-51); Hebrew otherwise, as before.
+    Language:       require('./donor-language').cardcomPageLanguage(language),
     // ChargeAndCreateToken required for recurring signups — verified
     // empirically that ChargeOnly (the default) produces a LowProfile deal
     // with no token, which Recurring Create then rejects (ResponseCode=8500).
@@ -830,6 +834,18 @@ exports.handleReturn = async ({ donationId, status }) => {
 // already linked to an account) is served by the has_account boolean
 // below instead -- it answers the same question without exposing the id.
 exports.getDonationPublic = async (donationId) => {
+  const row = await getDonationPublicRow(donationId);
+  if (!row) return null;
+  // The thank-you page in the donor's language, also when opened in a new tab
+  // (bilingual roadmap D-50): the donor's language and the published English title.
+  const donorLanguage = require('./donor-language');
+  row.donor_language = await donorLanguage.languageOfDonation(donationId);
+  const enTitle = await donorLanguage.campaignTitleIn(row.campaign_id, 'en', null);
+  if (enTitle) row.campaign_title_en = enTitle;
+  return row;
+};
+
+async function getDonationPublicRow(donationId) {
   const res = await db.query(
     `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name,
             (d.donor_user_id IS NOT NULL) AS has_account,
@@ -845,7 +861,7 @@ exports.getDonationPublic = async (donationId) => {
     [donationId]
   );
   return res.rows[0] || null;
-};
+}
 
 exports.getReceipt = (receiptId, userId, proof = null) => require('./official-receipt.service').metadata(receiptId, userId, proof);
 
