@@ -5,6 +5,9 @@
 // (e.g. "Entity not approved"), which is both untranslated and leaks an
 // internal admin-approval detail no donor needs to know about.
 function getDonationErrorMessage(error) {
+  if (error.code === 'COMMERCIAL_PAYMENT_NOT_READY') {
+    return 'התשלום לקמפיין זה עדיין אינו זמין. הגדרת התשלומים והחיוב של הגוף טרם הושלמה.';
+  }
   // Stable code, not a message-string match — see donations.service.js's
   // isMock fix (2026-08-21): this is a business condition an admin/alert
   // may need to key off later, not just donor-facing copy.

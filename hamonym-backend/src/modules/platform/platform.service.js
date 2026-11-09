@@ -9,6 +9,7 @@ const donationsService = require('../donations/donations.service');
 const emailService = require('../email/email.service');
 const adminNotifications = require('../email/admin-notification.service');
 const billingProvisioning = require('../billing-engine/provisioning.service');
+const { isCommercialEntity } = require('../entities/commercial-entity');
 
 // Business decision (2026-10, FIN-01): every approved nonprofit must have a
 // Hamonym billing account. createBillingAccount() itself never defaults
@@ -744,7 +745,7 @@ async function setStatus(entityId, superAdminUserId, status, action, notes, reas
   // an account; BILLING_ACCOUNT_ALREADY_EXISTS is still the catch-all no-op
   // guard underneath, same DB UNIQUE constraint createBillingAccount already
   // relies on, so this is safe even if that scoping assumption is ever wrong.
-  if (action === 'approve') {
+  if (action === 'approve' && !isCommercialEntity(entity.entity_type)) {
     try {
       await billingProvisioning.createBillingAccount({
         entityId,
