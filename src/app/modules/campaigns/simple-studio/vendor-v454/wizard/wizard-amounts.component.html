@@ -1,0 +1,4 @@
+<label class="hw-field"><span class="hw-label">סכומי תרומה מוצעים</span>
+ <input #a id="hwAmounts" (input)="valueChange.emit(a.value)" type="text" dir="ltr" [value]="value" placeholder="50, 100, 180, 360" />
+ <small>{{simple?'הפרידו בין סכומים בפסיק.':'הפרידו בין סכומים באמצעות פסיק או רווח. הכפתורים מתעדכנים מיד בתצוגת הקמפיין, בעזרת מנגנון התרומות הקיים.'}}</small>
+</label>

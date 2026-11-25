@@ -1,0 +1,4 @@
+:host { display: block; }
+[aria-invalid="true"] { border-color: #dc6b6b !important; box-shadow: 0 0 0 1px #dc6b6b; }
+.hw-field-error { display: block; margin-top: 5px; color: #991b1b; font-size: 12px; line-height: 1.5; }
+.hw-required { color: #991b1b; }

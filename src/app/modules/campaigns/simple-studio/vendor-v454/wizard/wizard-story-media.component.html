@@ -1,0 +1,13 @@
+<div class="hw-story-images">
+  <label for="hwStoryFile" class="hw-inline-upload">＋ הוספת תמונה לסיפור</label>
+  <input #file id="hwStoryFile" class="hw-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="upload.emit(file)" />
+  <span id="hwStoryImagesCount">{{ images.length }} תמונות בסיפור</span>
+  <div class="hw-story-gallery" aria-label="ניהול תמונות הסיפור">
+    @for (image of images; track image.path; let i = $index) {
+      <div class="hw-story-image-tile">
+        <img [src]="image.src" [alt]="image.alt" />
+        <button type="button" (click)="remove.emit(image.path)" [attr.aria-label]="'הסר את תמונה ' + (i + 1) + ' מהסיפור'" title="הסר תמונה מהסיפור">×</button>
+      </div>
+    }
+  </div>
+</div>

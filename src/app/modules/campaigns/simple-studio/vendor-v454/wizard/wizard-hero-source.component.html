@@ -1,0 +1,15 @@
+@if (mode === 'video') {
+ <label class="hw-field">
+  <span class="hw-label">כתובת הסרטון</span>
+  <input #v type="url" id="hwVideo" dir="ltr" [value]="video" placeholder="https://youtube.com/watch?v=..." (input)="videoChange.emit(v.value)" />
+  <small>אפשר קישור YouTube או קישור ישיר ל־MP4/WebM. העלאת קובץ וידאו לשרת תתווסף בהמשך.</small>
+ </label>
+} @else {
+ <div class="hw-field"><span class="hw-label">תמונת Hero מהמחשב</span>
+  <label class="hw-upload" for="hwHeroFile"><span class="hw-upload-icon">▧</span>
+   <strong>{{hasImage?'להחלפת התמונה לחץ כאן':'בחרו תמונה לקמפיין'}}</strong>
+   <small>JPG, PNG או WebP · עד 12MB · התמונות מטופלות במנגנון הקיים</small>
+  </label>
+  <input #file id="hwHeroFile" type="file" class="hw-file-input" accept="image/jpeg,image/png,image/webp,image/gif" (change)="upload.emit(file)" />
+ </div>
+}

@@ -1,0 +1,28 @@
+@let v = vm();
+<div class="hu-eyebrow">ניהול הקמפיין / דף תרומה פשוט</div><h1 class="hu-page-title">דף תרומה פשוט</h1><p class="hu-lead">רק מה שצריך כדי להקים דף תרומה. התאמת הצבעים והגופנים נמצאת בלשונית עיצוב.</p>
+<section ham-panel [title]="'פרטי דף התרומה'" [sub]="'הכותרת ותת־הכותרת משתמשות באותם שדות כמו בקמפיין רגיל.'">
+  <div class="hu-fields">
+    <div ham-text-field [label]="'כותרת הדף'" [path]="'meta.name'" [full]="true"></div>
+    <div ham-text-field [label]="'תת־כותרת (רשות)'" [path]="'content.heroSubtitle'" [full]="true"></div>
+    <div ham-text-field [label]="'כתובת URL (slug)'" [path]="'meta.slug'" [full]="true" [placeholder]="'לדוגמה: donate-together'"></div>
+  </div>
+</section>
+<section ham-panel [title]="'לוגו ותמונה'" [sub]="'אפשר לשלב תמונת Hero ולוגו, או להציג סמל לב ללא תמונה.'">
+  @for (p of v.pictures; track p.type) {
+    <div class="hu-simple-file-row"><div><strong>{{ p.title }}</strong><small>{{ p.current ? 'תמונה הוגדרה' : 'אופציונלי' }}</small></div>@if (p.current) {<img [attr.src]="p.ref ? (media.resolve(p.ref) || p.src) : p.src" [attr.data-ham-media-ref]="p.ref" alt="" class="hu-simple-file-thumb">}<label class="hu-action hu-simple-file-label">{{ p.current ? 'החלפה' : 'העלאה' }}<input type="file" [attr.data-hu-simple-upload]="p.type" accept="image/png,image/jpeg,image/webp" hidden [hamDraw]="clearFile"></label>@if (p.current) {<button class="hu-action" type="button" [attr.data-hu-simple-remove]="p.type">הסר</button>}</div>
+  }
+  <div class="hu-row" style="margin-top:12px"><button type="button" class="hu-action primary" data-hu-mode="design" [class.active]="view.activeTab() === 'design'">עיצוב צבעים וגופנים</button></div>
+</section>
+<section ham-panel [title]="'סכומי תרומה'" [sub]="'סכומים חד־פעמיים ואפשרות לסכום אחר.'">
+  <label ham-switch [title]="'להציג סכומי תרומה מוצעים'" [hint]="'אפשר לערוך את הסכומים בכל עת.'" [path]="'donations.suggestedAmounts'"></label>
+  @if (v.suggested) { <div ham-amount-chips [kind]="'oneTime'" [title]="'סכומי תרומה מוצעים'" [amounts]="v.oneTime"></div> }
+  <label ham-switch [title]="'לאפשר לתורם סכום אחר'" [path]="'donations.freeAmount'"></label>
+</section>
+<section ham-panel [title]="'הוראת קבע חודשית'" [sub]="'הגדרות נוספות יופיעו רק אם הפעלת תרומה חודשית.'">
+  <label ham-switch [title]="'לאפשר הוראת קבע חודשית'" [path]="'donations.monthlyEnabled'"></label>
+  @if (v.monthlyEnabled) {
+    <div ham-amount-chips [kind]="'monthly'" [title]="'סכומי תרומה חודשיים'" [amounts]="v.monthly"></div>
+    <div ham-choice-cards [path]="'donations.monthlyPeriod'" [items]="monthlyChoices" [label]="'משך הוראת קבע'"></div>
+    @if (v.monthlyFixed) { <div class="hu-fields"><div ham-text-field [label]="'מספר חיובים'" [path]="'donations.monthlyCount'" [type]="'number'"></div></div> }
+  }
+</section>

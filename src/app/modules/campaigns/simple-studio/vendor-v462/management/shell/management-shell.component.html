@@ -1,0 +1,36 @@
+<nav class="hu-menu" id="huMenu">
+  @if (simple()) {
+    <div class="hu-menu-caption">דף תרומה פשוט</div>
+    <div id="huMenuResults" class="hu-menu-results"><button type="button" class="active" data-hu-page="identity"><span aria-hidden="true">♡</span>פרטי דף התרומה</button></div>
+  } @else {
+    <div class="hu-menu-caption">ניהול ותוכן</div>
+    <label class="hu-menu-search"><span aria-hidden="true">⌕</span><input type="search" data-hu-nav-search placeholder="חיפוש הגדרה או רכיב..." [value]="view.navSearch()" aria-label="חיפוש הגדרות ורכיבים" autocomplete="off" (input)="search($event)"></label>
+    <div id="huMenuResults" class="hu-menu-results">
+      @for (e of entries(); track e.id) {
+        <button type="button" [class.active]="isActive(e.id)" [attr.data-hu-page]="e.id"><span aria-hidden="true">{{ e.icon }}</span>{{ e.title }}</button>
+      }
+      @if (settings().length) {
+        <div class="hu-menu-search-title">הגדרות מתאימות</div>
+        @for (x of settings(); track x.label) {
+          <button type="button" class="hu-menu-search-result" [attr.data-hu-page]="x.page ?? null" [attr.data-hu-edit]="x.edit ?? null"><span aria-hidden="true">⌕</span><span>{{ x.label }}<small>{{ x.hint }}</small></span></button>
+        }
+      }
+      @if (!entries().length && !settings().length) {
+        <div class="hu-menu-no-results">לא נמצאו הגדרות מתאימות</div>
+      }
+    </div>
+  }
+</nav>
+<div class="hu-manager-scroll" id="huPage">
+  @for (visit of visits(); track visit) {
+    @switch (pageComponent()) {
+      @case ('overview') { <ham-mgmt-overview /> }
+      @case ('publish') { <ham-mgmt-publish /> }
+      @case ('identity') { <ham-mgmt-identity /> }
+      @case ('fundraising') { <ham-mgmt-fundraising /> }
+      @case ('simple') { <ham-mgmt-simple-donation /> }
+      @case ('content') { <ham-mgmt-content /> }
+      @case ('race') { <ham-mgmt-race /> }
+    }
+  }
+</div>

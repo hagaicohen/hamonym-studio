@@ -1,0 +1,8 @@
+<ham-v209-toolbar></ham-v209-toolbar>
+<div class="ham-view-devices" role="group" aria-label="תצוגת מכשיר">
+  <button type="button" data-ham-single-device="desktop" title="תצוגת מחשב" aria-label="מחשב" [class.active]="device === 'desktop'" (click)="chooseDevice('desktop')"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></button>
+  <button type="button" data-ham-single-device="mobile" title="תצוגת מובייל" aria-label="מובייל" [class.active]="device === 'mobile'" (click)="chooseDevice('mobile')"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></button>
+</div>
+<button type="button" class="ham-template-top" data-ham-single-template title="בחר תבנית קמפיין" (click)="chooseTemplate()">▦ תבנית</button>
+<button type="button" class="ham-icon-tool" data-ham-single-open title="פתח קמפיין בדפדפן" aria-label="פתח קמפיין בדפדפן" (click)="openPublic()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 8h18M11 13h6v6M17 13l-8 8"/></svg></button>
+<button type="button" class="ham-v297-open-public" title="פתח את דף הקמפיין בלשונית חדשה" (click)="$event.stopPropagation(); openPublic()">↗ פתח בדפדפן</button>

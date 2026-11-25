@@ -1,0 +1,77 @@
+@let v = vm();
+<div class="hu-eyebrow">ניהול הקמפיין / פרטי הקמפיין</div><h1 class="hu-page-title">פרטי הקמפיין</h1><p class="hu-lead">אפשר להחליף סוג קמפיין בלי לאבד את הנתונים הקיימים.</p>
+<label class="ham-kind-choice">סוג הקמפיין <select data-ham-campaign-kind aria-label="סוג הקמפיין" [hamDraw]="writeKind"><option value="donation">קמפיין תרומות רגיל</option><option value="race">קמפיין מירוץ</option><option value="simple">דף תרומה פשוט</option></select></label>
+<div class="hu-eyebrow">ניהול הקמפיין / פרטים ותוכן</div><h1 class="hu-page-title">פרטים ותוכן</h1><p class="hu-lead">כאן מעדכנים פעם אחת את נתוני הקמפיין, את הטקסטים ואת המדיה. כל שינוי מופיע מיד בתצוגה החיה וב־Simple Studio.</p>
+
+<section ham-panel [title]="'זהות הקמפיין'" [sub]="'השם הוא הכותרת הראשית של הקמפיין. מציגים אותו על ה־Hero לפי בחירתכם.'">
+  <div class="hu-fields"><div ham-text-field [label]="'שם הקמפיין'" [path]="'meta.name'" [full]="true" [hint]="'שם הקמפיין הוא גם הכותרת הראשית של ה־Hero. אין שדה שם נוסף.'"></div></div>
+  <label ham-switch [title]="'הצג את שם הקמפיין על ה־Hero'" [hint]="'אפשר להסתיר את הכותרת מהתמונה בלי למחוק את שם הקמפיין או את המשפט הקצר.'" [path]="'content.showHeroName'"></label>
+</section>
+
+<section ham-panel [title]="'תחום ומיקום'" [sub]="'סיווג הקמפיין הוא מידע עסקי; אפשר לשלוט בנפרד בהצגת הקטגוריה בדף.'">
+  <div class="hu-fields">
+    <div ham-combobox-field [label]="'תחום ראשי'" [path]="'meta.category'" [options]="v.categoryOptions" [hint]="v.categoryHint"></div>
+    <div ham-combobox-field [label]="'תת־קטגוריה'" [path]="'meta.subcategory'" [options]="v.subcategoryOptions"></div>
+    <div ham-text-field [label]="'מיקום / אזור פעילות'" [path]="'meta.place'" [full]="true" [hint]="'אפשר להזין יישוב, אזור בישראל, מדינה בחו״ל, „בכל הארץ”, „בכל העולם” או „אונליין”.'"></div>
+  </div>
+  <label ham-switch [title]="'הצג את הקטגוריה בדף'" [hint]="'שינוי הנראות אינו משנה את קטגוריית הקמפיין במערכת.'" [path]="'content.showCategory'"></label>
+</section>
+
+<section ham-panel [title]="'Hero · משפט קצר ומדיה'" [sub]="'התמונה ומשפט המטרה מופיעים באזור הפתיחה. שם הקמפיין הוגדר למעלה — אין צורך להזין אותו שוב.'">
+  <div class="hu-fields">
+    <div ham-text-field [label]="'משפט קצר על מטרת הקמפיין'" [path]="'content.heroSubtitle'" [full]="true" [hint]="'משפט תמציתי שיופיע על תמונת ה־Hero מתחת לכותרת, כשמלל ה־Hero מוצג.'"></div>
+    <div ham-text-field [label]="'כתובת תמונת ה־Hero'" [path]="'content.heroUrl'" [full]="true" [hint]="'תוכלו גם להעלות תמונה או סרטון דרך מפקח ה־Hero בעיצוב.'"></div>
+  </div>
+  <label ham-switch [title]="'הצג את מלל ה־Hero'" [hint]="'מתג כללי לשם הקמפיין ולמשפט הקצר; אפשר להסתיר את השם בלבד באמצעות המתג באזור הראשון.'" [path]="'content.heroOverlay'"></label>
+  <div class="hu-row hu-section-action"><button type="button" class="hu-action" data-hu-edit="hero">עיצוב Hero · תמונה / וידאו / לוגו</button></div>
+</section>
+
+<section ham-panel [title]="'התיאור הקצר שמתחת ל־Hero'" [sub]="'כותרת, כותרת משנה ותיאור קצר — מקור אחד לניהול ולעיצוב.'">
+  <label ham-switch [title]="'הצג את אזור התיאור הקצר'" [hint]="'אפשר להסתיר את האזור בלי למחוק את הטקסטים.'" [path]="'content.showBelow'"></label>
+  <div class="hu-fields">
+    <div ham-text-field [label]="'כותרת התיאור הקצר'" [path]="'content.shortTitle'" [full]="true" [hint]="'כותרת לאזור שמתחת לתמונת הפתיחה.'"></div>
+    <div ham-text-field [label]="'כותרת משנה (רשות)'" [path]="'content.belowSubtitle'" [full]="true" [hint]="'שורה משלימה מתחת לכותרת, אם יש צורך.'"></div>
+    <div ham-text-field [label]="'התיאור הקצר'" [path]="'content.shortText'" [type]="'textarea'" [full]="true" [rows]="3" [hint]="'עד 120 תווים. התוכן מתעדכן מיד בתצוגה החיה.'"></div>
+  </div>
+  <div class="hu-row hu-section-action"><button class="hu-action" type="button" data-hu-edit="title">עיצוב אזור התיאור</button></div>
+</section>
+
+<section ham-panel [title]="'התאמות למובייל'" [sub]="'ברירת המחדל: אותם טקסטים בדסקטופ ובמובייל. אפשר להגדיר גרסה קצרה למכשירים קטנים.'">
+  <label ham-switch [title]="'טקסט Hero ייחודי למובייל'" [hint]="'כאשר כבוי, מוצג אותו טקסט שהוגדר למעלה.'" [path]="'mobileHero.enabled'"></label>
+  @if (v.mobileHeroEnabled) {
+    <div class="hu-fields">
+      <div ham-text-field [label]="'שם הקמפיין כפי שיוצג במובייל'" [path]="'mobileHero.title'" [full]="true" [hint]="'טקסט תצוגה חלופי בלבד; שם הקמפיין העסקי נשאר אחד.'"></div>
+      <div ham-text-field [label]="'משפט מטרה למובייל'" [path]="'mobileHero.subtitle'" [full]="true"></div>
+    </div>
+  }
+  <div class="hu-hint" style="margin-top:8px">בדקו את התוצאה בתצוגת המובייל של הבילדר.</div>
+</section>
+
+<section ham-panel [title]="'סיפור הקמפיין המלא'" [sub]="'הסיפור נשאר מנוהל ב־Story Builder המלא; אין שדה טקסט כפול.'">
+  <div class="hu-row"><span class="hu-hint">{{ v.storyBlocks }} בלוקים בסיפור</span><button class="hu-action primary" type="button" data-hu-story>פתח Story Builder</button></div>
+</section>
+
+<section ham-panel [title]="'מנהל הקמפיין'" [sub]="'פרטי המנהל משותפים למערכת הניהול ולעיצוב.'">
+  <div class="hu-fields"><div ham-text-field [label]="'שם מנהל הקמפיין'" [path]="'meta.manager'" [full]="true" [hint]="'אם התקבל משתמש מחובר, אפשר להשתמש בפרטיו; אפשר גם לבחור מנהל אחר.'"></div></div>
+  <div class="hu-callout"><div class="hu-upload-row"><div class="hu-manager-avatar" [hamDraw]="writeAvatar"></div><div><strong>תמונת מנהל הקמפיין</strong><div class="hu-hint">אם לא התקבלה תמונה מהמשתמש המחובר, או שנבחר מנהל אחר, ניתן להעלות תמונה.</div></div><label class="hu-file-btn">＋ העלאת תמונה<input id="huManagerPhotoUpload" type="file" accept="image/jpeg,image/png,image/webp" aria-label="העלאת תמונת מנהל קמפיין" [hamDraw]="clearFile"></label>@if (v.managerPhoto) {<button type="button" class="hu-action" data-hu-remove-photo>הסר תמונה</button>}@if (v.hasSessionManager) {<button class="hu-action" type="button" data-hu-session-manager>השתמש בפרטים שלי</button>}</div></div>
+</section>
+
+<section ham-panel [title]="'כתובת הקמפיין'" [sub]="'כתובת הדגמה בלבד. הפרסום האמיתי יתבצע במערכת.'">
+  <div class="hu-fields"><div ham-text-field [label]="'מזהה כתובת (slug)'" [path]="'meta.slug'" [full]="true" [placeholder]="'לדוגמה: עוזרים-ביחד'" [hint]="'אפשר בעברית, באנגלית ובשפות נוספות. רווחים מומרים למקפים.'"></div></div>
+  <div class="hu-callout"><strong>קישור שיתוף בדמו:</strong> <span class="hu-inline-preview"><a data-hu-share-preview target="_blank" rel="noopener noreferrer" [hamDraw]="writeShareLink"></a><button class="hu-action" data-hu-copy-url type="button">העתק</button></span></div>
+</section>
+
+<section ham-panel [title]="'אפשרויות עיצוב נוספות'" [sub]="'מיקום פרטי הקמפיין, אייקונים, צבעים, סדר רכיבים והתאמות מתקדמות נשארים בבילדר המלא.'">
+  <div class="hu-row"><button class="hu-action" type="button" data-hu-edit="campaignInfo">עצב את פרטי הקמפיין</button><button class="hu-action primary" type="button" data-hu-mode="design">פתח את Simple Studio המלא</button></div>
+</section>
+
+<details ham-section [title]="'צוות והרשאות'" [sectionId]="'access'">
+  <section ham-panel [title]="'אחריות לניהול'" [sub]="'זהו אותו מנהל שמוגדר בפרטים ותוכן ומוצג בבילדר — ללא שדה עריכה נוסף.'">
+    <div class="hu-sourced-value">{{ v.managerName }}<span class="hu-source-tag">מקור משותף לניהול ולעיצוב</span></div><button class="hu-action" type="button" data-hu-page="identity" style="margin:10px 0 16px">ערוך פרטי מנהל הקמפיין</button>
+    <div class="hu-fields"><div ham-text-field [label]="'משתתפים נוספים (שמות/מיילים)'" [path]="'access.editors'" [type]="'textarea'" [full]="true"></div></div>
+  </section>
+  <section ham-panel [title]="'הרשאות פרסום'" [sub]="'הגדרה זו אינה מעניקה הרשאה במערכת האמיתית.'">
+    <label ham-switch [title]="'אפשר למנהלי תוכן לבקש פרסום'" [hint]="'עדיין מחייב בדיקות צד שרת ואישור עמותה'" [path]="'access.allowEditorPublish'"></label>
+  </section>
+  <div class="hu-callout hu-warning">סטטוס הארגון, סליקה והרשאות פרסום אינם ידועים לדמו — לכן כפתור הפרסום אינו מבצע פרסום אמיתי.</div>
+</details>

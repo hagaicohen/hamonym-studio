@@ -1,0 +1,14 @@
+<!-- Original wizard controls: exact CSS class names and same two options. -->
+<div class="hw-device" role="group" aria-label="תצוגת קמפיין">
+  <button type="button" [class.is-active]="device === 'desktop'" [attr.aria-pressed]="device === 'desktop'" title="תצוגת מחשב" (click)="chooseDevice('desktop')">▣ מחשב</button>
+  <button type="button" [class.is-active]="device === 'mobile'" [attr.aria-pressed]="device === 'mobile'" title="תצוגת מובייל" (click)="chooseDevice('mobile')">▯ מובייל</button>
+</div>
+<div class="hw-layout-choice-host" [hidden]="device === 'mobile' || simple" (keydown.escape)="closeMenu()">
+  <button type="button" class="hw-layout-dropdown" [attr.aria-expanded]="menuOpen" title="החלף תבנית קמפיין" (click)="toggleMenu()">▦ <span>{{layoutText}}</span> ▾</button>
+  <div class="hw-layout-popover" [hidden]="!menuOpen">
+    <strong>בחרו פריסת דף</strong>
+    <small>סוג הקמפיין נשאר ללא שינוי, וכל הנתונים נשמרים.</small>
+    <div class="ham-layout-menu-entry"><button type="button" class="hw-layout-option" [class.is-selected]="!heroCard" [attr.aria-pressed]="!heroCard" (click)="chooseLayout('panorama')"><span class="ham-layout-menu-icon" aria-hidden="true">▤</span><span><b>פריסה רגילה</b><small>נתוני הגיוס בסיידבר</small></span></button></div>
+    <div class="ham-layout-menu-entry"><button type="button" class="hw-layout-option" [class.is-selected]="heroCard" [attr.aria-pressed]="heroCard" (click)="chooseLayout('heroCard')"><span class="ham-layout-menu-icon" aria-hidden="true">▣</span><span><b>כרטיס על ה־Hero</b><small>כרטיס נתוני הגיוס על תמונת ה־Hero</small></span></button></div>
+  </div>
+</div>

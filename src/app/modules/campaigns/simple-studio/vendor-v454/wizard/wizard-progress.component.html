@@ -1,0 +1,15 @@
+<div class="hw-progress">
+@if(simple){
+ <div class="hw-progress-top"><strong>שלב {{simpleIndex+1}} מתוך 3</strong><span>{{simplePercent}}%</span></div>
+ <div class="hw-progress-line"><span class="hw-progress-fill" [style.width.%]="simplePercent"></span></div>
+ <div class="hw-steps">@for(name of simpleSteps;track $index){<span class="hw-step" [class.active]="$index===simpleIndex" [class.done]="$index<simpleIndex">{{name}}</span>}</div>
+}@else{
+ <div class="hw-progress-top"><strong>{{step===5?'השלמת ההקמה':'שלב '+current+' מתוך 5'}}</strong><span>{{current*20}}% הושלמו</span></div>
+ <div class="hw-progress-line" role="progressbar" aria-label="התקדמות הקמת הקמפיין" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="current*20"><span class="hw-progress-fill" [style.width.%]="current*20"></span></div>
+ <div class="hw-steps">@for(name of shortSteps;track $index){<span class="hw-step" [class.active]="$index===step" [class.done]="$index<step||step===5">{{name}}</span>}</div>
+}
+</div>
+@if(simple){
+ @if(step===0){<header class="hw-section-head"><div class="hw-section-copy"><h1 class="hw-section-title">הגדרת דף תרומה פשוט</h1><p class="hw-section-subtitle">רק הפרטים הדרושים ליצירת דף התרומה</p></div></header>}
+ @else if(step===3){<header class="hw-section-head"><div class="hw-section-copy"><h1 class="hw-section-title">הגדרות תרומה</h1></div></header>}
+}@else{<header class="hw-section-head"><span class="hw-section-mark" aria-hidden="true">{{icons[step]}}</span><div class="hw-section-copy"><span class="hw-section-kicker">{{kickers[step]}}</span><h1 class="hw-section-title">{{title}}</h1><p class="hw-section-subtitle">{{subtitle}}</p></div></header>}

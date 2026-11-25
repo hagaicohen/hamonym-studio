@@ -1,0 +1,8 @@
+<label class="hw-field hw-slug-field">
+ <span class="hw-label">{{simple?'כתובת הדף':'כתובת הקמפיין'}} <span class="hw-required">*</span></span>
+ <div class="hw-slug-control">
+  <span class="hw-slug-prefix" dir="ltr">hamonym.com/campaign/</span>
+  <input #slugInput id="hwCampaignSlug" (input)="slugChange.emit(slugInput.value)" (change)="onChange(slugInput)" type="text" dir="ltr" autocomplete="off" spellcheck="false" required maxlength="70" [value]="slug" [placeholder]="simple?'donate-now':'campaign-name'" aria-label="מזהה כתובת הקמפיין" />
+ </div>
+ <small>{{simple?'אותיות, מספרים ומקפים. לפחות 3 תווים.':'שדה חובה · לפחות 3 תווים, אותיות בעברית או באנגלית, מספרים ומקפים. בלי רווחים.'}}</small>
+</label>
