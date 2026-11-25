@@ -1,7 +1,21 @@
-import { Component, ElementRef, inject, OnInit, OnDestroy, AfterViewInit, Input, HostListener } from '@angular/core';
+import { CampaignJoinDialogComponent } from '../../../shared/components/campaign-join-dialog/campaign-join-dialog.component';
+import {campaignBodyRoot} from '../../../utils/campaign-body-root';
+import {ContainerColumnResizeDirective} from '../../canvas/container-column-resize.directive';
+import {CampaignNavigationComponent} from '../../../shared/components/campaign-navigation.component';
+import {FundraisingSummaryComponent} from '../../../shared/components/fundraising-summary.component';
+import {SectionSurfaceDirective} from '../../../shared/components/section-surface.directive';
+import {sectionSurface,openingSurface} from '../../../utils/studio-section-style';
+import {listingCardStyle,listingGridStyle,joinCtaStyle} from '../../../utils/listing-design';
+import {AmountCardComponent} from '../../../shared/components/amount-card.component';
+import { blockPlacement, blockOrder, BlockPlacement } from '../../../utils/campaign-composition';
+import { CampaignProgressComponent } from '../../../shared/components/campaign-progress.component';
+import { CampaignContactComponent } from '../../../shared/components/campaign-contact.component';
+import { StatsGridDirective } from './stats-grid.directive';
+import { statisticTextStyle, StatCardSize, StatsLayoutInfo, statCardSize, statsVisualLayout, statsVisualData, moveStatsItem } from '../../../utils/stats-visual-layout';
+import { Component, ElementRef, inject, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, Input, Output, EventEmitter, HostListener } from '@angular/core';
 import { withStudioPlaceholders } from '../../canvas/studio-placeholders';
 import { Router, RouterLink } from '@angular/router';
-import { Subject, takeUntil, debounceTime } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
@@ -10,6 +24,8 @@ import { TextStyle, TextAlign } from '../../../../../shared/models/text-style.mo
 import { resolveRoleColor, resolveRoleFontWeight, resolveRoleBorderRadius, LEGACY_THEME_COLOR } from '../../../utils/text-role-resolver';
 import { AMOUNT_BUTTON_PRESETS, AmountButtonPresetTokens } from '../../../utils/donation-amount-button-presets';
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
+import { ToastService } from '../../../../../core/services/toast.service';
+import { SimpleStudioCheckoutService } from '../../../simple-studio/simple-studio-checkout.service';
 import { AccountNavService } from '../../../../../core/services/account-nav.service';
 import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 import { EntitiesService } from '../../../../../core/services/entities.service';
@@ -56,16 +72,34 @@ import { CHECKOUT_V2_ENABLED } from '../../../shared/config/checkout-v2.config';
 import { DonationService, Donor, DonorPeriod } from '../../../services/donation.service';
 import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
-import { CommentsService, CampaignComment } from '../../../services/comments.service';
+import { CampaignCommentsComponent } from '../../../shared/components/campaign-comments/campaign-comments.component';
+import { CampaignCountdownComponent } from '../../../shared/components/campaign-countdown/campaign-countdown.component';
+import { CampaignBadgeComponent } from '../../../shared/components/campaign-badge/campaign-badge.component';
+import { GallerySlideshowComponent } from '../../../shared/components/gallery-slideshow/gallery-slideshow.component';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { AmbassadorSlugFieldComponent } from '../../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { DonationCurrency, campaignCurrencies, presetsFor, currencySymbol, formatMoney } from '../../../utils/donation-currency';
+import { DonationCurrencyService } from '../../../services/donation-currency.service';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
+import { campaignLang, publicText } from '../../../../../core/i18n/content-language';
+import { FontRole, typographyVars, elementFont, ElementFontField, ensureStackLoaded } from '../../../utils/campaign-fonts';
+import { ElementColorStyle, elementColor } from '../../../utils/element-color';
+import { sidebarRowReversed, sidebarSideFor } from '../../../utils/sidebar-side';
+import { formatMoney as localizedMoney, HmMoneyPipe, HmMoneyArgPipe, HmCurrencyPipe } from '../../../../../core/i18n/money';
+import { HmTextRoleDirective, roleSizePx } from '../text-role.directive';
+import { HmAmountButtonsDirective } from '../../../utils/amount-buttons';
+import { categoryKey } from '../../../../../shared/config/entity-categories';
+import { dirOf } from '../../../../../shared/utils/direction';
+import { HmPublicTextPipe } from '../../../../../core/i18n/content-language';
 
 // Clicks that keep their own behavior in the Studio canvas (see
 // onCanvasClickCapture): the Studio's controls and in-place previews.
 const STUDIO_CANVAS_CONTROLS = '[data-studio-control], .hm-hero-part-hide, .preview-drag-handle, .tabs-header-btn, .accordion-panel-header';
+
+const CURRENCY_IN_HEBREW: Record<DonationCurrency, string> = { ILS: 'שקלים', USD: 'דולרים', EUR: 'אירו' };
 
 type HeroPart = 'logo' | 'title' | 'subtitle';
 type HeroPartPlace = 'above' | 'hero' | 'below';
@@ -75,10 +109,20 @@ const HERO_TEXT_SIZES: Record<'title' | 'subtitle', Record<'desktop' | 'mobile',
   subtitle: { desktop: { sm: '14px', md: '17px', lg: '20px', xl: '24px' }, mobile: { sm: '13px', md: '14px', lg: '16px', xl: '18px' } },
 };
 
+// Dark or white text for a solid background color (WCAG relative luminance).
+function readableOn(color: string | null | undefined): string {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((color ?? '').trim());
+  if (!m) return '#ffffff';
+  const hex = m[1].length === 3 ? m[1].split('').map(c => c + c).join('') : m[1];
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#0f172a' : '#ffffff';
+}
+
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [CampaignJoinDialogComponent, ContainerColumnResizeDirective, CampaignNavigationComponent, FundraisingSummaryComponent, SectionSurfaceDirective, AmountCardComponent, CampaignProgressComponent, CampaignContactComponent, CampaignCommentsComponent, CampaignCountdownComponent, CampaignBadgeComponent, GallerySlideshowComponent, StatsGridDirective, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmTextRoleDirective, HmPublicTextPipe, HmTextPipe, HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-preview.component.html',
   // One stylesheet split by page area, in the original cascade order (the
   // Studio-only canvas rules last; their classes appear nowhere else).
@@ -91,10 +135,23 @@ const HERO_TEXT_SIZES: Record<'title' | 'subtitle', Record<'desktop' | 'mobile',
     './campaign-preview.sections.css',
     './campaign-preview.page-end.css',
     './campaign-preview.studio.css',
+    './campaign-preview.visual-stats.css',
   ],
 })
-export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterViewChecked, OnDestroy {
+  @Input() visualEditing=false;
+  @Output() insertHere=new EventEmitter<{anchor:string;inside?:boolean;bodyStart?:boolean}>();
+  readonly campaignBodyRoot=campaignBodyRoot;
+  containerSplit(block:CampaignBlock){return block.responsive?.[this.compositionMobile?'mobile':'desktop']?.splitPercent??(block.data as ContainerBlockData).splitPercent??50;}
+  summaryReplayToken(block:CampaignBlock){const preview=this.state.summaryPreview();return preview.blockId===block.id?preview.token:0;}
+  readonly sectionSurface=sectionSurface; readonly openingSurface=openingSurface;
+  // System text of the campaign page follows the campaign language (D-43).
+  private readonly t = publicText();
+  private readonly contentLang = campaignLang();
   private state           = inject(CampaignStudioStateService);
+  private readonly simpleCheckout = inject(SimpleStudioCheckoutService);
+  private readonly paymentToasts = inject(ToastService);
+  private closeSimpleCheckout?: () => void;
   readonly GripVertical = GripVertical;
   readonly Mail = Mail;
   readonly Facebook = Facebook;
@@ -124,6 +181,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     // convention already used for nested hover (.container-child's own
     // (mouseenter) in the template).
     event.stopPropagation();
+    const stat = (event.target as HTMLElement)?.closest<HTMLElement>('[data-stat-key]');
+    if(block.type === 'stats') this.state.selectedStatistic.set(stat?{blockId:block.id,key:stat.dataset['statKey']!}:null);
     this.state.requestFocusBlock(block.id, block.type);
   }
 
@@ -173,9 +232,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   heroPartDrag: HeroPart | null = null;
   heroDropZone: string | null = null;
   readonly heroDropAligns: { align: TextAlign; label: string }[] = [
-    { align: 'right', label: 'ימין' },
-    { align: 'center', label: 'מרכז' },
-    { align: 'left', label: 'שמאל' },
+    { align: 'right', label: 'studio.canvas.zoneRight' },
+    { align: 'center', label: 'studio.canvas.zoneCenter' },
+    { align: 'left', label: 'studio.canvas.zoneLeft' },
   ];
 
   onHeroPartDragStart(event: DragEvent, part: HeroPart): void {
@@ -253,7 +312,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private entitiesService = inject(EntitiesService);
   private ui              = inject(StudioUiService);
   private donationService = inject(DonationService);
-  private commentsService = inject(CommentsService);
+  private currencyService = inject(DonationCurrencyService);
   private campaignPartnersService = inject(CampaignPartnersService);
 
   @Input() ambassador:      Ambassador | null = null;
@@ -283,9 +342,15 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private accountNav    = inject(AccountNavService);
 
   // ── Ambassador leaderboard state ──
+  readonly listingCardStyle=listingCardStyle;readonly listingGridStyle=listingGridStyle;readonly joinCtaStyle=joinCtaStyle;
   ambSearch   = '';
   ambSortBy: 'raised' | 'name' | 'pct' | 'donors' = 'raised';
   ambShowCount = 6;
+  ambassadorsLoading=false;ambassadorsLoadError=false;ambassadorTotal:number|undefined;private ambHasMore=false;private ambRequest=0;private ambSearchTimer:ReturnType<typeof setTimeout>|undefined;
+  get canShowMoreAmbassadors(){return this.ambFiltered.length>this.ambShowCount||this.ambHasMore;}
+  showMoreAmbassadors(){if(this.ambassadorsLoading)return;if(this.ambFiltered.length>this.ambShowCount)this.ambShowCount+=6;else if(this.ambHasMore&&this.loadedAmbSlug)this.loadAmbassadors(this.loadedAmbSlug,true);}
+  refreshAmbassadors(){clearTimeout(this.ambSearchTimer);this.ambRequest++;this.ambShowCount=6;this.ambSearchTimer=setTimeout(()=>{if(this.loadedAmbSlug)this.loadAmbassadors(this.loadedAmbSlug);},250);}
+  loadAmbassadors(slug:string,append=false){const token=++this.ambRequest;this.ambassadorsLoading=true;this.ambassadorsLoadError=false;this.ambassadorSvc.listPublic(slug).subscribe({next:r=>{if(token!==this.ambRequest)return;this.liveAmbassadors=r;this.ambHasMore=false;this.ambassadorTotal=r.length;this.ambassadorsLoading=false;if(append)this.ambShowCount+=6;},error:()=>{if(token!==this.ambRequest)return;this.ambassadorsLoading=false;this.ambassadorsLoadError=true;}});}
   private liveAmbassadors: AmbassadorPublicInfo[] | null = null;
   private loadedAmbSlug = '';
 
@@ -344,67 +409,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return draft.campaignLifecycle === 'ongoing';
   }
 
-  openJoinModal(): void {
-    this.joinForm          = { fullName: '', phone: '', email: '', goalAmount: null, slug: '' };
-    this.joinSlugAvailable = false;
-    this.joinGoalDisplay   = '';
-    this.joinStatus        = 'idle';
-    this.joinShareUrl      = '';
-    this.joinCopied        = false;
-    this.joinError         = '';
-    this.showJoinModal     = true;
-  }
-
-  // Non-blocking (Product Requirement 2): a personal goal above the
-  // campaign's target is allowed, just flagged -- never disables submit.
-  joinGoalAboveCampaignGoal(draft: CampaignDraft): boolean {
-    const target = draft.targetAmount ?? 0;
-    return !!this.joinForm.goalAmount && target > 0 && this.joinForm.goalAmount > target;
-  }
-
-  onJoinGoalInput(event: Event): void {
-    const raw = (event.target as HTMLInputElement).value.replace(/[^\d]/g, '');
-    const num = raw ? parseInt(raw, 10) : null;
-    this.joinForm.goalAmount = num && num > 0 ? num : null;
-    const formatted = num ? num.toLocaleString('he-IL') : '';
-    (event.target as HTMLInputElement).value = formatted;
-    this.joinGoalDisplay = formatted;
-  }
-
+  openJoinModal(): void { this.showJoinModal = true; }
   closeJoinModal(): void { this.showJoinModal = false; }
-
-  submitJoin(draft: CampaignDraft): void {
-    if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading' || !this.joinSlugAvailable) return;
-    this.joinStatus = 'loading';
-    this.ambassadorSvc.selfRegister(draft.slug!, {
-      fullName: this.joinForm.fullName,
-      phone: this.joinForm.phone,
-      email: this.joinForm.email,
-      goalAmount: this.joinForm.goalAmount,
-      slug: this.joinForm.slug,
-    }).subscribe({
-      next: (res: { slug: string; shareUrl: string }) => {
-        this.joinShareUrl = res.shareUrl;
-        this.joinStatus   = 'success';
-        this.router.navigate(['/campaigns', draft.slug, res.slug]);
-      },
-      error: (err: { error?: { error?: string } }) => {
-        this.joinStatus = 'error';
-        this.joinError  = err?.error?.error || 'אירעה שגיאה. נסה שוב.';
-      },
-    });
-  }
-
-  copyJoinLink(): void {
-    navigator.clipboard.writeText(this.joinShareUrl).then(() => {
-      this.joinCopied = true;
-      setTimeout(() => { this.joinCopied = false; }, 2500);
-    });
-  }
+  joinedAmbassador(result:{slug:string}):void {void this.router.navigate(['/campaigns',this.state.draft.slug,result.slug]);}
 
   get ambEffective(): AmbassadorPublicInfo[] {
-    if (this.ambassadorsList)  return this.ambassadorsList;
     if (this.liveAmbassadors) return this.liveAmbassadors;
+    if (this.ambassadorsList) return this.ambassadorsList;
     return (this.state.draft?.ambassadors ?? []).map((a: CampaignAmbassador) => ({
       id: a.id, fullName: a.fullName, slug: a.slug,
       goalAmount: a.goalAmount, personalMessage: a.personalMessage,
@@ -461,7 +472,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   shareEmail(draft: CampaignDraft): void {
-    const subject = encodeURIComponent(draft.title || 'קמפיין גיוס');
+    const subject = encodeURIComponent(draft.title || this.t('publicPage.campaignPreview.fundraisingCampaign'));
     const body = encodeURIComponent(`${draft.title}\n${this.campaignShareUrl(draft)}`);
     window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
   }
@@ -500,6 +511,28 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // Toggled by an IntersectionObserver on the in-page CTA — see
   // setupStickyObserver()/ngAfterViewInit. Found + fixed 2026-09-23.
   showStickyBar = false;
+  // Closed by the visitor while the bar is in 'always' mode (scroll mode re-shows it, as before).
+  stickyDismissed = false;
+
+  stickyMode(draft: CampaignDraft): 'scroll' | 'always' | 'inline' | 'hidden' {
+    return draft.layout.stickyCta?.mode ?? 'scroll';
+  }
+  // Never over an open checkout; inline mode is part of the page flow.
+  stickyShown(draft: CampaignDraft): boolean {
+    const mode = this.stickyMode(draft);
+    if (mode === 'hidden') return false;
+    if (mode === 'inline') return true;
+    if (this.checkoutOpen || this.stickyDismissed) return false;
+    return mode === 'always' || this.showStickyBar;
+  }
+  // A bar fixed over the page: the page keeps room for it at the bottom.
+  stickyFixed(draft: CampaignDraft): boolean {
+    return this.hasDonationWidget(draft) && this.stickyShown(draft) && this.stickyMode(draft) !== 'inline';
+  }
+  closeSticky(draft: CampaignDraft): void {
+    this.showStickyBar = false;
+    if (this.stickyMode(draft) === 'always') this.stickyDismissed = true;
+  }
   private stickyObserver: IntersectionObserver | null = null;
   readonly currentYear = new Date().getFullYear();
   private expandedOfferings = new Set<string>();
@@ -613,6 +646,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngOnInit(): void {
+    this.currencyService.load();
     this.draft$.subscribe(draft => {
       if (draft?.slug && draft.slug !== this.loadedSlug) {
         this.loadedSlug = draft.slug;
@@ -620,13 +654,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       }
       if (draft?.slug && draft.slug !== this.loadedAmbSlug) {
         this.loadedAmbSlug = draft.slug;
-        this.ambassadorSvc.listPublic(draft.slug).subscribe({
-          next: list => { this.liveAmbassadors = list; },
-        });
-      }
-      if (draft?.slug && draft.slug !== this.loadedCommentsSlug) {
-        this.loadedCommentsSlug = draft.slug;
-        this.loadComments(draft.slug);
+        this.loadAmbassadors(draft.slug);
       }
       if (draft?.slug && this.autoOpenJoin && !this.autoOpenJoinTriggered) {
         this.autoOpenJoinTriggered = true;
@@ -655,9 +683,6 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
           next: counts => { this.rewardCounts = counts; },
         });
       }
-    });
-    this.commentSearch$.pipe(debounceTime(300), takeUntil(this._destroy$)).subscribe(term => {
-      if (this.loadedCommentsSlug) this.loadComments(this.loadedCommentsSlug, term);
     });
     this.state.hoveredBlock$.pipe(takeUntil(this._destroy$)).subscribe(({ id }) => {
       this.hoveredBlockId = id;
@@ -703,6 +728,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngAfterViewInit(): void {
+    document.addEventListener('scroll', this.positionPreviewSticky, true);
+    window.addEventListener('resize', this.positionPreviewSticky);
     this.setupStickyObserver();
     this.host.nativeElement.addEventListener('click', this.onCanvasClickCapture, true);
   }
@@ -728,6 +755,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // Innermost wins: an opening part, then a page area unless it sits inside a
   // block (a Hero block is edited as that block), then the block.
   private selectFromCanvas(target: HTMLElement): boolean {
+    const amount=target.closest<HTMLElement>('[data-design-amount]')?.dataset['designAmount'];if(amount)this.state.amountCardSelection=amount;
     const part = target.closest<HTMLElement>('[data-studio-part]');
     if (part) {
       this.state.requestFocusArea(part.dataset['studioPart'] as StudioCanvasArea);
@@ -741,30 +769,73 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     }
     const block = blockEl && this.state.draft.blocks.find(b => b.id === blockEl.dataset['blockId']);
     if (!block) return false;
+    const summaryPart=target.closest<HTMLElement>('[data-summary-part]')?.dataset['summaryPart'];
+    this.state.summarySelection.set(summaryPart?{blockId:block.id,part:summaryPart}:null);
+    const stat = target.closest<HTMLElement>('[data-stat-key]');
+    if(block.type === 'stats') this.state.selectedStatistic.set(stat?{blockId:block.id,key:stat.dataset['statKey']!}:null);
     this.state.requestFocusBlock(block.id, block.type);
     return true;
   }
 
-  // .hm-donate-btn only exists once the async draft$ has resolved and the
-  // relevant block has rendered — not yet at ngAfterViewInit in the common
-  // case, hence the short retry loop instead of a one-shot querySelector.
-  // Gives up after ~4s (Partner pages / drafts with no donation-widget block
-  // at all never find it, by design — hasDonationWidget already gates the
-  // bar itself in the template either way).
-  private setupStickyObserver(attempt = 0): void {
-    const target = document.querySelector('.hm-primary-donate-cta');
-    if (!target) {
-      if (attempt < 20) setTimeout(() => this.setupStickyObserver(attempt + 1), 200);
+  // Observe this renderer only, and reconnect when editing replaces its CTA.
+  private observedDonateTarget: Element | null = null;
+  ngAfterViewChecked(): void {
+    this.setupStickyObserver();
+    this.positionPreviewSticky();
+  }
+
+  // A Studio canvas is a containing block for fixed descendants. Anchor the
+  // existing bar to its visible scrollport rather than the end of its content.
+  private readonly positionPreviewSticky = (): void => {
+    const root=this.host.nativeElement as HTMLElement;
+    for(const nav of Array.from(root.querySelectorAll<HTMLElement>('app-campaign-navigation'))){if(nav.dataset['navigationBehavior']!=='floating'){if(nav.dataset['floatingAnchored']){for(const key of ['position','width','left','top','z-index'])nav.style.removeProperty(key);delete nav.dataset['floatingAnchored'];}continue;}const frame=root.closest<HTMLElement>('.canvas-frame'),viewport=root.closest<HTMLElement>('.canvas-area,.preview-inner'),bounds=frame?.getBoundingClientRect(),port=viewport?.getBoundingClientRect(),width=Math.max(80,Math.min(640,(bounds?.width??innerWidth)-24));nav.dataset['floatingAnchored']='true';nav.style.position='fixed';nav.style.width=width+'px';nav.style.left=(bounds?(bounds.width-width)/2:(innerWidth-width)/2)+'px';nav.style.top=(bounds?Math.max(0,(port?.top??0)-bounds.top)+12:12)+'px';nav.style.zIndex='35';}
+
+    const host: HTMLElement = this.host.nativeElement;
+    const frame = host.closest<HTMLElement>('.canvas-frame');
+    const viewport = frame?.closest<HTMLElement>('.canvas-area') ?? host.closest<HTMLElement>('.preview-inner');
+    if (!viewport) return;
+    const bar = host.querySelector<HTMLElement>('.hm-sticky-bar');
+    if (!bar) return;
+    if (bar.dataset['stickyMode'] === 'inline') {
+      bar.classList.remove('hm-sticky-bar--compact');
+      for (const property of ['position', 'top', 'bottom', 'left', 'right', 'width', 'visibility']) bar.style.removeProperty(property);
       return;
     }
+    const bounds = (frame ?? host).getBoundingClientRect();
+    bar.classList.toggle('hm-sticky-bar--compact', bounds.width < 480);
+    const port = viewport.getBoundingClientRect();
+    const bottom = Math.min(window.innerHeight, port.bottom, bounds.bottom);
+    const top = Math.max(0, port.top, bounds.top);
+    const height = bar.offsetHeight;
+    bar.style.position = frame ? 'absolute' : 'fixed';
+    bar.style.top = (bottom - height - (frame ? bounds.top : 0)) + 'px';
+    bar.style.bottom = 'auto';
+    bar.style.left = frame ? '0' : bounds.left + 'px';
+    bar.style.right = 'auto';
+    bar.style.width = bounds.width + 'px';
+    bar.style.visibility = bottom - top >= height ? 'visible' : 'hidden';
+  };
+
+  private setupStickyObserver(): void {
+    const target = this.host.nativeElement.querySelector('.hm-primary-donate-cta');
+    if (target === this.observedDonateTarget) return;
+    this.stickyObserver?.disconnect();
+    this.observedDonateTarget = target;
+    if (!target) return;
     this.stickyObserver = new IntersectionObserver(
       ([entry]) => { this.showStickyBar = !entry.isIntersecting; },
-      { threshold: 0 },
+      { threshold: 0, root: this.host.nativeElement.closest('.canvas-area, .preview-inner') },
     );
     this.stickyObserver.observe(target);
   }
 
   ngOnDestroy(): void {
+    this.closeSimpleCheckout?.();
+    clearTimeout(this.donorSearchTimer);clearTimeout(this.ambSearchTimer);this.ambRequest++;this.donorRequest++;
+    document.removeEventListener('scroll', this.positionPreviewSticky, true);
+    window.removeEventListener('resize', this.positionPreviewSticky);
+    this.stopStatResize?.();
+    this.stopStatTouchDrag?.();
     this.host.nativeElement.removeEventListener('click', this.onCanvasClickCapture, true);
     this.stickyObserver?.disconnect();
     this._destroy$.next();
@@ -831,8 +902,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // only an explicit color applies (the legacy white was never shown there).
   heroTextColor(draft: CampaignDraft, part: 'title' | 'subtitle', onHero: boolean): string | null {
     const style = draft.heroTextStyle;
-    const color = part === 'title' ? style?.titleColor : style?.subtitleColor;
-    return color || (onHero ? style?.color ?? null : null);
+    const lang = this.contentLang();
+    const color = elementColor(style, lang, part === 'title' ? 'titleColor' : 'subtitleColor');
+    return color || (onHero ? elementColor(style, lang) ?? null : null);
   }
 
   // On the Hero the copy stays centered unless a part was dragged to a side;
@@ -850,11 +922,20 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   categoryLabel(categoryId: string): string {
     if (!categoryId || categoryId === '__custom__') return '';
     const found = ENTITY_CATEGORIES.find(c => c.id === categoryId);
-    return found ? found.label : categoryId;
+    return found ? this.t(categoryKey(found.id)) : categoryId;
   }
 
   layoutMode(draft: CampaignDraft): string {
     return draft.layout?.layoutMode ?? 'standard';
+  }
+
+  // The sidebar side in the content language shown (utils/sidebar-side.ts).
+  railSide(draft: CampaignDraft): 'left' | 'right' | null {
+    return sidebarSideFor(draft, this.contentLang());
+  }
+  bodyColumnsReversed(draft:CampaignDraft){return (this.railSide(draft)==='right') === (this.contentLang()!=='en');}
+  rowReversed(block: CampaignBlock, draft: CampaignDraft): boolean {
+    return sidebarRowReversed(draft, this.contentLang(), block.id);
   }
 
   // Whether the user has explicitly pulled Hero into the block tree (via a
@@ -917,11 +998,28 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   // ── Content blocks for standard/magazine layouts ──
+  get compositionMobile(): boolean { return this.ui.device === 'mobile' || (this.isPublicPage && window.innerWidth <= 768); }
+  placedBlocks(draft: CampaignDraft, placement: BlockPlacement): CampaignBlock[] { return draft.blocks.filter(b=>b.visible && this.compositionVisible(b,draft) && blockPlacement(b,this.compositionMobile)===placement).sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile)); }
+  private compositionVisible(block:CampaignBlock,draft:CampaignDraft):boolean{const seen=new Set<string>([block.id]);let current:CampaignBlock=block;while(true){const currentId:string=current.id;const parent:CampaignBlock|undefined=draft.blocks.find((b):boolean=>['container','tabs','accordion'].includes(b.type)&&(b.data as ContainerBlockData).childBlockIds?.includes(currentId));if(!parent)return true;if(!parent.visible||seen.has(parent.id))return false;seen.add(parent.id);current=parent;}}
+  headerBlocks(draft: CampaignDraft): CampaignBlock[] { return this.placedBlocks(draft,'below-header'); }
+  private isHeaderContent(block: CampaignBlock, draft: CampaignDraft): boolean {
+    const visited = new Set<string>();
+    let current: CampaignBlock | undefined = block;
+    while (current && !visited.has(current.id)) {
+      if (blockPlacement(current,this.compositionMobile) !== 'content') return true;
+      visited.add(current.id);
+      const id: string = current.id;
+      current = draft.blocks.find((b): boolean => ['container', 'tabs', 'accordion'].includes(b.type) && (b.data as ContainerBlockData).childBlockIds?.includes(id));
+    }
+    return false;
+  }
+  hasHeaderHero(draft: CampaignDraft): boolean { return draft.blocks.some(b=>b.visible && b.type==='hero' && blockPlacement(b,this.compositionMobile)!=='content'); }
+
   contentBlocks(draft: CampaignDraft): CampaignBlock[] {
     const childIds = this.topLevelChildIds(draft);
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id))
-      .sort((a, b) => a.order - b.order);
+      .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id))
+      .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
   }
 
   // Sidebar rail — prefers a real top-level container tagged
@@ -938,8 +1036,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     } else {
       const childIds = this.topLevelChildIds(draft);
       blocks = draft.blocks
-        .filter(b => b.visible && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
-        .sort((a, b) => a.order - b.order);
+        .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id) && (b.type === 'stats' || b.type === 'donation-widget'))
+        .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
     }
     // sidebarSections appends any not-already-claimed block of the chosen
     // FULL_WIDTH_TYPES after whatever the container/fallback above produced,
@@ -956,8 +1054,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     if (sections && sections.length > 0) {
       const claimed = new Set(blocks.map(b => b.type));
       const extra = draft.blocks
-        .filter(b => b.visible && sections.includes(b.type as any) && !claimed.has(b.type))
-        .sort((a, b) => a.order - b.order);
+        .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !this.isHeaderContent(b, draft) && sections.includes(b.type as any) && !claimed.has(b.type))
+        .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
       blocks = [...blocks, ...extra];
     }
     return blocks;
@@ -985,10 +1083,10 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     if (!this.railZoneContainerId(draft, 'sidebar') || !this.railZoneContainerId(draft, 'main')) return [];
     const childIds = this.topLevelChildIds(draft);
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && !(b.type === 'container' && (b.data as ContainerBlockData).railZone)
+      .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id) && !(b.type === 'container' && (b.data as ContainerBlockData).railZone)
         && !this.FULL_WIDTH_TYPES.includes(b.type)
         && (zone === 'sidebar') === this.SIDEBAR_TYPES.includes(b.type))
-      .sort((a, b) => a.order - b.order);
+      .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
   }
 
   hasMainContainer(draft: CampaignDraft): boolean {
@@ -1013,7 +1111,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   railZoneContainerId(draft: CampaignDraft, zone: 'sidebar' | 'main'): string | null {
     const childIds = this.topLevelChildIds(draft);
     const container = draft.blocks.find(b =>
-      b.type === 'container' && !childIds.has(b.id) && (b.data as ContainerBlockData).railZone === zone
+      b.type === 'container' && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id) && (b.data as ContainerBlockData).railZone === zone
     );
     return container?.id ?? null;
   }
@@ -1030,10 +1128,10 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
         .filter((id): id is string => !!id)
     );
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && !railContainerIds.has(b.id)
+      .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id) && !railContainerIds.has(b.id)
         && !this.SIDEBAR_TYPES.includes(b.type)
         && !this.FULL_WIDTH_TYPES.includes(b.type))
-      .sort((a, b) => a.order - b.order);
+      .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
   }
 
   // Full-width blocks rendered below the sidebar two-column area. Any type
@@ -1043,9 +1141,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     const childIds = this.topLevelChildIds(draft);
     const sections = draft.layout.sidebarSections ?? [];
     return draft.blocks
-      .filter(b => b.visible && !childIds.has(b.id) && this.FULL_WIDTH_TYPES.includes(b.type)
+      .filter(b => b.visible && blockPlacement(b,this.compositionMobile) === 'content' && !childIds.has(b.id) && this.FULL_WIDTH_TYPES.includes(b.type)
         && !sections.includes(b.type as any))
-      .sort((a, b) => a.order - b.order);
+      .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
   }
 
   private readonly SIDEBAR_TYPES = ['stats', 'donation-widget'];
@@ -1080,7 +1178,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       const ids = (parent.data as ContainerBlockData).childBlockIds;
       return ids.map(id => draft.blocks.find(b => b.id === id))
         .filter((b): b is CampaignBlock => !!b)
-        .sort((a, b) => a.order - b.order);
+        .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
     }
     const childIds = this.topLevelChildIds(draft);
     return draft.blocks.filter(b => !childIds.has(b.id)).sort((a, b) => a.order - b.order);
@@ -1148,12 +1246,14 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     const isRow = parentBlock?.type === 'container' && (parentBlock.data as ContainerBlockData).direction === 'row';
 
     if (isRow) {
-      // RTL: index 0 of a row-direction container renders RIGHTMOST — so
-      // "insert before index N" visually means "place it to the RIGHT of
-      // element N," i.e. the right half of its box, not the left.
+      // Index 0 of a row-direction container renders at the inline start —
+      // rightmost in the RTL campaign content — so "insert before index N"
+      // is the inline-start half of its box. Asked of the row itself, never
+      // assumed (the Studio around the canvas may be LTR).
+      const rtl = dirOf(hitEl) === 'rtl';
       const midX = rect.left + rect.width / 2;
-      const before = clientX > midX;
-      const lineX = before ? rect.right : rect.left;
+      const before = rtl ? clientX > midX : clientX < midX;
+      const lineX = before === rtl ? rect.right : rect.left;
       return {
         parentId, index: before ? idx : idx + 1,
         indicatorRect: { top: rect.top, left: lineX - 1, width: 2, height: rect.height },
@@ -1257,7 +1357,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       // Into the main column when the page has one (see railZoneDropTarget);
       // full-width sections still render from the top level below it.
       const draggedType = this.draggingType ?? draft.blocks.find(b => b.id === this.draggingExistingId)?.type;
-      const fallbackParent = draggedType && !this.FULL_WIDTH_TYPES.includes(draggedType) ? this.railZoneContainerId(draft, 'main') : null;
+      const fallbackParent = campaignBodyRoot(draft)?.id ?? (draggedType && !this.FULL_WIDTH_TYPES.includes(draggedType) ? this.railZoneContainerId(draft, 'main') : null);
       const scope = this.scopeBlocksAll(fallbackParent, draft);
       const lastEl = scope.length
         ? document.querySelector(`[data-block-id="${scope[scope.length - 1].id}"]`)
@@ -1285,7 +1385,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     // Hero from the picker OR an existing Hero block being repositioned.
     // See BlockType's 'hero' doc comment in campaign-studio-state.service.ts.
     const draggingType = this.draggingType ?? (this.draggingExistingId ? draft.blocks.find(b => b.id === this.draggingExistingId)?.type : null);
-    if (target && target.parentId && draggingType === 'hero') {
+    if (target && target.parentId && draggingType === 'hero' && !campaignBodyRoot(draft)) {
       const scope = this.scopeBlocksAll(null, draft);
       const lastEl = scope.length ? document.querySelector(`[data-block-id="${scope[scope.length - 1].id}"]`) : null;
       const rect = lastEl?.getBoundingClientRect();
@@ -1311,13 +1411,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     if (this.draggingExistingId) {
       const id = this.draggingExistingId;
       this.state.setDraggedExistingBlockId(null);
-      this.state.moveBlockTo(id, parentId, index);
+      this.state.moveBlockTo(id, parentId, index, undefined, this.ui.device);
       return;
     }
 
     const type = this.draggingType!;
     this.state.setDraggedBlockType(null);
-    const id = this.state.insertBlockAt(type, parentId, index);
+    const id = this.state.insertBlockAt(type, parentId, index,this.ui.device);
     if (id) this.state.requestFocusBlock(id, type);
   }
 
@@ -1354,13 +1454,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // same function.
   childBlocks(block: CampaignBlock, draft: CampaignDraft): CampaignBlock[] {
     const ids = (block.data as ContainerBlockData).childBlockIds;
-    const sections = draft.layout.sidebarSections;
+    const sections = campaignBodyRoot(draft)?undefined:draft.layout.sidebarSections;
     const isSidebarZone = (block.data as ContainerBlockData).railZone === 'sidebar';
     return ids
       .map(id => draft.blocks.find(b => b.id === id))
-      .filter((b): b is CampaignBlock => !!b && b.visible)
-      .filter(b => isSidebarZone || !sections?.includes(b.type as any))
-      .sort((a, b) => a.order - b.order);
+      .filter((b): b is CampaignBlock => !!b && b.visible && blockPlacement(b,this.compositionMobile) === 'content')
+      .filter(b => isSidebarZone || this.isHeaderContent(block, draft) || !sections?.includes(b.type as any))
+      .sort((a,b)=>blockOrder(a,this.compositionMobile)-blockOrder(b,this.compositionMobile));
   }
 
   // ── Tabs — which tab is active per Tabs block instance. Presentational
@@ -1415,14 +1515,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     start_date: 'calendar', end_date: 'calendar', days_remaining: 'alarm-clock', ambassadors: 'star',
   };
   readonly statLabels: Record<string, string> = {
-    target: 'יעד הגיוס', raised: 'גויס עד כה', percent: 'מדד הגיוס',
-    supporters: 'תומכים', start_date: 'תחילת הקמפיין',
-    end_date: 'תאריך סיום', days_remaining: 'ימים נותרו', ambassadors: 'שגרירים',
+    target: 'publicPage.campaignPreview.stat.target', raised: 'publicPage.campaignPreview.stat.raised', percent: 'publicPage.campaignPreview.stat.percent',
+    supporters: 'publicPage.campaignPreview.stat.supporters', start_date: 'publicPage.campaignPreview.stat.startDate',
+    end_date: 'publicPage.campaignPreview.stat.endDate', days_remaining: 'publicPage.campaignPreview.stat.daysRemaining', ambassadors: 'publicPage.campaignPreview.stat.ambassadors',
   };
 
   formatAmount(n: number): string {
-    if (!n) return '₪0';
-    return '₪' + n.toLocaleString('he-IL');
+    return localizedMoney(n, this.contentLang());
   }
 
   ambassadorPct(): number {
@@ -1477,9 +1576,10 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // clicking a link inside campaign body text shouldn't get navigated away
   // from the donation page. See DECISIONS.md (2026-07-31).
   private forceLinksNewTab(html: string): string {
-    if (!html.includes('<a ')) return html;
+    if (!html.includes('<a ')&&!html.includes('font-family')) return html;
     const div = document.createElement('div');
     div.innerHTML = html;
+    div.querySelectorAll<HTMLElement>('[style]').forEach(el=>ensureStackLoaded(el.style.fontFamily));
     div.querySelectorAll('a[href]').forEach(a => {
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
@@ -1508,8 +1608,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return null;
   }
 
+  // A chosen side stays that side in both languages (D-48); flex-start is the
+  // right in Hebrew and the left in English.
   ctaAlignStyle(align: string): string {
-    return align === 'right' ? 'flex-start' : align === 'left' ? 'flex-end' : 'center';
+    const rtl = this.contentLang() !== 'en';
+    if (align === 'right') return rtl ? 'flex-start' : 'flex-end';
+    if (align === 'left') return rtl ? 'flex-end' : 'flex-start';
+    return 'center';
   }
 
   middleAmountIndex(amounts: number[]): number {
@@ -1529,11 +1634,58 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // hides the toggle in the template in the first place (see html), so this
   // is never called with an empty array in the monthly branch in practice.
   amountsFor(draft: CampaignDraft): number[] {
-    return this.donationFrequency === 'monthly' ? draft.monthlyAmounts : draft.suggestedAmounts;
+    return presetsFor(draft, this.selectedCurrency, this.donationFrequency);
+  }
+
+  // ── Donation currency (multi-currency, 2026-11) ──
+  // ILS by default. A donor only sees currencies this campaign offers AND
+  // the platform has enabled; in the Studio the campaign's own choice is
+  // shown so the manager can design it, with a note while it is disabled.
+  selectedCurrency: DonationCurrency = 'ILS';
+  currencyNotice = '';
+  readonly formatMoney = formatMoney;
+  readonly currencySymbol = currencySymbol;
+
+  offeredCurrencies(draft: CampaignDraft): DonationCurrency[] {
+    const offered = campaignCurrencies(draft);
+    return this.pageBuilderActive ? offered : offered.filter(c => this.currencyService.isEnabled(c));
+  }
+
+  platformDisabledCurrencies(draft: CampaignDraft): DonationCurrency[] {
+    return campaignCurrencies(draft).filter(c => !this.currencyService.isEnabled(c));
+  }
+
+  monthlyAllowedFor(currency: DonationCurrency): boolean {
+    return currency === 'ILS' || this.currencyService.isEnabled(currency, true);
+  }
+
+  // Switching currency never converts what was entered: the chosen amount is
+  // cleared (with a visible, announced reason) so a ₪100 choice cannot turn
+  // into $100 unnoticed. Gifts are priced in ILS and monthly may not be
+  // available in the new currency -- both are reset rather than mixed.
+  selectCurrency(currency: DonationCurrency): void {
+    if (this.selectedCurrency === currency) return;
+    const hadAmount = this.explicitAmount > 0;
+    this.selectedCurrency = currency;
+    this.selectedAmount = null;
+    this.customAmount = null;
+    this.amountDisplay = '';
+    const notes: string[] = [];
+    if (hadAmount) notes.push(`הסכום נוקה — בחרו סכום ב${CURRENCY_IN_HEBREW[currency]}.`);
+    if (currency !== 'ILS' && this.cartOfferingIds.size > 0) {
+      this.cartOfferingIds = new Set();
+      notes.push('התשורות הוסרו — הן זמינות בשקלים בלבד.');
+    }
+    if (this.donationFrequency === 'monthly' && !this.monthlyAllowedFor(currency)) {
+      this.donationFrequency = 'one-time';
+      notes.push('תרומה חודשית זמינה כרגע בשקלים בלבד.');
+    }
+    this.currencyNotice = notes.join(' ');
   }
 
   selectFrequency(freq: 'one-time' | 'monthly'): void {
     if (this.donationFrequency === freq) return;
+    if (freq === 'monthly' && !this.monthlyAllowedFor(this.selectedCurrency)) return;
     this.donationFrequency = freq;
     // Presets differ between the two lists — a carried-over selection could
     // silently point at the wrong amount for the newly-chosen frequency.
@@ -1572,6 +1724,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // below). See DECISIONS.md (2026-07-16).
   selectOffering(offering: Offering, draft: CampaignDraft): void {
     if (this.isSoldOut(offering)) return;
+    if (this.selectedCurrency !== 'ILS') { this.currencyNotice = 'תשורות זמינות בשקלים בלבד — עברו ל-₪ כדי להוסיף.'; return; }
     this.cartOfferingIds.add(offering.id);
     this.cartOfferingIds = new Set(this.cartOfferingIds);
   }
@@ -1630,6 +1783,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   toggleOffering(id: string): void {
+    if (!this.cartOfferingIds.has(id) && this.selectedCurrency !== 'ILS') { this.currencyNotice = 'תשורות זמינות בשקלים בלבד — עברו ל-₪ כדי להוסיף.'; return; }
     if (this.cartOfferingIds.has(id)) {
       this.cartOfferingIds.delete(id);
     } else {
@@ -1696,9 +1850,23 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // which the pre-checkout summary already correctly relies on; this was the
   // one place that corrupted that invariant right before checkout opened.
   openCheckout(draft: CampaignDraft): void {
+    // USD/EUR go through Checkout V2 only; the legacy modal (registration,
+    // V2 disabled) is ILS-only, so it never receives a foreign amount.
+    if (this.selectedCurrency !== 'ILS' && (!this.CHECKOUT_V2_ENABLED || this.pendingRegistration)) {
+      this.currencyNotice = 'תרומה במטבע זה אינה זמינה כאן — בחרו ₪.';
+      return;
+    }
     // A pending registration alone is enough reason to open — the visitor
     // may just want to pay for it with zero extra donation.
     if (this.totalAmount(draft) === 0 && !this.pendingRegistration) return;
+    if (this.isPublicPage && draft.layout.simpleStudio && !this.pendingRegistration) {
+      try {
+        this.closeSimpleCheckout = this.simpleCheckout.open({ draft, amount: this.explicitAmount, currency: this.selectedCurrency,
+          recurring: this.donationFrequency === 'monthly', ambassadorId: this.ambassador?.id,
+          rewards: this.cartOfferingList(draft) });
+      } catch (error) { this.paymentToasts.show('error', 'לא ניתן לפתוח תשלום', (error as Error).message); }
+      return;
+    }
     this.checkoutMode = 'donation';
     this.checkoutOpen = true;
   }
@@ -1855,16 +2023,16 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // visual change). sectionTitle keeps titleColor as a permanent read-side
   // alias ahead of the new per-role override.
   donorsSectionTitleColor(draft: CampaignDraft, data: DonorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.sectionTitle?.color ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.sectionTitle) ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
   }
   donorNameColor(draft: CampaignDraft, data: DonorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.donorName?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.donorName), LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
   }
   donorAmountColor(draft: CampaignDraft, data: DonorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.donorAmount?.color, LEGACY_THEME_COLOR.accentColor, draft.layout?.theme, 'accentColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.donorAmount), LEGACY_THEME_COLOR.accentColor, draft.layout?.theme, 'accentColor');
   }
   donorMetaColor(draft: CampaignDraft, data: DonorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.donorMeta?.color, '#94a3b8', draft.layout?.theme, 'bodyTextColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.donorMeta), '#94a3b8', draft.layout?.theme, 'bodyTextColor');
   }
 
   // Ambassadors — AMBASSADORS_ROLE_NOTES: this is the section with a REAL
@@ -1884,22 +2052,22 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // donorCount, unchanged) or button chrome (left as its own deferred,
   // documented inconsistency).
   ambassadorsSectionTitleColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.sectionTitle?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.sectionTitle), LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
   }
   ambassadorNameColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.ambassadorName?.color, '#0f172a', draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.ambassadorName), '#0f172a', draft.layout?.theme, 'secondaryColor');
   }
   ambassadorNameWeight(data: AmbassadorsBlockData): number {
     return resolveRoleFontWeight(data.textStyles?.ambassadorName?.fontWeight, 800);
   }
   ambassadorRaisedColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.raisedAmount?.color, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.raisedAmount), LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
   }
   ambassadorDonorCountColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.donorCount?.color, '#0f172a', draft.layout?.theme);
+    return resolveRoleColor(this.roleColor(data.textStyles?.donorCount), '#0f172a', draft.layout?.theme);
   }
   ambassadorSecondaryMetaColor(draft: CampaignDraft, data: AmbassadorsBlockData): string {
-    return resolveRoleColor(data.textStyles?.secondaryMeta?.color, '#94a3b8', draft.layout?.theme, 'bodyTextColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.secondaryMeta), '#94a3b8', draft.layout?.theme, 'bodyTextColor');
   }
 
   // Stats — sectionTitle keeps the exact statsTitleColor()/titleColor
@@ -1911,13 +2079,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // in pure CSS, so "no override" must keep deferring to that, not a new
   // TS-computed literal.
   statsSectionTitleColor(draft: CampaignDraft, data: StatsBlockData): string | null {
-    return this.statsTitleColor(draft, data.textStyles?.sectionTitle?.color ?? data.titleColor);
+    return this.statsTitleColor(draft, this.roleColor(data.textStyles?.sectionTitle) ?? data.titleColor);
   }
   statsValueColorOverride(data: StatsBlockData): string | null {
-    return data.textStyles?.value?.color || null;
+    return this.roleColor(data.textStyles?.value) || null;
   }
   statsLabelColor(draft: CampaignDraft, data: StatsBlockData): string | null {
-    return data.textStyles?.label?.color || this.sectionBodyTextColor(draft);
+    return this.roleColor(data.textStyles?.label) || this.sectionBodyTextColor(draft);
   }
 
   // Universal Local Styling — Phase B1 (2026-10). Stats' fundraising ring
@@ -1947,16 +2115,16 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // must stay null. Text roles (sectionTitle/subtitle) have no such
   // composition conflict and keep the normal gated/legacy resolution.
   donationSectionTitleColor(draft: CampaignDraft, data: DonationWidgetBlockData): string {
-    return resolveRoleColor(data.textStyles?.sectionTitle?.color ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
+    return resolveRoleColor(this.roleColor(data.textStyles?.sectionTitle) ?? data.titleColor, LEGACY_THEME_COLOR.secondaryColor, draft.layout?.theme, 'secondaryColor');
   }
   donationSubtitleColor(draft: CampaignDraft, data: DonationWidgetBlockData): string | null {
-    return data.textStyles?.subtitle?.color || this.sectionBodyTextColor(draft);
+    return this.roleColor(data.textStyles?.subtitle) || this.sectionBodyTextColor(draft);
   }
   donationSecondaryMetaColor(draft: CampaignDraft, data: DonationWidgetBlockData): string | null {
-    return data.textStyles?.secondaryMeta?.color || this.sectionBodyTextColor(draft);
+    return this.roleColor(data.textStyles?.secondaryMeta) || this.sectionBodyTextColor(draft);
   }
   donationTotalSumColor(data: DonationWidgetBlockData): string | null {
-    return data.textStyles?.totalSum?.color || null;
+    return this.roleColor(data.textStyles?.totalSum) || null;
   }
 
   donationContainerBackground(data: DonationWidgetBlockData): string | null {
@@ -2035,8 +2203,21 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   donationCtaBackground(draft: CampaignDraft, data: DonationWidgetBlockData): string {
     return data.buttonStyles?.cta?.background || data.ctaColor || this.themePrimaryColor(draft);
   }
-  donationCtaTextColor(data: DonationWidgetBlockData): string | null {
-    return data.buttonStyles?.cta?.textColor || null;
+  donationCtaTextColor(data: DonationWidgetBlockData, draft?: CampaignDraft): string | null {
+    const explicit = data.buttonStyles?.cta?.textColor;
+    if (explicit) return explicit;
+    // The Hero card styles the button text in the campaign color, which is also
+    // the button's own background unless one was chosen: pick a color that reads
+    // on the actual background instead of an invisible label (2026-11-08).
+    if (draft && this.effectiveDonationComposition(draft) === 'hero') return readableOn(this.donationCtaBackground(draft, data));
+    return null;
+  }
+
+  // The donate text everywhere it appears (widget, sticky bar): the manager's own
+  // label from the page's donation box, else the default.
+  donateLabel(draft: CampaignDraft): string | null {
+    const box = draft.blocks.find(b => b.type === 'donation-widget' && b.visible !== false);
+    return (box?.data as DonationWidgetBlockData | undefined)?.ctaLabel?.trim() || null;
   }
   // CTA radius has no composition conflict (unlike background/text above) —
   // already Style-token-driven today (var(--hm-btn-radius,12px)), so this
@@ -2093,6 +2274,32 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // case every CSS custom property below is simply never set and each
   // consuming rule's own var(--hm-x, <legacy-literal>) fallback applies —
   // zero visual change, same principle already proven for theme colors.
+  // Fonts the campaign chose for the language it is shown in (D-46); cached per draft.
+  private fontCache: { draft: CampaignDraft; lang: string; vars: Record<FontRole, string | null> } | null = null;
+  // Amount labels: an explicit Text Role size wins over the amount-button preset's own size.
+  amountLabelSize(data: DonationWidgetBlockData): number | null {
+    return roleSizePx(data.textStyles?.amountLabel) ?? this.donationAmountButtonFontSize(data);
+  }
+
+  metaSize(draft: CampaignDraft): string | null {
+    const px = roleSizePx(draft.layout.metaTextStyle);
+    return px ? px + 'px' : null;
+  }
+
+  // A text role's own color in the open content language (undefined = the role's default).
+  roleColor(style: ElementColorStyle | undefined): string | undefined {
+    return elementColor(style, this.contentLang());
+  }
+
+  elementFont(style: Partial<TextStyle> | undefined, field: ElementFontField = 'fontFamilyByLanguage'): string | null {
+    return elementFont(style, this.contentLang(), field);
+  }
+  fonts(draft: CampaignDraft): Record<FontRole, string | null> {
+    const lang = this.contentLang();
+    if (this.fontCache?.draft !== draft || this.fontCache.lang !== lang) this.fontCache = { draft, lang, vars: typographyVars(draft, lang) };
+    return this.fontCache.vars;
+  }
+
   visualTokens(draft: CampaignDraft): CampaignStyleVisualTokens | undefined {
     return resolveVisualTokens(draft.layout?.campaignStyleId);
   }
@@ -2110,7 +2317,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   // Merged donation layouts render the progress summary inside the donation
   // card, reading the stats block's own KPI selection when there is one.
   isMergedDonationLayout(draft: CampaignDraft): boolean {
-    return MERGED_DONATION_LAYOUTS.includes(this.effectiveDonationComposition(draft));
+    const stats = draft.blocks.filter(b => b.type === 'stats' && b.visible);
+    const allStandalone = stats.length > 0 && stats.every(b => (b.data as StatsBlockData).visualLayout);
+    return !allStandalone && MERGED_DONATION_LAYOUTS.includes(this.effectiveDonationComposition(draft));
   }
 
   // The stats block steps aside only when a donation card is there to carry
@@ -2120,7 +2329,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   mergedStatItems(draft: CampaignDraft): StatItem[] {
-    const stats = draft.blocks.find(b => b.type === 'stats' && b.visible);
+    const stats = draft.blocks.find(b => b.type === 'stats' && b.visible && !(b.data as StatsBlockData).visualLayout);
     if (stats) return this.visibleGridStats(stats);
     return [
       { key: 'supporters', visible: true, order: 0 },
@@ -2243,13 +2452,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
 
   navItems(draft: CampaignDraft): { label: string; sectionId: string; count?: number; faded?: boolean }[] {
     const LABELS: Partial<Record<string, string>> = {
-      'rich-text':    'אודות הקמפיין',
-      'rewards':      'תשורות',
-      'updates':      'עדכונים',
-      'donors':       'תורמים',
-      'ambassadors':  'שגרירים',
-      'sponsors':     'תומכים',
-      'comments':     'תגובות',
+      'rich-text':    'publicPage.campaignPreview.nav.aboutCampaign',
+      'rewards':      'publicPage.campaignPreview.nav.offerings',
+      'updates':      'publicPage.campaignPreview.nav.updates',
+      'donors':       'publicPage.campaignPreview.nav.donors',
+      'ambassadors':  'publicPage.campaignPreview.nav.ambassadors',
+      'sponsors':     'publicPage.campaignPreview.nav.sponsors',
+      'comments':     'publicPage.campaignPreview.nav.comments',
     };
     const seen = new Set<string>();
     const items: { label: string; sectionId: string; count?: number; faded?: boolean }[] = [];
@@ -2258,13 +2467,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
       if (!sectionId || seen.has(sectionId)) continue;
       seen.add(sectionId);
       const label = block.type === 'rich-text'
-        ? (this.isCampaign(draft) ? 'אודות הקמפיין' : 'אודות')
+        ? (this.isCampaign(draft) ? 'publicPage.campaignPreview.nav.aboutCampaign' : 'publicPage.campaignPreview.nav.about')
         : LABELS[block.type];
       if (!label) continue;
       const count =
         block.type === 'ambassadors' ? (this.ambEffective.length || undefined) :
         block.type === 'donors'      ? (this.activeDonors.length  || undefined) :
-        block.type === 'comments'    ? (this.comments.length      || undefined) :
+        block.type === 'comments'    ? (this.commentsTotal        || undefined) :
         undefined;
       // Toolbar link dims (not removed) for donors/תשורות/שגרירים/עדכונים
       // once the campaign has no content there yet — on the public page
@@ -2360,9 +2569,9 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   private shownCount = 6;
   readonly PAGE_SIZE = 6;
 
-  get activeDonors(): Donor[] {
-    return this.donors;
-  }
+  donorSearch='';donorsLoading=false;donorsLoadError=false;private donorHasMore=false;private donorRequest=0;private donorSearchTimer:ReturnType<typeof setTimeout>|undefined;
+  get activeDonors(): Donor[] { return this.donors.filter(d=>!this.donorSearch||d.name.toLocaleLowerCase().includes(this.donorSearch.toLocaleLowerCase())); }
+  setDonorSearch(value:string){this.donorSearch=value;clearTimeout(this.donorSearchTimer);this.donorRequest++;this.donorSearchTimer=setTimeout(()=>{this.shownCount=this.PAGE_SIZE;if(this.loadedSlug)this.loadDonors(this.loadedSlug);},250);}
   // "הגדולות ביותר" replaces the old separate Top-10 leaderboard box —
   // same list, just reordered client-side, instead of a second dataset in
   // a second box that mostly duplicated the main feed.
@@ -2375,13 +2584,13 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return this.sortedDonors.slice(0, this.shownCount);
   }
   get canShowMore(): boolean {
-    return this.shownCount < this.activeDonors.length;
+    return this.shownCount < this.activeDonors.length || this.donorHasMore;
   }
   showMoreDonors(): void {
-    this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.activeDonors.length);
+    if(this.donorsLoading)return;if(this.shownCount<this.activeDonors.length){this.shownCount=Math.min(this.shownCount+this.PAGE_SIZE,this.activeDonors.length);}else if(this.donorHasMore&&this.loadedSlug)this.loadDonors(this.loadedSlug,true);
   }
   setDonorSort(sort: 'recent' | 'amount'): void {
-    this.donorSort = sort;
+    if(this.donorSort===sort)return;this.donorSort = sort;this.shownCount=this.PAGE_SIZE;if(this.loadedSlug)this.loadDonors(this.loadedSlug);
   }
 
   // Public page — never show a manager's draft update to a visitor. Status
@@ -2486,11 +2695,11 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   openUpdate(u: CampaignUpdate): void { this.viewingUpdate = u; }
   closeUpdate(): void { this.viewingUpdate = null; }
 
-  loadDonors(slug: string): void {
-    this.donationService.getDonors(slug, this.donorPeriod).subscribe({
-      next: ({ donors }) => {
-        this.donors = donors;
-      },
+  loadDonors(slug: string,append=false): void {
+    const request=++this.donorRequest,offset=append?this.donors.length:0;this.donorsLoading=true;this.donorsLoadError=false;
+    this.donationService.getDonors(slug,this.donorPeriod).subscribe({
+      next:({donors})=>{if(request!==this.donorRequest)return;this.donors=append?[...this.donors,...donors]:donors;this.donorHasMore=false;this.donorsLoading=false;if(append)this.shownCount+=this.PAGE_SIZE;},
+      error:()=>{if(request!==this.donorRequest)return;this.donorsLoading=false;this.donorsLoadError=true;}
     });
   }
 
@@ -2502,72 +2711,32 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   // ── Comments — public, anonymous (name + email, no login) ──
-  comments: CampaignComment[] = [];
-  private loadedCommentsSlug = '';
-  commentSearchTerm = '';
-  private commentSearch$ = new Subject<string>();
-  commentForm = { authorName: '', authorEmail: '', content: '' };
-  commentSubmitting = false;
-  commentSubmitError: string | null = null;
-  commentSubmitted = false;
-
-  loadComments(slug: string, search?: string): void {
-    this.commentsService.getComments(slug, search).subscribe({
-      next: list => { this.comments = list; },
-    });
-  }
-
-  onCommentSearchChange(term: string): void {
-    this.commentSearchTerm = term;
-    this.commentSearch$.next(term);
-  }
-
-  submitComment(draft: CampaignDraft): void {
-    const { authorName, authorEmail, content } = this.commentForm;
-    if (!authorName.trim() || !authorEmail.trim() || !content.trim()) {
-      this.commentSubmitError = 'נא למלא שם, אימייל ותוכן התגובה';
-      return;
-    }
-    this.commentSubmitting = true;
-    this.commentSubmitError = null;
-    this.commentsService.postComment(draft.slug!, { authorName, authorEmail, content }).subscribe({
-      next: comment => {
-        this.comments = [...this.comments, comment];
-        this.commentForm = { authorName: '', authorEmail: '', content: '' };
-        this.commentSubmitting = false;
-        this.commentSubmitted = true;
-        setTimeout(() => { this.commentSubmitted = false; }, 3000);
-      },
-      error: () => {
-        this.commentSubmitting = false;
-        this.commentSubmitError = 'משהו השתבש, נסו שוב';
-      },
-    });
-  }
-
-  formatCommentDate(date: Date): string {
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
-    const hh = String(date.getHours()).padStart(2, '0');
-    const mm = String(date.getMinutes()).padStart(2, '0');
-    return `${d}/${m}/${y} ${hh}:${mm}`;
-  }
+  // Published comments count for the section nav (the section loads them itself).
+  commentsTotal = 0;
 
   timeAgo(date: Date): string {
     const diff = Date.now() - date.getTime();
     const m = Math.floor(diff / 60000);
-    if (m < 60) return `לפני ${m} דקות`;
+    if (m < 60) return this.t('publicPage.campaignPreview.ago.minutes', { count: m });
     const h = Math.floor(m / 60);
-    if (h < 24) return `לפני ${h} שעות`;
+    if (h < 24) return this.t('publicPage.campaignPreview.ago.hours', { count: h });
     const d = Math.floor(h / 24);
-    return `לפני ${d} ימים`;
+    return this.t('publicPage.campaignPreview.ago.days', { count: d });
   }
 
   donorInitials(name: string): string {
-    if (name.includes('אנונימי')) return '?';
+    if (name.includes('אנונימי') || name === this.t('publicPage.campaignPreview.anonymous')) return '?';
     const parts = name.trim().split(' ');
     return parts.length >= 2 ? parts[0][0] + parts[1][0] : parts[0][0];
+  }
+
+  mergedStatLabelVisible(draft: CampaignDraft, key: string): boolean {
+    const stats = draft.blocks.find(block => block.type === 'stats' && block.visible && !(block.data as StatsBlockData).visualLayout);
+    return this.statLabelVisible(stats?.data as StatsBlockData | undefined, key);
+  }
+
+  statLabelVisible(data: StatsBlockData | undefined, key: string): boolean {
+    return data?.items?.find(item => item.key === key)?.showLabel !== false;
   }
 
   visibleStats(block: CampaignBlock): StatsBlockData['items'] {
@@ -2587,6 +2756,133 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     return this.visibleStats(block).filter(i => this.GRID_STAT_KEYS.includes(i.key));
   }
 
+  readonly statTextStyle = statisticTextStyle;
+  trackStatKey(index:number,item:StatItem):string{return item.key;}
+  // The manager's own label for the 'raised' stat also titles the amount (e.g. "נמכרו").
+  raisedTitle(draft: CampaignDraft, block?: CampaignBlock): string {
+    const stats = block ?? draft.blocks.find(b => b.type === 'stats');
+    return (stats?.data as StatsBlockData | undefined)?.items?.find(i => i.key === 'raised')?.label ?? '';
+  }
+  statItemColor(draft:CampaignDraft,data:StatsBlockData,item:StatItem,role:'value'|'label'):string|null {return this.roleColor(statisticTextStyle(data,item,role)) || (role==='label'?this.sectionBodyTextColor(draft):null);}
+  statArrange(blockId:string):boolean {return this.studioPlaceholders && this.state.arrangingStatistics()===blockId;}
+  readonly statsVisual = statsVisualData;
+  resizeStat: {blockId:string;key:string;size:StatCardSize} | null = null;
+  private stopStatResize?: () => void;
+  private stopStatTouchDrag?: () => void;
+  private statDragCache?: {source:StatsBlockData;key:string;target:string;swap:boolean;value:StatsBlockData};
+  statDropSwap=false;
+  private lastStatDragPoint?:{x:number;y:number};
+  private statResizeCache?: {source:StatsBlockData;key:string;size:StatCardSize;value:StatsBlockData};
+  statsRenderData(block: CampaignBlock): StatsBlockData {
+    const data=block.data as StatsBlockData,r=this.resizeStat;
+    if(r?.blockId !== block.id){
+      const drag=this.draggingStat??this.touchDraggingStat,target=this.statDropTarget?.slice(block.id.length+1);
+      if(drag?.blockId!==block.id || !target)return data;
+      const cache=this.statDragCache;
+      if(cache?.source===data && cache.key===drag.key && cache.target===target && cache.swap===this.statDropSwap)return cache.value;
+      const value={...data,items:moveStatsItem(data.items,drag.key,target,this.statDropSwap)};
+      this.statDragCache={source:data,key:drag.key,target,swap:this.statDropSwap,value};return value;
+    }
+    const cache=this.statResizeCache;
+    if(cache?.source===data && cache.key===r.key && cache.size===r.size)return cache.value;
+    const value={...data,items:data.items.map(i=>i.key===r.key?{...i,size:r.size}:i)};
+    this.statResizeCache={source:data,key:r.key,size:r.size,value};return value;
+  }
+  reportStatsLayout(blockId:string, info:StatsLayoutInfo):void {
+    if(this.studioPlaceholders) this.state.statisticsCanvas.update(all=>({...all,[blockId]:info}));
+  }
+  statIsSelected(blockId:string,key:string):boolean {
+    const selected=this.state.selectedStatistic();return this.studioPlaceholders && selected?.blockId===blockId && selected.key===key;
+  }
+  canResizeStat(block:CampaignBlock,key:string):boolean {return (this.state.statisticsCanvas()[block.id]?.columns ?? 2)>1 && !(statsVisualLayout((block.data as StatsBlockData).visualLayout).progress==='bar' && key==='percent');}
+  resizeStatByKeyboard(event:MouseEvent,block:CampaignBlock,key:string):void {
+    if(event.detail || !this.studioPlaceholders || !this.canResizeStat(block,key))return;
+    event.stopPropagation();const data=block.data as StatsBlockData,item=data.items.find(i=>i.key===key)!;
+    const sizes:StatCardSize[]=['normal','wide','featured'];const size=sizes[(sizes.indexOf(statCardSize(data,item))+1)%3];
+    this.state.updateBlockData(block.id,{...data,items:data.items.map(i=>i.key===key?{...i,size}:i)});
+  }
+  startStatResize(event:PointerEvent,block:CampaignBlock,key:string):void {
+    if(!this.studioPlaceholders || event.button!==0 || !this.canResizeStat(block,key))return;
+    event.preventDefault();event.stopPropagation();this.stopStatTouchDrag?.();this.stopStatResize?.();
+    this.state.selectedStatistic.set({blockId:block.id,key});
+    const data=block.data as StatsBlockData, item=data.items.find(i=>i.key===key)!;
+    const sizes:StatCardSize[]=['normal','wide','featured'];
+    const initial=sizes.indexOf(statCardSize(data,item)),x=event.clientX,y=event.clientY;
+    const direction=dirOf(event.currentTarget as Element)==='rtl'?-1:1;
+    this.resizeStat={blockId:block.id,key,size:sizes[initial]};
+    const move=(e:PointerEvent)=>{
+      if(e.pointerId!==event.pointerId)return;
+      const dx=(e.clientX-x)*direction,dy=e.clientY-y;
+      const step=Math.abs(dy)>40 ? (dy>0?2:-2) : Math.abs(dx)>40 ? (dx>0?1:-1) : 0;
+      this.resizeStat={blockId:block.id,key,size:sizes[Math.max(0,Math.min(2,initial+step))]};
+    };
+    const finish=(e:PointerEvent)=>{if(e.pointerId!==event.pointerId)return;const size=this.resizeStat?.size;cleanup();if(size && this.state.draft.blocks.find(b=>b.id===block.id)?.data===data && size!==statCardSize(data,item))this.state.updateBlockData(block.id,{...data,items:data.items.map(i=>i.key===key?{...i,size}:i)});};
+    const cancel=()=>cleanup();
+    const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cleanup();}};
+    const cleanup=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',finish);document.removeEventListener('pointercancel',cancel);document.removeEventListener('keydown',escape,true);this.resizeStat=null;this.stopStatResize=undefined;};
+    this.stopStatResize=cleanup;
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',finish);document.addEventListener('pointercancel',cancel);document.addEventListener('keydown',escape,true);
+  }
+
+  statDropTarget: string | null = null;
+  private touchDraggingStat: {blockId:string;key:string}|null=null;
+  private draggingStat: { blockId: string; key: string } | null = null;
+  startStatTouchDrag(event:PointerEvent,block:CampaignBlock,key:string):void {
+    if(!this.studioPlaceholders || event.pointerType!=='touch')return;
+    event.preventDefault();event.stopPropagation();this.stopStatResize?.();this.stopStatTouchDrag?.();
+    this.state.selectedStatistic.set({blockId:block.id,key});
+    this.touchDraggingStat={blockId:block.id,key};
+    const grid=(event.currentTarget as HTMLElement).closest('.sv-stats-grid');
+    const move=(e:PointerEvent)=>{if(e.pointerId!==event.pointerId)return;e.preventDefault();this.statDropSwap=e.shiftKey;const target=document.elementFromPoint(e.clientX,e.clientY)?.closest<HTMLElement>('[data-stat-key]');this.statDropTarget=target && grid?.contains(target) ? block.id+':'+target.dataset['statKey'] : null;};
+    const finish=(e:PointerEvent)=>{if(e.pointerId!==event.pointerId)return;const target=this.statDropTarget?.slice(block.id.length+1);cleanup();if(target){const data=block.data as StatsBlockData;const items=moveStatsItem(data.items,key,target,e.shiftKey);if(items!==data.items)this.state.updateBlockData(block.id,{...data,items});}};
+    const cleanup=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',finish);document.removeEventListener('pointercancel',cleanup);document.removeEventListener('keydown',escape,true);this.statDropTarget=null;this.touchDraggingStat=null;this.stopStatTouchDrag=undefined;};
+    const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cleanup();}};
+    this.stopStatTouchDrag=cleanup;document.addEventListener('pointermove',move,{passive:false});document.addEventListener('pointerup',finish);document.addEventListener('pointercancel',cleanup);document.addEventListener('keydown',escape,true);
+  }
+  startStatDrag(event: DragEvent, block: CampaignBlock, key: string): void {
+    if (!this.studioPlaceholders) return;
+    event.stopPropagation();
+    this.state.selectedStatistic.set({blockId:block.id,key});
+    this.lastStatDragPoint=undefined;
+    this.draggingStat = { blockId: block.id, key };
+    event.dataTransfer?.setData('application/x-hamonym-stat', JSON.stringify(this.draggingStat));
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+  allowStatDrop(event: DragEvent, blockId: string, key: string): void {
+    if (this.draggingStat?.blockId !== blockId || !this.studioPlaceholders) return;
+    event.preventDefault(); event.stopPropagation();
+    const last=this.lastStatDragPoint;
+    if(!last || Math.abs(event.clientX-last.x)+Math.abs(event.clientY-last.y)>4 || this.statDropSwap!==event.shiftKey){
+      this.lastStatDragPoint={x:event.clientX,y:event.clientY};this.statDropSwap=event.shiftKey;this.statDropTarget=blockId+':'+key;
+    }
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  }
+  allowStatGridDrop(event:DragEvent,blockId:string):void {if(this.studioPlaceholders && this.draggingStat?.blockId===blockId && this.statDropTarget){event.preventDefault();event.stopPropagation();}}
+  dropStat(event: DragEvent, block: CampaignBlock, target: string): void {
+    if (this.draggingStat?.blockId !== block.id || !this.studioPlaceholders) return;
+    event.preventDefault(); event.stopPropagation();
+    const data = block.data as StatsBlockData;
+    const intended=this.statDropTarget?.slice(block.id.length+1) || target;
+    const items = moveStatsItem(data.items, this.draggingStat.key, intended, event.shiftKey);
+    this.draggingStat = null; this.statDropTarget = null;
+    if (items !== data.items) this.state.updateBlockData(block.id, { ...data, items });
+  }
+  endStatDrag(event: DragEvent): void { event.stopPropagation(); this.draggingStat = null; this.statDropTarget = null; }
+  moveStatByKeyboard(event: KeyboardEvent, block: CampaignBlock, key: string): void {
+    if (!this.studioPlaceholders || !['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)) return;
+    this.state.selectedStatistic.set({blockId:block.id,key});
+    event.preventDefault(); event.stopPropagation();
+    const data = block.data as StatsBlockData;
+    const items = data.items.filter(i => i.visible).sort((a,b) => a.order-b.order);
+    const rtl = dirOf((event.currentTarget as Element) || this.host.nativeElement) === 'rtl';
+    const backward = event.key === 'ArrowUp' || (event.key === 'ArrowLeft' && !rtl) || (event.key === 'ArrowRight' && rtl);
+    const at = items.findIndex(i => i.key === key), next = at + (backward ? -1 : 1);
+    if (items[next]) this.state.updateBlockData(block.id, { ...data, items: moveStatsItem(data.items, key, items[next].key, true) });
+  }
+  donationPresentation(block: CampaignBlock, field: 'padding' | 'gap'): number | null {
+    const value = (block.data as DonationWidgetBlockData).presentation?.[field];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(48, value)) : null;
+  }
   readonly Math = Math;
 
   raisedPct(draft: CampaignDraft): number {
@@ -2620,3 +2916,4 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, OnDestro
     }
   }
 }
+

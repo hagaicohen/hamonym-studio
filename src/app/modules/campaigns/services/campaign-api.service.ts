@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core';
+import { studioCommerce } from '../simple-studio/studio-commerce';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, switchMap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { CampaignDraft, CampaignStudioStateService } from './campaign-studio-state.service';
+import { CampaignDraft, CampaignLayout, CampaignStudioStateService } from './campaign-studio-state.service';
 import { resolveTheme } from '../builder/styles/campaign-styles';
+import { canonicalDraft, newOptionUid, normalizeContentI18n } from '../utils/content-i18n';
 
 export interface DiscoverCampaign {
   id: string;
@@ -20,6 +22,9 @@ export interface DiscoverCampaign {
   created_at: string;
   entity_name: string;
   entity_logo: string | null;
+  // The published English version's title/description (D-54); absent otherwise.
+  title_en?: string | null;
+  short_description_en?: string | null;
 }
 
 // pg v8 returns DATE columns as Date objects. Convert to YYYY-MM-DD using local time.
@@ -59,7 +64,10 @@ export class CampaignApiService {
   }
 
   // camelCase CampaignDraft → snake_case payload for backend
-  private toSnake(draft: CampaignDraft, entityId?: string): Record<string, any> {
+  // Always the stored form: Hebrew in the fields, English in content_i18n, even
+  // while the Studio has the English version open.
+  private toSnake(view: CampaignDraft, entityId?: string): Record<string, any> {
+    const draft = canonicalDraft(view);
     const payload: Record<string, any> = {
       status:                   draft.status,
       slug:                     draft.slug,
@@ -111,6 +119,9 @@ export class CampaignApiService {
       blocks:                   draft.blocks,
       layout:                   draft.layout,
     };
+    // Sent only once a campaign has translations, so saving an untranslated
+    // campaign sends exactly what it always did.
+    if (draft.contentI18n) payload['content_i18n'] = draft.contentI18n;
     if (entityId) payload['entity_id'] = entityId;
     return payload;
   }
@@ -121,6 +132,7 @@ export class CampaignApiService {
       id:                      data.id,
       entityId:                data.entity_id,
       status:                  data.status,
+      isLocked:                data.is_locked === undefined ? undefined : !!data.is_locked,
       isHidden:                data.is_hidden ?? false,
       currentAmount:           parseFloat(data.current_amount)  || 0,
       supportersCount:         parseInt(data.supporters_count)  || 0,
@@ -182,6 +194,7 @@ export class CampaignApiService {
       registrationFieldIcon:  data.registration_field_icon  ?? '👤',
       registrationOptions:    (data.registration_options ?? []).map((o: any) => ({
         id:          o.id,
+        uid:         o.client_uid  || newOptionUid(),
         key:         o.key         ?? '',
         title:       o.title       ?? '',
         description: o.description ?? '',
@@ -194,6 +207,7 @@ export class CampaignApiService {
         ...b,
         label: b.label ?? DEFAULT_BLOCK_LABELS[b.type as string] ?? '',
       })),
+      contentI18n: normalizeContentI18n(data.content_i18n),
       layout: {
         ...(data.layout ?? {}),
         layoutMode: data.layout?.layoutMode ?? 'standard',
@@ -260,6 +274,39 @@ export class CampaignApiService {
     return this.http.patch<any>(`${this.apiUrl}/${campaignId}`, this.toSnake(draft), {
       headers: this.headers(),
     }).pipe(tap(() => this.studioState.markSaved(draft)), map(r => this.fromSnake(r)));
+  }
+
+  // Read the stored layout before replacing the column; preserve untouched keys
+  // without applying fromSnake's display defaults to the persisted object.
+  saveSimpleStudio(
+    campaignId: string,
+    layout: CampaignLayout,
+    document: NonNullable<CampaignLayout['simpleStudio']>,
+    slug?: string,
+    business?: Partial<Pick<CampaignDraft, 'title' | 'targetAmount' | 'coverImageUrl' | 'videoUrl' | 'heroType' | 'startDate' | 'endDate' | 'campaignLifecycle'>>,
+  ): Observable<CampaignDraft> {
+    return this.http.get<any>(`${this.apiUrl}/${campaignId}`, {
+      headers: this.headers(),
+    }).pipe(
+      switchMap(stored => {
+        const commerce = studioCommerce(document, this.fromSnake(stored));
+        return this.http.patch<any>(`${this.apiUrl}/${campaignId}`, {
+        layout: { ...(stored.layout ?? layout), simpleStudio: document },
+        ...(slug !== undefined ? { slug } : {}),
+        ...(business?.title !== undefined ? { title: business.title } : {}),
+        ...(business?.targetAmount !== undefined ? { target_amount: business.targetAmount } : {}),
+        ...(business?.coverImageUrl !== undefined ? { cover_image_url: business.coverImageUrl } : {}),
+        ...(business?.videoUrl !== undefined ? { video_url: business.videoUrl } : {}),
+        ...(business?.heroType !== undefined ? { hero_type: business.heroType } : {}),
+        ...(business?.startDate !== undefined ? { start_date: business.startDate } : {}),
+        ...(business?.endDate !== undefined ? { end_date: business.endDate || null } : {}),
+        ...(business?.campaignLifecycle !== undefined ? { campaign_lifecycle: business.campaignLifecycle } : {}),
+        ...(commerce.offerings !== undefined ? { rewards: commerce.offerings } : {}),
+        ...(commerce.registrationOptions !== undefined ? { registration_options: commerce.registrationOptions } : {}),
+      }, { headers: this.headers() });
+      }),
+      map(r => this.fromSnake(r)),
+    );
   }
 
   getById(campaignId: string): Observable<CampaignDraft> {

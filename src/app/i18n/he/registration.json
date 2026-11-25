@@ -1,0 +1,323 @@
+{
+  "organizationRegistration": {
+    "savedRegistrationDrafts": "טיוטות הרשמה שמורות",
+    "draft": "טיוטה",
+    "drafts": "טיוטות",
+    "editing": "בעריכה",
+    "notSavedYet": "טרם נשמרה",
+    "unsavedChanges": "· שינויים שלא נשמרו",
+    "deleteDraft": "מחק טיוטה: ",
+    "thisDraftIsOpenFor": "הטיוטה פתוחה לעריכה",
+    "continueEditing": "המשך עריכה: ",
+    "saveChanges": "שמור שינויים: ",
+    "theDraftWasSavedYou": "הטיוטה נשמרה — אפשר לחזור אליה בכל שלב",
+    "startANewRegistration": "התחלת הרשמה חדשה",
+    "deleteTheDraft": "למחוק את הטיוטה?",
+    "theDraftDraftnameWillBe": "הטיוטה \"{{draftName}}\" תוסר מהרשימה. לא ניתן לבטל פעולה זו.",
+    "deleting": "מוחק...",
+    "saveTheNewDraft": "לשמור את הטיוטה החדשה?",
+    "currentnameHasntBeenSavedYet": "\"{{currentName}}\" עדיין לא נשמרה. אם לא תשמרו אותה, היא תימחק.",
+    "thereAreUnsavedChanges": "יש שינויים שלא נשמרו",
+    "theChangesToCurrentnameHavent": "השינויים ב\"{{currentName}}\" עדיין לא נשמרו. מה לעשות לפני המעבר?",
+    "continueWithoutSaving": "עבור בלי לשמור",
+    "saveAndContinue": "שמור ועבור",
+    "loadingTheDraftLoadingname": "טוען את הטיוטה \"{{loadingName}}\"..."
+  },
+  "drafts": {
+    "deleteDraft": "מחק טיוטה",
+    "continueEditing": "המשך עריכה",
+    "errors": {
+      "notCreator": "רק מי שיצר את הטיוטה יכול למחוק אותה.",
+      "notADraft": "הארגון כבר נשלח לבדיקה ולא ניתן למחוק אותו כטיוטה.",
+      "hasCampaigns": "לטיוטה זו יש קמפיינים ולכן לא ניתן למחוק אותה.",
+      "notFound": "הטיוטה לא נמצאה. ייתכן שכבר נמחקה.",
+      "requestedNotFound": "הטיוטה המבוקשת לא נמצאה, או שהרישום שלה כבר נשלח.",
+      "loadFailed": "טעינת הטיוטה נכשלה. נסו שוב.",
+      "deleteFailed": "מחיקת הטיוטה נכשלה. נסו שוב.",
+      "saveFailed": "שמירת הטיוטה נכשלה. נסו שוב."
+    },
+    "untitled": "ללא שם",
+    "newRegistration": "הרשמה חדשה",
+    "saveOnlyCurrent": "ניתן לשמור רק את הטיוטה שבעריכה",
+    "fillBeforeSave": "יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה",
+    "saveChanges": "שמור שינויים",
+    "noChanges": "אין שינויים לשמירה"
+  },
+  "common": {
+    "cancel": "ביטול",
+    "saving": "שומר...",
+    "save": "שמור",
+    "entityDetails": "פרטי {{entity}}",
+    "contactPerson": "איש קשר",
+    "uploaded": "הועלה בהצלחה",
+    "viewFile": "הצג קובץ",
+    "remove": "הסר",
+    "next": "המשך לשלב הבא",
+    "entityProfile": "פרופיל {{entity}}",
+    "logo": "לוגו",
+    "back": "חזור",
+    "joinAsOrganization": "הצטרפות כעמותה",
+    "fundraisingGoals": "יעדי גיוס",
+    "feeCollectionMethod": "אמצעי גבייה לעמלות",
+    "connectTerminal": "חיבור מסוף אשראי",
+    "provider": "ספק סליקה"
+  },
+  "steps": {
+    "step1": "שלב 1 מתוך 6",
+    "step2": "שלב 2 מתוך 6",
+    "step3": "שלב 3 מתוך 6",
+    "step4": "שלב 4 מתוך 6"
+  },
+  "stepEntity": {
+    "letsGetToKnowYou": "בואו נכיר",
+    "entityDetailsAndValidation": "פרטי הישות ובדיקת תקינות",
+    "entityType": "סוג הישות",
+    "entityType2": "סוג הישות *",
+    "chooseAnEntityType": "בחר סוג ישות",
+    "nonprofitAmuta": "עמותה",
+    "publicBenefitCompanyChalatz": "חל״צ",
+    "newPoliticalParty": "מפלגה פוליטית חדשה",
+    "registeredPoliticalParty": "מפלגה פוליטית רשומה",
+    "exemptDealerContentCreatorsOnly": "עוסק פטור",
+    "licensedDealerContentCreatorsOnly": "עוסק מורשה",
+    "typeAName": "הקלד שם",
+    "typeTheRegistrationNumberEntityconfig": "הקלד מספר רישום{{entityConfig}}",
+    "categories": "קטגוריות",
+    "fullName": "שם מלא *",
+    "israelIsraeli": "ישראל ישראלי",
+    "email": "אימייל *",
+    "invalidEmailAddress": "כתובת אימייל לא תקינה",
+    "phone": "טלפון *",
+    "invalidPhoneNumber": "מספר טלפון לא תקין",
+    "requiredDocuments": "מסמכים נדרשים",
+    "registrationdocumentCanBeCompletedLater": "{{registrationDocument}} — ניתן להשלים בהמשך",
+    "uploadTheRegistrationdocumentPdfJpg": "יש להעלות {{registrationDocument}} (PDF, JPG, PNG - עד 10MB). ניתן גם להשלים זאת בהמשך, בהגדרות העמותה — זה לא יעצור אתכם מלהשלים את הקמת העמותה עכשיו.",
+    "youCanFinishSettingUp": "אפשר להמשיך ולהשלים את הקמת העמותה גם ללא המסמך כעת. את המסמך ניתן להעלות בהמשך בהגדרות העמותה, לצורך בדיקת הבקשה.",
+    "uploadRegistrationdocument": "העלה {{registrationDocument}}",
+    "section46TaxCreditCertificate": "אישור זיכוי מס לפי סעיף 46",
+    "optionalLetsTheCampaignPage": "אופציונלי — מאפשר הצגת תרומות מוכרות למס בדף הקמפיין (PDF, JPG, PNG - עד 10MB)",
+    "ifTheOrganizationHasA": "אם לעמותה יש אישור לפי סעיף 46, יש להעלות אותו ולהשלים את אימותו. עד להשלמת העלאת האישור ואימותו, התורמים לא יוכלו לקבל את הטבת המס באמצעות המערכת. העלאת קובץ לבדה אינה אישור שהמסמך אומת.",
+    "uploadTheSection46Certificate": "העלה אישור סעיף 46",
+    "note": "למידע:",
+    "theDocumentsWillBeReviewed": "המסמכים יועברו לבדיקה ואישור על ידי צוות המערכת לפני אישור הישות בפלטפורמה."
+  },
+  "stepProfile": {
+    "entityGoals": "תחומי פעילות ואפשרויות",
+    "setUpYourCardOn": "ניתן לבחור אפשרות אחת, כמה אפשרויות או להמשיך ללא בחירה. הבחירה אינה קובעת זכאות לסליקה או מגבילה את יכולות הקמפיין.",
+    "chooseAtLeastOneCampaign": "חובה לבחור לפחות סוג קמפיין אחד",
+    "entityCard": "כרטיס {{entity}}",
+    "displayName": "שם להצגה *",
+    "theNameShownOnThe": "השם שיוצג בפלטפורמה",
+    "shortDescription": "תיאור קצר *",
+    "tellUsAboutYourActivity": "ספרו על הפעילות שלכם...",
+    "entityWebsiteLinkOptional": "קישור לאתר {{entity}} (לא חובה)",
+    "uploadLogo": "העלה לוגו",
+    "recommended400x400PixelsPngJpg": "מומלץ 400x400 פיקסלים, PNG/JPG"
+  },
+  "stepGoals": {
+    "whatAreYourGoalsOn": "מה היעדים שלכם בפלטפורמה?",
+    "aGoalIsAPlanning": "יעד הוא כלי לתכנון ולא תקרת גיוס — אפשר להמשיך לקבל תרומות גם לאחר שעוברים אותו. ניתן לשנות את היעדים בהמשך. את תצוגת רכיבי הגיוס ניתן לערוך או להסתיר בעורך הקמפיין, בהתאם לעיצוב שנבחר.",
+    "monthlyFundraisingGoal": "יעד גיוס חודשי (₪)",
+    "howMuchDoYouHope": "כמה תרומות אתם מקווים לגייס בחודש דרך הפלטפורמה?",
+    "yearlyFundraisingGoal": "יעד גיוס שנתי (₪)",
+    "howMuchDoYouHope2": "כמה תרומות אתם מקווים לגייס בשנה דרך הפלטפורמה?",
+    "whyDoesThisMatter": "למה זה חשוב?",
+    "thisDataHelpsUsOffer": "הנתונים האלו עוזרים לנו להציע לכם המלצות מותאמות, לזהות הזדמנויות צמיחה ולפתח כלים חכמים שיעזרו לכם להשיג את היעדים."
+  },
+  "stepBillingMethod": {
+    "connectACollectionMethodFor": "חיבור אמצעי גבייה לצורך גביית עמלות שימוש בפלטפורמה",
+    "importantInformation": "מידע חשוב",
+    "systemFee3VatOf": "עמלת מערכת: 3% + מע״מ מכל תרומה",
+    "chargedOnceAMonthOnly": "החיוב מתבצע אחת לחודש בלבד",
+    "noChargeWithoutActualActivity": "לא מתבצע חיוב ללא פעילות בפועל",
+    "billingDetailsAndAccountingDocuments": "פרטי החיוב והמסמכים החשבונאיים יטופלו בהתאם להסדר החיוב של הארגון",
+    "collectionMethod": "שיטת גבייה",
+    "creditCard": "כרטיס אשראי",
+    "monthlyChargeByCreditCard": "חיוב חודשי באמצעות כרטיס אשראי",
+    "standingOrderMasav": "הוראת קבע (מס״ב)",
+    "chargeByBankAuthorization": "חיוב באמצעות הרשאה בנקאית",
+    "creditCardDetails": "פרטי כרטיס אשראי",
+    "cardDetailsAreStoredSecurely": "פרטי האשראי נשמרים בצורה מאובטחת באמצעות CardCom.",
+    "loadingTheSecurePaymentForm": "טוען טופס תשלום מאובטח...",
+    "theBillingMethodWasSaved": "אמצעי החיוב נשמר בהצלחה",
+    "cardEndingInLast4": "· כרטיס המסתיים ב-{{last4}}",
+    "replaceCard": "החלפת כרטיס",
+    "standingOrderMasav2": "הוראת קבע - מס״ב",
+    "downloadTheFormSignIt": "יש להוריד את הטופס, לחתום עליו ולהעלות אותו חזרה למערכת. את פרטי חשבון הבנק משלימים בהגדרות העמותה, בסיום תהליך ההרשמה.",
+    "planoidInstitutionCode25788": "קוד מוסד פלנויד: 25788",
+    "downloadTheStandingOrderForm": "הורד טופס הוראת קבע",
+    "authorizationApproved": "ההרשאה אושרה",
+    "uploading": "מעלה...",
+    "replaceTheSignedForm": "החלפת הטופס החתום",
+    "uploadTheSignedForm": "העלה טופס חתום",
+    "illCompleteThisLater": "אשלים בהמשך",
+    "theCollectionMethodWasSaved": "אמצעי הגבייה נשמר בהצלחה"
+  },
+  "stepPayment": {
+    "connectToYourCardProcessing": "התחברות למסוף הסליקה שלכם",
+    "illAddATerminalLater": "אוסיף מסוף מאוחר יותר",
+    "chooseAProvider": "בחר ספק",
+    "terminalNumber": "מספר מסוף *",
+    "apiUser": "משתמש API *",
+    "apiPassword": "סיסמת API *",
+    "testingTheConnection": "בודק חיבור...",
+    "testConnection": "בדוק חיבור",
+    "theConnectionSucceeded": "החיבור הצליח",
+    "terminalDetails": "פרטי מסוף {{provider}}"
+  },
+  "providers": {
+    "cardcom": "קארדקום",
+    "tranzila": "טרנזילה"
+  },
+  "stepReview": {
+    "theOrganizationWasCreated": "העמותה נוצרה בהצלחה",
+    "welcomeToHamonym": "ברוכים הבאים להמונים",
+    "takingYouToTheCampaigns": "מעבירים אותך למסך הקמפיינים...",
+    "summaryAndSubmission": "סיכום והגשה",
+    "aFinalReviewBeforeSubmitting": "סקירה אחרונה לפני שליחה לאישור",
+    "whatsDoneAndWhatsLeft": "מה הושלם ומה נשאר להשלמה?",
+    "theListSummarizesTheExisting": "הרשימה מסכמת את הפרטים וההגדרות הקיימים. פריטים שניתן להשלים בהמשך אינם חוסמים את שליחת הבקשה.",
+    "verified": "מאומת",
+    "entityType": "סוג ישות",
+    "email": "אימייל",
+    "phone": "טלפון",
+    "selectedCategories": "קטגוריות שנבחרו",
+    "documents": "מסמכים",
+    "section46Certificate": "אישור סעיף 46",
+    "displayName": "שם להצגה",
+    "pageTypes": "סוגי דפים",
+    "entityDescription": "תיאור {{entity}}",
+    "noLogoUploaded": "לא הועלה לוגו",
+    "monthlyFundraisingGoal": "יעד גיוס חודשי",
+    "yearlyFundraisingGoal": "יעד גיוס שנתי",
+    "theConnectionWillBeCompleted": "החיבור יושלם בהמשך",
+    "youChoseToSetUp": "בחרתם להגדיר את מסוף האשראי בשלב מאוחר יותר",
+    "terminalNumber": "מספר מסוף",
+    "apiUser": "משתמש API",
+    "apiPassword": "סיסמת API",
+    "connectionStatus": "סטטוס חיבור",
+    "theCardcomConnectionSucceeded": "החיבור לקארדקום הצליח",
+    "theCardcomConnectionFailed": "החיבור לקארדקום נכשל",
+    "theTerminalConnectionTestMust": "יש להשלים בדיקת חיבור למסוף",
+    "theCollectionMethodWillBe": "השלמת אמצעי הגבייה תתבצע בהמשך",
+    "collectionMethodType": "סוג אמצעי גבייה",
+    "provider": "ספק",
+    "cardStatus": "סטטוס כרטיס",
+    "cardSaved": "כרטיס נשמר בהצלחה",
+    "last4Digits": "4 ספרות אחרונות",
+    "noConfirmationWasReceivedFor": "לא התקבל אישור לשמירת כרטיס. יש להשלים את אמצעי הגבייה בהגדרות העמותה.",
+    "bankAuthorizationMasav": "הרשאת בנק (מס\"ב)",
+    "toBeCompletedInThe": "יש להשלים בהגדרות העמותה לאחר ההרשמה",
+    "whatsNext": "מה הלאה?",
+    "theHamonymTeamWillReview": "הבקשה תיבדק על ידי צוות המונים",
+    "youllReceiveAnEmailWithin": "תקבלו מייל תוך 24-48 שעות",
+    "onceApprovedYouCanStart": "לאחר אישור תוכלו להתחיל לגייס",
+    "back": "חזרה",
+    "submitting": "שולח...",
+    "submitForReview": "הגשה לבדיקה"
+  },
+  "categorySelector": {
+    "searchAndChooseCategories": "חיפוש ובחירת קטגוריות",
+    "searchForACategoryTo": "חפש קטגוריה להוספה...",
+    "selectedCategoriesLength": "קטגוריות שנבחרו ({{length}})",
+    "remove": "הסר ",
+    "noCategoriesSelectedYet": "עדיין לא נבחרו קטגוריות",
+    "allCategories": "כל הקטגוריות",
+    "noCategoriesMatchTheSearch": "לא נמצאו קטגוריות התואמות לחיפוש"
+  },
+  "categorySuggest": {
+    "missingACategorySuggestA": "חסרה קטגוריה? הציעו קטגוריה חדשה",
+    "suggestedCategoryName": "שם הקטגוריה המוצעת",
+    "sending": "שולח…",
+    "send": "שליחה",
+    "theSuggestionWillBeReviewed": "ההצעה תיבדק על ידי צוות Hamonym.",
+    "tooShort": "שם הקטגוריה צריך להכיל לפחות 2 תווים",
+    "alreadyPending": "ההצעה „{{label}}” כבר נמצאת בבדיקה. תודה!",
+    "sent": "תודה! ההצעה נשלחה לבדיקה. היא לא תתווסף לרשימה באופן אוטומטי.",
+    "exists": "הקטגוריה „{{label}}” כבר קיימת ברשימה. אפשר לחפש אותה ולבחור בה.",
+    "failed": "שליחת ההצעה נכשלה. נסו שוב."
+  },
+  "entityTypes": {
+    "association": {
+      "entity": "עמותה",
+      "entityName": "שם העמותה",
+      "registrationNumber": "מספר עמותה",
+      "registrationDocument": "תעודת התאגדות",
+      "onboardingTitle": "הצטרפות כעמותה"
+    },
+    "chalatz": {
+      "entity": "חל״צ",
+      "entityName": "שם החל״צ",
+      "registrationNumber": "מספר חל״צ",
+      "registrationDocument": "תעודת התאגדות",
+      "onboardingTitle": "הצטרפות כחל״צ"
+    },
+    "politicalPartyNew": {
+      "entity": "מפלגה פוליטית חדשה",
+      "entityName": "שם המפלגה",
+      "registrationDocument": "מסמכי הקמה",
+      "onboardingTitle": "הקמת מפלגה פוליטית"
+    },
+    "politicalPartyRegistered": {
+      "entity": "מפלגה פוליטית רשומה",
+      "entityName": "שם המפלגה",
+      "registrationDocument": "תעודת רישום מפלגה",
+      "onboardingTitle": "הצטרפות כמפלגה פוליטית"
+    },
+    "soleExempt": {
+      "entity": "עוסק פטור",
+      "entityName": "שם העסק",
+      "registrationNumber": "מספר עוסק",
+      "registrationDocument": "תעודת עוסק",
+      "onboardingTitle": "הצטרפות כעוסק פטור"
+    },
+    "soleRegistered": {
+      "entity": "עוסק מורשה",
+      "entityName": "שם העסק",
+      "registrationNumber": "מספר עוסק",
+      "registrationDocument": "תעודת עוסק",
+      "onboardingTitle": "הצטרפות כעוסק מורשה"
+    }
+  },
+  "billing": {
+    "errors": {
+      "ensureEntity": "לא ניתן היה לשמור את פרטי העמותה. נסו לחזור לשלב הקודם ולהמשיך שוב.",
+      "uploadFailed": "העלאת הקובץ נכשלה. נסו שוב.",
+      "cardNotSaved": "שמירת הכרטיס לא אושרה. בדקו את הפרטים ונסו שוב."
+    },
+    "continuing": "ממשיך...",
+    "continue": "המשך"
+  },
+  "payment": {
+    "serverError": "שגיאת שרת"
+  },
+  "checks": {
+    "organizationDetails": "פרטי העמותה",
+    "logo": "לוגו",
+    "completeLaterInSettings": "ניתן להשלים בהמשך בהגדרות העמותה.",
+    "taxApprovalDetail": "רלוונטי לעמותה בעלת אישור סעיף 46 בלבד. העלאה אינה אימות האישור.",
+    "feeCard": "כרטיס אשראי לגביית עמלות",
+    "masav": "הרשאת מס״ב",
+    "completeInSettingsAfter": "יש להשלים בהגדרות העמותה לאחר ההרשמה."
+  },
+  "review": {
+    "masavMethod": "הוראת קבע / מס\"ב",
+    "cardMethod": "כרטיס אשראי",
+    "submitFailed": "שגיאה בשליחת הבקשה. נסו שוב."
+  },
+  "errors": {
+    "incompleteProfile": "יש להשלים סוג גוף, שם רשמי, מספר רישום, שם לתצוגה, דוא״ל, טלפון ותיאור לפני ההגשה.",
+    "alreadySaving": "שמירת העמותה כבר מתבצעת. יש להמתין לסיום.",
+    "duplicateId": "מספר הזיהוי הזה כבר רשום במערכת. לא ניתן ליצור גוף נוסף עם אותו מספר."
+  },
+  "campaignTypes": {
+    "oneTime": {
+      "title": "תרומות חד פעמיות",
+      "description": "דף קמפיין לתרומות חד פעמיות"
+    },
+    "recurring": {
+      "title": "תרומות קבועות",
+      "description": "דף עמותה לתורמים קבועים"
+    }
+  }
+}

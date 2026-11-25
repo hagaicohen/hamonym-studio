@@ -1,6 +1,7 @@
 import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DonationToastItem } from '../../../services/donation.service';
+import { currencySymbol } from '../../../utils/donation-currency';
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 
 interface ActiveToast {
@@ -56,6 +57,7 @@ export class DonationToastComponent implements OnDestroy {
   }
 
   isLarge(amount: number): boolean { return amount >= 1000; }
+  symbol(currency?: string): string { return currencySymbol(currency); }
 
   ngOnDestroy(): void {
     this.timers.forEach(t => clearTimeout(t));

@@ -1,0 +1,74 @@
+@if (language.englishEnabled) {
+  <span class="hm-ls__anchor">
+  <button
+    #trigger
+    type="button"
+    class="hm-ls__trigger"
+    [class.hm-ls__trigger--open]="open"
+    aria-haspopup="menu"
+    [attr.aria-expanded]="open"
+    [attr.aria-controls]="menuId"
+    [attr.aria-label]="('common.language.selectorLabel' | transloco) + ': ' + (current.nameKey | transloco)"
+    [attr.data-language]="current.lang"
+    (click)="toggle()"
+    (keydown)="onTriggerKeydown($event)"
+  >
+    <ng-container *ngTemplateOutlet="flag; context: { $implicit: current.lang }" />
+  </button>
+  @if (!open) {
+    <span class="hm-ls__tip" role="tooltip" lang="en" aria-hidden="true">{{ current.name }}</span>
+  }
+
+  @if (open) {
+    <div class="hm-ls__menu" dir="ltr" [class.hm-ls__menu--from-right]="menuFromRight" [id]="menuId" role="menu" [attr.aria-label]="'common.language.selectorLabel' | transloco">
+      @for (o of options; track o.lang; let i = $index) {
+        <button
+          type="button"
+          role="menuitemradio"
+          class="hm-ls__item"
+          [class.hm-ls__item--active]="language.preferred() === o.lang"
+          [attr.aria-checked]="language.preferred() === o.lang"
+          [attr.data-language]="o.lang"
+          lang="en"
+          tabindex="-1"
+          (click)="select(o.lang)"
+          (keydown)="onItemKeydown($event, i)"
+        >
+          <ng-container *ngTemplateOutlet="flag; context: { $implicit: o.lang }" />
+          <span class="hm-ls__name">{{ o.name }}</span>
+          <span class="hm-ls__check" aria-hidden="true">
+            @if (language.preferred() === o.lang) {
+              <svg viewBox="0 0 16 16" focusable="false"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            }
+          </span>
+        </button>
+      }
+      @if (language.hebrewOnlyHere()) {
+        <p class="hm-ls__note" role="note" dir="auto">{{ 'common.language.hebrewOnlyHere' | transloco }}</p>
+      }
+    </div>
+  }
+  </span>
+}
+
+<!-- Flags are drawn, not emoji: Windows shows emoji flags as the letters "IL"/"US". -->
+<ng-template #flag let-lang>
+  @if (lang === 'en') {
+    <svg class="hm-ls__flag" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+      <rect width="30" height="20" fill="#fff" />
+      @for (y of usStripes; track y) { <rect [attr.y]="y" width="30" height="1.54" fill="#b22234" /> }
+      <rect width="12.5" height="10.77" fill="#3c3b6e" />
+      @for (s of usStars; track $index) { <circle [attr.cx]="s[0]" [attr.cy]="s[1]" r="0.45" fill="#fff" /> }
+    </svg>
+  } @else {
+    <svg class="hm-ls__flag" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+      <rect width="30" height="20" fill="#fff" />
+      <rect y="2" width="30" height="3" fill="#0038b8" />
+      <rect y="15" width="30" height="3" fill="#0038b8" />
+      <g fill="none" stroke="#0038b8" stroke-width="0.75" stroke-linejoin="round">
+        <path d="M15 6.2 18.29 11.9H11.71Z" />
+        <path d="M15 13.8 11.71 8.1H18.29Z" />
+      </g>
+    </svg>
+  }
+</ng-template>

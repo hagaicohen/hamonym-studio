@@ -8,14 +8,13 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  direction: rtl;
 }
 
 /* ------------------------------------------------------------------ */
 /* HEADER                                                               */
 /* ------------------------------------------------------------------ */
 
-.step-header_campaign { direction: rtl; margin-bottom: 4px; }
+.step-header_campaign {  margin-bottom: 4px; }
 .step-title-row { display: flex; align-items: center; gap: 8px; }
 
 .step-title {
@@ -242,7 +241,7 @@
 .amb-summary-info   { display: flex; flex-direction: column; gap: 1px; }
 .amb-summary-name   { font-size: 13px; font-weight: 700; color: #1e293b; }
 .amb-summary-goal   { font-size: 11px; color: #94a3b8; }
-.amb-summary-more   { font-size: 12px; color: #94a3b8; padding-right: 4px; }
+.amb-summary-more   { font-size: 12px; color: #94a3b8; padding-inline-start: 4px; }
 
 .status-chip {
   font-size: 12px;
@@ -685,4 +684,14 @@
   .cta-title {
     font-size: 17px;
   }
+}
+
+/* Studio properties panel (container "props", 2026-11-08): the layout follows the
+   panel's own width, so resizing the panel adapts it without touching the canvas.
+   The classic wizard has no such container and is unchanged. */
+@container props (max-width: 520px) {
+  .sections-grid, .bottom-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container props (max-width: 380px) {
+  .overview-stats { min-width: 0; grid-template-columns: minmax(0, 1fr); }
 }

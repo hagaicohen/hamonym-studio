@@ -1,0 +1,93 @@
+{
+  "topbar": {
+    "openNavigationMenu": "פתיחת תפריט ניווט",
+    "myAccount": "החשבון שלי",
+    "myPersonalArea": "האזור האישי",
+    "myRoles": "התפקידים שלי",
+    "setUpANewOrganization": "הקמת ארגון חדשה",
+    "joinAsAnAmbassador": "הצטרפות כשגריר",
+    "registerACompany": "רישום חברה",
+    "manageRoles": "ניהול תפקידים",
+    "logOut": "התנתקות",
+    "openUserMenu": "פתיחת תפריט משתמש",
+    "logIn": "התחברות",
+    "switchFailed": "לא ניתן לעבור לארגון. יש לבדוק הרשאה ולנסות שוב.",
+    "openFailed": "לא ניתן לפתוח את העמוד. יש לנסות שוב."
+  },
+  "sidebar": {
+    "platform": "פלטפורמה",
+    "myOrganization": "הארגון שלי",
+    "newCampaign": "+ קמפיין חדש"
+  },
+  "notificationBell": {
+    "notifications": "הודעות",
+    "noNewNotifications": "אין הודעות חדשות",
+    "pendingReview": "{{pendingReviewCount}} ארגונים ממתינות לאישור",
+    "flaggedForReview": "{{flaggedForReviewCount}} ארגונים פעילות דורשות בדיקה חוזרת",
+    "rejectedHint": "הארגון והנתונים שלה נשמרו. קראו את סיבת הדחייה. להגשה חוזרת נדרשת תחילה העברה להשלמת פרטים על ידי מנהל הפלטפורמה.",
+    "changesRequestedHint": "השלימו את הפרטים לפי הערות המנהל בהגדרות הארגון, שמרו ולחצו על ״שלח לבדיקה מחדש״.",
+    "approvedHint": "אפשר להמשיך לניהול הקמפיינים. פרסום וגיוס כפופים להגדרות ולכללים הקיימים.",
+    "actions": {
+      "approve": "הארגון שלכם אושר",
+      "reject": "הבקשה שלכם נדחתה",
+      "requestChanges": "נדרשים תיקונים בפרטי הארגון",
+      "suspend": "הארגון הושעה",
+      "reactivate": "הארגון הופעל מחדש"
+    }
+  },
+  "idleWarningModal": {
+    "stillThere": "עדיין שם?",
+    "logoutIn": "עקב חוסר פעילות, תנותק אוטומטית בעוד",
+    "seconds": "שניות.",
+    "stayLoggedIn": "המשך להיות מחובר"
+  },
+  "impersonationBanner": {
+    "signedInAs": "מנהל הפלטפורמה {{impersonatorName}} מחובר כרגע בשם המשתמש הזה",
+    "backToTheSuperAdmin": "חזרה לחשבון סופר אדמין"
+  },
+  "paidDonationToast": {
+    "newDonationReceived": "התקבלה תרומה חדשה!",
+    "donated": "{{donorLabel}} תרם/תרמה ₪{{amount}}",
+    "close": "סגור",
+    "anonymousDonor": "תורם/ת אנונימי/ת"
+  },
+  "platformTopStrip": {
+    "homeLink": "המונים - מעבר לאתר הראשי",
+    "logoAlt": "המונים",
+    "allCampaigns": "לכל הקמפיינים",
+    "campaignManagement": "ניהול הקמפיין",
+    "personalArea": "אזור אישי",
+    "logInPersonalArea": "כניסה / אזור אישי",
+    "hamonymOnFacebook": "עמוד הפייסבוק של המונים"
+  },
+  "roles": {
+    "entityManagerGroup": "הגופים שלי",
+    "ambassador": "שגריר",
+    "campaignManager": "קמפיינר",
+    "company": "חברה",
+    "donor": "תורם",
+    "user": "משתמש",
+    "associationManager": "מנהל ארגון",
+    "chalatzManager": "מנהל חל״צ",
+    "partyManager": "מנהל מפלגה",
+    "businessOwner": "בעל עסק"
+  },
+  "nav": {
+    "dashboard": "דשבורד",
+    "organizations": "ארגונים",
+    "campaigns": "קמפיינים",
+    "donations": "תרומות",
+    "registrations": "הרשמות",
+    "donors": "תורמים",
+    "ambassadors": "שגרירים",
+    "partners": "שותפים",
+    "reports": "דוחות",
+    "settings": "הגדרות",
+    "platformDashboard": "דשבורד פלטפורמה",
+    "platformOrganizations": "ארגונים",
+    "platformUsers": "משתמשים",
+    "platformCollectionOps": "ניהול גבייה",
+    "platformSettings": "הגדרות כלליות",
+    "platformCategorySuggestions": "הצעות קטגוריה"
+  }
+}

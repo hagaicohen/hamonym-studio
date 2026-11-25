@@ -4,7 +4,7 @@
   max-width: 860px; margin: 0 auto;
   padding: 28px 28px 40px;
   display: flex; flex-direction: column; gap: 20px;
-  font-family: 'Heebo', sans-serif; direction: rtl;
+  font-family: 'Heebo', sans-serif; 
 }
 
 /* Section header */
@@ -29,7 +29,7 @@
   display: flex; flex-direction: column; gap: 6px;
   padding: 14px 16px; border-radius: 14px;
   border: 2px solid #e2e8f0; background: #fff;
-  cursor: pointer; font-family: inherit; text-align: right;
+  cursor: pointer; font-family: inherit; text-align: start;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .type-card:hover   { border-color: #a78bfa; }
@@ -55,13 +55,13 @@
 .tg-req    { color: #ef4444; }
 .tg-amount-wrap { display: flex; align-items: center; gap: 0; position: relative; }
 .tg-currency {
-  position: absolute; right: 14px;
+  position: absolute; inset-inline-start: 14px;
   font-size: 16px; font-weight: 800; color: #64748b; pointer-events: none;
 }
 .tg-amount-input {
-  width: 100%; padding: 12px 40px 12px 14px;
+  width: 100%; padding-block: 12px 12px; padding-inline: 40px 14px;
   border: 1.5px solid #e2e8f0; border-radius: 10px;
-  font-size: 16px; font-weight: 700; direction: rtl;
+  font-size: 16px; font-weight: 700; 
   font-family: inherit; color: #0f172a; outline: none;
   transition: border-color 0.15s;
 }
@@ -130,4 +130,14 @@
   .tg-dates-row {
     display: flex; flex-direction: column; gap: 12px;
   }
+}
+/* Studio properties panel (container "props", 2026-11-08): the layout follows the
+   panel's own width, so resizing the panel adapts it without touching the canvas.
+   The classic wizard has no such container and is unchanged. */
+@container props (max-width: 460px) {
+  .types-grid--3col { grid-template-columns: minmax(0, 1fr); }
+}
+@container props (max-width: 360px) {
+  .types-grid, .tg-dates-row { grid-template-columns: minmax(0, 1fr); }
+  .type-card { padding: 12px; }
 }

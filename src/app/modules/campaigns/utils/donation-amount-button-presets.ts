@@ -96,13 +96,14 @@ export const AMOUNT_BUTTON_PRESETS: Record<DonationAmountButtonPreset, AmountBut
   },
 };
 
+// Labels are translation keys.
 export const DONATION_AMOUNT_BUTTON_PRESET_OPTIONS: { value: DonationAmountButtonPreset | 'inherit'; label: string }[] = [
-  { value: 'inherit',  label: 'לפי הסגנון' },
-  { value: 'subtle',   label: 'עדין' },
-  { value: 'solid',    label: 'סולידי' },
-  { value: 'soft',     label: 'רך' },
-  { value: 'card',     label: 'כרטיסים' },
-  { value: 'pill',     label: 'גלולה' },
-  { value: 'minimal',  label: 'מינימלי' },
-  { value: 'prominent', label: 'מודגש' },
+  { value: 'inherit',  label: 'builder.page.amountPresets.inherit' },
+  { value: 'subtle',   label: 'builder.page.amountPresets.subtle' },
+  { value: 'solid',    label: 'builder.page.amountPresets.solid' },
+  { value: 'soft',     label: 'builder.page.amountPresets.soft' },
+  { value: 'card',     label: 'builder.page.amountPresets.card' },
+  { value: 'pill',     label: 'builder.page.amountPresets.pill' },
+  { value: 'minimal',  label: 'builder.page.amountPresets.minimal' },
+  { value: 'prominent', label: 'builder.page.amountPresets.prominent' },
 ];

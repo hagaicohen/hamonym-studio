@@ -1,0 +1,6 @@
+<div class="hu-shade" data-hu-close (click)="view.closeDrawer()"></div>
+<aside class="hu-drawer" role="dialog" aria-modal="true" aria-labelledby="huDrawerTitle">
+  <div class="hu-drawer-head"><button class="hu-drawer-close" type="button" aria-label="סגירה" (click)="view.closeDrawer()">×</button><h2 id="huDrawerTitle">מוכנות לפרסום</h2></div>
+  <div id="huDrawerBody">@if (view.drawerOpen()) { <ham-publication-checks /> }</div>
+  <div class="hu-drawer-actions"><button class="hu-action" type="button" (click)="view.closeDrawer()">סגור</button></div>
+</aside>

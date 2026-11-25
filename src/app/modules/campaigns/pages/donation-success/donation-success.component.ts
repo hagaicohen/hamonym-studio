@@ -9,9 +9,11 @@ import { AnalyticsService } from '../../../../core/services/analytics.service';
 import { DonationService } from '../../services/donation.service';
 
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { formatMoney } from '../../utils/donation-currency';
 interface DonationResult {
   id:             string;
   amount:         number;
+  currency?:      'ILS' | 'USD' | 'EUR';
   created_at:     string;
   status:         string;
   donor_name:     string | null;
@@ -59,6 +61,9 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
   slug       = '';
   ref        = '';
   amount     = 0;
+  // The charged currency (server value once loaded; the redirect's own
+  // ?currency= until then). Absent = ILS.
+  currency   = 'ILS';
   donation: DonationResult | null = null;
   loading    = true;
   linkCopied = false;
@@ -88,6 +93,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
     this.slug   = this.route.snapshot.paramMap.get('slug') || '';
     this.ref    = this.route.snapshot.queryParamMap.get('ref')    || '';
     this.amount = parseFloat(this.route.snapshot.queryParamMap.get('amount') || '0');
+    this.currency = this.route.snapshot.queryParamMap.get('currency') || 'ILS';
 
     if (this.ref) {
       this.http.get<DonationResult>(`${environment.apiUrl}/api/donations/public/${this.ref}`)
@@ -95,6 +101,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
           next: (d) => {
             this.donation = d;
             this.amount   = parseFloat(String(d.amount));
+            this.currency = d.currency || 'ILS';
             this.title.setTitle(`תודה על תרומתך — ${d.campaign_title}`);
             this.loading  = false;
             this.loader.hide();
@@ -102,7 +109,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
             this.analytics.init(d.entity_ga_measurement_id);
             this.analytics.trackEvent('donation_completed', {
               value:         this.amount,
-              currency:      'ILS',
+              currency:      this.currency,
               campaign_name: d.campaign_title,
               campaign_id:   d.campaign_id,
               transaction_id: d.id,
@@ -146,7 +153,7 @@ export class DonationSuccessComponent implements OnInit, OnDestroy {
   }
 
   get formattedAmount(): string {
-    return '₪' + this.amount.toLocaleString('he-IL');
+    return formatMoney(this.amount, this.currency);
   }
 
   get formattedDate(): string {

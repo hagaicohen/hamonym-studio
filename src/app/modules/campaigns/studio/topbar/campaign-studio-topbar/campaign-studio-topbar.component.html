@@ -1,34 +1,34 @@
 <ng-container *ngIf="ui.state$ | async as s">
-<header class="studio-topbar" [class.studio-topbar--fullscreen]="s.fullscreen">
+<header class="studio-topbar" [class.studio-topbar--fullscreen]="s.fullscreen" [class.studio-topbar--creative]="compact">
 
   <!-- LEFT: exit / back -->
   <div class="title-group">
     <ng-container *ngIf="!s.fullscreen">
-      <button class="exit-button" (click)="closeStudio()" aria-label="יציאה מהעורך">
+      <button class="exit-button" (click)="closeStudio()" [attr.aria-label]="'studio.topbar.leaveEditor' | transloco">
         <lucide-icon [img]="X" [size]="20" [strokeWidth]="1.75"></lucide-icon>
       </button>
-      <div class="campaign-title">{{ title }}</div>
+      <div class="campaign-title">{{ title | hmText }}</div>
       <!-- Optional extras from the hosting page (the Studio); empty in the classic editor. -->
       <ng-content select="[topbarStatus]" />
     </ng-container>
     <ng-container *ngIf="s.fullscreen">
-      <button class="back-button" (click)="exitFullscreen()">
-        <lucide-icon [img]="ArrowRight"></lucide-icon>
-        חזרה לעריכה
+      <button type="button" class="back-button" (click)="exitFullscreen()">
+        <lucide-icon class="back-button-icon" [img]="ArrowRight" [size]="16" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+        <span>{{ 'studio.topbar.backToEditing' | transloco }}</span>
       </button>
     </ng-container>
   </div>
 
   <!-- CENTER: device + fullscreen switcher -->
   <div class="device-switcher">
-    <button class="device-button" [class.active]="s.device === 'desktop'" (click)="setDevice('desktop')" title="דסקטופ">
+    <button class="device-button" [class.active]="s.device === 'desktop'" [attr.aria-pressed]="s.device==='desktop'" [attr.aria-label]="'studio.topbar.desktop'|transloco" (click)="setDevice('desktop')" [title]="'studio.topbar.desktop' | transloco">
       <lucide-icon [img]="Monitor"></lucide-icon>
     </button>
-    <button class="device-button" [class.active]="s.device === 'mobile'" (click)="setDevice('mobile')" title="מובייל">
+    <button class="device-button" [class.active]="s.device === 'mobile'" [attr.aria-pressed]="s.device==='mobile'" [attr.aria-label]="'studio.topbar.mobile'|transloco" (click)="setDevice('mobile')" [title]="'studio.topbar.mobile' | transloco">
       <lucide-icon [img]="Smartphone"></lucide-icon>
     </button>
     <div class="device-divider"></div>
-    <button class="device-button" [class.active]="s.fullscreen" (click)="toggleFullscreen()" title="תצוגה מלאה">
+    <button class="device-button" [class.active]="s.fullscreen" (click)="toggleFullscreen()" [title]="'studio.topbar.fullScreen' | transloco">
       <lucide-icon [img]="s.fullscreen ? Minimize2 : Maximize2"></lucide-icon>
     </button>
   </div>
@@ -36,24 +36,27 @@
   <!-- RIGHT: view + save -->
   <div class="topbar-actions">
     <ng-content select="[topbarTools]" />
-    @if (campaignState.draft.id) {
-      <button class="advisor-button" [disabled]="advising || !aiEnabled"
+    <ng-template #secondaryActions>    @if (campaignState.draft.id) {
+      <button class="advisor-button ai-unavailable" disabled
         (click)="getAdvice()"
-        [title]="!aiEnabled ? 'תכונת AI זו אינה פעילה עבור חשבון זה' : 'קבל המלצות לשיפור הקמפיין מבינה מלאכותית'">
-        <lucide-icon [img]="icons.Sparkles" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> קבל המלצות לשיפור הקמפיין</span>
+        title="כלי AI אינם זמינים כרגע">
+        <lucide-icon [img]="icons.Sparkles" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> {{ 'studio.topbar.aiButton' | transloco }}</span>
         @if (advising) {
           <div class="btn-spinner"></div>
         }
       </button>
     }
     @if (campaignState.draft.id) {
-      <button class="view-campaign-button" (click)="openDashboard()" title="ניהול שוטף של הקמפיין">
-        <lucide-icon [img]="icons.LayoutDashboard" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> Dashboard</span>
+      <button class="view-campaign-button" (click)="openDashboard()" [title]="'studio.topbar.manageTitle' | transloco">
+        <lucide-icon [img]="icons.LayoutDashboard" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> {{ 'studio.topbar.dashboard' | transloco }}</span>
       </button>
     }
+</ng-template>
+    @if(!compact){<ng-container *ngTemplateOutlet="secondaryActions"/>}
+    @if(compact){<details class="workspace-overflow" data-workspace-menu><summary [attr.aria-label]="'studio.workspace.more'|transloco">•••</summary><div class="workspace-overflow-body"><ng-content select="[topbarSecondary]"/><ng-container *ngTemplateOutlet="secondaryActions"/><hm-language-switcher/></div></details>}
     @if (campaignSlug) {
-      <button class="view-campaign-button" (click)="viewCampaign()" title="צפה בדף הקמפיין">
-        <lucide-icon [img]="icons.Eye" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> צפה בקמפיין</span>
+      <button class="view-campaign-button" (click)="viewCampaign()" [title]="'studio.topbar.viewTitle' | transloco">
+        <lucide-icon [img]="icons.Eye" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span class="topbar-btn-label"> {{ 'studio.topbar.view' | transloco }}</span>
       </button>
     }
     <button class="save-button"
@@ -61,33 +64,36 @@
       [class.error]="saveState === 'error'"
       [disabled]="saveState === 'saving'"
       (click)="saveDraft()">
-      @if (saveState === 'idle')   { שמור טיוטה }
-      @if (saveState === 'saving') { שומר... }
-      @if (saveState === 'saved')  { <lucide-icon [img]="icons.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> נשמר }
-      @if (saveState === 'error')  { <lucide-icon [img]="icons.CircleAlert" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> שגיאה }
+      @if (saveState === 'idle')   { {{ 'studio.topbar.saveDraft' | transloco }} }
+      @if (saveState === 'saving') { {{ 'studio.topbar.saving' | transloco }} }
+      @if (saveState === 'saved')  { <lucide-icon [img]="icons.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'studio.topbar.saved' | transloco }} }
+      @if (saveState === 'error')  { <lucide-icon [img]="icons.CircleAlert" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'studio.topbar.error' | transloco }} }
     </button>
+    <!-- Interface language (D-27): the same button as the app topbar, at the inline-end edge. -->
+    @if (languageSelectorShown && !compact) { <span class="topbar-divider" aria-hidden="true"></span> }
+    @if(!compact){<hm-language-switcher />}
   </div>
 
 </header>
 
 @if (advisorError) {
   <div class="advisor-panel advisor-panel--error">
-    <span>{{ advisorError }}</span>
-    <button class="advisor-close" (click)="closeAdvisor()" aria-label="סגירה"><lucide-icon [img]="icons.X" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+    <span>{{ advisorError | hmText }}</span>
+    <button class="advisor-close" (click)="closeAdvisor()" [attr.aria-label]="'studio.page.close' | transloco"><lucide-icon [img]="icons.X" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
   </div>
 }
 
 @if (advisorResult) {
   <div class="advisor-panel">
     <div class="advisor-panel-header">
-      <div class="advisor-panel-title"><lucide-icon [img]="icons.Sparkles" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> המלצות לשיפור הקמפיין</div>
-      <button class="advisor-close" (click)="closeAdvisor()" aria-label="סגירה"><lucide-icon [img]="icons.X" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+      <div class="advisor-panel-title"><lucide-icon [img]="icons.Sparkles" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'studio.topbar.advisorTitle' | transloco }}</div>
+      <button class="advisor-close" (click)="closeAdvisor()" [attr.aria-label]="'studio.page.close' | transloco"><lucide-icon [img]="icons.X" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
     </div>
 
     <p class="advisor-summary">{{ advisorResult.summary }}</p>
 
     @if (advisorResult.strengths.length) {
-      <div class="advisor-section-title">חוזקות</div>
+      <div class="advisor-section-title">{{ 'studio.topbar.strengths' | transloco }}</div>
       <ul class="advisor-strengths">
         @for (s of advisorResult.strengths; track s) {
           <li>{{ s }}</li>
@@ -96,7 +102,7 @@
     }
 
     @if (advisorResult.tasks.length) {
-      <div class="advisor-section-title">משימות לביצוע</div>
+      <div class="advisor-section-title">{{ 'studio.topbar.tasks' | transloco }}</div>
       <div class="advisor-tasks">
         @for (t of advisorResult.tasks; track t.task) {
           <div class="advisor-task" [ngClass]="'severity-' + t.severity.toLowerCase()">

@@ -1,0 +1,26 @@
+<!-- Draggable two-position device slider; buttons remain keyboard-accessible. -->
+<div class="ham-device-slider" role="group" aria-label="תצוגה מקדימה לפי מכשיר" dir="rtl" [attr.data-device]="device">
+  <span class="ham-device-slider-thumb" aria-hidden="true" [class.is-dragging]="dragOffset !== null" [style.transform]="dragOffset === null ? null : 'translateX(' + (-dragOffset) + 'px)'" (pointerdown)="startDeviceDrag($event)" (pointermove)="moveDeviceDrag($event)" (pointerup)="endDeviceDrag($event)" (pointercancel)="cancelDeviceDrag($event)"></span>
+  <button type="button" class="ham-device-slider-option" [class.is-active]="device==='desktop'" [attr.aria-pressed]="device==='desktop'" title="מעבר לתצוגת מחשב" (click)="chooseDevice('desktop')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+    <span>מחשב</span>
+  </button>
+  <button type="button" class="ham-device-slider-option" [class.is-active]="device==='mobile'" [attr.aria-pressed]="device==='mobile'" title="מעבר לתצוגת מובייל" (click)="chooseDevice('mobile')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+    <span>מובייל</span>
+  </button>
+</div>
+<details class="ham-v209-dropdown" data-ham-v209-dropdown="layout" [attr.data-selected-layout]="selected" [hidden]="isDonation" [open]="layoutOpen">
+  <summary (click)="toggleLayout($event)" [attr.aria-expanded]="layoutOpen">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="ham-v209-label">החלפת תבנית</span><svg class="ham-v209-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </summary>
+  <div class="ham-v209-menu" role="group" aria-label="בחירת פריסת קמפיין">
+    <div class="ham-v298-picker-heading"><strong>בחר פריסת דף</strong><small>סוג הקמפיין נשאר ללא שינוי, וכל הנתונים נשמרים.</small></div>
+    <div class="ham-v298-picker-choices">
+      <div class="ham-layout-menu-entry"><button type="button" class="ham-layout-parent-option" data-ham-v209-layout="panorama" [attr.aria-checked]="selected==='panorama'" (click)="chooseLayout('panorama')"><span class="ham-layout-menu-icon" aria-hidden="true">▤</span><span class="ham-v298-choice-text"><strong>פריסה רגילה</strong><small>נתוני הגיוס בסיידבר</small></span></button></div>
+      <div class="ham-layout-menu-entry"><button type="button" class="ham-layout-parent-option" data-ham-v209-layout="heroCard" [attr.aria-checked]="selected==='heroCard'" (click)="chooseLayout('heroCard')"><span class="ham-layout-menu-icon" aria-hidden="true">▣</span><span class="ham-v298-choice-text"><strong>כרטיס על ה־Hero</strong><small>נתוני הגיוס על תמונת ה־Hero</small></span></button></div>
+    </div>
+  </div>
+</details>
+<button type="button" class="ham-v209-open" title="פתח קמפיין בדפדפן" (click)="openPublic()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4h7v7M20 4l-9 9M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg><span>פתח בדפדפן</span></button>

@@ -23,7 +23,6 @@
   gap: 32px;
   box-shadow: 0 32px 80px rgba(0,0,0,0.28);
   font-family: 'Heebo', sans-serif;
-  direction: rtl;
 }
 
 .pp-header { text-align: center; }

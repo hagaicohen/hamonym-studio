@@ -1,0 +1,65 @@
+{
+  "language": {
+    "he": "עברית",
+    "en": "English",
+    "selectorLabel": "שפת הממשק",
+    "hebrewOnlyHere": "העמוד הזה זמין כרגע בעברית בלבד",
+    "heShort": "עב",
+    "enShort": "EN"
+  },
+  "loading": "טוען...",
+  "dateRangePicker": {
+    "chooseADateRange": "בחירת טווח תאריכים",
+    "custom": "מותאם אישית",
+    "showingDataFor": "מציג נתונים עבור:",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "apply": "החל",
+    "cancel": "ביטול",
+    "presets": {
+      "today": "היום",
+      "d7": "7 ימים",
+      "d30": "30 יום",
+      "d90": "90 יום",
+      "months12": "12 חודשים"
+    }
+  },
+  "incompleteRegistrations": {
+    "incompleteRegistrations": "רישומים שלא הושלמו",
+    "theseAreNotActiveOrganizations": "אלה עדיין אינם ארגונים פעילים. ניתן ליצור קמפיין רק לאחר השלמת הרישום ושליחתו לבדיקה.",
+    "savedDate": "נשמרה {{date}}",
+    "completeRegistration": "השלם רישום: ",
+    "completeRegistration2": "השלם רישום"
+  },
+  "noOrganizationState": {
+    "campaigns": "קמפיינים",
+    "manageYourFundraisingCampaigns": "נהל את קמפיינים הגיוס שלך",
+    "noOrganizationIsLinkedTo": "לא נמצאה עמותה משוייכת למשתמש זה",
+    "signedInAsUseremail": "מחובר כ: {{userEmail}}",
+    "startRegistration": "התחל תהליך רישום"
+  },
+  "organizationChecks": {
+    "registrationDocs": "מסמכי רישום",
+    "taxApproval": "אישור מס",
+    "paymentConnected": "סליקה מחוברת",
+    "contactSet": "איש קשר מוגדר",
+    "campaignExists": "קמפיין קיים"
+  },
+  "checklist": {
+    "completion": "השלמת פרטי ארגון",
+    "listLabel": "רשימת השלמת פרטי ארגון",
+    "done": "הושלם: ",
+    "todo": "להשלמה: "
+  },
+  "identityCheck": {
+    "checking": "בודק את מספר הזיהוי...",
+    "validToSave": "מספר הזיהוי תקין לשמירה",
+    "available": "מספר הזיהוי פנוי לרישום",
+    "manageExisting": "ניהול הגוף הקיים",
+    "contactSupport": "לבירור הרשאה לגוף קיים, יש לפנות לתמיכה.",
+    "unverified": "לא הצלחנו לבדוק כרגע את מספר הזיהוי. אפשר להמשיך — המספר ייבדק שוב בשמירה."
+  },
+  "actions": {
+    "tryAgain": "נסה שוב"
+  }
+}

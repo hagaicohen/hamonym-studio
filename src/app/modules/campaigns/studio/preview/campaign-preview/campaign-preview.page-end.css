@@ -43,7 +43,7 @@
 /* Updates */
 .campaign-page--mobile .hm-updates-outer { padding: 0; }
 .campaign-page--mobile .hm-update-list-item { border-radius: 10px; }
-.campaign-page--mobile .hm-update-list-item .hm-update-content { padding: 14px 14px 14px 0; }
+.campaign-page--mobile .hm-update-list-item .hm-update-content { padding-block: 14px 14px; padding-inline: 14px 0; }
 
 /* Rewards: edge-to-edge on mobile preview */
 .campaign-page--mobile .hm-rewards { padding: 28px 0 20px; }
@@ -80,7 +80,6 @@
   padding: 28px 24px;
   background: #ffffff;
   border-top: 1px solid var(--hm-section-divider, #e2e8f0);
-  direction: rtl;
 }
 .hm-bottom-stat {
   display: flex;
@@ -124,7 +123,6 @@
   gap: 40px;
   padding: 64px clamp(20px, 6vw, 80px) 36px;
   border-top: 1px solid rgba(255,255,255,0.05);
-  direction: rtl;
   font-family: 'Heebo', sans-serif;
 }
 .hm-footer-logo { margin-bottom: 14px; }
@@ -152,7 +150,7 @@
   margin-bottom: 10px; text-decoration: none; cursor: pointer;
   transition: color 0.15s, padding-right 0.15s;
 }
-.hm-footer-links a:hover { color: #fff; padding-right: 4px; }
+.hm-footer-links a:hover { color: #fff; padding-inline-start: 4px; }
 
 .hm-footer-newsletter p { font-size: 13px; color: inherit; opacity: 0.6; line-height: 1.55; margin: 0 0 14px; }
 .hm-newsletter-form { display: flex; flex-direction: column; gap: 8px; }
@@ -244,8 +242,8 @@
   .hm-raised-amount { font-size: 22px; }
   .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-stat-box  { padding: 10px 4px 0; }
-  .hm-stat-box:nth-child(2n+1) { border-left: none; }
-  .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+  .hm-stat-box:nth-child(2n+1) { border-inline-end: none; }
+  .hm-stat-box:nth-child(2n)   { border-inline-end: 1px solid var(--line, #e2e8f0); }
   .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 
   /* REWARDS */
@@ -322,7 +320,6 @@
   align-items: center;
   padding-right: 48px;
   padding-left: 48px;
-  direction: rtl;
 }
 
 .hm-sticky-inner {
@@ -378,14 +375,13 @@
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s;
-  direction: rtl;
 }
 .hm-sticky-cta:hover { background: #334155; }
 
 .hm-sticky-close {
   position: absolute;
   top: 50%;
-  left: 14px;
+  inset-inline-end: 14px;
   transform: translateY(-50%);
   background: none;
   border: none;
@@ -400,10 +396,25 @@
 
 /* Mobile sticky bar */
 .campaign-page--mobile .hm-sticky-bar {
-  padding-right: 16px;
-  padding-left: 40px;
+  padding-inline-start: 16px;
+  padding-inline-end: 40px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  height: 56px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Sticky bar settings (layout.stickyCta, 2026-11-09). The page keeps room
+   for a fixed bar so it never covers the last content or the footer. */
+.hm-sticky-bar { height: calc(60px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+.hm-sticky-bar[style*='--hm-sticky-bg'] { background: var(--hm-sticky-bg); }
+.hm-sticky-bar[style*='--hm-sticky-fg'] .hm-sticky-stats,
+.hm-sticky-bar[style*='--hm-sticky-fg'] .hm-sticky-amount,
+.hm-sticky-bar[style*='--hm-sticky-fg'] .hm-sticky-pct,
+.hm-sticky-bar[style*='--hm-sticky-fg'] .hm-sticky-close { color: var(--hm-sticky-fg); }
+.hm-sticky-bar[style*='--hm-sticky-btn'] .hm-sticky-cta { background: var(--hm-sticky-btn); }
+.campaign-page--sticky-cta { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+.hm-sticky-bar--inline {
+  position: static; height: auto; padding-block: 14px; box-shadow: none;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }
 .campaign-page--mobile .hm-sticky-amount { font-size: 16px; }
 .campaign-page--mobile .hm-sticky-stats { gap: 6px; }
@@ -412,3 +423,9 @@
   font-size: 13px;
 }
 
+
+/* Compact Preview widths also occur inside desktop editor panels. */
+.hm-sticky-bar--compact { padding-inline: 12px 34px; }
+.hm-sticky-bar--compact .hm-sticky-inner { gap: 8px; }
+.hm-sticky-bar--compact .hm-sticky-stats { flex-direction: column; align-items: flex-start; gap: 0; }
+.hm-sticky-bar--compact .hm-sticky-cta { min-width: 0; flex-shrink: 1; padding: 8px 12px; font-size: 13px; white-space: normal; }

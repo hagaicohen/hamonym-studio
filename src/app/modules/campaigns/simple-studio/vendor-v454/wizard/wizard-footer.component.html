@@ -1,0 +1,8 @@
+<!-- Original footer markup and exact visible copy from scripts/005.js. -->
+<button type="button" class="hw-back" id="hwBack" (click)="back.emit()">→ חזרה</button>
+<div class="hw-foot-actions">
+  <span class="hw-foot-hint">{{ step === 5 ? 'הקמפיין עדיין לא פורסם' : 'אפשר לחזור ולשנות הכול' }}</span>
+  <button type="button" class="hw-primary" id="hwNext" (click)="next.emit()">
+    {{ step === 5 ? 'כניסה ל־Simple Studio' : (step === 4 || simple && step === 3) ? 'בדיקת מוכנות' : 'המשך לשלב הבא' }} <span>←</span>
+  </button>
+</div>

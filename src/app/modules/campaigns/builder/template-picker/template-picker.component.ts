@@ -1,6 +1,8 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CAMPAIGN_TEMPLATES, CampaignTemplate, TEMPLATE_PALETTES, TemplatePalette } from '../templates/campaign-templates';
+import { CAMPAIGN_TEMPLATES, CampaignTemplate, TEMPLATE_PALETTES, TemplatePalette, TemplatePreviewRow } from '../templates/campaign-templates';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../core/i18n/text.pipe';
 
 export interface TemplateSelection {
   template: CampaignTemplate;
@@ -10,9 +12,12 @@ export interface TemplateSelection {
 @Component({
   selector: 'app-template-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmTextPipe, TranslocoPipe, CommonModule],
   templateUrl: './template-picker.component.html',
   styleUrl: './template-picker.component.css',
+  // Re-rendered on its own events and inputs only; the cards stay the same
+  // elements while the host page renders (see previews below).
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TemplatePickerComponent {
   // 'switch' = changing the template of a page that already has content. The
@@ -29,11 +34,17 @@ export class TemplatePickerComponent {
     return this.mode === 'switch' && !this.offerQuickDonation ? CAMPAIGN_TEMPLATES.filter(t => t.pageFormat !== 'minimal') : CAMPAIGN_TEMPLATES;
   }
   readonly palettes = TEMPLATE_PALETTES;
-  hoveredId: string | null = null;
   selectedPalette: TemplatePalette = TEMPLATE_PALETTES[0];
+  // Each card's preview, built once per palette. Built in the template, it was a
+  // new array on every check, so every check re-created the preview elements:
+  // a click whose press and release had a check between them (the press itself
+  // can cause one) pressed an element that was gone on release, the browser
+  // fired no click, and the template was not chosen.
+  previews = this.buildPreviews();
 
   selectPalette(palette: TemplatePalette): void {
     this.selectedPalette = palette;
+    this.previews = this.buildPreviews();
   }
 
   select(template: CampaignTemplate): void {
@@ -42,5 +53,12 @@ export class TemplatePickerComponent {
 
   skip(): void {
     this.skipped.emit();
+  }
+
+  readonly trackTemplate = (_: number, t: CampaignTemplate): string => t.id;
+  readonly trackIndex = (i: number): number => i;
+
+  private buildPreviews(): Map<string, TemplatePreviewRow[]> {
+    return new Map(CAMPAIGN_TEMPLATES.map(t => [t.id, t.buildPreview(this.selectedPalette)]));
   }
 }

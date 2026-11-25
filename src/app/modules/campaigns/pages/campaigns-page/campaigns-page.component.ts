@@ -1,7 +1,7 @@
-import { Component, inject, OnInit, OnDestroy, effect, untracked } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignsWelcomeService } from '../../../../core/services/campaigns-welcome.service';
 import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/ambassador.service';
@@ -9,10 +9,13 @@ import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
-import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
+import { CampaignDraft, FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
+import { CampaignPublicationService } from '../../services/campaign-publication.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 import { campaignCreatePath, campaignEditPath } from '../../campaign-editor-route';
+import { MediaStoreService } from '../../simple-studio/vendor-v462/media/media-store.service';
 
 @Component({
   selector: 'app-campaigns-page',
@@ -22,6 +25,52 @@ import { campaignCreatePath, campaignEditPath } from '../../campaign-editor-rout
   styleUrls: ['./campaigns-page.component.css'],
 })
 export class CampaignsPageComponent implements OnInit, OnDestroy {
+  readonly publisher = inject(CampaignPublicationService);
+  private readonly toasts = inject(ToastService);
+  publishCandidate: CampaignDraft | null = null;
+  publishing = false;
+  publishError = '';
+  @ViewChild('publishDialog') set publishDialog(ref: ElementRef<HTMLDialogElement> | undefined) {
+    if (ref && !ref.nativeElement.open) ref.nativeElement.showModal();
+  }
+  publicationBlocker(campaign: CampaignDraft): string {
+    const entity = this.currentEntity.currentEntity();
+    return this.publisher.checks(campaign, entity?.id === campaign.entityId ? entity : null).find(check => check.required && !check.complete)?.detail || '';
+  }
+  requestPublication(campaign: CampaignDraft): void {
+    const blocker = this.publicationBlocker(campaign);
+    if (blocker) { this.toasts.show('warning', 'נדרשות השלמות', blocker); return; }
+    this.publishError = '';
+    this.publishCandidate = campaign;
+  }
+  cancelPublication(): void { if (!this.publishing) this.publishCandidate = null; }
+  async confirmPublication(): Promise<void> {
+    if (!this.publishCandidate?.id || this.publishing) return;
+    const campaign = this.publishCandidate;
+    this.publishing = true;
+    this.publishError = '';
+    const notification = this.toasts.show('info', 'מפרסם את הקמפיין…', 'הנתונים וההרשאות נבדקים שוב מול השרת.');
+    try {
+      const published = await this.publisher.publish(campaign.id!);
+      this.campaigns = this.campaigns.map(item => item.id === published.id ? published : item);
+      this.publishCandidate = null;
+      this.toasts.dismiss(notification);
+      this.toasts.show('success', 'הקמפיין פורסם בהצלחה', 'השרת אישר את הפרסום.');
+      if (this.currentContext.active()?.context?.id === campaign.entityId) {
+        try { this.campaigns = await firstValueFrom(this.campaignApi.list(campaign.entityId)); }
+        catch { this.toasts.show('warning', 'הקמפיין פורסם, אך רענון הרשימה נכשל', 'ניתן לרענן את הדף.'); }
+      }
+    } catch (error) {
+      const response = error as { error?: { error?: string; message?: string }; message?: string };
+      this.publishError = response.error?.error || response.error?.message || response.message || 'השרת לא אישר פרסום. יש לבדוק את הנתונים ולנסות שוב.';
+      this.toasts.dismiss(notification);
+      this.toasts.show('error', 'הפרסום לא הושלם', this.publishError);
+    } finally { this.publishing = false; }
+  }
+  private readonly media = inject(MediaStoreService);
+  private readonly failedCovers = new Set<string>();
+
+  coverFailed(url: string): void { this.failedCovers.add(url); }
   viewMode: 'grid' | 'list' = 'grid';
   campaigns: any[] = [];
   isLoading  = true;
@@ -163,6 +212,13 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   // Video-hero campaigns have no coverImageUrl — fall back to the YouTube
   // thumbnail so the card isn't blank.
   cardCoverUrl(c: any): string | null {
+    const studio = c.layout?.simpleStudio;
+    if (studio) {
+      const image = studio.content?.hero?.image;
+      if (typeof image !== 'string' || !image) return null;
+      const url = this.media.resolve(image);
+      return url && !this.failedCovers.has(url) ? url : null;
+    }
     if (c.coverImageUrl) return c.coverImageUrl;
     if (!c.videoUrl) return null;
     const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
@@ -269,7 +325,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
       draft:     'טיוטה',
-      published: 'פעיל',
+      published: 'פורסם',
       paused:    'מושהה',
       ended:     'הסתיים',
     };

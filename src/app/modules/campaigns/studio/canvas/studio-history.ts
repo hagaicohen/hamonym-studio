@@ -1,5 +1,6 @@
 import { Subscription } from 'rxjs';
 import type { CampaignDraft, CampaignStudioStateService } from '../../services/campaign-studio-state.service';
+import { ContentLang, contentLanguageOf, projectToLanguage } from '../../utils/content-i18n';
 
 // Undo/redo for the Campaign Builder Studio. Snapshots are deep copies: the
 // wizard steps edit the draft object in place before syncing, so a shallow
@@ -78,6 +79,16 @@ export class StudioHistory {
     if (!next || !this.current) return;
     this.past.push(this.current);
     this.restore(next);
+  }
+
+  // Switching the content language is not an edit: every step is re-shown in the
+  // new language, so undo/redo keep working there and never switch back (D-40).
+  reproject(lang: ContentLang): void {
+    this.commit();
+    const show = (d: CampaignDraft) => (contentLanguageOf(d) === lang ? d : projectToLanguage(d, lang));
+    this.past = this.past.map(show);
+    this.future = this.future.map(show);
+    this.snapshotCurrent();
   }
 
   private changed(): boolean {

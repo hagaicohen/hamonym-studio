@@ -1,0 +1,9 @@
+.shared-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 500;
+}
+
+.shared-header.studio-header {
+  z-index: 2147483647;
+}

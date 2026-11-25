@@ -11,9 +11,10 @@
     <!-- STICKY HEADER — all 3 steps visible from the very first render,
          never progressively revealed. -->
     <div class="cv2-header">
-      <button class="cv2-close" *ngIf="presentation === 'drawer' && paymentState !== 'processing' && paymentState !== 'confirming'" type="button" (click)="close()" aria-label="סגור">✕</button>
+      <app-campaign-language-picker />
+      <button class="cv2-close" *ngIf="presentation === 'drawer' && paymentState !== 'processing' && paymentState !== 'confirming'" type="button" (click)="close()" [attr.aria-label]="'publicPage.campaignPreview.close' | hmPublic">✕</button>
 
-      <div class="cv2-header-brand">
+      <div class="cv2-header-brand" *ngIf="{ active: (studioActive$ | async) && embedded && presentation === 'page' } as studio">
         <!-- Logo only — no separate org-name text label (2026-09-24: the
              campaign title row below already carries identity; a small
              caption next to the logo was redundant clutter). Size/shape
@@ -23,8 +24,8 @@
         <div class="cv2-logo-row"
           [class.cv2-align-right]="logoAlign === 'right'"
           [class.cv2-align-left]="logoAlign === 'left'"
-          *ngIf="entityLogoUrl">
-          <div class="cv2-logo"
+          *ngIf="entityLogoUrl && draft.showLogo !== false">
+          <div class="cv2-logo" [attr.data-studio-part]="studio.active ? 'logo' : null"
             [class.cv2-logo--square]="draft.layout.minimalLogoShape === 'square'"
             [class.cv2-logo--none]="draft.layout.minimalLogoShape === 'none'"
             [class.cv2-logo--sm]="(draft.layout.minimalLogoSize ?? 'md') === 'sm'"
@@ -36,35 +37,38 @@
         <div class="cv2-title-row"
           [class.cv2-align-right]="titleAlign === 'right'"
           [class.cv2-align-left]="titleAlign === 'left'">
-          <span class="cv2-campaign-title">{{ draft.title }}</span>
+          <div class="cv2-campaign-title" [attr.data-studio-part]="studio.active ? 'title' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.minimalTitleRichHtml' : 'title') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" [ngStyle]="presentation === 'page' ? headerTextStyle(draft, 'title') : null">
+            <ng-container *ngIf="presentation === 'page' && draft.layout.minimalAdvancedText; else plainTitle"><span [innerHTML]="richHtml(draft.layout.minimalTitleRichHtml || draft.title)"></span></ng-container>
+            <ng-template #plainTitle>{{ draft.title }}</ng-template>
+          </div>
         </div>
 
         <!-- Short description — same simple/rich-text branch as
              MinimalDonationPageComponent's own subtitle (2026-09-24: was
              missing entirely here). -->
-        <div class="cv2-subtitle-row"
+        <div class="cv2-subtitle-row" [attr.data-studio-part]="studio.active ? 'subtitle' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.projectDescription' : 'shortDescription') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" [ngStyle]="presentation === 'page' ? headerTextStyle(draft, 'subtitle') : null"
           [class.cv2-align-right]="subtitleAlign === 'right'"
           [class.cv2-align-left]="subtitleAlign === 'left'"
           *ngIf="(draft.layout.minimalAdvancedText && draft.layout.projectDescription) || (!draft.layout.minimalAdvancedText && draft.shortDescription)">
-          <div class="cv2-subtitle cv2-subtitle--rich" *ngIf="draft.layout.minimalAdvancedText" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
-          <p class="cv2-subtitle" *ngIf="!draft.layout.minimalAdvancedText">{{ draft.shortDescription }}</p>
+          <div class="cv2-subtitle cv2-subtitle--rich" [ngStyle]="presentation === 'page' ? headerTextStyle(draft, 'subtitle') : null" *ngIf="draft.layout.minimalAdvancedText" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
+          <p class="cv2-subtitle" [ngStyle]="presentation === 'page' ? headerTextStyle(draft, 'subtitle') : null" *ngIf="!draft.layout.minimalAdvancedText">{{ draft.shortDescription }}</p>
         </div>
       </div>
 
       <div class="cv2-stepper">
         <div class="cv2-step" [class.cv2-step--done]="step > 1" [class.cv2-step--active]="step === 1">
           <span class="cv2-step-num">{{ step > 1 ? '✓' : '1' }}</span>
-          <span class="cv2-step-label">סכום</span>
+          <span class="cv2-step-label">{{ 'publicPage.checkoutV2.amount' | hmPublic }}</span>
         </div>
         <div class="cv2-step-line" [class.cv2-step-line--done]="step > 1"></div>
         <div class="cv2-step" [class.cv2-step--done]="step > 2" [class.cv2-step--active]="step === 2">
           <span class="cv2-step-num">{{ step > 2 ? '✓' : '2' }}</span>
-          <span class="cv2-step-label">פרטים אישיים</span>
+          <span class="cv2-step-label">{{ 'publicPage.checkoutV2.personalDetails' | hmPublic }}</span>
         </div>
         <div class="cv2-step-line" [class.cv2-step-line--done]="step > 2"></div>
         <div class="cv2-step" [class.cv2-step--active]="step === 3">
           <span class="cv2-step-num">3</span>
-          <span class="cv2-step-label">תשלום</span>
+          <span class="cv2-step-label">{{ 'publicPage.checkoutV2.payment' | hmPublic }}</span>
         </div>
       </div>
     </div>
@@ -86,39 +90,48 @@
              of the reward (see chargeAmount's own doc comment on why that
              combination is deliberately impossible, not just hidden). -->
         <ng-container *ngIf="isRewardMode; else normalAmountStep">
-          <p class="cv2-section-label">תשורה נבחרת</p>
+          <p class="cv2-section-label">{{ 'publicPage.checkoutV2.selectedOffering' | hmPublic }}</p>
           <div class="cv2-reward-summary">
             <div class="cv2-reward-summary-item" *ngFor="let o of cartOfferings">
               <span class="cv2-reward-summary-title">{{ o.title }}</span>
-              <span class="cv2-reward-summary-amount">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</span>
+              <span class="cv2-reward-summary-amount">{{ o.minimumAmount | hmMoney }}</span>
             </div>
           </div>
         </ng-container>
 
         <ng-template #normalAmountStep>
+          <div class="cv2-currency-switch" role="radiogroup" aria-label="מטבע התרומה" *ngIf="offeredCurrencies.length > 1">
+            <button *ngFor="let c of offeredCurrencies" type="button" role="radio" class="cv2-currency-btn"
+              [class.is-selected]="currency === c" [attr.aria-checked]="currency === c"
+              (click)="selectCurrency(c)"><span aria-hidden="true">{{ currencySymbol(c) }}</span> {{ c }}</button>
+          </div>
+          <p class="cv2-currency-notice" role="status" aria-live="polite" *ngIf="currencyNotice">{{ currencyNotice }}</p>
+
           <div class="cv2-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
             <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
-              (click)="selectFrequency('one-time')">חד-פעמית</button>
+              (click)="selectFrequency('one-time')">{{ 'publicPage.campaignPreview.oneTime' | hmPublic }}</button>
             <button type="button" class="cv2-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
-              (click)="selectFrequency('monthly')">הוראת קבע חודשית</button>
+
+          [disabled]="!monthlyAllowedFor(currency)" [attr.title]="monthlyAllowedFor(currency) ? null : 'תרומה חודשית זמינה כרגע בשקלים בלבד'"
+              (click)="selectFrequency('monthly')">{{ 'publicPage.checkoutV2.monthlyStandingOrder' | hmPublic }}</button>
           </div>
 
-          <p class="cv2-section-label">בחר/י סכום לתרומה {{ donationFrequency === 'monthly' ? 'חודשית' : 'חד פעמית' }}</p>
+          <p class="cv2-section-label">{{ (donationFrequency === 'monthly' ? 'publicPage.checkoutV2.chooseMonthlyAmount' : 'publicPage.checkoutV2.chooseOneTimeAmount') | hmPublic }}</p>
 
-          <div class="cv2-amounts">
-            <button *ngFor="let a of amountsFor() | slice:0:6" class="cv2-amount-preset" type="button"
+          <div class="cv2-amounts" [hmAmountButtons]="draft.layout?.amountButtons">
+            <button *ngFor="let a of amountsFor() | slice:0:8" class="cv2-amount-preset" type="button"
               [class.is-selected]="isAmountSelected($any(a))" (click)="selectAmount($any(a))">
-              ₪{{ $any(a).toLocaleString('he-IL') }}
+              <app-amount-card [config]="draft.layout?.amountButtons?.cards?.[(donationFrequency === 'monthly' ? 'monthly:' : 'once:') + a]">{{ formatMoney($any(a), currency) }}</app-amount-card>
             </button>
           </div>
 
           <div class="cv2-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
-            <span class="cv2-currency-symbol">₪</span>
-            <input class="cv2-custom-amount" type="text" inputmode="numeric" placeholder="סכום אחר"
+            <span class="cv2-currency-symbol">{{ currencySymbol(currency) }}</span>
+            <input class="cv2-custom-amount" type="text" inputmode="numeric" [placeholder]="'publicPage.campaignPreview.otherAmount' | hmPublic"
               [value]="amountDisplay" (input)="onCustomAmountInput($event)">
           </div>
 
-          <div class="cv2-amount-confirm" *ngIf="explicitAmount > 0">✓ סכום שנבחר: ₪{{ explicitAmount.toLocaleString('he-IL') }}</div>
+          <div class="cv2-amount-confirm" *ngIf="explicitAmount > 0">✓ סכום שנבחר: {{ formatMoney(explicitAmount, currency) }}</div>
 
           <!-- Donation-level installment count — same picker/logic already
                proven on MinimalDonationPageComponent, now owned by the
@@ -127,16 +140,16 @@
                frequency never changes the body's height and the sticky
                footer never jumps — see .cv2-installments--hidden. -->
           <div class="cv2-installments" [class.cv2-installments--hidden]="donationFrequency !== 'monthly'">
-            <p class="cv2-installments-label">לכמה חודשים תרצו לתרום?</p>
+            <p class="cv2-installments-label">{{ 'publicPage.checkoutV2.forHowManyMonthsWould' | hmPublic }}</p>
             <div class="cv2-installments-options">
               <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button" class="cv2-installments-preset"
                 [class.is-selected]="isInstallmentsSelected(n)" (click)="selectInstallments(n)">{{ n }}</button>
               <div class="cv2-installments-custom-wrap">
-                <input class="cv2-installments-custom" type="text" inputmode="numeric" placeholder="מספר אחר"
+                <input class="cv2-installments-custom" type="text" inputmode="numeric" [placeholder]="'publicPage.checkoutV2.otherNumber' | hmPublic"
                   [value]="customInstallmentsInput" (input)="onCustomInstallmentsInput($event)">
               </div>
             </div>
-            <p class="cv2-installments-hint"><app-icon name="lock" /> ללא תפיסת מסגרת לכל התקופה</p>
+            <p class="cv2-installments-hint"><app-icon name="lock" /> {{ 'publicPage.checkoutV2.noCreditHoldForThe' | hmPublic }}</p>
           </div>
         </ng-template>
       </ng-container>
@@ -145,29 +158,29 @@
       <ng-container *ngIf="step === 2">
         <div class="cv2-referral-chip" *ngIf="ambassador">
           <span class="cv2-referral-icon"><app-icon name="handshake" /></span>
-          <span>תרמתם דרך <strong>{{ ambassador.fullName }}</strong></span>
+          <span>{{ 'publicPage.checkoutV2.youDonatedThrough' | hmPublic }} <strong>{{ ambassador.fullName }}</strong></span>
         </div>
 
         <form class="cv2-form" (ngSubmit)="goToStep3()" novalidate>
           <div class="cv2-field-group">
-            <label class="cv2-field-label">שם מלא <span class="cv2-required">*</span></label>
-            <input class="cv2-field-input" type="text" [(ngModel)]="name" name="name" placeholder="ישראל ישראלי"
+            <label class="cv2-field-label">{{ 'publicPage.campaignPreview.fullName' | hmPublic }} <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="text" [(ngModel)]="name" name="name" [placeholder]="'publicPage.campaignPreview.janeDoe' | hmPublic"
               autocomplete="name" [class.cv2-field-error]="submitted && name.trim().length < 2">
-            <span class="cv2-error-msg" *ngIf="submitted && name.trim().length < 2">נא להזין שם מלא</span>
+            <span class="cv2-error-msg" *ngIf="submitted && name.trim().length < 2">{{ 'publicPage.checkoutV2.pleaseEnterYourFullName' | hmPublic }}</span>
           </div>
 
           <div class="cv2-field-group">
-            <label class="cv2-field-label">כתובת אימייל <span class="cv2-required">*</span></label>
+            <label class="cv2-field-label">{{ 'publicPage.checkoutV2.emailAddress' | hmPublic }} <span class="cv2-required">*</span></label>
             <input class="cv2-field-input" type="email" [(ngModel)]="email" name="email" placeholder="israel@gmail.com"
               autocomplete="email" dir="ltr" [class.cv2-field-error]="submitted && !isValidEmail">
-            <span class="cv2-error-msg" *ngIf="submitted && !isValidEmail">נא להזין כתובת אימייל תקינה</span>
+            <span class="cv2-error-msg" *ngIf="submitted && !isValidEmail">{{ 'publicPage.checkoutV2.pleaseEnterAValidEmail' | hmPublic }}</span>
           </div>
 
           <div class="cv2-field-group">
-            <label class="cv2-field-label">מספר טלפון <span class="cv2-required">*</span></label>
+            <label class="cv2-field-label">{{ 'publicPage.checkoutV2.phoneNumber' | hmPublic }} <span class="cv2-required">*</span></label>
             <input class="cv2-field-input" type="tel" [(ngModel)]="phone" name="phone" placeholder="050-0000000"
               autocomplete="tel" dir="ltr" [class.cv2-field-error]="submitted && phone.trim().length < 9">
-            <span class="cv2-error-msg" *ngIf="submitted && phone.trim().length < 9">נא להזין מספר טלפון</span>
+            <span class="cv2-error-msg" *ngIf="submitted && phone.trim().length < 9">{{ 'publicPage.checkoutV2.pleaseEnterAPhoneNumber' | hmPublic }}</span>
           </div>
 
           <!-- 2026-09-27 — always shown in Checkout V2 (not gated behind
@@ -179,7 +192,7 @@
                the backend already expects for both the hosted flow's
                CardOwnerIdValue prefill and OpenFields. -->
           <div class="cv2-field-group">
-            <label class="cv2-field-label">תעודת זהות <span class="cv2-optional">(לא חובה)</span></label>
+            <label class="cv2-field-label">{{ 'publicPage.checkoutV2.idNumber' | hmPublic }} <span class="cv2-optional">{{ 'publicPage.checkoutV2.optional' | hmPublic }}</span></label>
             <div class="cv2-field-input-wrap">
               <input class="cv2-field-input" type="text" [(ngModel)]="idNumber" name="idNumber" placeholder="000000000"
                 inputmode="numeric" maxlength="9" dir="ltr"
@@ -188,22 +201,22 @@
               <span class="cv2-field-status-icon" *ngIf="idLiveState === 'valid'">✓</span>
               <span class="cv2-field-status-icon cv2-field-status-icon--bad" *ngIf="idLiveState === 'invalid'">✕</span>
             </div>
-            <span class="cv2-error-msg" *ngIf="idLiveState === 'invalid'">מספר ת.ז אינו תקין</span>
+            <span class="cv2-error-msg" *ngIf="idLiveState === 'invalid'">{{ 'publicPage.checkoutV2.theIdNumberIsNot' | hmPublic }}</span>
           </div>
 
           <div class="cv2-field-group" *ngIf="donorFields.showAddress">
-            <label class="cv2-field-label">כתובת <span class="cv2-required">*</span></label>
-            <input class="cv2-field-input" type="text" [(ngModel)]="address" name="address" placeholder="רחוב, מספר, עיר"
+            <label class="cv2-field-label">{{ 'publicPage.checkoutV2.address' | hmPublic }} <span class="cv2-required">*</span></label>
+            <input class="cv2-field-input" type="text" [(ngModel)]="address" name="address" [placeholder]="'publicPage.checkoutV2.streetNumberCity' | hmPublic"
               autocomplete="street-address" [class.cv2-field-error]="submitted && address.trim().length <= 2">
-            <span class="cv2-error-msg" *ngIf="submitted && address.trim().length <= 2">נא להזין כתובת</span>
+            <span class="cv2-error-msg" *ngIf="submitted && address.trim().length <= 2">{{ 'publicPage.checkoutV2.pleaseEnterAnAddress' | hmPublic }}</span>
           </div>
 
           <div class="cv2-field-group" *ngIf="donorFields.showPostalCode">
-            <label class="cv2-field-label">מיקוד <span class="cv2-required">*</span></label>
+            <label class="cv2-field-label">{{ 'publicPage.checkoutV2.postalCode' | hmPublic }} <span class="cv2-required">*</span></label>
             <input class="cv2-field-input" type="text" [(ngModel)]="postalCode" name="postalCode" placeholder="1234567"
               inputmode="numeric" maxlength="7" dir="ltr" autocomplete="postal-code"
               [class.cv2-field-error]="submitted && postalCode.trim().length < 4">
-            <span class="cv2-error-msg" *ngIf="submitted && postalCode.trim().length < 4">נא להזין מיקוד תקין</span>
+            <span class="cv2-error-msg" *ngIf="submitted && postalCode.trim().length < 4">{{ 'publicPage.checkoutV2.pleaseEnterAValidPostal' | hmPublic }}</span>
           </div>
 
           <!-- Optional, secondary — visually lighter than the required
@@ -211,17 +224,17 @@
           <div class="cv2-optional-section">
             <label class="cv2-checkbox-row">
               <input type="checkbox" [(ngModel)]="isAnonymous" name="isAnonymous">
-              <span>תרומה אנונימית</span>
+              <span>{{ 'publicPage.checkoutV2.anonymousDonation' | hmPublic }}</span>
             </label>
 
             <label class="cv2-checkbox-row">
               <input type="checkbox" [(ngModel)]="dedicationEnabled" name="dedicationEnabled">
-              <span>הוספת הקדשה</span>
+              <span>{{ 'publicPage.checkoutV2.addADedication' | hmPublic }}</span>
             </label>
             <div class="cv2-dedication-wrap" *ngIf="dedicationEnabled">
               <textarea class="cv2-field-input cv2-dedication-input" [(ngModel)]="dedicationText" name="dedicationText"
                 [maxlength]="DEDICATION_MAX_LENGTH" rows="2"
-                placeholder="לזכר / לכבוד / לרפואה / הקדשה אישית..."></textarea>
+                [placeholder]="'publicPage.checkoutV2.inMemoryOfInHonor' | hmPublic"></textarea>
               <span class="cv2-dedication-count">{{ dedicationText.length }}/{{ DEDICATION_MAX_LENGTH }}</span>
             </div>
           </div>
@@ -231,7 +244,8 @@
       <!-- ── STEP 3 — תשלום ── -->
       <ng-container *ngIf="step === 3">
         <ng-container *ngIf="paymentState !== 'paid'; else cv2PaidBlock">
-          <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError }}</div>
+          <div class="cv2-api-error" *ngIf="createDonationError">{{ createDonationError | hmPublic }}</div>
+          <p class="cv2-currency-charge" *ngIf="currency !== 'ILS'">החיוב יתבצע ב{{ currency === 'USD' ? 'דולר ארה״ב' : 'אירו' }} ({{ currencySymbol(currency) }}): {{ commitmentText }}</p>
 
           <!-- Hosted flow (CHECKOUT_V2_OPENFIELDS_ENABLED=false, rollback path) —
                CardCom's own hosted LowProfile checkout page, framed inline —
@@ -271,14 +285,14 @@
           <div class="cv2-payment-status cv2-payment-status--confirming" *ngIf="paymentState === 'confirming'">
             <span class="cv2-spinner cv2-spinner--dark"></span>
             <div class="cv2-payment-status-text">
-              <div class="cv2-payment-status-title">מאשרים את התרומה...</div>
-              <div class="cv2-payment-status-subtitle">זה ייקח עוד רגע.</div>
+              <div class="cv2-payment-status-title">{{ 'publicPage.checkoutV2.confirmingYourDonation' | hmPublic }}</div>
+              <div class="cv2-payment-status-subtitle">{{ 'publicPage.checkoutV2.thisWillTakeAnotherMoment' | hmPublic }}</div>
             </div>
           </div>
           <div class="cv2-payment-status cv2-payment-status--uncertain" *ngIf="paymentState === 'uncertain'">
             <div class="cv2-payment-status-text">
-              <div class="cv2-payment-status-title">התשלום עדיין בתהליך אישור</div>
-              <div class="cv2-payment-status-subtitle">אפשר לסגור את החלון. נשלח את הקבלה למייל מיד עם השלמת התרומה.</div>
+              <div class="cv2-payment-status-title">{{ 'publicPage.checkoutV2.thePaymentIsStillBeing' | hmPublic }}</div>
+              <div class="cv2-payment-status-subtitle">{{ 'publicPage.checkoutV2.youCanCloseThisWindow' | hmPublic }}</div>
             </div>
           </div>
         </ng-container>
@@ -290,12 +304,12 @@
         <ng-template #cv2PaidBlock>
           <div class="cv2-success">
             <div class="cv2-success-icon"><app-icon name="heart" /></div>
-            <h2 class="cv2-success-title">תודה רבה!</h2>
+            <h2 class="cv2-success-title">{{ 'publicPage.checkoutV2.thankYouSoMuch' | hmPublic }}</h2>
             <p class="cv2-success-text">{{ successMessage }}</p>
             <a class="cv2-success-receipt-link" *ngIf="receiptId" [routerLink]="'/receipts/' + receiptId">
-              <app-icon name="receipt" /> צפייה בקבלה
+              <app-icon name="receipt" /> {{ 'publicPage.checkoutV2.viewReceipt' | hmPublic }}
             </a>
-            <p class="cv2-success-receipt-note" *ngIf="!receiptId">הקבלה תישלח אליך למייל.</p>
+            <p class="cv2-success-receipt-note" *ngIf="!receiptId">{{ 'publicPage.checkoutV2.theReceiptWillBeSent' | hmPublic }}</p>
           </div>
         </ng-template>
       </ng-container>
@@ -313,9 +327,9 @@
              not competing visually with the primary CTA below it
              (2026-09-24: the pill/border version made it fight the main
              action instead of clearly reading as secondary). -->
-        <button type="button" class="cv2-back-btn" *ngIf="step > 1 && paymentState === 'idle'" (click)="goBack()">→ חזרה</button>
+        <button type="button" class="cv2-back-btn" *ngIf="step > 1 && paymentState === 'idle'" (click)="goBack()">{{ 'publicPage.checkoutV2.back' | hmPublic }}</button>
 
-        <div class="cv2-api-error cv2-api-error--footer" *ngIf="step === 2 && createDonationError">{{ createDonationError }}</div>
+        <div class="cv2-api-error cv2-api-error--footer" *ngIf="step === 2 && createDonationError">{{ createDonationError | hmPublic }}</div>
 
         <div class="cv2-cta-row">
           <div class="cv2-footer-amount-block" *ngIf="commitmentText">
@@ -325,11 +339,11 @@
 
           <ng-container [ngSwitch]="step">
             <button *ngSwitchCase="1" type="button" class="cv2-cta" [disabled]="!step1Valid" (click)="goToStep2()">
-              המשך לפרטים אישיים ←
+              {{ 'publicPage.checkoutV2.continueToPersonalDetails' | hmPublic }}
             </button>
 
             <button *ngSwitchCase="2" type="button" class="cv2-cta" [disabled]="creatingDonation" (click)="goToStep3()">
-              <span *ngIf="!creatingDonation">המשך לתשלום ←</span>
+              <span *ngIf="!creatingDonation">{{ 'publicPage.checkoutV2.continueToPayment' | hmPublic }}</span>
               <span class="cv2-spinner" *ngIf="creatingDonation"></span>
             </button>
 
@@ -346,17 +360,17 @@
               <ng-container *ngIf="CHECKOUT_V2_OPENFIELDS_ENABLED">
                 <button *ngIf="paymentState === 'idle'" type="button" class="cv2-cta"
                   [disabled]="openfieldsForm?.initState !== 'initialized'" (click)="submitOpenFieldsPayment()">
-                  שלם עכשיו
+                  {{ 'publicPage.checkoutV2.payNow' | hmPublic }}
                 </button>
                 <button *ngIf="paymentState === 'processing'" type="button" class="cv2-cta" disabled>
                   <span class="cv2-spinner"></span>
-                  <span>מעבדים את התשלום...</span>
+                  <span>{{ 'publicPage.checkoutV2.processingThePayment' | hmPublic }}</span>
                 </button>
                 <button *ngIf="paymentState === 'uncertain'" type="button" class="cv2-cta cv2-cta--muted" (click)="close()">
-                  סגור
+                  {{ 'publicPage.campaignPreview.close' | hmPublic }}
                 </button>
                 <button *ngIf="paymentState === 'paid'" type="button" class="cv2-cta" (click)="finishSuccess()">
-                  סיום
+                  {{ 'publicPage.checkoutV2.done' | hmPublic }}
                 </button>
               </ng-container>
             </ng-container>
@@ -365,7 +379,7 @@
       </div>
 
       <div class="cv2-footer">
-        <p class="cv2-trust-line"><app-icon name="lock" /> הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong></p>
+        <p class="cv2-trust-line"><app-icon name="lock" /> {{ 'publicPage.checkoutV2.paymentIsProcessedSecurelyThrough' | hmPublic }} <strong>{{ 'publicPage.checkoutV2.cardcomLtd' | hmPublic }}</strong></p>
       </div>
     </div>
 

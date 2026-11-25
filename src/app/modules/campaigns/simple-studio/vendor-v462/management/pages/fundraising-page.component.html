@@ -1,0 +1,79 @@
+@let v = vm();
+<div class="hu-eyebrow">ניהול הקמפיין / תרומות וגיוס</div><h1 class="hu-page-title">תרומות וגיוס</h1><p class="hu-lead">כל הגדרות הגיוס והתרומות במקום אחד.</p>
+
+<details ham-section [title]="'יעד, תקופה ומודל גיוס'" [sectionId]="'funding'" [initiallyOpen]="true">
+  <section ham-panel [title]="'יעד ותקופה'" [sub]="'יעד הגיוס מוצג באופן חי בתצוגת סטודיו.'">
+    <div class="hu-fields">
+      <div ham-text-field [label]="'יעד הגיוס (₪)'" [path]="'funding.target'" [type]="'number'" [full]="true"></div>
+      <div ham-text-field [label]="'תאריך התחלה'" [path]="'funding.start'" [type]="'date'"></div>
+      <div ham-text-field [label]="'תאריך סיום'" [path]="'funding.end'" [type]="'date'" [disabled]="v.noEndDate" [class.ham-disabled-date]="v.noEndDate"></div>
+      <label class="ham-no-end-toggle"><input #noEnd type="checkbox" role="switch" [checked]="v.noEndDate" (change)="setNoEndDate(noEnd.checked)"> ללא מועד סיום</label>
+    </div>
+    <div class="hu-hint" style="margin-top:10px">תאריך הסיום מתעדכן גם בספירת הימים בתצוגה החיה.</div>
+  </section>
+  <section ham-panel [title]="'סוג הקמפיין'" [sub]="'מגדיר את משך פעילות הקמפיין. סוג הקמפיין אינו קובע אם התורם משלם בתשלומים או בתרומה חודשית.'">
+    <div ham-choice-cards [path]="'funding.duration'" [items]="durationChoices" [label]="'סוג קמפיין'"></div>
+    <div class="hu-choice-divider"></div><h4 class="hu-choice-heading">מודל הגיוס</h4><p class="hu-choice-description">קובע כיצד יתנהלו כספי הגיוס ביחס ליעד הקמפיין.</p>
+    <div ham-choice-cards [path]="'funding.model'" [items]="modelChoices" [label]="'מודל גיוס'"></div>
+  </section>
+  <section ham-panel [title]="'מאצ׳ינג'" [sub]="'השתתפות של גורם נוסף בהכפלת תרומות, בהתאם ליחס ולתקרה. מוגדר בנפרד מסוג הקמפיין וממודל הגיוס.'">
+    <div ham-choice-cards [path]="'funding.matching'" [items]="matchingChoices" [label]="'הפעלת מאצ׳ינג'"></div>
+    @if (v.matching) {
+      <div class="hu-matching-settings"><div class="hu-matching-heading" [hamStaticHtml]="coinsHeading"></div><div class="hu-fields">
+        <div ham-text-field [label]="'יחס ההכפלה'" [path]="'funding.matchingFactor'" [type]="'number'" [hint]="'לדוגמה: 2 = יחס של פי 2'"></div>
+        <div ham-text-field [label]="'תקרת מאצ׳ינג (₪)'" [path]="'funding.matchingCap'" [type]="'number'" [hint]="'סכום מקסימלי להשתתפות גורם המאצ׳ינג.'"></div>
+      </div></div>
+    }
+  </section>
+  
+</details>
+
+<details ham-section [title]="'סכומי תרומה, תשלומים ותרומה חודשית'" [sectionId]="'donations'">
+  <section ham-panel [title]="'תרומה חד־פעמית'" [sub]="'בחרו אילו אפשרויות יופיעו לתורם.'">
+    <label ham-switch [title]="'הצג סכומים מוצעים'" [hint]="'שישה סכומים כברירת מחדל, ניתנים לעריכה, הוספה והסרה.'" [path]="'donations.suggestedAmounts'"></label>
+    @if (v.suggested) {
+      <div class="hu-donation-subsection"><div ham-amount-chips [kind]="'oneTime'" [title]="'סכומי תרומה מוצעים'" [amounts]="v.amounts.oneTime"></div></div>
+    }
+    <label ham-switch [title]="'אפשר סכום חופשי'" [hint]="'התורם יכול לבחור סכום משלו.'" [path]="'donations.freeAmount'"></label>
+  </section>
+  <section ham-panel [title]="'תרומה חודשית'" [sub]="'חיוב חוזר בכל חודש — נפרד לחלוטין מתשלומים בעסקה חד־פעמית.'">
+    <label ham-switch [title]="'אפשר תרומה חודשית'" [hint]="'הצג בתיבת התרומה אפשרות לתמיכה חודשית.'" [path]="'donations.monthlyEnabled'"></label>
+    @if (v.monthlyEnabled) {
+      <div class="hu-donation-subsection"><div ham-amount-chips [kind]="'monthly'" [title]="'סכומים חודשיים מוצעים'" [amounts]="v.amounts.monthly"></div>
+        <h4 class="hu-donation-subtitle">משך התרומה החודשית</h4>
+        <div ham-choice-cards [path]="'donations.monthlyPeriod'" [items]="monthlyChoices" [label]="'משך תרומה חודשית'"></div>
+        @if (v.monthlyFixed) {
+          <div class="hu-fields"><div ham-text-field [label]="'מספר חודשי תרומה'" [path]="'donations.monthlyCount'" [type]="'number'" [hint]="'כמה חיובים חודשיים יבוצעו עד לסיום אוטומטי'"></div></div>
+        }
+      </div>
+    }
+  </section>
+  <section ham-panel [title]="'תשלומים לתרומה חד־פעמית'" [sub]="'חלוקת עסקה אחת למספר תשלומים — לא התחייבות לתרומה חודשית.'">
+    <label ham-switch [title]="'אפשר תשלומים'" [hint]="'ברירת המחדל היא אפשרות של 1–6 תשלומים; ניתן לשנות את הרשימה.'" [path]="'donations.installments'"></label>
+    @if (v.installments) {
+      <div class="hu-installments" role="group" aria-label="אפשרויות תשלומים לתורם">
+        <div class="hu-installment-label">מספר התשלומים שיוצעו לתורם</div>
+        <div class="hu-installment-list">@for (n of v.installmentOptions; track $index) {<span class="hu-installment-option"><span class="hu-installment-option-text"><strong>{{ n }}</strong><span>{{ n === 1 ? 'תשלום' : 'תשלומים' }}</span></span><button type="button" [attr.data-hu-remove-installment]="n" [attr.aria-label]="'הסר אפשרות של ' + n + ' ' + (n === 1 ? 'תשלום' : 'תשלומים')" title="הסר אפשרות">×</button></span>}</div>
+        <div class="hu-installment-add-row"><label for="hu-add-installment">הוסף אפשרות</label><input id="hu-add-installment" type="text" inputmode="numeric" aria-label="מספר תשלומים חדש" maxlength="2" [hamDraw]="writeNextInstallment"><button type="button" class="hu-action" data-hu-add-installment>＋ הוסף</button><button type="button" class="hu-action hu-installment-reset" data-hu-reset-installments>החזר ל־1–6</button></div>
+        <p class="hu-installments-note">ברירת המחדל: תשלום אחד עד 6 תשלומים. אפשר להסיר או להוסיף מספר תשלומים. {{ v.installments ? 'אפשרויות אלה מוגדרות לקמפיין.' : 'התשלומים כרגע כבויים; האפשרויות נשמרות עד להפעלה.' }} האישור בפועל תלוי ביכולות הסליקה.</p>
+      </div>
+    } @else {
+      <p class="hu-hint hu-donation-muted">אפשרויות התשלומים נשמרות גם כשהמסלול כבוי. הפעלת התשלומים תחזיר אותן.</p>
+    }
+  </section>
+  <div class="hu-row hu-section-action"><button class="hu-action primary" data-hu-edit="donationBox">עצב את תיבת התרומה ב־Simple Studio</button></div>
+  
+</details>
+
+<!-- Rebuilt on every redraw, like the old blocks (the rest of the page keeps its instance). -->
+<details ham-section [title]="'שגרירים'" [sectionId]="'ambassadors'">@for (r of redraws(); track r) {<ham-mgmt-ambassadors />}</details>
+<details ham-section [title]="'תורמים והקדשות'" [sectionId]="'donors'">@for (r of redraws(); track r) {<ham-mgmt-incoming [type]="'donors'" />}</details>
+
+<details ham-section [title]="'פרטיות וחשיפת נתונים'" [sectionId]="'visibility'">
+  <div class="hu-exposure-page">
+    <header class="hu-exposure-banner"><div class="hu-exposure-banner-icon" aria-hidden="true">◉</div><div class="hu-exposure-banner-copy"><span class="hu-exposure-overline">ניהול הקמפיין / פרטיות וחשיפה</span><h1>חשיפה והצגה</h1><p>בחרו מה יראו התורמים בדף הקמפיין. כל הגדרה מסונכרנת עם הסטודיו — בלי לאבד מידע או עיצוב.</p></div><div class="hu-exposure-count"><strong>{{ v.exposureOn }}<span> / {{ v.exposureTotal }}</span></strong><small>אפשרויות מופעלות</small></div></header>
+    <div class="hu-exposure-topline"><span><span class="hu-exposure-dot"></span> השינויים משתקפים מייד בתצוגה החיה</span><button type="button" class="hu-action" data-hu-mode="design" [class.active]="view.activeTab() === 'design'" data-hu-open-design-exposure (click)="controller.openDesignExposure($event)">פתיחה בסטודיו ↗</button></div>
+    <div class="hu-exposure-grid">@for (g of v.groups; track g.title) {<section class="hu-exposure-card"><div class="hu-exposure-card-head"><span class="hu-exposure-section-icon">{{ g.icon }}</span><div><h2>{{ g.title }}</h2><p>{{ g.desc }}</p></div></div><div class="hu-exposure-list">@for (x of g.rows; track x.path) {<label class="hu-exposure-row" [class.is-dependent]="x.dependent"><span class="hu-exposure-row-text"><strong>{{ x.title }}</strong><small>{{ x.note }}</small></span><input type="checkbox" role="switch" [attr.data-hu-path]="x.path" [attr.aria-describedby]="x.dependent ? 'huExposureHint' : null" [hamDraw]="writeExposure"></label>}</div></section>}</div>
+    <div class="hu-exposure-privacy-note" id="huExposureHint"><span class="hu-exposure-lock" aria-hidden="true">♧</span><div><strong>חשיפה חכמה של נתונים</strong><p>{{ v.goalShown ? 'אם תסתירו את סכום היעד או הסכום שגויס, גם פס ההתקדמות והאחוז יוסתרו אוטומטית כדי שלא יהיה אפשר להסיק את הנתון.' : 'יעד הגיוס מוסתר כרגע. פס ההתקדמות והאחוז לא יוצגו בדף הציבורי, גם אם המתג שלהם מסומן.' }} נתוני העריכה יישארו שמורים. </p></div></div>
+  </div>
+</details>

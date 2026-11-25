@@ -1,0 +1,3 @@
+@for (option of options; track option.id) {
+  <button type="button" [attr.data-ham-mobile-view]="option.id" [attr.aria-selected]="pane === option.id" (click)="choose(option.id)">{{option.label}}</button>
+}

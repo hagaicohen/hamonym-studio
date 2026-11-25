@@ -1,0 +1,1 @@
+<label class="hw-field"><span class="hw-label">{{title}}</span><input [id]="fieldId" [attr.data-money]="isMoney ? '1' : null" [attr.inputmode]="isMoney ? 'numeric' : null" [type]="type" [value]="displayValue" (input)="onInput($event)" [placeholder]="placeholder" [attr.min]="type === 'number' ? 1 : null">@if (help) {<small>{{help}}</small>}</label>

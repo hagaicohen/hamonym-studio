@@ -5,9 +5,9 @@
       <div class="step-title-icon-wrapper">
         <lucide-angular [img]="Rocket" [size]="18" class="step-title-icon"></lucide-angular>
       </div>
-      <h1 class="step-title">סיכום ופרסום</h1>
+      <h1 class="step-title">{{ 'builder.publish.summaryAndPublishing' | transloco }}</h1>
     </div>
-    <p class="step-description">בדקו את פרטי הקמפיין לפני הפרסום</p>
+    <p class="step-description">{{ 'builder.publish.reviewTheCampaignDetailsBefore' | transloco }}</p>
   </div>
 
   <!-- ============================================================ -->
@@ -19,7 +19,7 @@
     <div class="overview-top">
 
       <div class="overview-info">
-        <h2 class="campaign-title-display">{{ draft.title || 'ללא כותרת' }}</h2>
+        <h2 class="campaign-title-display">{{ draft.title || ('builder.publish.untitled' | transloco) }}</h2>
         <div class="campaign-url" *ngIf="draft.slug">
           hamonym.com/campaigns/{{ draft.slug }}
           <span class="url-icon">↗</span>
@@ -29,38 +29,38 @@
 
       <div class="overview-stats">
         <div class="stat-item">
-          <div class="stat-label">סוג קמפיין</div>
+          <div class="stat-label">{{ 'builder.publish.campaignType' | transloco }}</div>
           <div class="stat-value">{{ fundingTypeLabel }}</div>
         </div>
         <div class="stat-item">
-          <div class="stat-label">יעד גיוס</div>
+          <div class="stat-label">{{ 'builder.publish.fundraisingGoal' | transloco }}</div>
           <div class="stat-value highlight">
             {{ draft.targetAmount ? ('₪' + (draft.targetAmount | number)) : '—' }}
           </div>
         </div>
         <div class="stat-item" *ngIf="!isOngoing">
-          <div class="stat-label">משך הקמפיין</div>
-          <div class="stat-value">{{ campaignDays > 0 ? (campaignDays + ' ימים') : '—' }}</div>
+          <div class="stat-label">{{ 'builder.publish.campaignDuration' | transloco }}</div>
+          <div class="stat-value">{{ campaignDays > 0 ? (campaignDays + ('builder.publish.days' | transloco)) : '—' }}</div>
         </div>
         <div class="stat-item" *ngIf="!isOngoing">
-          <div class="stat-label">תאריכים</div>
+          <div class="stat-label">{{ 'builder.publish.dates' | transloco }}</div>
           <div class="stat-value small">{{ formatDate(draft.startDate) }} – {{ formatDate(draft.endDate) }}</div>
         </div>
         <div class="stat-item" *ngIf="isOngoing">
-          <div class="stat-label">משך הקמפיין</div>
-          <div class="stat-value">מתמשך</div>
+          <div class="stat-label">{{ 'builder.publish.campaignDuration' | transloco }}</div>
+          <div class="stat-value">{{ 'builder.publish.ongoing' | transloco }}</div>
         </div>
       </div>
 
     </div>
 
     <div class="cover-image-row" *ngIf="draft.coverImageUrl && !isMinimalFormat">
-      <img [src]="draft.coverImageUrl" class="cover-thumb" alt="תמונת קמפיין">
+      <img [src]="draft.coverImageUrl" class="cover-thumb" [alt]="'builder.publish.campaignImage' | transloco">
     </div>
 
     <div class="payment-badge connected">
       <span class="badge-dot">✓</span>
-      סטטוס סליקה: מחובר ומוכן
+      {{ 'builder.publish.paymentProcessingStatusConnectedAnd' | transloco }}
     </div>
 
   </div>
@@ -75,34 +75,34 @@
     <div class="section-card">
       <div class="card-header">
         <lucide-angular [img]="FileText" class="card-icon"></lucide-angular>
-        <span class="card-title">תוכן הקמפיין</span>
+        <span class="card-title">{{ 'builder.publish.campaignContent' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">כותרת</span>
+        <span class="field-name">{{ 'builder.publish.title' | transloco }}</span>
         <span class="status-chip" [class.filled]="draft.title" [class.missing]="!draft.title">
-          {{ draft.title ? 'הוגדר ✓' : 'חסר' }}
+          {{ draft.title ? ('builder.publish.set' | transloco) : ('builder.publish.missing' | transloco) }}
         </span>
       </div>
 
       @if (!draft.title.trim()) {
         @if (isLoadingSuggestion) {
-          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> יוצרים עבורך הצעה לכותרת על בסיס התוכן שכתבת...</div>
+          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> {{ 'builder.publish.creatingATitleSuggestionFor' | transloco }}</div>
         } @else {
           @if (metadataSuggestion; as suggestion) {
             @if (suggestion.suggestedTitle && !dismissedTitle) {
               <div class="ai-suggestion-card">
-                <div class="ai-suggestion-label"><app-icon name="sparkles" /> יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-label"><app-icon name="sparkles" /> {{ 'builder.publish.weCreatedASuggestionFor' | transloco }}</div>
                 <div class="ai-suggestion-value">"{{ suggestion.suggestedTitle }}"</div>
                 <div class="ai-suggestion-actions">
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptTitle()"><app-icon name="sparkles" /> אמץ והצג ב-Hero</button>
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptTitle(false)">אמץ בלי להציג ב-Hero</button>
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">✕ לא תודה</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt ai-unavailable" disabled title="כלי AI אינם זמינים כרגע" (click)="adoptTitle()"><app-icon name="sparkles" /> {{ 'builder.publish.useItAndShowIt' | transloco }}</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden ai-unavailable" disabled (click)="adoptTitle(false)">{{ 'builder.publish.useItWithoutShowingIt' | transloco }}</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissTitleSuggestion()">{{ 'builder.publish.noThanks' | transloco }}</button>
                 </div>
               </div>
             } @else if (!suggestion.suggestedTitle && !dismissedTitle) {
               <div class="ai-suggestion-empty">
-                לא נמצא מספיק תוכן ליצירת כותרת אוטומטית — אפשר למלא ידנית בשלב "פרטי בסיס".
+                {{ 'builder.publish.notEnoughContentWasFound' | transloco }}
               </div>
             }
           }
@@ -110,30 +110,30 @@
       }
 
       <div class="field-row">
-        <span class="field-name">תיאור קצר</span>
+        <span class="field-name">{{ 'builder.publish.shortDescription' | transloco }}</span>
         <span class="status-chip" [class.filled]="draft.shortDescription" [class.missing]="!draft.shortDescription">
-          {{ draft.shortDescription ? 'הוגדר ✓' : 'חסר' }}
+          {{ draft.shortDescription ? ('builder.publish.set' | transloco) : ('builder.publish.missing' | transloco) }}
         </span>
       </div>
 
       @if (!draft.shortDescription.trim()) {
         @if (isLoadingSuggestion) {
-          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> יוצרים עבורך הצעה לתיאור קצר על בסיס התוכן שכתבת...</div>
+          <div class="ai-suggestion-loading"><app-icon name="sparkles" /> {{ 'builder.publish.creatingAShortDescriptionSuggestion' | transloco }}</div>
         } @else {
           @if (metadataSuggestion; as suggestion) {
             @if (suggestion.suggestedShortDescription && !dismissedShortDescription) {
               <div class="ai-suggestion-card">
-                <div class="ai-suggestion-label"><app-icon name="sparkles" /> יצרנו עבורך הצעה על בסיס התוכן שכתבת:</div>
+                <div class="ai-suggestion-label"><app-icon name="sparkles" /> {{ 'builder.publish.weCreatedASuggestionFor' | transloco }}</div>
                 <div class="ai-suggestion-value">"{{ suggestion.suggestedShortDescription }}"</div>
                 <div class="ai-suggestion-actions">
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt" (click)="adoptShortDescription()"><app-icon name="sparkles" /> אמץ והצג ב-Hero</button>
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden" (click)="adoptShortDescription(false)">אמץ בלי להציג ב-Hero</button>
-                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">✕ לא תודה</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt ai-unavailable" disabled title="כלי AI אינם זמינים כרגע" (click)="adoptShortDescription()"><app-icon name="sparkles" /> {{ 'builder.publish.useItAndShowIt' | transloco }}</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--adopt-hidden ai-unavailable" disabled (click)="adoptShortDescription(false)">{{ 'builder.publish.useItWithoutShowingIt' | transloco }}</button>
+                  <button type="button" class="ai-suggestion-btn ai-suggestion-btn--dismiss" (click)="dismissShortDescriptionSuggestion()">{{ 'builder.publish.noThanks' | transloco }}</button>
                 </div>
               </div>
             } @else if (!suggestion.suggestedShortDescription && !dismissedShortDescription) {
               <div class="ai-suggestion-empty">
-                לא נמצא מספיק תוכן ליצירת תיאור קצר אוטומטי — אפשר למלא ידנית בשלב "פרטי בסיס".
+                {{ 'builder.publish.notEnoughContentWasFound2' | transloco }}
               </div>
             }
           }
@@ -141,28 +141,28 @@
       }
 
       @if (metadataSuggestion && (!draft.title.trim() || !draft.shortDescription.trim())) {
-        <button type="button" class="ai-suggestion-regenerate" (click)="regenerateSuggestion()"><app-icon name="refresh" /> צור מחדש</button>
+        <button type="button" class="ai-suggestion-regenerate ai-unavailable" disabled title="כלי AI אינם זמינים כרגע" (click)="regenerateSuggestion()"><app-icon name="refresh" /> {{ 'builder.publish.regenerate' | transloco }}</button>
       }
 
       <ng-container *ngIf="!isMinimalFormat">
         <div class="field-row">
-          <span class="field-name">בלוקי תוכן</span>
+          <span class="field-name">{{ 'builder.publish.contentBlocks' | transloco }}</span>
           <span class="status-chip" [class.filled]="hasStoryBlock" [class.optional-empty]="!hasStoryBlock">
-            {{ hasStoryBlock ? 'הוגדרו ✓' : 'לא הוגדרו' }}
+            {{ hasStoryBlock ? ('builder.publish.set2' | transloco) : ('builder.publish.notSet' | transloco) }}
           </span>
         </div>
 
         <div class="field-row">
           <span class="field-name">Hero</span>
           <span class="status-chip" [class.filled]="hasHero" [class.missing]="!hasHero">
-            {{ hasHero ? 'הוגדר ✓' : 'חסר' }}
+            {{ hasHero ? ('builder.publish.set' | transloco) : ('builder.publish.missing' | transloco) }}
           </span>
         </div>
 
         <div class="field-row">
-          <span class="field-name">סרטון</span>
+          <span class="field-name">{{ 'builder.publish.video' | transloco }}</span>
           <span class="status-chip" [class.filled]="draft.videoUrl" [class.optional-empty]="!draft.videoUrl">
-            {{ draft.videoUrl ? 'הוגדר ✓' : 'לא הוגדר' }}
+            {{ draft.videoUrl ? ('builder.publish.set' | transloco) : ('builder.publish.notSet2' | transloco) }}
           </span>
         </div>
       </ng-container>
@@ -173,37 +173,37 @@
     <div class="section-card">
       <div class="card-header">
         <lucide-angular [img]="Heart" class="card-icon"></lucide-angular>
-        <span class="card-title">תרומות</span>
+        <span class="card-title">{{ 'builder.publish.donations' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">תרומות חד פעמיות</span>
-        <span class="status-chip enabled">מופעל ✓</span>
+        <span class="field-name">{{ 'builder.publish.oneTimeDonations' | transloco }}</span>
+        <span class="status-chip enabled">{{ 'builder.publish.on' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">סכום חופשי</span>
+        <span class="field-name">{{ 'builder.publish.customAmount' | transloco }}</span>
         <span class="status-chip" [class.enabled]="draft.allowCustomAmount" [class.disabled]="!draft.allowCustomAmount">
-          {{ draft.allowCustomAmount ? 'מופעל ✓' : 'מושבת' }}
+          {{ draft.allowCustomAmount ? ('builder.publish.on' | transloco) : ('builder.publish.off' | transloco) }}
         </span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">תרומות חודשיות</span>
+        <span class="field-name">{{ 'builder.publish.monthlyDonations' | transloco }}</span>
         <span class="status-chip" [class.enabled]="draft.allowMonthlyDonation" [class.disabled]="!draft.allowMonthlyDonation">
-          {{ draft.allowMonthlyDonation ? 'מופעל ✓' : 'מושבת' }}
+          {{ draft.allowMonthlyDonation ? ('builder.publish.on' | transloco) : ('builder.publish.off' | transloco) }}
         </span>
       </div>
 
       <div *ngIf="draft.enableSuggestedAmounts && draft.suggestedAmounts.length > 0">
-        <div class="amounts-label">סכומים מוצעים</div>
+        <div class="amounts-label">{{ 'builder.publish.suggestedAmounts' | transloco }}</div>
         <div class="amounts-row">
           <span class="amount-chip" *ngFor="let a of draft.suggestedAmounts">₪{{ a }}</span>
         </div>
       </div>
 
       <div *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
-        <div class="amounts-label">סכומים חודשיים</div>
+        <div class="amounts-label">{{ 'builder.publish.monthlyAmounts' | transloco }}</div>
         <div class="amounts-row">
           <span class="amount-chip" *ngFor="let a of draft.monthlyAmounts">₪{{ a }}</span>
         </div>
@@ -220,29 +220,29 @@
     <div class="section-card" *ngIf="!isMinimalFormat">
       <div class="card-header">
         <lucide-angular [img]="Users" class="card-icon"></lucide-angular>
-        <span class="card-title">שגרירים</span>
+        <span class="card-title">{{ 'builder.publish.ambassadors' | transloco }}</span>
       </div>
       <ng-container *ngIf="draft.ambassadors.length === 0">
         <div class="field-row">
-          <span class="field-name">שגרירים</span>
-          <span class="status-chip optional-empty">לא הוגדרו</span>
+          <span class="field-name">{{ 'builder.publish.ambassadors' | transloco }}</span>
+          <span class="status-chip optional-empty">{{ 'builder.publish.notSet' | transloco }}</span>
         </div>
       </ng-container>
       <ng-container *ngIf="draft.ambassadors.length > 0">
         <div class="field-row">
-          <span class="field-name">מספר שגרירים</span>
-          <span class="status-chip filled">{{ draft.ambassadors.length }} שגרירים ✓</span>
+          <span class="field-name">{{ 'builder.publish.numberOfAmbassadors' | transloco }}</span>
+          <span class="status-chip filled">{{ 'builder.publish.lengthAmbassadors' | transloco: { length: (draft.ambassadors.length) } }}</span>
         </div>
         <div class="amb-summary-list">
           <div class="amb-summary-item" *ngFor="let a of draft.ambassadors | slice:0:5">
             <div class="amb-summary-avatar">{{ a.fullName.charAt(0) }}</div>
             <div class="amb-summary-info">
               <span class="amb-summary-name">{{ a.fullName }}</span>
-              <span class="amb-summary-goal" *ngIf="a.goalAmount">יעד: ₪{{ a.goalAmount | number }}</span>
+              <span class="amb-summary-goal" *ngIf="a.goalAmount">{{ 'builder.publish.goalGoalamount' | transloco: { goalAmount: (a.goalAmount | number) } }}</span>
             </div>
           </div>
           <div class="amb-summary-more" *ngIf="draft.ambassadors.length > 5">
-            ועוד {{ draft.ambassadors.length - 5 }} שגרירים...
+            {{ 'builder.publish.andDraftMoreAmbassadors' | transloco: { draft: (draft.ambassadors.length - 5) } }}
           </div>
         </div>
       </ng-container>
@@ -260,10 +260,10 @@
     <div class="section-card ambassadors-note" *ngIf="isMinimalFormat">
       <div class="card-header">
         <lucide-angular [img]="Users" class="card-icon"></lucide-angular>
-        <span class="card-title">שגרירים</span>
+        <span class="card-title">{{ 'builder.publish.ambassadors' | transloco }}</span>
       </div>
       <p class="ambassadors-note-text">
-        רוצים לגייס באמצעות שגרירים? תוכלו להוסיף אותם מניהול הקמפיין.
+        {{ 'builder.publish.wantToFundraiseWithAmbassadors' | transloco }}
       </p>
     </div>
 
@@ -272,19 +272,19 @@
       <div class="section-card">
         <div class="card-header">
           <lucide-angular [img]="Settings" class="card-icon"></lucide-angular>
-          <span class="card-title">דף הקמפיין</span>
+          <span class="card-title">{{ 'builder.publish.campaignPage' | transloco }}</span>
         </div>
 
         <div class="field-row">
-          <span class="field-name">חסויות</span>
+          <span class="field-name">{{ 'builder.publish.sponsorships' | transloco }}</span>
           <span class="status-chip" [class.filled]="draft.sponsors.length > 0" [class.optional-empty]="draft.sponsors.length === 0">
-            {{ draft.sponsors.length > 0 ? (draft.sponsors.length + ' הוגדרו ✓') : 'לא הוגדרו' }}
+            {{ draft.sponsors.length > 0 ? (draft.sponsors.length + ('builder.publish.set3' | transloco)) : ('builder.publish.notSet' | transloco) }}
           </span>
         </div>
 
         <div class="field-row">
-          <span class="field-name">בלוקים בדף</span>
-          <span class="status-chip filled">{{ draft.blocks.length }} בלוקים ✓</span>
+          <span class="field-name">{{ 'builder.publish.blocksOnThePage' | transloco }}</span>
+          <span class="status-chip filled">{{ 'builder.publish.lengthBlocks' | transloco: { length: (draft.blocks.length) } }}</span>
         </div>
 
       </div>
@@ -293,24 +293,24 @@
       <div class="section-card">
         <div class="card-header">
           <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
-          <span class="card-title">תגמולים</span>
+          <span class="card-title">{{ 'builder.publish.rewards' | transloco }}</span>
         </div>
 
         <div *ngIf="!draft.offeringsEnabled" class="field-row">
-          <span class="field-name">תגמולים</span>
-          <span class="status-chip disabled">מושבת</span>
+          <span class="field-name">{{ 'builder.publish.rewards' | transloco }}</span>
+          <span class="status-chip disabled">{{ 'builder.publish.off' | transloco }}</span>
         </div>
 
         <div *ngIf="draft.offeringsEnabled">
 
           <div *ngIf="draft.offerings.length === 0" class="field-row">
-            <span class="field-name">תגמולים</span>
-            <span class="status-chip optional-empty">לא הוגדרו</span>
+            <span class="field-name">{{ 'builder.publish.rewards' | transloco }}</span>
+            <span class="status-chip optional-empty">{{ 'builder.publish.notSet' | transloco }}</span>
           </div>
 
           <div *ngIf="draft.offerings.length > 0">
             <div class="rewards-count">
-              <span class="status-chip filled">{{ draft.offerings.length }} תגמולים הוגדרו ✓</span>
+              <span class="status-chip filled">{{ 'builder.publish.lengthRewardsSet' | transloco: { length: (draft.offerings.length) } }}</span>
             </div>
 
             <div class="rewards-preview">
@@ -329,17 +329,17 @@
       <div class="section-card">
         <div class="card-header">
           <lucide-angular [img]="Gift" class="card-icon"></lucide-angular>
-          <span class="card-title">הרשמה</span>
+          <span class="card-title">{{ 'builder.publish.registration' | transloco }}</span>
         </div>
 
         <div *ngIf="draft.registrationOptions.length === 0" class="field-row">
-          <span class="field-name">הרשמה</span>
-          <span class="status-chip disabled">לא בשימוש</span>
+          <span class="field-name">{{ 'builder.publish.registration' | transloco }}</span>
+          <span class="status-chip disabled">{{ 'builder.publish.notInUse' | transloco }}</span>
         </div>
 
         <div *ngIf="draft.registrationOptions.length > 0">
           <div class="rewards-count">
-            <span class="status-chip filled">{{ draft.registrationOptions.length }} אפשרויות הרשמה הוגדרו ✓</span>
+            <span class="status-chip filled">{{ 'builder.publish.lengthRegistrationOptionsSet' | transloco: { length: (draft.registrationOptions.length) } }}</span>
           </div>
 
           <div class="rewards-preview">
@@ -365,14 +365,14 @@
     <div class="section-card">
       <div class="card-header">
         <lucide-angular [img]="CreditCard" class="card-icon"></lucide-angular>
-        <span class="card-title">סליקה</span>
+        <span class="card-title">{{ 'builder.publish.paymentProcessing' | transloco }}</span>
       </div>
 
       <div class="billing-provider">CardCom</div>
       <div class="billing-terminal">Terminal #12345</div>
       <div class="billing-connected">
         <span>✓</span>
-        מחובר ומוכן לקבל תרומות
+        {{ 'builder.publish.connectedAndReadyToReceive' | transloco }}
       </div>
 
     </div>
@@ -381,22 +381,22 @@
     <div class="section-card">
       <div class="card-header">
         <lucide-angular [img]="Info" class="card-icon"></lucide-angular>
-        <span class="card-title">מידע נוסף</span>
+        <span class="card-title">{{ 'builder.publish.moreInformation' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">שפה</span>
-        <span class="status-chip filled">עברית ✓</span>
+        <span class="field-name">{{ 'builder.publish.language' | transloco }}</span>
+        <span class="status-chip filled">{{ 'builder.publish.hebrew' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">מטבע</span>
-        <span class="status-chip filled">שקל חדש (₪) ✓</span>
+        <span class="field-name">{{ 'builder.publish.currency' | transloco }}</span>
+        <span class="status-chip filled">{{ 'builder.publish.israeliNewShekel' | transloco }}</span>
       </div>
 
       <div class="field-row">
-        <span class="field-name">אזור זמן</span>
-        <span class="status-chip filled">ירושלים (GMT+3) ✓</span>
+        <span class="field-name">{{ 'builder.publish.timeZone' | transloco }}</span>
+        <span class="status-chip filled">{{ 'builder.publish.jerusalemGmt3' | transloco }}</span>
       </div>
 
     </div>
@@ -427,22 +427,22 @@
     <div class="cta-text-block">
 
       @if (!isReady) {
-        <div class="cta-title">יש להשלים פרטים לפני הפרסום</div>
+        <div class="cta-title">{{ 'builder.publish.detailsMustBeCompletedBefore' | transloco }}</div>
         <ul class="missing-list">
           <li class="missing-item" *ngFor="let field of missingFields">
             <lucide-angular [img]="CircleAlert" [size]="15" class="missing-icon"></lucide-angular>
-            {{ field }}
+            {{ field | hmText }}
           </li>
         </ul>
       } @else if (!entityApproved) {
-        <div class="cta-title">✓ הקמפיין נשמר</div>
+        <div class="cta-title">{{ 'builder.publish.theCampaignWasSaved' | transloco }}</div>
         <div class="cta-description">
-          הקמפיין זמין עכשיו באזור שלך ותוכל להמשיך לנהל ולערוך אותו בכל עת.
+          {{ 'builder.publish.theCampaignIsNowAvailable' | transloco }}
         </div>
       } @else {
-        <div class="cta-title"><app-icon name="party" /> הקמפיין מוכן לפרסום!</div>
+        <div class="cta-title"><app-icon name="party" /> {{ 'builder.publish.theCampaignIsReadyTo' | transloco }}</div>
         <div class="cta-description">
-          כל השלבים הושלמו בהצלחה. לאחר הפרסום הקמפיין יהיה זמין לציבור ויתחיל לקבל תרומות.
+          {{ 'builder.publish.allTheStepsWereCompleted' | transloco }}
         </div>
       }
 
@@ -451,7 +451,7 @@
     <div class="cta-actions">
 
       @if (errorMessage) {
-        <div class="publish-error">{{ errorMessage }}</div>
+        <div class="publish-error">{{ errorMessage | hmText }}</div>
       }
 
       @if (isReady && !entityApproved) {
@@ -463,9 +463,9 @@
         <button class="manage-campaign-button" (click)="confirmAndGoToCampaign()" [disabled]="isSaving" type="button">
           @if (isSaving) {
             <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
-            <span>שומר...</span>
+            <span>{{ 'builder.publish.saving' | transloco }}</span>
           } @else {
-            <span>אישור ומעבר לקמפיין</span>
+            <span>{{ 'builder.publish.confirmAndGoToThe' | transloco }}</span>
           }
         </button>
         <!-- Private Preview — same real public renderer/route as a truly
@@ -474,23 +474,23 @@
              backend query behind it), not a separate/fake preview. Only
              meaningful once the campaign actually has a saved id/slug. -->
         <a *ngIf="draft.id && draft.slug" class="preview-live-link" [routerLink]="['/campaigns', draft.slug, 'view']" target="_blank">
-          צפייה בקמפיין ↗
+          {{ 'builder.publish.viewTheCampaign' | transloco }}
         </a>
         <!-- Status footnote, not the screen's subject — no publish button
              exists in this state at all, not even disabled. -->
-        <p class="approval-status-note"><app-icon name="lock" /> העמותה נמצאת בתהליך אישור. לאחר האישור ניתן יהיה לפרסם את הקמפיין לציבור.</p>
+        <p class="approval-status-note"><app-icon name="lock" /> {{ 'builder.publish.theOrganizationIsBeingApproved' | transloco }}</p>
       } @else if (canPublish) {
         <button class="publish-button" (click)="publishCampaign()" [disabled]="isPublishing" type="button">
           @if (isPublishing) {
             <lucide-angular [img]="Loader" class="publish-icon spin"></lucide-angular>
-            <span>מפרסם...</span>
+            <span>{{ 'builder.publish.publishing' | transloco }}</span>
           } @else {
             <lucide-angular [img]="Rocket" class="publish-icon"></lucide-angular>
-            <span>פרסום לציבור</span>
+            <span>{{ 'builder.publish.publishToThePublic' | transloco }}</span>
           }
         </button>
         <button class="preview-live-link preview-live-link--btn" (click)="confirmAndGoToCampaign()" [disabled]="isSaving" type="button">
-          {{ isSaving ? 'שומר...' : 'מעבר לקמפיין' }}
+          {{ isSaving ? ('builder.publish.saving' | transloco) : ('builder.publish.goToTheCampaign' | transloco) }}
         </button>
       }
 

@@ -1,0 +1,49 @@
+<div class="hw-panel">
+  <div class="hw-panel-head">
+    <div><strong>תשורות לתורמים</strong><small>לא חובה להקים תשורות כדי לפתוח קמפיין</small></div>
+    <button type="button" class="hw-add-reward" (click)="add.emit()">＋ הוסף תשורה</button>
+  </div>
+  @if (rewards.length) {
+  <div class="hw-reward-list">
+    @for (reward of rewards; track $index; let i = $index) {
+    <div class="hw-reward" [attr.data-hw-reward-index]="i">
+      <div class="hw-reward-header">
+        <span class="hw-reward-index">{{ i + 1 }}</span>
+        <div class="hw-reward-heading"><strong>{{reward.name || 'תשורה חדשה'}}</strong><small>{{formatAmount(reward.amount)}}</small></div>
+        <button type="button" class="hw-reward-remove" (click)="remove.emit(i)" aria-label="הסר תשורה">הסר</button>
+      </div>
+      <div class="hw-two-cols">
+        <label class="hw-field"><span class="hw-label">שם התשורה</span>
+          <input #n [id]="'hwRewardName'+i" [value]="reward.name" placeholder="מה מקבלים בתמורה?" (input)="edit.emit({index:i,key:'name',value:n.value})" /></label>
+        <label class="hw-field"><span class="hw-label">סכום התרומה (₪)</span>
+          <input #a [id]="'hwRewardAmount'+i" type="number" min="1" [value]="reward.amount" placeholder="למשל 360" (input)="edit.emit({index:i,key:'amount',value:number(a.value)})" /></label>
+      </div>
+      <button type="button" class="hw-advanced-toggle" (click)="toggle.emit(i)" [attr.aria-expanded]="reward.expanded">
+        {{reward.expanded ? 'הסתר אפשרויות מתקדמות' : 'אפשרויות מתקדמות: תמונה, תיאור, מלאי ומומלץ'}}
+        <span>{{reward.expanded ? '−' : '＋'}}</span>
+      </button>
+      @if (reward.expanded) {
+      <div class="hw-reward-advanced">
+        <label class="hw-field"><span class="hw-label">תיאור התשורה</span>
+          <textarea #d rows="2" [value]="reward.description" (input)="edit.emit({index:i,key:'description',value:d.value})"></textarea></label>
+        <div class="hw-field"><span class="hw-label">תמונה לתשורה</span>
+          <div class="hw-reward-photo-row">
+            @if (reward.imageSrc) { <img class="hw-reward-thumb" [src]="reward.imageSrc" alt="תמונת התשורה" /> } @else { <div class="hw-reward-empty-thumb">▧</div> }
+            <label [for]="'hwRewardImage'+i" class="hw-inline-upload">{{reward.image ? 'החלפת תמונה' : 'בחירת תמונה מהמחשב'}}</label>
+            <input #file [id]="'hwRewardImage'+i" type="file" class="hw-file-input" [attr.data-hw-reward-file]="i" accept="image/png,image/jpeg,image/webp" (change)="upload.emit({index:i,input:file})" />
+          </div>
+        </div>
+        <label class="hw-checkline"><input #r type="checkbox" [checked]="reward.recommended" (change)="edit.emit({index:i,key:'recommended',value:r.checked})" /> סמן כתשורה מומלצת ★</label>
+        <label class="hw-checkline"><input #st type="checkbox" [checked]="reward.stockEnabled" (change)="setStock(reward, i, st.checked)" /> הגבלת מלאי</label>
+        <label class="hw-field hw-stock-field" [hidden]="!reward.stockEnabled"><span class="hw-label">כמות זמינה</span>
+          <input #q type="number" min="0" [value]="reward.quantity" (input)="edit.emit({index:i,key:'quantity',value:number(q.value)})" /></label>
+      </div>
+      }
+    </div>
+    }
+  </div>
+  } @else {
+  <div class="hw-empty">אין עדיין תשורות. אפשר להתחיל בקמפיין תרומות רגיל ולהוסיף תשורות מתי שתרצו.</div>
+  }
+  <small class="hw-panel-note">התשורות משתמשות באותם נתונים, כרטיסים, עיבוד תמונות ורינדור של Simple Studio.</small>
+</div>

@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SectionPresentation } from '../../../builder/styles/campaign-styles';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
 
 // Section Presentation (2026-10-03) -- one small, reusable visual picker for
 // all four list-type sections (Rewards/Donors/Ambassadors/Updates), instead
@@ -14,12 +16,12 @@ import { SectionPresentation } from '../../../builder/styles/campaign-styles';
 @Component({
   selector: 'app-section-presentation-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmTextPipe, TranslocoPipe, CommonModule],
   templateUrl: './section-presentation-picker.component.html',
   styleUrl: './section-presentation-picker.component.css',
 })
 export class SectionPresentationPickerComponent {
-  @Input() label = 'תצוגת הרשימה';
+  @Input() label = 'studio.pickers.listDisplay';
   @Input() hint = '';
   // The options this section supports -- 'cards'/'list' for Donors/
   // Ambassadors/Updates, plus 'image' for Rewards only (see the product
@@ -27,8 +29,8 @@ export class SectionPresentationPickerComponent {
   // explicit-choice-only, which is why it's just another option here rather
   // than special-cased).
   @Input() options: { value: SectionPresentation; label: string }[] = [
-    { value: 'cards', label: 'כרטיסים' },
-    { value: 'list', label: 'רשימה' },
+    { value: 'cards', label: 'studio.pickers.cards' },
+    { value: 'list', label: 'studio.pickers.list' },
   ];
   // The campaign's own EXPLICIT choice for this section, or undefined if it
   // has never been set (i.e. "follow the Campaign Style's recommendation").

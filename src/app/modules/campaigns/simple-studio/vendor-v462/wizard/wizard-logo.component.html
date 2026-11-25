@@ -1,0 +1,15 @@
+<div class="hw-field ham-logo-field">
+  <span class="hw-label">לוגו העמותה / הקמפיין <em>לא חובה</em></span>
+  @if (hasLogo) {
+    <div class="ham-logo-preview">
+      <img [src]="src" alt="לוגו הקמפיין" />
+      <button type="button" class="hw-inline-upload" (click)="remove.emit()">הסרת הלוגו מהקמפיין</button>
+    </div>
+  }
+  <label class="hw-inline-upload" for="hwSimpleLogoFile">{{hasLogo?'החלפת לוגו':'＋ העלאת לוגו'}}</label>
+  <input #file id="hwSimpleLogoFile" type="file" class="hw-file-input" accept="image/png,image/jpeg,image/webp" (change)="upload.emit(file)" />
+  @if (organizationSrc && organizationSrc !== src) {
+    <button class="hw-inline-upload" type="button" (click)="restore.emit()">שימוש בלוגו העמותה</button>
+  }
+  <small class="hw-hint">הלוגו של העמותה הוא ברירת המחדל. החלפתו כאן לא תשנה את לוגו העמותה במערכת.</small>
+</div>

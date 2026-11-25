@@ -1,0 +1,122 @@
+/* One toolbar view and command service, in the wizard and in the editor. */
+body.hamonym-simple-studio-active #hwWizard .hw-preview-bar { display: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] {
+  --toolbar-ink: #173259;
+  --toolbar-border: #d7dfec;
+  position: relative !important; inset: auto !important;
+  width: calc(100% - 24px) !important; margin: 8px 12px !important;
+  height: 68px !important; min-height: 68px !important; max-height: none !important;
+  flex: 0 0 68px !important; padding: 12px 14px !important;
+  background: #f7faff !important; color: var(--toolbar-ink) !important;
+  border: 1px solid var(--toolbar-border) !important; border-radius: 14px !important;
+  box-shadow: 0 2px 5px #1732590b !important;
+  overflow: visible !important; direction: rtl; z-index: 100;
+  font: 13px/1.4 Heebo, Arial, sans-serif;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] * { box-sizing: border-box !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-shell {
+  display: grid !important; grid-template-columns: minmax(170px, 240px) auto minmax(0, 1fr) auto !important;
+  align-items: center !important; gap: 14px !important;
+  width: 100% !important; height: 42px !important; min-height: 0 !important; max-height: none !important;
+  padding: 0 !important; margin: 0 !important; border: 0 !important;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-right { grid-column: 1; grid-row: 1; min-width: 0 !important; overflow: hidden; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-navigation { grid-column: 2; grid-row: 1; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-left { grid-column: 3; grid-row: 1; justify-content: flex-end !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-navigation { grid-column: 4; grid-row: 1; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-right,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-left,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-navigation,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-navigation {
+  display: flex !important; align-items: center !important; direction: rtl !important;
+  flex-direction: row !important; gap: 8px !important; height: 42px !important;
+  min-width: 0 !important; padding: 0 !important; margin: 0 !important; order: 0 !important;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-left,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-navigation {
+  border-inline-start: 1px solid var(--toolbar-border) !important; padding-inline-start: 14px !important;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-preview,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-actions,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-single-toolbar,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .top-actions { display: contents !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-identity,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #saveStatus,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #saveBtn,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #exportBtn,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #importBtn,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-top-more,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-view-devices,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-icon-tool,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-open-public,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar]:has(.ham-v209-dropdown:not([hidden])) .ham-template-top,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-simple] .ham-template-top { display: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-wizard] .ham-v157-navigation { visibility: hidden !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-wizard] .ham-v297-more-menu > button:not([data-hamonym-wizard-command]),
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-wizard] .ham-v297-more-menu > hr,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] [data-hamonym-wizard-command][hidden] { display: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] button,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] summary {
+  color: var(--toolbar-ink) !important; font: 500 13px/1.4 Heebo, Arial, sans-serif !important;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-open,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-template-top,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #undoBtn,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #redoBtn,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-save,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-finish,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] summary {
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  gap: 6px !important; height: 40px !important; min-height: 40px !important; min-width: 40px !important;
+  flex-shrink: 0 !important; padding: 0 10px !important; margin: 0 !important;
+  border: 1px solid var(--toolbar-border) !important; border-radius: 9px !important;
+  background: #fff !important; box-shadow: 0 1px 2px #17325908 !important; cursor: pointer;
+}
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] button:disabled { opacity: .38 !important; cursor: default !important; box-shadow: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] button:focus-visible,
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] summary:focus-visible { outline: 2px solid #82aaff; outline-offset: 2px; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .hu-tabs { display: flex !important; width: 264px !important; height: 42px !important; padding: 3px !important; margin: 0 !important; gap: 2px !important; border: 1px solid var(--toolbar-border) !important; border-radius: 10px !important; background: #fff !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .hu-tab { display: flex !important; align-items: center; justify-content: center; flex: 1 1 auto !important; gap: 5px !important; white-space: nowrap !important; padding: 0 8px !important; height: 34px !important; min-height: 0 !important; border: 1px solid transparent !important; border-radius: 7px !important; background: transparent !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .hu-tab.active { background: #e6efff !important; color: #2158c4 !important; border-color: #afc8ff !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-device-slider { order: 0 !important; flex: 0 0 92px !important; width: 92px !important; height: 42px !important; padding: 3px !important; margin: 0 !important; border: 1px solid var(--toolbar-border) !important; border-radius: 10px !important; background: #fff !important; box-shadow: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-device-slider-option { height: 34px !important; min-height: 0 !important; padding: 0 !important; color: var(--toolbar-ink) !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-device-slider-option > span { display: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-device-slider-option.is-active { color: #2158c4 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-device-slider-thumb { background: #e6efff !important; border-color: #afc8ff !important; box-shadow: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-dropdown { order: 1 !important; flex: 0 0 152px !important; width: 152px !important; margin: 0 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-template-top { order: 1 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-open { order: 2 !important; width: 40px !important; padding: 0 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-open > span { display: none; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #undoBtn { order: 3 !important; width: 40px !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] #redoBtn { order: 4 !important; width: 40px !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-save { order: 5 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more { order: 6 !important; position: relative !important; flex: 0 0 40px !important; width: 40px !important; height: 40px !important; margin: 0 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more > summary { width: 40px !important; padding: 0 !important; list-style: none; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more > summary::-webkit-details-marker { display: none; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more-menu { position: absolute !important; top: calc(100% + 8px) !important; inset-inline-end: 0 !important; inset-inline-start: auto !important; z-index: 1000 !important; width: 260px !important; max-width: calc(100vw - 32px) !important; display: flex !important; flex-direction: column !important; gap: 3px !important; padding: 8px !important; background: #fff !important; border: 1px solid var(--toolbar-border) !important; border-radius: 10px !important; box-shadow: 0 8px 24px #17325920 !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more:not([open]) > .ham-v297-more-menu { display: none !important; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v297-more-menu button { display: flex !important; align-items: center; gap: 8px; width: 100% !important; min-height: 36px !important; height: auto !important; padding: 8px 10px !important; border: 0; border-radius: 6px; background: transparent; text-align: right; cursor: pointer; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity { display: flex; align-items: center; gap: 10px; min-width: 0; width: 100%; color: #173259; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity-text { min-width: 0; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity-title { display: flex; align-items: center; gap: 10px; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 16px/1.4 Heebo, Arial, sans-serif; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity small { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 11px; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-status { flex-shrink: 0; padding: 2px 8px; border-radius: 12px; background: #e8f0fd; color: #254773; font-size: 11px; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 44px; }
+body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] [data-ham-save-state="failed"] { color: #991b1b !important; border-color: #fecaca !important; }
+@media (max-width: 1180px) {
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] { height: 120px !important; min-height: 120px !important; flex-basis: 120px !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-shell { height: auto !important; grid-template-columns: minmax(120px, 1fr) auto auto !important; row-gap: 10px !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-navigation { grid-column: 3; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-left { grid-column: 1 / -1; grid-row: 2; justify-content: center !important; padding-inline-start: 0 !important; border-inline-start: 0 !important; }
+}
+@media (max-width: 620px) {
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] { height: 210px !important; min-height: 210px !important; flex-basis: 210px !important; padding: 10px !important; margin: 6px !important; width: calc(100% - 12px) !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-shell { grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-navigation { grid-column: 2; padding-inline-start: 8px !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v157-navigation { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-v209-left { grid-row: 3; flex-wrap: wrap !important; justify-content: center !important; height: 88px !important; gap: 8px !important; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-avatar { width: 36px; height: 36px; flex-basis: 36px; }
+  body.hamonym-simple-studio-active #hamonymStudioToolbar[data-hamonym-shared-toolbar] .ham-host-identity strong { font-size: 14px; }
+}

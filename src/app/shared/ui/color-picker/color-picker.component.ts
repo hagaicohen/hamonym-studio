@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, HostListener, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 const COMPACT_PALETTE: string[] = [
   // neutrals
@@ -42,7 +43,7 @@ const CSS_NAMES = [
 @Component({
   selector: 'app-color-picker',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [TranslocoPipe, CommonModule, FormsModule],
   templateUrl: './color-picker.component.html',
   styleUrl: './color-picker.component.css',
 })

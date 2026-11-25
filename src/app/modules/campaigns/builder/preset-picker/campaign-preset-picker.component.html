@@ -2,16 +2,16 @@
   <div class="pp-panel">
 
     <div class="pp-header">
-      <h1 class="pp-title">איזה קמפיין תרצו ליצור?</h1>
-      <p class="pp-subtitle">תמיד אפשר להוסיף ולשנות הכל אחרי הבחירה</p>
+      <h1 class="pp-title">{{ 'studio.pickers.whatKindOfCampaignWould' | transloco }}</h1>
+      <p class="pp-subtitle">{{ 'studio.pickers.youCanAlwaysAddAnd' | transloco }}</p>
     </div>
 
     <div class="pp-grid">
       <button class="pp-card" type="button" *ngFor="let p of presets"
         [style.order]="orderFor(p.id)" (click)="select(p)">
         <span class="pp-icon"><lucide-icon [img]="presetIcon(p.id)" [size]="28" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
-        <span class="pp-name">{{ p.name }}</span>
-        <span class="pp-desc">{{ p.description }}</span>
+        <span class="pp-name">{{ p.name | hmText }}</span>
+        <span class="pp-desc">{{ p.description | hmText }}</span>
       </button>
 
       <!-- "דף תרומה מהיר" — a direct entry point to layout.pageFormat=
@@ -21,13 +21,13 @@
            `presets`' own array order. -->
       <button class="pp-card" type="button" style="order: 2" (click)="selectMinimal()">
         <span class="pp-icon"><lucide-icon [img]="ui.Zap" [size]="28" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
-        <span class="pp-name">דף תרומה מהיר</span>
-        <span class="pp-desc">עמוד פשוט וממוקד לקבלת תרומות. מקימים במהירות ומשתפים קישור לתורמים.</span>
+        <span class="pp-name">{{ 'studio.pickers.quickDonationPage' | transloco }}</span>
+        <span class="pp-desc">{{ 'studio.pickers.aSimpleFocusedPageFor' | transloco }}</span>
       </button>
     </div>
 
     <div class="pp-footer">
-      <button class="pp-skip-btn" type="button" (click)="close()">→ חזרה</button>
+      <button class="pp-skip-btn" type="button" (click)="close()">{{ 'studio.pickers.back' | transloco }}</button>
     </div>
 
   </div>

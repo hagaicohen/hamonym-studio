@@ -1,0 +1,180 @@
+<div class="hw-app" (input)="onFormInteraction()" (change)="onFormInteraction()" (click)="onFormInteraction()">
+  <div class="ham-angular-wizard-header"><ham-wizard-header (save)="wizard.saveDraft()" /></div>
+  <nav class="ham-wizard-mobile-tabs" aria-label="תצוגות האשף">
+    <button type="button" data-ham-wizard-pane="form" [attr.aria-pressed]="pane() === 'form'" (click)="setPane('form')">עריכת פרטים</button>
+    <button type="button" data-ham-wizard-pane="preview" [attr.aria-pressed]="pane() === 'preview'" (click)="setPane('preview')">תצוגת הקמפיין</button>
+  </nav>
+  <div class="hw-layout">
+    <section class="hw-form-pane">
+      <div #formContent id="hwFormContent">
+        @for (token of [wizard.renderToken()]; track token) {
+          @if (step() < 0) {
+            <ham-welcome [organizationName]="organizerName()" />
+          } @else {
+            <ham-wizard-progress [step]="step()" [simple]="simple()" [title]="parts[step()].title" [subtitle]="parts[step()].sub" />
+            @if (simple()) {
+              @switch (step()) {
+                @case (0) { <ng-container *ngTemplateOutlet="simpleBasics" /> }
+                @case (3) { <ng-container *ngTemplateOutlet="simpleFunding" /> }
+                @default { <ng-container *ngTemplateOutlet="ready" /> }
+              }
+            } @else {
+              @switch (step()) {
+                @case (0) { <ng-container *ngTemplateOutlet="basics" /> }
+                @case (1) { <ng-container *ngTemplateOutlet="hero" /> }
+                @case (2) { <ng-container *ngTemplateOutlet="story" /> }
+                @case (3) { <ng-container *ngTemplateOutlet="funding" /> }
+                @case (4) { <ng-container *ngTemplateOutlet="manager" /> }
+                @default { <ng-container *ngTemplateOutlet="ready" /> }
+              }
+            }
+          }
+        }
+      </div>
+      @if (wizard.warning()) { <div class="hw-error" role="alert">{{ wizard.warning() }}</div> }
+      <div class="hw-foot" id="hwFoot">
+        @if (step() < 0) {
+          <ham-welcome-actions (begin)="next()" />
+        } @else {
+          <ham-wizard-footer [step]="step()" [simple]="simple()" (next)="next()" (back)="wizard.back()" />
+        }
+      </div>
+    </section>
+
+    <section class="hw-preview-pane">
+      <div class="hw-preview-bar">
+        <div class="hw-preview-title"><strong>כך הקמפיין שלך נראה</strong><small>כל שינוי מתעדכן מיד · הקמפיין עדיין טיוטה</small></div>
+        <div class="hw-preview-actions hw-studio-actions">
+          <!-- Host is display:contents: device switch + layout dropdown must be direct flex items of the row. -->
+          <ham-wizard-preview-controls [device]="wizard.device()" [simple]="previewSimple()" [heroCard]="previewHeroCard()"
+            (deviceChange)="wizard.setDevice($event)" (layoutChange)="wizard.setLayout($event)" />
+          <span class="hw-toolbar-separator" aria-hidden="true"></span>
+          <button type="button" data-hw-demo-existing class="ham-wizard-existing hw-icon-tool" [hidden]="!demoLoaded()" [disabled]="!demoLoaded()" [title]="demoTitle()" aria-label="עריכת נתוני קמפיין קיים" (click)="openDemoAsExisting()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button>
+          <button type="button" data-ham-open-public (click)="toolbar.openPublic(false)" class="ham-open-public-btn hw-icon-tool" title="פתח קמפיין בדפדפן" aria-label="פתח קמפיין בדפדפן"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-13 7 8-6m-5 0h5v5"/></svg></button>
+          <button type="button" data-ham-quick-reset (click)="quickReset($event)" class="ham-wizard-reset hw-icon-tool" title="איפוס מלא (לאחר אישור)" aria-label="איפוס מלא"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 3 7M3 4v7h7"/></svg></button>
+          <details #moreMenu class="hw-toolbar-more"><summary title="פעולות נוספות" aria-label="פעולות נוספות">⋯</summary><div class="hw-toolbar-more-menu">
+            
+            
+          </div></details>
+        </div>
+      </div>
+      <div #previewMount id="hwPreviewMount" class="hw-preview-mount"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ============================================================ steps -->
+
+<ng-template #simpleBasics>
+  <div class="hw-fields hw-basics">
+    <ham-wizard-kind [kind]="wizard.kind()" (kindChange)="wizard.changeKind($event)" />
+    <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">01</span><div><strong>פרטי דף התרומה</strong><small>רק הכותרת וכתובת הדף הן חובה</small></div></div>
+      <ham-wizard-field fieldId="campaignName" [required]="true" [error]="wizard.fieldError('campaignName')" title="כותרת הדף" [value]="c.hero.title" placeholder="לדוגמה: בונים עתיד טוב יותר" (valueChange)="write('campaignName', $event)" />
+      <ham-wizard-field fieldId="hwHeroSubtitle" title="תת־כותרת (לא חובה)" [value]="c.hero.subtitle" placeholder="משפט אחד מתחת לכותרת" (valueChange)="write('hwHeroSubtitle', $event)" />
+      <ham-wizard-slug [simple]="true" [slug]="wizard.displaySlug()" (slugChange)="write('hwCampaignSlug', $event)" />
+    </section>
+    <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">02</span><div><strong>מראה אזור הפתיחה</strong><small>אפשר להוסיף תמונה או לוגו — לא חובה</small></div></div>
+      <ham-wizard-choice choice="identity" [mode]="identity().mode" (chosen)="wizard.setSimpleIdentity($any($event))" />
+      @if (identity().showHeart) { <small class="hw-hint">סמל לב מופיע כברירת מחדל. צבע וגודל אפשר לשנות בעיצוב ב־Studio.</small> }
+      @if (identity().showLogo) {
+        <ham-wizard-logo mode="simple" [src]="logoSrc()" [organizationSrc]="wizard.organizationLogo()" (remove)="wizard.removeLogo()" (restore)="wizard.restoreLogo()" (upload)="wizard.upload($event, 'logo')" />
+      }
+      <label class="hw-toggle-card"><span class="hw-toggle-copy"><strong>להציג תמונת Hero?</strong><small>אפשר עם לב או עם לוגו — ללא תלות בבחירה למעלה</small></span><input #simpleHero class="hw-toggle-input" type="checkbox" role="switch" [checked]="identity().showHero" (change)="wizard.setSimpleHero(simpleHero.checked)"></label>
+      @if (identity().showHero) {
+        <div class="hw-field"><span class="hw-label">תמונת Hero (לא חובה)</span><label class="hw-upload" for="hwHeroFile"><span class="hw-upload-icon">▧</span><strong>{{ wizard.isRealHero() ? 'החלפת תמונה' : 'בחירת תמונה' }}</strong></label><input #heroFile id="hwHeroFile" type="file" class="hw-file-input" accept="image/jpeg,image/png,image/webp" (change)="wizard.upload(heroFile, 'hero')"></div>
+      }
+      <small class="hw-hint">מיקום הלוגו והכותרות, גופנים וצבעים מוגדרים בלשונית עיצוב לאחר ההקמה.</small>
+    </section>
+  </div>
+</ng-template>
+
+<ng-template #simpleFunding>
+  <div class="hw-fields"><section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">♡</span><div><strong>סכומי תרומה</strong><small>הגדרות אלה משותפות גם לקמפיין רגיל</small></div></div>
+    <ham-wizard-amounts [attr.aria-invalid]="!!wizard.fieldError('hwAmounts')" [simple]="true" [value]="amountsText()" (valueChange)="write('hwAmounts', $event)" />
+    <label class="hw-toggle-card"><span class="hw-toggle-copy"><strong>לאפשר סכום אחר</strong><small>התורם יכול להזין סכום בעצמו</small></span><input #other class="hw-toggle-input" type="checkbox" role="switch" [checked]="c.donate.boxAllowOther !== false" (change)="wizard.setAllowOther(other.checked)"></label>
+    <label class="hw-toggle-card"><span class="hw-toggle-copy"><strong>לאפשר הוראת קבע חודשית</strong><small>בנוסף לתרומה חד־פעמית</small></span><input #monthly class="hw-toggle-input" type="checkbox" role="switch" [checked]="donations().monthlyEnabled !== false" (change)="wizard.setMonthly(monthly.checked)"></label>
+    @if (donations().monthlyEnabled !== false) {
+      <label class="hw-field"><span class="hw-label">מספר חיובים (לא חובה) </span><input #months id="hwSimpleMonths" type="number" min="1" max="120" [value]="donations().monthlyPeriod === 'fixed' ? (donations().monthlyCount || 12) : ''" placeholder="ללא הגבלה" (input)="wizard.setMonthlyCount(months.value)"><small>השאירו ריק להוראת קבע עד לביטול.</small></label>
+    }
+  </section></div>
+</ng-template>
+
+<ng-template #basics>
+  <div class="hw-fields hw-basics">
+    <ham-wizard-kind [kind]="wizard.kind()" (kindChange)="wizard.changeKind($event)" />
+    <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">01</span><div><strong>המסר בתמונת הפתיחה</strong><small>שני המשפטים שיופיעו על תמונת ה־Hero או על הסרטון</small></div></div>
+      <ham-wizard-field fieldId="campaignName" [required]="true" [error]="wizard.fieldError('campaignName')" title="איך קוראים לקמפיין?" [value]="c.hero.title" placeholder="לדוגמה: בונים בית חם לילדים" (valueChange)="write('campaignName', $event)" />
+      <ham-wizard-field fieldId="hwHeroSubtitle" title="תת־כותרת על ה־Hero" [value]="c.hero.subtitle" placeholder="משפט קצר מתחת לכותרת (לא חובה)" (valueChange)="write('hwHeroSubtitle', $event)" />
+      <label class="hw-toggle-card"><span class="hw-toggle-copy"><strong>להציג את הכותרת ותת־הכותרת על התמונה?</strong><small>אפשר להסתיר אותן בלי למחוק את הטקסטים</small></span><input #heroText class="hw-toggle-input" type="checkbox" role="switch" [checked]="c.hero.showText !== false" (change)="wizard.setHeroText(heroText.checked)" aria-label="הצגת הכותרת ותת־הכותרת על תמונת הקמפיין"></label>
+    </section>
+    <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">02</span><div><strong>בקצרה על הקמפיין</strong><small>הפרטים שיופיעו מתחת לתמונת הפתיחה</small></div></div>
+      <ham-wizard-slug [simple]="false" [slug]="wizard.displaySlug()" (slugChange)="write('hwCampaignSlug', $event)" />
+      <ham-wizard-field fieldId="hwStoryHeading" title="כותרת אזור התיאור" [value]="c.title.title" placeholder="לדוגמה: נותנים תקווה לילדים" (valueChange)="write('hwStoryHeading', $event)" />
+      <ham-wizard-field fieldId="hwStorySubtitle" title="תת־כותרת לתיאור (לא חובה)" [value]="c.title.subtitle" placeholder="משפט נוסף שמסביר את המטרה" (valueChange)="write('hwStorySubtitle', $event)" />
+      <ham-wizard-description [error]="wizard.fieldError('campaignDescription')" [description]="c.title.description" (descriptionChange)="write('campaignDescription', $event)" />
+    </section>
+    <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">03</span><div><strong>תחום ומיקום</strong><small>הסיווג מסייע בחיפוש; המיקום יוצג רק אם תבחרו לציינו</small></div></div>
+      <ham-wizard-field fieldId="hwLocation" title="איפה מתקיים הפרויקט? (לא חובה)" [value]="c.campaignInfo.location || ''" placeholder="לדוגמה: ירושלים, ארצי או אונליין" (valueChange)="write('hwLocation', $event)" />
+      <ham-wizard-category-search [attr.aria-invalid]="!wizard.chosenCategory()" #categorySearch (changed)="categoryVersion.set(categoryVersion() + 1)" />
+      <ham-wizard-subcategory [version]="categoryVersion()" (changed)="categorySearch.refresh()" />
+    </section>
+  </div>
+</ng-template>
+
+<ng-template #hero>
+  <div class="hw-fields">
+    <ham-wizard-logo mode="regular" [src]="logoSrc()" [organizationSrc]="wizard.organizationLogo()" (remove)="wizard.removeLogo()" (restore)="wizard.restoreLogo()" (upload)="wizard.upload($event, 'logo')" />
+    <ham-wizard-choice choice="media" [mode]="c.hero.mediaType === 'video' ? 'video' : 'image'" (chosen)="wizard.setHeroMedia($any($event))" />
+    @if (state().template === 'slider') {
+      <ham-wizard-slider [images]="sliderImages()" (remove)="wizard.removeSlide($event)" (upload)="wizard.upload($event, 'slide')" />
+    }
+    <ham-wizard-hero-source [mode]="c.hero.mediaType === 'video' ? 'video' : 'image'" [video]="c.hero.video || ''" [hasImage]="wizard.isRealHero()" (videoChange)="write('hwVideo', $event)" (upload)="wizard.upload($event, 'hero')" />
+  </div>
+</ng-template>
+
+<ng-template #story>
+  <div class="hw-fields"><div class="hw-story-head"><span class="hw-label">סיפור הקמפיין</span><small>עריכת תוכן · מבוסס Story Builder</small></div>
+    <div class="hw-story-advanced-callout"><div><strong>רוצים להרחיב את סיפור הפרויקט?</strong><small>כאן אפשר לפתוח את ה־Story Builder המתקדם שכבר קיים, להוסיף תמונות, גלריות, וידאו ועמודות — ולחזור לאשף.</small></div><button type="button" class="hw-open-story-builder" (click)="openStoryBuilder(storyEditor)">עריכת סיפור מתקדמת ↗</button></div>
+    <ham-wizard-story-toolbar [editor]="storyEditor" />
+    <ham-wizard-story-editor [attr.aria-invalid]="!wizard.stepOK(2)" #storyEditor [initialHtml]="wizard.storyHtml()" (htmlChange)="wizard.setStoryHtml($event)" />
+    <div class="hw-story-photo-tip" role="note"><strong>מומלץ להוסיף תמונה לסיפור</strong><small>תמונה נוספת, שונה מתמונת ה־Hero, תופיע לצד הטקסט בדסקטופ: טקסט מימין ותמונה משמאל.</small></div>
+    <ham-wizard-story-media [images]="wizard.storyImages()" (remove)="wizard.removeStoryImage($event)" (upload)="wizard.upload($event, 'story')" />
+    <p class="hw-hint">אפשר להתחיל כאן בטקסט, או לפתוח כבר עכשיו את ה־Story Builder המלא. כל השינויים נשמרים באותו סיפור.</p>
+  </div>
+</ng-template>
+
+<ng-template #funding>
+  <div class="hw-fields">
+    <ham-wizard-field fieldId="hwGoal" [required]="true" [error]="wizard.fieldError('hwGoal')" title="יעד גיוס (₪)" [value]="wizard.formatAmount(c.stats.goal || '')" placeholder="לדוגמה 100,000" (valueChange)="write('hwGoal', $event)" />
+    <ham-wizard-amounts [attr.aria-invalid]="!!wizard.fieldError('hwAmounts')" [simple]="false" [value]="amountsText()" (valueChange)="write('hwAmounts', $event)" />
+    <ham-wizard-rewards [rewards]="wizard.rewards()" (add)="wizard.addReward()" (remove)="wizard.removeReward($event)" (toggle)="wizard.toggleReward($event)"
+      (edit)="wizard.editReward($event.index, $event.key, $event.value)" (upload)="wizard.upload($event.input, { reward: $event.index })" />
+  </div>
+</ng-template>
+
+<ng-template #manager>
+  <div class="hw-fields">
+    <div class="hw-field"><span class="hw-label">משך הקמפיין</span>
+      <div class="hw-end-date-picker"><span class="hw-label">תאריך התחלה <span class="hw-required">*</span></span><div style="display:contents" [innerHTML]="calendarField('funding.start')"></div></div>
+      <div class="hw-end-date-picker" [class.ham-disabled-date]="!wizard.hasEndDate()"><span class="hw-label">מועד סיום</span><div style="display:contents" [innerHTML]="calendarField()"></div></div>
+      <label class="ham-no-end-toggle"><input #noEnd type="checkbox" role="switch" [checked]="!wizard.hasEndDate()" (change)="wizard.setNoEndDate(noEnd.checked)"> ללא מועד סיום</label>
+    </div>
+    <div class="hw-manager-note">פרטי העמותה, אישורי הסליקה וההרשאות נשארים במערכת הארגון. כאן אוספים רק פרטים הקשורים לקמפיין הזה.</div>
+  </div>
+</ng-template>
+
+<ng-template #ready>
+  @let all = wizard.checks();
+  @let ok = allOk(all);
+  <div class="hw-ready">
+    <div class="hw-ready-symbol" [class.is-ready]="ok">{{ ok ? '✓' : '!' }}</div>
+    <h2>{{ ok ? 'אפשר להמשיך ל־Simple Studio' : 'נשארו כמה פרטים קטנים' }}</h2>
+    <p>{{ ok ? 'יצרנו טיוטת קמפיין עם תוכן ראשוני ודף שניתן להמשיך לעצב.' : 'צריך להשלים רק את הפרטים המסומנים. כל מה שכבר מילאתם נשמר.' }}</p>
+    <div class="hw-checks">
+      @for (x of all; track x.label) {
+        <button type="button" class="hw-check" (click)="wizard.goTo(x.step)"><span [class]="x.ok ? 'good' : 'missing'">{{ x.ok ? '✓' : '○' }}</span>{{ x.label }}<span class="hw-check-arrow">עריכה ←</span></button>
+      }
+    </div>
+    <div class="hw-ready-note">מסלול ירוק כאן = מוכן לעיצוב בלבד. אישור עמותה, סליקה ופרסום מטופלים במסלול אישור נפרד.</div>
+  </div>
+</ng-template>

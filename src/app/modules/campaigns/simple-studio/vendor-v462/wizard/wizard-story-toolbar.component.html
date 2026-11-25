@@ -1,0 +1,13 @@
+<div class="hw-rich-toolbar" role="toolbar" aria-label="עיצוב סיפור הקמפיין">
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('bold')" title="מודגש"><b>B</b></button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('italic')" title="נטוי"><i>I</i></button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('underline')" title="קו תחתון"><u>U</u></button>
+  <span class="hw-bar-separator"></span>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('h2')">H2</button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('h3')">H3</button>
+  <span class="hw-bar-separator"></span>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('insertUnorderedList')" title="רשימה">☷</button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('justifyRight')" title="יישור ימין">⇥</button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('justifyCenter')" title="מרכז">≡</button>
+  <button type="button" (mousedown)="$event.preventDefault()" (click)="format('createLink')" title="קישור">🔗</button>
+</div>

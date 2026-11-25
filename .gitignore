@@ -12,6 +12,7 @@ backend/node_modules
 .idea
 
 coverage
+
 # Local dependencies, generated output, credentials and diagnostic artifacts.
 **/node_modules/
 **/dist/
@@ -40,4 +41,3 @@ source-backups/
 /simple-studio-integration/
 /local-integration-20261125/
 /local-frontend-integration-20261125/
-

@@ -1,0 +1,8 @@
+<div class="hw-field"><span class="hw-label">לאיזה תחום משתייך הקמפיין?</span><input #search type="search" id="hwCategorySearch" placeholder="חיפוש תחום..." autocomplete="off" (input)="term.set(search.value)"><div id="hwCategories" class="hw-categories">
+  @for (r of results(); track r.category.id) {
+    <button type="button" [attr.aria-pressed]="r.chosen" [class.selected]="r.chosen" (click)="choose(r.category.id)"><span class="ham-category-icon" style="display:contents" [innerHTML]="r.icon"></span><span>{{ r.category.label }}</span></button>
+    @for (s of r.subs; track s.value) {
+      <button type="button" [attr.aria-pressed]="s.chosen" class="hw-cat-sub" [class.selected]="s.chosen" (click)="choose(r.category.id, s.value)"><span>↳ {{ s.value }}</span></button>
+    }
+  } @empty { <small>אין תוצאות לחיפוש</small> }
+</div><div id="hwCategorySelected" class="hw-category-selected" role="status" aria-live="polite">{{ status() }}</div></div>

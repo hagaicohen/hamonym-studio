@@ -27,7 +27,7 @@ import {
 } from '../../services/collection-ops.service';
 import { EntityComboboxComponent, ComboboxEntity } from '../../components/entity-combobox/entity-combobox.component';
 import { SimulationClockService, SimulationClockStatus } from '../../services/simulation-clock.service';
-
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 type Tab = 'overview' | 'history' | 'reports';
 type ReportPeriodMode = 'period' | 'range' | 'all';

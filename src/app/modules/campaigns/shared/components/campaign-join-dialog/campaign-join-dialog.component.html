@@ -1,0 +1,102 @@
+<ng-container *ngIf="showJoinModal">
+  <ng-container *ngIf="{ draft: draft$ | async } as vm2">
+  <div class="hm-join-overlay" (click)="closeJoinModal()"></div>
+  <div class="hm-join-modal" *ngIf="vm2.draft as draft">
+
+    <!-- Header -->
+    <div class="hm-join-header">
+      <h3 class="hm-join-title">{{ 'publicPage.campaignPreview.joinAsAnAmbassador' | hmPublic }}</h3>
+      <button class="hm-join-close" (click)="closeJoinModal()">✕</button>
+    </div>
+
+    <!-- FORM STATE -->
+    <ng-container *ngIf="joinStatus === 'idle' || joinStatus === 'loading'">
+      <div class="hm-join-body">
+        <p class="hm-join-sub">{{ 'publicPage.campaignPreview.getAPersonalSharingLink' | hmPublic }}</p>
+
+        <div class="hm-join-field">
+          <label class="hm-join-label">{{ 'publicPage.campaignPreview.fullName' | hmPublic }} <span style="color:#ef4444">*</span></label>
+          <input class="hm-join-input" type="text" [(ngModel)]="joinForm.fullName"
+                 [placeholder]="'publicPage.campaignPreview.janeDoe' | hmPublic" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">{{ 'publicPage.campaignPreview.phone2' | hmPublic }}</label>
+          <input class="hm-join-input" type="tel" [(ngModel)]="joinForm.phone"
+                 placeholder="050-0000000" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">{{ 'publicPage.campaignPreview.email2' | hmPublic }}</label>
+          <input class="hm-join-input" type="email" [(ngModel)]="joinForm.email"
+                 placeholder="you@example.com" [disabled]="joinStatus === 'loading'">
+        </div>
+        <div class="hm-join-field">
+          <label class="hm-join-label">{{ 'publicPage.campaignPreview.personalFundraisingGoal' | hmPublic }} <span style="color:#94a3b8;font-weight:400">{{ 'publicPage.campaignPreview.required' | hmPublic }}</span></label>
+          <div class="hm-join-money-wrap">
+            <span class="hm-join-money-sym">{{ '' | hmCurrency }}</span>
+            <input class="hm-join-input hm-join-input--money" type="text" inputmode="numeric"
+                   [value]="joinGoalDisplay"
+                   (input)="onJoinGoalInput($event)"
+                   placeholder="5,000"
+                   [disabled]="joinStatus === 'loading'">
+          </div>
+          <p class="hm-join-goal-warning" *ngIf="joinGoalAboveCampaignGoal(draft)">
+            {{ 'publicPage.campaignPreview.noteTheGoalYouChose' | hmPublic: { targetAmount: (draft.targetAmount | hmMoneyArg) } }}
+          </p>
+        </div>
+        <div class="hm-join-field">
+          <app-ambassador-slug-field
+            [campaignSlug]="draft.slug!"
+            [nameForDefault]="joinForm.fullName"
+            [(value)]="joinForm.slug"
+            (availabilityChange)="joinSlugAvailable = $event">
+          </app-ambassador-slug-field>
+        </div>
+      </div>
+      <div class="hm-join-footer">
+        <button class="hm-join-submit"
+                [style.background]="primaryColor(draft)"
+                [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable"
+                (click)="submitJoin(draft)">
+          <span *ngIf="joinStatus !== 'loading'">{{ 'publicPage.campaignPreview.getAPersonalSharingLink2' | hmPublic }} <app-icon name="rocket" /></span>
+          <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- SUCCESS STATE -->
+    <ng-container *ngIf="joinStatus === 'success'">
+      <div class="hm-join-body hm-join-success">
+        <div class="hm-join-success-icon" [style.color]="primaryColor(draft)">✓</div>
+        <h4 class="hm-join-success-title">{{ 'publicPage.campaignPreview.youreRegisteredAsAnAmbassador' | hmPublic }}</h4>
+        <p class="hm-join-success-sub">{{ 'publicPage.campaignPreview.yourPersonalLinkIsReady' | hmPublic }}</p>
+        <div class="hm-join-link-box">
+          <span class="hm-join-link-text">{{ joinShareUrl }}</span>
+          <button class="hm-join-copy-btn" [style.background]="primaryColor(draft)"
+                  (click)="copyJoinLink()">
+            {{ joinCopied ? ('publicPage.campaignPreview.copied' | hmPublic) : ('publicPage.campaignPreview.copy' | hmPublic) }}
+          </button>
+        </div>
+        <p class="hm-join-upsell">
+          {{ 'publicPage.campaignPreview.wantToTrackTheDonations' | hmPublic }}<br>
+          <a class="hm-join-upsell-link" [style.color]="primaryColor(draft)" [routerLink]="['/register']" [queryParams]="{returnUrl:returnUrl}">
+            {{ 'publicPage.campaignPreview.openAFreePersonalArea' | hmPublic }}
+          </a>
+        </p>
+      </div>
+    </ng-container>
+
+    <!-- ERROR STATE -->
+    <ng-container *ngIf="joinStatus === 'error'">
+      <div class="hm-join-body hm-join-success">
+        <div class="hm-join-success-icon" style="color:#ef4444">✗</div>
+        <h4 class="hm-join-success-title">{{ 'publicPage.campaignPreview.error' | hmPublic }}</h4>
+        <p class="hm-join-success-sub">{{ joinError | hmPublic }}</p>
+        <button class="hm-join-submit" [style.background]="primaryColor(draft)"
+                (click)="joinStatus = 'idle'">{{ 'publicPage.campaignPreview.tryAgain' | hmPublic }}</button>
+      </div>
+    </ng-container>
+
+  </div>
+  </ng-container>
+</ng-container>
+

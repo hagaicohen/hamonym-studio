@@ -1,0 +1,80 @@
+<header class="top ham-v155-ready ham-v157-ready">
+  <div class="ham-v157-shell ham-v209-ready">
+    <div class="ham-v209-right">
+      <div class="ham-v157-group ham-v157-identity">
+        <div class="ham-v159-official-logo" role="img" aria-label="המונים" ham-official-brand></div>
+        <div class="brand"><span class="brandmark">H</span><div><strong>HAMONYM</strong><small>SIMPLE STUDIO <span class="ver">13.3</span></small></div></div>
+      </div>
+      <div class="ham-v157-group ham-v157-navigation">
+        <div class="hu-tabs ham-single-modes" role="tablist" aria-label="מצבי עבודה">
+          <button type="button" data-hu-mode="management" class="hu-tab" [class.active]="managementView.activeTab() === 'management'" title="ניהול ותוכן">ניהול ותוכן</button>
+          <button type="button" data-hu-mode="design" class="hu-tab" [class.active]="managementView.activeTab() === 'design'" title="עיצוב">עיצוב</button>
+          <button type="button" data-hu-mode="publish" class="hu-tab" [class.active]="managementView.activeTab() === 'publish'" title="בדיקה ופרסום">פרסום</button>
+        </div>
+      </div>
+    </div>
+    <div class="ham-v209-left">
+      <div class="ham-v157-group ham-v157-preview">
+        <div class="ham-single-toolbar" ham-single-toolbar-controls></div>
+      </div>
+      <div class="ham-v157-group ham-v157-actions">
+        <div class="top-actions">
+          <span id="saveStatus">כל השינויים נשמרו מקומית</span>
+          <button id="undoBtn" title="ביטול שינוי" aria-label="ביטול שינוי" (click)="toolbar.restore('undo')">↶</button>
+          <button id="redoBtn" title="ביצוע מחדש" aria-label="ביצוע מחדש" (click)="toolbar.restore('redo')">↷</button>
+          <button class="soft" id="exportBtn" (click)="toolbar.exportJson()">ייצוא JSON</button>
+          <button class="soft" id="importBtn" (click)="toolbar.pickImport()">ייבוא</button>
+          <details class="ham-top-more hw-toolbar-more">
+            <summary aria-label="פעולות נוספות" title="פעולות נוספות">⋯</summary>
+            <div class="hw-toolbar-more-menu">
+              
+              
+              <button class="ham-reset-top" id="hamResetTopButton" title="מחק את נתוני הקמפיין וחזור לאשף ההקמה" type="button" (click)="toolbar.reset()">↺ איפוס מלא וחזרה לאשף</button>
+            </div>
+          </details>
+          <button class="primary" id="saveBtn" data-ham-v206-ready="1" [attr.data-ham-save-state]="toolbar.saveState()" [attr.title]="toolbar.saveInfo[toolbar.saveState()]" [attr.aria-label]="toolbar.saveInfo[toolbar.saveState()]" (click)="toolbar.save()"><svg viewBox="0 0 24 24" aria-hidden="true">@for (d of toolbar.saveIcons[toolbar.saveState()]; track $index) {<path [attr.d]="d"/>}@if (toolbar.saveState() === 'failed') {<circle cx="12" cy="12" r="9"/>}</svg></button>
+          <input #importFile accept=".json,application/json" hidden id="importFile" type="file" (change)="toolbar.importFile(importFile)"/>
+          <details class="ham-v297-more" ham-unified-toolbar></details>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="hu-toolbar" id="huToolbar"><div class="hu-status-actions"><button type="button" class="hu-publish" data-hu-drawer>בדיקת פרסום <span aria-hidden="true">✓</span></button></div></div>
+<nav class="ham-mobile-workspace-tabs" aria-label="מעבר בין מסכי העריכה" ham-mobile-workspace-tabs #mobileTabs (paneChange)="mobileTools.close()"></nav>
+<div class="workspace" [class.hu-management-mode]="managementView.mode() !== 'design'">
+  <aside class="sidebar">
+    <div class="side-title"><div><small>הקמפיין שלך</small><h2>מבנה הדף</h2></div><button class="text-btn" id="templatesBtn" [style.display]="toolbar.simple() ? 'none' : null" (click)="toolbar.openTemplates(!toolbar.isDonation())">החלפת תבנית</button></div>
+    
+    <div class="section-list" id="sectionList" ham-section-tree></div>
+    <div class="side-bottom"><button id="addStoryBtn" (click)="toolbar.addStoryBlock()">＋ בלוק לסיפור</button></div>
+  </aside>
+  <main class="stage">
+    <div class="stage-toolbar">
+      <div class="crumb">{{ editor.crumbLabel() }}<span> / </span> <b id="crumbName">{{ editor.crumbName() }}</b></div>
+      <div class="device-switch"><button [class.active]="toolbar.device() === 'mobile'" data-device="mobile" (click)="toolbar.setDevice('mobile')">▯ מובייל</button><button [class.active]="toolbar.device() === 'desktop'" data-device="desktop" (click)="toolbar.setDevice('desktop')">▣ דסקטופ</button></div>
+      <div class="stage-tools">
+        <button class="ham-open-public-btn" data-ham-open-public title="פתח את דף הקמפיין בלשונית נפרדת" type="button" (click)="toolbar.openPublic(false)">↗ פתח קמפיין בדפדפן</button>
+        <button class="ham-open-public-btn" data-ham-download-public title="הורד את דף הקמפיין כ-HTML לבדיקה ישירה בדפדפן" type="button" (click)="toolbar.openPublic(true)">הורד דף לבדיקה ↓</button>
+        <label style="display:none">סימון רכיבים <input id="highlightToggle" role="switch" type="checkbox" (change)="toolbar.setHighlight($any($event.target).checked)"/></label>
+        
+        
+        
+        <button id="resetBtn" (click)="toolbar.reset()">איפוס</button>
+      </div>
+      <button type="button" class="ham-mobile-tools-button" aria-label="הצג או הסתר כלי תצוגה" ham-mobile-tools #mobileTools="hamMobileTools"></button>
+    </div>
+    <div class="canvas" id="canvas"><div class="preview mobile" id="preview" (scroll)="editor.syncDonationCtas()" (click)="previewSel.onClick($event)" (pointerover)="previewSel.hover($event)" (pointermove)="previewSel.hover($event)" (pointerleave)="previewSel.leave()" (pointerdown)="previewSel.pointerDown($event)" (focusin)="previewSel.focusIn($event)"></div></div>
+    <div class="stage-foot">לחץ על רכיב בקמפיין כדי לערוך אותו · השינויים מתעדכנים מיד ונשמרים בדפדפן</div>
+  </main>
+  <aside class="inspector">
+    <div class="inspector-top" ham-inspector-head></div>
+    <div class="tabs" ham-inspector-tabs></div>
+    <div class="fields" id="fields" ham-inspector-fields></div>
+    <div class="inspector-bottom"><span>●</span> תצוגה חיה · ללא צורך בפרסום</div>
+    <div class="ham-inspector-resizer" title="גרור לשינוי רוחב הפאנל" role="separator" aria-orientation="vertical" aria-label="שינוי רוחב הפאנל הימני"></div>
+    <button type="button" class="ham-v279-sheet-close ham-angular-mobile-close" aria-label="סגור מאפיינים וחזור לתצוגה" ham-mobile-inspector-close [attr.style]="mobileCloseStyle()" (close)="mobileTabs.choose('preview')"></button>
+  </aside>
+</div>
+<div class="modal-backdrop" [class.hidden]="!toolbar.modalOpen()" id="templateModal" (click)="$event.target === $event.currentTarget && toolbar.modalOpen.set(false)"><div class="modal"><div class="modal-head"><div><small>ספריית תבניות</small><h2>בחר פריסת קמפיין</h2><p>בחירת פריסה משנה את סדר הרכיבים והעיצוב המבני. הצבעים, הפונטים והתוכן נשמרים.</p></div><button class="close" id="closeModal" (click)="toolbar.modalOpen.set(false)">✕</button></div><div class="template-grid" id="templateGrid">@if (toolbar.modalOpen()) {@for (c of toolbar.modalChoices; track c[0]) {<div class="ham-layout-menu-entry"><button type="button" [attr.class]="'template-card ' + (toolbar.chosen(c[0]) ? 'active' : '')" [attr.data-template]="c[0]" [attr.aria-pressed]="toolbar.chosen(c[0]) + ''" (click)="toolbar.chooseTemplate(c[0])"><span class="ham-layout-menu-icon" aria-hidden="true">{{ c[1] }}</span><span>{{ c[2] }} {{ toolbar.chosen(c[0]) ? '✓' : '' }}</span></button></div>}}</div></div></div>
+<div aria-label="עורך סיפור הקמפיין" aria-modal="true" class="sb-overlay" id="storyBuilder" role="dialog" ham-story-builder></div><div class="toast" [class.show]="editor.toastShown()" id="toast" role="status">{{ editor.toastText() }}</div>@if (previewSel.pencil(); as p) {<button [ham-edit-pencil]="p"></button>}

@@ -1,0 +1,29 @@
+<div class="hu-eyebrow">ניהול הקמפיין / תוכן הקמפיין</div><h1 class="hu-page-title">תוכן הקמפיין</h1><p class="hu-lead">בחרו רכיב וערכו את הפריטים שלו. עיצוב התצוגה נמצא בסטודיו.</p>
+<div class="hu-mod-tabs">@for (t of types; track t) {<button [attr.data-hu-module]="t" [class.active]="active === t" type="button">{{ labels[t] }}</button>}</div>
+<section ham-panel [title]="labels[active]">
+  @switch (active) {
+    @case ('rewards') {
+      <label ham-switch [title]="'הצג תשורות בקמפיין'" [hint]="'הסתרה אינה מוחקת את התשורות או את המלאי'" [path]="'visibility.rewards'"></label>
+      <div class="hu-callout">כאן מנהלים את פרטי התשורה: שם, סכום, תיאור, תמונה ומלאי. את הפריסה, הצבעים והמראה של כרטיסי התשורות משנים במסך העיצוב.</div>
+      <div class="hu-reward-design-box"><div class="hu-reward-design-copy"><strong>עיצוב התשורות</strong><small>הגדירו איך כרטיסי התשורות ייראו לציבור: פריסה, צבעים, תמונות, תיאורים וכפתור הבחירה.</small></div><button class="hu-action primary" data-hu-edit="rewards" type="button">עצב את התשורות ב־Simple Studio</button></div>
+      @if (items.length) {<section ham-collection [type]="'rewards'" [items]="items" [editor]="rewardEditor"></section>}
+      <div class="hu-row"><button class="hu-action" type="button" data-hu-add-item="rewards">＋ הוסף תשורה</button></div>
+    }
+    @case ('sponsors') {
+      <label ham-switch [title]="'הצג חסויות בקמפיין'" [hint]="'הנתונים והלוגואים יישמרו גם כשהחסויות מוסתרות'" [path]="'visibility.sponsors'"></label>
+      <div class="hu-reward-design-box"><div class="hu-reward-design-copy"><strong>איך החסויות מוצגות?</strong><small>מזינים שם חברה או ארגון ולוגו. בדף הקמפיין הלוגואים יוצגו בבאנר נע.</small></div><button type="button" class="hu-action primary" data-hu-edit="sponsors">עצב חסויות בסטודיו</button></div>
+      @if (items.length) {<section ham-collection [type]="'sponsors'" [items]="items" [editor]="sponsorEditor"></section>}
+      <button type="button" class="hu-action primary" data-hu-add-item="sponsors">＋ הוסף חסות</button>
+    }
+    @case ('updates') {
+      <label ham-switch [title]="'הצג עדכונים בקמפיין'" [hint]="'כיבוי יסתיר את רשימת העדכונים בלי למחוק אותם'" [path]="'visibility.updates'"></label>
+      <div class="hu-module-intro"><div><strong>החדשות של הקמפיין</strong><small>הוסיפו כותרת, תוכן, תאריך ותמונה. עדכוני טיוטה לא יופיעו בדף.</small></div><button type="button" class="hu-action primary" data-hu-edit="updates">עיצוב העדכונים</button></div>
+      @if (items.length) {<section ham-collection [type]="'updates'" [items]="items" [editor]="updateEditor"></section>}
+      <div class="hu-row"><button type="button" class="hu-action primary" data-hu-add-item="updates">＋ הוסף עדכון</button></div>
+    }
+    @case ('comments') { <ham-mgmt-incoming [type]="'comments'" /> }
+  }
+</section>
+<ng-template #rewardEditor let-item let-i="index"><section ham-reward-editor [item]="item" [i]="i"></section></ng-template>
+<ng-template #sponsorEditor let-item let-i="index"><section ham-sponsor-editor [item]="item" [i]="i" [count]="items.length"></section></ng-template>
+<ng-template #updateEditor let-item let-i="index"><section ham-update-editor [item]="item" [i]="i"></section></ng-template>

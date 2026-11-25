@@ -10,12 +10,14 @@ import { CampaignStudioStateService, FUNDING_TYPE_LABELS } from '../../../../cam
 import { publishEntityApproved, publishHasHero, publishMissingFields } from './publish-readiness';
 import { CampaignApiService }         from '../../../../campaigns/services/campaign-api.service';
 import { CurrentEntityService }       from '../../../../../core/services/current-entity.service';
-
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
 @Component({
   selector: 'app-campaign-publish-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, LucideAngularModule, RouterLink],
+  imports: [HmTextPipe, TranslocoPipe, HmIconComponent, CommonModule, LucideAngularModule, RouterLink],
   templateUrl: './campaign-publish-step.component.html',
   styleUrl: './campaign-publish-step.component.css',
 })
@@ -49,7 +51,7 @@ export class CampaignPublishStepComponent implements OnInit {
 
     const entityId = this.currentEntity.currentEntity()?.id;
     if (!entityId) {
-      this.errorMessage = 'לא נמצאה עמותה מחוברת. נסה להתחבר מחדש.';
+      this.errorMessage = 'builder.publish.errors.noEntity';
       return;
     }
 
@@ -82,7 +84,7 @@ export class CampaignPublishStepComponent implements OnInit {
       },
       error: (err) => {
         this.isSaving = false;
-        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'שמירת הקמפיין נכשלה. נסה שוב.';
+        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'builder.publish.errors.saveFailed';
       },
     });
   }
@@ -244,18 +246,18 @@ export class CampaignPublishStepComponent implements OnInit {
     this.errorMessage = null;
 
     if (!this.isReady) {
-      this.errorMessage = 'יש להשלים את כל השדות הנדרשים לפני פרסום';
+      this.errorMessage = 'builder.publish.errors.missingFields';
       return;
     }
 
     if (!this.entityApproved) {
-      this.errorMessage = 'העמותה ממתינה לאישור ועדיין לא ניתן לפרסם קמפיינים או לגייס כספים';
+      this.errorMessage = 'builder.publish.errors.entityPending';
       return;
     }
 
     const entityId = this.currentEntity.currentEntity()?.id;
     if (!entityId) {
-      this.errorMessage = 'לא נמצאה עמותה מחוברת. נסה להתחבר מחדש.';
+      this.errorMessage = 'builder.publish.errors.noEntity';
       return;
     }
 
@@ -283,7 +285,7 @@ export class CampaignPublishStepComponent implements OnInit {
       },
       error: (err) => {
         this.isPublishing = false;
-        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'אירעה שגיאה. נסה שוב.';
+        this.errorMessage = err?.error?.error ?? err?.error?.message ?? 'builder.publish.errors.generic';
       },
     });
   }

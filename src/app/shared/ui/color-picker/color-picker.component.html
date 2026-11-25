@@ -7,7 +7,7 @@
       [style.background]="isTransparent(value) ? '' : value">
     </span>
     <span class="cp-trigger-label" *ngIf="label">{{ label }}</span>
-    <span class="cp-trigger-value">{{ isTransparent(value) ? 'ללא' : value }}</span>
+    <span class="cp-trigger-value">{{ isTransparent(value) ? ('editors.ui.none' | transloco) : value }}</span>
     <span class="cp-chevron">›</span>
   </button>
 
@@ -35,7 +35,7 @@
       <input type="color" class="cp-native-hidden"
         [value]="isTransparent(value) ? '#ffffff' : value"
         (input)="onNativeColorInput($event)">
-      <span class="cp-free-label">בחר צבע חופשי</span>
+      <span class="cp-free-label">{{ 'editors.ui.chooseACustomColor' | transloco }}</span>
       <span class="cp-free-arrow">›</span>
     </label>
 
@@ -46,7 +46,7 @@
       <button *ngIf="showNone"
         class="cp-sq cp-sq--none"
         [class.cp-sq--active]="isTransparent(value)"
-        (click)="select('')" title="ללא">
+        (click)="select('')" [title]="'editors.ui.none' | transloco">
       </button>
       <button *ngFor="let c of compactPalette"
         class="cp-sq"
@@ -63,7 +63,7 @@
     <!-- CSS NAMES SEARCH -->
     <input class="cp-search" type="text"
       [(ngModel)]="nameSearch"
-      placeholder="חפש שם CSS (red, blue...)"
+      [placeholder]="'editors.ui.searchACssNameRed' | transloco"
       (click)="$event.stopPropagation()">
 
     <div class="cp-names-grid" *ngIf="filteredNames.length > 0">

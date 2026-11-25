@@ -1,0 +1,4 @@
+<section class="hw-slider-editor"><div><strong>תמונות נוספות לסליידר</strong><small>התמונה הראשית תופיע ראשונה. הוסיפו תמונות נוספות לסליידר, עד חמש.</small></div>
+ <div class="hw-slider-thumbs">@for (image of images; track $index) {<div class="hw-slider-thumb"><img [src]="image" [alt]="'תמונה נוספת '+($index+1)" /><button type="button" aria-label="הסר תמונה" (click)="remove.emit($index)">×</button></div>}</div>
+ @if (images.length < 5) {<label for="hwSliderFile" class="hw-inline-upload">＋ הוספת תמונה לסליידר</label><input #file id="hwSliderFile" type="file" class="hw-file-input" accept="image/jpeg,image/png,image/webp" (change)="upload.emit(file)" />}
+</section>

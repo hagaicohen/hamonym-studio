@@ -3,6 +3,7 @@ import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
 import { AmbassadorService } from '../../../services/ambassador.service';
+import { HmPublicTextPipe } from '../../../../../core/i18n/content-language';
 
 // Personal ambassador link picker (2026-10-01) -- shared across every flow
 // that creates/edits an ambassador (self-registration modal, admin CRUD
@@ -18,7 +19,7 @@ import { AmbassadorService } from '../../../services/ambassador.service';
 @Component({
   selector: 'app-ambassador-slug-field',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmPublicTextPipe, CommonModule, FormsModule],
   templateUrl: './ambassador-slug-field.component.html',
   styleUrl: './ambassador-slug-field.component.css',
 })

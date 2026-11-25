@@ -2,6 +2,7 @@ import { Component, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AccountNavService } from '../../services/account-nav.service';
+import { HmPublicTextPipe } from '../../i18n/content-language';
 
 // Permanent Hamonym platform chrome (2026-09-28) — NOT a Campaign Studio
 // block: not editable, removable, reorderable, or affected by campaign
@@ -31,7 +32,7 @@ import { AccountNavService } from '../../services/account-nav.service';
 @Component({
   selector: 'app-platform-top-strip',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmPublicTextPipe, CommonModule, RouterLink],
   templateUrl: './platform-top-strip.component.html',
   styleUrl: './platform-top-strip.component.css',
 })

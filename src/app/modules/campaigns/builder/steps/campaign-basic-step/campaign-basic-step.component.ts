@@ -13,13 +13,15 @@ import { CurrentEntityService } from '../../../../../core/services/current-entit
 import { EntitiesService } from '../../../../../core/services/entities.service';
 import { UploadService } from '../../../../../core/services/upload.service';
 import { TextStyle, CtaConfig } from '../../../../../shared/models/text-style.model';
-import { ENTITY_CATEGORIES } from '../../../../../shared/config/entity-categories';
-
+import { ENTITY_CATEGORIES, categoryKey } from '../../../../../shared/config/entity-categories';
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { HmTextPipe, isTranslationKey } from '../../../../../core/i18n/text.pipe';
 @Component({
   selector: 'app-campaign-basic-step',
   standalone: true,
-  imports: [HmIconComponent, 
+  imports: [HmTextPipe, TranslocoPipe, HmIconComponent, 
     CommonModule, FormsModule, LucideAngularModule,
     RichTextEditorComponent, ColorPickerComponent,
   ],
@@ -27,6 +29,7 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
   styleUrl: './campaign-basic-step.component.css',
 })
 export class CampaignBasicStepComponent implements OnInit {
+  private readonly i18n = inject(TranslocoService);
   readonly ui = { PenLine, X, PanelTop, Lock, Check, Building2 };
   protected state       = inject(CampaignStudioStateService);
   private entityService = inject(CurrentEntityService);
@@ -71,7 +74,7 @@ export class CampaignBasicStepComponent implements OnInit {
   get filteredCategories(): { id: string; label: string }[] {
     const q = this.categorySearch.trim().toLowerCase();
     if (!q) return this.categories;
-    return this.categories.filter(c => c.label.toLowerCase().includes(q));
+    return this.categories.filter(c => this.catLabel(c).toLowerCase().includes(q));
   }
 
   get categoryWordCount(): number {
@@ -88,7 +91,7 @@ export class CampaignBasicStepComponent implements OnInit {
   // the behavior this fix removes). Only selectCategory(), a real list
   // pick, ever writes draft.category, and it writes the id.
   openCategoryDropdown(): void {
-    this.categorySearch = this.categories.find((c) => c.id === this.draft.category)?.label || '';
+    this.categorySearch = this.catLabelOf(this.draft.category);
     this.categoryDropdownOpen = true;
   }
 
@@ -101,7 +104,7 @@ export class CampaignBasicStepComponent implements OnInit {
   }
 
   selectCategory(category: { id: string; label: string }): void {
-    this.categorySearch = category.label;
+    this.categorySearch = this.catLabel(category);
     this.state.patch({ category: category.id });
     this.sync();
     this.categoryDropdownOpen = false;
@@ -112,12 +115,22 @@ export class CampaignBasicStepComponent implements OnInit {
     // must never show something that wasn't actually persisted.
     setTimeout(() => {
       this.categoryDropdownOpen = false;
-      this.categorySearch = this.categories.find((c) => c.id === this.draft.category)?.label || '';
+      this.categorySearch = this.catLabelOf(this.draft.category);
     }, 150);
   }
 
   @HostListener('document:keydown.escape')
   closeCategoryOnEscape(): void { this.categoryDropdownOpen = false; }
+
+  catLabel(category: { id: string; label: string }): string {
+    const key = categoryKey(category.id);
+    return isTranslationKey(this.i18n, key) ? this.i18n.translate(key) : category.label;
+  }
+
+  private catLabelOf(id: string | null | undefined): string {
+    const category = this.categories.find((c) => c.id === id);
+    return category ? this.catLabel(category) : '';
+  }
 
   // ── Campaign Location (2026-09-29) — optional campaign metadata, NOT
   // Entity address. 'nationwide'/'online'/'international' get a fixed
@@ -125,11 +138,11 @@ export class CampaignBasicStepComponent implements OnInit {
   // typed label (no city dataset exists to autocomplete against — see
   // CampaignLocation's own doc comment). ──
   readonly LOCATION_TYPES: { type: CampaignLocationType; label: string }[] = [
-    { type: 'nationwide',     label: 'כל הארץ' },
-    { type: 'region',         label: 'עיר / אזור בישראל' },
-    { type: 'online',         label: 'אונליין' },
-    { type: 'international',  label: 'פעילות בינלאומית' },
-    { type: 'custom',         label: 'מיקום מותאם אישית' },
+    { type: 'nationwide',     label: 'builder.location.nationwide' },
+    { type: 'region',         label: 'builder.location.region' },
+    { type: 'online',         label: 'builder.location.online' },
+    { type: 'international',  label: 'builder.location.international' },
+    { type: 'custom',         label: 'builder.location.custom' },
   ];
 
   private static readonly CANNED_LABEL: Partial<Record<CampaignLocationType, string>> = {

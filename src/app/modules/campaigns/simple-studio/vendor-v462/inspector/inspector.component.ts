@@ -1,0 +1,118 @@
+import { ChangeDetectionStrategy, Component, ViewEncapsulation, inject , ChangeDetectorRef } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { InspectorService } from './inspector.service';
+import { FIELD_CONTROLS } from './controls';
+import { INSPECTOR_PANELS } from './panels';
+
+/** The shapes of the layout choices' small previews (`hamLayoutPreviewIcon`): x, y, width, height, rx, accent. */
+const LAYOUT_ART: Record<string, number[][]> = {
+  carousel: [[5, 5, 17, 26, 3], [26, 5, 19, 26, 3], [49, 5, 10, 26, 2], [29, 25, 13, 3, 1.5, 1]],
+  cards: [[4, 5, 17, 12, 2], [24, 5, 17, 12, 2], [44, 5, 17, 12, 2], [4, 20, 17, 12, 2], [24, 20, 17, 12, 2], [44, 20, 17, 12, 2]],
+  list: [[4, 4, 56, 8, 2], [4, 14, 56, 8, 2], [4, 24, 56, 8, 2], [9, 7, 19, 2, 1, 1]],
+  compact: [[4, 4, 56, 7, 2], [4, 13, 56, 7, 2], [4, 22, 56, 7, 2]],
+  leaders: [[5, 15, 15, 17, 2], [25, 5, 15, 27, 2], [45, 20, 15, 12, 2], [29, 9, 7, 3, 1, 1]],
+  feed: [[4, 4, 56, 14, 3], [4, 21, 56, 11, 3], [9, 8, 18, 2, 1, 1]],
+  logos: [[5, 5, 25, 12, 3], [35, 5, 25, 12, 3], [5, 20, 25, 12, 3], [35, 20, 25, 12, 3]],
+  strip: [[4, 10, 16, 16, 2], [24, 10, 16, 16, 2], [44, 10, 16, 16, 2]],
+  timeline: [[47, 5, 2, 27, 1, 1], [5, 7, 38, 9, 2], [5, 20, 38, 9, 2]]
+};
+const UNIFIED_PRESETS = [
+  ['classic', 'קלאסי', 'נקי ומאוזן', '#246f65', '#ffffff', '#f8fbf9', '#203a36'],
+  ['warm', 'חמים', 'רך ומזמין', '#b37a45', '#fffaf5', '#fff3e6', '#5c4331'],
+  ['civic', 'קהילתי', 'ברור ובטוח', '#285b87', '#f9fbff', '#edf4fa', '#213f59'],
+  ['elegant', 'אלגנטי', 'עדין ומרווח', '#785c85', '#ffffff', '#f7f4f9', '#433a4b']
+];
+const TYPO_PRESETS = [['classic', 'קלאסי', 'טיפוגרפיה שקטה ומאוזנת', 'Aa'], ['bold', 'מודגש', 'כותרת חזקה וממוקדת', 'A!'], ['elegant', 'אלגנטי', 'משקל קל וריווח נעים', 'Aa'], ['emotional', 'קמפייני / רגשי', 'כותרת מרגשת עם צל עדין', '✦']];
+const DONOR_LAYOUTS = [['list', '☷', 'רשימה', 'שורה לכל תורם'], ['cards', '▦', 'כרטיסים', 'כרטיסים ברשת'], ['carousel', '❮❯', 'קרוסלה', 'כרטיסים שנגללים הצידה'], ['feed', '◉', 'פיד', 'ציר תרומות']];
+const EMOJIS = ['♡', '♥', '✦', '✧', '☆', '★', '✓', '＋', '○', '●', '♧', '☘️', '🌿', '🤍', '🕊️', '🤲', '🙏', '🤝', '🌱', '🎗️', '💚', '✨', '🎁', '🌍'];
+
+/**
+ * `#fields` (v4.54): the Inspector's content, from `InspectorService.view`. The unified editor (intro, "מראה ופריסה",
+ * "מידע ופעולות") or a pane (the stats, the simple page), the management screen's extras on top. Each schema row is
+ * rendered by its control (`#field`), the specialized panels by their components; nested lists (`#blocks`) by the
+ * same template. No host elements inside `#fields`: the CSS and the large editor see the old tree.
+ */
+@Component({
+  selector: '[ham-inspector-fields]',
+  standalone: true,
+  // The Inspector's edits (InspectorService): Angular event bindings on #fields, for every control inside it.
+  host: { '(input)': 'ui.onInput($event)', '(change)': 'ui.onChange($event)', '(click)': 'ui.onClick($event)' },
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.Default,
+  imports: [NgTemplateOutlet, ...FIELD_CONTROLS, ...INSPECTOR_PANELS],
+  template: `@if (ui.view; as v) {@for (x of v.extras; track $index) {@if (x.k === 'heroName') {<section class="hu-inspector-extra hu-hero-name-inspector"><h3>שם הקמפיין על ה־Hero</h3><p>הסתרת השם אינה מסתירה את המשפט הקצר שמתחתיו.</p><label class="hu-switch"><span><strong>הצג את שם הקמפיין על התמונה</strong><small>הגדרה משותפת לניהול ולעיצוב</small></span><input role="switch" data-hu-path="content.showHeroName" type="checkbox" [hamChecked]="x.checked"></label></section>} @else {<section class="hu-inspector-extra"><h3>קישור לאתר העמותה</h3><p>קישור קטן בפוטר בלבד, אם יש לעמותה אתר.</p>@if (x.linked) {<div class="hu-sourced-value" dir="ltr">{{ x.site }}<span class="hu-source-tag">התקבל מנתוני העמותה</span></div>} @else {<div class="hu-footer-site-field"><label for="huNonprofitSite">כתובת אתר העמותה</label><input id="huNonprofitSite" type="text" dir="ltr" data-hu-path="meta.orgSite" placeholder="https://example.org" [hamValue]="x.site"></div>}<label>הצג קישור לאתר העמותה בפוטר <input type="checkbox" role="switch" data-hu-path="meta.nonprofitFooterVisible" [hamChecked]="x.visible"></label></section>}}
+@if (v.unified; as u) {<div class="ham-unified-intro"><strong>עריכת {{ u.title }}</strong><span>כל מה שצריך במקום אחד: פריסה, מראה, תוכן והתאמה אישית.</span><div class="ham-unified-device" role="group" aria-label="תצוגה לעריכה"><span>תצוגה:</span><button type="button" data-ham-unified-device="desktop" [attr.aria-pressed]="(u.device === 'desktop') + ''" [class.is-active]="u.device === 'desktop'">▣ מחשב</button><button type="button" data-ham-unified-device="mobile" [attr.aria-pressed]="(u.device === 'mobile') + ''" [class.is-active]="u.device === 'mobile'">▯ מובייל</button></div>@if (u.rewards) {<p class="ham-unified-feature-note">בחרו היכן להציג תשורות במחשב. ״תוכן ראשי״ מוסיף גם קישור ״תשורות״ לתפריט הקמפיין. במובייל התשורות נגישות בתפריט כרגיל.</p>}</div>@if (u.story) {<ng-container *ngTemplateOutlet="content; context: { $implicit: u }"></ng-container><ng-container *ngTemplateOutlet="appearance; context: { $implicit: u }"></ng-container>} @else {<ng-container *ngTemplateOutlet="appearance; context: { $implicit: u }"></ng-container><ng-container *ngTemplateOutlet="content; context: { $implicit: u }"></ng-container>}} @else {<ng-container *ngTemplateOutlet="blocks; context: { $implicit: v.blocks }"></ng-container>}}
+
+<ng-template #appearance let-u><details class="ham-unified-section ham-unified-appearance" data-ham-unified-section="appearance" [hamPanel]="!u.story"><summary><span class="ham-unified-section-icon">✦</span><span><strong>{{ u.story ? 'מראה הסיפור' : 'מראה ופריסה' }}</strong><small>פריסה, צבעים, טיפוגרפיה וגדלים</small></span><span class="ham-unified-chevron" aria-hidden="true">⌄</span></summary><div class="ham-unified-section-body">@if (u.placement) {<ng-container *ngTemplateOutlet="blocks; context: { $implicit: [u.placement] }"></ng-container>}@if (!u.story) {<div class="ham-unified-preset-header"><strong>התחלה מהירה</strong><small>בחרו סגנון מוכן, ואחר כך התאימו אותו כרצונכם</small></div><div class="ham-unified-presets" role="group" aria-label="סגנונות עיצוב מוכנים">@for (p of unifiedPresets; track p[0]) {<button type="button" class="ham-unified-preset" [attr.data-ham-unified-preset]="p[0]" [attr.title]="p[2]"><span class="ham-unified-preset-sample" [style.background]="p[4]" [style.border-color]="p[3]"><i [style.background]="p[3]"></i><i [style.background]="p[5]"></i><i [style.background]="p[6]"></i></span><strong>{{ p[1] }}</strong><small>{{ p[2] }}</small></button>}</div>}<ng-container *ngTemplateOutlet="blocks; context: { $implicit: u.design }"></ng-container></div></details></ng-template>
+<ng-template #content let-u>@if (u.content) {<details class="ham-unified-section ham-unified-content" data-ham-unified-section="content" [hamPanel]="u.story"><summary><span class="ham-unified-section-icon">✎</span><span><strong>מידע ופעולות</strong><small>טקסטים, תמונות ופרטים שמופיעים בקמפיין</small></span><span class="ham-unified-chevron" aria-hidden="true">⌄</span></summary><div class="ham-unified-section-body"><ng-container *ngTemplateOutlet="blocks; context: { $implicit: u.content }"></ng-container></div></details>}</ng-template>
+
+<ng-template #field let-f>@switch (f.control) {@case ('anchor') {<div class="field" ham-anchor-field [f]="f"></div>}@case ('info') {<div class="field info-align-field" ham-info-field [f]="f"></div>}@case ('alignment') {<div class="field" ham-alignment-field [f]="f"></div>}@case ('slider') {<div class="field slider-field" ham-slider-field [f]="f"></div>}@case ('toggle') {<label class="toggle-row" ham-toggle-field [f]="f"></label>}@case ('choice') {<div class="field ham-simple-choice-field" ham-choice-field [f]="f"></div>}@case ('select') {<div class="field" ham-select-field [f]="f"></div>}@default {<div class="field" ham-text-field [f]="f"></div>}}</ng-template>
+<ng-template #fieldList let-list>@for (f of list; track $index) {<ng-container *ngTemplateOutlet="field; context: { $implicit: f }"></ng-container>}</ng-template>
+
+<ng-template #blocks let-list>@for (b of list; track $index) {@switch (b.k) {
+@case ('field') {<ng-container *ngTemplateOutlet="field; context: { $implicit: b.f }"></ng-container>}
+@case ('friendly') {<div class="ham-simple-core"><div class="ham-simple-core-label"><strong>עיצוב מהיר</strong><small>בחרו מראה וצבע. השינוי מופיע בתצוגה.</small></div><ng-container *ngTemplateOutlet="fieldList; context: { $implicit: b.primary }"></ng-container></div><details class="ham-simple-more" [hamPanel]="false"><summary><strong>התאמה מתקדמת</strong><small>עוד צבעים, מידות והגדרות מקצועיות</small></summary><div class="ham-simple-more-fields"><ng-container *ngTemplateOutlet="fieldList; context: { $implicit: b.extra }"></ng-container></div></details>}
+@case ('typo') {<div class="field hu-typography-presets"><label>סגנון טיפוגרפיה מוכן</label><div class="hu-typo-grid">@for (p of typoPresets; track p[0]) {<button type="button" [attr.data-typo-preset]="p[0]" [attr.data-typo-scope]="b.scope" class="hu-typo-choice" [class.is-active]="p[0] === b.chosen" [attr.aria-pressed]="(p[0] === b.chosen) + ''"><span class="hu-typo-sample">{{ p[3] }}</span><strong>{{ p[1] }}</strong><small>{{ p[2] }}</small></button>}</div><p class="field-help">הבחירה משנה רק את העיצוב. אפשר לערוך כל הגדרה בנפרד לאחר מכן.</p></div>}
+@case ('group') {<details class="hu-inspector-group" [hamPanel]="b.open"><summary>{{ b.label }}</summary><div class="hu-inspector-group-fields"><ng-container *ngTemplateOutlet="fieldList; context: { $implicit: b.fields }"></ng-container></div></details>}
+@case ('donorLayouts') {<div class="field donor-layout-picker"><label>בחרו פריסת תורמים</label><div class="donor-layout-options">@for (o of donorLayouts; track o[0]) {<button type="button" [attr.data-donor-layout]="o[0]" class="donor-layout-option" [class.active]="b.current === o[0]" [attr.aria-pressed]="(b.current === o[0]) + ''"><span class="donor-layout-icon">{{ o[1] }}</span><strong>{{ o[2] }}</strong><small>{{ o[3] }}</small></button>}</div></div>}
+@case ('donorColumns') {<div class="donor-columns-editor"><h3>כרטיסים בשורה</h3><p class="field-help">אפשר להגדיר מספר עמודות שונה למובייל ולדסקטופ. ההגדרה חלה על פריסת כרטיסים בלבד. אם מוצגת רשימה או פיד, בחרו תחילה ״כרטיסים״ בלשונית תוכן.</p><div class="field"><label>📱 מובייל</label><ng-container *ngTemplateOutlet="columns; context: { key: 'columnsMobile', n: [1, 2, 3], active: b.mobile }"></ng-container></div><div class="field"><label>🖥️ דסקטופ</label><ng-container *ngTemplateOutlet="columns; context: { key: 'columnsDesktop', n: [1, 2, 3, 4], active: b.desktop }"></ng-container></div></div>}
+@case ('layoutPicker') {<div class="field hu-studio-layout-picker"><label>בחרו פריסה</label><div class="hu-layout-choices">@for (o of b.choices; track o[0]) {<button type="button" data-choice-field="layout" [attr.data-choice-scope]="b.scope" [attr.data-choice-value]="o[0]" class="hu-layout-choice" [class.active]="b.current === o[0]" [attr.aria-pressed]="(b.current === o[0]) + ''"><span class="ham-layout-art" aria-hidden="true"><svg viewBox="0 0 65 36" focusable="false">@for (r of art(o[0]); track $index) {<rect [attr.class]="r[5] ? 'accent' : null" [attr.x]="r[0]" [attr.y]="r[1]" [attr.width]="r[2]" [attr.height]="r[3]" [attr.rx]="r[4]"/>}</svg></span><strong>{{ o[1] }}</strong></button>}</div></div>}
+@case ('rewardPlacement') {<div class="ham-reward-placement"><strong>מיקום התשורות במחשב</strong><p>בתוכן הראשי: התשורות מופיעות בגוף הדף ונגישות גם בתפריט. בסיידבר: לצד אזור התרומה.</p><div class="db-layout-toggle" role="group" aria-label="מיקום התשורות"><button type="button" data-rewards-desktop-position="main" [class.active]="b.position === 'main'" [attr.aria-pressed]="(b.position === 'main') + ''">בתוכן הראשי</button><button type="button" data-rewards-desktop-position="sidebar" [class.active]="b.position === 'sidebar'" [attr.aria-pressed]="(b.position === 'sidebar') + ''">בסיידבר</button></div></div>}
+@case ('cardSize') {<details class="ham-inspector-advanced" [hamPanel]="false"><summary><strong>גודל ומידות הכרטיסים</strong><small>התאמה אישית לפי מכשיר</small></summary><div class="ham-inspector-advanced-body"><section ham-card-size-panel [p]="b.panel"></section></div></details>}
+@case ('themePalettes') {<h3>ערכות צבע מוכנות</h3><div class="palette-grid">@for (p of b.palettes; track p[0]) {<button class="palette-choice" [attr.data-palette]="p[0]"><span class="palette-swatches"><i [style.background]="p[1].primary"></i><i [style.background]="p[1].secondary"></i><i [style.background]="p[1].surface"></i></span><b>{{ p[1].name }}</b><small>{{ p[1].desc }}</small></button>}</div><h3>התאמה אישית</h3>}
+@case ('deviceVisibility') {<div class="device-visibility-editor"><h3>תצוגת הרכיב</h3><p>באילו מסכים הרכיב יופיע? ברירת המחדל היא בשניהם.</p><div class="device-visibility-options" role="group" aria-label="תצוגת הרכיב">@for (o of visibilityOptions; track o[0]) {<button type="button" [attr.data-device-visibility]="o[0]" [attr.aria-pressed]="(b.value === o[0]) + ''" [class.is-active]="b.value === o[0]">{{ o[1] }}</button>}</div></div>}
+@case ('navPlacement') {<div class="nav-placement-editor"><h3>אופן הצגת אזורי הקמפיין במובייל</h3><p>בתפריט בלבד: האזור יופיע רק לאחר בחירתו, ולא יהיה גלוי בגלילה רגילה. בדף: האזור יופיע תמיד בהמשך הקמפיין.</p>@for (r of b.rows; track r.id) {<div class="nav-placement-row"><strong>{{ r.label }}</strong><div class="nav-placement-segment" role="group" [attr.aria-label]="'הצגת ' + r.label"><button type="button" [attr.data-placement-id]="r.id" data-placement-value="page" [class.is-active]="!r.menu" [attr.aria-pressed]="(!r.menu) + ''">בדף</button><button type="button" [attr.data-placement-id]="r.id" data-placement-value="menu" [class.is-active]="r.menu" [attr.aria-pressed]="r.menu + ''">בתפריט</button></div></div>}</div>}
+@case ('emojiPicker') {<div class="field"><label>בחר אימוג׳י או סמל סולידי</label><div class="emoji-picker-grid">@for (e of emojis; track e) {<button type="button" class="emoji-picker-choice" [class.active]="b.current === e" [attr.data-pick-emoji]="e" [attr.title]="e">{{ e }}</button>}</div><small class="field-help">אפשר גם להקליד כל אימוג׳י בשדה למעלה.</small></div>}
+@case ('donateUpload') {<div class="field"><label>העלאת סמל משלך</label><label class="upload-button" for="donateIconUpload">⬆ &nbsp; בחירת תמונה מהמחשב</label><input class="visually-hidden-upload" id="donateIconUpload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" [hamValue]="''"><small class="field-help">PNG / JPG / WebP / SVG, עד 1MB. מומלץ רקע שקוף.</small>@if (b.hasIcon) {<button class="inspector-action" data-clear-donate-icon="true">הסר תמונה שהועלתה</button>}</div>}
+@case ('donation') {<div class="db-editor" ham-donation-editor [d]="b.d" [scope]="b.scope"></div>}
+@case ('category') {<div class="category-configuration" ham-category-editor [c]="b.c"></div>}
+@case ('managerUpload') {<div class="field"><label>תמונת מנהל הקמפיין</label><label class="upload-button" for="managerPhotoUpload">⬆ &nbsp; בחירת תמונה מהמחשב</label><input class="visually-hidden-upload" id="managerPhotoUpload" type="file" accept="image/png,image/jpeg,image/webp" [hamValue]="''"><small class="field-help">PNG / JPG / WebP עד 1.5MB</small></div>}
+@case ('heroUploads') {<div class="field"><label>תמונת Hero</label><label class="upload-button" for="heroImageUpload">▧ &nbsp; בחירת תמונה מהמחשב</label><input class="visually-hidden-upload" id="heroImageUpload" type="file" accept="image/png,image/jpeg,image/webp" [hamValue]="''"><small class="field-help">JPG / PNG / WebP, עד 3MB</small></div><div class="field"><label>סרטון Hero</label><label class="upload-button" for="heroVideoUpload">▶ &nbsp; בחירת סרטון מהמחשב</label><input class="visually-hidden-upload" id="heroVideoUpload" type="file" accept="video/mp4,video/webm" [hamValue]="''"><small class="field-help">MP4 / WebM, עד 20MB. הסרטון יופעל ללא קול ובלולאה.</small></div>}
+@case ('slider') {<div class="field ham-slider-inspector"><h3>תמונות לסליידר</h3><p class="field-help">תמונת ה־Hero הראשית היא השקופית הראשונה. ניתן להוסיף עד חמש תמונות נוספות. אלה אותן תמונות שנשמרות במנגנון המדיה הקיים.</p><div class="ham-slide-media-list">@for (p of b.photos; track $index; let i = $index) {<div class="ham-slide-media-item"><img [attr.src]="p.src" [attr.alt]="'שקופית ' + (i + 2)"><button type="button" [attr.data-ham-slider-remove]="i" [attr.aria-label]="'הסר שקופית ' + (i + 2)">×</button></div>}</div>@if (b.photos.length < 5) {<label class="upload-button" for="hamSliderUpload">＋ הוסף תמונה לסליידר</label><input class="visually-hidden-upload" id="hamSliderUpload" type="file" data-ham-slider-upload accept="image/jpeg,image/png,image/webp" [hamValue]="''">} @else {<small>הגעתם לחמש התמונות הנוספות.</small>}</div>}
+@case ('posterUpload') {<div class="field"><label>תמונה מקדימה לסרטון</label><label class="upload-button" for="heroPosterUpload">▧ &nbsp; העלאת תמונה מקדימה</label><input class="visually-hidden-upload" id="heroPosterUpload" type="file" accept="image/png,image/jpeg,image/webp" [hamValue]="''"><small class="field-help">אם YouTube חוסם טעינת תמונה, ניתן להעלות תמונה משלך.</small></div>}
+@case ('logoUpload') {<div class="field"><label>לוגו העמותה</label><label class="upload-button" for="orgLogoUpload">⬆ &nbsp; בחירת לוגו מהמחשב</label><input class="visually-hidden-upload" id="orgLogoUpload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" [hamValue]="''"><small class="field-help">לוגו העמותה יופיע על תמונת הפתיחה. מומלץ PNG שקוף.</small>@if (b.hasLogo) {<button class="inspector-action" data-remove-org-logo="true">הסר לוגו העמותה</button>}</div>}
+@case ('noDesign') {<p class="field-help">רכיב זה משתמש כרגע בעיצוב הכללי של הקמפיין. הגדרות נוספות יתווספו בהמשך.</p><button class="inspector-action" data-open-theme="true">פתח עיצוב כללי</button>}
+@case ('storyBlocks') {<button class="inspector-action" id="openStoryBuilder" type="button">✦ פתח עורך סיפור מתקדם</button><h3>בלוקים בסיפור</h3>@for (s of b.blocks; track $index; let i = $index, last = $last) {<div class="block-editor"><div class="block-editor-head">{{ s.type === 'image' ? 'תמונה' : 'פסקת טקסט' }} {{ i + 1 }}<span><button [attr.data-block-up]="i" [disabled]="i === 0">↑</button>{{ ' ' }}<button [attr.data-block-down]="i" [disabled]="last">↓</button>{{ ' ' }}<button [attr.data-block-delete]="i">✕</button></span></div>@if (s.type === 'text') {<textarea [attr.data-block-edit]="i" style="width:100%;min-height:95px;border:1px solid #e1e7e9;border-radius:7px;padding:8px" ham-flags [hamValue]="s.value ?? ''">{{ s.value ?? '' }}</textarea>} @else {<input [attr.data-block-edit]="i" type="url" style="width:100%;border:1px solid #e1e7e9;border-radius:7px;padding:8px" ham-flags [hamValue]="s.value ?? ''">}</div>}<button class="inspector-action" data-add-block="text">＋ הוסף פסקת טקסט</button><button class="inspector-action" data-add-block="image">＋ הוסף תמונה</button>}
+@case ('visibility') {<div class="hu-inspector-visibility"><label class="toggle-row">הצג בקמפיין <input role="switch" type="checkbox" [attr.data-visible]="b.id" [hamChecked]="b.checked"></label><p>אפשר לנהל את כל הגדרות החשיפה במסך אחד.</p><button type="button" class="hu-visibility-shortcut" data-hu-page="visibility">חשיפה והצגה ↗</button></div>}
+@case ('easy') {<section ham-presentation-panel [p]="b.cover"></section><details class="ham-easy-advanced" [hamPanel]="b.open"><summary><strong>אפשרויות עיצוב מתקדמות</strong> <span>לפתיחה: צבעים, פונטים, מידות ופרטים נוספים</span></summary><div class="ham-easy-advanced-body"><div class="ham-easy-extra"><strong>ניווט בקרוסלה</strong><div role="group" aria-label="ניווט בקרוסלה">@for (o of navChoices; track o[0]) {<button type="button" [attr.data-ham-nav]="o[0]" [attr.data-ham-scope]="b.extras.scope" [attr.aria-pressed]="(b.extras.nav === o[0]) + ''" [class.is-active]="b.extras.nav === o[0]">{{ o[1] }}</button>}</div></div><div class="ham-easy-extra"><strong>כמות טקסט בכרטיס</strong><div role="group" aria-label="כמות טקסט בכרטיס">@for (o of textChoices; track o[0]) {<button type="button" [attr.data-ham-text]="o[0]" [attr.data-ham-scope]="b.extras.scope" [attr.aria-pressed]="(b.extras.text === o[0]) + ''" [class.is-active]="b.extras.text === o[0]">{{ o[1] }}</button>}</div></div><ng-container *ngTemplateOutlet="blocks; context: { $implicit: b.inner }"></ng-container></div></details>}
+@case ('heroStats') {<section ham-stats-card-panel [card]="b.card"></section>}
+@case ('statsDemo') {<details class="ham-stats-demo-details" [hamPanel]="false"><summary>הצגת מדדים <small>אפשרויות נוספות</small></summary><div class="ham-stats-demo-fields"><ng-container *ngTemplateOutlet="fieldList; context: { $implicit: b.fields }"></ng-container></div></details>}
+@case ('simpleDesign') {<div ham-simple-design [s]="b.v"></div>}
+}}</ng-template>
+<ng-template #columns let-key="key" let-n="n" let-active="active"><div class="donor-column-choices" role="group" aria-label="מספר כרטיסים בשורה">@for (i of n; track i) {<button type="button" data-choice-scope="donors" [attr.data-choice-field]="key" [attr.data-choice-value]="i" [class.active]="active === i" [attr.aria-pressed]="(active === i) + ''">{{ i }}</button>}</div></ng-template>`
+})
+export class InspectorComponent {
+  readonly ui = inject(InspectorService);
+  constructor() { this.ui.register(inject(ChangeDetectorRef)); }
+  readonly unifiedPresets = UNIFIED_PRESETS;
+  readonly typoPresets = TYPO_PRESETS;
+  readonly donorLayouts = DONOR_LAYOUTS;
+  readonly emojis = EMOJIS;
+  readonly visibilityOptions = [['both', 'בשניהם'], ['mobile', 'מובייל'], ['desktop', 'דסקטופ']];
+  readonly navChoices = [['near', 'חיצים ליד הכרטיס'], ['dots', 'נקודות בלבד']];
+  readonly textChoices = [['full', 'מלא'], ['two', '2 שורות'], ['one', 'שורה אחת'], ['hide', 'ללא תיאור']];
+  art(id: string): number[][] { return LAYOUT_ART[id] || LAYOUT_ART['cards']; }
+}
+
+/** `.inspector-top`: the selected component's title and description (`#inspectorTitle`, `#inspectorDesc`). */
+@Component({
+  selector: '[ham-inspector-head]', standalone: true, encapsulation: ViewEncapsulation.None,
+  template: `<small>מאפייני הרכיב</small><h2 id="inspectorTitle">{{ ui.view?.title ?? 'Hero' }}</h2><p id="inspectorDesc">{{ ui.view?.desc ?? 'ערוך את התוכן והמראה של הרכיב הנבחר.' }}</p>`
+})
+export class InspectorHeadComponent { readonly ui = inject(InspectorService); constructor() { this.ui.register(inject(ChangeDetectorRef)); } }
+
+/**
+ * `.inspector > .tabs`: the legacy content / design tabs, kept for rollback and hidden by the unified editor. Shown
+ * in a simple campaign (the pane does not hide them), with the tab of the last pane that marked one.
+ */
+@Component({
+  selector: '[ham-inspector-tabs]', standalone: true, encapsulation: ViewEncapsulation.None,
+  host: { '[style.display]': 'ui.view?.tabsDisplay || null' },
+  template: `<button [class.active]="active() === 'content'" data-tab="content" (click)="ui.onTab()">תוכן</button><button [class.active]="active() === 'design'" data-tab="design" (click)="ui.onTab()">עיצוב</button>`
+})
+export class InspectorTabsComponent {
+  readonly ui = inject(InspectorService);
+  constructor() { this.ui.register(inject(ChangeDetectorRef)); }
+  private last = 'content';
+  active(): string { const t = this.ui.view?.activeTab; if (t) this.last = t; return this.last; }
+}

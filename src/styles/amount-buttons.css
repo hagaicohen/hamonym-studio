@@ -1,0 +1,74 @@
+/* Suggested-amount buttons, one campaign-wide look (utils/amount-buttons.ts).
+   Applies only when the campaign chose a layout (.hm-ab on the grid); each
+   surface sets --hm-ab-primary to its own primary color. The doubled class
+   selector outranks each component's own button rule; the grid rules use a tripled class because component grid rules tie with a doubled one and load later. */
+.hm-ab { --hm-ab-min: 62px; }
+.hm-ab.hm-ab--sm { --hm-ab-min: 52px; }
+.hm-ab.hm-ab--lg { --hm-ab-min: 84px; }
+
+/* Columns are a maximum: when the space is too narrow for them at the size's
+   minimum width, the grid uses fewer columns instead of overflowing. */
+.hm-ab.hm-ab.hm-ab--cols {
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--hm-ab-min),
+    calc((100% - (var(--hm-ab-cols) - 1) * var(--hm-ab-gap, 8px)) / var(--hm-ab-cols))), 1fr));
+}
+.hm-ab.hm-ab--sm > button { padding-block: 8px; font-size: 13px; }
+.hm-ab.hm-ab--lg > button { padding-block: 16px; font-size: 17px; }
+.hm-ab.hm-ab--rounded > button { border-radius: 14px; }
+
+/* Soft solid circles: a light tint, a clear solid selected state. */
+.hm-ab.hm-ab.hm-ab--circle { --hm-ab-min: 64px; justify-items: center; }
+.hm-ab.hm-ab--circle.hm-ab--sm { --hm-ab-min: 52px; }
+.hm-ab.hm-ab--circle.hm-ab--lg { --hm-ab-min: 84px; }
+.hm-ab.hm-ab--circle > button {
+  inline-size: min(100%, calc(var(--hm-ab-min) + 20px));
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--hm-ab-primary, #583cd6) 7%, #ffffff);
+  border: 1.5px solid color-mix(in srgb, var(--hm-ab-primary, #583cd6) 22%, #ffffff);
+  color: var(--hm-ab-primary, #0f2747);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+  white-space: nowrap;
+}
+.hm-ab.hm-ab--circle > button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--hm-ab-primary, #583cd6) 12%, #ffffff);
+  border-color: color-mix(in srgb, var(--hm-ab-primary, #583cd6) 40%, #ffffff);
+}
+.hm-ab.hm-ab--circle > button.is-selected {
+  background: var(--hm-ab-primary, #583cd6);
+  border-color: var(--hm-ab-primary, #583cd6);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--hm-ab-primary, #583cd6) 18%, transparent), 0 6px 14px rgba(15, 23, 42, .14);
+}
+.hm-ab > button:disabled { opacity: .45; cursor: not-allowed; }
+.hm-ab > button:focus-visible { outline: 2px solid var(--hm-ab-primary, #583cd6); outline-offset: 2px; }
+
+/* Alignment (right / left / center). Buttons keep their natural width and wrap;
+   the side is physical, so it is the same on Hebrew and English pages. Four
+   classes outrank every surface's own grid rule. Stretch = the grid above. */
+.hm-ab.hm-ab.hm-ab.hm-ab--align {
+  display: flex; flex-wrap: wrap; justify-content: var(--hm-ab-justify, center);
+  gap: var(--hm-ab-gap, 8px);
+}
+.hm-ab.hm-ab--align > button { flex: 0 0 auto; min-inline-size: var(--hm-ab-min); padding-inline: 18px; }
+.hm-ab.hm-ab--align.hm-ab--cols > button {
+  flex-basis: max(var(--hm-ab-min), calc((100% - (var(--hm-ab-cols) - 1) * var(--hm-ab-gap, 8px)) / var(--hm-ab-cols)));
+}
+.hm-ab.hm-ab--align.hm-ab--circle > button { padding-inline: 0; }
+
+/* Opt-in artwork cards: retain existing buttons, selection handlers and payment values. */
+.hm-ab>button:has(app-amount-card .artwork),.hm-ab>button:has(app-amount-card .layered){padding:0!important;min-inline-size:0;white-space:normal;overflow:visible;position:relative;border-radius:12px;align-self:stretch}
+.hm-ab>button:has(app-amount-card .artwork).is-selected,.hm-ab>button:has(app-amount-card .layered).is-selected{outline:3px solid var(--hm-ab-primary,#6236ed);outline-offset:2px}
+.hm-ab>button:has(app-amount-card .artwork).is-selected::after,.hm-ab>button:has(app-amount-card .layered).is-selected::after{content:'✓';position:absolute;inset-inline-end:6px;top:6px;inline-size:22px;block-size:22px;display:grid;place-items:center;border-radius:50%;background:var(--hm-ab-primary,#6236ed);color:white;box-shadow:0 0 0 2px white;font-size:13px;pointer-events:none}
+.hm-ab>button:has(app-amount-card .artwork):focus-visible{outline-width:3px;outline-offset:4px}
+/* Opt-in shared panorama: every button samples the same measured image plane. */
+.hm-ab.hm-ab.hm-ab.hm-ab--panorama{display:flex;flex-wrap:nowrap;gap:var(--hm-panorama-gap,0px);overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding:4px;align-items:stretch;padding-block:4px;justify-content:normal}
+.hm-ab.hm-ab.hm-ab--panorama>button{position:relative;flex:1 0 calc((100% - (var(--hm-panorama-count) - 1)*var(--hm-panorama-gap,0px))/var(--hm-panorama-count));min-inline-size:80px;inline-size:auto;block-size:var(--hm-panorama-height,130px);aspect-ratio:auto;padding:12px!important;border:0;border-radius:6px;color:var(--hm-panorama-color,#fff)!important;scroll-snap-align:start;white-space:normal;box-sizing:border-box;background-clip:border-box}
+.hm-ab.hm-ab.hm-ab--panorama>button:hover{filter:brightness(1.06)}.hm-ab.hm-ab.hm-ab--panorama>button.is-selected,.hm-ab.hm-ab.hm-ab--panorama>button:focus-visible{outline:3px solid var(--hm-ab-primary,#6236ed);outline-offset:-3px}
+.hm-ab.hm-ab--panorama app-amount-card .amount-card{display:flex;flex-direction:column;justify-content:center;block-size:100%;inline-size:100%;padding:0!important;background:transparent!important;border:0;aspect-ratio:auto;color:inherit}
+.hm-ab.hm-ab--panorama app-amount-card .amount-card>img,.hm-ab.hm-ab--panorama app-amount-card .card-overlay{display:none}
+.hm-ab.hm-ab--panorama app-amount-card .amount-card-copy{position:static!important;display:flex;flex-direction:column;gap:5px;inline-size:auto!important;block-size:auto!important;margin:0!important;overflow:visible!important;clip-path:none!important;white-space:normal!important;background:transparent!important;transform:none;text-align:center}
+.hm-ab.hm-ab.hm-ab.hm-ab--panorama-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));overflow-x:visible}
+.hm-ab.hm-ab--panorama-wrap>button{min-inline-size:0}

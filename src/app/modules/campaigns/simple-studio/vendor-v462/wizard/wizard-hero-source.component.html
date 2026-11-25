@@ -1,0 +1,16 @@
+@if (mode === 'video') {
+ <label class="hw-field">
+  <span class="hw-label">כתובת הסרטון</span>
+  <input #v type="url" id="hwVideo" dir="ltr" [attr.aria-invalid]="missing" aria-required="true" aria-describedby="hwHero-error" [value]="video" placeholder="https://youtube.com/watch?v=..." (input)="videoChange.emit(v.value)" />
+  <small>אפשר קישור YouTube או קישור ישיר ל־MP4/WebM. העלאת קובץ וידאו לשרת תתווסף בהמשך.</small>
+ </label>
+} @else {
+ <div class="hw-field"><span class="hw-label">תמונת Hero מהמחשב</span>
+  <label class="hw-upload" [attr.aria-invalid]="missing" for="hwHeroFile"><span class="hw-upload-icon">▧</span>
+   <strong>{{hasImage?'להחלפת התמונה לחץ כאן':'בחרו תמונה לקמפיין'}}</strong>
+   <small>JPG, PNG או WebP · עד 12MB · התמונות מטופלות במנגנון הקיים</small>
+  </label>
+  <input #file id="hwHeroFile" type="file" class="hw-file-input" [attr.aria-invalid]="missing" aria-required="true" aria-describedby="hwHero-error" accept="image/jpeg,image/png,image/webp,image/gif" (change)="upload.emit(file)" />
+ </div>
+}
+@if (missing) { <small id="hwHero-error" class="hw-field-error">{{mode === 'video' ? 'יש להזין כתובת סרטון תקינה.' : 'יש לבחור תמונת פתיחה לקמפיין.'}}</small> }

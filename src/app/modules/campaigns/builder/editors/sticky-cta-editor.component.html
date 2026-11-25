@@ -1,0 +1,29 @@
+@if (draft$ | async; as draft) {
+  <div class="cd" data-sticky-cta-editor>
+    <div class="cd-row">
+      <span class="cd-label">{{ 'builder.stickyCta.mode' | transloco }}</span>
+      <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.stickyCta.mode' | transloco">
+        @for (m of modes; track m.value) {
+          <button type="button" class="cd-chip" role="radio" [attr.data-mode]="m.value" [class.active]="(cfg(draft).mode ?? 'scroll') === m.value" [attr.aria-checked]="(cfg(draft).mode ?? 'scroll') === m.value"
+            (click)="set({ mode: m.value })">{{ m.label | transloco }}</button>
+        }
+      </div>
+    </div>
+    @if ((cfg(draft).mode ?? 'scroll') !== 'hidden') {
+      <div class="cd-row">
+        <label class="cd-label" for="sticky-cta-label">{{ 'builder.stickyCta.label' | transloco }}</label>
+        <input id="sticky-cta-label" class="cd-input" type="text" data-field="label" maxlength="40" [value]="cfg(draft).label ?? ''"
+          [placeholder]="'builder.stickyCta.labelPlaceholder' | transloco" (change)="set({ label: $any($event.target).value.trim() })">
+      </div>
+      @for (c of colors; track c.key) {
+        <div class="cd-row">
+          <label class="cd-label" [for]="'sticky-' + c.key">{{ c.label | transloco }}</label>
+          <input [id]="'sticky-' + c.key" type="color" class="cd-color" [attr.data-field]="c.key" [value]="cfg(draft)[c.key] || c.fallback"
+            (input)="setColor(c.key, $any($event.target).value)">
+          @if (cfg(draft)[c.key]) { <button type="button" class="cd-link" (click)="setColor(c.key, undefined)">{{ 'builder.badge.resetColor' | transloco }}</button> }
+        </div>
+      }
+    }
+    <p class="cd-note">{{ 'builder.stickyCta.note' | transloco }}</p>
+  </div>
+}

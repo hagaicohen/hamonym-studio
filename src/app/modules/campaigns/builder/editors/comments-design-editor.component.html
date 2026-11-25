@@ -1,0 +1,113 @@
+<div class="cd" data-comments-design>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cd-title-' + block.id">{{ 'builder.commentsDesign.title' | transloco }}</label>
+    <input [id]="'cd-title-' + block.id" class="cd-input" type="text" data-field="title" [value]="data.title ?? ''" maxlength="80"
+      [placeholder]="'builder.commentsDesign.titlePlaceholder' | transloco" (change)="set({ title: $any($event.target).value.trim() })">
+  </div>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cd-desc-' + block.id">{{ 'builder.commentsDesign.description' | transloco }}</label>
+    <textarea [id]="'cd-desc-' + block.id" class="cd-input cd-textarea" data-field="description" rows="2" maxlength="300"
+      [placeholder]="'builder.commentsDesign.descriptionPlaceholder' | transloco" (change)="set({ description: $any($event.target).value.trim() })">{{ data.description ?? '' }}</textarea>
+  </div>
+
+  <button type="button" class="cd-section-head" (click)="toggle('layout')" [attr.aria-expanded]="open.layout">
+    {{ 'builder.commentsDesign.layout' | transloco }}<span class="cd-chevron" [class.open]="open.layout" aria-hidden="true">›</span>
+  </button>
+  @if (open.layout) {
+    <div class="cd-row">
+      <span class="cd-label">{{ 'builder.commentsDesign.style' | transloco }}</span>
+      <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.commentsDesign.style' | transloco">
+        @for (s of styles; track s.value) {
+          <button type="button" class="cd-chip" role="radio" [attr.data-style]="s.value"
+            [class.active]="design.style === s.value" [attr.aria-checked]="design.style === s.value"
+            (click)="set({ style: s.value })">{{ s.label | transloco }}</button>
+        }
+      </div>
+    </div>
+    <div class="cd-row">
+      <span class="cd-label">{{ 'builder.commentsDesign.columns' | transloco }}</span>
+      <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.commentsDesign.columns' | transloco">
+        @for (n of [1, 2]; track n) {
+          <button type="button" class="cd-chip" role="radio" [attr.data-columns]="n"
+            [class.active]="design.columns === n" [attr.aria-checked]="design.columns === n"
+            (click)="set({ columns: $any(n) })">{{ n }}</button>
+        }
+      </div>
+    </div>
+    <div class="cd-row">
+      <label class="cd-label" [for]="'cd-count-' + block.id">{{ 'builder.commentsDesign.initialCount' | transloco }}</label>
+      <select [id]="'cd-count-' + block.id" class="cd-select" data-field="count" (change)="set({ initialCount: +$any($event.target).value })">
+        @for (n of counts; track n) { <option [value]="n" [selected]="design.initialCount === n">{{ n }}</option> }
+      </select>
+    </div>
+    <div class="cd-row">
+      <span class="cd-label">{{ 'builder.commentsDesign.align' | transloco }}</span>
+      <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.commentsDesign.align' | transloco">
+        @for (a of ['start', 'center']; track a) {
+          <button type="button" class="cd-chip" role="radio" [attr.data-align]="a"
+            [class.active]="design.align === a" [attr.aria-checked]="design.align === a"
+            (click)="set({ align: $any(a) })">{{ (a === 'start' ? 'builder.commentsDesign.alignStart' : 'builder.commentsDesign.alignCenter') | transloco }}</button>
+        }
+      </div>
+    </div>
+    <div class="cd-row">
+      <span class="cd-label">{{ 'builder.commentsDesign.formPosition' | transloco }}</span>
+      <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.commentsDesign.formPosition' | transloco">
+        @for (p of ['top', 'bottom']; track p) {
+          <button type="button" class="cd-chip" role="radio" [attr.data-form]="p"
+            [class.active]="design.formPosition === p" [attr.aria-checked]="design.formPosition === p"
+            (click)="set({ formPosition: $any(p) })">{{ (p === 'top' ? 'builder.commentsDesign.formTop' : 'builder.commentsDesign.formBottom') | transloco }}</button>
+        }
+      </div>
+    </div>
+    <div class="cd-row">
+      <label class="cd-label" [for]="'cd-gap-' + block.id">{{ 'builder.commentsDesign.gap' | transloco }}</label>
+      <input [id]="'cd-gap-' + block.id" type="range" class="cd-range" data-field="gap" min="0" max="48" step="4" [value]="design.gap" (input)="set({ gap: +$any($event.target).value })">
+      <span class="cd-value">{{ 'editors.ui.pxValue' | transloco: { value: design.gap } }}</span>
+    </div>
+    <div class="cd-row">
+      <label class="cd-label" [for]="'cd-pad-' + block.id">{{ 'builder.commentsDesign.padding' | transloco }}</label>
+      <input [id]="'cd-pad-' + block.id" type="range" class="cd-range" data-field="padding" min="0" max="64" step="4" [value]="design.padding" (input)="set({ padding: +$any($event.target).value })">
+      <span class="cd-value">{{ 'editors.ui.pxValue' | transloco: { value: design.padding } }}</span>
+    </div>
+    <label class="cd-toggle"><input type="checkbox" data-field="avatar" [checked]="design.showAvatar" (change)="set({ showAvatar: $any($event.target).checked })"> {{ 'builder.commentsDesign.showAvatar' | transloco }}</label>
+    <label class="cd-toggle"><input type="checkbox" data-field="dates" [checked]="design.showDates" (change)="set({ showDates: $any($event.target).checked })"> {{ 'builder.commentsDesign.showDates' | transloco }}</label>
+    <label class="cd-toggle"><input type="checkbox" data-field="search" [checked]="design.showSearch" (change)="set({ showSearch: $any($event.target).checked })"> {{ 'builder.commentsDesign.showSearch' | transloco }}</label>
+  }
+
+  <button type="button" class="cd-section-head" data-section="colors" (click)="toggle('colors')" [attr.aria-expanded]="open.colors">
+    {{ 'builder.commentsDesign.colors' | transloco }}<span class="cd-chevron" [class.open]="open.colors" aria-hidden="true">›</span>
+  </button>
+  @if (open.colors) {
+    <div class="cd-row">
+      <label class="cd-label" [for]="'cd-color-' + block.id">{{ 'builder.commentsDesign.accent' | transloco }}</label>
+      <input [id]="'cd-color-' + block.id" type="color" class="cd-color" data-field="accent" [value]="design.accentColor ?? '#583cd6'"
+        (input)="set({ accentColor: $any($event.target).value })">
+      @if (design.accentColor) {
+        <button type="button" class="cd-link" data-action="reset-accent" (click)="set({ accentColor: undefined })">{{ 'builder.commentsDesign.accentReset' | transloco }}</button>
+      } @else {
+        <span class="cd-hint">{{ 'builder.commentsDesign.accentAuto' | transloco }}</span>
+      }
+    </div>
+    <app-style-role-editor data-surface="section" [roleLabel]="'builder.commentsDesign.sectionSurface' | transloco"
+      [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+      [override]="data.surfaceStyles?.section" resolvedBackground="#fbfbfd" resolvedBorderColor="#e5e7eb" [resolvedBorderRadius]="16"
+      (overrideChange)="setSurface('section', $event)" />
+    <app-style-role-editor data-surface="card" [roleLabel]="'builder.commentsDesign.cardSurface' | transloco"
+      [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+      [override]="data.surfaceStyles?.card" resolvedBackground="#ffffff" resolvedBorderColor="#eef0f4" [resolvedBorderRadius]="14"
+      (overrideChange)="setSurface('card', $event)" />
+  }
+
+  <button type="button" class="cd-section-head" data-section="texts" data-typography-section (click)="toggle('texts')" [attr.aria-expanded]="open.texts">
+    {{ 'builder.commentsDesign.texts' | transloco }}<span class="cd-chevron" [class.open]="open.texts" aria-hidden="true">›</span>
+  </button>
+  @if (open.texts) {
+    @for (r of textRoles; track r.role) {
+      <app-text-role-editor [attr.data-role]="r.role" [roleLabel]="r.label | transloco" [override]="data.textStyles?.[r.role]"
+        (overrideChange)="setText(r.role, $event)" />
+    }
+  }
+
+  <p class="cd-note">{{ 'builder.commentsDesign.moderationNote' | transloco }}</p>
+</div>

@@ -27,18 +27,18 @@ export interface TemplatePalette {
 // Ordered by color family (purple/pink/red, warm, green/teal, blue, neutral).
 // Purple must stay first: it is the default selection (TEMPLATE_PALETTES[0]).
 export const TEMPLATE_PALETTES: TemplatePalette[] = [
-  { id: 'purple',    name: 'סגול',         base: '#7c3aed' },
-  { id: 'pink',      name: 'ורוד',         base: '#ec4899' },
-  { id: 'burgundy',  name: 'בורדו',        base: '#9F1239' },
-  { id: 'red',       name: 'אדום',         base: '#ef4444' },
-  { id: 'orange',    name: 'כתום',         base: '#f59e0b' },
-  { id: 'gold',      name: 'זהב',          base: '#CA8A04' },
-  { id: 'green',     name: 'ירוק',         base: '#22c55e' },
-  { id: 'teal',      name: 'טורקיז',       base: '#10b981' },
-  { id: 'deep-teal', name: 'טורקיז כהה',   base: '#0D9488' },
-  { id: 'blue',      name: 'כחול',         base: '#0ea5e9' },
-  { id: 'dark-blue', name: 'כחול כהה',     base: '#1E40AF' },
-  { id: 'slate',     name: 'אפור כהה',     base: '#475569' },
+  { id: 'purple',    name: 'studio.palettes.purple',         base: '#7c3aed' },
+  { id: 'pink',      name: 'studio.palettes.pink',         base: '#ec4899' },
+  { id: 'burgundy',  name: 'studio.palettes.burgundy',        base: '#9F1239' },
+  { id: 'red',       name: 'studio.palettes.red',         base: '#ef4444' },
+  { id: 'orange',    name: 'studio.palettes.orange',         base: '#f59e0b' },
+  { id: 'gold',      name: 'studio.palettes.gold',          base: '#CA8A04' },
+  { id: 'green',     name: 'studio.palettes.green',         base: '#22c55e' },
+  { id: 'teal',      name: 'studio.palettes.teal',       base: '#10b981' },
+  { id: 'deep-teal', name: 'studio.palettes.deepTeal',   base: '#0D9488' },
+  { id: 'blue',      name: 'studio.palettes.blue',         base: '#0ea5e9' },
+  { id: 'dark-blue', name: 'studio.palettes.darkBlue',     base: '#1E40AF' },
+  { id: 'slate',     name: 'studio.palettes.slate',     base: '#475569' },
 ];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -570,8 +570,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 1 — Classic
   {
     id: 'classic',
-    name: 'קלאסי',
-    description: 'פריסה מאוזנת. נתוני קמפיין ותרומה זה לצד זה, ואחריהם הסיפור, תשורות ושגרירים.',
+    name: 'studio.templates.classic.name',
+    description: 'studio.templates.classic.description',
     layoutMode: 'standard',
     defaultPaletteId: 'green',
     buildPreview: classicPreview,
@@ -582,8 +582,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 2 — Large Hero
   {
     id: 'large-hero',
-    name: 'תמונה גדולה',
-    description: 'תמונת רקע מרשימה תופסת את כל המסך. מושלם לקמפיינים ויזואליים.',
+    name: 'studio.templates.largeHero.name',
+    description: 'studio.templates.largeHero.description',
     layoutMode: 'standard',
     defaultPaletteId: 'blue',
     buildPreview: largeHeroPreview,
@@ -594,8 +594,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 3 — Sidebar Right (in RTL the sidebar block is first child → appears on physical RIGHT)
   {
     id: 'sidebar-right',
-    name: 'סיידבר ימין',
-    description: 'תיבת התרומה והנתונים בצד ימין. תוכן הסיפור בצד שמאל. ניתן להוסיף עוד תוכן לכל עמודה.',
+    name: 'studio.templates.sidebarRight.name',
+    description: 'studio.templates.sidebarRight.description',
     layoutMode: 'standard',
     defaultPaletteId: 'purple',
     buildPreview: sidebarRightPreview,
@@ -606,8 +606,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 4 — Sidebar Left (in RTL the sidebar block is second child → appears on physical LEFT)
   {
     id: 'sidebar-left',
-    name: 'סיידבר שמאל',
-    description: 'תיבת התרומה והנתונים בצד שמאל. תוכן הסיפור בצד ימין. ניתן להוסיף עוד תוכן לכל עמודה.',
+    name: 'studio.templates.sidebarLeft.name',
+    description: 'studio.templates.sidebarLeft.description',
     layoutMode: 'standard',
     defaultPaletteId: 'orange',
     buildPreview: sidebarLeftPreview,
@@ -621,8 +621,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // independent axis that actually produces the visual effect.
   {
     id: 'sidebar-right-hero-column',
-    name: 'סיידבר ימין (לאורך כל העמוד)',
-    description: 'תיבת התרומה והנתונים לאורך כל גובה העמוד בצד ימין. התמונה הראשית מוצגת בעמודה הראשית, לצד הסיידבר — לא מעליו.',
+    name: 'studio.templates.sidebarRightHeroColumn.name',
+    description: 'studio.templates.sidebarRightHeroColumn.description',
     layoutMode: 'sidebar-right',
     heroPlacement: 'main-column',
     defaultPaletteId: 'purple',
@@ -634,8 +634,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 4b — Sidebar Left, full height.
   {
     id: 'sidebar-left-hero-column',
-    name: 'סיידבר שמאל (לאורך כל העמוד)',
-    description: 'תיבת התרומה והנתונים לאורך כל גובה העמוד בצד שמאל. התמונה הראשית מוצגת בעמודה הראשית, לצד הסיידבר — לא מעליו.',
+    name: 'studio.templates.sidebarLeftHeroColumn.name',
+    description: 'studio.templates.sidebarLeftHeroColumn.description',
     layoutMode: 'sidebar-left',
     heroPlacement: 'main-column',
     defaultPaletteId: 'orange',
@@ -647,8 +647,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 5 — Donation First
   {
     id: 'donation-first',
-    name: 'תרומה במרכז',
-    description: 'תיבת התרומה בולטת בחלק העליון ממש. לגיוסים עם מוטיבציה חזקה לתרומה מיידית.',
+    name: 'studio.templates.donationFirst.name',
+    description: 'studio.templates.donationFirst.description',
     layoutMode: 'standard',
     defaultPaletteId: 'orange',
     buildPreview: donationFirstPreview,
@@ -659,8 +659,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 6 — Story First
   {
     id: 'story-first',
-    name: 'סיפור קודם',
-    description: 'הסיפור והתמונות מובילים. התרומה מגיעה אחרי שהמבקר השתכנע.',
+    name: 'studio.templates.storyFirst.name',
+    description: 'studio.templates.storyFirst.description',
     layoutMode: 'standard',
     defaultPaletteId: 'teal',
     buildPreview: storyFirstPreview,
@@ -671,8 +671,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 7 — Ambassadors First
   {
     id: 'ambassadors-first',
-    name: 'שגרירים במרכז',
-    description: 'שגרירי הקמפיין בולטים מיד אחרי הנתונים. מושלם לגיוסים מבוססי קהילה.',
+    name: 'studio.templates.ambassadorsFirst.name',
+    description: 'studio.templates.ambassadorsFirst.description',
     layoutMode: 'standard',
     defaultPaletteId: 'blue',
     buildPreview: ambassadorsFirstPreview,
@@ -683,8 +683,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 8 — Magazine
   {
     id: 'magazine',
-    name: 'מגזין / כתבה',
-    description: 'פריסת מגזין עם שני עמודות. מתאים לקמפיינים עם תוכן ארוך ועשיר.',
+    name: 'studio.templates.magazine.name',
+    description: 'studio.templates.magazine.description',
     layoutMode: 'magazine',
     defaultPaletteId: 'pink',
     buildPreview: magazinePreview,
@@ -695,8 +695,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 9 — Video Hero
   {
     id: 'video-hero',
-    name: 'וידאו ראשון',
-    description: 'הוידאו שלכם תופס את הבמה הראשית. נתוני הגיוס ותרומה ממש מתחת.',
+    name: 'studio.templates.videoHero.name',
+    description: 'studio.templates.videoHero.description',
     layoutMode: 'standard',
     defaultPaletteId: 'red',
     buildPreview: videoHeroPreview,
@@ -707,8 +707,8 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
   // 10 — Minimal Donation Page
   {
     id: 'minimal-donation',
-    name: 'דף תרומה מינימלי',
-    description: 'לוגו, כותרת קצרה וסכום תרומה — בלי כלום מעבר לזה. הכי מהיר בשביל המבקר להשלים תרומה.',
+    name: 'studio.templates.minimalDonation.name',
+    description: 'studio.templates.minimalDonation.description',
     layoutMode: 'standard',
     pageFormat: 'minimal',
     defaultPaletteId: 'green',

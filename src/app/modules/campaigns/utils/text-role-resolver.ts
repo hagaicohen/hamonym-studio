@@ -1,4 +1,5 @@
 import { TextAlign, TextFontSize, TextStyle } from '../../../shared/models/text-style.model';
+import { ensureStackLoaded } from './campaign-fonts';
 import { CampaignTheme } from '../services/campaign-studio-state.service';
 import { CampaignStyleVisualTokens } from '../builder/styles/campaign-styles';
 
@@ -59,7 +60,9 @@ export interface ResolvedTextRole {
   // inheritance, so "no override" must defer to that instead of
   // reasserting a fixed value here.
   fontFamily: string;
-  align:      TextAlign;
+  // 'start' when nothing chose a side: the reading start of the content
+  // language (right in Hebrew, as before; left in English) (D-48).
+  align:      TextAlign | 'start';
 }
 
 export function resolveRoleColor(
@@ -98,11 +101,14 @@ export function resolveRoleFontSizePx(
 }
 
 export function resolveRoleFontFamily(explicit: string | undefined): string {
+  // A catalog web font is fetched the first time an element uses it (D-46).
+  ensureStackLoaded(explicit);
   return explicit || 'inherit';
 }
 
-export function resolveRoleAlign(explicit: TextAlign | undefined, legacyAlign: TextAlign = 'right'): TextAlign {
-  return explicit || legacyAlign;
+export function resolveRoleAlign(explicit: TextAlign | undefined, legacyAlign: TextAlign = 'right'): TextAlign | 'start' {
+  if (explicit) return explicit;
+  return legacyAlign === 'right' ? 'start' : legacyAlign;
 }
 
 // Universal Local Styling — Phase B1 (2026-10). resolveRoleColor() above is

@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { LucideAngularModule, Image as ImageIcon } from 'lucide-angular';
 import { CampaignBlock, CampaignStudioStateService, ImageBlockData } from '../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../core/services/upload.service';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 // Image block editor, shared by Step 9 and the Studio properties panel.
 @Component({
   selector: 'app-image-block-editor',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [TranslocoPipe, CommonModule, LucideAngularModule],
   templateUrl: './image-block-editor.component.html',
   styleUrl: './block-editor.css',
 })

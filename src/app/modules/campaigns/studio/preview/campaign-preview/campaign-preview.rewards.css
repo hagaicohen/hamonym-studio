@@ -4,11 +4,11 @@
 .hm-rewards {
   background: var(--hm-rewards-bg, #06351f);
   color: #fff;
-  padding: 40px clamp(16px, 5vw, 48px);
+  padding-block: 40px 5vw,; padding-inline: clamp(16px, 48px);
   border-bottom: 1px solid rgba(255,255,255,0.1);
   /* Phase 3A -- same Assistant note as .hm-stats/.hm-donate above (never
      actually loaded, so this fallback already renders as Heebo today). */
-  font-family: var(--hm-font-family, 'Assistant', 'Heebo', sans-serif);
+  font-family: var(--hm-font-body, var(--hm-font-family, 'Assistant', 'Heebo', sans-serif));
 }
 .hm-rewards h2 {
   color: #fff;
@@ -66,7 +66,7 @@ select { --hm-select-accent: var(--hm-primary); }
 .hm-reward-filter-toggle {
   display: flex; align-items: center; gap: 6px; font-size: 13px;
   color: rgba(255,255,255,0.85); cursor: pointer;
-  height: 36px; margin-right: auto; flex: 0 0 auto;
+  height: 36px; margin-inline-start: auto; flex: 0 0 auto;
 }
 /* Native checkboxes have no reliable intrinsic size across browsers/zoom
    levels once nothing else on the page constrains them -- pin it explicitly
@@ -91,7 +91,7 @@ select { --hm-select-accent: var(--hm-primary); }
    it just takes its natural 36px height here, same as every other compact
    control. */
 .hm-reward-filters--compact .hm-reward-filter-search { flex: 0 0 auto; }
-.hm-reward-filters--compact .hm-reward-filter-toggle { margin-right: 0; }
+.hm-reward-filters--compact .hm-reward-filter-toggle { margin-inline-start: 0; }
 /* Light-theme override for the sidebar placement (2026-10-06) -- the
    defaults above are light-on-dark, built for .hm-rewards's own always-dark
    background; once Rewards sits in the sidebar it now renders on a white
@@ -320,7 +320,6 @@ select { --hm-select-accent: var(--hm-primary); }
   align-items: stretch;
   gap: 20px;
   padding: 0 2px;
-  direction: rtl;
   min-width: 100%;
   justify-content: center;
 }
@@ -463,7 +462,6 @@ select { --hm-select-accent: var(--hm-primary); }
   font-weight: 900;
   color: var(--hm-secondary, #7DD3FC);
   line-height: 1;
-  direction: rtl;
 }
 
 /* Card body */
@@ -479,7 +477,7 @@ select { --hm-select-accent: var(--hm-primary); }
   color: var(--hm-reward-title, #fff);
   margin: 0 0 10px;
   line-height: 1.4;
-  text-align: right;
+  text-align: start;
 }
 .hm-reward-body p {
   font-size: 13px;
@@ -504,8 +502,7 @@ select { --hm-select-accent: var(--hm-primary); }
   padding: 0;
   margin-bottom: 14px;
   font-family: inherit;
-  direction: rtl;
-  text-align: right;
+  text-align: start;
   display: block;
   opacity: 0.85;
   transition: opacity 0.15s;
@@ -668,7 +665,6 @@ select { --hm-select-accent: var(--hm-primary); }
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s;
-  direction: rtl;
 }
 .hm-overlay-continue-btn:hover { background: #16a34a; }
 
@@ -684,7 +680,6 @@ select { --hm-select-accent: var(--hm-primary); }
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
-  direction: rtl;
 }
 .hm-overlay-cancel-btn:hover {
   border-color: rgba(255,255,255,0.6);

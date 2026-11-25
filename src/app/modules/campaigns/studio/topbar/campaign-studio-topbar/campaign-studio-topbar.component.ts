@@ -9,13 +9,17 @@ import { StudioUiService, DeviceMode } from '../../services/studio-ui.service';
 import { CampaignApiService }         from '../../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
 import { CurrentEntityService }       from '../../../../../core/services/current-entity.service';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
+import { UiLanguageService } from '../../../../../core/i18n/ui-language.service';
+import { LanguageSwitcherComponent } from '../../../../../shared/ui/language-switcher/language-switcher.component';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 @Component({
   selector: 'app-campaign-studio-topbar',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [LanguageSwitcherComponent, HmTextPipe, TranslocoPipe, CommonModule, LucideAngularModule],
   templateUrl: './campaign-studio-topbar.component.html',
   styleUrls: ['./campaign-studio-topbar.component.css'],
 })
@@ -36,7 +40,9 @@ export class CampaignStudioTopbarComponent {
 
   // Where the first save of a new campaign continues: the classic editor
   // ('edit') or the Studio ('studio'), at /campaigns/:id/<editorPath>.
+  @Input() compact=false;
   @Input() editorPath: 'edit' | 'studio' = 'edit';
+  readonly languageSelectorShown = inject(UiLanguageService).englishEnabled;
 
   saveState: SaveState = 'idle';
 
@@ -45,7 +51,7 @@ export class CampaignStudioTopbarComponent {
   advisorError = '';
 
   get title(): string {
-    return this.campaignState.draft.title?.trim() || 'קמפיין חדש';
+    return this.campaignState.draft.title?.trim() || 'studio.topbar.newCampaign';
   }
 
   // AI Visibility Gate — hidden/greyed unless a Platform Admin has granted
@@ -85,7 +91,7 @@ export class CampaignStudioTopbarComponent {
         this.advising = false;
       },
       error: (err) => {
-        this.advisorError = err.error?.error || 'שגיאה בקבלת המלצות';
+        this.advisorError = err.error?.error || 'studio.topbar.advisorFailed';
         this.advising = false;
       },
     });
@@ -117,7 +123,7 @@ export class CampaignStudioTopbarComponent {
       next: (res) => {
         if (!draft.id && res?.id) {
           this.campaignState.patch({ id: res.id });
-          this.router.navigate(['/campaigns', res.id, this.editorPath], { replaceUrl: true });
+          this.router.navigate(['/campaigns', res.id, this.editorPath === 'edit' ? 'classic' : this.editorPath], { replaceUrl: true });
         }
         this.saveState = 'saved';
         setTimeout(() => { this.saveState = 'idle'; }, 2000);

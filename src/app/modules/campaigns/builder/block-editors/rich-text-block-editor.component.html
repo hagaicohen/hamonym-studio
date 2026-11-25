@@ -1,6 +1,6 @@
 @if (part === 'headingStyle') {
 <div class="editor-row" style="margin-top:10px">
-  <label class="editor-label">עיצוב הכותרת</label>
+  <label class="editor-label">{{ 'editors.ui.headingDesign' | transloco }}</label>
   <app-text-style-editor
     [textStyle]="richTextHeadingStyle(block)"
     (textStyleChange)="updateRichTextHeadingStyle(block.id, $event)"
@@ -8,19 +8,50 @@
     [showCta]="false">
   </app-text-style-editor>
 </div>
-} @else {
+ } @else {
+@if (part === "content" || part === "layout") {
+<div class="text-box-controls editor-field" data-text-box-controls>
+<details [open]="part==='content'"><summary>{{'studio.textUx.internal'|transloco}}</summary>
+  <label *ngIf="part==='content'" class="editor-label">{{'studio.visual.appliesTo'|transloco}}<select class="editor-input" data-text-layout-scope [ngModel]="layoutScope" (ngModelChange)="setLayoutScope($event)"><option *ngFor="let s of ['both','desktop','mobile']" [value]="s">{{('studio.visual.'+s)|transloco}}</option></select></label>
+  <div class="text-spacing-slider" *ngFor="let side of paddingSides">
+    <div class="text-spacing-label"><label class="editor-label" [for]="'text-space-'+block.id+'-'+side">{{('studio.visual.'+side)|transloco}}</label><div class="text-spacing-value"><input type="number" min="0" step="1" [attr.data-text-padding]="side" [attr.aria-label]="('studio.visual.'+side)|transloco" [ngModel]="paddingValue(side)" (ngModelChange)="setPadding(side,+$event)"><span>px</span></div></div>
+    <input type="range" step="1" [id]="'text-space-'+block.id+'-'+side" [attr.data-text-padding-slider]="side" [min]="sliderMin(paddingValue(side))" [max]="sliderMax(paddingValue(side),160)" [ngModel]="paddingValue(side)" (ngModelChange)="setPadding(side,+$event)">
+  </div>
+</details><details [open]="part==='content'"><summary>{{'studio.textUx.advancedSize'|transloco}}</summary>
+  <div class="text-spacing-slider"><div class="text-spacing-label"><label class="editor-label" [for]="'text-height-'+block.id">{{'studio.visual.height'|transloco}}<span class="text-auto" *ngIf="!(surface.minHeight??0)">{{'studio.visual.textHeightAuto'|transloco}}</span></label><div class="text-spacing-value"><input data-text-min-height type="number" min="0" step="1" [attr.aria-label]="'studio.visual.height'|transloco" [ngModel]="surface.minHeight??0" (ngModelChange)="setMinimumHeight(+$event)"><span>px</span></div></div><input data-text-height-slider type="range" step="1" [id]="'text-height-'+block.id" [min]="sliderMin(surface.minHeight??0)" [max]="sliderMax(surface.minHeight??0,960)" [ngModel]="surface.minHeight??0" (ngModelChange)="setMinimumHeight(+$event)"></div>
+  <span class="editor-label">{{'studio.visual.textVerticalAlign'|transloco}}</span><div class="text-segments" role="group" [attr.aria-label]="'studio.visual.textVerticalAlign'|transloco"><button type="button" *ngFor="let a of ['start','center','end']" [attr.data-text-vertical]="a" [class.is-active]="(surface.verticalAlign||'start')===a" [attr.aria-pressed]="(surface.verticalAlign||'start')===a" (click)="setSurface({verticalAlign:$any(a)})">{{('studio.visual.vertical_'+a)|transloco}}</button></div>
+
+</details>
+</div>
+}
+@if (part === "content" || part === "style") {
+  @if (part==="content") {
+  <span class="editor-label">{{'studio.visual.textAlign'|transloco}}</span><div class="text-segments" role="group" [attr.aria-label]="'studio.visual.textAlign'|transloco"><button type="button" *ngFor="let a of ['start','center','end']" [attr.data-text-align-choice]="a" [class.is-active]="alignmentSelected(a)" [attr.aria-pressed]="alignmentSelected(a)" [attr.aria-label]="('studio.visual.horizontal_'+a)|transloco" [title]="('studio.visual.horizontal_'+a)|transloco" (click)="setTextAlign($any(a))"><lucide-icon [img]="alignmentIcon(a)" [size]="16" aria-hidden="true"/></button></div>
+}
+<app-text-role-editor [simple]="part==='style'" [expanded]="part==='style'" [showAlign]="true" [roleLabel]="'editors.typography.role.body' | transloco"
+  [override]="asRichText(block.data).bodyStyle" (overrideChange)="updateBodyStyle($event)"></app-text-role-editor>
+}
+@if (part === "content" || part === "writing") {
 <div class="editor-field">
   <app-rich-text-editor
+    [paragraphSpacing]="asRichText(block.data).paragraphSpacing??10" [selectionTypography]="true" [prototypeUx]="part==='writing'" [direction]="textDirection" [hmTextRole]="asRichText(block.data).bodyStyle" [style.color]="bodyColor??null" [style.lineHeight]="asRichText(block.data).lineHeight??1.6"
     [ngModel]="asRichText(block.data).content"
     (ngModelChange)="updateRichText(block.id, $event)"
-    placeholder="כתבו כאן...">
+    [placeholder]="'editors.ui.writeHere' | transloco">
   </app-rich-text-editor>
+</div>
+}
+@if (part === "content" || part === "style") {
+<details><summary>{{'studio.textUx.advancedType'|transloco}}</summary>
   <div class="spacing-row" style="margin-top:10px">
-    <span class="spacing-label">מרווח שורות</span>
-    <input type="range" class="split-slider" min="1" max="3" step="0.1"
+    <span class="spacing-label">{{ 'editors.ui.lineSpacing' | transloco }}</span>
+    <input data-text-line-height type="range" class="split-slider" min="1" max="3" step="0.1"
       [value]="asRichText(block.data).lineHeight || 1.6"
       (input)="updateRichTextLineHeight(block.id, +$any($event.target).value)">
-    <span class="spacing-val">{{ (asRichText(block.data).lineHeight || 1.6) | number:'1.1-1' }}</span>
+    <input type="number" step="0.1" class="editor-input" [ngModel]="asRichText(block.data).lineHeight??1.6" (ngModelChange)="updateRichTextLineHeight(block.id,+$event)">
   </div>
-</div>
+  <label class="editor-label">{{'studio.visual.paragraphSpacing'|transloco}}<input class="editor-input" data-text-paragraph-spacing type="number" min="0" max="64" [ngModel]="asRichText(block.data).paragraphSpacing??10" (ngModelChange)="setParagraphSpacing(+$event)"></label>
+</details>
+}
+
 }

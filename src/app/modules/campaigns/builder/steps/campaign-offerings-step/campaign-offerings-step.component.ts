@@ -14,10 +14,12 @@ import { PartnerLinkModalComponent } from '../../../shared/components/partner-li
 import { CurrentEntityService } from '../../../../../core/services/current-entity.service';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
 @Component({
   selector: 'app-campaign-offerings-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, RouterLink, PartnerLinkModalComponent],
+  imports: [HmTextPipe, TranslocoPipe, HmIconComponent, CommonModule, FormsModule, LucideAngularModule, RouterLink, PartnerLinkModalComponent],
   templateUrl: './campaign-offerings-step.component.html',
   styleUrl: './campaign-offerings-step.component.css',
 })
@@ -77,7 +79,7 @@ export class CampaignOfferingsStepComponent implements OnInit {
 
     const entityId = this.currentEntity.currentEntity()?.id;
     if (!entityId) {
-      this.linkPartnerError = 'לא נמצאה עמותה פעילה';
+      this.linkPartnerError = 'builder.offerings.errors.noEntity';
       return;
     }
 
@@ -95,7 +97,7 @@ export class CampaignOfferingsStepComponent implements OnInit {
       },
       error: () => {
         this.savingCampaignForLink = false;
-        this.linkPartnerError = 'שמירת הקמפיין נכשלה, נסו שוב';
+        this.linkPartnerError = 'builder.offerings.errors.saveFailed';
       },
     });
   }
@@ -130,22 +132,22 @@ export class CampaignOfferingsStepComponent implements OnInit {
   // (2026-07-16). Fixed copy, not preset-driven — every campaign's Offerings
   // step is the same "gifts for donors" concept.
   readonly stepCopy = {
-    offeringsStepTitle: 'תשורות',
-    offeringsStepSubtitle: 'צור תשורה שתופיע לתורמים בקמפיין שלך',
-    offeringsEnableLabel: 'הפעל תשורות לקמפיין',
-    offeringsAddButtonLabel: '+ הוסף תשורה חדשה',
+    offeringsStepTitle: 'builder.offerings.copy.stepTitle',
+    offeringsStepSubtitle: 'builder.offerings.copy.stepSubtitle',
+    offeringsEnableLabel: 'builder.offerings.copy.enable',
+    offeringsAddButtonLabel: 'builder.offerings.copy.add',
   };
 
   readonly copy = {
     icon: 'gift' as const,
-    titleLabel: 'כותרת התשורה',
-    descLabel: 'תיאור התשורה',
-    priceLabel: 'סכום מינימלי (₪)',
-    imageLabel: 'תמונת התשורה',
-    featuredTitle: 'תשורה מומלצת',
-    featuredDesc: 'תשורות מומלצות יופיעו עם כוכב בולט למבקרים',
-    saveBtn: 'שמור תשורה',
-    updateBtn: 'עדכן תשורה',
+    titleLabel: 'builder.offerings.copy.titleLabel',
+    descLabel: 'builder.offerings.copy.descLabel',
+    priceLabel: 'builder.offerings.copy.priceLabel',
+    imageLabel: 'builder.offerings.copy.imageLabel',
+    featuredTitle: 'builder.offerings.copy.featuredTitle',
+    featuredDesc: 'builder.offerings.copy.featuredDesc',
+    saveBtn: 'builder.offerings.copy.saveBtn',
+    updateBtn: 'builder.offerings.copy.updateBtn',
     cta: 'בחירה בתשורה',
   };
 

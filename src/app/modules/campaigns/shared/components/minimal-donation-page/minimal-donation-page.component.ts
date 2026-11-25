@@ -1,4 +1,9 @@
+import {AmountCardComponent} from '../amount-card.component';
+import { minimalTextStyle } from '../../../utils/minimal-text-style';
 import { Component, inject, OnInit, AfterViewInit, OnDestroy, Input, HostBinding } from '@angular/core';
+import { HmAmountButtonsDirective } from '../../../utils/amount-buttons';
+import { campaignLang } from '../../../../../core/i18n/content-language';
+import { FontRole, typographyVars } from '../../../utils/campaign-fonts';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
@@ -11,6 +16,8 @@ import { Ambassador } from '../../../services/ambassador.service';
 import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { HmPublicTextPipe } from '../../../../../core/i18n/content-language';
+import { HmMoneyPipe, HmMoneyArgPipe, HmCurrencyPipe } from '../../../../../core/i18n/money';
 // layout.pageFormat === 'minimal' — a single-purpose donation page (logo,
 // short text, amount picker, CTA) for campaigns that don't need the full
 // Page Builder page. Deliberately a small, self-contained sibling of
@@ -24,14 +31,18 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 @Component({
   selector: 'app-minimal-donation-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, CheckoutModalComponent, CheckoutV2Component],
+  imports: [AmountCardComponent, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CheckoutModalComponent, CheckoutV2Component],
   templateUrl: './minimal-donation-page.component.html',
   styleUrl: './minimal-donation-page.component.css',
 })
 export class MinimalDonationPageComponent implements OnInit, AfterViewInit, OnDestroy {
   private state = inject(CampaignStudioStateService);
+  private readonly contentLang = campaignLang();
+  // Fonts the campaign chose for the language it is shown in (D-46).
+  fonts(draft: CampaignDraft): Record<FontRole, string | null> { return typographyVars(draft, this.contentLang()); }
   private sanitizer = inject(DomSanitizer);
   readonly draft$ = this.state.draft$;
+  readonly studioActive$ = this.state.pageBuilderActive$;
   readonly CHECKOUT_V2_ENABLED = CHECKOUT_V2_ENABLED;
 
   // Advanced text mode (layout.minimalAdvancedText) — same sanitize-then-
@@ -40,6 +51,8 @@ export class MinimalDonationPageComponent implements OnInit, AfterViewInit, OnDe
   // comment on why the extra DOMPurify pass is needed on top of Angular's
   // own, which strips the style attribute the editor's color/font-size
   // marks depend on).
+  headerTextStyle(draft: CampaignDraft, part: 'title' | 'subtitle') { return minimalTextStyle(draft, this.contentLang(), part); }
+
   richHtml(html: string | undefined): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(html || ''));
   }

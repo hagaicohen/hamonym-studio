@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, effect, untracked } from '@angular/core';
+import { RewardResponsibilityNoticeComponent } from '../../../campaigns/shared/components/reward-responsibility-notice/reward-responsibility-notice.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
@@ -9,8 +10,9 @@ import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { formatMoney } from '../../../campaigns/utils/donation-currency';
 // Background auto-refresh (2026-09-27) — same interval-polling pattern
 // already used by notification-bell.component.ts. Without this, a donation
 // that transitions pending -> paid server-side (e.g. Checkout V2's OpenFields
@@ -33,8 +35,15 @@ interface Kpi {
 interface Campaign { id: string; title: string; }
 
 interface Donation {
+  rewards?: Array<{id?:string;title:string;minimumAmount?:number}>;
   id:             string;
   amount:         number;
+  // Multi-currency (2026-11): amount is in `currency`; amount_ils is its ILS
+  // equivalent at the Bank of Israel representative rate (null while the
+  // rate is still pending). Not the amount actually settled to the account.
+  currency?:      'ILS' | 'USD' | 'EUR';
+  amount_ils?:    number | null;
+  fx_status?:     'not_required' | 'pending' | 'resolved';
   donor_name:     string;
   donor_email:    string;
   donor_phone:    string;
@@ -46,6 +55,7 @@ interface Donation {
   is_mock:        boolean;
   campaign_title: string;
   campaign_slug:  string;
+  note?: string | null;
 }
 
 type Period = 'month' | 'last_month' | 'quarter' | 'all';
@@ -63,11 +73,20 @@ const COLUMNS_STORAGE_KEY = 'donations-hidden-columns';
 @Component({
   selector: 'app-donations-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [RewardResponsibilityNoticeComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './donations-page.component.html',
   styleUrl: './donations-page.component.css',
 })
 export class DonationsPageComponent implements OnInit, OnDestroy {
+  purchasedRewards(donation:Donation): Array<{id:string;title:string;quantity:number}> {
+    const grouped=new Map<string,{id:string;title:string;quantity:number}>();
+    for(const reward of donation.rewards || []){
+      const id=reward.id || reward.title;
+      const row=grouped.get(id);
+      if(row)row.quantity++;else grouped.set(id,{id,title:reward.title,quantity:1});
+    }
+    return [...grouped.values()];
+  }
   private http          = inject(HttpClient);
   private destroy$ = new Subject<void>();
   private currentEntity = inject(CurrentEntityService);
@@ -239,6 +258,7 @@ export class DonationsPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.donations  = res.donations ?? [];
+          if(this.selected)this.selected=this.donations.find(d=>d.id===this.selected!.id) || this.selected;
           this.kpi        = res.kpi;
           this.campaigns  = res.campaigns ?? [];
           this.loading    = false;
@@ -289,11 +309,15 @@ export class DonationsPageComponent implements OnInit, OnDestroy {
   }
 
   private downloadCsv(rows: Donation[]): void {
-    const headerRow = ['תורם', 'קמפיין', 'סכום', 'תאריך', 'סטטוס'];
+    // Original amount and currency, and separately the ILS equivalent at the
+    // representative rate -- never presented as the settled amount.
+    const headerRow = ['תורם', 'קמפיין', 'סכום', 'מטבע', 'שווה ערך בש״ח (שער יציג)', 'תאריך', 'סטטוס'];
     const csvRows = rows.map(d => [
       this.donorDisplay(d),
       d.campaign_title,
       d.amount,
+      d.currency || 'ILS',
+      d.fx_status === 'pending' ? 'ממתין לשער' : (d.amount_ils ?? d.amount),
       this.fmtDate(d.completed_at ?? d.created_at),
       this.statusLabel(d.status),
     ]);
@@ -312,6 +336,14 @@ export class DonationsPageComponent implements OnInit, OnDestroy {
 
   fmtMoney(n: number): string {
     return '₪' + Math.round(n).toLocaleString('he-IL');
+  }
+
+  // A donation's own amount: in its currency, with the ILS equivalent next to
+  // a USD/EUR amount.
+  fmtDonationAmount(d: Donation): string {
+    if (!d.currency || d.currency === 'ILS') return this.fmtMoney(d.amount);
+    const original = formatMoney(d.amount, d.currency);
+    return d.amount_ils != null ? `${original} (≈ ${this.fmtMoney(d.amount_ils)})` : `${original} (שער בהמתנה)`;
   }
 
   fmtDate(iso: string | null): string {

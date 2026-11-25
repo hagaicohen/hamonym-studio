@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.spec.json","files":["src/test.ts"],"include":["src/app/modules/campaigns/utils/text-spacing.spec.ts","src/app/modules/campaigns/utils/text-title.spec.ts","src/app/modules/campaigns/utils/campaign-body-root.spec.ts","src/**/*.d.ts","src/app/modules/campaigns/utils/inline-typography.spec.ts"]}

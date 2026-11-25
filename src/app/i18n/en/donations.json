@@ -1,0 +1,64 @@
+{
+  "donations": {
+    "backToOverview": "→ Back to overview",
+    "donationsCampaignscoped": "Donations{{campaignScoped}}",
+    "successfulDonations": "Successful donations",
+    "averageDonation": "Average donation",
+    "failed": "Failed",
+    "allCampaigns": "All campaigns",
+    "allStatuses": "All statuses",
+    "noDonationsFound": "No donations found",
+    "date": "Date",
+    "donationDetails": "Donation details",
+    "created": "Created",
+    "completed": "Completed",
+    "failureReason": "Failure reason",
+    "type": "Type",
+    "testPayment": "TEST payment"
+  },
+  "periods": {
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "months3": "3 months",
+    "all": "All"
+  },
+  "common": {
+    "totalRaised": "Total raised",
+    "searchPlaceholder": "Search by name, email or phone...",
+    "exporting": "Exporting...",
+    "exportCsv": "Export CSV",
+    "columns": "Columns",
+    "loading": "Loading...",
+    "donor": "Donor",
+    "campaign": "Campaign",
+    "amount": "Amount",
+    "status": "Status",
+    "rowsPerPage": "Rows per page:",
+    "previous": "Previous",
+    "pageOf": "Page {{page}} of {{totalPages}}",
+    "next": "Next",
+    "email": "Email",
+    "phone": "Phone"
+  },
+  "status": {
+    "paid": "Paid",
+    "failed": "Failed",
+    "pending": "Pending"
+  },
+  "donors": {
+    "donorsCampaignscoped": "Donors{{campaignScoped}}",
+    "filteredByCampaign": "Filtered by campaign:",
+    "showAllDonors": "Show all donors ✕",
+    "numberOfDonors": "Number of donors",
+    "averagePerDonor": "Average per donor",
+    "noDonorsFound": "No donors found",
+    "totalDonated": "Total donated",
+    "donations": "Donations",
+    "campaigns": "Campaigns",
+    "lastDonation": "Last donation",
+    "donorDetails": "Donor details",
+    "name": "Name",
+    "numberOfDonations": "Number of donations",
+    "firstDonation": "First donation"
+  }
+}

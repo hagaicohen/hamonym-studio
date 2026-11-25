@@ -1,0 +1,18 @@
+<!-- The backdrop closes the drawer (v4.39 bug: it was a <div> and the button-only handler ignored it). -->
+<div class="hu-shade" data-hu-close (click)="view.closeDrawer()"></div>
+<aside class="hu-drawer" role="dialog" aria-modal="true" aria-labelledby="huDrawerTitle">
+  <div class="hu-drawer-head"><button class="hu-drawer-close" id="huDrawerClose" aria-label="סגור" data-hu-close>×</button><h2 id="huDrawerTitle">מוכנות ופרסום</h2><p class="hu-lead">מעבר מהיר בין חוסרים · אין פרסום אמיתי בדמו</p></div>
+  <div id="huDrawerBody">
+    @if (view.drawerOpen()) {
+      @let r = view.readiness();
+      <div class="hu-stat"><strong>{{ r.pct }}%</strong><small>{{ r.done }} מתוך {{ r.total }} תנאי תוכן הושלמו</small></div><div class="hu-bar"><span data-hu-meter [style.width.%]="r.pct"></span></div><p class="hu-hint">דוגמאות עיצוב אינן נחשבות. אחוז ההשלמה אינו אישור פרסום.</p>
+      <h3 class="hu-alert-title">חובה להשלים ({{ r.missing.length }})</h3>
+      @if (r.missing.length) { <ham-mgmt-check-rows [rows]="r.missing" /> } @else { <div class="hu-callout">כל פרטי התוכן הנדרשים הושלמו.</div> }
+      <h3 class="hu-alert-title">תנאי מערכת לפרסום</h3><div class="hu-unavailable"><strong>הפרסום חסום בדמו גם ב־100%.</strong> אישור חשבון/עמותה לפי העניין, סליקה, הרשאות ובדיקות שרת אינם מחוברים כאן. לא ניתן לפרסם מקובץ HTML.</div>
+      <h3 class="hu-alert-title">מומלץ, לא חלק מהאחוז</h3><ham-mgmt-check-rows [rows]="r.recommended" />
+      <h3 class="hu-alert-title">תנאי תוכן שהושלמו ({{ r.completed.length }})</h3>
+      @if (r.completed.length) { <ham-mgmt-check-rows [rows]="r.completed" /> } @else { <p class="hu-hint">עדיין לא הושלם אף תנאי תוכן.</p> }
+    }
+  </div>
+  <div class="hu-drawer-actions"><button class="hu-action" type="button" data-hu-close>סגור</button><button type="button" class="hu-action primary" data-hu-page="publish">עבור למסך הפרסום</button></div>
+</aside>

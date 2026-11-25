@@ -1,0 +1,7 @@
+<div class="hw-foot-actions" role="group" aria-label="ניווט בין שלבי הקמפיין" dir="rtl">
+  <button type="button" class="hw-back" id="hwBack" (click)="back.emit()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span>חזרה</span></button>
+  <button type="button" class="hw-primary" id="hwNext" (click)="next.emit()">
+    <span>{{ step === 5 ? 'כניסה ל־Simple Studio' : (step === 4 || simple && step === 3) ? 'בדיקת מוכנות' : 'המשך לשלב הבא' }}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+  </button>
+</div>
+@if(step===5){<span class="hw-foot-hint">הקמפיין עדיין לא פורסם</span>}

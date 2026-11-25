@@ -7,25 +7,25 @@
         <div class="ss-header-icon">
           <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-icon"></lucide-angular>
         </div>
-        <h2 class="ss-title">חסויות</h2>
+        <h2 class="ss-title">{{ 'builder.steps.sponsorships' | transloco }}</h2>
       </div>
       <div class="ss-visibility-toggle" *ngIf="sponsorsBlock">
-        <span class="ss-toggle-label">{{ sponsorsVisible ? 'מוצג בדף' : 'מוסתר' }}</span>
+        <span class="ss-toggle-label">{{ sponsorsVisible ? ('builder.steps.shownOnThePage' | transloco) : ('builder.steps.hidden' | transloco) }}</span>
         <button class="ss-toggle-btn" [class.ss-toggle-btn--on]="sponsorsVisible"
                 (click)="toggleSponsorsVisible()">
           <span class="ss-toggle-thumb"></span>
         </button>
       </div>
     </div>
-    <p class="ss-subtitle">ארגונים ושותפים שיוצגו בדף הקמפיין</p>
+    <p class="ss-subtitle">{{ 'builder.steps.organizationsAndPartnersShownOn' | transloco }}</p>
 
     <!-- PLACEMENT — only meaningful when there's a sidebar to place it in -->
     <div class="ss-placement-row" *ngIf="draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left'">
-      <span class="ss-placement-label">מיקום החסויות</span>
+      <span class="ss-placement-label">{{ 'builder.steps.sponsorshipsPosition' | transloco }}</span>
       <button class="ss-placement-btn" [class.ss-placement-btn--active]="!state.isSidebarSection('sponsors')"
-              (click)="state.setSidebarSection('sponsors', false)">מתחת לתוכן (רוחב מלא)</button>
+              (click)="state.setSidebarSection('sponsors', false)">{{ 'builder.steps.belowTheContentFullWidth' | transloco }}</button>
       <button class="ss-placement-btn" [class.ss-placement-btn--active]="state.isSidebarSection('sponsors')"
-              (click)="state.setSidebarSection('sponsors', true)">בסיידבר</button>
+              (click)="state.setSidebarSection('sponsors', true)">{{ 'builder.steps.inTheSidebar' | transloco }}</button>
     </div>
   </div>
 
@@ -37,41 +37,41 @@
 
       <!-- Logo -->
       <div class="sf-field">
-        <label class="sf-label">לוגו</label>
+        <label class="sf-label">{{ 'builder.steps.logo' | transloco }}</label>
         <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
         <div class="sf-logo-area" *ngIf="!form.logoUrl">
           <label for="sp-logo-input" class="sf-upload-label">
             <span class="sf-upload-icon"><app-icon name="cloud-upload" /></span>
-            <span>לחץ להעלאת לוגו</span>
-            <span class="sf-upload-hint">PNG / SVG מומלץ, רקע שקוף</span>
+            <span>{{ 'builder.steps.clickToUploadALogo' | transloco }}</span>
+            <span class="sf-upload-hint">{{ 'builder.steps.pngSvgRecommendedTransparentBackground' | transloco }}</span>
           </label>
         </div>
         <div class="sf-logo-preview" *ngIf="form.logoUrl">
-          <img [src]="form.logoUrl" alt="לוגו">
+          <img [src]="form.logoUrl" [alt]="'builder.steps.logo' | transloco">
           <div class="sf-logo-actions">
-            <label for="sp-logo-input" class="sf-img-btn">החלף</label>
-            <button type="button" class="sf-img-btn sf-img-btn--remove" (click)="form.logoUrl = ''">הסר</button>
+            <label for="sp-logo-input" class="sf-img-btn">{{ 'builder.steps.replace' | transloco }}</label>
+            <button type="button" class="sf-img-btn sf-img-btn--remove" (click)="form.logoUrl = ''">{{ 'builder.steps.remove' | transloco }}</button>
           </div>
         </div>
       </div>
 
       <!-- Name -->
       <div class="sf-field">
-        <label class="sf-label">שם נותן/ת החסות <span class="sf-req">*</span></label>
-        <input class="sf-input" type="text" [(ngModel)]="form.name" placeholder="למשל: קרן רוטשילד">
+        <label class="sf-label">{{ 'builder.steps.sponsorName' | transloco }} <span class="sf-req">*</span></label>
+        <input class="sf-input" type="text" [(ngModel)]="form.name" [placeholder]="'builder.steps.forExampleRothschildFoundation' | transloco">
       </div>
 
       <!-- Link -->
       <div class="sf-field">
-        <label class="sf-label">קישור לאתר (רשות)</label>
+        <label class="sf-label">{{ 'builder.steps.websiteLinkOptional' | transloco }}</label>
         <input class="sf-input" type="url" [(ngModel)]="form.link" placeholder="https://...">
       </div>
 
       <!-- Actions -->
       <div class="sf-actions">
-        <button class="sf-btn-clear" type="button" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
+        <button class="sf-btn-clear" type="button" (click)="clearForm()"><app-icon name="trash" /> {{ 'builder.steps.clear' | transloco }}</button>
         <button class="sf-btn-save" type="button" (click)="save()" [disabled]="!form.name.trim()">
-          <app-icon name="save" /> {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
+          <app-icon name="save" /> {{ isEditing ? ('builder.steps.updateSponsorship' | transloco) : ('builder.steps.saveSponsorship' | transloco) }}
         </button>
       </div>
 
@@ -81,14 +81,14 @@
     <div class="sponsor-preview-panel">
       <div class="sp-header">
         <lucide-angular [img]="Eye" [size]="16" class="sp-eye"></lucide-angular>
-        <span>תצוגה מקדימה</span>
+        <span>{{ 'builder.steps.preview' | transloco }}</span>
       </div>
       <div class="sp-card">
         <div class="sp-logo-wrap">
           <img *ngIf="form.logoUrl" [src]="form.logoUrl" alt="">
           <span *ngIf="!form.logoUrl" class="sp-logo-placeholder"><app-icon name="building" /></span>
         </div>
-        <div class="sp-name">{{ form.name || 'שם החסות' }}</div>
+        <div class="sp-name">{{ form.name || ('builder.steps.sponsorshipName' | transloco) }}</div>
         <div class="sp-link" *ngIf="form.link">{{ form.link }}</div>
       </div>
     </div>
@@ -100,9 +100,9 @@
     <div class="ss-list-header">
       <div class="ss-list-title">
         <lucide-angular [img]="HandshakeIcon" [size]="18" class="ss-list-icon"></lucide-angular>
-        החסויות בקמפיין ({{ draft.sponsors.length }})
+        {{ 'builder.steps.sponsorshipsInTheCampaignLength' | transloco: { length: (draft.sponsors.length) } }}
       </div>
-      <button class="ss-add-btn" type="button" (click)="clearForm()">+ הוסף חסות חדשה</button>
+      <button class="ss-add-btn" type="button" (click)="clearForm()">{{ 'builder.steps.addANewSponsorship' | transloco }}</button>
     </div>
 
     <div class="ss-grid">
@@ -117,8 +117,8 @@
           <div class="ss-card-name">{{ s.name }}</div>
           <div class="ss-card-link" *ngIf="s.link">{{ s.link }}</div>
           <div class="ss-card-actions">
-            <button class="ss-card-btn ss-card-btn--delete" type="button" (click)="deleteSponsor(s.id)"><app-icon name="trash" /> מחיקה</button>
-            <button class="ss-card-btn ss-card-btn--edit"   type="button" (click)="editSponsor(s)"><app-icon name="pencil" /> עריכה</button>
+            <button class="ss-card-btn ss-card-btn--delete" type="button" (click)="deleteSponsor(s.id)"><app-icon name="trash" /> {{ 'builder.steps.delete' | transloco }}</button>
+            <button class="ss-card-btn ss-card-btn--edit"   type="button" (click)="editSponsor(s)"><app-icon name="pencil" /> {{ 'builder.steps.edit' | transloco }}</button>
           </div>
         </div>
       </div>
@@ -127,6 +127,6 @@
 
   <!-- EMPTY STATE -->
   <hm-empty-state *ngIf="draft.sponsors.length === 0" size="compact" [headingLevel]="3"
-    [icon]="HandshakeIcon" title="טרם נוספו חסויות" description="חסויות הן רשות — ניתן לדלג"></hm-empty-state>
+    [icon]="HandshakeIcon" [title]="'builder.steps.noSponsorshipsAddedYet' | transloco" [description]="'builder.steps.sponsorshipsAreOptionalYouCan' | transloco"></hm-empty-state>
 
 </div>

@@ -1,0 +1,36 @@
+@if (!hidden) {
+  <section class="cd-panel" [attr.data-expired]="parts?.expired ? '' : null">
+    @if (data.title) {
+      <h2 class="cd-title" data-text-role="sectionTitle" [hmTextRole]="role('sectionTitle')" [style.color]="roleColor('sectionTitle')"
+        [attr.data-inline-edit]="'blocks#' + block.id + '.data.title'">{{ data.title }}</h2>
+    }
+    @if (!parts) {
+      <p class="cd-hint" data-countdown-unset>{{ 'publicPage.countdown.unset' | hmPublic }}</p>
+    } @else if (parts.expired) {
+      <p class="cd-expired" data-countdown-expired>{{ data.expiredText || ('publicPage.countdown.expired' | hmPublic) }}</p>
+      @if (editing && data.hideWhenExpired) { <p class="cd-hint">{{ 'publicPage.countdown.hiddenWhenExpired' | hmPublic }}</p> }
+    } @else {
+      <div class="cd-units" role="timer" aria-live="off"
+        [attr.aria-label]="(data.showSeconds === false ? 'publicPage.countdown.spokenNoSeconds' : 'publicPage.countdown.spoken') | hmPublic: { days: parts.days, hours: parts.hours, minutes: parts.minutes, seconds: parts.seconds }">
+        <div class="cd-unit" data-unit="days" aria-hidden="true">
+          <span class="cd-value" data-text-role="value" [hmTextRole]="role('value')" [style.color]="roleColor('value')">{{ parts.days }}</span>
+          <span class="cd-label" data-text-role="label" [hmTextRole]="role('label')" [style.color]="roleColor('label')">{{ 'publicPage.countdown.days' | hmPublic }}</span>
+        </div>
+        <div class="cd-unit" data-unit="hours" aria-hidden="true">
+          <span class="cd-value" data-text-role="value" [hmTextRole]="role('value')" [style.color]="roleColor('value')">{{ pad(parts.hours) }}</span>
+          <span class="cd-label" data-text-role="label" [hmTextRole]="role('label')" [style.color]="roleColor('label')">{{ 'publicPage.countdown.hours' | hmPublic }}</span>
+        </div>
+        <div class="cd-unit" data-unit="minutes" aria-hidden="true">
+          <span class="cd-value" data-text-role="value" [hmTextRole]="role('value')" [style.color]="roleColor('value')">{{ pad(parts.minutes) }}</span>
+          <span class="cd-label" data-text-role="label" [hmTextRole]="role('label')" [style.color]="roleColor('label')">{{ 'publicPage.countdown.minutes' | hmPublic }}</span>
+        </div>
+        @if (data.showSeconds !== false) {
+          <div class="cd-unit" data-unit="seconds" aria-hidden="true">
+            <span class="cd-value" data-text-role="value" [hmTextRole]="role('value')" [style.color]="roleColor('value')">{{ pad(parts.seconds) }}</span>
+            <span class="cd-label" data-text-role="label" [hmTextRole]="role('label')" [style.color]="roleColor('label')">{{ 'publicPage.countdown.seconds' | hmPublic }}</span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+}

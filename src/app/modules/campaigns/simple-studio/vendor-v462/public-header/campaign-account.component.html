@@ -1,0 +1,17 @@
+<button type="button" class="ham-header-login" aria-label="חשבון משתמש" title="חשבון משתמש" aria-haspopup="menu" [attr.aria-expanded]="expanded" (click)="toggle($event)">
+  <img *ngIf="photo" alt="תמונת משתמש" [src]="photo">
+  <span *ngIf="!photo && accountUser" aria-hidden="true">{{initial}}</span>
+  <svg *ngIf="!photo && !accountUser" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/></svg>
+</button>
+<div class="ham-account-popover" [hidden]="!expanded" role="menu">
+  <strong>{{ accountUser?.name || "החשבון שלי" }}</strong>
+  <ng-container *ngIf="accountUser; else guest">
+    <button type="button" data-ham-account-action="profile" (click)="action('profile',$event)">האזור האישי</button>
+    <button type="button" data-ham-account-action="donations" (click)="action('donations',$event)">התרומות שלי</button>
+    <button type="button" data-ham-account-action="logout" (click)="action('logout',$event)">התנתקות</button>
+  </ng-container>
+  <ng-template #guest>
+    <button type="button" data-ham-account-action="login" (click)="action('login',$event)">התחברות</button>
+    <button type="button" data-ham-account-action="register" (click)="action('register',$event)">הרשמה</button>
+  </ng-template>
+</div>

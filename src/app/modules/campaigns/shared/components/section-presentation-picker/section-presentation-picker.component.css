@@ -1,4 +1,4 @@
-:host { display: block; direction: rtl; font-family: inherit; }
+:host { display: block;  font-family: inherit; }
 
 .spp-wrap { display: flex; flex-direction: column; gap: 8px; }
 .spp-label { font-size: 13px; font-weight: 700; color: #334155; }

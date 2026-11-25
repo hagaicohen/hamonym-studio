@@ -1,6 +1,6 @@
 .step-container {
   display: flex; flex-direction: column; gap: 20px;
-  padding: 28px 24px; direction: rtl;
+  padding: 28px 24px; 
 }
 
 .step-header {
@@ -62,12 +62,12 @@
 }
 .field-toggle--on .toggle-switch { background: #7c3aed; }
 .toggle-thumb {
-  position: absolute; top: 3px; right: 3px;
+  position: absolute; top: 3px; inset-inline-start: 3px;
   width: 18px; height: 18px; border-radius: 50%;
   background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   transition: transform 0.2s;
 }
-.field-toggle--on .toggle-thumb { transform: translateX(-20px); }
+.field-toggle--on .toggle-thumb { transform: translateX(calc(-20px * var(--hm-dir-sign, 1))); }
 
 /* Amounts grid */
 .amounts-grid {
@@ -148,3 +148,5 @@
   font-size: 13px; color: #78350f; line-height: 1.5;
 }
 .info-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.currency-pending { color: #92400e; }

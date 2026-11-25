@@ -51,7 +51,7 @@
   flex-direction: column;
   justify-content: center;
   gap: 14px;
-  padding: 40px clamp(24px, 4vw, 56px);
+  padding-block: 40px 4vw,; padding-inline: clamp(24px, 56px);
   color: #ffffff;
   background: linear-gradient(135deg, var(--hm-primary, #583cd6), var(--hm-secondary, #6fc9eb));
   /* Sole floor: keeps the content side from collapsing to almost nothing
@@ -257,7 +257,6 @@
   width: 100%;
   padding: 60px 48px 80px;
   gap: 0;
-  direction: rtl;
 }
 .hm-hero-container--mobile {
   flex-direction: column;
@@ -425,7 +424,7 @@
 .hm-project-description ::ng-deep h3 { font-weight: 700; color: var(--hm-heading); margin: 14px 0 6px; }
 .hm-project-description ::ng-deep a  { color: var(--hm-link); }
 .hm-project-description ::ng-deep ul,
-.hm-project-description ::ng-deep ol { padding-right: 20px; margin-bottom: 10px; }
+.hm-project-description ::ng-deep ol { padding-inline-start: 20px; margin-bottom: 10px; }
 
 /* Overlaid on the Hero photo — needs the same legibility treatment as
    .hm-hero-subtitle (light text + shadow), not the plain-page dark text
@@ -482,9 +481,9 @@
     font-size: 0;
     border-top: 9px solid transparent;
     border-bottom: 9px solid transparent;
-    border-right: 0;
-    border-left: 14px solid currentColor;
-    margin-left: 3px;
+    border-inline-start: 0;
+    border-inline-end: 14px solid currentColor;
+    margin-inline-end: 3px;
 }
 
 /* ── Hero video lightbox ── */
@@ -511,7 +510,7 @@
 .hm-video-lightbox-close {
   position: absolute;
   top: 20px;
-  left: 20px;
+  inset-inline-end: 20px;
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
@@ -536,7 +535,6 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  direction: rtl;
   padding: 0 24px;
 }
 
@@ -592,7 +590,7 @@
 /* Org logo circle — absolute so it doesn't shift the centered text */
 .hm-hero-org-logo {
   position: absolute;
-  left: 48px;
+  inset-inline-end: 48px;
   top: 50%;
   transform: translateY(-50%);
   width: 128px; height: 128px;
@@ -614,8 +612,8 @@
    physical-side placement before this; direction:rtl on the page means
    `right` here IS the actual CSS `right` property (not a values swap). */
 .hm-hero-org-logo--right {
-  left: auto;
-  right: 48px;
+  inset-inline-end: auto;
+  inset-inline-start: 48px;
 }
 /* Shape/size (2026-09-28) — sm/md/lg are proportional steps around this
    element's own previous fixed 128px ("md"), same shape/size vocabulary as
@@ -669,3 +667,25 @@
 .hm-logo-above-badge--sm { width: 84px; height: 84px; }
 .hm-logo-above-badge--lg { width: 140px; height: 140px; }
 
+
+/* English (LTR) content (D-48): a side the manager chose stays that side. The
+   rules above are written for the RTL page; in LTR the same visual result
+   needs the opposite logical value. Centered placements need nothing. */
+.hm-opening-org:dir(ltr) { align-self: flex-start; }
+.hm-opening-org--center:dir(ltr) { align-self: center; }
+.hm-opening-org--right:dir(ltr) { align-self: flex-end; }
+.hm-hero-org-logo:dir(ltr) { inset-inline-end: auto; inset-inline-start: 48px; }
+.hm-hero-org-logo--center:dir(ltr) { inset-inline-start: 50%; }
+.hm-hero-org-logo--right:dir(ltr) { inset-inline-start: auto; inset-inline-end: 48px; }
+
+/* Campaign details typography (layout.metaTextStyle): presentation only. */
+.hm-meta--styled .hm-meta-badge {
+  color: var(--hm-meta-color, inherit);
+  font-size: var(--hm-meta-size, inherit);
+  font-weight: var(--hm-meta-weight, inherit);
+  font-family: var(--hm-meta-font, inherit);
+}
+.hm-opening-meta.hm-meta--styled .hm-meta-badge { font-size: var(--hm-meta-size, 12px); }
+
+/* Long/custom-size copy remains in normal flow in both public and Studio views. */
+.hm-hero-copy{min-inline-size:0}.hm-hero-copy>.hm-hero-title,.hm-hero-copy>.hm-hero-subtitle{flex-shrink:0;max-inline-size:100%;overflow-wrap:anywhere}

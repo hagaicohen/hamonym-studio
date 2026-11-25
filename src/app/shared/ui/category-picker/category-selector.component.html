@@ -1,5 +1,5 @@
-<div class="hm-cat">
-  <label class="hm-cat-label" [for]="inputId">חיפוש ובחירת קטגוריות</label>
+<div class="hm-cat" dir="rtl">
+  <label class="hm-cat-label" [for]="inputId">{{ label }}</label>
   <div class="hm-cat-search">
     <lucide-icon class="hm-cat-search-icon" [img]="Search" [size]="18" aria-hidden="true"></lucide-icon>
     <input
@@ -12,11 +12,12 @@
       [attr.aria-controls]="inputId + '-all'"
       [value]="query()"
       (input)="onSearch($event)"
+      (keydown)="searchKey($event)"
       (keydown.escape)="clearSearch(search)"
     />
   </div>
 
-  <div class="hm-cat-group">
+  @if (multiple) { <div class="hm-cat-group">
     <div class="hm-cat-heading" [id]="inputId + '-selected'" aria-live="polite">
       קטגוריות שנבחרו ({{ selectedIds.length }})
     </div>
@@ -24,7 +25,7 @@
       <ul class="hm-chip-list" [attr.aria-labelledby]="inputId + '-selected'">
         @for (id of selectedIds; track id) {
           <li class="hm-chip hm-chip--picked">
-            <span>{{ labelOf(id) }}</span>
+            <span class="hm-cat-emoji" aria-hidden="true">{{ emojiForId(id) }}</span><span>{{ labelOf(id) }}</span>
             <button type="button" class="hm-chip-remove" [attr.aria-label]="'הסר ' + labelOf(id)" (click)="remove(id)">
               <lucide-icon [img]="X" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
             </button>
@@ -36,12 +37,12 @@
     }
   </div>
 
-  <hr class="hm-cat-divider" />
+  <hr class="hm-cat-divider" /> }
 
   <div class="hm-cat-group">
     <div class="hm-cat-heading" [id]="inputId + '-all-title'">כל הקטגוריות</div>
     @if (visible.length) {
-      <ul class="hm-chip-list" [id]="inputId + '-all'" [attr.aria-labelledby]="inputId + '-all-title'">
+      <ul #options class="hm-chip-list hm-chip-list--options" [id]="inputId + '-all'" [attr.aria-labelledby]="inputId + '-all-title'" (keydown)="optionKey($event)">
         @for (category of visible; track category.id) {
           <li>
             <button
@@ -51,11 +52,13 @@
               [attr.aria-pressed]="isSelected(category.id)"
               (click)="toggle(category.id)"
             >
-              @if (isSelected(category.id)) {
-                <lucide-icon [img]="Check" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
-              }
-              <span>{{ category.label }}</span>
+              <span class="hm-cat-emoji" aria-hidden="true">{{ emoji(category) }}</span>
+              <span class="hm-cat-option-label">{{ categoryLabel(category) }}</span>
+              @if (isSelected(category.id)) { <lucide-icon [img]="Check" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon> }
             </button>
+            @for (sub of matchingSubcategories(category); track sub) {
+              <button type="button" class="hm-chip hm-cat-subcategory" [class.is-selected]="isSelected(category.id) && subcategory === sub" [attr.aria-pressed]="isSelected(category.id) && subcategory === sub" (click)="chooseSubcategory(category.id, sub)">↳ {{ sub }}</button>
+            }
           </li>
         }
       </ul>
@@ -63,4 +66,5 @@
       <p class="hm-cat-empty" [id]="inputId + '-all'" role="status">לא נמצאו קטגוריות התואמות לחיפוש</p>
     }
   </div>
+  @if (!multiple) { <p class="hm-cat-empty" role="status" aria-live="polite">{{ selectedIds.length ? 'נבחר: ' + labelOf(selectedIds[0]) : 'לא נבחר תחום ראשי' }}</p> }
 </div>

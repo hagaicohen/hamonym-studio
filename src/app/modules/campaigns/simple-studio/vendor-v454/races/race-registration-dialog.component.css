@@ -1,0 +1,40 @@
+/* Moved verbatim from the former inline <style id="ham-v214-race-registration-style">. */
+.ham-race-registration-dialog{border:0!important;border-radius:18px!important;padding:0!important;width:min(570px,calc(100vw - 22px))!important;max-width:570px!important;max-height:min(90dvh,850px)!important;overflow:hidden!important;box-shadow:0 22px 70px #11281b38!important;background:#fff!important;color:#263f37!important;direction:rtl!important;font-family:Heebo,Arial,sans-serif!important}
+ .ham-race-registration-dialog::backdrop{background:rgba(19,37,34,.56)}
+ .ham-race-registration-dialog *{box-sizing:border-box}
+ .ham-race-registration-dialog button,.ham-race-registration-dialog input{font-family:inherit}
+ .hrm-shell{display:flex;flex-direction:column;max-height:min(90dvh,850px);min-height:0}
+ .hrm-head{position:sticky;top:0;z-index:10;flex-shrink:0;display:flex;align-items:center;gap:12px;justify-content:space-between;background:#fff;border-bottom:1px solid #ebf0ed;padding:14px 20px 13px}
+ .hrm-head-copy{min-width:0}.hrm-head h2{font-size:19px;line-height:1.35;color:#245a4c;margin:0!important;font-weight:850}.hrm-sub{display:block;color:#82968c;font-size:11px;margin-top:3px}
+ .hrm-close{flex:none;width:32px;height:32px;display:grid;place-items:center;border:1px solid #d8e5de;border-radius:9px;background:white;color:#476c5e;cursor:pointer}
+ .hrm-body{overflow:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:16px 20px 12px;scrollbar-width:thin}
+ .hrm-lead{font-size:12px;color:#6f8478;margin:0 0 12px}
+ .hrm-rowlist{display:grid;gap:6px;margin:0 0 12px}
+ .hrm-person-row{display:flex;align-items:center;gap:8px;min-height:52px;padding:9px 11px;border:1px solid #dce8e0;background:#fafcfb;border-radius:11px}
+ .hrm-person-summary{flex:1;min-width:0;display:grid;gap:2px}.hrm-person-summary strong{font-size:12px;color:#244d40;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hrm-person-summary small{font-size:10px;color:#85968c}
+ .hrm-mini{width:30px;height:30px;display:grid;place-items:center;border:1px solid #dce7df;border-radius:8px;background:white;color:#337365;cursor:pointer;font-size:15px;flex:none}.hrm-mini:hover{background:#edf6f1}.hrm-mini.hrm-delete{color:#b26965}
+ .hrm-addbar{display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+ .hrm-linebtn{font-size:12px;font-weight:750;min-height:36px;border:1px solid #cfe2d8;border-radius:10px;color:#267063;background:#fff;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+ .hrm-linebtn:hover{background:#f3faf6}.hrm-upload-input{display:none!important}
+ .hrm-edit{border:1px solid #cddfd5;border-radius:13px;background:#f8fbf9;padding:13px;display:grid;gap:11px;margin-bottom:12px}
+ .hrm-edit-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;color:#2c5548}
+ .hrm-field{display:grid;gap:5px;min-width:0}.hrm-field label{font-size:11px;font-weight:700;color:#506b5d;text-align:right}.hrm-field input,.hrm-field button.hrm-select{width:100%;min-height:39px;background:white;border:1px solid #d3e1d9;border-radius:9px;padding:8px 10px;color:#264e41;font-size:12px;outline:0;text-align:right}
+ .hrm-field input:focus,.hrm-field button.hrm-select:focus{border-color:#2a8372;box-shadow:0 0 0 2px #2a837222}
+ .hrm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .hrm-select-wrap{position:relative;min-width:0}
+ .hrm-field button.hrm-select{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:9px 12px;min-height:42px;transition:border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
+ .hrm-field button.hrm-select>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-weight:550}
+ .hrm-field button.hrm-select .hrm-chevron{display:block;flex:0 0 16px;width:16px;height:16px;color:#66887a;transition:transform .18s ease}
+ .hrm-field button.hrm-select[aria-expanded="true"]{border-color:#2a8372;background:#fbfefd;box-shadow:0 0 0 2px #2a837218}
+ .hrm-field button.hrm-select[aria-expanded="true"] .hrm-chevron{transform:rotate(180deg);color:#277e6e}
+ .hrm-menu{position:absolute;z-index:40;top:calc(100% + 5px);right:0;left:0;max-height:210px;overflow:auto;background:#fff;border:1px solid #d4e4da;border-radius:11px;box-shadow:0 12px 30px #1b3c2f1c;padding:5px}
+ .hrm-menu[hidden]{display:none!important}.hrm-menu button{display:block;text-align:right;width:100%;padding:9px 8px;background:transparent;border:none;border-radius:7px;font-size:12px;color:#33574a;cursor:pointer}.hrm-menu button:hover,.hrm-menu button[aria-selected="true"]{background:#edf7f2;color:#17614d}
+ .hrm-date{position:relative}.hrm-date input{direction:ltr;text-align:right;padding-inline-start:10px;padding-inline-end:32px;color-scheme:light}.hrm-date .hrm-calendar{position:absolute;inset-inline-start:9px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#407766;cursor:pointer;font-size:17px}
+ .hrm-checkline{display:flex;align-items:center;gap:7px;font-size:11px;color:#50695e}.hrm-checkline input{accent-color:#257766;width:16px;height:16px}
+ .hrm-edit-actions{display:flex;justify-content:flex-start;gap:7px}.hrm-primary{border:0;background:#226e60;color:white;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer}.hrm-ghost{background:white;border:1px solid #d9e6de;color:#526f61;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:12px}
+ .hrm-footer{flex-shrink:0;border-top:1px solid #e7eee9;background:white;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+ .hrm-next{background:#226e60;border:0;border-radius:9px;color:white;padding:10px 16px;font-size:12px;font-weight:800;cursor:pointer}.hrm-next:disabled{opacity:.4;cursor:not-allowed}
+ .hrm-notice{font-size:11px;color:#70867b;margin:10px 0}.hrm-error{color:#ae504a!important;font-size:11px!important;margin:5px 0}.hrm-ok{color:#217157;font-size:11px}
+ .hrm-contact{display:grid;gap:12px}.hrm-total{border:1px solid #d9e8df;background:#f5faf7;border-radius:11px;padding:12px;display:flex;justify-content:space-between;font-size:13px;font-weight:800}
+ .hrm-muted{color:#80948b;font-size:11px}.hrm-body h3{margin:4px 0 12px;font-size:14px;color:#2d594d}
+ @media(max-width:460px){.hrm-head{padding:11px 14px}.hrm-body{padding:12px 14px}.hrm-footer{padding:11px 14px}.hrm-head h2{font-size:17px}.hrm-addbar{gap:5px}.hrm-linebtn{font-size:11px;padding:6px 8px}.hrm-grid{gap:7px}}

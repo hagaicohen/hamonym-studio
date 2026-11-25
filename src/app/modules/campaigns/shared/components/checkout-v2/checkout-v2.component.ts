@@ -1,3 +1,9 @@
+import { paymentConfirmation } from './payment-confirmation';
+import { Subscription as PaymentSubscription } from 'rxjs';
+import {AmountCardComponent} from '../amount-card.component';
+import { minimalTextStyle } from '../../../utils/minimal-text-style';
+import { CampaignLanguagePickerComponent } from '../../../../../shared/components/campaign-language-picker/campaign-language-picker.component';
+import { HmAmountButtonsDirective } from '../../../utils/amount-buttons';
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostBinding, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +11,7 @@ import { Router, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import {
   CampaignDraft, Offering,
-  DonorFieldsConfig, DEFAULT_DONOR_FIELDS,
+  DonorFieldsConfig, DEFAULT_DONOR_FIELDS, CampaignStudioStateService,
 } from '../../../services/campaign-studio-state.service';
 import { DonationService } from '../../../services/donation.service';
 import { AnalyticsService } from '../../../../../core/services/analytics.service';
@@ -13,8 +19,13 @@ import { Ambassador } from '../../../services/ambassador.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
 import { CHECKOUT_V2_OPENFIELDS_ENABLED } from '../../config/checkout-v2.config';
 import { OpenfieldsFormComponent } from '../../../../billing/components/openfields-form/openfields-form.component';
-
+
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { DonationCurrency, campaignCurrencies, presetsFor, currencySymbol, formatMoney } from '../../../utils/donation-currency';
+import { DonationCurrencyService } from '../../../services/donation-currency.service';
+import { HmPublicTextPipe, campaignLang, publicText } from '../../../../../core/i18n/content-language';
+import { HmMoneyPipe, publicMoney, HmMoneyArgPipe, HmCurrencyPipe } from '../../../../../core/i18n/money';
 // Checkout V2 (2026-09-24) — the real, continuous 3-step donation checkout
 // (סכום → פרטים אישיים → תשלום) behind CHECKOUT_V2_ENABLED. Deliberately a
 // brand-new, self-contained component that never imports or modifies
@@ -67,7 +78,7 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 @Component({
   selector: 'app-checkout-v2',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
+  imports: [AmountCardComponent, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, CampaignLanguagePickerComponent, HmPublicTextPipe, HmIconComponent, CommonModule, FormsModule, RouterModule, OpenfieldsFormComponent],
   templateUrl: './checkout-v2.component.html',
   styleUrl: './checkout-v2.component.css',
 })
@@ -95,6 +106,9 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // Initial state only — the donor can freely change amount/frequency/
   // installments in Step 1 regardless of what the page had pre-selected.
   @Input() initialAmount = 0;
+  // The currency chosen on the page (ILS unless the campaign offers more and
+  // the platform enabled it); the donor can change it in Step 1.
+  @Input() initialCurrency: DonationCurrency = 'ILS';
   @Input() initialFrequency: 'one-time' | 'monthly' = 'one-time';
   @Input() initialInstallments: number | null = null;
   // Offerings ("תשורות") already selected on the page itself, same as
@@ -136,6 +150,14 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
   @ViewChild(OpenfieldsFormComponent) openfieldsForm?: OpenfieldsFormComponent;
 
+  // System text of the campaign page follows the campaign language (D-43).
+
+  private readonly t = publicText();
+  private readonly money = publicMoney();
+  private readonly campaignLang = campaignLang();
+  private state = inject(CampaignStudioStateService);
+  readonly studioActive$ = this.state.pageBuilderActive$;
+
   private donationService = inject(DonationService);
   private analytics       = inject(AnalyticsService);
   private sanitizer       = inject(DomSanitizer);
@@ -143,6 +165,8 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
   // Same sanitize-then-bypass pattern MinimalDonationPageComponent already
   // uses for this exact field (its own richHtml()) — reused verbatim.
+  headerTextStyle(draft: CampaignDraft, part: 'title' | 'subtitle') { return minimalTextStyle(draft, this.campaignLang(), part); }
+
   richHtml(html: string | undefined): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(html || ''));
   }
@@ -165,7 +189,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Page mode IS the page — nothing behind it to lock scroll against.
     if (this.presentation === 'drawer') document.body.style.overflow = 'hidden';
+    this.currencyService.load();
+    this.currency = this.isRewardMode ? 'ILS' : this.initialCurrency;
     this.donationFrequency = this.initialFrequency;
+    if (this.donationFrequency === 'monthly' && !this.monthlyAllowedFor(this.currency)) this.donationFrequency = 'one-time';
     this.selectedAmount = this.initialAmount > 0 ? this.initialAmount : null;
     this.selectedInstallments = this.initialInstallments;
     // Reward mode (2026-10-06 bug fix, see isRewardMode's own doc comment)
@@ -181,7 +208,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.presentation === 'drawer') document.body.style.overflow = '';
     window.removeEventListener('message', this.boundHostedCheckoutMessage);
-    if (this.confirmPollTimer) clearTimeout(this.confirmPollTimer);
+    this.confirmation?.unsubscribe();
     if (this.receiptPollTimer) clearTimeout(this.receiptPollTimer);
   }
 
@@ -204,7 +231,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
       if (!this.donationId) return;
       this.paymentSucceeded.emit({ offeringIds: this.cartOfferings.map(o => o.id) });
       this.router.navigate(['/campaigns', this.draft.slug, 'success'], {
-        queryParams: { ref: this.donationId, amount: this.chargeAmount },
+        queryParams: { ref: this.donationId, amount: this.chargeAmount, ...(this.currency !== 'ILS' ? { currency: this.currency } : {}) },
       });
       return;
     }
@@ -225,7 +252,42 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   }
 
   amountsFor(): number[] {
-    return this.donationFrequency === 'monthly' ? this.draft.monthlyAmounts : this.draft.suggestedAmounts;
+    return presetsFor(this.draft, this.currency, this.donationFrequency);
+  }
+
+  // ── Currency (2026-11) ── the charged currency; the server re-validates it.
+  private currencyService = inject(DonationCurrencyService);
+  currency: DonationCurrency = 'ILS';
+  currencyNotice = '';
+  readonly currencySymbol = currencySymbol;
+  readonly formatMoney = formatMoney;
+
+  // Rewards are priced in ILS, so a reward checkout offers ILS only.
+  get offeredCurrencies(): DonationCurrency[] {
+    if (this.isRewardMode) return ['ILS'];
+    return campaignCurrencies(this.draft).filter(c => this.currencyService.isEnabled(c));
+  }
+
+  monthlyAllowedFor(currency: DonationCurrency): boolean {
+    return currency === 'ILS' || this.currencyService.isEnabled(currency, true);
+  }
+
+  // Never converts: the amount is cleared and the reason announced.
+  selectCurrency(currency: DonationCurrency): void {
+    if (this.currency === currency) return;
+    const hadAmount = this.explicitAmount > 0;
+    this.currency = currency;
+    this.selectedAmount = null;
+    this.customAmount = null;
+    this.amountDisplay = '';
+    const notes: string[] = [];
+    if (hadAmount) notes.push('הסכום נוקה — בחרו סכום במטבע שנבחר.');
+    if (this.donationFrequency === 'monthly' && !this.monthlyAllowedFor(currency)) {
+      this.donationFrequency = 'one-time';
+      this.selectedInstallments = null;
+      notes.push('תרומה חודשית זמינה כרגע בשקלים בלבד.');
+    }
+    this.currencyNotice = notes.join(' ');
   }
 
   selectAmount(amount: number): void {
@@ -236,6 +298,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
 
   selectFrequency(freq: 'one-time' | 'monthly'): void {
     if (this.donationFrequency === freq) return;
+    if (freq === 'monthly' && !this.monthlyAllowedFor(this.currency)) return;
     this.donationFrequency = freq;
     // Presets differ between the two lists — same reset campaign-preview's
     // own selectFrequency() already does, forcing an explicit re-pick
@@ -327,10 +390,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     return this.draft?.layout?.minimalHeaderLogoAlign ?? 'center';
   }
   get titleAlign(): 'right' | 'center' | 'left' {
-    return this.draft?.layout?.minimalHeaderTitleAlign ?? 'center';
+    return (this.presentation === 'page' ? this.draft?.layout?.minimalTextStyle?.titleAlign : undefined) ?? this.draft?.layout?.minimalHeaderTitleAlign ?? 'center';
   }
   get subtitleAlign(): 'right' | 'center' | 'left' {
-    return this.draft?.layout?.minimalHeaderSubtitleAlign ?? 'center';
+    return (this.presentation === 'page' ? this.draft?.layout?.minimalTextStyle?.subtitleAlign : undefined) ?? this.draft?.layout?.minimalHeaderSubtitleAlign ?? 'center';
   }
 
   // Reward mode: the Offering(s)' own total is already a complete,
@@ -352,10 +415,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     if (!amt) return '';
     if (this.donationFrequency === 'monthly') {
       return this.hasValidInstallments
-        ? `₪${amt.toLocaleString('he-IL')} לחודש × ${this.selectedInstallments} חודשים`
-        : `₪${amt.toLocaleString('he-IL')} לחודש`;
+        ? `${formatMoney(amt, this.currency)} לחודש × ${this.selectedInstallments} חודשים`
+        : `${formatMoney(amt, this.currency)} לחודש`;
     }
-    return `₪${amt.toLocaleString('he-IL')}`;
+    return formatMoney(amt, this.currency);
   }
 
   // The footer's own small sub-label under commitmentText. Reward mode must
@@ -366,10 +429,10 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   get commitmentSubLabel(): string {
     if (this.isRewardMode) {
       return this.cartOfferings.length === 1
-        ? `עבור התשורה: ${this.cartOfferings[0].title}`
-        : `עבור ${this.cartOfferings.length} תשורות שנבחרו`;
+        ? this.t('publicPage.checkoutV2.forOffering', { title: this.cartOfferings[0].title })
+        : this.t('publicPage.checkoutV2.forOfferings', { count: this.cartOfferings.length });
     }
-    return this.donationFrequency === 'monthly' ? 'תרומה חודשית' : 'תרומה חד פעמית';
+    return this.t(this.donationFrequency === 'monthly' ? 'publicPage.checkoutV2.monthlyDonation' : 'publicPage.checkoutV2.oneTimeDonation');
   }
 
   goToStep2(): void {
@@ -486,7 +549,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // identical for both, which would otherwise let canReuseExistingDonation()
   // wrongly reuse Reward A's already-created Donation/LowProfile for
   // Reward B's checkout.
-  private createdTermsSnapshot: { amount: number; frequency: 'one-time' | 'monthly'; installments: number | null; offeringIds: string } | null = null;
+  private createdTermsSnapshot: { amount: number; currency: DonationCurrency; frequency: 'one-time' | 'monthly'; installments: number | null; offeringIds: string } | null = null;
 
   private get offeringIdsKey(): string {
     return this.cartOfferings.map(o => o.id).sort().join(',');
@@ -521,19 +584,9 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // own assignment site's doc comment for exactly why the success screen
   // cannot just keep reading the live chargeAmount/isRewardMode/
   // cartOfferings getters after that point.
-  private paidSnapshot: { amount: number; isRewardMode: boolean; offeringTitles: string[] } | null = null;
+  private paidSnapshot: { amount: number; currency: DonationCurrency; isRewardMode: boolean; offeringTitles: string[] } | null = null;
 
-  private confirmPollTimer: ReturnType<typeof setTimeout> | null = null;
-  private confirmPollAttempts = 0;
-  private readonly CONFIRM_POLL_INTERVAL_MS = 1000;
-  // ~15s of visible "מאשרים את התרומה..." — long enough for ordinary
-  // webhook delivery, short enough to still feel like one transaction.
-  private readonly CONFIRM_FOREGROUND_ATTEMPTS = 15;
-  // After the foreground window, keep trying quietly (slower) for a good
-  // while longer, in case the donor just leaves the drawer open — total
-  // background budget below is on top of the foreground attempts.
-  private readonly CONFIRM_BACKGROUND_INTERVAL_MS = 5000;
-  private readonly CONFIRM_BACKGROUND_ATTEMPTS = 48;
+  private confirmation?: PaymentSubscription;
 
   private receiptPollTimer: ReturnType<typeof setTimeout> | null = null;
   private receiptPollAttempts = 0;
@@ -541,7 +594,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   private readonly RECEIPT_POLL_MAX_ATTEMPTS = 20;
 
   get formattedChargeAmount(): string {
-    return '₪' + this.chargeAmount.toLocaleString('he-IL');
+    return formatMoney(this.chargeAmount, this.currency);
   }
 
   // Success screen only -- prefers the frozen paidSnapshot over the live
@@ -556,13 +609,13 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   // case to word here yet.
   get successMessage(): string {
     const snap = this.paidSnapshot;
-    const amount = '₪' + (snap?.amount ?? this.chargeAmount).toLocaleString('he-IL');
+    const amount = formatMoney(snap?.amount ?? this.chargeAmount, snap?.currency ?? this.currency);
     if (snap?.isRewardMode) {
       return snap.offeringTitles.length === 1
-        ? `הרכישה שלך — ${snap.offeringTitles[0]} — בסך ${amount} התקבלה בהצלחה.`
-        : `הרכישה שלך בסך ${amount} התקבלה בהצלחה.`;
+        ? this.t('publicPage.checkoutV2.purchaseReceivedTitle', { title: snap.offeringTitles[0], amount })
+        : this.t('publicPage.checkoutV2.purchaseReceived', { amount });
     }
-    return `תרומתך בסך ${amount} התקבלה בהצלחה.`;
+    return this.t('publicPage.checkoutV2.donationReceived', { amount });
   }
 
   // A genuine CardCom-side decline (HandleSubmit IsSuccess=false) — the
@@ -591,25 +644,22 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   }
 
   private clearConfirmPoll(): void {
-    if (this.confirmPollTimer) clearTimeout(this.confirmPollTimer);
-    this.confirmPollTimer = null;
+    this.confirmation?.unsubscribe();
   }
 
   private startPaymentConfirmation(): void {
     this.paymentState = 'confirming';
-    this.confirmPollAttempts = 0;
     this.pollConfirmation();
   }
 
   private pollConfirmation(): void {
     if (!this.donationId) return;
     const donationId = this.donationId;
-    this.donationService.getStatus(donationId).subscribe({
-      next: (res) => {
-        // Stale response for a donation this component has already moved
-        // on from — ignore rather than act on an outdated poll.
-        if (this.donationId !== donationId) return;
-
+    this.confirmation?.unsubscribe();
+    this.confirmation = paymentConfirmation(this.donationService, donationId).subscribe(update => {
+      if (this.donationId !== donationId) return;
+      if (!update.result) { this.paymentState = update.state === 'uncertain' ? 'uncertain' : 'confirming'; return; }
+      const res = update.result;
         if (res.status === 'paid') {
           this.paymentState = 'paid';
           this.receiptId = res.receipt_id;
@@ -626,6 +676,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
           // already succeeded.
           this.paidSnapshot = {
             amount: this.chargeAmount,
+            currency: this.currency,
             isRewardMode: this.isRewardMode,
             offeringTitles: this.cartOfferings.map(o => o.title),
           };
@@ -637,23 +688,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
           this.resetAfterBackendFailure();
           return;
         }
-        this.scheduleNextConfirmPoll();
-      },
-      // A transient network error polling our own backend isn't a payment
-      // failure — keep trying within the same bounded window.
-      error: () => this.scheduleNextConfirmPoll(),
     });
-  }
-
-  private scheduleNextConfirmPoll(): void {
-    this.confirmPollAttempts++;
-    const totalBudget = this.CONFIRM_FOREGROUND_ATTEMPTS + this.CONFIRM_BACKGROUND_ATTEMPTS;
-    if (this.confirmPollAttempts >= totalBudget) return; // quietly stop -- reconciliation covers the rest
-
-    const stillForeground = this.confirmPollAttempts < this.CONFIRM_FOREGROUND_ATTEMPTS;
-    this.paymentState = stillForeground ? 'confirming' : 'uncertain';
-    const interval = stillForeground ? this.CONFIRM_POLL_INTERVAL_MS : this.CONFIRM_BACKGROUND_INTERVAL_MS;
-    this.confirmPollTimer = setTimeout(() => this.pollConfirmation(), interval);
   }
 
   private scheduleQuietReceiptPoll(donationId: string): void {
@@ -681,6 +716,8 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
     if (CHECKOUT_V2_OPENFIELDS_ENABLED ? !this.lowProfileId : !this.hostedCheckoutUrl) return false;
     const s = this.createdTermsSnapshot;
     return s.amount === this.chargeAmount
+      // A snapshot without a currency predates multi-currency: ILS.
+      && (s.currency ?? 'ILS') === this.currency
       && s.frequency === this.donationFrequency
       && s.installments === (this.donationFrequency === 'monthly' ? this.selectedInstallments : null)
       && s.offeringIds === this.offeringIdsKey;
@@ -721,6 +758,8 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         isAnonymous: this.isAnonymous,
       },
       amount: this.chargeAmount,
+      // ILS is sent as absent, exactly as before multi-currency.
+      ...(this.currency !== 'ILS' ? { currency: this.currency } : {}),
       rewards: this.cartOfferings.map(o => ({
         id:            o.id,
         title:         o.title,
@@ -757,6 +796,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         this.donationId = res.donationId;
         this.createdTermsSnapshot = {
           amount: this.chargeAmount,
+          currency: this.currency,
           frequency: this.donationFrequency,
           installments: this.donationFrequency === 'monthly' ? this.selectedInstallments : null,
           offeringIds: this.offeringIdsKey,
@@ -767,7 +807,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
         // (the embedded equivalent of that same handoff).
         this.analytics.trackEvent('donation_started', {
           value:         this.chargeAmount,
-          currency:      'ILS',
+          currency:      this.currency,
           campaign_name: this.draft.title,
           campaign_id:   this.draft.id,
         });

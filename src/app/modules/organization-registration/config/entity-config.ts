@@ -4,7 +4,8 @@ export type EntityType =
   | 'political_party_new'
   | 'political_party_registered'
   | 'sole_exempt'
-  | 'sole_registered';
+  | 'sole_registered'
+  | 'company';
 
 export interface EntityConfig {
   type: EntityType;
@@ -25,6 +26,12 @@ export interface EntityConfig {
 }
 
 export const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
+  company: {
+    type: 'company',
+    labels: {entity: 'חברה בע״מ', entityName: 'שם החברה', registrationNumber: 'מספר חברה',
+      registrationDocument: 'תעודת התאגדות', onboardingTitle: 'הצטרפות כחברה בע״מ'},
+    showSection46: false,
+  },
   association: {
     type: 'association',
 

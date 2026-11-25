@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
 import {
   NavigationCancel,
   NavigationEnd,
@@ -10,6 +10,9 @@ import {
 import { Subscription } from 'rxjs';
 import { AppLoaderComponent } from './core/ui/app-loader/app-loader.component';
 import { AppLoaderService } from './core/services/app-loader.service';
+import { TopbarComponent } from './core/layout/topbar/topbar.component';
+import { ImpersonationBannerComponent } from './core/layout/impersonation-banner/impersonation-banner.component';
+import { ToastContainerComponent } from './core/ui/toast-container.component';
 
 // Routes that hide the loader themselves after async data loading
 const SELF_HIDING_PREFIXES = ['/campaigns', '/dashboard'];
@@ -37,7 +40,7 @@ function workspaceKey(url: string): string | null {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, AppLoaderComponent],
+  imports: [RouterOutlet, AppLoaderComponent, TopbarComponent, ImpersonationBannerComponent, ToastContainerComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -45,6 +48,43 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly loader = inject(AppLoaderService);
   private readonly router = inject(Router);
   private sub?: Subscription;
+  readonly sharedHeader = signal(false);
+  readonly studioWorkspace = signal(false);
+  @ViewChild(RouterOutlet) private outlet?: RouterOutlet;
+  private headerElement?: HTMLElement;
+  private headerObserver?: ResizeObserver;
+  @ViewChild('fixedHeader') set fixedHeader(ref: ElementRef<HTMLElement> | undefined) {
+    this.headerObserver?.disconnect();
+    this.headerElement = ref?.nativeElement;
+    if (this.headerElement) {
+      this.measureHeader();
+      this.headerObserver = new ResizeObserver(this.measureHeader);
+      this.headerObserver.observe(this.headerElement);
+    }
+  }
+  private readonly measureHeader = (): void => {
+    if (this.headerElement) document.documentElement.style.setProperty('--header-height', `${this.headerElement.offsetHeight}px`);
+  };
+
+  toggleSidebar(): void {
+    if (this.outlet?.isActivated) {
+      (this.outlet.component as { toggleSidebar?: () => void }).toggleSidebar?.();
+    }
+  }
+
+  private syncHeader(): void {
+    const pending = [this.router.routerState.snapshot.root];
+    let shared = false, studio = false;
+    while (pending.length) {
+      const route = pending.pop()!;
+      shared ||= route.data['sharedHeader'] === true;
+      studio ||= route.data['studioWorkspace'] === true;
+      pending.push(...route.children);
+    }
+    this.sharedHeader.set(shared);
+    this.studioWorkspace.set(studio);
+    this.measureHeader();
+  }
 
   ngOnInit(): void {
     this.sub = this.router.events.subscribe(event => {
@@ -58,6 +98,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
         this.loader.show('טוען...');
       } else if (event instanceof NavigationEnd) {
+        this.syncHeader();
         const url = event.url;
         const selfHiding = SELF_HIDING_PREFIXES.some(p => url.startsWith(p));
         if (!selfHiding) {
@@ -74,5 +115,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.headerObserver?.disconnect();
   }
 }

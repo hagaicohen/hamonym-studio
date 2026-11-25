@@ -1,3 +1,4 @@
+<ng-container *ngIf="{ active: (studioActive$ | async) && embedded } as studio">
 <ng-container *ngIf="draft$ | async as draft">
 
 <!-- Checkout V2 (2026-09-24) — IS the donation page itself when enabled,
@@ -15,7 +16,7 @@
 </app-checkout-v2>
 
 <ng-container *ngIf="!CHECKOUT_V2_ENABLED">
-<div class="mdp-page"
+<div class="mdp-page" [style.--hm-font-body]="fonts(draft).body" [style.--hm-font-heading]="fonts(draft).headings" [style.--hm-font-button]="fonts(draft).buttons"
   [class.mdp-page--embedded]="embedded"
   [style.--mdp-primary]="draft.layout.theme.primaryColor"
   [style.--mdp-accent]="draft.layout.theme.accentColor">
@@ -30,7 +31,7 @@
        האפליקציה צריך להיות רחב יותר ולהתפרש על כל הגובה... פוטר סטיקי למטה". -->
   <div class="mdp-frame">
   <div class="mdp-card">
-    <div class="mdp-logo"
+    <div class="mdp-logo" [attr.data-studio-part]="studio.active ? 'logo' : null"
       *ngIf="draft.showLogo !== false"
       [class.mdp-logo--square]="draft.layout.minimalLogoShape === 'square'"
       [class.mdp-logo--none]="draft.layout.minimalLogoShape === 'none'"
@@ -42,41 +43,41 @@
     </div>
 
     <ng-container *ngIf="draft.layout.minimalAdvancedText; else simpleTitle">
-      <h1 class="mdp-title mdp-title--rich" [innerHTML]="richHtml(draft.layout.minimalTitleRichHtml || draft.title || 'דף תרומה')"></h1>
+      <h1 [ngStyle]="headerTextStyle(draft, 'title')" [attr.data-studio-part]="studio.active ? 'title' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.minimalTitleRichHtml' : 'title') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" class="mdp-title mdp-title--rich" [innerHTML]="richHtml(draft.layout.minimalTitleRichHtml || draft.title || ('publicPage.minimalDonation.donationPage' | hmPublic))"></h1>
     </ng-container>
     <ng-template #simpleTitle>
-      <h1 class="mdp-title" [style.color]="draft.layout.minimalTitleColor || '#0f2747'">{{ draft.title || 'דף תרומה' }}</h1>
+      <h1 [ngStyle]="headerTextStyle(draft, 'title')" [attr.data-studio-part]="studio.active ? 'title' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.minimalTitleRichHtml' : 'title') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" class="mdp-title">{{ draft.title || ('publicPage.minimalDonation.donationPage' | hmPublic) }}</h1>
     </ng-template>
 
     <ng-container *ngIf="draft.layout.minimalAdvancedText; else simpleSubtitle">
-      <div class="mdp-subtitle mdp-subtitle--rich" *ngIf="draft.layout.projectDescription" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
+      <div [ngStyle]="headerTextStyle(draft, 'subtitle')" [attr.data-studio-part]="studio.active ? 'subtitle' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.projectDescription' : 'shortDescription') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" class="mdp-subtitle mdp-subtitle--rich" *ngIf="draft.layout.projectDescription" [innerHTML]="richHtml(draft.layout.projectDescription)"></div>
     </ng-container>
     <ng-template #simpleSubtitle>
-      <p class="mdp-subtitle" *ngIf="draft.shortDescription" [style.color]="draft.layout.minimalSubtitleColor || '#62728d'">{{ draft.shortDescription }}</p>
+      <p [ngStyle]="headerTextStyle(draft, 'subtitle')" [attr.data-studio-part]="studio.active ? 'subtitle' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.projectDescription' : 'shortDescription') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" class="mdp-subtitle" *ngIf="draft.shortDescription">{{ draft.shortDescription }}</p>
     </ng-template>
 
     <div class="mdp-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
       <button type="button" class="mdp-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"
-        (click)="selectFrequency('one-time')">חד-פעמית</button>
+        (click)="selectFrequency('one-time')">{{ 'publicPage.campaignPreview.oneTime' | hmPublic }}</button>
       <button type="button" class="mdp-frequency-btn" [class.is-selected]="donationFrequency === 'monthly'"
-        (click)="selectFrequency('monthly')">חודשית</button>
+        (click)="selectFrequency('monthly')">{{ 'publicPage.campaignPreview.monthly' | hmPublic }}</button>
     </div>
 
-    <div class="mdp-amounts">
-      <button *ngFor="let a of amountsFor(draft) | slice:0:6"
+    <div class="mdp-amounts" [hmAmountButtons]="draft.layout.amountButtons">
+      <button *ngFor="let a of amountsFor(draft) | slice:0:8"
         class="mdp-amount-preset" type="button"
         [class.is-selected]="isAmountSelected($any(a))"
         (click)="selectAmount($any(a))">
-        ₪{{ $any(a).toLocaleString('he-IL') }}
+        <app-amount-card [config]="draft.layout.amountButtons?.cards?.[(donationFrequency === 'monthly' ? 'monthly:' : 'once:') + a]">{{ $any(a) | hmMoney }}</app-amount-card>
       </button>
     </div>
 
     <div class="mdp-custom-amount-wrap" *ngIf="draft.allowCustomAmount">
-      <span class="mdp-currency-symbol">₪</span>
+      <span class="mdp-currency-symbol">{{ '' | hmCurrency }}</span>
       <input class="mdp-custom-amount"
         type="text"
         inputmode="numeric"
-        placeholder="סכום אחר"
+        [placeholder]="'publicPage.campaignPreview.otherAmount' | hmPublic"
         [value]="amountDisplay"
         (input)="onCustomAmountInput($event)">
     </div>
@@ -89,7 +90,7 @@
          campaign-level defaults for the full-format widget only; this page
          no longer reads them at all. No "ללא הגבלה" option by design. -->
     <div class="mdp-installments" *ngIf="donationFrequency === 'monthly'">
-      <p class="mdp-installments-label">לכמה חודשים תרצו לתרום?</p>
+      <p class="mdp-installments-label">{{ 'publicPage.checkoutV2.forHowManyMonthsWould' | hmPublic }}</p>
       <div class="mdp-installments-options">
         <button *ngFor="let n of INSTALLMENT_OPTIONS" type="button"
           class="mdp-installments-preset"
@@ -100,21 +101,20 @@
         <div class="mdp-installments-custom-wrap">
           <input class="mdp-installments-custom"
             type="text" inputmode="numeric"
-            placeholder="מספר אחר"
+            [placeholder]="'publicPage.checkoutV2.otherNumber' | hmPublic"
             [value]="customInstallmentsInput"
             (input)="onCustomInstallmentsInput($event)">
         </div>
       </div>
-      <p class="mdp-installments-hint"><app-icon name="lock" /> ללא תפיסת מסגרת לכל התקופה</p>
+      <p class="mdp-installments-hint"><app-icon name="lock" /> {{ 'publicPage.checkoutV2.noCreditHoldForThe' | hmPublic }}</p>
       <p class="mdp-installments-explain" *ngIf="hasValidInstallments && explicitAmount > 0">
-        {{ explicitAmount.toLocaleString('he-IL') }} ₪ יחויבו פעם בחודש, למשך {{ selectedInstallments }} חודשים.
-        החיוב מתבצע בכל חודש בנפרד ואינו תופס מסגרת אשראי עבור מלוא התקופה.
+        {{ 'publicPage.minimalDonation.explicitamountWillBeChargedOnce' | hmPublic: { explicitAmount: (explicitAmount | hmMoneyArg), selectedInstallments: (selectedInstallments) } }}
       </p>
     </div>
 
     <button class="mdp-donate-btn" type="button" (click)="openCheckout()">
       <span class="mdp-lock-icon"><app-icon name="lock" /></span>
-      <span>לתמיכה מאובטחת</span>
+      <span>{{ 'publicPage.campaignPreview.forSecureSupport' | hmPublic }}</span>
     </button>
   </div>
 
@@ -127,11 +127,11 @@
        panel and stick to the real browser window instead. -->
   <div class="mdp-fixed-bottom" *ngIf="!embedded">
     <div class="mdp-sticky-bar" *ngIf="showStickyBar">
-      <span class="mdp-sticky-title">{{ draft.title || 'דף תרומה' }}</span>
-      <button class="mdp-sticky-cta" type="button" (click)="openCheckout()">לתמיכה מאובטחת</button>
+      <span class="mdp-sticky-title">{{ draft.title || ('publicPage.minimalDonation.donationPage' | hmPublic) }}</span>
+      <button class="mdp-sticky-cta" type="button" (click)="openCheckout()">{{ 'publicPage.campaignPreview.forSecureSupport' | hmPublic }}</button>
     </div>
     <div class="mdp-trust-footer">
-      הסליקה מתבצעת באופן מאובטח דרך <strong>קארדקום בע״מ</strong>
+      {{ 'publicPage.checkoutV2.paymentIsProcessedSecurelyThrough' | hmPublic }} <strong>{{ 'publicPage.checkoutV2.cardcomLtd' | hmPublic }}</strong>
     </div>
   </div>
   </div>
@@ -149,6 +149,8 @@
   [ambassador]="ambassador"
   (closed)="closeCheckout()">
 </app-checkout-modal>
+
+</ng-container>
 
 </ng-container>
 

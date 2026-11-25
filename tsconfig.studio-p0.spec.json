@@ -1,0 +1,1 @@
+﻿{"extends":"./tsconfig.spec.json","files":["src/test.ts"],"include":["src/app/modules/campaigns/utils/campaign-body-root.spec.ts","src/app/modules/campaigns/multi-currency.spec.ts","src/app/modules/campaigns/shared/components/checkout-v2/checkout-v2.component.spec.ts","src/**/*.d.ts"]}

@@ -1,3 +1,5 @@
+:host { display: block; position: sticky; top: 0; z-index: 101; }
+
 /* Thin, restrained platform chrome — must almost disappear into the page.
    Background matches the real old-platform value confirmed from its own
    source (`.single-campaign #secondary-nav-menu-header { background-color:
@@ -48,7 +50,7 @@
   position: absolute;
   height: 42px;
   width: 100%;
-  left: 0;
+  inset-inline-end: 0;
   bottom: -42px;
   /* Purely decorative — must never intercept pointer events (2026-09-29).
      Raising .pts-strip's own z-index to 101 (above .hm-sticky-header's 100)
@@ -68,16 +70,15 @@
    padding:0 16px) for the full campaign layout, but this is NOT derived
    from it and is used as-is on every page format, including the narrow
    460px minimal-donation Checkout V2 card (see this file's header comment).
-   `direction: rtl` is set explicitly (not inherited) so the physical
-   left/right placement below is deterministic regardless of context: first
-   DOM child (home link) lands on the right, second (Facebook) on the left. */
+   Direction is inherited from the page (bilingual roadmap §2.4): the first
+   DOM child (home link) lands on the inline-start side — right in Hebrew —
+   and the second (Facebook) on the inline-end side. */
 .pts-inner {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 16px;
   box-sizing: border-box;
-  direction: rtl;
   display: flex;
   align-items: center;
   justify-content: space-between;

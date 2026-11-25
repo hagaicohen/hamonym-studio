@@ -100,7 +100,7 @@ describe('CheckoutModalComponent — Registration participants', () => {
     expect(component.isValid).toBe(true);
   });
 
-  it('onSubmit sends one rewards line + one participants entry per participant, with the summed amount', () => {
+  it('onSubmit sends participants separately from catalog rewards, with the summed amount', () => {
     component.addParticipant();
     component.participants[0].name = 'דנה';
     component.addParticipant();
@@ -115,8 +115,7 @@ describe('CheckoutModalComponent — Registration participants', () => {
 
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.body.amount).toBe(130);
-    expect(req.request.body.rewards.length).toBe(2);
-    expect(req.request.body.rewards[1].title).toBe('10 ק"מ');
+    expect(req.request.body.rewards).toEqual([]);
     expect(req.request.body.participants).toEqual([
       { name: 'דנה', registrationOptionId: race5k.id, shirtSize: undefined },
       { name: 'יוסי', registrationOptionId: race10k.id, shirtSize: undefined },
@@ -203,7 +202,7 @@ describe('CheckoutModalComponent — Registration participants', () => {
 
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.body.amount).toBe(150);
-    expect(req.request.body.rewards).toEqual([{ title: '5 ק"מ', minimumAmount: 50 }]);
+    expect(req.request.body.rewards).toEqual([]);
     expect(req.request.body.participants).toEqual([
       { name: 'דנה', registrationOptionId: race5k.id, shirtSize: undefined },
     ]);

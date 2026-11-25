@@ -1,4 +1,4 @@
-:host { display: block; direction: rtl; font-family: inherit; }
+:host { display: block;  font-family: inherit; }
 
 .asf-wrap { display: flex; flex-direction: column; gap: 6px; }
 .asf-label { font-size: 13px; font-weight: 700; color: #334155; }
@@ -17,24 +17,24 @@
 .asf-input-row--taken { border-color: var(--hm-control-error); }
 
 .asf-prefix {
-  padding: 9px 4px 9px 10px;
+  padding-block: 9px 9px; padding-inline: 4px 10px;
   background: #f8fafc;
   color: #94a3b8;
   font-size: 13px;
   white-space: nowrap;
-  border-right: 1px solid #e2e8f0;
+  border-inline-start: 1px solid #e2e8f0;
 }
 .asf-input {
   flex: 1;
   min-width: 0;
   border: none;
   outline: none;
-  padding: 9px 12px 9px 4px;
+  padding-block: 9px 9px; padding-inline: 12px 4px;
   font-size: 14px;
   font-family: inherit;
   color: #0f172a;
   background: transparent;
-  text-align: left;
+  text-align: end;
 }
 
 .asf-status { font-size: 12px; margin: 0; font-weight: 600; }

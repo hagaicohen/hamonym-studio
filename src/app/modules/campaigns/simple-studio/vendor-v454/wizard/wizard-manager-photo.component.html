@@ -1,0 +1,5 @@
+<div class="hw-field"><span class="hw-label">תמונת מנהל הקמפיין <em>לא חובה</em></span>
+ <div class="hw-manager-photo-row">@if (src) {<img class="hw-manager-thumb" [src]="src" alt="תמונת מנהל הקמפיין" />} @else {<div class="hw-manager-empty-thumb">♙</div>}
+ <label class="hw-inline-upload" for="hwManagerImage">העלאת תמונה</label><input #file id="hwManagerImage" class="hw-file-input" type="file" accept="image/jpeg,image/png,image/webp" (change)="upload.emit(file)" /></div>
+ <small>משתמשים בתמונת מנהל הקמפיין הקיימת במודל HAMONYM.</small>
+</div>

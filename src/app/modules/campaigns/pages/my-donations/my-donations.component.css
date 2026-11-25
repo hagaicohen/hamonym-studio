@@ -157,6 +157,15 @@
   margin-top: 2px;
 }
 
+.md-item-note {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .md-item-amount {
   font-size: 15px;
   font-weight: 800;

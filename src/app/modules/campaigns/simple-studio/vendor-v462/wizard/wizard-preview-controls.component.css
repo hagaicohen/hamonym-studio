@@ -1,0 +1,3 @@
+:host { display: contents; }
+/* Presentation styles are intentionally retained in original-styles.css.
+   Only the Angular host itself is layout-neutral. */

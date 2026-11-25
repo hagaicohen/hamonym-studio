@@ -1,0 +1,32 @@
+@if (draft$ | async; as draft) {
+  <section class="cte" [attr.aria-label]="'editors.typography.title' | transloco">
+    <h4 class="cte-title">{{ 'editors.typography.title' | transloco }}</h4>
+    <p class="cte-note">{{ 'editors.typography.note' | transloco }}</p>
+    <div class="cte-tabs" role="tablist">
+      @for (l of langs; track l) {
+        <button type="button" role="tab" class="cte-tab" [class.is-active]="lang === l" [attr.aria-selected]="lang === l" [attr.data-lang]="l" (click)="pick(l)">
+          {{ ('common.language.' + l) | transloco }}
+        </button>
+      }
+    </div>
+    @for (role of roles; track role) {
+      <label class="cte-row">
+        <span class="cte-label">{{ ('editors.typography.role.' + role) | transloco }}</span>
+        <select class="cte-select" [attr.data-role]="role" [value]="chosen(draft, role)" (change)="set(role, $any($event.target).value)"
+          [style.font-family]="stackOf(chosen(draft, role))">
+          <option value="">{{ (role === 'body' || role === 'headings' ? 'editors.typography.styleDefault' : 'editors.typography.sameAsBody') | transloco }}</option>
+          @for (f of fonts(); track f.id) {
+            <option [value]="f.id" [selected]="f.id === chosen(draft, role)" [style.font-family]="f.stack">{{ f.name }}</option>
+          }
+        </select>
+        @if (note(draft, role); as n) { <span class="cte-hint">{{ n | transloco }}</span> }
+      </label>
+    }
+    <div class="cte-sample" [attr.dir]="lang === 'en' ? 'ltr' : 'rtl'" [attr.lang]="lang">
+      <div class="cte-sample-title" [style.font-family]="stackOf(chosen(draft, 'headings'))">{{ ('editors.typography.sampleTitle.' + lang) | transloco }}</div>
+      <div class="cte-sample-sub" [style.font-family]="stackOf(chosen(draft, 'subtitles') || chosen(draft, 'body'))">{{ ('editors.typography.sampleSubtitle.' + lang) | transloco }}</div>
+      <p class="cte-sample-body" [style.font-family]="stackOf(chosen(draft, 'body'))">{{ ('editors.typography.sampleBody.' + lang) | transloco }}</p>
+      <span class="cte-sample-btn" [style.font-family]="stackOf(chosen(draft, 'buttons') || chosen(draft, 'body'))">{{ ('editors.typography.sampleButton.' + lang) | transloco }}</span>
+    </div>
+  </section>
+}

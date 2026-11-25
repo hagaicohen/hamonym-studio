@@ -6,9 +6,9 @@
       <div class="tg-icon-box">
         <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
       </div>
-      <h2 class="tg-section-title">סוג קמפיין</h2>
+      <h2 class="tg-section-title">{{ 'builder.steps.campaignType' | transloco }}</h2>
     </div>
-    <p class="tg-section-desc">האם זו מטרה חד־פעמית, או גיוס שוטף לאורך זמן?</p>
+    <p class="tg-section-desc">{{ 'builder.steps.isThisAOneTime' | transloco }}</p>
   </div>
 
   <div class="types-grid">
@@ -28,29 +28,29 @@
             }
           </div>
         </div>
-        <div class="tc-title">{{ lc.title }}</div>
-        <div class="tc-desc">{{ lc.description }}</div>
+        <div class="tc-title">{{ lc.title | hmText }}</div>
+        <div class="tc-desc">{{ lc.description | hmText }}</div>
       </button>
     }
   </div>
 
   @if (showRaceConflict) {
     <div class="tg-conflict">
-      <p class="tg-conflict-title">הבחירה "קמפיין מתמשך" אינה תואמת לקמפיין מסוג "מירוץ".</p>
-      <p class="tg-conflict-desc">באפשרותכם:</p>
+      <p class="tg-conflict-title">{{ 'builder.steps.theOngoingCampaignChoiceDoesnt' | transloco }}</p>
+      <p class="tg-conflict-desc">{{ 'builder.steps.youCan' | transloco }}</p>
       <div class="tg-conflict-actions">
-        <button type="button" class="tg-conflict-btn" (click)="keepOneTimeForRace()">להישאר בקמפיין חד־פעמי (עם מירוץ)</button>
-        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="dropRaceForOngoing()">להסיר את המירוץ ולעבור למתמשך</button>
+        <button type="button" class="tg-conflict-btn" (click)="keepOneTimeForRace()">{{ 'builder.steps.stayWithAOneTime' | transloco }}</button>
+        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="dropRaceForOngoing()">{{ 'builder.steps.removeTheRaceAndSwitch' | transloco }}</button>
       </div>
     </div>
   }
 
   @if (askAboutRace) {
     <div class="tg-followup">
-      <p class="tg-followup-title">עברתם לקמפיין חד־פעמי — האם תרצו לשלב בו מירוץ?</p>
+      <p class="tg-followup-title">{{ 'builder.steps.youSwitchedToAOne' | transloco }}</p>
       <div class="tg-conflict-actions">
-        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="confirmMakeRace()">כן, הפכו אותו למירוץ</button>
-        <button type="button" class="tg-conflict-btn" (click)="dismissRaceQuestion()">לא, קמפיין רגיל</button>
+        <button type="button" class="tg-conflict-btn tg-conflict-btn--primary" (click)="confirmMakeRace()">{{ 'builder.steps.yesMakeItARace' | transloco }}</button>
+        <button type="button" class="tg-conflict-btn" (click)="dismissRaceQuestion()">{{ 'builder.steps.noARegularCampaign' | transloco }}</button>
       </div>
     </div>
   }
@@ -64,9 +64,9 @@
       <div class="tg-icon-box">
         <lucide-angular [img]="LayoutGrid" [size]="18" style="color:#7c3aed"></lucide-angular>
       </div>
-      <h2 class="tg-section-title">מודל גיוס</h2>
+      <h2 class="tg-section-title">{{ 'builder.steps.fundingModel' | transloco }}</h2>
     </div>
-    <p class="tg-section-desc">כל מודל מתאים למטרה אחרת</p>
+    <p class="tg-section-desc">{{ 'builder.steps.eachModelSuitsADifferent' | transloco }}</p>
   </div>
 
   @if (!isOngoing) {
@@ -87,14 +87,14 @@
               }
             </div>
           </div>
-          <div class="tc-title">{{ type.title }}</div>
-          <div class="tc-desc">{{ type.description }}</div>
+          <div class="tc-title">{{ type.title | hmText }}</div>
+          <div class="tc-desc">{{ type.description | hmText }}</div>
         </button>
       }
     </div>
   } @else {
     <div class="tg-tip">
-      קמפיין מתמשך פועל בהוראת קבע חודשית — אך תמיד תתאפשר גם תרומה חד־פעמית.
+      {{ 'builder.steps.anOngoingCampaignRunsAs' | transloco }}
     </div>
   }
 
@@ -108,18 +108,18 @@
     </div>
     <div>
       @if (!isOngoing) {
-        <h2 class="tg-section-title">יעד הגיוס ומשך הקמפיין</h2>
-        <p class="tg-section-desc">הגדירו כמה תרצו לגייס ובאיזה טווח זמן</p>
+        <h2 class="tg-section-title">{{ 'builder.steps.fundraisingGoalAndCampaignDuration' | transloco }}</h2>
+        <p class="tg-section-desc">{{ 'builder.steps.setHowMuchYouWant' | transloco }}</p>
       } @else {
-        <h2 class="tg-section-title">יעד הגיוס</h2>
-        <p class="tg-section-desc">הגדירו כמה תרצו לגייס</p>
+        <h2 class="tg-section-title">{{ 'builder.steps.fundraisingGoal' | transloco }}</h2>
+        <p class="tg-section-desc">{{ 'builder.steps.setHowMuchYouWant2' | transloco }}</p>
       }
     </div>
   </div>
 
   <!-- Target amount -->
   <div class="tg-field">
-    <label class="tg-label">יעד גיוס <span class="tg-req">*</span></label>
+    <label class="tg-label">{{ 'builder.steps.fundraisingGoal2' | transloco }} <span class="tg-req">*</span></label>
     <div class="tg-amount-wrap">
       <span class="tg-currency">₪</span>
       <input class="tg-amount-input" type="text"
@@ -131,7 +131,7 @@
         placeholder="100,000">
     </div>
     @if (isTargetInvalid()) {
-      <div class="tg-error">יש להזין יעד גיוס</div>
+      <div class="tg-error">{{ 'builder.steps.enterAFundraisingGoal' | transloco }}</div>
     }
   </div>
 
@@ -139,10 +139,10 @@
   @if (draft.targetAmount > 0) {
     <div class="tg-insight">
       <div class="tg-insight-amount">₪{{ targetAmountDisplay }}</div>
-      <div class="tg-insight-label">יעד הגיוס</div>
+      <div class="tg-insight-label">{{ 'builder.steps.fundraisingGoal' | transloco }}</div>
       <div class="tg-insight-rows">
-        <span>≈ {{ getDonors(200) }} תורמים של ₪200</span>
-        <span>≈ {{ getDonors(100) }} תורמים של ₪100</span>
+        <span>{{ 'builder.steps.getdonorsDonorsOf200' | transloco: { getDonors: (getDonors(200)) } }}</span>
+        <span>{{ 'builder.steps.getdonorsDonorsOf100' | transloco: { getDonors: (getDonors(100)) } }}</span>
       </div>
     </div>
   }
@@ -154,28 +154,28 @@
   @if (!isOngoing) {
     <div class="tg-dates-row">
       <div class="tg-field">
-        <label class="tg-label">תאריך התחלה</label>
+        <label class="tg-label">{{ 'builder.steps.startDate' | transloco }}</label>
         <input class="tg-date-input" type="date" [(ngModel)]="draft.startDate" (ngModelChange)="sync()">
       </div>
       <div class="tg-field">
-        <label class="tg-label">תאריך סיום</label>
+        <label class="tg-label">{{ 'builder.steps.endDate' | transloco }}</label>
         <input class="tg-date-input" type="date" [(ngModel)]="draft.endDate"   (ngModelChange)="sync()">
       </div>
     </div>
 
     @if (getCampaignDays() > 0) {
-      <div class="tg-duration">משך הקמפיין: <strong>{{ getCampaignDays() }} ימים</strong></div>
+      <div class="tg-duration">{{ 'builder.steps.campaignDuration' | transloco }} <strong>{{ 'builder.steps.getcampaigndaysDays' | transloco: { getCampaignDays: (getCampaignDays()) } }}</strong></div>
     }
     @if (isDateRangeInvalid()) {
-      <div class="tg-error">תאריך הסיום חייב להיות אחרי תאריך ההתחלה</div>
+      <div class="tg-error">{{ 'builder.steps.theEndDateMustBe' | transloco }}</div>
     }
 
     <div class="tg-tip">
-      <strong>טיפ:</strong> קמפיינים עם יעד ריאלי ומשך זמן מוגדר נוטים לגייס יותר תרומות.
+      <strong>{{ 'builder.steps.tip' | transloco }}</strong> {{ 'builder.steps.campaignsWithARealisticGoal' | transloco }}
     </div>
   } @else {
     <div class="tg-tip">
-      קמפיין מתמשך אינו מוגבל בזמן — יעד הגיוס נמדד מדי חודש.
+      {{ 'builder.steps.anOngoingCampaignIsntLimited' | transloco }}
     </div>
   }
 

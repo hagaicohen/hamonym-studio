@@ -1,0 +1,719 @@
+/* Only imported original styles, unchanged. */
+@import url('./assets/legacy/original-styles.css');
+
+/* HAMONYM Simple Studio | design-first, progressive disclosure, shared across inspectors */
+#fields .ham-simple-core,
+#fields .ham-simple-more,
+#fields .ham-inspector-advanced,
+#fields .ham-easy-advanced,
+#fields .hu-inspector-group {
+  border: 1px solid #e2e9e6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(29, 61, 49, .035);
+  margin: 0 0 12px;
+  overflow: hidden;
+}
+#fields .ham-simple-core {padding: 14px;}
+#fields .ham-simple-core-label {display:flex;flex-direction:column;gap:3px;margin-bottom:14px;}
+#fields .ham-simple-core-label strong {font-size:14px;color:#203c32;}
+#fields .ham-simple-core-label small {color:#607a70;font-size:12px;line-height:1.6;}
+#fields .ham-simple-more > summary,
+#fields .ham-inspector-advanced > summary,
+#fields .ham-easy-advanced > summary,
+#fields .hu-inspector-group > summary {
+  display:flex !important;
+  flex-direction:column;
+  position:relative;
+  padding:15px 16px 15px 42px !important;
+  cursor:pointer;
+  list-style:none;
+  background:#fff;
+  min-height:52px;
+  text-align:right;
+  gap:4px;
+}
+#fields .ham-simple-more > summary::-webkit-details-marker,
+#fields .ham-inspector-advanced > summary::-webkit-details-marker,
+#fields .ham-easy-advanced > summary::-webkit-details-marker,
+#fields .hu-inspector-group > summary::-webkit-details-marker {display:none;}
+#fields .ham-simple-more > summary::before,
+#fields .ham-inspector-advanced > summary::before,
+#fields .ham-easy-advanced > summary::before,
+#fields .hu-inspector-group > summary::before {
+  content:'' !important;
+  position:absolute;
+  inset-inline-end:16px;
+  top:calc(50% - 5px);
+  width:9px;height:9px;
+  border:solid #3b7160;
+  border-width:0 0 2px 2px;
+  transform:rotate(-45deg);
+  transition:transform .2s ease;
+  float:none !important;
+}
+#fields .ham-simple-more[open] > summary::before,
+#fields .ham-inspector-advanced[open] > summary::before,
+#fields .ham-easy-advanced[open] > summary::before,
+#fields .hu-inspector-group[open] > summary::before {transform:rotate(135deg);}
+#fields .ham-simple-more > summary strong,
+#fields .ham-inspector-advanced > summary strong,
+#fields .ham-easy-advanced > summary strong {font-size:13px;color:#244737;}
+#fields .ham-simple-more > summary small,
+#fields .ham-inspector-advanced > summary small,
+#fields .ham-easy-advanced > summary span {color:#697e76;font-size:11px;font-weight:400;}
+#fields .ham-simple-more-fields,
+#fields .ham-inspector-advanced-body,
+#fields .ham-easy-advanced-body,
+#fields .hu-inspector-group-fields {
+  padding:14px !important;
+  border-top:1px solid #e8efeb;
+}
+#fields details > summary:focus-visible {outline:2px solid #2c8c70;outline-offset:-3px;border-radius:12px;}
+#fields .field {min-width:0;}
+#fields input[type='range']{accent-color:#237a5d;cursor:pointer;max-width:100%;}
+#fields .hu-layout-choice, #fields .db-shape-choice, #fields .hu-typo-choice {transition:border-color .12s,background .12s,box-shadow .12s;}
+#fields button:focus-visible {outline:2px solid #247e62;outline-offset:2px;}
+@media (prefers-reduced-motion:reduce) {#fields details > summary::before,#fields .hu-layout-choice{transition:none;}}
+#fields .ham-simple-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px;}
+#fields .ham-simple-choice{border:1px solid #dbe5df;border-radius:11px;padding:11px 8px;background:#fff;color:#375448;font:inherit;font-size:12px;cursor:pointer;text-align:center;min-height:42px;}
+#fields .ham-simple-choice:is(.active,[aria-pressed='true']){border-color:#28775c;background:#edf7f0;color:#145c41;font-weight:700;box-shadow:inset 0 0 0 1px #28775c;}
+#fields .ham-simple-choice:hover:not(.active){background:#f5faf7;border-color:#a9cbb8;}
+
+
+/* Design workspace: an unmistakable second way to edit, with one live form. */
+.ham-wide-launcher{margin:8px 16px 12px;flex:0 0 auto}
+.ham-wide-launch-button{width:100%;display:flex;align-items:center;gap:10px;direction:rtl;text-align:right;padding:12px 13px;border:1.5px solid #2b9075;border-radius:13px;background:linear-gradient(120deg,#eaf8f1,#f8fcf9);color:#1b5d49;box-shadow:0 3px 12px #245e4312;font-family:inherit;cursor:pointer}
+.ham-wide-launch-button:hover,.ham-wide-launch-button:focus-visible{border-color:#14785a;background:#def4e8;outline:2px solid transparent;box-shadow:0 0 0 3px #2b907526}
+.ham-wide-launch-icon{font-size:23px;line-height:1;color:#167b5b}
+.ham-wide-launch-copy{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}.ham-wide-launch-copy strong{font-size:13px;font-weight:850}.ham-wide-launch-copy small{font-size:10px;color:#4e7768}.ham-wide-launch-arrow{font-size:20px;font-weight:800}
+.ham-wide-open{overflow:hidden}
+.ham-wide-backdrop{position:fixed;inset:0;z-index:4000;background:#0f252e8c;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,38px);backdrop-filter:blur(3px)}
+.ham-wide-panel.inspector{direction:rtl;width:min(920px,95vw);height:min(790px,91vh);min-height:380px;max-height:95vh;border:1px solid #dae9e0;border-radius:22px;box-shadow:0 25px 95px #081b2140;background:#fff;display:flex;flex-direction:column;overflow:hidden;color:#223b32}
+.ham-wide-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:23px 28px 15px;border-bottom:1px solid #e9efeb;flex:0 0 auto}
+.ham-wide-eyebrow{font-size:10px;font-weight:800;color:#318469;letter-spacing:.2px}.ham-wide-head h2{font-size:22px;margin:4px 0 4px}.ham-wide-head p{font-size:12px;color:#71867c;margin:0;line-height:1.6}
+.ham-wide-close{border:1px solid #e2eae5;background:#f8faf9;border-radius:10px;padding:9px 12px;color:#35584a;display:flex;gap:9px;align-items:center;white-space:nowrap;cursor:pointer}
+.ham-wide-categories{padding:12px 24px;display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid #e9efeb;flex:0 0 auto;direction:rtl}
+.ham-wide-categories button{border:1px solid #dde8e0;border-radius:10px;background:white;color:#3d5b4f;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;min-width:84px}
+.ham-wide-categories button:is(.is-active,:hover){background:#eaf6ee;border-color:#2b896e;color:#126b50}
+.ham-wide-body{overflow-y:auto;flex:1;min-height:0;scrollbar-gutter:stable}
+.ham-wide-body #fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;overflow:visible;padding:20px 26px;align-content:start}
+.ham-wide-body #fields > *{min-width:0;max-width:100%;margin:0}
+.ham-wide-body #fields > .ham-simple-core,.ham-wide-body #fields > .ham-simple-more,.ham-wide-body #fields > .ham-easy-advanced,.ham-wide-body #fields > .hu-inspector-group{align-self:start}
+.ham-wide-body #fields .ham-wide-hidden{display:none!important}
+.ham-wide-empty:not([hidden]){padding:25px;text-align:center;color:#637e6f;font-size:13px}
+.ham-wide-foot{padding:13px 25px;flex:0 0 auto;border-top:1px solid #e7eee9;background:#fbfdfb;display:flex;align-items:center;justify-content:space-between;gap:16px;color:#628274;font-size:11px}
+.ham-wide-foot button{background:#237c62;border:0;color:#fff;font-weight:800;border-radius:10px;padding:10px 21px;cursor:pointer}
+.ham-wide-panel :is(button,input,select,textarea):focus-visible{outline:2px solid #247e62;outline-offset:2px}
+@media(max-width:650px){.ham-wide-backdrop{padding:5px}.ham-wide-panel.inspector{width:100%;height:98dvh;max-height:98dvh;border-radius:15px}.ham-wide-head{padding:14px 16px}.ham-wide-head p{display:none}.ham-wide-categories{padding:10px;gap:5px}.ham-wide-categories button{min-width:0;padding:8px 10px;font-size:11px}.ham-wide-body #fields{grid-template-columns:1fr;padding:12px 15px}.ham-wide-foot{padding:10px 15px}.ham-wide-close span{display:none}}
+
+
+/* v4.1 Unified design studio — same controls, clearer hierarchy. */
+.inspector .tabs:has(+ .ham-wide-launcher),
+.inspector:has(.ham-unified-intro) > .tabs {display:none!important}
+#fields:has(.ham-unified-intro){display:flex;flex-direction:column;gap:13px;padding-bottom:24px}
+.ham-unified-intro{padding:17px;background:linear-gradient(135deg,#eff8f3 0%,#fbfdfa 100%);border:1px solid #d8e9df;border-radius:15px;display:flex;flex-direction:column;gap:5px;color:#244638;line-height:1.5}
+.ham-unified-intro > strong{font-size:15px;font-weight:850}
+.ham-unified-intro > span{font-size:12px;color:#597568}
+.ham-unified-feature-note{font-size:12px;background:#fff;border-right:3px solid #2c8064;padding:9px 10px;margin:6px 0 0;color:#456657;border-radius:5px}
+.ham-unified-device{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.ham-unified-device > span{margin-inline-end:auto;font-size:12px;font-weight:750}
+.ham-unified-device button{border:1px solid #cadfd2;border-radius:9px;padding:8px 12px;background:#fff;color:#315d49;font:inherit;font-size:12px;cursor:pointer}
+.ham-unified-device button.is-active,.ham-unified-device button[aria-pressed="true"]{background:#e3f4e9;border-color:#288163;color:#135c43;font-weight:850}
+.ham-unified-section{border:1px solid #dae5df;background:#fff;border-radius:15px;overflow:visible;box-shadow:0 3px 13px #2349380a;min-width:0}
+.ham-unified-section > summary{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;padding:15px 13px;user-select:none;position:relative}
+.ham-unified-section > summary::-webkit-details-marker{display:none}
+.ham-unified-section > summary > span:nth-child(2){display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ham-unified-section > summary strong{font-weight:850;font-size:14px;color:#233f33}
+.ham-unified-section > summary small{font-size:11px;font-weight:450;color:#71887b}
+.ham-unified-section-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;background:#e9f5ee;border-radius:10px;color:#257b5e;font-size:18px}
+.ham-unified-chevron{font-size:22px;color:#377f65;transition:transform .16s ease}
+.ham-unified-section[open] > summary .ham-unified-chevron{transform:rotate(180deg)}
+.ham-unified-section-body{display:flex;flex-direction:column;gap:12px;padding:0 12px 15px;min-width:0}
+.ham-unified-section-body > .field{min-width:0}
+.ham-unified-preset-header{display:flex;flex-direction:column;gap:3px;padding:4px 2px}
+.ham-unified-preset-header strong{font-size:13px;color:#213e33}.ham-unified-preset-header small{font-size:11px;color:#718377}
+.ham-unified-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}
+.ham-unified-preset{border:1px solid #dae6dd;border-radius:11px;display:flex;flex-direction:column;align-items:stretch;text-align:right;gap:4px;padding:10px;background:#fff;cursor:pointer;font:inherit;color:#273f35;min-width:0}
+.ham-unified-preset:hover,.ham-unified-preset:focus-visible{outline:2px solid #278565;outline-offset:1px;background:#f7fbf8}
+.ham-unified-preset strong{font-size:12px}.ham-unified-preset small{font-size:10px;color:#6d8177}
+.ham-unified-preset-sample{display:flex;gap:4px;padding:9px;border-radius:7px;border:1px solid;min-height:31px;align-items:center}
+.ham-unified-preset-sample i{display:block;width:30px;height:14px;border-radius:4px}
+.ham-unified-section-body details{max-width:100%}
+.ham-unified-section-body .ham-reward-placement{order:-1;border:1px solid #badfd0;background:#f4fbf7;padding:12px;border-radius:11px}
+.ham-wide-body #fields:has(.ham-unified-intro){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:20px;align-content:start}
+.ham-wide-body #fields > .ham-unified-intro{grid-column:1/-1}
+.ham-wide-body #fields > .ham-unified-section{min-width:0}
+.ham-wide-body .ham-unified-section-body{padding:0 15px 17px}
+.ham-wide-body .ham-unified-section-body > .field{min-width:0}
+@media(max-width:700px){.ham-wide-body #fields:has(.ham-unified-intro){grid-template-columns:1fr;padding:12px}.ham-unified-presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Desktop must never expose the mobile-only X sheet control. */
+@media(min-width:768px){.workspace > .inspector > .ham-angular-mobile-close{display:none!important}}
+
+
+/* v4.2 — visible editor entry, genuinely reorganized large design workspace. */
+.workspace:not(.hu-management-mode) > .inspector > .ham-wide-launcher {
+  position:sticky!important;top:0!important;z-index:75!important;display:block!important;
+  padding:11px 14px!important;margin:0!important;background:rgba(255,255,255,.98)!important;
+  border-block:1px solid #e0e9e4!important;box-shadow:0 6px 20px #183b2d12!important;flex-shrink:0!important;
+}
+.workspace > .inspector .ham-wide-launch-button {background:linear-gradient(110deg,#0f745a,#258d70)!important;color:#fff!important;border:0!important;min-height:62px!important;box-shadow:0 6px 17px #0e60432b!important;}
+.workspace > .inspector .ham-wide-launch-copy small,.workspace > .inspector .ham-wide-launch-icon {color:#ddf6e9!important;}
+.workspace > .inspector .ham-wide-launch-arrow {color:#fff!important;}
+.workspace > .stage .stage-toolbar .ham-wide-toolbar-entry {background:#147a60!important;border:1px solid #147a60!important;color:#fff!important;font-weight:800!important;white-space:nowrap!important;padding:10px 14px!important;box-shadow:0 2px 10px #147a6022!important;}
+.workspace > .stage .stage-toolbar .ham-wide-toolbar-entry:hover {background:#0e634d!important;}
+.ham-wide-backdrop {justify-content:flex-start!important;align-items:center!important;direction:rtl!important;background:rgba(13,31,34,.27)!important;backdrop-filter:blur(1.5px)!important;padding:16px!important;}
+.ham-wide-panel.inspector {width:min(870px,calc(100vw - 390px))!important;height:calc(100dvh - 32px)!important;max-height:calc(100dvh - 32px)!important;border-radius:20px!important;box-shadow:0 16px 60px #102a2850!important;}
+.ham-wide-workspace {display:grid;grid-template-columns:175px minmax(0,1fr);flex:1;min-height:0;direction:rtl;}
+.ham-wide-categories {display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;flex-wrap:nowrap!important;gap:7px!important;background:#f6faf8!important;border-left:1px solid #e0eae5!important;border-bottom:0!important;padding:22px 12px!important;min-width:0!important;overflow-y:auto!important;}
+.ham-wide-nav-title {font-size:12px;color:#59766a;padding:0 8px 10px;font-weight:800;}
+.ham-wide-categories button {width:100%;text-align:right!important;min-width:0!important;border:1px solid transparent!important;background:transparent!important;border-radius:10px!important;padding:12px!important;font-size:13px!important;}
+.ham-wide-categories button.is-active,.ham-wide-categories button[aria-selected=true] {background:#fff!important;border-color:#c3e2d3!important;color:#146c53!important;box-shadow:0 2px 8px #254b3910!important;}
+.ham-wide-main {display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;}
+.ham-wide-context {display:flex;flex-direction:column;gap:3px;padding:15px 24px;border-bottom:1px solid #e9eeeb;}
+.ham-wide-context strong {color:#213e32;font-size:15px;}
+.ham-wide-context span {color:#789084;font-size:11px;}
+.ham-wide-main > .ham-wide-body {flex:1;min-height:0;}
+.ham-wide-body #fields:has(.ham-unified-intro) {grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:18px!important;}
+.ham-wide-body #fields > .ham-unified-appearance,.ham-wide-body #fields > .ham-unified-content{align-self:start;}
+/* Mobile close belongs only to a real mobile inspector sheet, never to desktop. */
+.workspace > .inspector > button.ham-angular-mobile-close {display:none!important;}
+@media (max-width:767px) {
+ .workspace:not(.hu-management-mode)[data-ham-mobile-pane="inspector"] > .inspector > button.ham-angular-mobile-close {display:flex!important;align-items:center!important;justify-content:center!important;position:absolute!important;top:12px!important;left:12px!important;width:36px!important;height:36px!important;border-radius:50%!important;}
+ .ham-wide-panel.inspector{width:100%!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;}
+ .ham-wide-backdrop{padding:0!important;}
+ .ham-wide-workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);}
+ .ham-wide-categories{flex-direction:row!important;overflow-x:auto!important;overflow-y:hidden!important;padding:9px!important;border-left:0!important;border-bottom:1px solid #dfeae4!important;}
+ .ham-wide-nav-title{display:none;}
+ .ham-wide-categories button{width:auto!important;white-space:nowrap!important;flex-shrink:0!important;padding:9px 11px!important;}
+ .ham-wide-body #fields:has(.ham-unified-intro){grid-template-columns:1fr!important;}
+ .ham-wide-context{padding:10px 14px;}
+}
+
+/* 4.3: a permanent, unmistakable entry point in the Angular-owned toolbar. */
+app-root > .top .ham-design-studio-global{
+  display:inline-flex!important;align-items:center;justify-content:center;gap:7px;
+  flex:0 0 auto;min-width:142px;min-height:34px;padding:7px 12px!important;
+  border:1px solid #147b61!important;border-radius:10px!important;
+  background:#e7f6ef!important;color:#12664f!important;
+  font-size:12px!important;font-weight:800!important;white-space:nowrap;
+  cursor:pointer;box-shadow:0 1px 3px #164c2b14;
+}
+app-root > .top .ham-design-studio-global:hover,
+app-root > .top .ham-design-studio-global:focus-visible{
+  background:#d5eee2!important;outline:2px solid #188469;outline-offset:2px;
+}
+app-root > .top .ham-design-studio-version{
+  font-size:10px;font-weight:700;padding:2px 5px;border-radius:5px;
+  background:#fff;color:#147b61;
+}
+@media(max-width:850px){
+ app-root > .top .ham-design-studio-global{min-width:0;padding:7px 9px!important}
+ app-root > .top .ham-design-studio-version{display:none}
+}
+
+/* v4.4: mobile sheet dismiss controls must never enter the desktop inspector flow. */
+@media (min-width: 768px) {
+  .workspace .inspector button.ham-v279-sheet-close,
+  .workspace .inspector button.ham-angular-mobile-close { display: none !important; position: absolute !important; }
+}
+
+/* v4.6 — contextual editing, no duplicate toolbar action. */
+#sectionList .section-item[data-select]{position:relative;flex-wrap:wrap;}
+#sectionList .ham-tree-studio-button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ margin:6px 9px 8px 5px;padding:6px 10px;border:1px solid #b4daca;
+ border-radius:9px;background:#eef8f2;color:#17654d;font-family:inherit;font-size:11px;font-weight:700;
+ cursor:pointer;white-space:nowrap;flex:0 0 auto;
+}
+#sectionList .ham-tree-studio-button:hover,
+#sectionList .ham-tree-studio-button:focus-visible{
+ background:#daf1e5;border-color:#278563;outline:2px solid #a0d9bd;outline-offset:1px;
+}
+#sectionList .section-item.active .ham-tree-studio-button{background:#dff3e9;border-color:#278563;}
+/* Keep the entire studio header and its close control below the permanent top bar. */
+.ham-wide-backdrop{
+ top:68px!important;bottom:0!important;left:0!important;right:0!important;
+ height:auto!important;align-items:flex-start!important;padding:14px 16px!important;
+}
+.ham-wide-panel.inspector{
+ height:calc(100dvh - 92px)!important;
+ max-height:calc(100dvh - 92px)!important;
+ min-height:0!important;
+}
+.ham-wide-head{position:relative;z-index:2;background:#fff;flex-shrink:0!important;}
+.ham-wide-close{flex:0 0 auto;}
+@media(max-width:767px){
+ .ham-wide-backdrop{top:0!important;padding:0!important;}
+ .ham-wide-panel.inspector{height:100dvh!important;max-height:100dvh!important;}
+}
+
+/* v4.7 — edit directly on campaign preview, with one transient action. */
+#preview [data-part].editable.ham-preview-edit-hover{
+ outline:2px dashed #9352cb!important;outline-offset:-3px!important;
+}
+#preview [data-part].editable .ham-preview-edit-launcher{
+ position:absolute!important;top:8px!important;right:8px!important;left:auto!important;bottom:auto!important;
+ z-index:1001!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ gap:6px!important;min-height:34px!important;max-width:calc(100% - 16px)!important;
+ width:max-content!important;padding:6px 10px!important;margin:0!important;
+ background:#fff!important;color:#63369a!important;border:1px solid #bca3da!important;
+ border-radius:10px!important;box-shadow:0 5px 18px #29143e30!important;
+ font:700 12px/1.3 Heebo,Arial,sans-serif!important;direction:rtl!important;
+ transform:none!important;opacity:1!important;cursor:pointer!important;white-space:nowrap!important;
+}
+#preview .ham-preview-edit-launcher svg{width:16px!important;height:16px!important;flex:0 0 16px!important;
+ fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important;}
+#preview .ham-preview-edit-launcher:hover,#preview .ham-preview-edit-launcher:focus-visible{
+ background:#f3eaff!important;border-color:#9352cb!important;outline:2px solid #7a3dbc!important;outline-offset:2px!important;
+}
+#preview [data-part].editable.ham-preview-edit-hover{isolation:isolate;}
+@media(max-width:767px){
+ #preview .ham-preview-edit-launcher{font-size:11px!important;min-height:40px!important;}
+}
+/* Public standalone rendering must not expose editor-only controls. */
+body.ham-public-view .ham-preview-edit-launcher{display:none!important;}
+
+/* v4.20: The Panorama navigation is a SINGLE accessible horizontal strip.
+   Never compress navigation into a second row when rewards/participants join. */
+#preview.preview.desktop.layout-panorama .ham-desktop-story-column>.ham-panorama-tabs>.nav-desktop,
+#preview.preview.desktop.layout-panorama .ham-panorama-tabs>.nav-desktop,
+#preview.preview.desktop.layout-panorama .ham-panorama-tabs .nav-desktop:has(>.ham-rewards-main-nav){
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ grid-template-columns:none!important;overflow-x:auto!important;overflow-y:hidden!important;
+ white-space:nowrap!important;scrollbar-width:thin!important;
+ max-height:none!important;min-height:48px!important;height:auto!important;
+ align-items:stretch!important;justify-content:flex-start!important;direction:rtl!important;
+ scroll-snap-type:x proximity!important;overscroll-behavior-x:contain!important;
+}
+#preview.preview.desktop.layout-panorama .ham-panorama-tabs>.nav-desktop>.campaign-nav-link{
+ flex:0 0 auto!important;min-width:max-content!important;width:auto!important;
+ white-space:nowrap!important;scroll-snap-align:start!important;padding-inline:13px!important;
+}
+/* Shared collection views: the saved mode ALWAYS takes precedence over
+   older template-specific CSS (including recommended/sold-out rewards). */
+#preview.preview .hc-public-collection[data-hc-mode="grid"]>.hc-items{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ flex-wrap:initial!important;overflow:visible!important;scroll-snap-type:none!important;
+}
+#preview.preview.desktop .hc-public-collection[data-hc-mode="grid"]:not([data-hc-preset="two"]):not([data-hc-preset="wide"])>.hc-items{
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+#preview.preview .hc-public-collection[data-hc-mode="list"]>.hc-items{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+ flex-wrap:initial!important;overflow:visible!important;scroll-snap-type:none!important;
+}
+#preview.preview .hc-public-collection[data-hc-mode="carousel"]>.hc-items{
+ display:flex!important;flex-wrap:nowrap!important;grid-template-columns:none!important;
+ overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;
+ align-items:stretch!important;direction:rtl!important;scrollbar-width:none!important;
+}
+#preview.preview .hc-public-collection[data-hc-mode="carousel"]>.hc-items>.hc-card{
+ flex:0 0 calc((100% - var(--hc-gap,12px))/2)!important;
+ width:calc((100% - var(--hc-gap,12px))/2)!important;
+ min-width:0!important;max-width:calc((100% - var(--hc-gap,12px))/2)!important;
+ scroll-snap-align:start!important;
+}
+#preview.preview .hc-public-collection[data-hc-mode="grid"]>.hc-items>.hc-card,
+#preview.preview .hc-public-collection[data-hc-mode="list"]>.hc-items>.hc-card{
+ flex:initial!important;width:100%!important;max-width:100%!important;
+}
+/* Contextual edit button may be moved by drag; it never changes the layout of
+   real navigation buttons and never traps the user's next click. */
+#preview .ham-preview-edit-launcher{touch-action:none!important;user-select:none!important;cursor:grab!important}
+#preview .ham-preview-edit-launcher.ham-preview-edit-dragging{cursor:grabbing!important;opacity:.94!important}
+
+#preview.preview .hc-content-collection[data-hc-mode="grid"][data-hc-preset="two"]>.hc-items{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#preview.preview .hc-content-collection[data-hc-mode="grid"][data-hc-preset="wide"]>.hc-items{grid-template-columns:minmax(0,1fr)!important}
+
+/* v4.25: genuinely wide, single-workspace component editor.
+   Keep the original input DOM/events; visual organization only. */
+.ham-wide-backdrop {
+  left:0!important;right:0!important;top:68px!important;bottom:0!important;
+  justify-content:center!important;align-items:flex-start!important;
+  padding:14px clamp(12px,2.5vw,36px)!important;
+  background:rgba(17,36,38,.42)!important;
+}
+.ham-wide-panel.inspector {
+  width:min(1280px,calc(100vw - 48px))!important;
+  max-width:none!important;height:calc(100dvh - 90px)!important;
+  max-height:calc(100dvh - 90px)!important;
+  border-radius:20px!important;
+}
+.ham-wide-head {padding:19px 28px 16px!important;align-items:center!important;}
+.ham-wide-head h2 {font-size:23px!important;}
+.ham-wide-workspace {display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;}
+.ham-wide-categories {
+  display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
+  gap:9px!important;overflow-x:auto!important;overflow-y:hidden!important;
+  padding:13px 26px!important;border-bottom:1px solid #dfe9e3!important;
+  border-left:0!important;background:#f8fbf9!important;flex:0 0 auto!important;
+  scrollbar-width:thin;
+}
+.ham-wide-categories button {
+  flex:0 0 auto!important;width:auto!important;min-width:0!important;
+  padding:10px 17px!important;white-space:nowrap!important;
+  border:1px solid #e0eae5!important;background:white!important;
+  border-radius:11px!important;text-align:center!important;font-size:13px!important;
+}
+.ham-wide-categories button:is(.is-active,[aria-selected="true"]){
+  background:#e8f5ec!important;border-color:#2b8768!important;
+  color:#17644e!important;box-shadow:inset 0 0 0 1px #2b8768!important;
+}
+.ham-wide-main{display:flex!important;flex:1!important;min-width:0!important;min-height:0!important;}
+.ham-wide-context{display:none!important;}
+.ham-wide-body{width:100%;overflow-y:auto!important;min-width:0!important;scrollbar-gutter:stable;}
+.ham-wide-body #fields,
+.ham-wide-body #fields:has(.ham-unified-intro){
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  align-content:start!important;gap:16px!important;
+  padding:24px clamp(18px,3vw,44px)!important;
+}
+.ham-wide-body #fields > .ham-unified-section,
+.ham-wide-body #fields > .ham-unified-intro,
+.ham-wide-body #fields > .ham-reward-placement {width:100%!important;grid-column:1/-1!important;min-width:0!important;}
+.ham-wide-body #fields .ham-unified-section-body {
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))!important;
+  align-items:start!important;gap:16px!important;
+  padding:20px!important;
+}
+.ham-wide-body #fields .ham-unified-section-body > :is(.ham-simple-core,.ham-easy-advanced,.ham-simple-more,.hu-inspector-group){min-width:0!important;}
+.ham-wide-body #fields .ham-unified-section-body > .ham-unified-presets,
+.ham-wide-body #fields .ham-unified-section-body > .ham-unified-preset-header,
+.ham-wide-body #fields .ham-unified-section-body > .ham-reward-placement,
+.ham-wide-body #fields .ham-unified-section-body > .hu-studio-layout-picker{grid-column:1/-1!important;}
+.ham-wide-body #fields .ham-unified-section-body .field,
+.ham-wide-body #fields .ham-unified-section-body > details,
+.ham-wide-body #fields .ham-unified-section-body > div {min-width:0;max-width:100%;}
+.ham-wide-body #fields .ham-reward-placement {
+  background:linear-gradient(110deg,#eaf8f0,#f8fcfa)!important;
+  border:1.5px solid #8dcab0!important;border-radius:16px!important;
+  padding:20px 24px!important;margin:0!important;
+  box-shadow:0 3px 14px #153b2910!important;
+}
+.ham-wide-body #fields .ham-reward-placement > strong{font-size:18px!important;}
+.ham-wide-body #fields .ham-reward-placement .db-layout-toggle{display:flex!important;gap:12px!important;flex-wrap:wrap!important;}
+.ham-wide-body #fields .ham-reward-placement [data-rewards-desktop-position]{min-width:135px!important;min-height:44px!important;}
+.ham-wide-body #fields .ham-unified-section{overflow:hidden!important;box-shadow:0 4px 18px #213d3010!important;}
+.ham-wide-body #fields .ham-unified-section > summary {
+  padding:17px 20px!important;background:#f9fcfa!important;
+  border-bottom:1px solid transparent!important;
+}
+.ham-wide-body #fields .ham-unified-section[open] > summary{border-bottom-color:#e1eae5!important;}
+.ham-wide-body #fields .ham-unified-chevron{display:none!important;}
+.ham-wide-body #fields .ham-unified-section > summary::after {
+  content:"";width:9px;height:9px;flex:0 0 9px;
+  border-left:2px solid #267a60;border-bottom:2px solid #267a60;
+  transform:rotate(-45deg);transition:transform .18s ease;
+  margin-inline-start:auto;
+}
+.ham-wide-body #fields .ham-unified-section[open] > summary::after{transform:rotate(135deg);}
+.ham-wide-body #fields .ham-wide-hidden {display:none!important;}
+@media(max-width:800px){
+  .ham-wide-backdrop{top:0!important;padding:0!important;}
+  .ham-wide-panel.inspector{width:100%!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;}
+  .ham-wide-head{padding:14px 16px!important;}
+  .ham-wide-categories{padding:10px!important;gap:6px!important;}
+  .ham-wide-categories button{padding:9px 12px!important;font-size:12px!important;}
+  .ham-wide-body #fields,.ham-wide-body #fields:has(.ham-unified-intro){padding:13px!important;}
+  .ham-wide-body #fields .ham-unified-section-body{grid-template-columns:minmax(0,1fr)!important;padding:12px!important;}
+}
+/* Nested legacy groups also use the width; never recreate a narrow inspector. */
+.ham-wide-body #fields .ham-unified-section-body > :is(.ham-easy-advanced,.ham-simple-more,.ham-simple-core,.hu-inspector-group,.ham-inspector-advanced){grid-column:1/-1!important;width:100%!important;}
+.ham-wide-body #fields :is(.ham-easy-advanced-body,.ham-simple-more-fields,.ham-simple-core,.ham-inspector-advanced-body){
+ display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr))!important;
+ gap:14px!important;align-items:start!important;min-width:0!important;
+}
+.ham-wide-body #fields :is(.ham-easy-advanced-body,.ham-simple-more-fields,.ham-simple-core,.ham-inspector-advanced-body) > *{min-width:0;max-width:100%;}
+.ham-wide-body #fields .ham-unified-presets{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;gap:12px!important;}
+.ham-wide-body #fields .field{border:1px solid #e6eee9;border-radius:13px;background:#fff;padding:14px!important;box-shadow:0 2px 9px #1a3c2b08;}
+.ham-wide-body #fields .field :is(input,select,textarea){max-width:100%;}
+.ham-wide-body #fields .ham-wide-hidden{display:none!important;}
+@media(max-width:800px){
+ .ham-wide-body #fields :is(.ham-easy-advanced-body,.ham-simple-more-fields,.ham-simple-core,.ham-inspector-advanced-body){grid-template-columns:1fr!important;}
+}
+
+
+/* v4.29 — Three distinct reward VIEW states, not aliases for the image preset.
+   Rows = one compact horizontal row per reward. Grid = multi-column tiles.
+   Carousel = a single scrolling row. These selectors intentionally override
+   the original template and card-image layout overrides. */
+#preview.preview .hc-content-rewards[data-hc-mode="list"] > .hc-items {
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-auto-flow:row!important;
+  gap:10px!important;
+  overflow:visible!important;
+  scroll-snap-type:none!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card {
+  display:grid!important;
+  grid-template-columns:clamp(78px,21%,132px) minmax(0,1fr)!important;
+  grid-template-rows:auto!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:92px!important;
+  max-height:none!important;
+  padding:8px!important;
+  gap:12px!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card .reward-tile-photo {
+  display:block!important;
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+  height:92px!important;
+  min-height:0!important;
+  max-height:105px!important;
+  align-self:center!important;
+  flex:none!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card .reward-tile-copy {
+  grid-column:2!important;
+  grid-row:1!important;
+  width:auto!important;
+  min-width:0!important;
+  height:auto!important;
+  padding:4px 3px!important;
+  flex:1 1 auto!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card .reward-tile-copy>button {
+  margin-top:6px!important;
+  max-width:230px!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="grid"] > .hc-items {
+  display:grid!important;
+  grid-auto-flow:row!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  overflow:visible!important;
+}
+#preview.preview.desktop .hc-content-rewards[data-hc-mode="grid"]:not([data-hc-preset="wide"]):not([data-hc-preset="two"]) > .hc-items {
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="grid"][data-hc-preset="wide"] > .hc-items {
+  grid-template-columns:minmax(0,1fr)!important;
+}
+#preview.preview .hc-content-rewards[data-hc-mode="carousel"] > .hc-items {
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  overflow-x:auto!important;
+  scroll-snap-type:x mandatory!important;
+}
+@media(max-width:600px){
+  #preview.preview.mobile .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card {
+    grid-template-columns:80px minmax(0,1fr)!important;
+    gap:8px!important;
+  }
+  #preview.preview.mobile .hc-content-rewards[data-hc-mode="list"] > .hc-items > .reward-tile.hc-card .reward-tile-photo {
+    height:80px!important;
+  }
+}
+
+/* v4.31: contextual editor action is a stable document-level portal.
+   It must NOT be a child of public campaign DOM, which is re-created on
+   reset, demo loading, tab switching, and mode changes. */
+app-root > .ham-preview-edit-launcher {
+ position:fixed!important; z-index:2147483000!important;
+ display:inline-flex!important; align-items:center!important; justify-content:center!important;
+ gap:6px!important; width:max-content!important; max-width:min(245px,90vw)!important;
+ min-height:34px!important; padding:6px 10px!important; margin:0!important;
+ border:1px solid #bca3da!important; border-radius:10px!important;
+ background:#fff!important; color:#63369a!important;
+ box-shadow:0 5px 18px #29143e30!important;
+ font:700 12px/1.3 Heebo,Arial,sans-serif!important;
+ direction:rtl!important; white-space:nowrap!important;
+ cursor:grab!important; touch-action:none!important; user-select:none!important;
+ pointer-events:auto!important;
+}
+app-root > .ham-preview-edit-launcher svg {
+ width:16px!important;height:16px!important;flex:0 0 16px!important;
+ fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;
+ stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+app-root > .ham-preview-edit-launcher:hover,app-root > .ham-preview-edit-launcher:focus-visible {
+ background:#f3eaff!important;border-color:#9352cb!important;
+ outline:2px solid #7a3dbc!important;outline-offset:2px!important;
+}
+app-root > .ham-preview-edit-launcher.ham-preview-edit-dragging{cursor:grabbing!important;opacity:.94!important;}
+body.ham-public-view app-root > .ham-preview-edit-launcher {display:none!important;}
+
+/* v4.31: selecting Advanced in the wide studio IS the expansion.
+   No duplicate nested 'Advanced' title, chevron or click is required. */
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields :is(details.ham-easy-advanced,details.ham-simple-more){
+ border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;grid-column:1/-1!important;margin:0!important;padding:0!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields :is(details.ham-easy-advanced,details.ham-simple-more) > summary{display:none!important;}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields :is(.ham-easy-advanced-body,.ham-simple-more-fields){
+ border:0!important;padding:0!important;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))!important;gap:16px!important;align-items:start!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields :is(details.ham-easy-advanced,details.ham-simple-more) > :not(summary){display:grid!important;}
+
+/* v4.32: Advanced is a wide-editor tab, not a second nested accordion. */
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields details.ham-inspector-advanced {
+ border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;grid-column:1/-1!important;margin:0!important;padding:0!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields details.ham-inspector-advanced > summary {display:none!important;}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields details.ham-inspector-advanced > .ham-inspector-advanced-body {display:grid!important;}
+
+/* v4.34: the wide editor owns the disclosure. Never display an additional
+   "Advanced design options" card/summary within the wide workspace. */
+.ham-wide-panel .ham-wide-body #fields details.ham-easy-advanced,
+.ham-wide-panel .ham-wide-body #fields details.ham-simple-more,
+.ham-wide-panel .ham-wide-body #fields details.ham-inspector-advanced {
+  display:contents!important;border:0!important;background:transparent!important;
+  padding:0!important;margin:0!important;box-shadow:none!important;
+}
+.ham-wide-panel .ham-wide-body #fields details.ham-easy-advanced > summary,
+.ham-wide-panel .ham-wide-body #fields details.ham-simple-more > summary,
+.ham-wide-panel .ham-wide-body #fields details.ham-inspector-advanced > summary {display:none!important;}
+.ham-wide-panel .ham-wide-body #fields .ham-easy-advanced-body,
+.ham-wide-panel .ham-wide-body #fields .ham-simple-more-fields,
+.ham-wide-panel .ham-wide-body #fields .ham-inspector-advanced-body {
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  align-content:start!important;gap:14px!important;border:0!important;
+  margin:0!important;padding:0!important;min-width:0!important;
+}
+/* Large Rewards editor: one legible column, not three nested independent card
+   columns with huge whitespace and inconsistent vertical alignment. */
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section-body {
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:16px!important;max-width:950px!important;margin-inline:auto!important;
+}
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section-body > *{width:100%!important;max-width:100%!important;}
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section-body .ham-card-size-panel,
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section-body .ham-easy-design{max-width:100%!important;}
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section-body .ham-wide-hidden{display:none!important;}
+
+/* The per-tab hidden state must beat the general wide-panel flatten rule. */
+.ham-wide-panel .ham-wide-body #fields details.ham-easy-advanced.ham-wide-hidden,
+.ham-wide-panel .ham-wide-body #fields details.ham-simple-more.ham-wide-hidden,
+.ham-wide-panel .ham-wide-body #fields details.ham-inspector-advanced.ham-wide-hidden,
+.ham-wide-panel .ham-wide-body #fields .ham-unified-section.ham-wide-hidden {display:none!important;}
+/* Sidebar shortcut is not restricted to Panorama if a two-column layout is used. */
+#preview.preview.desktop .ham-desktop-donation-column > .ham-rewards-discovery-link {
+ display:flex!important;align-items:center;justify-content:center;gap:8px;
+ width:100%;cursor:pointer;min-height:42px;
+}
+/* Advanced category shows advanced settings directly, not the quick-start
+   presets and basic presentation choices above them. */
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-unified-preset-header,
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-unified-presets,
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-easy-design {
+  display:none!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-unified-appearance {
+  border:0!important;box-shadow:none!important;background:transparent!important;overflow:visible!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-unified-appearance > summary {
+  display:none!important;
+}
+.ham-wide-panel[data-ham-wide-active-category="advanced"] .ham-wide-body #fields .ham-unified-appearance > .ham-unified-section-body {
+  padding:0!important;background:transparent!important;
+}
+
+/* v4.35: rewards shortcut follows the real donation section in EVERY desktop template.
+   Override the legacy Panorama-only exclusion without relying on extra wrappers. */
+#preview.preview.desktop .ham-rewards-discovery-link[data-ham-jump-rewards] {
+ display:flex!important; align-items:center; justify-content:center; gap:9px;
+ padding:12px 16px; margin-top:10px; width:100%; min-height:44px;
+ box-sizing:border-box; border:1px solid #b6d9cc; border-radius:11px;
+ background:#eff8f3; color:#186b52; font-weight:700; cursor:pointer;
+}
+#preview.preview.desktop .ham-rewards-discovery-link[data-ham-jump-rewards]:hover {background:#e3f2e9;}
+
+/* Shared campaign width: the standalone export must use the same desktop
+   canvas as Studio, rather than expanding its snapshot to 1240px. The layout
+   attribute raises specificity above the export's #preview.preview override. */
+#preview.preview.desktop[class*="layout-"] {
+ width:100%!important;
+ max-width:1100px!important;
+ box-sizing:border-box!important;
+ margin-inline:auto!important;
+}
+
+/* Public presentation only. Campaign components keep their Preview rules. */
+html:has(> body > #preview.preview) {
+ background:#fff!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+}
+body:has(> #preview.preview) {
+ display:flow-root!important;
+ background:#fff!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ min-height:100dvh!important;
+ overflow-x:clip!important;
+ overflow-y:auto!important;
+}
+body:has(> #preview.preview)::before,
+body:has(> #preview.preview)::after {content:none!important;}
+body > #preview.preview[class*="layout-"],
+body > #preview.preview.desktop[class*="layout-"],
+#hamStandaloneFallback #preview.preview[class*="layout-"],
+#hamStandaloneFallback #preview.preview.desktop[class*="layout-"] {
+ width:calc(100% - 40px)!important;
+ max-width:var(--ham-public-preview-width,1100px)!important;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ margin:24px auto!important;
+ box-sizing:border-box!important;
+ background:#fff!important;
+ border-width:var(--ham-public-preview-border-width,0)!important;
+ border-style:var(--ham-public-preview-border-style,none)!important;
+ border-color:#edf0f3!important;
+ border-radius:24px!important;
+ box-shadow:0 4px 20px rgba(15,23,42,.10)!important;
+ padding:var(--ham-public-preview-padding,0)!important;
+ font-family:var(--ham-public-preview-font-family,Heebo,Arial,sans-serif)!important;
+ font-size:var(--ham-public-preview-font-size,14px)!important;
+ line-height:var(--ham-public-preview-line-height,normal)!important;
+ color:var(--ham-public-preview-color,var(--ink))!important;
+ /* Keep the document as scroll owner: sticky/fixed donation controls remain intact. */
+ overflow:visible!important;
+}
+body > #preview.preview.mobile[class*="layout-"],
+#hamStandaloneFallback #preview.preview.mobile[class*="layout-"] {max-width:390px!important;}
+body > #preview.preview.desktop[class*="layout-"] [data-part="header"],
+body > #preview.preview.desktop[class*="layout-"] [data-part="header"] .campaign-header,
+#hamStandaloneFallback #preview.preview.desktop[class*="layout-"] [data-part="header"],
+#hamStandaloneFallback #preview.preview.desktop[class*="layout-"] [data-part="header"] .campaign-header {
+ border-top-left-radius:23px!important;
+ border-top-right-radius:23px!important;
+}
+body > #preview.preview[class*="layout-"] [data-part="footer"],
+#hamStandaloneFallback #preview.preview[class*="layout-"] [data-part="footer"] {
+ border-bottom-left-radius:23px!important;
+ border-bottom-right-radius:23px!important;
+ overflow:clip!important;
+}
+@media(max-width:700px) {
+ body > #preview.preview[class*="layout-"],
+ body > #preview.preview.desktop[class*="layout-"],
+ body > #preview.preview.mobile[class*="layout-"],
+ #hamStandaloneFallback #preview.preview[class*="layout-"],
+ #hamStandaloneFallback #preview.preview.desktop[class*="layout-"] {
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+ }
+ #hamStandaloneFallback #preview.preview.mobile[class*="layout-"] {max-width:100%!important;}
+ body > #preview.preview[class*="layout-"] > [data-part="header"] .campaign-header,
+ body > #preview.preview[class*="layout-"] [data-part="footer"],
+ #hamStandaloneFallback #preview.preview[class*="layout-"] > [data-part="header"] .campaign-header,
+ #hamStandaloneFallback #preview.preview[class*="layout-"] [data-part="footer"] {border-radius:0!important;}
+ body > #preview.preview.desktop[class*="layout-"] [data-part="header"],
+ body > #preview.preview.desktop[class*="layout-"] [data-part="header"] .campaign-header,
+ #hamStandaloneFallback #preview.preview.desktop[class*="layout-"] [data-part="header"],
+ #hamStandaloneFallback #preview.preview.desktop[class*="layout-"] [data-part="header"] .campaign-header {border-radius:0!important;}
+}

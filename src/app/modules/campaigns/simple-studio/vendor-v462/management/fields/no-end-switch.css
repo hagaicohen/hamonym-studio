@@ -1,0 +1,7 @@
+.ham-no-end-toggle { grid-column: 1 / -1; display: inline-flex; align-items: center; justify-self: start; gap: 8px; margin: 4px 0 0; color: #52665d; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.ham-no-end-toggle input { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 32px; width: 32px; height: 18px; min-height: 18px; margin: 0; padding: 0; border: 0; border-radius: 999px; background: #d5ded9; cursor: pointer; }
+.ham-no-end-toggle input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #183b2926; }
+.ham-no-end-toggle input:checked { background: #20775e; }
+.ham-no-end-toggle input:checked::before { transform: translateX(14px); }
+.ham-no-end-toggle input:focus-visible { outline: 2px solid #20775e; outline-offset: 3px; }
+.ham-disabled-date { opacity: .45; }

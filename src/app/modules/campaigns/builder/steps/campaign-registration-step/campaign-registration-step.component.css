@@ -4,7 +4,6 @@
   padding: 28px 28px 40px;
   max-width: 1100px; margin: 0 auto;
   font-family: 'Heebo', sans-serif;
-  direction: rtl;
 }
 
 /* ─── HEADER ─── */
@@ -37,7 +36,7 @@
 .rf-field { display: flex; flex-direction: column; gap: 7px; }
 .rf-label-row { display: flex; align-items: center; justify-content: space-between; }
 .rf-label { font-size: 13px; font-weight: 700; color: #374151; }
-.rf-req   { color: #ef4444; margin-right: 2px; }
+.rf-req   { color: #ef4444; margin-inline-start: 2px; }
 
 .rf-input {
   width: 100%; box-sizing: border-box;
@@ -51,10 +50,10 @@
 
 .rf-currency-wrap { position: relative; }
 .rf-currency-symbol {
-  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  position: absolute; inset-inline-start: 14px; top: 50%; transform: translateY(-50%);
   font-weight: 700; color: #64748b; font-size: 15px; pointer-events: none;
 }
-.rf-input--currency { padding-right: 32px; }
+.rf-input--currency { padding-inline-start: 32px; }
 
 .rf-advanced-toggle {
   align-self: flex-start;
@@ -172,4 +171,14 @@
   .rgo-add-btn { width: 100%; }
 
   .rgo-grid { grid-template-columns: 1fr; }
+}
+
+/* Studio properties panel (container "props", 2026-11-08): the layout follows the
+   panel's own width, so resizing the panel adapts it without touching the canvas.
+   The classic wizard has no such container and is unchanged. */
+@container props (max-width: 680px) {
+  .rgo-builder { grid-template-columns: minmax(0, 1fr); }
+}
+@container props (max-width: 300px) {
+  .rgo-grid { grid-template-columns: minmax(0, 1fr); }
 }
