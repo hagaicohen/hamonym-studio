@@ -658,7 +658,7 @@ router.post(
 );
 
 router.post('/me/donation-verification', requireAuth, async (req,res) => {
-  try { await require('../modules/donations/donor-ownership.service').requestVerification(req.user.id); res.json({ sent:true }); }
+  try { await require('../modules/donations/donor-ownership.service').requestVerification(req.user.id, req.body?.lang); res.json({ sent:true }); }
   catch(error) { res.status(error.status || 503).json({ error: error.status===429 ? 'Please wait before requesting another email' : 'Email delivery unavailable' }); }
 });
 router.post('/me/verify-donations', requireAuth, async (req,res) => {

@@ -52,13 +52,15 @@ module.exports = {
 
     const res = await db.query(
       `SELECT c.id, c.current_amount, c.supporters_count,
-              COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0) AS actual_amount,
+              -- Progress is in ILS: the ILS equivalent (a USD/EUR donation still
+              -- waiting for its rate is not counted yet, exactly as in markDonationPaid).
+              COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0) AS actual_amount,
               COUNT(d.id) FILTER (WHERE d.status = 'paid') AS actual_supporters
        FROM campaigns c
        LEFT JOIN donations d ON d.campaign_id = c.id
        WHERE c.deleted_at IS NULL
        GROUP BY c.id
-       HAVING c.current_amount != COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)
+       HAVING c.current_amount != COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)
            OR c.supporters_count != COUNT(d.id) FILTER (WHERE d.status = 'paid')`
     );
 
@@ -94,7 +96,7 @@ module.exports = {
            LEFT JOIN donations d ON d.campaign_id = c.id AND d.status = 'paid'
            WHERE c.id = f.subject_id AND c.deleted_at IS NULL
            GROUP BY c.id, c.current_amount, c.supporters_count
-           HAVING c.current_amount != COALESCE(SUM(d.amount), 0)
+           HAVING c.current_amount != COALESCE(SUM(d.amount_ils), 0)
                OR c.supporters_count != COUNT(d.id)
          )`
     );

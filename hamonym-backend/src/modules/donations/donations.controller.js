@@ -5,6 +5,7 @@
 // (e.g. "Entity not approved"), which is both untranslated and leaks an
 // internal admin-approval detail no donor needs to know about.
 function getDonationErrorMessage(error) {
+  if (error.code === 'CAMPAIGN_NOT_PUBLISHED') return 'לא ניתן לתרום לקמפיין שטרם פורסם.';
   // Stable code, not a message-string match — see donations.service.js's
   // isMock fix (2026-08-21): this is a business condition an admin/alert
   // may need to key off later, not just donor-facing copy.
@@ -13,6 +14,12 @@ function getDonationErrorMessage(error) {
   }
   if (error.code === 'INVALID_INSTALLMENTS') {
     return 'מספר החודשים שנבחר אינו תקין — נסו שוב.';
+  }
+  if (error.code === 'UNSUPPORTED_CURRENCY' || error.code === 'CURRENCY_NOT_ENABLED') {
+    return 'המטבע שנבחר אינו זמין כרגע לתרומה זו — בחרו מטבע אחר.';
+  }
+  if (error.code === 'ITEMS_REQUIRE_ILS') {
+    return 'תשורות והרשמה זמינות בשקלים בלבד — בחרו ₪ כדי להמשיך.';
   }
   switch (error.message) {
     case 'Entity not approved':
@@ -62,7 +69,7 @@ exports.getMyDonations = async (req, res) => {
 
 exports.createDonation = async (req, res) => {
   try {
-    const { campaignId, donor, amount, rewards, participants, utmParams, recurring, installments, ambassadorId, embedded, note } = req.body;
+    const { campaignId, donor, amount, currency, rewards, participants, utmParams, recurring, installments, ambassadorId, embedded, note, language } = req.body;
 
     if (!campaignId || !donor || !amount) {
       return res.status(400).json({ error: 'campaignId, donor and amount are required' });
@@ -72,14 +79,21 @@ exports.createDonation = async (req, res) => {
     const userAgent = req.headers['user-agent'] || null;
 
     const result = await donationsService.createDonation({
-      campaignId, donor, amount, rewards, participants,
-      utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note,
+      campaignId, donor, amount, currency, rewards, participants,
+      utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note, language,
     });
     res.json(result);
   } catch (err) {
     console.error('createDonation error:', err.message);
-    res.status(400).json({ error: getDonationErrorMessage(err) });
+    res.status(err.code === 'CAMPAIGN_NOT_PUBLISHED' ? 403 : 400).json({ error: getDonationErrorMessage(err) });
   }
+};
+
+// Which currencies a donor can pick right now (ILS always; USD/EUR only once
+// enabled -- see currency.config.js).
+exports.getCurrencies = (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(require('../currency/currency.config').availability());
 };
 
 exports.getLiveDonations = async (req, res) => {

@@ -49,7 +49,7 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
             COALESCE(r.donors_in_range, 0)::int   AS donors_in_range
      FROM campaigns c
      LEFT JOIN LATERAL (
-       SELECT SUM(d.amount) AS raised_in_range, COUNT(*) AS donors_in_range
+       SELECT SUM(d.amount_ils) AS raised_in_range, COUNT(*) AS donors_in_range
        FROM donations d
        WHERE d.campaign_id = c.id AND d.status = 'paid' ${rangeClause}
      ) r ON TRUE
@@ -147,7 +147,7 @@ exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) =>
            ELSE 'ישיר / לא מזוהה'
          END AS channel,
          COUNT(*)::int AS count,
-         COALESCE(SUM(amount), 0)::float AS total
+         COALESCE(SUM(amount_ils), 0)::float AS total
        FROM donations
        WHERE ${scopeClause} AND status = 'paid'
        GROUP BY channel
@@ -159,7 +159,7 @@ exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) =>
          utm_params->>'source' AS source,
          utm_params->>'medium' AS medium,
          COUNT(*)::int AS count,
-         COALESCE(SUM(amount), 0)::float AS total
+         COALESCE(SUM(amount_ils), 0)::float AS total
        FROM donations
        WHERE ${scopeClause} AND status = 'paid' AND utm_params IS NOT NULL
        GROUP BY utm_params->>'source', utm_params->>'medium'
@@ -170,7 +170,7 @@ exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) =>
       `SELECT
          COUNT(*)::int AS total_count,
          COUNT(*) FILTER (WHERE utm_params IS NOT NULL)::int AS with_utm_count,
-         COALESCE(SUM(amount), 0)::float AS total_raised
+         COALESCE(SUM(amount_ils), 0)::float AS total_raised
        FROM donations
        WHERE ${scopeClause} AND status = 'paid'`,
       scopeParams
@@ -226,8 +226,8 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
 
   const [thisMonthRes, lastMonthRes, yearSeriesRes] = await Promise.all([
     db.query(
-      `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
-              COALESCE(AVG(amount), 0)::float AS avg
+      `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount_ils), 0)::float AS total,
+              COALESCE(AVG(amount_ils), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
          AND completed_at >= COALESCE($2::date, date_trunc('month', NOW()))
@@ -235,8 +235,8 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
       thisMonthParams
     ),
     db.query(
-      `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount), 0)::float AS total,
-              COALESCE(AVG(amount), 0)::float AS avg
+      `SELECT COUNT(*)::int AS count, COALESCE(SUM(amount_ils), 0)::float AS total,
+              COALESCE(AVG(amount_ils), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
          AND completed_at >= COALESCE($2::date, date_trunc('month', NOW() - INTERVAL '1 month'))
@@ -247,7 +247,7 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
       `SELECT
          EXTRACT(YEAR FROM completed_at)::int  AS year,
          EXTRACT(MONTH FROM completed_at)::int AS month,
-         COALESCE(SUM(amount), 0)::float AS total
+         COALESCE(SUM(amount_ils), 0)::float AS total
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClauseYear}
          AND completed_at >= date_trunc('year', NOW() - INTERVAL '1 year')
@@ -346,7 +346,7 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, 
     db.query(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'failed' AND ${kpiRangeClause})::int   AS failed_count,
-         COALESCE(SUM(amount) FILTER (WHERE status = 'failed' AND ${kpiRangeClause}), 0)::float AS failed_amount,
+         COALESCE(SUM(amount_ils) FILTER (WHERE status = 'failed' AND ${kpiRangeClause}), 0)::float AS failed_amount,
          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_count,
          COUNT(*) FILTER (WHERE status = 'paid' AND ${kpiPaidRangeClause})::int   AS paid_count_month
        FROM donations
@@ -363,7 +363,7 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, 
       reasonsParams
     ),
     db.query(
-      `SELECT d.id, d.amount::float, d.donor_name, d.status, d.failure_reason,
+      `SELECT d.id, d.amount::float, d.currency, d.amount_ils::float, d.donor_name, d.status, d.failure_reason,
               d.created_at, d.updated_at, c.title AS campaign_title
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id

@@ -106,8 +106,12 @@ exports.handle = async (payload) => {
     return holdForVerification(donationId, gate.reasons, gate.comparison);
   }
 
+  const fx = await donationsService.fxSnapshotFor(donation.currency, new Date(), { subjectId: donationId });
   const markResult = await donationsService.markDonationPaid(donationId, {
     providerReference: result?.TranzactionId || result?.LowProfileId || null,
+    providerAmount: result?.TranzactionInfo?.Amount ?? null,
+    providerCoinId: result?.TranzactionInfo?.CoinId ?? null,
+    fx,
   });
 
   // Document persistence is independent of the committed payment result.

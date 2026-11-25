@@ -1,3 +1,9 @@
+function validateCampaignSlug(value) {
+  if (typeof value !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N}-]{1,68}[\p{L}\p{N}]$/u.test(value) || value.includes('--')) throw new Error('Invalid campaign slug');
+  return value;
+}
+exports.validateCampaignSlug = validateCampaignSlug;
+
 const db =
   require('../../db/db');
 
@@ -6,6 +12,9 @@ const { isEntityMember } =
 
 const { isValidCategoryId } =
   require('./entity-categories');
+
+const { validateContentI18n, publicContentI18n, hasContentI18nColumn, hasOptionUidColumn, cleanOptionUid } =
+  require('./content-i18n');
 
 // Reused only for the ambassador personal-link slug rules, so that the
 // Ambassador Studio self-edit path (updateMyAmbassadorRecord) and the
@@ -57,6 +66,8 @@ const UPDATABLE_CAMPAIGN_COLUMNS = new Set([
   'recurring_billing_mode', 'recurring_installments_count', 'rewards_enabled',
   'rewards', 'registration_field_label', 'registration_field_icon',
   'sponsors', 'ambassadors', 'updates', 'blocks', 'layout',
+  // Bilingual campaign content (migration 088) -- validated in updateCampaign.
+  'content_i18n',
 ]);
 
 function sanitizeUpdateData(
@@ -84,6 +95,7 @@ const JSON_COLUMNS = new Set([
   'updates',
   'blocks',
   'layout',
+  'content_i18n',
 ]);
 
 function buildUpdateQuery(
@@ -236,6 +248,7 @@ exports.createCampaign =
     if (!data.slug) {
       data.slug = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     }
+    validateCampaignSlug(data.slug);
 
     const hasAccess =
       await validateOwnership(
@@ -577,36 +590,58 @@ async function syncAmbassadors(campaignId, ambassadors) {
 |--------------------------------------------------------------------------
 | SYNC REGISTRATION OPTIONS (JSON draft array → registration_options table)
 |--------------------------------------------------------------------------
-| Delete-all + reinsert rather than a slug-style upsert (unlike
-| syncAmbassadors above) — options have no natural business key to match on
-| (the optional `key` field can be empty/duplicate), the array is small and
-| edited by one admin, and existing registration_participants rows keep
-| their own option_key/option_title snapshot regardless (ON DELETE SET NULL
-| on registration_option_id), so re-numbering ids on every save is harmless.
-| See docs/DECISIONS.md (2026-07-16).
+| Preserve IDs by campaign-scoped ID/client_uid; update the existing records transactionally.
 */
 
-async function syncRegistrationOptions(campaignId, options) {
+async function syncRegistrationOptions(campaignId, options, transaction = null) {
   if (options === undefined) return;
-
-  await db.query('DELETE FROM registration_options WHERE campaign_id = $1', [campaignId]);
-
-  if (!Array.isArray(options) || options.length === 0) return;
-
-  for (let i = 0; i < options.length; i++) {
-    const o = options[i];
-    if (!o || !o.title || o.price == null) continue;
-    await db.query(
-      `INSERT INTO registration_options (campaign_id, key, title, description, price, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [campaignId, o.key || null, o.title, o.description || null, o.price, i]
-    );
+  if (!Array.isArray(options)) throw new Error('Registration options must be an array');
+  const withUid = await hasOptionUidColumn();
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const ids = new Set(), uids = new Set();
+  for (const option of options) {
+    if (!option || !String(option.title || '').trim() || !Number.isFinite(Number(option.price)) || Number(option.price) < 0) throw new Error('Invalid registration option title or price');
+    if (option.id && ids.has(option.id)) throw new Error('Duplicate registration option ID');
+    if (option.id) ids.add(option.id);
+    const uid = cleanOptionUid(option.uid);
+    if (uid && uids.has(uid)) throw new Error('Duplicate registration option identity');
+    if (uid) uids.add(uid);
   }
+  const client = transaction || await db.connect();
+  try {
+    if (!transaction) await client.query('BEGIN');
+    await client.query('SELECT id FROM campaigns WHERE id=$1 FOR UPDATE', [campaignId]);
+    const {rows} = await client.query(`SELECT id${withUid ? ', client_uid' : ''} FROM registration_options WHERE campaign_id=$1 FOR UPDATE`, [campaignId]);
+    const kept = [];
+    for (let i=0;i<options.length;i++) {
+      const o=options[i], uid=cleanOptionUid(o.uid);
+      const row=rows.find(row=>row.id===o.id || (withUid && uid && row.client_uid===uid));
+      if(row && kept.includes(row.id)) throw new Error('Duplicate registration option identity');
+      const values=[o.key || null,String(o.title).trim(),o.description || null,Number(o.price),i];
+      if(row) {
+        const uidSql=withUid ? ', client_uid=COALESCE($6,client_uid)' : '';
+        const args=withUid ? [...values,uid,row.id,campaignId] : [...values,row.id,campaignId];
+        await client.query(`UPDATE registration_options SET key=$1,title=$2,description=$3,price=$4,sort_order=$5${uidSql} WHERE id=$${args.length-1} AND campaign_id=$${args.length}`,args);
+        kept.push(row.id);
+      } else {
+        const id=uuid.test(String(o.id||'')) ? o.id : require('crypto').randomUUID();
+        const args=[id,campaignId,...values,...(withUid?[uid]:[])];
+        await client.query(`INSERT INTO registration_options (id,campaign_id,key,title,description,price,sort_order${withUid?',client_uid':''}) VALUES (${args.map((_,i)=>'$'+(i+1)).join(',')})`,args);
+        kept.push(id);
+      }
+    }
+    await client.query('DELETE FROM registration_options WHERE campaign_id=$1 AND NOT (id=ANY($2::uuid[]))',[campaignId,kept]);
+    if (!transaction) await client.query('COMMIT');
+  } catch(error) {
+    if (!transaction) await client.query('ROLLBACK');
+    throw error;
+  } finally { if (!transaction) client.release(); }
 }
 
-async function getRegistrationOptions(campaignId) {
-  const { rows } = await db.query(
-    `SELECT id, key, title, description, price, sort_order
+async function getRegistrationOptions(campaignId, transaction = null) {
+  const uid = (await hasOptionUidColumn()) ? ', client_uid' : '';
+  const { rows } = await (transaction || db).query(
+    `SELECT id, key, title, description, price, sort_order${uid}
      FROM registration_options
      WHERE campaign_id = $1
      ORDER BY sort_order`,
@@ -807,6 +842,9 @@ exports.updateCampaign =
 
     }
 
+    if (data.slug !== undefined && data.slug !== campaignResult.rows[0].slug) validateCampaignSlug(data.slug);
+    if (data.status === 'published') validateCampaignSlug(data.slug ?? campaignResult.rows[0].slug);
+
     // Slug immutability (2026-09-22) — once a campaign has ever been
     // published, its address is live: shared donor/ambassador links, past
     // communications, external listings. Settings' own UI already treats
@@ -843,6 +881,18 @@ exports.updateCampaign =
       }
     }
 
+    // Bilingual campaign content (migration 088): shape and size checked here;
+    // dropped (not failed) while the column does not exist yet, so the rest
+    // of the save still goes through.
+    if (data.content_i18n !== undefined) {
+      if (await hasContentI18nColumn()) {
+        data = { ...data, content_i18n: validateContentI18n(data.content_i18n) };
+      } else {
+        data = { ...data };
+        delete data.content_i18n;
+      }
+    }
+
     // registration_options isn't a campaigns column — it's synced into its
     // own table separately, below.
     const registrationOptions = data.registration_options;
@@ -863,10 +913,12 @@ exports.updateCampaign =
       data
     );
 
+    const transaction = registrationOptions !== undefined ? await db.connect() : null;
     try {
+      if(transaction)await transaction.query('BEGIN');
 
       const result =
-        await db.query(
+        await (transaction || db).query(
 
           `
           UPDATE campaigns
@@ -897,12 +949,14 @@ exports.updateCampaign =
       if (data.ambassadors !== undefined) {
         await syncAmbassadors(campaignId, data.ambassadors);
       }
-      await syncRegistrationOptions(campaignId, registrationOptions);
-      campaign.registration_options = await getRegistrationOptions(campaignId);
+      await syncRegistrationOptions(campaignId, registrationOptions, transaction);
+      campaign.registration_options = await getRegistrationOptions(campaignId, transaction);
+      if(transaction)await transaction.query('COMMIT');
       require('../dashboard/dashboard.service').invalidateDashboard(campaign.entity_id);
       return campaign;
 
     } catch (err) {
+      if(transaction)await transaction.query('ROLLBACK');
 
       if (
         err.code === '23505'
@@ -916,7 +970,7 @@ exports.updateCampaign =
 
       throw err;
 
-    }
+    } finally { transaction?.release(); }
 
   };
 
@@ -991,6 +1045,8 @@ exports.getCampaignBySlugPublic = async (slug) => {
     delete campaign.is_featured;
     delete campaign.deleted_by;
     delete campaign.hidden_by_entity_cascade;
+    // An English version that is not published never leaves the server.
+    if ('content_i18n' in campaign) campaign.content_i18n = publicContentI18n(campaign.content_i18n);
     campaign.registration_options = await getRegistrationOptions(campaign.id);
   }
   return campaign;
@@ -1021,12 +1077,18 @@ exports.discoverCampaigns = async ({ search, category, sortBy, page = 0, limit =
   const sortCol = DISCOVER_SORT_COLUMNS[sortBy] || 'c.created_at';
   const sortOrd = sortBy === 'ending_soon' ? 'ASC NULLS LAST' : 'DESC';
 
+  // The published English title/description (migration 088), never an unpublished one.
+  const english = (await hasContentI18nColumn())
+    ? `, CASE WHEN c.content_i18n->'en'->>'published' = 'true' THEN c.content_i18n->'en'->'values'->>'title' END AS title_en,
+         CASE WHEN c.content_i18n->'en'->>'published' = 'true' THEN c.content_i18n->'en'->'values'->>'shortDescription' END AS short_description_en`
+    : '';
+
   const [listRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
          c.id, c.title, c.slug, c.short_description, c.category, c.cover_image_url, c.video_url,
          c.current_amount, c.target_amount, c.supporters_count, c.end_date, c.created_at,
-         e.display_name AS entity_name, e.logo_url AS entity_logo
+         e.display_name AS entity_name, e.logo_url AS entity_logo${english}
        FROM campaigns c
        JOIN entities e ON e.id = c.entity_id
        ${whereStr}

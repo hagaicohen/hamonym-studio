@@ -11,7 +11,13 @@
 // the existing retry path) — so it never marks the donation paid and never
 // touches cardcom_webhook_events.error; the caller is expected to hold the
 // donation and record a reconciliation_findings row instead.
-const ISRAELI_SHEKEL_COIN_ID = 1;
+const { coinIdFor, DEFAULT_CURRENCY } = require('../currency/currency.config');
+
+// The coin CardCom must report is the donation's own currency (ILS = 1, the
+// only value accepted before multi-currency). An unknown currency fails.
+function expectedCoinId(donation) {
+  try { return coinIdFor(donation.currency || DEFAULT_CURRENCY); } catch (_) { return null; }
+}
 
 function toAgorot(amount) {
   return Math.round(Number(amount) * 100);
@@ -26,7 +32,8 @@ function evaluateGateV1({ result, donation, donationId }) {
   } else {
     if (info.ResponseCode !== 0) reasons.push('tranzaction_response_code_mismatch');
     if (toAgorot(info.Amount) !== toAgorot(donation.amount)) reasons.push('amount_mismatch');
-    if (info.CoinId !== ISRAELI_SHEKEL_COIN_ID) reasons.push('coin_id_mismatch');
+    const expected = expectedCoinId(donation);
+    if (expected == null || info.CoinId !== expected) reasons.push('coin_id_mismatch');
   }
 
   if (String(result?.ReturnValue) !== String(donationId)) reasons.push('return_value_mismatch');
@@ -39,6 +46,7 @@ function evaluateGateV1({ result, donation, donationId }) {
     // never persisted into reconciliation_findings.details.
     comparison: {
       dbAmount: donation.amount,
+      dbCurrency: donation.currency || DEFAULT_CURRENCY,
       cardcomAmount: info?.Amount ?? null,
       cardcomCoinId: info?.CoinId ?? null,
       cardcomTranzactionResponseCode: info?.ResponseCode ?? null,

@@ -4,7 +4,7 @@ const client = require('../payment/cardcom/document.client');
 const unavailable = () => Object.assign(new Error('Official receipt unavailable'), { status: 404 });
 async function authorize(receiptId, userId, proof = null) {
   const { rows } = await db.query(
-    `SELECT r.id AS receipt_id, d.id, d.amount, d.status, d.low_profile_id,
+    `SELECT r.id AS receipt_id, d.id, d.amount, d.currency, d.status, d.low_profile_id,
             d.provider_reference, d.entity_id, d.provider_row_id, ri.cardcom_account_id
      FROM receipts r JOIN donations d ON d.id=r.donation_id
      LEFT JOIN recurring_instructions ri ON ri.id=d.recurring_instruction_id

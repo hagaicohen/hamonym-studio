@@ -20,7 +20,7 @@ function parseNameToValueResponse(raw) {
 // ("Low Profile Deal have no token"), verified empirically.
 exports.createRecurring = async ({
   terminalNumber, userName, apiPassword, chargeInTerminal,
-  lowProfileDealGuid, donorName, amount, invoiceDescription,
+  lowProfileDealGuid, donorName, amount, coinId = 1, invoiceDescription,
   internalDescription, nextDateToBill, totalNumOfBills, timeIntervalId, returnValue,
 }) => {
   const params = new URLSearchParams({
@@ -36,7 +36,8 @@ exports.createRecurring = async ({
     'RecurringPayments.NextDateToBill': nextDateToBill,
     'RecurringPayments.TotalNumOfBills': totalNumOfBills,
     'RecurringPayments.TimeIntervalId': timeIntervalId,
-    'RecurringPayments.FinalDebitCoinId': '1',
+    // The currency the donor authorized (1 = ILS, unchanged default).
+    'RecurringPayments.FinalDebitCoinId': String(coinId),
     'RecurringPayments.ReturnValue': returnValue || '',
     'RecurringPayments.FlexItem.InvoiceDescription': invoiceDescription || '',
     'RecurringPayments.FlexItem.Price': amount,

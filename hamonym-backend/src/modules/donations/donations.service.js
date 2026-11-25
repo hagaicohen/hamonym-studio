@@ -1,6 +1,8 @@
 ﻿const db    = require('../../db/db');
 const { getDonationProvider } = require('../payment/donation-provider');
 const emailService = require('../email/email.service');
+const currencyConfig = require('../currency/currency.config');
+const exchangeRates = require('../currency/exchange-rate.service');
 
 // Creates a receipt row for a paid donation (idempotent — a donation can only
 // ever get one receipt, enforced by the UNIQUE(donation_id) constraint) and
@@ -30,8 +32,8 @@ async function finalizePaidDonation(donationId, client = db) {
   );
 
   const insertRes = await client.query(
-    `INSERT INTO receipts (donation_id, entity_id, campaign_id, amount, donor_name, donor_email)
-     SELECT id, entity_id, campaign_id, amount, donor_name, donor_email
+    `INSERT INTO receipts (donation_id, entity_id, campaign_id, amount, currency, donor_name, donor_email)
+     SELECT id, entity_id, campaign_id, amount, currency, donor_name, donor_email
      FROM donations
      WHERE id = $1 AND status = 'paid'
      ON CONFLICT (donation_id) DO NOTHING
@@ -105,28 +107,37 @@ exports.withTransaction = withTransaction;
 // what each Cardcom API actually exposes, not an oversight; see the
 // reconciliation job's own comment for the resulting dedup implications.
 async function finalizeSuccessfulRecurringCharge(instruction, { amount, providerReference, rowId = null, statusCode = null }) {
+  // Each charge is in the currency the donor authorized at signup and gets
+  // its own representative-rate snapshot (never the signup's).
+  const currency = instruction.currency || currencyConfig.DEFAULT_CURRENCY;
+  const snapshot = await fxSnapshotFor(currency, new Date(), { subjectId: instruction.id });
+  // Same rule as markDonationPaid: a snapshot resolved for another Israel
+  // date (lookup straddled midnight) is left for resolvePendingFx.
+  const fx = snapshot?.status === 'resolved' && snapshot.forDate !== exchangeRates.israelDate(new Date()) ? { status: 'pending' } : snapshot;
   let receipt = null;
   const donationId = await withTransaction(async (client) => {
     const donationRes = await client.query(
       `INSERT INTO donations (
          campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
          rewards, status, recurring_instruction_id, provider_reference,
-         provider_row_id, provider_status_code, completed_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',$7,$8,$9,$10,NOW())
-       RETURNING id`,
+         provider_row_id, provider_status_code, completed_at,
+         currency, fx_status, fx_rate, fx_rate_source, fx_rate_date
+       ) VALUES ($1,$2,$3,$4,$5,$6,'[]','paid',$7,$8,$9,$10,NOW(),$11,$12,$13,$14,$15)
+       RETURNING id, amount_ils`,
       [
         instruction.campaign_id, instruction.entity_id, amount,
         instruction.donor_name, instruction.donor_email, instruction.donor_phone,
         instruction.id, providerReference, rowId, statusCode,
+        currency, ...fxColumns(fx),
       ]
     );
     const id = donationRes.rows[0].id;
 
     await client.query(
       `UPDATE campaigns
-       SET current_amount = current_amount + $1, supporters_count = supporters_count + 1, updated_at = NOW()
+       SET current_amount = current_amount + COALESCE($1::numeric, 0), supporters_count = supporters_count + 1, updated_at = NOW()
        WHERE id = $2`,
-      [amount, instruction.campaign_id]
+      [donationRes.rows[0].amount_ils, instruction.campaign_id]
     );
 
     receipt = await finalizePaidDonation(id, client);
@@ -212,7 +223,12 @@ async function processRegistrationDonation(donationId, campaignId, participants,
 /* ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
    CREATE DONATION + CARDCOM LOW PROFILE
 ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ */
-exports.createDonation = async ({ campaignId, donor, amount, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note }) => {
+exports.createDonation = async ({ campaignId, donor, amount, currency, rewards = [], participants, utmParams, ipAddress, userAgent, recurring, installments, ambassadorId, embedded, note, language }) => {
+
+  // The charged currency is decided here, never inferred later: unknown or
+  // not-enabled currencies are refused before anything is created.
+  const donationCurrency = currencyConfig.normalizeCurrency(currency);
+  currencyConfig.assertDonationCurrency(donationCurrency, { recurring: !!recurring });
 
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
@@ -231,6 +247,14 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
 
   if (campaign.entity_status !== 'active') {
     throw new Error('Entity not approved');
+  }
+
+  // A public payment request must never turn an editor draft into a real charge.
+  if (campaign.status !== 'published') {
+    const error = new Error('Campaign is not published');
+    error.status = 403;
+    error.code = 'CAMPAIGN_NOT_PUBLISHED';
+    throw error;
   }
 
   // Server-side donation amount validation (2026-08-31, Donation Engine
@@ -320,10 +344,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     throw err;
   }
 
-  // Deliberately not checking campaign.status here (e.g. 'draft') — the
-  // studio editor's live preview lets a manager test-donate against their
-  // own unpublished campaign, which is a legitimate, separate use case from
-  // public visibility. Only block what "hidden"/"deleted" are meant to stop.
+  // Visibility checks supplement the publication and organization gates above.
   if (campaign.deleted_at || campaign.campaign_hidden || campaign.entity_hidden) {
     throw new Error('Campaign not found');
   }
@@ -352,6 +373,15 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     const err = new Error('Payment not configured for this campaign');
     err.status = 400;
     err.code = 'PAYMENT_NOT_CONFIGURED';
+    throw err;
+  }
+
+  // Reward minimums and registration prices are set in ILS; adding them to a
+  // USD/EUR amount would mix currencies on one CardCom charge.
+  if (donationCurrency !== currencyConfig.DEFAULT_CURRENCY && (rewards.length > 0 || (participants || []).length > 0)) {
+    const err = new Error('Rewards and registration are available in ILS only');
+    err.status = 400;
+    err.code = 'ITEMS_REQUIRE_ILS';
     throw err;
   }
 
@@ -409,6 +439,7 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
         donorEmail: donor.email,
         donorPhone: donor.phone,
         amount: donationAmount,
+        currency: donationCurrency,
         donorRequestedInstallments,
       })
     : null;
@@ -420,8 +451,8 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
        donor_name, donor_email, donor_phone, donor_id_number, donor_address,
        postal_code, is_anonymous,
        rewards, status,
-       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id, note
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17)
+       utm_params, ip_address, user_agent, recurring_instruction_id, ambassador_id, note, currency
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14,$15,$16,$17,$18)
      RETURNING id`,
     [
       campaignId,
@@ -444,9 +475,12 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
       // (previously write-only from createManualDonation's admin entry
       // flow); this is its first donor-facing use.
       note || null,
+      donationCurrency,
     ]
   );
   const donationId = donationRes.rows[0].id;
+  // The donor's campaign language (migration 089) — messages only, never money.
+  await require('./donor-language').recordDonorLanguage(donationId, language);
 
   await processRegistrationDonation(donationId, campaignId, participants, registrationOptionsById);
 
@@ -510,7 +544,11 @@ exports.createDonation = async ({ campaignId, donor, amount, rewards = [], parti
     ApiName:        hasVerifiedCardcom ? campaign.cardcom_api_username    : donationFallbackCredentials.apiName,
     ApiPassword:    hasVerifiedCardcom ? campaign.cardcom_api_password_encrypted : donationFallbackCredentials.apiPassword,
     Amount:         round2(donationAmount),
-    Language:       'he',
+    // ILS keeps CardCom's default (no ISOCoinId) exactly as before.
+    ...(donationCurrency !== currencyConfig.DEFAULT_CURRENCY ? { ISOCoinId: currencyConfig.coinIdFor(donationCurrency) } : {}),
+    // English provider pages only behind CARDCOM_ENGLISH_PAGES_ENABLED (off until
+    // verified on a test terminal, bilingual roadmap D-51); Hebrew otherwise, as before.
+    Language:       require('./donor-language').cardcomPageLanguage(language),
     // ChargeAndCreateToken required for recurring signups — verified
     // empirically that ChargeOnly (the default) produces a LowProfile deal
     // with no token, which Recurring Create then rejects (ResponseCode=8500).
@@ -680,7 +718,7 @@ function credentialsFromEntityRow(row) {
 // for its exact shape) rather than folding these columns into that query.
 async function getDonationForVerification(donationId) {
   const res = await db.query(
-    `SELECT id, amount, status, low_profile_id FROM donations WHERE id = $1`,
+    `SELECT id, amount, currency, status, low_profile_id FROM donations WHERE id = $1`,
     [donationId]
   );
   return res.rows[0] || null;
@@ -737,32 +775,46 @@ exports.resolveCardcomCredentialsForEntity = resolveCardcomCredentialsForEntity;
 // safe to call twice — only the atomicity behind it did. Rows already
 // marked 'paid' from before this fix are not retroactively covered by
 // this change; the aggregate-consistency job is the safety net for those.
-async function markDonationPaid(donationId, { providerReference } = {}) {
+// providerAmount/providerCoinId: what CardCom confirmed (already checked by
+// the verification gate). fx: the representative-rate snapshot for a USD/EUR
+// donation (fxSnapshotFor); it is applied only if the payment's own Israel
+// date is the date it was resolved for -- otherwise, and when no rate could be
+// resolved, the donation is still marked paid (the money was taken) with
+// fx_status 'pending' and joins campaign progress once resolvePendingFx runs.
+async function markDonationPaid(donationId, { providerReference, providerAmount = null, providerCoinId = null, fx = null } = {}) {
   let receipt = null;
+  const [fxStatus, fxRate, fxSource, fxRateDate] = fxColumns(fx);
   const outcome = await withTransaction(async (client) => {
     const updateRes = await client.query(
       `UPDATE donations
-       SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW()
+       SET status='paid', provider_reference=$1, completed_at=NOW(), updated_at=NOW(),
+           provider_amount=$3, provider_coin_id=$4,
+           fx_status      = CASE WHEN $9::boolean THEN $5 ELSE fx_status END,
+           fx_rate        = CASE WHEN $9::boolean THEN $6::numeric ELSE fx_rate END,
+           fx_rate_source = CASE WHEN $9::boolean THEN $7 ELSE fx_rate_source END,
+           fx_rate_date   = CASE WHEN $9::boolean THEN $8::date ELSE fx_rate_date END
        WHERE id=$2 AND status != 'paid'
-       RETURNING amount, campaign_id, entity_id`,
-      [providerReference || null, donationId]
+       RETURNING amount, amount_ils, currency, fx_status, campaign_id, entity_id`,
+      [providerReference || null, donationId, providerAmount, providerCoinId, fxStatus, fxRate, fxSource, fxRateDate,
+       fxStatus === 'resolved' && fx.forDate === exchangeRates.israelDate(new Date())]
     );
 
     const row = updateRes.rows[0];
     if (!row) return { updated: false };
 
+    // Progress is in ILS: the ILS equivalent, nothing while it is pending.
     await client.query(
       `UPDATE campaigns
-       SET current_amount   = current_amount   + $1,
+       SET current_amount   = current_amount   + COALESCE($1::numeric, 0),
            supporters_count = supporters_count + 1,
            updated_at = NOW()
        WHERE id = $2`,
-      [row.amount, row.campaign_id]
+      [row.amount_ils, row.campaign_id]
     );
 
     receipt = await finalizePaidDonation(donationId, client);
 
-    return { updated: true, amount: row.amount, campaignId: row.campaign_id, entityId: row.entity_id };
+    return { updated: true, amount: row.amount, currency: row.currency, fxStatus: row.fx_status, campaignId: row.campaign_id, entityId: row.entity_id };
   });
 
   if (outcome.updated) {
@@ -796,7 +848,7 @@ exports.markDonationFailed = markDonationFailed;
 exports.handleReturn = async ({ donationId, status }) => {
 
   const donRes = await db.query(
-    `SELECT d.amount, c.slug
+    `SELECT d.amount, d.currency, c.slug
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      WHERE d.id = $1`,
@@ -813,7 +865,7 @@ exports.handleReturn = async ({ donationId, status }) => {
 
   return {
     redirectUrl: status === 'success'
-      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}`
+      ? `${frontBase}/campaigns/${slug}/success?ref=${donationId}&amount=${amount}${row.currency && row.currency !== 'ILS' ? `&currency=${row.currency}` : ''}`
       : `${frontBase}/campaigns/${slug}/view?payment=failed`,
   };
 };
@@ -830,8 +882,20 @@ exports.handleReturn = async ({ donationId, status }) => {
 // already linked to an account) is served by the has_account boolean
 // below instead -- it answers the same question without exposing the id.
 exports.getDonationPublic = async (donationId) => {
+  const row = await getDonationPublicRow(donationId);
+  if (!row) return null;
+  // The thank-you page in the donor's language, also when opened in a new tab
+  // (bilingual roadmap D-50): the donor's language and the published English title.
+  const donorLanguage = require('./donor-language');
+  row.donor_language = await donorLanguage.languageOfDonation(donationId);
+  const enTitle = await donorLanguage.campaignTitleIn(row.campaign_id, 'en', null);
+  if (enTitle) row.campaign_title_en = enTitle;
+  return row;
+};
+
+async function getDonationPublicRow(donationId) {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.created_at, d.status, d.donor_name,
+    `SELECT d.id, d.amount, d.currency, d.created_at, d.status, d.donor_name,
             (d.donor_user_id IS NOT NULL) AS has_account,
             c.id AS campaign_id, c.title AS campaign_title, c.slug AS campaign_slug,
             c.cover_image_url, e.display_name AS entity_name, e.logo_url AS entity_logo,
@@ -845,13 +909,13 @@ exports.getDonationPublic = async (donationId) => {
     [donationId]
   );
   return res.rows[0] || null;
-};
+}
 
 exports.getReceipt = (receiptId, userId, proof = null) => require('./official-receipt.service').metadata(receiptId, userId, proof);
 
 exports.getMyDonations = async (userId, proof = null) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, d.created_at, d.is_anonymous, d.note, d.status,
+    `SELECT d.id, d.amount, d.currency, d.completed_at, d.created_at, d.is_anonymous, d.note, d.status,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
             r.id AS receipt_id
@@ -876,6 +940,7 @@ exports.getLiveDonations = async (slug, since) => {
   const res = await db.query(
     `SELECT d.donor_name AS name,
             d.amount::float AS amount,
+            d.currency,
             d.completed_at,
             d.is_anonymous,
             d.note
@@ -927,7 +992,7 @@ exports.getCampaignDonors = async (slug, period) => {
   const [listRes, topRes] = await Promise.all([
     db.query(
       `WITH camp AS (
-         SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount,
+         SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount, d.currency,
                 d.completed_at, d.is_anonymous, d.note
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
@@ -943,6 +1008,7 @@ exports.getCampaignDonors = async (slug, period) => {
        SELECT
          CASE WHEN camp.is_anonymous THEN 'תורם/ת אנונימי/ת' ELSE camp.donor_name END AS name,
          camp.amount,
+         camp.currency,
          camp.completed_at,
          camp.is_anonymous,
          camp.note,
@@ -954,7 +1020,7 @@ exports.getCampaignDonors = async (slug, period) => {
       [slug]
     ),
     db.query(
-      `SELECT d.donor_name AS name, SUM(d.amount)::float AS total
+      `SELECT d.donor_name AS name, SUM(d.amount_ils)::float AS total
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
        JOIN entities  e ON e.id = c.entity_id
@@ -1053,8 +1119,8 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
 
   const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
-      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.note,
+      `SELECT d.id, d.amount::float, d.currency, d.amount_ils::float, d.fx_status, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.note, d.rewards,
               (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
@@ -1073,8 +1139,8 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
          COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
          COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
          COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
-         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
-         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount
+         COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount
        FROM donations d
        WHERE ${summaryWhereStr}`,
       summaryParams
@@ -1169,7 +1235,7 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
 
   const [listRes, totalRes] = await Promise.all([
     db.query(
-      `SELECT d.id, d.amount::float, d.donor_name, d.status, d.completed_at, d.created_at,
+      `SELECT d.id, d.amount::float, d.currency, d.amount_ils::float, d.fx_status, d.donor_name, d.status, d.completed_at, d.created_at,
               d.is_anonymous, d.failure_reason,
               (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
               (d.recurring_instruction_id IS NOT NULL) AS is_recurring,
@@ -1200,7 +1266,7 @@ exports.getPlatformDonations = async ({ status, entityId, campaignId, period, se
 exports.getEntityDonationsSummary = async (entityId, { limit = 25, page = 0 } = {}) => {
   const [listRes, aggRes] = await Promise.all([
     db.query(
-      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+      `SELECT d.id, d.amount::float, d.currency, d.amount_ils::float, d.fx_status, d.donor_name, d.donor_email, d.donor_phone,
               d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
@@ -1216,8 +1282,8 @@ exports.getEntityDonationsSummary = async (entityId, { limit = 25, page = 0 } = 
          COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
          COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
          COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
-         COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
-         COALESCE(AVG(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount,
+         COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
+         COALESCE(AVG(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS avg_amount,
          COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))
            FILTER (WHERE d.status = 'paid')::int AS donor_count
        FROM donations d
@@ -1277,7 +1343,7 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
       `WITH base AS (
          SELECT
            COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name) AS donor_key,
-           d.donor_name, d.donor_email, d.donor_phone, d.amount, d.completed_at,
+           d.donor_name, d.donor_email, d.donor_phone, d.amount_ils AS amount, d.completed_at,
            d.campaign_id, d.is_anonymous
          FROM donations d
          WHERE ${whereStr}
@@ -1302,7 +1368,7 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
     db.query(
       `SELECT
          COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))::int AS donor_count,
-         COALESCE(SUM(d.amount), 0)::float AS total_raised
+         COALESCE(SUM(d.amount_ils), 0)::float AS total_raised
        FROM donations d
        WHERE ${whereStr}`,
       params
@@ -1448,4 +1514,71 @@ exports.createManualDonation = async (entityId, { campaignId, amount, source, su
 };
 
 function round2(n) { return Math.round(n * 100) / 100; }
+
+// The representative-rate snapshot for a payment in `currency` at `instant`
+// (null for ILS). Never throws: when no rate can be resolved the donation is
+// recorded with fx_status 'pending' and a finding, and resolvePendingFx
+// completes it later -- a payment the provider confirmed is never rejected
+// because a rate source is down.
+async function fxSnapshotFor(currency, instant, { subjectId = null } = {}) {
+  if (!currency || currency === currencyConfig.DEFAULT_CURRENCY) return null;
+  try {
+    const r = await exchangeRates.rateAt(currency, instant);
+    return { status: 'resolved', forDate: r.forDate, rate: r.rate, source: r.source, rateDate: r.rateDate };
+  } catch (err) {
+    console.error('[donations] exchange rate pending:', currency, err.reason || err.code || err.message);
+    try {
+      await require('../../jobs/reconciliation-findings').recordFinding(db, {
+        jobName: 'donation_fx_snapshot', findingType: 'fx_rate_pending', severity: 'warning',
+        subjectType: 'donation', subjectId, details: { currency, reason: err.reason || err.code || 'unknown' },
+      });
+    } catch (_) { /* the finding is visibility only */ }
+    return { status: 'pending' };
+  }
+}
+exports.fxSnapshotFor = fxSnapshotFor;
+
+function fxColumns(fx) {
+  if (!fx || fx.status !== 'resolved') return ['pending', null, null, null];
+  return ['resolved', fx.rate, fx.source, fx.rateDate];
+}
+
+// Completes paid USD/EUR donations still waiting for a representative rate:
+// the rate for each payment's own Israel date (the same rule as at payment
+// time, so a late resolution gives the same rate), then campaign progress.
+// Safe to re-run: a donation is resolved once (WHERE fx_status='pending').
+async function resolvePendingFx({ limit = 100 } = {}) {
+  const { rows } = await db.query(
+    `SELECT id, currency, completed_at FROM donations
+     WHERE status = 'paid' AND fx_status = 'pending' ORDER BY completed_at LIMIT $1`,
+    [limit]
+  );
+  let resolved = 0, stillPending = 0;
+  for (const row of rows) {
+    let rate;
+    try { rate = await exchangeRates.rateAt(row.currency, row.completed_at); }
+    catch (_) { stillPending++; continue; }
+    const done = await withTransaction(async (client) => {
+      const res = await client.query(
+        `UPDATE donations SET fx_status='resolved', fx_rate=$2, fx_rate_source=$3, fx_rate_date=$4, updated_at=NOW()
+         WHERE id=$1 AND status='paid' AND fx_status='pending'
+         RETURNING amount_ils, campaign_id, entity_id`,
+        [row.id, rate.rate, rate.source, rate.rateDate]
+      );
+      const updated = res.rows[0];
+      if (!updated) return null;
+      await client.query(
+        `UPDATE campaigns SET current_amount = current_amount + $1, updated_at = NOW() WHERE id = $2`,
+        [updated.amount_ils, updated.campaign_id]
+      );
+      return updated;
+    });
+    if (done) {
+      resolved++;
+      if (done.entity_id) require('../dashboard/dashboard.service').invalidateDashboard(done.entity_id);
+    }
+  }
+  return { checked: rows.length, resolved, stillPending };
+}
+exports.resolvePendingFx = resolvePendingFx;
 

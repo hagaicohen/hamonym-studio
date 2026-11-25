@@ -17,6 +17,7 @@ function getStatusCode(
     case 'Campaign not found':
       return 404;
 
+    case 'Invalid campaign slug':
     case 'Slug is required':
     case 'Entity ID is required':
     case 'No fields supplied':
@@ -27,6 +28,8 @@ function getStatusCode(
     case 'End date must be on or after the start date to publish':
     case 'Cannot change slug after publishing':
     case 'Invalid campaign category':
+    case 'Invalid campaign translations':
+    case 'English title is required to publish the English version':
     // Raised by syncAmbassadors when a Builder draft carries an
     // ambassador personal link that fails canonical validation.
     case 'Slug too short':
@@ -53,6 +56,8 @@ function getErrorMessage(
 
   switch (error.message) {
 
+    case 'Invalid campaign slug':
+      return 'Invalid campaign slug: use 3-70 letters, numbers and single hyphens.';
     case 'Unauthorized':
       return 'אין לך הרשאה לבצע פעולה זו';
 
@@ -106,6 +111,12 @@ function getErrorMessage(
 
     case 'Invalid campaign category':
       return 'יש לבחור קטגוריה מהרשימה הקיימת';
+
+    case 'Invalid campaign translations':
+      return 'נתוני התרגום של הקמפיין אינם תקינים';
+
+    case 'English title is required to publish the English version':
+      return 'לא ניתן לפרסם את הגרסה האנגלית בלי שם קמפיין באנגלית';
 
     default:
       return 'אירעה שגיאה בלתי צפויה';
@@ -350,7 +361,7 @@ exports.checkSlugAvailable =
 
       const available =
         await service.checkSlugAvailable({
-          slug: slug.trim().toLowerCase(),
+          slug: service.validateCampaignSlug(slug.trim()),
           excludeId: excludeId || null
         });
 
@@ -361,7 +372,7 @@ exports.checkSlugAvailable =
       console.error(err);
 
       res
-        .status(500)
+        .status(err.message === 'Invalid campaign slug' ? 400 : 500)
         .json({ error: 'אירעה שגיאה בלתי צפויה' });
 
     }

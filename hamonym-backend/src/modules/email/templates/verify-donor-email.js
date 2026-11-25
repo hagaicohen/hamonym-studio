@@ -1,4 +1,14 @@
-module.exports = ({ verificationUrl }) => ({
+const ENGLISH = ({ verificationUrl }) => {
+  const href = String(verificationUrl).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return {
+    subject: 'Verify your email to view your donations',
+    text: 'To verify that this email address is yours: ' + verificationUrl,
+    html: '<div dir="ltr" lang="en"><p>To verify that this email address is yours:</p><a href="' + href + '">Verify and view donations</a><p>The link is valid for one hour.</p></div>',
+  };
+};
+
+// lang 'en': the same message in English (D-50).
+module.exports = ({ verificationUrl, lang }) => lang === 'en' ? ENGLISH({ verificationUrl }) : ({
   subject: '\u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5\u05d0\u05f4\u05dc \u05dc\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05ea\u05e8\u05d5\u05de\u05d5\u05ea',
   text: '\u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d1\u05e2\u05dc\u05d5\u05ea \u05e2\u05dc \u05db\u05ea\u05d5\u05d1\u05ea \u05d4\u05d3\u05d5\u05d0\u05f4\u05dc: ' + verificationUrl,
   html: '<div dir="rtl"><p>\u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d1\u05e2\u05dc\u05d5\u05ea \u05e2\u05dc \u05db\u05ea\u05d5\u05d1\u05ea \u05d4\u05d3\u05d5\u05d0\u05f4\u05dc:</p><a href="' +

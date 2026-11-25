@@ -7,6 +7,7 @@ const { requireEntityOwnership } = require('../../middleware/entity-permission.m
 // Public — donors are not logged in
 router.post('/',                          controller.createDonation);
 router.get('/return',                     controller.handleReturn);
+router.get('/currencies',                 controller.getCurrencies);
 router.get('/public/:id',                 controller.getDonationPublic);
 router.get('/campaign/:slug/donors',      controller.getCampaignDonors);
 router.get('/campaign/:slug/live',        controller.getLiveDonations);

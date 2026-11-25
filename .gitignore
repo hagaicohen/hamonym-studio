@@ -12,3 +12,32 @@ backend/node_modules
 .idea
 
 coverage
+# Local dependencies, generated output, credentials and diagnostic artifacts.
+**/node_modules/
+**/dist/
+**/.angular/
+**/out-tsc/
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/__pycache__/
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+*.log
+*.tsbuildinfo
+*.bak
+*.zip
+.claude/settings.local.json
+.commercial-*/
+.organization-full-deploy/
+.copy-approved-backend.tmp.cjs
+source-backups/
+
+# Sibling/isolated worktrees are preserved locally, not vendored into Git.
+/simple-studio-angular/
+/simple-studio-integration/
+/local-integration-20261125/
+/local-frontend-integration-20261125/
+

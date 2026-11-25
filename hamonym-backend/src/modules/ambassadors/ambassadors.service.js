@@ -165,7 +165,7 @@ exports.verifyEntityOwnership = verifyEntityOwnership;
 
 const STATS_SQL = `
   COALESCE((
-    SELECT SUM(d.amount) FROM donations d
+    SELECT SUM(d.amount_ils) FROM donations d
     WHERE d.ambassador_id = a.id AND d.status = 'paid'
   ), 0) AS raised_online,
   COALESCE((
@@ -173,7 +173,7 @@ const STATS_SQL = `
     WHERE adj.ambassador_id = a.id
   ), 0) AS raised_manual,
   COALESCE((
-    SELECT SUM(d.amount) FROM donations d
+    SELECT SUM(d.amount_ils) FROM donations d
     WHERE d.ambassador_id = a.id AND d.status = 'paid'
   ), 0) + COALESCE((
     SELECT SUM(adj.amount) FROM ambassador_adjustments adj

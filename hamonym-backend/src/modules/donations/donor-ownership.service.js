@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const db = require('../../db/db');
 const email = require('../email/email.service');
-exports.requestVerification = async userId => {
+exports.requestVerification = async (userId, lang) => {
   if (process.env.EMAIL_ENABLED !== 'true' || !process.env.EMAIL_PROVIDER || process.env.EMAIL_PROVIDER === 'stub')
     throw Object.assign(new Error('Email delivery is not configured'), { status: 503 });
   const token = crypto.randomBytes(32).toString('hex');
@@ -16,7 +16,7 @@ exports.requestVerification = async userId => {
   const url = new URL('/my-donations', process.env.FRONTEND_URL || 'http://localhost:4200');
   url.searchParams.set('verification', token);
   const delivery = await email.send({ template: 'verify-donor-email', to: rows[0].email,
-    data: { verificationUrl: url.href }, userId });
+    data: { verificationUrl: url.href, lang: lang === 'en' ? 'en' : 'he' }, userId });
   if (delivery?.status !== 'sent') throw Object.assign(new Error('Email delivery failed'), { status: 503 });
 };
 exports.verify = async (userId, token) => {

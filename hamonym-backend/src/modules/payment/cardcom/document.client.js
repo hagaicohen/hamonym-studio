@@ -24,7 +24,7 @@ exports.recurringDocument = async (credentials, donation) => {
     String(row.AccountID) === String(donation.cardcom_account_id) &&
     String(row.TerminalNumber) === String(credentials.terminalNumber) &&
     String(row.TranzactionId) === String(donation.provider_reference) &&
-    row.FinalDebitCoinID === 1 &&
+    row.FinalDebitCoinID === require('../../currency/currency.config').coinIdFor(donation.currency || 'ILS') &&
     Math.round(Number(row.SumToBill) * 100) === Math.round(Number(donation.amount) * 100));
   if (matching.length !== 1) return null;
   return { TranzactionId: matching[0].TranzactionId,

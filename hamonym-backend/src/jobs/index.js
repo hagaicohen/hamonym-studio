@@ -18,6 +18,7 @@ jobRunner.register(require('./billing-monthly-cycle.job'));
 jobRunner.register(require('./fin11-masav-prepare.job'));
 jobRunner.register(require('./email-dispatch-recovery.job'));
 jobRunner.register(require('./operational-alerting.job'));
+jobRunner.register(require('./fx-snapshot-backfill.job'));
 
 // No production cron activation: simulation-only registrations have no schedule.
 { // Internal steps are always registered; only the shared monthly orchestrator schedules them.

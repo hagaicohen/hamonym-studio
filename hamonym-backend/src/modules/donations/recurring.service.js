@@ -87,12 +87,12 @@ function nextOccurrenceOfAnchorDay(anchorDay, now = new Date()) {
 // recurring_billing_mode/recurring_installments_count (the full-format
 // widget's own campaign-level default) when it's absent — e.g. an older
 // client, or a full-format donation that never sends it.
-exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, donorPhone, amount, timeIntervalId = 1, donorRequestedInstallments = null }) => {
+exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, donorPhone, amount, currency = 'ILS', timeIntervalId = 1, donorRequestedInstallments = null }) => {
   const res = await db.query(
-    `INSERT INTO recurring_instructions (entity_id, campaign_id, donor_name, donor_email, donor_phone, amount, time_interval_id, donor_requested_installments, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending_payment')
+    `INSERT INTO recurring_instructions (entity_id, campaign_id, donor_name, donor_email, donor_phone, amount, time_interval_id, donor_requested_installments, status, currency)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending_payment',$9)
      RETURNING id`,
-    [entityId, campaignId, donorName || null, donorEmail || null, donorPhone || null, amount, timeIntervalId, donorRequestedInstallments]
+    [entityId, campaignId, donorName || null, donorEmail || null, donorPhone || null, amount, timeIntervalId, donorRequestedInstallments, currency]
   );
   return res.rows[0].id;
 };
@@ -109,7 +109,7 @@ exports.createSignup = async ({ entityId, campaignId, donorName, donorEmail, don
 exports.completeSignup = async (donationId) => {
   const donationRes = await db.query(
     `SELECT d.recurring_instruction_id, d.low_profile_id, d.donor_name,
-            ri.status, ri.cardcom_recurring_id, ri.amount, ri.time_interval_id,
+            ri.status, ri.cardcom_recurring_id, ri.amount, ri.currency, ri.time_interval_id,
             ri.donor_requested_installments,
             c.recurring_billing_mode, c.recurring_installments_count
      FROM donations d
@@ -178,6 +178,7 @@ exports.completeSignup = async (donationId) => {
       lowProfileDealGuid: row.low_profile_id,
       donorName: row.donor_name,
       amount: row.amount,
+      coinId: require('../currency/currency.config').coinIdFor(row.currency || 'ILS'),
       invoiceDescription: 'תרומה חודשית',
       internalDescription: `Hamonym recurring — ${instructionId}`,
       nextDateToBill,
@@ -432,7 +433,7 @@ exports.verifyOwnership = async (instructionId, userId, proof = null) => {
 // guaranteed to match what an actual Resume would set.
 exports.getMyRecurringInstructions = async (userId, proof = null) => {
   const res = await db.query(
-    `SELECT ri.id, ri.status, ri.amount, ri.next_date_to_bill, ri.total_installments,
+    `SELECT ri.id, ri.status, ri.amount, ri.currency, ri.next_date_to_bill, ri.total_installments,
             ri.billing_anchor_day, ri.cancelled_at, ri.created_at,
             c.title AS campaign_title, c.slug AS campaign_slug, c.cover_image_url,
             e.display_name AS entity_name, e.logo_url AS entity_logo,
@@ -473,7 +474,7 @@ exports.getMyRecurringInstructions = async (userId, proof = null) => {
 // attempt has no receipt and isn't part of what a donor reviews here.
 exports.getRecurringDonationHistory = async (instructionId) => {
   const res = await db.query(
-    `SELECT d.id, d.amount, d.completed_at, r.id AS receipt_id
+    `SELECT d.id, d.amount, d.currency, d.completed_at, r.id AS receipt_id
      FROM donations d
      LEFT JOIN receipts r ON r.donation_id = d.id
      WHERE d.recurring_instruction_id = $1 AND d.status = 'paid'

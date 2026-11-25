@@ -43,13 +43,18 @@ async function queueRecurringFailureEmail({ instruction, donationId, rawStatus, 
       [instruction.campaign_id]
     );
     const details = detailsRes.rows[0] || {};
+    // Message language only (migration 089); Hebrew when unknown.
+    const donorLanguage = require('../../donations/donor-language');
+    const lang = await donorLanguage.languageOfRecurringInstruction(instruction.id);
+    const campaignTitle = await donorLanguage.campaignTitleIn(instruction.campaign_id, lang, details.campaign_title);
 
     emailService.queue({
       template: 'recurring-payment-failed',
       to: instruction.donor_email,
       data: {
+        lang,
         donorName: instruction.donor_name,
-        campaignTitle: details.campaign_title || 'הקמפיין',
+        campaignTitle: campaignTitle || (lang === 'en' ? 'the campaign' : 'הקמפיין'),
         entityName: details.entity_name || null,
         amount,
         failedAtDisplay: formatDateDDMMYYYY(Date.now()),
@@ -87,7 +92,7 @@ exports.handle = async (payload) => {
   if (!recurringId || !internalDealNumber) return;
 
   const instructionRes = await db.query(
-    `SELECT id, entity_id, campaign_id, donor_name, donor_email, donor_phone, amount
+    `SELECT id, entity_id, campaign_id, donor_name, donor_email, donor_phone, amount, currency
      FROM recurring_instructions WHERE cardcom_recurring_id = $1`,
     [recurringId]
   );
@@ -141,14 +146,15 @@ exports.handle = async (payload) => {
     `INSERT INTO donations (
        campaign_id, entity_id, amount, donor_name, donor_email, donor_phone,
        rewards, status, recurring_instruction_id, provider_reference,
-       provider_row_id, provider_status_code, failure_reason, completed_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,'[]','failed',$7,$8,$9,$10,$11,NOW())
+       provider_row_id, provider_status_code, failure_reason, completed_at, currency
+     ) VALUES ($1,$2,$3,$4,$5,$6,'[]','failed',$7,$8,$9,$10,$11,NOW(),$12)
      RETURNING id`,
     [
       instruction.campaign_id, instruction.entity_id, amount,
       instruction.donor_name, instruction.donor_email, instruction.donor_phone,
       instruction.id, String(internalDealNumber), rowId, statusCode,
       `cardcom_recurring_${rawStatus}`,
+      instruction.currency || 'ILS',
     ]
   );
 

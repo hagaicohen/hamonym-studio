@@ -50,7 +50,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
     db.query(`
       SELECT
         COUNT(*)::int                    AS count,
-        COALESCE(SUM(amount), 0)::float  AS total
+        COALESCE(SUM(amount_ils), 0)::float  AS total
       FROM donations
       WHERE entity_id = $1
         AND status = 'paid'
@@ -61,7 +61,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
     db.query(`
       SELECT
         COUNT(*)::int                    AS count,
-        COALESCE(SUM(amount), 0)::float  AS total
+        COALESCE(SUM(amount_ils), 0)::float  AS total
       FROM donations
       WHERE entity_id = $1
         AND status = 'paid'
@@ -80,7 +80,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
     db.query(`
       SELECT
         COUNT(*)::int                    AS count,
-        COALESCE(SUM(amount), 0)::float  AS total_lost
+        COALESCE(SUM(amount_ils), 0)::float  AS total_lost
       FROM donations
       WHERE entity_id = $1
         AND status = 'failed'
@@ -91,7 +91,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
     db.query(`
       SELECT
         d.id,
-        d.amount::float,
+        d.amount::float, d.currency, d.amount_ils::float,
         d.donor_name,
         d.completed_at,
         c.title AS campaign_title
@@ -106,7 +106,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
     db.query(`
       SELECT
         d.id,
-        d.amount::float,
+        d.amount::float, d.currency, d.amount_ils::float,
         d.donor_name,
         d.updated_at,
         c.title AS campaign_title
@@ -125,7 +125,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
         a.slug,
         c.title AS campaign_title,
         c.slug  AS campaign_slug,
-        COALESCE(SUM(d.amount), 0)::float AS raised_total
+        COALESCE(SUM(d.amount_ils), 0)::float AS raised_total
       FROM campaign_ambassadors a
       JOIN campaigns c ON c.id = a.campaign_id
       LEFT JOIN donations d ON d.ambassador_id = a.id AND d.status = 'paid'
@@ -141,7 +141,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
           DATE(completed_at AT TIME ZONE 'Asia/Jerusalem'),
           'MM-DD'
         ) AS day,
-        COALESCE(SUM(amount), 0)::float AS total
+        COALESCE(SUM(amount_ils), 0)::float AS total
       FROM donations
       WHERE entity_id = $1
         AND status = 'paid'

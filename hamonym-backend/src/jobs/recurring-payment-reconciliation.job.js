@@ -158,10 +158,25 @@ async function reconcileInstruction(db, instruction, { getHistory, resolveCreden
   const successfulItems = history.filter(
     (item) => item.RecurringId === instruction.cardcom_recurring_id && item.Status === 'SUCCESSFUL'
   );
+  const expectedCoinId = require('../modules/currency/currency.config').coinIdFor(instruction.currency || 'ILS');
 
   let recovered = 0;
   for (const item of successfulItems) {
     if (await alreadyRepresented(db, instruction.id, item)) continue;
+
+    // A charge in a currency other than the one the donor authorized is never
+    // recorded as that currency's amount -- it is held for a human instead.
+    if (item.FinalDebitCoinID != null && Number(item.FinalDebitCoinID) !== expectedCoinId) {
+      await recordFinding(db, {
+        jobName: 'recurring-payment-reconciliation',
+        findingType: 'recurring_charge_currency_mismatch',
+        severity: 'critical',
+        subjectType: 'recurring_instruction',
+        subjectId: instruction.id,
+        details: { cardcomTranzactionId: item.TranzactionId ?? null, cardcomCoinId: item.FinalDebitCoinID, expectedCoinId },
+      });
+      continue;
+    }
 
     await finalizeCharge(instruction, {
       amount: item.SumToBill,
@@ -196,7 +211,7 @@ async function reconcileAllActiveInstructions(db, deps = {}) {
   const now = deps.now || new Date();
 
   const instructionsRes = await db.query(
-    `SELECT id, entity_id, campaign_id, cardcom_account_id, cardcom_recurring_id
+    `SELECT id, entity_id, campaign_id, cardcom_account_id, cardcom_recurring_id, currency
      FROM recurring_instructions
      WHERE status = 'active' AND cardcom_account_id IS NOT NULL AND cardcom_recurring_id IS NOT NULL`
   );

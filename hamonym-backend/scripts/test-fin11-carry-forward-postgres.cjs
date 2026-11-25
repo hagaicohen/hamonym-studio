@@ -47,7 +47,13 @@ assert.equal((await pool.query("SELECT jsonb_agg(to_jsonb(d) ORDER BY id)::text 
 assert.equal((await pool.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_schema=$1 AND table_name='donations' AND column_name='is_mock'",[schema])).rows[0].n,0);
 await assert.rejects(()=>pool.query('UPDATE donations SET amount=999 WHERE id=$1',[OLD]),/frozen once paid/);
 pass('Migration 080 removes flag, preserves every other field, and preserves paid immutability; legacy true paid donation is now eligible');
-const deps={'../../db/db':pool,'../payment/donation-provider':{getDonationProvider(){throw Error('External providers forbidden')}},'../email/email.service':{},'../dashboard/dashboard.service':{invalidateDashboard(){}}};
+// Migration 087 (multi-currency) columns and its ILS-sync trigger, taken from the
+// migration itself and created in this private schema only (087 targets public.).
+{const mc=fs.readFileSync(root+'migrations/087_donation_multi_currency.sql','utf8');
+await pool.query("ALTER TABLE donations ADD COLUMN currency varchar(3) NOT NULL DEFAULT 'ILS',ADD COLUMN amount_ils numeric(12,2),ADD COLUMN fx_rate numeric(12,6),ADD COLUMN fx_rate_source varchar(40),ADD COLUMN fx_rate_date date,ADD COLUMN fx_status varchar(16) NOT NULL DEFAULT 'not_required',ADD COLUMN provider_amount numeric(12,2),ADD COLUMN provider_coin_id integer;ALTER TABLE receipts ADD COLUMN currency varchar(3) NOT NULL DEFAULT 'ILS'");
+await pool.query(mc.slice(mc.indexOf('CREATE FUNCTION public.donations_sync_ils_equivalent()'),mc.indexOf('-- Existing rows are all ILS')).replaceAll('public.',''));
+await pool.query("UPDATE donations SET fx_status='not_required'");}
+const deps={'../../db/db':pool,'../payment/donation-provider':{getDonationProvider(){throw Error('External providers forbidden')}},'../email/email.service':{},'../dashboard/dashboard.service':{invalidateDashboard(){}},'../currency/currency.config':require(root+'src/modules/currency/currency.config'),'../currency/exchange-rate.service':{israelDate(){throw Error('No exchange rates in this test')},rateAt(){throw Error('No exchange rates in this test')}}};
 const donations=load('src/modules/donations/donations.service.js',deps);
 locker=await pool.connect();await locker.query('BEGIN');await locker.query('SELECT * FROM campaigns WHERE id=$1 FOR UPDATE',[C]);
 paymentPromise=donations.markDonationPaid(LATE,{providerReference:'MOCK-QA-ONLY'});

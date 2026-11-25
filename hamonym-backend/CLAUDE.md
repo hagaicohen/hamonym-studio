@@ -99,3 +99,15 @@ FRONTEND_URL              # http://localhost:4200
 BACKEND_URL               # http://localhost:3000
 GOOGLE_CLIENT_ID
 ```
+
+## Bilingual campaign content (frontend roadmap D-38 … D-55)
+
+- `campaigns.content_i18n` (migration 088) holds the English overlay only; Hebrew stays in the regular columns.
+  Validate with `content-i18n.js#validateContentI18n`; public responses go through `publicContentI18n`
+  (an unpublished English version never leaves the server).
+- `registration_options.client_uid` (088) is the stable identity English translations attach to.
+- `donations.donor_language` (migration 089) is display/communication only — never read it in financial code.
+- New columns are used only after `hasColumn()` confirms them, so a deploy before the migration degrades safely.
+- Donor-facing emails take `lang` (`he`/`en`); official receipts and accounting documents are not localized.
+- CardCom `Language` is `he` unless `CARDCOM_ENGLISH_PAGES_ENABLED=true` (off until verified on a test terminal).
+- Tests: `node scripts/test-campaign-content-i18n.js` (no database).

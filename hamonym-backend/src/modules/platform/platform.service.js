@@ -176,8 +176,8 @@ async function getKpis() {
     db.query(`SELECT COUNT(*)::int AS active FROM campaigns WHERE status = 'published' AND deleted_at IS NULL`),
     db.query(
       `SELECT
-         COALESCE(SUM(amount) FILTER (WHERE status = 'paid' AND created_at >= CURRENT_DATE), 0)::float AS today,
-         COALESCE(SUM(amount) FILTER (WHERE status = 'paid' AND created_at >= date_trunc('month', NOW())), 0)::float AS month,
+         COALESCE(SUM(amount_ils) FILTER (WHERE status = 'paid' AND created_at >= CURRENT_DATE), 0)::float AS today,
+         COALESCE(SUM(amount_ils) FILTER (WHERE status = 'paid' AND created_at >= date_trunc('month', NOW())), 0)::float AS month,
          COUNT(*) FILTER (WHERE status = 'failed' AND created_at >= date_trunc('month', NOW()))::int AS failed_this_month
        FROM donations`
     ),
@@ -308,7 +308,7 @@ const ACTIVITY_UNION_SQL = `
 
   SELECT
     'donation', d.created_at,
-    NULL, NULL,
+    NULL, d.currency,
     NULL, c.title,
     d.amount, NULL
   FROM donations d
@@ -336,7 +336,8 @@ function formatActivityRow(r) {
     case 'campaign':
       return { type: r.type, title: `קמפיין חדש: ${r.campaign_title}`, subtitle: r.entity_name, timestamp: r.ts };
     case 'donation':
-      return { type: r.type, title: `תרומה: ₪${Math.round(r.amount).toLocaleString('he-IL')}`, subtitle: `לקמפיין ${r.campaign_title}`, timestamp: r.ts };
+      // The donation branch carries its currency in the `action` column.
+      return { type: r.type, title: `תרומה: ${({ USD: '$', EUR: '€' })[r.action] || '₪'}${Math.round(r.amount).toLocaleString('he-IL')}`, subtitle: `לקמפיין ${r.campaign_title}`, timestamp: r.ts };
     case 'user':
       return { type: r.type, title: `משתמש חדש: ${r.user_name}`, subtitle: null, timestamp: r.ts };
     default:
@@ -375,7 +376,7 @@ exports.getActivityFeed = async ({ type, sortDir, page = 0, limit = 20 }) => {
 async function getCharts() {
   const [dailyRes, weeklyRes] = await Promise.all([
     db.query(
-      `SELECT gs::date AS day, COALESCE(SUM(d.amount) FILTER (WHERE d.status = 'paid'), 0)::float AS total
+      `SELECT gs::date AS day, COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS total
        FROM generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day') gs
        LEFT JOIN donations d ON date_trunc('day', d.created_at) = gs
        GROUP BY gs ORDER BY gs`

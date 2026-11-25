@@ -34,3 +34,11 @@ Records migration numbers whose production history differs from the files in
   scheduled jobs in the same minute.
 
 **086 is used and must not be reused. The next migration is 087.**
+
+## 087 — multi-currency donations (prepared, NOT applied)
+
+- `migrations/087_donation_multi_currency.sql`, rollback `scripts/rollback-087-donation-multi-currency.sql`.
+- Prepared 2026-11-06 and verified only on isolated local clones (see docs/finance/MULTI_CURRENCY_DONATIONS.md).
+- Not applied to production. It must be applied before deploying the backend that reads the new columns.
+
+**087 is reserved by this prepared migration. Until it is applied or withdrawn, choose 088 for anything new.**
