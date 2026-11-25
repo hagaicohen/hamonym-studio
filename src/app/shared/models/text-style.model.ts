@@ -13,7 +13,13 @@ export interface TextStyle {
   // normal CSS inheritance/cascade -- only an explicit Role override sets
   // these.
   fontFamily?: string;
+  fontFamilyByLanguage?: Partial<Record<'he' | 'en', string>>;
+  titleFontFamilyByLanguage?: Partial<Record<'he' | 'en', string>>;
+  subtitleFontFamilyByLanguage?: Partial<Record<'he' | 'en', string>>;
   fontWeight?: number;
+  // An exact size for a Text Role override (px). Takes precedence over the
+  // sm/md/lg/xl steps, which stay readable on overrides saved before it.
+  fontSizePx?: number;
   // Hero only -- separate title/subtitle styling that applies wherever the
   // text sits (above, on or below the Hero). Absent on campaigns saved
   // before 2026-11: on the Hero they fall back to color/fontSize, and
@@ -21,6 +27,11 @@ export interface TextStyle {
   // color (white by default) was only ever applied on the photo.
   titleColor?:       string;
   subtitleColor?:    string;
+  // Per content language (utils/element-color.ts); the shared fields above
+  // stay the value for a language without its own.
+  colorByLanguage?:         Partial<Record<'he' | 'en', string>>;
+  titleColorByLanguage?:    Partial<Record<'he' | 'en', string>>;
+  subtitleColorByLanguage?: Partial<Record<'he' | 'en', string>>;
   titleFontSize?:    TextFontSize;
   subtitleFontSize?: TextFontSize;
   // Set by dragging the title/subtitle in the Studio canvas. Absent = the
@@ -30,6 +41,8 @@ export interface TextStyle {
 }
 
 export interface CtaConfig {
+  fontFamily?: string;
+  fontFamilyByLanguage?: Partial<Record<'he' | 'en', string>>;
   visible: boolean;
   label:   string;
   color:   string;

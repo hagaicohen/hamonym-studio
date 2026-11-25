@@ -1,0 +1,93 @@
+{
+  "topbar": {
+    "openNavigationMenu": "Open navigation menu",
+    "myAccount": "My account",
+    "myPersonalArea": "My personal area",
+    "myRoles": "My roles",
+    "setUpANewOrganization": "Set up a new organization",
+    "joinAsAnAmbassador": "Join as an ambassador",
+    "registerACompany": "Register a company",
+    "manageRoles": "Manage roles",
+    "logOut": "Log out",
+    "openUserMenu": "Open user menu",
+    "logIn": "Log in",
+    "switchFailed": "Couldn't switch to the organization. Check your permissions and try again.",
+    "openFailed": "Couldn't open the page. Please try again."
+  },
+  "sidebar": {
+    "platform": "Platform",
+    "myOrganization": "My organization",
+    "newCampaign": "+ New campaign"
+  },
+  "notificationBell": {
+    "notifications": "Notifications",
+    "noNewNotifications": "No new notifications",
+    "pendingReview": "{pendingReviewCount, plural, one {# organization awaiting approval} other {# organizations awaiting approval}}",
+    "flaggedForReview": "{flaggedForReviewCount, plural, one {# active organization needs another review} other {# active organizations need another review}}",
+    "rejectedHint": "The organization and its data have been kept. Read the reason for the rejection. To resubmit, the platform administrator must first move it back to completing details.",
+    "changesRequestedHint": "Complete the details according to the administrator's notes in the organization settings, save, and click \"Resubmit for review\".",
+    "approvedHint": "You can continue managing campaigns. Publishing and fundraising are subject to the existing settings and rules.",
+    "actions": {
+      "approve": "Your organization was approved",
+      "reject": "Your request was rejected",
+      "requestChanges": "Changes are needed in the organization's details",
+      "suspend": "The organization was suspended",
+      "reactivate": "The organization was reactivated"
+    }
+  },
+  "idleWarningModal": {
+    "stillThere": "Still there?",
+    "logoutIn": "Due to inactivity, you will be logged out automatically in",
+    "seconds": "seconds.",
+    "stayLoggedIn": "Stay logged in"
+  },
+  "impersonationBanner": {
+    "signedInAs": "Platform administrator {{impersonatorName}} is currently signed in as this user",
+    "backToTheSuperAdmin": "Back to the super admin account"
+  },
+  "paidDonationToast": {
+    "newDonationReceived": "New donation received!",
+    "donated": "{{donorLabel}} donated ₪{{amount}}",
+    "close": "Close",
+    "anonymousDonor": "An anonymous donor"
+  },
+  "platformTopStrip": {
+    "homeLink": "Hamonym — go to the main site",
+    "logoAlt": "Hamonym",
+    "allCampaigns": "All campaigns",
+    "campaignManagement": "Campaign management",
+    "personalArea": "Personal area",
+    "logInPersonalArea": "Log in / Personal area",
+    "hamonymOnFacebook": "Hamonym on Facebook"
+  },
+  "roles": {
+    "entityManagerGroup": "My organizations",
+    "ambassador": "Ambassador",
+    "campaignManager": "Campaigner",
+    "company": "Company",
+    "donor": "Donor",
+    "user": "User",
+    "associationManager": "Organization manager",
+    "chalatzManager": "Public benefit company manager",
+    "partyManager": "Party manager",
+    "businessOwner": "Business owner"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "organizations": "Organizations",
+    "campaigns": "Campaigns",
+    "donations": "Donations",
+    "registrations": "Registrations",
+    "donors": "Donors",
+    "ambassadors": "Ambassadors",
+    "partners": "Partners",
+    "reports": "Reports",
+    "settings": "Settings",
+    "platformDashboard": "Platform dashboard",
+    "platformOrganizations": "Organizations",
+    "platformUsers": "Users",
+    "platformCollectionOps": "Collections",
+    "platformSettings": "General settings",
+    "platformCategorySuggestions": "Category suggestions"
+  }
+}

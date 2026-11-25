@@ -1,8 +1,13 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CampaignStudioStateService } from '../../../modules/campaigns/services/campaign-studio-state.service';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { CAMPAIGN_FONTS, elementFont, setElementFont, ensureStackLoaded } from '../../../modules/campaigns/utils/campaign-fonts';
+import { elementColor, setElementColor } from '../../../modules/campaigns/utils/element-color';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { TextStyle, TextAlign, TextFontSize } from '../../models/text-style.model';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../core/i18n/text.pipe';
 
 // Typography Phase A (2026-10) -- the shared Builder editor for a per-block
 // Text Role override (block.data.textStyles?.[roleName], a Partial
@@ -24,7 +29,7 @@ import { TextStyle, TextAlign, TextFontSize } from '../../models/text-style.mode
 @Component({
   selector: 'app-text-role-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent],
+  imports: [HmTextPipe, TranslocoPipe, CommonModule, FormsModule, ColorPickerComponent],
   templateUrl: './text-role-editor.component.html',
   styleUrl: './text-role-editor.component.css',
 })
@@ -37,28 +42,23 @@ export class TextRoleEditorComponent {
   @Input() override: Partial<TextStyle> | undefined;
   @Output() overrideChange = new EventEmitter<Partial<TextStyle> | undefined>();
 
+  @Input() simple = false;
   @Input() showColor = true;
-  @Input() showFontWeight = false;
-  @Input() showFontSize = false;
-  @Input() showFontFamily = false;
-  @Input() showAlign = false;
+  // Every text role offers the full set (2026-11-08); a host turns off what
+  // does not apply to its element (alignment of a button label, for example).
+  @Input() showFontWeight = true;
+  @Input() showFontSize = true;
+  @Input() showFontFamily = true;
+  @Input() showAlign = true;
 
-  // Only the fonts actually loaded in index.html (2026-10-06 doc comment
-  // there) -- Rubik/Secular One are NOT loaded despite appearing in an
-  // earlier curated-set discussion, so they are deliberately absent here
-  // rather than offered and silently falling back to the browser default.
-  readonly fontOptions: { value: string; label: string }[] = [
-    { value: "'Heebo', sans-serif",               label: 'Heebo (רגיל)' },
-    { value: "'Frank Ruhl Libre', 'Heebo', serif", label: 'Frank Ruhl Libre' },
-    { value: "'Varela Round', 'Heebo', sans-serif", label: 'Varela Round' },
-    { value: "'Assistant', 'Heebo', sans-serif",   label: 'Assistant' },
-  ];
+  // Catalog fonts are loaded on first use; legacy saved stacks remain valid.
+  readonly fontOptions: { value: string; label: string }[] = CAMPAIGN_FONTS.map(f => ({ value: f.stack, label: f.id === 'heebo' ? 'editors.fonts.heebo' : f.name }));
 
   readonly weightOptions: { value: number; label: string }[] = [
-    { value: 400, label: 'רגיל' },
-    { value: 700, label: 'מודגש' },
-    { value: 800, label: 'מודגש+' },
-    { value: 900, label: 'כבד' },
+    { value: 400, label: 'editors.weights.regular' },
+    { value: 700, label: 'editors.weights.bold' },
+    { value: 800, label: 'editors.weights.extraBold' },
+    { value: 900, label: 'editors.weights.heavy' },
   ];
 
   readonly sizeOptions: { value: TextFontSize; label: string }[] = [
@@ -69,12 +69,25 @@ export class TextRoleEditorComponent {
   ];
 
   readonly alignOptions: { value: TextAlign; label: string }[] = [
-    { value: 'right',  label: 'ימין'  },
-    { value: 'center', label: 'מרכז'  },
-    { value: 'left',   label: 'שמאל'  },
+    { value: 'right',  label: 'editors.align.right'  },
+    { value: 'center', label: 'editors.align.center'  },
+    { value: 'left',   label: 'editors.align.left'  },
   ];
 
-  expanded = false;
+  private readonly state = inject(CampaignStudioStateService);
+  get selectedFont(): string { return elementFont(this.override, this.state.contentLanguage) ?? ''; }
+  setFont(stack: string): void {
+    ensureStackLoaded(stack);
+    const next = setElementFont(this.override ?? {}, this.state.contentLanguage, stack || null);
+    this.overrideChange.emit(Object.keys(next).length ? next : undefined);
+  }
+  // Color for the open content language (same value as the floating toolbar's).
+  get roleColor(): string | undefined { return elementColor(this.override, this.state.contentLanguage); }
+  setColor(color: string | null): void {
+    const next = setElementColor(this.override ?? {}, this.state.contentLanguage, color);
+    this.overrideChange.emit(Object.keys(next).length ? next : undefined);
+  }
+  @Input() expanded = false;
 
   get hasOverride(): boolean {
     return !!this.override && Object.keys(this.override).length > 0;
@@ -82,6 +95,26 @@ export class TextRoleEditorComponent {
 
   patch(partial: Partial<TextStyle>): void {
     this.overrideChange.emit({ ...(this.override ?? {}), ...partial });
+  }
+
+  // An exact size in px; it replaces the older sm/md/lg/xl step.
+  get sizePx(): number | null {
+    const o = this.override;
+    return o?.fontSizePx ?? (o?.fontSize ? ({ sm: 13, md: 16, lg: 20, xl: 26 } as const)[o.fontSize] : null);
+  }
+  setSizePx(value: string | number): void {
+    const px = Math.round(Number(value));
+    if (!Number.isFinite(px) || px <= 0) { this.resetSize(); return; }
+    const next: Partial<TextStyle> = { ...(this.override ?? {}), fontSizePx: Math.min(96, Math.max(8, px)) };
+    delete next.fontSize;
+    this.overrideChange.emit(next);
+  }
+  resetSize(): void {
+    if (!this.override) return;
+    const next: Partial<TextStyle> = { ...this.override };
+    delete next.fontSize;
+    delete next.fontSizePx;
+    this.overrideChange.emit(Object.keys(next).length ? next : undefined);
   }
 
   resetProperty(key: keyof TextStyle): void {

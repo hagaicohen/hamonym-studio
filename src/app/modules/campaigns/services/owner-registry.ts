@@ -33,6 +33,7 @@ export type OwnerType = 'campaign' | 'partner' | 'campaign-partner';
 // "Campaign Hero" for campaign-partner — not the same ambiguity problem
 // since each owner has its own separate blocks/layout storage).
 export const SECTION_REGISTRY: Record<BlockType, OwnerType[]> = {
+  navigation:['campaign'],progress: ['campaign'], contact: ['campaign','partner','campaign-partner'],
   'rich-text':       ['campaign', 'partner', 'campaign-partner'],
   'image':           ['campaign', 'partner', 'campaign-partner'],
   'video':           ['campaign', 'partner', 'campaign-partner'],
@@ -56,6 +57,8 @@ export const SECTION_REGISTRY: Record<BlockType, OwnerType[]> = {
   'coupons':         ['campaign-partner'],
   'map':             ['partner'],
   'opening-hours':   ['partner'],
+  'countdown':       ['campaign'],
+  'badge':           ['campaign'],
 };
 
 export function isSectionAvailableFor(type: BlockType, owner: OwnerType): boolean {

@@ -28,7 +28,7 @@ export function organizationMissingItems(entity: any, masav?: MasavReadiness | n
     items.push({ key: 'tax_document', severity: 'legal', title: 'אישור מס (סעיף 46)', detail: 'מסמך משפטי שלא הועלה' });
   }
   if (entity.cardcom_connection_status !== 'success') {
-    items.push({ key: 'cardcom', severity: 'operational', title: 'חיבור CardCom', detail: 'ללא חיבור מאומת, התרומות לא ייסלקו לחשבון העמותה' });
+    items.push({ key: 'cardcom', severity: 'operational', title: 'חיבור CardCom', detail: 'ללא חיבור מאומת, לא ניתן לקבל תשלומים בחשבון הגוף' });
   }
   if (!entity.billing_method) {
     items.push({ key: 'billing_method', severity: 'operational', title: 'אמצעי חיוב', detail: 'נדרש לצורך גביית דמי הפלטפורמה' });

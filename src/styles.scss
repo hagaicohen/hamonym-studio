@@ -13,12 +13,13 @@
 @use './styles/tokens';
 @use './styles/form-controls';
 @import "./styles/onboarding.css";
+@import "./styles/amount-buttons.css";
 
 /* You can add global styles to this file, and also import other style files */
 
 html,
 body {
-  direction: rtl;
+  /* Direction is inherited from the html dir attribute; do not override html itself. */
 
   font-family: "Heebo", sans-serif;
 

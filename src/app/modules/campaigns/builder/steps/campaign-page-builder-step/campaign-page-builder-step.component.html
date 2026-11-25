@@ -5,16 +5,16 @@
       <span class="step-icon-wrapper">
         <lucide-angular [img]="LayersIcon" [size]="18" class="step-icon"></lucide-angular>
       </span>
-      <h2 class="step-title">{{ isCampaign ? 'בניית דף הקמפיין' : (ownerType === 'partner' ? 'בניית דף השותף' : 'עריכת תוכן ההשתתפות בקמפיין') }}</h2>
+      <h2 class="step-title">{{ isCampaign ? ('builder.page.buildTheCampaignPage' | transloco) : (ownerType === 'partner' ? ('builder.page.buildThePartnerPage' | transloco) : ('builder.page.editTheCampaignParticipationContent' | transloco)) }}</h2>
     </div>
-    <p class="step-desc">הוסיפו בלוקים, שנו סדר, ערכו תוכן.</p>
+    <p class="step-desc">{{ 'builder.page.addBlocksChangeTheOrder' | transloco }}</p>
     <!-- Campaign only — Partner/Campaign-Participation have exactly one
          recommended structure today (auto-seeded on creation), so a
          template picker with nothing real to choose between stays hidden
          until there's actually more than one option. See DECISIONS.md
          (2026-08-02). -->
     <button class="btn-change-template" type="button" *ngIf="isCampaign" (click)="showTemplatePicker = true">
-      <lucide-icon [img]="ui.LayoutTemplate" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> שנה תבנית
+      <lucide-icon [img]="ui.LayoutTemplate" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.changeTemplate' | transloco }}
     </button>
   </div>
 
@@ -35,14 +35,14 @@
   <div class="builder-zone builder-zone--store">
     <div class="builder-zone-header" (click)="showBlockPicker = !showBlockPicker">
       <span class="section-icon-box section-icon-box--store"><lucide-icon [img]="ui.Blocks" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
-      <span class="builder-zone-title">הוסיפו בלוקים לדף</span>
+      <span class="builder-zone-title">{{ 'builder.page.addBlocksToThePage' | transloco }}</span>
       <span class="section-chevron" [class.open]="showBlockPicker">›</span>
     </div>
     <ng-container *ngIf="showBlockPicker">
-      <p class="picker-hint"><lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> גררו בלוק ישירות למיקום הרצוי בתצוגה שמימין, או פשוט לחצו עליו כדי להוסיף אותו בסוף הדף</p>
+      <p class="picker-hint"><lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.dragABlockStraightTo' | transloco }}</p>
       <div class="block-picker block-picker--grouped">
         <div class="picker-group" *ngFor="let group of blockGroups">
-          <div class="picker-group-label">{{ group.label }}</div>
+          <div class="picker-group-label">{{ group.label | hmText }}</div>
           <div class="picker-group-items">
             <button class="picker-item"
               *ngFor="let type of group.types"
@@ -53,7 +53,7 @@
               (dragend)="onPickerDragEnd()"
               (click)="addBlock(type, draft.blocks)">
               <span class="picker-icon"><lucide-icon [img]="lucideIcon(type)" [size]="18" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
-              <span class="picker-label">{{ blockTypeLabel(type) }}</span>
+              <span class="picker-label">{{ blockTypeLabel(type) | hmText }}</span>
               <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
             </button>
           </div>
@@ -78,37 +78,40 @@
              buttons. A dedicated handle (not the whole header) so it never
              conflicts with clicking the header to expand/collapse, or the
              action buttons beside it. See DECISIONS.md (2026-07-31). -->
-        <span class="block-drag-handle" draggable="true" title="גררו לשינוי מיקום"
+        <span class="block-drag-handle" draggable="true" [title]="'builder.page.dragToMove' | transloco"
           (click)="$event.stopPropagation()"
           (dragstart)="onBlockDragStart($event, block.id)"
           (dragend)="onBlockDragEnd()"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         <span class="block-icon"><lucide-icon [img]="parentBlock?.type === 'tabs' ? ui.Rows3 : parentBlock?.type === 'accordion' ? ui.ListCollapse : lucideIcon(block.type)" [size]="16" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
         <div class="block-header-info">
-          <span class="block-label">{{ parentBlock?.type === 'tabs' ? 'טאב' : parentBlock?.type === 'accordion' ? 'פאנל' : blockLabel(block) }}
+          <span class="block-label">{{ parentBlock?.type === 'tabs' ? ('builder.page.tab' | transloco) : parentBlock?.type === 'accordion' ? ('builder.page.panel' | transloco) : blockLabel(block) }}
             <span class="block-closed-count"
               *ngIf="(block.type === 'container' || block.type === 'tabs' || block.type === 'accordion') && getContainerViewState(block.id) === 'closed'">
-              · {{ containerChildren(block, draft.blocks).length }} בלוקים
+              {{ 'builder.page.lengthBlocks' | transloco: { length: (containerChildren(block, draft.blocks).length) } }}
             </span>
           </span>
           <span class="block-user-label" *ngIf="block.label">{{ block.label }}</span>
-          <span class="block-import-review-chip" *ngIf="block.importReview?.needsReview" title="נוצר אוטומטית מייבוא אתר, ברמת ביטחון בינונית — כדאי לבדוק"><lucide-icon [img]="ui.TriangleAlert" [size]="12" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לבדיקה</span>
+          <span class="block-import-review-chip" *ngIf="block.importReview?.needsReview" [title]="'builder.page.createdAutomaticallyFromAWebsite' | transloco"><lucide-icon [img]="ui.TriangleAlert" [size]="12" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.toReview' | transloco }}</span>
         </div>
         <div class="block-actions" (click)="$event.stopPropagation()">
+          <button type="button" class="action-btn" (click)="moveBelowHeader(block)"
+            [title]="(block.placement === 'below-header' ? 'studio.actions.returnToContent' : 'studio.actions.moveBelowHeader') | transloco"
+            [attr.aria-label]="(block.placement === 'below-header' ? 'studio.actions.returnToContent' : 'studio.actions.moveBelowHeader') | transloco">?</button>
           <button class="action-btn" *ngIf="block.importReview?.needsReview"
-            (click)="clearImportReview(block.id)" title="סמן כנבדק"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> נבדק</button>
+            (click)="clearImportReview(block.id)" [title]="'builder.page.markAsReviewed' | transloco"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.reviewed' | transloco }}</button>
           <button class="action-btn"
             (click)="moveInScope(block.id, parentBlock, draft.blocks, -1)"
-            [disabled]="isFirstInScopeOf(block, parentBlock, draft.blocks)" title="למעלה">↑</button>
+            [disabled]="isFirstInScopeOf(block, parentBlock, draft.blocks)" [title]="'builder.page.up' | transloco">↑</button>
           <button class="action-btn"
             (click)="moveInScope(block.id, parentBlock, draft.blocks, 1)"
-            [disabled]="isLastInScopeOf(block, parentBlock, draft.blocks)" title="למטה">↓</button>
+            [disabled]="isLastInScopeOf(block, parentBlock, draft.blocks)" [title]="'builder.page.down' | transloco">↓</button>
           <button class="action-btn action-btn--swap"
             *ngIf="block.type === 'container' && asContainer(block.data).direction === 'row' && asContainer(block.data).childBlockIds.length >= 2"
             (click)="swapContainerChildren(block.id)"
-            title="החלף ימין ↔ שמאל">⇄</button>
+            [title]="'builder.page.swapRightLeft' | transloco">⇄</button>
           <button class="action-btn" [class.action-btn--muted]="!block.visible"
             (click)="toggleVisibility(block.id)"><lucide-icon [img]="block.visible ? ui.Eye : ui.EyeOff" [size]="15" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></button>
-          <button class="action-btn action-btn--danger" (click)="removeBlock(block.id)" aria-label="מחיקה"><lucide-icon [img]="ui.X" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+          <button class="action-btn action-btn--danger" *ngIf="canRemove(block.id)" (click)="removeBlock(block.id)" [attr.aria-label]="'builder.page.delete' | transloco"><lucide-icon [img]="ui.X" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
         </div>
         <span class="block-chevron"
           [class.open]="editingBlockId === block.id"
@@ -121,11 +124,11 @@
            children tree. Same SIBLING-of-.block-editor reasoning as the tree
            below — must not depend on editingBlockId. ── -->
       <div class="container-name-field" *ngIf="block.type === 'container' && getContainerViewState(block.id) !== 'closed'">
-        <label class="editor-label">שם הבלוק (לצורך זיהוי)</label>
+        <label class="editor-label">{{ 'builder.page.blockNameForIdentification' | transloco }}</label>
         <input class="editor-input" type="text"
           [value]="block.label"
           (input)="updateLabel(block.id, $any($event.target).value)"
-          placeholder="למשל: סיפור, תמונה ראשית...">
+          [placeholder]="'builder.page.forExampleStoryMainImage' | transloco">
       </div>
 
       <!-- ── CONTAINER CHILDREN TREE — the elements that make up the
@@ -149,7 +152,7 @@
                 <rect x="3" y="6.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
                 <rect x="3" y="11" width="10" height="3" rx="1.5" fill="currentColor" opacity="0.35"/>
               </svg>
-              זה מעל זה (עמודה)
+              {{ 'builder.page.oneAboveTheOtherColumn' | transloco }}
             </button>
             <button type="button" class="direction-btn"
               [class.active]="asContainer(block.data).direction === 'row'"
@@ -159,14 +162,14 @@
                 <rect x="6" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.6"/>
                 <rect x="11" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.35"/>
               </svg>
-              זה לצד זה (שורה)
+              {{ 'builder.page.sideBySideRow' | transloco }}
             </button>
           </div>
           <div class="container-tree-actions-row">
-            <span class="container-tree-count">{{ containerChildren(block, draft.blocks).length }} בלוקים</span>
+            <span class="container-tree-count">{{ 'builder.page.lengthBlocks2' | transloco: { length: (containerChildren(block, draft.blocks).length) } }}</span>
             <button class="container-add-btn" type="button"
               (click)="$event.stopPropagation(); showContainerPickerId = (showContainerPickerId === block.id ? null : block.id)">
-              + הוסף לכאן
+              {{ 'builder.page.addHere' | transloco }}
             </button>
           </div>
         </div>
@@ -176,7 +179,7 @@
              *ngIf="showContainerPickerId === block.id"
              (click)="$event.stopPropagation()">
           <div class="picker-group" *ngFor="let group of nestedBlockGroups">
-            <div class="picker-group-label">{{ group.label }}</div>
+            <div class="picker-group-label">{{ group.label | hmText }}</div>
             <div class="picker-group-items">
               <button class="picker-item"
                 *ngFor="let type of group.types"
@@ -187,7 +190,7 @@
                 (dragend)="onPickerDragEnd()"
                 (click)="addBlockInsideContainer(block.id, type, draft.blocks)">
                 <span class="picker-icon"><lucide-icon [img]="lucideIcon(type)" [size]="18" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
-                <span class="picker-label">{{ blockTypeLabel(type) }}</span>
+                <span class="picker-label">{{ blockTypeLabel(type) | hmText }}</span>
                 <span class="picker-added" *ngIf="isAlreadyAdded(type, draft.blocks)"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
               </button>
             </div>
@@ -202,7 +205,7 @@
           </ng-container>
         </ng-container>
         <ng-template #emptyContainerTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף לכאן" להוספת בלוק</div>
+          <div class="container-empty-hint">{{ 'builder.page.clickAddHereToAdd' | transloco }}</div>
         </ng-template>
       </div>
 
@@ -219,10 +222,10 @@
       <div class="container-children-tree" *ngIf="block.type === 'tabs' && getContainerViewState(block.id) !== 'closed'">
         <div class="container-tree-header">
           <span class="container-tree-label">
-            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ containerChildren(block, draft.blocks).length }} טאבים
+            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.lengthTabs' | transloco: { length: (containerChildren(block, draft.blocks).length) } }}
           </span>
           <button class="container-add-btn" type="button" (click)="addTab(block.id, draft.blocks)">
-            + הוסף טאב
+            {{ 'builder.page.addATab' | transloco }}
           </button>
         </div>
 
@@ -233,7 +236,7 @@
           </ng-container>
         </ng-container>
         <ng-template #emptyTabsTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף טאב" כדי להתחיל</div>
+          <div class="container-empty-hint">{{ 'builder.page.clickAddATabTo' | transloco }}</div>
         </ng-template>
       </div>
 
@@ -242,10 +245,10 @@
       <div class="container-children-tree" *ngIf="block.type === 'accordion' && getContainerViewState(block.id) !== 'closed'">
         <div class="container-tree-header">
           <span class="container-tree-label">
-            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ containerChildren(block, draft.blocks).length }} פאנלים
+            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.lengthPanels' | transloco: { length: (containerChildren(block, draft.blocks).length) } }}
           </span>
           <button class="container-add-btn" type="button" (click)="addPanel(block.id, draft.blocks)">
-            + הוסף פאנל
+            {{ 'builder.page.addAPanel' | transloco }}
           </button>
         </div>
 
@@ -256,7 +259,7 @@
           </ng-container>
         </ng-container>
         <ng-template #emptyAccordionTpl>
-          <div class="container-empty-hint">לחצו על "+ הוסף פאנל" כדי להתחיל</div>
+          <div class="container-empty-hint">{{ 'builder.page.clickAddAPanelTo' | transloco }}</div>
         </ng-template>
       </div>
 
@@ -272,8 +275,8 @@
   <div class="builder-zone builder-zone--content">
     <div class="builder-zone-header" (click)="toggleSection('zone-content')">
       <span class="section-icon-box section-icon-box--content"><lucide-icon [img]="ui.FileText" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
-      <span class="builder-zone-title">תוכן הדף</span>
-      <span class="builder-zone-count" *ngIf="topLevelBlocks(draft.blocks).length">{{ topLevelBlocks(draft.blocks).length }} בלוקים</span>
+      <span class="builder-zone-title">{{ 'builder.page.pageContent' | transloco }}</span>
+      <span class="builder-zone-count" *ngIf="topLevelBlocks(draft.blocks).length">{{ 'builder.page.lengthBlocks2' | transloco: { length: (topLevelBlocks(draft.blocks).length) } }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-content')">›</span>
     </div>
     <ng-container *ngIf="!isSectionCollapsed('zone-content')">
@@ -284,7 +287,7 @@
         </ng-container>
       </div>
       <ng-template #zoneContentEmptyTpl>
-        <p class="zone-content-empty">עדיין אין בלוקים בדף — הוסיפו את הראשון מהחנות שמעל <app-icon name="arrow-up" /></p>
+        <p class="zone-content-empty">{{ 'builder.page.thereAreNoBlocksOn' | transloco }} <app-icon name="arrow-up" /></p>
       </ng-template>
     </ng-container>
   </div>
@@ -299,7 +302,7 @@
   <div class="builder-zone builder-zone--design">
     <div class="builder-zone-header" (click)="toggleSection('zone-design')">
       <span class="section-icon-box section-icon-box--design"><lucide-icon [img]="ui.Palette" [size]="16" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
-      <span class="builder-zone-title">עיצוב הקמפיין</span>
+      <span class="builder-zone-title">{{ 'builder.page.campaignDesign' | transloco }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('zone-design')">›</span>
     </div>
     <ng-container *ngIf="!isSectionCollapsed('zone-design')">
@@ -323,6 +326,7 @@
 
 <!-- The editor body of one block, shared by Step 9 and the Studio. -->
 <ng-template #blockEditorBody let-block="block" let-parentBlock="parentBlock" let-draft="draft">
+  <app-campaign-enhancements-editor [block]="block" />
 
         <!-- LABEL — for rich-text/video/gallery this is genuinely rendered
              as a visible heading on the page (see campaign-preview.component
@@ -331,11 +335,14 @@
              title here. For every other block type it really is
              editor-only, used only in this block-list/header display. -->
         <div class="editor-field" *ngIf="block.type !== 'container'">
-          <label class="editor-label">{{ ['rich-text','video','gallery'].includes(block.type) ? 'כותרת (רשות — מוצגת בדף)' : 'שם הבלוק (לצורך זיהוי)' }}</label>
+          <div class="text-title-field-header">
+          <label class="editor-label">{{ ['rich-text','video','gallery'].includes(block.type) ? ('builder.page.titleOptionalShownOnThe' | transloco) : ('builder.page.blockNameForIdentification' | transloco) }}</label>
+            <input *ngIf="block.type==='rich-text'" class="text-title-switch" data-text-show-title type="checkbox" role="switch" [attr.aria-label]="'studio.visual.showTextTitle'|transloco" [attr.aria-checked]="textTitleShown(block)" [ngModel]="textTitleShown(block)" (ngModelChange)="setTextTitleShown(block,$event)">
+          </div>
           <input class="editor-input" type="text"
             [value]="block.label"
             (input)="updateLabel(block.id, $any($event.target).value)"
-            [placeholder]="['rich-text','video','gallery'].includes(block.type) ? 'למשל: הסיפור שלנו' : 'למשל: סיפור, תמונה ראשית...'">
+            [placeholder]="['rich-text','video','gallery'].includes(block.type) ? ('builder.page.forExampleOurStory' | transloco) : ('builder.page.forExampleStoryMainImage' | transloco)">
 
           <!-- Heading style — right after the heading field itself, since
                it styles exactly that text. Collapsed by default (the
@@ -347,9 +354,9 @@
         <div class="editor-divider" *ngIf="block.type !== 'container'"></div>
 
         <!-- ── HERO (positional marker only) ── -->
-        <div class="editor-field" *ngIf="block.type === 'hero'">
+        <div class="editor-field" *ngIf="block.type === 'hero' && !studioBlockId">
           <p class="system-note">
-            <lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן ה-Hero — כותרת, תמונה, טקסט — נערך בשלב "פרטי בסיס". הבלוק הזה קובע רק את המיקום שלו בדף — אפשר להזיז אותו ↑↓ או להכניס אותו לתוך מסגרת, כמו כל בלוק אחר.
+            <lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.theHeroContentTitleImage' | transloco }}
           </p>
         </div>
 
@@ -361,7 +368,7 @@
 
         <!-- ── VIDEO ── -->
         <div class="editor-field" *ngIf="block.type === 'video'">
-          <label class="editor-label">קישור וידאו</label>
+          <label class="editor-label">{{ 'builder.page.videoLink' | transloco }}</label>
           <input class="editor-input" type="url"
             [value]="asVideo(block.data).url"
             (change)="updateVideoUrl(block.id, $any($event.target).value)"
@@ -379,45 +386,65 @@
               <div class="gallery-item-actions">
                 <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, -1)" [disabled]="i === 0">←</button>
                 <button class="gallery-btn" (click)="moveGalleryItem(block.id, i, 1)"  [disabled]="i === asGallery(block.data).items.length - 1">→</button>
-                <button class="gallery-btn gallery-btn--danger" (click)="removeGalleryItem(block.id, i)" aria-label="הסרה"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+                <button class="gallery-btn gallery-btn--danger" (click)="removeGalleryItem(block.id, i)" [attr.aria-label]="'builder.page.remove' | transloco"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
               </div>
               <input class="gallery-caption" type="text"
                 [value]="item.caption || ''"
                 (input)="updateGalleryCaption(block.id, i, $any($event.target).value)"
-                placeholder="כיתוב...">
+                [placeholder]="'builder.page.caption' | transloco">
             </div>
           </div>
 
           <button class="upload-area-btn" type="button" (click)="galleryInput.click()">
-            + הוסף תמונות לגלריה
+            {{ 'builder.page.addImagesToTheGallery' | transloco }}
           </button>
 
           <!-- Gallery style options -->
           <div class="gallery-style-section">
-            <div class="editor-label" style="margin-bottom:8px">סגנון תצוגה</div>
+            <div class="editor-label" style="margin-bottom:8px">{{ 'builder.page.displayStyle' | transloco }}</div>
 
             <div class="gallery-mode-btns">
-              <button class="gallery-mode-btn"
-                [class.active]="asGallery(block.data).style !== 'grid'"
+              <button class="gallery-mode-btn" data-gallery-style="slider"
+                [class.active]="asGallery(block.data).style !== 'grid' && asGallery(block.data).style !== 'slideshow'"
                 (click)="updateGalleryStyle(block.id, 'style', 'slider')">
-                <app-icon name="slider" /> סליידר
+                <app-icon name="slider" /> {{ 'builder.page.slider' | transloco }}
               </button>
               <button class="gallery-mode-btn"
                 [class.active]="asGallery(block.data).style === 'grid'"
                 (click)="updateGalleryStyle(block.id, 'style', 'grid')">
-                ▦ רשת
+                {{ 'builder.page.grid' | transloco }}
+              </button>
+              <button class="gallery-mode-btn" data-gallery-style="slideshow"
+                [class.active]="asGallery(block.data).style === 'slideshow'"
+                (click)="updateGalleryStyle(block.id, 'style', 'slideshow')">
+                {{ 'builder.gallery.slideshow' | transloco }}
               </button>
             </div>
+            <ng-container *ngIf="asGallery(block.data).style === 'slideshow'">
+              <div class="editor-row" style="margin-top:10px">
+                <label class="editor-label" [for]="'gal-interval-' + block.id">{{ 'builder.gallery.interval' | transloco }}</label>
+                <input [id]="'gal-interval-' + block.id" class="editor-input" type="number" min="2" max="30" step="1" data-gallery-interval
+                  [value]="asGallery(block.data).intervalSeconds ?? 5" (change)="updateGalleryStyle(block.id, 'intervalSeconds', +$any($event.target).value)">
+              </div>
+              <div class="editor-row">
+                <label class="editor-label" [for]="'gal-transition-' + block.id">{{ 'builder.gallery.transition' | transloco }}</label>
+                <select [id]="'gal-transition-' + block.id" class="editor-select" data-gallery-transition
+                  [ngModel]="asGallery(block.data).transition ?? 'slide'" (ngModelChange)="updateGalleryStyle(block.id, 'transition', $event)">
+                  <option value="slide">{{ 'builder.gallery.transitionSlide' | transloco }}</option>
+                  <option value="fade">{{ 'builder.gallery.transitionFade' | transloco }}</option>
+                </select>
+              </div>
+            </ng-container>
 
             <div class="editor-row" style="margin-top:10px">
-              <label class="editor-label">יחס תמונה</label>
+              <label class="editor-label">{{ 'builder.page.imageRatio' | transloco }}</label>
               <select class="editor-select"
                 [ngModel]="asGallery(block.data).aspectRatio"
                 (ngModelChange)="updateGalleryStyle(block.id, 'aspectRatio', $event)">
-                <option value="16:9">16:9 — רחב</option>
-                <option value="4:3">4:3 — סטנדרטי</option>
+                <option value="16:9">{{ 'builder.page.n169Wide' | transloco }}</option>
+                <option value="4:3">{{ 'builder.page.n43Standard' | transloco }}</option>
                 <option value="3:2">3:2</option>
-                <option value="1:1">1:1 — ריבועי</option>
+                <option value="1:1">{{ 'builder.page.n11Square' | transloco }}</option>
               </select>
             </div>
 
@@ -426,19 +453,19 @@
                 <input type="checkbox"
                   [ngModel]="asGallery(block.data).showArrows"
                   (ngModelChange)="updateGalleryStyle(block.id, 'showArrows', $event)">
-                חצים
+                {{ 'builder.page.arrows' | transloco }}
               </label>
               <label class="gallery-check">
                 <input type="checkbox"
                   [ngModel]="asGallery(block.data).showDots"
                   (ngModelChange)="updateGalleryStyle(block.id, 'showDots', $event)">
-                נקודות
+                {{ 'builder.page.dots' | transloco }}
               </label>
               <label class="gallery-check">
                 <input type="checkbox"
                   [ngModel]="asGallery(block.data).showCaptions"
                   (ngModelChange)="updateGalleryStyle(block.id, 'showCaptions', $event)">
-                כיתובים
+                {{ 'builder.page.captions' | transloco }}
               </label>
             </div>
           </div>
@@ -455,22 +482,22 @@
                working button. Always visible (not tucked under "עיצוב
                מתקדם"), so it isn't easy to miss. -->
           <div class="editor-row">
-            <label class="editor-label">מטרת הכפתור</label>
+            <label class="editor-label">{{ 'builder.page.buttonPurpose' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn" *ngIf="isCampaign"
                 [class.active]="(asCta(block.data).ctaAction || 'donate') === 'donate'"
-                (click)="updateCtaAction(block.id, 'donate')">תרומה</button>
+                (click)="updateCtaAction(block.id, 'donate')">{{ 'builder.page.donation' | transloco }}</button>
               <button class="direction-btn" *ngIf="isCampaign"
                 [class.active]="asCta(block.data).ctaAction === 'register'"
-                (click)="updateCtaAction(block.id, 'register')">הרשמה למירוץ</button>
+                (click)="updateCtaAction(block.id, 'register')">{{ 'builder.page.raceRegistration' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asCta(block.data).ctaAction === 'link'"
-                (click)="updateCtaAction(block.id, 'link')">קישור לאתר</button>
+                (click)="updateCtaAction(block.id, 'link')">{{ 'builder.page.websiteLink' | transloco }}</button>
             </div>
           </div>
 
           <div class="editor-row" *ngIf="asCta(block.data).ctaAction === 'link'">
-            <label class="editor-label">כתובת הקישור</label>
+            <label class="editor-label">{{ 'builder.page.linkAddress' | transloco }}</label>
             <input class="editor-input" type="url"
               [value]="asCta(block.data).linkUrl || ''"
               (input)="updateCtaLinkUrl(block.id, $any($event.target).value)"
@@ -478,21 +505,21 @@
           </div>
 
           <div class="editor-row">
-            <label class="editor-label">כותרת</label>
+            <label class="editor-label">{{ 'builder.page.title' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asCta(block.data).title"
               (input)="updateCtaField(block.id, 'title', $any($event.target).value)"
-              placeholder="כותרת הקריאה לפעולה">
+              [placeholder]="'builder.page.callToActionTitle' | transloco">
           </div>
           <div class="editor-row">
-            <label class="editor-label">תיאור</label>
+            <label class="editor-label">{{ 'builder.page.description' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asCta(block.data).text"
               (input)="updateCtaField(block.id, 'text', $any($event.target).value)"
-              placeholder="תיאור קצר">
+              [placeholder]="'builder.page.shortDescription' | transloco">
           </div>
           <div class="editor-row">
-            <label class="editor-label">צבע רקע</label>
+            <label class="editor-label">{{ 'builder.page.backgroundColor' | transloco }}</label>
             <div class="color-row">
               <input type="color" class="color-picker"
                 [value]="asCta(block.data).backgroundColor"
@@ -509,11 +536,11 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('cta-design')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב הכפתור</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.buttonDesign' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('cta-design')">
-              <app-style-role-editor roleLabel="כפתור" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.button' | transloco" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
                 [override]="asCta(block.data).buttonStyles?.main"
                 [resolvedBackground]="ctaButtonResolved(asCta(block.data), 'background')"
                 [resolvedTextColor]="ctaButtonResolved(asCta(block.data), 'textColor')"
@@ -525,8 +552,8 @@
 
           <div class="editor-divider"></div>
           <div class="container-design-section">
-            <div class="container-design-header" (click)="toggleSection('cta-texts')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
+            <div class="container-design-header" data-typography-section (click)="toggleSection('cta-texts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.texts' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('cta-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('cta-texts')">
@@ -542,11 +569,11 @@
           </div>
 
           <div class="spacing-row" style="margin-top:10px">
-            <span class="spacing-label">גובה הבלוק</span>
+            <span class="spacing-label">{{ 'builder.page.blockHeight' | transloco }}</span>
             <input type="range" class="split-slider" min="12" max="56" step="4"
               [value]="asCta(block.data).blockHeight || 32"
               (input)="updateCtaBlockHeight(block.id, +$any($event.target).value)">
-            <span class="spacing-val">{{ (asCta(block.data).blockHeight || 32) === 12 ? 'קומפקטי' : (asCta(block.data).blockHeight || 32) >= 48 ? 'מרווח' : 'רגיל' }}</span>
+            <span class="spacing-val">{{ (asCta(block.data).blockHeight || 32) === 12 ? ('builder.page.compact' | transloco) : (asCta(block.data).blockHeight || 32) >= 48 ? ('builder.page.spacious' | transloco) : ('builder.page.normal' | transloco) }}</span>
           </div>
         </div>
 
@@ -560,7 +587,7 @@
              page. See DECISIONS.md (2026-07-30). -->
         <div class="container-design-section" *ngIf="block.type === 'container'">
           <div class="container-design-header" (click)="toggleSection('container-design-' + block.id)">
-            <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
+            <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.design' | transloco }}</span>
             <span class="section-chevron" [class.open]="!isSectionCollapsed('container-design-' + block.id)">›</span>
           </div>
 
@@ -571,13 +598,13 @@
           <ng-container *ngIf="parentBlock?.type === 'accordion'">
             <div class="donation-toggle-item"
               (click)="updatePanelField(block.id, 'panelDefaultOpen', !asContainer(block.data).panelDefaultOpen)">
-              <span class="donation-toggle-text">פתוח בהתחלה</span>
+              <span class="donation-toggle-text">{{ 'builder.page.openAtFirst' | transloco }}</span>
               <span class="toggle-pill" [class.on]="asContainer(block.data).panelDefaultOpen">
                 <span class="toggle-pill-dot"></span>
               </span>
             </div>
             <div class="editor-row" style="margin-top:8px">
-              <label class="editor-label">אייקון (אופציונלי)</label>
+              <label class="editor-label">{{ 'builder.page.iconOptional' | transloco }}</label>
               <input class="editor-input" type="text" maxlength="4" style="max-width:70px; text-align:center"
                 [value]="asContainer(block.data).panelIcon || ''"
                 (input)="updatePanelField(block.id, 'panelIcon', $any($event.target).value)"
@@ -593,17 +620,30 @@
                rendering inline. See DECISIONS.md (2026-07-17). -->
           <div class="editor-row"
             *ngIf="!parentBlock && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
-            <label class="editor-label">מיקום הקונטיינר</label>
+            <label class="editor-label">{{ 'builder.page.containerPosition' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="!asContainer(block.data).railZone"
-                (click)="setContainerRailZone(block.id, null)">רגיל</button>
+                (click)="setContainerRailZone(block.id, null)">{{ 'builder.page.normal' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asContainer(block.data).railZone === 'sidebar'"
-                (click)="setContainerRailZone(block.id, 'sidebar')">סיידבר לאורך העמוד</button>
+                (click)="setContainerRailZone(block.id, 'sidebar')">{{ 'builder.page.sidebarAlongThePage' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asContainer(block.data).railZone === 'main'"
-                (click)="setContainerRailZone(block.id, 'main')">תוכן ראשי (כולל Hero)</button>
+                (click)="setContainerRailZone(block.id, 'main')">{{ 'builder.page.mainContentIncludingTheHero' | transloco }}</button>
+            </div>
+          </div>
+
+          <!-- The sidebar side for the content language being edited. -->
+          <div class="editor-row" *ngIf="!parentBlock && isSidebarLayoutContainer(block, draft)" data-sidebar-side>
+            <label class="editor-label">{{ 'builder.page.sidebarSide' | transloco }} · {{ ('builder.page.sidebarSideIn.' + contentLang) | transloco }}</label>
+            <div class="direction-toggle">
+              <button class="direction-btn" data-side="auto" [class.active]="sidebarSideChoice(draft) === 'auto'"
+                (click)="setSidebarSide(null)">{{ 'builder.page.sidebarSideAuto' | transloco }}</button>
+              <button class="direction-btn" data-side="right" [class.active]="sidebarSideChoice(draft) === 'right'"
+                (click)="setSidebarSide('right')">{{ 'builder.page.sidebarSideRight' | transloco }}</button>
+              <button class="direction-btn" data-side="left" [class.active]="sidebarSideChoice(draft) === 'left'"
+                (click)="setSidebarSide('left')">{{ 'builder.page.sidebarSideLeft' | transloco }}</button>
             </div>
           </div>
 
@@ -611,9 +651,9 @@
                blocks and arrange them either stacked or side by side. Stated
                plainly (not just "כיוון") since this was the single most
                confusing part of the whole element. -->
-          <p class="container-hint">טבלת פריסה מחזיקה כמה בלוקים ומסדרת אותם זה מעל זה או זה לצד זה. הוסיפו בלוקים מתחת, ובחרו כאן איך יוצגו:</p>
+          <p class="container-hint">{{ 'builder.page.aLayoutTableHoldsSeveral' | transloco }}</p>
           <div class="editor-row">
-            <label class="editor-label">סידור הבלוקים</label>
+            <label class="editor-label">{{ 'builder.page.blockArrangement' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="(asContainer(block.data).direction || 'column') === 'column'"
@@ -623,7 +663,7 @@
                   <rect x="3" y="6.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
                   <rect x="3" y="11" width="10" height="3" rx="1.5" fill="currentColor" opacity="0.35"/>
                 </svg>
-                זה מעל זה (עמודה)
+                {{ 'builder.page.oneAboveTheOtherColumn' | transloco }}
               </button>
               <button class="direction-btn"
                 [class.active]="asContainer(block.data).direction === 'row'"
@@ -633,7 +673,7 @@
                   <rect x="6" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.6"/>
                   <rect x="11" y="3" width="4" height="10" rx="1.5" fill="currentColor" opacity="0.35"/>
                 </svg>
-                זה לצד זה (שורה)
+                {{ 'builder.page.sideBySideRow' | transloco }}
               </button>
             </div>
           </div>
@@ -641,7 +681,7 @@
           <!-- Split percent — only when row -->
           <div class="split-percent-row" *ngIf="asContainer(block.data).direction === 'row'">
             <label class="editor-label">
-              חלוקת רוחב: {{ asContainer(block.data).splitPercent ?? 50 }}% / {{ 100 - (asContainer(block.data).splitPercent ?? 50) }}%
+              {{ 'builder.page.widthSplitAscontainerAscontainer2' | transloco: { asContainer: (asContainer(block.data).splitPercent ?? 50), asContainer2: (100 - (asContainer(block.data).splitPercent ?? 50)) } }}
             </label>
             <input type="range" class="split-slider" min="20" max="80" step="5"
               [value]="asContainer(block.data).splitPercent ?? 50"
@@ -655,19 +695,19 @@
             <button class="swap-sides-btn"
                     *ngIf="asContainer(block.data).childBlockIds.length >= 2"
                     (click)="swapContainerChildren(block.id)"
-                    title="החלף ימין ↔ שמאל">
+                    [title]="'builder.page.swapRightLeft' | transloco">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M2 5h10M10 3l2 2-2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M14 11H4M6 9l-2 2 2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              החלף ימין ↔ שמאל
+              {{ 'builder.page.swapRightLeft' | transloco }}
             </button>
           </div>
 
           <!-- Colors row -->
           <div class="container-colors-row">
             <div class="editor-row">
-              <label class="editor-label">רקע</label>
+              <label class="editor-label">{{ 'builder.page.background' | transloco }}</label>
               <app-color-picker
                 [value]="asContainer(block.data).backgroundColor"
                 (valueChange)="updateContainerField(block.id, 'backgroundColor', $event)"
@@ -675,7 +715,7 @@
               </app-color-picker>
             </div>
             <div class="editor-row">
-              <label class="editor-label">מסגרת חיצונית</label>
+              <label class="editor-label">{{ 'builder.page.outerFrame' | transloco }}</label>
               <app-color-picker
                 [value]="asContainer(block.data).borderColor"
                 (valueChange)="updateContainerField(block.id, 'borderColor', $event)"
@@ -688,13 +728,13 @@
                color is actually set. -->
           <div class="container-sliders" *ngIf="asContainer(block.data).borderColor">
             <div class="slider-row">
-              <span class="slider-label">עובי מסגרת ({{ asContainer(block.data).borderWidth ?? 1.5 }}px)</span>
+              <span class="slider-label">{{ 'builder.page.frameWidthAscontainerPx' | transloco: { asContainer: (asContainer(block.data).borderWidth ?? 1.5) } }}</span>
               <input type="range" class="split-slider" min="1" max="10" step="0.5"
                 [value]="asContainer(block.data).borderWidth ?? 1.5"
                 (input)="updateContainerField(block.id, 'borderWidth', +$any($event.target).value)">
             </div>
             <div class="slider-row">
-              <span class="slider-label">עיגול פינות ({{ asContainer(block.data).borderRadius ?? 0 }}px)</span>
+              <span class="slider-label">{{ 'builder.page.cornerRoundingAscontainerPx' | transloco: { asContainer: (asContainer(block.data).borderRadius ?? 0) } }}</span>
               <input type="range" class="split-slider" min="0" max="40" step="2"
                 [value]="asContainer(block.data).borderRadius ?? 0"
                 (input)="updateContainerField(block.id, 'borderRadius', +$any($event.target).value)">
@@ -704,7 +744,7 @@
           <!-- Divider BETWEEN the blocks inside — separate from the outer
                frame border above (e.g. table-style cell lines). -->
           <div class="editor-row">
-            <label class="editor-label">גבול בין הבלוקים</label>
+            <label class="editor-label">{{ 'builder.page.borderBetweenBlocks' | transloco }}</label>
             <app-color-picker
               [value]="asContainer(block.data).childDividerColor || ''"
               (valueChange)="updateContainerField(block.id, 'childDividerColor', $event)"
@@ -713,7 +753,7 @@
           </div>
           <div class="container-sliders" *ngIf="asContainer(block.data).childDividerColor">
             <div class="slider-row">
-              <span class="slider-label">עובי הגבול הפנימי ({{ asContainer(block.data).childDividerWidth ?? 1 }}px)</span>
+              <span class="slider-label">{{ 'builder.page.innerBorderWidthAscontainerPx' | transloco: { asContainer: (asContainer(block.data).childDividerWidth ?? 1) } }}</span>
               <input type="range" class="split-slider" min="1" max="10" step="0.5"
                 [value]="asContainer(block.data).childDividerWidth ?? 1"
                 (input)="updateContainerField(block.id, 'childDividerWidth', +$any($event.target).value)">
@@ -722,29 +762,29 @@
 
           <!-- Background image -->
           <div class="editor-row">
-            <label class="editor-label">תמונת רקע (רשות)</label>
+            <label class="editor-label">{{ 'builder.page.backgroundImageOptional' | transloco }}</label>
             <input #containerBgInput type="file" accept="image/*,image/gif" hidden
               (change)="onContainerBgImageSelected(block.id, $event)">
             <div class="bg-image-preview"
               *ngIf="asContainer(block.data).backgroundImageUrl"
               [style.backgroundImage]="'url(' + asContainer(block.data).backgroundImageUrl + ')'">
-              <button class="bg-image-remove" (click)="updateContainerField(block.id, 'backgroundImageUrl', '')" aria-label="הסרת תמונת רקע"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+              <button class="bg-image-remove" (click)="updateContainerField(block.id, 'backgroundImageUrl', '')" [attr.aria-label]="'builder.page.removeTheBackgroundImage' | transloco"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
             </div>
             <button class="upload-area-btn" type="button" (click)="containerBgInput.click()">
-              {{ asContainer(block.data).backgroundImageUrl ? 'החלף תמונת רקע' : '+ תמונת רקע / GIF' }}
+              {{ asContainer(block.data).backgroundImageUrl ? ('builder.page.replaceTheBackgroundImage' | transloco) : ('builder.page.backgroundImageGif' | transloco) }}
             </button>
           </div>
 
           <!-- Sliders -->
           <div class="container-sliders">
             <div class="slider-row">
-              <span class="slider-label">ריפוד ({{ asContainer(block.data).padding }}px)</span>
+              <span class="slider-label">{{ 'builder.page.paddingPaddingPx' | transloco: { padding: (asContainer(block.data).padding) } }}</span>
               <input type="range" class="split-slider" min="0" max="60" step="4"
                 [value]="asContainer(block.data).padding"
                 (input)="updateContainerField(block.id, 'padding', +$any($event.target).value)">
             </div>
             <div class="slider-row">
-              <span class="slider-label">מרווח בין בלוקים ({{ asContainer(block.data).gap }}px)</span>
+              <span class="slider-label">{{ 'builder.page.spaceBetweenBlocksGapPx' | transloco: { gap: (asContainer(block.data).gap) } }}</span>
               <input type="range" class="split-slider" min="0" max="60" step="4"
                 [value]="asContainer(block.data).gap"
                 (input)="updateContainerField(block.id, 'gap', +$any($event.target).value)">
@@ -757,16 +797,16 @@
                the rest of this block's own design controls, not a
                separate always-visible strip. -->
           <div class="editor-field spacing-editor">
-            <label class="editor-label">מרווחים חיצוניים</label>
+            <label class="editor-label">{{ 'builder.page.outerSpacing' | transloco }}</label>
             <div class="spacing-row">
-              <span class="spacing-label">למעלה</span>
+              <span class="spacing-label">{{ 'builder.page.up' | transloco }}</span>
               <input type="range" class="split-slider" min="0" max="80" step="4"
                 [value]="block.spacingTop"
                 (input)="updateSpacing(block.id, 'spacingTop', +$any($event.target).value)">
               <span class="spacing-val">{{ block.spacingTop }}px</span>
             </div>
             <div class="spacing-row">
-              <span class="spacing-label">למטה</span>
+              <span class="spacing-label">{{ 'builder.page.down' | transloco }}</span>
               <input type="range" class="split-slider" min="0" max="80" step="4"
                 [value]="block.spacingBottom"
                 (input)="updateSpacing(block.id, 'spacingBottom', +$any($event.target).value)">
@@ -780,21 +820,21 @@
         <!-- ── TABS ── -->
         <div class="container-editor" *ngIf="block.type === 'tabs'">
           <div class="editor-row">
-            <label class="editor-label">סגנון טאבים</label>
+            <label class="editor-label">{{ 'builder.page.tabStyle' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="asTabs(block.data).styleVariant === 'underline'"
-                (click)="updateTabsField(block.id, 'styleVariant', 'underline')">קו תחתון</button>
+                (click)="updateTabsField(block.id, 'styleVariant', 'underline')">{{ 'builder.page.underline' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asTabs(block.data).styleVariant === 'pills'"
-                (click)="updateTabsField(block.id, 'styleVariant', 'pills')">פילים</button>
+                (click)="updateTabsField(block.id, 'styleVariant', 'pills')">{{ 'builder.page.pills' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asTabs(block.data).styleVariant === 'boxed'"
-                (click)="updateTabsField(block.id, 'styleVariant', 'boxed')">תחומה</button>
+                (click)="updateTabsField(block.id, 'styleVariant', 'boxed')">{{ 'builder.page.boxed' | transloco }}</button>
             </div>
           </div>
           <div class="editor-row">
-            <label class="editor-label">צבע הדגשה</label>
+            <label class="editor-label">{{ 'builder.page.highlightColor' | transloco }}</label>
             <app-color-picker
               [value]="asTabs(block.data).accentColor"
               (valueChange)="updateTabsField(block.id, 'accentColor', $event)"
@@ -802,19 +842,19 @@
             </app-color-picker>
           </div>
           <div class="editor-row">
-            <label class="editor-label">תצוגה במובייל</label>
+            <label class="editor-label">{{ 'builder.page.onMobile' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="!asTabs(block.data).mobileLayout || asTabs(block.data).mobileLayout === 'same'"
-                (click)="updateTabsField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
+                (click)="updateTabsField(block.id, 'mobileLayout', 'same')">{{ 'builder.page.sameAsOnDesktop' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asTabs(block.data).mobileLayout === 'accordion'"
-                (click)="updateTabsField(block.id, 'mobileLayout', 'accordion')"><lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> פאנלים</button>
+                (click)="updateTabsField(block.id, 'mobileLayout', 'accordion')"><lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.panels' | transloco }}</button>
             </div>
           </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
-            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הפוך לפאנלים (נפתחים/נסגרים)
+            <lucide-icon [img]="ui.ListCollapse" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.turnIntoPanelsOpenClose' | transloco }}
           </button>
 
           <!-- Advanced tab colors/border — collapsed by default, same
@@ -822,13 +862,13 @@
                containers etc., keyed per-block. -->
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('tabs-advanced-' + block.id)">
-              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> מתקדם</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.advanced' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('tabs-advanced-' + block.id)">›</span>
             </div>
 
             <div class="container-editor" *ngIf="!isSectionCollapsed('tabs-advanced-' + block.id)">
               <div class="editor-row">
-                <label class="editor-label">צבע כותרת</label>
+                <label class="editor-label">{{ 'builder.page.titleColor' | transloco }}</label>
                 <app-color-picker
                   [value]="asTabs(block.data).labelColor ?? ''"
                   (valueChange)="updateTabsField(block.id, 'labelColor', $event)"
@@ -836,7 +876,7 @@
                 </app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">צבע רקע של לשונית</label>
+                <label class="editor-label">{{ 'builder.page.tabBackgroundColor' | transloco }}</label>
                 <app-color-picker
                   [value]="asTabs(block.data).tabBgColor ?? ''"
                   (valueChange)="updateTabsField(block.id, 'tabBgColor', $event)"
@@ -846,7 +886,7 @@
 
               <div class="donation-toggle-item" style="margin-top:10px"
                 (click)="updateTabsField(block.id, 'contentBorder', !asTabs(block.data).contentBorder)">
-                <span class="donation-toggle-text">— הצג קווים מסביב לתוכן</span>
+                <span class="donation-toggle-text">{{ 'builder.page.showLinesAroundTheContent' | transloco }}</span>
                 <span class="toggle-pill" [class.on]="asTabs(block.data).contentBorder">
                   <span class="toggle-pill-dot"></span>
                 </span>
@@ -854,18 +894,18 @@
 
               <ng-container *ngIf="asTabs(block.data).contentBorder">
                 <div class="editor-row" style="margin-top:8px">
-                  <label class="editor-label">סגנון קו</label>
+                  <label class="editor-label">{{ 'builder.page.lineStyle' | transloco }}</label>
                   <div class="direction-toggle">
                     <button class="direction-btn"
                       [class.active]="(asTabs(block.data).contentBorderStyle || 'solid') === 'solid'"
-                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'solid')">רגיל</button>
+                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'solid')">{{ 'builder.page.normal' | transloco }}</button>
                     <button class="direction-btn"
                       [class.active]="asTabs(block.data).contentBorderStyle === 'dashed'"
-                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'dashed')">מקווקו</button>
+                      (click)="updateTabsField(block.id, 'contentBorderStyle', 'dashed')">{{ 'builder.page.dashed' | transloco }}</button>
                   </div>
                 </div>
                 <div class="editor-row">
-                  <label class="editor-label">צבע קו</label>
+                  <label class="editor-label">{{ 'builder.page.lineColor' | transloco }}</label>
                   <app-color-picker
                     [value]="asTabs(block.data).contentBorderColor || '#e2e8f0'"
                     (valueChange)="updateTabsField(block.id, 'contentBorderColor', $event)">
@@ -879,21 +919,21 @@
         <!-- ── ACCORDION (panels) ── -->
         <div class="container-editor" *ngIf="block.type === 'accordion'">
           <div class="editor-row">
-            <label class="editor-label">סגנון פאנלים</label>
+            <label class="editor-label">{{ 'builder.page.panelStyle' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="asAccordion(block.data).styleVariant === 'underline'"
-                (click)="updateAccordionField(block.id, 'styleVariant', 'underline')">פשוט</button>
+                (click)="updateAccordionField(block.id, 'styleVariant', 'underline')">{{ 'builder.page.simple' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asAccordion(block.data).styleVariant === 'pills'"
-                (click)="updateAccordionField(block.id, 'styleVariant', 'pills')">מעוגל</button>
+                (click)="updateAccordionField(block.id, 'styleVariant', 'pills')">{{ 'builder.page.rounded' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asAccordion(block.data).styleVariant === 'boxed'"
-                (click)="updateAccordionField(block.id, 'styleVariant', 'boxed')">תחום</button>
+                (click)="updateAccordionField(block.id, 'styleVariant', 'boxed')">{{ 'builder.page.boxed2' | transloco }}</button>
             </div>
           </div>
           <div class="editor-row">
-            <label class="editor-label">צבע הדגשה</label>
+            <label class="editor-label">{{ 'builder.page.highlightColor' | transloco }}</label>
             <app-color-picker
               [value]="asAccordion(block.data).accentColor"
               (valueChange)="updateAccordionField(block.id, 'accentColor', $event)"
@@ -901,31 +941,102 @@
             </app-color-picker>
           </div>
           <div class="editor-row">
-            <label class="editor-label">תצוגה במובייל</label>
+            <label class="editor-label">{{ 'builder.page.onMobile' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn"
                 [class.active]="!asAccordion(block.data).mobileLayout || asAccordion(block.data).mobileLayout === 'same'"
-                (click)="updateAccordionField(block.id, 'mobileLayout', 'same')">כמו במחשב</button>
+                (click)="updateAccordionField(block.id, 'mobileLayout', 'same')">{{ 'builder.page.sameAsOnDesktop' | transloco }}</button>
               <button class="direction-btn"
                 [class.active]="asAccordion(block.data).mobileLayout === 'tabs'"
-                (click)="updateAccordionField(block.id, 'mobileLayout', 'tabs')"><lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טאבים</button>
+                (click)="updateAccordionField(block.id, 'mobileLayout', 'tabs')"><lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.tabs' | transloco }}</button>
             </div>
           </div>
           <button class="container-add-btn" type="button" style="margin-top:8px"
             (click)="convertTabsAccordionType(block.id)">
-            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הפוך לטאבים
+            <lucide-icon [img]="ui.Rows3" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.turnIntoTabs' | transloco }}
           </button>
         </div>
 
         <!-- ── STATS ── -->
         <div class="editor-field stats-editor" *ngIf="block.type === 'stats'">
+          <label class="field-label" *ngIf="selectedStatItem(block) as selectedStat">
+            <input type="checkbox" data-stat-label-visibility [checked]="selectedStat.showLabel !== false"
+              (change)="setStatLabelVisibility(block.id, selectedStat.key, $any($event.target).checked)">
+            {{ 'builder.statsLabels.showLabel' | transloco: { name: (statLabelKey(selectedStat.key) | transloco) } }}
+          </label>
+          <section class="sv-layout-editor">
+            <h4>{{ 'builder.visualStats.chooseDesign' | transloco }}</h4>
+            <ng-template #presetChoices let-choices>
+              <div class="sv-presets" role="group" [attr.aria-label]="'builder.visualStats.layout' | transloco">
+                <button type="button" *ngFor="let preset of choices" [attr.data-stats-preset]="preset.id"
+                  [class.is-active]="asStats(block.data).visualLayout?.preset === preset.id" [attr.aria-pressed]="asStats(block.data).visualLayout?.preset === preset.id" (click)="setStatsPreset(block.id,preset.id)">
+                  <span class="sv-thumbnail" aria-hidden="true" [style.grid-template-columns]="'repeat(' + statsThumbnail(block,preset.id).columns + ',1fr)'" [style.grid-template-rows]="'repeat(' + statsThumbnail(block,preset.id).rows + ',1fr)'">
+                    <i *ngFor="let cell of statsThumbnail(block,preset.id).cells; trackBy:trackStatThumbnail" [class.is-progress]="cell.key === 'percent' && statsPresetProgress(asStats(block.data),preset.id) !== 'hidden'" [class.is-bar]="cell.key === 'percent' && statsPresetProgress(asStats(block.data),preset.id) === 'bar'"
+                      [style.grid-column]="cell.column + ' / span ' + cell.columns" [style.grid-row]="cell.row + ' / span ' + cell.rows"><span></span></i>
+                  </span>{{ ('builder.visualStats.' + preset.id) | transloco }}
+                </button>
+              </div>
+            </ng-template>
+            <ng-container *ngTemplateOutlet="presetChoices; context: {$implicit:statsPresets}" />
+            <details><summary>{{ 'builder.visualStats.moreLayouts' | transloco }}</summary><ng-container *ngTemplateOutlet="presetChoices; context: {$implicit:extraStatsPresets}" /></details>
+            <button type="button" class="direction-btn" data-stats-reset *ngIf="asStats(block.data).visualLayout" (click)="clearStatsLayout(block.id)">{{ 'builder.visualStats.templateLayout' | transloco }}</button>
+            <ng-container *ngIf="asStats(block.data).visualLayout">
+              <label *ngIf="hasStatProgress(asStats(block.data))">{{ 'builder.visualStats.progress' | transloco }}<select [ngModel]="statsVisual(asStats(block.data)).progress" (ngModelChange)="setStatsLayout(block.id,'progress',$event)"><option value="circle">{{ 'builder.visualStats.circle' | transloco }}</option><option value="bar">{{ 'builder.visualStats.bar' | transloco }}</option><option value="hidden">{{ 'builder.visualStats.hidden' | transloco }}</option></select></label>
+
+
+            </ng-container>
+              <details data-stats-visibility><summary>{{ 'builder.visualStats.visibility' | transloco }}</summary>
+          <div class="stats-items-list">
+            <div class="stats-item-row" *ngFor="let item of sortedStatItems(asStats(block.data))">
+              <div class="stats-item-left">
+                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, -1)" [title]="'builder.page.moveRight' | transloco">←</button>
+                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, 1)"  [title]="'builder.page.moveLeft' | transloco">→</button>
+              </div>
+              <label class="stats-item-label">
+                <span class="stats-item-icon"><lucide-icon [img]="statIcons[item.key]" [size]="16" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
+                <span class="stats-item-name">{{ statLabels[item.key] | hmText }}</span>
+              </label>
+              <input type="text" class="stats-label-input" maxlength="40" [attr.data-stat-label]="item.key"
+                [value]="item.label ?? ''" [placeholder]="statLabels[item.key] | hmText"
+                [attr.aria-label]="'builder.statsLabels.customLabel' | transloco: { name: (statLabels[item.key] | hmText) }"
+                (change)="setStatLabel(block.id, item.key, $any($event.target).value)">
+              <input type="checkbox" class="stats-checkbox"
+                [checked]="item.visible"
+                (change)="toggleStatItem(block.id, item.key, $any($event.target).checked)">
+            </div>
+          </div>
+              </details>
+          </section>
+
+          <details class="sv-legacy-controls" data-stats-advanced><summary>{{ 'builder.visualStats.advanced' | transloco }}</summary>
+            <ng-container *ngIf="asStats(block.data).visualLayout">
+              <p class="sv-responsive-note" role="status">{{ 'builder.visualStats.adaptation' | transloco: {requested:statsCanvasInfo(block).requested,columns:statsCanvasInfo(block).columns,rows:statsCanvasInfo(block).rows} }}</p>
+              <p *ngIf="statsCanvasInfo(block).requested !== statsCanvasInfo(block).columns">{{ 'builder.visualStats.adaptationHint' | transloco }}</p>
+              <details data-stat-fallback><summary>{{ 'builder.visualStats.preciseEditing' | transloco }}</summary>
+              <h4>{{ 'builder.visualStats.designItem' | transloco }}</h4>
+              <ng-container *ngIf="selectedStatItem(block) as selectedStat">
+                <label>{{ 'builder.visualStats.selectedItem' | transloco }}<select [ngModel]="selectedStat.key" (ngModelChange)="selectStatItem(block,$event)"><option *ngFor="let stat of sortedStatItems(asStats(block.data))" [hidden]="!stat.visible" [value]="stat.key">{{ statLabelKey(stat.key) | transloco }}</option></select></label>
+                <span class="editor-label">{{ 'builder.visualStats.cardSize' | transloco }}</span>
+                <div class="sv-size-actions"><button type="button" *ngFor="let size of statCardSizes" [attr.data-stat-card-size]="size" [attr.aria-pressed]="statSize(asStats(block.data),selectedStat) === size" [class.is-active]="statSize(asStats(block.data),selectedStat) === size" [disabled]="sizeUnavailable(block)" (click)="setStatCardSize(block,size)">{{ ('builder.visualStats.size.' + size) | transloco }}</button></div>
+                <p>{{ (sizeUnavailable(block) ? 'builder.visualStats.sizeConstrained' : 'builder.visualStats.sizeHint') | transloco }}</p>
+                <h4>{{ 'builder.visualStats.arrangeItems' | transloco }}</h4>
+                <div class="sv-size-actions"><button type="button" data-stat-move="previous" [disabled]="statMoveDisabled(block,-1)" (click)="moveSelectedStat(block,-1)">{{ 'builder.visualStats.previous' | transloco }}</button><button type="button" data-stat-move="next" [disabled]="statMoveDisabled(block,1)" (click)="moveSelectedStat(block,1)">{{ 'builder.visualStats.next' | transloco }}</button></div>
+                <p>{{ 'builder.visualStats.dragHint' | transloco }}</p>
+              </ng-container>
+              </details>
+
+                <label>{{ 'builder.visualStats.columns' | transloco }}<select data-stat-columns [ngModel]="statsVisual(asStats(block.data)).columns" (ngModelChange)="setStatsLayout(block.id,'columns',+$event)"><option *ngFor="let n of [1,2,3,4]" [value]="n" [disabled]="n > statsCanvasInfo(block).maxColumns">{{n}}</option></select></label>
+                <p>{{ 'builder.visualStats.actualRows' | transloco: {rows:statsCanvasInfo(block).rows} }}</p>
+                <label>{{ 'builder.visualStats.gap' | transloco }}<input data-stat-gap type="number" min="4" max="40" [ngModel]="statsVisual(asStats(block.data)).gap" (ngModelChange)="setStatsLayout(block.id,'gap',+$event)"></label>
+                <label>{{ 'builder.visualStats.align' | transloco }}<select [ngModel]="statsVisual(asStats(block.data)).align" (ngModelChange)="setStatsLayout(block.id,'align',$event)"><option value="start">{{ 'builder.visualStats.start' | transloco }}</option><option value="center">{{ 'editors.align.center' | transloco }}</option><option value="end">{{ 'builder.visualStats.end' | transloco }}</option></select></label>
+                          </ng-container>
 
           <!-- Mini horizontal preview -->
           <div class="stats-mini-preview">
             <span class="stats-mini-item"
               *ngFor="let item of sortedStatItems(asStats(block.data))"
               [class.stats-mini-item--hidden]="!item.visible">
-              <lucide-icon [img]="statIcons[item.key]" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ statLabels[item.key] }}
+              <lucide-icon [img]="statIcons[item.key]" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ statLabels[item.key] | hmText }}
             </span>
           </div>
 
@@ -933,30 +1044,30 @@
           <div class="stats-config-grid">
 
             <div class="editor-row">
-              <label class="editor-label">סגנון</label>
+              <label class="editor-label">{{ 'builder.page.style' | transloco }}</label>
               <div class="stats-style-toggle">
                 <button class="stats-style-btn"
                   [class.active]="asStats(block.data).style === 'cards'"
                   (click)="updateStatsField(block.id, 'style', 'cards')">
-                  <span class="stats-style-icon">▦</span> כרטיסים
+                  <span class="stats-style-icon">▦</span> {{ 'builder.page.cards' | transloco }}
                 </button>
                 <button class="stats-style-btn"
                   [class.active]="asStats(block.data).style === 'inline'"
                   (click)="updateStatsField(block.id, 'style', 'inline')">
-                  <span class="stats-style-icon">≡</span> אינליין
+                  <span class="stats-style-icon">≡</span> {{ 'builder.page.inline' | transloco }}
                 </button>
               </div>
             </div>
 
             <div class="editor-row">
-              <label class="editor-label">גודל</label>
+              <label class="editor-label">{{ 'builder.page.size' | transloco }}</label>
               <div class="direction-toggle">
                 <button class="direction-btn" [class.active]="asStats(block.data).size === 'sm'"
-                  (click)="updateStatsField(block.id, 'size', 'sm')">קטן</button>
+                  (click)="updateStatsField(block.id, 'size', 'sm')">{{ 'builder.page.small' | transloco }}</button>
                 <button class="direction-btn" [class.active]="asStats(block.data).size === 'md'"
-                  (click)="updateStatsField(block.id, 'size', 'md')">בינוני</button>
+                  (click)="updateStatsField(block.id, 'size', 'md')">{{ 'builder.page.medium' | transloco }}</button>
                 <button class="direction-btn" [class.active]="asStats(block.data).size === 'lg'"
-                  (click)="updateStatsField(block.id, 'size', 'lg')">גדול</button>
+                  (click)="updateStatsField(block.id, 'size', 'lg')">{{ 'builder.page.large' | transloco }}</button>
               </div>
             </div>
 
@@ -971,20 +1082,20 @@
                one heading instead of sitting loose in the config grid. -->
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('stats-design')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.design' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-design')">
               <div class="editor-row">
-                <label class="editor-label">צבע אייקונים</label>
+                <label class="editor-label">{{ 'builder.page.iconColor' | transloco }}</label>
                 <div class="direction-toggle">
                   <button type="button" class="direction-btn" [class.active]="!asStats(block.data).iconColor"
-                    (click)="updateStatsField(block.id, 'iconColor', '')">אוטומטי</button>
+                    (click)="updateStatsField(block.id, 'iconColor', '')">{{ 'builder.page.automatic' | transloco }}</button>
                   <button type="button" class="direction-btn" [class.active]="!!asStats(block.data).iconColor"
-                    (click)="setStatsIconColorCustom(block.id)">מותאם אישית</button>
+                    (click)="setStatsIconColorCustom(block.id)">{{ 'builder.page.custom' | transloco }}</button>
                 </div>
               </div>
-              <p class="theme-hint" *ngIf="!asStats(block.data).iconColor">בהתאם לצבע ההדגשה של הסגנון</p>
+              <p class="theme-hint" *ngIf="!asStats(block.data).iconColor">{{ 'builder.page.followsTheStylesHighlightColor' | transloco }}</p>
               <div class="editor-row" *ngIf="asStats(block.data).iconColor">
                 <label class="editor-label"></label>
                 <app-color-picker
@@ -994,7 +1105,7 @@
               </div>
 
               <div class="editor-row">
-                <label class="editor-label">רקע</label>
+                <label class="editor-label">{{ 'builder.page.background' | transloco }}</label>
                 <app-color-picker
                   [value]="asStats(block.data).backgroundColor"
                   (valueChange)="updateStatsField(block.id, 'backgroundColor', $event)"
@@ -1003,7 +1114,7 @@
               </div>
 
               <div class="editor-row">
-                <label class="editor-label">מסגרת</label>
+                <label class="editor-label">{{ 'builder.page.frame' | transloco }}</label>
                 <app-color-picker
                   [value]="asStats(block.data).borderColor"
                   (valueChange)="updateStatsField(block.id, 'borderColor', $event)"
@@ -1012,11 +1123,11 @@
               </div>
 
               <p class="stats-contrast-warning" *ngIf="statsLowContrast(asStats(block.data))">
-                <lucide-icon [img]="ui.TriangleAlert" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> צבע האייקון קרוב מדי לצבע הרקע — הוא עלול להיעלם. נסו רקע כהה יותר או אייקון בצבע אחר.
+                <lucide-icon [img]="ui.TriangleAlert" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.theIconColorIsToo' | transloco }}
               </p>
 
               <div class="editor-row">
-                <label class="editor-label">עיגול פינות ({{ asStats(block.data).borderRadius }}px)</label>
+                <label class="editor-label">{{ 'builder.page.cornerRoundingBorderradiusPx' | transloco: { borderRadius: (asStats(block.data).borderRadius) } }}</label>
                 <input type="range" class="split-slider" min="0" max="24" step="2"
                   [value]="asStats(block.data).borderRadius"
                   (input)="updateStatsField(block.id, 'borderRadius', +$any($event.target).value)">
@@ -1033,23 +1144,23 @@
                textStyles.sectionTitle instead. -->
           <div class="editor-divider"></div>
           <div class="container-design-section">
-            <div class="container-design-header" (click)="toggleSection('stats-texts')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
+            <div class="container-design-header" data-typography-section (click)="toggleSection('stats-texts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.texts' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-texts')">
-              <app-text-role-editor roleLabel="כותרת (&quot;גויס עד כה&quot;)"
+              <app-text-role-editor [roleLabel]="'builder.page.titleRaisedSoFar' | transloco"
                 [override]="asStats(block.data).textStyles?.sectionTitle ?? (asStats(block.data).titleColor ? { color: asStats(block.data).titleColor } : undefined)"
                 [resolvedColor]="statsRoleResolvedColor(draft, 'sectionTitle', asStats(block.data))"
                 (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="סכום שגויס" [showFontSize]="true"
-                [override]="asStats(block.data).textStyles?.value"
+              <app-text-role-editor [roleLabel]="'builder.page.amountRaised' | transloco" [showFontSize]="true"
+                [override]="statsTextOverride(block,'value')"
                 [resolvedColor]="statsRoleResolvedColor(draft, 'value', asStats(block.data))"
                 (overrideChange)="updateTextStyleRole(block.id, 'value', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="טקסט משני (תוויות)"
-                [override]="asStats(block.data).textStyles?.label"
+              <app-text-role-editor [roleLabel]="'builder.page.secondaryTextLabels' | transloco"
+                [override]="statsTextOverride(block,'label')"
                 [resolvedColor]="statsRoleResolvedColor(draft, 'label', asStats(block.data))"
                 (overrideChange)="updateTextStyleRole(block.id, 'label', $event)">
               </app-text-role-editor>
@@ -1065,11 +1176,11 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('stats-progress')">
-              <span class="container-design-title"><app-icon name="ring" /> טבעת ההתקדמות</span>
+              <span class="container-design-title"><app-icon name="ring" /> {{ 'builder.page.progressRing' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('stats-progress')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('stats-progress')">
-              <app-style-role-editor roleLabel="מסילה ומילוי" [showTrackColor]="true" [showFillColor]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.trackAndFill' | transloco" [showTrackColor]="true" [showFillColor]="true"
                 [override]="asStats(block.data).progressStyles?.ring"
                 [resolvedTrackColor]="statsRingResolvedColor('trackColor')"
                 [resolvedFillColor]="statsRingResolvedColor('fillColor')"
@@ -1079,67 +1190,57 @@
           </div>
 
           <div class="editor-divider"></div>
-          <label class="editor-label">סדר וחשיפה — הפס מוצג <strong>מימין לשמאל</strong></label>
+          <label class="editor-label">{{ 'builder.page.orderAndVisibilityTheBar' | transloco }} <strong>{{ 'builder.page.fromRightToLeft' | transloco }}</strong></label>
 
-          <div class="stats-items-list">
-            <div class="stats-item-row" *ngFor="let item of sortedStatItems(asStats(block.data))">
-              <div class="stats-item-left">
-                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, -1)" title="הזז ימינה">←</button>
-                <button class="stats-arrow" (click)="moveStatItem(block.id, item.key, 1)"  title="הזז שמאלה">→</button>
-              </div>
-              <label class="stats-item-label">
-                <span class="stats-item-icon"><lucide-icon [img]="statIcons[item.key]" [size]="16" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
-                <span class="stats-item-name">{{ statLabels[item.key] }}</span>
-              </label>
-              <input type="checkbox" class="stats-checkbox"
-                [checked]="item.visible"
-                (change)="toggleStatItem(block.id, item.key, $any($event.target).checked)">
-            </div>
-          </div>
+          </details>
         </div>
 
         <!-- ── DONATION WIDGET ── -->
         <div class="editor-field donation-editor" *ngIf="block.type === 'donation-widget'">
 
           <div class="editor-row">
-            <label class="editor-label">כותרת</label>
+            <label class="editor-label">{{ 'builder.page.title' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asDonationWidget(block.data).title"
               (input)="updateDonationWidgetField(block.id, 'title', $any($event.target).value)"
-              placeholder="תמכו עכשיו">
+              [placeholder]="'builder.page.supportNow' | transloco">
           </div>
 
           <div class="editor-row">
-            <label class="editor-label">תת-כותרת</label>
+            <label class="editor-label">{{ 'builder.page.subtitle' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asDonationWidget(block.data).subtitle"
               (input)="updateDonationWidgetField(block.id, 'subtitle', $any($event.target).value)"
-              placeholder="כל תרומה מקרבת אותנו ליעד">
+              [placeholder]="'builder.page.everyDonationBringsUsCloser' | transloco">
           </div>
 
           <ng-container [ngTemplateOutlet]="donationLayoutPicker"></ng-container>
+          <details class="sv-layout-editor"><summary>{{ 'builder.visualStats.presentation' | transloco }}</summary><label>{{ 'builder.visualStats.descriptionPosition' | transloco }}<select [ngModel]="asDonationWidget(block.data).presentation?.subtitlePosition ?? 'top'" (ngModelChange)="setDonationPresentation(block.id, 'subtitlePosition', $event)"><option value="top">{{ 'builder.visualStats.top' | transloco }}</option><option value="bottom">{{ 'builder.visualStats.bottom' | transloco }}</option></select></label>
+            <label *ngFor="let field of ['padding','gap']">{{ ('builder.visualStats.' + field) | transloco }}<input type="range" min="0" max="48" [value]="$any(asDonationWidget(block.data).presentation)?.[field] ?? 16" (input)="setDonationPresentation(block.id, field, +$any($event.target).value)"></label>
+            <label>{{ 'builder.visualStats.align' | transloco }}<select [ngModel]="asDonationWidget(block.data).presentation?.align ?? 'center'" (ngModelChange)="setDonationPresentation(block.id, 'align', $event)"><option value="start">{{ 'builder.visualStats.start' | transloco }}</option><option value="center">{{ 'editors.align.center' | transloco }}</option><option value="end">{{ 'builder.visualStats.end' | transloco }}</option></select></label>
+          </details>
 
           <div class="editor-divider"></div>
 
           <!-- CTA button -->
           <div class="donation-cta-grid">
             <div class="editor-row">
-              <label class="editor-label">טקסט כפתור</label>
+              <label class="editor-label">{{ 'builder.page.buttonText' | transloco }}</label>
               <input class="editor-input" type="text"
                 [value]="asDonationWidget(block.data).ctaLabel"
                 (input)="updateDonationWidgetField(block.id, 'ctaLabel', $any($event.target).value)"
-                placeholder="תמכו עכשיו">
+                [placeholder]="'builder.page.supportNow' | transloco">
             </div>
             <div class="editor-row">
-              <label class="editor-label">צבע כפתור</label>
+              <label class="editor-label">{{ 'builder.page.buttonColor' | transloco }}</label>
               <div class="direction-toggle">
                 <button type="button" class="direction-btn" [class.active]="!asDonationWidget(block.data).ctaColor"
-                  (click)="updateDonationWidgetField(block.id, 'ctaColor', '')">אוטומטי</button>
+                  (click)="updateDonationWidgetField(block.id, 'ctaColor', '')">{{ 'builder.page.automatic' | transloco }}</button>
                 <button type="button" class="direction-btn" [class.active]="!!asDonationWidget(block.data).ctaColor"
-                  (click)="setCtaColorCustom(block.id)">מותאם אישית</button>
+                  (click)="setCtaColorCustom(block.id)">{{ 'builder.page.custom' | transloco }}</button>
               </div>
             </div>
-            <p class="theme-hint" *ngIf="!asDonationWidget(block.data).ctaColor">בהתאם לעיצוב הקמפיין (צבע הפעולה הראשית)</p>
+            <p class="theme-hint" *ngIf="!asDonationWidget(block.data).ctaColor">{{ 'builder.page.followsTheCampaignDesignThe' | transloco }}</p>
             <div class="editor-row" *ngIf="asDonationWidget(block.data).ctaColor">
               <label class="editor-label"></label>
               <app-color-picker
@@ -1150,7 +1251,7 @@
           </div>
 
           <div class="editor-row">
-            <label class="editor-label">אייקון על הכפתור</label>
+            <label class="editor-label">{{ 'builder.page.iconOnTheButton' | transloco }}</label>
             <div class="icon-row">
               <button *ngFor="let ic of ['','❤️','🙏','⭐','🎁','✨','→']"
                 class="tse-icon-btn"
@@ -1165,7 +1266,7 @@
 
           <!-- Payment logos -->
           <div class="editor-row">
-            <label class="editor-label">אמצעי תשלום</label>
+            <label class="editor-label">{{ 'builder.page.paymentMethods' | transloco }}</label>
             <div class="payment-logos-row">
               <button *ngFor="let logo of ['visa','mastercard','amex','apple-pay','google-pay','bit']"
                 class="payment-logo-btn"
@@ -1177,7 +1278,7 @@
           </div>
 
           <div class="system-note">
-            <lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> סכומי התרומה נלקחים מהגדרות בשלב "הגדרות תרומה".
+            <lucide-icon [img]="ui.Lightbulb" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.theDonationAmountsComeFrom' | transloco }}
           </div>
 
           <!-- Universal Local Styling Phase B1 (2026-10) -- "עיצוב": the
@@ -1191,11 +1292,11 @@
           <div class="editor-divider"></div>
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('donation-design')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.design' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donation-design')">
-              <app-style-role-editor roleLabel="כרטיס התרומה" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.donationCard' | transloco" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
                 [override]="asDonationWidget(block.data).surfaceStyles?.container"
                 [resolvedBackground]="donationContainerResolved(draft, 'background')"
                 [resolvedBorderColor]="donationContainerResolved(draft, 'borderColor')"
@@ -1209,9 +1310,9 @@
                    overrides, and an existing override still wins per-
                    property over the preset (StyleRoleEditor's own
                    "לפי הסגנון" semantics, generalized one layer deeper). -->
-              <label class="editor-label">כפתורי סכומים</label>
+              <label class="editor-label">{{ 'builder.page.amountButtons' | transloco }}</label>
               <div class="amt-preset-row">
-                <span class="editor-label" style="min-width:auto">סגנון</span>
+                <span class="editor-label" style="min-width:auto">{{ 'builder.page.style' | transloco }}</span>
                 <div class="amt-preset-picker">
                   <button type="button" class="amt-preset-swatch"
                     *ngFor="let opt of amountButtonPresetOptions"
@@ -1221,14 +1322,14 @@
                       <span class="amt-preset-mini-btn" [ngStyle]="miniAmountButtonStyle(opt.value, false)">50 ₪</span>
                       <span class="amt-preset-mini-btn" [ngStyle]="miniAmountButtonStyle(opt.value, true)">100 ₪</span>
                     </span>
-                    <span class="amt-preset-label">{{ opt.label }}</span>
+                    <span class="amt-preset-label">{{ opt.label | hmText }}</span>
                   </button>
                 </div>
               </div>
 
               <div class="editor-divider"></div>
-              <label class="editor-label">התאמה אישית</label>
-              <app-style-role-editor roleLabel="כפתורי סכום" [showBackground]="true" [showTextColor]="true" [showBorderColor]="true" [showBorderRadius]="true"
+              <label class="editor-label">{{ 'builder.page.customization' | transloco }}</label>
+              <app-style-role-editor [roleLabel]="'builder.page.amountButtons2' | transloco" [showBackground]="true" [showTextColor]="true" [showBorderColor]="true" [showBorderRadius]="true"
                 [override]="asDonationWidget(block.data).buttonStyles?.amountButton"
                 [resolvedBackground]="donationAmountButtonResolved('background')"
                 [resolvedTextColor]="donationAmountButtonResolved('textColor')"
@@ -1236,13 +1337,13 @@
                 [resolvedBorderRadius]="donationAmountButtonResolvedRadius()"
                 (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'amountButton', $event)">
               </app-style-role-editor>
-              <app-style-role-editor roleLabel="כפתור סכום נבחר" [showBackground]="true" [showTextColor]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.selectedAmountButton' | transloco" [showBackground]="true" [showTextColor]="true"
                 [override]="asDonationWidget(block.data).buttonStyles?.amountButtonSelected"
                 [resolvedBackground]="donationAmountButtonSelectedResolved('background')"
                 [resolvedTextColor]="donationAmountButtonSelectedResolved('textColor')"
                 (overrideChange)="updateStyleRole(block.id, 'buttonStyles', 'amountButtonSelected', $event)">
               </app-style-role-editor>
-              <app-style-role-editor roleLabel="כפתור תרומה" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.donateButton' | transloco" [showBackground]="true" [showTextColor]="true" [showBorderRadius]="true"
                 [override]="asDonationWidget(block.data).buttonStyles?.cta"
                 [resolvedBackground]="donationCtaResolved(draft, asDonationWidget(block.data), 'background')"
                 [resolvedTextColor]="donationCtaResolved(draft, asDonationWidget(block.data), 'textColor')"
@@ -1257,28 +1358,62 @@
                campaign-preview.component.ts), same pattern as Stats/Donors. -->
           <div class="editor-divider"></div>
           <div class="container-design-section">
-            <div class="container-design-header" (click)="toggleSection('donation-texts')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
+            <div class="container-design-header" data-typography-section (click)="toggleSection('donation-texts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.texts' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donation-texts')">
-              <app-text-role-editor roleLabel="כותרת"
+              <app-text-role-editor [roleLabel]="'builder.page.title' | transloco"
                 [override]="asDonationWidget(block.data).textStyles?.sectionTitle ?? (asDonationWidget(block.data).titleColor ? { color: asDonationWidget(block.data).titleColor } : undefined)"
                 [resolvedColor]="donorsRoleResolvedColor(draft, 'sectionTitle')"
                 (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="תת-כותרת"
+              <app-text-role-editor [roleLabel]="'builder.page.subtitle' | transloco"
                 [override]="asDonationWidget(block.data).textStyles?.subtitle"
                 (overrideChange)="updateTextStyleRole(block.id, 'subtitle', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="טקסט משני (הערות/סיכום)"
+              <app-text-role-editor [roleLabel]="'builder.page.secondaryTextNotesSummary' | transloco"
                 [override]="asDonationWidget(block.data).textStyles?.secondaryMeta"
                 (overrideChange)="updateTextStyleRole(block.id, 'secondaryMeta', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel='סה"כ לתשלום'
+              <app-text-role-editor [roleLabel]="'builder.page.totalToPay' | transloco"
                 [override]="asDonationWidget(block.data).textStyles?.totalSum"
                 (overrideChange)="updateTextStyleRole(block.id, 'totalSum', $event)">
               </app-text-role-editor>
+              <app-text-role-editor [roleLabel]="'builder.amounts.labelRole' | transloco" [showAlign]="false" [showColor]="false"
+                [override]="asDonationWidget(block.data).textStyles?.amountLabel"
+                (overrideChange)="updateTextStyleRole(block.id, 'amountLabel', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor [roleLabel]="'builder.amounts.frequencyRole' | transloco" [showAlign]="false"
+                [override]="asDonationWidget(block.data).textStyles?.frequencyLabel"
+                (overrideChange)="updateTextStyleRole(block.id, 'frequencyLabel', $event)">
+              </app-text-role-editor>
+              <app-text-role-editor [roleLabel]="'builder.amounts.ctaRole' | transloco" [showAlign]="false" [showColor]="false"
+                [override]="asDonationWidget(block.data).textStyles?.ctaText"
+                (overrideChange)="updateTextStyleRole(block.id, 'ctaText', $event)">
+              </app-text-role-editor>
+            </div>
+          </div>
+
+          <!-- Amount buttons: shape, size, spacing, columns (2026-11-08). The
+               amounts themselves are the campaign's own suggested amounts. -->
+          <div class="editor-divider"></div>
+          <div class="container-design-section">
+            <div class="container-design-header" data-amount-design-section (click)="toggleSection('donation-amounts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.amounts.title' | transloco }}</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('donation-amounts')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('donation-amounts')">
+              <app-amount-buttons-editor />
+            </div>
+          </div>
+          <div class="container-design-section">
+            <div class="container-design-header" data-sticky-cta-section (click)="toggleSection('sticky-cta')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.stickyCta.title' | transloco }}</span>
+              <span class="section-chevron" [class.open]="!isSectionCollapsed('sticky-cta')">›</span>
+            </div>
+            <div class="container-editor" *ngIf="!isSectionCollapsed('sticky-cta')">
+              <app-sticky-cta-editor />
             </div>
           </div>
         </div>
@@ -1287,16 +1422,16 @@
              INSIDE the "עיצוב" panel instead (see below), so they're not
              shown twice. ── -->
         <div class="editor-field spacing-editor" *ngIf="block.type !== 'container'">
-          <label class="editor-label">מרווחים חיצוניים</label>
+          <label class="editor-label">{{ 'builder.page.outerSpacing' | transloco }}</label>
           <div class="spacing-row">
-            <span class="spacing-label">למעלה</span>
+            <span class="spacing-label">{{ 'builder.page.up' | transloco }}</span>
             <input type="range" class="split-slider" min="0" max="80" step="4"
               [value]="block.spacingTop"
               (input)="updateSpacing(block.id, 'spacingTop', +$any($event.target).value)">
             <span class="spacing-val">{{ block.spacingTop }}px</span>
           </div>
           <div class="spacing-row">
-            <span class="spacing-label">למטה</span>
+            <span class="spacing-label">{{ 'builder.page.down' | transloco }}</span>
             <input type="range" class="split-slider" min="0" max="80" step="4"
               [value]="block.spacingBottom"
               (input)="updateSpacing(block.id, 'spacingBottom', +$any($event.target).value)">
@@ -1306,12 +1441,12 @@
 
         <!-- SYSTEM: rewards/donors — auto -->
         <div class="system-note" *ngIf="['rewards','donors'].includes(block.type)">
-          <lucide-icon [img]="ui.Wrench" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> בלוק זה מציג נתונים מהמערכת באופן אוטומטי.
+          <lucide-icon [img]="ui.Wrench" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.thisBlockShowsDataFrom' | transloco }}
         </div>
 
         <!-- SPONSORS — managed in step 6 -->
         <div class="system-note" *ngIf="block.type === 'sponsors'">
-          <lucide-icon [img]="ui.Handshake" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> החסויות מנוהלות בצעד 6 — חסויות
+          <lucide-icon [img]="ui.Handshake" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.sponsorshipsAreManagedInStep' | transloco }}
         </div>
 
         <!-- REWARDS — item content managed in step 4; placement + Section
@@ -1321,10 +1456,10 @@
              _OPTIONS in the .ts. -->
         <div class="editor-field" *ngIf="block.type === 'rewards'">
           <div class="system-note" style="margin-bottom:10px">
-            <lucide-icon [img]="ui.Gift" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן התשורות מנוהל בצעד 4 — תשורות
+            <lucide-icon [img]="ui.Gift" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.theRewardContentIsManaged' | transloco }}
           </div>
           <app-section-presentation-picker
-            label="תצוגת התשורות"
+            [label]="'builder.page.rewardsDisplay' | transloco"
             [options]="REWARDS_PRESENTATION_OPTIONS"
             [value]="draft.layout.sectionPresentation?.rewards"
             [recommended]="recommendedRewardsPresentation(draft)"
@@ -1333,25 +1468,25 @@
           </app-section-presentation-picker>
         </div>
         <div class="editor-field" *ngIf="block.type === 'rewards' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
-          <label class="editor-label">מיקום התשורות</label>
+          <label class="editor-label">{{ 'builder.page.rewardsPosition' | transloco }}</label>
           <div class="direction-toggle">
             <button class="direction-btn" [class.active]="!state.isSidebarSection('rewards')"
-              (click)="state.setSidebarSection('rewards', false)">מתחת לתוכן (רוחב מלא)</button>
+              (click)="state.setSidebarSection('rewards', false)">{{ 'builder.page.belowTheContentFullWidth' | transloco }}</button>
             <button class="direction-btn" [class.active]="state.isSidebarSection('rewards')"
-              (click)="state.setSidebarSection('rewards', true)">בסיידבר</button>
+              (click)="state.setSidebarSection('rewards', true)">{{ 'builder.page.inTheSidebar' | transloco }}</button>
           </div>
         </div>
         <!-- Only meaningful for the compact sidebar reward card -->
         <div class="editor-field" *ngIf="block.type === 'rewards' && state.isSidebarSection('rewards')">
-          <label class="editor-label">מיקום התמונה בכרטיסיה</label>
+          <label class="editor-label">{{ 'builder.page.imagePositionInTheCard' | transloco }}</label>
           <div class="direction-toggle">
             <button class="direction-btn" [class.active]="(draft.layout.rewardsImagePosition ?? 'inline') === 'inline'"
-              (click)="setRewardsImagePosition('inline')">אייקון קטן בצד הכותרת</button>
+              (click)="setRewardsImagePosition('inline')">{{ 'builder.page.aSmallIconNextTo' | transloco }}</button>
             <button class="direction-btn" [class.active]="draft.layout.rewardsImagePosition === 'full'"
-              (click)="setRewardsImagePosition('full')">תמונה מתחת לכותרת</button>
+              (click)="setRewardsImagePosition('full')">{{ 'builder.page.imageBelowTheTitle' | transloco }}</button>
           </div>
           <div class="spacing-row" *ngIf="draft.layout.rewardsImagePosition === 'full'" style="margin-top:10px">
-            <span class="spacing-label">גובה התמונה ({{ draft.layout.rewardsImageSize ?? 120 }}px)</span>
+            <span class="spacing-label">{{ 'builder.page.imageHeightDraftPx' | transloco: { draft: (draft.layout.rewardsImageSize ?? 120) } }}</span>
             <input type="range" class="split-slider" min="60" max="240" step="10"
               [value]="draft.layout.rewardsImageSize ?? 120"
               (input)="setRewardsImageSize(+$any($event.target).value)">
@@ -1369,37 +1504,37 @@
         <div class="editor-field" *ngIf="block.type === 'rewards'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('rewards-advanced')">
-              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב מתקדם</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.SlidersHorizontal" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.advancedDesign' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('rewards-advanced')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('rewards-advanced')">
               <div class="editor-row">
-                <label class="editor-label">רקע סקשן</label>
+                <label class="editor-label">{{ 'builder.page.sectionBackground' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardsBg"
                   (valueChange)="patchTheme({ rewardsBg: $event })"></app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">בורדר כרטיס</label>
+                <label class="editor-label">{{ 'builder.page.cardBorder' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardCardBorder"
                   (valueChange)="patchTheme({ rewardCardBorder: $event })"></app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">נבחר / Hover</label>
+                <label class="editor-label">{{ 'builder.page.selectedHover' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardCardBorderActive"
                   (valueChange)="patchTheme({ rewardCardBorderActive: $event })"></app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">צבע כותרת</label>
+                <label class="editor-label">{{ 'builder.page.titleColor' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardTitleColor ?? '#ffffff'"
                   (valueChange)="patchTheme({ rewardTitleColor: $event })"></app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">צבע תיאור</label>
+                <label class="editor-label">{{ 'builder.page.descriptionColor' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardDescColor ?? '#ffffff'"
                   (valueChange)="patchTheme({ rewardDescColor: $event })"></app-color-picker>
               </div>
               <div class="editor-row">
-                <label class="editor-label">צבע כפתור "לבחירה"</label>
+                <label class="editor-label">{{ 'builder.page.chooseButtonColor' | transloco }}</label>
                 <app-color-picker [value]="draft.layout.theme.rewardButtonColor ?? draft.layout.theme.secondaryColor"
                   (valueChange)="patchTheme({ rewardButtonColor: $event })"></app-color-picker>
               </div>
@@ -1411,20 +1546,20 @@
              Section Presentation live here (2026-10-04 fix, same reasoning
              as Rewards above). -->
         <div class="system-note" *ngIf="block.type === 'ambassadors'">
-          <lucide-icon [img]="ui.Star" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> השגרירים מנוהלים בצעד 7 — שגרירים
+          <lucide-icon [img]="ui.Star" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.ambassadorsAreManagedInStep' | transloco }}
         </div>
         <div class="editor-field" *ngIf="block.type === 'ambassadors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
-          <label class="editor-label">מיקום השגרירים</label>
+          <label class="editor-label">{{ 'builder.page.ambassadorsPosition' | transloco }}</label>
           <div class="direction-toggle">
             <button class="direction-btn" [class.active]="!state.isSidebarSection('ambassadors')"
-              (click)="state.setSidebarSection('ambassadors', false)">מתחת לתוכן (רוחב מלא)</button>
+              (click)="state.setSidebarSection('ambassadors', false)">{{ 'builder.page.belowTheContentFullWidth' | transloco }}</button>
             <button class="direction-btn" [class.active]="state.isSidebarSection('ambassadors')"
-              (click)="state.setSidebarSection('ambassadors', true)">בסיידבר</button>
+              (click)="state.setSidebarSection('ambassadors', true)">{{ 'builder.page.inTheSidebar' | transloco }}</button>
           </div>
         </div>
         <div class="editor-field" *ngIf="block.type === 'ambassadors'">
           <app-section-presentation-picker
-            label="תצוגת השגרירים"
+            [label]="'builder.page.ambassadorsDisplay' | transloco"
             [options]="AMBASSADORS_PRESENTATION_OPTIONS"
             [value]="draft.layout.sectionPresentation?.ambassadors"
             [recommended]="recommendedSectionPresentation(draft, 'ambassadors')"
@@ -1441,18 +1576,18 @@
         <div class="editor-field" *ngIf="block.type === 'ambassadors'">
           <div class="container-design-section">
             <div class="container-design-header" (click)="toggleSection('ambassadors-design')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> עיצוב</span>
+              <span class="container-design-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.design' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-design')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-design')">
-              <app-style-role-editor roleLabel="כרטיס/שורה" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.cardRow' | transloco" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
                 [override]="asAmbassadorsBlock(block.data).surfaceStyles?.card"
                 [resolvedBackground]="ambassadorsSurfaceResolvedColor(draft, 'background')"
                 [resolvedBorderColor]="ambassadorsSurfaceResolvedColor(draft, 'borderColor')"
                 [resolvedBorderRadius]="ambassadorsCardResolvedRadius(draft)"
                 (overrideChange)="updateStyleRole(block.id, 'surfaceStyles', 'card', $event)">
               </app-style-role-editor>
-              <app-style-role-editor roleLabel="כפתור &quot;לדף השגריר&quot;" [showBackground]="true" [showTextColor]="true"
+              <app-style-role-editor [roleLabel]="'builder.page.toTheAmbassadorsPageButton' | transloco" [showBackground]="true" [showTextColor]="true"
                 [override]="asAmbassadorsBlock(block.data).buttonStyles?.viewButton"
                 [resolvedBackground]="ambassadorsSurfaceResolvedColor(draft, 'buttonBackground')"
                 [resolvedTextColor]="ambassadorsSurfaceResolvedColor(draft, 'buttonTextColor')"
@@ -1468,32 +1603,32 @@
              text-color field at all before this phase. -->
         <div class="editor-field" *ngIf="block.type === 'ambassadors'">
           <div class="container-design-section">
-            <div class="container-design-header" (click)="toggleSection('ambassadors-texts')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
+            <div class="container-design-header" data-typography-section (click)="toggleSection('ambassadors-texts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.texts' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('ambassadors-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('ambassadors-texts')">
-              <app-text-role-editor roleLabel="כותרת (&quot;שגרירים&quot;)"
+              <app-text-role-editor [roleLabel]="'builder.page.titleAmbassadors' | transloco"
                 [override]="asAmbassadorsBlock(block.data).textStyles?.sectionTitle"
                 [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'sectionTitle')"
                 (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="שם שגריר/ה" [showFontWeight]="true"
+              <app-text-role-editor [roleLabel]="'builder.page.ambassadorName' | transloco" [showFontWeight]="true"
                 [override]="asAmbassadorsBlock(block.data).textStyles?.ambassadorName"
                 [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'ambassadorName')"
                 (overrideChange)="updateTextStyleRole(block.id, 'ambassadorName', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="סכום שגויס"
+              <app-text-role-editor [roleLabel]="'builder.page.amountRaised' | transloco"
                 [override]="asAmbassadorsBlock(block.data).textStyles?.raisedAmount"
                 [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'raisedAmount')"
                 (overrideChange)="updateTextStyleRole(block.id, 'raisedAmount', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="מספר תורמים"
+              <app-text-role-editor [roleLabel]="'builder.page.numberOfDonors' | transloco"
                 [override]="asAmbassadorsBlock(block.data).textStyles?.donorCount"
                 [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'donorCount')"
                 (overrideChange)="updateTextStyleRole(block.id, 'donorCount', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="טקסט משני (יעד/תורמים)"
+              <app-text-role-editor [roleLabel]="'builder.page.secondaryTextGoalDonors' | transloco"
                 [override]="asAmbassadorsBlock(block.data).textStyles?.secondaryMeta"
                 [resolvedColor]="ambassadorsRoleResolvedColor(draft, 'secondaryMeta')"
                 (overrideChange)="updateTextStyleRole(block.id, 'secondaryMeta', $event)">
@@ -1504,17 +1639,17 @@
 
         <!-- DONORS — no dedicated step; placement + Section Presentation only -->
         <div class="editor-field" *ngIf="block.type === 'donors' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
-          <label class="editor-label">מיקום התורמים</label>
+          <label class="editor-label">{{ 'builder.page.donorsPosition' | transloco }}</label>
           <div class="direction-toggle">
             <button class="direction-btn" [class.active]="!state.isSidebarSection('donors')"
-              (click)="state.setSidebarSection('donors', false)">מתחת לתוכן (רוחב מלא)</button>
+              (click)="state.setSidebarSection('donors', false)">{{ 'builder.page.belowTheContentFullWidth' | transloco }}</button>
             <button class="direction-btn" [class.active]="state.isSidebarSection('donors')"
-              (click)="state.setSidebarSection('donors', true)">בסיידבר</button>
+              (click)="state.setSidebarSection('donors', true)">{{ 'builder.page.inTheSidebar' | transloco }}</button>
           </div>
         </div>
         <div class="editor-field" *ngIf="block.type === 'donors'">
           <app-section-presentation-picker
-            label="תצוגת התורמים"
+            [label]="'builder.page.donorsDisplay' | transloco"
             [options]="DONORS_PRESENTATION_OPTIONS"
             [value]="draft.layout.sectionPresentation?.donors"
             [recommended]="recommendedSectionPresentation(draft, 'donors')"
@@ -1530,27 +1665,27 @@
              it, but every NEW edit goes through textStyles.sectionTitle. -->
         <div class="editor-field" *ngIf="block.type === 'donors'">
           <div class="container-design-section">
-            <div class="container-design-header" (click)="toggleSection('donors-texts')">
-              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> טקסטים</span>
+            <div class="container-design-header" data-typography-section (click)="toggleSection('donors-texts')">
+              <span class="container-design-title"><lucide-icon [img]="ui.Type" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.texts' | transloco }}</span>
               <span class="section-chevron" [class.open]="!isSectionCollapsed('donors-texts')">›</span>
             </div>
             <div class="container-editor" *ngIf="!isSectionCollapsed('donors-texts')">
-              <app-text-role-editor roleLabel="כותרת (&quot;התורמים שלנו&quot;)"
+              <app-text-role-editor [roleLabel]="'builder.page.titleOurDonors' | transloco"
                 [override]="asDonors(block.data).textStyles?.sectionTitle ?? (asDonors(block.data).titleColor ? { color: asDonors(block.data).titleColor } : undefined)"
                 [resolvedColor]="donorsRoleResolvedColor(draft, 'sectionTitle')"
                 (overrideChange)="updateTextStyleRole(block.id, 'sectionTitle', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="שם תורם/ת"
+              <app-text-role-editor [roleLabel]="'builder.page.donorName' | transloco"
                 [override]="asDonors(block.data).textStyles?.donorName"
                 [resolvedColor]="donorsRoleResolvedColor(draft, 'donorName')"
                 (overrideChange)="updateTextStyleRole(block.id, 'donorName', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="סכום תרומה"
+              <app-text-role-editor [roleLabel]="'builder.page.donationAmount' | transloco"
                 [override]="asDonors(block.data).textStyles?.donorAmount"
                 [resolvedColor]="donorsRoleResolvedColor(draft, 'donorAmount')"
                 (overrideChange)="updateTextStyleRole(block.id, 'donorAmount', $event)">
               </app-text-role-editor>
-              <app-text-role-editor roleLabel="טקסט משני (זמן)"
+              <app-text-role-editor [roleLabel]="'builder.page.secondaryTextTime' | transloco"
                 [override]="asDonors(block.data).textStyles?.donorMeta"
                 [resolvedColor]="donorsRoleResolvedColor(draft, 'donorMeta')"
                 (overrideChange)="updateTextStyleRole(block.id, 'donorMeta', $event)">
@@ -1567,20 +1702,20 @@
              compatibility -- see recommendedUpdatesPresentation()'s own doc
              comment). -->
         <div class="editor-field" *ngIf="block.type === 'updates' && (draft.layout.layoutMode === 'sidebar-right' || draft.layout.layoutMode === 'sidebar-left')">
-          <label class="editor-label">מיקום העדכונים</label>
+          <label class="editor-label">{{ 'builder.page.updatesPosition' | transloco }}</label>
           <div class="direction-toggle">
             <button class="direction-btn" [class.active]="!state.isSidebarSection('updates')"
-              (click)="state.setSidebarSection('updates', false)">מתחת לתוכן (רוחב מלא)</button>
+              (click)="state.setSidebarSection('updates', false)">{{ 'builder.page.belowTheContentFullWidth' | transloco }}</button>
             <button class="direction-btn" [class.active]="state.isSidebarSection('updates')"
-              (click)="state.setSidebarSection('updates', true)">בסיידבר</button>
+              (click)="state.setSidebarSection('updates', true)">{{ 'builder.page.inTheSidebar' | transloco }}</button>
           </div>
         </div>
         <div class="editor-field" *ngIf="block.type === 'updates'">
           <div class="system-note" style="margin-bottom:10px">
-            <lucide-icon [img]="ui.Megaphone" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תוכן העדכונים מנוהל בצעד 8 — עדכונים
+            <lucide-icon [img]="ui.Megaphone" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.theUpdateContentIsManaged' | transloco }}
           </div>
           <app-section-presentation-picker
-            label="תצוגת העדכונים"
+            [label]="'builder.page.updatesDisplay' | transloco"
             [options]="UPDATES_PRESENTATION_OPTIONS"
             [value]="draft.layout.sectionPresentation?.updates"
             [recommended]="recommendedUpdatesPresentation(draft, block)"
@@ -1591,26 +1726,29 @@
 
         <!-- COMMENTS — public, unmoderated; posted directly by site visitors -->
         <div class="system-note" *ngIf="block.type === 'comments'">
-          <lucide-icon [img]="ui.MessageCircle" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> כל מבקר באתר יכול להוסיף תגובה (שם + אימייל, ללא הרשמה). התגובות מוצגות כאן לפי סדר כרונולוגי.
+          <lucide-icon [img]="ui.MessageCircle" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.anySiteVisitorCanAdd' | transloco }}
         </div>
+        <app-comments-design-editor *ngIf="block.type === 'comments'" [block]="block" />
+        <app-countdown-editor *ngIf="block.type === 'countdown'" [block]="block" />
+        <app-badge-editor *ngIf="block.type === 'badge'" [block]="block" />
 
         <!-- ── SPACER / DIVIDER ── -->
         <div class="editor-field" *ngIf="block.type === 'divider'">
           <div class="spacing-row">
-            <span class="spacing-label">גובה מרווח ({{ asDivider(block.data).height || 24 }}px)</span>
+            <span class="spacing-label">{{ 'builder.page.spaceHeightHeightPx' | transloco: { height: (asDivider(block.data).height || 24) } }}</span>
             <input type="range" class="split-slider" min="4" max="120" step="4"
               [value]="asDivider(block.data).height || 24"
               (input)="updateDividerField(block.id, 'height', +$any($event.target).value)">
           </div>
           <div class="donation-toggle-item" style="margin-top:10px"
             (click)="updateDividerField(block.id, 'showLine', !asDivider(block.data).showLine)">
-            <span class="donation-toggle-text">— הצג קו מפריד</span>
+            <span class="donation-toggle-text">{{ 'builder.page.showADividerLine' | transloco }}</span>
             <span class="toggle-pill" [class.on]="asDivider(block.data).showLine">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="editor-row" *ngIf="asDivider(block.data).showLine" style="margin-top:8px">
-            <span class="spacing-label">צבע קו</span>
+            <span class="spacing-label">{{ 'builder.page.lineColor' | transloco }}</span>
             <app-color-picker
               [value]="asDivider(block.data).lineColor || '#e2e8f0'"
               (valueChange)="updateDividerField(block.id, 'lineColor', $event)">
@@ -1620,24 +1758,24 @@
 
         <!-- ── SHARE ── -->
         <div class="editor-field" *ngIf="block.type === 'share'">
-          <label class="editor-label">אילו אפשרויות שיתוף להציג</label>
+          <label class="editor-label">{{ 'builder.page.whichSharingOptionsToShow' | transloco }}</label>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'link')">
-            <span class="donation-toggle-text"><lucide-icon [img]="ui.Link" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> העתקת קישור</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Link" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.copyLink' | transloco }}</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.link">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'email')">
-            <span class="donation-toggle-text"><lucide-icon [img]="ui.Mail" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> אימייל</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Mail" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.email' | transloco }}</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.email">
               <span class="toggle-pill-dot"></span>
             </span>
           </div>
           <div class="donation-toggle-item"
             (click)="toggleSharePlatform(block.id, 'x')">
-            <span class="donation-toggle-text"><lucide-icon [img]="ui.Twitter" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> X (טוויטר)</span>
+            <span class="donation-toggle-text"><lucide-icon [img]="ui.Twitter" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.xTwitter' | transloco }}</span>
             <span class="toggle-pill" [class.on]="asShare(block.data).platforms.x">
               <span class="toggle-pill-dot"></span>
             </span>
@@ -1661,26 +1799,26 @@
         <!-- ── COUPONS (Partner-only, Phase 3) ── -->
         <div class="editor-field" *ngIf="block.type === 'coupons'">
           <div class="editor-row">
-            <label class="editor-label">קוד קופון</label>
+            <label class="editor-label">{{ 'builder.page.couponCode' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asCoupons(block.data).code || ''"
               (input)="updateCouponsField(block.id, 'code', $any($event.target).value)">
           </div>
           <div class="editor-row">
-            <label class="editor-label">תיאור ההטבה</label>
+            <label class="editor-label">{{ 'builder.page.benefitDescription' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asCoupons(block.data).discountLabel || ''"
-              placeholder="למשל: 10% הנחה"
+              [placeholder]="'builder.page.forExample10Off' | transloco"
               (input)="updateCouponsField(block.id, 'discountLabel', $any($event.target).value)">
           </div>
           <div class="editor-row">
-            <label class="editor-label">תיאור מלא</label>
+            <label class="editor-label">{{ 'builder.page.fullDescription' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asCoupons(block.data).description || ''"
               (input)="updateCouponsField(block.id, 'description', $any($event.target).value)">
           </div>
           <div class="editor-row">
-            <label class="editor-label">בתוקף עד (רשות)</label>
+            <label class="editor-label">{{ 'builder.page.validUntilOptional' | transloco }}</label>
             <input class="editor-input" type="date"
               [value]="asCoupons(block.data).expiresAt || ''"
               (input)="updateCouponsField(block.id, 'expiresAt', $any($event.target).value || null)">
@@ -1690,19 +1828,19 @@
         <!-- ── MAP / LOCATION (Partner-only, Phase 3) ── -->
         <div class="editor-field" *ngIf="block.type === 'map'">
           <div class="editor-row">
-            <label class="editor-label">כתובת</label>
+            <label class="editor-label">{{ 'builder.page.address' | transloco }}</label>
             <input class="editor-input" type="text"
               [value]="asMap(block.data).address || ''"
               (input)="updateMapField(block.id, 'address', $any($event.target).value)">
           </div>
           <div class="editor-row">
-            <label class="editor-label">קו רוחב (lat)</label>
+            <label class="editor-label">{{ 'builder.page.latitudeLat' | transloco }}</label>
             <input class="editor-input" type="number" step="any"
               [value]="asMap(block.data).lat ?? ''"
               (input)="updateMapField(block.id, 'lat', $any($event.target).value === '' ? null : +$any($event.target).value)">
           </div>
           <div class="editor-row">
-            <label class="editor-label">קו אורך (lng)</label>
+            <label class="editor-label">{{ 'builder.page.longitudeLng' | transloco }}</label>
             <input class="editor-input" type="number" step="any"
               [value]="asMap(block.data).lng ?? ''"
               (input)="updateMapField(block.id, 'lng', $any($event.target).value === '' ? null : +$any($event.target).value)">
@@ -1716,7 +1854,7 @@
             <input class="editor-input" type="text" [disabled]="day.closed"
               [value]="day.hours"
               (input)="updateOpeningHoursDay(block.id, i, 'hours', $any($event.target).value)">
-            <span class="donation-toggle-text" style="white-space:nowrap">סגור</span>
+            <span class="donation-toggle-text" style="white-space:nowrap">{{ 'builder.page.closed' | transloco }}</span>
             <span class="toggle-pill" [class.on]="day.closed"
               (click)="updateOpeningHoursDay(block.id, i, 'closed', !day.closed)">
               <span class="toggle-pill-dot"></span>
@@ -1754,11 +1892,11 @@
        surface/Opening default -- far more than "colors" alone). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('design-style')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.Sparkles" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> סגנון עיצובי</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Sparkles" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.designStyle' | transloco }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('design-style')">›</span>
     </div>
     <ng-container *ngIf="!isSectionCollapsed('design-style')">
-      <p class="theme-hint">בחרו את האופי החזותי של הקמפיין — צבעים, טיפוגרפיה, כפתורים וכרטיסים.</p>
+      <p class="theme-hint">{{ 'builder.page.chooseTheCampaignsVisualCharacter' | transloco }}</p>
       <div class="theme-style-row">
         <button class="theme-style-btn"
           *ngFor="let s of campaignStyles"
@@ -1774,12 +1912,12 @@
        OpeningComposition values/resolver/state untouched). -->
   <div class="campaign-theme-section" *ngIf="isCampaign">
     <div class="campaign-bg-header" (click)="toggleSection('opening-composition')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.Compass" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> מבנה הפתיחה</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Compass" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.openingLayout' | transloco }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('opening-composition')">›</span>
     </div>
 
     <ng-container *ngIf="!isSectionCollapsed('opening-composition')">
-      <p class="theme-hint">בחרו איך המבקר יפגוש את הקמפיין בתחילת העמוד.</p>
+      <p class="theme-hint">{{ 'builder.page.chooseHowVisitorsMeetThe' | transloco }}</p>
       <div class="opening-comp-row">
         <button type="button" class="opening-comp-card" *ngFor="let opt of OPENING_COMPOSITIONS"
           [class.opening-comp-card--active]="effectiveOpeningComposition(draft) === opt.value"
@@ -1790,12 +1928,12 @@
             <span class="opening-comp-thumb-a"></span>
             <span class="opening-comp-thumb-b"></span>
           </span>
-          <span class="opening-comp-label">{{ opt.label }}</span>
-          <span class="opening-comp-recommended" *ngIf="styleRecommendedOpeningComposition(draft) === opt.value">מומלץ לסגנון הזה</span>
+          <span class="opening-comp-label">{{ opt.label | hmText }}</span>
+          <span class="opening-comp-recommended" *ngIf="styleRecommendedOpeningComposition(draft) === opt.value">{{ 'builder.page.recommendedForThisStyle' | transloco }}</span>
         </button>
       </div>
       <button type="button" class="logo-design-toggle" *ngIf="draft.layout.openingComposition" (click)="resetOpeningComposition()">
-        <span>↺ חזרה להמלצת הסגנון</span>
+        <span>{{ 'builder.page.backToTheStylesRecommendation' | transloco }}</span>
       </button>
     </ng-container>
   </div>
@@ -1805,25 +1943,25 @@
        the same controls/bindings as before). -->
   <div class="campaign-theme-section">
     <div class="campaign-bg-header" (click)="toggleSection('theme-colors')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> צבעים</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.Palette" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.colors' | transloco }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('theme-colors')">›</span>
     </div>
 
     <ng-container *ngIf="!isSectionCollapsed('theme-colors')">
-    <p class="theme-hint">התאמה אישית של צבעי הסגנון שבחרתם.</p>
+    <p class="theme-hint">{{ 'builder.page.customizeTheColorsOfThe' | transloco }}</p>
     <!-- Legacy quick-palette swatches — only shown before a Campaign Style
          has been chosen. Once campaignStyleId is set, theme's 4 managed
          fields must only ever be written by resolveTheme() (single-writer
          invariant); this row's direct patchTheme(buildTheme(...)) write
          would silently violate that, so it's hidden instead of adapted. -->
     <div class="theme-palette-row" *ngIf="!draft.layout.campaignStyleId">
-      <span class="theme-palette-label">צבע:</span>
+      <span class="theme-palette-label">{{ 'builder.page.color' | transloco }}</span>
       <button class="theme-palette-swatch"
         *ngFor="let p of themeColorPalettes"
         [class.theme-palette-swatch--selected]="isActiveThemePalette(p, draft.layout.theme)"
         [style.background]="p.base"
-        [title]="p.name"
-        [attr.aria-label]="p.name"
+        [title]="p.name | hmText"
+        [attr.aria-label]="p.name | hmText"
         (click)="applyThemePalette(p)">
       </button>
     </div>
@@ -1840,53 +1978,53 @@
       </div>
 
       <div class="theme-primary-block">
-        <span class="theme-color-label">צבע המותג הראשי</span>
+        <span class="theme-color-label">{{ 'builder.page.mainBrandColor' | transloco }}</span>
         <div class="theme-color-control">
           <app-color-picker [value]="draft.layout.theme.primaryColor"
             (valueChange)="onThemeColorChange('primaryColor', $event)"></app-color-picker>
-          <span class="theme-field-status">{{ styleFieldStatusLabel('primaryColor') }}</span>
+          <span class="theme-field-status">{{ styleFieldStatusLabel('primaryColor') | hmText }}</span>
           <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('primaryColor')"
-            title="חזרה לצבע המוצע של הסגנון" (click)="resetStyleOverride('primaryColor')">↺</button>
+            [title]="'builder.page.backToTheStylesSuggested' | transloco" (click)="resetStyleOverride('primaryColor')">↺</button>
         </div>
       </div>
 
-      <p class="theme-complementary-label">צבעים משלימים</p>
+      <p class="theme-complementary-label">{{ 'builder.page.complementaryColors' | transloco }}</p>
       <div class="theme-colors-grid">
         <div class="theme-color-row">
-          <span class="theme-color-label">משני / כותרות</span>
+          <span class="theme-color-label">{{ 'builder.page.secondaryHeadings' | transloco }}</span>
           <div class="theme-color-control">
             <app-color-picker [value]="draft.layout.theme.secondaryColor"
               (valueChange)="onThemeColorChange('secondaryColor', $event)"></app-color-picker>
-            <span class="theme-field-status">{{ styleFieldStatusLabel('secondaryColor') }}</span>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('secondaryColor') | hmText }}</span>
             <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('secondaryColor')"
-              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('secondaryColor')">↺</button>
+              [title]="'builder.page.backToTheStylesDefault' | transloco" (click)="resetStyleOverride('secondaryColor')">↺</button>
           </div>
         </div>
         <div class="theme-color-row">
-          <span class="theme-color-label">הדגשה / קישורים</span>
+          <span class="theme-color-label">{{ 'builder.page.highlightLinks' | transloco }}</span>
           <div class="theme-color-control">
             <app-color-picker [value]="draft.layout.theme.accentColor"
               (valueChange)="onThemeColorChange('accentColor', $event)"></app-color-picker>
-            <span class="theme-field-status">{{ styleFieldStatusLabel('accentColor') }}</span>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('accentColor') | hmText }}</span>
             <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('accentColor')"
-              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('accentColor')">↺</button>
+              [title]="'builder.page.backToTheStylesDefault' | transloco" (click)="resetStyleOverride('accentColor')">↺</button>
           </div>
         </div>
         <div class="theme-color-row">
-          <span class="theme-color-label">צבע טקסט</span>
+          <span class="theme-color-label">{{ 'builder.page.textColor' | transloco }}</span>
           <div class="theme-color-control">
             <app-color-picker [value]="draft.layout.theme.bodyTextColor"
               (valueChange)="onThemeColorChange('bodyTextColor', $event)"></app-color-picker>
-            <span class="theme-field-status">{{ styleFieldStatusLabel('bodyTextColor') }}</span>
+            <span class="theme-field-status">{{ styleFieldStatusLabel('bodyTextColor') | hmText }}</span>
             <button type="button" class="theme-reset-btn" *ngIf="hasStyleOverride('bodyTextColor')"
-              title="חזרה לברירת המחדל של הסגנון" (click)="resetStyleOverride('bodyTextColor')">↺</button>
+              [title]="'builder.page.backToTheStylesDefault' | transloco" (click)="resetStyleOverride('bodyTextColor')">↺</button>
           </div>
         </div>
       </div>
       <button type="button" class="theme-reset-all-btn" *ngIf="hasAnyStyleOverride" (click)="resetAllStyleOverrides()">
-        איפוס התאמות עיצוב
+        {{ 'builder.page.resetDesignCustomizations' | transloco }}
       </button>
-      <p class="theme-hint">שינוי הצבע הראשי יעדכן אוטומטית את הצבעים המשלימים, חוץ מאלה ששינית ידנית.</p>
+      <p class="theme-hint">{{ 'builder.page.changingTheMainColorAutomatically' | transloco }}</p>
     </ng-container>
 
     <!-- Legacy grid — unchanged from before this Style existed, shown only
@@ -1894,35 +2032,35 @@
     <ng-template #legacyColorsGrid>
     <div class="theme-colors-grid">
       <div class="theme-color-row">
-        <span class="theme-color-label">ראשי</span>
+        <span class="theme-color-label">{{ 'builder.page.main' | transloco }}</span>
         <div class="theme-color-control">
           <app-color-picker [value]="draft.layout.theme.primaryColor"
             (valueChange)="onThemeColorChange('primaryColor', $event)"></app-color-picker>
         </div>
       </div>
       <div class="theme-color-row">
-        <span class="theme-color-label">משני / כותרות</span>
+        <span class="theme-color-label">{{ 'builder.page.secondaryHeadings' | transloco }}</span>
         <div class="theme-color-control">
           <app-color-picker [value]="draft.layout.theme.secondaryColor"
             (valueChange)="onThemeColorChange('secondaryColor', $event)"></app-color-picker>
         </div>
       </div>
       <div class="theme-color-row">
-        <span class="theme-color-label">הדגשה / קישורים</span>
+        <span class="theme-color-label">{{ 'builder.page.highlightLinks' | transloco }}</span>
         <div class="theme-color-control">
           <app-color-picker [value]="draft.layout.theme.accentColor"
             (valueChange)="onThemeColorChange('accentColor', $event)"></app-color-picker>
         </div>
       </div>
       <div class="theme-color-row">
-        <span class="theme-color-label">צבע טקסט</span>
+        <span class="theme-color-label">{{ 'builder.page.textColor' | transloco }}</span>
         <div class="theme-color-control">
           <app-color-picker [value]="draft.layout.theme.bodyTextColor"
             (valueChange)="onThemeColorChange('bodyTextColor', $event)"></app-color-picker>
         </div>
       </div>
     </div>
-    <p class="theme-hint">שינוי צבע משני יעדכן את כל הכותרות בדף. שינוי הדגשה יעדכן קישורים וכפתורי CTA.</p>
+    <p class="theme-hint">{{ 'builder.page.changingTheSecondaryColorUpdates' | transloco }}</p>
     </ng-template>
     </ng-container>
 
@@ -1932,14 +2070,14 @@
          place is immediately visible in the other -- there is only one
          underlying value, shown from two locations, not two synced copies. -->
     <div class="theme-cta-section" *ngIf="donationWidgetBlock">
-      <p class="theme-complementary-label">צבע כפתור תרומה (CTA)</p>
+      <p class="theme-complementary-label">{{ 'builder.page.donateButtonColorCta' | transloco }}</p>
       <div class="direction-toggle">
         <button type="button" class="direction-btn" [class.active]="!donationCtaColor"
-          (click)="setDonationCtaColorAuto()">אוטומטי</button>
+          (click)="setDonationCtaColorAuto()">{{ 'builder.page.automatic' | transloco }}</button>
         <button type="button" class="direction-btn" [class.active]="!!donationCtaColor"
-          (click)="setDonationCtaColorCustom()">מותאם אישית</button>
+          (click)="setDonationCtaColorCustom()">{{ 'builder.page.custom' | transloco }}</button>
       </div>
-      <p class="theme-hint" *ngIf="!donationCtaColor">בהתאם לעיצוב הקמפיין (צבע הפעולה הראשית)</p>
+      <p class="theme-hint" *ngIf="!donationCtaColor">{{ 'builder.page.followsTheCampaignDesignThe' | transloco }}</p>
       <div class="editor-row" *ngIf="donationCtaColor">
         <app-color-picker [value]="donationCtaColor"
           (valueChange)="setDonationCtaColorValue($event)"></app-color-picker>
@@ -1956,7 +2094,7 @@
        Hero itself. -->
   <div class="campaign-theme-section" *ngIf="isCampaign">
     <div class="campaign-bg-header" (click)="toggleSection('campaign-logo')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לוגו</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.page.logo' | transloco }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('campaign-logo')">›</span>
     </div>
 
@@ -1964,13 +2102,13 @@
       <div class="editor-row">
         <label class="donor-field-toggle">
           <input type="checkbox" [checked]="draft.showLogo" (change)="state.patch({ showLogo: !draft.showLogo })">
-          הצג לוגו על ה-Hero
+          {{ 'builder.page.showTheLogoOnThe' | transloco }}
         </label>
       </div>
 
       <ng-container *ngIf="draft.showLogo">
         <div class="editor-row">
-          <label class="editor-label">לוגו</label>
+          <label class="editor-label">{{ 'builder.page.logo' | transloco }}</label>
           <div class="logo-source-row">
             <div class="logo-source-preview">
               <img *ngIf="draft.campaignLogoUrl || entityLogoUrl" [src]="draft.campaignLogoUrl || entityLogoUrl" alt="">
@@ -1978,25 +2116,25 @@
             </div>
             <input #campaignLogoInput type="file" accept="image/*" (change)="onCampaignLogoChange($event)" hidden>
             <button class="logo-upload-btn" type="button" [disabled]="isUploadingLogo" (click)="campaignLogoInput.click()">
-              {{ isUploadingLogo ? 'מעלה...' : (draft.campaignLogoUrl ? 'החלף' : 'העלה לוגו מותאם') }}
+              {{ isUploadingLogo ? ('builder.page.uploading' | transloco) : (draft.campaignLogoUrl ? ('builder.page.replace' | transloco) : ('builder.page.uploadACustomLogo' | transloco)) }}
             </button>
-            <button class="logo-remove-btn" type="button" *ngIf="draft.campaignLogoUrl" (click)="removeCampaignLogo()">הסר</button>
+            <button class="logo-remove-btn" type="button" *ngIf="draft.campaignLogoUrl" (click)="removeCampaignLogo()">{{ 'builder.page.remove2' | transloco }}</button>
           </div>
-          <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">מוצג לוגו העמותה</span>
+          <span class="logo-option-hint" *ngIf="!draft.campaignLogoUrl">{{ 'builder.page.theOrganizationsLogoIsShown' | transloco }}</span>
         </div>
 
         <button class="logo-design-toggle" type="button" (click)="logoDesignOpen = !logoDesignOpen">
-          <span>עיצוב הלוגו — מיקום, רקע ומסגרת</span>
+          <span>{{ 'builder.page.logoDesignPositionBackgroundAnd' | transloco }}</span>
           <span>{{ logoDesignOpen ? '▲' : '▼' }}</span>
         </button>
 
         <ng-container *ngIf="logoDesignOpen">
           <div class="editor-row">
-            <label class="editor-label">מיקום</label>
+            <label class="editor-label">{{ 'builder.page.position' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn" *ngFor="let opt of LOGO_POSITIONS"
                 [class.active]="(draft.heroLogoPosition || 'left') === opt.pos"
-                (click)="setLogoPosition(opt.pos)">{{ opt.label }}</button>
+                (click)="setLogoPosition(opt.pos)">{{ opt.label | hmText }}</button>
             </div>
           </div>
 
@@ -2004,16 +2142,16 @@
                -- 'above' is otherwise always centered with no horizontal
                control at all, unlike the overlay left/center/right values. -->
           <div class="editor-row" *ngIf="draft.heroLogoPosition === 'above'">
-            <label class="editor-label">יישור אופקי (מעל ה-Hero)</label>
+            <label class="editor-label">{{ 'builder.page.horizontalAlignmentAboveTheHero' | transloco }}</label>
             <div class="direction-toggle">
               <button class="direction-btn" *ngFor="let opt of LOGO_ALIGNS"
                 [class.active]="(draft.logoStripAlign || 'center') === opt.align"
-                (click)="setLogoStripAlign(opt.align)">{{ opt.label }}</button>
+                (click)="setLogoStripAlign(opt.align)">{{ opt.label | hmText }}</button>
             </div>
           </div>
 
           <div class="editor-row">
-            <label class="editor-label">עיצוב הלוגו</label>
+            <label class="editor-label">{{ 'builder.page.logoDesign' | transloco }}</label>
             <app-logo-appearance-editor
               [shape]="draft.heroLogoShape ?? 'circle'"
               (shapeChange)="setLogoShape($event)"
@@ -2049,52 +2187,52 @@
        own Opening CTA -- only the position rows are provably dead code for
        EVERY structured composition, so only those are conditioned here. -->
   <div class="campaign-theme-section">
-    <div class="campaign-bg-header" (click)="toggleSection('hero-texts')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? 'טקסטי Hero' : (ownerType === 'partner' ? 'טקסטי הקאבר' : 'טקסטי הבאנר') }}</span>
+    <div class="campaign-bg-header" data-typography-section (click)="toggleSection('hero-texts')">
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? ('builder.page.heroTexts' | transloco) : (ownerType === 'partner' ? ('builder.page.coverTexts' | transloco) : ('builder.page.bannerTexts' | transloco)) }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('hero-texts')">›</span>
     </div>
 
     <ng-container *ngIf="!isSectionCollapsed('hero-texts')">
-    <p class="theme-hint" *ngIf="isCampaign && hasStructuredOpening(draft)">מבנה הפתיחה הנוכחי ("מבנה הפתיחה" למעלה) קובע איפה הכותרות מופיעות — מיקומי הטקסט הבאים לא פעילים כרגע.</p>
+    <p class="theme-hint" *ngIf="isCampaign && hasStructuredOpening(draft)">{{ 'builder.page.theCurrentOpeningLayoutOpening' | transloco }}</p>
     <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
-      <label class="editor-label">כותרת — מיקום</label>
+      <label class="editor-label">{{ 'builder.page.titlePosition' | transloco }}</label>
       <div class="direction-toggle">
         <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'above'"
-          (click)="state.setHeroTitlePosition('above')">מעל</button>
+          (click)="state.setHeroTitlePosition('above')">{{ 'builder.page.above' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hero'"
-          (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
+          (click)="state.setHeroTitlePosition('hero')">{{ 'builder.page.inTheHero' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'below'"
-          (click)="state.setHeroTitlePosition('below')">מתחת</button>
+          (click)="state.setHeroTitlePosition('below')">{{ 'builder.page.below' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroTitlePosition === 'hidden'"
-          (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
+          (click)="state.setHeroTitlePosition('hidden')">{{ 'builder.page.hidden' | transloco }}</button>
       </div>
     </div>
 
     <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
-      <label class="editor-label">תת-כותרת — מיקום</label>
+      <label class="editor-label">{{ 'builder.page.subtitlePosition' | transloco }}</label>
       <div class="direction-toggle">
         <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'above'"
-          (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+          (click)="state.setHeroSubtitlePosition('above')">{{ 'builder.page.above' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hero'"
-          (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+          (click)="state.setHeroSubtitlePosition('hero')">{{ 'builder.page.inTheHero' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'below'"
-          (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+          (click)="state.setHeroSubtitlePosition('below')">{{ 'builder.page.below' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.heroSubtitlePosition === 'hidden'"
-          (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+          (click)="state.setHeroSubtitlePosition('hidden')">{{ 'builder.page.hidden' | transloco }}</button>
       </div>
     </div>
 
     <div class="editor-row" *ngIf="!isCampaign || !hasStructuredOpening(draft)">
-      <label class="editor-label">תיאור קצר — מיקום</label>
+      <label class="editor-label">{{ 'builder.page.shortDescriptionPosition' | transloco }}</label>
       <div class="direction-toggle">
         <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'above'"
-          (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+          (click)="state.setProjectDescriptionPosition('above')">{{ 'builder.page.above' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hero'"
-          (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+          (click)="state.setProjectDescriptionPosition('hero')">{{ 'builder.page.inTheHero' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'below'"
-          (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+          (click)="state.setProjectDescriptionPosition('below')">{{ 'builder.page.below' | transloco }}</button>
         <button class="direction-btn" [class.active]="draft.layout.projectDescriptionPosition === 'hidden'"
-          (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+          (click)="state.setProjectDescriptionPosition('hidden')">{{ 'builder.page.hidden' | transloco }}</button>
       </div>
     </div>
 
@@ -2112,7 +2250,7 @@
   <!-- CAMPAIGN BACKGROUND -->
   <div class="campaign-bg-section">
     <div class="campaign-bg-header" (click)="toggleSection('background')">
-      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? 'רקע הקמפיין' : 'רקע הדף' }}</span>
+      <span class="campaign-bg-title"><lucide-icon [img]="ui.ImageIcon" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ isCampaign ? ('builder.page.campaignBackground' | transloco) : ('builder.page.pageBackground' | transloco) }}</span>
       <span class="section-chevron" [class.open]="!isSectionCollapsed('background')">›</span>
     </div>
 
@@ -2120,16 +2258,16 @@
     <!-- Type selector -->
     <div class="bg-type-toggle">
       <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'none'"
-        (click)="updateLayoutBg('backgroundType', 'none', draft)">ללא</button>
+        (click)="updateLayoutBg('backgroundType', 'none', draft)">{{ 'builder.page.none' | transloco }}</button>
       <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'color'"
-        (click)="updateLayoutBg('backgroundType', 'color', draft)">צבע</button>
+        (click)="updateLayoutBg('backgroundType', 'color', draft)">{{ 'builder.page.color2' | transloco }}</button>
       <button class="bg-type-btn" [class.active]="draft.layout.backgroundType === 'image'"
-        (click)="updateLayoutBg('backgroundType', 'image', draft)">תמונה / GIF</button>
+        (click)="updateLayoutBg('backgroundType', 'image', draft)">{{ 'builder.page.imageGif' | transloco }}</button>
     </div>
 
     <!-- Color picker -->
     <div class="editor-row" *ngIf="draft.layout.backgroundType === 'color'">
-      <label class="editor-label">צבע רקע</label>
+      <label class="editor-label">{{ 'builder.page.backgroundColor' | transloco }}</label>
       <div class="color-row">
         <input type="color" class="color-picker"
           [value]="draft.layout.backgroundColor"
@@ -2145,10 +2283,10 @@
       <div class="bg-image-preview"
         *ngIf="draft.layout.backgroundImageUrl"
         [style.backgroundImage]="'url(' + draft.layout.backgroundImageUrl + ')'">
-        <button class="bg-image-remove" (click)="updateLayoutBg('backgroundImageUrl', '', draft)" aria-label="הסרת תמונת רקע"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
+        <button class="bg-image-remove" (click)="updateLayoutBg('backgroundImageUrl', '', draft)" [attr.aria-label]="'builder.page.removeTheBackgroundImage' | transloco"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></button>
       </div>
       <button class="upload-area-btn" type="button" (click)="campaignBgInput.click()">
-        {{ draft.layout.backgroundImageUrl ? 'החלף תמונת רקע' : '+ הוסף תמונת רקע / GIF' }}
+        {{ draft.layout.backgroundImageUrl ? ('builder.page.replaceTheBackgroundImage' | transloco) : ('builder.page.addABackgroundImageGif' | transloco) }}
       </button>
     </ng-container>
     </ng-container>
@@ -2167,7 +2305,7 @@
           <line x1="3" y1="10" x2="21" y2="10" stroke-dasharray="3 2"/>
         </svg>
       </span>
-      <span class="campaign-bg-title">פרטי קמפיין</span>
+      <span class="campaign-bg-title">{{ 'builder.page.campaignDetails' | transloco }}</span>
       <div class="footer-toggle-inline"
         (click)="updateLayoutBg('showBottomBanner', !(draft.layout.showBottomBanner !== false), draft)">
         <span class="toggle-pill" [class.on]="draft.layout.showBottomBanner !== false">
@@ -2187,7 +2325,7 @@
           <line x1="7" y1="20" x2="7" y2="16"/>
         </svg>
       </span>
-      <span class="campaign-bg-title">פוטר</span>
+      <span class="campaign-bg-title">{{ 'builder.page.footer' | transloco }}</span>
       <div class="footer-toggle-inline"
         (click)="$event.stopPropagation(); updateLayoutBg('showFooter', !(draft.layout.showFooter !== false), draft)">
         <span class="toggle-pill" [class.on]="draft.layout.showFooter !== false">
@@ -2202,14 +2340,14 @@
       <!-- Colors -->
       <div class="footer-colors-row">
         <div class="editor-row">
-          <label class="editor-label">צבע רקע</label>
+          <label class="editor-label">{{ 'builder.page.backgroundColor' | transloco }}</label>
           <app-color-picker
             [value]="draft.layout.footerBg || '#030712'"
             (valueChange)="updateLayoutBg('footerBg', $event, draft)">
           </app-color-picker>
         </div>
         <div class="editor-row">
-          <label class="editor-label">צבע טקסט</label>
+          <label class="editor-label">{{ 'builder.page.textColor' | transloco }}</label>
           <app-color-picker
             [value]="draft.layout.footerTextColor || '#ffffff'"
             (valueChange)="updateLayoutBg('footerTextColor', $event, draft)">
@@ -2220,7 +2358,7 @@
       <!-- Contact toggle -->
       <div class="footer-toggle-row"
         (click)="updateLayoutBg('showFooterContact', !(draft.layout.showFooterContact !== false), draft)">
-        <span class="editor-label">עמודת "צור קשר"</span>
+        <span class="editor-label">{{ 'builder.page.contactUsColumn' | transloco }}</span>
         <span class="toggle-pill" [class.on]="draft.layout.showFooterContact !== false">
           <span class="toggle-pill-dot"></span>
         </span>
@@ -2228,25 +2366,25 @@
 
       <ng-container *ngIf="draft.layout.showFooterContact !== false">
         <div class="editor-row">
-          <label class="editor-label">דוא"ל</label>
+          <label class="editor-label">{{ 'builder.page.email2' | transloco }}</label>
           <input class="editor-input" type="text"
             [value]="draft.layout.footerEmail"
             (input)="updateLayoutBg('footerEmail', $any($event.target).value, draft)"
             placeholder="info@hamonym.org">
         </div>
         <div class="editor-row">
-          <label class="editor-label">טלפון</label>
+          <label class="editor-label">{{ 'builder.page.phone' | transloco }}</label>
           <input class="editor-input" type="text"
             [value]="draft.layout.footerPhone"
             (input)="updateLayoutBg('footerPhone', $any($event.target).value, draft)"
             placeholder="072-3970028">
         </div>
         <div class="editor-row">
-          <label class="editor-label">שעות פעילות</label>
+          <label class="editor-label">{{ 'builder.page.openingHours' | transloco }}</label>
           <input class="editor-input" type="text"
             [value]="draft.layout.footerHours"
             (input)="updateLayoutBg('footerHours', $any($event.target).value, draft)"
-            placeholder="א'-ה' 09:00-17:00">
+            [placeholder]="'builder.page.sunThu090017' | transloco">
         </div>
       </ng-container>
 
@@ -2259,17 +2397,17 @@
      offered from both the donation and the stats block. -->
 <ng-template #donationLayoutPicker>
   <div class="editor-row">
-    <label class="editor-label">פריסת התרומה (נתונים + טופס)</label>
+    <label class="editor-label">{{ 'builder.page.donationLayoutStatsForm' | transloco }}</label>
     <div class="direction-toggle donation-layout-options">
       <button *ngFor="let opt of donationLayoutOptions" type="button" class="direction-btn"
         [class.active]="effectiveDonationLayout() === opt.value"
-        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label }}</button>
+        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label | hmText }}</button>
     </div>
     <div class="direction-toggle donation-layout-more">
-      <span class="editor-hint">עוד:</span>
+      <span class="editor-hint">{{ 'builder.page.more' | transloco }}</span>
       <button *ngFor="let opt of moreDonationLayoutOptions" type="button" class="direction-btn"
         [class.active]="effectiveDonationLayout() === opt.value"
-        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label }}</button>
+        (click)="setConversionWidgetLayout(opt.value)">{{ opt.label | hmText }}</button>
     </div>
   </div>
 </ng-template>

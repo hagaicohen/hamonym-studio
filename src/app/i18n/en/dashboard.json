@@ -1,0 +1,128 @@
+{
+  "dashboard": {
+    "dashboard": "Dashboard",
+    "toAlerts": "To alerts",
+    "goToAlerts": "Go to alerts",
+    "raisedInPeriod": "Raised in period",
+    "noDataToCompare": "No data to compare",
+    "n0NoChange": "0% no change",
+    "vsPreviousPeriod": "vs. previous period",
+    "donationsInPeriod": "Donations in period",
+    "activeCampaigns": "Active campaigns",
+    "outOfTotalCampaigns": "out of {{total}} campaigns",
+    "failedPayments": "Failed payments",
+    "fmtNotCollected": "{{fmt}} not collected",
+    "noFailedPayments": "No failed payments",
+    "organizationStatus": "Organization status",
+    "approvalStatusAdministratorNotesAnd": "Approval status, administrator notes and required items for each organization.",
+    "yourFirstCampaignStartsHere": "Your first campaign starts here",
+    "activityWillAppearHereOnce": "Activity will appear here once you create a campaign. You can prepare a draft right now; publishing and receiving donations are subject to the existing approvals and settings.",
+    "newCampaign": "+ New campaign",
+    "alerts": "Alerts",
+    "previous": "Previous",
+    "next": "Next",
+    "topAmbassadors": "Top ambassadors",
+    "allAmbassadors": "All ambassadors",
+    "noAmbassadorsYet": "No ambassadors yet",
+    "allFailedPayments": "All failed payments",
+    "lengthPluralOneOther": "{length, plural, one {# payment failed this week} other {# payments failed this week}}",
+    "fmtNotCollectedInTotal": "{{fmt}} not collected in total",
+    "reason": "Reason",
+    "amount": "Amount",
+    "campaign": "Campaign",
+    "date": "Date",
+    "noFailedPaymentsInThe": "No failed payments in the selected period",
+    "recentDonations": "Recent donations",
+    "allDonations": "All donations",
+    "donor": "Donor",
+    "time": "Time",
+    "noDonationsYet": "No donations yet",
+    "raisedInTheLast30": "Raised in the last 30 days",
+    "allReports": "All reports"
+  },
+  "nextAction": {
+    "rejected": "The application was rejected — see the administrator's notes",
+    "changesRequested": "Corrections are needed before the organization can be approved",
+    "pendingReview": "The application is being reviewed by the platform administrator",
+    "suspended": "The organization's activity was suspended — see the administrator's notes",
+    "draft": "The organization's details still need to be completed",
+    "readyFirstCampaign": "The organization is approved — you can create the first campaign",
+    "ready": "The organization is approved and ready",
+    "approvedIncomplete": "The organization is approved — some details are still missing"
+  },
+  "requirements": {
+    "entityType": "Entity type",
+    "legalName": "Legal name",
+    "registrationNumber": "Registration number",
+    "displayName": "Display name",
+    "email": "Email",
+    "phone": "Phone",
+    "description": "Organization description",
+    "logo": "Logo",
+    "associationCertificate": "Certificate of incorporation",
+    "taxDocument": "Section 46 certificate",
+    "contactFullName": "Contact person name"
+  },
+  "statusCard": {
+    "unavailable": "Couldn't load the organization's completion status.",
+    "requiredDetails": "Details to complete",
+    "checkMissing": "Check and complete the details marked as missing in the organization settings.",
+    "recommendations": "More recommendations — they don't block creating a draft",
+    "viewDetails": "View details",
+    "fixAndResubmit": "Fix and resubmit",
+    "createFirstCampaign": "Create a first campaign",
+    "manageCampaigns": "Manage campaigns",
+    "completeDetails": "Complete details",
+    "rec": {
+      "logo": "Add a logo",
+      "certificate": "Certificate of incorporation — can be completed later",
+      "cardcom": "Check the CardCom settings — receiving donations depends on the existing processing settings",
+      "section46": "Section 46, if you have a certificate — for the tax benefit"
+    }
+  },
+  "otherOrganizations": {
+    "refreshFailed": "Couldn't refresh the organizations' status. Please try again.",
+    "loadFailed": "Couldn't load the other organizations. Try refreshing."
+  },
+  "errors": {
+    "loadFailed": "Couldn't load the organization's data. Try refreshing."
+  },
+  "cardDeclined": "Card declined",
+  "pctUp": "↑ vs. last month {{n}}%",
+  "pctDown": "↓ vs. last month {{n}}%",
+  "timeAgo": {
+    "now": "Now",
+    "minutes": "{n, plural, one {# minute ago} other {# minutes ago}}",
+    "hours": "{n, plural, one {# hour ago} other {# hours ago}}",
+    "days": "{n, plural, one {# day ago} other {# days ago}}"
+  },
+  "alerts": {
+    "noActiveCampaigns": {
+      "title": "No active campaigns right now",
+      "description": "Publish an existing campaign or create a new one to start fundraising"
+    },
+    "campaignPending": {
+      "description": "The campaign won't go public until the review is finished"
+    },
+    "goal90": {
+      "description": "Almost at the goal — time for the final push"
+    },
+    "noDonations14": {
+      "description": "Share the campaign again to get activity back"
+    },
+    "draftUnpublished": {
+      "description": "The campaign is saved as a draft and waiting to be published"
+    }
+  },
+  "alertActions": {
+    "profile": "To the organization profile",
+    "setUpProcessing": "Set up processing",
+    "uploadDocument": "Upload document",
+    "viewCampaign": "View campaign",
+    "toCampaign": "To the campaign",
+    "details": "Details",
+    "toCampaigns": "To campaigns",
+    "continueEditing": "Continue editing"
+  },
+  "ofGoal": "{{pct}}% of goal"
+}

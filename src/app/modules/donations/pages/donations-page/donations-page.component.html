@@ -124,7 +124,7 @@
                   @if (d.is_mock) { <span class="badge-test">TEST</span> }
                 </td>
                 @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ d.campaign_title }}</td> }
-                <td class="don-amount">{{ fmtMoney(d.amount) }}</td>
+                <td class="don-amount">{{ fmtDonationAmount(d) }}</td>
                 @if (isColVisible('date'))   { <td class="don-date ltr-col">{{ fmtDate(d.completed_at ?? d.created_at) }}</td> }
                 @if (isColVisible('status')) { <td class="col-secondary"><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td> }
               </tr>
@@ -170,17 +170,30 @@
           <span class="dr-label">תורם</span>
           <span class="dr-value">{{ donorDisplay(selected) }}</span>
         </div>
-        @if (!selected.is_anonymous && selected.donor_email) {
+        @if ((!selected.is_anonymous || selected.rewards?.length) && selected.donor_email) {
           <div class="drawer-row">
             <span class="dr-label">אימייל</span>
             <span class="dr-value">{{ selected.donor_email }}</span>
           </div>
         }
-        @if (!selected.is_anonymous && selected.donor_phone) {
+        @if ((!selected.is_anonymous || selected.rewards?.length) && selected.donor_phone) {
           <div class="drawer-row">
             <span class="dr-label">טלפון</span>
             <span class="dr-value">{{ selected.donor_phone }}</span>
           </div>
+        }
+        @if (selected.rewards?.length && selected.is_anonymous) {
+          <div class="drawer-row"><span class="dr-label">איש קשר לאספקת התשורה</span><span class="dr-value">{{ selected.donor_name }}</span></div>
+        }
+        @if (selected.rewards?.length) {
+          <section class="purchased-rewards" aria-label="תשורות שנרכשו">
+            <h3>תשורות בעסקה</h3>
+            @for (reward of purchasedRewards(selected); track reward.id) {
+              <div class="drawer-row"><span class="dr-label">{{ reward.title }}</span><span class="dr-value">כמות: {{ reward.quantity }}</span></div>
+            }
+            @if (selected.status !== 'paid') { <p>התשלום טרם אושר. אין לספק תשורות לפני אישור התשלום.</p> }
+            <app-reward-responsibility-notice />
+          </section>
         }
         @if (selected.note && selected.status === 'paid') {
           <div class="drawer-row">
@@ -199,7 +212,7 @@
         </div>
         <div class="drawer-row">
           <span class="dr-label">סכום</span>
-          <span class="dr-value bold">{{ fmtMoney(selected.amount) }}</span>
+          <span class="dr-value bold">{{ fmtDonationAmount(selected) }}</span>
         </div>
         <div class="drawer-row">
           <span class="dr-label">סטטוס</span>

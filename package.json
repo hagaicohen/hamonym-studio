@@ -42,7 +42,9 @@
     "tippy.js": "^6.3.7",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",
-    "zone.js": "~0.14.3"
+    "zone.js": "~0.14.3",
+    "@jsverse/transloco": "8.4.0",
+    "@messageformat/core": "3.4.1"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.0.6",
@@ -57,6 +59,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.4.2"
+    "typescript": "~5.4.2",
+    "@playwright/test": "1.61.1"
   }
 }

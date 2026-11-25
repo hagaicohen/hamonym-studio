@@ -1,61 +1,76 @@
-<app-platform-top-strip [manageCampaignId]="canEdit ? (state.draft.id ?? null) : null" />
+<!-- The whole page speaks the campaign language the visitor chose: content,
+     platform strip, donation and checkout text (bilingual campaign content, D-43). -->
+<div class="public-campaign" [hmCampaignContent]="contentLang" [hmCampaignLanguages]="languages" (hmCampaignLanguageChange)="setLanguage($event)">
+  @if (languages.length > 1 && !notFound && !isLoading) {
+    <nav class="public-lang-switch" [attr.aria-label]="'publicPage.campaignPublic.languageSwitch' | hmPublic">
+      @for (l of languages; track l) {
+        <a class="public-lang-option" [href]="languageHref(l)" [attr.hreflang]="l" [attr.lang]="l" [attr.dir]="l === 'en' ? 'ltr' : 'rtl'"
+          [class.is-active]="l === contentLang" [attr.aria-current]="l === contentLang ? 'true' : null"
+          (click)="setLanguage(l, $event)">{{ languageNames[l] | hmPublic }}</a>
+      }
+    </nav>
+  }
 
-@if (notFound) {
-  <div class="public-not-found">
-    <p>הקמפיין לא נמצא</p>
-  </div>
-} @else if (!isLoading) {
+  @if (notFound) {
+    <div class="public-not-found">
+      <p>{{ 'publicPage.campaignPublic.campaignNotFound' | hmPublic }}</p>
+    </div>
+  } @else if (!isLoading) {
 
-  @if (ownerPreview) {
-    <!-- Lightweight preview-status indication only (2026-10-06) — NOT a
-         management bar: "ניהול הקמפיין" in the Platform Top Strip above is
-         now the only management affordance, so this never needs its own
-         Edit action, just enough to tell the manager this campaign isn't
-         publicly visible yet. -->
-    <div class="owner-preview-bar">
-      <span><app-icon name="lock" /> תצוגה מקדימה — הקמפיין עדיין אינו מפורסם לציבור (העמותה ממתינה לאישור)</span>
+    @if (ownerPreview) {
+      <!-- Lightweight preview-status indication only (2026-10-06) — NOT a
+           management bar: "ניהול הקמפיין" in the Platform Top Strip above is
+           now the only management affordance, so this never needs its own
+           Edit action, just enough to tell the manager this campaign isn't
+           publicly visible yet. -->
+      <div class="owner-preview-bar">
+        <span><app-icon name="lock" /> {{ 'publicPage.campaignPublic.previewTheCampaignIsNot' | hmPublic }}</span>
+      </div>
+    }
+
+    @if (isAmbassadorMode && currentAmbassador) {
+      <div class="ambassador-edit-bar">
+        <span class="ambassador-edit-label">{{ 'publicPage.campaignPublic.youAreViewingYourAmbassador' | hmPublic }}</span>
+        <button class="ambassador-edit-btn" (click)="editMyAmbassadorPage()">
+          <app-icon name="pencil" /> {{ 'publicPage.campaignPublic.editMyPage' | hmPublic }}
+        </button>
+      </div>
+    }
+
+    <div class="public-preview-wrap">
+      @if (goalAchieved) {
+        <section class="campaign-goal-success" [class.is-celebrating]="celebratingGoal" [attr.aria-label]="'publicPage.campaignPublic.campaignGoalReached' | hmPublic">
+          <div class="campaign-goal-title"><span aria-hidden="true">✓</span><strong>{{ 'publicPage.campaignPublic.weReachedTheGoalThanks' | hmPublic }}</strong></div>
+          <p>{{ 'publicPage.campaignPublic.currentamountRaisedOfATargetamount' | hmPublic: { currentAmount: (state.draft.currentAmount | hmMoneyArg:'ILS':2), targetAmount: (state.draft.targetAmount | hmMoneyArg:'ILS':2) } }}</p>
+          <strong>{{ goalProgressPct }}%</strong>
+          <div class="campaign-goal-progress" role="progressbar" [attr.aria-label]="'publicPage.campaignPublic.fundraisingGoalReached' | hmPublic" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" [attr.aria-valuetext]="goalProgressPct + ('publicPage.campaignPublic.ofGoal' | hmPublic)"><span></span></div>
+        </section>
+      }
+      @if (state.draft.layout.simpleStudio) {
+        <app-simple-studio-public-page [draft]="state.draft" [ambassadorId]="currentAmbassador?.id" />
+      } @else if (isMinimalFormat) {
+        <app-minimal-donation-page [ambassador]="currentAmbassador" />
+      } @else {
+        <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" [isPublicPage]="true" />
+      }
     </div>
   }
 
-  @if (isAmbassadorMode && currentAmbassador) {
-    <div class="ambassador-edit-bar">
-      <span class="ambassador-edit-label">אתה צופה בדף השגריר שלך</span>
-      <button class="ambassador-edit-btn" (click)="editMyAmbassadorPage()">
-        <app-icon name="pencil" /> ערוך הדף שלי
-      </button>
+
+  @if (celebratingGoal) {
+    <div class="campaign-goal-confetti" aria-hidden="true">
+      @for (piece of goalConfetti; track $index) {
+        <span [style.left.%]="piece.left" [style.background-color]="piece.color" [style.animation-delay.s]="piece.delay" [style.--goal-confetti-drift]="piece.drift + 'px'"></span>
+      }
     </div>
   }
+  <span class="campaign-goal-announcement" role="status" aria-live="polite">{{ celebratingGoal ? ('publicPage.campaignPublic.weReachedTheGoalThanks' | hmPublic) : '' }}</span>
 
-  <div class="public-preview-wrap">
-    @if (goalAchieved) {
-      <section class="campaign-goal-success" [class.is-celebrating]="celebratingGoal" dir="rtl" aria-label="יעד הקמפיין הושג">
-        <div class="campaign-goal-title"><span aria-hidden="true">✓</span><strong>הגענו ליעד! בזכותכם!</strong></div>
-        <p>גויסו ₪{{ state.draft.currentAmount | number:'1.0-2' }} מתוך יעד של ₪{{ state.draft.targetAmount | number:'1.0-2' }}</p>
-        <strong>{{ goalProgressPct }}%</strong>
-        <div class="campaign-goal-progress" role="progressbar" aria-label="יעד הגיוס הושג" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" [attr.aria-valuetext]="goalProgressPct + '% מהיעד'"><span></span></div>
-      </section>
-    }
-    @if (isMinimalFormat) {
-      <app-minimal-donation-page [ambassador]="currentAmbassador" />
-    } @else {
-      <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" [isPublicPage]="true" />
-    }
-  </div>
-}
+  <app-payment-failed-popup
+    *ngIf="showFailedPopup"
+    (retry)="onRetryPayment()"
+    (closed)="showFailedPopup = false">
+  </app-payment-failed-popup>
 
-@if (celebratingGoal) {
-  <div class="campaign-goal-confetti" aria-hidden="true">
-    @for (piece of goalConfetti; track $index) {
-      <span [style.left.%]="piece.left" [style.background-color]="piece.color" [style.animation-delay.s]="piece.delay" [style.--goal-confetti-drift]="piece.drift + 'px'"></span>
-    }
-  </div>
-}
-<span class="campaign-goal-announcement" role="status" aria-live="polite">{{ celebratingGoal ? 'הגענו ליעד! בזכותכם!' : '' }}</span>
-
-<app-payment-failed-popup
-  *ngIf="showFailedPopup"
-  (retry)="onRetryPayment()"
-  (closed)="showFailedPopup = false">
-</app-payment-failed-popup>
-
-<app-donation-toast />
+  <app-donation-toast />
+</div>

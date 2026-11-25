@@ -8,6 +8,8 @@ import { routes } from './app.routes';
 
 import { provideHmIconDefaults } from './shared/ui/design-system/icons';
 
+import { provideHmI18n } from './core/i18n/i18n.providers';
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({
@@ -27,5 +29,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
 
     provideHmIconDefaults(),
+    ...provideHmI18n(),
   ],
 };

@@ -14,7 +14,8 @@ const svg = (label: string, height: number) =>
     `<text x="600" y="${height / 2 + 40}" text-anchor="middle" font-family="Heebo, Arial, sans-serif" font-size="34" font-weight="600" fill="#6d28d9">${label}</text>` +
     `</svg>`);
 
-export const PLACEHOLDER_COVER = svg('תמונת הפתיחה של הקמפיין', 520);
+// A cover sits behind real copy: never place instructional text underneath it.
+export const PLACEHOLDER_COVER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ede9fe"/><stop offset="1" stop-color="#ddd6fe"/></linearGradient></defs><rect width="1200" height="520" fill="url(#g)"/></svg>');
 export const PLACEHOLDER_IMAGE = svg('תמונה', 400);
 export const PLACEHOLDER_TITLE = 'כותרת הקמפיין שלכם';
 export const PLACEHOLDER_SUBTITLE = 'משפט קצר שמסביר לתורמים למה כדאי לתמוך';

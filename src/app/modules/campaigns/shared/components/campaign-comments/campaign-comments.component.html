@@ -1,0 +1,112 @@
+<div class="cm-panel">
+  <header class="cm-header">
+    <div class="cm-heading">
+      <h2 class="cm-title" data-text-role="sectionTitle" [hmTextRole]="role('sectionTitle')" [style.color]="roleColor('sectionTitle')"
+        [attr.data-inline-edit]="'blocks#' + block.id + '.data.title'">{{ data.title || ('publicPage.comments.defaultTitle' | hmPublic) }}</h2>
+      @if (data.description) {
+        <p class="cm-description" data-text-role="subtitle" [hmTextRole]="role('subtitle')" [style.color]="roleColor('subtitle')"
+          [attr.data-inline-edit]="'blocks#' + block.id + '.data.description'" data-inline-multiline>{{ data.description }}</p>
+      }
+    </div>
+    @if (showingSamples) {
+      <span class="cm-sample-badge" data-comments-sample>{{ 'publicPage.comments.sampleBadge' | hmPublic }}</span>
+    } @else if (total > 0) {
+      <span class="cm-count" [attr.aria-label]="'publicPage.comments.countLabel' | hmPublic: { count: total }">{{ total }}</span>
+    }
+  </header>
+
+  @if (design.formPosition === 'top') { <ng-container [ngTemplateOutlet]="formTpl" /> }
+
+  @if (design.showSearch && (total > 0 || search)) {
+    <div class="cm-search">
+      <label class="cm-sr" [for]="uid + '-search'">{{ 'publicPage.campaignPreview.searchComments' | hmPublic }}</label>
+      <input [id]="uid + '-search'" type="search" [placeholder]="'publicPage.campaignPreview.searchComments' | hmPublic"
+        [ngModel]="search" (ngModelChange)="onSearch($event)" maxlength="100">
+    </div>
+  }
+
+  @if (visible.length) {
+    @if (design.style === 'carousel') {
+      <div class="cm-carousel">
+        <button type="button" class="cm-nav cm-nav--prev" (click)="scrollCarousel(-1)" [attr.aria-label]="'publicPage.comments.previous' | hmPublic">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div #track class="cm-track" tabindex="0" role="group" [attr.aria-label]="'publicPage.comments.defaultTitle' | hmPublic">
+          @for (c of visible; track c.id) { <ng-container [ngTemplateOutlet]="itemTpl" [ngTemplateOutletContext]="{ $implicit: c }" /> }
+        </div>
+        <button type="button" class="cm-nav cm-nav--next" (click)="scrollCarousel(1)" [attr.aria-label]="'publicPage.comments.next' | hmPublic">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    } @else {
+      <div class="cm-list">
+        @for (c of visible; track c.id) { <ng-container [ngTemplateOutlet]="itemTpl" [ngTemplateOutletContext]="{ $implicit: c }" /> }
+      </div>
+    }
+    @if (nextCursor && !showingSamples) {
+      <button type="button" class="cm-more" (click)="loadMore()" [disabled]="loadingMore">
+        {{ (loadingMore ? 'publicPage.comments.loading' : 'publicPage.comments.showMore') | hmPublic }}
+      </button>
+    }
+  } @else if (loaded) {
+    <p class="cm-empty">
+      {{ (loadFailed ? 'publicPage.comments.loadFailed' : search ? 'publicPage.campaignPreview.noMatchingCommentsFound' : 'publicPage.comments.empty') | hmPublic }}
+    </p>
+  }
+
+  @if (design.formPosition === 'bottom') { <ng-container [ngTemplateOutlet]="formTpl" /> }
+</div>
+
+<ng-template #itemTpl let-c>
+  <article class="cm-item" [class.cm-item--sample]="showingSamples">
+    @if (design.showAvatar) { <span class="cm-avatar" aria-hidden="true">{{ initial(c.authorName) }}</span> }
+    <div class="cm-item-body">
+      <div class="cm-meta">
+        <span class="cm-author" data-text-role="commentAuthor" [hmTextRole]="role('commentAuthor')" [style.color]="roleColor('commentAuthor')" dir="auto">{{ c.authorName }}</span>
+      </div>
+      <p class="cm-text" data-text-role="commentBody" [hmTextRole]="role('commentBody')" [style.color]="roleColor('commentBody')"
+        [attr.lang]="c.language" dir="auto">{{ c.content }}</p>
+      @if (design.showDates) { <time class="cm-date" [attr.datetime]="c.createdAt.toISOString()">{{ when(c.createdAt) }}</time> }
+    </div>
+  </article>
+</ng-template>
+
+<ng-template #formTpl>
+  <form class="cm-form" (ngSubmit)="submit()" novalidate [attr.aria-labelledby]="uid + '-form-title'">
+    <h3 class="cm-form-title" [id]="uid + '-form-title'">{{ 'publicPage.comments.formTitle' | hmPublic }}</h3>
+    <div class="cm-field">
+      <label class="cm-sr" [for]="uid + '-content'">{{ 'publicPage.comments.contentLabel' | hmPublic }}</label>
+      <textarea [id]="uid + '-content'" name="content" rows="3" [(ngModel)]="form.content" (ngModelChange)="touched()"
+        [maxlength]="limits.contentMax" [placeholder]="'publicPage.comments.contentPlaceholder' | hmPublic" [disabled]="editing"
+        [attr.aria-invalid]="tried && !!contentError" [attr.aria-describedby]="uid + '-content-hint'" required></textarea>
+      <div class="cm-hint-row" [id]="uid + '-content-hint'">
+        @if (tried && contentError) { <span class="cm-field-error">{{ contentError | hmPublic: { min: limits.contentMin } }}</span> }
+        <span class="cm-counter">{{ form.content.length }}/{{ limits.contentMax }}</span>
+      </div>
+    </div>
+    <div class="cm-form-row">
+      <div class="cm-field cm-field--name">
+        <label class="cm-sr" [for]="uid + '-name'">{{ 'publicPage.comments.nameLabel' | hmPublic }}</label>
+        <input [id]="uid + '-name'" type="text" name="authorName" autocomplete="name" [(ngModel)]="form.authorName" (ngModelChange)="touched()"
+          [maxlength]="limits.nameMax" [placeholder]="'publicPage.comments.namePlaceholder' | hmPublic" [disabled]="editing"
+          [attr.aria-invalid]="tried && !!nameError" [attr.aria-describedby]="tried && nameError ? uid + '-name-error' : null" required>
+        @if (tried && nameError) { <span class="cm-field-error" [id]="uid + '-name-error'">{{ nameError | hmPublic: { min: limits.nameMin } }}</span> }
+      </div>
+      <div class="cm-field cm-field--email"><label [for]="uid + '-email'">{{ lang() === 'en' ? 'Email (not published)' : 'דוא״ל (לא יוצג לציבור)' }}</label><input [id]="uid + '-email'" type="email" name="authorEmail" autocomplete="email" [(ngModel)]="form.authorEmail" [disabled]="editing" required></div>
+      <button type="submit" class="cm-submit" [disabled]="submitting || editing">
+        {{ (submitting ? 'publicPage.comments.sending' : 'publicPage.comments.submit') | hmPublic }}
+      </button>
+    </div>
+    <!-- Honeypot: hidden from people and assistive technology; bots fill it. -->
+    <div class="cm-hp" aria-hidden="true">
+      <input type="text" name="website" tabindex="-1" autocomplete="off" [(ngModel)]="form.website">
+    </div>
+    <p class="cm-privacy">{{ 'publicPage.comments.privacy' | hmPublic }}</p>
+    @if (editing) { <p class="cm-editing-note" data-comments-editing-note>{{ 'publicPage.comments.editingNote' | hmPublic }}</p> }
+    <p class="cm-status" role="status">
+      @if (result === 'pending') { {{ 'publicPage.comments.pendingThanks' | hmPublic }} }
+      @if (result === 'published') { {{ 'publicPage.comments.publishedThanks' | hmPublic }} }
+    </p>
+    @if (error) { <p class="cm-error" role="alert">{{ error | hmPublic }}</p> }
+  </form>
+</ng-template>

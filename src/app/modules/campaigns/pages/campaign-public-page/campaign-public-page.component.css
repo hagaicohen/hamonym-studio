@@ -1,7 +1,10 @@
 :host {
   display: block;
   min-height: 100vh;
+  background: #fff;
 }
+
+.public-campaign { display: flow-root; min-height: 100dvh; background: #fff; }
 
 .public-loading,
 .public-not-found {
@@ -30,7 +33,18 @@
 }
 
 .public-preview-wrap {
-  width: 100%;
+  width: calc(100% - 40px);
+  max-width: 1100px;
+  margin: 24px auto;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, .10);
+  /* Clip rounded backgrounds without creating a nested scrolling container. */
+  overflow: clip;
+}
+
+@media (max-width: 700px) {
+  .public-preview-wrap { width: 100%; max-width: 100%; margin: 0; border-radius: 0; box-shadow: none; overflow: visible; }
 }
 
 /* Normal document flow (not fixed) — was position:fixed before 2026-09-24,
@@ -49,7 +63,6 @@
   gap: 16px;
   padding: 10px 20px;
   font-size: 14px;
-  direction: rtl;
 }
 
 /* Platform Navigation Cleanup (2026-10-06) — deliberately NOT the old
@@ -69,7 +82,6 @@
   padding: 6px 20px;
   font-size: 13px;
   text-align: center;
-  direction: rtl;
 }
 
 .ambassador-edit-label {
@@ -113,3 +125,17 @@
 @keyframes campaign-goal-cheer { 0% { transform: scale(.94); } 15% { transform: scale(1.12); } 35% { transform: scale(1); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
 @media (max-width: 480px) { .campaign-goal-success { padding: 12px 14px; margin: 10px auto; }.campaign-goal-confetti > span:nth-child(even) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .campaign-goal-confetti { display: none; }.campaign-goal-success.is-celebrating .campaign-goal-progress > span, .campaign-goal-success.is-celebrating .campaign-goal-title { animation: none; } }
+
+/* Campaign language selector (bilingual campaign content, D-43): only the
+   published languages, each named in its own language. */
+.public-lang-switch {
+  display: flex; justify-content: flex-end; gap: 4px;
+  padding: 6px 16px; background: #fff; border-bottom: 1px solid #e2e8f0;
+}
+.public-lang-option {
+  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  color: #475569; text-decoration: none; border: 1px solid transparent;
+}
+.public-lang-option:hover { border-color: #cbd5e1; }
+.public-lang-option.is-active { background: #0f172a; color: #fff; }
+.public-lang-option:focus-visible { outline: 2px solid #583cd6; outline-offset: 2px; }

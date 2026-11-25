@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { LucideAngularModule, LucideIconData, HandHeart, Footprints, FileText, Zap } from 'lucide-angular';
 import { CAMPAIGN_PRESETS, CampaignPreset } from '../presets/campaign-presets';
 import { PresetId } from '../../services/campaign-studio-state.service';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../core/i18n/text.pipe';
 
 @Component({
   selector: 'app-campaign-preset-picker',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [HmTextPipe, TranslocoPipe, CommonModule, LucideAngularModule],
   templateUrl: './campaign-preset-picker.component.html',
   styleUrl: './campaign-preset-picker.component.css',
 })

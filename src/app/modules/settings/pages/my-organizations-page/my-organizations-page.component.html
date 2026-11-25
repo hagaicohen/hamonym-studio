@@ -22,8 +22,18 @@
           <div class="entity-top">
             <div class="entity-header">
               <div class="entity-title-row">
-                <div class="entity-name">
-                  {{ entityName(entity) }}
+                <div class="entity-identity">
+                  <div class="entity-identity-text">
+                    <div class="entity-name">{{ entityName(entity) }}</div>
+                    <div class="entity-type">{{ getEntityTypeLabel(entity.entity_type) }}</div>
+                  </div>
+                  <div class="entity-logo">
+                    @if (entity.logo_url && !failedLogos.has(entity.id)) {
+                      <img [src]="entity.logo_url" [alt]="entityName(entity)" (error)="failedLogos.add(entity.id)" />
+                    } @else {
+                      <lucide-icon [img]="OrganizationIcon" [size]="26" aria-hidden="true"></lucide-icon>
+                    }
+                  </div>
                 </div>
 
                 <div class="entity-status-group">
@@ -41,9 +51,6 @@
                 </div>
               </div>
 
-              <div class="entity-type">
-                {{ getEntityTypeLabel(entity.entity_type) }}
-              </div>
             </div>
           </div>
 

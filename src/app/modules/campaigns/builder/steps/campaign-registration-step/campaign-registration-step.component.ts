@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { newOptionUid } from '../../../utils/content-i18n';
 import { CommonModule } from '@angular/common';
 import {
   CampaignStudioStateService,
@@ -7,6 +8,7 @@ import {
 import { getPreset } from '../../presets/campaign-presets';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 // Registration Options step — a race/event participant category or price
 // tier (e.g. "10 ק"מ VIP", "תורם כבוד - מבוגר"). Deliberately separate from
 // the Offerings step (gifts) and not a Page Builder block — Registration is
@@ -16,7 +18,7 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 @Component({
   selector: 'app-campaign-registration-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule],
+  imports: [TranslocoPipe, HmIconComponent, CommonModule],
   templateUrl: './campaign-registration-step.component.html',
   styleUrl: './campaign-registration-step.component.css',
 })
@@ -125,7 +127,7 @@ export class CampaignRegistrationStepComponent {
   }
 
   private empty(): RegistrationOption {
-    return { id: '', key: '', title: '', description: '', price: 0 };
+    return { id: '', uid: newOptionUid(), key: '', title: '', description: '', price: 0 };
   }
 
   private reset(): void {

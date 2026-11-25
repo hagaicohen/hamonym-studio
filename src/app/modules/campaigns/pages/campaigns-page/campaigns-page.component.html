@@ -132,15 +132,9 @@
       <div class="drafts-grid">
         @for (c of drafts; track c.id) {
           <div class="draft-card" [class.draft-card--deleting]="deletingId === c.id">
-            <div class="draft-cover" [class.draft-cover--minimal]="isMinimal(c)">
-              @if (isMinimal(c)) {
-                @if (minimalLogoFor(c)) {
-                  <img [src]="minimalLogoFor(c)" [alt]="c.title" class="draft-cover-logo" />
-                } @else {
-                  <div class="draft-cover-logo-fallback"><app-icon name="building" /></div>
-                }
-              } @else if (c.coverImageUrl) {
-                <img [src]="c.coverImageUrl" [alt]="c.title" class="draft-cover-img" />
+            <div class="draft-cover">
+              @if (cardCoverUrl(c); as cover) {
+                <img [src]="cover" [alt]="c.title" class="draft-cover-img" (error)="coverFailed(cover)" />
               } @else {
                 <div class="draft-cover-placeholder">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28" opacity="0.35">
@@ -151,13 +145,16 @@
             </div>
             <div class="draft-body">
               <h3 class="draft-title">{{ c.title || 'ללא כותרת' }}</h3>
+              @let blocker = publicationBlocker(c);
+              <span class="draft-publication-status" [class.is-ready]="!blocker">{{ blocker ? 'נדרשות השלמות' : '✓ מוכן לפרסום' }}</span>
+              <small class="draft-publication-detail">{{ blocker || 'כל תנאי הפרסום הושלמו' }}</small>
               <!-- Publication intent (2026-09-24): status === 'draft' alone
                    no longer means "still being worked on" — a campaign here
                    with publishRequestedAt set is finished and waiting only
                    on entity approval, not on the manager. Editing stays
                    available either way (see "המשך עריכה" below), this is
                    just the framing shown up front. -->
-              @if (c.publishRequestedAt) {
+              @if (c.publishRequestedAt && currentEntity.currentEntity()?.status !== 'active') {
                 <span class="draft-status-badge draft-status-badge--pending"><app-icon name="hourglass" /> ממתין לאישור העמותה</span>
               }
               @if (c.createdAt) {
@@ -165,11 +162,12 @@
               }
             </div>
             <div class="draft-actions">
-              <button class="btn-continue" (click)="editCampaign(c.id)">המשך עריכה</button>
-              <button class="btn-analyze"
-                      [disabled]="!!advisingId"
+              @if (!publicationBlocker(c)) { <button class="btn-continue btn-publish" [disabled]="publishing" (click)="requestPublication(c)"><app-icon name="send" /> פרסם קמפיין</button> }
+              <button class="btn-continue" [class.btn-continue-secondary]="!publicationBlocker(c)" (click)="editCampaign(c.id)">המשך עריכה</button>
+              <button class="btn-analyze ai-unavailable"
+                      disabled
                       (click)="analyzeCampaign($event, c)"
-                      title="נתח קמפיין עם בינה מלאכותית">
+                      title="כלי AI אינם זמינים כרגע">
                 @if (advisingId === c.id) { <div class="btn-spinner-sm"></div> } @else { <lucide-angular [img]="SparklesIcon" [size]="15"></lucide-angular> }
               </button>
               <button class="btn-delete-draft"
@@ -204,15 +202,11 @@
               <div class="campaign-card campaign-card--clickable" [class.card--hidden]="c.isHidden" (click)="manageCampaign(c.id)">
 
                 <div class="card-cover"
-                  [class.card-cover--minimal]="isMinimal(c)"
-                  [style.backgroundImage]="isMinimal(c) ? 'none' : (cardCoverUrl(c) ? 'url(' + cardCoverUrl(c) + ')' : 'none')"
                   [class.card-cover--deleting]="deletingId === c.id">
-                  @if (isMinimal(c)) {
-                    @if (minimalLogoFor(c)) {
-                      <img [src]="minimalLogoFor(c)" [alt]="c.title" class="card-cover-logo" />
-                    } @else {
-                      <div class="card-cover-logo-fallback"><app-icon name="building" /></div>
-                    }
+                  @if (cardCoverUrl(c); as cover) {
+                    <img class="card-hero-thumbnail" [src]="cover" [alt]="c.title" (error)="coverFailed(cover)" />
+                  } @else {
+                    <div class="card-cover-logo-fallback"><app-icon name="image" /></div>
                   }
                   <span class="card-status-badge" [class]="'badge-' + c.status">
                     {{ statusLabel(c.status) }}
@@ -246,7 +240,7 @@
                   <div class="card-actions" (click)="$event.stopPropagation()">
                     <button class="btn-manage" (click)="manageCampaign(c.id)">ניהול קמפיין</button>
                     @if (c.slug) {
-                      <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
+                      <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה בקמפיין</button>
                     }
                     <div class="card-menu-wrap">
                       <button class="btn-icon-action btn-menu" (click)="toggleMenu($event, c.id)" title="עוד פעולות">⋯</button>
@@ -326,7 +320,7 @@
                 <div class="list-actions" (click)="$event.stopPropagation()">
                   <button class="btn-manage" (click)="manageCampaign(c.id)">ניהול קמפיין</button>
                   @if (c.slug) {
-                    <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה</button>
+                    <button class="btn-action btn-view" (click)="viewCampaign(c.slug)">צפה בקמפיין</button>
                   }
                   <div class="card-menu-wrap">
                     <button class="btn-icon-action btn-menu" (click)="toggleMenu($event, c.id)" title="עוד פעולות">⋯</button>
@@ -405,6 +399,19 @@
       }
     </div>
   </div>
+}
+
+@if (publishCandidate; as campaign) {
+  <dialog #publishDialog class="publish-dialog" dir="rtl" aria-labelledby="publish-title" aria-describedby="publish-description" (cancel)="$event.preventDefault(); cancelPublication()">
+    <h2 id="publish-title">פרסום הקמפיין</h2>
+    <p id="publish-description">לפרסם את <strong>״{{ campaign.title }}״</strong>? הקמפיין יהיה זמין לציבור לאחר אישור השרת.</p>
+    <div class="publish-url-label">כתובת הקמפיין<span class="publish-url-text" dir="ltr">{{ publisher.url(campaign) }}</span></div>
+    @if (publishError) { <p class="publish-error" role="alert">{{ publishError }}</p> }
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" [disabled]="publishing" (click)="cancelPublication()">ביטול</button>
+      <button type="button" class="btn-continue btn-publish" [disabled]="publishing" [attr.aria-busy]="publishing" (click)="confirmPublication()">@if (publishing) { <span class="btn-spinner-sm"></span> מפרסם… } @else { <app-icon name="send" /> פרסם קמפיין }</button>
+    </div>
+  </dialog>
 }
 
 <!-- ══ CAMPAIGN ADVISOR ══ -->

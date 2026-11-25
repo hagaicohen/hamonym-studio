@@ -1,6 +1,6 @@
 // app.routes.ts
 
-import { Routes, UrlSegment, UrlMatchResult } from '@angular/router';
+import { Routes, UrlSegment, UrlMatchResult, CanDeactivateFn } from '@angular/router';
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
 import { CampaignWorkspaceShellComponent } from './modules/campaigns/shared/components/campaign-workspace-shell/campaign-workspace-shell.component';
@@ -13,6 +13,7 @@ import { aiFeatureGuard } from './core/guards/ai-feature.guard';
 
 // Campaign Builder Studio: leaving with unsaved edits asks first.
 const studioLeaveGuard = (page: { canLeave?: () => boolean } | null) => page?.canLeave ? page.canLeave() : true;
+const simpleStudioLeaveGuard: CanDeactivateFn<{ leave: (url: string) => boolean | Promise<boolean> }> = (page, _route, _state, next) => page.leave(next.url);
 import { devOnlyGuard } from './core/guards/dev-only.guard';
 import { DEV_ONLY_ROUTES } from './modules/dev/dev-only.routes';
 
@@ -44,7 +45,8 @@ const AMBASSADOR_STUDIO_ROUTE = {
 // stop swallowing campaigns/discover).
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function campaignIdMatcher(segments: UrlSegment[]): UrlMatchResult | null {
-  if (segments.length < 2 || segments[0].path !== 'campaigns' || !UUID_RE.test(segments[1].path)) {
+  // A bare campaign UUID is a public campaign URL, not a management workspace.
+  if (segments.length < 3 || segments[0].path !== 'campaigns' || !UUID_RE.test(segments[1].path)) {
     return null;
   }
   return { consumed: segments.slice(0, 2), posParams: { id: segments[1] } };
@@ -261,7 +263,29 @@ export const routes: Routes = [
   ======================================== */
 
   {
+    path: 'campaigns/create/simple-studio',
+    data: { sharedHeader: true, studioWorkspace: true },
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [simpleStudioLeaveGuard],
+    loadComponent: () => import('./modules/campaigns/simple-studio/simple-studio-page.component').then(m => m.SimpleStudioPageComponent),
+  },
+  {
+    path: 'campaigns/:id/simple-studio',
+    data: { sharedHeader: true, studioWorkspace: true },
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [simpleStudioLeaveGuard],
+    loadComponent: () => import('./modules/campaigns/simple-studio/simple-studio-page.component').then(m => m.SimpleStudioPageComponent),
+  },
+  {
     path: 'campaigns/create',
+    pathMatch: 'full',
+    data: { sharedHeader: true, studioWorkspace: true },
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [simpleStudioLeaveGuard],
+    loadComponent: () => import('./modules/campaigns/simple-studio/simple-studio-page.component').then(m => m.SimpleStudioPageComponent),
+  },
+  {
+    path: 'campaigns/create/classic',
     canActivate: [campaignEditorGuard],
     loadComponent: () =>
       import(
@@ -313,6 +337,13 @@ export const routes: Routes = [
 
   {
     path: 'campaigns/:id/edit',
+    data: { sharedHeader: true, studioWorkspace: true },
+    canActivate: [campaignEditorGuard],
+    canDeactivate: [simpleStudioLeaveGuard],
+    loadComponent: () => import('./modules/campaigns/simple-studio/simple-studio-page.component').then(m => m.SimpleStudioPageComponent),
+  },
+  {
+    path: 'campaigns/:id/classic',
     canActivate: [campaignEditorGuard],
     loadComponent: () =>
       import(
@@ -484,6 +515,7 @@ export const routes: Routes = [
   {
     path: '',
     component: AppLayoutComponent,
+    data: { sharedHeader: true },
     canActivate: [contextGuard],
     children: [
       {

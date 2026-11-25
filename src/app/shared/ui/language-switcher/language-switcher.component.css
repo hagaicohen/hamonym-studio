@@ -1,0 +1,188 @@
+:host {
+  display: inline-flex;
+  font-family: inherit;
+}
+
+.hm-ls__anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Pages without a header: a strip at the top of the page with the button at the
+   inline-start corner (right in Hebrew, left in English). Sticky, so it stays
+   reachable while scrolling, and in-flow, so it never covers the page content. */
+:host(.hm-ls--floating) {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding-inline: 14px;
+  box-sizing: border-box;
+}
+
+.hm-ls__trigger {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 50%;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.hm-ls__trigger:hover {
+  border-color: #c4b5fd;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.hm-ls__trigger--open,
+.hm-ls__trigger--open:hover {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+  color: #4c1d95;
+}
+
+.hm-ls__trigger:focus-visible,
+.hm-ls__item:focus-visible {
+  outline: 2px solid #583cd6;
+  outline-offset: 2px;
+}
+
+/* The flag inside the round button. */
+.hm-ls__flag {
+  display: block;
+  width: 22px;
+  height: 15px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 0.5px rgba(15, 23, 42, 0.18);
+  flex-shrink: 0;
+}
+
+/* The current language's name, in English, under the button on hover and focus. */
+.hm-ls__tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 1002;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s;
+}
+.hm-ls__tip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: #1e293b;
+}
+.hm-ls__trigger:hover + .hm-ls__tip,
+.hm-ls__trigger:focus-visible + .hm-ls__tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Opens towards the wider side of the window (set when opening), in both
+   directions. The menu itself is always left to right (English names), so its
+   inline start is its left. */
+.hm-ls__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 1001;
+  min-width: 168px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.hm-ls__menu--from-right {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+.hm-ls__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-block: 7px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.hm-ls__item:hover,
+.hm-ls__item:focus-visible {
+  background: #f1f5f9;
+}
+
+.hm-ls__item--active,
+.hm-ls__item--active:hover {
+  background: #eef2ff;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.hm-ls__name {
+  flex: 1;
+}
+
+.hm-ls__check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #583cd6;
+}
+
+.hm-ls__check svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.hm-ls__note {
+  margin: 4px 0 0;
+  padding-block: 6px 2px;
+  padding-inline: 8px;
+  border-top: 1px solid #f1f5f9;
+  max-width: 200px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+}

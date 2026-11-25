@@ -5,26 +5,33 @@ import { Title } from '@angular/platform-browser';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
 import { CampaignPreviewComponent } from '../../studio/preview/campaign-preview/campaign-preview.component';
+import { SimpleStudioPublicPageComponent } from '../../simple-studio/simple-studio-public-page.component';
 import { MinimalDonationPageComponent } from '../../shared/components/minimal-donation-page/minimal-donation-page.component';
 import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
 import { DonationToastComponent } from '../../shared/components/donation-toast/donation-toast.component';
-import { PlatformTopStripComponent } from '../../../../core/layout/platform-top-strip/platform-top-strip.component';
 import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DonationService } from '../../services/donation.service';
+import { SimpleStudioCheckoutService } from '../../simple-studio/simple-studio-checkout.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
-
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { HmCampaignContentDirective, HmPublicTextPipe, publicText } from '../../../../core/i18n/content-language';
+import { CampaignDraft } from '../../services/campaign-studio-state.service';
+import { ContentLang, localizeDraft, publicLanguages } from '../../utils/content-i18n';
+import { langParam, recallCampaignLanguage, rememberCampaignLanguage } from '../../utils/campaign-language-memory';
+import { HmMoneyArgPipe } from '../../../../core/i18n/money';
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent, PlatformTopStripComponent],
+  imports: [SimpleStudioPublicPageComponent, HmMoneyArgPipe, HmCampaignContentDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })
 export class CampaignPublicPageComponent implements OnInit, OnDestroy {
+  private readonly studioCheckout = inject(SimpleStudioCheckoutService);
   @ViewChild(DonationToastComponent) private toast!: DonationToastComponent;
 
   private route           = inject(ActivatedRoute);
@@ -40,6 +47,46 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   private ctx             = inject(CurrentContextService);
   private donationSvc     = inject(DonationService);
   private analytics       = inject(AnalyticsService);
+  private readonly t       = publicText();
+
+  // ── Language (bilingual campaign content, D-43 … D-45) ──
+  // Hebrew always; English once the manager published a complete English
+  // version. `?lang=en` is the stable link to it.
+  contentLang: ContentLang = 'he';
+  // Each language is named in itself (common.language.*, same in both dictionaries).
+  readonly languageNames: Record<ContentLang, string> = { he: 'common.language.he', en: 'common.language.en' };
+  languages: ContentLang[] = ['he'];
+  private stored: CampaignDraft | null = null;
+  private slug = '';
+
+  languageHref(lang: ContentLang): string {
+    return this.router.serializeUrl(this.router.createUrlTree([], {
+      relativeTo: this.route, queryParams: { lang: lang === 'en' ? 'en' : null }, queryParamsHandling: 'merge',
+    }));
+  }
+
+  // Switches in place: nothing is reloaded or re-created, so an open checkout
+  // keeps what the donor typed, and the live totals keep counting.
+  setLanguage(lang: ContentLang, event?: Event): void {
+    event?.preventDefault();
+    if (lang === this.contentLang || !this.languages.includes(lang)) return;
+    this.applyLanguage(lang, false);
+    this.router.navigate([], { relativeTo: this.route, queryParams: { lang: lang === 'en' ? 'en' : null }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  private applyLanguage(lang: ContentLang, initial: boolean): void {
+    if (!this.stored) return;
+    this.contentLang = lang;
+    const view = localizeDraft(this.stored, lang);
+    if (!initial) {
+      view.currentAmount = this.state.draft.currentAmount;
+      view.supportersCount = this.state.draft.supportersCount;
+    }
+    this.state.loadDraft(view);
+    this.state.setStoredVersion(this.stored);
+    this.title.setTitle(view.title ? this.t('publicPage.campaignPublic.pageTitle', { title: view.title }) : this.t('publicPage.campaignPreview.hamonym'));
+    rememberCampaignLanguage(this.slug, lang, view.title);
+  }
 
   get isAmbassadorMode(): boolean {
     return this.ctx.active()?.role === 'ambassador';
@@ -216,7 +263,6 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     // donation-success page the browser tab kept showing "תודה על
     // תרומתך — X" indefinitely — Angular doesn't reset <title> on
     // navigation by itself.
-    this.title.setTitle(data.title ? `${data.title} — המונים` : 'המונים');
     this.snapshotTakenAt = new Date();
     // lastSeenAt gates which polled donations become toasts — sinceParm
     // (passed from the donation-success page's "back to campaign" link,
@@ -225,9 +271,19 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     // this page load. snapshotTakenAt (above) still gates the running
     // total separately, so that donation isn't double-counted.
     this.lastSeenAt = sinceParm ? new Date(sinceParm) : this.snapshotTakenAt;
-    this.state.loadDraft(data);
+    this.slug = slug;
+    this.stored = data;
+    this.languages = publicLanguages(data);
+    const requested = langParam(this.route.snapshot.queryParamMap.get('lang')) ?? recallCampaignLanguage(slug)?.lang ?? 'he';
+    const lang = this.languages.includes(requested) ? requested : 'he';
+    // A link to a version that is not available opens Hebrew, without a misleading ?lang=.
+    if (requested !== lang && this.route.snapshot.queryParamMap.has('lang')) {
+      this.router.navigate([], { relativeTo: this.route, queryParams: { lang: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
+    this.applyLanguage(lang, true);
     this.loader.hide();
     this.isLoading = false;
+    this.studioCheckout.resumeOnPublicPage(this.state.draft);
 
     this.analytics.init(data.entityGaMeasurementId);
     this.analytics.trackEvent('campaign_view', {
@@ -235,9 +291,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
       campaign_id:   data.id,
     });
 
-    this.ambassadorSvc.listPublic(slug).subscribe({
-      next: list => { this.ambassadorsList = list; },
-    });
+    // The shared preview owns the paginated public ambassador feed.
 
     if (ambassadorSlug) {
       this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({

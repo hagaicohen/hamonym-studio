@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 export type LogoShape = 'circle' | 'square' | 'none';
 export type LogoSize = 'sm' | 'md' | 'lg';
@@ -23,7 +24,7 @@ export type LogoBorderStyle = 'solid' | 'dashed';
 @Component({
   selector: 'app-logo-appearance-editor',
   standalone: true,
-  imports: [CommonModule, ColorPickerComponent],
+  imports: [TranslocoPipe, CommonModule, ColorPickerComponent],
   templateUrl: './logo-appearance-editor.component.html',
   styleUrl: './logo-appearance-editor.component.css',
 })

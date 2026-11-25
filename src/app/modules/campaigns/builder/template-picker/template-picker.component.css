@@ -55,7 +55,7 @@
   font-size: 13px;
   font-weight: 700;
   color: #64748b;
-  margin-left: 4px;
+  margin-inline-end: 4px;
 }
 
 .tp-swatch {
@@ -113,14 +113,16 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   cursor: pointer;
 }
 
-.tp-card--hovered {
+/* Hover in CSS, and without lifting the card: a card that moved under the
+   pointer lost and regained the hover at its edge, and a click there was lost. */
+.tp-card:hover,
+.tp-card:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  transform: translateY(-3px);
 }
 
 /* Preview area */
@@ -191,7 +193,8 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.tp-card--hovered .tp-btn {
+.tp-card:hover .tp-btn,
+.tp-card:focus-visible .tp-btn {
   background: var(--accent, #22c55e);
   color: #fff;
 }

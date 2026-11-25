@@ -19,8 +19,7 @@
   /* Phase 3A (2026-09-29) -- the one root-level font-family token; nearly
      everything else in this file is font-family:inherit, so this single
      line is what actually cascades a Style's typeface everywhere. */
-  font-family: var(--hm-font-family, 'Heebo', sans-serif);
-  direction: rtl;
+  font-family: var(--hm-font-body, var(--hm-font-family, 'Heebo', sans-serif));
   background: #ffffff;
   overflow-x: clip;
 }
@@ -108,7 +107,7 @@
 .nav-link--faded { opacity: 0.4; cursor: default; pointer-events: none; }
 .nav-link--faded:hover { color: inherit !important; }
 .nav-link-count {
-  display: inline-block; margin-right: 4px;
+  display: inline-block; margin-inline-start: 4px;
   font-size: 11px; font-weight: 700; opacity: 0.75;
 }
 
@@ -153,7 +152,7 @@
 /* ══ Ambassador Card ══ */
 /* ══ Ambassador Strip ══ */
 .ambassador-strip {
-  direction: rtl; display: flex; align-items: center;
+   display: flex; align-items: center;
   justify-content: space-between; gap: 24px;
   padding: 16px 20px; margin: 8px 16px;
   background: #ffffff; border: 1px solid #e5e7eb;
@@ -272,3 +271,73 @@
 .nav-drawer-link:last-child { border-bottom: none; }
 .nav-drawer-link:hover { background: #f8fafc; }
 
+
+/* Campaign typography per content language (D-46). Each variable is set only
+   when the campaign chose a font for that role, so nothing changes otherwise;
+   a per-element font (Text Role override) is an inline style and still wins. */
+.campaign-page :is(h1, h2, h3, h4, .section-heading, .hm-section-title, .hm-hero-title, .hm-hero-title-external,
+  .hm-opening-title, .cta-title, .hm-update-title, .hm-join-title, .hm-raised-title, .accordion-panel-title,
+  [data-text-role="sectionTitle"]) {
+  font-family: var(--hm-font-heading, inherit);
+}
+.campaign-page :is(.hm-hero-subtitle, .hm-hero-subtitle-external, .hm-donate-subtitle, .hm-register-subtitle,
+  [data-text-role="subtitle"]) {
+  font-family: var(--hm-font-subtitle, inherit);
+}
+.campaign-page :is(button, .hm-btn, a[class*="btn"], a[class*="cta"]) {
+  font-family: var(--hm-font-button, inherit);
+}
+
+.position-blocks--fullbleed { max-width:none; inline-size:100%; padding-inline:0; }
+
+.hm-listing-designed :is(.hm-lb-toolbar,.hm-donors-toolbar){display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-block:8px}.hm-listing-designed :is(input,select,.hm-lb-sort-btn,.hm-donors-more-btn){border-radius:20px;min-block-size:36px}.hm-listing-designed :is(.hm-lb-sort-row,.hm-donors-sort-row){display:flex;flex-wrap:wrap;gap:6px}.hm-listing-designed :is(input,select){max-inline-size:100%}
+
+.hm-donor-search{display:block;margin-block-end:12px}.hm-donor-search input{box-sizing:border-box;inline-size:min(100%,320px);padding:8px 14px;border:1px solid #cbd5e1;border-radius:20px;font:inherit}
+
+.hm-local-surface{box-sizing:border-box;max-width:100%}.hm-local-background>.donation-widget,.hm-local-background>.hm-contact,.hm-local-background>.hm-progress{background:transparent!important}.hm-local-padding>.donation-widget{padding:0!important}
+@media(prefers-reduced-motion:no-preference){[data-entry-effect=fade]{animation:hm-section-fade var(--hm-effect-duration,500ms) ease both}[data-entry-effect=slide]{animation:hm-section-slide var(--hm-effect-duration,500ms) ease both}[data-entry-effect=scale]{animation:hm-section-scale var(--hm-effect-duration,500ms) ease both}.hm-hover-lift{transition:transform 180ms ease}.hm-hover-lift:hover{transform:translateY(-3px)}}
+@keyframes hm-section-fade{from{opacity:0}to{opacity:1}}@keyframes hm-section-slide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes hm-section-scale{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+
+.visual-insert{position:absolute;inset-inline:0;top:-14px;z-index:8;display:flex;align-items:center;justify-content:center;gap:6px;min-height:28px;margin-inline:auto;width:max-content;max-width:100%;padding:2px 12px;border:1px solid #ddd6fe;border-radius:16px;background:#fff;color:#6d28d9;opacity:0;cursor:pointer;font:500 12px inherit}.block-wrap:hover>.visual-insert,.visual-insert:focus-visible{opacity:1}.visual-empty-insert{width:100%;min-height:80px;border:1px dashed #c4b5fd;border-radius:8px;background:#faf8ff;color:#6d28d9;cursor:pointer}@media(hover:none){.visual-insert{opacity:1}.visual-insert span{display:none}}
+.hm-hero.hm-local-background>.hm-hero-bg-layer{background:transparent!important}.hm-hero.hm-local-height{min-height:var(--hm-section-size)}.hm-opening.hm-local-height>.hm-opening-content{min-height:0}
+
+.hm-local-background>.hm-section{background:transparent!important}.hm-local-padding>.hm-section{padding:0!important}
+
+.block-wrap:has(>app-campaign-navigation[data-navigation-behavior="sticky"]),.container-child:has(>app-campaign-navigation[data-navigation-behavior="sticky"]){position:sticky;top:0;z-index:30}.block-wrap:has(>app-campaign-navigation[data-navigation-behavior="floating"]){min-height:52px}
+
+[data-listing-decoration=diamond],[data-listing-decoration=heart]{position:relative;padding-top:26px!important;margin-top:16px}[data-listing-decoration=diamond]::before,[data-listing-decoration=heart]::before{content:"";position:absolute;top:-14px;inset-inline-start:calc(50% - 14px);width:28px;height:28px;background:var(--hm-primary,#6236ed);border:5px solid white;box-shadow:0 3px 9px #0f172a18;pointer-events:none}[data-listing-decoration=diamond]::before{border-radius:7px;transform:rotate(45deg)}[data-listing-decoration=heart]::before{border-radius:50%;background:radial-gradient(circle,#ffffff 24%,transparent 27%),var(--hm-primary,#6236ed)}
+
+.block-container:has(>.studio-column-resizer){position:relative}.studio-column-resizer{position:absolute;top:50%;transform:translate(50%,-50%);z-index:10;width:16px;height:48px;padding:0;border:1px solid #d8ccec;border-radius:8px;background:linear-gradient(90deg,transparent 40%,#9b85d7 40%,#9b85d7 60%,transparent 60%),#fff;box-shadow:0 2px 8px #0f172a12;cursor:col-resize;touch-action:none;opacity:0}.block-container:hover>.studio-column-resizer,.studio-selected .studio-column-resizer,.studio-column-resizer:focus-visible{opacity:1}.studio-column-resizer:focus-visible{outline:2px solid #9b85d7;outline-offset:2px}@media(hover:none){.studio-column-resizer{opacity:1}}
+
+.hero-composition{position:relative;z-index:2;inline-size:100%;min-inline-size:0;flex-basis:100%;margin-block:24px 16px}.hero-composition .position-blocks{padding:0;margin:0}.hm-hero:has(.hero-composition){padding-bottom:96px;height:auto}.hm-hero:has(.hero-composition) .hm-hero-container{height:auto;flex-wrap:wrap}.hero-composition app-fundraising-summary{display:block}
+
+/* Opt-in body tree; legacy layouts retain their existing renderer. */
+.campaign-body-root{width:100%;min-width:0;--hm-body-content-width:1200px}
+.campaign-body-root [data-body-role="root"]{display:flex;flex-direction:column;width:100%;overflow:visible}
+.campaign-body-root .container-child{box-sizing:border-box;min-width:0}
+.campaign-body-root [data-body-child="root"]{flex:0 0 auto!important;width:100%;margin-inline:auto}
+.campaign-body-root [data-body-role="columns"]{width:100%;max-width:1200px;margin-inline:auto;padding:24px 16px!important;box-sizing:border-box;align-items:flex-start}
+.campaign-body-root [data-body-role="columns"].body-columns--reverse{flex-direction:row-reverse}
+.campaign-body-root [data-body-child-role="main"]{flex:1 1 0!important}
+.campaign-body-root [data-body-child-role="rail"]{flex:0 0 min(380px,44%)!important;min-width:260px;background:#f8fafc;border-radius:16px;position:sticky;top:16px}
+.visual-body-start,.visual-body-end{display:block;position:relative;z-index:4;margin:12px auto;padding:5px 16px;border:1px dashed #a78bfa;border-radius:16px;background:#fff;color:#6d28d9;cursor:pointer}
+.campaign-page--visual-editing .campaign-body-root [data-body-role="root"]>.container-child>.visual-insert{position:relative;inset:auto;transform:none;display:block;width:max-content;margin:4px auto;z-index:5}
+.campaign-page--mobile .campaign-body-root [data-body-role="columns"]{flex-direction:column!important}
+.campaign-page--mobile .campaign-body-root [data-body-child-role="main"],.campaign-page--mobile .campaign-body-root [data-body-child-role="rail"]{flex:0 0 auto!important;width:100%;min-width:0;position:relative;top:auto}
+
+.campaign-body-root [data-body-role="root"]{padding:0!important;gap:0!important}
+
+.campaign-body-root [data-body-role="magazine"]{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:0!important;padding:0!important}
+.campaign-page--mobile .campaign-body-root [data-body-role="magazine"]{grid-template-columns:1fr}
+
+/* Explicit text controls override nested rich HTML and avoid double padding. */
+.block-rich-text[data-text-line-height] ::ng-deep p:not([style*="line-height"]),.block-rich-text[data-text-line-height] ::ng-deep div:not([style*="line-height"]),.block-rich-text[data-text-line-height] ::ng-deep li:not([style*="line-height"]),.block-rich-text[data-text-line-height] ::ng-deep span:not([style*="line-height"]){line-height:inherit}
+.block-rich-text[data-text-align] ::ng-deep p:not([style*="text-align"]),.block-rich-text[data-text-align] ::ng-deep h1:not([style*="text-align"]),.block-rich-text[data-text-align] ::ng-deep h2:not([style*="text-align"]),.block-rich-text[data-text-align] ::ng-deep h3:not([style*="text-align"]),.block-rich-text[data-text-align] ::ng-deep div:not([style*="text-align"]){text-align:var(--hm-text-align)}
+.block-rich-text[data-paragraph-spacing] ::ng-deep p:not([style*="margin-bottom"]){margin-block:0 var(--hm-paragraph-gap,10px)!important}
+.block-rich-text[data-paragraph-spacing] ::ng-deep>:last-child{margin-block-end:0!important}
+.hm-local-padding>.block-rich-text{box-sizing:border-box;width:100%;max-width:none;padding:0!important}
+.hm-local-padding>.block-rich-text ::ng-deep>:first-child{margin-block-start:0!important}
+.hm-local-padding>.block-rich-text ::ng-deep>:last-child{margin-block-end:0!important}
+.hm-local-padding:has(>.block-rich-text)>.section-heading{padding:0 0 8px}
+.campaign-page--visual-editing .campaign-body-root [data-body-role="root"]>.container-child:has(>.block-rich-text)>.visual-insert{position:absolute;inset-block-start:2px;inset-inline-start:auto;inset-inline-end:40px;width:24px;margin:0}
+.campaign-page--visual-editing .campaign-body-root [data-body-role="root"]>.container-child:has(>.block-rich-text)>.visual-insert span{display:none}

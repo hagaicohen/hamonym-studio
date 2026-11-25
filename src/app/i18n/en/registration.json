@@ -1,0 +1,323 @@
+{
+  "organizationRegistration": {
+    "savedRegistrationDrafts": "Saved registration drafts",
+    "draft": "draft",
+    "drafts": "drafts",
+    "editing": "Editing",
+    "notSavedYet": "Not saved yet",
+    "unsavedChanges": "· Unsaved changes",
+    "deleteDraft": "Delete draft: ",
+    "thisDraftIsOpenFor": "This draft is open for editing",
+    "continueEditing": "Continue editing: ",
+    "saveChanges": "Save changes: ",
+    "theDraftWasSavedYou": "The draft was saved — you can come back to it at any step",
+    "startANewRegistration": "Start a new registration",
+    "deleteTheDraft": "Delete the draft?",
+    "theDraftDraftnameWillBe": "The draft \"{{draftName}}\" will be removed from the list. This can't be undone.",
+    "deleting": "Deleting...",
+    "saveTheNewDraft": "Save the new draft?",
+    "currentnameHasntBeenSavedYet": "\"{{currentName}}\" hasn't been saved yet. If you don't save it, it will be deleted.",
+    "thereAreUnsavedChanges": "There are unsaved changes",
+    "theChangesToCurrentnameHavent": "The changes to \"{{currentName}}\" haven't been saved yet. What would you like to do before moving on?",
+    "continueWithoutSaving": "Continue without saving",
+    "saveAndContinue": "Save and continue",
+    "loadingTheDraftLoadingname": "Loading the draft \"{{loadingName}}\"..."
+  },
+  "drafts": {
+    "deleteDraft": "Delete draft",
+    "continueEditing": "Continue editing",
+    "errors": {
+      "notCreator": "Only the person who created the draft can delete it.",
+      "notADraft": "The organization was already submitted for review and can no longer be deleted as a draft.",
+      "hasCampaigns": "This draft has campaigns, so it can't be deleted.",
+      "notFound": "The draft was not found. It may have been deleted already.",
+      "requestedNotFound": "The requested draft was not found, or its registration was already submitted.",
+      "loadFailed": "Loading the draft failed. Please try again.",
+      "deleteFailed": "Deleting the draft failed. Please try again.",
+      "saveFailed": "Saving the draft failed. Please try again."
+    },
+    "untitled": "Untitled",
+    "newRegistration": "New registration",
+    "saveOnlyCurrent": "Only the draft being edited can be saved",
+    "fillBeforeSave": "Fill in the entity type, name and registration number before saving a draft",
+    "saveChanges": "Save changes",
+    "noChanges": "No changes to save"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save",
+    "entityDetails": "{{entity}} details",
+    "contactPerson": "Contact person",
+    "uploaded": "Uploaded successfully",
+    "viewFile": "View file",
+    "remove": "Remove",
+    "next": "Continue to the next step",
+    "entityProfile": "{{entity}} profile",
+    "logo": "Logo",
+    "back": "Back",
+    "joinAsOrganization": "Join as an organization",
+    "fundraisingGoals": "Fundraising goals",
+    "feeCollectionMethod": "Fee collection method",
+    "connectTerminal": "Connect a card terminal",
+    "provider": "Processing provider"
+  },
+  "steps": {
+    "step1": "Step 1 of 6",
+    "step2": "Step 2 of 6",
+    "step3": "Step 3 of 6",
+    "step4": "Step 4 of 6"
+  },
+  "stepEntity": {
+    "letsGetToKnowYou": "Let's get to know you",
+    "entityDetailsAndValidation": "Entity details and validation",
+    "entityType": "Entity type",
+    "entityType2": "Entity type *",
+    "chooseAnEntityType": "Choose an entity type",
+    "nonprofitAmuta": "Nonprofit (Amuta)",
+    "publicBenefitCompanyChalatz": "Public benefit company (Chalatz)",
+    "newPoliticalParty": "New political party",
+    "registeredPoliticalParty": "Registered political party",
+    "exemptDealerContentCreatorsOnly": "Exempt sole proprietor",
+    "licensedDealerContentCreatorsOnly": "Registered sole proprietor",
+    "typeAName": "Type a name",
+    "typeTheRegistrationNumberEntityconfig": "Type the registration number{{entityConfig}}",
+    "categories": "Categories",
+    "fullName": "Full name *",
+    "israelIsraeli": "Israel Israeli",
+    "email": "Email *",
+    "invalidEmailAddress": "Invalid email address",
+    "phone": "Phone *",
+    "invalidPhoneNumber": "Invalid phone number",
+    "requiredDocuments": "Required documents",
+    "registrationdocumentCanBeCompletedLater": "{{registrationDocument}} — can be completed later",
+    "uploadTheRegistrationdocumentPdfJpg": "Upload the {{registrationDocument}} (PDF, JPG, PNG — up to 10MB). You can also complete this later in the organization settings — it won't stop you from finishing the setup now.",
+    "youCanFinishSettingUp": "You can finish setting up the organization without the document for now. The document can be uploaded later in the organization settings, for reviewing the application.",
+    "uploadRegistrationdocument": "Upload {{registrationDocument}}",
+    "section46TaxCreditCertificate": "Section 46 tax-credit certificate",
+    "optionalLetsTheCampaignPage": "Optional — lets the campaign page show tax-deductible donations (PDF, JPG, PNG — up to 10MB)",
+    "ifTheOrganizationHasA": "If the organization has a Section 46 certificate, upload it and complete its verification. Until the certificate is uploaded and verified, donors can't receive the tax benefit through the system. Uploading a file alone does not mean the document was verified.",
+    "uploadTheSection46Certificate": "Upload the Section 46 certificate",
+    "note": "Note:",
+    "theDocumentsWillBeReviewed": "The documents will be reviewed and approved by the system team before the entity is approved on the platform."
+  },
+  "stepProfile": {
+    "entityGoals": "Activities and options",
+    "setUpYourCardOn": "Choose one, several, or no options. Your selection does not determine payment eligibility or restrict campaign capabilities.",
+    "chooseAtLeastOneCampaign": "Choose at least one campaign type",
+    "entityCard": "{{entity}} card",
+    "displayName": "Display name *",
+    "theNameShownOnThe": "The name shown on the platform",
+    "shortDescription": "Short description *",
+    "tellUsAboutYourActivity": "Tell us about your activity...",
+    "entityWebsiteLinkOptional": "{{entity}} website link (optional)",
+    "uploadLogo": "Upload logo",
+    "recommended400x400PixelsPngJpg": "Recommended 400x400 pixels, PNG/JPG"
+  },
+  "stepGoals": {
+    "whatAreYourGoalsOn": "What are your goals on the platform?",
+    "aGoalIsAPlanning": "A goal is a planning tool, not a fundraising cap — you can keep receiving donations after you pass it. You can change the goals later. The display of fundraising elements can be edited or hidden in the campaign editor, depending on the chosen design.",
+    "monthlyFundraisingGoal": "Monthly fundraising goal (₪)",
+    "howMuchDoYouHope": "How much do you hope to raise per month through the platform?",
+    "yearlyFundraisingGoal": "Yearly fundraising goal (₪)",
+    "howMuchDoYouHope2": "How much do you hope to raise per year through the platform?",
+    "whyDoesThisMatter": "Why does this matter?",
+    "thisDataHelpsUsOffer": "This data helps us offer you tailored recommendations, spot growth opportunities and build smart tools that help you reach your goals."
+  },
+  "stepBillingMethod": {
+    "connectACollectionMethodFor": "Connect a collection method for platform usage fees",
+    "importantInformation": "Important information",
+    "systemFee3VatOf": "System fee: 3% + VAT of each donation",
+    "chargedOnceAMonthOnly": "Charged once a month only",
+    "noChargeWithoutActualActivity": "No charge without actual activity",
+    "billingDetailsAndAccountingDocuments": "Billing details and accounting documents are handled according to the organization's billing arrangement",
+    "collectionMethod": "Collection method",
+    "creditCard": "Credit card",
+    "monthlyChargeByCreditCard": "Monthly charge by credit card",
+    "standingOrderMasav": "Standing order (MASAV)",
+    "chargeByBankAuthorization": "Charge by bank authorization",
+    "creditCardDetails": "Credit card details",
+    "cardDetailsAreStoredSecurely": "Card details are stored securely by CardCom.",
+    "loadingTheSecurePaymentForm": "Loading the secure payment form...",
+    "theBillingMethodWasSaved": "The billing method was saved",
+    "cardEndingInLast4": "· Card ending in {{last4}}",
+    "replaceCard": "Replace card",
+    "standingOrderMasav2": "Standing order — MASAV",
+    "downloadTheFormSignIt": "Download the form, sign it and upload it back to the system. You complete the bank account details in the organization settings at the end of the registration.",
+    "planoidInstitutionCode25788": "Planoid institution code: 25788",
+    "downloadTheStandingOrderForm": "Download the standing order form",
+    "authorizationApproved": "Authorization approved",
+    "uploading": "Uploading...",
+    "replaceTheSignedForm": "Replace the signed form",
+    "uploadTheSignedForm": "Upload the signed form",
+    "illCompleteThisLater": "I'll complete this later",
+    "theCollectionMethodWasSaved": "The collection method was saved"
+  },
+  "stepPayment": {
+    "connectToYourCardProcessing": "Connect to your card-processing terminal",
+    "illAddATerminalLater": "I'll add a terminal later",
+    "chooseAProvider": "Choose a provider",
+    "terminalNumber": "Terminal number *",
+    "apiUser": "API user *",
+    "apiPassword": "API password *",
+    "testingTheConnection": "Testing the connection...",
+    "testConnection": "Test connection",
+    "theConnectionSucceeded": "The connection succeeded",
+    "terminalDetails": "{{provider}} terminal details"
+  },
+  "providers": {
+    "cardcom": "CardCom",
+    "tranzila": "Tranzila"
+  },
+  "stepReview": {
+    "theOrganizationWasCreated": "The organization was created",
+    "welcomeToHamonym": "Welcome to Hamonym",
+    "takingYouToTheCampaigns": "Taking you to the campaigns screen...",
+    "summaryAndSubmission": "Summary and submission",
+    "aFinalReviewBeforeSubmitting": "A final review before submitting for approval",
+    "whatsDoneAndWhatsLeft": "What's done and what's left?",
+    "theListSummarizesTheExisting": "The list summarizes the existing details and settings. Items that can be completed later don't block submitting the application.",
+    "verified": "Verified",
+    "entityType": "Entity type",
+    "email": "Email",
+    "phone": "Phone",
+    "selectedCategories": "Selected categories",
+    "documents": "Documents",
+    "section46Certificate": "Section 46 certificate",
+    "displayName": "Display name",
+    "pageTypes": "Page types",
+    "entityDescription": "{{entity}} description",
+    "noLogoUploaded": "No logo uploaded",
+    "monthlyFundraisingGoal": "Monthly fundraising goal",
+    "yearlyFundraisingGoal": "Yearly fundraising goal",
+    "theConnectionWillBeCompleted": "The connection will be completed later",
+    "youChoseToSetUp": "You chose to set up the card terminal later",
+    "terminalNumber": "Terminal number",
+    "apiUser": "API user",
+    "apiPassword": "API password",
+    "connectionStatus": "Connection status",
+    "theCardcomConnectionSucceeded": "The CardCom connection succeeded",
+    "theCardcomConnectionFailed": "The CardCom connection failed",
+    "theTerminalConnectionTestMust": "The terminal connection test must be completed",
+    "theCollectionMethodWillBe": "The collection method will be completed later",
+    "collectionMethodType": "Collection method type",
+    "provider": "Provider",
+    "cardStatus": "Card status",
+    "cardSaved": "Card saved",
+    "last4Digits": "Last 4 digits",
+    "noConfirmationWasReceivedFor": "No confirmation was received for saving the card. Complete the collection method in the organization settings.",
+    "bankAuthorizationMasav": "Bank authorization (MASAV)",
+    "toBeCompletedInThe": "To be completed in the organization settings after registration",
+    "whatsNext": "What's next?",
+    "theHamonymTeamWillReview": "The Hamonym team will review the application",
+    "youllReceiveAnEmailWithin": "You'll receive an email within 24–48 hours",
+    "onceApprovedYouCanStart": "Once approved, you can start fundraising",
+    "back": "Back",
+    "submitting": "Submitting...",
+    "submitForReview": "Submit for review"
+  },
+  "categorySelector": {
+    "searchAndChooseCategories": "Search and choose categories",
+    "searchForACategoryTo": "Search for a category to add...",
+    "selectedCategoriesLength": "Selected categories ({{length}})",
+    "remove": "Remove ",
+    "noCategoriesSelectedYet": "No categories selected yet",
+    "allCategories": "All categories",
+    "noCategoriesMatchTheSearch": "No categories match the search"
+  },
+  "categorySuggest": {
+    "missingACategorySuggestA": "Missing a category? Suggest a new one",
+    "suggestedCategoryName": "Suggested category name",
+    "sending": "Sending…",
+    "send": "Send",
+    "theSuggestionWillBeReviewed": "The suggestion will be reviewed by the Hamonym team.",
+    "tooShort": "The category name must have at least 2 characters",
+    "alreadyPending": "The suggestion \"{{label}}\" is already being reviewed. Thank you!",
+    "sent": "Thank you! The suggestion was sent for review. It won't be added to the list automatically.",
+    "exists": "The category \"{{label}}\" is already on the list. You can search for it and choose it.",
+    "failed": "Sending the suggestion failed. Please try again."
+  },
+  "entityTypes": {
+    "association": {
+      "entity": "Organization",
+      "entityName": "Organization name",
+      "registrationNumber": "Nonprofit registration number",
+      "registrationDocument": "certificate of incorporation",
+      "onboardingTitle": "Join as an organization"
+    },
+    "chalatz": {
+      "entity": "Public benefit company",
+      "entityName": "Company name",
+      "registrationNumber": "Company registration number",
+      "registrationDocument": "certificate of incorporation",
+      "onboardingTitle": "Join as a public benefit company"
+    },
+    "politicalPartyNew": {
+      "entity": "New political party",
+      "entityName": "Party name",
+      "registrationDocument": "founding documents",
+      "onboardingTitle": "Establish a political party"
+    },
+    "politicalPartyRegistered": {
+      "entity": "Registered political party",
+      "entityName": "Party name",
+      "registrationDocument": "party registration certificate",
+      "onboardingTitle": "Join as a registered party"
+    },
+    "soleExempt": {
+      "entity": "Business",
+      "entityName": "Business name",
+      "registrationNumber": "Business ID / dealer number",
+      "registrationDocument": "dealer certificate",
+      "onboardingTitle": "Join as a content creator"
+    },
+    "soleRegistered": {
+      "entity": "Business",
+      "entityName": "Business name",
+      "registrationNumber": "Business ID / dealer number",
+      "registrationDocument": "dealer certificate",
+      "onboardingTitle": "Join as a content creator"
+    }
+  },
+  "billing": {
+    "errors": {
+      "ensureEntity": "Couldn't save the organization details. Go back to the previous step and continue again.",
+      "uploadFailed": "Uploading the file failed. Please try again.",
+      "cardNotSaved": "Saving the card wasn't approved. Check the details and try again."
+    },
+    "continuing": "Continuing...",
+    "continue": "Continue"
+  },
+  "payment": {
+    "serverError": "Server error"
+  },
+  "checks": {
+    "organizationDetails": "Organization details",
+    "logo": "Logo",
+    "completeLaterInSettings": "Can be completed later in the organization settings.",
+    "taxApprovalDetail": "Relevant only to an organization with a Section 46 certificate. Uploading is not verification of the certificate.",
+    "feeCard": "Credit card for fees",
+    "masav": "MASAV authorization",
+    "completeInSettingsAfter": "To be completed in the organization settings after registration."
+  },
+  "review": {
+    "masavMethod": "Standing order / MASAV",
+    "cardMethod": "Credit card",
+    "submitFailed": "Submitting the application failed. Please try again."
+  },
+  "errors": {
+    "incompleteProfile": "Complete the entity type, legal name, registration number, display name, email, phone and description before submitting.",
+    "alreadySaving": "The organization is already being saved. Please wait for it to finish.",
+    "duplicateId": "This ID number is already registered. Another entity can't be created with the same number."
+  },
+  "campaignTypes": {
+    "oneTime": {
+      "title": "One-time donations",
+      "description": "A campaign page for one-time donations"
+    },
+    "recurring": {
+      "title": "Recurring donations",
+      "description": "An organization page for recurring donors"
+    }
+  }
+}

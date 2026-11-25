@@ -1,2 +1,9 @@
 <app-loader />
+@if (sharedHeader()) {
+  <div class="shared-header" [class.studio-header]="studioWorkspace()" #fixedHeader>
+    <app-impersonation-banner />
+    <app-topbar (menuClick)="toggleSidebar()" />
+  </div>
+}
 <router-outlet></router-outlet>
+<app-toast-container />

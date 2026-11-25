@@ -28,6 +28,26 @@ describe('Explicit organization submission lifecycle',()=>{
   });
   afterEach(()=>http.verify());
   const matches=(suffix:string)=>(r:any)=>r.url.endsWith(suffix);
+  it('starts without purposes and preserves saved nonprofit choices on reload and save',()=>{
+    expect(state.state().selectedCampaignTypes).toEqual([]);
+    state.loadFromEntity({...entity,campaign_types:['one-time','recurring']});
+    expect(state.state().selectedCampaignTypes).toEqual(['one-time','recurring']);
+    state.save({includeBilling:false}).subscribe();
+    const request=http.expectOne(matches('/api/entities/new-org'));
+    expect(request.request.body.campaign_types).toEqual(['one-time','recurring']);
+    request.flush(entity);
+    state.loadFromEntity({...entity,campaign_types:[]});
+    expect(state.state().selectedCampaignTypes).toEqual([]);
+  });
+  it('submits a music business without donation choices or documents',()=>{
+    state.updateState({...complete,entityType:'sole_exempt',selectedCampaignTypes:[]});
+    state.submitForReview().subscribe();
+    const request=http.expectOne(matches('/api/entities'));
+    expect(request.request.body.entity_type).toBe('sole_exempt');
+    expect(request.request.body.campaign_types).toEqual([]);
+    request.flush({entity:{...entity,entity_type:'sole_exempt'}});
+    submitted();
+  });
   function created(){http.expectOne(matches('/api/entities')).flush({entity});}
   function submitted(){http.expectOne(matches('/api/entities/new-org/request-review')).flush({entity:{...entity,status:'pending_review'}});}
   it('saves a complete draft without calling submission',()=>{

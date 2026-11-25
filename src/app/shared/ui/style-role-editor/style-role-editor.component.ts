@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { SurfaceStyle, ButtonStyle, ProgressStyle } from '../../models/style-role.model';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 // Universal Local Styling Phase B1 (2026-10) -- the ONE shared Builder
 // editor for a non-text style role override (surfaceStyles/buttonStyles/
@@ -21,7 +22,7 @@ export type StyleRoleOverride = Partial<SurfaceStyle & ButtonStyle & ProgressSty
 @Component({
   selector: 'app-style-role-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent],
+  imports: [TranslocoPipe, CommonModule, FormsModule, ColorPickerComponent],
   templateUrl: './style-role-editor.component.html',
   styleUrl: './style-role-editor.component.css',
 })

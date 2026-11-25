@@ -510,3 +510,5 @@
   /* Column toggling is moot once secondary columns are force-hidden */
   .don-col-menu-wrap { display: none; }
 }
+
+.purchased-rewards{border-top:1px solid #e7eeea;margin-top:16px;padding-top:12px}.purchased-rewards h3{font-size:14px;margin:0 0 10px}.purchased-rewards>p{font-size:12px;color:#66766f;line-height:1.6}

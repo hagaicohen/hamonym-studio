@@ -1,0 +1,33 @@
+{
+  "onboarding": {
+    "howWouldYouLikeTo": "איך תרצה להשתמש במערכת?",
+    "wellBuildAPersonalizedExperience": "נבנה עבורך חוויה מותאמת אישית",
+    "organizationFundraisingBody": "עמותה / גוף מגייס",
+    "manageCampaignsAndRaiseDonations": "ניהול קמפיינים וגיוס תרומות",
+    "campaigner": "קמפיינר",
+    "manageAndFundraiseForCampaigns": "ניהול וגיוס עבור קמפיינים",
+    "businessPartner": "עסק שותף",
+    "partnershipsAndBusinessExposure": "שיתופי פעולה וחשיפה עסקית",
+    "justADonor": "רק תורם",
+    "trackDonationsAndCampaigns": "מעקב אחר תרומות וקמפיינים",
+    "continue": "המשך"
+  },
+  "welcome": {
+    "welcomeUsername": "ברוכים הבאים{{userName}}",
+    "whatWouldYouLikeTo": "מה תרצה לעשות?",
+    "cards": {
+      "createOrganization": {
+        "title": "הקמת עמותה / ארגון",
+        "description": "פתח עמותה או ארגון כדי לגייס תרומות"
+      },
+      "findCampaign": {
+        "title": "מציאת קמפיין לתרומה",
+        "description": "חפש פרויקטים ועמותות לתמיכה"
+      },
+      "ambassador": {
+        "title": "הצטרפות כשגריר",
+        "description": "גייס תרומות עבור קמפיין קיים"
+      }
+    }
+  }
+}

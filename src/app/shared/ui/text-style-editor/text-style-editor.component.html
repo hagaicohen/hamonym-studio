@@ -1,28 +1,37 @@
 <div class="tse">
+  <label class="tse-row">
+    <span class="tse-label">{{ 'editors.ui.font' | transloco }}</span>
+    <select class="tse-input" data-testid="element-font" [ngModel]="selectedFont" (ngModelChange)="setFont($event)">
+      <option value="">{{ 'editors.typography.campaignDefault' | transloco }}</option>
+      <option *ngFor="let f of fontOptions" [value]="f.stack">{{ f.name }}</option>
+    </select>
+    <span class="tse-inherited">{{ (selectedFont ? 'editors.typography.explicitFont' : 'editors.typography.campaignDefault') | transloco }}</span>
+  </label>
+
 
   <!-- ONE PART (Studio direct editing): its own controls, always open. -->
   <div class="tse-body tse-body--part" *ngIf="part">
     <ng-container *ngIf="part !== 'cta'">
       <div class="tse-row">
-        <span class="tse-label">יישור</span>
+        <span class="tse-label">{{ 'editors.ui.alignment' | transloco }}</span>
         <div class="tse-chips">
           <button *ngFor="let opt of alignOptions" class="tse-chip"
             [class.active]="partAlign() === opt.value"
-            (click)="setPartAlign(opt.value)">{{ opt.label }}</button>
+            (click)="setPartAlign(opt.value)">{{ opt.label | hmText }}</button>
         </div>
       </div>
       <div class="tse-row">
-        <span class="tse-label">גודל</span>
+        <span class="tse-label">{{ 'editors.ui.size' | transloco }}</span>
         <div class="tse-chips">
           <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
             [class.active]="(part === 'title' ? (textStyle.titleFontSize || textStyle.fontSize) : (textStyle.subtitleFontSize || 'md')) === opt.value"
-            (click)="part === 'title' ? patchStyle({ fontSize: opt.value, titleFontSize: opt.value }) : patchStyle({ subtitleFontSize: opt.value })">{{ opt.label }}</button>
+            (click)="part === 'title' ? patchStyle({ fontSize: opt.value, titleFontSize: opt.value }) : patchStyle({ subtitleFontSize: opt.value })">{{ opt.label | hmText }}</button>
         </div>
       </div>
       <div class="tse-row">
-        <span class="tse-label">צבע</span>
-        <app-color-picker *ngIf="part === 'title'" [value]="textStyle.titleColor || textStyle.color" (valueChange)="patchStyle({ titleColor: $event })"></app-color-picker>
-        <app-color-picker *ngIf="part === 'subtitle'" [value]="textStyle.subtitleColor || textStyle.color" (valueChange)="patchStyle({ subtitleColor: $event })"></app-color-picker>
+        <span class="tse-label">{{ 'editors.ui.color' | transloco }}</span>
+        <app-color-picker *ngIf="part === 'title'" [value]="partColor('titleColor')" (valueChange)="setPartColor('titleColor', $event)"></app-color-picker>
+        <app-color-picker *ngIf="part === 'subtitle'" [value]="partColor('subtitleColor')" (valueChange)="setPartColor('subtitleColor', $event)"></app-color-picker>
       </div>
     </ng-container>
     <ng-container *ngIf="part === 'cta'" [ngTemplateOutlet]="ctaRows"></ng-container>
@@ -31,7 +40,7 @@
   <!-- TOGGLE ROW -->
   <div class="tse-toggle-row" *ngIf="!part" (click)="expanded = !expanded">
     <div class="tse-toggle-left">
-      <span class="tse-advanced-label">עיצוב מתקדם</span>
+      <span class="tse-advanced-label">{{ 'editors.ui.advancedDesign' | transloco }}</span>
       <span class="tse-summary" *ngIf="!expanded">{{ summary }}</span>
     </div>
     <label class="tse-switch" (click)="$event.stopPropagation()">
@@ -45,69 +54,69 @@
 
     <!-- POSITION -->
     <div class="tse-row" *ngIf="showPosition">
-      <span class="tse-label">מיקום טקסט</span>
+      <span class="tse-label">{{ 'editors.ui.textPosition' | transloco }}</span>
       <div class="tse-chips">
         <button *ngFor="let opt of positionOptions" class="tse-chip"
           [class.active]="textStyle.position === opt.value"
-          (click)="patchStyle({ position: opt.value })">{{ opt.label }}</button>
+          (click)="patchStyle({ position: opt.value })">{{ opt.label | hmText }}</button>
       </div>
     </div>
 
     <!-- ALIGN -->
     <div class="tse-row">
-      <span class="tse-label">יישור טקסט</span>
+      <span class="tse-label">{{ 'editors.ui.textAlignment' | transloco }}</span>
       <div class="tse-chips">
         <button *ngFor="let opt of alignOptions" class="tse-chip"
           [class.active]="textStyle.align === opt.value"
-          (click)="setAlign(opt.value)">{{ opt.label }}</button>
+          (click)="setAlign(opt.value)">{{ opt.label | hmText }}</button>
       </div>
     </div>
 
     <ng-container *ngIf="splitTitleSubtitle">
       <div class="tse-row">
-        <span class="tse-label">גודל כותרת</span>
+        <span class="tse-label">{{ 'editors.ui.titleSize' | transloco }}</span>
         <div class="tse-chips">
           <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
             [class.active]="(textStyle.titleFontSize || textStyle.fontSize) === opt.value"
-            (click)="patchStyle({ fontSize: opt.value, titleFontSize: opt.value })">{{ opt.label }}</button>
+            (click)="patchStyle({ fontSize: opt.value, titleFontSize: opt.value })">{{ opt.label | hmText }}</button>
         </div>
       </div>
 
       <div class="tse-row">
-        <span class="tse-label">גודל תת-כותרת</span>
+        <span class="tse-label">{{ 'editors.ui.subtitleSize' | transloco }}</span>
         <div class="tse-chips">
           <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
             [class.active]="(textStyle.subtitleFontSize || 'md') === opt.value"
-            (click)="patchStyle({ subtitleFontSize: opt.value })">{{ opt.label }}</button>
+            (click)="patchStyle({ subtitleFontSize: opt.value })">{{ opt.label | hmText }}</button>
         </div>
       </div>
 
       <div class="tse-row">
-        <span class="tse-label">צבע כותרת</span>
-        <app-color-picker [value]="textStyle.titleColor || textStyle.color" (valueChange)="patchStyle({ titleColor: $event })"></app-color-picker>
+        <span class="tse-label">{{ 'editors.ui.titleColor' | transloco }}</span>
+        <app-color-picker [value]="partColor('titleColor')" (valueChange)="setPartColor('titleColor', $event)"></app-color-picker>
       </div>
 
       <div class="tse-row">
-        <span class="tse-label">צבע תת-כותרת</span>
-        <app-color-picker [value]="textStyle.subtitleColor || textStyle.color" (valueChange)="patchStyle({ subtitleColor: $event })"></app-color-picker>
+        <span class="tse-label">{{ 'editors.ui.subtitleColor' | transloco }}</span>
+        <app-color-picker [value]="partColor('subtitleColor')" (valueChange)="setPartColor('subtitleColor', $event)"></app-color-picker>
       </div>
     </ng-container>
 
     <ng-container *ngIf="!splitTitleSubtitle">
     <!-- FONT SIZE -->
     <div class="tse-row">
-      <span class="tse-label">גודל פונט</span>
+      <span class="tse-label">{{ 'editors.ui.fontSize' | transloco }}</span>
       <div class="tse-chips">
         <button *ngFor="let opt of sizeOptions" class="tse-chip tse-chip--size"
           [class.active]="textStyle.fontSize === opt.value"
-          (click)="patchStyle({ fontSize: opt.value })">{{ opt.label }}</button>
+          (click)="patchStyle({ fontSize: opt.value })">{{ opt.label | hmText }}</button>
       </div>
     </div>
 
     <!-- TEXT COLOR -->
     <div class="tse-row">
-      <span class="tse-label">צבע טקסט</span>
-      <app-color-picker [value]="textStyle.color" (valueChange)="patchStyle({ color: $event })"></app-color-picker>
+      <span class="tse-label">{{ 'editors.ui.textColor' | transloco }}</span>
+      <app-color-picker [value]="partColor('color')" (valueChange)="setPartColor('color', $event)"></app-color-picker>
     </div>
     </ng-container>
 
@@ -124,7 +133,7 @@
     <ng-container *ngIf="ctaConfig">
 
       <div class="tse-row tse-row--toggle">
-        <span class="tse-label">כפתור CTA</span>
+        <span class="tse-label">{{ 'editors.ui.ctaButton' | transloco }}</span>
         <label class="tse-switch">
           <input type="checkbox" [checked]="ctaConfig.visible"
             (change)="patchCta({ visible: $any($event.target).checked })">
@@ -135,14 +144,14 @@
       <ng-container *ngIf="ctaConfig.visible">
 
         <div class="tse-row">
-          <span class="tse-label">טקסט</span>
+          <span class="tse-label">{{ 'editors.ui.text' | transloco }}</span>
           <input class="tse-input" type="text" [value]="ctaConfig.label"
             (input)="patchCta({ label: $any($event.target).value })"
-            placeholder="תרמו עכשיו">
+            [placeholder]="'editors.ui.donateNow' | transloco">
         </div>
 
         <div class="tse-row">
-          <span class="tse-label">אייקון</span>
+          <span class="tse-label">{{ 'editors.ui.icon' | transloco }}</span>
           <div class="tse-icons">
             <button *ngFor="let ic of presetIcons" class="tse-icon-btn"
               [class.active]="ctaConfig.icon === ic"
@@ -153,16 +162,16 @@
         </div>
 
         <div class="tse-row">
-          <span class="tse-label">יישור כפתור</span>
+          <span class="tse-label">{{ 'editors.ui.buttonAlignment' | transloco }}</span>
           <div class="tse-chips">
             <button *ngFor="let opt of alignOptions" class="tse-chip"
               [class.active]="ctaConfig.align === opt.value"
-              (click)="patchCta({ align: opt.value })">{{ opt.label }}</button>
+              (click)="patchCta({ align: opt.value })">{{ opt.label | hmText }}</button>
           </div>
         </div>
 
         <div class="tse-row">
-          <span class="tse-label">צבע כפתור</span>
+          <span class="tse-label">{{ 'editors.ui.buttonColor' | transloco }}</span>
           <app-color-picker [value]="ctaConfig.color" (valueChange)="patchCta({ color: $event })"></app-color-picker>
         </div>
 

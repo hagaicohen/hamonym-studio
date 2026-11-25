@@ -1,5 +1,5 @@
 <div class="spp-wrap">
-  <label class="spp-label">{{ label }}</label>
+  <label class="spp-label">{{ label | hmText }}</label>
   <p class="spp-hint" *ngIf="hint">{{ hint }}</p>
 
   <div class="spp-row">
@@ -18,12 +18,12 @@
         <span class="spp-img"></span><span class="spp-strip"></span>
       </span>
 
-      <span class="spp-card-label">{{ opt.label }}</span>
-      <span class="spp-recommended" *ngIf="recommended === opt.value">מומלץ</span>
+      <span class="spp-card-label">{{ opt.label | hmText }}</span>
+      <span class="spp-recommended" *ngIf="recommended === opt.value">{{ 'studio.pickers.recommended' | transloco }}</span>
     </button>
   </div>
 
   <button type="button" class="spp-reset" *ngIf="value" (click)="onReset()">
-    ↺ חזרה להמלצה
+    {{ 'studio.pickers.backToTheRecommendation' | transloco }}
   </button>
 </div>

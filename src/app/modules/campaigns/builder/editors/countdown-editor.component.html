@@ -1,0 +1,60 @@
+<div class="cd" data-countdown-editor>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cdn-at-' + block.id">{{ 'builder.countdown.target' | transloco }}</label>
+    <input [id]="'cdn-at-' + block.id" class="cd-input" type="datetime-local" data-field="targetAt" [value]="localValue"
+      (change)="setTarget($any($event.target).value)">
+  </div>
+  <p class="cd-note" data-field="timezone">{{ 'builder.countdown.timezoneNote' | transloco: { zone: timeZone } }}</p>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cdn-title-' + block.id">{{ 'builder.countdown.title' | transloco }}</label>
+    <input [id]="'cdn-title-' + block.id" class="cd-input" type="text" data-field="title" maxlength="120" [value]="data.title ?? ''"
+      [placeholder]="'builder.countdown.titlePlaceholder' | transloco" (change)="set({ title: $any($event.target).value.trim() })">
+  </div>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cdn-exp-' + block.id">{{ 'builder.countdown.expiredText' | transloco }}</label>
+    <input [id]="'cdn-exp-' + block.id" class="cd-input" type="text" data-field="expiredText" maxlength="160" [value]="data.expiredText ?? ''"
+      [placeholder]="'builder.countdown.expiredPlaceholder' | transloco" (change)="set({ expiredText: $any($event.target).value.trim() })">
+  </div>
+  <label class="cd-toggle"><input type="checkbox" data-field="hideWhenExpired" [checked]="!!data.hideWhenExpired" (change)="set({ hideWhenExpired: $any($event.target).checked || undefined })"> {{ 'builder.countdown.hideWhenExpired' | transloco }}</label>
+  <label class="cd-toggle"><input type="checkbox" data-field="showSeconds" [checked]="data.showSeconds !== false" (change)="set({ showSeconds: $any($event.target).checked ? undefined : false })"> {{ 'builder.countdown.showSeconds' | transloco }}</label>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.countdown.style' | transloco }}</span>
+    <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.countdown.style' | transloco">
+      @for (s of ['boxes', 'inline']; track s) {
+        <button type="button" class="cd-chip" role="radio" [attr.data-style]="s" [class.active]="(data.style ?? 'boxes') === s" [attr.aria-checked]="(data.style ?? 'boxes') === s"
+          (click)="set({ style: s === 'boxes' ? undefined : $any(s) })">{{ (s === 'boxes' ? 'builder.countdown.styleBoxes' : 'builder.countdown.styleInline') | transloco }}</button>
+      }
+    </div>
+  </div>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.countdown.align' | transloco }}</span>
+    <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.countdown.align' | transloco">
+      @for (a of ['center', 'start']; track a) {
+        <button type="button" class="cd-chip" role="radio" [attr.data-align]="a" [class.active]="(data.align ?? 'center') === a" [attr.aria-checked]="(data.align ?? 'center') === a"
+          (click)="set({ align: a === 'center' ? undefined : $any(a) })">{{ (a === 'center' ? 'builder.commentsDesign.alignCenter' : 'builder.commentsDesign.alignStart') | transloco }}</button>
+      }
+    </div>
+  </div>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'cdn-color-' + block.id">{{ 'builder.commentsDesign.accent' | transloco }}</label>
+    <input [id]="'cdn-color-' + block.id" type="color" class="cd-color" data-field="accent" [value]="data.accentColor || '#583cd6'" (input)="set({ accentColor: $any($event.target).value })">
+    @if (data.accentColor) {
+      <button type="button" class="cd-link" (click)="set({ accentColor: undefined })">{{ 'builder.commentsDesign.accentReset' | transloco }}</button>
+    } @else {
+      <span class="cd-hint">{{ 'builder.commentsDesign.accentAuto' | transloco }}</span>
+    }
+  </div>
+
+  <button type="button" class="cd-section-head" data-section="design" data-typography-section (click)="open.design = !open.design" [attr.aria-expanded]="open.design">
+    {{ 'builder.commentsDesign.colors' | transloco }}<span class="cd-chevron" [class.open]="open.design" aria-hidden="true">›</span>
+  </button>
+  @if (open.design) {
+    <app-style-role-editor [roleLabel]="'builder.countdown.sectionSurface' | transloco" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+      [override]="data.surfaceStyles?.section" [resolvedBorderRadius]="16" (overrideChange)="setSurface('section', $event)" />
+    <app-style-role-editor [roleLabel]="'builder.countdown.unitSurface' | transloco" [showBackground]="true" [showBorderColor]="true" [showBorderRadius]="true"
+      [override]="data.surfaceStyles?.unit" [resolvedBorderRadius]="12" (overrideChange)="setSurface('unit', $event)" />
+    @for (r of roles; track r.role) {
+      <app-text-role-editor [roleLabel]="r.label | transloco" [override]="data.textStyles?.[r.role]" (overrideChange)="setText(r.role, $event)" />
+    }
+  }
+</div>

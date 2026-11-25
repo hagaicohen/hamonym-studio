@@ -1,0 +1,128 @@
+{
+  "dashboard": {
+    "dashboard": "דשבורד",
+    "toAlerts": "להתראות",
+    "goToAlerts": "מעבר להתראות",
+    "raisedInPeriod": "גויס בתקופה",
+    "noDataToCompare": "אין נתון להשוואה",
+    "n0NoChange": "0% ללא שינוי",
+    "vsPreviousPeriod": "לעומת התקופה הקודמת",
+    "donationsInPeriod": "תרומות בתקופה",
+    "activeCampaigns": "קמפיינים פעילים",
+    "outOfTotalCampaigns": "מתוך {{total}} קמפיינים",
+    "failedPayments": "תשלומים שנכשלו",
+    "fmtNotCollected": "{{fmt}} לא נגבו",
+    "noFailedPayments": "אין תשלומים שנכשלו",
+    "organizationStatus": "סטטוס העמותות",
+    "approvalStatusAdministratorNotesAnd": "מצב האישור, הערות המנהל והשלמות נדרשות לכל עמותה.",
+    "yourFirstCampaignStartsHere": "הקמפיין הראשון שלכם מתחיל כאן",
+    "activityWillAppearHereOnce": "כאן תופיע הפעילות לאחר יצירת קמפיין. אפשר להכין טיוטה כבר עכשיו; הפרסום וקבלת התרומות כפופים לאישורים ולהגדרות הקיימים.",
+    "newCampaign": "+ קמפיין חדש",
+    "alerts": "התראות",
+    "previous": "הקודם",
+    "next": "הבא",
+    "topAmbassadors": "שגרירים מובילים",
+    "allAmbassadors": "לכל השגרירים",
+    "noAmbassadorsYet": "אין עדיין שגרירים",
+    "allFailedPayments": "לכל התשלומים שנכשלו",
+    "lengthPluralOneOther": "{{length}} תשלומים נכשלו השבוע",
+    "fmtNotCollectedInTotal": "סה\"כ {{fmt}} שלא נגבו",
+    "reason": "סיבה",
+    "amount": "סכום",
+    "campaign": "קמפיין",
+    "date": "תאריך",
+    "noFailedPaymentsInThe": "אין תשלומים שנכשלו בתקופה המוצגת",
+    "recentDonations": "תרומות אחרונות",
+    "allDonations": "לכל התרומות",
+    "donor": "תורם",
+    "time": "זמן",
+    "noDonationsYet": "אין עדיין תרומות",
+    "raisedInTheLast30": "גיוסים ב-30 הימים האחרונים",
+    "allReports": "לכל הדוחות"
+  },
+  "nextAction": {
+    "rejected": "הבקשה נדחתה — יש לעיין בהערות המנהל",
+    "changesRequested": "נדרשים תיקונים לפני אישור העמותה",
+    "pendingReview": "הבקשה בבדיקה אצל מנהל הפלטפורמה",
+    "suspended": "פעילות העמותה הושעתה — יש לעיין בהערות המנהל",
+    "draft": "נשאר להשלים את פרטי העמותה",
+    "readyFirstCampaign": "העמותה מאושרת — אפשר ליצור את הקמפיין הראשון",
+    "ready": "העמותה מאושרת ומוכנה לפעילות",
+    "approvedIncomplete": "העמותה מאושרת — נשארו פרטים להשלמה"
+  },
+  "requirements": {
+    "entityType": "סוג הגוף",
+    "legalName": "שם הגוף הרשמי",
+    "registrationNumber": "מספר רישום",
+    "displayName": "שם לתצוגה",
+    "email": "דואר אלקטרוני",
+    "phone": "טלפון",
+    "description": "תיאור העמותה",
+    "logo": "לוגו",
+    "associationCertificate": "תעודת התאגדות",
+    "taxDocument": "אישור סעיף 46",
+    "contactFullName": "שם איש הקשר"
+  },
+  "statusCard": {
+    "unavailable": "לא ניתן לטעון את מצב ההשלמות של העמותה.",
+    "requiredDetails": "פרטים נדרשים להשלמה",
+    "checkMissing": "יש לבדוק ולהשלים את הפרטים שסומנו בחסר בהגדרות העמותה.",
+    "recommendations": "המלצות והשלמות נוספות — אינן חוסמות יצירת טיוטה",
+    "viewDetails": "צפייה בפרטים",
+    "fixAndResubmit": "תיקון והגשה מחדש",
+    "createFirstCampaign": "יצירת קמפיין ראשון",
+    "manageCampaigns": "ניהול הקמפיינים",
+    "completeDetails": "השלמת פרטים",
+    "rec": {
+      "logo": "הוספת לוגו",
+      "certificate": "תעודת התאגדות — ניתן להשלים בהמשך",
+      "cardcom": "בדיקת הגדרות CardCom — קבלת תרומות כפופה להגדרות הסליקה הקיימות",
+      "section46": "סעיף 46, אם קיים אישור — לצורך הטבת המס"
+    }
+  },
+  "otherOrganizations": {
+    "refreshFailed": "לא ניתן לרענן את סטטוס העמותות. יש לנסות שוב.",
+    "loadFailed": "לא ניתן לטעון את רשימת העמותות הנוספות. יש לנסות לרענן."
+  },
+  "errors": {
+    "loadFailed": "לא ניתן לטעון את נתוני העמותה. יש לנסות לרענן."
+  },
+  "cardDeclined": "כרטיס סירב",
+  "pctUp": "↑ לעומת חודש שעבר {{n}}%",
+  "pctDown": "↓ לעומת חודש שעבר {{n}}%",
+  "timeAgo": {
+    "now": "עכשיו",
+    "minutes": "לפני {{n}} דקות",
+    "hours": "לפני {{n}} שעות",
+    "days": "לפני {{n}} ימים"
+  },
+  "alerts": {
+    "noActiveCampaigns": {
+      "title": "אין קמפיינים פעילים כרגע",
+      "description": "פרסם קמפיין קיים או צור חדש כדי להתחיל לגייס"
+    },
+    "campaignPending": {
+      "description": "הקמפיין לא יצא לציבור עד לסיום הבדיקה"
+    },
+    "goal90": {
+      "description": "הגיעו כמעט עד היעד — הזמן לדחוף לסיום"
+    },
+    "noDonations14": {
+      "description": "שתף את הקמפיין מחדש כדי לחזור לפעילות"
+    },
+    "draftUnpublished": {
+      "description": "הקמפיין נשמר כטיוטה ומחכה לפרסום"
+    }
+  },
+  "alertActions": {
+    "profile": "לפרופיל העמותה",
+    "setUpProcessing": "הגדר סליקה",
+    "uploadDocument": "העלה מסמך",
+    "viewCampaign": "צפה בקמפיין",
+    "toCampaign": "לקמפיין",
+    "details": "לפירוט",
+    "toCampaigns": "לקמפיינים",
+    "continueEditing": "המשך עריכה"
+  },
+  "ofGoal": "{{pct}}% מהיעד"
+}

@@ -9,7 +9,6 @@
    top (not vertically centered mid-page), the page itself IS the
    background. 2026-09-24. */
 .mdp-page {
-  direction: rtl;
   min-height: 100dvh;
   width: 100%;
   /* Extra bottom padding — the trust footer is fixed to the viewport bottom
@@ -154,18 +153,18 @@
 }
 .mdp-currency-symbol {
   position: absolute;
-  right: 16px; top: 50%;
+  inset-inline-start: 16px; top: 50%;
   transform: translateY(-50%);
   font-weight: 800; color: #62728d; font-size: 16px;
   pointer-events: none;
 }
 .mdp-custom-amount {
   width: 100%;
-  padding: 14px 40px 14px 16px;
+  padding-block: 14px 14px; padding-inline: 40px 16px;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 15px; font-weight: 700;
-  text-align: right; direction: rtl;
+  text-align: start; 
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
@@ -176,7 +175,7 @@
    field just above it. */
 .mdp-installments {
   margin-bottom: 16px;
-  text-align: right;
+  text-align: start;
 }
 .mdp-installments-label {
   font-size: 13px; font-weight: 700; color: #0f2747;
@@ -212,7 +211,7 @@
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 13px; font-weight: 700;
-  text-align: center; direction: rtl;
+  text-align: center; 
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
@@ -258,7 +257,6 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  direction: rtl;
 }
 
 .mdp-sticky-bar {
@@ -433,3 +431,15 @@
     box-shadow: none;
   }
 }
+
+/* Campaign typography per content language (D-46); unset = unchanged. */
+.mdp-page { font-family: var(--hm-font-body, inherit); }
+.mdp-page :is(h1, h2, h3) { font-family: var(--hm-font-heading, inherit); }
+.mdp-page button { font-family: var(--hm-font-button, inherit); }
+
+/* Campaign amount-button layout (src/styles/amount-buttons.css) in this page's color. */
+.mdp-amounts { --hm-ab-primary: var(--mdp-primary, #0f2747); }
+
+/* English (LTR): the currency code follows the amount — at the field's end. */
+.mdp-currency-symbol:dir(ltr) { inset-inline-start: auto; inset-inline-end: 16px; font-size: 13px; }
+.mdp-custom-amount:dir(ltr) { padding-inline: 16px 52px; }

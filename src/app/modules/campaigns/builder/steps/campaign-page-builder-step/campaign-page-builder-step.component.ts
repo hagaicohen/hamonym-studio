@@ -1,4 +1,12 @@
+import { CampaignEnhancementsEditorComponent } from '../../editors/campaign-enhancements-editor.component';
+import { elementColor } from '../../../utils/element-color';
+import { statisticTextStyle, StatCardSize, statsPlacement, statCardSize, moveStatsItem, STATS_PRESETS, StatsPreset, StatsVisualLayout, applyStatsPreset, statsVisualLayout, statsVisualData } from '../../../utils/stats-visual-layout';
 import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
+import { AmountButtonsEditorComponent } from '../../editors/amount-buttons-editor.component';
+import { CommentsDesignEditorComponent } from '../../editors/comments-design-editor.component';
+import { CountdownEditorComponent } from '../../editors/countdown-editor.component';
+import { BadgeEditorComponent } from '../../editors/badge-editor.component';
+import { StickyCtaEditorComponent } from '../../editors/sticky-cta-editor.component';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -73,8 +81,13 @@ import { environment } from '../../../../../../environments/environment';
 import {
   LogoAppearanceEditorComponent, LogoShape, LogoSize,
 } from '../../../../../shared/ui/logo-appearance-editor/logo-appearance-editor.component';
-
+
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
+import { explicitSidebarSide, sidebarLayoutOf, withSidebarSide } from '../../../utils/sidebar-side';
+import type { ContentLang } from '../../../utils/content-i18n';
 export { BLOCK_GROUPS } from '../../block-catalog';
 
 const ADDABLE_BLOCKS: BlockType[] = [
@@ -87,7 +100,7 @@ const ADDABLE_BLOCKS: BlockType[] = [
 @Component({
   selector: 'app-campaign-page-builder-step',
   standalone: true,
-  imports: [HmIconComponent, 
+  imports: [CampaignEnhancementsEditorComponent, AmountButtonsEditorComponent, CommentsDesignEditorComponent, CountdownEditorComponent, BadgeEditorComponent, StickyCtaEditorComponent, HmTextPipe, TranslocoPipe, HmIconComponent, 
     CommonModule, FormsModule, LucideAngularModule, TextStyleEditorComponent,
     TextRoleEditorComponent, StyleRoleEditorComponent,
     ColorPickerComponent, TemplatePickerComponent, LogoAppearanceEditorComponent, SectionPresentationPickerComponent,
@@ -170,10 +183,10 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   isUploadingLogo = false;
   logoDesignOpen = false;
   readonly LOGO_POSITIONS: { pos: 'left' | 'center' | 'right' | 'above'; label: string }[] = [
-    { pos: 'right', label: 'ימין' },
-    { pos: 'center', label: 'מרכז' },
-    { pos: 'left', label: 'שמאל' },
-    { pos: 'above', label: 'מעל' },
+    { pos: 'right', label: 'builder.page.align.right' },
+    { pos: 'center', label: 'builder.page.align.center' },
+    { pos: 'left', label: 'builder.page.align.left' },
+    { pos: 'above', label: 'builder.page.align.above' },
   ];
 
   setHovered(id: string | null): void { this.state.setHoveredBlock(id, 'builder'); }
@@ -359,6 +372,10 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     return parentBlock ? this.containerChildren(parentBlock, blocks) : this.topLevelBlocks(blocks);
   }
 
+  moveBelowHeader(block: CampaignBlock): void {
+    this.state.moveBlockTo(block.id, null, 0, block.placement === 'below-header' ? null : 'below-header');
+  }
+
   moveInScope(id: string, parentBlock: CampaignBlock | null, blocks: CampaignBlock[], dir: -1 | 1): void {
     const scopeIds = this.scopeBlocksFor(parentBlock, blocks).map(b => b.id);
     if (dir < 0) {
@@ -398,7 +415,10 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.showTemplatePicker = false;
   }
 
+  canRemove(id: string): boolean { return this.state.canRemoveBlock(id); }
+
   removeBlock(id: string): void {
+    if (!this.canRemove(id)) return;
     if (this.editingBlockId === id) this.editingBlockId = null;
     this.state.removeBlock(id);
   }
@@ -412,6 +432,9 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
       this.editingBlockId = this.editingBlockId === id ? null : id;
     }
   }
+
+  textTitleShown(block:CampaignBlock):boolean {const data=block.data as RichTextBlockData;if(data.showTitle!==undefined)return data.showTitle;const parent=this.state.draft.blocks.find(b=>(b.data as ContainerBlockData).childBlockIds?.includes(block.id));return !parent||!!(parent.data as ContainerBlockData).bodyRole||!!block.placement||(['desktop','mobile'] as const).some(d=>!!block.responsive?.[d]?.placement&&block.responsive[d]!.placement!=='content');}
+  setTextTitleShown(block:CampaignBlock,showTitle:boolean):void {this.state.updateBlockData(block.id,{...block.data,showTitle} as RichTextBlockData);}
 
   updateLabel(id: string, label: string): void {
     this.state.updateBlockLabel(id, label);
@@ -581,6 +604,21 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     this.state.swapContainerChildren(id);
   }
 
+  // The sidebar side for the content language being edited: shown on the
+  // container that makes the sidebar layout (utils/sidebar-side.ts).
+  get contentLang(): ContentLang { return this.state.contentLanguage; }
+  isSidebarLayoutContainer(block: CampaignBlock, draft: CampaignDraft): boolean {
+    const layout = sidebarLayoutOf(draft);
+    if (!layout) return false;
+    return layout.kind === 'row' ? layout.containerId === block.id : !!(block.data as ContainerBlockData).railZone;
+  }
+  sidebarSideChoice(draft: CampaignDraft): 'auto' | 'left' | 'right' {
+    return explicitSidebarSide(draft, this.contentLang) ?? 'auto';
+  }
+  setSidebarSide(side: 'left' | 'right' | null): void {
+    this.state.patch({ layout: withSidebarSide(this.state.draft.layout, this.contentLang, side) });
+  }
+
   onCampaignBgImageSelected(event: Event, draft: any): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -608,9 +646,9 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
 
   // Stats
   readonly statLabels: Record<string, string> = {
-    target: 'יעד הגיוס', raised: 'גויס עד כה', percent: 'אחוז הגיוס',
-    supporters: 'תומכים', start_date: 'תחילת הקמפיין',
-    end_date: 'תאריך סיום', days_remaining: 'ימים נותרו', ambassadors: 'שגרירים',
+    target: 'builder.page.stats.target', raised: 'builder.page.stats.raised', percent: 'builder.page.stats.percent',
+    supporters: 'builder.page.stats.supporters', start_date: 'builder.page.stats.startDate',
+    end_date: 'builder.page.stats.endDate', days_remaining: 'builder.page.stats.daysRemaining', ambassadors: 'builder.page.stats.ambassadors',
   };
 
   readonly statIcons: Record<string, LucideIconData> = {
@@ -618,6 +656,61 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     start_date: Calendar, end_date: Calendar, days_remaining: AlarmClock, ambassadors: Star,
   };
 
+  readonly statsPresets = STATS_PRESETS.filter(p=>['strip','featured','balanced','topbar'].includes(p.id));
+  readonly extraStatsPresets = STATS_PRESETS.filter(p=>['compact','sidebar'].includes(p.id));
+  trackStatThumbnail(index:number,cell:{key:string}):string {return cell.key;}
+  statsPresetProgress(data:StatsBlockData,preset:StatsPreset):string {return preset==='topbar'?'bar':data.visualLayout?.progress??'circle';}
+  readonly statCardSizes:StatCardSize[] = ['normal','wide','featured'];
+  statsThumbnail(block:CampaignBlock,preset:StatsPreset) {const max=this.statsCanvasInfo(block).maxColumns;return statsPlacement(applyStatsPreset(block.data as StatsBlockData,preset),max===1?240:max===2?480:Infinity);}
+  statsCanvasInfo(block:CampaignBlock) { return this.state.statisticsCanvas()[block.id] ?? statsPlacement(block.data as StatsBlockData); }
+  selectedStatItem(block:CampaignBlock):StatItem|undefined {
+    const selected=this.state.selectedStatistic();
+    return (block.data as StatsBlockData).items.find(i=>i.visible && selected?.blockId===block.id && i.key===selected.key) ?? this.sortedStatItems(block.data as StatsBlockData).find(i=>i.visible);
+  }
+  selectStatItem(block:CampaignBlock,key:string):void { this.state.selectedStatistic.set({blockId:block.id,key}); }
+  statLabelKey(key:string):string {return 'publicPage.campaignPreview.stat.' + (({days_remaining:'daysRemaining',start_date:'startDate',end_date:'endDate'} as Record<string,string>)[key] || key);}
+  hasStatProgress(data:StatsBlockData):boolean {return data.items.some(i=>i.visible && i.key==='percent');}
+  statSize=statCardSize;
+  sizeUnavailable(block:CampaignBlock):boolean {return this.statsCanvasInfo(block).columns<2 || ((block.data as StatsBlockData).visualLayout?.preset==='topbar' && this.selectedStatItem(block)?.key==='percent');}
+  setStatCardSize(block:CampaignBlock,size:StatCardSize):void {
+    const selected=this.selectedStatItem(block);if(!selected || this.sizeUnavailable(block))return;
+    const data=block.data as StatsBlockData;
+    this.state.updateBlockData(block.id,{...data,items:data.items.map(i=>i.key===selected.key?{...i,size}:i)});
+  }
+  moveSelectedStat(block:CampaignBlock,step:number):void {
+    const selected=this.selectedStatItem(block),data=block.data as StatsBlockData;
+    const items=this.sortedStatItems(data).filter(i=>i.visible),at=items.findIndex(i=>i.key===selected?.key),target=items[at+step];
+    if(selected && target){this.state.selectedStatistic.set({blockId:block.id,key:selected.key});this.state.updateBlockData(block.id,{...data,items:moveStatsItem(data.items,selected.key,target.key,true)});}
+  }
+  statMoveDisabled(block:CampaignBlock,step:number):boolean {const items=this.sortedStatItems(block.data as StatsBlockData).filter(i=>i.visible);return !items[items.findIndex(i=>i.key===this.selectedStatItem(block)?.key)+step];}
+
+  readonly statsVisual = statsVisualData;
+  clearStatsLayout(id: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (block?.type === 'stats') this.state.updateBlockData(id, { ...block.data, visualLayout: undefined } as StatsBlockData);
+  }
+  setStatsPreset(id: string, preset: StatsPreset): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (block?.type === 'stats') {const data=applyStatsPreset(block.data as StatsBlockData,preset);const first=[...data.items].sort((a,b)=>a.order-b.order).find(i=>i.visible);if(first)this.state.selectedStatistic.set({blockId:id,key:first.key});this.state.updateBlockData(id,data);}
+  }
+  setStatsLayout(id: string, field: keyof StatsVisualLayout, value: string | number): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (block?.type !== 'stats') return;
+    const data = block.data as StatsBlockData;
+    if(field==='columns' && Number(value)>this.statsCanvasInfo(block).maxColumns)return;
+    const count = Math.max(1, data.items.filter(i => i.visible).length);
+    const requested = field === 'rows' ? { columns: Math.min(4, Math.max(1, Math.ceil(count / Math.max(1, Number(value) || 1)))) } : { [field]: value };
+    const visualLayout = {...statsVisualLayout({ ...(data.visualLayout ?? { preset: 'balanced' }), ...requested }),version:data.visualLayout?.version};
+    visualLayout.rows = Math.max(1, Math.ceil(count / visualLayout.columns));
+    this.state.updateBlockData(id, { ...data, visualLayout });
+  }
+  setDonationPresentation(id: string, field: string, value: string | number): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (block?.type !== 'donation-widget') return;
+    const data = block.data as DonationWidgetBlockData;
+    const next = field === 'subtitlePosition' ? (value === 'bottom' ? 'bottom' : 'top') : field === 'align' ? value : Math.max(0, Math.min(48, Number(value) || 0));
+    this.state.updateBlockData(id, { ...data, presentation: { ...data.presentation, [field]: next } });
+  }
   sortedStatItems(data: StatsBlockData): StatItem[] {
     return [...data.items].sort((a, b) => a.order - b.order);
   }
@@ -664,6 +757,34 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     };
   }
 
+  // The manager's own label for a stat (empty = the default label for its key).
+  setStatLabelVisibility(id: string, key: string, show: boolean): void {
+    const block = this.state.draft.blocks.find(b => b.id === id && b.type === 'stats');
+    if (!block) return;
+    const data = block.data as StatsBlockData;
+    const items = data.items.map(item => {
+      if (item.key !== key) return item;
+      const next = { ...item };
+      if (show) delete next.showLabel; else next.showLabel = false;
+      return next;
+    });
+    this.state.updateBlockData(id, { ...data, items });
+  }
+
+  setStatLabel(id: string, key: string, value: string): void {
+    const block = this.state.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as StatsBlockData;
+    const label = value.trim();
+    const items = data.items.map(i => {
+      if (i.key !== key) return i;
+      const next = { ...i, label };
+      if (!label) delete (next as { label?: string }).label;
+      return next;
+    });
+    this.state.updateBlockData(id, { ...data, items } as StatsBlockData);
+  }
+
   toggleStatItem(id: string, key: string, visible: boolean): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
@@ -692,16 +813,16 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // The four main donation layouts; the earlier visual variants stay
   // selectable (and keep rendering exactly as before) under "more".
   readonly donationLayoutOptions: { value: ConversionWidgetLayout; label: string }[] = [
-    { value: 'classic',          label: 'קלאסי' },
-    { value: 'compact-bar',      label: 'קומפקטי' },
-    { value: 'conversion-first', label: 'ממוקד המרה' },
-    { value: 'modern',           label: 'מודרני' },
+    { value: 'classic',          label: 'builder.page.layouts.classic' },
+    { value: 'compact-bar',      label: 'builder.page.layouts.compact' },
+    { value: 'conversion-first', label: 'builder.page.layouts.conversionFirst' },
+    { value: 'modern',           label: 'builder.page.layouts.modern' },
   ];
   readonly moreDonationLayoutOptions: { value: ConversionWidgetLayout; label: string }[] = [
-    { value: 'unified',          label: 'מאוחד' },
-    { value: 'compact',          label: 'צפוף' },
-    { value: 'hero',             label: 'כרטיס Hero' },
-    { value: 'split-horizontal', label: 'פיצול אופקי' },
+    { value: 'unified',          label: 'builder.page.layouts.unified' },
+    { value: 'compact',          label: 'builder.page.layouts.dense' },
+    { value: 'hero',             label: 'builder.page.layouts.heroCard' },
+    { value: 'split-horizontal', label: 'builder.page.layouts.splitHorizontal' },
   ];
 
   // What the page actually renders, Style default included, so the
@@ -773,6 +894,14 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   updateTextStyleRole(id: string, role: string, override: Partial<TextStyle> | undefined): void {
     const block = this.state.draft.blocks.find(b => b.id === id);
     if (!block) return;
+    const selected=this.state.selectedStatistic();
+    if(block.type==='stats' && (block.data as StatsBlockData).visualLayout && selected?.blockId===id && (role==='value'||role==='label')){
+      const data=block.data as StatsBlockData;
+      this.state.updateBlockData(id,{...data,items:data.items.map(item=>{
+        if(item.key!==selected.key)return item;
+        const textStyles={...item.textStyles};if(override)textStyles[role]=override;else delete textStyles[role];return {...item,textStyles};
+      })});return;
+    }
     const data = block.data as { textStyles?: Record<string, Partial<TextStyle>> };
     const textStyles = { ...(data.textStyles ?? {}) };
     if (override) textStyles[role] = override;
@@ -822,7 +951,19 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
     }
   }
 
+  statsTextOverride(block:CampaignBlock,role:'value'|'label'):Partial<TextStyle>|undefined {
+    const data=block.data as StatsBlockData,selected=this.state.selectedStatistic();
+    const item=data.visualLayout && selected?.blockId===block.id ? data.items.find(i=>i.key===selected.key && i.visible) : undefined;
+    return item?item.textStyles?.[role]:data.textStyles?.[role];
+  }
   statsRoleResolvedColor(draft: CampaignDraft, role: StatsTextRole, data: StatsBlockData): string {
+    const selected=this.state.selectedStatistic();
+    if(selected && role!=='sectionTitle' && this.state.draft.blocks.find(b=>b.id===selected.blockId)?.data===data){
+      const item=data.items.find(i=>i.key===selected.key);
+      const inherited=item && elementColor(statisticTextStyle(data,item,role),this.state.contentLanguage);
+      if(inherited)return inherited;
+    }
+
     const theme = draft.layout.theme;
     switch (role) {
       case 'sectionTitle': return resolveRoleColor(data.titleColor, LEGACY_THEME_COLOR.secondaryColor, theme, 'secondaryColor');
@@ -970,9 +1111,9 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // internal `value`s are the real OpeningComposition literals, unchanged,
   // consumed by state/resolver/renderer exactly as before.
   readonly OPENING_COMPOSITIONS: { value: OpeningComposition; label: string }[] = [
-    { value: 'classic', label: 'קלאסי' },
-    { value: 'story-first', label: 'הסיפור במרכז' },
-    { value: 'fundraising-split', label: 'גיוס ומדיה' },
+    { value: 'classic', label: 'builder.page.layouts.classic' },
+    { value: 'story-first', label: 'builder.page.opening.storyFirst' },
+    { value: 'fundraising-split', label: 'builder.page.opening.fundraisingSplit' },
   ];
 
   // The actually-rendered composition right now (explicit if set, else the
@@ -1022,21 +1163,21 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // steps, which ARE gated post-publish, silently making them
   // uneditable for any already-published campaign).
   readonly REWARDS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
-    { value: 'cards', label: 'כרטיסים' },
-    { value: 'list', label: 'קומפקטי' },
-    { value: 'image', label: 'תמונה מודגשת' },
+    { value: 'cards', label: 'builder.page.presentation.cards' },
+    { value: 'list', label: 'builder.page.layouts.compact' },
+    { value: 'image', label: 'builder.page.presentation.image' },
   ];
   readonly DONORS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
-    { value: 'cards', label: 'כרטיסים' },
-    { value: 'list', label: 'רשימה' },
+    { value: 'cards', label: 'builder.page.presentation.cards' },
+    { value: 'list', label: 'builder.page.presentation.list' },
   ];
   readonly AMBASSADORS_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
-    { value: 'cards', label: 'כרטיסים' },
-    { value: 'list', label: 'רשימה קומפקטית' },
+    { value: 'cards', label: 'builder.page.presentation.cards' },
+    { value: 'list', label: 'builder.page.presentation.compactList' },
   ];
   readonly UPDATES_PRESENTATION_OPTIONS: { value: SectionPresentation; label: string }[] = [
-    { value: 'cards', label: 'כרטיסים' },
-    { value: 'list', label: 'רשימה' },
+    { value: 'cards', label: 'builder.page.presentation.cards' },
+    { value: 'list', label: 'builder.page.presentation.list' },
   ];
 
   recommendedSectionPresentation(draft: CampaignDraft, type: PresentableSection): SectionPresentation {
@@ -1109,7 +1250,7 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // bodyText, it just happens that its own "automatic" is the Style's seed
   // color rather than something derived from another field.
   styleFieldStatusLabel(field: StyleColorField): string {
-    return this.hasStyleOverride(field) ? 'מותאם אישית' : 'אוטומטי';
+    return this.hasStyleOverride(field) ? 'builder.page.styleField.custom' : 'builder.page.styleField.automatic';
   }
 
   get currentPaletteSwatches(): string[] {
@@ -1153,9 +1294,9 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // comment for why this reuses the existing (previously dead) logoStripAlign
   // field instead of inventing a new one.
   readonly LOGO_ALIGNS: { align: 'right' | 'center' | 'left'; label: string }[] = [
-    { align: 'right', label: 'ימין' },
-    { align: 'center', label: 'מרכז' },
-    { align: 'left', label: 'שמאל' },
+    { align: 'right', label: 'builder.page.align.right' },
+    { align: 'center', label: 'builder.page.align.center' },
+    { align: 'left', label: 'builder.page.align.left' },
   ];
   setLogoStripAlign(align: 'right' | 'center' | 'left'): void {
     this.state.patch({ logoStripAlign: align });
@@ -1210,8 +1351,8 @@ export class CampaignPageBuilderStepComponent implements OnInit, OnDestroy {
   // evergreen cover photo with a campaign-specific promotional banner.
   blockTypeLabel(type: BlockType): string {
     if (type === 'hero') {
-      if (this.ownerType === 'partner') return 'קאבר העסק';
-      if (this.ownerType === 'campaign-partner') return 'באנר המבצע';
+      if (this.ownerType === 'partner') return 'builder.page.hero.partnerCover';
+      if (this.ownerType === 'campaign-partner') return 'builder.page.hero.campaignPartnerBanner';
       return BLOCK_LABELS[type];
     }
     return BLOCK_LABELS[type] ?? type;

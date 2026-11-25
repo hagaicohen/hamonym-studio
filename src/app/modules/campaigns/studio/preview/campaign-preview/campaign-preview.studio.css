@@ -50,7 +50,7 @@
 .hm-hero-part-hide {
   position: absolute;
   top: -10px;
-  left: -10px;
+  inset-inline-end: -10px;
   z-index: 3;
   width: 22px; height: 22px;
   padding: 0;
@@ -68,7 +68,7 @@
 .hm-hero-part-grip {
   position: absolute;
   top: -10px;
-  right: -10px;
+  inset-inline-start: -10px;
   z-index: 3;
   width: 22px; height: 22px;
   display: flex; align-items: center; justify-content: center;
@@ -87,9 +87,8 @@
 
 .hm-hero-dropstrip {
   display: flex;
-  direction: rtl;
   gap: 8px;
-  padding: 8px clamp(16px, 5vw, 48px);
+  padding-block: 8px 5vw,; padding-inline: clamp(16px, 48px);
 }
 .hm-hero-dropstrip--on-hero {
   position: absolute;
@@ -165,3 +164,13 @@
   height: 16px;
 }
 
+
+/* Editor-only handles live beside the copy, never over its glyphs. */
+.hm-hero-part>.hm-hero-part-hide,.hm-hero-part>.hm-hero-part-grip{top:0;inline-size:24px;block-size:24px;opacity:0;pointer-events:none}.hm-hero-part>.hm-hero-part-hide{inset-inline-end:-28px}.hm-hero-part>.hm-hero-part-grip{inset-inline-start:-28px}.hm-hero-part:hover>.hm-hero-part-hide,.hm-hero-part:focus-within>.hm-hero-part-hide,.hm-hero-part>.hm-hero-part-hide:focus-visible{opacity:1;pointer-events:auto}.hm-hero-part:hover>.hm-hero-part-grip,.hm-hero-part:focus-within>.hm-hero-part-grip{opacity:1}
+
+/* Insertion controls straddle block edges; only the editing canvas may overflow. */
+.campaign-page--visual-editing .block-wrap--editable,
+.campaign-page--visual-editing .sidebar-rail { overflow: visible; }
+
+/* Reserve room for the first insertion control below a sticky campaign header. */
+.campaign-page--visual-editing .sidebar-rail-inner::before { content: ''; display: block; block-size: 16px; }

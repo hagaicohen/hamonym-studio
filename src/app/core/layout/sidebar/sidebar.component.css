@@ -4,7 +4,7 @@
   width: 260px;
   background: white;
   border-top: 1px solid #e2e8f0;
-  border-left: 1px solid #e2e8f0;
+  border-inline-end: 1px solid #e2e8f0;
   padding: 24px 16px;
   box-sizing: border-box;
   overflow-y: auto;
@@ -96,7 +96,7 @@
   .sidebar {
     position: fixed;
     top: var(--header-height, 72px);
-    right: 0;
+    inset-inline-start: 0;
     width: 260px;
     height: calc(100vh - var(--header-height, 72px));
     transform: translateX(100%);
@@ -108,3 +108,5 @@
     transform: translateX(0);
   }
 }
+
+@media (max-width: 768px) { .sidebar:dir(ltr):not(.mobile-open) { transform: translateX(-100%); } }

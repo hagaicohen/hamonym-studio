@@ -5,7 +5,9 @@ import {
   LucideAngularModule, Circle, CircleCheck,
   Target, TrendingUp, Zap, LayoutGrid, Repeat,
 } from 'lucide-angular';
-import { CampaignStudioStateService, CampaignFundingType, CampaignLifecycle, FUNDING_TYPE_LABELS } from '../../../../campaigns/services/campaign-studio-state.service';
+import { CampaignStudioStateService, CampaignFundingType, CampaignLifecycle } from '../../../../campaigns/services/campaign-studio-state.service';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
 
 interface CampaignTypeOption {
   id: CampaignFundingType;
@@ -24,7 +26,7 @@ interface LifecycleOption {
 @Component({
   selector: 'app-campaign-type-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [HmTextPipe, TranslocoPipe, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-type-step.component.html',
   styleUrls: ['./campaign-type-step.component.css'],
 })
@@ -39,8 +41,8 @@ export class CampaignTypeStepComponent implements OnInit {
   // First decision in this step (per docs/המונים – עדכונים.pdf) — gates the
   // funding-type default below it. Orthogonal field, see CampaignLifecycle.
   readonly lifecycleOptions: LifecycleOption[] = [
-    { id: 'one-time', title: 'חד־פעמי', description: 'מטרה מוגדרת עם תאריך התחלה וסיום', icon: Target },
-    { id: 'ongoing',  title: 'מתמשך',   description: 'גיוס שוטף ללא תאריך סיום, ביעד חודשי', icon: Repeat },
+    { id: 'one-time', title: 'builder.lifecycle.oneTime', description: 'builder.lifecycle.oneTimeDesc', icon: Target },
+    { id: 'ongoing',  title: 'builder.lifecycle.ongoing',   description: 'builder.lifecycle.ongoingDesc', icon: Repeat },
   ];
 
   // Race preset is chosen earlier in the flow (campaign-preset-picker, before
@@ -119,9 +121,9 @@ export class CampaignTypeStepComponent implements OnInit {
   // definition of 'ongoing'. Only shown (implicitly, fixed) via the ongoing
   // branch above, never as a selectable card.
   readonly campaignTypes: CampaignTypeOption[] = [
-    { id: 'all-or-nothing', title: FUNDING_TYPE_LABELS['all-or-nothing'], description: 'הכסף יועבר רק אם היעד הושג במלואו',      icon: Target     },
-    { id: 'flexible',       title: FUNDING_TYPE_LABELS['flexible'],       description: 'כל סכום שיגויס יועבר לעמותה',           icon: TrendingUp  },
-    { id: 'matching',       title: FUNDING_TYPE_LABELS['matching'],       description: 'כל תרומה מוכפלת לפי יחס שתקבעו',         icon: Zap        },
+    { id: 'all-or-nothing', title: 'campaignsList.funding.all-or-nothing', description: 'builder.funding.allOrNothingDesc',      icon: Target     },
+    { id: 'flexible',       title: 'campaignsList.funding.flexible',       description: 'builder.funding.flexibleDesc',           icon: TrendingUp  },
+    { id: 'matching',       title: 'campaignsList.funding.matching',       description: 'builder.funding.matchingDesc',         icon: Zap        },
   ];
 
   selectType(type: CampaignFundingType): void { this.state.patch({ fundingType: type }); }

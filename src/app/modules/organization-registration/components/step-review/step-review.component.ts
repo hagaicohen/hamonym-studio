@@ -79,14 +79,14 @@ export class StepReviewComponent implements OnInit {
   get completionChecks(): OrganizationCheck[] {
     const state = this.state();
     return [
-      { label: 'פרטי העמותה', ok: this.stateService.isProfileComplete },
-      { label: 'לוגו', ok: !!(state.logoFile || state.logoPreview), detail: 'ניתן להשלים בהמשך בהגדרות העמותה.' },
+      { label: 'פרטי הארגון או העסק', ok: this.stateService.isProfileComplete },
+      { label: 'לוגו', ok: !!(state.logoFile || state.logoPreview), detail: 'ניתן להשלים בהמשך בהגדרות הגוף.' },
       ...organizationHealthChecks(buildPayload(state), 0)
         .filter(check => check.label !== 'קמפיין קיים')
         .map(check => check.label === 'אישור מס' ? { ...check, detail: 'רלוונטי לעמותה בעלת אישור סעיף 46 בלבד. העלאה אינה אימות האישור.' } : check),
       state.paymentMethod === 'credit-card'
         ? { label: 'כרטיס אשראי לגביית עמלות', ok: !!state.billingCard }
-        : { label: 'הרשאת מס״ב', ok: false, detail: 'יש להשלים בהגדרות העמותה לאחר ההרשמה.' },
+        : { label: 'הרשאת מס״ב', ok: false, detail: 'יש להשלים בהגדרות הגוף לאחר ההרשמה.' },
     ];
   }
 

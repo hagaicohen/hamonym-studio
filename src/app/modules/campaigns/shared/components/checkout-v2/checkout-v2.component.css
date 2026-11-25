@@ -20,7 +20,6 @@
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
-  direction: rtl;
 }
 
 .cv2-drawer {
@@ -36,7 +35,7 @@
 }
 
 @keyframes cv2DrawerIn {
-  from { transform: translateX(100%); }
+  from { transform: translateX(calc(100% * var(--hm-dir-sign, 1))); }
   to   { transform: translateX(0); }
 }
 
@@ -93,7 +92,7 @@
   z-index: 5;
   border-radius: 16px 16px 0 0; /* matches the outer card's own top corners */
 }
-.cv2-drawer.cv2-drawer--page .cv2-header-brand { padding-left: 0; }
+.cv2-drawer.cv2-drawer--page .cv2-header-brand { padding-inline-end: 0; }
 .cv2-drawer.cv2-drawer--page .cv2-body {
   flex: 1 0 auto;
   overflow: visible;
@@ -126,7 +125,7 @@
 .cv2-close {
   position: absolute;
   top: 14px;
-  left: 16px;
+  inset-inline-end: 16px;
   width: 32px; height: 32px;
   border-radius: 50%;
   border: none;
@@ -143,7 +142,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-left: 40px; /* room for the close button */
+  padding-inline-end: 40px; /* room for the close button */
   margin-bottom: 14px;
 }
 
@@ -157,10 +156,10 @@
   text-align: center;
 }
 .cv2-logo-row.cv2-align-right, .cv2-title-row.cv2-align-right, .cv2-subtitle-row.cv2-align-right {
-  justify-content: flex-start; text-align: right;
+  justify-content: flex-start; text-align: start;
 }
 .cv2-logo-row.cv2-align-left, .cv2-title-row.cv2-align-left, .cv2-subtitle-row.cv2-align-left {
-  justify-content: flex-end; text-align: left;
+  justify-content: flex-end; text-align: end;
 }
 
 .cv2-logo {
@@ -318,7 +317,7 @@
 }
 .cv2-currency-symbol {
   position: absolute;
-  right: 14px;
+  inset-inline-start: 14px;
   font-size: 15px;
   font-weight: 700;
   color: #94a3b8;
@@ -326,7 +325,7 @@
 }
 .cv2-custom-amount {
   width: 100%;
-  padding: 13px 34px 13px 14px;
+  padding-block: 13px 13px; padding-inline: 34px 14px;
   border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   font-size: 15px;
@@ -480,13 +479,6 @@
   color: #94a3b8;
 }
 
-.cv2-dedication-note {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: #94a3b8;
-  line-height: 1.4;
-}
-
 .cv2-field-input {
   padding: 13px 14px;
   border: 1.5px solid #e2e8f0;
@@ -495,7 +487,6 @@
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
-  direction: rtl;
   background: #f8fafc;
   width: 100%;
 }
@@ -516,10 +507,10 @@
 }
 
 .cv2-field-input-wrap { position: relative; display: flex; align-items: center; }
-.cv2-field-input-wrap .cv2-field-input { padding-left: 36px; }
+.cv2-field-input-wrap .cv2-field-input { padding-inline-end: 36px; }
 .cv2-field-status-icon {
   position: absolute;
-  left: 12px;
+  inset-inline-end: 12px;
   font-size: 14px;
   font-weight: 700;
   color: #22c55e;
@@ -629,7 +620,7 @@
   flex: 0 1 260px;
   width: auto;
   max-width: 260px;
-  margin-right: auto;
+  margin-inline-start: auto;
   padding: 14px 20px; /* ~46px total height with this font-size */
   border: none;
   border-radius: 999px;
@@ -760,7 +751,7 @@
 
   /* Near/full-width CTA on mobile (2026-09-24) — the desktop cap above
      doesn't apply here; back to filling the remaining row space. */
-  .cv2-cta { flex: 1 1 auto; max-width: none; margin-right: 0; }
+  .cv2-cta { flex: 1 1 auto; max-width: none; margin-inline-start: 0; }
 
   /* Page mode on mobile stays full-bleed (2026-09-24) — the desktop-only
      "subtle card" treatment above only makes sense with visible page
@@ -780,3 +771,23 @@
     border-radius: 0;
   }
 }
+
+/* Donation currency (2026-11) -- same segmented control as the frequency toggle. */
+.cv2-currency-switch { display: flex; gap: 6px; margin-bottom: 12px; padding: 4px; border: 1.5px solid #dbe3ea; border-radius: 10px; }
+.cv2-currency-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 9px 4px; border: none; border-radius: 7px;
+  background: transparent; color: #62728d; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; transition: all .2s ease; }
+.cv2-currency-btn.is-selected { background: var(--cv2-primary, #0f2747); color: #fff; }
+.cv2-currency-btn:focus-visible, .cv2-frequency-btn:focus-visible { outline: 2px solid var(--cv2-primary, #583cd6); outline-offset: 2px; }
+.cv2-frequency-btn:disabled { opacity: .45; cursor: not-allowed; }
+.cv2-currency-notice { margin: -4px 0 12px; padding: 6px 10px; border-radius: 6px; background: #fffbeb; color: #92400e; font-size: 13px; text-align: center; }
+.cv2-currency-charge { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: #f1f5f9; color: #0f172a; font-size: 14px; font-weight: 600; text-align: center; }
+
+/* Campaign amount-button layout (src/styles/amount-buttons.css) in this checkout's color. */
+.cv2-amounts { --hm-ab-primary: var(--cv2-primary, #0f2747); }
+
+/* English (LTR): the currency code follows the amount — at the field's end. */
+.cv2-currency-symbol:dir(ltr) { inset-inline-start: auto; inset-inline-end: 14px; font-size: 13px; }
+.cv2-custom-amount:dir(ltr) { padding-inline: 14px 48px; }
+
+.cv2-drawer--page .cv2-campaign-title { white-space: normal; overflow-wrap: anywhere; }
+.cv2-campaign-title :is(p) { margin: 0; }

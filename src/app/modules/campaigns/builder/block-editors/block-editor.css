@@ -57,7 +57,7 @@
 .split-slider { width: 100%; accent-color: #7c3aed; }
 .spacing-row { display: flex; align-items: center; gap: 10px; }
 .spacing-label { font-size: 12px; font-weight: 600; color: #64748b; min-width: 44px; }
-.spacing-val { font-size: 11px; color: #94a3b8; min-width: 36px; text-align: left; }
+.spacing-val { font-size: 11px; color: #94a3b8; min-width: 36px; text-align: end; }
 .direction-toggle {
   display: inline-flex;
   background: #f1f5f9;
@@ -86,3 +86,9 @@
   color: #7c3aed;
   box-shadow: 0 1px 4px rgba(0,0,0,0.10);
 }
+
+.text-box-controls{padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;gap:10px}.text-padding-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.text-align-buttons{display:flex;gap:6px}.text-align-buttons button{flex:1;border:1px solid #d5dceb;border-radius:6px;background:white;padding:7px;cursor:pointer}
+
+.text-spacing-slider{display:grid;gap:4px;min-width:0}.text-spacing-label{display:flex;align-items:center;justify-content:space-between;gap:8px}.text-spacing-value{display:flex;align-items:center;gap:3px;font-size:11px;color:#64748b;direction:ltr}.text-spacing-value input{width:54px;min-width:0;box-sizing:border-box;padding:4px;border:1px solid #d5dceb;border-radius:6px;font:inherit;text-align:center;background:white}.text-spacing-slider input[type=range]{width:100%;min-width:0;margin:0;accent-color:#7c3aed;cursor:pointer}.text-auto{font-size:10px;color:#7c3aed;margin-inline-start:6px}.text-segments{display:flex;gap:3px;padding:3px;background:#eef0f5;border-radius:8px}.text-segments button{display:flex;align-items:center;justify-content:center;flex:1;min-width:0;padding:6px 3px;border:0;border-radius:6px;background:transparent;color:#64748b;font:inherit;font-size:12px;cursor:pointer}.text-segments button.is-active{background:white;color:#5b21b6;box-shadow:0 1px 3px #0f172a14}.text-box-controls :is(button,input):focus-visible{outline:2px solid #8b5cf6;outline-offset:2px}
+
+.text-box-controls details{border:1px solid #e3e7f0;border-radius:10px;padding:10px;margin-block:5px}.text-box-controls summary{font-weight:600;font-size:13px;cursor:pointer}.text-box-controls details[open]>:not(summary){margin-block-start:10px}.text-box-controls{background:transparent;padding:0;border:0}.text-spacing-slider{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:8px}.text-spacing-slider .text-spacing-label{display:contents}.text-spacing-slider .editor-label{grid-column:1/-1}.text-spacing-slider input[type=range]{grid-column:1;grid-row:2}.text-spacing-slider .text-spacing-value{grid-column:2;grid-row:2}.text-spacing-value input{width:50px!important}.text-segments{background:#f5f5fb;border-radius:10px;padding:4px}

@@ -10,10 +10,12 @@ import { RoleType } from '../../models/user-context.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
+import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher/language-switcher.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, NotificationBellComponent],
+  imports: [LanguageSwitcherComponent, TranslocoPipe, HmIconComponent, CommonModule, NotificationBellComponent],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.css'],
 })

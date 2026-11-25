@@ -9,7 +9,7 @@ import { CurrentContextService } from '../../../../core/services/current-context
 import { IncompleteRegistrationsComponent } from '../../../../shared/components/incomplete-registrations/incomplete-registrations.component';
 import { registeredOrganizations, registrationDrafts } from '../../../../core/utils/organization-registration-status';
 
-import { LucideAngularModule, Flag, Users, Settings, Eye, EyeOff, Trash2 } from 'lucide-angular';
+import { LucideAngularModule, Flag, Users, Settings, Eye, EyeOff, Trash2, Building2 } from 'lucide-angular';
 
 // Promoted out of SettingsPageComponent (2026-09-28, "הישויות שלי" ->
 // "ארגונים" main-nav item) — an organization/nonprofit is a primary
@@ -36,10 +36,12 @@ export class MyOrganizationsPageComponent implements OnInit {
   readonly EyeIcon = Eye;
   readonly EyeOffIcon = EyeOff;
   readonly TrashIcon = Trash2;
+  readonly OrganizationIcon = Building2;
 
   entities: any[] = [];
   drafts: any[] = [];
   loading = true;
+  readonly failedLogos = new Set<string>();
 
   ngOnInit(): void {
     const currentEntity = this.currentEntityService.currentEntity();

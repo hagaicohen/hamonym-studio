@@ -5,12 +5,12 @@
   <nav class="sidebar-nav">
 
     <ng-container *ngIf="platformNavItems().length">
-      <div class="sidebar-section-label">פלטפורמה</div>
+      <div class="sidebar-section-label">{{ 'shell.sidebar.platform' | transloco }}</div>
       <ng-container *ngFor="let item of platformNavItems()" [ngTemplateOutlet]="navItemTpl" [ngTemplateOutletContext]="{ item }"></ng-container>
     </ng-container>
 
     <ng-container *ngIf="platformNavItems().length && navItems().length">
-      <div class="sidebar-section-label">העמותה שלי</div>
+      <div class="sidebar-section-label">{{ 'shell.sidebar.myOrganization' | transloco }}</div>
     </ng-container>
 
     <ng-container *ngFor="let item of navItems()" [ngTemplateOutlet]="navItemTpl" [ngTemplateOutletContext]="{ item }"></ng-container>
@@ -84,10 +84,10 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3a14.5 14.5 0 013 9 14.5 14.5 0 01-3 9 14.5 14.5 0 01-3-9 14.5 14.5 0 013-9z" />
       </svg>
 
-      <span>{{ item.label }}</span>
+      <span>{{ item.label | transloco }}</span>
     </a>
   </ng-template>
 
-  <button *ngIf="showNewCampaignBtn()" class="btn-new-campaign" (click)="createCampaign()">+ קמפיין חדש</button>
+  <button *ngIf="showNewCampaignBtn()" class="btn-new-campaign" (click)="createCampaign()">{{ 'shell.sidebar.newCampaign' | transloco }}</button>
 
 </aside>

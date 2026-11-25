@@ -6,6 +6,8 @@ import { environment } from '../../../../environments/environment';
 export interface Donor {
   name: string;
   amount: number;
+  // The donation's own currency (2026-11); absent on older responses = ILS.
+  currency?: 'ILS' | 'USD' | 'EUR';
   completedAt: Date;
   isAnonymous: boolean;
   isFirst: boolean;
@@ -22,6 +24,7 @@ export type DonorPeriod = 'all' | 'today' | 'week';
 export interface DonationToastItem {
   name: string;
   amount: number;
+  currency?: 'ILS' | 'USD' | 'EUR';
   completedAt: Date;
   isAnonymous: boolean;
   note?: string | null;
@@ -66,6 +69,9 @@ export interface DonationPayload {
   // recurring instruction alongside this first charge. Absent/false = the
   // existing one-time flow, unchanged.
   recurring?: boolean;
+  // Charged currency (2026-11). Absent = ILS, exactly as before; the server
+  // refuses one it doesn't support or hasn't enabled.
+  currency?: 'ILS' | 'USD' | 'EUR';
   // Donor's own choice of how many monthly charges they want (2026-09-24) —
   // a donation-level choice, made on the donation page itself before
   // checkout ever opens (MinimalDonationPageComponent). No credit-limit
@@ -124,6 +130,7 @@ export interface DonationStatusResult {
 export interface MyDonation {
   id: string;
   amount: string | number;
+  currency?: 'ILS' | 'USD' | 'EUR';
   completed_at: string;
   created_at: string;
   is_anonymous: boolean;
@@ -152,6 +159,7 @@ export class DonationService {
       donors: (r.donors ?? []).map((d: any) => ({
         name: d.name,
         amount: d.amount,
+        currency: d.currency || 'ILS',
         completedAt: new Date(d.completed_at),
         isAnonymous: d.is_anonymous,
         isFirst: d.is_first,
@@ -167,6 +175,7 @@ export class DonationService {
     }).pipe(map(r => (r.donations ?? []).map((d: any) => ({
       name: d.name,
       amount: parseFloat(d.amount),
+      currency: d.currency || 'ILS',
       completedAt: new Date(d.completed_at),
       isAnonymous: d.is_anonymous,
       note: d.note,

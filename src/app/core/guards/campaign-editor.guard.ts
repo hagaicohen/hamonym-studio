@@ -4,13 +4,13 @@ import { map, catchError, of } from 'rxjs';
 import { CurrentContextService } from '../services/current-context.service';
 import { CampaignApiService } from '../../modules/campaigns/services/campaign-api.service';
 
-export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+export const campaignEditorGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state) => {
   const context     = inject(CurrentContextService);
   const router      = inject(Router);
   const campaignApi = inject(CampaignApiService);
 
   const token = localStorage.getItem('token');
-  if (!token) return router.createUrlTree(['/login']);
+  if (!token) return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 
   const campaignId = route.paramMap.get('id');
 

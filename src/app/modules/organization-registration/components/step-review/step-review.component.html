@@ -6,7 +6,7 @@
     <div class="success-card">
       <div class="success-icon" aria-hidden="true"><lucide-icon [img]="Check" [size]="successIconSize" [strokeWidth]="iconStroke"></lucide-icon></div>
 
-      <h2>העמותה נוצרה בהצלחה</h2>
+      <h2>הגוף נוצר בהצלחה</h2>
 
       <p>ברוכים הבאים להמונים</p>
 
@@ -231,17 +231,7 @@
         </div>
       </div>
 
-      <div class="summary-item full-width">
-        <div class="summary-label">סוגי דפים</div>
 
-        <div class="summary-tags">
-          @for (type of selectedCampaignTypes; track type) {
-            <div class="summary-tag">
-              {{ getCampaignTypeLabel(type) }}
-            </div>
-          }
-        </div>
-      </div>
 
       <div class="summary-item full-width">
         <div class="summary-label">תיאור {{ entityConfig.labels.entity }}</div>
@@ -271,6 +261,7 @@
   <!-- GOALS -->
   <!-- ===================================================== -->
 
+  @if (monthlyGoal || yearlyGoal) {
   <div class="summary-card">
     <div class="summary-card-header">
       <div class="summary-card-icon emerald">
@@ -290,19 +281,19 @@
       </div>
 
       <div>
-        <div class="summary-card-title">יעדי גיוס</div>
+        <div class="summary-card-title">תכנון פעילות (לא חובה)</div>
       </div>
     </div>
 
     <div class="summary-grid">
       <div class="summary-item">
-        <div class="summary-label">יעד גיוס חודשי</div>
+        <div class="summary-label">יעד פעילות חודשי</div>
 
         <div class="summary-value">₪{{ monthlyGoal || 0 | number }}</div>
       </div>
 
       <div class="summary-item">
-        <div class="summary-label">יעד גיוס שנתי</div>
+        <div class="summary-label">יעד פעילות שנתי</div>
 
         <div class="summary-value">₪{{ yearlyGoal || 0 | number }}</div>
       </div>
@@ -310,6 +301,7 @@
   </div>
 
   <!-- ===================================================== -->
+  }
   <!-- PAYMENT -->
   <!-- ===================================================== -->
 
@@ -545,7 +537,7 @@
         }
 
         @if (paymentMethod === "credit-card" && !state().billingCard) {
-          <p class="completion-help">לא התקבל אישור לשמירת כרטיס. יש להשלים את אמצעי הגבייה בהגדרות העמותה.</p>
+          <p class="completion-help">לא התקבל אישור לשמירת כרטיס. יש להשלים את אמצעי הגבייה בהגדרות הגוף.</p>
         }
         @if (paymentMethod === "masav") {
           <div class="summary-item full-width">
@@ -566,7 +558,7 @@
                 <path d="M12 16h.01"></path>
               </svg>
 
-              <span> יש להשלים בהגדרות העמותה לאחר ההרשמה </span>
+              <span> יש להשלים בהגדרות הגוף לאחר ההרשמה </span>
             </div>
           </div>
         }

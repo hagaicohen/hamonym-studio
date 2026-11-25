@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "files": [
+    "src/test.ts"
+  ],
+  "include": [
+    "src/app/modules/campaigns/multi-currency.spec.ts",
+    "src/app/modules/campaigns/shared/components/checkout-v2/checkout-v2.component.spec.ts",
+    "src/app/modules/campaigns/shared/components/checkout-modal/checkout-modal.component.spec.ts",
+    "src/app/modules/campaigns/utils/campaign-fonts.spec.ts",
+    "src/app/modules/campaigns/utils/content-i18n.spec.ts",
+    "src/app/modules/campaigns/studio/preview/campaign-preview/visual-stats.spec.ts",
+    "src/app/modules/campaigns/shared/components/checkout-v2/amount-buttons-surfaces.spec.ts",
+    "src/**/*.d.ts",
+    "src/app/core/guards/campaign-editor.guard.spec.ts"
+  ]
+}

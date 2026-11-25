@@ -1,0 +1,105 @@
+@if (draft$ | async; as draft) {
+  <div class="amount-layout">
+    <details class="panorama-settings" data-panorama-settings><summary>{{'studio.panorama.name'|transloco}}</summary>
+    <label class="panorama-enable"><input type="checkbox" data-panorama-enable [ngModel]="styleOf(draft).panorama?.enabled||false" (ngModelChange)="setPanorama({enabled:$event})">{{'studio.panorama.enable'|transloco}}</label>
+    @if(styleOf(draft).panorama?.enabled){<p>{{'studio.panorama.hint'|transloco}}</p><label>{{'studio.panorama.upload'|transloco}}<input data-panorama-upload type="file" accept="image/png,image/jpeg,image/webp,image/gif" [disabled]="uploading" (change)="uploadPanorama($event)"></label>
+    @if(uploading){<p role="status">{{'studio.artwork.uploading'|transloco}}</p>}@if(uploadError){<p role="alert">{{'studio.artwork.uploadError'|transloco}}</p>}
+    @if(panoramaImage(draft)){<button type="button" (click)="removePanoramaImage()">{{'studio.artwork.remove'|transloco}}</button>}
+    <label>{{'studio.panorama.zoom'|transloco}}<input data-panorama-zoom type="range" min="1" max="3" step="0.1" [ngModel]="styleOf(draft).panorama?.zoom??1" (ngModelChange)="setPanorama({zoom:+$event})"></label>
+    <label>{{'studio.panorama.horizontal'|transloco}}<input data-panorama-x type="range" min="0" max="100" step="5" [ngModel]="styleOf(draft).panorama?.positionX??50" (ngModelChange)="setPanorama({positionX:+$event})"></label>
+    <label>{{'studio.panorama.vertical'|transloco}}<input data-panorama-y type="range" min="0" max="100" step="5" [ngModel]="styleOf(draft).panorama?.positionY??50" (ngModelChange)="setPanorama({positionY:+$event})"></label>
+    <label>{{'studio.panorama.height'|transloco}}<input data-panorama-height type="number" min="90" max="320" [ngModel]="styleOf(draft).panorama?.height??130" (ngModelChange)="setPanorama({height:+$event})"></label>
+    <label>{{'studio.panorama.mobile'|transloco}}<select data-panorama-mobile [ngModel]="styleOf(draft).panorama?.mobile||'scroll'" (ngModelChange)="setPanorama({mobile:$event})"><option value="scroll">{{'studio.panorama.scroll'|transloco}}</option><option value="wrap">{{'studio.panorama.wrap'|transloco}}</option></select></label>
+    <app-color-picker [label]="'studio.artwork.overlay'|transloco" [value]="styleOf(draft).panorama?.overlayColor||'#0f172a'" (valueChange)="setPanorama({overlayColor:$event})"/>
+    <label>{{'studio.artwork.opacity'|transloco}}<input data-panorama-opacity type="range" min="0" max="0.9" step="0.05" [ngModel]="styleOf(draft).panorama?.overlayOpacity??0.3" (ngModelChange)="setPanorama({overlayOpacity:+$event})"></label>
+    <app-color-picker [label]="'studio.panorama.textColor'|transloco" [value]="styleOf(draft).panorama?.textColor||'#ffffff'" (valueChange)="setPanorama({textColor:$event})"/>
+    }</details>
+    @if(!styleOf(draft).panorama?.enabled){
+    <div class="amount-layout-row">
+      <span class="amount-layout-label">{{ 'builder.amounts.shape' | transloco }}</span>
+      <div class="amount-layout-chips" role="radiogroup" [attr.aria-label]="'builder.amounts.shape' | transloco">
+        @for (s of shapes; track s.value) {
+          <button type="button" class="amount-chip" role="radio" [attr.data-shape]="s.value"
+            [class.active]="(styleOf(draft).shape ?? 'rect') === s.value" [attr.aria-checked]="(styleOf(draft).shape ?? 'rect') === s.value"
+            (click)="set({ shape: s.value === 'rect' ? undefined : s.value })">
+            <span class="amount-chip-swatch" [attr.data-shape]="s.value" aria-hidden="true"></span>{{ s.label | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="amount-layout-row">
+      <span class="amount-layout-label">{{ 'builder.amounts.size' | transloco }}</span>
+      <div class="amount-layout-chips" role="radiogroup" [attr.aria-label]="'builder.amounts.size' | transloco">
+        @for (s of sizes; track s.value) {
+          <button type="button" class="amount-chip" role="radio" [attr.data-size]="s.value"
+            [class.active]="(styleOf(draft).size ?? 'md') === s.value" [attr.aria-checked]="(styleOf(draft).size ?? 'md') === s.value"
+            (click)="set({ size: s.value === 'md' ? undefined : s.value })">{{ s.label | transloco }}</button>
+        }
+      </div>
+    </div>
+    <div class="amount-layout-row">
+      <span class="amount-layout-label">{{ 'builder.amounts.align' | transloco }}</span>
+      <div class="amount-layout-chips" role="radiogroup" [attr.aria-label]="'builder.amounts.align' | transloco">
+        @for (a of aligns; track a.value) {
+          <button type="button" class="amount-chip" role="radio" [attr.data-align]="a.value"
+            [class.active]="(styleOf(draft).align ?? 'stretch') === a.value" [attr.aria-checked]="(styleOf(draft).align ?? 'stretch') === a.value"
+            (click)="set({ align: a.value === 'stretch' ? undefined : a.value })">{{ a.label | transloco }}</button>
+        }
+      </div>
+    </div>
+    <div class="amount-layout-row">
+      <label class="amount-layout-label" for="amount-columns">{{ 'builder.amounts.columns' | transloco }}</label>
+      <select id="amount-columns" class="amount-columns" (change)="set({ columns: $any($event.target).value ? +$any($event.target).value : undefined })">
+        <option value="" [selected]="!styleOf(draft).columns">{{ 'builder.amounts.columnsAuto' | transloco }}</option>
+        @for (n of columns; track n) { <option [value]="n" [selected]="styleOf(draft).columns === n">{{ n }}</option> }
+      </select>
+    </div>
+    }
+    <div class="amount-layout-row">
+      <span class="amount-layout-label">{{ 'builder.amounts.gap' | transloco }}</span>
+      <input type="range" class="amount-gap" min="0" max="32" step="2" [attr.aria-label]="'builder.amounts.gap' | transloco"
+        [value]="styleOf(draft).gap ?? (styleOf(draft).panorama?.enabled ? 0 : 8)" (input)="set({ gap: +$any($event.target).value })">
+      <span class="amount-gap-val">{{ 'editors.ui.pxValue' | transloco: { value: styleOf(draft).gap ?? (styleOf(draft).panorama?.enabled ? 0 : 8) } }}</span>
+    </div>
+    <div class="amount-layout-row amount-layout-row--top">
+      <span class="amount-layout-label">{{ 'builder.amounts.values' | transloco }}</span>
+      @if (draft.status === 'published') {
+        <p class="amount-layout-note">{{ 'builder.amounts.valuesPublished' | transloco }}</p>
+      } @else {
+        <div class="amount-values">
+          @for (v of draft.suggestedAmounts; track $index) {
+            <span class="amount-value">
+              <span aria-hidden="true">₪</span>
+              <input type="number" min="1" step="1" inputmode="numeric" [value]="v" [attr.aria-label]="'builder.amounts.valueN' | transloco: { n: $index + 1 }"
+                (change)="setAmount($index, $any($event.target).value)">
+              <button type="button" class="amount-remove" (click)="removeAmount($index)" [attr.aria-label]="'builder.amounts.remove' | transloco">×</button>
+            </span>
+          }
+          @if (draft.suggestedAmounts.length < max) {
+            <button type="button" class="amount-add" (click)="addAmount()">{{ 'builder.amounts.add' | transloco }}</button>
+          }
+        </div>
+        <p class="amount-layout-note">{{ 'builder.amounts.valuesNote' | transloco: { count: draft.suggestedAmounts.length } }}</p>
+      }
+    </div>
+    <details data-individual-amounts><summary>{{'builder.enhance.cardDesign'|transloco}}</summary>
+<label>{{'builder.enhance.selectAmount'|transloco}}<select data-amount-card-key [(ngModel)]="cardKey"><option value="">—</option>@for(card of cards(draft);track card.key){<option [value]="card.key">{{card.label}} ? {{('builder.enhance.'+card.frequency)|transloco}}</option>}</select></label>
+@if(cardKey){
+<div class="artwork-primary" data-artwork-editor><label>{{'studio.artwork.mode'|transloco}}<select data-artwork-mode [ngModel]="selectedCard(draft).mode||'legacy'" (ngModelChange)="setCard({mode:$event==='legacy'?undefined:$event})"><option value="legacy">{{'studio.artwork.legacy'|transloco}}</option><option value="artwork">{{'studio.artwork.finished'|transloco}}</option><option value="layered">{{'studio.artwork.layered'|transloco}}</option></select></label><label class="artwork-upload">{{'studio.artwork.replace'|transloco}}<input data-artwork-upload type="file" accept="image/png,image/jpeg,image/webp,image/gif" [disabled]="uploading" (change)="uploadArtwork($event)"></label>@if(uploading){<p role="status">{{'studio.artwork.uploading'|transloco}}</p>}@if(uploadError){<p role="alert">{{'studio.artwork.uploadError'|transloco}}</p>}<p class="artwork-warning">{{'studio.artwork.bindingWarning'|transloco}}</p></div>
+@if(cardImage(draft)){<label>{{'studio.artwork.ratio'|transloco}}<select data-artwork-ratio [ngModel]="selectedCard(draft).aspectRatio||'1 / 1'" (ngModelChange)="setCard({aspectRatio:$event})"><option value="1 / 1">1:1</option><option value="3 / 4">3:4</option><option value="4 / 3">4:3</option><option value="16 / 9">16:9</option></select></label><label>{{'studio.artwork.fit'|transloco}}<select [ngModel]="selectedCard(draft).imageFit||'cover'" (ngModelChange)="setCard({imageFit:$event})"><option value="cover">{{'studio.artwork.cover'|transloco}}</option><option value="contain">{{'studio.artwork.contain'|transloco}}</option></select></label><label>{{'studio.artwork.position'|transloco}}<select [ngModel]="selectedCard(draft).imagePosition||'50% 50%'" (ngModelChange)="setCard({imagePosition:$event})"><option value="50% 50%">{{'studio.visual.center'|transloco}}</option><option value="50% 0%">{{'studio.visual.top'|transloco}}</option><option value="50% 100%">{{'studio.visual.bottom'|transloco}}</option></select></label><button type="button" (click)="setCardImage(undefined)">{{'studio.artwork.remove'|transloco}}</button>}
+<label>{{'studio.artwork.description'|transloco}}<input data-artwork-description [ngModel]="selectedCard(draft).accessibleDescription" (ngModelChange)="setCard({accessibleDescription:$event})"></label>
+@if(selectedCard(draft).mode==='layered'){<div class="layer-presets" role="group" [attr.aria-label]="'studio.artwork.templates'|transloco"><button type="button" data-layer-preset="editorial" (click)="setCard({overlayColor:'#0f172a',overlayOpacity:0.4,contentAlign:'end',decoration:'none',color:'#ffffff'})">{{'studio.artwork.editorial'|transloco}}</button><button type="button" data-layer-preset="seal" (click)="setCard({overlayColor:'#164e63',overlayOpacity:0.2,contentAlign:'center',decoration:'seal',color:'#ffffff'})">{{'studio.artwork.seal'|transloco}}</button><button type="button" data-layer-preset="pill" (click)="setCard({overlayColor:'#312e81',overlayOpacity:0.15,contentAlign:'end',decoration:'pill',color:'#ffffff'})">{{'studio.artwork.pill'|transloco}}</button></div><label>{{'studio.artwork.contentPosition'|transloco}}<select data-layer-position [ngModel]="selectedCard(draft).contentAlign||'center'" (ngModelChange)="setCard({contentAlign:$event})"><option value="start">{{'studio.visual.top'|transloco}}</option><option value="center">{{'studio.visual.center'|transloco}}</option><option value="end">{{'studio.visual.bottom'|transloco}}</option></select></label><app-color-picker [value]="selectedCard(draft).overlayColor||'#0f172a'" [label]="'studio.artwork.overlay'|transloco" (valueChange)="setCard({overlayColor:$event})"/><label>{{'studio.artwork.opacity'|transloco}}<input type="range" min="0" max="0.9" step="0.05" [ngModel]="selectedCard(draft).overlayOpacity??0.25" (ngModelChange)="setCard({overlayOpacity:+$event})"></label><label>{{'studio.artwork.decoration'|transloco}}<select [ngModel]="selectedCard(draft).decoration||'none'" (ngModelChange)="setCard({decoration:$event})"><option value="none">{{'studio.visual.effect_none'|transloco}}</option><option value="pill">{{'studio.artwork.pill'|transloco}}</option><option value="seal">{{'studio.artwork.seal'|transloco}}</option></select></label>}
+<label>{{'builder.enhance.title'|transloco}}<input data-amount-card-title [ngModel]="selectedCard(draft).title" (ngModelChange)="setCard({title:$event})"></label>
+<label>{{'builder.enhance.description'|transloco}}<input [ngModel]="selectedCard(draft).description" (ngModelChange)="setCard({description:$event})"></label>
+<label>{{'builder.enhance.imageUrl'|transloco}}<input type="url" [ngModel]="cardImage(draft)" (ngModelChange)="setCardImage($event)"></label>
+<app-color-picker [value]="selectedCard(draft).background||'#ffffff'" [label]="'builder.enhance.background'|transloco" (valueChange)="setCard({background:$event})"/>
+<app-color-picker [value]="selectedCard(draft).color||'#0f172a'" [label]="'builder.enhance.textColor'|transloco" (valueChange)="setCard({color:$event})"/>
+<app-color-picker [value]="selectedCard(draft).borderColor||'#e2e8f0'" [label]="'builder.enhance.border'|transloco" (valueChange)="setCard({borderColor:$event})"/>
+<label>{{'builder.enhance.radius'|transloco}}<input type="range" min="0" max="48" [ngModel]="selectedCard(draft).radius??12" (ngModelChange)="setCard({radius:bounded($event)})"></label>
+<label>{{'builder.enhance.padding'|transloco}}<input type="range" min="0" max="48" [ngModel]="selectedCard(draft).padding??10" (ngModelChange)="setCard({padding:bounded($event)})"></label>
+<app-text-role-editor [roleLabel]="'builder.enhance.typography'|transloco" [override]="selectedCard(draft).textStyle" (overrideChange)="setCard({textStyle:$event})"/>
+<button type="button" (click)="clearCard()">{{'builder.enhance.inherit'|transloco}}</button><p>{{'builder.enhance.visualOnly'|transloco}}</p>
+}</details>
+    <p class="amount-layout-note amount-layout-note--shared">{{ 'builder.amounts.shared' | transloco }}</p>
+  </div>
+}

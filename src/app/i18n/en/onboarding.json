@@ -1,0 +1,33 @@
+{
+  "onboarding": {
+    "howWouldYouLikeTo": "How would you like to use Hamonym?",
+    "wellBuildAPersonalizedExperience": "We'll build a personalized experience for you",
+    "organizationFundraisingBody": "Organization / fundraising body",
+    "manageCampaignsAndRaiseDonations": "Manage campaigns and raise donations",
+    "campaigner": "Campaigner",
+    "manageAndFundraiseForCampaigns": "Manage and fundraise for campaigns",
+    "businessPartner": "Business partner",
+    "partnershipsAndBusinessExposure": "Partnerships and business exposure",
+    "justADonor": "Just a donor",
+    "trackDonationsAndCampaigns": "Track donations and campaigns",
+    "continue": "Continue"
+  },
+  "welcome": {
+    "welcomeUsername": "Welcome{{userName}}",
+    "whatWouldYouLikeTo": "What would you like to do?",
+    "cards": {
+      "createOrganization": {
+        "title": "Set up an organization",
+        "description": "Open an organization to raise donations"
+      },
+      "findCampaign": {
+        "title": "Find a campaign to donate to",
+        "description": "Search for projects and organizations to support"
+      },
+      "ambassador": {
+        "title": "Join as an ambassador",
+        "description": "Raise donations for an existing campaign"
+      }
+    }
+  }
+}

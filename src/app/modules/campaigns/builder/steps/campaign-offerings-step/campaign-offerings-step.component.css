@@ -4,7 +4,6 @@
   padding: 28px 28px 40px;
   max-width: 1100px; margin: 0 auto;
   font-family: 'Heebo', sans-serif;
-  direction: rtl;
 }
 
 /* ─── LAYOUT PICKER ─── */
@@ -100,13 +99,13 @@
 }
 .rs-slider::before {
   content: ''; position: absolute;
-  width: 20px; height: 20px; top: 3px; left: 3px; /* LTR: starts left */
+  width: 20px; height: 20px; top: 3px; inset-inline-end: 3px; /* LTR: starts left */
   border-radius: 50%; background: #fff;
   transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .rs-switch input:checked + .rs-slider         { background: #3b82f6; }
 .rs-switch input:checked + .rs-slider--purple  { background: #7c3aed; }
-.rs-switch input:checked + .rs-slider::before  { transform: translateX(22px); }
+.rs-switch input:checked + .rs-slider::before  { transform: translateX(calc(22px * var(--hm-dir-sign, 1))); }
 
 /* ─── BUILDER GRID ─── */
 .rs-builder {
@@ -130,7 +129,7 @@
   display: flex; align-items: center; justify-content: space-between;
 }
 .rf-label { font-size: 13px; font-weight: 700; color: #374151; }
-.rf-req   { color: #ef4444; margin-right: 2px; }
+.rf-req   { color: #ef4444; margin-inline-start: 2px; }
 .rf-icon  { font-size: 16px; opacity: 0.5; }
 
 .rf-input {
@@ -146,10 +145,10 @@
 
 .rf-currency-wrap { position: relative; }
 .rf-currency-symbol {
-  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  position: absolute; inset-inline-start: 14px; top: 50%; transform: translateY(-50%);
   font-weight: 700; color: #64748b; font-size: 15px; pointer-events: none;
 }
-.rf-input--currency { padding-right: 32px; }
+.rf-input--currency { padding-inline-start: 32px; }
 
 /* Offering type toggle */
 .rf-type-btns { display: flex; gap: 8px; }
@@ -309,11 +308,10 @@
   font-weight: 900;
   color: #7DD3FC;
   line-height: 1;
-  direction: rtl;
 }
 
 /* Body */
-.rp-body { padding: 4px 20px 22px; direction: rtl; }
+.rp-body { padding: 4px 20px 22px;  }
 .rp-title {
   font-size: 15px; font-weight: 700;
   color: #fff; margin-bottom: 8px; line-height: 1.4;
@@ -350,7 +348,6 @@
   font-weight: 900;
   padding: 10px 16px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.15);
-  direction: rtl;
   border-radius: 20px 20px 0 0;
 }
 .rp-img-hero {
@@ -414,7 +411,7 @@
   font-size: 28px; opacity: 0.25;
 }
 .rs-card-badge {
-  position: absolute; top: 8px; right: 8px;
+  position: absolute; top: 8px; inset-inline-start: 8px;
   background: #f59e0b; color: #fff;
   font-size: 10px; font-weight: 800;
   width: 22px; height: 22px; border-radius: 50%;
@@ -515,4 +512,13 @@
   .reward-form-panel{
     padding: 10px;
   }
+}
+/* Studio properties panel (container "props", 2026-11-08): the layout follows the
+   panel's own width, so resizing the panel adapts it without touching the canvas.
+   The classic wizard has no such container and is unchanged. */
+@container props (max-width: 680px) {
+  .rs-builder { grid-template-columns: minmax(0, 1fr); }
+}
+@container props (max-width: 340px) {
+  .rs-grid { grid-template-columns: minmax(0, 1fr); }
 }

@@ -1,10 +1,13 @@
+import {TextSelection,AllSelection,SelectionBookmark} from '@tiptap/pm/state';
   import {
-    AfterViewInit, ChangeDetectorRef, Component,
+    AfterViewInit, ChangeDetectorRef, Component, OnChanges, SimpleChanges,
     ElementRef, forwardRef, inject, Input, OnDestroy, ViewChild,
   } from '@angular/core';
   import { CommonModule } from '@angular/common';
   import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
-  import { Editor } from '@tiptap/core';
+  import {toHex} from '../../../modules/campaigns/utils/element-color';
+  import { Editor, Extension } from '@tiptap/core';
+  import { CAMPAIGN_FONTS, ensureStackLoaded } from '../../../modules/campaigns/utils/campaign-fonts';
   import StarterKit from '@tiptap/starter-kit';
   import Placeholder from '@tiptap/extension-placeholder';
   import Link from '@tiptap/extension-link';
@@ -13,12 +16,18 @@
   import { TextStyle } from '@tiptap/extension-text-style';
   import Highlight from '@tiptap/extension-highlight';
   import { HmIconComponent } from '../design-system/icon.component';
+  import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+  import { textOf } from '../../../core/i18n/text.pipe';
 
   // Single TextStyle extension carrying both color and fontSize as inline marks
   const CustomTextStyle = TextStyle.extend({
     addAttributes() {
       return {
         ...this.parent?.(),
+        ...Object.fromEntries(['fontFamily','fontWeight','lineHeight'].map(name=>[name,{
+          default:null, parseHTML:(el:HTMLElement)=>el.style[name as 'fontFamily']||null,
+          renderHTML:(attrs:Record<string,any>)=>attrs[name]?{style:name.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+': '+attrs[name]}:{}
+        }])),
         color: {
           default: null,
           parseHTML: (el: HTMLElement) => el.style.color || null,
@@ -35,10 +44,13 @@
     },
   });
 
+  const paragraphTypography=['fontFamily','fontSize','fontWeight','lineHeight','color','marginBottom'] as const;
+  const ParagraphTypography=Extension.create({name:'paragraphTypography',addGlobalAttributes(){return [{types:['paragraph','heading'],attributes:Object.fromEntries(paragraphTypography.map(name=>[name,{default:null,parseHTML:(el:HTMLElement)=>el.style[name]||null,renderHTML:(attrs:Record<string,any>)=>attrs[name]?{style:name.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+': '+attrs[name]}:{}}]))}];}});
+
   @Component({
     selector: 'app-rich-text-editor',
     standalone: true,
-    imports: [CommonModule, FormsModule, HmIconComponent],
+    imports: [TranslocoPipe, CommonModule, FormsModule, HmIconComponent],
     templateUrl: './rich-text-editor.component.html',
     styleUrls: ['./rich-text-editor.component.css'],
     providers: [{
@@ -47,14 +59,78 @@
       multi: true,
     }],
   })
-  export class RichTextEditorComponent implements AfterViewInit, OnDestroy, ControlValueAccessor {
-    @Input() placeholder = 'ספר את הסיפור שלך...';
+  export class RichTextEditorComponent implements AfterViewInit, OnChanges, OnDestroy, ControlValueAccessor {
+    private readonly i18n = inject(TranslocoService);
+    @Input() placeholder = 'editors.richText.placeholder';
     @Input() minHeight = 160;
     // Compact mode (2026-08-06) — for short fields like an update's title,
     // not a full story body: only Font Size / Color / Align. No headings,
     // no bold/italic/underline/strike, no lists, no link/blockquote — those
     // read as "editing a document", not "styling a headline".
     @Input() compact = false;
+    @Input() selectionTypography = false;
+    @Input() prototypeUx=false;
+    @Input() paragraphSpacing=10;
+    private formatBookmark:SelectionBookmark|null=null;
+    private editingContext=false;
+    get hasEditingContext(){return !!this.editor&&this.editingContext&&(this.editor.state.selection instanceof TextSelection||this.editor.state.selection instanceof AllSelection)&&!this.disabled;}
+    rememberSelection(){if(this.editor&&(this.editor.state.selection instanceof TextSelection||this.editor.state.selection instanceof AllSelection)){this.formatBookmark=this.editor.state.selection.getBookmark();this.editingContext=true;}}
+    get editingTarget(){if(!this.hasEditingContext)return '';const {from,to}=this.editor!.state.selection;return from===to?this.i18n.translate('editors.richText.atCursor'):this.editor!.state.doc.textBetween(from,to,' ').slice(0,70);}
+    changeLocal(name:string,value:string){
+      if(!this.hasEditingContext||!this.formatBookmark)return;
+      if(['fontSize','lineHeight','marginBottom'].includes(name)&&(!value||!Number.isFinite(+value)||+value<0||(name!=='marginBottom'&&+value===0)))return;
+      const editor=this.editor!,selection=this.formatBookmark.resolve(editor.state.doc);if(!(selection instanceof TextSelection||selection instanceof AllSelection))return;
+      let chain=editor.chain().command(({tr})=>{if(!selection.eq(tr.selection))tr.setSelection(selection);return true;});
+      if(name==='marginBottom')chain=chain.updateAttributes('paragraph',{marginBottom:+value+'px'});
+      else {if(name==='fontFamily'&&value)ensureStackLoaded(value);if(name==='fontWeight')chain=chain.unsetBold();chain=chain.setMark('textStyle',{[name]:value?(name==='fontSize'?+value+'px':value):null});}
+      chain.run();this.formatBookmark=editor.state.selection.getBookmark();
+    }
+    formattingState(name:string):{value:string;mixed:boolean;inherited:boolean;valid:boolean}{
+      const editor=this.editor;if(!editor||!this.hasEditingContext)return {value:'',mixed:false,inherited:false,valid:false};
+      const {from,to,empty}=editor.state.selection,values=new Set<string>();let inherited=true;
+      const sample=(position:number,marks:readonly any[],paragraph:any)=>{
+        const mark=marks.find(m=>m.type.name==='textStyle');const own=name==='marginBottom'?paragraph?.attrs[name]:mark?.attrs[name];
+        const explicit=own??(name==='fontWeight'&&marks.some(m=>m.type.name==='bold')?'700':paragraph?.attrs[name]);if(explicit!=null)inherited=false;
+        const point=editor.view.domAtPos(Math.min(Math.max(1,position),editor.state.doc.content.size));const dom=point.node.nodeType===1?(point.node.childNodes[point.offset]??point.node):point.node;const element=dom.nodeType===1?dom as HTMLElement:dom.parentElement;
+        const css=getComputedStyle(element??editor.view.dom),paraCss=getComputedStyle(element?.closest('p,h1,h2,h3')??editor.view.dom);
+        let value=String(explicit??(name==='marginBottom'?paraCss.marginBottom:css.getPropertyValue(name.replace(/[A-Z]/g,c=>'-'+c.toLowerCase()))));
+        if(name==='fontSize'||name==='marginBottom'){const computed=name==='fontSize'?css.fontSize:paraCss.marginBottom;value=String(parseFloat(explicit&&/px$/.test(String(explicit))?String(explicit):computed)||0);}
+        if(name==='lineHeight'){const raw=String(explicit??css.lineHeight);value=String(Math.round((raw.endsWith('px')?parseFloat(raw)/parseFloat(css.fontSize):parseFloat(raw)||1.6)*100)/100);}
+        if(name==='fontFamily'){const first=value.split(',')[0].replace(/['"]/g,'').trim().toLowerCase();value=this.fonts.find(font=>font.stack.split(',')[0].replace(/['"]/g,'').trim().toLowerCase()===first)?.stack??value;}
+        if(name==='color')value=toHex(value)??value;
+        values.add(value);
+      };
+      if(empty)sample(from,editor.state.storedMarks??editor.state.selection.$from.marks(),editor.state.selection.$from.parent);
+      else editor.state.doc.nodesBetween(from,to,(node,pos,parent)=>{if(node.isText)sample(Math.max(from,pos),node.marks,parent);});
+      return {value:values.size===1?Array.from(values)[0]:'',mixed:values.size>1,inherited,valid:values.size>0};
+    }
+    knownFont(value:string){return this.fonts.some(font=>font.stack===value);}
+    knownWeight(value:string){return this.weights.includes(value);}
+    formatHint(name:string){const state=this.formattingState(name);return !state.valid?'editors.richText.chooseText':state.mixed?'editors.richText.mixedValues':state.inherited?'editors.richText.inheritedValue':'editors.richText.localValue';}
+    formatPlaceholder(name:string){return this.i18n.translate(this.formattingState(name).mixed?'editors.richText.mixedValues':'editors.richText.chooseText');}
+    get localColor(){return toHex(this.formattingState('color').value)??'#000000';}
+    @Input() direction: 'rtl'|'ltr' = 'rtl';
+    readonly fonts=CAMPAIGN_FONTS;
+    readonly weights=['400','500','600','700','800','900'];
+    private destroyed=false;
+    ngOnChanges(changes:SimpleChanges){if(changes['direction']&&this.editor)this.editor.setOptions({editorProps:{attributes:{class:'hamonym-editor-content',dir:this.direction}}});}
+    get selectionSummary(){return this.selectionTypography?'editors.richText.localFormatting':'editors.ui.advancedDesign';}
+    selectedAttribute(name:string):string {
+      const editor=this.editor;if(!editor)return '';
+      const {from,to,empty}=editor.state.selection;
+      if(empty)return String(editor.getAttributes('textStyle')[name]??(name==='fontWeight'&&editor.isActive('bold')?'700':''));
+      const values=new Set<string>();
+      editor.state.doc.nodesBetween(from,to,node=>{if(node.isText){const mark=node.marks.find(m=>m.type.name==='textStyle');values.add(String(mark?.attrs[name]??(name==='fontWeight'&&node.marks.some(m=>m.type.name==='bold')?'700':'')));}});
+      return values.size===1?Array.from(values)[0]:'';
+    }
+    setLocalAttribute(name:'fontFamily'|'fontWeight'|'lineHeight',value:string){
+      if(name==='lineHeight'&&value&&(!Number.isFinite(+value)||+value<=0))return;
+      if(name==='fontFamily'&&value)ensureStackLoaded(value);
+      let chain=this.editor?.chain().focus();if(name==='fontWeight')chain=chain?.unsetBold();
+      chain?.setMark('textStyle',{[name]:value||null}).run();
+    }
+    setPreciseSize(value:string){if(!value){this.setFontSize('');return;}const size=Number(value);if(Number.isFinite(size)&&size>0)this.setFontSize(size+'px');}
+    get preciseSize(){return this.selectedAttribute('fontSize').replace(/px$/,'');}
 
     @ViewChild('editorEl') editorElement!: ElementRef<HTMLDivElement>;
 
@@ -85,12 +161,13 @@
 
     ngAfterViewInit(): void {
       setTimeout(() => {
+        if(this.destroyed)return;
         this.editor = new Editor({
           element: this.editorElement.nativeElement,
           extensions: [
-            StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+            StarterKit.configure({ heading: { levels: [1, 2, 3] }, link:false, underline:false }),
             Underline,
-            CustomTextStyle,
+            CustomTextStyle, ParagraphTypography,
             Highlight.configure({ multicolor: true }),
             // Every link a manager inserts opens in a NEW tab — a donor
             // clicking an external link inside campaign body text
@@ -101,12 +178,12 @@
               HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
             }),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            Placeholder.configure({ placeholder: this.placeholder }),
+            Placeholder.configure({ placeholder: textOf(this.i18n, this.placeholder) }),
           ],
           content: this.value,
           editable: !this.disabled,
           editorProps: {
-            attributes: { class: 'hamonym-editor-content', dir: 'rtl' },
+            attributes: { class: 'hamonym-editor-content', dir: this.direction },
           },
           onUpdate: ({ editor }) => {
             const html = editor.getHTML();
@@ -115,6 +192,9 @@
             this.onChange(html);
             this.internalUpdate = false;
           },
+          onFocus: () => {this.rememberSelection();this.cdr.markForCheck();},
+          onSelectionUpdate: () => {if(this.editor?.isFocused)this.rememberSelection();this.cdr.markForCheck();},
+          onTransaction: ({transaction}) => {if(this.formatBookmark&&transaction.docChanged)this.formatBookmark=this.formatBookmark.map(transaction.mapping);this.cdr.markForCheck();},
           onBlur: () => { this.onTouched(); },
         });
         this.cdr.detectChanges();
@@ -125,7 +205,7 @@
       const newValue = value || '';
       if (this.internalUpdate || newValue === this.value) return;
       this.value = newValue;
-      if (this.editor) this.editor.commands.setContent(this.value, { emitUpdate: false });
+      if (this.editor) {this.editor.commands.setContent(this.value, { emitUpdate: false });this.formatBookmark=null;this.editingContext=false;}
     }
     registerOnChange(fn: any): void { this.onChange = fn; }
     registerOnTouched(fn: any): void { this.onTouched = fn; }
@@ -134,7 +214,7 @@
       if (this.editor) this.editor.setEditable(!isDisabled);
     }
 
-    toggleBold()        { this.editor?.chain().focus().toggleBold().run(); }
+    toggleBold()        { const chain=this.editor?.chain().focus();if(this.selectionTypography)chain?.setMark('textStyle',{fontWeight:null});chain?.toggleBold().run(); }
     toggleItalic()      { this.editor?.chain().focus().toggleItalic().run(); }
     toggleUnderline()   { this.editor?.chain().focus().toggleUnderline().run(); }
     toggleStrike()      { this.editor?.chain().focus().toggleStrike().run(); }
@@ -144,7 +224,7 @@
     setTextAlign(a: 'right'|'center'|'left') { this.editor?.chain().focus().setTextAlign(a).run(); }
     setParagraph()      { this.editor?.chain().focus().setParagraph().run(); }
     setHeading(level: 1|2|3) { this.editor?.chain().focus().toggleHeading({ level }).run(); }
-    clearFormatting()   { this.editor?.chain().focus().unsetAllMarks().clearNodes().run(); }
+    clearFormatting()   { this.editor?.chain().focus().unsetAllMarks().clearNodes().resetAttributes('paragraph',[...paragraphTypography]).unsetTextAlign().run(); }
 
     // Color (selection-only via textStyle mark)
     setColor(color: string): void {
@@ -156,7 +236,7 @@
       this.showColorPicker = false;
     }
     getActiveColor(): string {
-      return this.editor?.getAttributes('textStyle')['color'] || '#000000';
+      return this.selectedAttribute('color') || '#000000';
     }
 
     // Font size (selection-only via textStyle mark)
@@ -168,13 +248,13 @@
       }
     }
     getActiveFontSize(): string {
-      return this.editor?.getAttributes('textStyle')['fontSize'] || '';
+      return this.selectedAttribute('fontSize');
     }
 
     addLink(): void {
       if (!this.editor) return;
       const previousUrl = this.editor.getAttributes('link')['href'];
-      const url = window.prompt('הכנס קישור', previousUrl);
+      const url = window.prompt(this.i18n.translate('editors.richText.enterLink'), previousUrl);
       if (url === null) return;
       if (url === '') { this.editor.chain().focus().unsetLink().run(); return; }
       this.editor.chain().focus().setLink({ href: url }).run();
@@ -202,5 +282,5 @@
       else this.setParagraph();
     }
 
-    ngOnDestroy(): void { this.editor?.destroy(); }
+    ngOnDestroy(): void { this.destroyed=true; this.editor?.destroy(); }
   }

@@ -18,42 +18,42 @@ interface NavItem {
   exactMatch?: boolean;
 }
 
-const DASHBOARD:   NavItem = { route: '/dashboard',   label: 'דשבורד',   icon: 'dashboard' };
+const DASHBOARD:   NavItem = { route: '/dashboard',   label: 'shell.nav.dashboard',   icon: 'dashboard' };
 // 2026-09-28 — promoted out of Settings ("הישויות שלי") into a first-class
 // main-nav destination: an organization is a primary workspace object, not
 // a system setting. Reuses the exact same page/data/actions that used to
 // live inside SettingsPageComponent — see MyOrganizationsPageComponent.
-const ENTITIES:    NavItem = { route: '/entities',    label: 'ארגונים',  icon: 'entities' };
-const CAMPAIGNS:   NavItem = { route: '/campaigns',   label: 'קמפיינים', icon: 'campaigns' };
-const DONATIONS:   NavItem = { route: '/donations',   label: 'תרומות',   icon: 'donations' };
-const REGISTRATIONS: NavItem = { route: '/registrations', label: 'הרשמות', icon: 'registrations' };
-const DONORS:      NavItem = { route: '/donors',      label: 'תורמים',   icon: 'donors' };
-const AMBASSADORS: NavItem = { route: '/ambassadors', label: 'שגרירים',  icon: 'ambassadors' };
-const PARTNERS:    NavItem = { route: '/partners',    label: 'שותפים',   icon: 'partners' };
-const REPORTS:     NavItem = { route: '/reports',     label: 'דוחות',    icon: 'reports' };
-const SETTINGS:    NavItem = { route: '/settings',    label: 'הגדרות',   icon: 'settings' };
+const ENTITIES:    NavItem = { route: '/entities',    label: 'shell.nav.organizations',  icon: 'entities' };
+const CAMPAIGNS:   NavItem = { route: '/campaigns',   label: 'shell.nav.campaigns', icon: 'campaigns' };
+const DONATIONS:   NavItem = { route: '/donations',   label: 'shell.nav.donations',   icon: 'donations' };
+const REGISTRATIONS: NavItem = { route: '/registrations', label: 'shell.nav.registrations', icon: 'registrations' };
+const DONORS:      NavItem = { route: '/donors',      label: 'shell.nav.donors',   icon: 'donors' };
+const AMBASSADORS: NavItem = { route: '/ambassadors', label: 'shell.nav.ambassadors',  icon: 'ambassadors' };
+const PARTNERS:    NavItem = { route: '/partners',    label: 'shell.nav.partners',   icon: 'partners' };
+const REPORTS:     NavItem = { route: '/reports',     label: 'shell.nav.reports',    icon: 'reports' };
+const SETTINGS:    NavItem = { route: '/settings',    label: 'shell.nav.settings',   icon: 'settings' };
 
-const PLATFORM_DASHBOARD:     NavItem = { route: '/platform',              label: 'דשבורד פלטפורמה', icon: 'platform', exactMatch: true };
-const PLATFORM_ORGANIZATIONS: NavItem = { route: '/platform/organizations', label: 'עמותות',          icon: 'ambassadors' };
-const PLATFORM_PARTNERS:      NavItem = { route: '/platform/partners',      label: 'שותפים',          icon: 'partners' };
-const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     label: 'קמפיינים',        icon: 'campaigns' };
-const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'משתמשים',         icon: 'donors' };
+const PLATFORM_DASHBOARD:     NavItem = { route: '/platform',              label: 'shell.nav.platformDashboard', icon: 'platform', exactMatch: true };
+const PLATFORM_ORGANIZATIONS: NavItem = { route: '/platform/organizations', label: 'shell.nav.platformOrganizations',          icon: 'ambassadors' };
+const PLATFORM_PARTNERS:      NavItem = { route: '/platform/partners',      label: 'shell.nav.partners',          icon: 'partners' };
+const PLATFORM_CAMPAIGNS:     NavItem = { route: '/platform/campaigns',     label: 'shell.nav.campaigns',        icon: 'campaigns' };
+const PLATFORM_USERS:         NavItem = { route: '/platform/users',         label: 'shell.nav.platformUsers',         icon: 'donors' };
 // UX simplification pass, 2026-09-14: "תפעול CardCom" is gone as a primary
 // operator concept -- CardCom is the payment provider underneath the
 // donation flow, not something the operator "operates". Replaced with two
 // business-facing worlds: תרומות (donor -> provider -> עמותה) and חיובי
 // עמותות (עמותה -> provider/מס"ב -> Hamonym), the latter absorbing what
 // used to be two separate entries ("חשבונות חיוב" + "תפעול חיוב").
-const PLATFORM_DONATIONS:    NavItem = { route: '/platform/donations',   label: 'תרומות',       icon: 'donations' };
+const PLATFORM_DONATIONS:    NavItem = { route: '/platform/donations',   label: 'shell.nav.donations',       icon: 'donations' };
 // Unified "ניהול גבייה" (2026-10) -- replaces the two separate "חיובי
 // עמותות"/"ניהול כספים" entries with one page (3 tabs: סקירה ופעולות /
 // היסטוריה / דוחות). Both old routes still exist and redirect here
 // (app.routes.ts) so any existing bookmark/link keeps working.
-const PLATFORM_COLLECTION_OPS: NavItem = { route: '/platform/collection-ops', label: 'ניהול גבייה', icon: 'settings' };
+const PLATFORM_COLLECTION_OPS: NavItem = { route: '/platform/collection-ops', label: 'shell.nav.platformCollectionOps', icon: 'settings' };
 // "הגדרות כלליות" (2026-09-14j) -- platform-wide settings that aren't about
 // any one association or billing operation (currently: system VAT rate).
-const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'הגדרות כלליות', icon: 'settings' };
-const PLATFORM_CATEGORY_SUGGESTIONS: NavItem = { route: '/platform/category-suggestions', label: 'הצעות קטגוריה', icon: 'reports' };
+const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'shell.nav.platformSettings', icon: 'settings' };
+const PLATFORM_CATEGORY_SUGGESTIONS: NavItem = { route: '/platform/category-suggestions', label: 'shell.nav.platformCategorySuggestions', icon: 'reports' };
 
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, ENTITIES, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
@@ -63,10 +63,11 @@ const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'donor':            [],
 };
 
+import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [TranslocoPipe, CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css', '../../../shared/styles/new-campaign-button.css'],
 })

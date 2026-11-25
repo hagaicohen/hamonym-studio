@@ -174,10 +174,34 @@
   content: '';
   position: absolute;
   width: 18px; height: 18px;
-  top: 3px; right: 3px;
+  top: 3px; inset-inline-start: 3px;
   border-radius: 50%;
   background: #fff;
   transition: transform 0.2s;
 }
 .tse-switch input:checked + .tse-switch-slider { background: #7c3aed; }
-.tse-switch input:checked + .tse-switch-slider::before { transform: translateX(-20px); }
+.tse-switch input:checked + .tse-switch-slider::before { transform: translateX(calc(-20px * var(--hm-dir-sign, 1))); }
+
+/* ── Row layout (2026-11-08): label · control · reset, the "by style" hint on
+   its own line under the control, consistent heights. In a narrow properties
+   panel (its own width, container "props") the label goes above the control. ── */
+.tse-body { gap: 16px; padding: 16px; }
+.tse-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 6px; }
+.tse-label { flex: 0 0 84px; min-width: 0; line-height: 1.3; }
+.tse-row > select, .tse-row > .tse-input, .tse-row > .tse-chips, .tse-row > app-color-picker, .tse-row > .tse-size {
+  flex: 1 1 150px; min-width: 0;
+}
+.tse-row select.tse-input, .tse-row input.tse-input { block-size: 34px; }
+.tse-inherited { box-sizing: border-box; flex: 1 0 100%; padding-inline-start: 94px; font-size: 11px; color: #94a3b8; }
+.tse-reset { flex: 0 0 auto; block-size: 30px; inline-size: 30px; border-radius: 8px; }
+@container props (max-width: 330px) {
+  .tse-label { flex-basis: 100%; }
+  .tse-inherited { padding-inline-start: 0; }
+  .tse-body { padding: 12px; gap: 14px; }
+}
+
+/* The always-visible font row uses the same inset as the other existing
+   controls, including when a narrow properties panel wraps the field. */
+.tse > .tse-row { padding:12px 14px; box-sizing:border-box; }
+.tse > .tse-row select { min-inline-size:0; max-inline-size:100%; }
+.tse > .tse-row .tse-inherited { flex-basis:100%; padding-inline-start:92px; box-sizing:border-box; font-size:12px; color:#64748b; }

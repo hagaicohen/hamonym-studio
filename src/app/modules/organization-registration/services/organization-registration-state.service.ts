@@ -155,7 +155,7 @@ export const initialState: OrganizationRegistrationState = {
 
   website: '',
 
-  selectedCampaignTypes: ['one-time', 'recurring'],
+  selectedCampaignTypes: [],
 
   logoPreview: '',
 
@@ -242,7 +242,6 @@ export function stepGatePasses(step: number, state: OrganizationRegistrationStat
       );
     case 2:
       return !!(
-        state.selectedCampaignTypes.length &&
         state.displayName.trim().length > 1 &&
         state.organizationDescription.trim().length > 10
       );
@@ -457,7 +456,7 @@ export class OrganizationRegistrationStateService {
       displayName: entity.display_name || '',
       organizationDescription: entity.description || '',
       website: entity.website || '',
-      selectedCampaignTypes: entity.campaign_types?.length ? entity.campaign_types : initialState.selectedCampaignTypes,
+      selectedCampaignTypes: Array.isArray(entity.campaign_types) ? [...entity.campaign_types] : [],
       logoPreview: entity.logo_url || '',
       monthlyGoal: entity.monthly_goal != null ? String(entity.monthly_goal) : '',
       yearlyGoal: entity.yearly_goal != null ? String(entity.yearly_goal) : '',

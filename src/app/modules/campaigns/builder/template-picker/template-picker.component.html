@@ -2,41 +2,38 @@
   <div class="tp-panel">
 
     <div class="tp-header">
-      <h1 class="tp-title">בחרו עיצוב לדף הקמפיין</h1>
+      <h1 class="tp-title">{{ 'studio.pickers.chooseADesignForThe' | transloco }}</h1>
       @if (mode === 'switch') {
-        <p class="tp-subtitle">התוכן, הבלוקים והגדרות הקמפיין נשמרים. התבנית משנה את הפריסה, את סדר המקטעים ואת הצבעים שלא שיניתם ידנית.</p>
+        <p class="tp-subtitle">{{ 'studio.pickers.theContentBlocksAndCampaign' | transloco }}</p>
       } @else {
-        <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+        <p class="tp-subtitle">{{ 'studio.pickers.youCanChangeAndCustomize' | transloco }}</p>
       }
     </div>
 
     <div class="tp-palette-row">
-      <span class="tp-palette-label">צבע:</span>
+      <span class="tp-palette-label">{{ 'studio.pickers.color' | transloco }}</span>
       <button class="tp-swatch"
         *ngFor="let p of palettes"
         [class.tp-swatch--selected]="selectedPalette.id === p.id"
         [style.background]="p.base"
-        [title]="p.name"
-        [attr.aria-label]="p.name"
+        [title]="p.name | hmText"
+        [attr.aria-label]="p.name | hmText"
         (click)="selectPalette(p)">
       </button>
     </div>
 
     <div class="tp-grid">
       <div class="tp-card"
-        *ngFor="let t of templates"
-        [class.tp-card--hovered]="hoveredId === t.id"
+        *ngFor="let t of templates; trackBy: trackTemplate"
         [class.tp-card--current]="t.id === currentTemplateId"
         [attr.aria-current]="t.id === currentTemplateId ? 'true' : null"
         [style.--accent]="selectedPalette.base"
         role="button"
         tabindex="0"
-        [attr.aria-label]="'בחירת עיצוב ' + t.name"
+        [attr.aria-label]="('studio.pickers.chooseTheDesign' | transloco) + (t.name | hmText)"
         (click)="select(t)"
         (keydown.enter)="select(t)"
-        (keydown.space)="$event.preventDefault(); select(t)"
-        (mouseenter)="hoveredId = t.id"
-        (mouseleave)="hoveredId = null">
+        (keydown.space)="$event.preventDefault(); select(t)">
 
         <!-- Visual preview -->
         <div class="tp-preview">
@@ -44,9 +41,9 @@
           <div class="tp-preview-hero"></div>
           <!-- Content rows from template definition -->
           <div class="tp-preview-body">
-            <div class="tp-preview-row" *ngFor="let row of t.buildPreview(selectedPalette)">
+            <div class="tp-preview-row" *ngFor="let row of previews.get(t.id); trackBy: trackIndex">
               <div class="tp-preview-col"
-                *ngFor="let col of row.cols"
+                *ngFor="let col of row.cols; trackBy: trackIndex"
                 [style.flex]="col.flex"
                 [style.background]="col.color"
                 [style.height.px]="col.height">
@@ -57,19 +54,19 @@
 
         <!-- Info -->
         <div class="tp-card-body">
-          <div class="tp-card-name">{{ t.name }}@if (t.id === currentTemplateId) { <span class="tp-current">התבנית הנוכחית</span> }</div>
-          <div class="tp-card-desc">{{ t.description }}</div>
+          <div class="tp-card-name">{{ t.name | hmText }}@if (t.id === currentTemplateId) { <span class="tp-current">{{ 'studio.pickers.currentTemplate' | transloco }}</span> }</div>
+          <div class="tp-card-desc">{{ t.description | hmText }}</div>
           @if (mode === 'switch' && t.pageFormat === 'minimal') {
-            <div class="tp-card-note">תוכן הדף הרגיל נשמר ומוסתר, ויחזור בבחירת תבנית רגילה.</div>
+            <div class="tp-card-note">{{ 'studio.pickers.theRegularPageContentIs' | transloco }}</div>
           }
-          <span class="tp-btn" aria-hidden="true">בחרו עיצוב זה</span>
+          <span class="tp-btn" aria-hidden="true">{{ 'studio.pickers.chooseThisDesign' | transloco }}</span>
         </div>
 
       </div>
     </div>
 
     <div class="tp-footer">
-      <button class="tp-skip-btn" (click)="skip()">{{ mode === 'switch' ? 'ביטול' : 'דלגו — אתחיל ידנית' }}</button>
+      <button class="tp-skip-btn" (click)="skip()">{{ mode === 'switch' ? ('studio.pickers.cancel' | transloco) : ('studio.pickers.skipIllStartManually' | transloco) }}</button>
     </div>
 
   </div>

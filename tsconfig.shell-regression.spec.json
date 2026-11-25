@@ -1,0 +1,1 @@
+﻿{"extends":"./tsconfig.spec.json","files":["src/test.ts"],"include":["src/app/core/i18n/route-language.spec.ts","src/**/*.d.ts"]}

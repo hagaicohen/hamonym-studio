@@ -44,6 +44,10 @@ export class StepBillingMethodComponent implements OnInit {
 
   readonly stateService = inject(OrganizationRegistrationStateService);
 
+  get isCommercialEntity(): boolean {
+    return ['sole_exempt', 'sole_registered', 'company'].includes(this.stateService.state().entityType);
+  }
+
   paymentMethod: PaymentMethod = 'credit-card';
 
   continueLater = false;

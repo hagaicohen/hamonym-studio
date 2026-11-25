@@ -6,14 +6,14 @@
       <div class="rs-header-icon">
         <lucide-angular [img]="Gift" [size]="18" class="rs-gift-icon"></lucide-angular>
       </div>
-      <h2 class="rs-title">{{ stepCopy.offeringsStepTitle }}</h2>
+      <h2 class="rs-title">{{ stepCopy.offeringsStepTitle | hmText }}</h2>
     </div>
-    <p class="rs-subtitle">{{ stepCopy.offeringsStepSubtitle }}</p>
+    <p class="rs-subtitle">{{ stepCopy.offeringsStepSubtitle | hmText }}</p>
   </div>
 
   <!-- ── ENABLE TOGGLE ── -->
   <div class="rs-enable-row">
-    <div class="rs-enable-text">{{ stepCopy.offeringsEnableLabel }}</div>
+    <div class="rs-enable-text">{{ stepCopy.offeringsEnableLabel | hmText }}</div>
     <label class="rs-switch">
       <input type="checkbox" [(ngModel)]="draft.offeringsEnabled" (ngModelChange)="sync()">
       <span class="rs-slider"></span>
@@ -28,7 +28,7 @@
          which matters because this step is gated/unreachable once the
          campaign is published, while the Page Builder step never is. -->
     <div class="rs-layout-note">
-      <app-icon name="palette" /> עיצוב התצוגה (כרטיסים/רשימה/תמונה, מיקום, צבעים) נמצא בשלב "בניית דף".
+      <app-icon name="palette" /> {{ 'builder.offerings.theDisplayDesignCardsList' | transloco }}
     </div>
 
     <!-- ── BUILDER: Form + Preview ── -->
@@ -40,17 +40,17 @@
         <!-- כותרת -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">{{ copy.titleLabel }} <span class="rf-req">*</span></label>
+            <label class="rf-label">{{ copy.titleLabel | hmText }} <span class="rf-req">*</span></label>
             <span class="rf-icon"><app-icon [name]="copy.icon" /></span>
           </div>
           <input class="rf-input" type="text" [(ngModel)]="offering.title"
-            placeholder="ספר חתום על ידי המחבר">
+            [placeholder]="'builder.offerings.aBookSignedByThe' | transloco">
         </div>
 
         <!-- מחיר / סכום מינימלי -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">{{ copy.priceLabel }} <span class="rf-req">*</span></label>
+            <label class="rf-label">{{ copy.priceLabel | hmText }} <span class="rf-req">*</span></label>
             <span class="rf-icon"><app-icon name="card" /></span>
           </div>
           <div class="rf-currency-wrap">
@@ -65,22 +65,22 @@
         <!-- תיאור -->
         <div class="rf-field">
           <div class="rf-label-row">
-            <label class="rf-label">{{ copy.descLabel }} <span class="rf-req">*</span></label>
+            <label class="rf-label">{{ copy.descLabel | hmText }} <span class="rf-req">*</span></label>
             <span class="rf-icon">≡</span>
           </div>
           <textarea class="rf-input rf-textarea" [(ngModel)]="offering.description"
-            placeholder="ספר עם הקדשה אישית ותעודת הוקרה לתורם. משלוח חינם עד הבית.">
+            [placeholder]="'builder.offerings.aBookWithAPersonal' | transloco">
           </textarea>
         </div>
 
         <!-- כמות -->
           <div class="rf-field">
             <div class="rf-label-row">
-              <label class="rf-label">כמות (אופציונלי)</label>
+              <label class="rf-label">{{ 'builder.offerings.quantityOptional' | transloco }}</label>
               <span class="rf-icon"><app-icon name="users" /></span>
             </div>
             <div class="rf-stock-toggle-row">
-              <span class="rf-stock-toggle-label">{{ offering.stock === null ? 'ללא הגבלה' : 'הגבלת כמות' }}</span>
+              <span class="rf-stock-toggle-label">{{ offering.stock === null ? ('builder.offerings.noLimit' | transloco) : ('builder.offerings.limitQuantity' | transloco) }}</span>
               <label class="rs-switch">
                 <input type="checkbox" [checked]="offering.stock !== null"
                   (change)="offering.stock = $any($event.target).checked ? (offering.stock || 10) : null">
@@ -91,35 +91,35 @@
               class="rf-input rf-input--stock" type="text"
               [value]="stockInput"
               (input)="onStockInput($event)"
-              placeholder="כמות יחידות">
+              [placeholder]="'builder.offerings.numberOfUnits' | transloco">
           </div>
 
           <!-- עסק שמספק את התשורה (אופציונלי) -->
           <div class="rf-field">
             <div class="rf-label-row">
-              <label class="rf-label">עסק שמספק את התשורה (אופציונלי)</label>
+              <label class="rf-label">{{ 'builder.offerings.businessThatProvidesTheReward' | transloco }}</label>
               <span class="rf-icon"><app-icon name="handshake" /></span>
             </div>
 
             <div class="rf-partner-linked" *ngIf="linkedPartnerFor(offering.id) as cp; else pickPartner">
               <span class="rf-partner-name"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</span>
-              <button type="button" class="rf-partner-unlink" (click)="unlinkPartner(cp)">הסר</button>
+              <button type="button" class="rf-partner-unlink" (click)="unlinkPartner(cp)">{{ 'builder.offerings.remove' | transloco }}</button>
             </div>
             <ng-template #pickPartner>
               <button type="button" class="rf-partner-pick-btn"
                 [disabled]="!isFormValid || savingCampaignForLink"
                 (click)="openPartnerPickerForCurrentOffering()">
-                <app-icon name="handshake" /> {{ savingCampaignForLink ? 'שומר קמפיין...' : 'בחר עסק' }}
+                <app-icon name="handshake" /> {{ savingCampaignForLink ? ('builder.offerings.savingTheCampaign' | transloco) : ('builder.offerings.chooseABusiness' | transloco) }}
               </button>
-              <p class="rf-partner-hint" *ngIf="!isFormValid">מלאו כותרת לתשורה קודם</p>
-              <p class="rf-partner-hint rf-partner-hint--error" *ngIf="linkPartnerError">{{ linkPartnerError }}</p>
+              <p class="rf-partner-hint" *ngIf="!isFormValid">{{ 'builder.offerings.fillInARewardTitle' | transloco }}</p>
+              <p class="rf-partner-hint rf-partner-hint--error" *ngIf="linkPartnerError">{{ linkPartnerError | hmText }}</p>
             </ng-template>
           </div>
 
           <!-- תמונה -->
           <div class="rf-field">
             <div class="rf-label-row">
-              <label class="rf-label">{{ copy.imageLabel }}</label>
+              <label class="rf-label">{{ copy.imageLabel | hmText }}</label>
             </div>
 
             <input id="reward-img-input" type="file" accept="image/*"
@@ -127,20 +127,20 @@
 
             <div class="rf-upload-area" *ngIf="!offering.imageUrl">
               <div class="rf-upload-icon"><app-icon name="cloud-upload" /></div>
-              <p class="rf-upload-title">גרור תמונה לכאן או
-                <label for="reward-img-input" class="rf-upload-link">לחץ להעלאה</label>
+              <p class="rf-upload-title">{{ 'builder.offerings.dragAnImageHereOr' | transloco }}
+                <label for="reward-img-input" class="rf-upload-link">{{ 'builder.offerings.clickToUpload' | transloco }}</label>
               </p>
-              <p class="rf-upload-hint">מומלץ להעלות תמונה ברזולוציה של 1200×800 פיקסלים (יחס 3:2)</p>
+              <p class="rf-upload-hint">{{ 'builder.offerings.weRecommendUploadingAnImage' | transloco }}</p>
               <label for="reward-img-input" class="rf-library-btn">
-                <app-icon name="image" /> בחר מהספריה
+                <app-icon name="image" /> {{ 'builder.offerings.chooseFromTheLibrary' | transloco }}
               </label>
             </div>
 
             <div class="rf-img-preview" *ngIf="offering.imageUrl">
-              <img [src]="offering.imageUrl" alt="תמונת תשורה" class="rf-img-thumb">
+              <img [src]="offering.imageUrl" [alt]="'builder.offerings.rewardImage' | transloco" class="rf-img-thumb">
               <div class="rf-img-actions">
-                <label for="reward-img-input" class="rf-img-btn">החלף</label>
-                <button type="button" class="rf-img-btn rf-img-btn--remove" (click)="removeImage()">הסר</button>
+                <label for="reward-img-input" class="rf-img-btn">{{ 'builder.offerings.replace' | transloco }}</label>
+                <button type="button" class="rf-img-btn rf-img-btn--remove" (click)="removeImage()">{{ 'builder.offerings.remove' | transloco }}</button>
               </div>
             </div>
           </div>
@@ -150,8 +150,8 @@
             <div class="rf-featured-text">
               <span class="rf-featured-star"><app-icon name="star" /></span>
               <div>
-                <div class="rf-featured-title">{{ copy.featuredTitle }}</div>
-                <div class="rf-featured-desc">{{ copy.featuredDesc }}</div>
+                <div class="rf-featured-title">{{ copy.featuredTitle | hmText }}</div>
+                <div class="rf-featured-desc">{{ copy.featuredDesc | hmText }}</div>
               </div>
             </div>
             <label class="rs-switch">
@@ -163,11 +163,11 @@
         <!-- Actions -->
         <div class="rf-actions">
           <button class="rf-btn-clear" type="button" (click)="clearForm()">
-            <app-icon name="trash" /> נקה טופס
+            <app-icon name="trash" /> {{ 'builder.offerings.clearForm' | transloco }}
           </button>
           <button class="rf-btn-save" type="button" (click)="save()"
             [disabled]="!isFormValid">
-            <app-icon name="save" /> {{ isEditing ? copy.updateBtn : copy.saveBtn }}
+            <app-icon name="save" /> {{ (isEditing ? copy.updateBtn : copy.saveBtn) | hmText }}
           </button>
         </div>
 
@@ -177,13 +177,13 @@
       <div class="reward-preview-panel">
         <div class="rp-header">
           <lucide-angular [img]="Eye" [size]="16" class="rp-eye"></lucide-angular>
-          <span>תצוגה מקדימה</span>
+          <span>{{ 'builder.offerings.preview' | transloco }}</span>
         </div>
 
         <!-- Standard layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout !== 'image'">
           <div class="rp-card" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> {{ 'builder.offerings.recommended' | transloco }}</div>
             <div class="rp-card-top">
               <div class="rp-icon-wrap">
                 <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" class="rp-img" alt="">
@@ -194,12 +194,12 @@
               </div>
             </div>
             <div class="rp-body">
-              <div class="rp-title">{{ offering.title || 'כותרת התשורה' }}</div>
-              <p class="rp-desc">{{ offering.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <div class="rp-title">{{ offering.title || ('builder.offerings.rewardTitle' | transloco) }}</div>
+              <p class="rp-desc">{{ offering.description || ('builder.offerings.theRewardDescriptionWillAppear' | transloco) }}</p>
               <button class="rp-cta" type="button"
                 [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
                 [style.color]="'rgba(255,255,255,0.9)'">
-                {{ copy.cta }}
+                <span data-i18n-content>{{ copy.cta }}</span>
               </button>
             </div>
           </div>
@@ -208,7 +208,7 @@
         <!-- Image layout preview -->
         <ng-container *ngIf="draft.layout.rewardsLayout === 'image'">
           <div class="rp-card rp-card--img" [style.background]="draft.layout.theme.rewardsBg || '#014737'">
-            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
+            <div class="rp-badge" *ngIf="offering.featured === true"><app-icon name="star" /> {{ 'builder.offerings.recommended' | transloco }}</div>
             <div class="rp-price-top" [style.color]="draft.layout.theme.secondaryColor || '#7DD3FC'">
               ₪{{ offering.minimumAmount ? offering.minimumAmount.toLocaleString('he-IL') : '0' }}
             </div>
@@ -217,12 +217,12 @@
               <span *ngIf="!offering.imageUrl" class="rp-img-hero-placeholder"><app-icon name="image" /></span>
             </div>
             <div class="rp-body rp-body--img">
-              <div class="rp-title rp-title--center">{{ offering.title || 'כותרת התשורה' }}</div>
-              <p class="rp-desc rp-desc--justify">{{ offering.description || 'תיאור התשורה יופיע כאן...' }}</p>
+              <div class="rp-title rp-title--center">{{ offering.title || ('builder.offerings.rewardTitle' | transloco) }}</div>
+              <p class="rp-desc rp-desc--justify">{{ offering.description || ('builder.offerings.theRewardDescriptionWillAppear' | transloco) }}</p>
               <button class="rp-cta" type="button"
                 [style.borderColor]="draft.layout.theme.rewardCardBorder || 'rgba(255,255,255,0.25)'"
                 [style.color]="'rgba(255,255,255,0.9)'">
-                {{ copy.cta }}
+                <span data-i18n-content>{{ copy.cta }}</span>
               </button>
             </div>
           </div>
@@ -237,9 +237,9 @@
       <div class="rs-list-header">
         <div class="rs-list-title">
           <lucide-angular [img]="Gift" [size]="18" class="rs-list-icon"></lucide-angular>
-          {{ stepCopy.offeringsStepTitle }} בקמפיין ({{ draft.offerings.length }})
+          {{ 'builder.offerings.inCampaign' | transloco: { count: draft.offerings.length } }}
         </div>
-        <button class="rs-add-btn" type="button" (click)="clearForm()">{{ stepCopy.offeringsAddButtonLabel }}</button>
+        <button class="rs-add-btn" type="button" (click)="clearForm()">{{ stepCopy.offeringsAddButtonLabel | hmText }}</button>
       </div>
 
       <div class="rs-grid">
@@ -270,13 +270,13 @@
             <div class="rs-card-partner" *ngIf="linkedPartnerFor(o.id) as cp">
               <span class="rs-card-partner-label"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</span>
               <div class="rs-card-partner-icons">
-                <a class="rs-card-icon-btn" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener" title="פרופיל השותף">
+                <a class="rs-card-icon-btn" [routerLink]="['/partners', cp.partnerEntityId, 'builder']" target="_blank" rel="noopener" [title]="'builder.offerings.partnerProfile' | transloco">
                   <lucide-angular [img]="Building2" [size]="13"></lucide-angular>
                 </a>
-                <a class="rs-card-icon-btn" [routerLink]="['/campaign-partners', cp.id, 'builder']" target="_blank" rel="noopener" title="תוכן ההשתתפות בקמפיין">
+                <a class="rs-card-icon-btn" [routerLink]="['/campaign-partners', cp.id, 'builder']" target="_blank" rel="noopener" [title]="'builder.offerings.campaignParticipationContent' | transloco">
                   <lucide-angular [img]="Gift" [size]="13"></lucide-angular>
                 </a>
-                <button class="rs-card-icon-btn rs-card-icon-btn--danger" type="button" (click)="unlinkPartner(cp)" title="ניתוק">
+                <button class="rs-card-icon-btn rs-card-icon-btn--danger" type="button" (click)="unlinkPartner(cp)" [title]="'builder.offerings.disconnect' | transloco">
                   <lucide-angular [img]="X" [size]="13"></lucide-angular>
                 </button>
               </div>
@@ -284,13 +284,13 @@
 
             <div class="rs-card-actions">
               <button class="rs-card-btn rs-card-btn--delete" type="button" (click)="deleteOffering(o.id)">
-                <app-icon name="trash" /> מחיקה
+                <app-icon name="trash" /> {{ 'builder.offerings.delete' | transloco }}
               </button>
               <button class="rs-card-btn rs-card-btn--duplicate" type="button" (click)="duplicateOffering(o)">
-                <app-icon name="copy" /> שכפל
+                <app-icon name="copy" /> {{ 'builder.offerings.duplicate' | transloco }}
               </button>
               <button class="rs-card-btn rs-card-btn--edit" type="button" (click)="editOffering(o)">
-                <app-icon name="pencil" /> עריכה
+                <app-icon name="pencil" /> {{ 'builder.offerings.edit' | transloco }}
               </button>
             </div>
           </div>

@@ -6,12 +6,13 @@ import { EmptyStateComponent } from '../../../../../shared/ui/empty-state/empty-
 import { CampaignStudioStateService, CampaignSponsor } from '../../../services/campaign-studio-state.service';
 import { ColorPickerComponent } from '../../../../../shared/ui/color-picker/color-picker.component';
 import { UploadService } from '../../../../../core/services/upload.service';
-
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-campaign-sponsors-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, EmptyStateComponent],
+  imports: [TranslocoPipe, HmIconComponent, CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, EmptyStateComponent],
   templateUrl: './campaign-sponsors-step.component.html',
   styleUrl: './campaign-sponsors-step.component.css',
 })

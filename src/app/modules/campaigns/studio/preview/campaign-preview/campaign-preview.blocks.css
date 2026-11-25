@@ -170,7 +170,7 @@
 .block-rich-text ::ng-deep h3 { font-weight: 700; color: var(--hm-heading); margin: 14px 0 6px; }
 .block-rich-text ::ng-deep a  { color: var(--hm-link); }
 .block-rich-text ::ng-deep ul,
-.block-rich-text ::ng-deep ol { padding-right: 20px; margin-bottom: 10px; }
+.block-rich-text ::ng-deep ol { padding-inline-start: 20px; margin-bottom: 10px; }
 
 /* IMAGE */
 /* max-width/margin-inline match .block-rich-text's own column exactly —
@@ -237,7 +237,6 @@
   flex-wrap: nowrap;
   align-items: stretch;
   gap: 16px;
-  direction: rtl;
   min-width: 100%;
   justify-content: center;
 }
@@ -281,7 +280,7 @@
   padding: 8px 12px;
   background: linear-gradient(transparent, rgba(0,0,0,0.6));
   color: #fff; font-size: 12px;
-  direction: rtl; text-align: right;
+   text-align: start;
 }
 
 /* GRID mode */
@@ -425,7 +424,7 @@
 .tabs-panel { width: 100%; }
 
 /* ACCORDION (panels) */
-.block-accordion { width: 100%; box-sizing: border-box; padding: 0 clamp(16px, 5vw, 48px); display: flex; flex-direction: column; gap: 10px; }
+.block-accordion { width: 100%; box-sizing: border-box; padding-block: 0 5vw,; padding-inline: clamp(16px, 48px); display: flex; flex-direction: column; gap: 10px; }
 .accordion-panel-header {
   width: 100%;
   display: flex;
@@ -437,7 +436,7 @@
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  text-align: right;
+  text-align: start;
   transition: all 0.15s;
 }
 .accordion-panel-icon { font-size: 18px; flex-shrink: 0; }
@@ -479,7 +478,7 @@
 .campaign-page--mobile .hm-raised-info {
   flex: 1;
   align-items: flex-start;
-  text-align: left;
+  text-align: end;
 }
 .campaign-page--mobile .hm-ring-wrapper { width: 80px; height: 80px; }
 .campaign-page--mobile .hm-ring-svg    { width: 80px; height: 80px; }
@@ -492,8 +491,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .campaign-page--mobile .hm-stat-box { padding: 10px 4px 0; }
-.campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-left: none; }
-.campaign-page--mobile .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+.campaign-page--mobile .hm-stat-box:nth-child(2n+1) { border-inline-end: none; }
+.campaign-page--mobile .hm-stat-box:nth-child(2n)   { border-inline-end: 1px solid var(--line, #e2e8f0); }
 /* 3-column amounts on mobile */
 .campaign-page--mobile .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 
@@ -527,8 +526,8 @@
 /* 2-column stat grid inside any container — row-major wrapping */
 .container-child .hm-stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .container-child .hm-stat-box { padding: 12px 6px 0; }
-.container-child .hm-stat-box:nth-child(2n+1) { border-left: none; }
-.container-child .hm-stat-box:nth-child(2n)   { border-left: 1px solid var(--line, #e2e8f0); }
+.container-child .hm-stat-box:nth-child(2n+1) { border-inline-end: none; }
+.container-child .hm-stat-box:nth-child(2n)   { border-inline-end: 1px solid var(--line, #e2e8f0); }
 /* 3-column amounts inside container */
 .container-child .hm-amounts { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
 /* Both cards fill their container-child height equally */
@@ -642,3 +641,12 @@
 }
 .cta-btn:hover { filter: brightness(1.1); }
 
+
+/* The sidebar side per content language (utils/sidebar-side.ts): the class names
+   the side to show, kept in both directions. */
+.page-layout-sidebar--right:dir(ltr) { flex-direction: row; }
+.page-layout-sidebar--left:dir(ltr)  { flex-direction: row-reverse; }
+
+/* A side-by-side sidebar row whose chosen side differs from the content
+   direction's natural order. Stacked on mobile as before. */
+.campaign-page:not(.campaign-page--mobile) .block-container--row.block-container--reversed { flex-direction: row-reverse; }

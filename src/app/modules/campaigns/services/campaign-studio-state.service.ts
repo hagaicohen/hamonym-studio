@@ -1,4 +1,6 @@
-import { Injectable } from '@angular/core';
+import {campaignBodyRoot,withCampaignBodyRoot} from '../utils/campaign-body-root';
+import type { StatsVisualLayout } from '../utils/stats-visual-layout';
+import { Injectable, signal } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { TextStyle, CtaConfig } from '../../../shared/models/text-style.model';
 export { TextStyle, CtaConfig, TextAlign, TextFontSize, TextPosition } from '../../../shared/models/text-style.model';
@@ -9,6 +11,9 @@ export { DonationAmountButtonPreset } from '../utils/donation-amount-button-pres
 import { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, resolveTheme } from '../builder/styles/campaign-styles';
 import type { CampaignTemplate, TemplatePalette } from '../builder/templates/campaign-templates';
 import { isUntouchedStarter, mergePaletteTheme, reorderForTemplate } from '../builder/templates/template-switch';
+import type { CampaignTypography } from '../utils/campaign-fonts';
+import type { AmountButtonsStyle } from '../utils/amount-buttons';
+import { CampaignContentI18n, ContentLang, ContentView, canonicalDraft, contentLanguageOf, copyBlockTranslations, keepHebrewAsEnglish, projectToLanguage, syncContentView, withEnglishPublished } from '../utils/content-i18n';
 export { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
 
 export type CampaignFundingType =
@@ -100,13 +105,26 @@ export type BlockType =
   // existing campaign.
   | 'coupons'
   | 'map'
-  | 'opening-hours';
+  | 'opening-hours'
+  // Display-only blocks (Phase 1, 2026-11-09): a countdown to an absolute
+  // moment, and a promotional badge. Neither touches amounts or charges.
+  | 'countdown'
+  | 'badge'
+  | 'progress'
+  | 'contact'
+  | 'navigation';
 
 export type StatKey =
   | 'target' | 'raised' | 'percent' | 'supporters'
   | 'start_date' | 'end_date' | 'days_remaining' | 'ambassadors';
 
 export interface StatItem {
+  // Absent keeps the existing label; false hides only its visual text.
+  showLabel?: boolean;
+  // The manager's own label (e.g. "נמכרו", "מנויים"); unset = the default for the key.
+  label?: string;
+  textStyles?: Partial<Record<StatsTextRole, Partial<TextStyle>>>;
+  size?: import('../utils/stats-visual-layout').StatCardSize;
   key:     StatKey;
   visible: boolean;
   order:   number;
@@ -132,7 +150,9 @@ export type AmbassadorsTextRole = 'sectionTitle' | 'ambassadorName' | 'raisedAmo
 // resolution chain (color properties reuse resolveRoleColor() as-is;
 // borderRadius resolves against the Campaign Style's existing generic
 // cards.radius/buttons.radius tokens, never a new per-component token).
-export type DonationTextRole    = 'sectionTitle' | 'subtitle' | 'secondaryMeta' | 'totalSum';
+// amountLabel / frequencyLabel / ctaText (2026-11-08): the amount buttons, the
+// one-time/monthly toggle and the donate button's own text.
+export type DonationTextRole    = 'sectionTitle' | 'subtitle' | 'secondaryMeta' | 'totalSum' | 'amountLabel' | 'frequencyLabel' | 'ctaText';
 export type DonationButtonRole  = 'amountButton' | 'amountButtonSelected' | 'cta';
 export type DonationSurfaceRole = 'container';
 export type AmbassadorsSurfaceRole = 'card';
@@ -141,6 +161,7 @@ export type StatsProgressRole = 'ring';
 export type CtaButtonRole = 'main';
 
 export interface StatsBlockData {
+  visualLayout?: StatsVisualLayout;
   items:           StatItem[];
   style:           'cards' | 'inline';
   size:            'sm' | 'md' | 'lg';
@@ -179,6 +200,9 @@ export const DEFAULT_DONOR_FIELDS: DonorFieldsConfig = {
 };
 
 export interface DonationWidgetBlockData {
+  progress?:import('../utils/campaign-composition').ProgressConfig & {visible?:boolean};
+  presentation?: { padding?: number; gap?: number; align?: 'start' | 'center' | 'end'; subtitlePosition?: 'top' | 'bottom' };
+
   title:            string;
   subtitle:         string;
   ctaLabel:         string;
@@ -216,6 +240,8 @@ export interface DonationWidgetBlockData {
 }
 
 export interface RichTextBlockData {
+  paragraphSpacing?:number;
+  showTitle?: boolean; // Absent preserves existing headings; hiding retains label.
   content:     string;
   lineHeight?: number; // default 1.6
   // Style for the block's own `label`, when rendered on the page as
@@ -224,6 +250,7 @@ export interface RichTextBlockData {
   // size/weight) — unchanged for existing blocks. See DECISIONS.md
   // (2026-07-31).
   headingStyle?: TextStyle;
+  bodyStyle?: Partial<TextStyle>;
 }
 
 export interface DividerBlockData {
@@ -233,6 +260,7 @@ export interface DividerBlockData {
 }
 
 export interface DonorsBlockData {
+  design?:import('../utils/listing-design').ListingDesign;
   viewMode: 'grid' | 'list';
   // Section text override (2026-10-06, "Style → Theme → Section override"
   // model) -- the section's own "התורמים שלנו" title, falling back to
@@ -257,6 +285,8 @@ export interface ShareBlockData {
 // Block-level view configs — content lives at draft root level
 export interface SponsorsBlockData    { /* view config only */ }
 export interface AmbassadorsBlockData {
+  design?:import('../utils/listing-design').ListingDesign;
+  joinCta?:import('../utils/listing-design').JoinCtaDesign;
   // Typography Phase A (2026-10) -- no pre-existing titleColor field here
   // (this interface was previously completely empty), so there is no
   // legacy alias to preserve -- a fresh textStyles-only role set.
@@ -270,7 +300,28 @@ export interface AmbassadorsBlockData {
   surfaceStyles?: Partial<Record<AmbassadorsSurfaceRole, Partial<SurfaceStyle>>>;
   buttonStyles?:  Partial<Record<AmbassadorsButtonRole, Partial<ButtonStyle>>>;
 }
-export interface CommentsBlockData    { /* view config only — comments live in campaign_comments table */ }
+// View config only: the comments themselves belong to the campaign (backend
+// campaign_comments), never to this block. Every field is optional; unset =
+// the default look (utils/comments-design.ts). title/description are campaign
+// content (translatable per language).
+export type CommentsTextRole = 'sectionTitle' | 'subtitle' | 'commentAuthor' | 'commentBody';
+export interface CommentsBlockData {
+  title?: string;
+  description?: string;
+  style?: 'cards' | 'list' | 'carousel';
+  columns?: 1 | 2;
+  initialCount?: number;
+  showAvatar?: boolean;
+  showDates?: boolean;
+  showSearch?: boolean;
+  align?: 'start' | 'center';
+  formPosition?: 'top' | 'bottom';
+  accentColor?: string;
+  gap?: number;
+  padding?: number;
+  surfaceStyles?: { section?: SurfaceStyle; card?: SurfaceStyle };
+  textStyles?: Partial<Record<CommentsTextRole, Partial<TextStyle>>>;
+}
 export interface UpdatesBlockData {
   viewMode: 'slider' | 'list';
 }
@@ -300,12 +351,45 @@ export interface VideoBlockData {
 
 export interface GalleryBlockData {
   items:       { url: string; caption?: string }[];
-  style:       'slider' | 'grid';
+  // 'slider' = the scrolling strip, 'grid'; 'slideshow' = one image at a time
+  // (autoPlay, intervalSeconds, transition apply to it only).
+  style:       'slider' | 'grid' | 'slideshow';
   aspectRatio: '16:9' | '4:3' | '1:1' | '3:2';
   showCaptions: boolean;
   showDots:    boolean;
   showArrows:  boolean;
   autoPlay:    boolean;
+  intervalSeconds?: number;
+  transition?: 'slide' | 'fade';
+}
+
+// A countdown to an absolute moment (ISO 8601 UTC, e.g. 2026-12-31T22:00:00.000Z),
+// so every visitor counts to the same instant whatever their time zone.
+export interface CountdownBlockData {
+  targetAt: string | null;
+  title?: string;
+  expiredText?: string;
+  hideWhenExpired?: boolean;
+  showSeconds?: boolean;
+  style?: 'boxes' | 'inline';
+  align?: 'start' | 'center';
+  accentColor?: string;
+  surfaceStyles?: { section?: SurfaceStyle; unit?: SurfaceStyle };
+  textStyles?: Partial<Record<'sectionTitle' | 'value' | 'label', Partial<TextStyle>>>;
+}
+
+// A promotional badge ("כל תרומה מוכפלת ×2"). Display only: it never changes
+// an amount, a charge or a report.
+export interface BadgeBlockData {
+  text: string;
+  subtext?: string;
+  imageUrl?: string | null;
+  shape?: 'pill' | 'ribbon' | 'card';
+  size?: 'sm' | 'md' | 'lg';
+  align?: 'start' | 'center' | 'end';
+  background?: string;
+  textColor?: string;
+  borderColor?: string;
 }
 
 export interface SplitBlockData {
@@ -315,6 +399,7 @@ export interface SplitBlockData {
 }
 
 export interface ContainerBlockData {
+  bodyRole?: 'root'|'columns'|'main'|'rail'|'magazine';
   childBlockIds:       string[];
   backgroundColor:     string;
   borderColor:         string;
@@ -433,6 +518,9 @@ export interface OpeningHoursBlockData {
 }
 
 export type BlockData =
+  | import('../utils/campaign-composition').NavigationConfig
+  | import('../utils/campaign-composition').ProgressConfig
+  | import('../utils/campaign-composition').ContactConfig
   | RichTextBlockData
   | ImageBlockData
   | VideoBlockData
@@ -451,12 +539,19 @@ export type BlockData =
   | UpdatesBlockData
   | ShareBlockData
   | CommentsBlockData
+  | CountdownBlockData
+  | BadgeBlockData
   | CouponsBlockData
   | MapBlockData
   | OpeningHoursBlockData
   | Record<string, never>;
 
 export interface CampaignBlock {
+  sectionStyle?:Partial<SurfaceStyle>; cardStyle?:Partial<SurfaceStyle>;
+  effect?:import('../utils/studio-section-style').SectionEffect;
+
+  placement?: 'below-header';
+  responsive?: Partial<Record<'desktop' | 'mobile', import('../utils/campaign-composition').DeviceComposition>>;
   id: string;
   type: BlockType;
   order: number;
@@ -471,6 +566,10 @@ export interface CampaignBlock {
   // action once the manager has looked at it — see
   // campaign-page-builder-step's block-list header.
   importReview?: { needsReview: boolean; confidence: number; sourceId: string };
+  // Component removal policy (2026-11-09): set only on blocks the manager added
+  // (add, drop from the catalog, duplicate). Template, import and every block
+  // saved before this have none and are show/hide only — see canRemoveBlock().
+  userAdded?: true;
 }
 
 // Offering = a donation perk/gift (formerly "Reward"). Race/event participant
@@ -497,6 +596,9 @@ export interface Offering {
 // see DECISIONS.md (2026-07-16).
 export interface RegistrationOption {
   id: string;
+  // Stable identity across saves (the server re-creates options, so `id` changes);
+  // English translations attach to it (D-45).
+  uid?: string;
   key: string;
   title: string;
   description: string;
@@ -586,7 +688,24 @@ export interface CampaignLocation {
 
 export type StudioCanvasArea = 'opening' | 'nav' | 'footer' | 'title' | 'subtitle' | 'logo' | 'hero-cta';
 
+// Mobile/desktop sticky donate bar (Phase 1, 2026-11-09). Unset = 'scroll'
+// (today's behavior: shown once the page's own donate button is out of view).
+export interface StickyCtaConfig {
+  mode?: 'scroll' | 'always' | 'inline' | 'hidden';
+  label?: string;
+  background?: string;
+  textColor?: string;
+  buttonColor?: string;
+}
+
 export interface CampaignLayout {
+  simpleStudio?: Record<string, unknown>;
+  bodyRootId?: string;
+  replaceLegacyNavigation?:boolean;
+  openingSurface?:Partial<SurfaceStyle>; openingResponsive?:Partial<Record<'desktop'|'mobile',Partial<SurfaceStyle>>>;
+  openingEffect?:import('../utils/studio-section-style').SectionEffect;
+
+  stickyCta?: StickyCtaConfig;
   layoutMode:         LayoutMode;
   templateId?:        string;
   // 'full' (default/undefined) = today's block-based Page Builder page,
@@ -598,6 +717,13 @@ export interface CampaignLayout {
   // already-passthrough `layout` JSON blob. See 2026-09-23 conversation
   // (pre-pilot "minimal donation page" decision).
   pageFormat?:        'full' | 'minimal';
+  // Donation currencies besides ILS that this campaign offers (multi-currency,
+  // 2026-11). The goal and progress stay in ILS; the platform must also have
+  // the currency enabled (DonationCurrencyService) before a donor sees it.
+  donationCurrencies?: ('USD' | 'EUR')[];
+  // The manager's own presets per foreign currency; absent = round defaults
+  // in that currency (DEFAULT_FOREIGN_PRESETS), never converted shekel ones.
+  currencyPresets?: Partial<Record<'USD' | 'EUR', { oneTime?: number[]; monthly?: number[] }>>;
   // Minimal-format logo presentation only (MinimalDonationPageComponent) —
   // the full page's own Hero logo has always been a fixed circle with no
   // shape/size control at all, so there's no existing field to reuse for
@@ -623,6 +749,7 @@ export interface CampaignLayout {
   // MinimalDonationPageComponent (not via a --mdp-* CSS var, since those are
   // shared with the button/selected-amount state and need to vary
   // independently per the 2026-09-24 "control every part separately" ask).
+  minimalTextStyle?: Partial<TextStyle>;
   minimalTitleColor?:    string;
   minimalSubtitleColor?: string;
   // Opt-in "advanced" mode (2026-09-24) — off by default (plain title input +
@@ -687,6 +814,10 @@ export interface CampaignLayout {
   // existing campaign — no migration needed, same pattern as heroPlacement.
   // See DECISIONS.md (2026-07-26).
   sidebarSections?: Array<'rewards' | 'donors' | 'ambassadors' | 'updates' | 'sponsors'>;
+  // The sidebar's side per content language, only where the manager chose one.
+  // Absent = automatic: Hebrew keeps the saved structure's side, English mirrors
+  // it (utils/sidebar-side.ts). A layout setting, shared by every block.
+  sidebarSideByLanguage?: Partial<Record<ContentLang, 'left' | 'right'>>;
   // Reward card structure is fixed: price → title → image → description.
   // This only controls where the IMAGE sits within that order — only
   // meaningful for the compact sidebar reward card (the below-sidebar
@@ -748,6 +879,15 @@ export interface CampaignLayout {
   // — just another optional key inside the already-passthrough `layout`
   // JSON blob.
   campaignLocation?:  CampaignLocation;
+  // Typography of the campaign details line (organizer, category, dates,
+  // location) under the Hero. Presentation only; the details stay data.
+  metaTextStyle?:     Partial<TextStyle>;
+  // Suggested-amount buttons for the whole campaign: donation widget, Checkout V2
+  // and minimal page (utils/amount-buttons.ts). Absent = each one's own look.
+  amountButtons?:     AmountButtonsStyle;
+  // Fonts per content language and text role (utils/campaign-fonts.ts, D-46).
+  // Absent = the Campaign Style's font everywhere (every existing campaign).
+  typography?:        CampaignTypography;
   theme:              CampaignTheme;
   backgroundType:     'none' | 'color' | 'image';
   backgroundColor:    string;
@@ -784,6 +924,7 @@ export interface CampaignDraft {
   id?:          string;
   entityId?:    string;
   status:       CampaignStatus;
+  isLocked?:    boolean;
   currentAmount?:   number;
   supportersCount?: number;
   isHidden?:        boolean;
@@ -889,6 +1030,12 @@ export interface CampaignDraft {
 
   // Layout & Theme
   layout: CampaignLayout;
+
+  // English version of the authored text (utils/content-i18n.ts). Absent on every
+  // campaign that has never been translated.
+  contentI18n?: CampaignContentI18n;
+  // Transient, Studio only: set while the English version is open for editing.
+  contentView?: ContentView;
 }
 
 function generateId(): string {
@@ -1219,6 +1366,14 @@ export function createInitialCampaignPartnerDraft(campaignPartnerId: string, tit
   providedIn: 'root',
 })
 export class CampaignStudioStateService {
+  amountCardSelection = '';
+  readonly summarySelection=signal<{blockId:string;part:string}|null>(null);
+  readonly summaryPreview=signal({blockId:'',token:0});
+  // Ephemeral editor context, deliberately outside CampaignDraft and its history/persistence.
+  readonly arrangingStatistics = signal<string | null>(null);
+  readonly selectedStatistic = signal<{blockId:string; key:string} | null>(null);
+  readonly statisticsCanvas = signal<Record<string, import('../utils/stats-visual-layout').StatsLayoutInfo>>({});
+
   private draftSubject = new BehaviorSubject<CampaignDraft>(createInitialDraft());
   private editModeSubject = new BehaviorSubject<boolean>(false);
 
@@ -1286,7 +1441,40 @@ export class CampaignStudioStateService {
 
   // Replaces the draft without touching edit mode or anything else (Studio
   // undo/redo restores a snapshot through this).
-  replaceDraft(draft: CampaignDraft): void { this.draftSubject.next(draft); }
+  replaceDraft(draft: CampaignDraft): void { this.emit(draft); }
+
+  // Every draft change goes through here, so text fields that appear while the
+  // English version is open are registered with their Hebrew base.
+  private emit(draft: CampaignDraft): void { this.draftSubject.next(syncContentView(draft)); }
+
+  // ── Content language (bilingual campaign content, D-38 … D-45) ──
+  get contentLanguage(): ContentLang { return contentLanguageOf(this.draft); }
+
+  // Opens the given language version of the content for editing. Unsaved edits
+  // of the other version are kept (folded into the draft first).
+  setContentLanguage(lang: ContentLang): void {
+    if (lang === this.contentLanguage) return;
+    this.emit(projectToLanguage(this.draft, lang));
+  }
+
+  // The draft as stored: Hebrew in the fields, English in contentI18n.
+  canonicalDraft(draft: CampaignDraft = this.draft): CampaignDraft { return canonicalDraft(draft); }
+
+  setEnglishPublished(published: boolean): void { this.emit(withEnglishPublished(this.draft, published)); }
+
+  keepHebrewAsEnglish(path: string): void { this.emit(keepHebrewAsEnglish(this.draft, path)); }
+
+  // The public page shows a campaign in the language the visitor chose; payments
+  // and analytics keep the stored (Hebrew) wording whatever that language is (D-44).
+  private storedVersion: CampaignDraft | null = null;
+  setStoredVersion(draft: CampaignDraft | null): void { this.storedVersion = draft; }
+  storedDraft(): CampaignDraft { return this.storedVersion ?? canonicalDraft(this.draft); }
+  storedOfferingTitle(id: string): string | undefined { return this.storedDraft().offerings?.find(o => o.id === id)?.title; }
+
+  // A saved draft coming back from the server, shown in the language that is open.
+  adoptSaved(saved: CampaignDraft): CampaignDraft {
+    return this.contentLanguage === 'he' ? saved : projectToLanguage(saved, this.contentLanguage);
+  }
 
   // Last draft the server accepted (create/update), for the Studio's
   // unsaved-changes warning. Server-owned fields are ignored when comparing.
@@ -1294,7 +1482,7 @@ export class CampaignStudioStateService {
   private static readonly SERVER_FIELDS = ['id', 'entityId', 'status', 'currentAmount', 'supportersCount', 'isHidden',
     'createdAt', 'updatedAt', 'publishedAt', 'publishRequestedAt', 'entityGaMeasurementId', 'entityName', 'entityLogo'] as const;
   draftFingerprint(draft: CampaignDraft): string {
-    const copy: Record<string, unknown> = { ...draft };
+    const copy: Record<string, unknown> = { ...canonicalDraft(draft) };
     for (const k of CampaignStudioStateService.SERVER_FIELDS) delete copy[k];
     return JSON.stringify(copy);
   }
@@ -1312,7 +1500,7 @@ export class CampaignStudioStateService {
     const hasSingle = (b: CampaignBlock | undefined): boolean => !!b && (singleInstance.includes(b.type)
       || (isParent(b) && (b.data as ContainerBlockData).childBlockIds.some(cid => hasSingle(blocks.find(x => x.id === cid)))));
     const block = blocks.find(b => b.id === id);
-    return !!block && !hasSingle(block);
+    return !!block && id!==this.draft.layout.bodyRootId && !hasSingle(block);
   }
 
   duplicateBlock(id: string, singleInstance: BlockType[]): string | null {
@@ -1332,6 +1520,7 @@ export class CampaignStudioStateService {
     const copies = subtree.map(b => {
       const copy: CampaignBlock = structuredClone(b);
       copy.id = idMap.get(b.id)!;
+      copy.userAdded = true;
       if (isParent(copy)) {
         const data = copy.data as ContainerBlockData;
         copy.data = { ...data, childBlockIds: data.childBlockIds.filter(c => idMap.has(c)).map(c => idMap.get(c)!) } as ContainerBlockData;
@@ -1350,7 +1539,7 @@ export class CampaignStudioStateService {
         ? { ...b, data: { ...(b.data as ContainerBlockData), childBlockIds: [...(b.data as ContainerBlockData).childBlockIds, newId] } as ContainerBlockData }
         : b);
     }
-    this.patch({ blocks: next });
+    this.emit(copyBlockTranslations({ ...this.draft, blocks: next }, idMap));
     return newId;
   }
 
@@ -1363,7 +1552,7 @@ export class CampaignStudioStateService {
   }
 
   patch(partial: Partial<CampaignDraft>): void {
-    this.draftSubject.next({ ...this.draft, ...partial });
+    this.emit({ ...this.draft, ...partial });
   }
 
   // ── Campaign Style (Design Evolution Phase 1, 2026-09-29) ──
@@ -1417,12 +1606,12 @@ export class CampaignStudioStateService {
   }
 
   sync(): void {
-    this.draftSubject.next({ ...this.draft });
+    this.emit({ ...this.draft });
   }
 
   reset(): void {
     this.editModeSubject.next(false);
-    this.draftSubject.next(createInitialDraft());
+    this.emit(createInitialDraft());
   }
 
   applyTemplate(
@@ -1446,7 +1635,7 @@ export class CampaignStudioStateService {
       pageFormat,
       theme: { ...base.layout.theme, ...themeOverride },
     };
-    this.draftSubject.next({ ...base, blocks, layout });
+    this.emit({ ...base, blocks, layout });
   }
 
   // Initial creation from a template (new, unsaved campaign): a fresh draft
@@ -1569,8 +1758,9 @@ export class CampaignStudioStateService {
   }
 
   loadDraft(data: CampaignDraft): void {
+    this.storedVersion = null;
     this.editModeSubject.next(true);
-    this.draftSubject.next(data);
+    this.emit(data);
     this.markSaved(data);
   }
 
@@ -1579,7 +1769,7 @@ export class CampaignStudioStateService {
   // visitor has the public campaign page open.
   bumpRaisedAmount(amountDelta: number, supportersDelta: number): void {
     const current = this.draft;
-    this.draftSubject.next({
+    this.emit({
       ...current,
       currentAmount:   (current.currentAmount ?? 0) + amountDelta,
       supportersCount: (current.supportersCount ?? 0) + supportersDelta,
@@ -1612,6 +1802,10 @@ export class CampaignStudioStateService {
   };
 
   private defaultBlockLabel(type: BlockType, blocks: CampaignBlock[]): string {
+    if(type==='rich-text')return this.contentLanguage==='en'?'Title':'כותרת';
+    // Blocks added after the bilingual Studio have no stored name: the tree shows
+    // the catalog name in the interface language (buildStudioTree).
+    if (UNNAMED_BLOCK_TYPES.has(type)) return '';
     const baseName = this.DEFAULT_BLOCK_LABELS[type] ?? type;
     const sameType = blocks.filter(b => b.type === type).length;
     return sameType > 0 ? `${baseName} ${sameType + 1}` : baseName;
@@ -1629,6 +1823,7 @@ export class CampaignStudioStateService {
       const last = sameType[sameType.length - 1];
       if (last) return structuredClone(last.data);
     }
+    if(type==='rich-text')return {...defaultBlockData(type,this.draft.ownerType),showTitle:false,content:this.contentLanguage==='en'?'<p>Enter text here...</p>':'<p>הכנס טקסט כאן...</p>'} as RichTextBlockData;
     return defaultBlockData(type, this.draft.ownerType);
   }
 
@@ -1647,6 +1842,7 @@ export class CampaignStudioStateService {
       spacingTop: 0,
       spacingBottom: 0,
       data: this.startingBlockData(type, blocks),
+      userAdded: true,
     });
     this.patch({ blocks });
     // An empty tab bar looks broken (unlike an empty container, which is
@@ -1744,7 +1940,18 @@ export class CampaignStudioStateService {
   // left pointing at a block that no longer exists (harmless today since
   // every reader already filters dangling ids defensively, but not worth
   // leaving as latent stale data). See DECISIONS.md (2026-07-17).
+  // Only a block the manager added — with everything inside it — can be
+  // removed; the campaign's own structure is shown or hidden instead, so its
+  // settings, both languages' text and its place are kept.
+  canRemoveBlock(id: string, blocks: CampaignBlock[] = this.draft.blocks): boolean {
+    const block = blocks.find(b => b.id === id);
+    if (!block?.userAdded) return false;
+    if (block.type !== 'container' && block.type !== 'tabs' && block.type !== 'accordion') return true;
+    return ((block.data as ContainerBlockData).childBlockIds ?? []).every(c => !blocks.some(b => b.id === c) || this.canRemoveBlock(c, blocks));
+  }
+
   removeBlock(id: string): void {
+    if (!this.canRemoveBlock(id)) return;
     const toRemove = new Set<string>([id]);
     let added = true;
     while (added) {
@@ -1785,25 +1992,25 @@ export class CampaignStudioStateService {
   }
 
   // Swap block with its predecessor in a given ordered id-list (scope-aware move)
-  moveBlockUpInScope(id: string, orderedScopeIds: string[]): void {
+  moveBlockUpInScope(id: string, orderedScopeIds: string[], device?: 'desktop'|'mobile'): void {
     const idx = orderedScopeIds.indexOf(id);
     if (idx <= 0) return;
     const prevId = orderedScopeIds[idx - 1];
     const blocks = this.draft.blocks.map(b => ({ ...b }));
     const a = blocks.find(b => b.id === id)!;
     const prev = blocks.find(b => b.id === prevId)!;
-    [a.order, prev.order] = [prev.order, a.order];
+    if(device){const current=a.responsive?.[device]?.order??a.order,other=prev.responsive?.[device]?.order??prev.order;a.responsive={...a.responsive,[device]:{...a.responsive?.[device],order:other}};prev.responsive={...prev.responsive,[device]:{...prev.responsive?.[device],order:current}};}else [a.order, prev.order] = [prev.order, a.order];
     this.patch({ blocks });
   }
 
-  moveBlockDownInScope(id: string, orderedScopeIds: string[]): void {
+  moveBlockDownInScope(id: string, orderedScopeIds: string[], device?: 'desktop'|'mobile'): void {
     const idx = orderedScopeIds.indexOf(id);
     if (idx < 0 || idx >= orderedScopeIds.length - 1) return;
     const nextId = orderedScopeIds[idx + 1];
     const blocks = this.draft.blocks.map(b => ({ ...b }));
     const a = blocks.find(b => b.id === id)!;
     const next = blocks.find(b => b.id === nextId)!;
-    [a.order, next.order] = [next.order, a.order];
+    if(device){const current=a.responsive?.[device]?.order??a.order,other=next.responsive?.[device]?.order??next.order;a.responsive={...a.responsive,[device]:{...a.responsive?.[device],order:other}};next.responsive={...next.responsive,[device]:{...next.responsive?.[device],order:current}};}else [a.order, next.order] = [next.order, a.order];
     this.patch({ blocks });
   }
 
@@ -1887,7 +2094,7 @@ export class CampaignStudioStateService {
     const maxOrder = siblingOrders.length ? Math.max(...siblingOrders) : 0;
     const newId = Math.random().toString(36).slice(2, 10);
     const label = this.defaultBlockLabel(type, blocks);
-    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: this.startingBlockData(type, blocks) });
+    blocks.push({ id: newId, type, order: maxOrder + 1, visible: true, label, spacingTop: 0, spacingBottom: 0, data: this.startingBlockData(type, blocks), userAdded: true });
     ctData.childBlockIds = [...ctData.childBlockIds, newId];
     const updatedBlocks = blocks.map(b => b.id === containerId ? { ...b, data: ctData } : b);
     this.patch({ blocks: updatedBlocks });
@@ -1930,11 +2137,14 @@ export class CampaignStudioStateService {
   // than only the two touched neighbors, so the new position is
   // unambiguous regardless of any pre-existing gaps in `order`. See
   // DECISIONS.md (2026-07-31).
-  insertBlockAt(type: BlockType, parentId: string | null, index: number): string | null {
+  ensureBodyRoot(): string | null {const next=withCampaignBodyRoot(this.draft,generateId);if(next!==this.draft)this.patch(next);return campaignBodyRoot(this.draft)?.id??null;}
+
+  insertBlockAt(type: BlockType, parentId: string | null, index: number, device?:'desktop'|'mobile'): string | null {
     const existing = this.draft.blocks;
     if (parentId && !existing.find(b => b.id === parentId && (b.type === 'container' || b.type === 'tabs' || b.type === 'accordion'))) return null;
 
     const scopeIds = this.scopeIdsFor(parentId, existing);
+    if(device)scopeIds.sort((a,b)=>(existing.find(x=>x.id===a)?.responsive?.[device]?.order??existing.find(x=>x.id===a)!.order)-(existing.find(x=>x.id===b)?.responsive?.[device]?.order??existing.find(x=>x.id===b)!.order));
     const clampedIndex = Math.max(0, Math.min(index, scopeIds.length));
     const id = generateId();
     const newBlock: CampaignBlock = {
@@ -1942,6 +2152,7 @@ export class CampaignStudioStateService {
       label: this.defaultBlockLabel(type, existing),
       spacingTop: 0, spacingBottom: 0,
       data: this.startingBlockData(type, existing),
+      userAdded: true,
     };
 
     const newScopeIds = [...scopeIds];
@@ -1950,6 +2161,7 @@ export class CampaignStudioStateService {
 
     const blocks = existing.map(b => orderById.has(b.id) ? { ...b, order: orderById.get(b.id)! } : b);
     blocks.push({ ...newBlock, order: orderById.get(id)! });
+    if(campaignBodyRoot(this.draft)){for(const d of ['desktop','mobile'] as const){const sorted=scopeIds.slice().sort((a,b)=>(existing.find(x=>x.id===a)?.responsive?.[d]?.order??existing.find(x=>x.id===a)!.order)-(existing.find(x=>x.id===b)?.responsive?.[d]?.order??existing.find(x=>x.id===b)!.order));sorted.splice(Math.min(clampedIndex,sorted.length),0,id);for(const b of blocks){const rank=sorted.indexOf(b.id);if(rank>=0)b.responsive={...b.responsive,[d]:{...b.responsive?.[d],order:rank,placement:'content'}};}}}
 
     if (parentId) {
       const idx = blocks.findIndex(b => b.id === parentId);
@@ -1982,12 +2194,14 @@ export class CampaignStudioStateService {
   // count `id` at its OLD position if the move is within the SAME scope —
   // adjusted for below (removing `id` shifts every later index down by 1).
   // See DECISIONS.md (2026-07-31).
-  moveBlockTo(id: string, parentId: string | null, index: number): void {
+  moveBlockTo(id: string, parentId: string | null, index: number, placement?: 'below-header' | null, device?: 'desktop'|'mobile'): void {
     const existing = this.draft.blocks;
+    if(id===this.draft.layout.bodyRootId)return;
+    parentId=parentId??campaignBodyRoot(this.draft)?.id??null;
     if (!existing.find(b => b.id === id)) return;
     if (parentId && this.isSameOrDescendant(parentId, id, existing)) return; // can't drop into itself/its own subtree
 
-    const oldScopeIds = this.scopeIdsFor(parentId, existing);
+    const oldScopeIds = this.scopeIdsFor(parentId, existing).sort((a,b)=>device ? (existing.find(x=>x.id===a)?.responsive?.[device]?.order??existing.find(x=>x.id===a)!.order)-(existing.find(x=>x.id===b)?.responsive?.[device]?.order??existing.find(x=>x.id===b)!.order):0);
     const oldIdx = oldScopeIds.indexOf(id);
     const adjustedIndex = (oldIdx !== -1 && oldIdx < index) ? index - 1 : index;
 
@@ -2001,7 +2215,7 @@ export class CampaignStudioStateService {
       return { ...b, data: { ...data, childBlockIds: data.childBlockIds.filter(cid => cid !== id) } };
     });
 
-    const scopeIds = this.scopeIdsFor(parentId, detached).filter(bid => bid !== id);
+    const scopeIds = oldScopeIds.filter(bid => bid !== id);
     const clampedIndex = Math.max(0, Math.min(adjustedIndex, scopeIds.length));
     const newScopeIds = [...scopeIds];
     newScopeIds.splice(clampedIndex, 0, id);
@@ -2018,6 +2232,12 @@ export class CampaignStudioStateService {
       }
     }
 
+    if (placement !== undefined || parentId) {
+      const moved = blocks.find(b => b.id === id)!;
+      if(parentId&&campaignBodyRoot(this.draft)){for(const d of ['desktop','mobile'] as const)moved.responsive={...moved.responsive,[d]:{...moved.responsive?.[d],placement:'content'}};}
+      if (placement && !parentId) moved.placement = placement; else delete moved.placement;
+    }
+    if(device){const other=device==='desktop'?'mobile':'desktop';for(let i=0;i<blocks.length;i++){const b=blocks[i],old=existing.find(x=>x.id===b.id)!;if(orderById.has(b.id))blocks[i]={...b,responsive:{...b.responsive,[other]:{...b.responsive?.[other],order:old.responsive?.[other]?.order??old.order},[device]:{...b.responsive?.[device],order:b.order}}};}}
     this.patch({ blocks });
   }
 
@@ -2026,10 +2246,11 @@ export class CampaignStudioStateService {
   }
 
   updateBlockSpacing(id: string, field: 'spacingTop' | 'spacingBottom', value: number): void {
-    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, [field]: value } : b) });
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, [field]: value, ...(b.type==='rich-text'?{sectionStyle:{...b.sectionStyle,[field==='spacingTop'?'marginBefore':'marginAfter']:value}}:{}) } : b) });
   }
 
   toggleBlockVisibility(id: string): void {
+    if(id===this.draft.layout.bodyRootId)return;
     const blocks = this.draft.blocks.map(b =>
       b.id === id ? { ...b, visible: !b.visible } : b
     );
@@ -2068,9 +2289,11 @@ export class CampaignStudioStateService {
   }
 }
 
+const UNNAMED_BLOCK_TYPES = new Set<BlockType>(['countdown', 'badge','navigation']);
+
 function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | 'campaign-partner' = 'campaign'): BlockData {
   switch (type) {
-    case 'rich-text':   return { content: '', lineHeight: 1.6 };
+    case 'rich-text':   return { content: '', lineHeight: 1.6, showTitle:true };
     case 'image':       return { url: '' };
     case 'video':       return { url: '' };
     case 'gallery':     return { items: [], style: 'slider', aspectRatio: '16:9', showCaptions: true, showDots: true, showArrows: true, autoPlay: false } as GalleryBlockData;
@@ -2115,6 +2338,7 @@ function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | '
     case 'donors':      return { viewMode: 'grid' } as DonorsBlockData;
     case 'sponsors':    return {} as SponsorsBlockData;
     case 'ambassadors': return {} as AmbassadorsBlockData;
+    case 'comments':    return { title: '', description: '' } as CommentsBlockData;
     case 'updates':     return { viewMode: 'slider' } as UpdatesBlockData;
     case 'share':       return { platforms: { link: true, email: true, x: true, facebook: true, whatsapp: true } } as ShareBlockData;
     case 'cta':         return ownerType !== 'campaign' ? {
@@ -2133,6 +2357,11 @@ function defaultBlockData(type: BlockType, ownerType: 'campaign' | 'partner' | '
     } as CtaBlockData;
     case 'coupons':      return { code: '', discountLabel: '', description: '', expiresAt: null } as CouponsBlockData;
     case 'map':          return { address: '', lat: null, lng: null, zoom: 14 } as MapBlockData;
+    case 'countdown':   return { targetAt: null, title: '', expiredText: '' } as CountdownBlockData;
+    case 'navigation':return {desktop:{mode:'horizontal'},mobile:{mode:'dropdown',align:'center'}} as import('../utils/campaign-composition').NavigationConfig;
+    case 'progress': return { percentPosition: 'inside', height: 16, radius: 8, animate: false } as import('../utils/campaign-composition').ProgressConfig;
+    case 'contact': return { template: 'columns' } as import('../utils/campaign-composition').ContactConfig;
+    case 'badge':       return { text: '', subtext: '' } as BadgeBlockData;
     case 'opening-hours': return { days: [
       { label: 'ראשון',  hours: '09:00–17:00', closed: false },
       { label: 'שני',    hours: '09:00–17:00', closed: false },

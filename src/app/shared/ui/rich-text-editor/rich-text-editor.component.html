@@ -1,15 +1,15 @@
-<div class="editor-shell" [class.editor-shell--compact]="compact">
+<div class="editor-shell" [class.editor-shell--compact]="compact" [class.editor-shell--typography]="selectionTypography" [class.editor-shell--prototype]="prototypeUx" [style.--hm-editor-paragraph-gap.px]="paragraphSpacing">
 
-  <div class="editor-toolbar" *ngIf="editor">
+  <div class="editor-toolbar" *ngIf="editor" (mousedown)="$any($event.target).closest('button') && $event.preventDefault()">
 
     <ng-container *ngIf="!compact">
       <!-- BLOCK TYPE -->
       <div class="toolbar-group">
-        <select class="toolbar-select" [value]="getCurrentBlockType()" (change)="onBlockTypeChange($event)">
-          <option value="paragraph">טקסט</option>
-          <option value="h1">כותרת 1</option>
-          <option value="h2">כותרת 2</option>
-          <option value="h3">כותרת 3</option>
+        <select [disabled]="disabled||(prototypeUx&&!hasEditingContext)" class="toolbar-select" [value]="getCurrentBlockType()" (change)="onBlockTypeChange($event)">
+          <option value="paragraph">{{ 'editors.ui.text' | transloco }}</option>
+          <option value="h1">{{ 'editors.ui.heading1' | transloco }}</option>
+          <option value="h2">{{ 'editors.ui.heading2' | transloco }}</option>
+          <option value="h3">{{ 'editors.ui.heading3' | transloco }}</option>
         </select>
       </div>
 
@@ -17,18 +17,19 @@
 
       <!-- INLINE FORMATTING -->
       <div class="toolbar-group">
-        <button type="button" class="toolbar-btn" [class.active]="isActive('bold')"      (click)="toggleBold()"      title="מודגש"><strong>B</strong></button>
-        <button type="button" class="toolbar-btn" [class.active]="isActive('italic')"    (click)="toggleItalic()"    title="נטוי"><em>I</em></button>
-        <button type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" title="קו תחתון"><u>U</u></button>
-        <button type="button" class="toolbar-btn" [class.active]="isActive('strike')"    (click)="toggleStrike()"    title="קו חוצה"><s>S</s></button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('bold')"      (click)="toggleBold()"      [title]="'editors.ui.bold' | transloco"><strong>B</strong></button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('italic')"    (click)="toggleItalic()"    [title]="'editors.ui.italic' | transloco"><em>I</em></button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" [title]="'editors.ui.underline' | transloco"><u>U</u></button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('strike')"    (click)="toggleStrike()"    [title]="'editors.ui.strikethrough' | transloco"><s>S</s></button>
       </div>
 
       <div class="toolbar-sep"></div>
     </ng-container>
 
+    <ng-container *ngIf="!prototypeUx">
     <!-- FONT SIZE (selection-only) -->
     <div class="toolbar-group">
-      <button *ngFor="let opt of fontSizeOptions"
+      <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" *ngFor="let opt of fontSizeOptions"
         type="button" class="toolbar-btn fs-btn"
         [class.active]="getActiveFontSize() === opt.value"
         [title]="opt.value"
@@ -39,16 +40,18 @@
 
     <div class="toolbar-sep"></div>
 
+    <div class="toolbar-group" *ngIf="selectionTypography"><input data-inline-size class="toolbar-number" type="number" min="1" [value]="preciseSize" (change)="setPreciseSize($any($event.target).value)" [attr.aria-label]="'editors.ui.fontSize'|transloco" [placeholder]="'—'"><span>px</span></div>
     <!-- TEXT COLOR -->
     <div class="toolbar-group color-group">
-      <button type="button" class="toolbar-btn color-btn" (click)="showColorPicker = !showColorPicker" title="צבע טקסט">
-        <span class="color-preview-letter" [style.color]="getActiveColor()">A</span>
-        <span class="color-underline" [style.background]="getActiveColor()"></span>
+      <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn color-btn" (click)="showColorPicker = !showColorPicker" [title]="'editors.ui.textColor' | transloco">
+        <span class="color-preview-letter" [style.color]="selectionTypography?(selectedAttribute('color')||'inherit'):getActiveColor()">A</span>
+        <span class="color-underline" [style.background]="selectionTypography?(selectedAttribute('color')||'transparent'):getActiveColor()"></span>
       </button>
 
       <div class="color-dropdown" *ngIf="showColorPicker">
+        <p *ngIf="selectionTypography&&!selectedAttribute('color')" class="local-format-hint">{{'editors.richText.inheritOrMixed'|transloco}}</p>
         <div class="color-swatches">
-          <button
+          <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)"
             *ngFor="let c of presetColors"
             class="color-swatch"
             [style.background]="c"
@@ -60,20 +63,21 @@
         <div class="color-custom-row">
           <label class="color-custom-label">
             <input type="color" [value]="getActiveColor()" (input)="setColor($any($event.target).value)">
-            צבע מותאם
+            {{ 'editors.ui.customColor' | transloco }}
           </label>
-          <button type="button" class="color-reset-btn" (click)="unsetColor()">איפוס</button>
+          <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="color-reset-btn" (click)="unsetColor()">{{ 'editors.ui.reset' | transloco }}</button>
         </div>
       </div>
     </div>
 
-    <ng-container *ngIf="!compact">
+    </ng-container>
+<ng-container *ngIf="!compact&&!prototypeUx">
       <div class="toolbar-sep"></div>
 
       <!-- LISTS -->
       <div class="toolbar-group">
-        <button type="button" class="toolbar-btn" [class.active]="isActive('bulletList')"  (click)="toggleBulletList()"  title="רשימה">•≡</button>
-        <button type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" title="רשימה ממוספרת">1.</button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('bulletList')"  (click)="toggleBulletList()"  [title]="'editors.ui.list' | transloco">•≡</button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" [title]="'editors.ui.numberedList' | transloco">1.</button>
       </div>
     </ng-container>
 
@@ -81,9 +85,9 @@
 
     <!-- ALIGN -->
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'right' })"  (click)="setTextAlign('right')"  title="ימין">≡→</button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'center' })" (click)="setTextAlign('center')" title="מרכז">≡</button>
-      <button type="button" class="toolbar-btn" [class.active]="isActive('textAlign', { textAlign: 'left' })"   (click)="setTextAlign('left')"   title="שמאל">←≡</button>
+      <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="editor.isActive({textAlign:'right'})"  (click)="setTextAlign('right')"  [title]="'editors.ui.right' | transloco">≡→</button>
+      <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="editor.isActive({textAlign:'center'})" (click)="setTextAlign('center')" [title]="'editors.ui.center' | transloco">≡</button>
+      <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="editor.isActive({textAlign:'left'})"   (click)="setTextAlign('left')"   [title]="'editors.ui.left' | transloco">←≡</button>
     </div>
 
     <ng-container *ngIf="!compact">
@@ -91,14 +95,21 @@
 
       <!-- LINK + EXTRA -->
       <div class="toolbar-group">
-        <button type="button" class="toolbar-btn" [class.active]="isActive('link')"       (click)="addLink()"          title="קישור"><app-icon name="link" /></button>
-        <button type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" title="ציטוט">❝</button>
-        <button type="button" class="toolbar-btn"                                          (click)="clearFormatting()"  title="נקה עיצוב">Tx</button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn" [class.active]="isActive('link')"       (click)="addLink()"          [title]="'editors.ui.link' | transloco"><app-icon name="link" /></button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" *ngIf="!prototypeUx" type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" [title]="'editors.ui.quote' | transloco">❝</button>
+        <button [disabled]="disabled||(prototypeUx&&!hasEditingContext)" type="button" class="toolbar-btn"                                          data-remove-local (click)="clearFormatting()" [attr.aria-label]="'editors.richText.removeLocal'|transloco" [title]="'editors.richText.removeLocal'|transloco">Tx</button>
       </div>
     </ng-container>
 
   </div>
 
-  <div #editorEl class="editor-content" [style.minHeight.px]="minHeight"></div>
+  <div #editorEl [attr.dir]="direction" class="editor-content" [style.minHeight.px]="minHeight"></div>
 
+
+<details class="inline-typography" *ngIf="selectionTypography&&editor&&prototypeUx" data-prototype-local><summary>{{'studio.textUx.selectionStyle'|transloco}}</summary><div class="selection-context" [class.selection-context--empty]="!hasEditingContext"><span>{{(hasEditingContext?'editors.richText.formattingTarget':'editors.richText.chooseText')|transloco}}</span><strong dir="auto" *ngIf="hasEditingContext">{{editingTarget}}</strong></div><div class="inline-typography-grid" *ngIf="hasEditingContext"><label class="selection-field">{{'editors.ui.font'|transloco}}<select data-inline-family [disabled]="!hasEditingContext" [value]="formattingState('fontFamily').value" (change)="changeLocal('fontFamily',$any($event.target).value)"><option value="" disabled>{{formatPlaceholder('fontFamily')}}</option><option *ngIf="formattingState('fontFamily').value&&!knownFont(formattingState('fontFamily').value)" [value]="formattingState('fontFamily').value">{{formattingState('fontFamily').value}}</option><option *ngFor="let font of fonts" [value]="font.stack">{{font.name}}</option></select><small [attr.data-format-state]="'fontFamily'">{{formatHint('fontFamily')|transloco}}</small></label><div class="selection-pair"><label class="selection-field">{{'editors.ui.fontSize'|transloco}} (px)<input data-inline-size type="number" min="1" step="1" [disabled]="!hasEditingContext" [value]="formattingState('fontSize').value" [placeholder]="formatPlaceholder('fontSize')" (input)="changeLocal('fontSize',$any($event.target).value)"><small [attr.data-format-state]="'fontSize'">{{formatHint('fontSize')|transloco}}</small></label><label class="selection-field">{{'editors.ui.textColor'|transloco}}<input data-inline-color [class.mixed-color]="formattingState('color').mixed" type="color" [disabled]="!hasEditingContext" [value]="localColor" (input)="changeLocal('color',$any($event.target).value)"><small [attr.data-format-state]="'color'">{{formatHint('color')|transloco}}</small></label></div><details class="inline-extra"><summary>{{'studio.textUx.advancedType'|transloco}}</summary><label class="selection-field">{{'editors.ui.fontWeight'|transloco}}<select data-inline-weight [disabled]="!hasEditingContext" [value]="formattingState('fontWeight').value" (change)="changeLocal('fontWeight',$any($event.target).value)"><option value="" disabled>{{formatPlaceholder('fontWeight')}}</option><option *ngIf="formattingState('fontWeight').value&&!knownWeight(formattingState('fontWeight').value)" [value]="formattingState('fontWeight').value">{{formattingState('fontWeight').value}}</option><option *ngFor="let weight of weights" [value]="weight">{{('editors.richText.weight'+weight)|transloco}} ({{weight}})</option></select><small [attr.data-format-state]="'fontWeight'">{{formatHint('fontWeight')|transloco}}</small></label><div class="selection-pair"><label class="selection-field">{{'editors.ui.lineSpacing'|transloco}}<input data-inline-line-height type="number" min="0.1" step="0.1" [disabled]="!hasEditingContext" [value]="formattingState('lineHeight').value" [placeholder]="formatPlaceholder('lineHeight')" (input)="changeLocal('lineHeight',$any($event.target).value)"><small [attr.data-format-state]="'lineHeight'">{{formatHint('lineHeight')|transloco}}</small></label><label class="selection-field">{{'studio.visual.paragraphSpacing'|transloco}}<input data-inline-paragraph-spacing type="number" min="0" step="1" [disabled]="!hasEditingContext" [value]="formattingState('marginBottom').value" [placeholder]="formatPlaceholder('marginBottom')" (input)="changeLocal('marginBottom',$any($event.target).value)"><small [attr.data-format-state]="'marginBottom'">{{formatHint('marginBottom')|transloco}}</small></label></div><div class="toolbar-group"><button type="button" class="toolbar-btn" [disabled]="!hasEditingContext" (click)="toggleBulletList()" [title]="'editors.ui.list'|transloco">•≡</button><button type="button" class="toolbar-btn" [disabled]="!hasEditingContext" (click)="toggleOrderedList()" [title]="'editors.ui.numberedList'|transloco">1.</button><button type="button" class="toolbar-btn" [disabled]="!hasEditingContext" (click)="toggleBlockquote()" [title]="'editors.ui.quote'|transloco">❝</button></div></details></div></details>
+  <details class="inline-typography" *ngIf="selectionTypography&&editor&&!prototypeUx"><summary>{{selectionSummary|transloco}}</summary><div class="inline-typography-grid">
+    <label>{{'editors.ui.font'|transloco}}<select data-inline-family [value]="selectedAttribute('fontFamily')" (change)="setLocalAttribute('fontFamily',$any($event.target).value)"><option value="">{{'editors.richText.inheritOrMixed'|transloco}}</option><option *ngFor="let font of fonts" [value]="font.stack">{{font.name}}</option></select></label>
+    <label>{{'editors.ui.fontWeight'|transloco}}<select data-inline-weight [value]="selectedAttribute('fontWeight')" (change)="setLocalAttribute('fontWeight',$any($event.target).value)"><option value="">{{'editors.richText.inheritOrMixed'|transloco}}</option><option *ngFor="let weight of weights" [value]="weight">{{weight}}</option></select></label>
+    <label>{{'editors.ui.lineSpacing'|transloco}}<input data-inline-line-height type="number" min="0.1" step="0.1" [value]="selectedAttribute('lineHeight')" (change)="setLocalAttribute('lineHeight',$any($event.target).value)" placeholder="—"></label>
+  </div></details>
 </div>

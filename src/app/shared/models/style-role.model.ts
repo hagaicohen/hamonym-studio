@@ -8,6 +8,13 @@
 // against the existing generic cards.*/buttons.* tokens).
 
 export interface SurfaceStyle {
+  paddingTop?:number; paddingBottom?:number; paddingInlineStart?:number; paddingInlineEnd?:number;
+  verticalAlign?:'start'|'center'|'end';
+  widthMode?: 'full-bleed'|'content'|'custom';
+  backgroundImage?:string; backgroundPosition?:'center'|'top'|'bottom';
+  marginBefore?:number; marginAfter?:number; padding?:number; maxWidth?:number; minHeight?:number; borderWidth?:number;
+  align?:'start'|'center'|'end';
+
   background?:   string;
   borderColor?:  string;
   borderRadius?: number; // px

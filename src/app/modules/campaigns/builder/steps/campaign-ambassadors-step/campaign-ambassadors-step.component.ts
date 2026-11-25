@@ -5,8 +5,10 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, Users, Plus, Upload, Download, Search, Pencil, Trash2, X, CircleCheck, ExternalLink } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { AmbassadorService } from '../../../services/ambassador.service';
-
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { HmTextPipe } from '../../../../../core/i18n/text.pipe';
 // Hebrew-preserving (2026-10-01) -- same normalization rule as the live
 // backend/admin flows (ambassadors.service.js#normalizeSlug), replacing the
 // old ASCII-transliterating map so a Hebrew name's DEFAULT suggestion is
@@ -69,11 +71,12 @@ const EMPTY_FORM: FormModel = {
 @Component({
   selector: 'app-campaign-ambassadors-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
+  imports: [HmTextPipe, TranslocoPipe, HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-ambassadors-step.component.html',
   styleUrl: './campaign-ambassadors-step.component.css',
 })
 export class CampaignAmbassadorsStepComponent {
+  private readonly i18n = inject(TranslocoService);
   protected state  = inject(CampaignStudioStateService);
   private router = inject(Router);
   readonly svc   = inject(AmbassadorService);
@@ -212,13 +215,13 @@ export class CampaignAmbassadorsStepComponent {
     this.slugTimer = setTimeout(() => {
       if (!/^[a-z0-9א-ת]+(?:-[a-z0-9א-ת]+)*$/.test(slug)) {
         this.slugStatus = 'invalid';
-        this.slugError  = 'רק אותיות, מספרים ומקפים';
+        this.slugError  = 'builder.ambassadors.slugInvalid';
         return;
       }
       const taken = this.ambassadors.some(a => a.slug === slug && a.id !== this.editingId);
       if (taken) {
         this.slugStatus = 'invalid';
-        this.slugError  = 'הכינוי כבר תפוס';
+        this.slugError  = 'builder.ambassadors.slugTaken';
         return;
       }
       this.slugStatus = 'valid';
@@ -255,7 +258,7 @@ export class CampaignAmbassadorsStepComponent {
   }
 
   delete(id: string): void {
-    if (!confirm('למחוק שגריר/ה זה?')) return;
+    if (!confirm(this.i18n.translate('builder.ambassadors.confirmDelete'))) return;
     this.state.patch({ ambassadors: this.ambassadors.filter(a => a.id !== id) });
   }
 
@@ -289,7 +292,7 @@ export class CampaignAmbassadorsStepComponent {
           goalAmount: cols[3] ? parseCommas(cols[3]) : null,
           personalMessage: '',
           valid: fullName.length > 0,
-          error: fullName ? undefined : 'שם חסר',
+          error: fullName ? undefined : 'builder.ambassadors.nameMissing',
         };
       });
       this.showImportModal = true;
@@ -309,7 +312,7 @@ export class CampaignAmbassadorsStepComponent {
         goalAmount: row[3] ? parseCommas(String(row[3])) : null,
         personalMessage: '',
         valid: fullName.length > 0,
-        error: fullName ? undefined : 'שם חסר',
+        error: fullName ? undefined : 'builder.ambassadors.nameMissing',
       };
     });
     this.showImportModal = true;

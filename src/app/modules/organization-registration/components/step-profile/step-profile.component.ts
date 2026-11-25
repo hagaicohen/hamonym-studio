@@ -109,7 +109,6 @@ export class StepProfileComponent {
   // skipped the logo, contradicting the field's own visible copy.
   get canContinue(): boolean {
     return !!(
-      this.selectedCampaignTypes.length &&
       this.displayName.trim().length > 1 &&
       this.organizationDescription.trim().length > 10
     );

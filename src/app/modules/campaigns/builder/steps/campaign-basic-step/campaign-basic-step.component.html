@@ -6,23 +6,23 @@
       <span class="step-icon-wrapper">
         <lucide-angular [img]="ImageIcon" [size]="18" class="step-icon"></lucide-angular>
       </span>
-      <h2 class="step-title">פרטי הקמפיין</h2>
+      <h2 class="step-title">{{ 'builder.steps.campaignDetails' | transloco }}</h2>
     </div>
-    <p class="step-desc">תמונה, כותרת וסיפור המיזם</p>
+    <p class="step-desc">{{ 'builder.steps.imageTitleAndTheProjects' | transloco }}</p>
   </div>
 
   <!-- ── HERO MEDIA ── -->
   <div class="field-section">
     <div class="media-type-row">
-      <label class="field-label">תמונה / וידאו <span class="required">*</span></label>
+      <label class="field-label">{{ 'builder.steps.imageVideo' | transloco }} <span class="required">*</span></label>
       <div class="media-toggle">
         <button class="media-toggle-btn" [class.active]="draft.heroType === 'image'" (click)="setHeroType('image')">
           <lucide-angular [img]="ImageIcon" [size]="15" class="toggle-icon"></lucide-angular>
-          <span>תמונה</span>
+          <span>{{ 'builder.steps.image' | transloco }}</span>
         </button>
         <button class="media-toggle-btn" [class.active]="draft.heroType === 'video'" (click)="setHeroType('video')">
           <lucide-angular [img]="VideoIcon" [size]="15" class="toggle-icon"></lucide-angular>
-          <span>וידאו</span>
+          <span>{{ 'builder.steps.video' | transloco }}</span>
         </button>
       </div>
     </div>
@@ -35,11 +35,11 @@
         <img *ngIf="draft.coverImageUrl" [src]="draft.coverImageUrl" class="upload-preview-img" alt="">
         <div *ngIf="!draft.coverImageUrl" class="upload-empty">
           <lucide-angular [img]="ImageIcon" class="upload-empty-icon"></lucide-angular>
-          <span>לחצו להעלאת תמונת כיסוי</span>
-          <small>JPG / PNG עד 10MB</small>
+          <span>{{ 'builder.steps.clickToUploadACover' | transloco }}</span>
+          <small>{{ 'builder.steps.jpgPngUpTo10mb' | transloco }}</small>
         </div>
         <div *ngIf="draft.coverImageUrl" class="upload-replace-overlay">
-          <span>החלף תמונה</span>
+          <span>{{ 'builder.steps.replaceImage' | transloco }}</span>
         </div>
       </div>
     </ng-container>
@@ -57,31 +57,30 @@
   </div>
 
   <div class="tip-box">
-    <strong>טיפ:</strong>
-    אפשר למלא כאן כותרת, תת-כותרת וסיפור — הם ימלאו אוטומטית את עמוד הקמפיין, וזו הדרך המהירה ביותר להתחיל.
-    אבל זו רק נקודת התחלה: בשלב "בניית דף" תוכלו להסתיר כל אחד מהם, לשנות איפה הוא מוצג, או לספר את הסיפור שלכם בעיצוב אחר לגמרי.
+    <strong>{{ 'builder.steps.tip' | transloco }}</strong>
+    {{ 'builder.steps.youCanFillInA' | transloco }}
   </div>
 
   <!-- ── TITLE ── -->
   <div class="field-section">
     <div class="field-meta">
-      <label class="field-label">שם הקמפיין</label>
+      <label class="field-label">{{ 'builder.steps.campaignName' | transloco }}</label>
       <span class="char-counter">{{ draft.title.length }}/80</span>
     </div>
     <input class="field-input field-input--lg" type="text"
       [(ngModel)]="draft.title" (ngModelChange)="sync()"
-      maxlength="80" placeholder="שם הקמפיין שיופיע כותרת ה-Hero">
+      maxlength="80" [placeholder]="'builder.steps.theCampaignNameShownAs' | transloco">
   </div>
 
   <!-- ── SUBTITLE ── -->
   <div class="field-section">
     <div class="field-meta">
-      <label class="field-label">תת-כותרת</label>
+      <label class="field-label">{{ 'builder.steps.subtitle' | transloco }}</label>
       <span class="char-counter">{{ draft.shortDescription.length }}/160</span>
     </div>
     <input class="field-input" type="text"
       [(ngModel)]="draft.shortDescription" (ngModelChange)="sync()"
-      maxlength="160" placeholder="משפט קצר שמתאר את המיזם">
+      maxlength="160" [placeholder]="'builder.steps.aShortSentenceDescribingThe' | transloco">
   </div>
 
   <!-- ── PROJECT DESCRIPTION + STORY — the two heaviest fields on this step
@@ -89,7 +88,7 @@
        open on a wall of empty editors. ── -->
   <div class="step-collapse-section">
     <div class="step-collapse-header" (click)="toggleSection('story')">
-      <span class="step-collapse-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תיאור מורחב וסיפור הקמפיין</span>
+      <span class="step-collapse-title"><lucide-icon [img]="ui.PenLine" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.extendedDescriptionAndCampaignStory' | transloco }}</span>
       <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('story')">›</span>
     </div>
 
@@ -97,39 +96,39 @@
       <!-- Project description — distinct from the subtitle above (one short
            line) and the story below (the main "על המיזם" text block). -->
       <div class="field-section">
-        <label class="field-label">תיאור קצר של הפרויקט</label>
+        <label class="field-label">{{ 'builder.steps.shortProjectDescription' | transloco }}</label>
         <app-rich-text-editor
           [ngModel]="draft.layout.projectDescription"
           (ngModelChange)="state.setProjectDescription($event)"
-          placeholder="תיאור קצר של הפרויקט...">
+          [placeholder]="'builder.steps.shortProjectDescription2' | transloco">
         </app-rich-text-editor>
       </div>
 
       <div class="logo-option-section">
-        <span class="logo-option-label">תיאור קצר — מיקום</span>
+        <span class="logo-option-label">{{ 'builder.steps.shortDescriptionPosition' | transloco }}</span>
         <div class="logo-position-row">
           <button class="logo-pos-btn"
             [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'above'"
-            (click)="state.setProjectDescriptionPosition('above')">מעל</button>
+            (click)="state.setProjectDescriptionPosition('above')">{{ 'builder.steps.above' | transloco }}</button>
           <button class="logo-pos-btn"
             [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hero'"
-            (click)="state.setProjectDescriptionPosition('hero')">ב-Hero</button>
+            (click)="state.setProjectDescriptionPosition('hero')">{{ 'builder.steps.inTheHero' | transloco }}</button>
           <button class="logo-pos-btn"
             [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'below'"
-            (click)="state.setProjectDescriptionPosition('below')">מתחת</button>
+            (click)="state.setProjectDescriptionPosition('below')">{{ 'builder.steps.below' | transloco }}</button>
           <button class="logo-pos-btn"
             [class.logo-pos-btn--active]="draft.layout.projectDescriptionPosition === 'hidden'"
-            (click)="state.setProjectDescriptionPosition('hidden')">מוסתר</button>
+            (click)="state.setProjectDescriptionPosition('hidden')">{{ 'builder.steps.hidden' | transloco }}</button>
         </div>
       </div>
 
       <div class="field-section">
-        <label class="field-label">סיפור הקמפיין</label>
-        <p class="field-hint">יופיע כתוכן הראשי בדף הקמפיין</p>
+        <label class="field-label">{{ 'builder.steps.campaignStory' | transloco }}</label>
+        <p class="field-hint">{{ 'builder.steps.appearsAsTheMainContent' | transloco }}</p>
         <app-rich-text-editor
           [ngModel]="storyContent"
           (ngModelChange)="setStoryContent($event)"
-          placeholder="ספרו את הסיפור שלכם...">
+          [placeholder]="'builder.steps.tellYourStory' | transloco">
         </app-rich-text-editor>
       </div>
     </ng-container>
@@ -138,7 +137,7 @@
   <!-- ── CATEGORY ── -->
   <div class="field-section">
     <div class="field-meta">
-      <label class="field-label">קטגוריה <span class="required">*</span></label>
+      <label class="field-label">{{ 'builder.steps.category' | transloco }} <span class="required">*</span></label>
       <span class="char-counter" *ngIf="categorySearch">{{ categorySearch.length }}/20</span>
     </div>
     <div class="category-picker">
@@ -151,7 +150,7 @@
         (input)="onCategoryInput($any($event.target).value)"
         (focus)="openCategoryDropdown()"
         (blur)="onCategoryBlur()"
-        placeholder="חפשו או הקלידו קטגוריה...">
+        [placeholder]="'builder.steps.searchOrTypeACategory' | transloco">
       <div class="category-dropdown" *ngIf="categoryDropdownOpen">
         <button
           *ngFor="let cat of filteredCategories"
@@ -159,10 +158,10 @@
           class="category-option"
           [class.selected]="draft.category === cat.id"
           (mousedown)="selectCategory(cat)">
-          {{ cat.label }}
+          {{ catLabel(cat) }}
         </button>
         <div *ngIf="filteredCategories.length === 0" class="category-empty">
-          לא נמצאו קטגוריות תואמות — בחרו קטגוריה מהרשימה
+          {{ 'builder.steps.noMatchingCategoriesChooseA' | transloco }}
         </div>
       </div>
     </div>
@@ -172,41 +171,41 @@
        Entity address; a campaign can be nationwide even if the nonprofit's
        office sits in one city. ── -->
   <div class="field-section">
-    <label class="field-label">מיקום הקמפיין</label>
-    <p class="field-hint">איפה מתקיים הקמפיין / למי הוא מיועד? (רשות)</p>
+    <label class="field-label">{{ 'builder.steps.campaignLocation' | transloco }}</label>
+    <p class="field-hint">{{ 'builder.steps.whereDoesTheCampaignTake' | transloco }}</p>
     <div class="media-toggle location-type-row">
       <button type="button" *ngFor="let opt of LOCATION_TYPES"
         class="media-toggle-btn" [class.active]="campaignLocation?.type === opt.type"
         (click)="setLocationType(opt.type)">
-        {{ opt.label }}
+        {{ opt.label | hmText }}
       </button>
     </div>
     <input *ngIf="campaignLocation?.type === 'region' || campaignLocation?.type === 'custom'"
       class="field-input" type="text" maxlength="40"
       [value]="campaignLocation?.label || ''"
       (input)="setLocationLabel($any($event.target).value)"
-      [placeholder]="campaignLocation?.type === 'region' ? 'לדוגמה: בית שמש והסביבה' : 'לדוגמה: יישובי עוטף עזה'">
+      [placeholder]="campaignLocation?.type === 'region' ? ('builder.steps.forExampleBeitShemeshAnd' | transloco) : ('builder.steps.forExampleGazaBorderCommunities' | transloco)">
     <button *ngIf="campaignLocation" type="button" class="location-clear-btn" (click)="clearLocation()">
-      <lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> ללא מיקום
+      <lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.noLocation' | transloco }}
     </button>
   </div>
 
   <!-- ── MANAGER NAME ── -->
   <div class="field-section">
-    <label class="field-label">מנהל הקמפיין</label>
-    <p class="field-hint">השם שיופיע על ה-Hero. ברירת מחדל: שם מנהל העמותה.</p>
+    <label class="field-label">{{ 'builder.steps.campaignManager' | transloco }}</label>
+    <p class="field-hint">{{ 'builder.steps.theNameShownOnThe' | transloco }}</p>
     <input class="field-input" type="text"
       [(ngModel)]="draft.managerName" (ngModelChange)="sync()"
-      maxlength="60" placeholder="שם מנהל הקמפיין">
+      maxlength="60" [placeholder]="'builder.steps.campaignManagersName' | transloco">
   </div>
 
   <!-- ── HERO VISIBILITY ── -->
   <div class="step-collapse-section">
     <div class="step-collapse-header" (click)="toggleSection('hero-display')">
-      <span class="step-collapse-title"><lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> תצוגת Hero — כותרת ותת-כותרת</span>
+      <span class="step-collapse-title"><lucide-icon [img]="ui.PanelTop" [size]="15" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.heroDisplayTitleAndSubtitle' | transloco }}</span>
       <span class="step-collapse-chevron" [class.open]="!isSectionCollapsed('hero-display')">›</span>
     </div>
-    <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">בחרו היכן יוצגו הכותרת ותת-הכותרת</p>
+    <p class="field-hint" *ngIf="isSectionCollapsed('hero-display')">{{ 'builder.steps.chooseWhereTheTitleAnd' | transloco }}</p>
 
     <div class="hero-toggles" *ngIf="!isSectionCollapsed('hero-display')">
 
@@ -219,38 +218,38 @@
 
       <div class="logo-meta-options">
         <div class="logo-option-section">
-          <span class="logo-option-label">כותרת — מיקום</span>
+          <span class="logo-option-label">{{ 'builder.steps.titlePosition' | transloco }}</span>
           <div class="logo-position-row">
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'above'"
-              (click)="state.setHeroTitlePosition('above')">מעל</button>
+              (click)="state.setHeroTitlePosition('above')">{{ 'builder.steps.above' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hero'"
-              (click)="state.setHeroTitlePosition('hero')">ב-Hero</button>
+              (click)="state.setHeroTitlePosition('hero')">{{ 'builder.steps.inTheHero' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'below'"
-              (click)="state.setHeroTitlePosition('below')">מתחת</button>
+              (click)="state.setHeroTitlePosition('below')">{{ 'builder.steps.below' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroTitlePosition === 'hidden'"
-              (click)="state.setHeroTitlePosition('hidden')">מוסתר</button>
+              (click)="state.setHeroTitlePosition('hidden')">{{ 'builder.steps.hidden' | transloco }}</button>
           </div>
         </div>
 
         <div class="logo-option-section">
-          <span class="logo-option-label">תת-כותרת — מיקום</span>
+          <span class="logo-option-label">{{ 'builder.steps.subtitlePosition' | transloco }}</span>
           <div class="logo-position-row">
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'above'"
-              (click)="state.setHeroSubtitlePosition('above')">מעל</button>
+              (click)="state.setHeroSubtitlePosition('above')">{{ 'builder.steps.above' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hero'"
-              (click)="state.setHeroSubtitlePosition('hero')">ב-Hero</button>
+              (click)="state.setHeroSubtitlePosition('hero')">{{ 'builder.steps.inTheHero' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'below'"
-              (click)="state.setHeroSubtitlePosition('below')">מתחת</button>
+              (click)="state.setHeroSubtitlePosition('below')">{{ 'builder.steps.below' | transloco }}</button>
             <button class="logo-pos-btn"
               [class.logo-pos-btn--active]="draft.layout.heroSubtitlePosition === 'hidden'"
-              (click)="state.setHeroSubtitlePosition('hidden')">מוסתר</button>
+              (click)="state.setHeroSubtitlePosition('hidden')">{{ 'builder.steps.hidden' | transloco }}</button>
           </div>
         </div>
       </div>
@@ -260,24 +259,24 @@
 
   <!-- ── SLUG (required, not advanced) ── -->
   <div class="field-section">
-    <label class="field-label">כתובת הקמפיין <span class="required">*</span></label>
-    <p class="field-hint" *ngIf="!isSlugLocked">אותיות (עברית או לועזית), מספרים ומקפים בלבד</p>
+    <label class="field-label">{{ 'builder.steps.campaignAddress' | transloco }} <span class="required">*</span></label>
+    <p class="field-hint" *ngIf="!isSlugLocked">{{ 'builder.steps.lettersHebrewOrLatinNumbers' | transloco }}</p>
     <div class="url-field-wrapper" [class.focused]="slugFocused" [class.invalid]="slugAvailable === false">
       <span class="url-prefix">{{ urlPrefix }}</span>
       <input type="text" class="url-input"
         [ngModel]="draft.slug"
         [readonly]="isSlugLocked"
-        [title]="isSlugLocked ? 'שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה לאחר פרסום' : ''"
+        [title]="isSlugLocked ? ('builder.steps.changingTheAddressBreaksExisting' | transloco) : ''"
         (focus)="slugFocused = true"
         (blur)="onSlugBlur()"
         (keydown)="allowSlugChars($event)"
         (ngModelChange)="onSlugChange($event)"
         placeholder="campaign-name">
     </div>
-    <p class="field-hint" *ngIf="isSlugLocked"><lucide-icon [img]="ui.Lock" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
-    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הכתובת זמינה</div>
-    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> הכתובת כבר בשימוש</div>
-    <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">בודק זמינות...</div>
+    <p class="field-hint" *ngIf="isSlugLocked"><lucide-icon [img]="ui.Lock" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.cantBeChangedTheAddress' | transloco }}</p>
+    <div class="slug-success"  *ngIf="!isSlugLocked && slugAvailable === true"><lucide-icon [img]="ui.Check" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.theAddressIsAvailable' | transloco }}</div>
+    <div class="slug-error"    *ngIf="!isSlugLocked && slugAvailable === false"><lucide-icon [img]="ui.X" [size]="14" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon> {{ 'builder.steps.theAddressIsAlreadyIn' | transloco }}</div>
+    <div class="slug-checking" *ngIf="!isSlugLocked && isCheckingSlug">{{ 'builder.steps.checkingAvailability' | transloco }}</div>
   </div>
 
   <!-- ── ADVANCED TOGGLE ── -->

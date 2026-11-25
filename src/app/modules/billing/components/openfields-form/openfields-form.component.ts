@@ -25,6 +25,7 @@ type InitState = 'idle' | 'waitingForFrames' | 'initializing' | 'initialized' | 
   styleUrls: ['./openfields-form.component.css'],
 })
 export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
+  lastOutcome: 'idle' | 'accepted' | 'declined' | 'uncertain' = 'idle';
   // Optional -- used in two contexts: Settings (entity always exists, real
   // id) and the organization-registration wizard's billing step (the draft
   // entity may not have been created yet when this step first renders).
@@ -335,6 +336,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async tokenize(): Promise<boolean> {
+    this.lastOutcome = 'idle';
     if (!this.lowProfileId) {
       console.error('LOW PROFILE NOT READY');
 
@@ -379,6 +381,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
       }
 
       const timeout = setTimeout(() => {
+        this.lastOutcome = 'uncertain';
         console.error('CARDCOM TIMEOUT');
 
         this.transactionStarted = false;
@@ -389,6 +392,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
       }, 15000);
 
       const listener = (event: MessageEvent) => {
+        if (event.origin !== 'https://secure.cardcom.solutions' || event.source !== masterFrame.contentWindow) return;
         if (!event?.data) {
           return;
         }
@@ -414,6 +418,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
           // remains the only thing that ever writes donations.status='paid',
           // exactly as before this component was reused here.
           if (this.donationMode) {
+            this.lastOutcome = result?.IsSuccess === true ? 'accepted' : 'declined';
             resolve(result?.IsSuccess === true);
             return;
           }
@@ -454,7 +459,8 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
           return;
         }
 
-        if (msg?.action === 'HandleEror') {
+        if (msg?.action === 'HandleEror' || msg?.action === 'HandleError') {
+          this.lastOutcome = 'declined';
           clearTimeout(timeout);
 
           this.transactionStarted = false;
@@ -505,6 +511,7 @@ export class OpenfieldsFormComponent implements OnInit, OnDestroy, OnChanges {
   // ngOnDestroy — never duplicated across retries/reinitializations, which
   // all go through startInit() instead of touching this listener).
   private onMessage(event: MessageEvent): void {
+    if (event.origin !== 'https://secure.cardcom.solutions') return;
     const action = event?.data?.action;
 
     if (action === 'ready') {

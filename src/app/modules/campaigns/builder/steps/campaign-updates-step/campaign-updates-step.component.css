@@ -1,7 +1,7 @@
 .upd-step {
   display: flex; flex-direction: column; gap: 24px;
   padding: 28px 28px 40px; max-width: 1100px; margin: 0 auto;
-  font-family: 'Heebo', sans-serif; direction: rtl;
+  font-family: 'Heebo', sans-serif; 
 }
 .upd-header-top { display: flex; align-items: center; justify-content: space-between; }
 .upd-design-note {
@@ -17,11 +17,11 @@
 }
 .upd-toggle-btn--on { background: #16a34a; }
 .upd-toggle-thumb {
-  position: absolute; top: 3px; right: 3px;
+  position: absolute; top: 3px; inset-inline-start: 3px;
   width: 16px; height: 16px; border-radius: 50%; background: #fff;
   transition: transform 0.2s; display: block;
 }
-.upd-toggle-btn--on .upd-toggle-thumb { transform: translateX(-18px); }
+.upd-toggle-btn--on .upd-toggle-thumb { transform: translateX(calc(-18px * var(--hm-dir-sign, 1))); }
 .upd-title  { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
 .upd-subtitle{ font-size: 13px; color: #64748b; margin: 4px 0 0; }
 .upd-header-icon {
@@ -140,4 +140,13 @@
   .upd-builder { grid-template-columns: none; }
   .upd-preview-panel { visibility: hidden;  }
   .upd-step { padding: 10px; }
+}
+/* Studio properties panel (container "props", 2026-11-08): the layout follows the
+   panel's own width, so resizing the panel adapts it without touching the canvas.
+   The classic wizard has no such container and is unchanged. */
+@container props (max-width: 600px) {
+  .upd-builder { grid-template-columns: minmax(0, 1fr); }
+}
+@container props (max-width: 320px) {
+  .upd-grid { grid-template-columns: minmax(0, 1fr); }
 }

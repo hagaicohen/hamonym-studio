@@ -4,6 +4,18 @@ export interface EntityCategory {
 }
 
 const RAW_ENTITY_CATEGORIES: EntityCategory[] = [
+  { id: 'music', label: 'מוזיקה' },
+  { id: 'songwriting-composition', label: 'כתיבת שירים והלחנה' },
+  { id: 'music-production', label: 'הפקה מוזיקלית' },
+  { id: 'recording-studios', label: 'אולפני הקלטות' },
+  { id: 'live-performances', label: 'הופעות חיות' },
+  { id: 'artists-bands', label: 'אמנים ולהקות' },
+  { id: 'music-education', label: 'חינוך מוזיקלי' },
+  { id: 'instrument-vocal-lessons', label: 'שיעורי נגינה ופיתוח קול' },
+  { id: 'music-album-sales', label: 'מכירת מוזיקה ואלבומים' },
+  { id: 'musical-instruments-equipment', label: 'כלי נגינה וציוד מוזיקלי' },
+  { id: 'audio-sound-services', label: 'שירותי אודיו וסאונד' },
+  { id: 'music-content-subscriptions', label: 'תוכן מוזיקלי ומנויים' },
   { id: 'aid-support',           label: 'סיוע לנזקקים' },
   { id: 'animals',               label: 'בעלי חיים' },
   { id: 'art',                   label: 'אמנות' },
@@ -67,3 +79,5 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     .sort((a, b) => HEBREW_COLLATOR.compare(a.label, b.label)),
   ...RAW_ENTITY_CATEGORIES.filter((c) => c.id === 'other'),
 ];
+
+export const categoryKey = (id: string): string => `categories.${id}`;

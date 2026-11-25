@@ -1,0 +1,65 @@
+{
+  "language": {
+    "he": "עברית",
+    "en": "English",
+    "selectorLabel": "Interface language",
+    "hebrewOnlyHere": "This page is currently available in Hebrew only",
+    "heShort": "עב",
+    "enShort": "EN"
+  },
+  "loading": "Loading...",
+  "dateRangePicker": {
+    "chooseADateRange": "Choose a date range",
+    "custom": "Custom",
+    "showingDataFor": "Showing data for:",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "presets": {
+      "today": "Today",
+      "d7": "7 days",
+      "d30": "30 days",
+      "d90": "90 days",
+      "months12": "12 months"
+    }
+  },
+  "incompleteRegistrations": {
+    "incompleteRegistrations": "Incomplete registrations",
+    "theseAreNotActiveOrganizations": "These are not active organizations yet. You can create a campaign only after completing the registration and submitting it for review.",
+    "savedDate": "Saved {{date}}",
+    "completeRegistration": "Complete registration: ",
+    "completeRegistration2": "Complete registration"
+  },
+  "noOrganizationState": {
+    "campaigns": "Campaigns",
+    "manageYourFundraisingCampaigns": "Manage your fundraising campaigns",
+    "noOrganizationIsLinkedTo": "No organization is linked to this user",
+    "signedInAsUseremail": "Signed in as: {{userEmail}}",
+    "startRegistration": "Start registration"
+  },
+  "organizationChecks": {
+    "registrationDocs": "Registration documents",
+    "taxApproval": "Tax certificate",
+    "paymentConnected": "Payment processing connected",
+    "contactSet": "Contact person set",
+    "campaignExists": "Has a campaign"
+  },
+  "checklist": {
+    "completion": "Organization details complete",
+    "listLabel": "Organization details checklist",
+    "done": "Done: ",
+    "todo": "To do: "
+  },
+  "identityCheck": {
+    "checking": "Checking the ID number...",
+    "validToSave": "The ID number is valid to save",
+    "available": "The ID number is available for registration",
+    "manageExisting": "Manage the existing entity",
+    "contactSupport": "To ask for access to an existing entity, contact support.",
+    "unverified": "We couldn't check the ID number right now. You can continue — it will be checked again when saving."
+  },
+  "actions": {
+    "tryAgain": "Try again"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "donations": {
+    "backToOverview": "→ חזרה לסקירה כללית",
+    "donationsCampaignscoped": "תרומות{{campaignScoped}}",
+    "successfulDonations": "תרומות שהצליחו",
+    "averageDonation": "ממוצע תרומה",
+    "failed": "נכשלו",
+    "allCampaigns": "כל הקמפיינים",
+    "allStatuses": "כל הסטטוסים",
+    "noDonationsFound": "לא נמצאו תרומות",
+    "date": "תאריך",
+    "donationDetails": "פרטי תרומה",
+    "created": "נוצר",
+    "completed": "הושלם",
+    "failureReason": "סיבת כישלון",
+    "type": "סוג",
+    "testPayment": "תשלום TEST"
+  },
+  "periods": {
+    "thisMonth": "החודש",
+    "lastMonth": "חודש שעבר",
+    "months3": "3 חודשים",
+    "all": "הכל"
+  },
+  "common": {
+    "totalRaised": "סך גיוס",
+    "searchPlaceholder": "חיפוש לפי שם, אימייל או טלפון...",
+    "exporting": "מייצא...",
+    "exportCsv": "ייצוא CSV",
+    "columns": "עמודות",
+    "loading": "טוען...",
+    "donor": "תורם",
+    "campaign": "קמפיין",
+    "amount": "סכום",
+    "status": "סטטוס",
+    "rowsPerPage": "שורות בעמוד:",
+    "previous": "הקודם",
+    "pageOf": "עמוד {{page}} מתוך {{totalPages}}",
+    "next": "הבא",
+    "email": "אימייל",
+    "phone": "טלפון"
+  },
+  "status": {
+    "paid": "שולם",
+    "failed": "נכשל",
+    "pending": "ממתין"
+  },
+  "donors": {
+    "donorsCampaignscoped": "תורמים{{campaignScoped}}",
+    "filteredByCampaign": "מסונן לפי קמפיין:",
+    "showAllDonors": "הצג את כל התורמים ✕",
+    "numberOfDonors": "מספר תורמים",
+    "averagePerDonor": "ממוצע לתורם",
+    "noDonorsFound": "לא נמצאו תורמים",
+    "totalDonated": "סה\"כ נתרם",
+    "donations": "תרומות",
+    "campaigns": "קמפיינים",
+    "lastDonation": "תרומה אחרונה",
+    "donorDetails": "פרטי תורם",
+    "name": "שם",
+    "numberOfDonations": "מספר תרומות",
+    "firstDonation": "תרומה ראשונה"
+  }
+}

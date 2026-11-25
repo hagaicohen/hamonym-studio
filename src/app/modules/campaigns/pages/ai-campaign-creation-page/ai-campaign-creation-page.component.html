@@ -219,7 +219,7 @@
                   <div class="ai-error">{{ refineError() }}</div>
                 }
 
-                <button type="button" class="btn-secondary" [disabled]="refiningStory()" (click)="refineStory()">
+                <button type="button" class="btn-secondary ai-unavailable" disabled title="כלי AI אינם זמינים כרגע" (click)="refineStory()">
                   {{ refiningStory() ? 'מעדכנים...' : 'עדכנו את הטקסט עם התשובות ←' }}
                 </button>
               </div>

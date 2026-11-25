@@ -1,0 +1,29 @@
+<div class="gs" role="region" aria-roledescription="carousel" [attr.aria-label]="'publicPage.gallery.label' | hmPublic" tabindex="0" (keydown)="onKey($event)">
+  <div class="gs-viewport" [style.aspect-ratio]="aspect">
+    <div class="gs-track" [style.--gs-index]="index">
+      @for (item of items; track $index; let i = $index) {
+        <figure class="gs-slide" [class.gs-slide--active]="i === index" [attr.aria-hidden]="i !== index" [attr.data-slide]="i"
+          role="group" aria-roledescription="slide" [attr.aria-label]="('publicPage.gallery.slideOf' | hmPublic: { n: i + 1, total: items.length })">
+          <img [src]="item.url" [alt]="item.caption || ''">
+          @if (data.showCaptions && item.caption) { <figcaption class="gs-caption">{{ item.caption }}</figcaption> }
+        </figure>
+      }
+    </div>
+    @if (data.showArrows !== false && items.length > 1) {
+      <button type="button" class="gs-nav gs-nav--prev" (click)="go(index - 1)" [attr.aria-label]="'publicPage.gallery.previous' | hmPublic">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button type="button" class="gs-nav gs-nav--next" (click)="go(index + 1)" [attr.aria-label]="'publicPage.gallery.next' | hmPublic">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    }
+  </div>
+  @if (data.showDots !== false && items.length > 1) {
+    <div class="gs-dots">
+      @for (item of items; track $index; let i = $index) {
+        <button type="button" class="gs-dot" [class.active]="i === index" [attr.aria-current]="i === index ? 'true' : null"
+          [attr.aria-label]="'publicPage.gallery.goTo' | hmPublic: { n: i + 1 }" (click)="go(i)"></button>
+      }
+    </div>
+  }
+</div>

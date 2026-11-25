@@ -1,0 +1,37 @@
+:host { display: block; }
+.gs { display: flex; flex-direction: column; gap: 10px; outline: none; }
+.gs:focus-visible .gs-viewport { outline: 2px solid #583cd6; outline-offset: 3px; }
+.gs-viewport { position: relative; overflow: hidden; border-radius: 14px; background: #f1f5f9; }
+.gs-track { position: absolute; inset: 0; }
+.gs-slide { position: absolute; inset: 0; margin: 0; }
+.gs-slide img { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
+.gs-caption {
+  position: absolute; inset-inline: 0; inset-block-end: 0; padding: 10px 14px; font-size: 14px; color: #fff;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.7), transparent);
+}
+
+/* Slide: slides sit side by side along the reading direction. */
+:host([data-transition='slide']) .gs-track { display: flex; transition: transform 0.5s ease; transform: translateX(calc(var(--gs-index) * -100%)); }
+:host([data-transition='slide']) .gs-track:dir(rtl) { transform: translateX(calc(var(--gs-index) * 100%)); }
+:host([data-transition='slide']) .gs-slide { position: relative; inset: auto; flex: 0 0 100%; }
+
+/* Fade: slides stack; the active one fades in. */
+:host([data-transition='fade']) .gs-slide { opacity: 0; transition: opacity 0.6s ease; }
+:host([data-transition='fade']) .gs-slide--active { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-track, .gs-slide { transition: none !important; }
+}
+
+.gs-nav {
+  position: absolute; inset-block-start: 50%; transform: translateY(-50%); inline-size: 38px; block-size: 38px;
+  border-radius: 50%; border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.92); color: #0f172a; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+.gs-nav--prev { inset-inline-start: 10px; }
+.gs-nav--next { inset-inline-end: 10px; }
+.gs-nav svg:dir(ltr) { transform: scaleX(-1); }
+.gs-nav:focus-visible, .gs-dot:focus-visible { outline: 2px solid #583cd6; outline-offset: 2px; }
+.gs-dots { display: flex; justify-content: center; gap: 6px; }
+.gs-dot { inline-size: 8px; block-size: 8px; padding: 0; border-radius: 50%; border: 0; background: #cbd5e1; cursor: pointer; }
+.gs-dot.active { background: #583cd6; inline-size: 22px; border-radius: 4px; }

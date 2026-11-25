@@ -50,9 +50,9 @@
         </svg>
       </div>
 
-      <h2>מטרות {{ entityConfig.labels.entity }}</h2>
+      <h2>תחומי פעילות ואפשרויות</h2>
 
-      <p>הגדירו את הכרטיס שלכם בפלטפורמה</p>
+      <p>ניתן לבחור אפשרות אחת, כמה אפשרויות או להמשיך ללא בחירה. הבחירה אינה קובעת זכאות לסליקה או מגבילה את יכולות הקמפיין.</p>
     </div>
 
     <!-- CAMPAIGN TYPES -->
@@ -63,6 +63,7 @@
           type="button"
           class="campaign-type-row"
           [class.active]="selectedCampaignTypes.includes(type.id)"
+          [attr.aria-pressed]="selectedCampaignTypes.includes(type.id)"
           (click)="toggleCampaignType(type.id)"
         >
           <div class="campaign-type-content">
@@ -97,9 +98,6 @@
       }
     </div>
 
-    @if (!selectedCampaignTypes.length) {
-      <div class="field-error">חובה לבחור לפחות סוג קמפיין אחד</div>
-    }
     <!-- PROFILE -->
 
     <div class="base-section">

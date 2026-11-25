@@ -1,4 +1,7 @@
-import { Component, inject, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { TextStyleEditorComponent } from '../../../../../shared/ui/text-style-editor/text-style-editor.component';
+import { TextStyle } from '../../../../../shared/models/text-style.model';
+import { Component, Input, inject, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { AmountButtonsEditorComponent } from '../../editors/amount-buttons-editor.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule, Zap } from 'lucide-angular';
@@ -13,6 +16,7 @@ import { RichTextEditorComponent } from '../../../../../shared/ui/rich-text-edit
 import { environment } from '../../../../../../environments/environment';
 
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 // Step 1 for layout.pageFormat === 'minimal' — replaces campaign-basic-step
 // entirely (not a stripped-down reuse of it) for this format. That step's
 // hero upload/category/manager-name/story fields all describe a full
@@ -25,11 +29,12 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 @Component({
   selector: 'app-campaign-minimal-details-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent, LogoAppearanceEditorComponent],
+  imports: [TextStyleEditorComponent, AmountButtonsEditorComponent, TranslocoPipe, HmIconComponent, CommonModule, FormsModule, LucideAngularModule, ColorPickerComponent, RichTextEditorComponent, LogoAppearanceEditorComponent],
   templateUrl: './campaign-minimal-details-step.component.html',
   styleUrl: './campaign-minimal-details-step.component.css',
 })
 export class CampaignMinimalDetailsStepComponent implements OnInit {
+  @Input() selectedPart: 'logo' | null = null;
   protected state = inject(CampaignStudioStateService);
   private entityService = inject(CurrentEntityService);
   private entitiesService = inject(EntitiesService);
@@ -97,10 +102,17 @@ export class CampaignMinimalDetailsStepComponent implements OnInit {
     this.patchLayout({ minimalHeaderLogoAlign: align });
   }
   setTitleAlign(align: 'right' | 'center' | 'left'): void {
-    this.patchLayout({ minimalHeaderTitleAlign: align });
+    this.patchLayout({ minimalHeaderTitleAlign: align, minimalTextStyle: { ...this.draft.layout.minimalTextStyle, titleAlign: align } });
   }
   setSubtitleAlign(align: 'right' | 'center' | 'left'): void {
-    this.patchLayout({ minimalHeaderSubtitleAlign: align });
+    this.patchLayout({ minimalHeaderSubtitleAlign: align, minimalTextStyle: { ...this.draft.layout.minimalTextStyle, subtitleAlign: align } });
+  }
+
+  get minimalTextStyle(): TextStyle {
+    return { align: 'center', color: '', fontSize: 'md', position: 'center',
+      titleColor: this.draft.layout.minimalTitleColor || '#0f2747',
+      subtitleColor: this.draft.layout.minimalSubtitleColor || '#62728d',
+      ...this.draft.layout.minimalTextStyle };
   }
 
   patchLayout(partial: Partial<CampaignDraft['layout']>): void {

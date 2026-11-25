@@ -1,0 +1,55 @@
+<div class="cd" data-badge-editor>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'bd-text-' + block.id">{{ 'builder.badge.text' | transloco }}</label>
+    <input [id]="'bd-text-' + block.id" class="cd-input" type="text" data-field="text" maxlength="80" [value]="data.text"
+      [placeholder]="'builder.badge.textPlaceholder' | transloco" (change)="set({ text: $any($event.target).value.trim() })">
+  </div>
+  <div class="cd-row">
+    <label class="cd-label" [for]="'bd-sub-' + block.id">{{ 'builder.badge.subtext' | transloco }}</label>
+    <input [id]="'bd-sub-' + block.id" class="cd-input" type="text" data-field="subtext" maxlength="140" [value]="data.subtext ?? ''"
+      [placeholder]="'builder.badge.subtextPlaceholder' | transloco" (change)="set({ subtext: $any($event.target).value.trim() })">
+  </div>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.badge.image' | transloco }}</span>
+    <input #badgeFile type="file" accept="image/*" hidden (change)="upload($event)">
+    <button type="button" class="cd-chip" data-action="upload" [disabled]="uploading" (click)="badgeFile.click()">{{ (uploading ? 'builder.badge.uploading' : data.imageUrl ? 'builder.badge.replaceImage' : 'builder.badge.addImage') | transloco }}</button>
+    @if (data.imageUrl) { <button type="button" class="cd-link" data-action="remove-image" (click)="set({ imageUrl: undefined })">{{ 'builder.badge.removeImage' | transloco }}</button> }
+    @if (uploadFailed) { <span class="cd-hint" role="alert">{{ 'builder.badge.uploadFailed' | transloco }}</span> }
+  </div>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.badge.shape' | transloco }}</span>
+    <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.badge.shape' | transloco">
+      @for (s of shapes; track s.value) {
+        <button type="button" class="cd-chip" role="radio" [attr.data-shape]="s.value" [class.active]="(data.shape ?? 'pill') === s.value" [attr.aria-checked]="(data.shape ?? 'pill') === s.value"
+          (click)="set({ shape: s.value === 'pill' ? undefined : s.value })">{{ s.label | transloco }}</button>
+      }
+    </div>
+  </div>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.badge.size' | transloco }}</span>
+    <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.badge.size' | transloco">
+      @for (s of sizes; track s.value) {
+        <button type="button" class="cd-chip" role="radio" [attr.data-size]="s.value" [class.active]="(data.size ?? 'md') === s.value" [attr.aria-checked]="(data.size ?? 'md') === s.value"
+          (click)="set({ size: s.value === 'md' ? undefined : s.value })">{{ s.label | transloco }}</button>
+      }
+    </div>
+  </div>
+  <div class="cd-row">
+    <span class="cd-label">{{ 'builder.badge.position' | transloco }}</span>
+    <div class="cd-chips" role="radiogroup" [attr.aria-label]="'builder.badge.position' | transloco">
+      @for (a of aligns; track a.value) {
+        <button type="button" class="cd-chip" role="radio" [attr.data-align]="a.value" [class.active]="(data.align ?? 'center') === a.value" [attr.aria-checked]="(data.align ?? 'center') === a.value"
+          (click)="set({ align: a.value === 'center' ? undefined : a.value })">{{ a.label | transloco }}</button>
+      }
+    </div>
+  </div>
+  @for (c of colors; track c.key) {
+    <div class="cd-row">
+      <label class="cd-label" [for]="'bd-' + c.key + '-' + block.id">{{ c.label | transloco }}</label>
+      <input [id]="'bd-' + c.key + '-' + block.id" type="color" class="cd-color" [attr.data-field]="c.key" [value]="color(c.key) || c.fallback"
+        (input)="setColor(c.key, $any($event.target).value)">
+      @if (color(c.key)) { <button type="button" class="cd-link" (click)="setColor(c.key, undefined)">{{ 'builder.badge.resetColor' | transloco }}</button> }
+    </div>
+  }
+  <p class="cd-note">{{ 'builder.badge.displayOnly' | transloco }}</p>
+</div>

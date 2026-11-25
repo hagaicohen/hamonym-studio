@@ -6,25 +6,25 @@
     (click)="!asImage(block.data).url && imgInput.click()">
     <img *ngIf="asImage(block.data).url" [src]="asImage(block.data).url" class="image-preview-img" alt="">
     <div class="image-preview-empty" *ngIf="!asImage(block.data).url">
-      <lucide-icon [img]="ui.ImageIcon" [size]="28" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span>לחצו להעלאת תמונה</span>
+      <lucide-icon [img]="ui.ImageIcon" [size]="28" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon><span>{{ 'editors.ui.clickToUploadAnImage' | transloco }}</span>
     </div>
   </div>
 
   <div class="image-actions" *ngIf="asImage(block.data).url">
-    <button class="editor-btn" type="button" (click)="imgInput.click()">החלף תמונה</button>
-    <button class="editor-btn editor-btn--danger" type="button" (click)="updateImageField(block.id, 'url', '')">הסר</button>
+    <button class="editor-btn" type="button" (click)="imgInput.click()">{{ 'editors.ui.replaceImage' | transloco }}</button>
+    <button class="editor-btn editor-btn--danger" type="button" (click)="updateImageField(block.id, 'url', '')">{{ 'editors.ui.remove' | transloco }}</button>
   </div>
 
   <div class="editor-row">
-    <label class="editor-label">כיתוב (רשות)</label>
+    <label class="editor-label">{{ 'editors.ui.captionOptional' | transloco }}</label>
     <input class="editor-input" type="text"
       [value]="asImage(block.data).caption || ''"
       (input)="updateImageField(block.id, 'caption', $any($event.target).value)"
-      placeholder="תיאור התמונה...">
+      [placeholder]="'editors.ui.imageDescription' | transloco">
   </div>
 
   <div class="spacing-row" style="margin-top:10px">
-    <span class="spacing-label">רוחב התמונה</span>
+    <span class="spacing-label">{{ 'editors.ui.imageWidth' | transloco }}</span>
     <input type="range" class="split-slider" min="20" max="100" step="5"
       [value]="asImage(block.data).widthPercent ?? 100"
       (input)="updateImageWidth(block.id, +$any($event.target).value)">
@@ -32,14 +32,14 @@
   </div>
 
   <div class="editor-row" *ngIf="(asImage(block.data).widthPercent ?? 100) < 100">
-    <label class="editor-label">מיקום</label>
+    <label class="editor-label">{{ 'editors.ui.position' | transloco }}</label>
     <div class="direction-toggle">
       <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'right'"
-        (click)="updateImageField(block.id, 'align', 'right')">ימין</button>
+        (click)="updateImageField(block.id, 'align', 'right')">{{ 'editors.ui.right' | transloco }}</button>
       <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'center'"
-        (click)="updateImageField(block.id, 'align', 'center')">מרכז</button>
+        (click)="updateImageField(block.id, 'align', 'center')">{{ 'editors.ui.center' | transloco }}</button>
       <button class="direction-btn" [class.active]="(asImage(block.data).align || 'center') === 'left'"
-        (click)="updateImageField(block.id, 'align', 'left')">שמאל</button>
+        (click)="updateImageField(block.id, 'align', 'left')">{{ 'editors.ui.left' | transloco }}</button>
     </div>
   </div>
 
@@ -50,12 +50,12 @@
        so width and height become two separate controls instead of
        always moving together. See DECISIONS.md (2026-07-31). -->
   <div class="spacing-row" style="margin-top:10px">
-    <span class="spacing-label">גובה התמונה</span>
+    <span class="spacing-label">{{ 'editors.ui.imageHeight' | transloco }}</span>
     <input type="range" class="split-slider" min="80" max="600" step="10"
       [value]="asImage(block.data).heightPx || 240"
       (input)="updateImageHeight(block.id, +$any($event.target).value)">
-    <span>{{ asImage(block.data).heightPx ? (asImage(block.data).heightPx + 'px') : 'אוטומטי' }}</span>
+    <span>{{ asImage(block.data).heightPx ? (asImage(block.data).heightPx + 'px') : ('editors.ui.automatic' | transloco) }}</span>
   </div>
   <button class="editor-btn" type="button" *ngIf="asImage(block.data).heightPx"
-    (click)="resetImageHeight(block.id)" style="margin-top:6px">↺ גובה אוטומטי (לפי התמונה)</button>
+    (click)="resetImageHeight(block.id)" style="margin-top:6px">{{ 'editors.ui.automaticHeightFromTheImage' | transloco }}</button>
 </div>

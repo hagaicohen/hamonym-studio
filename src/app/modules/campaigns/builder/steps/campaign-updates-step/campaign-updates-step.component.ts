@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Megaphone, Eye } from 'lucide-angular';
 import { CampaignStudioStateService, CampaignUpdate } from '../../../services/campaign-studio-state.service';
 import { UploadService } from '../../../../../core/services/upload.service';
-
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-campaign-updates-step',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
+  imports: [TranslocoPipe, HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-updates-step.component.html',
   styleUrl: './campaign-updates-step.component.css',
 })
