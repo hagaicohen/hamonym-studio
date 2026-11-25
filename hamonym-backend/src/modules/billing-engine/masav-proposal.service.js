@@ -30,7 +30,7 @@
 const pool = require('../../db/db');
 const { getStatementBalance } = require('./statement-balance.service');
 const { hasOpenCollectionHold } = require('./payment-exceptions.service');
-const { ACTIONABLE_STATEMENT_STATUSES, ACTIVE_ATTEMPT_STATUSES } = require('../collection-engine/collection.service');
+const { ACTIONABLE_STATEMENT_STATUSES, ACTIVE_ATTEMPT_STATUSES, assertRealStatement } = require('../collection-engine/collection.service');
 const { recordFinding } = require('../../jobs/reconciliation-findings');
 
 // Same mandate check routing.js#resolveCollectionMethod already performs
@@ -81,6 +81,7 @@ async function prepareMasavProposal(statementId, transactionClient = null) {
   const client = transactionClient || await pool.connect();
   try {
     if (!transactionClient) await client.query('BEGIN');
+    await assertRealStatement(statementId, client);
 
     const stmtRes = await client.query(
       `SELECT s.id, s.status, ba.entity_id
@@ -282,6 +283,7 @@ async function approveMasavProposal({ proposalId, superAdminUserId, reason }, tr
 
     const stmtRes = await client.query(`SELECT s.id, ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id = s.billing_account_id WHERE s.id = $1 FOR UPDATE OF s`, [peekRes.rows[0].statement_id]);
     const statement = stmtRes.rows[0];
+    await assertRealStatement(statement.id, client);
 
     const propRes = await client.query(`SELECT * FROM masav_collection_proposals WHERE id = $1 FOR UPDATE`, [proposalId]);
     const proposal = propRes.rows[0];

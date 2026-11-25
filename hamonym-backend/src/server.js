@@ -1,4 +1,3 @@
-require('./modules/payment/pilot-provider-boundary').install();
 // src/server.js
 
 require('dotenv').config();
@@ -234,8 +233,8 @@ app.get(
         'Hamonym backend running',
 
       commit: process.env.RENDER_GIT_COMMIT || null,
-      paymentPhase: 'test',
-      paymentProvider: 'mock',
+      paymentPhase: 'provider-configured',
+      paymentProvider: 'cardcom',
       billingSchemaReady
 
     });

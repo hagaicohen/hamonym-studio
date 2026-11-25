@@ -982,3 +982,7 @@ thead .bo-actions-col { background: #fff; z-index: 2; }
   gap: 8px;
   margin-top: 10px;
 }
+
+.collection-confirm-backdrop{position:fixed;inset:0;z-index:10000;background:#102a244d;display:flex;align-items:center;justify-content:center;padding:16px}
+.collection-confirm{width:min(100%,460px);max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;padding:24px;background:#fff;border:1px solid #d7e5df;border-radius:16px;box-shadow:0 12px 36px #102a2426;color:#183c34}
+.collection-confirm h2{font-size:18px;margin:0 0 12px}.collection-confirm p{font-size:14px;line-height:1.7;margin:0 0 12px}.collection-confirm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}

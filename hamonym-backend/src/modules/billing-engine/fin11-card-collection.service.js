@@ -139,11 +139,14 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
       [statementId]
     );
     const statement = stmtRes.rows[0];
-    if (statement?.simulation_provider === 'fin11_mock' && !simulationScope.current()) {
+    if (statement?.simulation_provider === 'fin11_mock') {
       await client.query('COMMIT');
-      return { skipped: true, reason: 'simulation_statement_requires_simulator' };
+      return { skipped: true, reason: 'legacy_simulated_financial_data' };
     }
-    if (statement) simulationScope.assertEntity(statement.entity_id);
+    if (statement) {
+      simulationScope.assertEntity(statement.entity_id);
+      await require('../collection-engine/collection.service').assertRealStatement(statementId, client);
+    }
     if (!statement) {
       const err = new Error('Statement not found');
       err.code = 'STATEMENT_NOT_FOUND';
@@ -250,10 +253,8 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
     const attemptNumber = nextAttemptRes.rows[0].next;
 
     const insertRes = await client.query(
-      simulation
-        ? `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, business_collection_at, provider) VALUES ($1, 'card', $2, $3, $4, 'fin11_mock') RETURNING id, attempt_number`
-        : `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount) VALUES ($1, 'card', $2, $3) RETURNING id, attempt_number`,
-      simulation ? [statementId, attemptNumber, requestedAmount, simulation.businessAt] : [statementId, attemptNumber, requestedAmount]
+      `INSERT INTO collection_attempts (statement_id, collection_method, attempt_number, requested_amount, business_collection_at, provider) VALUES ($1, 'card', $2, $3, $4, 'cardcom') RETURNING id, attempt_number`,
+      [statementId, attemptNumber, requestedAmount, simulation?.businessAt || now.toISOString()]
     );
 
     if (statement.status === 'approved') {
@@ -293,6 +294,8 @@ async function openFin11CappedCardAttempt(statementId, now = new Date()) {
 // so every test here runs against an injected fake, never a real provider
 // call.
 async function runFin11CardCollectionCycle(statementId, resolveAdapter, now = new Date()) {
+  const authorization = simulationScope.current();
+  if (!authorization?.collectionAuthorized || !authorization.superAdminUserId) throw Object.assign(new Error('Explicit Super Admin collection authorization required'), { code: 'COLLECTION_CONFIRMATION_REQUIRED', status: 403 });
   const opened = await openFin11CappedCardAttempt(statementId, now);
   if (opened.skipped) return opened;
 

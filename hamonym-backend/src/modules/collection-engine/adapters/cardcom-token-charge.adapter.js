@@ -47,15 +47,19 @@ function buildCardExpirationMMYY(expMonth, expYear) {
 // failureReason -- same principle as detail-recurring.handler.js's
 // `cardcom_recurring_<status>`, never an invented taxonomy.
 function classifyChargeResponse(data) {
-  const responseCode = data?.ResponseCode;
+  const responseCode = typeof data?.ResponseCode === 'number' ? data.ResponseCode : (typeof data?.ResponseCode === 'string' && /^\d+$/.test(data.ResponseCode) ? Number(data.ResponseCode) : null);
   const rawStatus = `${responseCode}:${data?.Description || ''}`;
 
-  if (responseCode === 0) {
+  if (responseCode === 0 && data?.TranzactionId != null && String(data.TranzactionId).trim() && String(data.TranzactionId) !== '0') {
     return {
       outcome: 'succeeded',
       providerReference: data?.TranzactionId != null ? String(data.TranzactionId) : null,
       providerRawStatus: rawStatus,
     };
+  }
+
+  if (!Number.isInteger(responseCode) || responseCode === 0) {
+    return { outcome: 'ambiguous', providerRawStatus: rawStatus, failureReason: 'cardcom_response_unverified' };
   }
 
   if (responseCode === 608) {
@@ -107,11 +111,10 @@ function extractSanitizedProviderError(err) {
 }
 
 exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
-  throw Object.assign(new Error('Real platform-fee collection is disabled during the pilot'), { code: 'REAL_COLLECTION_DISABLED_DURING_PILOT' });
-  const simulation = require('../../../lib/fin11-simulation-context');
-  if (simulation.current()) simulation.configuration();
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
   const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
+
+  if (!terminalNumber || !apiName || !paymentInstrument?.token || paymentInstrument.provider !== 'cardcom') return { outcome: 'technical_failure', failureReason: 'platform_cardcom_configuration_required' };
 
   const cardExpirationMMYY = buildCardExpirationMMYY(
     paymentInstrument?.exp_month,
@@ -166,9 +169,10 @@ exports.charge = async ({ attemptId, amount, paymentInstrument }) => {
 // Nothing in this codebase invokes this automatically yet -- see that file
 // for why.
 exports.reconcile = async ({ attemptId }) => {
-  throw Object.assign(new Error('Real platform-fee provider access is disabled during the pilot'), { code: 'REAL_COLLECTION_DISABLED_DURING_PILOT' });
   const terminalNumber = process.env.HAMONYM_CARDCOM_TERMINAL;
   const apiName = process.env.HAMONYM_CARDCOM_API_NAME;
+
+  if (!terminalNumber || !apiName) throw Object.assign(new Error('Platform Cardcom credentials are required'), { code: 'PLATFORM_CARDCOM_CONFIGURATION_REQUIRED' });
 
   let data;
   try {
@@ -227,10 +231,10 @@ exports.reconcile = async ({ attemptId }) => {
     };
   }
 
-  const responseCode = data?.ResponseCode;
+  const responseCode = typeof data?.ResponseCode === 'number' ? data.ResponseCode : (typeof data?.ResponseCode === 'string' && /^\d+$/.test(data.ResponseCode) ? Number(data.ResponseCode) : null);
   const rawStatus = `${responseCode}:${data?.Description || ''}`;
 
-  if (responseCode === 0 && data?.TranzactionId != null) {
+  if (responseCode === 0 && data?.TranzactionId != null && String(data.TranzactionId).trim() && String(data.TranzactionId) !== '0') {
     return {
       outcome: 'succeeded',
       providerReference: String(data.TranzactionId),

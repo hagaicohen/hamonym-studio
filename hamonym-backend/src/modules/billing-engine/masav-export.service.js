@@ -39,6 +39,7 @@ async function execute(options,guards){
   const statements=(await client.query("SELECT s.id,ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id=s.billing_account_id WHERE s.status IN ('approved','open') ORDER BY s.id"+(previewOnly?'':' FOR UPDATE OF s'))).rows;
   for(const statement of statements){
    if(peeks.some(p=>p.statement_id===statement.id))continue;
+   await require('../collection-engine/collection.service').assertRealStatement(statement.id,client);
    const balance=await getStatementBalance(statement.id,client);if(balance.outstanding<=0)continue;
    const exported=await guards.hasExportedMasavProposal(statement.id,client);
    if(!exported.exists)excluded.push({statementId:statement.id,entityId:statement.entity_id,reason:'MASAV_PREPARATION_REQUIRED'});
@@ -49,6 +50,7 @@ async function execute(options,guards){
   const statement=(await client.query('SELECT s.id,s.status,s.billing_period_id,ba.entity_id FROM statements s JOIN billing_accounts ba ON ba.id=s.billing_account_id WHERE s.id=$1'+(previewOnly?'':' FOR UPDATE OF s'),[peek.statement_id])).rows[0];
   const proposal=(await client.query('SELECT * FROM masav_collection_proposals WHERE id=$1'+(previewOnly?'':' FOR UPDATE'),[peek.id])).rows[0];
   let reason=!(oneClick?['proposed','approved']:['approved']).includes(proposal.status)?'PROPOSAL_NOT_APPROVED':!['approved','open'].includes(statement.status)?'STATEMENT_NOT_ACTIONABLE':null;
+  await require('../collection-engine/collection.service').assertRealStatement(statement.id,client);
   const balance=await getStatementBalance(statement.id,client);const mandate=await guards.checkMasavMandate(statement.entity_id,client);
   const exported=await guards.hasExportedMasavProposal(statement.id,client),hold=await hasOpenCollectionHold(statement.entity_id,client),unresolved=await guards.findUnresolvedAttempt(statement.id,client);
   reason=reason|| (exported.exists?'MASAV_ALREADY_EXPORTED':hold.held?'COLLECTION_HELD':unresolved?'UNRESOLVED_COLLECTION_ATTEMPT':!mandate.valid?mandate.reason:balance.outstanding<=0?'NO_OUTSTANDING_BALANCE':cents(balance.outstanding)!==cents(proposal.proposed_amount)?'PROPOSAL_STALE_AT_EXPORT':null);

@@ -76,6 +76,9 @@ async function calculateAccountStatement(client, account, { billingRunId, period
      FROM donations
      WHERE entity_id = $1
        AND status = 'paid'
+       AND COALESCE(to_jsonb(donations)->>'is_mock','false') <> 'true'
+       AND COALESCE(low_profile_id,'') NOT LIKE 'hamonym-mock:%'
+       AND COALESCE(provider_reference,'') NOT LIKE 'mock:%'
        AND billing_effective_at < $2
        AND effective_statement_id IS NULL
      ORDER BY billing_effective_at`,
@@ -151,6 +154,7 @@ async function calculateAccountStatement(client, account, { billingRunId, period
 // Stage C itself would not also consider eligible, and discovery alone
 // never writes effective_statement_id (only Approval does — unchanged).
 async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
+  if (options.marker?.simulation_provider === 'fin11_mock') throw Object.assign(new Error('Simulated financial calculations are prohibited; real billing integration requires review'), { code: 'MOCK_FINANCIAL_OPERATIONS_REMOVED' });
   const scope = require("../../lib/fin11-simulation-context");
   if (options.entityIds) {
     if (!scope.current() || options.entityIds.some(id => !scope.current().entityIds.includes(id))) throw new Error("Billing execution context required");
@@ -180,6 +184,9 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
      FROM donations d
      JOIN entities e ON e.id = d.entity_id AND e.status = 'active'
      WHERE d.status = 'paid'
+       AND COALESCE(to_jsonb(d)->>'is_mock','false') <> 'true'
+       AND COALESCE(d.low_profile_id,'') NOT LIKE 'hamonym-mock:%'
+       AND COALESCE(d.provider_reference,'') NOT LIKE 'mock:%'
        AND d.billing_effective_at < $1
        AND d.effective_statement_id IS NULL
        ${options.entityIds ? 'AND d.entity_id=ANY($2::uuid[])' : ''}
@@ -227,6 +234,9 @@ async function runProductionCalculation(billingPeriodId, asOf, options = {}) {
           const pending = await client.query(
             `SELECT COUNT(*)::int AS donation_count, COALESCE(SUM(amount),0) AS gross
              FROM donations WHERE entity_id=$1 AND status='paid'
+       AND COALESCE(to_jsonb(donations)->>'is_mock','false') <> 'true'
+       AND COALESCE(low_profile_id,'') NOT LIKE 'hamonym-mock:%'
+       AND COALESCE(provider_reference,'') NOT LIKE 'mock:%'
                AND billing_effective_at < $2 AND effective_statement_id IS NULL
                AND NOT EXISTS (SELECT 1 FROM statement_components sc
                  WHERE sc.donation_id=donations.id AND sc.statement_id=ANY($3::uuid[]))`,

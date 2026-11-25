@@ -96,11 +96,15 @@ exports.runJob = async (req, res) => {
     if (!jobRunner.list().includes(name)) {
       return res.status(404).json({ error: `Unknown job: ${name}` });
     }
-    const result = await jobRunner.run(name, { triggeredBy: `admin:${req.user.id}` });
+    const result = await jobRunner.run(name, {
+      triggeredBy: `admin:${req.user.id}`,
+      collectionAuthorized: req.body?.confirmCollection === true,
+      superAdminUserId: req.user.id,
+    });
     res.json(result);
   } catch (err) {
     console.error('[cardcom-ops.runJob]', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ code: err.code, error: err.message });
   }
 };
 

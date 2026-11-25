@@ -1,4 +1,3 @@
-require('../modules/payment/pilot-provider-boundary').install();
 const db = require('../db/db');
 const clock = require('../lib/clock');
 const simulationScope = require('../lib/fin11-simulation-context');
@@ -61,13 +60,14 @@ function lockKeyFor(jobName) {
 // connection happens to close. A transaction-scoped lock on a single
 // checked-out client has neither problem — it's released automatically on
 // COMMIT/ROLLBACK, even if the process crashes mid-job.
-exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
+exports.run = async (jobName, { triggeredBy = 'scheduler', collectionAuthorized = false, superAdminUserId = null } = {}) => {
   const job = registry.get(jobName);
   if (!job) throw new Error(`Unknown job: ${jobName}`);
 
   const simulation = simulationScope.current();
-  if (job.simulationOnly && !simulation) throw new Error('FIN-11 simulation scope required');
-  if (simulation) simulationScope.configuration();
+  const actor = simulation?.superAdminUserId || superAdminUserId;
+  const mayCollect = !!actor && (simulation?.collectionAuthorized === true || collectionAuthorized === true);
+  if (job.requiresExplicitCollection && !mayCollect) throw Object.assign(new Error('Explicit confirmation is required before real Cardcom collection'), { code: 'COLLECTION_CONFIRMATION_REQUIRED', status: 403 });
   const lockKey = lockKeyFor(jobName);
   const lockClient = await db.connect();
 
@@ -104,7 +104,8 @@ exports.run = async (jobName, { triggeredBy = 'scheduler' } = {}) => {
 
     try {
       const result = await Promise.race([
-        job.handler(db, { now: businessNow, simulation, ...(simulation ? { resolveAdapter: method => { simulationScope.configuration(); if (method !== 'card') throw new Error('Only simulated card collection is allowed'); return require('../modules/collection-engine/adapters/fin11-mock.adapter'); } } : {}) }),
+        simulationScope.run({ ...simulationScope.configuration(), ...simulation, businessAt: businessNow.toISOString(), entityIds: simulation?.entityIds || null, collectionAuthorized: mayCollect, superAdminUserId: actor },
+          () => job.handler(db, { now: businessNow, simulation, collectionAuthorized: mayCollect, superAdminUserId: actor })),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Job timed out')), job.timeoutMs)),
       ]);
 

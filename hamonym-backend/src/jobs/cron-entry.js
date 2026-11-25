@@ -1,4 +1,3 @@
-require('../modules/payment/pilot-provider-boundary').install();
 // Entry point for a Render Cron Job (docs/CARDCOM_OPERATIONAL_PROCESSES.md,
 // Part י' revised 2026-08-18) — replaces the in-process node-cron scheduler
 // (scheduler.js/server.js's ENABLE_JOB_SCHEDULER), which turned out to be

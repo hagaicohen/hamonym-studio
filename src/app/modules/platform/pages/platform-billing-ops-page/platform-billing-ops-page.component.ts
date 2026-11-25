@@ -1671,6 +1671,7 @@ export class PlatformBillingOpsPageComponent implements OnInit {
   expandedJob: string | null = null;
   runningJob: string | null = null;
   jobActionError: string | null = null;
+  collectionJobConfirmation: string | null = null;
 
   toggleTechnicalJobs(): void {
     this.showTechnicalJobs = !this.showTechnicalJobs;
@@ -1705,10 +1706,15 @@ export class PlatformBillingOpsPageComponent implements OnInit {
     });
   }
 
-  runJobNow(jobName: string): void {
+  runJobNow(jobName: string, confirmCollection = false): void {
+    if (this.runningJob) return;
+    if (['billing-monthly-cycle', 'fin11-card-collection', 'fin11-card-retry-sweep'].includes(jobName) && !confirmCollection) {
+      this.collectionJobConfirmation = jobName;
+      return;
+    }
     this.runningJob = jobName;
     this.jobActionError = null;
-    this.cardcomOps.runJob(jobName).subscribe({
+    this.cardcomOps.runJob(jobName, confirmCollection).subscribe({
       next: () => {
         this.runningJob = null;
         delete this.runsByJob[jobName];
@@ -1719,6 +1725,12 @@ export class PlatformBillingOpsPageComponent implements OnInit {
         this.jobActionError = err?.error?.error || 'הרצת המשימה נכשלה';
       },
     });
+  }
+
+  confirmCollectionJob(): void {
+    const jobName = this.collectionJobConfirmation;
+    this.collectionJobConfirmation = null;
+    if (jobName) this.runJobNow(jobName, true);
   }
 
   fmtDuration(ms: number | null): string {

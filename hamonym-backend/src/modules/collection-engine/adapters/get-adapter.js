@@ -1,4 +1,4 @@
-const cardAdapter = require('./fin11-mock.adapter');
+const cardAdapter = require('./cardcom-token-charge.adapter');
 const masavAdapter = require('./masav.adapter');
 
 const ADAPTERS = {

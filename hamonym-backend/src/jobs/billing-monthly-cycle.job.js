@@ -99,8 +99,8 @@ async function computeMostRecentCycleBoundary(db, now) {
 // to runProductionCalculation. The calculation/period/approval services
 // themselves take their time parametrically (year/month, asOf) and are not
 // modified here.
-async function handler(db, { now = new Date() } = {}) {
-  return require('../modules/billing-engine/monthly-billing-orchestrator.service').execute({ db, triggeredBy: 'scheduler' });
+async function handler(db, { now = new Date(), collectionAuthorized = false, superAdminUserId = null } = {}) {
+  return require('../modules/billing-engine/monthly-billing-orchestrator.service').execute({ db, collectionAuthorized, superAdminUserId, triggeredBy: superAdminUserId ? 'admin:' + superAdminUserId : 'scheduler' });
 }
 
 function validateResult(result) {

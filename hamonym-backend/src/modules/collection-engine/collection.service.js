@@ -37,6 +37,20 @@ const MANUAL_CARD_RETRY = Symbol('super-admin-manual-card-retry');
 // all in one transaction so two concurrent callers on the same Statement
 // can never both pass the "no active attempt" check -- same locking idiom
 // as approval.service.js's SELECT ... FOR UPDATE.
+// Preserve historical records, but never turn simulated debt/results into real collections.
+async function assertRealStatement(statementId, client = pool) {
+  const result = await client.query(
+    `SELECT 1 FROM statements s JOIN billing_runs br ON br.id=s.billing_run_id
+     WHERE s.id=$1 AND br.result_summary->>'simulation_provider'='fin11_mock'
+     UNION ALL SELECT 1 FROM collection_attempts WHERE statement_id=$1 AND provider='fin11_mock'
+     UNION ALL SELECT 1 FROM statement_components sc JOIN donations d ON d.id=sc.donation_id
+       WHERE sc.statement_id=$1 AND (COALESCE(to_jsonb(d)->>'is_mock','false')='true'
+         OR COALESCE(d.low_profile_id,'') LIKE 'hamonym-mock:%'
+         OR COALESCE(d.provider_reference,'') LIKE 'mock:%') LIMIT 1`,
+    [statementId]);
+  if (result.rowCount) throw Object.assign(new Error('Historical simulated financial data requires review; no real collection was started'), { code: 'LEGACY_SIMULATED_FINANCIAL_DATA', status: 409 });
+}
+
 async function openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: manualRetry } = {}) {
   const client = await pool.connect();
   try {
@@ -417,6 +431,17 @@ async function resolveAttempt(attemptId, statementId, outcome, transactionClient
       throw err;
     }
 
+    const provenance = (await client.query('SELECT provider, collection_method, status, provider_reference FROM collection_attempts WHERE id=$1 AND statement_id=$2 FOR UPDATE', [attemptId, statementId])).rows[0];
+    if (!provenance || provenance.provider === 'fin11_mock' || (provenance.collection_method === 'card' && provenance.provider !== 'cardcom')) throw Object.assign(new Error('Only real provider attempts can be resolved'), { code: 'UNVERIFIED_COLLECTION_PROVIDER' });
+    await assertRealStatement(statementId, client);
+    if (outcome.outcome === 'succeeded' && (typeof outcome.providerReference !== 'string' || !outcome.providerReference.trim())) throw Object.assign(new Error('A verified provider transaction reference is required'), { code: 'UNVERIFIED_COLLECTION_RESULT' });
+    if (provenance.status === 'succeeded') {
+      if (outcome.outcome !== 'succeeded' || outcome.providerReference !== provenance.provider_reference) throw Object.assign(new Error('Confirmed collection cannot be overwritten by a conflicting result'), { code: 'COLLECTION_RESULT_CONFLICT' });
+      const paidState = (await client.query('SELECT status FROM statements WHERE id=$1', [statementId])).rows[0];
+      if (!transactionClient) await client.query('COMMIT');
+      return { attemptId, outcome: 'succeeded', statementStatus: paidState.status, replayed: true };
+    }
+
     await client.query(
       `UPDATE collection_attempts
        SET status = $2, provider_reference = $3, provider_raw_status = $4,
@@ -530,6 +555,7 @@ async function resolveAttempt(attemptId, statementId, outcome, transactionClient
 // tests only (defaults to the real registry) -- see design doc section 6.1
 // for why both real adapters refuse to actually charge anything today.
 async function runCollectionForStatement(statementId, { resolveAdapter = defaultGetAdapter, [MANUAL_CARD_RETRY]: manualRetry } = {}) {
+  await assertRealStatement(statementId);
   const opened = await openAttempt(statementId, resolveAdapter, { [MANUAL_CARD_RETRY]: manualRetry });
   if (opened.skipped) return opened;
 
@@ -636,6 +662,7 @@ async function getFin11CappedCardProposal(statementId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await assertRealStatement(statementId, client);
 
     const stmtRes = await client.query(
       `SELECT s.*, ba.entity_id
@@ -725,6 +752,7 @@ async function getFin11CappedCardProposal(statementId) {
 }
 
 module.exports = {
+  assertRealStatement,
   runSuperAdminManualCardRetry,
   runCollectionForStatement,
   openAttempt,

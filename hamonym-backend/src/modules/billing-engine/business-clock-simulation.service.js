@@ -1,7 +1,6 @@
 'use strict';
 const pool = require('../../db/db');
 const clock = require('../../lib/clock');
-const collection = require('./fin11-simulation.service');
 const LOCK = 117911076;
 function failure(message, status, code) { return Object.assign(new Error(message), { status, code }); }
 async function read(db) {
@@ -39,13 +38,11 @@ async function setEnabled(enabled, adminId) {
 async function setFixed(isoDatetime, adminId) {
   if (typeof isoDatetime !== 'string' || !/(Z|[+-]\d{2}:\d{2})$/.test(isoDatetime) || !Number.isFinite(Date.parse(isoDatetime))) throw failure('נדרש תאריך תקין עם אזור זמן מפורש', 400, 'INVALID_TIME');
   const businessAt = new Date(isoDatetime).toISOString();
-  let results;
   const state = await change(adminId, async (client, row) => {
     await client.query('INSERT INTO admin_simulation_clock (enabled, fixed_at, updated_by) VALUES (true,$1,$2) ON CONFLICT (id) DO UPDATE SET enabled=true, fixed_at=$1, updated_by=$2, updated_at=NOW()', [businessAt, adminId]);
-    // The existing FIN-11 service owns durable dispatch, retry limits and idempotency.
-    results = await collection.advance(businessAt, adminId);
+    // Changing business time never dispatches financial operations.
   });
-  return { ...state, ...(results ? { results: results.results, skipped: results.skipped } : {}) };
+  return state;
 }
 async function reset(adminId) {
   return change(adminId, async (client, row) => {

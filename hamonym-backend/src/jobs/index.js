@@ -20,9 +20,9 @@ jobRunner.register(require('./email-dispatch-recovery.job'));
 jobRunner.register(require('./operational-alerting.job'));
 jobRunner.register(require('./fx-snapshot-backfill.job'));
 
-// No production cron activation: simulation-only registrations have no schedule.
+// Financial collection jobs stay manual-only and require explicit Super Admin authorization.
 { // Internal steps are always registered; only the shared monthly orchestrator schedules them.
-  jobRunner.register({ ...require('./fin11-card-collection.job'), schedule: null, simulationOnly: true });
-  jobRunner.register({ ...require('./fin11-card-retry-sweep.job'), schedule: null, simulationOnly: true });
+  jobRunner.register({ ...require('./fin11-card-collection.job'), schedule: null, requiresExplicitCollection: true });
+  jobRunner.register({ ...require('./fin11-card-retry-sweep.job'), schedule: null, requiresExplicitCollection: true });
 }
 module.exports = jobRunner;

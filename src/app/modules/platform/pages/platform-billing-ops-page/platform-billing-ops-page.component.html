@@ -1035,3 +1035,17 @@
     </div>
   }
 </div>
+
+@if (collectionJobConfirmation) {
+  <div class="collection-confirm-backdrop" (click)="collectionJobConfirmation = null" (keydown.escape)="collectionJobConfirmation = null">
+    <section class="collection-confirm" role="alertdialog" aria-modal="true" aria-labelledby="collection-confirm-title" tabindex="-1" dir="rtl" (click)="$event.stopPropagation()">
+      <h2 id="collection-confirm-title">אישור גבייה אמיתית</h2>
+      <p>{{ jobLabel(collectionJobConfirmation) }}</p>
+      <p>הפעולה עשויה לחייב את הכרטיסים של חשבונות החיוב הזכאים, דרך מסוף Cardcom המוגדר בסביבה זו. גם כאשר שעון הסימולציה פעיל, התשלום אינו מדומה.</p>
+      <div class="collection-confirm-actions">
+        <button type="button" class="ops-btn ops-btn-primary" (click)="confirmCollectionJob()">אישור והפעלת גבייה</button>
+        <button type="button" class="ops-btn" autofocus (click)="collectionJobConfirmation = null">ביטול</button>
+      </div>
+    </section>
+  </div>
+}

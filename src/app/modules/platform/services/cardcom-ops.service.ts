@@ -158,8 +158,8 @@ export class CardcomOpsService {
   // backend routes as everything else here — no separate "admin action"
   // API, no financial operations exposed (see cardcom-ops.controller.js's
   // own comment on that boundary).
-  runJob(name: string): Observable<unknown> {
-    return this.http.post(`${this.base}/jobs/${name}/run`, {}, { headers: authHeaders() });
+  runJob(name: string, confirmCollection = false): Observable<unknown> {
+    return this.http.post(`${this.base}/jobs/${name}/run`, { confirmCollection }, { headers: authHeaders() });
   }
 
   resolveFinding(id: number): Observable<unknown> {

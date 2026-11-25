@@ -53,7 +53,7 @@
       } @else if (clockError) {
         <div class="plat-error">{{ clockError }}</div>
       } @else if (clockStatus) {
-        <p class="gs-vat-note">{{ clockStatus.collectionAuthorized ? 'עדכון הזמן עשוי להפעיל גביית בדיקה מורשית ב־CardCom Sandbox.' : 'גבייה אוטומטית אינה מורשית. קביעת הזמן אינה מאפשרת גבייה.' }}</p>
+        <p class="gs-vat-note">קידום השעון משנה את הזמן העסקי בלבד. גבייה דרך Cardcom דורשת הפעלה ואישור מנהל נפרדים.</p>
 
         <div class="sim-clock-status-row">
           <span class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</span>

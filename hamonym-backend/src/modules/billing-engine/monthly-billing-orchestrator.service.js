@@ -12,16 +12,15 @@ async function prepare({ db, now, previousAt, config }) {
   let existingRun;
   {
     existingRun = (await db.query(`SELECT r.id FROM billing_runs r JOIN billing_periods bp ON bp.id=r.billing_period_id
-      WHERE bp.period_start=$1 AND bp.period_end=$2 AND bp.retired=false
-      AND r.result_summary->>'simulation_provider'='fin11_mock' AND r.result_summary->>'simulation_identity'=$3 ORDER BY r.started_at LIMIT 1`,
-      [boundary.periodStart, boundary.periodEnd, config.fingerprint])).rows[0];
+      WHERE bp.period_start=$1 AND bp.period_end=$2 AND bp.retired=false AND r.mode='production'
+      AND COALESCE(r.result_summary->>'simulation_provider','') <> 'fin11_mock' ORDER BY r.started_at LIMIT 1`,
+      [boundary.periodStart, boundary.periodEnd])).rows[0];
     const current = await periods.resolveSelectedMonthBoundary(db, now.getUTCFullYear(), now.getUTCMonth()+1);
     if (!existingRun && now < current.periodEnd && (!previousAt || new Date(previousAt) >= boundary.periodEnd)) return { status: 'skipped', reason: 'cutoff_not_reached' };
   }
   const { periodId, periodCreated } = await periods.ensurePeriod(db, boundary.periodStart, boundary.periodEnd);
   const result = await calculation.runProductionCalculation(periodId, now.toISOString(), {
-    resumeSafe: true, entityIds: config.entityIds, billingRunId: existingRun?.id,
-    marker: { simulation_provider: 'fin11_mock', simulation_identity: config.fingerprint }
+    resumeSafe: true, entityIds: config.entityIds, billingRunId: existingRun?.id
   });
   const autoApprovalEnabled = true; // Existing approval service still validates every statement.
   const approval = autoApprovalEnabled && !result.errors.length ? await autoApproveDraftStatementsForRun(result.billingRunId) : { approved: [], failed: [] };
@@ -39,7 +38,8 @@ async function prepare({ db, now, previousAt, config }) {
     status: result.errors.length || approval.failed.length || result.blockedEntities.length ? 'blocked' : 'success',
     reason: result.errors.length || result.blockedEntities.length ? 'calculation_incomplete' : approval.failed.length ? 'approval_failed' : null };
 }
-async function execute({ db = pool, previousAt, triggeredBy = 'hamonym-clock' } = {}) {
+async function execute({ db = pool, previousAt, triggeredBy = 'scheduler', collectionAuthorized = false, superAdminUserId = null } = {}) {
+  if (collectionAuthorized && !superAdminUserId) throw Object.assign(new Error('Super Admin collection authorization required'), { status: 403 });
   const config = scope.configuration();
   if (!await require('./billing-readiness').ready(db)) return { results: [{ step: 'monthly_billing', status: 'blocked', result: { reason: 'billing_migrations_required' } }] };
   const client = await db.connect();
@@ -50,7 +50,7 @@ async function execute({ db = pool, previousAt, triggeredBy = 'hamonym-clock' } 
     const now = await require('../../lib/clock').now(db);
     // Enumerate existing eligible accounts; this is not a configured authorization list.
     config.entityIds = (await db.query("SELECT entity_id FROM billing_accounts WHERE enforcement_status='active' ORDER BY entity_id")).rows.map(row => row.entity_id);
-    return await scope.run({ businessAt: now.toISOString(), ...config }, async () => {
+    return await scope.run({ businessAt: now.toISOString(), ...config, collectionAuthorized, superAdminUserId }, async () => {
       const results = [];
       let prepared;
       try { prepared = await prepare({ db, now, previousAt, config }); }
@@ -64,8 +64,13 @@ async function execute({ db = pool, previousAt, triggeredBy = 'hamonym-clock' } 
         if (prepared.status === 'skipped') await prepareMasav();
         return { results };
       }
-      try { results.push({ step: 'recover_mock_attempts', status: 'success', result: await require('./collection-attempt-recovery.service').recover() }); }
-      catch { results.push({ step: 'recover_mock_attempts', status: 'blocked', result: { reason: 'mock_recovery_failed' } }); return { results }; }
+      if (!collectionAuthorized) {
+        results.push({ step: 'card_collection', status: 'skipped', result: { reason: 'explicit_collection_confirmation_required' } });
+        await prepareMasav();
+        return { results };
+      }
+      // Existing provider-backed reconciliation owns unresolved attempts.
+      // Collection never invents an outcome or retries pending/ambiguous attempts.
       for (const name of ['fin11-card-collection', 'fin11-card-retry-sweep']) {
         let outcome;
         try { outcome = await require('../../jobs').run(name, { triggeredBy }); }

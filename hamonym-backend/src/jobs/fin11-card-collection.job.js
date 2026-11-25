@@ -58,8 +58,8 @@ async function handler(db, { now = new Date(), resolveAdapter = defaultGetAdapte
   const statementsRes = await db.query(
     `SELECT id FROM statements WHERE billing_period_id = $1 AND status = ANY($2::text[])
          AND ($3::uuid[] IS NULL OR billing_account_id IN (SELECT id FROM billing_accounts WHERE entity_id = ANY($3::uuid[])))
-         AND ($4::text IS NULL OR billing_run_id IN (SELECT id FROM billing_runs WHERE result_summary->>'simulation_provider'='fin11_mock' AND result_summary->>'simulation_identity'=$4))`,
-    [periodId, ACTIONABLE_STATEMENT_STATUSES, simulation?.entityIds || null, simulation?.fingerprint || null]
+         AND billing_run_id IN (SELECT id FROM billing_runs WHERE COALESCE(result_summary->>'simulation_provider','') <> 'fin11_mock')`,
+    [periodId, ACTIONABLE_STATEMENT_STATUSES, simulation?.entityIds || null]
   );
 
   const summary = {
