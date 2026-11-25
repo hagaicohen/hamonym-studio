@@ -41,3 +41,6 @@ source-backups/
 /simple-studio-integration/
 /local-integration-20261125/
 /local-frontend-integration-20261125/
+
+# Canonical frontend source is tracked at /src; do not embed this repository in itself.
+/hamonym-app/
